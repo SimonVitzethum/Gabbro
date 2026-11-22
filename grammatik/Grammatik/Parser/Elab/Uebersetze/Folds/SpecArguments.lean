@@ -51,6 +51,16 @@ decreasing_by
 
 /-- Array elements and nominal record fields admit lexical values at
     the declared type, including when the two constructors are nested. -/
+def specCompositeIndexFits (ctx : UCtx) (base offset : USide) (expected : Ty) : Bool :=
+  match base, offset with
+  | .param name, .lit index =>
+    match uValueType ctx (.param name) with
+    | some (.arr element length) =>
+      decide (element = expected ∧ 0 ≤ index ∧ index < (length : Int)) &&
+        !ctx.unknownRanges.contains name
+    | _ => false
+  | _, _ => false
+
 def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
   | .arrCons head tail, expected =>
     match expected with
@@ -72,6 +82,7 @@ def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
         | .error _ => false
       | .error _ => false
     | _ => false
+  | .idx base offset, expected => specCompositeIndexFits ctx base offset expected
   | .param name, expected =>
     !ctx.unknownRanges.contains name && decide (uValueType ctx (.param name) = some expected)
   | value, expected => specLiteralFieldFits ctx.records value expected
@@ -95,6 +106,15 @@ theorem specCompositeField_erfuellbar (ctx : UCtx) (base : USide) (name : String
     (checked : specCompositeArgumentFits ctx base (.prod identity fields) = true) :
     specCompositeArgumentFits ctx (.field base name) target = true := by
   simp only [specCompositeArgumentFits, read, nominal, selected, decide_true, checked, Bool.and_self]
+
+/-- A checked array element retains its declared type inside the shared constructor checker. -/
+theorem specCompositeIndex_erfuellbar (ctx : UCtx) (name : String) (element : Ty)
+    (count : Nat) (index : Int) (bounds : 0 ≤ index ∧ index < (count : Int))
+    (read : uValueType ctx (.param name) = some (.arr element count))
+    (resolved : ctx.unknownRanges.contains name = false) :
+    specCompositeArgumentFits ctx (.idx (.param name) (.lit index)) element = true := by
+  simp only [specCompositeArgumentFits, specCompositeIndexFits, read, resolved, Bool.not_false, bounds.1, bounds.2,
+    true_and, decide_true, Bool.and_self]
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
@@ -286,7 +306,7 @@ theorem specArrayIndexArgument_of_local (ctx : UCtx) (name : String) (element : 
   intro argument
   have parsed : uWertBody ctx argument = .ok (.idx (.param name) (.lit index)) := by
     change uRechne ctx (uWertBlatt ctx) (.variable name) = _ at read
-    simp only [argument, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, array, Bool.false_eq_true, ite_false, read] <;> rfl
+    simp only [argument, uWertBody, uRechne, uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, array, Bool.false_eq_true, ite_false, read] <;> rfl
   have valid : (0 : Int) ≤ index ∧ (index : Int) < capacity := ⟨Int.ofNat_zero_le _, Int.ofNat_lt.mpr inside⟩
   exact ⟨parsed, by
     simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath, baseType,

@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.PrologueCode
 public import Stage0.Senke.Bild.Prolog
+import Stage0.Senke.Bild.Ruf.Idle.Counters
 import Stage0.Senke.Bild.Mehr.ImageTransition
 
 @[expose] public section
@@ -129,7 +130,8 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     (far : CodeFar (compiled.entry fp).pc (table f).length fp K)
     (depthWord : memory.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (depth + 1)))
     (environment : EnvAt output.image.Y memory fp args)
-    (stored : WeltAt memory output.image.Y world)
+    (stored : WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
+    (snapshots : EntrySnapshots.Inputs output.image.Y world memory (oldCells (output.compiled.program.ensures f)))
     (requires : ReqAmEintritt output.compiled.program f world args)
     (reads : W → Prop) (frameReads : ∀ byte, inSlots fp 0 K byte → reads byte)
     (codeReads : ∀ byte, (compiled.entry fp).pc.toNat ≤ byte.toNat →
@@ -143,7 +145,11 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     let restricted := maskMemory reads (inSlots fp 0 K) memory
     ∃ count after, @IRReference kernel.withoutSyscalls count
       (compiled.entry fp) restricted (compiled.bodyEntry fp) after ∧ Agree fp FB K restricted after ∧
-      CodeAt after (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1) := by
+      CodeAt after (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1) ∧
+      FrameOK after fp K ∧
+      EntryFrameValues output.image.Y output.compiled.program f after fp
+        (world.lese (Signatur.anfang _ ((declOf output.compiled.unit).signatur f))
+          (output.compiled.program.requires f).orte) args := by
   intro restricted
   letI : Kern := kernel.withoutSyscalls
   have loaded : CodeAt memory (compiled.entry fp).pc (table f) := exactCode.symm ▸ compiled.instructions
@@ -166,17 +172,14 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
       Mem.le_congr (fun j hj => (sameWord j hj).1)
     unfold Mem.rd64 at depthWord ⊢
     rwa [samePermissions, sameValue]
-  have observed := expression_world_mask frameReads layout.lay requiresReads
-    (⟨fun t _ field index valid => stored.1 t field index valid, fun g _ => stored.2.1 g⟩ :
-      WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
+  have observed := expression_world_mask frameReads layout.lay requiresReads stored
   have saved : EntrySnapshots.Inputs output.image.Y world restricted
       (oldCells (output.compiled.program.ensures f)) := by
     intro cell member
     have bounds := EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member
-    have original := EntrySnapshots.Inputs.of_world stored
-      (fun cell member => (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1) cell member
-    exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member) original
-  obtain ⟨ens, pc, after, run, changed, post, position, _⟩ :=
+    exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member)
+      (snapshots cell member)
+  obtain ⟨ens, pc, after, run, changed, post, position, values, _⟩ :=
     prolog_setup (O := O) (rp := 0) (cfp := 0) (H := []) lowered codeSize depthFits capacity
       layout small proofFrame decoded far maskedDepth maskedArgs observed saved requires
   have samePost : compiled.postcondition = ens := Option.some.inj (compiled.postconditionLowered.symm.trans post)
@@ -185,7 +188,7 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
   rw [exactCode, List.length_append, Nat.add_sub_cancel] at address
   subst pc
   obtain ⟨count, steps⟩ := IRReference.of_star run
-  exact ⟨count, after, steps, changed, exactCode ▸ decoded.agree changed far⟩
+  exact ⟨count, after, steps, changed, exactCode ▸ decoded.agree changed far, proofFrame.agree changed, values⟩
 
 /-- Retain the production layout when the same instructions are present in another view. -/
 def FunctionIRPrologue.withCode [Kern] {output : Emitted src reserve options}
@@ -213,20 +216,31 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
     (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
     (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
-    (compiled : FunctionIRPrologue output after root.1) (K : Nat)
-    (ownsWrites : ∀ byte, inSlots (imagePrologueFrame output thread) 0 K byte →
+    (compiled : FunctionIRPrologue output after root.1)
+    (entryWorld : World (declOf output.compiled.unit))
+    (values : EntryFrameValues output.image.Y output.compiled.program root.1 after
+      (imagePrologueFrame output thread) entryWorld root.2)
+    (entryFrame : FrameOK after (imagePrologueFrame output thread) (output.image.Ks - FB))
+    (entryFits : frei ((declOf output.compiled.unit).params root.1)
+      (functionFrame output.compiled.program root.1).bodyReserved ≤ output.image.Ks - FB)
+    (ownsWrites : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte →
       imageStackFootprint output thread byte)
+    (keptHeader : ∀ index : Fin FB, after.rd64
+      (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
+      memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)))
     (continuation : @IRReference kernel.withoutSyscalls count
       (compiled.entry (imagePrologueFrame output thread))
       (maskMemory (imagePrologueReads output thread root.1)
-        (inSlots (imagePrologueFrame output thread) 0 K) memory)
+        (inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB)) memory)
       (compiled.bodyEntry (imagePrologueFrame output thread)) after) :
     ImageProloguePhase output E thread (.next (compiled.entry (imagePrologueFrame output thread))) memory state :=
-  let writes := inSlots (imagePrologueFrame output thread) 0 K
+  let writes := inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB)
   let reads := imagePrologueReads output thread root.1
   let scope := maskMemory_agreement reads writes memory (fun byte hit => Or.inl (ownsWrites byte hit))
-  ⟨root, declared, alive, unentered, writes, ownsWrites, maskMemory reads writes memory,
-    after, compiled, ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
+  ⟨root, declared, alive, unentered, writes, fun _ inside => inside, ownsWrites, maskMemory reads writes memory,
+    after, compiled, entryWorld, values, entryFrame, entryFits,
+    (fun index => memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val))), keptHeader,
+    ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
 
 /-- At the exact relocated entry, the serialized root arguments and
     the checked precondition establish the scheduled prologue phase. -/
@@ -239,7 +253,9 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
     (loaded : output.IRFunctionSemantics memory)
     {world : World (declOf output.compiled.unit)}
-    (stored : WeltAt memory output.image.Y world)
+    (stored : WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires root.1).orte))
+    (snapshots : ∀ cell ∈ oldCells (output.compiled.program.ensures root.1), cell.da output.image.Y →
+      ValueAt output.image.Y memory (BitVec.ofNat 64 (cell.adr output.image.Y)) 0 cell.ty (cell.val world))
     (requires : ReqAmEintritt output.compiled.program root.1 world root.2)
     (frame : FrameOK memory (imagePrologueFrame output thread) (output.image.Ks - FB))
     (environment : EnvAt output.image.Y memory (imagePrologueFrame output thread) root.2)
@@ -247,7 +263,9 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       some (BitVec.ofNat 64 output.image.depth)) :
     ∃ phase : ImageProloguePhase output E thread
         (.next ⟨BitVec.ofNat 64 (output.image.A root.1), imagePrologueFrame output thread⟩) memory state,
-      phase.root = root ∧ phase.reads = imagePrologueReads output thread root.1 := by
+      phase.root = root ∧ phase.reads = imagePrologueReads output thread root.1 ∧
+        phase.header = (fun index => memory.rd64
+          (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val))) := by
   have declaredStack : thread ≤ output.starts.length := by
     have present := (List.getElem?_eq_some_iff.mp declared).1
     rw [unit.starts, List.length_cons] at present
@@ -262,8 +280,12 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
   let reads := imagePrologueReads output thread root.1
   have depthEq : depth + 1 = output.image.depth := by dsimp [depth]; omega
   have capacity : (depth + 1 + 1) * words ≤ slots := by rw [depthEq]; dsimp [slots]; omega
-  have room : frei ((declOf output.compiled.unit).params root.1) ≤ slots :=
+  have bodyFits : frei ((declOf output.compiled.unit).params root.1)
+      (functionFrame output.compiled.program root.1).bodyReserved ≤ slots :=
     parameters.trans (topFits.trans ((Nat.le_mul_of_pos_left _ (by omega : 0 < depth + 1 + 1)).trans capacity))
+  have room : frei ((declOf output.compiled.unit).params root.1) ≤ slots := by
+    unfold frei at bodyFits ⊢
+    omega
   have codeBound : output.image.fp0 < 2 ^ 31 :=
     aboveCode.trans_lt ((Nat.le_add_right _ _).trans_lt
       (layout.top.trans_lt (layout.ord.trans_lt layout.lay.2.2)))
@@ -291,12 +313,95 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       (last : byte.toNat < cell.adr output.image.Y + 8 * valueWords cell.ty) : reads byte := by
     have valid := (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1
     exact .inr (.inr ⟨cell, valid, .inr member, first, by cases cell <;> exact last⟩)
-  obtain ⟨count, finished, reference, _, installed⟩ :=
+  obtain ⟨count, finished, reference, unchanged, installed, bodyFrame, values⟩ :=
     compiled.scoped_reference O exactCode ⟨top, lowered, topFits⟩ (by omega)
       (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
-      environment stored requires reads frameReads codeReads requiresReads snapshotReads
+      environment stored
+      (fun cell member => snapshots cell member (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1)
+      requires reads frameReads codeReads requiresReads snapshotReads
   let finishedCode := compiled.withCode installed
-  exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode slots ownsWrites reference,
-    rfl, rfl⟩
+  have headerFits : FB ≤ slots := by
+    change frei ((declOf output.compiled.unit).params root.1) _ ≤ slots at bodyFits
+    unfold frei at bodyFits
+    omega
+  have keptHeader (index : Fin FB) :=
+    (agree_rd_low unchanged frame.room index.isLt headerFits).trans
+      (frame_word_agrees frame (index.isLt.trans_le headerFits) (fun byte inside =>
+        (maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads).1.1 byte (frameReads byte inside)))
+  exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode _ values
+    bodyFrame bodyFits ownsWrites keptHeader reference,
+    rfl, rfl, rfl⟩
+
+/-- The scheduled runtime partition supplies the prologue's exact world
+    inputs at the issuing thread's actual memory view. -/
+theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {O : Orakel (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread : Nat} {history : List Runner.Mach.Ev}
+    {machine : Runner.Mach.Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition (Senke.Faeden.imageRuntimeFootprint output E state.m)
+      output E O history machine state body pendingPhase)
+    (pending : body[thread]? = some none)
+    (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
+    (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
+    (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread) :
+    let memory := machine.ms.1.view thread
+    let frame := imagePrologueFrame output thread
+    BytesAt memory codeBase (output.image.code.flatMap encII) →
+    ReqAmEintritt output.compiled.program root.1 (worldZ (state.m.speicher.welt [])) root.2 →
+    FrameOK memory frame (output.image.Ks - FB) →
+    EnvAt output.image.Y memory frame root.2 →
+    memory.rd64 (slot frame (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 output.image.depth) →
+    ∃ phase : ImageProloguePhase output E thread
+        (.next ⟨BitVec.ofNat 64 (output.image.A root.1), frame⟩) memory state,
+      phase.root = root ∧ phase.header =
+        (fun index => memory.rd64 (slot frame (BitVec.ofNat 64 index.val))) := by
+  intro memory frame loaded requires frameOK environment depthWord
+  obtain ⟨committed, world, agrees⟩ := partition.prologue_world unit hardware accepted duties pending declared
+  obtain ⟨inputs, snapshots⟩ := output.prologue_sources world agrees
+  obtain ⟨phase, selected, _, header⟩ := output.enter_prologue unit O root declared alive unentered
+    (Emitted.function_semantics_at loaded) inputs snapshots requires frameOK environment depthWord
+  exact ⟨phase, selected, header⟩
+
+/-- The actual issuing view at the decoded body address supplies the
+    canonical GX return header and lexical environment for that root. -/
+theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {thread : Nat} {control : Res T} {memory view : Mem}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view)
+    {rp caller : W} (returnPointer : phase.header ⟨0, by decide⟩ = some rp)
+    (callerFrame : phase.header ⟨1, by decide⟩ = some caller)
+    {sourceEntry : World (declOf output.compiled.unit).mitRuhe}
+    (entryValues : ∀ cell ∈ oldCells (E.P.mitRuhe.ensures (some phase.root.1)),
+      cell.val (worldR phase.entryWorld) = cell.val sourceEntry) :
+    let program := E.P.mitRuhe
+    let layout := output.image.Y.withIdle
+    let fn := some phase.root.1
+    let fp := imagePrologueFrame output thread
+    let K := output.image.Ks - FB
+    let args := envR phase.root.2
+    FrameOK view fp K ∧ Kopf layout fn view fp K rp caller args program sourceEntry ∧
+      EnvAt layout view fp args (functionFrame program fn).bodyReserved := by
+  dsimp only
+  rw [unit.program] at entryValues ⊢
+  have values := (phase.entry_values reached).withIdle
+  have offsets := functionFrame_offsets_withIdle output.compiled.program output.image.Y phase.root.1
+  have resultFits : (functionFrame output.compiled.program.mitRuhe (some phase.root.1)).internalResult ≤
+      output.image.Ks - FB := by
+    rw [offsets.2.2.2.2.1]
+    have available := phase.entryFits
+    have prefixLength := (functionFrame output.compiled.program phase.root.1).protected_prefix.2
+    unfold FrameLayout.internalStatus FrameLayout.bodyParams at prefixLength
+    unfold frei at available
+    omega
+  exact ⟨phase.entry_frame reached, ⟨
+    (phase.entry_header reached ⟨0, by decide⟩).trans returnPointer,
+    (phase.entry_header reached ⟨1, by decide⟩).trans callerFrame,
+    values.original, resultFits, values.snapshots.congr_values entryValues⟩, values.lexical⟩
 
 end Gabbro.Stage0

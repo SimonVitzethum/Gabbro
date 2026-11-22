@@ -336,7 +336,7 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
     uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
-  simp only [uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, bounds,
+  simp only [uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, bounds,
     locals, and_self, bind, Option.bind, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/

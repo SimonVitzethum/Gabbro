@@ -7,6 +7,28 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
+/-- Fitting a synthesized aggregate keeps its exact type. Array literals
+    with a checking-only rule are outside this bridge. -/
+theorem lowWertE_aggregate_of_fit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {source : USide} {target : Ty}
+    (aggregate : (∃ n fields, target = .prod n fields) ∨ (∃ ty count, target = .arr ty count))
+    (bySynthesis : lowWertAtE u Γ Λ fn er target source =
+      (lowWertE u Γ Λ fn er source).bind (fitW target))
+    {term : Expr (declOf u) Γ Λ target} (accepted : lowWertAtE u Γ Λ fn er target source = .ok term) :
+    ∃ expression, lowWertE u Γ Λ fn er source = .ok ⟨target, expression⟩ := by
+  rw [bySynthesis] at accepted
+  cases read : lowWertE u Γ Λ fn er source with
+  | error diagnostic => simp only [read, Except.bind] at accepted; cases accepted
+  | ok value =>
+    obtain ⟨ty, expression⟩ := value
+    simp only [read, Except.bind, fitW] at accepted
+    split at accepted
+    · next equal =>
+      change ty = target at equal
+      subst ty
+      exact ⟨expression, rfl⟩
+    · rcases aggregate with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ <;> cases ty <;> cases accepted
+
 /-- Nominal literal construction retains every identity, schema and field-type check. -/
 theorem lowLit_product (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (identity actual : Nat) (fields : List Ty) (reordered : Bool) (values : List (Ty × USide)) :

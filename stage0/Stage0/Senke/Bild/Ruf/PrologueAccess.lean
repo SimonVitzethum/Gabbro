@@ -9,7 +9,8 @@ import Stage0.Senke.Bild.Ruf.Idle.Lowering
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
-  Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.Faeden Runner Runner.IR
+  Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.Faeden
+  Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
@@ -80,5 +81,98 @@ theorem Emitted.prologue_read_owner [Kern] (output : Emitted src reserve options
       fuss_teilG _ _ (known.elim (fun read => fuss_req _ _ read) (fun read => fuss_ens _ _ read))
     exact plainWriterFootprint_access hardware accepted duties separated allocated begins ends plain reached
       (.inl inFootprint)
+
+/-- Every prologue read sees the same bytes in the projected memory and
+    in the issuer's actual TSO view. -/
+theorem ImageRuntimePartition.prologue_projection [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {machine : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition (imageRuntimeFootprint output E state.m)
+      output E O history machine state body pendingPhase)
+    {thread : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root) :
+    GleichAuf (imagePrologueReads output thread root.1)
+      (projectSCState (imageRuntimeFootprint output E state.m) machine.ms).1 (machine.ms.1.view thread) := by
+  intro byte read
+  exact mergedView_accessible_at machine.ms.1 _ thread byte
+    (fun issuer store queued address touched => (partition.1 issuer store queued address touched).1)
+    (fun _ owned => output.prologue_read_owner unit hardware accepted duties declared read owned)
+
+/-- A pending root reads the exact committed model values. Other bodies
+    can have tentative writes, but none of their write footprints can
+    overlap the checked prologue reads. -/
+theorem ImageRuntimePartition.prologue_world [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {machine : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition (imageRuntimeFootprint output E state.m)
+      output E O history machine state body pendingPhase)
+    {thread : Nat} (pending : body[thread]? = some none)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root) :
+    ∃ committed, WeltAt committed output.image.Y (worldZ (state.m.speicher.welt [])) ∧
+      GleichAuf (imagePrologueReads output thread root.1) (machine.ms.1.view thread) committed := by
+  let footprint := imageRuntimeFootprint output E state.m
+  have accessible (byte : W) (read : imagePrologueReads output thread root.1 byte)
+      (owner : Nat) (owned : footprint owner byte) : owner = thread :=
+    output.prologue_read_owner unit hardware accepted duties declared read owned
+  have projected := partition.prologue_projection unit hardware accepted duties declared
+  have main {m : Mem} (stored : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
+      WeltAt m output.image.Y (worldZ (state.m.speicher.welt [])) := by
+    apply WeltAt.withIdle_iff.mp
+    rwa [worldR_worldZ]
+  rcases partition.2.2.1 with ⟨_, world⟩ | ⟨snapshots, positions, committed, related, indices⟩
+  · exact ⟨_, main world, fun byte read => (projected byte read).symm⟩
+  · refine ⟨committed, main related.welt, fun byte read => (projected byte read).symm.trans (related.aussen byte ?_)⟩
+    intro issuer snapshot known written
+    have actual : issuer = thread := accessible byte read issuer ((indices issuer snapshot known).2.write byte written)
+    subst issuer
+    have live := related.zustand thread snapshot known
+    change body[thread]? = some (some snapshot.r) at live
+    rw [pending] at live
+    cases live
+
+/-- The reading thread receives the complete canonical words for its
+    precondition and snapshots from the committed world at this boundary. -/
+theorem Emitted.prologue_sources [Kern] (output : Emitted src reserve options)
+    {thread : Nat} {f : (declOf output.compiled.unit).Fn} {committed view : Mem}
+    {world : World (declOf output.compiled.unit)}
+    (stored : WeltAt committed output.image.Y world)
+    (agrees : GleichAuf (imagePrologueReads output thread f) view committed) :
+    WorldOnAt view output.image.Y world (· ∈ (output.compiled.program.requires f).orte) ∧
+      ∀ cell ∈ oldCells (output.compiled.program.ensures f), cell.da output.image.Y →
+        ValueAt output.image.Y view (BitVec.ofNat 64 (cell.adr output.image.Y)) 0 cell.ty (cell.val world) := by
+  let L := output.image.Y
+  have layout := output.layout_checked.1
+  have value (cell : Zelle (declOf output.compiled.unit)) (valid : cell.da L)
+      (reads : cell.carrier ∈ (output.compiled.program.requires f).orte ∨
+        cell ∈ oldCells (output.compiled.program.ensures f)) :
+      ValueAt L view (BitVec.ofNat 64 (cell.adr L)) 0 cell.ty (cell.val world) := by
+    have written : ValueAt L committed (BitVec.ofNat 64 (cell.adr L)) 0 cell.ty (cell.val world) := by
+      cases cell with
+      | glob g => exact stored.2.1 g
+      | elem t field index => exact stored.1 t field index valid
+    have bound : cell.adr L + 8 * valueWords cell.ty < 2 ^ 64 := by
+      have within : cell.adr L + 8 * valueWords cell.ty ≤ L.hi := by
+        cases cell with
+        | glob g => exact (layout.2.1 g).2
+        | elem t field index => exact (layout.1 t field index valid).2
+      exact within.trans_lt (layout.2.2.trans (by decide))
+    refine ValueAt.congr_read_bytes bound (fun byte first last => ?_) written
+    have exactBytes := agrees byte (.inr (.inr ⟨cell, valid, reads, first, by cases cell <;> exact last⟩))
+    exact ⟨exactBytes.1, exactBytes.2.1⟩
+  exact ⟨⟨fun t read field index valid => value (.elem t field index) valid (.inl read),
+    fun g read => value (.glob g) trivial (.inl read)⟩,
+    fun cell read valid => value cell valid (.inr read)⟩
 
 end Gabbro.Stage0

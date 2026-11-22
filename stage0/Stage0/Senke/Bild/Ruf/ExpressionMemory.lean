@@ -53,6 +53,14 @@ theorem expression_mask_value [Kern] {D : Deklaration} {L : Senke.Lay D}
   have agree := (maskMemory_agreement reads writes memory writeReads).1
   exact Senke.ValueAt.congr_read_bytes bound (fun byte first last => agree.1 byte (covered byte first last)) typed
 
+theorem frame_word_agrees {before after : Mem} {fp : W} {K index : Nat}
+    (frame : FrameOK before fp K) (fits : index < K)
+    (same : ∀ byte, inSlots fp 0 K byte → after.b byte = before.b byte ∧ after.rd byte = before.rd byte) :
+    after.rd64 (slot fp (BitVec.ofNat 64 index)) = before.rd64 (slot fp (BitVec.ofNat 64 index)) := by
+  have word (offset : Nat) (inside : offset < 8) := same _ (frame_slot_byte frame fits inside)
+  simp only [Mem.rd64, Mem.all_congr (fun offset inside => (word offset inside).2),
+    Mem.le_congr (fun offset inside => (word offset inside).1)]
+
 /-- A complete value stored in a private frame depends only on that
     frame's readable bytes. -/
 theorem frame_value_agrees {D : Deklaration} {L : Senke.Lay D} {before after : Mem} {fp : W}
@@ -63,13 +71,7 @@ theorem frame_value_agrees {D : Deklaration} {L : Senke.Lay D} {before after : M
     Senke.ValueAt L after fp base ty value := by
   refine ⟨stored.1, fun index present => ?_⟩
   have width : index < Senke.valueWords ty := by simpa only [Senke.encodeWords_length] using present
-  have word (offset : Nat) (inside : offset < 8) :=
-    same _ (frame_slot_byte frame (by omega : base + index < K) inside)
-  have sameRead : after.rd64 (slot fp (BitVec.ofNat 64 (base + index))) =
-      before.rd64 (slot fp (BitVec.ofNat 64 (base + index))) := by
-    simp only [Mem.rd64, Mem.all_congr (fun offset inside => (word offset inside).2),
-      Mem.le_congr (fun offset inside => (word offset inside).1)]
-  rw [sameRead]
+  rw [frame_word_agrees frame (by omega : base + index < K) same]
   exact stored.2 index present
 
 /-- A physical read region containing the chosen carriers

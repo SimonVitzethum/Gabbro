@@ -171,7 +171,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
         have statusBound : layout.internalResult ≤ layout.internalStatus := by
           simp only [FrameLayout.internalStatus]; omega
         omega
-      obtain ⟨mR, entryRun, entryChanged, original, lexical, saved⟩ :=
+      obtain ⟨mR, entryRun, entryChanged, ⟨original, lexical, saved⟩⟩ :=
         entryFrame_run P f hsnap frame1 hK entryFits
           (codeAt_left code3) (codeFar_left (n := entry.length) (k := cb.length)
             (by simpa only [List.length_append] using far3))

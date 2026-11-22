@@ -1,6 +1,7 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+public import Stage0.Senke.Bild.Ruf.PrologueContinuation
+public import Stage0.Senke.Rueckkehr.Entry
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 public import Stage0.Senke.Bild.Ruf.RootMemory
 public import Stage0.Senke.Bild.Ruf.PrologueAccess
@@ -58,7 +59,8 @@ theorem FunctionIRPrologue.of_lowered [Kern] {output : Emitted src reserve optio
     (exactCode : CodeAt memory (BitVec.ofNat 64 (output.image.A f)) code)
     (fits : output.image.A f + 16 * code.length ≤ output.image.fp0) :
     ∃ prologue : FunctionIRPrologue output memory f,
-      code = prologue.prefixCode ++ prologue.body.1 ∧ frei ((declOf output.compiled.unit).params f) ≤ top := by
+      code = prologue.prefixCode ++ prologue.body.1 ∧
+        frei ((declOf output.compiled.unit).params f) (functionFrame output.compiled.program f).bodyReserved ≤ top := by
   simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
   obtain ⟨requirement, requirementLowered, post, postLowered, body, bodyLowered,
     capture, captureLowered, built, frameTop⟩ := lowered
@@ -68,12 +70,12 @@ theorem FunctionIRPrologue.of_lowered [Kern] {output : Emitted src reserve optio
     relocateC FB frame.ensReserved frame.parameterWords ++ capture ++
     relocateC frame.ensParams (frame.bodyReserved - frame.ensReserved) frame.parameterWords
   have equal : prefixCode ++ body.1 = code := built
-  have room : frei ((declOf output.compiled.unit).params f) ≤ top := by
+  have room : frei ((declOf output.compiled.unit).params f) frame.bodyReserved ≤ top := by
     have storage : frei ((declOf output.compiled.unit).params f) frame.bodyReserved =
         frame.bodyParams + frame.parameterWords := rfl
     change max (retTop frame) (max requirement.2 (max (frame.bodyParams + frame.parameterWords) body.2)) = top
       at frameTop
-    unfold frei at storage ⊢
+    rw [storage]
     omega
   exact ⟨⟨requirement, post, capture, body, prefixCode, requirementLowered,
     postLowered, captureLowered, bodyLowered, rfl, equal.symm ▸ exactCode, equal.symm ▸ fits⟩,
@@ -95,7 +97,8 @@ theorem FunctionIRPrologue.partitions [Kern] {output : Emitted src reserve optio
       CodeAt memory (compiled.bodyEntry fp).pc compiled.body.1 :=
   ⟨codeAt_left compiled.instructions, codeAt_right compiled.instructions⟩
 
-private theorem snapshots_agree {D : Deklaration} {L : Lay D} {world : World D}
+theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.At.congr_read_frame
+    {D : Deklaration} {L : Lay D} {world : World D}
     {before after : Mem} {fp : W} {K base : Nat} {cells : List (Zelle D)}
     (frame : FrameOK before fp K) (fits : base + EntrySnapshots.words cells ≤ K)
     (same : ∀ byte, inSlots fp 0 K byte → after.b byte = before.b byte ∧ after.rd byte = before.rd byte)
@@ -107,6 +110,50 @@ private theorem snapshots_agree {D : Deklaration} {L : Lay D} {world : World D}
     have bound : base + valueWords head.ty + EntrySnapshots.words tail ≤ K := by
       simpa only [EntrySnapshots.words, Nat.add_assoc] using fits
     exact ⟨frame_value_agrees frame (by omega) same saved.1, ih bound saved.2⟩
+
+/-- Captures represent every entry world that agrees on their exact cells. -/
+theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.At.congr_values
+    {D : Deklaration} {L : Lay D} {before after : World D} {memory : Mem} {fp : W}
+    {cells : List (Zelle D)} {base : Nat}
+    (saved : EntrySnapshots.At L before memory fp cells base)
+    (same : ∀ cell ∈ cells, cell.val before = cell.val after) :
+    EntrySnapshots.At L after memory fp cells base := by
+  induction cells generalizing base with
+  | nil => trivial
+  | cons cell tail ih =>
+    exact ⟨same cell List.mem_cons_self ▸ saved.1,
+      ih saved.2 (fun other inside => same other (List.mem_cons_of_mem _ inside))⟩
+
+/-- Restored arguments and old values depend only on their complete frame spans. -/
+theorem _root_.Gabbro.Stage0.Senke.EntryFrameValues.congr_read_frame
+    {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
+    {before after : Mem} {fp : W} {K : Nat} {entry : World D} {args : Env D (D.params f)}
+    (stored : EntryFrameValues L P f before fp entry args) (frame : FrameOK before fp K)
+    (fits : frei (D.params f) (functionFrame P f).bodyReserved ≤ K)
+    (same : ∀ byte, inSlots fp 0 K byte → after.b byte = before.b byte ∧ after.rd byte = before.rd byte) :
+    EntryFrameValues L P f after fp entry args := by
+  let layout := functionFrame P f
+  have reserves : layout.ensReserved ≤ layout.bodyReserved := by
+    simp only [FrameLayout.ensReserved, FrameLayout.bodyReserved]
+    omega
+  have move (reserved : Nat) (bound : reserved ≤ layout.bodyReserved)
+      (env : EnvAt L before fp args reserved) : EnvAt L after fp args reserved := by
+    intro ty x
+    refine frame_value_agrees frame ?_ same (env ty x)
+    have extent := variableOffset_bound x
+    change frei (D.params f) layout.bodyReserved ≤ K at fits
+    unfold frei vslot at *
+    omega
+  have snapshotEnd : FB + EntrySnapshots.words (oldCells (P.ensures f)) = layout.ensParams := rfl
+  have snapshotFits : FB + EntrySnapshots.words (oldCells (P.ensures f)) ≤ K := by
+    rw [snapshotEnd]
+    have start : layout.ensParams = FB + layout.ensReserved := rfl
+    change frei (D.params f) layout.bodyReserved ≤ K at fits
+    unfold frei at fits
+    omega
+  exact ⟨move layout.ensReserved reserves stored.original,
+    move layout.bodyReserved (Nat.le_refl _) stored.lexical,
+    stored.snapshots.congr_read_frame frame snapshotFits same⟩
 
 /-- Snapshot capture is confined to the generated instructions, the
     declared source cells, and the destination frame. This single
@@ -155,143 +202,11 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.capture_frameMemory [kernel : 
       actual.b byte = finish.b byte ∧ actual.rd byte = finish.rd byte :=
     ⟨(relevant.1 byte (frameReads byte inside)).1.symm, (relevant.1 byte (frameReads byte inside)).2.symm⟩
   refine ⟨rfl, ⟨readMap, writeMap, ?_⟩,
-    snapshots_agree (proofFrame.agree (Senke.Agree.widen written fits)) fits same stored⟩
+    stored.congr_read_frame (proofFrame.agree (Senke.Agree.widen written fits)) fits same⟩
   intro byte outside
   by_cases inside : inSlots fp 0 K byte
   · exact (same byte inside).1.trans ((written.b byte outside).trans (agreement.1 byte (frameReads byte inside)).1)
   · exact (untouched byte inside).1
-
-/-- The remaining instructions of an established IR region. Its current
-    instruction may be between requests, and the last full instruction
-    ends at the same fixed boundary in every case. -/
-def IRContinuation [kernel : Kern] (target : T) (finish : Mem) (control : Res T) (memory : Mem) : Prop :=
-  match control with
-  | .next pointer => ∃ count, @IRReference kernel.withoutSyscalls count pointer memory target finish
-  | .ask .. => ∃ next middle count,
-      @Run kernel.withoutSyscalls control memory next middle ∧
-      @IRReference kernel.withoutSyscalls count next middle target finish
-  | .fault | .unk => False
-
-private theorem IRContinuation.ofRun [kernel : Kern] {target next : T} {memory middle finish : Mem}
-    {control : Res T} {count : Nat} (step : @Run kernel.withoutSyscalls control memory next middle)
-    (remaining : @IRReference kernel.withoutSyscalls count next middle target finish) :
-    IRContinuation target finish control memory := by
-  cases control with
-  | next pointer =>
-    cases step
-    exact ⟨count, remaining⟩
-  | ask request resume => exact ⟨next, middle, count, step, remaining⟩
-  | fault | unk => cases step
-
-theorem IRContinuation.noHost [Kern] {target : T} {memory finish : Mem} {request : Req} {resume : Ans → Res T}
-    (pending : IRContinuation target finish (.ask (.sys request) resume) memory) : False := by
-  obtain ⟨_, _, _, instruction, _⟩ := pending
-  cases instruction with
-  | ask impossible _ => cases impossible
-  | sys impossible _ => exact impossible
-
-theorem IRContinuation.not_fault [Kern] {target : T} {memory finish : Mem} {control : Res T}
-    (continuation : IRContinuation target finish control memory) : control ≠ .fault := by
-  rintro rfl
-  exact continuation
-
-/-- A restricted continuation certifies its next request from the Lean IR
-    semantics and the permissions of its reference memory. -/
-theorem IRContinuation.request_scope [Kern] {target : T} {memory finish : Mem}
-    {request : Op} {resume : Ans → Res T} {reads writes : W → Prop}
-    (continuation : IRContinuation target finish (.ask request resume) memory)
-    (blind : Blind (.ask request resume))
-    (readable : ∀ byte, memory.rd byte = true → reads byte)
-    (writable : ∀ byte, memory.wr byte = true → reads byte ∧ writes byte) :
-    HostFreeControl reads writes (.ask request resume) := by
-  have noHost (call : Req) (same : request = .sys call) : False := by
-    subst request
-    exact IRContinuation.noHost continuation
-  obtain ⟨_, _, _, instruction, _⟩ := continuation
-  cases instruction with
-  | ask answered rest =>
-    rename_i answer
-    cases answer with
-    | none =>
-      rw [blind.missing] at rest
-      cases rest
-    | some words =>
-      obtain ⟨readScope, writeScope⟩ := memAns_confined readable writable answered
-      exact ⟨noHost, readScope, writeScope⟩
-  | sys impossible _ => exact False.elim impossible
-  | fp =>
-    refine ⟨?_, ?_, ?_⟩
-    · intro _ impossible
-      cases impossible
-    · intro _ touched
-      cases touched
-    · intro writesMemory
-      cases writesMemory
-
-/-- Decoding the next instruction either opens the remaining reference
-    or identifies the exact boundary where the region has finished. -/
-theorem IRContinuation.decode [Kern] {target pointer : T} {memory finish : Mem}
-    (continuation : IRContinuation target finish (.next pointer) memory) :
-    (pointer = target ∧ memory = finish) ∨ IRContinuation target finish (IR.step pointer) memory := by
-  obtain ⟨_, code⟩ := continuation
-  cases code with
-  | start => exact .inl ⟨rfl, rfl⟩
-  | extend current remaining => exact .inr (.ofRun current remaining)
-
-/-- Consuming an actual response preserves the restricted continuation
-    and its reusable read and write permissions. -/
-theorem IRContinuation.answer [kernel : Kern] {before after : imageTSO.St} {thread : Nat}
-    {reads writes : W → Prop} {reference finish : Mem} {target : T}
-    {request : Op} {resume : Ans → Res T} {answer : Ans}
-    (continuation : IRContinuation target finish (.ask request resume) reference)
-    (blind : Blind (.ask request resume))
-    (readable : ∀ byte, reference.rd byte = true → reads byte)
-    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
-    (agreement : MaskedAgreement reads writes reference (before.1.view thread))
-    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
-      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
-    (replied : imageTSO.ans before thread request answer after) :
-    ∃ updated, IRContinuation target finish (resume answer) updated ∧
-      MaskedAgreement reads writes updated (after.1.view thread) ∧
-      updated.rd = reference.rd ∧ updated.wr = reference.wr := by
-  obtain ⟨_, _, _, instruction, suffix⟩ := continuation
-  cases instruction with
-  | ask expected rest =>
-    have memory : istSpeicherOp request = true := by
-      cases request <;> first | rfl | cases expected
-    rename_i normalized
-    cases normalized with
-    | none =>
-      rw [blind.missing] at rest
-      cases rest
-    | some words =>
-      obtain ⟨sameControl, sameView⟩ :=
-        tso_scoped_memory_response blind readable writable agreement memory expected replied.1
-      have permissions := memAns_nurIn expected
-      exact ⟨_, .ofRun (sameControl.symm ▸ rest) suffix, sameView, permissions.rd, permissions.wr⟩
-  | sys impossible _ => exact False.elim impossible
-  | fp expected rest =>
-    obtain ⟨rfl, word, rfl, observed⟩ := replied.1
-    have same := nativeUnique _ _ _ _ _ rfl expected observed
-    cases same
-    exact ⟨reference, .ofRun rest suffix, agreement, rfl, rfl⟩
-
-/-- Adjacent regions preserve the unfinished part of the current
-    instruction while extending its eventual destination. -/
-theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle finish : Mem}
-    {target next : T} {count : Nat}
-    (first : IRContinuation target middle control memory)
-    (suffix : @IRReference kernel.withoutSyscalls count target middle next finish) :
-    IRContinuation next finish control memory := by
-  letI : Kern := kernel.withoutSyscalls
-  cases control with
-  | next pointer =>
-    obtain ⟨_, initial⟩ := first
-    exact ⟨_, initial.append suffix⟩
-  | ask request resume =>
-    obtain ⟨pointer, after, _, instruction, initial⟩ := first
-    exact ⟨pointer, after, _, instruction, initial.append suffix⟩
-  | fault | unk => exact False.elim first
 
 def imagePrologueFrame (output : Emitted src reserve options) (thread : Nat) : W :=
   slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) (BitVec.ofNat 64 FB)
@@ -307,10 +222,20 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   alive : state.lebt thread = true
   unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread
   writes : W → Prop
+  frameWritable : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte → writes byte
   privateWrites : ∀ byte, writes byte → imageStackFootprint output thread byte
   reference : Mem
   finish : Mem
   lowered : FunctionIRPrologue output finish root.1
+  entryWorld : World (declOf output.compiled.unit)
+  entryValues : EntryFrameValues output.image.Y output.compiled.program root.1 finish
+    (imagePrologueFrame output thread) entryWorld root.2
+  entryFrame : FrameOK finish (imagePrologueFrame output thread) (output.image.Ks - FB)
+  entryFits : frei ((declOf output.compiled.unit).params root.1)
+    (functionFrame output.compiled.program root.1).bodyReserved ≤ output.image.Ks - FB
+  header : Fin FB → Option W
+  headerStored : ∀ index : Fin FB, finish.rd64
+    (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) = header index
   running : IRContinuation (lowered.bodyEntry (imagePrologueFrame output thread)) finish control reference
   blind : Blind control
   readable : ∀ byte, reference.rd byte = true → imagePrologueReads output thread root.1 byte
@@ -322,6 +247,73 @@ abbrev ImageProloguePhase.reads [Kern] {output : Emitted src reserve options}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state) : W → Prop :=
   imagePrologueReads output thread phase.root.1
+
+/-- The prologue boundary is also valid in the projected memory used
+    to register all threads, as it agrees on this root's scoped bytes. -/
+theorem ImageProloguePhase.boundary_agrees [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory projected : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory)
+    (agrees : GleichAuf phase.reads projected memory) :
+    MaskedAgreement phase.reads phase.writes phase.finish projected := by
+  refine ⟨fun byte read => ?_, fun byte writable => ?_⟩
+  · exact ⟨(reached.1 byte read).1.trans (agrees byte read).1.symm,
+      (reached.1 byte read).2.trans (agrees byte read).2.1.symm⟩
+  · exact (reached.2 byte writable).trans
+      (agrees byte (.inl (phase.privateWrites byte writable))).2.2.symm
+
+/-- The actual issuing view has the restored arguments and snapshots
+    at the decoded prologue boundary. -/
+theorem ImageProloguePhase.entry_values [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) :
+    EntryFrameValues output.image.Y output.compiled.program phase.root.1 view
+      (imagePrologueFrame output thread) phase.entryWorld phase.root.2 :=
+  phase.entryValues.congr_read_frame phase.entryFrame phase.entryFits fun byte inside =>
+    let same := reached.1 byte (.inl (phase.privateWrites byte (phase.frameWritable byte inside)))
+    ⟨same.1.symm, same.2.symm⟩
+
+/-- Frame permissions in the actual view agree with those used by the
+    whole prologue proof, for every slot in the thread's reservation. -/
+theorem ImageProloguePhase.entry_frame [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) :
+    FrameOK view (imagePrologueFrame output thread) (output.image.Ks - FB) := by
+  have same index fits offset inside :=
+    let frame := frame_slot_byte phase.entryFrame (index := index) fits (offset := offset) inside
+    let write := phase.frameWritable _ frame
+    And.intro (reached.1 _ (.inl (phase.privateWrites _ write))).2.symm (reached.2 _ write).symm
+  refine ⟨phase.entryFrame.lt, ?_, ?_⟩
+  · intro index fits
+    rw [Mem.all_congr (fun offset inside => (same index fits offset inside).1)]
+    exact phase.entryFrame.rd index fits
+  · intro index fits
+    rw [Mem.all_congr (fun offset inside => (same index fits offset inside).2)]
+    exact phase.entryFrame.wr index fits
+
+/-- The actual body sees the return, caller-frame and depth words
+    that the startup stub installed before the prologue. -/
+theorem ImageProloguePhase.entry_header [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) (index : Fin FB) :
+    view.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
+      phase.header index := by
+  have fits : index.val < output.image.Ks - FB := by
+    have withinHeader := index.isLt
+    have room := phase.entryFits
+    unfold frei at room
+    omega
+  rw [frame_word_agrees phase.entryFrame fits (fun byte inside =>
+    let same := reached.1 byte (.inl (phase.privateWrites byte (phase.frameWritable byte inside)))
+    ⟨same.1.symm, same.2.symm⟩)]
+  exact phase.headerStored index
 
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
@@ -335,7 +327,9 @@ def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
     (alive : nextState.lebt thread = true) (sameHead : nextState.m.faeden thread = state.m.faeden thread) :
     ImageProloguePhase output E thread control nextMemory nextState :=
   ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered,
-    phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered, phase.running, phase.blind,
+    phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
+    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored,
+    phase.running, phase.blind,
     phase.readable, phase.writable, ⟨fun byte inside =>
       ⟨(phase.agrees.1 byte inside).1.trans (sameReads byte inside).1.symm,
         (phase.agrees.1 byte inside).2.trans (sameReads byte inside).2.symm⟩,
@@ -354,7 +348,8 @@ theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
   rcases IRContinuation.decode phase.running with ⟨boundary, reference⟩ | progress
   · exact .inl ⟨boundary, reference ▸ phase.agrees⟩
   · exact .inr ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
-      phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered, progress,
+      phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
+      phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored, progress,
       blind_step pointer, phase.readable, phase.writable, phase.agrees⟩⟩
 
 theorem ImageProloguePhase.request_scope [Kern] {output : Emitted src reserve options}
@@ -379,7 +374,9 @@ theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
   obtain ⟨updated, progress, kept, readMap, writeMap⟩ :=
     IRContinuation.answer phase.running phase.blind phase.readable phase.writable phase.agrees nativeUnique response
   exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
-    phase.writes, phase.privateWrites, updated, phase.finish, phase.lowered, progress, phase.blind.weiter answer,
+    phase.writes, phase.frameWritable, phase.privateWrites, updated, phase.finish, phase.lowered,
+    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored,
+    progress, phase.blind.weiter answer,
     fun byte permit => phase.readable byte (by simpa only [readMap] using permit),
     fun byte permit => phase.writable byte (by simpa only [writeMap] using permit), kept⟩⟩
 

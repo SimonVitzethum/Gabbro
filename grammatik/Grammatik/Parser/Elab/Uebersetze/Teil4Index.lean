@@ -283,6 +283,25 @@ def uRelativeSlice (ctx : UCtx) (blatt : SExpr → Except String USide) (minimum
     some (begin, .sub finish begin, lastLo - firstHi)
   else none
 
+/-- Adjacent endpoints share the same lexical start in `a[i .. i + n]`.
+    The extent is `n` even when the endpoint intervals overlap. -/
+def uRelativeSliceWithLength (ctx : UCtx) (blatt : SExpr → Except String USide) (minimum : Int) :
+    SExpr → SExpr → Option (USide × USide × Int)
+  | .variable start, .bin op (.variable repeated) count => do
+    if strEq op "+" && strEq start repeated then
+      let (startLo, startHi, offset) ← uSliceInteger ctx blatt (.variable start)
+      let (countLo, countHi, length) ← uSliceInteger ctx blatt count
+      if 0 ≤ startLo ∧ 0 ≤ countLo ∧ startHi + countHi ≤ minimum then
+        some (offset, length, countLo)
+      else none
+    else none
+  | _, _ => none
+
+def uSliceExtent (ctx : UCtx) (blatt : SExpr → Except String USide) (minimum : Int)
+    (first last : SExpr) : Option (USide × USide × Int) :=
+  (uRelativeSlice ctx blatt minimum first last).orElse
+    (fun _ => uRelativeSliceWithLength ctx blatt minimum first last)
+
 /-- The offset is always relative to the original carrier.
     A subslice only adds to this offset and replaces its visible length. -/
 structure USliceView where
@@ -299,16 +318,16 @@ def uSliceView (ctx : UCtx) (blatt : SExpr → Except String USide) :
       let (begin, length, minimum) ←
         match uFixedLocalArrayExtent ctx blatt (.param array) first last with
         | some (_, count, start) => some (start, .lit (Int.ofNat count), (count : Int))
-        | none => uRelativeSlice ctx blatt capacity first last
+        | none => uSliceExtent ctx blatt capacity first last
       some ⟨.param array, begin, length, minimum⟩
     else none
   | .built "#slice" [.ext .text [text] [], first, last] => do
     let bytes := text.toUTF8.toList
-    let (begin, length, minimum) ← uRelativeSlice ctx blatt bytes.length first last
+    let (begin, length, minimum) ← uSliceExtent ctx blatt bytes.length first last
     some ⟨.text (bytes.map (fun byte => Int.ofNat byte.toNat)), begin, length, minimum⟩
   | .built "#slice" [base, first, last] => do
     let view ← uSliceView ctx blatt base
-    let (begin, length, minimum) ← uRelativeSlice ctx blatt view.minimum first last
+    let (begin, length, minimum) ← uSliceExtent ctx blatt view.minimum first last
     some ⟨view.carrier, .add view.offset begin, length, minimum⟩
   | _ => none
 termination_by source => sizeOf source

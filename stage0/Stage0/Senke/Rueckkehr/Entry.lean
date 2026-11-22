@@ -10,6 +10,13 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 set_option maxHeartbeats 2000000
 
+/-- Complete typed values established by the function's entry frame. -/
+structure EntryFrameValues (L : Lay D) (P : Programm D) (f : D.Fn)
+    (memory : Runner.Mem) (fp : Runner.W) (entry : World D) (args : Env D (D.params f)) : Prop where
+  original : EnvAt L memory fp args (functionFrame P f).ensReserved
+  lexical : EnvAt L memory fp args (functionFrame P f).bodyReserved
+  snapshots : EntrySnapshots.At L entry memory fp (oldCells (P.ensures f)) FB
+
 /-- The entry frame reads only its parameters and the captured source cells. -/
 theorem entryFrame_run (P : Programm D) (f : D.Fn)
     {snap : List II} {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {σ : World D}
@@ -32,9 +39,7 @@ theorem entryFrame_run (P : Programm D) (f : D.Fn)
     ∃ m', Star ⟨pc, fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (2 * contextWords (D.params f) + snap.length)), fp⟩ m' ∧
       Agree fp FB K m m' ∧
-      EnvAt L m' fp ρ (functionFrame P f).ensReserved ∧
-      EnvAt L m' fp ρ (functionFrame P f).bodyReserved ∧
-      EntrySnapshots.At L σ m' fp (oldCells (P.ensures f)) FB := by
+      EntryFrameValues L P f m' fp σ ρ := by
   let layout := functionFrame P f
   change frei (D.params f) layout.bodyReserved ≤ K at fits
   change CodeAt m pc (relocateC FB layout.ensReserved (contextWords (D.params f)) ++
@@ -99,7 +104,7 @@ theorem entryFrame_run (P : Programm D) (f : D.Fn)
     bodyFits
   refine ⟨m3, ?_, (first.mono (by unfold FB; omega)).trans
     (second.trans (third.mono (by unfold FrameLayout.bodyParams; omega))),
-    original, by simpa only [shift] using lexical, saved3⟩
+    ⟨original, by simpa only [shift] using lexical, saved3⟩⟩
   have sizes : contextWords (D.params f) + (snap.length + contextWords (D.params f)) =
       2 * contextWords (D.params f) + snap.length := by omega
   simpa only [Nat.zero_add, relocateC_length, pc_add, Nat.add_assoc, sizes]

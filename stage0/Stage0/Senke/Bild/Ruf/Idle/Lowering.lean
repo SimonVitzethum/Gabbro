@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Funktion
 public import Stage0.Senke.Spez
 public import Stage0.Senke.Welt.Spans.IdleLayout
+import Stage0.Senke.Welt.Spans.IdleValue
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil2
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
@@ -161,6 +162,12 @@ private theorem oldCells_holdings {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
   cases equal
   rfl
 
+theorem postCells_withIdle (P : Programm D) (f : D.Fn) :
+    oldCells (P.mitRuhe.ensures (some f)) = (oldCells (P.ensures f)).map Zelle.withIdle := by
+  simp only [Programm.mitRuhe]
+  with_unfolding_all exact ((oldCells_context _ _).trans
+    ((oldCells_holdings _ _).trans (oldCells_ruE (P.ensures f))))
+
 /-- A shifted signature and its postcondition still capture each cell
     at the same address and reserve exactly the original number of words. -/
 theorem postSnapshots_withIdle (P : Programm D) (layout : Lay D) (f : D.Fn) (base : Nat) :
@@ -168,12 +175,22 @@ theorem postSnapshots_withIdle (P : Programm D) (layout : Lay D) (f : D.Fn) (bas
     let shifted := oldCells (P.mitRuhe.ensures (some f))
     EntrySnapshots.words shifted = EntrySnapshots.words cells ∧
       EntrySnapshots.capture layout.withIdle shifted base = EntrySnapshots.capture layout cells base := by
-  have cells : oldCells (P.mitRuhe.ensures (some f)) = (oldCells (P.ensures f)).map Zelle.withIdle := by
-    simp only [Programm.mitRuhe]
-    with_unfolding_all exact ((oldCells_context _ _).trans
-      ((oldCells_holdings _ _).trans (oldCells_ruE (P.ensures f))))
-  simp only [cells]
+  simp only [postCells_withIdle]
   exact EntrySnapshots.withIdle layout (oldCells (P.ensures f)) base
+
+/-- The same stored snapshot witnesses the entry world after function indices shift. -/
+theorem EntrySnapshots.At.withIdle {L : Lay D} {world : World D} {memory : Runner.Mem} {fp : Runner.W}
+    {cells : List (Zelle D)} {base : Nat} (stored : EntrySnapshots.At L world memory fp cells base) :
+    EntrySnapshots.At L.withIdle (worldR world) memory fp (cells.map Zelle.withIdle) base := by
+  induction cells generalizing base with
+  | nil => trivial
+  | cons cell rest ih =>
+    have width : valueWords cell.withIdle.ty = valueWords cell.ty := by
+      cases cell <;> simp only [Zelle.withIdle, Zelle.ty, Deklaration.mitRuhe, tyR, valueWords_mapNumbers]
+    simp only [List.map_cons, EntrySnapshots.At, width]
+    refine ⟨?_, ih stored.2⟩
+    have head := stored.1.withIdle
+    cases cell <;> exact head
 
 private theorem column_carrier (table : D.Tab) (field : D.Feld table) :
     ∀ (count start : Nat) (cell : Zelle D), cell ∈ EntrySnapshots.column table field start count →

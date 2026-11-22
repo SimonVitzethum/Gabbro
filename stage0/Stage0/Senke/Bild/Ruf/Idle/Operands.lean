@@ -38,10 +38,10 @@ private theorem wordCompatB_tyR : ∀ t : Ty, wordCompatB (tyR t) = wordCompatB 
   | .arr _ 0 | .arr _ (_ + 2) | .ptr ⟨_, _, .table _⟩
   | .int .. | .bool | .opt .. | .why .. | .never | .fl .. | .fnptr .. | .ref .. | .str .. | .prod .. => rfl
 
-private theorem aggregateFits_tyR (ty : Ty) : aggregateFits (tyR ty) = aggregateFits ty := by
+theorem aggregateFits_tyR (ty : Ty) : aggregateFits (tyR ty) = aggregateFits ty := by
   simp only [aggregateFits, wordCompatB_tyR, tyR, valueWords_mapNumbers]
 
-private theorem slotC_withIdle (L : Lay D) (t : D.Tab) (f : D.Feld t) (dest : Nat) (index : List II × Nat) :
+theorem slotC_withIdle (L : Lay D) (t : D.Tab) (f : D.Feld t) (dest : Nat) (index : List II × Nat) :
     slotC L.withIdle t f dest index = slotC L t f dest index := by
   have compat : aggregateFits (D.mitRuhe.typ t f) = aggregateFits (D.typ t f) := aggregateFits_tyR _
   simp only [slotC, compat, slotA, Lay.withIdle]

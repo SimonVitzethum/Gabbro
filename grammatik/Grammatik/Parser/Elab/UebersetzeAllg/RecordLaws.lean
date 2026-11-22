@@ -252,6 +252,32 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
           · cases accepted
         · cases accepted
       · cases accepted
+    case idx array offset =>
+      simp only [specCompositeArgumentFits, specCompositeIndexFits] at accepted
+      split at accepted
+      · next name index =>
+        split at accepted
+        · next element capacity selected =>
+          obtain ⟨⟨rfl, first, last⟩, known⟩ :=
+            (Bool.and_eq_true_iff.mp accepted).imp of_decide_eq_true id
+          have baseAccepted : specCompositeArgumentFits ctx (.param name) (.arr element capacity) = true := by
+            simp only [specCompositeArgumentFits, selected, decide_true, Bool.and_true, known]
+          obtain ⟨_, fitted⟩ := lexical name (.arr element capacity) baseAccepted
+          obtain ⟨base, lowered⟩ := lowWertE_aggregate_of_fit (.inr ⟨element, capacity, rfl⟩)
+            (by cases read : lowWertE u Γ Λ fn er (.param name) <;>
+              simp only [lowWertAtE, read, Except.bind]) fitted
+          have high : index ≤ (capacity : Int) - 1 := by omega
+          let position : Expr (declOf u) Γ Λ (.index capacity) := .widen first high (.lit index)
+          have access : lowWertE u Γ Λ fn er (.idx (.param name) (.lit index)) =
+              .ok ⟨element, .arrGet base position⟩ := by
+            rw [lowWertE]
+            · simp only [lowered, lowWertE, LowSide.wert, zahlVon, LowWert.zahl, idxW,
+                dite_eq_left first, dite_eq_left high, position] <;> rfl
+            · intro _ _ _ impossible
+              cases impossible
+          exact ⟨.arrGet base position, by simp only [lowWertAtE, access, fitW, dite_true] <;> rfl⟩
+        · cases accepted
+      · cases accepted
     all_goals
       apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
       simpa only [specCompositeArgumentFits, scope] using accepted
