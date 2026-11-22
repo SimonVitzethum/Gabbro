@@ -339,4 +339,35 @@ theorem memAns_gleich {m1 m2 m1' : Mem} {o : Op} {a : Ans} (hg : GleichAuf (fuss
   | sys q => simp only [memAns, reduceCtorEq] at h
   | fp kind x y => simp only [memAns, reduceCtorEq] at h
 
+/-- Replay needs write permission agreement only for requests that
+    may write. In particular, reads can share bytes whose write
+    permission is masked in the reference execution. -/
+theorem memAns_replay {before actual after : Mem} {request : Op} {answer : Ans}
+    (agree : ∀ byte, fussOp request byte →
+      before.b byte = actual.b byte ∧ before.rd byte = actual.rd byte ∧
+        (schreibtOp request = true → before.wr byte = actual.wr byte))
+    (step : memAns before request = some (answer, after)) :
+    ∃ updated, memAns actual request = some (answer, updated) ∧
+      ∀ byte, fussOp request byte → after.b byte = updated.b byte ∧ after.rd byte = updated.rd byte := by
+  by_cases writes : schreibtOp request = true
+  · obtain ⟨updated, answered, contents⟩ :=
+      memAns_gleich (fun byte included => by
+        obtain ⟨data, read, write⟩ := agree byte included
+        exact ⟨data, read, write writes⟩) step
+    exact ⟨updated, answered, fun byte included =>
+      ⟨(contents byte included).1, (contents byte included).2.1⟩⟩
+  · cases request with
+    | rd width base =>
+      let view : Mem := { actual with wr := before.wr }
+      have same : GleichAuf (fussOp (.rd width base)) before view :=
+        fun byte read => ⟨(agree byte read).1, (agree byte read).2.1, rfl⟩
+      rw [memAns_rd] at step
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj step)
+      have result := rdAntwort_agrees width same
+      refine ⟨actual, ?_, fun byte read => ⟨(agree byte read).1, (agree byte read).2.1⟩⟩
+      rw [memAns_rd, result]
+      rfl
+    | wr | cas => exact (writes rfl).elim
+    | sys | fp => cases step
+
 end Gabbro.Stage0.Senke.BildMehr

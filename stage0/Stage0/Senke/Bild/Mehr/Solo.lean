@@ -63,6 +63,12 @@ theorem RunP.remaining {start current : Res T} {before now : Mem}
       obtain ⟨rfl, rfl⟩ := same
       exact ih later
 
+/-- A reference can mask writes to shared read-only bytes. It agrees
+    with the actual memory on the permissions that can affect it. -/
+def MaskedAgreement (reads writes : W → Prop) (reference actual : Mem) : Prop :=
+  (∀ byte, reads byte → reference.b byte = actual.b byte ∧ reference.rd byte = actual.rd byte) ∧
+  (∀ byte, writes byte → reference.wr byte = actual.wr byte)
+
 /-- A successful reference instruction in memory restricted to the
     declared regions determines every actual request of that instruction.
     Memory outside its write region is preserved. -/
@@ -71,8 +77,8 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
     (ran : RunM r reference target finish) (tree : Blind r)
     (readable : ∀ byte, reference.rd byte = true → reads byte)
     (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
-    {actual : Mem} (agrees : GleichAuf reads reference actual) :
-    ∃ result, RunM r actual target result ∧ GleichAuf reads finish result ∧
+    {actual : Mem} (agrees : MaskedAgreement reads writes reference actual) :
+    ∃ result, RunM r actual target result ∧ MaskedAgreement reads writes finish result ∧
       (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
       ∀ {current : Mem} {request : Op} {resume : Ans → Res T},
         RunP r actual (.ask request resume) current →
@@ -91,15 +97,23 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
     | some words =>
       have confined := memAns_confined readable writable answered
       obtain ⟨advanced, sameAnswer, sameTouched⟩ :=
-        memAns_gleich (fun y touched => agrees y (confined.1 y touched)) answered
+        memAns_replay (fun byte touched =>
+          ⟨(agrees.1 byte (confined.1 byte touched)).1, (agrees.1 byte (confined.1 byte touched)).2,
+            fun writesRequest => agrees.2 byte (confined.2 writesRequest byte touched)⟩) answered
       have referenceStable := memAns_nurIn answered
       have actualStable := memAns_nurIn sameAnswer
-      have sameRegion : GleichAuf reads middle advanced := by
-        intro byte included
-        by_cases touched : fussOp op byte
-        · exact sameTouched byte touched
-        · exact (referenceStable.gleichAt touched).trans
-            ((agrees byte included).trans (actualStable.gleichAt touched).symm)
+      have sameRegion : MaskedAgreement reads writes middle advanced := by
+        refine ⟨?_, ?_⟩
+        · intro byte included
+          by_cases touched : fussOp op byte
+          · exact sameTouched byte touched
+          · have b := (referenceStable.gleichAt touched).1
+            exact ⟨b.trans ((agrees.1 byte included).1.trans (actualStable.gleichAt touched).1.symm),
+              (congrFun referenceStable.rd byte).trans
+                ((agrees.1 byte included).2.trans (congrFun actualStable.rd byte).symm)⟩
+        · intro byte included
+          exact (congrFun referenceStable.wr byte).trans
+            ((agrees.2 byte included).trans (congrFun actualStable.wr byte).symm)
       obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _)
         (fun byte permission => readable byte (by simpa only [referenceStable.rd] using permission))
         (fun byte permission => writable byte (by simpa only [referenceStable.wr] using permission)) sameRegion
