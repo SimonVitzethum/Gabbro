@@ -129,7 +129,10 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     exact .inr (last.trans_le (fpValue ▸ far.2.2))
   refine ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl, ?_⟩
   intro control actual solo
-  simpa only [ownFrame] using confined (imageRootReads output 0) readFrame readCode solo
+  rcases confined (imageRootReads output 0) readFrame readCode solo with inside | pending
+  · exact .inl (Eq.mp (congrArg (fun writes => BildMehr.HostFreeControl (imageRootReads output 0) writes control)
+      ownFrame) inside)
+  · exact .inr pending
 
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
