@@ -107,13 +107,8 @@ public theorem pollTaskWith_except_normal {Failure : Type} (model : Model Value 
     cases event <;> rfl
   | .join left right, world => by
     rw [pollTaskWith, pollTask_join, pollTaskWith_except_normal model poll normal left world]
-    generalize pollTask model left world = first
-    obtain ⟨lp, l, middle, lc⟩ := first
     simp only [bind, Except.bind]
-    rw [pollTaskWith_except_normal model poll normal right middle]
-    generalize pollTask model right middle = second
-    obtain ⟨rp, r, after, rc⟩ := second
-    cases lp <;> cases rp <;> rfl
+    rw [pollTaskWith_except_normal model poll normal right (pollTask model left world).2.2.1] <;> rfl
 termination_by structural task _ => task
 
 public inductive Event (Value : Type) where
