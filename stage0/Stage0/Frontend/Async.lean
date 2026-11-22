@@ -141,12 +141,13 @@ public structure CanonicalExpression (u : UProg) (Λ : List (Res (declOf u))) (c
 /-- Literal return expressions need no incoming frame slot. This
     inhabits the ordinary source-to-segment elaboration premises. -/
 public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res (declOf u)))
-    (ctx : UCtx) (fn : UFn) (function : AsyncFn) (value : Int) :
+    (ctx : UCtx) (fn : UFn) (function : AsyncFn) (value : Nat) :
     ∃ resolved : CanonicalExpression u Λ ctx fn function (.lit value),
       resolveExpression u Λ ctx fn function (.lit value) = .ok resolved ∧
       resolved.bound.locals = [] ∧ resolved.bound.result = .int value value := by
   have noBindings : expressionBindings function (.lit value) = [] := by
-    simp only [expressionBindings, expressionNames, List.contains_nil, List.filter_false]
+    simp only [expressionBindings, expressionNames, List.contains_nil, List.filter_eq_nil_iff,
+      Bool.false_eq_true, not_false_eq_true, implies_true]
   simp only [resolveExpression, expressionParameters, noBindings, List.mapM_nil, pure, Except.pure]
   simp only [uWertBody, uRechne, uWertBlatt, lowWertE, LowSide.wert, FrameLocals, List.map_nil,
     CanonicalExpression.bound, BoundExpression.ofExpr]

@@ -191,7 +191,9 @@ theorem nestedLocalArraySlice_erfuellbar (element : Ty) (capacity : Nat) (fits :
   refine ⟨scope, nestedLocalArraySlice_observations scope (uWertBlatt scope) "a" element capacity
     (.variable "i") (.variable "j") (.lit 1) (.lit 2) (.lit 0)
     (.param "i") (.sub (.param "j") (.param "i")) (.lit 1) (.sub (.lit 2) (.lit 1)) (.lit 0)
-    3 1 0 0 array readArray rfl outer ?_ ?_ (by decide)⟩ <;> rfl
+    3 1 0 0 array readArray rfl outer ?_ ?_ (by decide)⟩ <;>
+    simp only [uRelativeSlice, uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some,
+      bind, Option.bind] <;> rfl
 
 /-- The actual typed elaborator emits one array read with the translated
     index. The outer start, inner start and selected index are evaluated once. -/
