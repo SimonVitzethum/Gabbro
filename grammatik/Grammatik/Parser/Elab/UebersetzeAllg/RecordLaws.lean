@@ -93,13 +93,14 @@ private theorem lowLitFields_of_fields (u : UProg) (Γ : Ctx) (Λ : List (Res (d
     ∃ args : Args (declOf u) Γ Λ (fields.map Prod.fst),
       lowLitFields (fields.map Prod.fst) fields = .ok args := by
   induction fields with
-  | nil => exact ⟨.nil, by simp only [List.map_nil, lowLitFields]⟩
+  | nil => exact ⟨.nil, by change lowLitFields [] [] = .ok .nil; rw [lowLitFields]⟩
   | cons field rest ih =>
     obtain ⟨value, lowValue⟩ := lower field List.mem_cons_self
     obtain ⟨args, lowArgs⟩ := ih (fun entry present => lower entry (List.mem_cons_of_mem _ present))
-    cases field
+    rcases field with ⟨ty, raw⟩
     exact ⟨.cons value args, by
-      simp only [List.map_cons, lowLitFields, bne_self_eq_false, Bool.false_eq_true, ite_false,
+      change lowLitFields (ty :: rest.map Prod.fst) ((ty, raw) :: rest) = .ok (.cons value args)
+      simp only [lowLitFields, bne_self_eq_false, Bool.false_eq_true, ite_false,
         lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
 
 theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
@@ -266,7 +267,7 @@ private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
   | nil => rfl
   | cons value rest ih =>
     change uArraySides ctx
-      ((if value then SExpr.tru else SExpr.fls) :: rest.map (fun n => if n then .tru else .fls)) read = _
+      ((if value then SExpr.tru else SExpr.fls) :: rest.map (fun n => if n then SExpr.tru else SExpr.fls)) read = _
     simp only [uArraySides, List.foldr_cons]
     cases value <;>
       simp only [uRecordSide, Bool.false_eq_true, ite_false,
