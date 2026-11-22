@@ -53,8 +53,8 @@ theorem decodeArrayCarrier_pack (identity : Nat) {capacity : Nat} {τ : Ty}
     (view : ArraySliceView capacity) (source : Wert D (.arr τ capacity)) :
     decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
       (packSliceCarrier identity view source) = some (view.value source) := by
-  simp only [decodeArrayCarrier, packSliceCarrier, Int.toNat_natCast, dite_eq_left view.fits]
-  rfl
+  simp only [decodeArrayCarrier, packSliceCarrier, Int.toNat_natCast]
+  rw [dif_pos view.fits]
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/
@@ -75,15 +75,20 @@ theorem decodeStringCarrier_pack (identity : Nat) {capacity : Nat}
       (packSliceCarrier identity view source) =
         some (strBoundedSliceValue source view.offset (view.offset + view.length)
           ⟨Nat.le_add_right _ _, present⟩) := by
-  simp only [decodeStringCarrier, packSliceCarrier, Int.toNat_natCast, dite_eq_left present]
+  simp only [decodeStringCarrier, packSliceCarrier, Int.toNat_natCast]
+  rw [dif_pos present]
 
 theorem decodeStringCarrier_isSome {identity capacity : Nat}
     (stored : Wert D (sliceCarrierType identity capacity (.str capacity))) :
     (decodeStringCarrier (D := D) (identity := identity) (capacity := capacity) stored).isSome = true ↔
       stored.1.n.toNat + stored.2.1.n.toNat ≤ stored.2.2.1.val.length := by
   unfold decodeStringCarrier
-  split <;> simp_all only [Option.isSome_some, Option.isSome_none, Bool.false_eq_true,
-    eq_self, iff_true, false_iff]
+  dsimp only
+  by_cases fits : stored.1.n.toNat + stored.2.1.n.toNat ≤ stored.2.2.1.val.length
+  · rw [dif_pos fits, Option.isSome_some]
+    exact ⟨fun _ => fits, fun _ => rfl⟩
+  · rw [dif_neg fits, Option.isSome_none]
+    exact ⟨by decide, fun yes => (fits yes).elim⟩
 
 /-- The concrete carrier premises hold for every array and every
     half-open range, including an empty range at the end. -/
