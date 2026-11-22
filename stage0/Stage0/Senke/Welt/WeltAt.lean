@@ -113,7 +113,7 @@ theorem valueAt_world_stab {m m' : Runner.Mem} {fp : Runner.W} {K address : Nat}
   rwa [addr] at h
 
 theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
-    {requireWrites : Bool := true} (hl : LayIn L)
+    {requireWrites : Bool} (hl : LayIn L)
     (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ requireWrites) fp K := by
   intro m m' hm ha
   obtain ⟨hs, hg, hwr⟩ := hm
