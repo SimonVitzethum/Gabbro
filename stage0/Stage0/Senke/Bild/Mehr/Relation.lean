@@ -151,4 +151,110 @@ theorem MTRel.append_pending_root {P : Programm D} {O : Orakel D} {passes : Nat}
   · rw [machine]
     exact related.welt
 
+/-- Once startup enters a lowered body, replace its empty slot by the
+    exact source position. Existing threads and the committed GX world
+    retain their relation through the startup's private writes. -/
+theorem MTRel.enter_pending_root {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D}
+    {c : PCfg} {state : FadenMaschine D} {S : Nat → Option Solo}
+    {X : Nat → MLage D} {committed memory : Runner.Mem} {i : Nat} {entry : MLage D}
+    (related : MTRel P O passes L c state S X committed)
+    (empty : c.ths[i]? = some none)
+    (entryOK : entry.Ok) (exactProgram : entry.B.P = P ∧ entry.B.O = O ∧ entry.B.passes = passes ∧ entry.B.L = L)
+    (live : state.lebt entry.thr = true) (waiting : state.wartet entry.thr = [])
+    (head : state.m.faeden entry.thr = entry.M.faeden entry.thr)
+    (fresh : ∀ j s, S j = some s → (X j).thr ≠ entry.thr)
+    (footprint writes : Runner.W → Prop)
+    (inside : ∀ byte, writes byte → footprint byte)
+    (agrees : GleichAuf footprint memory entry.mb)
+    (outside : ∀ byte, ¬ writes byte → GleichAt memory c.m byte)
+    (entryPrivate : ∀ j s, S j = some s → ∀ byte, writes byte → ¬ s.F byte)
+    (existingPrivate : ∀ j s, S j = some s → ∀ byte, s.Wr byte → ¬ footprint byte) :
+    MTRel P O passes L ⟨memory, c.ths.set i (some (.next entry.start))⟩ state
+      (setzeS S i ⟨.next entry.start, entry.mb, footprint, writes⟩)
+      (fun j => if j = i then entry else X j) committed := by
+  let added : Solo := ⟨.next entry.start, entry.mb, footprint, writes⟩
+  have slot := (List.getElem?_eq_some_iff.mp empty).1
+  have ready (j : Nat) (s : Solo) (found : setzeS S i added j = some s) :
+      j = i ∧ s = added ∨ j ≠ i ∧ S j = some s := setzeS_fall found
+  refine {
+    zustand := ?_
+    lebend := ?_
+    mem := ⟨?_, ?_, ?_⟩
+    lage := ?_
+    prog := ?_
+    solo := ?_
+    lebtG := ?_
+    inj := ?_
+    amRand := ?_
+    welt := related.welt
+    aussen := ?_ }
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · exact List.getElem?_set_self slot
+    · exact (List.getElem?_set_ne other.symm).trans (related.zustand j s previous)
+  · intro j r found
+    by_cases same : j = i
+    · subst j
+      exact ⟨added, setzeS_self _ _ _⟩
+    · change (c.ths.set i (some (.next entry.start)))[j]? = some (some r) at found
+      rw [List.getElem?_set_ne same.symm] at found
+      obtain ⟨s, previous⟩ := related.lebend j r found
+      exact ⟨s, (setzeS_ne S added same).trans previous⟩
+  · intro j s known byte read
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨_, previous⟩
+    · exact agrees byte read
+    · exact (outside byte (fun written => entryPrivate j s previous byte written read)).trans
+        (related.mem.gleich j s previous byte read)
+  · intro j s known byte written
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨_, previous⟩
+    · exact inside byte written
+    · exact related.mem.wrF j s previous byte written
+  · intro j k s u distinct left right byte written
+    rcases ready j s left with ⟨rfl, rfl⟩ | ⟨_, leftOld⟩ <;>
+      rcases ready k u right with ⟨rfl, rfl⟩ | ⟨_, rightOld⟩
+    · exact (distinct rfl).elim
+    · exact entryPrivate k u rightOld byte written
+    · exact existingPrivate j s leftOld byte written
+    · exact related.mem.getrennt j k s u distinct leftOld rightOld byte written
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · simpa only [ite_true] using entryOK
+    · simpa only [ite_eq_right other] using related.lage j s previous
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · simpa only [ite_true] using exactProgram
+    · simpa only [ite_eq_right other] using related.prog j s previous
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · simpa only [ite_true] using soloLauf_start entry.start entry.mb
+    · simpa only [ite_eq_right other] using related.solo j s previous
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · simpa only [ite_true] using And.intro live waiting
+    · simpa only [ite_eq_right other] using related.lebtG j s previous
+  · intro j k s u left right same
+    rcases ready j s left with ⟨rfl, rfl⟩ | ⟨otherJ, leftOld⟩ <;>
+      rcases ready k u right with ⟨rfl, rfl⟩ | ⟨otherK, rightOld⟩
+    · rfl
+    · simp only [ite_true, ite_eq_right otherK] at same
+      exact (fresh k u rightOld same.symm).elim
+    · simp only [ite_eq_right otherJ, ite_true] at same
+      exact (fresh j s leftOld same).elim
+    · simp only [ite_eq_right otherJ, ite_eq_right otherK] at same
+      exact related.inj j k s u leftOld rightOld same
+  · intro j s known
+    rcases ready j s known with ⟨rfl, rfl⟩ | ⟨other, previous⟩
+    · simpa only [ite_true] using head
+    · simpa only [ite_eq_right other] using related.amRand j s previous
+  · intro byte unwritten
+    refine (outside byte (unwritten i added (setzeS_self _ _ _))).trans (related.aussen byte ?_)
+    intro j s previous
+    have other : j ≠ i := by
+      intro same
+      subst j
+      have present := related.zustand i s previous
+      rw [empty] at present
+      cases present
+    exact unwritten j s ((setzeS_ne S added other).trans previous)
+
 end Gabbro.Stage0.Senke.BildMehr
