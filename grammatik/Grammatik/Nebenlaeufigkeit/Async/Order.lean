@@ -104,9 +104,8 @@ private theorem asyncReady_exists {functions todo : List AsyncFn} {defined : Lis
       · classical
         rw [List.all_eq_true] at ready
         obtain ⟨child, missing⟩ := Classical.not_forall.mp ready
-        have used : child ∈ function.callees := by
-          by_contra absent
-          exact missing (fun member => False.elim (absent member))
+        have used : child ∈ function.callees :=
+          Classical.byContradiction (fun absent => missing (fun member => False.elim (absent member)))
         have undefined : child ∉ defined := fun present =>
           missing (fun _ => List.contains_iff_mem.mpr present)
         exact ih child ⟨function, remaining function member, rfl, used⟩
@@ -141,10 +140,8 @@ public theorem arrangeAsync_complete {functions : List AsyncFn}
       let deferred := todo.filter fun function => !ready function
       obtain ⟨function, member, eligible⟩ := asyncReady_exists wellFounded remaining closed (List.cons_ne_nil _ _)
       have chosen : function ∈ available := List.mem_filter.mpr ⟨member, eligible⟩
-      have notEmpty : available.isEmpty = false := by
-        cases available with
-        | nil => cases chosen
-        | cons => rfl
+      have notEmpty : available.isEmpty = false :=
+        List.isEmpty_eq_false_iff_exists_mem.mpr ⟨function, chosen⟩
       have smaller : deferred.length ≤ fuel := by
         have positive : 0 < available.length := List.length_pos_of_mem chosen
         have same := (List.filter_append_perm ready todo).length_eq
@@ -171,9 +168,13 @@ public theorem arrangeAsync_complete {functions : List AsyncFn}
       | error reason => simp only [result, Except.isOk, Except.toBool, Bool.false_eq_true] at continues
       | ok ordered =>
         change (arrangeAsync (fuel + 1) defined (head :: tail)).isOk = true
-        simp only [arrangeAsync, show (head :: tail).filter ready = available from rfl, notEmpty,
-          Bool.false_eq_true, ite_false, bind, Except.bind]
-        simp only [show List.filter (fun function => !function.callees.all defined.contains) (head :: tail) =
-          deferred from rfl, result, pure, Except.pure, Except.isOk, Except.toBool]
+        rw [arrangeAsync]
+        change (do
+          if available.isEmpty then throw "async: unknown or recursive future dependency"
+          let rest ← arrangeAsync fuel (defined ++ available.map AsyncFn.name) deferred
+          return ⟨available ++ rest.val, _⟩ :
+            Except String { ordered : List AsyncFn // ordered.Perm (head :: tail) }).isOk = true
+        simp only [notEmpty, Bool.false_eq_true, ite_false, bind, Except.bind, result,
+          pure, Except.pure, Except.isOk, Except.toBool]
 
 end Gabbro.Grammatik.Async
