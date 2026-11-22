@@ -29,7 +29,7 @@ theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {me
       (fun base => layU_sync output.compiled.unit output.tor base)
   have actual := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
   have main := codeAt_right (a := spawnC (startScratch output.compiled.main) spawnSites) (by
-    simpa only [List.append_assoc] using actual :
+    simpa only [Emitted.starts, List.append_assoc] using actual :
       CodeAt memory (BitVec.ofNat 64 codeBase)
         (spawnC (startScratch output.compiled.main) spawnSites ++
           (startC output.image.A output.compiled.main output.image.depth 231 true ++
@@ -417,8 +417,11 @@ private theorem function_depth_guard [Kern] (output : Emitted src reserve option
   simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
   obtain ⟨req, _, ensures, _, body, _, snapshot, _, shape, _⟩ := lowered
   rw [← shape] at decoded
-  refine ⟨_, ?_⟩
-  simpa only [List.append_assoc, scratch] using decoded
+  let layout := functionFrame output.compiled.program fn
+  refine ⟨req.1 ++ guardC scratch 101 scratch ++
+    relocateC FB layout.ensReserved layout.parameterWords ++ snapshot ++
+    relocateC layout.ensParams (layout.bodyReserved - layout.ensReserved) layout.parameterWords ++ body.1, ?_⟩
+  simpa only [List.append_assoc, scratch, layout] using decoded
 
 /-- A zero depth word at an emitted function entry branches directly
     to the stop for that function's model depth exhaustion. -/
@@ -440,11 +443,11 @@ theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
   have guard : CodeAt (before.ms.1.view thread) pc (guardC 2 105 scratch) :=
     codeAt_left decoded
   have branch := tso_guard_fail (before := imageToTSO before) running guard
-    (by rw [show sx (II.f (Int.ofNat 2)) = BitVec.ofNat 64 2 by decide]; exact zero)
+    (by rw [show sx (II.f ((2 : Nat) : Int)) = BitVec.ofNat 64 2 by decide]; exact zero)
   refine ⟨tso_silent_prefix_image branch rfl, ?_, ?_⟩
-  · have tail := codeAt_right (a := [ci 19 (Int.ofNat 2) 32 0, ci 18 64 0 0]) (by
+  · have tail := codeAt_right (a := [ci 19 ((2 : Nat) : Int) 32 0, ci 18 64 0 0]) (by
       simpa only [guardC] using guard : CodeAt (before.ms.1.view thread) pc
-        ([ci 19 (Int.ofNat 2) 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
+        ([ci 19 ((2 : Nat) : Int) 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
     exact tail
   · simp only [rufRumpf]
 
@@ -473,8 +476,10 @@ theorem Emitted.root_depth_guard_pass [Kern] (output : Emitted src reserve optio
     have equal := congrArg BitVec.toNat zero
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits] at equal
     exact (Nat.ne_of_gt layout.depth_pos) equal
-  have stepped := tso_guard_pass (before := imageToTSO before) running (codeAt_left decoded)
-    (by rw [show sx (II.f (Int.ofNat 2)) = BitVec.ofNat 64 2 by decide]; exact word) nonzero
+  have guard : CodeAt (before.ms.1.view thread) pc
+      (guardC 2 105 (functionFrame output.compiled.program fn).canonicalResult) := codeAt_left decoded
+  have stepped := tso_guard_pass (before := imageToTSO before) running guard
+    (by rw [show sx (II.f ((2 : Nat) : Int)) = BitVec.ofNat 64 2 by decide]; exact word) nonzero
   exact ⟨rest, tso_silent_prefix_image stepped rfl, codeAt_right decoded⟩
 
 end Gabbro.Stage0
