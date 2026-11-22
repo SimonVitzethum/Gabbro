@@ -107,4 +107,34 @@ theorem relocatedValue_measure (type : Ty) (value : Wert D type) (destination : 
 
 end
 
+/-- Global locations change with the world base. Their complete typed
+    loads and stores use the same code and frame budgets at either base. -/
+theorem globalAccess_measure (original relocated : Lay D) (global : D.Glob) (destination : Nat)
+    (first : original.ga global + 8 * valueWords (D.gtyp global) < 2 ^ 31)
+    (second : relocated.ga global + 8 * valueWords (D.gtyp global) < 2 ^ 31) :
+    (globalValueC original global destination).map codeMeasure =
+      (globalValueC relocated global destination).map codeMeasure ∧
+    ∀ left right, codeMeasure left = codeMeasure right →
+      (globalStoreC original global destination left).map codeMeasure =
+        (globalStoreC relocated global destination right).map codeMeasure := by
+  constructor
+  · simp only [globalValueC, if_pos first, if_pos second, Option.map_some, codeMeasure, loadSpan_length]
+  · intro left right same
+    obtain ⟨length, frame⟩ := Prod.mk.inj same
+    simp only [globalStoreC, if_pos first, if_pos second, Option.map_some, codeMeasure,
+      List.length_append, storeSpan_length, length, frame]
+
+/-- A column's absolute base is the sole relocated operand in its
+    address calculation. The index code contributes its own budget. -/
+theorem cellAddress_measure (original relocated : Lay D) (table : D.Tab) (field : D.Feld table)
+    (destination : Nat) {left right : List II × Nat} (same : codeMeasure left = codeMeasure right)
+    (first : original.col table field < 2 ^ 31) (second : relocated.col table field < 2 ^ 31) :
+    (cellAddressC original table field destination left).map codeMeasure =
+      (cellAddressC relocated table field destination right).map codeMeasure := by
+  obtain ⟨length, frame⟩ := Prod.mk.inj same
+  by_cases stride : 8 * valueWords (D.typ table field) < 2 ^ 31
+  · simp only [cellAddressC, first, second, stride, and_self, ite_true, Option.map_some,
+      codeMeasure, List.length_append, List.length_cons, List.length_nil, length, frame]
+  · simp only [cellAddressC, first, second, stride, and_false, ite_false, Option.map_none]
+
 end Gabbro.Stage0.Senke
