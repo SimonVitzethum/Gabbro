@@ -8406,6 +8406,13 @@ carrier reads for lexical operands.
 slot along the actual runner execution. The prepared clone theorem also
 identifies the new slot's original source frame.
 
+`ImageIdleBuffers.flush_preserves_unallocated_frame` preserves every byte
+and both permissions of an unallocated stack during a private store
+flush. The future-frame lemmas transfer the plain, pointer-buffer,
+result-area and futex contracts from the issuer's view to shared memory.
+Area and buffer answers use confinement of the destination to the
+issuer's reservation.
+
 ## 214. Runtime slice values and direct observations
 
 `BoundedSlice` has a static capacity and exposes only the elements within

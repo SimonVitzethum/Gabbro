@@ -433,6 +433,30 @@ theorem image_area_gate_preserves_future_frame {src : String} {reserve : Nat} {o
   exact ⟨(agreement.b byte outsideArea (fun world => outside world.1) (fun lock => outside lock.1)).symm,
     (congrFun agreement.rd byte).symm, (congrFun agreement.wr byte).symm⟩
 
+/-- A pointer-buffer gate may replace its scratch bytes. The gate
+    contract and the actual allocation keep all other stacks unchanged. -/
+theorem image_buffer_gate_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {before after : imageTSO.St}
+    {issuer future argument words : Nat} {request : Req} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1) (different : future ≠ issuer)
+    (step : imageTSO.ans before issuer (.sys request) answer after)
+    (scratch : ∀ byte : W, (reqArg request argument).toNat ≤ byte.toNat ∧
+      byte.toNat < (reqArg request argument).toNat + 8 * words → imageStackFootprint output issuer byte)
+    (gate : request ≠ cloneReq →
+      Kern.ans request (before.1.view issuer) answer (after.1.view issuer) →
+      let prior := before.1.view issuer
+      let next := after.1.view issuer
+      next.rd = prior.rd ∧ next.wr = prior.wr ∧
+        ∀ byte : W, ¬ ((reqArg request argument).toNat ≤ byte.toNat ∧
+          byte.toNat < (reqArg request argument).toNat + 8 * words) → next.b byte = prior.b byte) :
+    GleichAuf (imageStackFootprint output future) before.1.m after.1.m := by
+  apply image_host_preserves_future_frame stores different step
+  intro ordinary answered byte inFrame
+  obtain ⟨read, write, bytes⟩ := gate ordinary answered
+  refine ⟨(bytes byte ?_).symm, (congrFun read byte).symm, (congrFun write byte).symm⟩
+  intro inside
+  exact different (imageStackFootprint_disjoint inFrame (scratch byte inside))
+
 /-- The explicit futex boundary preserves the future frame byte for byte. -/
 theorem image_futex_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {before after : imageTSO.St}
