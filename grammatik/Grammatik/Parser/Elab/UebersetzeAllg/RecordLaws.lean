@@ -118,6 +118,25 @@ theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
         record_lower u Γ Λ fn er identity reordered fields args gate lowered _ exactSchema⟩
     · cases typeRead
 
+/-- A Boolean constructor field jointly satisfies the reader premises
+    for arbitrary nominal identity, field name and Boolean value. -/
+theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
+    (identity : Nat) (value : Bool) :
+    let schema : URecord := { name, identity, fields := [(label, .bool)] }
+    let ctx := { base with records := schema :: base.records }
+    let argument := SExpr.call name [.ext .label [label] [if value then .tru else .fls]]
+    let fields := [(.bool, USide.truth value)]
+    uWertBody ctx argument = .ok (.product identity false fields) ∧
+      uSpecValueArgument ctx schema.ty argument = .ok () := by
+  intro schema ctx argument fields
+  have chosen : uRecordConstructor ctx name = some schema := by
+    simp [uRecordConstructor, ctx, schema, strEq_apply_eq_decide]
+  have read : uWertBody ctx argument = .ok (.product identity false fields) := by
+    cases value <;>
+      simp [argument, fields, uWertBody, uRechne, chosen, uRecordSides, uRecordSide, uRecordValues,
+        schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure]
+  exact ⟨read, specLiteralRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl rfl⟩
+
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (raw : USide) :
