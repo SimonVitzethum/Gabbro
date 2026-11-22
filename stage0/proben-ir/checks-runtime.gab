@@ -12,7 +12,7 @@ impl fn half(x : u32 in 0 .. 1000) -> u32 in 0 .. 50 or Fault
 impl fn main() -> u32 in 0 .. 255
     effects { pure }
 {
-    let a = half(84) else (e) { return 1; };
+    let a = half(84) else (e) { return 1; }
     check a == 42 else { return 3; }
     return a;
 }

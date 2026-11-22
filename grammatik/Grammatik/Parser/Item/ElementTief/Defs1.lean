@@ -117,7 +117,7 @@ def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
             | .ok (grund, r3) => match parseFnRest f sig r3 with
               | .error e => .error e
               | .ok (.fnT sig' (.block ss ende), r) =>
-                .ok (.fnT sig' (.block (.cond (.un "!" c) (schliesseBlock [.ret (some grund)]) [] none :: ss) ende), r)
+                .ok (.fnT sig' (.block (.cond (negiere c) (schliesseBlock [.ret (some grund)]) [] none :: ss) ende), r)
               | .ok _ => .error "checks: a function with a body is required"
       else .error "fn without body"
     | .zeichen "=" :: rest => match rest with
