@@ -204,6 +204,69 @@ public theorem inv_encoded (f : AsyncFn) (types : TypeResolution) (inventory : I
   let payload : Nutzlast D.Fn D.passt (some (frameType types f)) := frame
   (⟨selected.val, Fall.ofNutzlast D.Fn D.passt _ selected.val (selected.property.symm ▸ payload)⟩, ())
 
+private theorem phaseValueAt_transport (types : TypeResolution) (f : AsyncFn)
+    (cases : List Phase) (index : Fin cases.length) {τ : Ty}
+    (same : phaseType types f (cases.get index) = τ) (value : Wert D τ) :
+    let schema := cases.map fun p => some (phaseType types f p)
+    let mapped : Fin schema.length := ⟨index.val, by simpa only [schema, List.length_map] using index.isLt⟩
+    let mappedType : schema.get mapped = some (phaseType types f (cases.get index)) :=
+      List.getElem_map (fun p => some (phaseType types f p)) (h := mapped.isLt)
+    let payload : Nutzlast D.Fn D.passt (some τ) := value
+    phaseValueAt D types f cases index (same.symm ▸ value) =
+      ⟨mapped, Fall.ofNutzlast D.Fn D.passt schema mapped
+        ((mappedType.trans (congrArg some same)).symm ▸ payload)⟩ := by
+  cases same
+  rfl
+
+/-- The computed dispatch tag and the live frame written by ordinary G
+    form the same state as the semantic running command. -/
+public theorem runningValue_inv (types : TypeResolution) (f : AsyncFn) (inventory : Inventory D)
+    (tag : Nat) (within : tag ≤ f.body.length) (frame : Frame (Value D))
+    (saved : Wert D (frameType types f)) (slots : FrameRep D types f (.running tag) frame saved)
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame)) :
+    Inv f types inventory (.running tag frame) (runningValue D types f tag within saved) := by
+  let selected := commandRunningIndex 0 f.body tag within
+  let index : Fin (phases f).length := selected.val.succ.succ
+  have active : (phases f).get index = .running tag := selected.property
+  have sameType : phaseType types f ((phases f).get index) = frameType types f :=
+    congrArg (phaseType types f) active
+  have payload : PhaseRep D types f ((phases f).get index) (.running tag frame) (sameType.symm ▸ saved) := by
+    have transport (phase : Phase) (same : phase = .running tag) :
+        PhaseRep D types f phase (.running tag frame) ((congrArg (phaseType types f) same).symm ▸ saved) := by
+      cases same
+      exact .running tag frame saved slots
+    exact transport _ active
+  have presentMarks : MarksRep inventory ((phases f).get index) (.running tag frame) := active.symm ▸ marks
+  have absent (before : Fin (phases f).length) (earlier : before.val < index.val) :
+      encodePhase D types f ((phases f).get before) (.running tag frame) = none := by
+    obtain ⟨position, inList⟩ := before
+    cases position with
+    | zero => rfl
+    | succ position =>
+      cases position with
+      | zero => rfl
+      | succ position =>
+        let previous : Fin (commandPhases 0 f.body).length :=
+          ⟨position, Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ inList)⟩
+        have closer : previous.val < selected.val.val := Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ earlier)
+        have different := commandRunningIndex_first 0 f.body tag within previous closer
+        change encodePhase D types f ((commandPhases 0 f.body).get previous) (.running tag frame) = none
+        cases atPhase : (commandPhases 0 f.body).get previous with
+        | cancelled => rfl
+        | completed => rfl
+        | waiting => rfl
+        | running current =>
+          have other : tag ≠ current := by
+            intro equal
+            exact (different (atPhase.trans (congrArg Phase.running equal.symm)))
+          exact if_neg other
+  have matched := phaseListRep_at types f inventory (.running tag frame) (phases f) index _ payload presentMarks absent
+  have exactValue : phaseValueAt D types f (phases f) index (sameType.symm ▸ saved) =
+      (runningValue D types f tag within saved).1 :=
+    phaseValueAt_transport types f (phases f) index sameType saved
+  rw [exactValue] at matched
+  exact matched
+
 public theorem runningExpr_reads (types : TypeResolution) (f : AsyncFn)
     {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
     (frame : Expr D Γ Λ (frameType types f)) :
