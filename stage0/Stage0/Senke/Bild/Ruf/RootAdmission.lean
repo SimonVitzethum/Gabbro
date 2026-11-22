@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
 import Stage0.Senke.Images.DispatchSource
 import Stage0.Senke.Bild.Ruf.GateTrace
 import Lean.Elab.Tactic.Omega
