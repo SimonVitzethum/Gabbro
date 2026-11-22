@@ -182,8 +182,48 @@ private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
       | await =>
         exact ⟨_, .later _ _ _ _ skipRun (.later _ _ _ _ rfl continuation)⟩
 
-/-- The actual Ready poll restores the complete state record. This lemma
-    covers the case where the enclosing frame's own inventory is unchanged. -/
+/-- A Ready answer from the actual call semantics restores the complete
+    encoded state when the enclosing frame retains its own inventory. -/
+public theorem await_runTaskPoll_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat)
+    (inventory : Inventory D) (tag : Nat) (destination : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future))
+    {world after : World D} {value : Value D} {successor : Task (Value D) (Child D types)}
+    {cost : Nat} (successful : runTaskPoll elaboration calls prices task world =
+      .ok (.ready value, successor, after, cost)) :
+    let resumed := State.running (Child := Child D types) (tag + 1) (save frame destination value)
+    successor = .ready value ∧
+    inventory.resources (.running (tag + 1)) = inventory.resources (.waiting tag future) ∧
+    ∃ record, Inv f types inventory resumed record ∧ encode D types f resumed = some record := by
+  intro resumed
+  obtain ⟨cached, _, restored, sameMarks⟩ :=
+    await_runTaskPoll_ready_frame elaboration calls prices tag destination future boundary rest command
+      slots represented successful
+  have within : tag + 1 ≤ f.body.length := by
+    have length := congrArg List.length command
+    simp only [List.length_drop, List.length_cons] at length
+    omega
+  have owned : MarksRep inventory (.running (tag + 1)) resumed := by
+    simpa only [MarksRep, resumed, State.marks, sameMarks, sameInventory] using marks
+  obtain ⟨_, running⟩ := runningPhaseList inventory (tag + 1) restored owned f.body 0 (tag + 1) within
+    (Nat.zero_add (tag + 1)).symm
+  have full : PhaseListRep D types f inventory (phases f) resumed _ :=
+    .later _ _ _ _ rfl (.later _ _ _ _ rfl running)
+  have invariant : Inv f types inventory resumed (_, ()) := full
+  refine ⟨cached, ?_, _, invariant, inv_encoded f types inventory resumed _ invariant⟩
+  rw [inventory.exact, inventory.exact, sameInventory]
+
+/-- The complete state and the ordinary table step agree in the total
+    model when the supplied call environment always returns normally. -/
 public theorem await_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
     (elaboration : Elaboration D V Λ types f)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
@@ -207,21 +247,12 @@ public theorem await_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
     inventory.resources (.running (tag + 1)) = inventory.resources (.waiting tag future) ∧
     ∃ record, Inv f types inventory resumed record ∧ encode D types f resumed = some record := by
   intro model answer resumed ready
-  obtain ⟨stepped, next, restored, sameMarks⟩ :=
-    await_ready_resumes elaboration calls prices normal tag destination future boundary rest command
-      frame task saved child slots represented world value ready
-  have within : tag + 1 ≤ f.body.length := by
-    have length := congrArg List.length command
-    simp only [List.length_drop, List.length_cons] at length
-    omega
-  have owned : MarksRep inventory (.running (tag + 1)) resumed := by
-    simpa only [MarksRep, resumed, State.marks, sameMarks, sameInventory] using marks
-  obtain ⟨_, running⟩ := runningPhaseList inventory (tag + 1) restored owned f.body 0 (tag + 1) within
-    (Nat.zero_add (tag + 1)).symm
-  have full : PhaseListRep D types f inventory (phases f) resumed _ :=
-    .later _ _ _ _ rfl (.later _ _ _ _ rfl running)
-  have invariant : Inv f types inventory resumed (_, ()) := full
-  refine ⟨stepped, ?_, _, invariant, inv_encoded f types inventory resumed _ invariant⟩
-  rw [inventory.exact, inventory.exact, sameInventory]
+  have successful : runTaskPoll elaboration calls prices task world =
+      .ok (.ready value, answer.2.1, answer.2.2.1, answer.2.2.2) := by
+    rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← ready]
+  refine ⟨?_, (await_runTaskPoll_ready_preserves elaboration calls prices inventory tag destination future
+    boundary rest command frame task saved child slots represented marks sameInventory successful).2⟩
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  rw [show (pollTask model task world).1 = Poll.ready value from ready]
 
 end Gabbro.Grammatik.Async.Representation

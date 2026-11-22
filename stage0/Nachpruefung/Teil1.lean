@@ -228,6 +228,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.await_resume_frame
 #print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_frame
 #print axioms Gabbro.Grammatik.Async.Representation.await_ready_resumes
+#print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_ready_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitLocalOrigins_sound
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitInventory_sound
