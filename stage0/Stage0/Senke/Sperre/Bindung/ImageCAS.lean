@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Images.Correctness
 public import Stage0.Senke.Sperre.Bindung.Simulation
+import Stage0.Senke.Bild.Mehr.PrivatePath
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -112,5 +113,68 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
         refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_⟩
         rw [memoryEq, exactMemory]
         exact ⟨represented.next, represented.serving, represented.waiters⟩
+
+/-- A real serving-word read admits the issuing ticket precisely when
+    it matches modulo the machine word. The hosted binding registers an
+    unmatched waiter, while spin retries without changing the lock state. -/
+theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {base ticket : Nat} {thread : Fin N} {before : Zustand N}
+    (strategy : LockWait) (spins : strategy = .spin → SpinState before)
+    (saved : before.pc thread = .ladeS ticket)
+    (represented : TicketWordsAt machine.ms.1.m base before)
+    (footprint : Nat → W → Prop) (buffers : PrivateBuffers footprint machine.ms.1)
+    (shared : ∀ byte, fenster (BitVec.ofNat 64 (base + 8)) byte → ∀ owner, ¬ footprint owner byte)
+    (waiting : machine.ths[thread.val]? = some (some (.ask (.rd 8 (BitVec.ofNat 64 (base + 8))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val (.rd 8 (BitVec.ofNat 64 (base + 8))) reply memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
+    ProcessStep imageTSO actI machine [] after ∧ memory = machine.ms ∧
+      (∃ extra, reply = some (BitVec.ofNat 64 before.w.serv, extra)) ∧
+      ∃ next, BindingStep strategy before thread next ∧ TicketWordsAt memory.1.m base next ∧
+        ((next.pc thread).haelt = true ↔ before.w.serv % 2 ^ 64 = ticket % 2 ^ 64) := by
+  intro after
+  let address := BitVec.ofNat 64 (base + 8)
+  have agreement : GleichAuf (fenster address) (machine.ms.1.view thread.val) machine.ms.1.m :=
+    fun byte hit => view_agrees_at (fun store pending touched =>
+      shared byte hit thread.val ((buffers thread.val store pending byte touched).1))
+  obtain ⟨memorySame, extra, result⟩ := answered.1
+  have observed : reply = some (BitVec.ofNat 64 before.w.serv, extra) := by
+    change reply = ((machine.ms.1.view thread.val).rd64 address).map (·, extra) at result
+    rw [gleich_rd64 agreement, represented.serving] at result
+    exact result
+  refine ⟨.ask waiting rfl rfl answered rfl, memorySame, ⟨extra, observed⟩, ?_⟩
+  by_cases admitted : before.w.serv % 2 ^ 64 = ticket % 2 ^ 64
+  · let next := before.mit thread (.drin ticket)
+    have stepped : Schritt before thread next := .tritt saved admitted
+    have matches : BindingStep strategy before thread next := by
+      cases strategy
+      · exact stepped
+      · refine .inl ⟨stepped, spins rfl, ?_⟩
+        intro other
+        by_cases same : other = thread
+        · subst other
+          change (upd before.pc thread (.drin ticket) thread).spin
+          rw [upd_self]
+          trivial
+        · change (upd before.pc thread (.drin ticket) other).spin
+          rw [upd_ne _ _ same]
+          exact spins rfl other
+    refine ⟨next, matches, ?_, ?_⟩
+    · rw [memorySame]
+      exact ⟨represented.next, represented.serving, represented.waiters⟩
+    · change (upd before.pc thread (.drin ticket) thread).haelt = true ↔ _
+      rw [upd_self]
+      exact ⟨fun _ => admitted, fun _ => rfl⟩
+  · cases strategy
+    · let next := before.mit thread (.incL ticket before.w.serv)
+      refine ⟨next, .wartet saved admitted, ?_, ?_⟩
+      · rw [memorySame]
+        exact ⟨represented.next, represented.serving, represented.waiters⟩
+      · change (upd before.pc thread (.incL ticket before.w.serv) thread).haelt = true ↔ _
+        rw [upd_self]
+        exact ⟨fun impossible => by cases impossible, fun equal => (admitted equal).elim⟩
+    · refine ⟨before, .inr ⟨ticket, saved, admitted, rfl⟩, memorySame.symm ▸ represented, ?_⟩
+      rw [saved]
+      exact ⟨fun impossible => by cases impossible, fun equal => (admitted equal).elim⟩
 
 end Gabbro.Stage0.Senke.Faeden
