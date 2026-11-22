@@ -32,7 +32,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     have same : t' = t := Option.some.inj (ht'.symm.trans ht)
     subst same
     exact slotValueC_ok hs hK hk hLay (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
-      (fun m stored => (hWL m stored).table _ (hRead _ (by simp only [Expr.orte, List.mem_cons, List.mem_append]; first | exact Or.inl rfl | exact Or.inr (Or.inl rfl))) f _ hk) hp
+      (fun m stored => (hWL m stored).table _ (hRead _ (by simp [Expr.orte])) f _ hk) hp
   | _, _, .arrNil, hRead, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
   | _, _, .arrCons a rest, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
@@ -327,7 +327,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     istSome_ok e (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te he hte m pc ρ hp) h hK hp
   | _, _, .glob g access, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
-    exact globalValueC_ok h hK (fun m stored => (hWL m stored).global g (hRead _ (by simp only [Expr.orte, List.mem_cons, Or.inl]))) hp
+    exact globalValueC_ok h hK (fun m stored => (hWL m stored).global g (hRead _ (by simp [Expr.orte]))) hp
   | _, _, .slot t f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp
   | _, _, .thru _ t _ f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp
   | _, _, .thruOwn _ t _ f i _ _ _ _ _ access, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
@@ -335,7 +335,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have tops := slotValueC_top hs
     have tiK : ti ≤ K := by have := tops.1; simp only at this; omega
-    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay (fun m stored => (hWL m stored).table t (hRead _ (by simp only [Expr.orte, List.mem_cons, List.mem_append]; first | exact Or.inl rfl | exact Or.inr (Or.inl rfl))) f)
+    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f)
       (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ci1 ti hci tiK m pc ρ hp).word trivial) hp
   | _, _, .case cs i nutz, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     exact case_value_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) cs i nutz
@@ -373,7 +373,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
         (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te he hte m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .getBytes t f hf n i hlo hhi access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
-    getBytes_ok i hf n hlo hhi access (fun m stored => (hWL m stored).table t (hRead _ (by simp only [Expr.orte, List.mem_cons, List.mem_append]; first | exact Or.inl rfl | exact Or.inr (Or.inl rfl))) f) hLay
+    getBytes_ok i hf n hlo hhi access (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) hLay
       (fun d ci ti hi ht m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) d ci ti hi ht m pc ρ hp).word trivial)
       h hK hp
   | _, _, .forallSlots t body _, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -383,7 +383,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     (quantL_ok false (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (inherit_reads hRead) (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
   | _, _, .reaches t f hf a b access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
-    (reachesL_ok hf (fun m stored => (hWL m stored).table t (hRead _ (by simp only [Expr.orte, List.mem_cons, List.mem_append]; first | exact Or.inl rfl | exact Or.inr (Or.inl rfl))) f) (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
+    (reachesL_ok hf (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
       (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp).word trivial)
       (fun cb tb hb htb m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb htb m pc ρ hp).word trivial) hp).value rfl
   | _, _, .count n body, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -412,10 +412,10 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) q ca ta ha hta m pc ρ hp)
       d c top h hK m pc hp
   | _, _, .oldG g access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
-    oldGlobal_ok σ₀ σ g access (fun m stored => (hWL m stored).global g (hRead _ (by simp only [Expr.orte, List.mem_cons, Or.inl]))) same h hK hp
+    oldGlobal_ok σ₀ σ g access (fun m stored => (hWL m stored).global g (hRead _ (by simp [Expr.orte]))) same h hK hp
   | _, _, .oldS t f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     oldSlot_ok σ₀ σ hLay t f i access
-      (fun m stored => (hWL m stored).table t (hRead _ (by simp only [Expr.orte, List.mem_cons, Or.inl])) f) same
+      (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) same
       (fun ci ti lower fits m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ci ti lower fits m pc ρ hp) h hK hp
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ _ => e
 theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
