@@ -270,7 +270,7 @@ private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
     simp only [uArraySides, List.foldr_cons]
     cases value <;>
       simp only [uRecordSide, Bool.false_eq_true, ite_false, ite_true, ih _ rfl,
-        bind, Except.bind, pure, Except.pure]
+        bind, Except.bind, pure, Except.pure] <;> rfl
 
 /-- The literal array accepted at a predicate parameter retains its
     declared type after substitution, including at array length zero. -/

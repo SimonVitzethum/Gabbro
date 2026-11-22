@@ -151,7 +151,7 @@ private theorem savedFutex (environment : LE baseline pc fp scratch base code)
     (tso_sys_prefix (before := imageToTSO machine) (t := pointer) (nr := 202)
       (a1 := BitVec.ofNat 64 (base + 8)) (a2 := mode) (a3 := value) (a4 := 0) (a5 := 0) (a6 := 0)
       running instruction ?_ ?_ ?_ ?_ ?_ ?_ ?_) rfl
-  all_goals rw [argsSlot]
+  all_goals simp only [ci, pointer, argsSlot]
   · simpa only [number] using slots.sl 10 (by decide)
   · rw [show (8 : W) = BitVec.ofNat 64 (8 * 1) from rfl, slot_plus]
     simpa only [address, Nat.add_assoc] using slots.sl 11 (by decide)
