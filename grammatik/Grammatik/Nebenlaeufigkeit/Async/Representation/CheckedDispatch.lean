@@ -290,15 +290,15 @@ public theorem PhasePlan.exec_refines {elaboration : Elaboration D V Λ types f}
         (.there finished) oracle passes calls world (.cons value env) frame slots (l := l)
       simp only [runActivation, List.drop_length, PhasePlan.block]
       exact refineStop inventory state finished separate (env.set state record) _
-        (Env.get_set_same env state record ▸ inv) _ _
+        ((Env.get_set_same env state record).symm ▸ inv) _ _
         (.ready (evaluateBound elaboration f.result frame world).1 frame.marks) rfl _
         (congrArg Ausgang.schrumpf ran)
   | poll checked =>
     cases selected with
     | waiting tag future frame task frameValue taskValue slots child =>
-      let payload := (frameValue, taskValue, ())
       have ran := checked.poll_simulates inventory .here (.there state) (.there finished) oracle passes
-        calls prices world (.cons payload env) frame task (.waiting tag _ frame task frameValue taskValue slots child)
+        calls prices world (.cons (frameValue, taskValue, ()) env) frame task
+        (.waiting _ _ frame task frameValue taskValue slots child)
         owned (fixed.resume checked.command) (l := l)
       simp only [runActivation, checked.command, PhasePlan.block]
       cases answer : runTaskPoll elaboration calls prices task world with
@@ -313,7 +313,7 @@ public theorem PhasePlan.exec_refines {elaboration : Elaboration D V Λ types f}
           obtain ⟨record, executed, inv, _⟩ := ran
           rw [executed]
           exact refineStop inventory state finished separate (env.set state record) _
-            (Env.get_set_same env state record ▸ inv) _ _ .pending rfl _ rfl
+            ((Env.get_set_same env state record).symm ▸ inv) _ _ .pending rfl _ rfl
         | ready result =>
           simp only [runWaitingPoll, answer, waitingReply] at ran ⊢
           obtain ⟨record, executed, inv, _⟩ := ran
