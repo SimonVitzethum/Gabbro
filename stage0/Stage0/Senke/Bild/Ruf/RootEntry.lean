@@ -131,6 +131,7 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
         (before.ms.1.view (index + 1)).rd64 (slot fp (BitVec.ofNat 64 i)) := by
     rw [view, Mem.rd64_write_far (slot_far frameOK.room (by omega) inside (by omega)),
       Mem.rd64_write_far (slot_far frameOK.room (by omega) inside (by omega))]
+    rfl
   have updatedCode : BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) := by
     have above (slotNo : Nat) (inside : slotNo < output.image.Ks)
         (byte : W) (touched : fenster (slot fp (BitVec.ofNat 64 slotNo)) byte) :
