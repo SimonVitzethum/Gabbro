@@ -80,7 +80,7 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
   all_goals
     intros
     try (apply And.intro <;> intros)
-    simp only [ruS, ruB, ruEnd, ruArms, ruGArms, lowS, lowB, lowEnd, lowTags, lowSumTags, lowGrund,
+    try simp only [ruS, ruB, ruEnd, ruArms, ruGArms, lowS, lowB, lowEnd, lowTags, lowSumTags, lowGrund,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, vslot_varR,
       lowE_withIdle, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
       retC_withIdle, retTop_withIdle, retWhyC_withIdle, retScopedC_withIdle, retWhyScopedC_withIdle,
