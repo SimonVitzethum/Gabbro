@@ -98,6 +98,19 @@ private theorem SlotsRep.save_other_fields {oldLive nextLive : List String} {fra
       (by simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr other] using found)
       typed (ih absent.2)
 
+private theorem SlotsRep.save_unobserved {live : List String} {frame : Frame (Value D)}
+    {fields : List (String × Parser.STyp)} {record : ProdVal D.Fn D.passt (slotTypes types fields)}
+    (represented : SlotsRep D types live frame fields record)
+    (name : String) (value : Value D) (unused : name ∉ live) :
+    SlotsRep D types live (save frame name value) fields record := by
+  induction represented with
+  | nil => exact .nil
+  | dead absent _ ih => exact .dead absent ih
+  | @live label previous sourceType ordinary fields rest needed found typed tail ih =>
+    have distinct : label ≠ name := fun equal => unused (equal ▸ needed)
+    exact .live needed
+      (by simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr distinct] using found) typed ih
+
 /-- Writing the computed named slot preserves the frame relation. The
     other fields retain their previous values and canonical absent tags. -/
 public theorem NamedFrameSlot.save_rep {name : String} {sourceType : Parser.STyp}
@@ -336,6 +349,56 @@ public theorem bindFrameBlock_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Li
       exact List.mem_append_right _ List.mem_cons_self
     exact List.mem_map_of_mem (f := Prod.fst) member
   · exact represented.declared name (retained name live same)
+
+/-- Emit the binding segment from its checked declaration. An unused
+    result is evaluated for its reads and then discarded. -/
+@[expose] public def lowerBinding {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (next : Phase) (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (saved : Var Γ (frameType types f)) (expression : Expr D Γ Λ (types.ordinary sourceType)) :
+    Block D V l Γ Λ Λ :=
+  if destination ∈ liveAt f next then
+    bindFrameBlock types f (without destination (liveAt f next)) saved
+      (frameSlot types destination sourceType (f.params ++ f.fields) binding).val expression
+  else evaluateBlock expression saved (trimFrameExpr types f (liveAt f next) (.there saved))
+
+/-- Every generated binding, including a discarded result, has the exact
+    source read transition and restores the canonical live frame. -/
+public theorem lowerBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {f : AsyncFn} {before next : Phase} (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
+    (saved : Var Γ (frameType types f)) (expression : Expr D Γ Λ (types.ordinary sourceType))
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (represented : FrameRep D types f before frame (env.get saved)) :
+    let answer := evaluateExpression expression world env
+    let result := Value.typed (types.ordinary sourceType) answer.1
+    ∃ record, execBlock oracle passes calls
+        (lowerBinding (V := V) (l := l) types f next destination sourceType binding saved expression) world env =
+          .ok answer.2.1 (env.set saved record) ∧
+      FrameRep D types f next (save frame destination result) record := by
+  intro answer result
+  by_cases needed : destination ∈ liveAt f next
+  · simp only [lowerBinding, if_pos needed]
+    exact bindFrameBlock_rep destination sourceType binding needed retained saved expression oracle passes calls
+      world env frame represented
+  · simp only [lowerBinding, if_neg needed]
+    have kept (name : String) (live : name ∈ liveAt f next) : name ∈ liveAt f before :=
+      retained name live (fun equal => needed (equal ▸ live))
+    let cleared : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=
+      trimFrameExpr types f (liveAt f next) (.there saved)
+    let extended : Env D (types.ordinary sourceType :: Γ) := .cons answer.1 env
+    have old : SlotsRep D types (liveAt f before) frame (f.params ++ f.fields)
+        (extended.get (.there saved)) := represented.slots
+    obtain ⟨read, trimmed⟩ := trimFrameExpr_rep (Λ := Λ) (.there saved) kept answer.2.1 answer.2.1 extended old
+    have noRead (current : World D) : current.lese Λ [] = current := rfl
+    have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression saved cleared world env
+    change cleared.orte = [] at read
+    simp only [read, noRead] at executed
+    exact ⟨_, executed, ⟨trimmed.save_unobserved destination result needed,
+      fun name live => represented.declared name (kept name live), represented.unique⟩⟩
 
 /-- Authority is the ordinary resource inventory, separate from by-value
     storage. The injective declaration numbering cannot alias two owners. -/
