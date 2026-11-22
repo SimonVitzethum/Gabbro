@@ -164,11 +164,12 @@ private theorem foreignDecode_withIdle {D : Deklaration} (O : Orakel D) (routine
     foreignDecode O.mitRuhe routine raw =
       (foreignDecode O routine raw).map (Sum.map (ergR (D.aerg routine)) id) := by
   unfold foreignDecode
-  change (if D.agruende routine = 0 then _ else _) = (if D.agruende routine = 0 then _ else _).map _
-  split
-  · rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+  by_cases zero : D.agruende routine = 0
+  · rw [if_pos (show D.mitRuhe.agruende routine = 0 from zero), if_pos zero]
+    rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
     cases einpassenErg O.zeiger (D.aerg routine) raw <;> rfl
-  · exact sonstPasst_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O) (D.aerg routine) (D.agruende routine) raw
+  · rw [if_neg (show D.mitRuhe.agruende routine ≠ 0 from zero), if_neg zero]
+    exact sonstPasst_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O) (D.aerg routine) (D.agruende routine) raw
 
 private theorem ergWert_withIdle {D : Deklaration} {τ : Ty} {e : Option Ty}
     (typed : e = some τ) (value : ErgVal D e) :
