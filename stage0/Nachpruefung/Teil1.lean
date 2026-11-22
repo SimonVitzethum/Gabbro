@@ -279,10 +279,12 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.lowerBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resumeBlock_exec
 #print axioms Gabbro.Grammatik.Async.Representation.runningValue_inv
+#print axioms Gabbro.Grammatik.Async.Representation.waitingExpr_eval
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoredBindingBlock_rep
+#print axioms Gabbro.Grammatik.Async.Representation.CheckedBinding.block_rep
 #print axioms Gabbro.Grammatik.Async.Representation.frameSlot
 #print axioms Gabbro.Grammatik.Async.Representation.evaluateBind_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_frame

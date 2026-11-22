@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Resume
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Restore
+import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -162,5 +163,68 @@ public theorem restoredBindingBlock_rep (elaboration : Elaboration D V Λ types 
   rw [show execBlock oracle passes calls block world (appendLocals locals outer) =
     .ok result.2.1 (appendLocals locals (.cons value (.cons saved .nil))) from evaluated, removeLocals_ok] at installed
   exact ⟨value, installed, invariant, encoded⟩
+
+/-- The selected ordinary binding is pinned to the actual command, its
+    elaborated expression and the live indices of the generated frame. -/
+public structure CheckedBinding (elaboration : Elaboration D V Λ types f) (tag : Nat) where
+  destination : String
+  source : Parser.SExpr
+  cost : Nat
+  rest : List Command
+  command : f.body.drop tag = Command.bind destination source cost :: rest
+  within : tag + 1 ≤ f.body.length
+  resolved : BoundExpression D Λ
+  known : elaboration.expression source = some resolved
+  sourceType : Parser.STyp
+  binding : (f.params ++ f.fields).lookup destination = some sourceType
+  sameType : resolved.result = types.ordinary sourceType
+  restore : RestorePlan types f resolved.locals
+  live : ∀ entry ∈ resolved.locals, entry.1 ∈ liveAt f (.running tag)
+
+@[expose] public def checkBindingAt (elaboration : Elaboration D V Λ types f) (tag : Nat) :
+    Except String (CheckedBinding elaboration tag) := do
+  match atTag : f.body.drop tag with
+  | .bind destination source cost :: rest =>
+    match found : elaboration.expression source with
+    | none => throw "async: unresolved binding expression"
+    | some expression =>
+      match binding : (f.params ++ f.fields).lookup destination with
+      | none => throw "async: missing binding declaration"
+      | some sourceType =>
+        if sameType : expression.result = types.ordinary sourceType then
+          if localsLive : expression.locals.all (fun entry => decide (entry.1 ∈ liveAt f (.running tag))) = true then
+            let plan ← restorePlanFor types f expression.locals
+            have within : tag + 1 ≤ f.body.length := by
+              have length := congrArg List.length atTag
+              simp only [List.length_drop, List.length_cons] at length
+              omega
+            return ⟨destination, source, cost, rest, atTag, within, expression, found, sourceType, binding, sameType,
+              plan, fun entry member => of_decide_eq_true (List.all_eq_true.mp localsLive entry member)⟩
+          else throw "async: binding expression uses an unavailable local"
+        else throw "async: binding expression result disagrees with its declaration"
+  | _ => throw "async: position is not an ordinary binding"
+
+@[expose] public def CheckedBinding.block {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    (checked : CheckedBinding elaboration tag) : Block D V l [stateType types f, frameType types f] Λ Λ :=
+  restoredBindingBlock types f tag checked.within checked.destination checked.sourceType checked.binding
+    checked.resolved checked.sameType checked.restore
+
+/-- The compiler's checked binding arm executes from canonical storage
+    using the exact modeled expression result and source world. -/
+public theorem CheckedBinding.block_rep {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    (checked : CheckedBinding elaboration tag) (inventory : Inventory D) (frame : Frame (Value D))
+    (before : World D) (saved : Wert D (frameType types f)) (previous : Wert D (stateType types f))
+    (represented : FrameRep D types f (.running tag) frame saved)
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (unchanged : inventory.owned (.running (tag + 1)) = inventory.owned (.running tag))
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) :
+    let result := evaluateBound elaboration checked.source frame before
+    let resumed := State.running (Child := Child D types) (tag + 1) (save frame checked.destination result.1)
+    ∃ value, execBlock oracle passes calls (checked.block (l := l)) before (.cons previous (.cons saved .nil)) =
+        .ok result.2.1 (.cons value (.cons saved .nil)) ∧
+      Inv f types inventory resumed value ∧ encode D types f resumed = some value :=
+  restoredBindingBlock_rep (l := l) elaboration inventory tag checked.within checked.destination checked.source
+    checked.cost checked.rest checked.command checked.resolved checked.known checked.sourceType checked.binding
+    checked.sameType checked.restore checked.live before frame saved previous represented marks unchanged oracle passes calls
 
 end Gabbro.Grammatik.Async.Representation

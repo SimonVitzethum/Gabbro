@@ -171,17 +171,24 @@ public theorem commandRunningIndex_first (base : Nat) (body : List Command) (off
             change (commandPhases (base + 1) rest).get next ≠ .running (base + (offset + 1))
             rwa [← tag]
 
-@[expose] public def runningCase (types : TypeResolution) (f : AsyncFn)
-    (tag : Nat) (within : tag ≤ f.body.length) :
-    {index : Fin (stateCases types f).length // (stateCases types f).get index = some (frameType types f)} :=
-  let selected := commandRunningIndex 0 f.body tag within
-  let phase : Fin (phases f).length := selected.val.succ.succ
+@[expose] public def selectedPhaseCase (types : TypeResolution) (f : AsyncFn)
+    (phase : Fin (phases f).length) (expected : Phase) (exactPhase : (phases f).get phase = expected) :
+    {index : Fin (stateCases types f).length //
+      (stateCases types f).get index = some (phaseType types f expected)} :=
   let index : Fin (stateCases types f).length :=
     ⟨phase.val, by simpa only [stateCases, List.length_map] using phase.isLt⟩
   ⟨index, by
     have mapped : (stateCases types f).get index = some (phaseType types f ((phases f).get phase)) :=
       List.getElem_map (fun p => some (phaseType types f p)) (h := index.isLt)
-    exact mapped.trans (congrArg (fun p => some (phaseType types f p)) selected.property)⟩
+    exact mapped.trans (congrArg (fun p => some (phaseType types f p)) exactPhase)⟩
+
+@[expose] public def runningCase (types : TypeResolution) (f : AsyncFn)
+    (tag : Nat) (within : tag ≤ f.body.length) :
+    {index : Fin (stateCases types f).length // (stateCases types f).get index = some (frameType types f)} :=
+  let selected := commandRunningIndex 0 f.body tag within
+  selectedPhaseCase types f selected.val.succ.succ (.running tag) (by
+    change (commandPhases 0 f.body).get selected.val = .running tag
+    simpa only [Nat.zero_add] using selected.property)
 
 /-- Generate the typed constructor for a resumed frame at a checked
     program position. The payload remains at its declared frame type. -/
@@ -190,6 +197,55 @@ public theorem commandRunningIndex_first (base : Nat) (body : List Command) (off
     (frame : Expr D Γ Λ (frameType types f)) : Expr D Γ Λ (stateType types f) :=
   let selected := runningCase types f tag within
   stateExpr types f selected.val (selected.property.symm ▸ NutzlastExpr.val frame)
+
+/-- Resolve the actual Waiting tag by following the source command list.
+    The certificate matches this await's own future, including nested joins. -/
+@[expose] public def commandWaitingIndex (base : Nat) {name : String} {future : FutureExpr}
+    {boundary : Boundary} {remaining : List Command} : (body : List Command) → (offset : Nat) →
+    body.drop offset = Command.await name future boundary :: remaining →
+    {index : Fin (commandPhases base body).length //
+      (commandPhases base body).get index = .waiting (base + offset) future}
+  | [], _, found => by simp only [List.drop_nil] at found; cases found
+  | .bind _ _ _ :: _, 0, found => by cases found
+  | .await _ child _ :: rest, 0, found =>
+    have same : child = future := (Command.await.inj (List.cons.inj found).1).2.1
+    ⟨⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩, congrArg (Phase.waiting base) same⟩
+  | .bind _ _ _ :: rest, offset + 1, found =>
+    let next := commandWaitingIndex (base + 1) rest offset found
+    ⟨next.val.succ, by
+      have tag : base + 1 + offset = base + (offset + 1) := by omega
+      change (commandPhases (base + 1) rest).get next.val = .waiting (base + (offset + 1)) future
+      exact next.property.trans (congrArg (fun tag => Phase.waiting tag future) tag)⟩
+  | .await _ _ _ :: rest, offset + 1, found =>
+    let next := commandWaitingIndex (base + 1) rest offset found
+    ⟨next.val.succ.succ, by
+      have tag : base + 1 + offset = base + (offset + 1) := by omega
+      change (commandPhases (base + 1) rest).get next.val = .waiting (base + (offset + 1)) future
+      exact next.property.trans (congrArg (fun tag => Phase.waiting tag future) tag)⟩
+termination_by structural body _ _ => body
+
+@[expose] public def waitingCase (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest) :
+    {index : Fin (stateCases types f).length //
+      (stateCases types f).get index = some (phaseType types f (.waiting tag future))} :=
+  let selected := commandWaitingIndex 0 f.body tag command
+  selectedPhaseCase types f selected.val.succ.succ (.waiting tag future) (by
+    change (commandPhases 0 f.body).get selected.val = .waiting tag future
+    simpa only [Nat.zero_add] using selected.property)
+
+/-- The ordinary G constructor saves both the continuation frame and the
+    child storage at the precise Waiting case selected by the command. -/
+@[expose] public def waitingExpr (types : TypeResolution) (f : AsyncFn)
+    {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Expr D Γ Λ (frameType types f)) (child : Expr D Γ Λ (taskStorageType types [tag] future)) :
+    Expr D Γ Λ (stateType types f) :=
+  let selected := waitingCase types f tag command
+  let fields : Expr D Γ Λ (phaseType types f (.waiting tag future)) :=
+    .prod (types.recordName [2, tag]) (.cons frame (.cons child .nil))
+  stateExpr types f selected.val (selected.property.symm ▸ NutzlastExpr.val fields)
 
 @[expose] public def awaitCount : List Command → Nat
   | [] => 0

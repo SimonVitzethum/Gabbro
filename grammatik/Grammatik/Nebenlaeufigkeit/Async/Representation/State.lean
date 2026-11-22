@@ -270,16 +270,17 @@ public theorem runningValue_inv (types : TypeResolution) (f : AsyncFn) (inventor
   rw [exactValue] at matched
   exact matched
 
+private theorem payloadReads_cast {Γ : Ctx} {Λ : List (Res D)} {before after : Option Ty}
+    (same : before = after) (payload : NutzlastExpr D Γ Λ before) :
+    (same ▸ payload : NutzlastExpr D Γ Λ after).orte = payload.orte := by
+  cases same
+  rfl
+
 public theorem runningExpr_reads (types : TypeResolution) (f : AsyncFn)
     {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
     (frame : Expr D Γ Λ (frameType types f)) :
     (runningExpr types f tag within frame).orte = frame.orte := by
-  have transport {before after : Option Ty} (same : before = after)
-      (payload : NutzlastExpr D Γ Λ before) :
-      (same ▸ payload : NutzlastExpr D Γ Λ after).orte = payload.orte := by
-    cases same
-    rfl
-  simp only [runningExpr, stateExpr, Expr.orte, Args.orte, transport, NutzlastExpr.orte, List.append_nil]
+  simp only [runningExpr, stateExpr, Expr.orte, Args.orte, payloadReads_cast, NutzlastExpr.orte, List.append_nil]
 
 /-- The generated constructor carries the actual evaluated frame. Transport
     across the selector's type equality changes no field in that frame. -/
@@ -314,6 +315,31 @@ public theorem resumeBlock_exec {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   change eval world successor world env = runningValue D types f tag within (env.get saved) at exactFrame
   rw [exactFrame] at execution
   exact execution
+
+@[expose] public def waitingValue (D : Deklaration) (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future)) :
+    Wert D (stateType types f) :=
+  let selected := waitingCase types f tag command
+  let payload : Nutzlast D.Fn D.passt (some (phaseType types f (.waiting tag future))) := (frame, child, ())
+  (⟨selected.val, Fall.ofNutzlast D.Fn D.passt _ selected.val (selected.property.symm ▸ payload)⟩, ())
+
+public theorem waitingExpr_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Expr D Γ Λ (frameType types f)) (child : Expr D Γ Λ (taskStorageType types [tag] future)) :
+    (waitingExpr types f tag command frame child).orte = frame.orte ++ child.orte := by
+  simp only [waitingExpr, stateExpr, Expr.orte, Args.orte, payloadReads_cast, NutzlastExpr.orte, List.append_nil]
+
+public theorem waitingExpr_eval {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Expr D Γ Λ (frameType types f)) (child : Expr D Γ Λ (taskStorageType types [tag] future))
+    (entry world : World D) (env : Env D Γ) :
+    eval entry (waitingExpr types f tag command frame child) world env =
+      waitingValue D types f tag command (eval entry frame world env) (eval entry child world env) := by
+  simp only [waitingExpr, stateExpr, waitingValue, eval, evalProd, evalNutz_cast, evalNutz] <;> rfl
 
 public theorem cancelled_encoded (types : TypeResolution) (f : AsyncFn) :
     encode D types f State.cancelled = some (cancelledValue types f D) := rfl
