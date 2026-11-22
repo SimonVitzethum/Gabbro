@@ -173,6 +173,10 @@ import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 #print axioms Gabbro.Grammatik.Async.Representation.checkedDispatch_reachable_encoded
 #print axioms Gabbro.Stage0.Frontend.Async.resolveExpression_literal_erfuellbar
 #print axioms Gabbro.Stage0.Frontend.Async.resolveChild
+#print axioms Gabbro.Grammatik.Async.Segment.checkElaboration
+#print axioms Gabbro.Stage0.Frontend.Async.resolveFunction
+#print axioms Gabbro.Grammatik.Async.Representation.pollFunction_refines
+#print axioms Gabbro.Stage0.Frontend.Async.lowerNamedPoll
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.nestedLocalArraySlice_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_nestedLocalArraySliceIndex
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_nestedLocalArraySliceIndex

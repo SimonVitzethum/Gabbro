@@ -9,6 +9,7 @@ public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
 public import Grammatik.Nebenlaeufigkeit.Async.Creation
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Check
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
+public import Grammatik.Nebenlaeufigkeit.Async.PollFunction
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
@@ -266,5 +267,47 @@ public structure ResolvedFunction (u : UProg) (V : Vertrag (declOf u)) (Λ : Lis
     match checked : checkPhaseTable elaboration with
     | .error failure => .error failure
     | .ok phases => .ok ⟨elaboration, elaborated, phases, checked⟩
+
+public structure NamedPoll (u : UProg) (ctx : UCtx) (function : AsyncFn) (types : TypeResolution)
+    (children : (fn : (declOf u).Fn) → (name : String) →
+      Option (ResolvedPoll u (verOf u fn) (resOf u fn) types name)) where
+  poll : (declOf u).Fn
+  selected : fnNr u (pollName function.name) = .ok poll
+  input : (declOf u).params poll = [stateType types function]
+  result : (verOf u poll).erg = some (pollResultType types function)
+  inventory : (resOf u poll).Perm (verOf u poll).ende
+  expanded : ResolvedFunction u (verOf u poll) (resOf u poll) ctx (u.fns.get poll)
+    function types (children poll)
+
+/-- The body to install has the exact type of the actual selected
+    declaration slot in the canonical program. -/
+@[expose] public def NamedPoll.body {u : UProg} {ctx : UCtx} {function : AsyncFn} {types : TypeResolution}
+    {children : (fn : (declOf u).Fn) → (name : String) →
+      Option (ResolvedPoll u (verOf u fn) (resOf u fn) types name)}
+    (resolved : NamedPoll u ctx function types children) :
+    Endblock (declOf u) (vertragVon (declOf u) resolved.poll) false
+      ((declOf u).params resolved.poll) (Signatur.anfang (declOf u) ((declOf u).signatur resolved.poll)) :=
+  resolved.input.symm ▸ pollFunction resolved.expanded.phases resolved.result resolved.inventory
+
+/-- Resolve the private declaration, compare its ordinary call
+    signature, and lower the canonically parsed body into that exact slot. -/
+@[expose] public def lowerNamedPoll (u : UProg) (ctx : UCtx) (function : AsyncFn) (types : TypeResolution)
+    (children : (fn : (declOf u).Fn) → (name : String) →
+      Option (ResolvedPoll u (verOf u fn) (resOf u fn) types name)) :
+    Except String (NamedPoll u ctx function types children) :=
+  match selected : fnNr u (pollName function.name) with
+  | .error failure => .error failure
+  | .ok poll =>
+    if input : (declOf u).params poll = [stateType types function] then
+      if result : (verOf u poll).erg = some (pollResultType types function) then
+        if inventory : decide ((resOf u poll).Perm (verOf u poll).ende) = true then
+          if (verOf u poll).gruende = 0 then
+            (resolveFunction u (verOf u poll) (resOf u poll) ctx (u.fns.get poll) function types
+              (children poll)).map fun expanded =>
+                ⟨poll, selected, input, result, of_decide_eq_true inventory, expanded⟩
+          else .error "async: generated poll signature has a reason channel"
+        else .error "async: generated poll signature does not restore its resource index"
+      else .error "async: generated poll signature has another result type"
+    else .error "async: generated poll signature has another state parameter"
 
 end Gabbro.Stage0.Frontend.Async
