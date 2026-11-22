@@ -84,6 +84,27 @@ meta def findeHyp? (n : Lean.Name) (R? : Option Lean.Expr := none) : MetaM (Opti
   return none
 
 open Lean Meta in
+/-- After a call `R g σ ρ = .ok σ' v` (`hruf`): the hypothesis
+    `hvertrag : ReqAmEintritt P g σ ρ → EnsAmRueck P g σ σ' ρ v` from the certificate's
+    `RespektiertRahmen P R`. Without that hypothesis in context the goal stays as it is. -/
+meta def vertragsHyp (goal : MVarId) (R x hruf σ' v : Lean.Expr) : MetaM MVarId := goal.withContext do
+  let some hRR ← findeHyp? ``Gabbro.Grammatik.RespektiertRahmen (some R) | return goal
+  let ty ← instantiateMVars (← inferType hRR)
+  let P := ty.getAppArgs[ty.getAppNumArgs - 2]!
+  let xa := x.getAppArgs
+  let g := xa[0]!
+  let σ := xa[1]!
+  let ρ := xa[2]!
+  let req ← mkAppM ``Gabbro.Grammatik.ReqAmEintritt #[P, g, σ, ρ]
+  let ens ← mkAppM ``Gabbro.Grammatik.EnsAmRueck #[P, g, σ, σ', ρ, v]
+  let hty ← mkArrow req ens
+  let pf ← withLocalDeclD `hq req fun hq => do
+    mkLambdaFVars #[hq] (mkAppN (mkProj ``And 0 hRR) #[g, σ, ρ, hq, σ', v, hruf])
+  let g' ← goal.assert `hvertrag hty pf
+  let (_, g'') ← g'.intro1P
+  return g''
+
+open Lean Meta in
 /-- The hypothesis `lowerAllg u = .ok (P, fs)` of the opened duty. -/
 meta def findeLow? : MetaM (Option Lean.Expr) := do
   for d in ← getLCtx do
@@ -237,6 +258,9 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
             return true
         return false
       if zu then continue
+      -- an answer: the callee's contract as a hypothesis (`RespektiertVertraege`, part of the certificate's
+      -- `RespektiertRahmen`): where its precondition held, its postcondition holds of the result
+      let m' ← if k == 0 then vertragsHyp m' R x (mkFVar fs[2]!) (mkFVar fs[0]!) (mkFVar fs[1]!) else pure m'
       out := out ++ [m']
     return some out
   return none

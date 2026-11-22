@@ -87,6 +87,8 @@ meta partial def tWertInt (v : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Le
       if e.isAppOf `Gabbro.Grammatik.ErgExpr.val then tInt a[a.size-4]! a[a.size-2]! e.appArg! a[a.size-1]!
       else atomInt v
   | some `Gabbro.Grammatik.Zahl.weiter => tWertInt a[a.size-1]!
+  -- a callee's result at its declared type: the value itself
+  | some `Gabbro.Grammatik.ergWert => tWertInt a[a.size-1]!
   | _ => atomInt v
 end
 
@@ -144,8 +146,19 @@ meta def tBedingung? (b : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option
 
 /-- A condition `c = true` / `c = false` / `¬ c = true` over a lowered expression, translated:
     the new proposition and whether the kernel accepts it as the old one. -/
-meta def tAussage? (p : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option Lean.Expr) := do
+meta partial def tAussage? (p : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option Lean.Expr) := do
   let p ← instantiateMVars p
+  -- an implication between conditions (a callee's contract): both sides translated
+  if p.isForall && !p.bindingBody!.hasLooseBVars && !(p.isAppOfArity ``Not 1) then
+    let a := p.bindingDomain!
+    let b := p.bindingBody!
+    let a' := (← tAussage? a).getD a
+    let b' := (← tAussage? b).getD b
+    if a' == a && b' == b then return none
+    let p' ← mkArrow a' b'
+    match Kernel.isDefEq (← getEnv) (← getLCtx) p p' with
+    | .ok true => return some p'
+    | _ => return none
   let (neg, q) := if p.isAppOfArity ``Not 1 then (true, p.appArg!) else (false, p)
   let some (_, l, r) := q.eq? | return none
   let some t ← tBedingung? l | return none
@@ -158,31 +171,59 @@ meta def tAussage? (p : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option L
 /-- **Translate the conditions over symbolic values into integer arithmetic and try `omega`.** -/
 syntax (name := gabbrovArith) "gabbrov_arith" : tactic
 
-/-- The entry precondition `ReqAmEintritt P f σ ρ` of the opened duty, read at the function's own
-    lowering (`requires_eq`), as a further hypothesis. -/
+/-- A contract proposition `ReqAmEintritt P f σ ρ` or `EnsAmRueck P f s σ ρ v` with `P`'s precondition or
+    postcondition replaced by that of `f`'s own lowering (`requires_eq`, `ensures_eq`): the new proposition
+    and the equation `t = t'`. -/
+meta def vertragOffen? (hlow t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  let n := t.getAppNumArgs
+  let (satz, pos) ←
+    if t.isAppOf ``Gabbro.Grammatik.ReqAmEintritt && n ≥ 4 then pure (``Gabbro.Bruecke.requires_eq, 3)
+    else if t.isAppOf ``Gabbro.Grammatik.EnsAmRueck && n ≥ 6 then pure (``Gabbro.Bruecke.ensures_eq, 5)
+    else return none
+  let f := t.getAppArgs[n - pos]!
+  let some body ← delta? t | return none
+  let some (_, lhs, _) := body.eq? | return none
+  let ev := lhs.appArg!
+  unless ev.isAppOf ``Gabbro.Grammatik.eval && ev.getAppNumArgs ≥ 4 do return none
+  let X := ev.getAppArgs[ev.getAppNumArgs - 3]!
+  let some eqX ← (try some <$> mkAppM satz #[hlow, f] catch _ => pure none) | return none
+  let some (_, _, rhs) := (← inferType eqX).eq? | return none
+  let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
+  let motiv := mkLambda `r .default (← inferType X) motivRumpf
+  return some ((mkApp motiv rhs).headBeta, ← mkCongrArg motiv eqX)
+
+/-- Every contract hypothesis (`ReqAmEintritt`, `EnsAmRueck`, and an implication between them, as the
+    callee's contract `hvertrag`) read at the functions' own lowering, as a further hypothesis. -/
 meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
   let some hlow ← findeLow? | return goal
   let mut g := goal
   for d in ← getLCtx do
     if LocalDecl.isImplementationDetail d then continue
     let ty ← instantiateMVars (LocalDecl.type d)
-    unless ty.isAppOf ``Gabbro.Grammatik.ReqAmEintritt && ty.getAppNumArgs ≥ 4 do continue
-    let f := ty.getAppArgs[ty.getAppNumArgs - 3]!
-    let some body ← delta? ty | continue
-    let some (_, lhs, _) := body.eq? | continue
-    -- lhs = wahr? (eval σ X σ ρ)
-    let ev := lhs.appArg!
-    unless ev.isAppOf ``Gabbro.Grammatik.eval && ev.getAppNumArgs ≥ 4 do continue
-    let X := ev.getAppArgs[ev.getAppNumArgs - 3]!
-    let some eq ← (try some <$> mkAppM ``Gabbro.Bruecke.requires_eq #[hlow, f] catch _ => pure none) | continue
-    let some (_, _, rhs) := (← inferType eq).eq? | continue
-    let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
-    let motiv := mkLambda `r .default (← inferType X) motivRumpf
-    let neu := (mkApp motiv rhs).headBeta
-    let pf ← mkEqMP (← mkCongrArg motiv eq) d.toExpr
-    g ← g.assert `hreq neu pf
-    let (_, g') ← g.intro1
-    g := g'
+    if let some (neu, eq) ← vertragOffen? hlow ty then
+      g ← g.assert `hreq neu (← mkEqMP eq d.toExpr)
+      let (_, g') ← g.intro1
+      g := g'
+    else if ty.isForall && !ty.bindingBody!.hasLooseBVars then
+      let a := ty.bindingDomain!
+      let b := ty.bindingBody!
+      let oa ← vertragOffen? hlow a
+      let ob ← vertragOffen? hlow b
+      if oa.isNone && ob.isNone then continue
+      let a' := (oa.map (·.1)).getD a
+      let b' := (ob.map (·.1)).getD b
+      let pf ← withLocalDeclD `x a' fun x => do
+        let arg ← match oa with
+          | some (_, eqA) => mkEqMPR eqA x
+          | none => pure x
+        let res := mkApp d.toExpr arg
+        let res ← match ob with
+          | some (_, eqB) => mkEqMP eqB res
+          | none => pure res
+        mkLambdaFVars #[x] res
+      g ← g.assert `hvertrag' (← mkArrow a' b') pf
+      let (_, g') ← g.intro1
+      g := g'
   return g
 
 @[tactic gabbrovArith] meta def evalGabbrovArith : Tactic := fun _ => withMainContext do
@@ -226,11 +267,13 @@ meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
     evalTactic (← `(tactic| intro))
   for nm in namen do
     evalTactic (← `(tactic| try simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true',
-      decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false]
+      decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false,
+      true_implies, implies_true]
       at $(mkIdent nm):ident))
   if imZiel then
     evalTactic (← `(tactic| try simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true',
-      decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false]))
+      decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false,
+      true_implies, implies_true]))
   -- the language's division and remainder round towards zero (`tdiv`/`tmod`); on non-negative operands
   -- they are `omega`'s `/`/`%`
   for nm in namen do
