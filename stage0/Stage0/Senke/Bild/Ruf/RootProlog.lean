@@ -8,7 +8,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
@@ -140,5 +140,42 @@ theorem Emitted.root_depth_guard_pass [Kern] (output : Emitted src reserve optio
   have size : (guardC 2 105 (functionFrame output.compiled.program fn).canonicalResult).length = 5 := rfl
   rw [size] at suffix
   exact ⟨rest, tso_silent_prefix_image stepped rfl, suffix⟩
+
+/-- A declared child starts with its actual arguments and passes the
+    function's depth check in the same silent process prefix. -/
+theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {before : Cfg imageTSO (Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root) {history : List Ev}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} :
+    let entry : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let target := BitVec.ofNat 64 (output.image.A root.1)
+    let frame := slot entry.fp (BitVec.ofNat 64 FB)
+    let prologue := target + BitVec.ofNat 64 (16 * 5)
+    before.ths[index + 1]? = some (some (.next entry)) →
+    ImageRootPhase output E history (before.ms.1.view (index + 1)) (index + 1) (.next entry) state →
+    ∃ after : imageTSO.St, ∃ rest,
+      ProcessPrefix imageTSO actI before [] 37
+        ⟨after, before.ths.set (index + 1) (some (.next ⟨prologue, frame⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      (∀ world, WeltAt (before.ms.1.view (index + 1)) output.image.Y world →
+        WeltAt (after.1.view (index + 1)) output.image.Y world) ∧
+      FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
+      EnvAt output.image.Y (after.1.view (index + 1)) frame root.2 ∧
+      CodeAt (after.1.view (index + 1)) prologue rest := by
+  intro entry target frame prologue running phase
+  obtain ⟨after, call, shared, otherViews, world, permissions, environment, _, _, depth, loaded, _⟩ :=
+    output.child_body_from_root_phase unit declared running phase
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  let entered : Cfg imageTSO (Res T) :=
+    ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩
+  have ready : entered.ths[index + 1]? = some (some (.next ⟨target, frame⟩)) :=
+    List.getElem?_set_self inside
+  obtain ⟨rest, passed, code⟩ := output.root_depth_guard_pass (before := entered) root.1 loaded ready depth
+  refine ⟨after, rest, ?_, shared, otherViews, world, permissions, environment, code⟩
+  simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 
 end Gabbro.Stage0

@@ -102,6 +102,7 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
+      BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry fp pointer scratch target frame words running frameOK loadedTarget depth args
@@ -150,7 +151,7 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
     exact (agree_write frameOK.room (Nat.zero_le FB) (by omega) _).trans
       (agree_write frameOK.room (Nat.zero_le (FB + 1)) (by omega) _)
   refine ⟨after, tso_silent_prefix_image run rfl, shared, others, confined,
-    frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, ?_⟩
+    frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, updatedCode, ?_⟩
   · intro i inWords
     have within : FB + FB + i < output.image.Ks := by
       have count : words.length = contextWords ((declOf output.compiled.unit).params root.1) := encodeEnv_length _ _
@@ -228,6 +229,7 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some entry.fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
+      BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame words running frameOK arguments
@@ -347,17 +349,18 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some entry.fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
+      BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame running phase
   obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
-  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, body⟩ :=
+  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, code, body⟩ :=
     output.child_body_prefix declared bytes running permissions arguments
   have valid := output.startPlan.starts_valid (initialWorld _ output.initialValid) output.image.Y root
     (List.mem_of_getElem? declared)
   have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) root.2).mpr ⟨valid, words⟩
   have thread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
   exact ⟨after, executed, shared, others, fun _ stored => output.world_survives_stack thread stored writes,
-    frameOK, environment, returnPC, callerFrame, depth, body⟩
+    frameOK, environment, returnPC, callerFrame, depth, code, body⟩
 
 end Gabbro.Stage0
