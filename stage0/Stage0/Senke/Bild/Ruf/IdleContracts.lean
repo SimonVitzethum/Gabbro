@@ -72,7 +72,7 @@ private theorem lowEnsAt_withIdle (L : Lay D) (original shifted : FrameLayout)
         (funext (lowEnsAt_withIdle L original shifted reserve b (start + EntrySnapshots.words (oldCells a))))
     simp only [ruE, lowEnsAt]
     congr 1 <;> with_unfolding_all first | exact left | exact right
-  | _, _, _, node@(.and a b), start, dest | _, _, _, node@(.or a b), start, dest => by
+  | _, _, _, .and a b, start, dest | _, _, _, .or a b, start, dest => by
     have left := lowEnsAt_withIdle L original shifted reserve a start dest
     have right :=
       (congrArg (fun n => lowEnsAt L.withIdle shifted (start + n) (ruE b) (dest + 1)) (words_ruE L a)).trans
@@ -113,9 +113,11 @@ private theorem lowEnsAt_withIdle (L : Lay D) (original shifted : FrameLayout)
   | _, _, _, node@(.strWeit ..), _, dest | _, _, _, node@(.wenn ..), _, dest | _, _, _, node@(.eng ..), _, dest
   | _, _, _, node@(.count ..), _, dest | _, _, _, node@(.prod ..), _, dest | _, _, _, node@(.prodGet ..), _, dest
   | _, _, _, node@(.prodSet ..), _, dest => by
+    have expression := lowE_withIdle L shifted.ensReserved false node dest
+    subst node
     simp only [ruE, lowEnsAt]
     rw [← reserve]
-    with_unfolding_all exact (lowE_withIdle L shifted.ensReserved false node dest)
+    with_unfolding_all exact expression
 termination_by structural _ _ _ expr _ _ => expr
 
 private theorem lowEns_context (L : Lay D) (frame : FrameLayout) {Γ Γ' : Ctx}
