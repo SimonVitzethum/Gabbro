@@ -58,14 +58,6 @@ theorem ImageTicketStates.protected_exclusive {D : Deklaration} {N : Nat}
   have rightTicket := ((locks.owners guard).inside ⟨second, secondInside⟩).mpr heldRight
   exact congrArg Fin.val ((locks.protocol guard).ausschluss leftTicket rightTicket)
 
-theorem protectedCellFootprint_lock_disjoint {D : Deklaration} {layout : Lay D}
-    {source : RufMaschineG D} {thread : Nat} {address : W} {locked : D.Lock}
-    (inLayout : LayIn layout) (synchronized : LaySync layout)
-    (owned : protectedCellFootprint layout source thread address) : ¬ LockBytes layout locked address := by
-  intro lockByte
-  exact (Nat.not_le_of_lt (protectedCellFootprint_bounds inLayout owned).2)
-    ((synchronized.1 locked).1.trans lockByte.1)
-
 /-- The image's fixed stack reservation and the currently protected
     cells use the same TSO projection. Other carrier permissions are
     handled by their own source access rules. -/
@@ -173,18 +165,19 @@ theorem imageProtectedFootprint_exclusive [Kern] {src : String} {reserve : Nat} 
       (protectedCellFootprint_bounds inLayout left).1).elim
   · exact locks.protected_exclusive cells left right
 
-theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+theorem imageRuntimeFootprint_lock_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {thread : Nat} {address : W} {lock : (declOf output.compiled.unit).Lock}
     (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
     (order : output.image.Y.lo ≤ output.image.Y.hi)
-    (owned : imageProtectedFootprint output source thread address) :
+    (owned : imageRuntimeFootprint output E source thread address) :
     ¬ LockBytes output.image.Y.withIdle lock address := by
-  rcases owned with stack | data
-  · intro lockByte
-    have below := imageStackFootprint_before_world stack
-    exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
-  · exact protectedCellFootprint_lock_disjoint inLayout synchronized data
+  intro lockByte
+  have above := (synchronized.1 lock).1.trans lockByte.1
+  rcases imageRuntimeFootprint_placed inLayout owned with stack | ⟨_, world⟩
+  · exact (Nat.not_le_of_lt (imageStackFootprint_before_world stack)) (order.trans above)
+  · exact (Nat.not_le_of_lt world) above
 
 /-- The combined view has at most one owner at every physical byte. -/
 theorem imageRuntimeFootprint_exclusive [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
@@ -214,13 +207,14 @@ theorem imageRuntimeFootprint_exclusive [Kern] {src : String} {reserve : Nat} {o
     ticket words. The issuing thread's private stores cannot cover a
     synchronization byte either. -/
 theorem ImageTicketStates.transport_image_effect [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {source nextSource : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {source nextSource : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {N thread : Nat} {before after : Mem} {states : _ → Zustand N} {writes : W → Prop}
     (current : ImageTicketStates output.image.Y.withIdle before source states)
     (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (belowLocks : ∀ byte, writes byte → byte.toNat < output.image.Y.hi)
-    (kept : GleichAuf (fun byte => ¬ imageProtectedFootprint output source thread byte ∧ ¬ writes byte) before after)
+    (kept : GleichAuf (fun byte => ¬ imageRuntimeFootprint output E source thread byte ∧ ¬ writes byte) before after)
     (owners : ∀ lock issuer, lock ∈ offen (source.faeden issuer).spur ↔
       lock ∈ offen (nextSource.faeden issuer).spur) :
     ImageTicketStates output.image.Y.withIdle after nextSource states := by
@@ -229,75 +223,67 @@ theorem ImageTicketStates.transport_image_effect [Kern] {src : String} {reserve 
   have aboveWorld : output.image.Y.hi ≤ byte.toNat :=
     (synchronized.1 lock).1.trans synchronizationByte.1
   exact (kept byte
-    ⟨fun owned => imageProtectedFootprint_lock_disjoint inLayout synchronized order owned synchronizationByte,
+    ⟨fun owned => imageRuntimeFootprint_lock_disjoint inLayout synchronized order owned synchronizationByte,
       fun written => (Nat.not_le_of_lt (belowLocks byte written)) aboveWorld⟩).symm
 
 /-- Changing the current source trace of the CAS issuer leaves every
     pending store assigned to the same owning thread. The actual TSO
     rule requires the issuer's buffer to have drained before answering. -/
-theorem privateBuffers_after_release [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options}
-    {source target : RufMaschineG (declOf output.compiled.unit).mitRuhe}
-    {before after : imageTSO.St} {thread : Nat} {N : Nat} {states : _ → Zustand N}
+theorem privateBuffers_after_release {before after : imageTSO.St} {thread : Nat}
+    {sourceView targetView : Nat → W → Prop}
     {address expected word : W} {reply : Ans}
     (answered : imageTSO.ans before thread (.cas address expected word) reply after)
-    (old : PrivateBuffers (imageProtectedFootprint output source) before.1)
-    (locks : ImageTicketStates output.image.Y.withIdle after.1.m target states)
-    (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
-    (others : ∀ issuer, issuer ≠ thread → ∀ lock,
-      lock ∈ offen (source.faeden issuer).spur → lock ∈ offen (target.faeden issuer).spur) :
-    PrivateBuffers (imageProtectedFootprint output source) after.1 ∧
-      PrivateBuffers (imageProtectedFootprint output target) after.1 ∧
-      projectSCState (imageProtectedFootprint output target) after =
-        projectSCState (imageProtectedFootprint output source) after := by
+    (old : PrivateBuffers sourceView before.1)
+    (retained : ∀ issuer, issuer ≠ thread → ∀ byte, sourceView issuer byte → targetView issuer byte)
+    (exclusive : ∀ {issuer other byte}, targetView issuer byte → targetView other byte → issuer = other) :
+    PrivateBuffers sourceView after.1 ∧ PrivateBuffers targetView after.1 ∧
+      projectSCState targetView after = projectSCState sourceView after := by
   have drained : before.1.buf thread = [] := answered.1.1
   have buffers : after.1.buf = before.1.buf := by
     rcases answered.1.2 with ⟨_, _, same⟩ | ⟨_, _, _, _, changed⟩
     · rw [same]
     · have bufferEq := congrArg TSt.buf changed
       exact bufferEq
-  have oldAfter : PrivateBuffers (imageProtectedFootprint output source) after.1 := by
+  have oldAfter : PrivateBuffers sourceView after.1 := by
     intro issuer store pending byte hit
     rw [buffers] at pending
     exact old issuer store pending byte hit
-  have newAfter : PrivateBuffers (imageProtectedFootprint output target) after.1 := by
+  have newAfter : PrivateBuffers targetView after.1 := by
     intro issuer store pending byte hit
     have different : issuer ≠ thread := by
       intro same
       rw [same, buffers, drained] at pending
       cases pending
-    have previous := (oldAfter issuer store pending byte hit).1
-    have current : imageProtectedFootprint output target issuer byte := by
-      rcases previous with stack | ⟨cell, present, low, high, guarded, held⟩
-      · exact .inl stack
-      · exact .inr ⟨cell, present, low, high, guarded,
-          fun lock guards => others issuer different lock (held lock guards)⟩
-    exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive locks inLayout cells assigned current⟩
+    have current := retained issuer different byte (oldAfter issuer store pending byte hit).1
+    exact ⟨current, fun _ assigned => exclusive assigned current⟩
   exact ⟨oldAfter, newAfter, projectSCState_reassign oldAfter newAfter⟩
 
 /-- The CAS publishes the serving word in the SC projection while
     reassigning the protected cells according to the new source owner.
     The physical lock words themselves stay outside the private views. -/
 theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {source target : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {before after : imageTSO.St} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
     {lock : (declOf output.compiled.unit).Lock} {start released : Zustand N}
     {expected word : W} {reply : Ans}
     (answered : imageTSO.ans before thread.val
       (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) expected word) reply after)
-    (old : PrivateBuffers (imageProtectedFootprint output source) before.1)
+    (old : PrivateBuffers (imageRuntimeFootprint output E source) before.1)
     (locks : ImageTicketStates output.image.Y.withIdle after.1.m target states)
     (prior : TicketOwnership source lock start) (next : TicketOwnership target lock released)
     (releasedPC : released.pc = upd start.pc thread .gibW)
     (otherLocks : OtherLockOwners (D := (declOf output.compiled.unit).mitRuhe) lock source target)
     (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E)
     (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (order : output.image.Y.lo ≤ output.image.Y.hi) :
-    PrivateBuffers (imageProtectedFootprint output target) after.1 ∧
-      (SC L0).ans (projectSCState (imageProtectedFootprint output source) before) thread.val
+    PrivateBuffers (imageRuntimeFootprint output E target) after.1 ∧
+      (SC L0).ans (projectSCState (imageRuntimeFootprint output E source) before) thread.val
         (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) expected word) reply
-        (projectSCState (imageProtectedFootprint output target) after) := by
+        (projectSCState (imageRuntimeFootprint output E target) after) := by
   have transferred (other : Nat) (different : other ≠ thread.val) (guard : (declOf output.compiled.unit).Lock)
       (held : guard ∈ offen (source.faeden other).spur) : guard ∈ offen (target.faeden other).spur := by
     by_cases selected : guard = lock
@@ -306,12 +292,20 @@ theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options :
       intro inside
       rw [releasedPC, upd_ne _ _ (fun equal => different (congrArg Fin.val equal))]
     · exact (otherLocks guard selected other).mpr held
-  obtain ⟨_, pending, projection⟩ := privateBuffers_after_release answered old locks inLayout cells transferred
+  have retains (other : Nat) (different : other ≠ thread.val) (byte : W)
+      (owned : imageRuntimeFootprint output E source other byte) : imageRuntimeFootprint output E target other byte := by
+    rcases owned with (stack | ⟨cell, present, low, high, guarded, held⟩) | plain
+    · exact .inl (.inl stack)
+    · exact .inl (.inr ⟨cell, present, low, high, guarded, fun guard protects =>
+        transferred other different guard (held guard protects)⟩)
+    · exact .inr plain
+  obtain ⟨_, pending, projection⟩ := privateBuffers_after_release answered old retains
+    (fun left right => imageRuntimeFootprint_exclusive locks inLayout cells hardware accepted duties left right)
   have shared (byte : W) (hit : fenster (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) byte) :
-      ∀ other, ¬ imageProtectedFootprint output source other byte := by
+      ∀ other, ¬ imageRuntimeFootprint output E source other byte := by
     intro other owned
     have fits : output.image.Y.withIdle.lk lock + 24 ≤ 2 ^ 64 := (synchronized.1 lock).2.trans bound
-    exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
+    exact imageRuntimeFootprint_lock_disjoint inLayout synchronized order owned
       (lockWord_in_bytes fits (by decide) hit)
   refine ⟨pending, ?_⟩
   rw [projection]
@@ -329,8 +323,11 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
     {lock : (declOf output.compiled.unit).mitRuhe.Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
     {ticket expected : Nat}
     (locks : ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m states)
-    (buffers : PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1)
+    (buffers : PrivateBuffers (imageRuntimeFootprint output E source.m) machine.ms.1)
     (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E)
     (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (limit : N ≤ 2147483647)
     (saved : (states lock).pc thread = .gibC ticket expected)
@@ -359,11 +356,11 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
         imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf ∧
         ImageTicketStates output.image.Y.withIdle memory.1.m next.m
           (fun other => if other = lock then released else states other) ∧
-        PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
-        (SC L0).ans (projectSCState (imageProtectedFootprint output source.m) machine.ms) thread.val
+        PrivateBuffers (imageRuntimeFootprint output E next.m) memory.1 ∧
+        (SC L0).ans (projectSCState (imageRuntimeFootprint output E source.m) machine.ms) thread.val
           (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8))
             (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply
-          (projectSCState (imageProtectedFootprint output next.m) memory) := by
+          (projectSCState (imageRuntimeFootprint output E next.m) memory) := by
   intro after prior released
   have fits := (synchronized.1 lock).2.trans bound
   obtain ⟨step, result, written, lockWords, valid, next, advanced, store, trace, owners, others⟩ :=
@@ -379,7 +376,7 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
       (fun hit => outside (lockWord_in_bytes fits (by decide) hit))
   have registered := locks.update synchronized bound stable others lockWords valid owners
   obtain ⟨privatelyOwned, projected⟩ := image_release_projected answered buffers registered
-    (locks.owners lock) owners rfl others inLayout cells synchronized bound order
+    (locks.owners lock) owners rfl others inLayout cells hardware accepted duties synchronized bound order
   have quiet : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf := by
     rw [trace]
     simp only [imageSourceForeignEvents, List.filterMap_append, rufEigenG, List.reverse_singleton,
@@ -397,8 +394,11 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
     {lock : (declOf output.compiled.unit).mitRuhe.Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
     {ticket : Nat}
     (locks : ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m states)
-    (buffers : PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1)
+    (buffers : PrivateBuffers (imageRuntimeFootprint output E source.m) machine.ms.1)
     (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E)
     (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (limit : N ≤ 2147483647)
     (spins : output.image.Y.lockWait = .spin → SpinState (states lock))
@@ -430,16 +430,16 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
         imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf ∧
         ImageTicketStates output.image.Y.withIdle memory.1.m next.m
           (fun other => if other = lock then admitted else states other) ∧
-        PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
-        (SC L0).ans (projectSCState (imageProtectedFootprint output source.m) machine.ms) thread.val
+        PrivateBuffers (imageRuntimeFootprint output E next.m) memory.1 ∧
+        (SC L0).ans (projectSCState (imageRuntimeFootprint output E source.m) machine.ms) thread.val
           (.rd 8 (BitVec.ofNat 64 (output.image.Y.lk lock + 8))) reply
-          (projectSCState (imageProtectedFootprint output next.m) memory) := by
+          (projectSCState (imageRuntimeFootprint output E next.m) memory) := by
   intro after admitted
   have fits := (synchronized.1 lock).2.trans bound
   have shared (byte : W) (hit : fenster (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) byte) :
-      ∀ owner, ¬ imageProtectedFootprint output source.m owner byte := by
+      ∀ owner, ¬ imageRuntimeFootprint output E source.m owner byte := by
     intro owner owned
-    exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
+    exact imageRuntimeFootprint_lock_disjoint inLayout synchronized order owned
       (lockWord_in_bytes fits (by decide) hit)
   obtain ⟨step, unchanged, _, words, valid, next, advanced, store, trace, owners, others⟩ :=
     image_ticket_admit_GX (P := E.P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
@@ -465,15 +465,17 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
         intro inside
         exact upd_ne _ _ (fun same => issuer (congrArg Fin.val same))
     · exact (others guard selected owner).mpr held
-  have oldAtAnswer : PrivateBuffers (imageProtectedFootprint output source.m) memory.1 := unchanged.symm ▸ buffers
-  have nextBuffers : PrivateBuffers (imageProtectedFootprint output next.m) memory.1 := by
+  have oldAtAnswer : PrivateBuffers (imageRuntimeFootprint output E source.m) memory.1 := unchanged.symm ▸ buffers
+  have nextBuffers : PrivateBuffers (imageRuntimeFootprint output E next.m) memory.1 := by
     intro owner pending member byte hit
     have previous := (oldAtAnswer owner pending member byte hit).1
-    have current : imageProtectedFootprint output next.m owner byte := by
-      rcases previous with stack | ⟨cell, present, low, high, guarded, held⟩
-      · exact .inl stack
-      · exact .inr ⟨cell, present, low, high, guarded, fun guard protects => retained owner guard (held guard protects)⟩
-    exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive registered inLayout cells assigned current⟩
+    have current : imageRuntimeFootprint output E next.m owner byte := by
+      rcases previous with (stack | ⟨cell, present, low, high, guarded, held⟩) | plain
+      · exact .inl (.inl stack)
+      · exact .inl (.inr ⟨cell, present, low, high, guarded, fun guard protects => retained owner guard (held guard protects)⟩)
+      · exact .inr plain
+    exact ⟨current, fun _ assigned =>
+      imageRuntimeFootprint_exclusive registered inLayout cells hardware accepted duties assigned current⟩
   have quiet : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf := by
     rw [trace]
     simp only [imageSourceForeignEvents, List.filterMap_append, rufEigenG, List.reverse_singleton,
