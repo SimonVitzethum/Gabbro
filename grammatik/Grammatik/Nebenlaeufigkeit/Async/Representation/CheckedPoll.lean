@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedDispatch
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 import Lean.Elab.Tactic.Omega
 
@@ -255,5 +256,32 @@ public theorem checkedPoll_refines {elaboration : Elaboration D V Λ types f}
   simp only [singleStatement]
   exact checkedRetry_refines table inventory fixed state finished separate oracle passes calls prices
     (execBlock oracle passes calls exhausted) _ source world reset (activationFuel_le f source) cleared kept
+
+/-- The actual dispatcher closes the reachable-state representation
+    obligation for fixed resource indices. Every reachable semantic
+    state has its canonical encoding, including all suspended states. -/
+public theorem checkedDispatch_reachable_encoded {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (inventory : Inventory D) (fixed : FixedActivationInventory (f := f) inventory)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    {source : State (Value D) (Child D types)} {world : World D}
+    (reached : Reachable (inducedModel elaboration calls prices normal) f inventory source world) :
+    ∃ record, Inv f types inventory source record ∧ encode D types f source = some record := by
+  let model := inducedModel elaboration calls prices normal
+  refine reachable_encoded model f inventory ?_ reached
+  intro before after initial final event cost record represented step
+  let context := [stateType types f, Ty.bool]
+  let state : Var context (stateType types f) := .here
+  let finished : Var context .bool := .there .here
+  let env : Env D context := .cons record (.cons false .nil)
+  have distinct : state.position ≠ finished.position := Nat.zero_ne_one
+  have dispatch := checkedDispatch_refines table inventory fixed state finished distinct oracle passes calls
+    prices initial env rfl before represented (l := false)
+  have activated := runActivation_agrees_with_inducedModel elaboration calls prices normal before initial
+  rw [step] at activated
+  rw [activated] at dispatch
+  obtain ⟨updated, _, invariant, _⟩ := dispatch
+  exact ⟨updated.get state, invariant⟩
 
 end Gabbro.Grammatik.Async.Representation
