@@ -26,6 +26,13 @@ theorem guardedCarrierExpr_reads (identity : Nat) (source : Var Γ backing)
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi)) :
     (guardedCarrierExpr (D := D) (Λ := Λ) (capacity := capacity) identity source first last).orte = [] := rfl
 
+private theorem eval_eng_exact {lo hi : Int} (source : Expr D Γ Λ (.int lo hi))
+    (fallback : Expr D Γ Λ (.int 0 capacity)) (entry world : World D) (env : Env D Γ)
+    (valid : 0 ≤ (eval entry source world env).n ∧ (eval entry source world env).n ≤ (capacity : Int)) :
+    eval entry (.eng source 0 capacity fallback) world env = ⟨(eval entry source world env).n, valid.1, valid.2⟩ := by
+  rw [eval]
+  exact dite_eq_left valid
+
 theorem guardedCarrierExpr_exact (identity : Nat) (source : Var Γ backing)
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
     (entry world : World D) (env : Env D Γ)
@@ -38,15 +45,17 @@ theorem guardedCarrierExpr_exact (identity : Nat) (source : Var Γ backing)
   have firstFits : 0 ≤ (env.get first).n ∧ (env.get first).n ≤ (capacity : Int) := ⟨valid.1, by omega⟩
   have lengthFits : 0 ≤ (env.get last).n - (env.get first).n ∧
       (env.get last).n - (env.get first).n ≤ (capacity : Int) := ⟨by omega, by omega⟩
+  have startChecked (fallback : Expr D Γ Λ (.int 0 capacity)) :
+      eval entry (.eng (.var first) 0 capacity fallback) world env =
+        ⟨(env.get first).n, firstFits.1, firstFits.2⟩ :=
+    eval_eng_exact (.var first) fallback entry world env firstFits
+  have lengthChecked (fallback : Expr D Γ Λ (.int 0 capacity)) :
+      eval entry (.eng (.sub (.var last) (.var first)) 0 capacity fallback) world env =
+        ⟨(env.get last).n - (env.get first).n, lengthFits.1, lengthFits.2⟩ :=
+    eval_eng_exact (.sub (.var last) (.var first)) fallback entry world env lengthFits
   rw [guardedCarrierExpr, sliceCarrierExpr_eval]
-  simp only [eval, Zahl.sub]
-  split
-  · split
-    · exact Prod.ext (zahl_ext offset.symm) (Prod.ext (zahl_ext length.symm) rfl)
-    · rename_i outside
-      exact (outside lengthFits).elim
-  · rename_i outside
-    exact (outside firstFits).elim
+  rw [startChecked, lengthChecked]
+  exact Prod.ext (zahl_ext offset.symm) (Prod.ext (zahl_ext length.symm) rfl)
 
 /-- Both endpoint checks run before the ordinary binding of a slice
     descriptor. Invalid signed endpoints take the supplied refusal. -/
