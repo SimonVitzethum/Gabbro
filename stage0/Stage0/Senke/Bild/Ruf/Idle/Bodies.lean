@@ -141,6 +141,13 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
     try dsimp only [List.map_cons, resR, tyR, Ty.mapNumbers, ArmCtx, Option.map_some] at *
     try simp only [Consuming.lower, lowFloatWithIdle, frei_withIdle, lowB_resources,
       lowEnd_resources, counterDepthB_ru, FrameLayout.internalResult_withIdle, *]
-    try rfl
+    first
+    | rfl
+    | congr 1 <;> first
+      | rfl
+      | apply_assumption
+      | funext _
+        first | apply_assumption | apply lowE_withIdle
+    | skip
 
 end Gabbro.Stage0.Senke
