@@ -141,6 +141,7 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
         ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      Agree fp 0 output.image.Ks (before.ms.1.view (index + 1)) (after.1.view (index + 1)) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       WordsAt (after.1.view (index + 1)) frame FB words ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) = some (nxt pointer).pc ∧
@@ -190,7 +191,12 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
     rw [view]
     exact output.code_survives_writes (write_nurIn _ _ _) (above (FB + 1) (by omega))
       (output.code_survives_writes (write_nurIn _ _ _) (above FB (by omega)) bytes)
-  refine ⟨after, tso_silent_prefix_image run rfl, shared, others, frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, ?_⟩
+  have confined : Agree fp 0 output.image.Ks (before.ms.1.view (index + 1)) (after.1.view (index + 1)) := by
+    rw [view]
+    exact (agree_write frameOK.room (Nat.zero_le FB) (by omega) _).trans
+      (agree_write frameOK.room (Nat.zero_le (FB + 1)) (by omega) _)
+  refine ⟨after, tso_silent_prefix_image run rfl, shared, others, confined,
+    frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, ?_⟩
   · intro i inWords
     have within : FB + FB + i < output.image.Ks := by
       have count : words.length = contextWords ((declOf output.compiled.unit).params root.1) := encodeEnv_length _ _
@@ -260,6 +266,7 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
         ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      Agree entry.fp 0 output.image.Ks (before.ms.1.view (index + 1)) (after.1.view (index + 1)) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       WordsAt (after.1.view (index + 1)) frame FB words ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) =
@@ -280,7 +287,7 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     omega
   have calleeRoom : FB + 2 < output.image.Ks := by dsimp only [scratch] at scratchRoom; simp only [FB] at *; omega
   have fits : FB + FB + words.length ≤ output.image.Ks := by rw [wordCount]; exact scratchRoom.le
-  obtain ⟨first, depthRun, shared₁, others₁, code₁, frame₁, args₁, depth₁⟩ :=
+  obtain ⟨first, depthRun, shared₁, others₁, code₁, frame₁, args₁, depth₁, writes₁⟩ :=
     output.root_depth_preserves_frame declared bytes running frameOK fits arguments
   have inside := (List.getElem?_eq_some_iff.mp running).1
   have onThread (control : Res T) : (before.ths.set (index + 1) (some control))[index + 1]? = some (some control) :=
@@ -292,6 +299,9 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
   rw [← write₂] at preserved₂
   obtain ⟨code₂, frame₂, args₂⟩ := preserved₂
+  have writes₂ : Agree entry.fp 0 output.image.Ks (first.1.view (index + 1)) (second.1.view (index + 1)) := by
+    rw [write₂]
+    exact agree_write frame₁.room (Nat.zero_le scratch) scratchRoom _
   have depth₂ : (second.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 2)) =
       some (BitVec.ofNat 64 (output.image.depth + 1)) := by
     have separate : scratch ≠ 2 := by simp only [scratch, FB]; omega
@@ -309,6 +319,9 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     (Or.inl (by simp only [FB]; decide)) code₂ frame₂ args₂
   rw [← write₃] at preserved₃
   obtain ⟨code₃, frame₃, args₃⟩ := preserved₃
+  have writes₃ : Agree entry.fp 0 output.image.Ks (second.1.view (index + 1)) (third.1.view (index + 1)) := by
+    rw [write₃]
+    exact agree_write frame₂.room (Nat.zero_le (FB + 2)) calleeRoom _
   have depth₃ : (third.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 (FB + 2))) =
       some (BitVec.ofNat 64 output.image.depth) := by
     obtain ⟨_, _, bound, _, _⟩ := output.root_stub_code bytes declared
@@ -332,17 +345,21 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   have preserved₄ := child_store_preserves output (value := output.image.A root.1)
     declaredThread scratchRoom fits (Or.inr wordCount.le) code₃ frame₃ args₃
   rw [← write₄] at preserved₄
+  have writes₄ : Agree entry.fp 0 output.image.Ks (third.1.view (index + 1)) (fourth.1.view (index + 1)) := by
+    rw [write₄]
+    exact agree_write frame₃.room (Nat.zero_le scratch) scratchRoom _
   have depth₄ : (fourth.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 (FB + 2))) =
       some (BitVec.ofNat 64 output.image.depth) := by
     have separate : scratch ≠ FB + 2 := by simp only [scratch, FB]; omega
     rw [write₄, Mem.rd64_write_far (slot_far frame₃.room scratchRoom calleeRoom separate)]
     exact depth₃
   let call : T := ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩
-  obtain ⟨after, callRun, shared₅, others₅, body⟩ :=
+  obtain ⟨after, callRun, shared₅, others₅, writes₅, body⟩ :=
     output.root_call_enter (before := ⟨fourth, before.ths.set (index + 1) (some (.next call))⟩)
       declared code₄ (onThread (.next call)) frame₄ targetWord depth₄ preserved₄.2.2
   simp only [List.set_set] at callRun
-  refine ⟨after, ?_, shared₅.trans (shared₄.trans (shared₃.trans (shared₂.trans shared₁))), ?_, body⟩
+  refine ⟨after, ?_, shared₅.trans (shared₄.trans (shared₃.trans (shared₂.trans shared₁))), ?_,
+    writes₁.trans (writes₂.trans (writes₃.trans (writes₄.trans writes₅))), body⟩
   · simpa only [List.nil_append] using (((depthRun.trans operandRun).trans subRun).trans targetRun).trans callRun
   · intro other different
     exact (others₅ other different).trans ((others₄ other different).trans
@@ -367,6 +384,8 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
         ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      (∀ world, WeltAt (before.ms.1.view (index + 1)) output.image.Y world →
+        WeltAt (after.1.view (index + 1)) output.image.Y world) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view (index + 1)) frame root.2 ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) =
@@ -378,12 +397,14 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame running phase
   obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
-  obtain ⟨after, executed, shared, others, frameOK, words, returnPC, callerFrame, depth, body⟩ :=
+  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, body⟩ :=
     output.child_body_prefix declared bytes running permissions arguments
   have valid := output.startPlan.starts_valid (initialWorld _ output.initialValid) output.image.Y root
     (List.mem_of_getElem? declared)
   have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) root.2).mpr ⟨valid, words⟩
-  exact ⟨after, executed, shared, others, frameOK, environment, returnPC, callerFrame, depth, body⟩
+  have thread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
+  exact ⟨after, executed, shared, others, fun _ stored => output.world_survives_stack thread stored writes,
+    frameOK, environment, returnPC, callerFrame, depth, body⟩
 
 /-- A zero depth word at an emitted function entry branches directly
     to the stop for that function's model depth exhaustion. -/

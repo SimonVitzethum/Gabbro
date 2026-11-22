@@ -278,13 +278,14 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
       FrameOK (after.1.view (index + 1)) pointer.fp output.image.Ks ∧
       WordsAt (after.1.view (index + 1)) pointer.fp (FB + FB) words ∧
       (after.1.view (index + 1)).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
-        some (BitVec.ofNat 64 (output.image.depth + 1)) := by
+        some (BitVec.ofNat 64 (output.image.depth + 1)) ∧
+      Agree pointer.fp 0 output.image.Ks (before.ms.1.view (index + 1)) (after.1.view (index + 1)) := by
   intro pointer words running frame fits args
   obtain ⟨after, run, memory, wroteDepth, others⟩ := output.root_depth_start declared loaded running frame
   obtain ⟨_, depthSlot, depthFits, _, _⟩ := output.root_stub_code loaded declared
   have thread : index + 1 ≤ output.starts.length :=
     Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
-  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
+  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
   · apply output.code_survives_writes (write_nurIn _ _ _) _ loaded
     intro byte touched
     have own := imageStackFootprint_slot (output := output) (i := index + 1)
@@ -299,6 +300,7 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
   · have word := rd64_write_same (w := BitVec.ofNat 64 (output.image.depth + 1)) (frame.rd 2 depthSlot)
     simpa only [BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
+  · exact agree_write frame.room (Nat.zero_le _) depthSlot _
 
 /-- The child's startup phase carries the exact typed stack payload
     of the corresponding declared source root. -/
@@ -360,7 +362,7 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
     change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
       BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-  obtain ⟨after, run, shared, others, loaded, permissions, words, depth⟩ :=
+  obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _⟩ :=
     output.root_depth_preserves_frame declared code running frame fits args
   refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
   · intro i present
