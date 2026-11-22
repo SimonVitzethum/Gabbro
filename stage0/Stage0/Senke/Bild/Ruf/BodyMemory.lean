@@ -234,7 +234,7 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
     {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem}
     {thread : Nat} {snapshot : Solo} {pc : W}
-    {carriers : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob → Prop}
+    {carriers : (declOf output.compiled.unit).mitRuhe.Tab ⊕ (declOf output.compiled.unit).mitRuhe.Glob → Prop}
     (buffers : PrivateBuffers footprint after.ms.1)
     (matched : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState footprint after.ms).1, after.ths⟩ state snapshots positions committed)
