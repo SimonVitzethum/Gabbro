@@ -130,13 +130,6 @@ theorem functionFrame_withIdle (P : Programm D) (L : Lay D) (f : D.Fn) :
         result := (D.erg f).map tyR } := by
   have snapshots := (postSnapshots_withIdle P L f FB).1
   have counters := functionCounterDepth_withIdle P f
-  change
-    { params := (D.params f).map tyR, result := (D.erg f).map tyR, reasons := D.gruende f,
-      snapshotWords := EntrySnapshots.words (oldCells (P.mitRuhe.ensures (some f))),
-      counterDepth := counterDepthE (P.mitRuhe.rumpf (some f)) } =
-    { params := (D.params f).map tyR, result := (D.erg f).map tyR, reasons := D.gruende f,
-      snapshotWords := EntrySnapshots.words (oldCells (P.ensures f)),
-      counterDepth := counterDepthE (P.rumpf f) }
   exact kongr₂ (FrameLayout.mk ((D.params f).map tyR) ((D.erg f).map tyR) (D.gruende f))
     snapshots counters
 
