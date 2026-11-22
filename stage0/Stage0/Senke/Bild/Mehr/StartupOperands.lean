@@ -213,10 +213,20 @@ theorem tso_sys_prefix {layout : Runner.Beweis.Lay}
   have operand2 : ProcessStep (TSO layout) actI (onThread (f2 t (fetchArgs (sx dest)))) []
       (onThread (fetchArgs (sx dest) (sx args))) :=
     load32 (fun a => fetchArgs (sx dest) (sx a)) instruction.f2
-  refine .cons (.priv running rfl) (.cons (tso_fetch_opcode before inside instruction.op (by decide))
-    (.cons operand1 (.cons operand2 (.cons (load64 _ number) (.cons (load64 _ first)
-      (.cons (load64 _ second) (.cons (load64 _ third) (.cons (load64 _ fourth)
-        (.cons (load64 _ fifth) (.cons (load64 _ sixth) (.nil _))))))))))
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step t)) := .priv running rfl
+  have fetched : ProcessStep (TSO layout) actI (onThread (IR.step t)) [] (onThread (op 23 t)) :=
+    tso_fetch_opcode before inside 23 instruction.op (by decide)
+  refine .cons started ?_
+  refine .cons fetched ?_
+  refine .cons operand1 ?_
+  refine .cons operand2 ?_
+  refine .cons (load64 _ number) ?_
+  refine .cons (load64 _ first) ?_
+  refine .cons (load64 _ second) ?_
+  refine .cons (load64 _ third) ?_
+  refine .cons (load64 _ fourth) ?_
+  refine .cons (load64 _ fifth) ?_
+  exact .cons (load64 _ sixth) (.nil _)
 
 /-- A successful binary instruction reads both slots from the issuing
     view and buffers its exact result at the decoded destination. -/
