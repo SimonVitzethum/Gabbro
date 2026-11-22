@@ -114,4 +114,41 @@ theorem StarM.vor_halt {n : Nat} {t t1 ts : T} {m m1 ms : Mem} {q : Req} (h : St
   · obtain ⟨rfl, rfl⟩ := hk.halt hq
     exact .refl _ _
 
+/-- Counted reference instructions in the Lean IR. This index counts
+    completed instructions even when a reference receives a floating
+    answer. It is used in proofs and is absent from the emitted image. -/
+inductive IRReference : Nat → T → Mem → T → Mem → Prop
+  | start (pointer : T) (memory : Mem) : IRReference 0 pointer memory pointer memory
+  | extend {n : Nat} {entry mid finish : T} {before next after : Mem} :
+      Run (step entry) before mid next → IRReference n mid next finish after →
+      IRReference (n + 1) entry before finish after
+
+theorem IRReference.of_star {entry finish : T} {before after : Mem}
+    (run : Star entry before finish after) :
+    ∃ count, IRReference count entry before finish after := by
+  induction run with
+  | refl => exact ⟨0, .start _ _⟩
+  | next first _ ih =>
+    obtain ⟨count, tail⟩ := ih
+    exact ⟨count + 1, .extend first tail⟩
+
+/-- An arbitrary memory-only prefix consumes that many reference
+    instructions with identical intermediate memories. The remaining
+    reference is valid even if it is about to ask for a floating answer. -/
+theorem StarM.consume_reference {taken count : Nat} {entry middle finish : T}
+    {before current after : Mem} (part : StarM taken entry before middle current) :
+    IRReference count entry before finish after → taken ≤ count →
+    IRReference (count - taken) middle current finish after := by
+  induction part generalizing count with
+  | refl =>
+    intro reference _
+    simpa only [Nat.sub_zero] using reference
+  | next head _ tail =>
+    intro reference within
+    cases reference with
+    | start => exact (Nat.not_succ_le_zero _ within).elim
+    | extend first remaining =>
+      obtain ⟨rfl, rfl⟩ := head.det first
+      simpa only [Nat.succ_sub_succ_eq_sub] using tail remaining (Nat.le_of_succ_le_succ within)
+
 end Gabbro.Stage0.Senke.BildLauf
