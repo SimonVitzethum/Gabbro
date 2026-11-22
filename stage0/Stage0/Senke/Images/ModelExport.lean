@@ -89,7 +89,7 @@ private theorem Emitted.image_model_empty_accumulators (output : Emitted src res
     (noAccumulators : imageAccumulatorItems output = []) :
     ImageModelUnit output { output.goalUnit Q with axiomSources := sources } :=
   output.image_model_without_arenas Q sources summary (OldSource.zertifizierbar_teile noOwnership).1
-    [] (noAccumulators ▸ .nil)
+    [] (by rw [noAccumulators]; exact .nil)
 
 /-- For the part of the current emitter with no foreign or ownership
     declarations, the checked output supplies the specified source unit

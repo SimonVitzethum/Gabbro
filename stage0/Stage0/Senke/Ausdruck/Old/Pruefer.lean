@@ -165,7 +165,7 @@ theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns 
   · rintro ⟨accepted, start⟩
     exact accepts_gibt_einheitVon u P Q sp main starts gestartet checks derived _ hws accepted start
   · intro accepted
-    simp only [akzeptiertX_pruefer, Bool.and_eq_true] at accepted
+    simp only [akzeptiertX_pruefer, checkAkzeptiertX, Bool.and_eq_true] at accepted
     rcases accepted with ⟨⟨⟨⟨core, _⟩, _⟩, invariant⟩, logic⟩
     refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
     simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, derived, bind, Except.bind]

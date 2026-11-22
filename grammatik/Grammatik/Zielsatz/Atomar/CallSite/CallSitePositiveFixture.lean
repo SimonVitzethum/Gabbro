@@ -66,7 +66,7 @@ theorem functions_complete : ∀ f : decl.Fn, f ∈ [()] := fun f => by
 
 /-- The source post reads the two-valued return variable, not literal truth. -/
 theorem good_checker : akzeptiertX_pruefer.akzeptiert unit [()] [] [] = true := by
-  simp only [akzeptiertX_pruefer, AkzeptiertX, Bool.and_eq_true]
+  simp only [akzeptiertX_pruefer, checkAkzeptiertX, AkzeptiertX, Bool.and_eq_true]
   and_intros
   all_goals first
     | exact (schnittstellenB_iff functions_complete).mpr (schnittstellen_standard _ _)
