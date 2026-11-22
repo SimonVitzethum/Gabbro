@@ -209,16 +209,17 @@ def imageExternalEvent (event : Ev) : Bool :=
   !(decide (request = cloneReq ∨ request.nr.toNat = NR_EXIT ∨ request.nr.toNat = NR_EXIT_GROUP ∨
     request = futexReq request.a1 128 request.a3 ∨ request = futexReq request.a1 129 request.a3))
 
-/-- The typed program's foreign calls occur in the same global order
-    and at the same thread indices as the runner's external requests. -/
+def imageSourceForeignEvents {D : Deklaration} (run : Lauf D) : List (Faden × D.Ax) :=
+  run.filterMap fun step => match step.ereignis with
+    | .fremd (.inl routine) => some (step.faden, routine)
+    | _ => none
+
+/-- The typed program and runner agree on the global order of foreign calls. -/
 def ImageForeignTrace (output : Emitted src reserve options)
     (history : List Ev) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  let model := state.m.lauf.filterMap (fun step => match step.ereignis with
-    | .fremd (.inl routine) => some (step.faden, routine)
-    | _ => none)
   List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
     event.1 = typed.1 ∧ ∃ gate, output.tor typed.2 = some gate ∧
-      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent) model
+      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent) (imageSourceForeignEvents state.m.lauf)
 
 /-- The actual mapped output and empty initial buffers establish the
     initial phase, exact source memory and empty observation history. -/
@@ -326,6 +327,7 @@ def ImageGateEvent [Kern] (output : Emitted src reserve options)
       ImageReach output E O before site ∧ ImageReach output E O site after ∧
       site.lebt event.1 = true ∧
       (mitSpeicher site.m memory).foreignCallKey event.1 = some ⟨routine, world, args⟩ ∧
+      imageSourceForeignEvents after.m.lauf = imageSourceForeignEvents before.m.lauf ++ [(event.1, routine)] ∧
       (∀ carrier, ¬ GeteiltV (D := declOf output.compiled.unit) E.P E.ws carrier →
         TraegerGleich memory site.m.speicher carrier) ∧
       ∃ gate word extra, layout.tor routine = some gate ∧ request.nr = BitVec.ofNat 64 gate.nr ∧

@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+public import Stage0.Senke.Bild.Ruf.GateTrace
 import Stage0.Senke.Bild.Mehr.StartupOperands
 import Runner.Basis.MemLemma
 
@@ -58,9 +59,7 @@ theorem ImageForeignTrace.retire {src : String} {reserve : Nat} {options : Profi
     ImageForeignTrace output (history ++ [(i, req, none)]) state := by
   have internal : imageExternalEvent (i, req, none) = false := by
     simp only [imageExternalEvent, exit, true_or, or_true, decide_true, Bool.not_true]
-  unfold ImageForeignTrace at matched ⊢
-  simpa only [List.filter_append, List.filter_cons, internal, Bool.false_eq_true, ite_false,
-    List.filter_nil, List.append_nil] using matched
+  exact matched.appendInternal (by intro event member; simpa only [List.mem_singleton.mp member] using internal) rfl
 
 private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
     {slots destination value : Nat}
