@@ -227,6 +227,41 @@ theorem uSliceLocalType_unknown (ctx : UCtx) (name : String)
     (unresolved : ctx.unknownRanges.contains name = true) : uSliceLocalType ctx name = none := by
   simp only [uSliceLocalType, unresolved, ite_true]
 
+/-- A provisional local cannot be accepted as a slice operand even if a
+    source constant has the same name. -/
+theorem uSliceInteger_unknown (ctx : UCtx) (blatt : SExpr → Except String USide) (name : String)
+    (unresolved : ctx.unknownRanges.contains name = true) :
+    uSliceInteger ctx blatt (.variable name) = none := by
+  simp only [uSliceInteger, uSliceLocalType_unknown ctx name unresolved, unresolved, ite_true]
+
+/-- A resolved local operand retains its interval and its exact lexical
+    read. A known non-integer binding cannot produce that operand. -/
+theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
+    {source : SExpr} {name : String} {lo hi : Int}
+    (recognized : uSliceInteger ctx blatt source = some (lo, hi, .param name)) :
+    source = .variable name ∧ uSliceLocalType ctx name = some (.int lo hi) ∧
+      blatt (.variable name) = .ok (.param name) := by
+  have notLiteral (expression : SExpr) :
+      (uSchranke (uSliceConstants ctx) expression).map (fun value => (value, value, USide.lit value)) ≠
+        some (lo, hi, USide.param name) := by
+    cases uSchranke (uSliceConstants ctx) expression <;>
+      simp only [Option.map_none, Option.map_some, reduceCtorEq, Prod.mk.injEq, and_false]
+  cases source <;> first
+  | exact (notLiteral _ recognized).elim
+  | rename_i current
+    simp only [uSliceInteger] at recognized
+    split at recognized
+    · rename_i lower upper resolved
+      split at recognized
+      · rename_i localRead
+        simp only [Option.some.injEq, Prod.mk.injEq, USide.param.injEq] at recognized
+        obtain ⟨rfl, rfl, rfl⟩ := recognized
+        exact ⟨rfl, resolved, localRead⟩
+      · cases recognized
+    · split at recognized
+      · cases recognized
+      · exact (notLiteral _ recognized).elim
+
 /-- A varying local endpoint and static upper endpoint and index
     satisfy the productive slice checks together. -/
 theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 4 ≤ capacity) :
