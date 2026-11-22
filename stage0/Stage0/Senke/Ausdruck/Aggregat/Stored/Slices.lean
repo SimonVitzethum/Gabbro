@@ -46,6 +46,45 @@ theorem ValueAt.checked_slice_view {D : Deklaration} {layout : Lay D} {memory : 
     ArraySliceView.value_ofEndpoints (α := Wert D τ) (capacity := capacity) value first.toNat last.toNat valid
   exact same ▸ stored
 
+/-- Encode an array view as offset and length. The array's declared
+    storage location is carried separately by the typed lowering. -/
+def sliceDescriptorWords {capacity : Nat} (view : ArraySliceView capacity) : List Runner.W :=
+  [BitVec.ofNat 64 view.offset, BitVec.ofNat 64 view.length]
+
+/-- Read the saved descriptor through the ordinary frame layout. Bounds
+    are re-established before any element address can be formed. -/
+def readSliceDescriptor (memory : Runner.Mem) (frame : Runner.W) (storage capacity : Nat) :
+    Option (ArraySliceView capacity) := do
+  let offset ← memory.rd64 (slot frame (BitVec.ofNat 64 storage))
+  let length ← memory.rd64 (slot frame (BitVec.ofNat 64 (storage + 1)))
+  if valid : offset.toNat + length.toNat ≤ capacity then
+    some ⟨offset.toNat, length.toNat, valid⟩
+  else none
+
+theorem readSliceDescriptor_exact {memory : Runner.Mem} {frame : Runner.W} {storage capacity : Nat}
+    (view : ArraySliceView capacity) (sized : capacity < 2 ^ 64)
+    (stored : WordsAt memory frame storage (sliceDescriptorWords view)) :
+    readSliceDescriptor memory frame storage capacity = some view := by
+  have offset := stored 0 (by simp [sliceDescriptorWords])
+  have length := stored 1 (by simp [sliceDescriptorWords])
+  simp only [sliceDescriptorWords, List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero] at offset length
+  have offsetFits : view.offset < 2 ^ 64 := (Nat.le_trans (Nat.le_add_right _ _) view.fits).trans_lt sized
+  have lengthFits : view.length < 2 ^ 64 := (Nat.le_trans (Nat.le_add_left _ _) view.fits).trans_lt sized
+  simp only [readSliceDescriptor, offset, length, Option.bind_eq_bind, Option.bind_some,
+    BitVec.toNat_ofNat, Nat.mod_eq_of_lt offsetFits, Nat.mod_eq_of_lt lengthFits, dite_eq_left view.fits]
+
+/-- A descriptor loaded from the frame selects the exact value of the
+    modeled view in its original allocation. The visible element width
+    is inherited from the underlying type, including aggregate types. -/
+theorem ValueAt.decode_slice_descriptor {D : Deklaration} {layout : Lay D} {memory : Runner.Mem}
+    {frame : Runner.W} {base storage capacity : Nat} {τ : Ty} {value : Wert D (.arr τ capacity)}
+    (array : ValueAt layout memory frame base (.arr τ capacity) value)
+    (view : ArraySliceView capacity) (sized : capacity < 2 ^ 64)
+    (stored : WordsAt memory frame storage (sliceDescriptorWords view)) :
+    readSliceDescriptor memory frame storage capacity = some view ∧
+      SliceAt (τ := τ) layout memory frame (base + view.offset * valueWords τ) (view.value value) :=
+  ⟨readSliceDescriptor_exact view sized stored, array.slice_view view⟩
+
 /-- The representation of an existing slice can be narrowed by moving
     the base. All observed bytes and their layout obligations are inherited. -/
 theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
