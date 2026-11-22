@@ -34,7 +34,9 @@ theorem ImageStartSite.call_target [Kern] {output : Emitted src reserve options}
       BytesAt (after.1.view site.thread) codeBase (output.image.code.flatMap encII) ∧
       FrameOK (after.1.view site.thread) fp output.image.Ks ∧
       (after.1.view site.thread).rd64 (slot fp (BitVec.ofNat 64 scratch)) =
-        some (BitVec.ofNat 64 (output.image.A site.fn)) := by
+        some (BitVec.ofNat 64 (output.image.A site.fn)) ∧
+      QueuedStores before.ms.1 after.1 site.thread
+        [(slot fp (BitVec.ofNat 64 scratch), BitVec.ofNat 64 (output.image.A site.fn))] := by
   intro entry fp pointer scratch running frame
   obtain ⟨stub, _, _, exitRoom, signed⟩ := site.stub bytes
   obtain ⟨_, _, _, _, _, targetFits⟩ := output.relocated_function_code bytes site.fn
@@ -53,13 +55,14 @@ theorem ImageStartSite.call_target [Kern] {output : Emitted src reserve options}
   have writable : Mem.all before.ms.1.m.wr (slot fp (sx (II.f (scratch : Int)))) 8 = true := by
     rw [dest, ← foldl_wr (before.ms.1.buf site.thread) before.ms.1.m]
     exact frame.wr _ callRoom
-  obtain ⟨after, run, memory, view, others⟩ :=
+  obtain ⟨after, run, memory, view, others, queued⟩ :=
     tso_const_prefix (before := imageToTSO before) running instruction writable
   have small := targetFits.trans (by decide : 2 ^ 31 < 2 ^ 64)
   have written : after.1.view site.thread =
       Mem.write (before.ms.1.view site.thread) (slot fp (BitVec.ofNat 64 scratch)) 8 (output.image.A site.fn) := by
     rw [view, dest, target, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small] <;> rfl
-  refine ⟨after, tso_silent_prefix_image run rfl, memory, others, written, ?_, ?_, ?_⟩ <;> rw [written]
+  rw [dest, target] at queued
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, others, written, ?_, ?_, ?_, queued⟩ <;> rw [written]
   · apply output.code_survives_writes (write_nurIn _ _ _) _ bytes
     intro byte touched
     have reserved := imageStackFootprint_slot (output := output) (i := site.thread) site.bounded callRoom touched
@@ -100,6 +103,8 @@ theorem ImageStartSite.call_enter [Kern] {output : Emitted src reserve options}
       (after.1.view site.thread).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       BytesAt (after.1.view site.thread) codeBase (output.image.code.flatMap encII) ∧
+      QueuedStores before.ms.1 after.1 site.thread
+        [(frame, (nxt pointer).pc), (slot fp (BitVec.ofNat 64 (FB + 1)), fp)] ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y site.fn =
         some (code, top) ∧ CodeAt (after.1.view site.thread) target code := by
   intro entry fp pointer scratch target frame words running frameOK loadedTarget depth args
@@ -120,10 +125,10 @@ theorem ImageStartSite.call_enter [Kern] {output : Emitted src reserve options}
   have writableFP : Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f (FB : Int))) + 8) 8 = true := by
     rw [frameSlot, slot_plus8, ← foldl_wr (before.ms.1.buf site.thread) before.ms.1.m]
     exact frameOK.wr (FB + 1) (by omega)
-  obtain ⟨after, run, shared, view, others⟩ := tso_call_prefix (before := imageToTSO before)
+  obtain ⟨after, run, shared, view, others, queued⟩ := tso_call_prefix (before := imageToTSO before)
     running instruction (by rw [targetSlot]; exact loadedTarget) writablePC writableFP
-  rw [frameSlot] at run view
-  rw [slot_plus8] at view
+  rw [frameSlot] at run view queued
+  rw [slot_plus8] at view queued
   have frameAfter : FrameOK (after.1.view site.thread) fp output.image.Ks := by
     rw [view]
     exact ⟨frameOK.lt, frameOK.rd, frameOK.wr⟩
@@ -147,7 +152,7 @@ theorem ImageStartSite.call_enter [Kern] {output : Emitted src reserve options}
     exact (agree_write frameOK.room (Nat.zero_le FB) (by omega) _).trans
       (agree_write frameOK.room (Nat.zero_le (FB + 1)) (by omega) _)
   refine ⟨after, tso_silent_prefix_image run rfl, shared, others, confined,
-    frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, updatedCode, ?_⟩
+    frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, updatedCode, queued, ?_⟩
   · intro i inWords
     have within : FB + FB + i < output.image.Ks := by
       have count : words.length = contextWords ((declOf output.compiled.unit).params site.fn) := encodeEnv_length _ _
@@ -224,6 +229,8 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
       (after.1.view site.thread).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       BytesAt (after.1.view site.thread) codeBase (output.image.code.flatMap encII) ∧
+      (PrivateBuffers (imageStackFootprint output) before.ms.1 →
+        PrivateBuffers (imageStackFootprint output) after.1) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y site.fn =
         some (code, top) ∧ CodeAt (after.1.view site.thread) target code := by
   intro entry target frame words running frameOK arguments
@@ -236,12 +243,12 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
     omega
   have calleeRoom : FB + 2 < output.image.Ks := by dsimp only [scratch] at scratchRoom; simp only [FB] at *; omega
   have fits : FB + FB + words.length ≤ output.image.Ks := by rw [wordCount]; exact scratchRoom.le
-  obtain ⟨first, depthRun, shared₁, others₁, code₁, frame₁, args₁, depth₁, writes₁⟩ :=
+  obtain ⟨first, depthRun, shared₁, others₁, code₁, frame₁, args₁, depth₁, writes₁, queue₁⟩ :=
     site.depth_preserves_frame bytes running frameOK fits arguments
   have inside := (List.getElem?_eq_some_iff.mp running).1
   have onThread (control : Res T) : (before.ths.set site.thread (some control))[site.thread]? = some (some control) :=
     List.getElem?_set_self inside
-  obtain ⟨second, operandRun, shared₂, write₂, others₂⟩ :=
+  obtain ⟨second, operandRun, shared₂, write₂, others₂, queue₂⟩ :=
     site.call_decrement_operand (before := ⟨first, before.ths.set site.thread (some (.next (nxt entry)))⟩)
       code₁ (onThread (.next (nxt entry))) frame₁
   have preserved₂ := site.store_preserves (value := 1)
@@ -260,7 +267,7 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
     rw [write₂]
     exact rd64_write_same (w := 1) (frame₁.rd scratch scratchRoom)
   simp only [List.set_set] at operandRun
-  obtain ⟨third, subRun, shared₃, write₃, others₃⟩ :=
+  obtain ⟨third, subRun, shared₃, write₃, others₃, queue₃⟩ :=
     site.call_depth (before := ⟨second, before.ths.set site.thread (some (.next (nxt (nxt entry))))⟩)
       code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
   simp only [List.set_set] at subRun
@@ -283,7 +290,7 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
     change (⟨entry.pc + 16 + 16 + 16, entry.fp⟩ : T) = callConst
     rw [BitVec.add_assoc, BitVec.add_assoc] <;> rfl
   rw [samePC] at subRun
-  obtain ⟨fourth, targetRun, shared₄, others₄, write₄, code₄, frame₄, targetWord⟩ :=
+  obtain ⟨fourth, targetRun, shared₄, others₄, write₄, code₄, frame₄, targetWord, queue₄⟩ :=
     site.call_target (before := ⟨third, before.ths.set site.thread (some (.next callConst))⟩)
       code₃ (onThread (.next callConst)) frame₃
   simp only [List.set_set] at targetRun
@@ -303,16 +310,29 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
     rw [write₄, Mem.rd64_write_far (slot_far frame₃.room scratchRoom calleeRoom separate)]
     exact depth₃
   let call : T := ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩
-  obtain ⟨after, callRun, shared₅, others₅, writes₅, body⟩ :=
+  obtain ⟨after, callRun, shared₅, others₅, writes₅, frameAfter, argsAfter, returnPC, callerFP, depthAfter, codeAfter,
+    queue₅, lowered⟩ :=
     site.call_enter (before := ⟨fourth, before.ths.set site.thread (some (.next call))⟩)
       code₄ (onThread (.next call)) frame₄ targetWord depth₄ preserved₄.2.2
   simp only [List.set_set] at callRun
   refine ⟨after, ?_, shared₅.trans (shared₄.trans (shared₃.trans (shared₂.trans shared₁))), ?_,
-    writes₁.trans (writes₂.trans (writes₃.trans (writes₄.trans writes₅))), body⟩
+    writes₁.trans (writes₂.trans (writes₃.trans (writes₄.trans writes₅))), frameAfter, argsAfter,
+    returnPC, callerFP, depthAfter, codeAfter, ?_, lowered⟩
   · simpa only [List.nil_append] using (((depthRun.trans operandRun).trans subRun).trans targetRun).trans callRun
   · intro other different
     exact (others₅ other different).trans ((others₄ other different).trans
       ((others₃ other different).trans ((others₂ other different).trans (others₁ other different))))
+  · intro privateBefore
+    apply site.queued_stores_private (queue₁.trans (queue₂.trans (queue₃.trans (queue₄.trans queue₅)))) _ privateBefore
+    intro store stored byte touched
+    simp only [List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at stored
+    rcases stored with rfl | rfl | rfl | rfl | rfl | rfl
+    · exact imageStackFootprint_slot site.bounded two touched
+    · exact imageStackFootprint_slot site.bounded scratchRoom touched
+    · exact imageStackFootprint_slot site.bounded calleeRoom touched
+    · exact imageStackFootprint_slot site.bounded scratchRoom touched
+    · exact imageStackFootprint_slot site.bounded (by omega : FB < output.image.Ks) touched
+    · exact imageStackFootprint_slot site.bounded (by omega : FB + 1 < output.image.Ks) touched
 
 /-- The root phase of the actual image supplies the serialized inputs
     for the complete silent prefix into its lowered function. -/
@@ -347,7 +367,7 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame running phase
   obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
-  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, code, body⟩ :=
+  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, code, _, body⟩ :=
     (output.childStartSite declared).body_prefix bytes running permissions arguments
   have valid := output.startPlan.starts_valid (initialWorld _ output.initialValid) output.image.Y root
     (List.mem_of_getElem? declared)

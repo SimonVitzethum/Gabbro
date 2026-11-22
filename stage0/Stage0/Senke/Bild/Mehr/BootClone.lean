@@ -209,7 +209,7 @@ theorem bootSpawn_run [Kern] {layout : Runner.Beweis.Lay}
   have writable : Mem.all prepared.1.m.wr (slot fp (sx (II.f ((scratch + 2 : Nat) : Int)))) 8 = true := by
     rw [dest, committed, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr _ inFrame
-  obtain ⟨finished, resume, memory, wrote, other⟩ :=
+  obtain ⟨finished, resume, memory, wrote, other, _⟩ :=
     tso_ret1_prefix (before := active) (i := i) (parent := parent) responseReady instruction.f1 writable
   have advance : nxt parent = ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ := by
     exact congrArg (fun ip => T.mk ip fp) (pcN pc 2 1 3 rfl)

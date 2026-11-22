@@ -67,6 +67,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.loaded_boot_run
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_ret1_prefix
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_const_prefix
+#print axioms Gabbro.Stage0.Senke.BildMehr.QueuedStores.trans
 #print axioms Gabbro.Stage0.Senke.spawn_prepare_prefix
 #print axioms Gabbro.Stage0.Emitted.first_boot_clone
 #print axioms Gabbro.Stage0.bootSpawn_run
@@ -240,6 +241,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageStartSite.call_target
 #print axioms Gabbro.Stage0.ImageStartSite.call_enter
 #print axioms Gabbro.Stage0.ImageStartSite.body_prefix
+#print axioms Gabbro.Stage0.ImageStartSite.queued_stores_private
 #print axioms Gabbro.Stage0.Emitted.child_body_from_root_phase
 #print axioms Gabbro.Stage0.Emitted.depth_guard_zero
 #print axioms Gabbro.Stage0.Emitted.root_depth_guard_pass

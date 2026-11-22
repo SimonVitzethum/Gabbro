@@ -10,6 +10,21 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Beweis Runner.Mach
 
+/-- The exact FIFO suffix queued by the executing thread. All other
+    threads retain their original buffers. -/
+def QueuedStores (before after : TSt) (thread : Nat) (stores : List (W × W)) : Prop :=
+  ∀ i, after.buf i = before.buf i ++ (if i = thread then stores else [])
+
+theorem QueuedStores.trans {before middle after : TSt} {thread : Nat}
+    {first second : List (W × W)} (left : QueuedStores before middle thread first)
+    (right : QueuedStores middle after thread second) :
+    QueuedStores before after thread (first ++ second) := by
+  intro i
+  rw [right i, left i]
+  by_cases equal : i = thread
+  · simp only [equal, ite_eq_left rfl, List.append_assoc]
+  · simp only [ite_eq_right equal, List.append_nil]
+
 /-- The read part of an IR instruction leaves the TSO state and all other
     entries of the thread list unchanged. -/
 theorem tso_read_step {layout : Lay} (before : Cfg (TSO layout) (Res T))
@@ -37,7 +52,8 @@ theorem tso_write_step {layout : Lay}
         ⟨after, before.ths.set i (some (resume (some (0, 0))))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) address 8 value.toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
+      QueuedStores before.ms.1 after.1 i [(address, value)] := by
   have outsideTable (j : Nat) (inside : j < 8) :
       ¬ TB layout (address + BitVec.ofNat 64 j) := by
     intro touches
@@ -67,11 +83,20 @@ theorem tso_write_step {layout : Lay}
     Or.inr ⟨writable, rfl, rfl⟩
   have stored := ProcessStep.ask (act := actI) running rfl rfl answered
     (t' := resume (some (0, 0))) rfl
-  refine ⟨after, ?_, rfl, ?_⟩
+  refine ⟨after, ?_, rfl, ?_, ?_, ?_⟩
   · simpa only [Mach.lbl] using stored
-  rcases tso_store_updates_view answered with refused | accepted
-  · cases refused.1
-  · exact accepted.2
+  · rcases tso_store_updates_view answered with refused | accepted
+    · cases refused.1
+    · exact accepted.2.1
+  · rcases tso_store_updates_view answered with refused | accepted
+    · cases refused.1
+    · exact accepted.2.2
+  · intro j
+    by_cases same : j = i
+    · simp only [after, TSt.setBuf, ite_eq_left same, pending]
+      subst j
+      rfl
+    · simp only [after, TSt.setBuf, ite_eq_right same, List.append_nil]
 
 /-- Finishing an instruction's result operation reads its destination,
     enqueues the word and advances the program counter. -/
@@ -86,7 +111,8 @@ theorem tso_ret1_prefix {layout : Lay}
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
+      QueuedStores before.ms.1 after.1 i [(slot parent.fp (sx dest), value)] := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
   obtain ⟨inside, current⟩ := List.getElem?_eq_some_iff.mp running
@@ -105,13 +131,13 @@ theorem tso_ret1_prefix {layout : Lay}
         exact List.set_getElem_self inside
       simp only [onThread, threads]
     exact original ▸ decoded
-  obtain ⟨after, queued, committed, view, others⟩ :=
+  obtain ⟨after, queued, committed, view, others, buffers⟩ :=
     tso_write_step (before := onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent)))
       (List.getElem?_set_self inside) writable
   have stored : ProcessStep (TSO layout) actI (onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent))) []
       ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ := by
     simpa only [onThread, List.set_set, wr64, opt_some] using queued
-  exact ⟨after, .cons decoded (.cons stored (.nil _)), committed, view, others⟩
+  exact ⟨after, .cons decoded (.cons stored (.nil _)), committed, view, others, buffers⟩
 
 /-- The real runner loads an immediate, enqueues its destination store,
     and advances to the next instruction. The issuer can already read
@@ -127,7 +153,8 @@ theorem tso_const_prefix {layout : Lay}
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 (sx value).toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
+      QueuedStores before.ms.1 after.1 i [(slot parent.fp (sx dest), sx value)] := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
   have inside := (List.getElem?_eq_some_iff.mp running).1
@@ -146,10 +173,10 @@ theorem tso_const_prefix {layout : Lay}
       (fun answer => opt answer fun pair => ret1 parent (sx (pair.1.setWidth 32))) loaded
   have retReady : (onThread (ret1 parent (sx value))).ths[i]? = some (some (ret1 parent (sx value))) :=
     List.getElem?_set_self inside
-  obtain ⟨after, result, committed, view, other⟩ := tso_ret1_prefix retReady instruction.f1 writable
+  obtain ⟨after, result, committed, view, other, buffers⟩ := tso_ret1_prefix retReady instruction.f1 writable
   have reads : ProcessPrefix (TSO layout) actI before [] 3 (onThread (ret1 parent (sx value))) :=
     .cons started (.cons fetched (.cons immediate (.nil _)))
-  refine ⟨after, ?_, committed, view, other⟩
+  refine ⟨after, ?_, committed, view, other, buffers⟩
   simpa only [onThread, List.set_set, List.nil_append] using reads.trans result
 
 theorem tso_fetch_opcode {layout : Runner.Beweis.Lay}
@@ -246,7 +273,8 @@ theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
+      QueuedStores before.ms.1 after.1 i [(slot parent.fp (sx dest), value)] := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
   have inside := (List.getElem?_eq_some_iff.mp running).1
@@ -283,9 +311,9 @@ theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
       (.cons firstRead (.cons secondIndex (.cons secondRead (.nil _))))))
   have ready : (onThread (ret1 parent value)).ths[i]? = some (some (ret1 parent value)) :=
     List.getElem?_set_self inside
-  obtain ⟨after, result, memory, view, other⟩ :=
+  obtain ⟨after, result, memory, view, other, buffers⟩ :=
     tso_ret1_prefix (before := onThread (ret1 parent value)) (i := i) ready instruction.f1 writable
-  refine ⟨after, ?_, memory, view, other⟩
+  refine ⟨after, ?_, memory, view, other, buffers⟩
   simpa only [onThread, List.set_set, List.nil_append] using read.trans result
 
 /-- The call instruction reads its actual target, buffers the return PC
@@ -305,7 +333,8 @@ theorem tso_call_prefix {layout : Lay}
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (Mem.write (before.ms.1.view i) frame 8 (nxt caller).pc.toNat)
         (frame + 8) 8 caller.fp.toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
+      QueuedStores before.ms.1 after.1 i [(frame, (nxt caller).pc), (frame + 8, caller.fp)] := by
   intro frame
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) := ⟨before.ms, before.ths.set i (some r)⟩
   let enter : T := ⟨target, frame⟩
@@ -335,7 +364,7 @@ theorem tso_call_prefix {layout : Lay}
   have decodedCall : ProcessPrefix (TSO layout) actI before [] 5 afterDecode :=
     .cons started (.cons (tso_fetch_opcode before inside 20 caller instruction.op (by decide))
       (.cons decoded (.cons selected (.cons chosen (.nil _)))))
-  obtain ⟨first, savedPC, committed, firstView, firstOthers⟩ :=
+  obtain ⟨first, savedPC, committed, firstView, firstOthers, firstQueue⟩ :=
     tso_write_step (before := afterDecode) (List.getElem?_set_self inside) writablePC
   let afterPC : Cfg (TSO layout) (Res T) := ⟨first, before.ths.set i (some storeFrame)⟩
   have savePC : ProcessStep (TSO layout) actI afterDecode [] afterPC := by
@@ -344,13 +373,13 @@ theorem tso_call_prefix {layout : Lay}
     change Mem.all first.1.m.wr _ 8 = true
     rw [committed]
     exact writableFP
-  obtain ⟨after, savedFP, finalMemory, finalView, finalOthers⟩ :=
+  obtain ⟨after, savedFP, finalMemory, finalView, finalOthers, finalQueue⟩ :=
     tso_write_step (before := afterPC) (List.getElem?_set_self inside) secondWritable
   have saveFP : ProcessStep (TSO layout) actI afterPC []
       ⟨after, before.ths.set i (some (.next enter))⟩ := by
     simpa only [afterPC, storeFrame, wr64, opt_some, List.set_set] using savedFP
   exact ⟨after, decodedCall.trans (.cons savePC (.cons saveFP (.nil _))),
     finalMemory.trans committed, finalView.trans (congrArg (fun m => Mem.write m (frame + 8) 8 caller.fp.toNat) firstView),
-    fun j different => (finalOthers j different).trans (firstOthers j different)⟩
+    fun j different => (finalOthers j different).trans (firstOthers j different), firstQueue.trans finalQueue⟩
 
 end Gabbro.Stage0.Senke.BildMehr

@@ -214,7 +214,9 @@ theorem image_depth_setup [Kern] {D : Deklaration}
       after.1.m = before.ms.1.m ∧
       after.1.view thread = Runner.Mem.write (before.ms.1.view thread)
         (slot pointer.fp (BitVec.ofNat 64 2)) 8 (depth + 1) ∧
-      ∀ other, other ≠ thread → after.1.view other = before.ms.1.view other := by
+      (∀ other, other ≠ thread → after.1.view other = before.ms.1.view other) ∧
+      QueuedStores before.ms.1 after.1 thread
+        [(slot pointer.fp (BitVec.ofNat 64 2), BitVec.ofNat 64 (depth + 1))] := by
   have first := stub 0 (by rw [startC_len]; decide)
   have instruction : InsAt (before.ms.1.view thread) pointer.pc 1
       (II.f 2) (II.f ((depth + 1 : Nat) : Int)) (II.f 0) := by
@@ -226,9 +228,12 @@ theorem image_depth_setup [Kern] {D : Deklaration}
   have writable : Runner.Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f 2))) 8 = true := by
     rw [slotNumber, ← Runner.Beweis.foldl_wr (before.ms.1.buf thread) before.ms.1.m]
     exact frame.wr 2 enough
-  obtain ⟨after, run, memory, view, others⟩ :=
+  obtain ⟨after, run, memory, view, others, queued⟩ :=
     tso_const_prefix (before := imageToTSO before) running instruction writable
-  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others, ?_⟩
+  swap
+  · rw [slotNumber, depthWord] at queued
+    exact queued
   rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] <;> rfl
 
@@ -252,7 +257,9 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
       ∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other := by
   intro pointer running frame
   obtain ⟨stub, enough, depthFits, _, _⟩ := output.root_stub_code loaded declared
-  exact image_depth_setup (before := before) stub enough depthFits running frame
+  obtain ⟨after, run, shared, wrote, others, _⟩ :=
+    image_depth_setup (before := before) stub enough depthFits running frame
+  exact ⟨after, run, shared, wrote, others⟩
 
 /-- Past the loader, the root phase carries the exact arguments serialized
     for the selected declaration, with its private stack permissions. -/

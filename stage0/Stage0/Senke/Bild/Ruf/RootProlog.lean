@@ -31,7 +31,9 @@ theorem Emitted.main_depth_start [Kern] (output : Emitted src reserve options)
       ∀ other, other ≠ 0 → after.1.view other = before.ms.1.view other := by
   intro pointer running frame
   obtain ⟨stub, header, depth, _, _⟩ := output.main_stub_code loaded
-  exact image_depth_setup (before := before) stub header depth running frame
+  obtain ⟨after, run, shared, wrote, others, _⟩ :=
+    image_depth_setup (before := before) stub header depth running frame
+  exact ⟨after, run, shared, wrote, others⟩
 
 private theorem function_depth_guard [Kern] (output : Emitted src reserve options)
     {memory : Mem} (loaded : BytesAt memory codeBase (output.image.code.flatMap encII))
@@ -206,6 +208,8 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
       (∀ world, WeltAt (before.ms.1.view 0) output.image.Y world → WeltAt (after.1.view 0) output.image.Y world) ∧
       FrameOK (after.1.view 0) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view 0) frame output.args ∧
+      (PrivateBuffers (imageStackFootprint output) before.ms.1 →
+        PrivateBuffers (imageStackFootprint output) after.1) ∧
       CodeAt (after.1.view 0) prologue rest := by
   intro site entry target frame prologue running phase
   have declared : E.starts[0]? = some ⟨output.compiled.main, output.args⟩ := by
@@ -215,7 +219,7 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
     intro equal
     cases equal
   obtain ⟨bytes, permissions, arguments⟩ := ImageRootPhase.payload declared phase (.inr pastLoader)
-  obtain ⟨after, call, shared, views, writes, newFrame, words, _, _, depth, code, _⟩ :=
+  obtain ⟨after, call, shared, views, writes, newFrame, words, _, _, depth, code, buffers, _⟩ :=
     site.body_prefix bytes running permissions arguments
   have valid := fun τ x => mainEnv_valid output.image.Y _ output.args output.pointers τ x
   have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) output.args).mpr ⟨valid, words⟩
@@ -225,7 +229,7 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
   obtain ⟨rest, passed, decoded⟩ :=
     output.root_depth_guard_pass (before := entered) (thread := 0) output.compiled.main code ready depth
   refine ⟨after, rest, ?_, shared, views, fun _ stored => output.world_survives_stack site.bounded stored writes,
-    newFrame, environment, decoded⟩
+    newFrame, environment, buffers, decoded⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 
 end Gabbro.Stage0

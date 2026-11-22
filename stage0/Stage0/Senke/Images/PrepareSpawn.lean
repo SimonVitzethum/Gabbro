@@ -40,7 +40,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
   have writable0 : Mem.all before.ms.1.m.wr (slot fp (sx (II.f s))) 8 = true := by
     rw [sx0, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr s (by omega)
-  obtain ⟨middle, prefix0, committed0, view0, other0⟩ := tso_const_prefix running first writable0
+  obtain ⟨middle, prefix0, committed0, view0, other0, _⟩ := tso_const_prefix running first writable0
   rw [sx0, sx_nat address] at view0
   have same0 : Agree fp s K (before.ms.1.view i) (middle.1.view i) := by
     rw [view0]
@@ -55,7 +55,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
   have writable1 : Mem.all middle.1.m.wr (slot fp (sx (II.f ((s + 1 : Nat) : Int)))) 8 = true := by
     rw [sx1, ← foldl_wr (middle.1.buf i) middle.1.m]
     exact (frame.agree same0).wr (s + 1) (by omega)
-  obtain ⟨after, prefix1, committed1, view1, other1⟩ := tso_const_prefix running1 second writable1
+  obtain ⟨after, prefix1, committed1, view1, other1, _⟩ := tso_const_prefix running1 second writable1
   rw [sx1, sx_nat stack] at view1
   have same1 : Agree fp s K (middle.1.view i) (after.1.view i) := by
     rw [view1]

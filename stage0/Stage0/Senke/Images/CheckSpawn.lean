@@ -128,9 +128,10 @@ theorem tso_slt_prefix {layout : Runner.Beweis.Lay}
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 (bool (a.slt b)).toNat ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j :=
-  tso_binary_prefix (compute := fun x y => some (bool (x.slt y))) rfl (by decide)
-    running instruction left right rfl writable
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  obtain ⟨after, run, shared, view, other, _⟩ := tso_binary_prefix (compute := fun x y => some (bool (x.slt y)))
+    rfl (by decide) running instruction left right rfl writable
+  exact ⟨after, run, shared, view, other⟩
 
 /-- The compiled clone check branches on the signed returned word. It
     reaches the next site for a positive ID and the first instruction
@@ -166,7 +167,7 @@ theorem tso_spawn_check_outcome [Kern] {layout : Runner.Beweis.Lay}
   have zeroWritable : Mem.all before.ms.1.m.wr (slot fp (sx (II.f ((scratch + 3 : Nat) : Int)))) 8 = true := by
     rw [zeroIndex, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr (scratch + 3) (by omega)
-  obtain ⟨middle, zeroRun, same0, view0, others0⟩ := tso_const_prefix running zeroCode zeroWritable
+  obtain ⟨middle, zeroRun, same0, view0, others0, _⟩ := tso_const_prefix running zeroCode zeroWritable
   rw [zeroIndex] at view0
   have safe0 : Agree fp (scratch + 3) K (before.ms.1.view i) (middle.1.view i) := by
     rw [view0]

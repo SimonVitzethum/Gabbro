@@ -81,6 +81,25 @@ def Emitted.childStartSite [Kern] (output : Emitted src reserve options)
   keep := false
   stub := fun loaded => output.root_stub_code loaded declared
 
+/-- A decoded store to a slot of the selected stack preserves the
+    disjointness of all queued stores, including existing ones. -/
+theorem ImageStartSite.queued_stores_private [Kern] {output : Emitted src reserve options}
+    (site : ImageStartSite output) {before after : TSt} {stores : List (W × W)}
+    (queue : QueuedStores before after site.thread stores)
+    (within : ∀ store ∈ stores, ∀ byte, fenster store.1 byte → imageStackFootprint output site.thread byte)
+    (privateBefore : PrivateBuffers (imageStackFootprint output) before) :
+    PrivateBuffers (imageStackFootprint output) after := by
+  intro thread store pending byte touched
+  rw [queue thread] at pending
+  rcases List.mem_append.mp pending with prior | new
+  · exact privateBefore thread store prior byte touched
+  · by_cases writer : thread = site.thread
+    · subst thread
+      rw [ite_eq_left rfl] at new
+      have slot := within store new byte touched
+      exact ⟨slot, fun _ other => imageStackFootprint_disjoint other slot⟩
+    · simp only [ite_eq_right writer, List.not_mem_nil] at new
+
 /-- The first call-tail instruction writes the decrement operand in the
     scratch word immediately after the serialized parameter span. -/
 theorem ImageStartSite.call_decrement_operand [Kern] {output : Emitted src reserve options}
@@ -97,7 +116,8 @@ theorem ImageStartSite.call_decrement_operand [Kern] {output : Emitted src reser
       after.1.m = before.ms.1.m ∧
       after.1.view site.thread =
         Mem.write (before.ms.1.view site.thread) (slot entry.fp (BitVec.ofNat 64 scratch)) 8 1 ∧
-      ∀ other, other ≠ site.thread → after.1.view other = before.ms.1.view other := by
+      (∀ other, other ≠ site.thread → after.1.view other = before.ms.1.view other) ∧
+      QueuedStores before.ms.1 after.1 site.thread [(slot entry.fp (BitVec.ofNat 64 scratch), 1)] := by
   intro entry scratch running frame
   obtain ⟨stub, _, _, exitRoom, signed⟩ := site.stub loaded
   have callRoom : scratch < output.image.Ks := by
@@ -115,13 +135,15 @@ theorem ImageStartSite.call_decrement_operand [Kern] {output : Emitted src reser
   have writable : Mem.all before.ms.1.m.wr (slot entry.fp (sx (II.f (scratch : Int)))) 8 = true := by
     rw [destination, ← Runner.Beweis.foldl_wr (before.ms.1.buf site.thread) before.ms.1.m]
     exact frame.wr scratch callRoom
-  obtain ⟨after, run, memory, view, others⟩ :=
+  obtain ⟨after, run, memory, view, others, queued⟩ :=
     tso_const_prefix (before := imageToTSO before) running instruction writable
-  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
-  rw [view, destination, operand] <;> rfl
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others, ?_⟩
+  · rw [view, destination, operand] <;> rfl
+  · rw [destination] at queued
+    exact queued
 
 /-- The emitted subtraction installs the exact model call depth in
-    the child's callee frame, before the jump into lowered code. -/
+    the callee frame, before the jump into lowered code. -/
 theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
     {before : Runner.Mach.Cfg imageTSO (Runner.Res T)}
     (site : ImageStartSite output)
@@ -139,7 +161,9 @@ theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
       after.1.m = before.ms.1.m ∧
       after.1.view site.thread =
         Mem.write (before.ms.1.view site.thread) (slot entry.fp (BitVec.ofNat 64 (FB + 2))) 8 output.image.depth ∧
-      ∀ other, other ≠ site.thread → after.1.view other = before.ms.1.view other := by
+      (∀ other, other ≠ site.thread → after.1.view other = before.ms.1.view other) ∧
+      QueuedStores before.ms.1 after.1 site.thread
+        [(slot entry.fp (BitVec.ofNat 64 (FB + 2)), BitVec.ofNat 64 output.image.depth)] := by
   intro entry scratch running frame depth one
   obtain ⟨stub, _, depthFits, exitRoom, signed⟩ := site.stub loaded
   have callRoom : scratch < output.image.Ks := by
@@ -170,12 +194,14 @@ theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
     change some (BitVec.ofNat 64 (output.image.depth + 1) - BitVec.ofNat 64 1) = _
     rw [BitVec.ofNat_sub_ofNat_of_le (w := 64) (output.image.depth + 1) 1 (by decide) (by omega),
       Nat.add_sub_cancel]
-  obtain ⟨after, run, shared, view, others⟩ := tso_binary_prefix
+  obtain ⟨after, run, shared, view, others, queued⟩ := tso_binary_prefix
     (before := imageToTSO before) (compute := fun a b => some (a - b)) rfl (by decide)
     running instruction (by rw [lhs]; exact depth) (by rw [rhs]; exact one) subtract writable
-  refine ⟨after, tso_silent_prefix_image run rfl, shared, ?_, others⟩
-  rw [view, out, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt ((Nat.lt_succ_self _).trans (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64)))] <;> rfl
+  refine ⟨after, tso_silent_prefix_image run rfl, shared, ?_, others, ?_⟩
+  · rw [view, out, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt ((Nat.lt_succ_self _).trans (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64)))] <;> rfl
+  · rw [out] at queued
+    exact queued
 
 /-- The first stub instruction leaves its exact arguments, frame
     permissions and code intact. The issuing view holds the depth word
@@ -200,11 +226,13 @@ theorem ImageStartSite.depth_preserves_frame [Kern] {output : Emitted src reserv
       WordsAt (after.1.view site.thread) pointer.fp (FB + FB) words ∧
       (after.1.view site.thread).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 (output.image.depth + 1)) ∧
-      Agree pointer.fp 0 output.image.Ks (before.ms.1.view site.thread) (after.1.view site.thread) := by
+      Agree pointer.fp 0 output.image.Ks (before.ms.1.view site.thread) (after.1.view site.thread) ∧
+      QueuedStores before.ms.1 after.1 site.thread
+        [(slot pointer.fp (BitVec.ofNat 64 2), BitVec.ofNat 64 (output.image.depth + 1))] := by
   intro pointer words running frame fits args
   obtain ⟨stub, depthSlot, depthFits, _, _⟩ := site.stub loaded
-  obtain ⟨after, run, memory, wroteDepth, others⟩ := image_depth_setup stub depthSlot depthFits running frame
-  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
+  obtain ⟨after, run, memory, wroteDepth, others, queued⟩ := image_depth_setup stub depthSlot depthFits running frame
+  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_, ?_, queued⟩ <;> rw [wroteDepth]
   · apply output.code_survives_writes (write_nurIn _ _ _) _ loaded
     intro byte touched
     have own := imageStackFootprint_slot (output := output) (i := site.thread)
@@ -252,7 +280,7 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src reserve options)
     change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
       BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-  obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _⟩ :=
+  obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _, _⟩ :=
     (output.childStartSite declared).depth_preserves_frame code running frame fits args
   refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
   · intro i present

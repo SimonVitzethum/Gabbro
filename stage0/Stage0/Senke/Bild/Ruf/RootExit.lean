@@ -80,7 +80,7 @@ private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat
   have writable : Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f destination))) 8 = true := by
     rw [address, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr destination inside
-  obtain ⟨after, steps, _, view, _⟩ := tso_const_prefix (before := imageToTSO before) running instruction writable
+  obtain ⟨after, steps, _, view, _, _⟩ := tso_const_prefix (before := imageToTSO before) running instruction writable
   exact ⟨after, tso_silent_prefix_image steps rfl, by rw [view, address, sx_nat valueFits] <;> rfl⟩
 
 /-- The emitted stop sequence stores its request and then issues the exact
