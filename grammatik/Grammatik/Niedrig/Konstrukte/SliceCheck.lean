@@ -92,4 +92,70 @@ theorem stringSliceBounds_erfuellbar {maximum : Nat} (source : Wert D (.str maxi
     rw [dite_eq_left accepted]
     exact ⟨_, rfl, rfl⟩
 
+/-- Check the requested index against the saved runtime length. The
+    signed check runs before converting the offset to an address. -/
+def sliceIndexBoundsExpr {lo hi : Int} (length : Var Γ (.int 0 capacity)) (index : Var Γ (.int lo hi)) :
+    Expr D Γ Λ .bool :=
+  .and (.le (.lit 0) (.var index)) (.lt (.var index) (.var length))
+
+theorem sliceIndexBounds_exact {lo hi : Int} (length : Var Γ (.int 0 capacity))
+    (index : Var Γ (.int lo hi)) (entry world : World D) (env : Env D Γ) :
+    eval entry (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true ↔
+      0 ≤ (env.get index).n ∧ (env.get index).n.toNat < (env.get length).n.toNat := by
+  change (decide (0 ≤ (env.get index).n) && decide ((env.get index).n < (env.get length).n)) = true ↔ _
+  simp only [Bool.and_eq_true_iff, decide_eq_true_eq]
+  have validLength := (env.get length).lo_le
+  constructor <;> rintro ⟨lower, upper⟩ <;> exact ⟨lower, by omega⟩
+
+/-- The index guard establishes the exact valid index of the runtime
+    slice value, for every descriptor whose saved length is correct. -/
+theorem sliceIndexBounds_view {lo hi : Int} {view : ArraySliceView capacity}
+    (length : Var Γ (.int 0 capacity)) (index : Var Γ (.int lo hi))
+    (entry world : World D) (env : Env D Γ)
+    (saved : (env.get length).n = (view.length : Int)) :
+    eval entry (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true ↔
+      0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length := by
+  rw [sliceIndexBounds_exact, saved, Int.toNat_natCast]
+
+/-- The ordinary conditional runs the selection arm only at an index
+    within the saved view. The guard observes no carrier. -/
+theorem sliceIndexGuard_exec {lo hi : Int} {view : ArraySliceView capacity}
+    (length : Var Γ (.int 0 capacity)) (index : Var Γ (.int lo hi))
+    (rejected : Endblock D V l Γ Λ) (accepted : Block D V l Γ Λ out)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (saved : (env.get length).n = (view.length : Int)) :
+    execBlock oracle passes calls (.check (sliceIndexBoundsExpr length index) rejected accepted) world env =
+      if 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length then
+        execBlock oracle passes calls accepted world env
+      else (execEnd oracle passes calls rejected world env).zuAusgang := by
+  have noReads : (sliceIndexBoundsExpr (D := D) (Λ := Λ) length index).orte = [] := rfl
+  rw [execBlock, noReads, show world.lese Λ [] = world from rfl]
+  have branch := sliceIndexBounds_view (Λ := Λ) length index world world env saved
+  change (if eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true then _ else _) = _
+  by_cases inside : 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length
+  · rw [if_pos (branch.mpr inside), if_pos inside]
+  · rw [if_neg (fun accepted => inside (branch.mp accepted)), if_neg inside]
+
+/-- A slice with a positive length admits its first element and rejects
+    its length as an index. Both outcomes follow from the same bound. -/
+theorem sliceIndexBounds_erfuellbar {view : ArraySliceView capacity}
+    (nonempty : 0 < view.length) (entry world : World D) :
+    let size : Var [.int 0 capacity, .int 0 capacity] (.int 0 capacity) := .here
+    let position : Var [.int 0 capacity, .int 0 capacity] (.int 0 capacity) := .there .here
+    let length : Zahl 0 capacity := ⟨view.length, by omega, by have := view.fits; omega⟩
+    let env : Env D [.int 0 capacity, .int 0 capacity] :=
+      .cons length (.cons ⟨0, by omega, by omega⟩ .nil)
+    eval entry (sliceIndexBoundsExpr (Λ := Λ) size position) world env = true ∧
+      eval entry (sliceIndexBoundsExpr (Λ := Λ) size size) world env = false := by
+  intro size position length env
+  refine ⟨(sliceIndexBounds_view size position entry world env rfl).mpr ⟨Int.le_refl _, nonempty⟩, ?_⟩
+  cases outcome : eval entry (sliceIndexBoundsExpr (Λ := Λ) size size) world env with
+  | false => rfl
+  | true =>
+    have inside := ((sliceIndexBounds_view size size entry world env rfl).mp outcome).2
+    have cast : (env.get size).n.toNat = view.length := Int.toNat_natCast _
+    rw [cast] at inside
+    exact (Nat.lt_irrefl _ inside).elim
+
 end Gabbro.Grammatik.LowLevel.Construct
