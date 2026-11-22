@@ -387,7 +387,7 @@ inductive ProjectedRequest (footprint : Nat → W → Prop) (thread : Nat) : Op 
       (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
       ProjectedRequest footprint thread (.cas address expected value)
 
-private theorem ProjectedRequest.projects {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+theorem ProjectedRequest.projects {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
     {before after : (TSO layout).St} {i : Nat} {request : Op} {response : Ans}
     (accepted : ProjectedRequest footprint i request) (buffers : PrivateBuffers footprint before.1)
     (answered : (TSO layout).ans before i request response after) :

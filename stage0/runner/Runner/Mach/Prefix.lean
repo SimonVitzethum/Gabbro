@@ -43,6 +43,24 @@ inductive ProcessPrefix (M : MemSys) (act : θ → Res θ) :
 
 variable {M : MemSys} {act : θ → Res θ}
 
+/-- Only successful clone adds a slot, and it always records an event. -/
+theorem ProcessStep.silent_slots {before after : Cfg M θ} {events : List Ev}
+    (step : ProcessStep M act before events after) (quiet : events = []) :
+    after.ths.length = before.ths.length := by
+  cases step with
+  | tau => rfl
+  | priv | ask | exit | cloneNo => exact List.length_set
+  | clone => cases quiet
+
+theorem ProcessPrefix.silent_slots {before after : Cfg M θ} {events : List Ev} {count : Nat}
+    (run : ProcessPrefix M act before events count after) (quiet : events = []) :
+    after.ths.length = before.ths.length := by
+  induction run with
+  | nil => rfl
+  | cons step _ ih =>
+    obtain ⟨head, tail⟩ := List.append_eq_nil_iff.mp quiet
+    exact (ih tail).trans (step.silent_slots head)
+
 theorem ProcessPrefix.ofStep {a b : Cfg M θ} {events : List Ev}
     (step : ProcessStep M act a events b) : ProcessPrefix M act a events 1 b := by
   simpa only [List.append_nil] using ProcessPrefix.cons step (.nil b)
