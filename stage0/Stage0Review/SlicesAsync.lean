@@ -178,6 +178,9 @@ import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 #print axioms Gabbro.Grammatik.Async.Representation.pollFunction_refines
 #print axioms Gabbro.Stage0.Frontend.Async.lowerNamedPoll
 #print axioms Gabbro.Stage0.Frontend.Async.NamedPoll.call_refines
+#print axioms Gabbro.Stage0.Frontend.Async.NamedPoll.linkedCall_refines
+#print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.body
+#print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.other
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh
 #print axioms Gabbro.Grammatik.Async.Representation.checkedRetryStmt_cost
