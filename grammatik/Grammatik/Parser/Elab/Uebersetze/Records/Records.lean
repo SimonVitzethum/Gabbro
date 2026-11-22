@@ -177,7 +177,9 @@ theorem uRecordConstructor_mem {ctx : UCtx} {name : String} {schema : URecord}
     split at selected
     · cases selected
     · cases alias : ctx.namedTypes.find? (fun entry => strEq entry.1 name) with
-      | none => simp only [alias, Option.bind_eq_bind, Option.bind_none] at selected
+      | none =>
+        simp only [alias, Option.bind_eq_bind, Option.bind_none] at selected
+        cases selected
       | some entry =>
         simp only [alias, Option.bind_eq_bind, Option.bind_some] at selected
         exact List.mem_of_find?_eq_some selected
