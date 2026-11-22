@@ -3,6 +3,8 @@ module
 public import Stage0.Senke.Images.Correctness
 public import Stage0.Senke.Sperre.Bindung.Simulation
 import Stage0.Senke.Bild.Mehr.PrivatePath
+import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.Mehr.StartupOperands
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -18,6 +20,28 @@ structure TicketWordsAt (memory : Mem) (base : Nat) {N : Nat} (state : Zustand N
   next : memory.rd64 (BitVec.ofNat 64 base) = some (BitVec.ofNat 64 state.w.next)
   serving : memory.rd64 (BitVec.ofNat 64 (base + 8)) = some (BitVec.ofNat 64 state.w.serv)
   waiters : memory.rd64 (BitVec.ofNat 64 (base + 16)) = some (BitVec.ofNat 64 state.w.wait)
+
+/-- Once the actual image is at a CAS cell, the decoded operands
+    determine the exact locked request. The seven silent steps retain
+    the same memory and every other thread's control. -/
+theorem image_cas_at [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat} {pointer : T}
+    {base : W} {code : List II} {index : Nat} {dest addressSlot expectedSlot : Int}
+    (running : before.ths[thread]? = some (some (.next pointer)))
+    (encoded : CodeAt (before.ms.1.view thread) base code)
+    (location : pointer.pc = base + BitVec.ofNat 64 (16 * index))
+    (cell : code[index]? = some (ci 22 dest addressSlot expectedSlot))
+    {address expected update : W}
+    (addressRead : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f addressSlot))) = some address)
+    (expectedRead : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f expectedSlot))) = some expected)
+    (updateRead : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f expectedSlot)) + 8) = some update) :
+    let resume : Ans → Res T := fun reply => opt reply fun pair => ret1 pointer pair.1
+    ProcessPrefix imageTSO actI before [] 7
+      ⟨before.ms, before.ths.set thread (some (.ask (.cas address expected update) resume))⟩ := by
+  obtain ⟨inside, opcode⟩ := List.getElem?_eq_some_iff.mp cell
+  have instruction := encoded index inside
+  rw [opcode, ← location] at instruction
+  have run := tso_cas_prefix (before := imageToTSO before) running instruction addressRead expectedRead updateRead
+  exact tso_silent_prefix_image run rfl
 
 /-- A readable and writable CAS returns the actual committed word, even
     when the comparison fails. Both outcomes preserve every store buffer. -/
