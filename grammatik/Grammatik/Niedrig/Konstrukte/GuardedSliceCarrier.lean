@@ -107,4 +107,58 @@ theorem withGuardedSlice_exec (identity : Nat) (source : Var Γ backing) (length
         (.cons (eval observed (guardedCarrierExpr identity source first last) observed env) env)).schrumpf = _
       rw [guardedCarrierExpr_exact identity source first last observed observed env checked]
 
+/-- Runtime text slicing checks the actual byte length. The success
+    continuation receives a carrier whose ordinary decoder returns
+    exactly the substring selected by the model. The refusal takes
+    the original environment and never evaluates that continuation. -/
+theorem withGuardedTextSlice_exec (identity : Nat) (source : Var Γ (.str capacity))
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (refused : Endblock D V l Γ Λ)
+    (accepted : Block D V l (sliceCarrierType identity capacity (.str capacity) :: Γ) Λ out)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) :
+    let selected := checkStringSlice (env.get source) (env.get first).n (env.get last).n
+    let outcome := execBlock oracle passes calls
+      (withGuardedSlice identity source (.strLen (.var source)) first last refused accepted) world env
+    (∀ text, selected = some text → ∃ stored,
+      decodeStringCarrier (D := D) (identity := identity) (capacity := capacity) stored = some text ∧
+      outcome = (execBlock oracle passes calls accepted world (.cons stored env)).schrumpf) ∧
+    (selected = none → outcome = (execEnd oracle passes calls refused world env).zuAusgang) := by
+  intro selected outcome
+  let length : Expr D Γ Λ (.int 0 capacity) := .strLen (.var source)
+  obtain ⟨run, refuse⟩ :=
+    withGuardedSlice_exec identity source length first last refused accepted oracle passes calls world env
+  have quiet : world.lese Λ length.orte = world := rfl
+  rw [quiet] at run refuse
+  have available : (eval world length world env).n.toNat = (env.get source).1.length := rfl
+  rw [available] at run refuse
+  refine ⟨?_, ?_⟩
+  · intro text chosen
+    by_cases valid : SignedSliceOk (env.get source).1.length (env.get first).n (env.get last).n
+    · obtain ⟨view, checked, present, executed⟩ := run valid
+      let stored := packSliceCarrier identity view (env.get source)
+      refine ⟨stored, ?_, executed⟩
+      have decoded := decodeStringCarrier_pack identity view (env.get source) present
+      obtain ⟨_, _, _, exactOffset, exactLength⟩ := ArraySliceView.check_result checked
+      have start : view.offset = (env.get first).n.toNat := by omega
+      have lastByte : view.offset + view.length = (env.get last).n.toNat := by
+        have low := valid.1
+        have order := valid.2.1
+        omega
+      rw [← chosen]
+      change decodeStringCarrier (D := D) (identity := identity) stored =
+        checkStringSlice (env.get source) (env.get first).n (env.get last).n
+      rw [decoded, checkStringSlice, dite_eq_left valid]
+      apply congrArg some
+      apply Subtype.ext
+      simp only [strBoundedSliceValue, strSliceValue, start, lastByte]
+    · simp only [selected, checkStringSlice, dite_eq_right valid] at chosen
+      cases chosen
+  · intro rejected
+    apply refuse
+    intro valid
+    simp only [selected, checkStringSlice, dite_eq_left valid] at rejected
+    cases rejected
+
 end Gabbro.Grammatik.LowLevel.Construct
