@@ -248,7 +248,8 @@ public theorem bindFrameBlock_exec {V : Vertrag D} {l : Bool}
       (fun _ => rfl)
   let temporary : Expr D (τ :: Γ) Λ τ := .var .here
   have savedRead : (saveSlotExpr types f cleared destination temporary).orte = [] := by
-    simp only [saveSlotExpr, Expr.orte, NutzlastExpr.orte, temporary, read, List.nil_append]
+    simp only [saveSlotExpr, Expr.orte, NutzlastExpr.orte, temporary, List.append_nil]
+    exact read
   have noRead (current : World D) : current.lese Λ [] = current := rfl
   have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression saved
     (saveSlotExpr types f cleared destination temporary) world env
@@ -311,11 +312,11 @@ public theorem bindFrameBlock_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Li
     have distinct : name ≠ destination := by
       intro equal
       subst name
-      simpa only [beq_self_eq_true, Bool.not_true] using present.2
+      exact Bool.false_ne_true (by simpa only [beq_self_eq_true, Bool.not_true] using present.2)
     exact retained name present.1 distinct
   have stable (name : String) (other : name ≠ destination) : name ∈ keep ↔ name ∈ liveAt f next := by
     simp only [keep, without, List.mem_filter, beq_eq_false_iff_ne.mpr other, Bool.not_false,
-      Bool.true_eq_true, and_true]
+      eq_self, and_true]
   let extended : Env D (types.ordinary sourceType :: Γ) := .cons answer.1 env
   have old : SlotsRep D types (liveAt f before) frame (f.params ++ f.fields)
       (extended.get (.there saved)) := represented.slots
@@ -330,9 +331,10 @@ public theorem bindFrameBlock_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Li
   by_cases same : name = destination
   · subst name
     obtain ⟨earlier, later, fieldsEq, _⟩ := List.lookup_eq_some_iff.mp binding
-    apply List.mem_map_of_mem
-    rw [fieldsEq]
-    exact List.mem_append_right _ List.mem_cons_self
+    have member : (destination, sourceType) ∈ f.params ++ f.fields := by
+      rw [fieldsEq]
+      exact List.mem_append_right _ List.mem_cons_self
+    exact List.mem_map_of_mem (f := Prod.fst) member
   · exact represented.declared name (retained name live same)
 
 /-- Authority is the ordinary resource inventory, separate from by-value
