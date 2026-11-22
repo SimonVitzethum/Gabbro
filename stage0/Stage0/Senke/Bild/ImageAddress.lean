@@ -150,7 +150,8 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     {index : Nat} {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
     (declared : output.starts[index]? = some root) :
     CodeAt memory (BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)))
-      (startC output.image.A root.1 output.image.depth 60 false) ∧ 2 < output.image.Ks := by
+      (startC output.image.A root.1 output.image.depth 60 false) ∧
+      2 < output.image.Ks ∧ output.image.depth + 1 < 2 ^ 31 := by
   obtain ⟨_, body, sites, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
@@ -171,11 +172,61 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
       startC output.image.A output.compiled.main output.image.depth 231 true) header
   rw [ofNat_add64, List.length_append, spawns, startC_len] at rootCode
   have code := rootsC_at output.image.A output.image.depth roots _ index listed rootCode
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
   · simpa only [selected, Nat.mul_add, Nat.add_assoc] using code
   · have room := layout.hroom
     simp only [FB] at room
     omega
+  · have depthBound : output.image.depth + 1 ≤ output.image.Ks := by
+      rw [layout.hdepth]
+      have quotient := Nat.div_le_self (output.image.Ks - FB) (maxTop _)
+      have room := layout.hroom
+      simp only [depthOf, FB] at quotient room ⊢
+      omega
+    have allocation := layout.hylo
+    have order := layout.hyord
+    have last := layout.hyhi
+    have limit := layout.hfit
+    have reserved := Nat.le_mul_of_pos_right output.image.Ks
+      (Nat.succ_pos ((output.starts.map (·.1)).length))
+    omega
+
+/-- The first instruction of a declared child actually writes the image's
+    depth word to its own slot 2, advances its PC and preserves all other
+    thread views. The shared memory has not flushed that store. -/
+theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
+    {before : Runner.Mach.Cfg imageTSO (Runner.Mach.Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (loaded : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
+    let pointer : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    before.ths[index + 1]? = some (some (.next pointer)) →
+    FrameOK (before.ms.1.view (index + 1)) pointer.fp output.image.Ks →
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO actI before [] 5
+        ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view (index + 1) = Runner.Mem.write (before.ms.1.view (index + 1))
+        (slot pointer.fp (BitVec.ofNat 64 2)) 8 (output.image.depth + 1) ∧
+      ∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other := by
+  intro pointer running frame
+  obtain ⟨stub, enough, depthFits⟩ := output.root_stub_code loaded declared
+  have first := stub 0 (by rw [startC_len]; decide)
+  have instruction : InsAt (before.ms.1.view (index + 1)) pointer.pc 1
+      (II.f 2) (II.f ((output.image.depth + 1 : Nat) : Int)) (II.f 0) := by
+    simpa only [startC, List.singleton_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] using first
+  have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
+  have depthWord : sx (II.f ((output.image.depth + 1 : Nat) : Int)) =
+      BitVec.ofNat 64 (output.image.depth + 1) := sx_nat depthFits
+  have writable : Runner.Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f 2))) 8 = true := by
+    rw [slotNumber, ← Runner.Beweis.foldl_wr (before.ms.1.buf (index + 1)) before.ms.1.m]
+    exact frame.wr 2 enough
+  obtain ⟨after, prefix, memory, view, others⟩ :=
+    tso_const_prefix (before := imageToTSO before) running instruction writable
+  refine ⟨after, tso_silent_prefix_image prefix rfl, memory, ?_, others⟩
+  rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))]
 
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
