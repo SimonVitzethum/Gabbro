@@ -81,7 +81,7 @@ theorem rdN_agrees {before after : Mem} {address : W} (width : Nat)
   split
   · rw [gleich_rd8 (by simpa only [readWidth] using agree)]
   · rw [gleich_rd32 (by simpa only [readWidth] using agree)]
-  · exact gleich_rd64 (by simpa only [readWidth] using agree)
+  · exact gleich_rd64 (by simpa only [readWidth, byteWindow, fenster, GleichAuf] using agree)
   · rfl
 
 /-- At a private read, interpreting the request on the local memory view
