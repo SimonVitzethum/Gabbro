@@ -8184,6 +8184,10 @@ span any number of internal IR instructions and can end in a host event.
 The segment proof for all admitted programs and schedules remains open.
 `irBild_function_semantics` already proves the common sequential IR
 contract for every emitted function at every representable call depth.
+For an image with declared workers, the first visible IR transition
+is the generated clone request with the relocated child operands.
+There is no silent terminal outcome before that request, and its
+successful answer activates the same declared GX position.
 
 `Stage0RunnerCorrect` additionally connects the mapped x86 execution to
 the same IR history and remains a subsequent proof obligation.
