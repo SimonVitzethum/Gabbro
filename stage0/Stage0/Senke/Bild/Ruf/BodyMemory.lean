@@ -49,13 +49,13 @@ private theorem image_body_local_change [Kern] {src : String} {reserve : Nat} {o
     (otherViews : ∀ j, j ≠ i → memory.1.view j = before.ms.1.view j)
     (advance : MSchritt i ⟨(projectSCState footprint before.ms).1, body⟩
       ⟨(projectSCState footprint memory).1, body.set i (some control)⟩) :
-    ImageRuntimeMatches output E O history ⟨memory, before.ths.set i (some control)⟩ state := by
+    ImageRuntimeMatchesAt footprint output E O history ⟨memory, before.ths.set i (some control)⟩ state := by
   let updated := body.set i (some control)
   let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set i (some control)⟩
   have started := related.zustand i solo present
   have actual := body_slot_present roots started
   obtain ⟨next, sameRead, sameWrite, advanced⟩ := mtRel_schritt related present covers advance
-  refine ⟨footprint, updated, buffers, ?_, .inr ⟨setzeS snapshots i next, positions, committed, advanced, ?_⟩, ?_⟩
+  refine ⟨updated, buffers, ?_, .inr ⟨setzeS snapshots i next, positions, committed, advanced, ?_⟩, ?_⟩
   · simpa only [updated, List.length_set] using length
   · intro j s known
     rcases setzeS_fall known with ⟨rfl, rfl⟩ | ⟨_, previous⟩
@@ -96,7 +96,7 @@ theorem image_body_begin_instruction [Kern] {src : String} {reserve : Nat} {opti
         ImageRootPhase output E history (before.ms.1.view j) j r state)
     (present : snapshots i = some solo) (running : solo.r = .next pointer) :
     let after : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i (some (IR.step pointer))⟩
-    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatches output E O history after state := by
+    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatchesAt footprint output E O history after state := by
   intro after
   have started : body[i]? = some (some (.next pointer)) := running ▸ related.zustand i solo present
   have covers : ImFuss solo := by
@@ -129,7 +129,7 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
     (ordinary : match request with | .rd .. | .wr .. => True | _ => False)
     (answered : imageTSO.ans before.ms i request answer memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set i (some (resume answer))⟩
-    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatches output E O history after state := by
+    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatchesAt footprint output E O history after state := by
   intro after
   have started : body[i]? = some (some (.ask request resume)) := ready ▸ related.zustand i solo present
   have actual := body_slot_present roots started
@@ -193,7 +193,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     intro i store pending j different address readable written
     have privateByte := (buffers i store pending address written).1
     rcases readable with own | code
-    · exact different (Senke.Faeden.imageProtectedFootprint_stack_owner inLayout privateByte own)
+    · exact different (Senke.Faeden.imageProtectedFootprint_stack_owner inLayout privateByte own).symm
     · rcases privateByte with stack | data
       · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans stack.2.1)
       · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans
