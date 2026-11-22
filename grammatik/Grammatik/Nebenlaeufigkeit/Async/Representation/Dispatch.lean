@@ -45,7 +45,7 @@ public theorem phaseArms_cost (types : TypeResolution) (f : AsyncFn)
       kostenArms exit calls passes (phaseArms types f cases blocks) ≤ limit
   | [], _, _ => Nat.zero_le _
   | _ :: rest, blocks, bounded =>
-    max_le (bounded ⟨0, Nat.zero_lt_succ _⟩)
+    Nat.max_le_of_le_of_le (bounded ⟨0, Nat.zero_lt_succ _⟩)
       (phaseArms_cost types f exit calls passes limit rest (fun index => blocks index.succ)
         (fun index => bounded index.succ))
 
@@ -58,7 +58,7 @@ public theorem phaseArms_calls (types : TypeResolution) (f : AsyncFn)
       rufeArms direct indirect forever (phaseArms types f cases blocks) = true
   | [], _, _ => rfl
   | _ :: rest, blocks, admitted =>
-    Bool.and_eq_true.mpr ⟨admitted ⟨0, Nat.zero_lt_succ _⟩,
+    Bool.and_eq_true_iff.mpr ⟨admitted ⟨0, Nat.zero_lt_succ _⟩,
       phaseArms_calls types f direct indirect forever rest (fun index => blocks index.succ)
         (fun index => admitted index.succ)⟩
 
