@@ -134,8 +134,12 @@ theorem sliceIndexGuard_exec {lo hi : Int} {view : ArraySliceView capacity}
   have branch := sliceIndexBounds_view (Λ := Λ) length index world world env saved
   change (if wahr? (eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env) = true then _ else _) = _
   by_cases inside : 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length
-  · rw [if_pos (branch.mpr inside), if_pos inside]
-  · rw [if_neg (fun accepted => inside (branch.mp accepted)), if_neg inside]
+  · have yes : wahr? (eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env) = true :=
+      branch.mpr inside
+    rw [if_pos yes, if_pos inside]
+  · have no : wahr? (eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env) ≠ true :=
+      fun accepted => inside (branch.mp accepted)
+    rw [if_neg no, if_neg inside]
 
 /-- A slice with a positive length admits its first element and rejects
     its length as an index. Both outcomes follow from the same bound. -/
