@@ -206,6 +206,64 @@ theorem ImageTicketStates.adjustWaiters [Kern] {D : Deklaration} [DecidableEq D.
   exact ⟨step, returned, buffers, next, advanced,
     current.update geometry bound untouched (fun _ _ _ => Iff.rfl) words invariant sameOwners⟩
 
+/-- A serving read that returns a different ticket preserves every
+    source owner. The hosted strategy prepares its waiter increment,
+    and the freestanding spin strategy stays at the same position. -/
+theorem ImageTicketStates.retryServing [Kern] {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N} {lock : D.Lock}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Fin N} {ticket : Nat} {footprint : Nat → W → Prop}
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64) (capacity : N ≤ 2147483647)
+    (spins : layout.lockWait = .spin → SpinState (states lock))
+    (saved : (states lock).pc thread = .ladeS ticket)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (shared : ∀ byte, fenster (BitVec.ofNat 64 (layout.lk lock + 8)) byte →
+      ∀ owner, ¬ footprint owner byte)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.rd 8 (BitVec.ofNat 64 (layout.lk lock + 8))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val (.rd 8 (BitVec.ofNat 64 (layout.lk lock + 8))) reply memory)
+    (unmatched : ∀ extra, reply ≠ some (BitVec.ofNat 64 ticket, extra)) :
+    let next := match layout.lockWait with
+      | .futex => (states lock).mit thread (.incL ticket (states lock).w.serv)
+      | .spin => states lock
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths.set thread.val (some (resume reply))⟩ ∧
+      memory = machine.ms ∧ BindingStep layout.lockWait (states lock) thread next ∧
+      ImageTicketStates layout memory.1.m source (fun other => if other = lock then next else states other) := by
+  intro next
+  obtain ⟨step, unchanged, ⟨extra, observed⟩, actual, binding, words, _, _, exactRetry⟩ :=
+    image_ticket_serving_read layout.lockWait spins saved (current.words lock) footprint buffers shared waiting answered
+  have different : (states lock).w.serv % 2 ^ 64 ≠ ticket % 2 ^ 64 := by
+    intro equality
+    have word : BitVec.ofNat 64 (states lock).w.serv = BitVec.ofNat 64 ticket :=
+      BitVec.eq_of_toNat_eq (by simpa only [BitVec.toNat_ofNat] using equality)
+    apply unmatched extra
+    exact observed.trans (congrArg (fun value => some (value, extra)) word)
+  have exactNext : actual = next := exactRetry different
+  rw [exactNext] at binding words
+  have valid : Inv N next := by
+    rcases (waitModel layout.lockWait).refines binding with same | stepped
+    · rw [same]
+      exact current.protocol lock
+    · exact (current.protocol lock).schritt capacity stepped
+  have sameOwners : TicketOwnership source lock next := by
+    refine ⟨?_, (current.owners lock).outside⟩
+    intro other
+    have unchangedOwner : (next.pc other).haelt = ((states lock).pc other).haelt := by
+      unfold next
+      split
+      · by_cases issuer : other = thread
+        · subst other
+          simp only [Zustand.mit, upd_self, saved, Ort.haelt]
+        · rw [Zustand.mit, upd_ne _ _ issuer]
+      · rfl
+    rw [unchangedOwner]
+    exact (current.owners lock).inside other
+  have stable : GleichAuf (fun byte => ¬ LockBytes layout lock byte) memory.1.m machine.ms.1.m := by
+    rw [unchanged]
+    exact fun byte _ => GleichAt.refl _ byte
+  exact ⟨step, unchanged, binding, current.update geometry bound stable (fun _ _ _ => Iff.rfl) words valid sameOwners⟩
+
 /-- A control-only lock transition can change the entire waiter queue.
     Only its ownership bits and the three physical counters must stay
     the same. Hosts can change hidden buffered bytes outside the locks. -/

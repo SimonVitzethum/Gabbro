@@ -283,7 +283,7 @@ theorem image_ticket_admit_GX [Kern] {D : Deklaration} {N : Nat}
       Inv N admitted ∧ ∃ target, FadenSchrittX P O passes Tg source target ∧
         target.m.speicher = source.m.speicher ∧ TicketOwnership target.m lock admitted ∧
           OtherLockOwners lock source.m target.m := by
-  obtain ⟨process, memorySame, ⟨extra, observed⟩, next, binds, words, _, successor⟩ :=
+  obtain ⟨process, memorySame, ⟨extra, observed⟩, next, binds, words, _, successor, _⟩ :=
     image_ticket_serving_read strategy spins saved represented footprint buffers shared waiting answered
   obtain ⟨expectedExtra, expected⟩ := matched
   have same := congrArg (fun pair : W × W => pair.1.toNat) (Option.some.inj (observed.symm.trans expected))
