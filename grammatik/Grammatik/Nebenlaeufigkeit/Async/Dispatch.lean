@@ -57,6 +57,23 @@ public theorem dispatchArms_select_value (cases : List (Option Ty))
     (Fall.toNutzlast D.Fn D.passt cases index payload)
   simpa only [Fall.of_to] using h
 
+/-- The ordinary evaluator runs the same selected arm, with its actual
+    saved payload. It removes the arm binder from every outcome. -/
+public theorem dispatchArms_exec (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) :
+    ∀ (cases : List (Option Ty))
+      (bodies : (i : Fin cases.length) → Block D V l (ArmCtx Γ (cases.get i)) Λ Λ)
+      (value : Wert D (.sum cases)),
+      execArms oracle passes calls (dispatchArms cases bodies) value world env =
+        (execBlock oracle passes calls (bodies value.1) world
+          (armEnv (Fall.toNutzlast D.Fn D.passt cases value.1 value.2) env)).schrumpfArm (cases.get value.1)
+  | [], _, ⟨i, _⟩ => i.elim0
+  | _ :: _, _, ⟨⟨0, _⟩, _⟩ => rfl
+  | _ :: rest, bodies, ⟨⟨index + 1, inside⟩, payload⟩ =>
+    dispatchArms_exec oracle passes calls world env rest (fun i => bodies i.succ)
+      ⟨⟨index, Nat.lt_of_succ_lt_succ inside⟩, payload⟩
+
 /-- Construction followed by generated dispatch feeds the original typed
     payload to exactly its own segment. This connects the record constructor
     with canonical expression evaluation and G arm selection. -/
