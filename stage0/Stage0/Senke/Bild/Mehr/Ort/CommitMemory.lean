@@ -119,6 +119,75 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
       rw [value]
       exact beforeWorld.2.1 global
 
+private theorem reanchorCommitted [Kern] {P : Programm D} {O : Orakel D}
+    {passes : Nat} {layout : Lay D} {program : PCfg} {source : FadenMaschine D}
+    {snapshots : Nat → Option Solo} {positions : Nat → MLage D} {committed published : Mem}
+    {thread : Nat} {snapshot : Solo} {machine : RufMaschineG D} {next : MLage D}
+    (matched : MTRel P O passes layout program source snapshots positions committed)
+    (registered : snapshots thread = some snapshot)
+    (previous : ∀ other, other ≠ (positions thread).thr → machine.faeden other = source.m.faeden other)
+    (world : WeltAt published layout (machine.speicher.welt []))
+    (outside : ∀ byte, (∀ i s, snapshots i = some s → ¬ s.Wr byte) → GleichAt program.m published byte)
+    (valid : next.Ok) (sameProgram : next.B.P = P ∧ next.B.O = O ∧ next.B.passes = passes ∧ next.B.L = layout)
+    (sameThread : next.thr = (positions thread).thr)
+    (sameHead : machine.faeden next.thr = next.M.faeden next.thr)
+    (control : snapshot.r = .next next.start) (memory : snapshot.m = next.mb) :
+    MTRel P O passes layout program { source with m := machine } snapshots
+      (fun i => if i = thread then next else positions i) published := by
+  let reset := fun i => if i = thread then next else positions i
+  have identity (i : Nat) : (reset i).thr = (positions i).thr := by
+    by_cases current : i = thread
+    · subst i
+      simpa only [reset, ite_true] using sameThread
+    · simp only [reset, ite_eq_right current]
+  refine {
+    zustand := matched.zustand
+    lebend := matched.lebend
+    mem := matched.mem
+    lage := ?_
+    prog := ?_
+    solo := ?_
+    lebtG := ?_
+    inj := ?_
+    amRand := ?_
+    welt := world
+    aussen := outside }
+  · intro i s found
+    by_cases current : i = thread
+    · subst i
+      simpa only [reset, ite_true] using valid
+    · simpa only [reset, ite_eq_right current] using matched.lage i s found
+  · intro i s found
+    by_cases current : i = thread
+    · subst i
+      simpa only [reset, ite_true] using sameProgram
+    · simpa only [reset, ite_eq_right current] using matched.prog i s found
+  · intro i s found
+    by_cases current : i = thread
+    · subst i
+      have same : s = snapshot := Option.some.inj (found.symm.trans registered)
+      subst s
+      simp only [reset, ite_true, control, memory]
+      exact soloLauf_start _ _
+    · simpa only [reset, ite_eq_right current] using matched.solo i s found
+  · intro i s found
+    change source.lebt (reset i).thr = true ∧ source.wartet (reset i).thr = []
+    rw [identity]
+    exact matched.lebtG i s found
+  · intro i j s t first second same
+    change (reset i).thr = (reset j).thr at same
+    rw [identity, identity] at same
+    exact matched.inj i j s t first second same
+  · intro i s found
+    change machine.faeden (reset i).thr = (reset i).M.faeden (reset i).thr
+    by_cases current : i = thread
+    · subst i
+      simpa only [reset, ite_true] using sameHead
+    · simp only [reset, ite_eq_right current]
+      have different : (positions i).thr ≠ (positions thread).thr :=
+        fun same => current (matched.inj i thread s snapshot found registered same)
+      exact (previous _ different).trans (matched.amRand i s found)
+
 /-- The source commit and the byte-level commit agree on the same
     reachable GX machine. The committed memory takes the selected bytes
     from the actual IR projection and preserves all other bytes. -/
@@ -152,7 +221,14 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
       WeltAt published layout (machine.speicher.welt []) ∧
       (∀ other, other ≠ position.thr → machine.faeden other = source.m.faeden other) ∧
       (∀ byte, selected byte → GleichAt published program.m byte) ∧
-      ∀ byte, ¬ selected byte → GleichAt published committed byte := by
+      (∀ byte, ¬ selected byte → GleichAt published committed byte) ∧
+      ∀ next : MLage D, next.Ok →
+        (next.B.P = P ∧ next.B.O = O ∧ next.B.passes = passes ∧ next.B.L = layout) →
+        next.thr = position.thr → machine.faeden next.thr = next.M.faeden next.thr →
+        snapshot.r = .next next.start → snapshot.m = next.mb →
+        MTRel P O passes layout program { source with m := machine } snapshots
+          (fun i => if i = thread then next else positions i) published := by
+  classical
   intro position selected published
   obtain ⟨machine, world, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
     matched.commit_segment registered (shared := shared) quiet control boundary agree free
@@ -169,12 +245,19 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     rw [store]
     cases world
     exact bytes
-  refine ⟨machine, world, reached, pointer, sourceBoundary, exactBytes, preserved, ?_, ?_⟩
-  · intro byte chosen
+  have updated : ∀ byte, selected byte → GleichAt published program.m byte := by
+    intro byte chosen
     obtain ⟨value, read, write⟩ := matched.mem.gleich thread snapshot registered byte (covers byte chosen)
     exact ⟨by simpa only [published, commitBytes, ite_eq_left chosen] using value.symm,
       (congrFun permissions.1.symm byte).trans read.symm, (congrFun permissions.2.symm byte).trans write.symm⟩
-  · intro byte excluded
-    exact ⟨by simp only [published, commitBytes, ite_eq_right excluded], rfl, rfl⟩
+  have unchanged : ∀ byte, ¬ selected byte → GleichAt published committed byte := fun byte excluded =>
+    ⟨by simp only [published, commitBytes, ite_eq_right excluded], rfl, rfl⟩
+  refine ⟨machine, world, reached, pointer, sourceBoundary, exactBytes, preserved, updated, unchanged, ?_⟩
+  intro next valid programEq threadEq headEq controlEq memoryEq
+  apply reanchorCommitted matched registered preserved exactBytes _ valid programEq threadEq headEq controlEq memoryEq
+  intro byte outside
+  by_cases chosen : selected byte
+  · exact (updated byte chosen).symm
+  · exact (matched.aussen byte outside).trans (unchanged byte chosen).symm
 
 end Gabbro.Stage0.Senke.BildMehr
