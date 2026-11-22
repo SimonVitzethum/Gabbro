@@ -113,6 +113,37 @@ public theorem phaseListRep_encoded (types : TypeResolution) (f : AsyncFn)
   | later phase rest source value absent _ ih =>
     simp only [encodePhases, absent, ih, Option.bind_eq_bind, Option.bind_some, Option.pure_def] <;> rfl
 
+/-- Inject the payload at its position in the generated schema. The
+    matched position, rather than payload-type equality, identifies a case. -/
+@[expose] public def phaseValueAt (D : Deklaration) (types : TypeResolution) (f : AsyncFn)
+    (cases : List Phase) (index : Fin cases.length)
+    (value : Wert D (phaseType types f (cases.get index))) :
+    Wert D (.sum (cases.map fun p => some (phaseType types f p))) :=
+  let schema := cases.map fun p => some (phaseType types f p)
+  let mapped : Fin schema.length := ⟨index.val, by simpa only [schema, List.length_map] using index.isLt⟩
+  have typeAt : schema.get mapped = some (phaseType types f (cases.get index)) :=
+    List.getElem_map (fun p => some (phaseType types f p)) (h := mapped.isLt)
+  let payload : Nutzlast D.Fn D.passt (some (phaseType types f (cases.get index))) := value
+  ⟨mapped, Fall.ofNutzlast D.Fn D.passt schema mapped (typeAt.symm ▸ payload)⟩
+
+public theorem phaseListRep_at (types : TypeResolution) (f : AsyncFn)
+    (inventory : Inventory D) (source : State (Value D) (Child D types)) :
+    ∀ (cases : List Phase) (index : Fin cases.length)
+      (value : Wert D (phaseType types f (cases.get index))),
+      PhaseRep D types f (cases.get index) source value →
+      MarksRep inventory (cases.get index) source →
+      (∀ before : Fin cases.length, before.val < index.val →
+        encodePhase D types f (cases.get before) source = none) →
+      PhaseListRep D types f inventory cases source (phaseValueAt D types f cases index value)
+  | [], index, _, _, _, _ => index.elim0
+  | phase :: rest, ⟨0, _⟩, value, payload, marks, _ => .first phase rest source value payload marks
+  | phase :: rest, ⟨offset + 1, valid⟩, value, payload, marks, absent =>
+    have head := absent ⟨0, Nat.zero_lt_succ _⟩ (Nat.zero_lt_succ offset)
+    let next : Fin rest.length := ⟨offset, Nat.lt_of_succ_lt_succ valid⟩
+    have tail := phaseListRep_at types f inventory source rest next value payload marks
+      (fun before earlier => absent before.succ (Nat.succ_lt_succ earlier))
+    .later phase rest source _ head tail
+
 @[expose] public def prefixValue (D : Deklaration) (types : TypeResolution) (f : AsyncFn)
     (suffix : List Phase)
     (value : Wert D (Ty.sum (suffix.map fun phase => some (phaseType types f phase)))) :
@@ -172,6 +203,17 @@ public theorem inv_encoded (f : AsyncFn) (types : TypeResolution) (inventory : I
   let selected := runningCase types f tag within
   let payload : Nutzlast D.Fn D.passt (some (frameType types f)) := frame
   (⟨selected.val, Fall.ofNutzlast D.Fn D.passt _ selected.val (selected.property.symm ▸ payload)⟩, ())
+
+public theorem runningExpr_reads (types : TypeResolution) (f : AsyncFn)
+    {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
+    (frame : Expr D Γ Λ (frameType types f)) :
+    (runningExpr types f tag within frame).orte = frame.orte := by
+  have transport {before after : Option Ty} (same : before = after)
+      (payload : NutzlastExpr D Γ Λ before) :
+      (same ▸ payload : NutzlastExpr D Γ Λ after).orte = payload.orte := by
+    cases same
+    rfl
+  simp only [runningExpr, stateExpr, Expr.orte, Args.orte, transport, NutzlastExpr.orte, List.append_nil]
 
 /-- The generated constructor carries the actual evaluated frame. Transport
     across the selector's type equality changes no field in that frame. -/

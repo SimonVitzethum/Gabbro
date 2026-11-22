@@ -141,17 +141,6 @@ termination_by structural body _ _ => body
   let selected := runningCase types f tag within
   stateExpr types f selected.val (selected.property.symm ▸ NutzlastExpr.val frame)
 
-public theorem runningExpr_reads (types : TypeResolution) (f : AsyncFn)
-    {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
-    (frame : Expr D Γ Λ (frameType types f)) :
-    (runningExpr types f tag within frame).orte = frame.orte := by
-  have transport {before after : Option Ty} (same : before = after)
-      (payload : NutzlastExpr D Γ Λ before) :
-      (same ▸ payload : NutzlastExpr D Γ Λ after).orte = payload.orte := by
-    cases same
-    rfl
-  simp only [runningExpr, stateExpr, Expr.orte, Args.orte, transport, NutzlastExpr.orte, List.append_nil]
-
 @[expose] public def awaitCount : List Command → Nat
   | [] => 0
   | .bind _ _ _ :: rest => awaitCount rest
