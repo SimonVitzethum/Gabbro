@@ -8467,3 +8467,17 @@ premise (b) with its lock family. The induction mirrors the simulation (`laufSeq
 | `logik_sperren` | `Kette/Andocken/Sperren.lean` | The duties of a unit give `LogikPflicht` under every local lock family. |
 | `nutzerA_einheitDer_sperren`, `nutzerA_aus_compiled_sperren` | `Kette/Andocken/Sperren.lean` | **Premise (b) of Stage 0's image theorem for units with locks**: the duties, no foreign body, the run facts of `nutzerA_aus_compiled` and Stage 0's own lock decision `checkUnitLock` on the judged unit (`sperrenGeprueftB`; `sperren_of_geprueft`: locality and the initial-memory duty) give `NutzerPflichtA` of the judged unit. |
 | `nutzerA_aus_compiled_sperren_erfuellbar` | `Kette/Andocken/SperrenErfuellbar.lean` | The premises hold jointly for a unit with one declared lock and one carried function whose duty is proved; Stage 0's lock decision accepts its judged unit for every program, memory, entry, starts and checks. |
+
+## 216. GabbroV carries `let x = T::C;` of a bare tagged type (2026-11-22)
+
+The Body reading of `let x = T::C;` (`UStmt.bindSum`) binds the case label, the encoding `valOf` gives every
+value of a bare tagged type; a tagged local copies. The form is carried through the whole chain: the
+readers, the lowering, the block, ending and body simulations, the frames and the lock-freedom induction.
+
+| Theorem | File | Statement |
+|---|---|---|
+| `schrittB_bindSum`, `namedSum_sicht` | `Anweisung/Lokal/Benannt.lean` | The reading of the binder: a bare tagged type, the case label or the copied local, the scope `UFn.mitSum`. |
+| `Sicht.bindSum`, `UmfangB.bindSum`, `PositionalLRel.pushSum`, `protectedNames_mitSum` | `Anweisung/Summe/Scope.lean` | The scope after the binder keeps every visibility and typing fact of the bridge. |
+| `lowBodyF_bindSum_ok`, `lowSeq_bindSum_ok`, `lowEndL_bindSum_ok` | `Anweisung/Summe/Kopf.lean` | The lowering of the binder in its three readers. |
+| `lowSVal_named_sim`, `lowBindSum_named_sim`, `blockZiel_bindSum_G` | `Anweisung/Summe/Werte.lean` | **The binder simulates**: the Body reading evaluates to the encoding of the lowered value, and the positional relation grows by the new local. |
+| `bindSum_erfuellbar` | `Kette/Andocken/FormenErfuellbar.lean` | The form occurs in a unit whose duties hold, its `meetsU` proved. |

@@ -73,6 +73,14 @@ theorem lauf_ohne (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (r : URet
         exact lauf_ohne S c hc r n k ss (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩))
           (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest bs'
           (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hrest hbs'
+      case bindSum x sidx v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨hs, hbare, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindSum hstep0
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindSum_ok c (hs := hs) hlow
+        simp only [Endblock.ohneLocks]
+        exact lauf_ohne S c hc r n k ss (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec)
+          (fT.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) (ns.push x) rest bs' (hS.bindSum x sidx _) hmemss hrest hbs'
       case loopBeg x tab inv =>
         obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow

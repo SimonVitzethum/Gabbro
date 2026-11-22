@@ -100,6 +100,13 @@ theorem ende_ohne (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) :
         (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) q rest ys restZ used
         (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hm hq hy
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), by simpa only [Endblock.ohneLocks] using IH.2.2⟩
+    case bindSum x sidx v =>
+      obtain ⟨bT, fT', ns', ys, ht, hy, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨hs, hbare, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindSum ht
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowEndL_bindSum_ok (hs := hs) hlow
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec)
+        (fT.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) (ns.push x) q rest ys restZ used (hS.bindSum x sidx _) hmemss hm hq hy
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), by simpa only [Endblock.ohneLocks] using IH.2.2⟩
     case matchWhyBeg x =>
       obtain ⟨count, e, arms, tailZ, allocated, ys, he, hAZ, hYZ, rfl⟩ := seqZ_reason_some hbs
       obtain ⟨id, ht, hid, rfl⟩ := reasonSubject_some he
