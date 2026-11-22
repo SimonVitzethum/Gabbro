@@ -43,7 +43,7 @@ theorem expression_pre_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx
       Mem.le_congr (fun j inside => (sameWord j inside).1)]
     exact stored.2 word present
 
-private theorem expression_mask_value [Kern] {D : Deklaration} {L : Senke.Lay D}
+theorem expression_mask_value [Kern] {D : Deklaration} {L : Senke.Lay D}
     {memory : Mem} {reads writes : W → Prop} {address : Nat} {ty : Ty} {value : Wert D ty}
     (writeReads : ∀ byte, writes byte → reads byte)
     (bound : address + 8 * Senke.valueWords ty < 2 ^ 64)
@@ -52,6 +52,25 @@ private theorem expression_mask_value [Kern] {D : Deklaration} {L : Senke.Lay D}
     Senke.ValueAt L (maskMemory reads writes memory) (BitVec.ofNat 64 address) 0 ty value := by
   have agree := (maskMemory_agreement reads writes memory writeReads).1
   exact Senke.ValueAt.congr_read_bytes bound (fun byte first last => agree.1 byte (covered byte first last)) typed
+
+/-- A complete value stored in a private frame depends only on that
+    frame's readable bytes. -/
+theorem frame_value_agrees {D : Deklaration} {L : Senke.Lay D} {before after : Mem} {fp : W}
+    {K base : Nat} {ty : Ty} {value : Wert D ty} (frame : FrameOK before fp K)
+    (fits : base + Senke.valueWords ty ≤ K)
+    (same : ∀ byte, inSlots fp 0 K byte → after.b byte = before.b byte ∧ after.rd byte = before.rd byte)
+    (stored : Senke.ValueAt L before fp base ty value) :
+    Senke.ValueAt L after fp base ty value := by
+  refine ⟨stored.1, fun index present => ?_⟩
+  have width : index < Senke.valueWords ty := by simpa only [Senke.encodeWords_length] using present
+  have word (offset : Nat) (inside : offset < 8) :=
+    same _ (frame_slot_byte frame (by omega : base + index < K) inside)
+  have sameRead : after.rd64 (slot fp (BitVec.ofNat 64 (base + index))) =
+      before.rd64 (slot fp (BitVec.ofNat 64 (base + index))) := by
+    simp only [Mem.rd64, Mem.all_congr (fun offset inside => (word offset inside).2),
+      Mem.le_congr (fun offset inside => (word offset inside).1)]
+  rw [sameRead]
+  exact stored.2 index present
 
 /-- A physical read region containing the authorized carriers
     preserves their complete value representations in the proof memory. -/
@@ -120,23 +139,18 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
   · intro exactCount
     obtain ⟨rfl, memoryEq, unwritten⟩ := completed exactCount
     obtain ⟨rdActual, wrActual⟩ := StarM.permissions ran
-    refine ⟨rfl, ⟨rdActual, wrActual, ?_⟩, value.1, ?_⟩
+    refine ⟨rfl, ⟨rdActual, wrActual, ?_⟩, ?_⟩
     · intro byte outside
       by_cases inFrame : inSlots fp 0 K byte
       · have covered := frameReads byte inFrame
         exact (memoryEq.1 byte covered).1.symm.trans
           ((preservedWords.b byte outside).trans (agree.1 byte covered).1)
       · exact (unwritten byte inFrame).1
-    · intro index present
-      have indexFits : index < Senke.valueWords τ := by simpa only [Senke.encodeWords_length] using present
-      have agreeWord (offset : Nat) (inWord : offset < 8) :=
-        memoryEq.1 _ (frameReads _ (frame_slot_byte pre.frame (by omega : d + index < K) inWord))
-      have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
-          finish.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
-        simp only [Mem.rd64, Mem.all_congr (fun offset valid => (agreeWord offset valid).2.symm),
-          Mem.le_congr (fun offset valid => (agreeWord offset valid).1.symm)]
-      rw [sameRead]
-      exact value.2 index present
+    · have refFrame := masked.frame.agree preservedWords
+      apply frame_value_agrees refFrame resultFits _ value
+      intro byte inside
+      exact ⟨(memoryEq.1 byte (frameReads byte inside)).1.symm,
+        (memoryEq.1 byte (frameReads byte inside)).2.symm⟩
 
 /-- A body can advance its source binding at the exact completed IR
     boundary. Prefixes inside the bound expression supply the same
