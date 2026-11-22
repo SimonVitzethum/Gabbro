@@ -261,10 +261,12 @@ theorem BodyFrame.bind_reference [kernel : Kern] {D : Deklaration} {B : BodyFram
   have ready : Senke.PreS B.L memory pc B.fp B.Ks (Senke.frei Γ B.reserved) code env B.reserved :=
     ⟨evaluated.ctx, evaluated.small, evaluated.frame, evaluated.code, evaluated.far, evaluated.env,
       trivial, Senke.wstab_true _ _⟩
+  have observedMemory : Senke.ReadWorldAt memory B.L observed Λ :=
+    ⟨fun t _ f k valid => stored.1 t f k valid, fun g _ => stored.2.1 g⟩
   obtain ⟨count, _, _, prefixCorrect⟩ :=
     lowE_frameMemory (world := observed) (initial := observed) reads frameReads codeReads bound lowered
       (by omega) resultFits ready
-      (Senke.WeltAt.reads stored Λ) worldReads frame.win.lay (by omega) (fun _ => rfl)
+      observedMemory worldReads frame.win.lay (by omega) (fun _ => rfl)
   refine ⟨count, ?_⟩
   intro taken pointer current ran
   rcases Nat.lt_or_ge taken count with inside | finished
