@@ -1,5 +1,4 @@
 module
-import Grammatik.Niedrig.Konstrukte.SliceCheck
 
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
@@ -18,6 +17,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.ConstructLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedAwait
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
+import Grammatik.Niedrig.Konstrukte.SliceCheck
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
 public import Stage0.Senke.Ausdruck.Tag
 

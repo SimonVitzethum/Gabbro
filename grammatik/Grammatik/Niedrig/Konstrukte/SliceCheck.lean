@@ -26,9 +26,12 @@ theorem sliceBoundsExpr_exact (length : Expr D Γ Λ (.int 0 capacity))
     (entry world : World D) (env : Env D Γ) :
     eval entry (sliceBoundsExpr length first last) world env = true ↔
       SignedSliceOk (eval entry length world env).n.toNat (env.get first).n (env.get last).n := by
-  simp only [sliceBoundsExpr, eval, wahr?, Zahl.lit, Bool.and_eq_true, decide_eq_true_eq]
+  change (decide (0 ≤ (env.get first).n) &&
+      (decide ((env.get first).n ≤ (env.get last).n) &&
+        decide ((env.get last).n ≤ (eval entry length world env).n))) = true ↔ _
+  simp only [Bool.and_eq_true_iff, decide_eq_true_eq, SignedSliceOk]
   have nonnegative := (eval entry length world env).lo_le
-  exact and_congr_right fun _ => and_congr_right fun _ => by omega
+  constructor <;> rintro ⟨lower, ordered, upper⟩ <;> exact ⟨lower, ordered, by omega⟩
 
 /-- Share the same ordinary branch for an array capacity and the actual
     byte length of a string. Only the accepted arm constructs a view. -/
@@ -52,7 +55,7 @@ theorem guardSlice_exec (length : Expr D Γ Λ (.int 0 capacity))
   intro read
   rw [guardSlice, execBlock, sliceBoundsExpr_reads]
   have exact := sliceBoundsExpr_exact length first last read read env
-  change (if eval read (sliceBoundsExpr length first last) read env then _ else _) = _
+  change (if eval read (sliceBoundsExpr length first last) read env = true then _ else _) = _
   by_cases valid : SignedSliceOk (eval read length read env).n.toNat (env.get first).n (env.get last).n
   · rw [if_pos (exact.mpr valid), if_pos valid]
   · rw [if_neg (fun taken => valid (exact.mp taken)), if_neg valid]
@@ -73,17 +76,17 @@ theorem stringSliceBounds_exact (source : Var Γ (.str capacity))
 theorem stringSliceBounds_erfuellbar {maximum : Nat} (source : Wert D (.str maximum)) :
     let first : Var [.int 0 0, .str maximum] (.int 0 0) := .here
     let saved : Var [.int 0 0, .str maximum] (.str maximum) := .there .here
-    let env := Env.cons (Zahl.lit 0) (Env.cons source .nil)
+    let env : Env D [.int 0 0, .str maximum] := .cons ⟨0, Int.le_refl 0, Int.le_refl 0⟩ (.cons source .nil)
     (∀ (world : World D), eval world
       (sliceBoundsExpr (Λ := Λ) (.strLen (.var saved)) first first) world env = true) ∧
       ∃ sliced, checkStringSlice source 0 0 = some sliced ∧ sliced.1 = [] := by
-  have accepted : SignedSliceOk source.1.length 0 0 := ⟨le_rfl, le_rfl, Int.natCast_nonneg _⟩
+  have accepted : SignedSliceOk source.1.length 0 0 := ⟨Int.le_refl 0, Int.le_refl 0, Int.natCast_nonneg _⟩
   have observed := (checkStringSlice_exact source 0 0).mpr accepted
   refine ⟨?_, ?_⟩
   · intro world
-    exact (stringSliceBounds_exact .there .here .here world world _).mpr observed
+    exact (stringSliceBounds_exact (.there .here) .here .here world world _).mpr observed
   · unfold checkStringSlice
-    rw [dif_pos accepted]
+    rw [dite_eq_left accepted]
     exact ⟨_, rfl, rfl⟩
 
 end Gabbro.Grammatik.LowLevel.Construct
