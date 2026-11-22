@@ -188,6 +188,11 @@ theorem zurueck_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {v : ErgVal D V.er
 theorem why_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {r : Fin V.gruende} {e : Logik D} :
     (EndAusgang.why σ r : EndAusgang V l Γ) ≠ EndAusgang.logik e := nofun
 
+/-- Two `logik` outcomes with different stops differ. -/
+theorem logik_ne_logik {l : Bool} {Γ : Ctx} {e e' : Logik D} (h : e ≠ e') :
+    (EndAusgang.logik e : EndAusgang V l Γ) ≠ EndAusgang.logik e' :=
+  fun h' => h (by cases h'; rfl)
+
 /-- No declared invariant: nothing is owed at a return. -/
 theorem invAmRueck_leer {P : Programm D} {f : D.Fn} {σ : World D} (h : D.invs = []) : InvAmRueck P f σ :=
   fun i hi => by rw [h] at hi; cases hi

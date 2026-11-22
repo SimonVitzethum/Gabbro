@@ -71,15 +71,16 @@ meta def fertigSchritt (hens : Lean.Expr) (goal : MVarId) : MetaM (Option (List 
           if cx != cy then
             if let some (.ctorInfo _) := (← getEnv).find? cx then
               if let some (.ctorInfo _) := (← getEnv).find? cy then
-                if (← try (do
-                    let (h, g) ← goal.intro1
-                    g.withContext do
+                -- `.logik x ≠ .logik y` from `x ≠ y` (different stops), by `logik_ne_logik`
+                if ca == ``Gabbro.Grammatik.EndAusgang.logik && a.getAppNumArgs = 5 then
+                  if (← try (do
                       let k ← withLocalDeclD `hxy (← mkEq x y) fun hxy => do
                         mkLambdaFVars #[hxy] (← mkNoConfusion (mkConst ``False) hxy)
-                      let outer ← mkNoConfusion (← g.getType) (mkFVar h)
-                      g.assign (mkApp outer k)
-                    pure true) catch _ => pure false) then
-                  return some []
+                      let aa := a.getAppArgs
+                      goal.assign (← mkAppOptM ``Gabbro.Bruecke.logik_ne_logik
+                        #[aa[0]!, aa[1]!, aa[2]!, aa[3]!, x, y, k])
+                      pure true) catch _ => pure false) then
+                    return some []
       -- a `logik` outcome of a handler that never blames a caller is no precondition stop
       if ca == ``Gabbro.Grammatik.EndAusgang.logik && cb == ca && a.getAppNumArgs = 5 then
         let e := a.getArg! 4
