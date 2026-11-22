@@ -408,7 +408,7 @@ theorem specArraySliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declO
       lowWertE u Γ Λ fn er (.slice (.param name) first last) = .ok ⟨.arr element (last - first), span⟩ ∧
       ∀ entry world env, eval entry span world env = arrSliceValue (eval entry base world env) first last bounds := by
   intro argument span
-  obtain ⟨_, accepted⟩ := specArraySliceArgument_erfuellbar ctx name element capacity first last bounds read baseType
+  obtain ⟨_, accepted⟩ := specArraySliceArgument_of_local ctx name element capacity first last bounds read baseType
   refine ⟨accepted, ?_, fun entry world env => arraySpan_refines base entry world env first last bounds⟩
   rw [lowWertE_slice, typed]
   exact lowerSlice_array base first last bounds allowed

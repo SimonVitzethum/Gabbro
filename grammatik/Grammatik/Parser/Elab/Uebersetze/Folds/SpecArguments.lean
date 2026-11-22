@@ -112,7 +112,7 @@ theorem specStringConcatArgument_erfuellbar (ctx : UCtx) (lhs rhs : SExpr) (left
 
 /-- Before inlining a static array slice, check both the original base
     and the actual interval. The resulting array retains its element type. -/
-theorem specArraySliceArgument_erfuellbar (ctx : UCtx) (name : String) (element : Ty)
+theorem specArraySliceArgument_of_local (ctx : UCtx) (name : String) (element : Ty)
     (capacity first last : Nat) (bounds : first ≤ last ∧ last ≤ capacity)
     (read : uWertBody ctx (.variable name) = .ok (.param name))
     (baseType : uValueType ctx (.param name) = some (.arr element capacity)) :
@@ -129,6 +129,23 @@ theorem specArraySliceArgument_erfuellbar (ctx : UCtx) (name : String) (element 
   exact ⟨parsed, by
     simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath,
       baseType, bounds, and_self, ite_true, Option.bind_some, pure, Except.pure] <;> rfl⟩
+
+theorem specArraySliceArgument_erfuellbar (element : Ty) (capacity first last : Nat)
+    (bounds : first ≤ last ∧ last ≤ capacity) :
+    ∃ ctx : UCtx,
+      uWertBody ctx (.variable "array") = .ok (.param "array") ∧
+      uValueType ctx (.param "array") = some (.arr element capacity) ∧
+      uSpecValueArgument ctx (.arr element (last - first))
+        (.built "#slice" [.variable "array", .lit first, .lit last]) = .ok () := by
+  let ctx : UCtx := {
+    names := ["array"], kinds := [.wert], types := [.arr element capacity],
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have read : uWertBody ctx (.variable "array") = .ok (.param "array") := by
+    simp [ctx, uWertBody, uRechne, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have baseType : uValueType ctx (.param "array") = some (.arr element capacity) := by
+    simp [ctx, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  exact ⟨ctx, read, baseType, (specArraySliceArgument_of_local ctx "array" element capacity first last
+    bounds read baseType).2⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/
