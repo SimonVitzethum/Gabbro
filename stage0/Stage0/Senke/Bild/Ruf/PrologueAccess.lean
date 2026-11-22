@@ -77,7 +77,7 @@ theorem Emitted.prologue_read_owner [Kern] (output : Emitted src reserve options
       cases cell <;> simpa only [physical, Zelle.withIdle, Zelle.carrier,
         requires_mitRuhe_orte, ensures_mitRuhe_orte] using readsContract
     have inFootprint : physical.carrier ∈ fussOrteG E.P.mitRuhe (some root.1) :=
-      fuss_teilG _ _ (known.elim (fuss_req _ _) (fuss_ens _ _))
+      fuss_teilG _ _ (known.elim (fun read => fuss_req _ _ read) (fun read => fuss_ens _ _ read))
     exact plainWriterFootprint_access hardware accepted duties separated allocated begins ends plain reached
       (.inl inFootprint)
 
