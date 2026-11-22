@@ -23,7 +23,11 @@ def specLiteralFieldFits : Ty → USide → Bool
     match bytesZahl bytes with
     | some decoded => decide (decoded.length ≤ capacity)
     | none => false
+  | .arr _ 0, .arrNil => true
+  | .arr element (length + 1), .arrCons first rest =>
+    specLiteralFieldFits element first && specLiteralFieldFits (.arr element length) rest
   | _, _ => false
+termination_by structural _ value => value
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/

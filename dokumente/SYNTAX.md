@@ -1225,8 +1225,9 @@ For example, `spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;` checks each 
 that parameter type before inlining. Integer argument intervals must be contained in the declared
 range and Boolean parameters require Boolean arguments. Record, array, string and floating-point
 parameters accept named values and record field paths whose elaborated type equals the declared
-type. A record parameter also accepts its nominal constructor with Boolean, integer and string
-literal fields. Each literal is checked against its declared field type before substitution.
+type. A record parameter also accepts its nominal constructor with Boolean, integer, string and
+array literals as fields. Nested array literals must match the lengths and element types declared
+for that field. Each literal is checked against its declared field type before substitution.
 A string literal also fits a string parameter whose declared bound equals its UTF-8 byte
 length. Concatenating supported string arguments adds their byte bounds before the parameter
 type is checked. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
