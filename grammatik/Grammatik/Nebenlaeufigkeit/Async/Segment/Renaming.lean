@@ -24,7 +24,7 @@ private theorem Env.AgreesUnder.binder {original : Env D Γ} {renamed : Env D Γ
 mutual
 /-- Renaming preserves ordinary G evaluation, the complete read trace,
     and the static cost used for poll admission. -/
-public theorem Expr.ren_sound {τ : Ty}
+public theorem Expr.ren_sound {Γ Γ' : Ctx} {τ : Ty}
     (expression : Expr D Γ Λ τ) (rename : ∀ {ν : Ty}, Var Γ ν → Var Γ' ν) :
     (expression.ren rename).orte = expression.orte ∧
     kostenExpr (expression.ren rename) = kostenExpr expression ∧
@@ -62,7 +62,7 @@ public theorem Expr.ren_sound {τ : Ty}
     · simp only [Expr.ren, Expr.orte, aSound.1]
     · simp only [Expr.ren, kostenExpr, aSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees]
+      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees] <;> rfl
   | .thru a _ _ _ b _
   | .thruOwn a _ _ _ b _ _ _ _ _ _
   | .refEq a b
@@ -101,7 +101,8 @@ public theorem Expr.ren_sound {τ : Ty}
     · simp only [Expr.ren, Expr.orte, aSound.1, bSound.1]
     · simp only [Expr.ren, kostenExpr, aSound.2.1, bSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees, bSound.2.2 entry world original renamed agrees]
+      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees,
+        bSound.2.2 entry world original renamed agrees] <;> rfl
   | .arrSet a b c
   | .wenn a b c => by
     have aSound := Expr.ren_sound a rename
@@ -111,21 +112,22 @@ public theorem Expr.ren_sound {τ : Ty}
     · simp only [Expr.ren, Expr.orte, aSound.1, bSound.1, cSound.1]
     · simp only [Expr.ren, kostenExpr, aSound.2.1, bSound.2.1, cSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees, bSound.2.2 entry world original renamed agrees, cSound.2.2 entry world original renamed agrees]
+      simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees,
+        bSound.2.2 entry world original renamed agrees, cSound.2.2 entry world original renamed agrees] <;> rfl
   | .case _ _ payload => by
     have payloadSound := NutzlastExpr.ren_sound payload rename
     refine ⟨?_, ?_, ?_⟩
     · simp only [Expr.ren, Expr.orte, payloadSound.1]
     · simp only [Expr.ren, kostenExpr, payloadSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval, payloadSound.2.2 entry world original renamed agrees]
+      simp only [Expr.ren, eval, payloadSound.2.2 entry world original renamed agrees] <;> rfl
   | .prod _ arguments => by
     have argumentsSound := Args.ren_sound arguments rename
     refine ⟨?_, ?_, ?_⟩
     · simp only [Expr.ren, Expr.orte, argumentsSound.1]
     · simp only [Expr.ren, kostenExpr, argumentsSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval, argumentsSound.2.2 entry world original renamed agrees]
+      simp only [Expr.ren, eval, argumentsSound.2.2 entry world original renamed agrees] <;> rfl
   | .forallSlots _ body _ | .existsSlots _ body _ | .count _ body => by
     have sound := Expr.ren_sound body (Var.hoch rename)
     refine ⟨?_, ?_, ?_⟩
@@ -134,10 +136,10 @@ public theorem Expr.ren_sound {τ : Ty}
     · intro entry world original renamed agrees
       simp only [Expr.ren, eval,
         fun value => sound.2.2 entry world (.cons value original) (.cons value renamed)
-          (Env.AgreesUnder.binder agrees value)]
+          (Env.AgreesUnder.binder agrees value)] <;> rfl
 termination_by structural expression
 
-public theorem NutzlastExpr.ren_sound {c : Option Ty}
+public theorem NutzlastExpr.ren_sound {Γ Γ' : Ctx} {c : Option Ty}
     (expression : NutzlastExpr D Γ Λ c) (rename : ∀ {ν : Ty}, Var Γ ν → Var Γ' ν) :
     (expression.ren rename).orte = expression.orte ∧
     kostenNutz (expression.ren rename) = kostenNutz expression ∧
@@ -149,7 +151,7 @@ public theorem NutzlastExpr.ren_sound {c : Option Ty}
   | .val expression => Expr.ren_sound expression rename
 termination_by structural expression
 
-public theorem Args.ren_sound {fields : List Ty}
+public theorem Args.ren_sound {Γ Γ' : Ctx} {fields : List Ty}
     (expressions : Args D Γ Λ fields) (rename : ∀ {ν : Ty}, Var Γ ν → Var Γ' ν) :
     (expressions.ren rename).orte = expressions.orte ∧
     kostenArgs (expressions.ren rename) = kostenArgs expressions ∧
@@ -165,7 +167,8 @@ public theorem Args.ren_sound {fields : List Ty}
     · simp only [Args.ren, Args.orte, expressionSound.1, restSound.1]
     · simp only [Args.ren, kostenArgs, expressionSound.2.1, restSound.2.1]
     · intro entry world original renamed agrees
-      simp only [Args.ren, evalProd, expressionSound.2.2 entry world original renamed agrees, restSound.2.2 entry world original renamed agrees]
+      simp only [Args.ren, evalProd, expressionSound.2.2 entry world original renamed agrees,
+        restSound.2.2 entry world original renamed agrees] <;> rfl
 termination_by structural expressions
 end
 

@@ -37,7 +37,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
-import Grammatik.Nebenlaeufigkeit.Async.Representation.Resume
+import Grammatik.Nebenlaeufigkeit.Async.Representation.BindLowering
 import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 import Grammatik.Zielsatz.BeweisAtomar
