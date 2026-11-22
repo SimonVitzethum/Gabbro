@@ -92,13 +92,13 @@ theorem lowWertE_localArraySpan {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u
 
 /-- The actual core lowering of a runtime slice length is integer
     subtraction in the direction of the half-open range. -/
-theorem lowWertE_localArraySliceLength {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
-    {fn : UFn} {er : Option Ty} {first last : String} {firstLo firstHi lastLo lastHi : Int}
+theorem lowWertE_arraySliceLength {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {first last : USide} {firstLo firstHi lastLo lastHi : Int}
     {begin : Expr (declOf u) Γ Λ (.int firstLo firstHi)}
     {finish : Expr (declOf u) Γ Λ (.int lastLo lastHi)}
-    (readFirst : lowWertE u Γ Λ fn er (.param first) = .ok ⟨.int firstLo firstHi, begin⟩)
-    (readLast : lowWertE u Γ Λ fn er (.param last) = .ok ⟨.int lastLo lastHi, finish⟩) :
-    lowWertE u Γ Λ fn er (.sub (.param last) (.param first)) =
+    (readFirst : lowWertE u Γ Λ fn er first = .ok ⟨.int firstLo firstHi, begin⟩)
+    (readLast : lowWertE u Γ Λ fn er last = .ok ⟨.int lastLo lastHi, finish⟩) :
+    lowWertE u Γ Λ fn er (.sub last first) =
       .ok ⟨.int (lastLo - firstHi) (lastHi - firstLo), .sub finish begin⟩ := by
   simp only [lowWertE, readFirst, readLast, zahlVon, LowWert.zahl, LowSide.minus, LowSide.wert]
 
@@ -139,20 +139,21 @@ theorem localArraySliceIndex_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
     uRechne ctx blatt (.index (.built "#slice" [.variable array, .variable first, .variable last])
       (.variable index)) = .ok (.idx (.param array) (.add (.param first) (.param index))) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, arrayType, firstType, lastType, indexType, bounds,
-    locals, indexBounds, and_self, ite_true]
+  simp only [uLocalArraySliceObservation, uSliceInteger, arrayType, firstType, lastType, indexType, bounds,
+    locals.1, locals.2.1, locals.2.2, indexBounds.2.2, indexBounds.1, indexBounds.2.1,
+    and_self, bind, Option.bind, ite_true]
 
 theorem lowWertE_localArraySliceIndex {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
-    {fn : UFn} {er : Option Ty} {array first index : String} {τ : Ty} {capacity : Nat}
+    {fn : UFn} {er : Option Ty} {array : String} {first index : USide} {τ : Ty} {capacity : Nat}
     {firstLo firstHi indexLo indexHi : Int}
     {base : Expr (declOf u) Γ Λ (.arr τ capacity)}
     {begin : Expr (declOf u) Γ Λ (.int firstLo firstHi)}
     {position : Expr (declOf u) Γ Λ (.int indexLo indexHi)}
     (readArray : lowWertE u Γ Λ fn er (.param array) = .ok ⟨.arr τ capacity, base⟩)
-    (readFirst : lowWertE u Γ Λ fn er (.param first) = .ok ⟨.int firstLo firstHi, begin⟩)
-    (readIndex : lowWertE u Γ Λ fn er (.param index) = .ok ⟨.int indexLo indexHi, position⟩)
+    (readFirst : lowWertE u Γ Λ fn er first = .ok ⟨.int firstLo firstHi, begin⟩)
+    (readIndex : lowWertE u Γ Λ fn er index = .ok ⟨.int indexLo indexHi, position⟩)
     (lower : 0 ≤ firstLo + indexLo) (upper : firstHi + indexHi ≤ (capacity : Int) - 1) :
-    lowWertE u Γ Λ fn er (.idx (.param array) (.add (.param first) (.param index))) =
+    lowWertE u Γ Λ fn er (.idx (.param array) (.add first index)) =
       .ok ⟨τ, .arrGet base (.widen lower upper (.add begin position))⟩ := by
   simp only [lowWertE, readArray, readFirst, readIndex, LowSide.plus, LowSide.wert,
     zahlVon, LowWert.zahl, idxW, dite_eq_left lower, dite_eq_left upper]
@@ -225,6 +226,32 @@ theorem runtimeSliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough :
 theorem uSliceLocalType_unknown (ctx : UCtx) (name : String)
     (unresolved : ctx.unknownRanges.contains name = true) : uSliceLocalType ctx name = none := by
   simp only [uSliceLocalType, unresolved, ite_true]
+
+/-- A varying local endpoint and static upper endpoint and index
+    satisfy the productive slice checks together. -/
+theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 4 ≤ capacity) :
+    ∃ scope : UCtx,
+      uWertBody scope (.built "lenof" [.built "#slice" [.variable "a", .variable "i", .lit 4]]) =
+        .ok (.sub (.lit 4) (.param "i")) ∧
+      uWertBody scope (.index (.built "#slice" [.variable "a", .variable "i", .lit 4]) (.lit 1)) =
+        .ok (.idx (.param "a") (.add (.param "i") (.lit 1))) := by
+  let scope : UCtx := {
+    names := ["a", "i"], kinds := [.wert, .int], types := [.arr τ capacity, .int 0 1],
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have arrayType : uSliceLocalType scope "a" = some (.arr τ capacity) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have firstType : uSliceLocalType scope "i" = some (.int 0 1) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have arrayRead : uWertBlatt scope (.variable "a") = .ok (.param "a") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have firstRead : uWertBlatt scope (.variable "i") = .ok (.param "i") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have bounds : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ 4 ∧ (4 : Int) ≤ capacity :=
+    ⟨by decide, by decide, by omega⟩
+  have position : (0 : Int) ≤ 1 ∧ (1 : Int) < 4 - 1 := by decide
+  refine ⟨scope, ?_, ?_⟩ <;>
+    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, bind, Option.bind,
+      arrayType, firstType, arrayRead, firstRead, bounds, position, ite_true]
 
 /-- A static literal substring admitted as a predicate argument lowers
     to the exact model subsequence at the checked byte bound. -/

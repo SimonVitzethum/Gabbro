@@ -124,72 +124,6 @@ def uTraegerIndex (ctx : UCtx) : SExpr → Bool
   | .variable n => ctx.tabs.any (fun t => strEq t.name n)
   | _ => false
 
-/-- The length operand of a full slice names the same lexical value.
-    Restricting it to a resolved local avoids duplicating a memory read. -/
-def uFullLocalSlice (ctx : UCtx) (first : Int) : USide → SExpr → Bool
-  | .param name, .built "lenof" [.variable last] =>
-    first == 0 && strEq name last &&
-      match uValueType ctx (.param name) with
-      | some (.arr ..) | some (.str ..) => true
-      | _ => false
-  | _, _ => false
-
-/-- Expand a fixed number of array elements using the ordinary typed
-    expression reader. The start and array operands are lexical locals. -/
-def uLocalArraySpan (array start : USide) (element : Ty) : Nat → Nat → USide
-  | _, 0 => .typed (.arr element 0) .arrNil
-  | offset, count + 1 =>
-    .arrCons (.idx array (.add start (.lit offset))) (uLocalArraySpan array start element (offset + 1) count)
-
-def uSliceConstants (ctx : UCtx) : List (String × (Int × Int)) :=
-  (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
-    (fun (name, value) => (name, (value, value)))
-
-/-- Bounds must come from a resolved binding, never from an untyped
-    local's placeholder range awaiting dependent lowering. -/
-def uSliceLocalType (ctx : UCtx) (name : String) : Option Ty :=
-  if ctx.unknownRanges.contains name then none else uValueType ctx (.param name)
-
-/-- The dynamic endpoint form `array[start .. start + N]` fixes the
-    number of selected elements statically. The same lexical start
-    must be used at both endpoints, and its complete interval must fit. -/
-def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
-    USide → SExpr → SExpr → Option USide
-  | .param array, .variable start, .bin "+" (.variable lastStart) amount => do
-    if !strEq start lastStart then none else
-      let some (.arr element length) := uSliceLocalType ctx array | none
-      let some (.int lo hi) := uSliceLocalType ctx start | none
-      let some count := uSchranke (uSliceConstants ctx) amount | none
-      if 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length then
-        if blatt (.variable start) = .ok (.param start) then
-          some (uLocalArraySpan (.param array) (.param start) element 0 count.toNat)
-        else none
-      else none
-  | _, _, _ => none
-
-/-- Observe a local array slice using its endpoints and, for an element
-    observation, the translated index in the original array. -/
-def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
-    (index : Option SExpr) : SExpr → Option USide
-  | .built "#slice" [.variable array, .variable first, .variable last] => do
-    let some (.arr _ capacity) := uSliceLocalType ctx array | none
-    let some (.int firstLo firstHi) := uSliceLocalType ctx first | none
-    let some (.int lastLo lastHi) := uSliceLocalType ctx last | none
-    if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
-      if blatt (.variable array) = .ok (.param array) ∧
-          blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last) then
-        match index with
-        | none => some (.sub (.param last) (.param first))
-        | some (.variable name) => do
-          let some (.int lo hi) := uSliceLocalType ctx name | none
-          if 0 ≤ lo ∧ hi < lastLo - firstHi ∧ blatt (.variable name) = .ok (.param name) then
-            some (.idx (.param array) (.add (.param first) (.param name)))
-          else none
-        | some _ => none
-      else none
-    else none
-  | _ => none
-
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. C13 adds the closed integer builtins
     (`+% -% *% <<% +|`, `clz ctz log2_floor popcount bswap rotl rotr`) at the declared storage width. -/
@@ -394,7 +328,8 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
     uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, arrayType, firstType, lastType, bounds, locals, and_self, ite_true]
+  simp only [uLocalArraySliceObservation, uSliceInteger, arrayType, firstType, lastType, bounds,
+    locals, locals.1, locals.2.1, locals.2.2, bind, Option.bind, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
