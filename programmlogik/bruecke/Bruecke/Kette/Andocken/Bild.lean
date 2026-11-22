@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Stufe0
+public import Bruecke.Kette.Andocken.Stufe0
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
 @[expose] public section
 
