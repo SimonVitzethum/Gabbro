@@ -455,13 +455,9 @@ theorem specFieldArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))
     let aggregate : Expr (declOf u) Γ Λ (.prod schema.val.identity (schema.val.fields.map (·.2))) :=
       cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) value
     uSpecValueArgument ctx target (.field base field) = .ok () ∧
-      lowWertE u Γ Λ fn er (.field operand field) = .ok ⟨target, Expr.prodGet aggregate position⟩ ∧
-      ∀ initial world env, eval initial (.prodGet aggregate position) world env =
-        prodGetW (F := (declOf u).Fn) (passt := (declOf u).passt)
-          (fs := schema.val.fields.map (·.2)) position
-          (eval initial aggregate world env) := by
+      lowWertE u Γ Λ fn er (.field operand field) = .ok ⟨target, Expr.prodGet aggregate position⟩ := by
   intro aggregate
-  refine ⟨specFieldArgument_of_checked ctx base field read prechecked nominal selected, ?_, fun _ _ _ => rfl⟩
+  refine ⟨specFieldArgument_of_checked ctx base field read prechecked nominal selected, ?_⟩
   simp only [lowWertE, gate, typed, ← schemas, nominal, selected, bind, Except.bind, pure, Except.pure, aggregate]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
