@@ -18,11 +18,7 @@ private theorem ptrParam_tyR (types : List Ty) :
   · next index located =>
     cases present : types[index]? with
     | none => rfl
-    | some type =>
-      cases type <;> try rfl
-      case ptr capability =>
-        obtain ⟨_, _, ⟨_⟩⟩ := capability
-        rfl
+    | some type => cases type <;> rfl
   · rfl
 
 private theorem pointerCount_tyR (types : List Ty) :
@@ -51,9 +47,6 @@ private theorem unpackK_withIdle (L : Lay D) (t : D.Tab) (f : D.Feld t) (base sc
 
 private theorem byteType_tyR (ty : Ty) : (tyR ty = .int 0 255) ↔ ty = .int 0 255 := by
   cases ty <;> simp only [tyR, Ty.mapNumbers, reduceCtorEq]
-  case ptr capability =>
-    obtain ⟨_, _, ⟨_⟩⟩ := capability
-    simp only [tyR, Ty.mapNumbers, reduceCtorEq]
 
 /-- Buffer packing, register arguments and the selected syscall row keep their exact bytes. -/
 theorem torC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
@@ -73,7 +66,7 @@ theorem torC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
   have byteType (t : D.Tab) (f : D.Feld t) : (D.mitRuhe.typ t f = .int 0 255) ↔
       D.typ t f = .int 0 255 := byteType_tyR _
   simp only [torC, binding, width, types, pointer, count, table, bytes, extent,
-    L.withIdle_count, lowR_withIdle, byteType, packI_withIdle, unpackK_withIdle]
+    L.withIdle_count, lowR_withIdle, byteType, packI_withIdle, unpackK_withIdle] <;> rfl
 
 theorem torC0_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (dest reserved : Nat) :
@@ -85,10 +78,7 @@ private theorem chkC_tyR (result : Option Ty) (dest : Nat) :
     chkC (result.map tyR) dest = chkC result dest := by
   cases result with
   | none => rfl
-  | some ty => cases ty <;> try rfl
-    case ptr capability =>
-      obtain ⟨_, _, ⟨_⟩⟩ := capability
-      rfl
+  | some ty => cases ty <;> rfl
 
 private theorem fallibleTy_tyR (ty : Ty) : fallibleTy (tyR ty) = fallibleTy ty := by
   cases ty <;> rfl
@@ -110,7 +100,7 @@ theorem fallibleForeignC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a 
   have binding : L.withIdle.tor a = L.tor a := rfl
   have area : usesArea L.withIdle a = usesArea L a := rfl
   have reasons : D.mitRuhe.agruende a = D.agruende a := rfl
-  have checks : chkC (some (tyR ty)) dest = chkC (some ty) dest := chkC_tyR _ _
+  have checks : chkC (some (tyR ty)) dest = chkC (some ty) dest := chkC_tyR (some ty) dest
   have receive : areaReceive (tyR ty) dest = areaReceive ty dest := by
     simp only [areaReceive, tyR, valueWords_mapNumbers]
   simp only [fallibleForeignC, binding, area, reasons, areaC_withIdle, torC_withIdle,
