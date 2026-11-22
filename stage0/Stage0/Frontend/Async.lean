@@ -159,7 +159,29 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
   let resolved : CanonicalExpression u Λ ctx fn function (.lit value) :=
     ⟨[], .lit value, term, parameters, read, lowered⟩
   refine ⟨resolved, ?_, rfl, rfl⟩
-  simp only [resolveExpression, parameters, read, FrameLocals, List.map_nil, lowered, resolved]
+  unfold resolveExpression
+  split
+  · rename_i error impossible
+    rw [parameters] at impossible
+    cases impossible
+  · rename_i actual found
+    have same := Except.ok.inj (found.symm.trans parameters)
+    subst actual
+    split
+    · rename_i error impossible
+      rw [read] at impossible
+      cases impossible
+    · rename_i actual found
+      have same := Except.ok.inj (found.symm.trans read)
+      subst actual
+      split
+      · rename_i error impossible
+        rw [lowered] at impossible
+        cases impossible
+      · rename_i actual found
+        have same := Except.ok.inj (found.symm.trans lowered)
+        subst actual
+        rfl
 
 /-- The poll entry is private to the expansion and cannot collide with
     any source identifier. The same name is used by all child-call sites. -/
