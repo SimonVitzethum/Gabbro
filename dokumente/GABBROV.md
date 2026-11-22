@@ -42,7 +42,7 @@ of the obligations reach GabbroV.
 | the Lean `Body` channel | `programmlogik/` (§13); historical Rust `gabbro prove`, `lean.rs`, `beweis.rs` | The model remains; the deleted Rust driver is history, and the bridge consumes tracked duties pending Lean V1. |
 | the specification channel | `programmlogik/gabbrov/V1.lean`, `V2.lean`; historical Rust `gabbro lean a.gab b.gab` | The Lean specifications remain; source parsing and elaboration now use `grammatik/Grammatik/Parser/`. |
 | the Lean parser (T3) | `grammatik/Grammatik/Parser/` (§14) | source text → surface tree → `UProg` → G program, computed in Lean |
-| the bridge | `programmlogik/bruecke/Bruecke/` (§14) | GabbroV's duties give premise (b) of the goal theorem |
+| the certificate | `programmlogik/bruecke/Bruecke/Zertifikat/` | the model's certificate over the lowered program gives premise (b) of the image theorem, every form |
 | the proof-side census | `grammatik/Grammatik/GabbroV/` (17 files, ≈6 000 lines) | closing the person's linked-structure arguments, the shared-atomic rely, refusal census |
 | the checker's own logic | `programmlogik/passlogik/` (§15) | the pass register's sentences as Lean theorems over models of the rules |
 
@@ -53,19 +53,20 @@ measuring coverage and V2 extending the bridge to every Stage-0 form (R2).
 
 **Using the generator.** `lake build gabbrov` in `programmlogik/bruecke`, then
 `gabbrov Proofs.Lexer lexer.gab out/` writes, under `out/Proofs/Lexer/`: `Quelle` (the text), `Daten/S<k>`
-(the elaborated functions, 16 per module) and `Daten` (the unit `u` and the rank), `Pflicht/F<i>` (the
-function's Body as GabbroV reads it, as a Lean term and in source notation, its reading equation, its decided
-checks, and the goal `ziel<i>`), `Beweis/F<i>` (your proof of `ziel<i>`; written once, never replaced),
-`Sammlung/S<k>` and `Lexer.lean` (the unit checks, a `#guard` that Stage 0 compiles the text to exactly `u`, and the theorem
-`nutzer`: premise (b) for the unit Stage 0 compiles from the text). The front end is never evaluated in the kernel:
-the text enters only through the premise `c : Compiled quelle` with `c.unit = u`, which the `#guard` checks by
-running Stage 0 (owner, 2026-11-21). No step quantifies over function positions, so the files of a unit of
-500 000 lines are many small modules Lake builds in parallel. A form or check outside the bridge is a named
-refusal in `Lexer.lean` (exit 1), and premise (b) is then not stated. For a unit without foreign
-bodies `Lexer.lean` also states `nutzerBild`, exactly the premise `NutzerPflichtA` of Stage 0's image
-theorems, from the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` (checked in `Pruefung`); for a
-unit that declares locks it takes Stage 0's own lock decision `sperrenGeprueftB` on the judged unit
-(`nutzerA_aus_compiled_sperren`, THEOREM-MAP §215).
+(the elaborated functions, 16 per module), `Daten` (the unit `u` and its length), `Pflicht/F<i>` (the duty
+`ziel<i>` of function `i`: its logic over the program Stage 0 lowers, `ZielF`), `Beweis/F<i>` (your proof
+of `ziel<i>`; written once, never replaced), `Sammlung/S<k>` and `Lexer.lean` with `nutzerBild`: exactly the
+premise `NutzerPflichtA` of Stage 0's image theorems. The duties are the model's certificate
+(`logikPflichten_iff`: exactly premise (b)) over the lowered program itself, so ONE theorem
+(`nutzerA_aus_ziele`, `programmlogik/bruecke/Bruecke/Zertifikat/Satz.lean`) covers every language form; no
+form is refused. What you prove is only your program's logic (`ensures`, invariants, `requires` at calls);
+the lock and start conditions are Stage 0's checker decision (`entschiedenB`, proved sound), the foreign
+bodies' locality is the environment contract you name. A proof starts with `zielF_aus` (the body of the
+function is its own lowering, `programm_von`) and `gabbrov_wp` (the exact weakest-precondition rules).
+The source text enters only through Stage 0's run (owner, 2026-11-22: the run of Stage 0, which gets its own
+correctness proofs, is the one boundary): the premises `c.unit = u` and `ohneAltGlobalB c.expanded` of
+`nutzerBild`, checked in `Pruefung`. A unit whose postconditions read `old` of a static is a named refusal
+(exit 1).
 
 ---
 

@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Andocken.Zertifikat
+public import Bruecke.Zertifikat.WP
 public import Grammatik.Parser.Elab.UebersetzePipeline
 @[expose] public section
 
@@ -94,7 +94,7 @@ def fuss (modul : String) : String := "end " ++ modul ++ "\n"
 def quelleDatei (modul src : String) : Datei :=
   let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
   { pfad := modul.replace "." "/" ++ "/Quelle"
-    text := kopf modul ["Bruecke.Kette.Andocken.Zertifikat"] "The source text of the unit, byte for byte (written by `gabbrov`)." ++
+    text := kopf modul ["Bruecke.Zertifikat.WP"] "The source text of the unit, byte for byte (written by `gabbrov`)." ++
       "def zeilen : List (List Char) :=\n  [" ++ zeilen ++ "]\n\n" ++
       "def quelle : String := String.ofList zeilen.flatten\n\n" ++ fuss modul }
 
@@ -111,7 +111,7 @@ def stueckModul (modul : String) (k : Nat) : String := modul ++ ".Daten.S" ++ to
 
 def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
   { pfad := (stueckModul modul k).replace "." "/"
-    text := kopf modul ["Bruecke.Kette.Andocken.Zertifikat"]
+    text := kopf modul ["Bruecke.Zertifikat.WP"]
         ("The elaborated functions of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
       String.join (fs.map fun (i, f) =>
         "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  " ++ breit (repr f) ++ "\n\n") ++
@@ -154,7 +154,11 @@ def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
     text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
         "`. `gabbrov` writes this file once and never replaces it.") ++
       "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
-      "  intro P fs hlow Q sp main args roots gestartet checks passes\n  exact?\n\n" ++ fuss modul }
+      "  apply zielF_aus\n" ++
+      "  intro P v hv hens hrumpf Q sp main args roots gestartet checks\n" ++
+      "  -- the body is `v.2.1` (`hrumpf`), the postcondition `v.1` (`hens`); after `rw [hrumpf]`,\n" ++
+      "  -- `gabbrov_wp` applies the weakest-precondition rules of the model\n" ++
+      "  refine logikFn_aus ?_ ?_ ?_\n  all_goals exact?\n\n" ++ fuss modul }
 
 def sammlungModul (modul : String) (k : Nat) : String := modul ++ ".Sammlung.S" ++ toString k
 
@@ -205,10 +209,10 @@ def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) (altFre
 /-- The checks of the run facts, by running Stage 0's front end; no theorem imports it. -/
 def pruefungDatei (modul : String) : Datei :=
   { pfad := modul.replace "." "/" ++ "/Pruefung"
-    text := (kopf modul ["Bruecke.Kette.Andocken.Zertifikat", modul ++ ".Quelle", modul ++ ".Daten"]
+    text := (kopf modul ["Bruecke.Zertifikat.WP", modul ++ ".Quelle", modul ++ ".Daten"]
         "Checks the run facts of `nutzerBild` by running Stage 0's front end (written by `gabbrov`).").replace
         "@[expose] public section"
-        ("meta import Bruecke.Kette.Andocken.Zertifikat\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+        ("meta import Bruecke.Zertifikat.WP\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
       "#guard stufe0Einheit quelle == .ok u\n\n" ++
       "-- No postcondition reads `old` of a static (the run fact `hold` of `nutzerBild`).\n" ++

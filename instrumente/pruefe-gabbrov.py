@@ -8,9 +8,8 @@ Stages:
      duty libraries build, and no theorem depends on `sorryAx`.
   2. The person's proofs (`programmlogik/Proofs/`) and the GabbroV files (`programmlogik/gabbrov/`)
      carry no `sorry`, `admit`, `native_decide` and no `axiom`.
-  3. The bridge (`programmlogik/bruecke/`): the tracked duty files its `Duty` library imports exist, `lake build`
-     there is green, and every `#print axioms` of a bridge theorem names exactly `propext`,
-     `Classical.choice`, `Quot.sound`.
+  3. GabbroV's certificate and generator (`programmlogik/bruecke/`): `lake build` there is green, and every
+     `#print axioms` of a theorem there names exactly `propext`, `Classical.choice`, `Quot.sound`.
 
 The duty files under `programmlogik/Duty/` were printed by the removed Rust tool; they are tracked
 inputs now. A verified generator in Lean is owed.
@@ -61,18 +60,15 @@ def stufe_sorry():
 def stufe_bruecke():
     if not B.is_dir():
         print("  3 bruecke:  NICHT GEMESSEN (programmlogik/bruecke/ fehlt)"); return None
-    wurzeln = re.findall(r'"Duty\.(\w+)"', (B / "lakefile.toml").read_text(encoding="utf-8"))
-    fehlend = [n for n in wurzeln if not (P / "Duty" / f"{n}.lean").is_file()]
     p = subprocess.run(["lake", "build"], cwd=B, env=ENV, capture_output=True, text=True, timeout=3600)
     aus = p.stdout + p.stderr
     jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", aus)
     saetze = re.findall(r"Bruecke/\S+: '([^']+)' depends on axioms: \[([^\]]*)\]", aus)
     fremd = [n for n, ax in saetze if set(a.strip() for a in ax.split(",")) != STANDARD]
-    ok = p.returncode == 0 and bool(jobs) and bool(saetze) and not fremd and bool(wurzeln) and not fehlend
+    ok = p.returncode == 0 and bool(jobs) and bool(saetze) and not fremd
     print(f"  3 bruecke:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else 'kein Abschluss'}, "
-          f"{len(saetze)} Saetze geprueft, {len(fremd)} mit anderen Axiomen, "
-          f"{len(wurzeln) - len(fehlend)} von {len(wurzeln)} Duty-Dateien vorhanden)")
-    for x in (fremd + fehlend)[:10]: print("     ", x)
+          f"{len(saetze)} Saetze geprueft, {len(fremd)} mit anderen Axiomen)")
+    for x in fremd[:10]: print("     ", x)
     return ok
 
 
