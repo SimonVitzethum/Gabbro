@@ -72,7 +72,7 @@ theorem stringKey_value {n a k out tmp : Nat} (s : Nat → Runner.W)
   unfold stringKeyC
   split
   · next hk =>
-    simp (disch := omega) only [aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, aluFn,
+    simp (disch := omega) only [aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, aluFn,
       Int.toNat_natCast, slotUpd_same, slotUpd_other, ite_true, ite_false,
       OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true]
     have slotIndex : ((a : Int) + 1 + (k : Int)).toNat = a + 1 + k :=
@@ -99,7 +99,7 @@ theorem stringKey_value {n a k out tmp : Nat} (s : Nat → Runner.W)
       exact BitVec.zero_mul
   · next hk =>
     have absent : ¬ k < bs.length := by omega
-    simp [aluRun, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, slotUpd, keyAt_byte, absent]
+    simp [aluRun, aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, slotUpd, keyAt_byte, absent]
 
 theorem stringCompare_value (acc : Nat) (s : Nat → Runner.W) (x y : Nat) (r : Bool)
     (hx : x < 2 ^ 64) (hy : y < 2 ^ 64)

@@ -145,7 +145,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       refine f1_run (t := ⟨pc, fp⟩) ins' ?_
       rw [sx_nat (by omega)]
       exact run_wr64 hw
-    · rw [rd j hj]; simp only [aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast]; rfl
+    · rw [rd j hj]; simp only [aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast]; rfl
   | bin o a b c f hf h1 h2 h3 h4 =>
     have ins' : InsAt m pc o (II.f a) (II.f b) (II.f c) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (f (s b) (s c)) h1 h2 (fun j hj _ => hs j hj)
@@ -159,7 +159,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
     · rw [rd j hj]
       have distinct : o.val ≠ 1 ∧ o.val ≠ 2 := by
         constructor <;> (intro same; rw [same] at hf; cases hf)
-      simp only [aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast, hf, distinct.1, distinct.2, ite_false]
+      simp only [aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, hf, distinct.1, distinct.2, ite_false]
 
 /-- Admitted straight-line code runs to its end; every frame slot then holds `aluRun`. -/
 theorem alu_run {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {code : List II}

@@ -43,7 +43,7 @@ theorem ext_word (x : Int) (k : Nat) (hk : 1 ≤ k) (h1 : -(2 ^ 63 * 2 ^ (64 * (
 
 theorem aluStep_mov (a b : Nat) (s : Nat → Runner.W) :
     aluStep (ci 2 (a : Nat) (b : Nat) 0) s = slotUpd s a (s b) := by
-  simp only [aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast]
+  simp only [aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast]
   simp
 
 theorem wideLtC_frame (n a : Nat) (s : Nat → Runner.W) (i : Nat) (h : i < a ∨ a + 2 * (n + 1) + 7 ≤ i) :

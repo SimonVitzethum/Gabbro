@@ -16,8 +16,6 @@ open Runner.Mem
 /-- The opcode is exactly the one byte occupied by the IR encoding. -/
 abbrev Opcode := Fin 256
 
-theorem Opcode.literal_value (value : Nat) : ((OfNat.ofNat value : Opcode) : Nat) = value % 256 := rfl
-
 /-- A lowered instruction: opcode and three fields. -/
 structure II where
   opcode : Opcode
@@ -29,9 +27,6 @@ structure II where
 abbrev II.o (i : II) : Nat := i.opcode.val
 
 theorem II.opcode_fits (i : II) : i.o < 256 := i.opcode.isLt
-
-theorem II.opcodes_fit (code : List II) : code.all (fun i => decide (i.o < 256)) = true :=
-  List.all_eq_true.mpr fun i _ => decide_eq_true i.opcode_fits
 
 def II.f (v : Int) : BitVec 32 := BitVec.ofInt 32 v
 
