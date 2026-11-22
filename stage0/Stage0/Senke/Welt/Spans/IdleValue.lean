@@ -113,16 +113,39 @@ theorem ValueAt.withIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : Na
   obtain ⟨words, valid⟩ := idleValue L τ v
   exact ⟨valid.mpr stored.1, words.symm ▸ stored.2⟩
 
+theorem ValueAt.ofWithIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : Nat}
+    {τ : Ty} {v : Wert D τ} (stored : ValueAt L.withIdle m fp base (tyR τ) (valR τ v)) :
+    ValueAt L m fp base τ v := by
+  obtain ⟨words, valid⟩ := idleValue L τ v
+  exact ⟨valid.mp stored.1, words ▸ stored.2⟩
+
+/-- Both machines give the same representation to every allocated world
+    cell, including any worlds reached after entry. -/
+theorem WeltAt.withIdle_iff {L : Lay D} {m : Runner.Mem} {world : World D}
+    {requireWrites : Bool} :
+    WeltAt m L.withIdle (worldR world) requireWrites ↔ WeltAt m L world requireWrites := by
+  constructor
+  · intro stored
+    refine ⟨?_, ?_, stored.2.2⟩
+    · intro t field i bound
+      have cell := stored.1 t field i bound
+      rw [Lay.withIdle_elem] at cell
+      exact cell.ofWithIdle
+    · intro g
+      exact (stored.2.1 g).ofWithIdle
+  · intro stored
+    refine ⟨?_, ?_, stored.2.2⟩
+    · intro t field i bound
+      rw [Lay.withIdle_elem]
+      exact (stored.1 t field i bound).withIdle
+    · intro g
+      exact (stored.2.1 g).withIdle
+
 /-- Loading bytes for the ordinary source memory also loads the same
     memory of the goal machine, including all nested pointer values. -/
 theorem WeltAt.withIdle {L : Lay D} {m : Runner.Mem} {s : Speicher D}
     (stored : WeltAt m L (s.welt [])) :
     WeltAt m L.withIdle ((speicherR s).welt []) := by
-  refine ⟨?_, ?_, stored.2.2⟩
-  · intro t field i bound
-    rw [Lay.withIdle_elem]
-    exact (stored.1 t field i bound).withIdle
-  · intro g
-    exact (stored.2.1 g).withIdle
+  exact WeltAt.withIdle_iff.mpr stored
 
 end Gabbro.Stage0.Senke
