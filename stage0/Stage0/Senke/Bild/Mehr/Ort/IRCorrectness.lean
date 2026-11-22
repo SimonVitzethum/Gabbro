@@ -166,7 +166,7 @@ private theorem firstWorker_clone_control
   | ask found asked ordinary _ _ =>
     obtain ⟨rfl, rfl⟩ := issuer found
     cases asked
-    exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
+    exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
   | exit => cases logged
   | cloneNo _ _ _ refused _ =>
     simp only [List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
@@ -208,6 +208,7 @@ theorem LoadedIRImage.firstWorkerActivation
   have ready : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
       opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)) := by
     rw [pending]
+    rfl
   have slots : ImageSlotsMatch output E O [] before (imageSourceStart E) := by
     refine ⟨?_, ?_⟩
     · intro i
