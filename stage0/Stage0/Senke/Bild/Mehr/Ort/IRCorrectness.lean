@@ -39,12 +39,20 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
       ∀ expected available request resume,
         BildMehr.SCMemoryPrefix L0 startSC available expected →
         expected.ths = [some (.ask (.sys request) resume)] →
-        steps ≤ available ∧ BildMehr.SCMemoryPrefix L0 finishSC (available - steps) expected := by
+        steps ≤ available ∧ BildMehr.SCMemoryPrefix L0 finishSC (available - steps) expected ∧
+        ∀ {next events}, ProcessStep imageTSO actI finish events next → events ≠ [] →
+          steps = available ∧ finishSC = expected := by
   obtain ⟨owned, steps, bound, run⟩ := BildMehr.tso_silent_single_thread
     (image_prefix_tso path) rfl rfl (BildMehr.privateBuffers_empty loaded.emptyBuffers)
-  exact ⟨steps, bound, path.silent_slots rfl, run, BildMehr.mergedView_empty _ _ loaded.emptyBuffers,
-    BildMehr.singleThreadView _ owned, fun _ _ _ _ reference waiting =>
-      reference.consume_until_host waiting run rfl (BildMehr.alleBlind_start _)⟩
+  have one : finish.ths.length = 1 := path.silent_slots rfl
+  refine ⟨steps, bound, one, run, BildMehr.mergedView_empty _ _ loaded.emptyBuffers,
+    BildMehr.singleThreadView _ owned, ?_⟩
+  intro expected available request resume reference waiting
+  obtain ⟨within, rest⟩ := reference.consume_until_host waiting run rfl (BildMehr.alleBlind_start _)
+  refine ⟨within, rest, ?_⟩
+  intro next events observed visible
+  obtain ⟨empty, same⟩ := rest.at_observation rfl one observed visible
+  exact ⟨by omega, same⟩
 
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
