@@ -212,8 +212,11 @@ theorem BodyFrame.finishBind {B : BodyFrame D} (frame : B.Ok)
     simp only [frei, contextWords_cons] at original ⊢
     omega
   have framePrefix : FB ≤ frei Γ B.reserved := by simp only [frei]; omega
+  have protectedFrame : (functionFrame B.P B.f).internalResult ≤ frei Γ B.reserved := by
+    rw [← frame.lo0]
+    exact low
   exact ⟨agreeW_of (agree.mono low), tail, tailTop, body, by omega, by omega, prepared, lowNext,
-    view.agree agree pre.frame framePrefix, locks.agree agree pre.frame framePrefix, worldAfter, protectedNext, held⟩
+    view.agree agree pre.frame framePrefix, locks.agree agree pre.frame protectedFrame, worldAfter, protectedNext, held⟩
 
 /-- **One binding, the image side**: from the boundary in front of `let x = e; rest`, the image runs the code of `e`
     (its lowering `ce`, which leaves the value in the next free slot of the frame) and stands at the boundary of
