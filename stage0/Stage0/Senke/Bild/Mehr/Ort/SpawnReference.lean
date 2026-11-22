@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.Ort.MemoryReference
 public import Stage0.Senke.Start
+import Stage0.Senke.Bild.ImageAddress
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -106,38 +107,30 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
 
 end Gabbro.Stage0.Senke.BildMehr
 
-namespace Gabbro.Stage0
+namespace Gabbro.Stage0.Senke.BildMehr
 
-open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR Runner.Mem
+open Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildLauf Runner Runner.IR Runner.Mem
 
 /-- The clone result store leaves the same argument frame in place.
     The guard reads that actual word and selects the next installed
     startup site or the declared refusal stop. -/
-theorem Emitted.clone_result_reference [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    (output : Emitted src reserve options) {index : Nat} {view : Mem} {id : W}
-    (declared : index < output.starts.length)
-    (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
-    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
-    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
-    let fp := BitVec.ofNat 64 output.image.fp0
-    let scratch := startScratch output.compiled.main
+theorem spawnResult_reference [kernel : Kern] {view : Mem} {pc fp id : W}
+    {slots scratch entry stack : Nat} (decoded : CodeAt view pc (spawnOne scratch entry stack))
+    (frame : FrameOK view fp slots) (far : CodeFar pc 10 fp slots)
+    (room : scratch + 8 ≤ slots) (small : slots < 2 ^ 31) :
     let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
     let guard := nxt parent
     let next : T := ⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩
     let result := Mem.write view (slot fp (BitVec.ofNat 64 (scratch + 2))) 8 id.toNat
-    RunP (ret1 parent id) view (.next guard) result ∧ Agree fp (scratch + 2) output.image.Ks view result ∧
+    RunP (ret1 parent id) view (.next guard) result ∧ Agree fp (scratch + 2) slots view result ∧
       (0 < id.toInt → ∃ final, @Star kernel.withoutSyscalls guard result next final ∧
-        Agree fp (scratch + 3) output.image.Ks result final) ∧
+        Agree fp (scratch + 3) slots result final) ∧
       (id.toInt ≤ 0 → @Stops kernel.withoutSyscalls guard result cloneCode) := by
-  intro pc fp scratch parent guard next result
-  obtain ⟨code, far, room, small, _, _⟩ := output.loaded_spawn_site loaded declared
-  let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)
-  let stack := output.image.fp0 + 8 * (output.image.Ks * (index + 1))
+  intro parent guard next result
   let site := spawnOne scratch entry stack
-  have decoded : CodeAt view pc site := code
   have destination : view.rd32 (parent.pc + 4) = some (II.f ((scratch + 2 : Nat) : Int)) :=
     (decoded 2 (by rw [spawnOne_len]; decide)).f1
-  have inFrame : scratch + 2 < output.image.Ks := by omega
+  have inFrame : scratch + 2 < slots := by omega
   have operand : sx (II.f ((scratch + 2 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 2) :=
     sx_nat (inFrame.trans small)
   have writable : Mem.all view.wr (slot parent.fp (sx (II.f ((scratch + 2 : Nat) : Int)))) 8 = true := by
@@ -145,7 +138,7 @@ theorem Emitted.clone_result_reference [kernel : Kern] {src : String} {reserve :
     exact frame.wr _ inFrame
   have stored := resultStore_reference (value := id) destination writable
   rw [operand] at stored
-  have unchanged : Agree fp (scratch + 2) output.image.Ks view result :=
+  have unchanged : Agree fp (scratch + 2) slots view result :=
     agree_write frame.room (Nat.le_refl _) inFrame _
   have actualWord : result.rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id :=
     rd64_wr64 (wr64_some (frame.wr _ inFrame)) (frame.rd _ inFrame)
@@ -158,7 +151,7 @@ theorem Emitted.clone_result_reference [kernel : Kern] {src : String} {reserve :
     have tail := codeAt_right splitCode
     rw [through, ← guardAddr] at tail
     exact tail
-  have separated : CodeFar guard.pc (site.drop 3).length fp output.image.Ks := by
+  have separated : CodeFar guard.pc (site.drop 3).length fp slots := by
     rw [guardAddr, remaining]
     exact codeFar_right (n := 3) (k := 7) far
   letI : Kern := kernel.withoutSyscalls
@@ -171,5 +164,72 @@ theorem Emitted.clone_result_reference [kernel : Kern] {src : String} {reserve :
   have target : (⟨guard.pc + BitVec.ofNat 64 (16 * 7), fp⟩ : T) = next := by
     rw [guardAddr, pcN pc 3 7 10 rfl]
   exact ⟨final, target ▸ ran, agrees⟩
+
+end Gabbro.Stage0.Senke.BildMehr
+
+namespace Gabbro.Stage0
+
+open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR
+
+/-- A positive reply selects the successor in the actual startup
+    header. Every partial memory run stays in the same scope until its
+    exact boundary, which still has the installed code and frame. -/
+theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) {index : Nat} {view : Mem} {id : W}
+    (declared : index < output.starts.length) (positive : 0 < id.toInt)
+    (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let scratch := startScratch output.compiled.main
+    let guard := nxt ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+    let next : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * (index + 1))), fp⟩
+    let result := Mem.write view (slot fp (BitVec.ofNat 64 (scratch + 2))) 8 id.toNat
+    ∀ {control current}, SoloLauf guard result control current →
+      HostFreeControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
+      ∃ boundary, SoloLauf next boundary control current ∧
+        BytesAt boundary codeBase (output.image.code.flatMap encII) ∧ FrameOK boundary fp output.image.Ks := by
+  intro pc fp scratch guard next result control current path
+  obtain ⟨code, far, room, small, _, childFits⟩ := output.loaded_spawn_site loaded declared
+  have fpValue : fp.toNat = output.image.fp0 := by
+    change (BitVec.ofNat 64 output.image.fp0).toNat = _
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have frameRegion : inSlots fp 0 output.image.Ks = imageStackFootprint output 0 := by
+    funext byte
+    apply propext
+    simp only [inSlots, fpValue, imageStackFootprint, Nat.zero_le, true_and, Nat.mul_zero, Nat.add_zero, Nat.mul_one]
+  let reads := imageRootReads output 0
+  let writes := inSlots fp 0 output.image.Ks
+  have frameReads : ∀ byte, writes byte → reads byte :=
+    fun _ inside => .inl (frameRegion ▸ inside)
+  have codeReads : ∀ byte : W, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * 10 → reads byte := by
+    intro byte _ last
+    exact .inr (last.trans_le (fpValue ▸ far.2.2))
+  obtain ⟨smallFrame, smallCode⟩ := maskMemory_code_frame code frame
+    (by simpa only [spawnOne_len] using far.1) frameReads (by simpa only [spawnOne_len] using codeReads)
+  obtain ⟨_, _, accepted, _⟩ := spawnResult_reference (id := id) smallCode smallFrame far room small
+  obtain ⟨_, reference, _⟩ := accepted positive
+  obtain ⟨count, compiled⟩ := IRReference.of_star reference
+  have target : (⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩ : T) = next := by
+    simp only [pc, next, ← BitVec.ofNat_add, Nat.mul_add, Nat.add_assoc, Nat.mul_one]
+  rw [target] at compiled
+  obtain ⟨agreement, readable, writable⟩ := maskMemory_agreement reads writes result frameReads
+  change @IRReference kernel.withoutSyscalls count guard (maskMemory reads writes result) next _ at compiled
+  rcases compiled.split_scoped agreement readable writable path with internal | ⟨boundary, complete, suffix, _, unchanged⟩
+  · exact .inl (Eq.mp (congrArg (fun written => HostFreeControl reads written control) frameRegion) internal)
+  · obtain ⟨rd, wr⟩ := StarM.permissions complete
+    have answerFrame : Agree fp 0 output.image.Ks view result :=
+      agree_write frame.room (Nat.zero_le _) (by omega : scratch + 2 < output.image.Ks) _
+    have guardFrame : Agree fp 0 output.image.Ks result boundary :=
+      ⟨rd, wr, fun byte outside => (unchanged byte outside).1⟩
+    have kept := answerFrame.trans guardFrame
+    refine .inr ⟨boundary, suffix, ?_, frame.agree kept⟩
+    intro byte present
+    have below := output.code_byte_before_stacks present
+    have outside : ¬ inSlots fp 0 output.image.Ks (BitVec.ofNat 64 (codeBase + byte)) := by
+      intro inFrame
+      exact (Nat.not_le_of_lt below) (fpValue ▸ (Nat.le_trans (Nat.le_add_right _ _) inFrame.1))
+    rw [kept.rd, kept.wr, kept.b _ outside]
+    exact loaded byte present
 
 end Gabbro.Stage0

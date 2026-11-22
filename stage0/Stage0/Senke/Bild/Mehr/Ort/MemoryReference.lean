@@ -117,6 +117,25 @@ theorem SoloLauf.split_after [Kern] {count : Nat} {start finish : T}
     obtain ⟨rfl, validAtBoundary⟩ := complete first
     exact .inr ⟨atBoundary, first, ⟨used - count, pointer, memory, tail, pending⟩, validAtBoundary⟩
 
+/-- A restricted reference yields the same boundary for every actual
+    solo execution, irrespective of the values outside its footprint. -/
+theorem _root_.Gabbro.Stage0.Senke.BildLauf.IRReference.split_scoped [kernel : Kern]
+    {count : Nat} {start finish : T} {reference target before : Mem} {reads writes : W → Prop}
+    (code : @IRReference kernel.withoutSyscalls count start reference finish target)
+    (agreement : MaskedAgreement reads writes reference before)
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    {control : Res T} {current : Mem} (run : SoloLauf start before control current) :
+    HostFreeControl reads writes control ∨
+      ∃ boundary, StarM count start before finish boundary ∧ SoloLauf finish boundary control current ∧
+        MaskedAgreement reads writes target boundary ∧
+        ∀ byte, ¬ writes byte → GleichAt boundary before byte := by
+  apply SoloLauf.split_after (fun _ => trivial) _ _ run
+  · intro pointer memory complete
+    exact (code.scoped_prefix agreement readable writable complete (Nat.le_refl _)).1 rfl
+  · intro used pointer memory residual after part within pending
+    exact (code.scoped_prefix agreement readable writable part within.le).2 within pending
+
 /-- Restricting the permitted data accesses preserves decoding of an
     installed code region and access to every word of its private frame. -/
 theorem maskMemory_code_frame [Kern] {memory : Mem} {pc fp : W} {slots : Nat}
