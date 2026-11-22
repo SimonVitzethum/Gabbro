@@ -186,7 +186,7 @@ private theorem granted_window {p : W → Bool} {width : Nat} {base byte : W}
     (allowed : Mem.all p base width = true) (touched : byteWindow width base byte) :
     p byte = true := by
   have permission := Mem.all_spec allowed (j := (byte - base).toNat) touched
-  rw [BitVec.ofNat_toNat, BitVec.add_comm base, BitVec.sub_add_cancel] at permission
+  rw [BitVec.ofNat_toNat, BitVec.setWidth_eq, BitVec.add_comm base, BitVec.sub_add_cancel] at permission
   exact permission
 
 private theorem read_granted (m : Mem) (base : W) : ∀ (width : Nat),
