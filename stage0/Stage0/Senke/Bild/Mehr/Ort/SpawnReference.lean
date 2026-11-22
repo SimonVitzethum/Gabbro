@@ -197,7 +197,8 @@ theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : N
   have frameRegion : inSlots fp 0 output.image.Ks = imageStackFootprint output 0 := by
     funext byte
     apply propext
-    simp only [inSlots, fpValue, imageStackFootprint, Nat.zero_le, true_and, Nat.mul_zero, Nat.add_zero, Nat.mul_one]
+    simp only [inSlots, fpValue, imageStackFootprint, Nat.zero_le, true_and, Nat.mul_zero,
+      Nat.add_zero, Nat.zero_add, Nat.mul_one]
   let reads := imageRootReads output 0
   let writes := inSlots fp 0 output.image.Ks
   have frameReads : ∀ byte, writes byte → reads byte :=
@@ -209,13 +210,14 @@ theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : N
     (by simpa only [spawnOne_len] using far.1) frameReads (by simpa only [spawnOne_len] using codeReads)
   obtain ⟨_, _, accepted, _⟩ := spawnResult_reference (id := id) smallCode smallFrame far room small
   obtain ⟨_, reference, _⟩ := accepted positive
-  obtain ⟨count, compiled⟩ := IRReference.of_star reference
+  obtain ⟨count, compiled⟩ := @IRReference.of_star kernel.withoutSyscalls _ _ _ _ reference
   have target : (⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩ : T) = next := by
     simp only [pc, next, ← BitVec.ofNat_add, Nat.mul_add, Nat.add_assoc, Nat.mul_one]
   rw [target] at compiled
   obtain ⟨agreement, readable, writable⟩ := maskMemory_agreement reads writes result frameReads
   change @IRReference kernel.withoutSyscalls count guard (maskMemory reads writes result) next _ at compiled
-  rcases compiled.split_scoped agreement readable writable path with internal | ⟨boundary, complete, suffix, _, unchanged⟩
+  rcases IRReference.split_scoped (kernel := kernel) compiled agreement readable writable path with
+    internal | ⟨boundary, complete, suffix, _, unchanged⟩
   · exact .inl (Eq.mp (congrArg (fun written => HostFreeControl reads written control) frameRegion) internal)
   · obtain ⟨rd, wr⟩ := StarM.permissions complete
     have answerFrame : Agree fp 0 output.image.Ks view result :=
