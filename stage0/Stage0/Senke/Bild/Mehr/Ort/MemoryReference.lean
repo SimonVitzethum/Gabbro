@@ -26,7 +26,8 @@ theorem maskMemory_code_frame [Kern] {memory : Mem} {pc fp : W} {slots : Nat}
     let restricted := maskMemory reads (inSlots fp 0 slots) memory
     FrameOK restricted fp slots ∧ CodeAt restricted pc code := by
   intro restricted
-  have agree := (maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads).1
+  have agree : MaskedAgreement reads (inSlots fp 0 slots) restricted memory :=
+    (maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads).1
   refine ⟨⟨frame.lt, fun index present => ?_, fun index present => ?_⟩, ?_⟩
   · rw [Mem.all_congr (fun offset valid => (agree.1 _ (frameReads _ (frame_slot_byte frame present valid))).2)]
     exact frame.rd index present

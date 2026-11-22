@@ -187,31 +187,39 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
           fun byte outside => (untouched byte outside).trans (memAns_aussen same written byte outside)⟩
     | sys | fp => cases actualAnswer
 
-/-- A successful reference instruction in memory restricted to the
-    declared regions determines every actual request of that instruction.
-    Memory outside its write region is preserved. -/
-theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
+/-- A restricted reference ending at a memory-independent boundary
+    determines every request before that boundary in the actual memory.
+    The endpoint can be the next instruction or a pending host answer. -/
+theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
     {reads writes : W → Prop}
-    (ran : RunM r reference target finish) (tree : Blind r)
+    (ran : RunP r reference target finish) (tree : Blind r)
+    (safe : target ≠ .fault)
+    (blocked : ∀ op resume, target = .ask op resume → ∀ memory, memAns memory op = none)
     (readable : ∀ byte, reference.rd byte = true → reads byte)
     (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
     {actual : Mem} (agrees : MaskedAgreement reads writes reference actual) :
-    ∃ result, RunM r actual target result ∧ MaskedAgreement reads writes finish result ∧
+    ∃ result, RunP r actual target result ∧ MaskedAgreement reads writes finish result ∧
       (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
       ∀ {current : Mem} {request : Op} {resume : Ans → Res T},
-        RunP r actual (.ask request resume) current →
+        RunP r actual (.ask request resume) current → (.ask request resume : Res T) ≠ target →
           (∀ byte, fussOp request byte → reads byte) ∧
           (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
   induction ran generalizing actual with
-  | next =>
-    refine ⟨actual, .next, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
-    intro current request resume partialRun
-    cases partialRun
+  | refl =>
+    refine ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
+    intro current request resume partialRun prior
+    cases partialRun with
+    | refl => exact (prior rfl).elim
+    | ask answered _ =>
+      rw [blocked _ _ rfl] at answered
+      cases answered
   | @ask op k before middle after answer dest answered rest ih =>
     cases answer with
     | none =>
       rw [tree.missing] at rest
-      cases rest
+      cases rest with
+      | refl => exact (safe rfl).elim
+      | ask => contradiction
     | some words =>
       obtain ⟨advanced, sameAnswer, sameRegion, included, written⟩ :=
         replay_memory_request readable writable agrees answered
@@ -222,14 +230,14 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
       refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
       · intro byte outside
         exact (otherBytes byte outside).trans (memAns_aussen sameAnswer written byte outside)
-      · intro current request resume partialRun
+      · intro current request resume partialRun prior
         cases partialRun with
         | refl => exact ⟨included, written⟩
         | ask wasAnswered leftover =>
           rw [sameAnswer] at wasAnswered
           simp only [Option.some.injEq, Prod.mk.injEq] at wasAnswered
           obtain ⟨rfl, rfl⟩ := wasAnswered
-          exact pending leftover
+          exact pending leftover prior
 
 /-- A partial execution of a proved memory-only instruction can wait
     only on a memory request, or be at the exact next instruction. -/
@@ -363,18 +371,20 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
       fun _ impossible _ => (Nat.not_lt_zero _ impossible).elim⟩
   | next head _ ih =>
     obtain ⟨middle, executed, reached, otherBytes, requests⟩ :=
-      RunM.replay_on head (blind_step _) readable writable agrees
+      (RunM.toPrefix head).replay_on (blind_step _) (by intro same; cases same)
+        (by intro op resume same; cases same) readable writable agrees
+    have instruction := runP_runM executed rfl
     obtain ⟨rd, wr⟩ := RunM.permissions head
     obtain ⟨result, ran, agreement, laterBytes, laterRequests⟩ := ih
       (fun byte granted => readable byte (by simpa only [rd] using granted))
       (fun byte granted => writable byte (by simpa only [wr] using granted)) reached
-    refine ⟨result, .next executed ran, agreement,
+    refine ⟨result, .next instruction ran, agreement,
       fun byte outside => (laterBytes byte outside).trans (otherBytes byte outside), ?_⟩
     intro taken instruction atInstruction current request resume complete within pending
     cases complete with
-    | refl => exact requests pending
+    | refl => exact requests pending (by intro same; cases same)
     | next moved remaining =>
-      obtain ⟨rfl, rfl⟩ := executed.det moved.run
+      obtain ⟨rfl, rfl⟩ := instruction.det moved.run
       exact laterRequests remaining (Nat.lt_of_succ_lt_succ within) pending
 
 /-- The common memory permissions stay fixed through complete and
