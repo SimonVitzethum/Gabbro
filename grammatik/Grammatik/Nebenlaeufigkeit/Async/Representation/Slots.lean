@@ -79,6 +79,29 @@ public inductive NamedFrameSlot (types : TypeResolution) (name : String) (source
         (by simpa only [List.lookup_cons, beq_eq_false_iff_ne.mpr same, Bool.false_eq_true, ite_false] using present)
       ⟨.tail selected.val, .tail (Ne.symm same) selected.property⟩
 
+/-- A live declared name reads exactly its initialized field, even when
+    two frame fields have the same G type. -/
+public theorem NamedFrameSlot.read_live {name : String} {sourceType : Parser.STyp}
+    {fields : List (String × Parser.STyp)}
+    {position : FieldAt (slotTypes types fields) (.sum [none, some (types.ordinary sourceType)])}
+    (named : NamedFrameSlot types name sourceType fields position)
+    {live : List String} {frame : Frame (Value D)} (needed : name ∈ live) :
+    ∀ {record : ProdVal D.Fn D.passt (slotTypes types fields)}, SlotsRep D types live frame fields record →
+      ∃ value ordinary, frame.values.lookup name = some value ∧
+        valueAt D (types.ordinary sourceType) value = some ordinary ∧
+        prodGetW (F := D.Fn) (passt := D.passt) position record = presentValue D (types.ordinary sourceType) ordinary := by
+  induction named with
+  | head =>
+    intro record represented
+    cases represented with
+    | dead unused _ => exact (unused needed).elim
+    | live _ found typed _ => exact ⟨_, _, found, typed, rfl⟩
+  | tail _ _ ih =>
+    intro record represented
+    cases represented with
+    | dead _ tail => exact ih tail
+    | live _ _ _ tail => exact ih tail
+
 private theorem SlotsRep.save_other_fields {oldLive nextLive : List String} {frame : Frame (Value D)}
     {fields : List (String × Parser.STyp)} {record : ProdVal D.Fn D.passt (slotTypes types fields)}
     (represented : SlotsRep D types oldLive frame fields record)
