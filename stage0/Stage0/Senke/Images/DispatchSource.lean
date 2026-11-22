@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Stage0.Senke.Bild.Mehr.ImageTransition
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -34,6 +35,31 @@ theorem image_future_frame_of_prefix [Kern] {output : Emitted src reserve option
     have rest := ih unallocated (fun earlier next bound =>
       classify ((ProcessPrefix.ofStep step).trans earlier) next bound)
     exact fun byte inFrame => (first byte inFrame).trans (rest byte inFrame)
+
+/-- Agreement on a startup reservation transports both the frame
+    permissions and every serialized argument word to the new memory. -/
+theorem image_stack_frame_preserved {output : Emitted src reserve options} {thread base : Nat}
+    {saved current : Mem} {words : List W} (declared : thread ≤ output.starts.length)
+    (equal : GleichAuf (imageStackFootprint output thread) saved current)
+    (fits : base + words.length ≤ output.image.Ks) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+    FrameOK saved fp output.image.Ks → WordsAt saved fp base words →
+      FrameOK current fp output.image.Ks ∧ WordsAt current fp base words := by
+  intro fp frame arguments
+  have slotAgreement (index : Nat) (inside : index < output.image.Ks) :
+      GleichAuf (fenster (slot fp (BitVec.ofNat 64 index))) saved current :=
+    fun byte touches => equal byte (imageStackFootprint_slot declared inside touches)
+  refine ⟨⟨frame.lt, ?_, ?_⟩, ?_⟩
+  · intro index inside
+    rw [← gleich_rdall (slotAgreement index inside)]
+    exact frame.rd index inside
+  · intro index inside
+    rw [← gleich_wr (slotAgreement index inside)]
+    exact frame.wr index inside
+  · intro index inside
+    have within : base + index < output.image.Ks := by omega
+    rw [← gleich_rd64 (slotAgreement (base + index) within)]
+    exact arguments index inside
 
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
