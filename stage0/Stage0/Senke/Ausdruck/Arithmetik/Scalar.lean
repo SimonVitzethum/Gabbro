@@ -12,7 +12,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
     expression theorem already returns the complete value relation for every width. -/
 theorem lowE_int_value_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int}
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) {same : σ₀ = σ} (world : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
+    (σ₀ σ : World D) {same : σ₀ = σ} (world : ∀ m, W m → WeltAt m L σ requireWrites) (layout : LayIn L)
     (e : Expr D Γ Λ (.int lo hi))
     (_width : integerWords lo hi = 1)
     (lower : lowE L (reserved := reserved) e d = some (code, top)) (fits : top ≤ K)

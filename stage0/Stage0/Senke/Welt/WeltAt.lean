@@ -60,11 +60,17 @@ theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da L) (hc
 def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
   ∀ x : Nat, L.lo ≤ x → x < L.hi → m.wr (BitVec.ofNat 64 x) = true
 
-def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
+/-- The typed values of a world, with an optional writable backing.
+    A value reader needs only the representation of the cells. -/
+def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) (requireWrites : Bool := true) : Prop :=
   (∀ t f (k : Nat), (k : Int) < L.count t →
     ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)) ∧
   (∀ g, ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)) ∧
-  WeltWr m L
+  (if requireWrites then WeltWr m L else True)
+
+theorem WeltAt.readOnly {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
+    (world : WeltAt m L σ requireWrites) : WeltAt m L σ false :=
+  ⟨world.1, world.2.1, trivial⟩
 
 /-- A word of the world may be written. -/
 theorem WeltWr.word {m : Runner.Mem} {L : Lay D} (h : WeltWr m L) {a : Nat} (h1 : L.lo ≤ a) (h2 : a + 8 ≤ L.hi)

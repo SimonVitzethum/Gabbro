@@ -16,7 +16,7 @@ theorem slotValueC_index_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t}
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {child : List II × Nat}
     {m : Runner.Mem} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (made : slotValueC L t f d child = some (code, top)) (fits : top ≤ K)
-    (layout : LayIn L) (world : ∀ m, W m → WeltAt m L σ)
+    (layout : LayIn L) (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (ih : ∀ m pc, Pre L m pc fp K (d + valueWords (D.typ t f)) child.1 ρ W reserved →
       Ok m pc fp K (d + valueWords (D.typ t f)) child.1
         (Enc L (.index (D.count t)) index))
@@ -38,7 +38,7 @@ theorem slotValueC_index_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t}
 /-- Raw G admits old in ordinary expressions. Its snapshot equals the current world there;
     it is not the distinct function-entry snapshot used by ensures. -/
 theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
-    (world : ∀ m, W m → WeltAt m L σ) (g : D.Glob) (access : gdarf D g Λ)
+    (world : ∀ m, W m → WeltAt m L σ requireWrites) (g : D.Glob) (access : gdarf D g Λ)
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {m : Runner.Mem} {ρ : Env D Γ}
     (same : currentOld = true → σ₀ = σ)
     (made : lowE (Γ := Γ) (currentOld := currentOld) L (.oldG (Γ := Γ) g access) d reserved = some (code, top))
@@ -54,7 +54,7 @@ theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
 
 /-- An old slot read evaluates its index in the same current world as every ordinary slot read. -/
 theorem oldSlot_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
-    (world : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
+    (world : ∀ m, W m → WeltAt m L σ requireWrites) (layout : LayIn L)
     (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (access : darf D t Λ)
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {m : Runner.Mem} {ρ : Env D Γ}
     (same : currentOld = true → σ₀ = σ)

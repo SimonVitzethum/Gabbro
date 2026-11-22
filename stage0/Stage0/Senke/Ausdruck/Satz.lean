@@ -12,7 +12,7 @@ mutual
     explicitly. The ensures fallback disables current-old reads and retains the generic
     theorem with an independent entry world, without assuming entry equals exit. -/
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
-    (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre L m pc fp K d c ρ W reserved → ValueOk L m pc fp K d c τ (eval σ₀ e σ ρ)
@@ -417,7 +417,7 @@ termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 /-- Storage-address induction shares the exact expression induction; table row
     indices are compiled and proved by lowE_ok before their address is formed. -/
 theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L)
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L)
     {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowStorage (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → top ≤ K →
@@ -450,7 +450,7 @@ theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
     lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ trivial h hK hp
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (ρ : Env D Γ) →
       ProdFieldsOk (currentOld := currentOld) L σ₀ σ fp K reserved W ρ args
   | _, _, .nil, _ => trivial
@@ -459,7 +459,7 @@ theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.M
       lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
 termination_by structural _ _ args _ => args
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
     (c : List II) → (top : Nat) → lowN (currentOld := currentOld) L (reserved := reserved) tag nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
@@ -484,7 +484,7 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
 termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ => nutz
 /-- A payload uses exactly its canonical words; the absent payload has no marker. -/
 theorem lowPayload_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
     (c : List II) → (top : Nat) → lowPayload (currentOld := currentOld) L (reserved := reserved) nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →

@@ -47,7 +47,7 @@ theorem slotRefC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {n k : Nat}
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop} (ht : D.tabNr n = some t)
     (hs : slotC L t f d cr = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d cr.1 ρ W reserved → Ok m pc fp K d cr.1 (Enc L (.ref n) k))
-    (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t (k : Int) f)) := by
   have hs0 := hs
   simp only [slotC] at hs

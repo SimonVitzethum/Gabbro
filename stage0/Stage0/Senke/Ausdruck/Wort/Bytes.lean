@@ -22,7 +22,7 @@ theorem wert_transport_eq_cast {τ τ' : Ty} (h : τ = τ') (v : Wert D τ) :
 theorem readBytesL_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
     {σ₀ σ : World D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} {ρ : Env D Γ}
-    (hWL : ∀ m, W m → WeltAt m L σ) (hlo : 0 ≤ a)
+    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hlo : 0 ≤ a)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
     (n j d : Nat) → (c : List II) → (top : Nat) →

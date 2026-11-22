@@ -92,7 +92,7 @@ theorem ValueAt.ofCellWord {D : Deklaration} {L : Lay D} {m : Runner.Mem} {a : N
 /-- A global of a word-compatible type: its address, the word there. -/
 theorem glob_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {L : Lay D} {σ : World D} {g : D.Glob} (hl : lit32 (L.ga g) = true) (hc : WordCompatible (D.gtyp g))
-    (h : Pre L m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] ρ W reserved) (hWL : ∀ m, W m → WeltAt m L σ) (hd : d < K) :
+    (h : Pre L m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] ρ W reserved) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hd : d < K) :
     Ok m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] (Enc L (D.gtyp g) (σ.globs g)) := by
   have h' : Pre L m pc fp K d ([ci 1 d (L.ga g) 0] ++ [ci 15 d d 0]) ρ W reserved := h
   refine ok_seq h' (const_ok h'.left hl hd) (fun m' w hp' hr hw => ?_) (by omega)
@@ -163,7 +163,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) k))
-    (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t k.n f)) := by
   have hs0 := hs
   simp only [slotC] at hs
@@ -190,7 +190,7 @@ theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : 
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) (eval σ₀ i σ ρ)))
-    (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t (eval σ₀ i σ ρ).n f)) :=
   slotC_value_ok hs hK ih hWL hp
 

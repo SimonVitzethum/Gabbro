@@ -38,7 +38,7 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
     {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     {σ₀ σ : World D} (same : σ₀ = σ) (lay : LayIn L)
-    {ρ : Env D Γ} {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ)
+    {ρ : Env D Γ} {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (reserved : Nat) :
     NativeFloatCode (L := L) (reserved := reserved) ρ W
       (fun d => wideComputedFloatOfE L e d reserved) (gleitAusInt (eval σ₀ e σ ρ).n) := by
@@ -170,7 +170,7 @@ private theorem wideComputedFloatOfE_value_ok {Γ : Ctx} {Λ : List (Res D)}
 theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     {σ₀ σ : World D} (same : σ₀ = σ) (lay : LayIn L)
-    {ρ : Env D Γ} {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ)
+    {ρ : Env D Γ} {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (reserved : Nat) :
     WordCode (L := L) (reserved := reserved) ρ W (fun d => wideComputedFloatOfE L e d reserved)
       (gleitAusInt (eval σ₀ e σ ρ).n).hwToBits.toBitVec := by
@@ -186,7 +186,7 @@ theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
     (hc : computedFloatOfE L e d reserved = some (code, top))
     (hp : Pre L m pc fp K d code ρ W reserved) (ht : top ≤ K)
-    (lay : LayIn L) (same : σ₀ = σ) (world : ∀ m, W m → WeltAt m L σ) :
+    (lay : LayIn L) (same : σ₀ = σ) (world : ∀ m, W m → WeltAt m L σ requireWrites) :
     Ok m pc fp K d code (· = (gleitAusInt (eval σ₀ e σ ρ).n).hwToBits.toBitVec) := by
   have child : WordCode (L := L) (reserved := reserved) ρ W
       (fun j => lowE L e j reserved) (BitVec.ofInt 64 (eval σ₀ e σ ρ).n) := by

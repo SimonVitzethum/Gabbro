@@ -40,7 +40,7 @@ theorem storageCell_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {σ : World D} {t : D.Tab} {f : D.Feld t} {idx d K top reserved : Nat}
     {index : List II × Nat} {c : List II} {m : Runner.Mem} {pc fp : Runner.W}
     (made : cellAddressC L t f d index = some (c, top)) (fits : top ≤ K)
-    (bound : (idx : Int) < L.count t) (world : ∀ m, W m → WeltAt m L σ)
+    (bound : (idx : Int) < L.count t) (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (child : ∀ m pc, Pre L m pc fp K d index.1 ρ W reserved →
       Ok m pc fp K d index.1 (· = BitVec.ofNat 64 idx))
     (pre : Pre L m pc fp K d c ρ W reserved) :
@@ -50,7 +50,7 @@ theorem storageCell_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 /-- Address lowering never copies a stored value. Unsupported roots return none;
     accepted roots use the same canonical environment and world representation. -/
 theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (world : ∀ m, W m → WeltAt m L σ)
+    (σ₀ σ : World D) (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (e : Expr D Γ Λ τ) {ρ : Env D Γ} {fp pc : Runner.W} {K d top reserved : Nat}
     {c : List II} {m : Runner.Mem}
     (child : StorageChildrenOk (L := L) (currentOld := currentOld) σ₀ σ ρ fp K reserved W e)
