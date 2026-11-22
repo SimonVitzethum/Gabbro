@@ -448,7 +448,7 @@ theorem ImageSimulation.no_machine_error [Kern] {output : Emitted src reserve op
 /-- B6 for the production Stage 0 emitter. This definition is the claim
     to prove. A successful build fixes the source and model unit before
     universal quantification over the hardware, schedule and run. -/
-def Stage0Correct [Kern] : Prop :=
+def Stage0RunnerCorrect [Kern] : Prop :=
   ∀ (source : String) (reserve : Nat) (options : Profil.Options) (bytes : List B),
     irBild source reserve options = .ok bytes →
     ∃ (output : Emitted source reserve options) (E : Einheit (declOf output.compiled.unit)),
@@ -473,7 +473,7 @@ def Stage0Correct [Kern] : Prop :=
 
 /-- The emitted bytes already carry a checker verdict on their exact
     model. The remaining obligation is the execution simulation. -/
-theorem stage0_correct_of_simulation [Kern]
+theorem stage0_runner_correct_of_simulation [Kern]
     (simulate : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
         (output : Emitted source reserve options), emit source reserve options = .ok output →
         let E := output.checkedUnit.unit
@@ -483,7 +483,7 @@ theorem stage0_correct_of_simulation [Kern]
             ImageFutexAnswers → SichtOK O →
             ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
               Nonempty (ImageSimulation output E O start)) :
-    Stage0Correct := by
+    Stage0RunnerCorrect := by
   intro source reserve options bytes wrote
   obtain ⟨output, emitted, payload, sourceModel, unit, accepted, posts, duties⟩ := irBild_checkImageUnit wrote
   refine ⟨output, output.checkedUnit.unit, emitted, payload, sourceModel, unit, accepted, ?_⟩

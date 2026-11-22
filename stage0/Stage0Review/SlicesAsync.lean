@@ -121,7 +121,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_after_return
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_declared_workers
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
-#print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
+#print axioms Gabbro.Stage0.stage0_runner_correct_of_ir_simulation
+#print axioms Gabbro.Stage0.stage0_correct_of_ir_refinement
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
 #print axioms Gabbro.Grammatik.Async.inferredBoundary_erfuellbar

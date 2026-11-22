@@ -106,7 +106,7 @@ theorem ImageIRSimulation.toRunner (sim : ImageIRSimulation output E O start)
 
 /-- The exact IR simulation supplies the execution leg of the native goal
     for every image whose unit passed the production model checker. -/
-theorem stage0_correct_of_ir_simulation
+theorem stage0_runner_correct_of_ir_simulation
     (simulate : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
         (output : Emitted source reserve options), emit source reserve options = .ok output →
         let E := output.checkedUnit.unit
@@ -116,8 +116,8 @@ theorem stage0_correct_of_ir_simulation
             ImageFutexAnswers → SichtOK O →
             ∀ (start : Cfg imageTSO X86.X), MappedImage output start →
               Nonempty (ImageIRSimulation output E O start)) :
-    Stage0Correct := by
-  apply stage0_correct_of_simulation
+    Stage0RunnerCorrect := by
+  apply stage0_runner_correct_of_simulation
   intro source reserve options output emitted
   dsimp only
   intro O calls foreign hardware gate answers futex visibility start mapped

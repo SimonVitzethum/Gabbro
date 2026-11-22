@@ -44,6 +44,7 @@ public import Stage0.Senke.Bild.Mehr.ImageTransition
 public import Stage0.Senke.Bild.Mehr.Ort.SingleThread
 public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
 public import Stage0.Senke.Bild.Mehr.Ort.Simulation
+public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
 public import Stage0.Senke.Bild.Mehr.Ort.LockReads
 public import Stage0.Senke.Bild.Mehr.Ort.AtomicExchange
 public import Stage0.Senke.Bild.Mehr.Ort.AtomicRead
