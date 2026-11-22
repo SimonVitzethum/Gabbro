@@ -168,6 +168,54 @@ theorem SCMemoryPrefix.consume_until_host {layout : Runner.Beweis.Lay}
     taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected :=
   reference.consume_to_boundary actual one blind (.inr fun _ step => sc_waiting_host_no_silent waiting step rfl)
 
+private theorem SCSchritt.no_host_request {layout : Runner.Beweis.Lay}
+    {before after : Cfg (SC layout) (Res T)} {i : Nat}
+    (step : SCSchritt layout i before after) {control : Res T} {request : Req}
+    {resume : Ans → Res (Res T)} (position : before.ths[i]? = some (some control))
+    (asks : actI control = .ask (.sys request) resume) : False := by
+  cases step with
+  | priv ready =>
+    rw [ready] at position
+    have same := (Option.some.inj (Option.some.inj position)).symm
+    subst control
+    cases asks
+  | ask ready memory =>
+    rw [ready] at position
+    have same := (Option.some.inj (Option.some.inj position)).symm
+    subst control
+    have operation := (Res.ask.inj asks).1
+    rw [operation] at memory
+    cases memory
+
+/-- An observed event from the only running slot occurs at the end of
+    its memory reference. The actual observation can use any memory
+    system with the same thread controls at that boundary. -/
+theorem SCMemoryPrefix.at_observation {layout : Runner.Beweis.Lay} {M : MemSys}
+    {start expected : Cfg (SC layout) (Res T)} {before after : Cfg M (Res T)}
+    {remaining : Nat} {events : List Ev}
+    (reference : SCMemoryPrefix layout start remaining expected)
+    (threads : start.ths = before.ths) (one : before.ths.length = 1)
+    (observed : ProcessStep M actI before events after) (visible : events ≠ []) :
+    remaining = 0 ∧ start = expected := by
+  cases reference with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons first _ =>
+    exfalso
+    have impossible {i : Nat} {control : Res T} {request : Req} {resume : Ans → Res (Res T)}
+        (ready : before.ths[i]? = some (some control))
+        (asks : actI control = .ask (.sys request) resume) : False := by
+      have index := onlySlot one ready
+      subst i
+      exact first.no_host_request (threads.symm ▸ ready) asks
+    cases observed with
+    | tau | priv => exact visible rfl
+    | @ask _ _ _ operation _ _ _ ready asked _ _ _ =>
+      cases operation with
+      | rd | wr | cas | fp => exact visible rfl
+      | sys => exact impossible ready asked
+    | exit ready asked _ | cloneNo ready asked _ _ _ | clone ready asked _ _ _ _ =>
+      exact impossible ready asked
+
 private theorem actI_ask_no_terminal {control : Res T}
     {request : Op} {resume : Ans → Res (Res T)} {reply : Ans} {ending : Ende}
     (asked : actI control = .ask request resume) (stopped : Res.ende (resume reply) = some ending) : False := by
