@@ -18,17 +18,24 @@ private theorem entryIndex_ruE :
       entryIndex (ruE expr) = entryIndex expr
   | _, _, _, .widen _ _ expr => entryIndex_ruE expr
   | _, _, _, .neg expr => by
-    simpa only [ruE, entryIndex] using
+    simp only [ruE, entryIndex]
+    with_unfolding_all exact
       congrArg (fun i : Option Int => do return -(← i)) (entryIndex_ruE expr)
   | _, _, _, .add left right =>
-    by simpa only [ruE, entryIndex] using
-      kongr₂ (fun a b : Option Int => do return (← a) + (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
+    by
+      simp only [ruE, entryIndex]
+      with_unfolding_all exact
+        kongr₂ (fun a b : Option Int => do return (← a) + (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .sub left right =>
-    by simpa only [ruE, entryIndex] using
-      kongr₂ (fun a b : Option Int => do return (← a) - (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
+    by
+      simp only [ruE, entryIndex]
+      with_unfolding_all exact
+        kongr₂ (fun a b : Option Int => do return (← a) - (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .mul left right =>
-    by simpa only [ruE, entryIndex] using
-      kongr₂ (fun a b : Option Int => do return (← a) * (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
+    by
+      simp only [ruE, entryIndex]
+      with_unfolding_all exact
+        kongr₂ (fun a b : Option Int => do return (← a) * (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .lit .. | _, _, _, .tru .. | _, _, _, .fls ..
   | _, _, _, .var .. | _, _, _, .glob .. | _, _, _, .slot ..
   | _, _, _, .thru .. | _, _, _, .thruOwn .. | _, _, _, .ptrOf ..
@@ -74,7 +81,9 @@ theorem oldCells_ruE :
       | none => if EntrySnapshots.columnFits (D := D.mitRuhe) table field then
           rest ++ EntrySnapshots.column (D := D.mitRuhe) table field 0 (D.count table).toNat else []
     calc
-      _ = cells (entryIndex (ruE index)) (oldCells (ruE index)) := by simp only [ruE, oldCells, cells]
+      _ = cells (entryIndex (ruE index)) (oldCells (ruE index)) := by
+        simp only [ruE, oldCells, cells]
+        with_unfolding_all rfl
       _ = cells (entryIndex index) ((oldCells index).map Zelle.withIdle) :=
         kongr₂ cells (entryIndex_ruE index) (oldCells_ruE index)
       _ = _ := by
@@ -89,7 +98,8 @@ theorem oldCells_ruE :
   | _, _, _, .add left right | _, _, _, .sub left right | _, _, _, .mul left right
   | _, _, _, .eq left right | _, _, _, .lt left right | _, _, _, .le left right
   | _, _, _, .and left right | _, _, _, .or left right | _, _, _, .intBuiltin2 _ left right => by
-    simpa only [ruE, oldCells, List.map_append] using
+    simp only [ruE, oldCells, List.map_append]
+    with_unfolding_all exact
       kongr₂ (· ++ ·) (oldCells_ruE left) (oldCells_ruE right)
   | _, _, _, .lit .. | _, _, _, .tru .. | _, _, _, .fls ..
   | _, _, _, .var .. | _, _, _, .glob .. | _, _, _, .slot ..
