@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
+public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
 import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Bild.RunnerFile
 import Lean.Elab.Tactic.Omega

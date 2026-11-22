@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+public import Stage0.Senke.Bild.Ruf.PrologueCode
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -13,68 +13,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 variable {src : String} {reserve : Nat} {options : Profil.Options} [Kern]
   {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
   {O : Orakel (declOf output.compiled.unit)} {memory : imageTSO.St}
-
-/-- Every function in the actual payload has the ordinary IR semantics
-    of its typed model body at every representable depth. The same code
-    table is used for all calls, including indirect and recursive calls. -/
-def Emitted.IRFunctionSemantics (output : Emitted src reserve options) (memory : Runner.Mem) : Prop :=
-  let D := declOf output.compiled.unit
-  ∃ (code : D.Fn → List II) (frameWords : Nat),
-    FB + (output.image.depth + 1) * frameWords ≤ output.image.Ks ∧
-    (∀ fn, ∃ top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y fn =
-      some (code fn, top) ∧ top ≤ frameWords ∧
-      CodeAt memory (BitVec.ofNat 64 (output.image.A fn)) (code fn) ∧
-      output.image.A fn + 16 * (code fn).length ≤ output.image.fp0) ∧
-    ∀ (oracle : Orakel D), TorOK output.image.Y oracle → SichtOK oracle →
-      ∀ depth, depth < 2 ^ 64 →
-        FunSpec output.image.Y output.image.A code
-          (rufAt output.compiled.program oracle output.image.passes depth)
-          (BitVec.ofNat 64 depth) ((depth + 1) * frameWords)
-
-theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) :
-    output.IRFunctionSemantics memory.1.m := by
-  obtain ⟨_, _, _, _, packed, _, _, startup, _⟩ :=
-    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
-  obtain ⟨functions, body, spawns, layout, code, _, entry, roots⟩ :=
-    bild_lage output.emission output.funktionen_voll
-      (fun base bound => layU_in output.compiled.unit output.tor base bound)
-      (fun base => layU_dis output.compiled.unit output.tor base)
-      (fun base => by simp only [layU]; omega)
-      (fun base => layU_sync output.compiled.unit output.tor base)
-  have exactBytes : BytesAt memory.1.m codeBase (output.image.code.flatMap encII ++
-      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
-    simpa only [packed, Option.getD_some, List.append_nil] using startup
-  rw [code, entry, roots] at exactBytes
-  obtain ⟨lowered, located, _, _, _⟩ := layout.code exactBytes
-  let functionCode (fn : (declOf output.compiled.unit).Fn) :=
-    ((functions[fn.val]?).map (·.1)).getD []
-  refine ⟨functionCode, maxTop functions, ?_, ?_, ?_⟩
-  · have enough : FB ≤ output.image.Ks := Nat.le_trans (Nat.le_add_right _ _) layout.hroom
-    have reduced : 0 < output.image.depth := layout.depth_pos
-    have quotient : output.image.depth + 1 = (output.image.Ks - FB) / maxTop functions := by
-      rw [layout.hdepth, depthOf] at reduced ⊢
-      omega
-    rw [quotient]
-    have used := Nat.div_mul_le_self (output.image.Ks - FB) (maxTop functions)
-    omega
-  · intro fn
-    obtain ⟨top, built, small⟩ := lowered fn
-    exact ⟨top, built, small, located fn⟩
-  · intro oracle gates visibility depth fitted
-    letI := gates
-    letI := visibility
-    exact layout.funSpec exactBytes depth fitted
-
-/-- The production frontend, executable checker, and sequential
-    function lowering agree on a single typed program and image. -/
-theorem irBild_function_semantics {bytes : List B} (wrote : irBild src reserve options = .ok bytes) :
-    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
-      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
-      ImageModelUnit output output.checkedUnit.unit ∧
-      akzeptiertX_pruefer.akzeptiert output.checkedUnit.unit output.fsA.1 output.lsA.1 output.csA.1 = true ∧
-      ∀ memory : imageTSO.St, LoadedIRImage output memory → output.IRFunctionSemantics memory.1.m := by
-  obtain ⟨output, emitted, payload, canonical, unit, accepted, _, _⟩ := irBild_checkImageUnit wrote
-  exact ⟨output, emitted, payload, canonical, unit, accepted, fun _ loaded => loaded.function_semantics⟩
 
 /-- An IR segment either stays silent or ends at its first host
     observation. The observed answer is checked at that exact endpoint,
@@ -95,7 +33,7 @@ structure ImageIRRefinement (output : Emitted src reserve options)
   initial : related [] (output.irEntry memory) (imageSourceStart E)
   consistent : ∀ history ir state, related history ir state →
     ImageSlotsMatch output E O history ir state ∧ ImageForeignTrace output history state ∧
-      ImageRuntimeMatches output E O history ir state
+      ImageRuntimeMatches output E O history ir state (ImagePendingRoot output E history state)
   segment : ∀ {history before state events after}, related history before state →
     ImageIRSegment before events after →
     ∃ next, related (history ++ events) after next ∧ ImageReach output E O state next ∧
@@ -232,7 +170,8 @@ def Stage0Correct : Prop :=
           (∀ finish events count, ProcessPrefix imageTSO actI (output.irEntry memory) events count finish →
             ∃ state, ImageReach output E O (imageSourceStart E) state ∧
               ImageSlotsMatch output E O events finish state ∧ ImageForeignTrace output events state ∧
-              ImageRuntimeMatches output E O events finish state ∧ ImageGoalAt output E O state) ∧
+              ImageRuntimeMatches output E O events finish state (ImagePendingRoot output E events state) ∧
+              ImageGoalAt output E O state) ∧
           (∀ events ending count, Tr imageTSO actI (output.irEntry memory) events ending count →
             ending ≠ .fault ∧ ending ≠ .unk ∧
             (ending ≠ .lauf → ∃ earlier last state, events = earlier ++ last ∧

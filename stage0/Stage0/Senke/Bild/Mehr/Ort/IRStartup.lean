@@ -423,4 +423,66 @@ theorem LoadedIRImage.firstWorkerActivation
   rw [unit.starts]
   rfl
 
+/-- Every function in the actual payload has the ordinary IR semantics
+    of its typed model body at every representable depth. The same code
+    table is used for all calls, including indirect and recursive calls. -/
+def Emitted.IRFunctionSemantics (output : Emitted src reserve options) (memory : Runner.Mem) : Prop :=
+  let D := declOf output.compiled.unit
+  ∃ (code : D.Fn → List II) (frameWords : Nat),
+    FB + (output.image.depth + 1) * frameWords ≤ output.image.Ks ∧
+    (∀ fn, ∃ top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y fn =
+      some (code fn, top) ∧ top ≤ frameWords ∧
+      CodeAt memory (BitVec.ofNat 64 (output.image.A fn)) (code fn) ∧
+      output.image.A fn + 16 * (code fn).length ≤ output.image.fp0) ∧
+    ∀ (oracle : Orakel D), TorOK output.image.Y oracle → SichtOK oracle →
+      ∀ depth, depth < 2 ^ 64 →
+        FunSpec output.image.Y output.image.A code
+          (rufAt output.compiled.program oracle output.image.passes depth)
+          (BitVec.ofNat 64 depth) ((depth + 1) * frameWords)
+
+theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) :
+    output.IRFunctionSemantics memory.1.m := by
+  obtain ⟨_, _, _, _, packed, _, _, startup, _⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
+  obtain ⟨functions, body, spawns, layout, code, _, entry, roots⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  have exactBytes : BytesAt memory.1.m codeBase (output.image.code.flatMap encII ++
+      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
+    simpa only [packed, Option.getD_some, List.append_nil] using startup
+  rw [code, entry, roots] at exactBytes
+  obtain ⟨lowered, located, _, _, _⟩ := layout.code exactBytes
+  let functionCode (fn : (declOf output.compiled.unit).Fn) :=
+    ((functions[fn.val]?).map (·.1)).getD []
+  refine ⟨functionCode, maxTop functions, ?_, ?_, ?_⟩
+  · have enough : FB ≤ output.image.Ks := Nat.le_trans (Nat.le_add_right _ _) layout.hroom
+    have reduced : 0 < output.image.depth := layout.depth_pos
+    have quotient : output.image.depth + 1 = (output.image.Ks - FB) / maxTop functions := by
+      rw [layout.hdepth, depthOf] at reduced ⊢
+      omega
+    rw [quotient]
+    have used := Nat.div_mul_le_self (output.image.Ks - FB) (maxTop functions)
+    omega
+  · intro fn
+    obtain ⟨top, built, small⟩ := lowered fn
+    exact ⟨top, built, small, located fn⟩
+  · intro oracle gates visibility depth fitted
+    letI := gates
+    letI := visibility
+    exact layout.funSpec exactBytes depth fitted
+
+/-- The production frontend, executable checker, and sequential
+    function lowering agree on a single typed program and image. -/
+theorem irBild_function_semantics {bytes : List B} (wrote : irBild src reserve options = .ok bytes) :
+    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
+      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
+      ImageModelUnit output output.checkedUnit.unit ∧
+      akzeptiertX_pruefer.akzeptiert output.checkedUnit.unit output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+      ∀ memory : imageTSO.St, LoadedIRImage output memory → output.IRFunctionSemantics memory.1.m := by
+  obtain ⟨output, emitted, payload, canonical, unit, accepted, _, _⟩ := irBild_checkImageUnit wrote
+  exact ⟨output, emitted, payload, canonical, unit, accepted, fun _ loaded => loaded.function_semantics⟩
+
 end Gabbro.Stage0

@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
+public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 public import Stage0.Senke.Bild.Ruf.RootMemory
 
@@ -385,6 +385,22 @@ def ImagePendingRoot [Kern] (output : Emitted src reserve options)
     (control : Res T) : Prop :=
   ImageRootPhase output E history memory thread control state ∨
     Nonempty (ImageProloguePhase output E thread control memory state)
+
+/-- A partition whose pending threads are all in startup stubs is ready
+    for the runtime relation that also admits installed prologues. -/
+theorem ImageRuntimePartition.with_prologues [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {machine : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    (partition : ImageRuntimePartition footprint output E O history machine state body) :
+    ImageRuntimePartition footprint output E O history machine state body (ImagePendingRoot output E history state) := by
+  obtain ⟨buffers, length, bodies, roots⟩ := partition
+  refine ⟨buffers, length, bodies, ?_⟩
+  intro thread
+  rcases roots thread with exactSlot | ⟨control, pending, live, root⟩
+  · exact .inl exactSlot
+  · exact .inr ⟨control, pending, live, .inl root⟩
 
 /-- A thread can decode its next prologue instruction while other body
     and root slots retain their existing relations to the source machine. -/

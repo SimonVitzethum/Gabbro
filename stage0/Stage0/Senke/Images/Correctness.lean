@@ -190,8 +190,9 @@ abbrev ImageRuntimeMatchesAt [Kern] (footprint : Nat → W → Prop) (output : E
 abbrev ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (history : List Ev) (machine : Cfg imageTSO (Res T))
-    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  ∃ footprint, ImageRuntimeMatchesAt footprint output E O history machine state
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
+    (pending : Mem → Nat → Res T → Prop := fun m i r => ImageRootPhase output E history m i r state) : Prop :=
+  ∃ footprint, ImageRuntimeMatchesAt footprint output E O history machine state pending
 
 /-- The actual request of a non-returning gate at the issuing source thread. -/
 def ImageNeverRequest (output : Emitted src reserve options)
