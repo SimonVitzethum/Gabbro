@@ -29,6 +29,21 @@ def frageEnde (m : Bool) (name : String) (ty : Option STyp) (e : SExpr) :
     else .error "? without ;"
   | _ => .error "? without ;"
 
+/-- The negation of a condition, as the source writes it: a comparison flips its operator (so the
+    narrowing of ranges by a guard reads it, LANGUAGE.md §3.2), a negation drops, anything else gets
+    `!`. The meaning is the Boolean negation in every case. -/
+def negiere : SExpr → SExpr
+  | .bin op a b =>
+    if strEq op "<=" then .bin ">" a b
+    else if strEq op "<" then .bin ">=" a b
+    else if strEq op ">=" then .bin "<" a b
+    else if strEq op ">" then .bin "<=" a b
+    else if strEq op "==" then .bin "!=" a b
+    else if strEq op "!=" then .bin "==" a b
+    else .un "!" (.bin op a b)
+  | .un op e => if strEq op "!" then e else .un "!" (.un op e)
+  | e => .un "!" e
+
 /-- A block that ends in `return`, `leave` or `next`: it never falls through. -/
 def blockEndet : SAnw → Bool
   | .block _ (some _) => true
@@ -269,7 +284,7 @@ def parseChild (f : Nat) (toks : List Token) :
 
 /-- `check c else { … }` (behind `check`): a run-time check. The `else` block must end
     (`return`, `leave`, `next`); it never falls through. The form is a branch on `!c` whose
-    then-block is the `else` block, so it means exactly `Block.check` of the model: the
+    then-block is the `else` block, so it means exactly `Block.check` of the model (the condition negated by `negiere`): the
     statements after it run only where `c` holds, and the checker may assume `c` there. -/
 def parseCheck (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -282,7 +297,7 @@ def parseCheck (f : Nat) (toks : List Token) :
       | .ok rest' => match parseBlock f rest' with
         | .error e => .error e
         | .ok (b, rest'') =>
-          if blockEndet b then .ok (.cond (.un "!" c) b [] none, rest'')
+          if blockEndet b then .ok (.cond (negiere c) b [] none, rest'')
           else .error "check: the else block must end with return, leave or next"
 
 def parseWenn (f : Nat) (toks : List Token) :

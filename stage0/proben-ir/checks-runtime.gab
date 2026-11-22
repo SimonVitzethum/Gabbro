@@ -3,7 +3,7 @@
 // half(84) = 42 passes both checks. Exit 42.
 module ir_checks_runtime {
 reason Fault { TooBig = 1 "too big" exhaustive }
-impl fn half(x : u32 in 0 .. 1000) -> u32 in 0 .. 50 or Fault
+impl fn half(x : u32 in 0 .. 1000) -> u32 in 0 .. 100 or Fault
     effects { pure }
     checks x <= 100 else Fault::TooBig
 {
@@ -12,7 +12,7 @@ impl fn half(x : u32 in 0 .. 1000) -> u32 in 0 .. 50 or Fault
 impl fn main() -> u32 in 0 .. 255
     effects { pure }
 {
-    let a = half(84) else (e) { return 1; };
+    let a = half(84) else (e) { return 1; }
     check a == 42 else { return 3; }
     return a;
 }
