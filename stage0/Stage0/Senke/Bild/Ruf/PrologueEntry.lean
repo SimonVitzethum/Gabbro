@@ -319,7 +319,7 @@ theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src res
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread) :
     let memory := machine.ms.1.view thread
     let frame := imagePrologueFrame output thread
-    output.IRFunctionSemantics memory →
+    BytesAt memory codeBase (output.image.code.flatMap encII) →
     ReqAmEintritt output.compiled.program root.1 (worldZ (state.m.speicher.welt [])) root.2 →
     FrameOK memory frame (output.image.Ks - FB) →
     EnvAt output.image.Y memory frame root.2 →
@@ -330,7 +330,7 @@ theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src res
   obtain ⟨committed, world, agrees⟩ := partition.prologue_world unit hardware accepted duties pending declared
   obtain ⟨inputs, snapshots⟩ := output.prologue_sources world agrees
   obtain ⟨phase, _, _⟩ := output.enter_prologue unit O root declared alive unentered
-    loaded inputs snapshots requires frameOK environment depthWord
+    (Emitted.function_semantics_at loaded) inputs snapshots requires frameOK environment depthWord
   exact ⟨phase⟩
 
 end Gabbro.Stage0

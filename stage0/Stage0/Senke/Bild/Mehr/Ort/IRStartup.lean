@@ -440,23 +440,24 @@ def Emitted.IRFunctionSemantics (output : Emitted src reserve options) (memory :
           (rufAt output.compiled.program oracle output.image.passes depth)
           (BitVec.ofNat 64 depth) ((depth + 1) * frameWords)
 
-theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) :
-    output.IRFunctionSemantics memory.1.m := by
-  obtain ⟨_, _, _, _, packed, _, _, startup, _⟩ :=
-    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
-  obtain ⟨functions, body, spawns, layout, code, _, entry, roots⟩ :=
+theorem Emitted.function_semantics_at {actual : Mem}
+    (loaded : BytesAt actual codeBase (output.image.code.flatMap encII)) :
+    output.IRFunctionSemantics actual := by
+  obtain ⟨functions, body, spawns, layout, code, _, _, _⟩ :=
     bild_lage output.emission output.funktionen_voll
       (fun base bound => layU_in output.compiled.unit output.tor base bound)
       (fun base => layU_dis output.compiled.unit output.tor base)
       (fun base => by simp only [layU]; omega)
       (fun base => layU_sync output.compiled.unit output.tor base)
-  have exactBytes : BytesAt memory.1.m codeBase (output.image.code.flatMap encII ++
-      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
-    simpa only [packed, Option.getD_some, List.append_nil] using startup
-  rw [code, entry, roots] at exactBytes
-  obtain ⟨lowered, located, _, _, _⟩ := layout.code exactBytes
+  let header := spawnC (startScratch output.compiled.main) spawns ++
+    startC output.image.A output.compiled.main output.image.depth 231 true ++
+    rootsC output.image.A output.image.depth (output.starts.map (·.1))
   let functionCode (fn : (declOf output.compiled.unit).Fn) :=
     ((functions[fn.val]?).map (·.1)).getD []
+  obtain ⟨lowered, located, _⟩ := bild_code (C := functionCode) (hd := header) (fp0 := output.image.fp0)
+    (fun _ => rfl) layout.hbody (by rw [show header.length = _ from layout.head]; exact layout.hfp)
+    (by rw [show header.length = _ from layout.head]; exact layout.haddr) layout.hlen layout.hlow layout.hpos
+    (code ▸ loaded)
   refine ⟨functionCode, maxTop functions, ?_, ?_, ?_⟩
   · have enough : FB ≤ output.image.Ks := Nat.le_trans (Nat.le_add_right _ _) layout.hroom
     have reduced : 0 < output.image.depth := layout.depth_pos
@@ -472,7 +473,14 @@ theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) 
   · intro oracle gates visibility depth fitted
     letI := gates
     letI := visibility
-    exact layout.funSpec exactBytes depth fitted
+    have fits (fn : (declOf output.compiled.unit).Fn) := (located fn).2
+    have limit := layout.hfit
+    exact lowFun_spec layout.hfa lowered (fun fn => by have := fits fn; omega)
+      (fun fn => by have := fits fn; omega) depth fitted
+
+theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) :
+    output.IRFunctionSemantics memory.1.m :=
+  Emitted.function_semantics_at (output.loaded_code loaded.payload)
 
 /-- The production frontend, executable checker, and sequential
     function lowering agree on a single typed program and image. -/

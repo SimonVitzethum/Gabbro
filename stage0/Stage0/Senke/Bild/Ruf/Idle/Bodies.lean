@@ -54,32 +54,32 @@ private theorem globalStoreC_withIdle (L : Lay D) (global : D.Glob) (dest : Nat)
 theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : FrameLayout)
     (ens : List II × Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     ∀ (pr : List Nat) (ex : Int × Int) (reserved : Nat) (sc : List D.Lock),
-      lowEnd passes (fun f => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruEnd e) reserved sc =
+      lowEnd passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruEnd e) reserved sc =
         lowEnd passes A L frame ens pr ex e reserved sc := by
   let shifted : D.mitRuhe.Fn → Nat := fun f => f.elim 0 A
   apply Endblock.rec
-    (motive_1 := fun s => ∀ pr ex reserved sc,
+    (motive_1 := fun _ _ _ _ s => ∀ pr ex reserved sc,
       lowS passes shifted L.withIdle frame.withIdle ens pr ex (ruS s) reserved sc =
         lowS passes A L frame ens pr ex s reserved sc)
-    (motive_2 := fun b => ∀ pr ex reserved sc,
+    (motive_2 := fun _ _ _ _ b => ∀ pr ex reserved sc,
       lowB passes shifted L.withIdle frame.withIdle ens pr ex (ruB b) reserved sc =
         lowB passes A L frame ens pr ex b reserved sc)
-    (motive_3 := fun body => ∀ pr ex reserved sc,
+    (motive_3 := fun _ _ _ body => ∀ pr ex reserved sc,
       lowEnd passes shifted L.withIdle frame.withIdle ens pr ex (ruEnd body) reserved sc =
         lowEnd passes A L frame ens pr ex body reserved sc)
-    (motive_4 := fun arms =>
+    (motive_4 := fun _ _ _ _ _ arms =>
       (∀ pr ex tag reserved sc,
         lowTags passes shifted L.withIdle frame.withIdle ens pr ex (ruArms arms) tag reserved sc =
           lowTags passes A L frame ens pr ex arms tag reserved sc) ∧
       (∀ pr ex span tag reserved sc,
         lowSumTags passes shifted L.withIdle frame.withIdle ens pr ex (ruArms arms) span tag reserved sc =
           lowSumTags passes A L frame ens pr ex arms span tag reserved sc))
-    (motive_5 := fun arms => ∀ pr ex tag reserved sc,
+    (motive_5 := fun _ _ _ _ _ arms => ∀ pr ex tag reserved sc,
       lowGrund passes shifted L.withIdle frame.withIdle ens pr ex (ruGArms arms) tag reserved sc =
         lowGrund passes A L frame ens pr ex arms tag reserved sc)
   all_goals
     intros
-    try (constructor <;> intros)
+    try (apply And.intro <;> intros)
     simp only [ruS, ruB, ruEnd, ruArms, ruGArms, lowS, lowB, lowEnd, lowTags, lowSumTags, lowGrund,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, vslot_varR,
       lowE_withIdle, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
