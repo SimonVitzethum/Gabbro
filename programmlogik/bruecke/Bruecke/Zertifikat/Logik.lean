@@ -108,6 +108,7 @@ syntax (name := gabbrovLogikCmd) "gabbrov_logik " ident " : " ident : command
     let ty ← mkArrow (mkConst logikName) zielTy
     let tv : TheoremVal := { name := logikName ++ `genuegt, levelParams := [], type := ty, value := pf }
     addDecl (Declaration.thmDecl tv)
-    logInfo m!"{logikName}: {props.length} statement(s) of the program's logic remain"
+    let ax ← collectAxioms (logikName ++ `genuegt)
+    logInfo m!"{logikName}: {props.length} statement(s) of the program's logic remain; axioms {ax.toList}"
 
 end Gabbro.Bruecke

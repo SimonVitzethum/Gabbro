@@ -114,6 +114,15 @@ open Lean Elab Tactic Meta in
   let b' ← kernNormal args[args.size - 4]!
   replaceMainGoal [← goal.replaceTargetDefEq (mkAppN t.getAppFn (args.set! (args.size - 4) b'))]
 
+/-- Run a tactic with a fresh heartbeat budget; on any failure (a timeout too) the goals stay as they
+    were. -/
+syntax (name := gabbrovSicher) "gabbrov_sicher " tactic : tactic
+
+open Lean Elab Tactic in
+@[tactic gabbrovSicher] meta def evalGabbrovSicher : Tactic := fun stx => do
+  let s ← saveState
+  tryCatchRuntimeEx (withCurrHeartbeats (evalTactic stx[1])) (fun _ => s.restore)
+
 /-- The generic steps (`Generisch.lean`), tried only where no rule and no simple reduction applies:
     refold an execution, unfold a dispatch helper, split or reduce a `match`, one equation step. -/
 syntax (name := gabbrovGenerisch) "gabbrov_generisch" : tactic
@@ -145,15 +154,16 @@ open Lean Elab Tactic Meta in
     offen := offen.tail!
     if ← g.isAssigned then continue
     setGoals [g]
-    let ok ← try
+    let s ← saveState
+    let ok ← tryCatchRuntimeEx (withCurrHeartbeats do
         evalTactic (← `(tactic| first
           | gabbrov_schritt
           | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])
           | (dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
               Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang])
           | gabbrov_generisch))
-        pure true
-      catch _ => pure false
+        pure true)
+      (fun _ => do s.restore; pure false)
     if ok then offen := (← getGoals) ++ offen
     else stehen := stehen ++ [g]
   setGoals (offen ++ stehen)
@@ -194,7 +204,7 @@ macro "gabbrov_beweis" : tactic => `(tactic| (
     intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
     show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
     rw [hrumpf] <;> gabbrov_rumpf <;> gabbrov_wp
-  all_goals gabbrov_fertig hens
-  all_goals try gabbrov_arith))
+  all_goals gabbrov_sicher gabbrov_fertig hens
+  all_goals gabbrov_sicher gabbrov_arith))
 
 end Gabbro.Bruecke
