@@ -251,7 +251,7 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr)
-    (continue : ∀ machine world,
+    (continuation : ∀ machine world,
       let x := positions thread
       Senke.BildLauf.RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl x.ebe machine world x.ρe →
       ∃ next : MLage (declOf output.compiled.unit).mitRuhe, next.Ok ∧
@@ -263,7 +263,7 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
   obtain ⟨machine, world, reaches, _, sourceBoundary, _, _, _, _, restart⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
-  obtain ⟨next, valid, program, threadEq, head, entry, memory⟩ := continue machine world sourceBoundary
+  obtain ⟨next, valid, program, threadEq, head, entry, memory⟩ := continuation machine world sourceBoundary
   have related := restart next valid program threadEq head entry memory
   refine ⟨{ state with m := machine }, reaches, after.ths, buffers, rfl,
     .inr ⟨snapshots, _, _, related, ?_⟩, fun _ => .inl rfl⟩
