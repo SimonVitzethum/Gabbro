@@ -306,7 +306,7 @@ private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {
     rw [updated]
     exact ((write_nurIn _ address value.toNat).gleichAt untouched).symm
   | priv | exit => exact fun byte _ => GleichAt.refl _ byte
-  | @ask _ _ _ _ request _ _ _ _ _ _ answered _ =>
+  | @ask _ _ _ request _ _ _ _ _ _ answered _ =>
     cases request with
     | cas | sys => exact directEffects trivial answered
     | rd | fp =>
