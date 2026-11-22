@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.ImageAddress
+import Stage0.Senke.Images.CheckSpawn
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -286,5 +287,37 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   · intro other different
     exact (others₅ other different).trans ((others₄ other different).trans
       ((others₃ other different).trans ((others₂ other different).trans (others₁ other different))))
+
+/-- A zero depth word at an emitted function entry branches directly
+    to the stop for that function's model depth exhaustion. -/
+theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
+    {before : Cfg imageTSO (Res T)} {thread : Nat} {fp : W} (fn : (declOf output.compiled.unit).Fn)
+    (loaded : BytesAt (before.ms.1.view thread) codeBase (output.image.code.flatMap encII))
+    (oracle : Orakel (declOf output.compiled.unit)) (world : World (declOf output.compiled.unit))
+    (arguments : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params fn)) :
+    let pc := BitVec.ofNat 64 (output.image.A fn)
+    let scratch := (functionFrame output.compiled.program fn).canonicalResult
+    before.ths[thread]? = some (some (.next ⟨pc, fp⟩)) →
+    (before.ms.1.view thread).rd64 (slot fp (BitVec.ofNat 64 2)) = some 0 →
+    ProcessPrefix imageTSO actI before [] 5
+      ⟨before.ms, before.ths.set thread (some (.next ⟨pc + 32, fp⟩))⟩ ∧
+    CodeAt (before.ms.1.view thread) (pc + 32) (stopC (logikCode (.abstieg fn)) scratch) ∧
+    rufRumpf output.compiled.program oracle output.image.passes 0 fn world arguments = .logik (.abstieg fn) := by
+  intro pc scratch running zero
+  obtain ⟨code, top, lowered, decoded, _, _⟩ := output.relocated_function_code loaded fn
+  simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
+  obtain ⟨req, _, ensures, _, body, _, snapshot, _, shape, _⟩ := lowered
+  rw [← shape] at decoded
+  have guard : CodeAt (before.ms.1.view thread) pc (guardC 2 105 scratch) :=
+    codeAt_left (by simpa only [List.append_assoc, scratch] using decoded)
+  have branch := tso_guard_fail (before := imageToTSO before) running guard
+    (by rw [show sx (II.f 2) = BitVec.ofNat 64 2 by decide]; exact zero)
+  refine ⟨tso_silent_prefix_image branch rfl, ?_, ?_⟩
+  · have tail := codeAt_right (a := [ci 19 2 32 0, ci 18 64 0 0]) (by
+      simpa only [guardC] using guard : CodeAt (before.ms.1.view thread) pc
+        ([ci 19 2 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
+    exact tail
+  · exact Gabbro.Stage0.Senke.BildLauf.rufRumpf_null_eq
+      output.compiled.program oracle output.image.passes fn world arguments
 
 end Gabbro.Stage0
