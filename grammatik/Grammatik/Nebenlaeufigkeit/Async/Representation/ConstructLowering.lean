@@ -98,7 +98,6 @@ public theorem constructLeafBlock_assign (elaboration : Elaboration D V Λ types
   change _ = Ausgang.ok (effect actual.1 (constructChild elaboration name evaluated.1 evaluated.2.1).2.1).2
     (env.set destination (effect actual.1 (constructChild elaboration name evaluated.1 evaluated.2.1).2.1).1)
   rw [← exactChild.2.1]
-  rfl
 
 /-- The checked construction plan follows the exact finite source tree.
     Each leaf establishes the arglist types against the callee signature. -/
@@ -199,5 +198,99 @@ public theorem ConstructPlan.representable {elaboration : Elaboration D V Λ typ
       rcases List.mem_append.mp selected with left | right
       · exact first left
       · exact second right
+
+@[expose] public def activeJoinValue (types : TypeResolution) (path : List Nat) (left right : FutureExpr)
+    (first : Wert D (taskStorageType types (0 :: path) left))
+    (second : Wert D (taskStorageType types (1 :: path) right)) :
+    Wert D (taskStorageType types path (.join left right)) :=
+  readyAnswer D (taskActiveType types path (.join left right))
+    (taskResultType types path (.join left right)) (first, second, ())
+
+/-- The generated code binds the exact lazy future of the source tree.
+    The result of its continuation is preserved when the constructor's
+    private temporaries leave their lexical scopes. -/
+public theorem ConstructPlan.lower_assign {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    {future : FutureExpr} (plan : ConstructPlan elaboration tag future)
+    (path : List Nat) {τ : Ty} (destination : Var Γ τ) (saved : Var Γ (frameType types f))
+    (body : ∀ {Δ : Ctx}, (∀ {type : Ty}, Var Γ type → Var Δ type) →
+      Var Δ (taskStorageType types path future) → Block D V l Δ Λ Λ)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (effect : Wert D (taskStorageType types path future) → World D → Wert D τ × World D)
+    (frame : Frame (Value D)) (world : World D) (env : Env D Γ)
+    (represented : FrameRep D types f (.running tag) frame (env.get saved))
+    (correct : ∀ {Δ : Ctx} (extend : ∀ {type : Ty}, Var Γ type → Var Δ type)
+      (slot : Var Δ (taskStorageType types path future)) (scope : Env D Δ) (world : World D),
+      env.AgreesUnder scope extend →
+      execBlock oracle passes calls (body extend slot) world scope =
+        let answer := effect (scope.get slot) world
+        .ok answer.2 (scope.set (extend destination) answer.1)) :
+    let built := makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame future world
+    ∃ storage, TaskRep D types path future built.1 storage ∧
+      execBlock oracle passes calls (plan.lower path saved body) world env =
+        let answer := effect storage built.2.1
+        .ok answer.2 (env.set destination answer.1) := by
+  induction plan generalizing path Γ world with
+  | call name args callee known checked =>
+    exact constructLeafBlock_assign elaboration tag path name args callee known checked destination saved body
+      oracle passes calls effect frame world env represented correct
+  | @join left right first second firstIH secondIH =>
+    let make := makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame
+    let collect := activeJoinValue (D := D) types path left right
+    let secondEffect := fun a b (now : World D) => effect (collect a b) now
+    let firstEffect := fun a (now : World D) =>
+      let b := make right now
+      match encodeTask D types (1 :: path) right b.1 with
+      | some code => secondEffect a code b.2.1
+      | none => (env.get destination, now)
+    let rest : ∀ {Δ : Ctx}, (∀ {type : Ty}, Var Γ type → Var Δ type) →
+        Var Δ (taskStorageType types (0 :: path) left) → Block D V l Δ Λ Λ :=
+      fun extend a =>
+        second.lower (1 :: path) (extend saved) (fun later b =>
+          .bind (joinChildrenExpr types path left right (.var (later a)) (.var b))
+            (body (fun var => .there (later (extend var))) .here))
+    have executes {Δ : Ctx} (extend : ∀ {type : Ty}, Var Γ type → Var Δ type)
+        (a : Var Δ (taskStorageType types (0 :: path) left)) (middleEnv : Env D Δ) (middle : World D)
+        (agrees : env.AgreesUnder middleEnv extend) :
+        execBlock oracle passes calls (rest extend a) middle middleEnv =
+          .ok (firstEffect (middleEnv.get a) middle).2
+            (middleEnv.set (extend destination) (firstEffect (middleEnv.get a) middle).1) := by
+      let finish : ∀ {Ξ : Ctx}, (∀ {type : Ty}, Var Δ type → Var Ξ type) →
+          Var Ξ (taskStorageType types (1 :: path) right) → Block D V l Ξ Λ Λ :=
+        fun later b => .bind (joinChildrenExpr types path left right (.var (later a)) (.var b))
+          (body (fun var => .there (later (extend var))) .here)
+      have frameRep : FrameRep D types f (.running tag) frame (middleEnv.get (extend saved)) := by
+        rw [agrees saved]
+        exact represented
+      have finishes {Ξ : Ctx} (later : ∀ {type : Ty}, Var Δ type → Var Ξ type)
+          (b : Var Ξ (taskStorageType types (1 :: path) right)) (context : Env D Ξ) (now : World D)
+          (retained : middleEnv.AgreesUnder context later) :
+          execBlock oracle passes calls (finish later b) now context =
+            .ok (secondEffect (middleEnv.get a) (context.get b) now).2
+              (context.set (later (extend destination)) (secondEffect (middleEnv.get a) (context.get b) now).1) := by
+        let value := collect (context.get (later a)) (context.get b)
+        have ran := correct (fun var => .there (later (extend var))) .here (.cons value context) now
+          (fun var => (retained (extend var)).trans (agrees var))
+        change (execBlock oracle passes calls (body (fun var => .there (later (extend var))) .here) now
+          (.cons value context)).schrumpf = _
+        rw [ran]
+        change Ausgang.ok (effect value now).2 (context.set (later (extend destination)) (effect value now).1) = _
+        unfold value secondEffect
+        rw [retained a]
+      obtain ⟨bStorage, bRep, ran⟩ := secondIH (1 :: path) (extend destination) (extend saved)
+        finish (secondEffect (middleEnv.get a)) middle middleEnv frameRep finishes
+      have code := taskRep_encoded types (1 :: path) right (make right middle).1 bStorage bRep
+      change execBlock oracle passes calls (second.lower (1 :: path) (extend saved) finish) middle middleEnv = _
+      rw [ran]
+      simp only [firstEffect, code]
+    obtain ⟨aStorage, aRep, ran⟩ := firstIH (0 :: path) destination saved rest firstEffect world env represented executes
+    obtain ⟨bStorage, bRep⟩ := second.representable frame (env.get saved) represented (1 :: path) (make left world).2.1
+    have encoded := taskRep_encoded types (1 :: path) right _ bStorage bRep
+    refine ⟨collect aStorage bStorage, .joinActive aRep bRep, ?_⟩
+    change execBlock oracle passes calls (first.lower (0 :: path) saved rest) world env =
+      .ok (effect (collect aStorage bStorage) (make right (make left world).2.1).2.1).2
+        (env.set destination (effect (collect aStorage bStorage) (make right (make left world).2.1).2.1).1)
+    rw [ran]
+    simp only [firstEffect, encoded, secondEffect]
 
 end Gabbro.Grammatik.Async.Representation

@@ -306,6 +306,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.CheckedArgument.lower_exec
 #print axioms Gabbro.Grammatik.Async.Representation.CheckedArguments.lower_assign
 #print axioms Gabbro.Grammatik.Async.Representation.constructLeafBlock_assign
+#print axioms Gabbro.Grammatik.Async.Representation.ConstructPlan.lower_assign
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep
