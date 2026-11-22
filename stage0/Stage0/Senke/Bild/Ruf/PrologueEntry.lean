@@ -62,6 +62,78 @@ theorem FunctionIRPrologue.reference [kernel : Kern]
   obtain ⟨count, steps⟩ := IRReference.of_star run
   exact ⟨count, after, steps, changed, body⟩
 
+/-- The installed prologue reaches its body in a memory that grants
+    access only to the chosen read region and its own frame writes. -/
+theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
+    {output : Emitted src reserve options}
+    {f : (declOf output.compiled.unit).Fn} {memory : Mem}
+    (compiled : FunctionIRPrologue output memory f)
+    (O : Orakel (declOf output.compiled.unit))
+    {table : (declOf output.compiled.unit).Fn → List II} {reserveWords depth : Nat}
+    (exactCode : table f = compiled.prefixCode ++ compiled.body.1)
+    (lowered : ∃ top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y f =
+      some (table f, top) ∧ top ≤ reserveWords)
+    (codeSize : 16 * (table f).length < 2 ^ 31) (depthFits : depth + 1 < 2 ^ 64)
+    {fp : W} {K Ks : Nat}
+    {world : World (declOf output.compiled.unit)} {args : Env _ ((declOf output.compiled.unit).params f)}
+    (capacity : (depth + 1 + 1) * reserveWords ≤ Ks)
+    (layout : WIn output.image.Y fp Ks K) (small : K < 2 ^ 31)
+    (frame : FrameOK memory fp K) (room : frei ((declOf output.compiled.unit).params f) ≤ K)
+    (far : CodeFar (compiled.entry fp).pc (table f).length fp K)
+    (depthWord : memory.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (depth + 1)))
+    (environment : EnvAt output.image.Y memory fp args)
+    (stored : WeltAt memory output.image.Y world)
+    (requires : ReqAmEintritt output.compiled.program f world args)
+    (reads : W → Prop) (frameReads : ∀ byte, inSlots fp 0 K byte → reads byte)
+    (codeReads : ∀ byte, (compiled.entry fp).pc.toNat ≤ byte.toNat →
+      byte.toNat < (compiled.entry fp).pc.toNat + 16 * (table f).length → reads byte)
+    (requiresReads : ∀ cell : Zelle (declOf output.compiled.unit), cell.da output.image.Y →
+      cell.carrier ∈ (output.compiled.program.requires f).orte → ∀ byte : W,
+      cell.adr output.image.Y ≤ byte.toNat → byte.toNat < cell.adr output.image.Y + cell.bytes → reads byte)
+    (snapshotReads : ∀ cell ∈ oldCells (output.compiled.program.ensures f), ∀ byte : W,
+      cell.adr output.image.Y ≤ byte.toNat → byte.toNat < cell.adr output.image.Y + 8 * valueWords cell.ty →
+      reads byte) :
+    let restricted := maskMemory reads (inSlots fp 0 K) memory
+    ∃ count after, @IRReference kernel.withoutSyscalls count
+      (compiled.entry fp) restricted (compiled.bodyEntry fp) after ∧ Agree fp FB K restricted after := by
+  intro restricted
+  letI : Kern := kernel.withoutSyscalls
+  have loaded : CodeAt memory (compiled.entry fp).pc (table f) := exactCode.symm ▸ compiled.instructions
+  obtain ⟨protected, decoded⟩ := maskMemory_code_frame loaded frame far.1 frameReads codeReads
+  have agreement := (maskMemory_agreement reads (inSlots fp 0 K) memory frameReads).1
+  have sameFrame (byte : W) (inside : inSlots fp 0 K byte) := agreement.1 byte (frameReads byte inside)
+  have maskedArgs : EnvAt output.image.Y restricted fp args := by
+    intro ty variableAt
+    have fits := variableOffset_bound variableAt
+    exact frame_value_agrees frame (by unfold frei vslot at *; omega) sameFrame (environment ty variableAt)
+  have maskedDepth : restricted.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (depth + 1)) := by
+    have slotFits : 2 < K := by unfold frei FB at room; omega
+    have sameWord (offset : Nat) (inside : offset < 8) :=
+      sameFrame _ (frame_slot_byte frame slotFits inside)
+    simp only [Mem.rd64, Mem.all_congr (fun j hj => (sameWord j hj).2),
+      Mem.le_congr (fun j hj => (sameWord j hj).1)]
+    exact depthWord
+  have observed := expression_world_mask frameReads layout.lay requiresReads
+    (⟨fun t _ field index valid => stored.1 t field index valid, fun g _ => stored.2.1 g⟩ :
+      WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
+  have saved : EntrySnapshots.Inputs output.image.Y world restricted
+      (oldCells (output.compiled.program.ensures f)) := by
+    intro cell member
+    have bounds := EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member
+    have original := EntrySnapshots.Inputs.of_world stored
+      (fun cell member => (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1) cell member
+    exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member) original
+  obtain ⟨ens, pc, after, run, changed, post, position, _⟩ :=
+    prolog_setup (O := O) (rp := 0) (cfp := 0) (H := []) lowered codeSize depthFits capacity
+      layout small protected decoded far maskedDepth maskedArgs observed saved requires
+  have samePost : compiled.postcondition = ens := Option.some.inj (compiled.postconditionLowered.symm.trans post)
+  subst ens
+  have address := position compiled.body compiled.bodyLowered
+  rw [exactCode, List.length_append, Nat.add_sub_cancel] at address
+  subst pc
+  obtain ⟨count, steps⟩ := IRReference.of_star run
+  exact ⟨count, after, steps, changed⟩
+
 /-- Retain the production code and layout data after private frame
     setup has written only above the installed instruction region. -/
 def FunctionIRPrologue.agree [Kern] {output : Emitted src reserve options}
