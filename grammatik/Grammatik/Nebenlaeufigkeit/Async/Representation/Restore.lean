@@ -40,8 +40,16 @@ public theorem restorePlanFor_complete (types : TypeResolution) (f : AsyncFn) (l
     obtain ⟨sourceType, found, exactType⟩ := declared name type List.mem_cons_self
     obtain ⟨tail, accepted⟩ := ih (fun name type member => declared name type (List.mem_cons_of_mem _ member))
     subst type
-    exact ⟨.cons name sourceType found tail, by
-      simp only [restorePlanFor, found, dite_eq_left rfl, bind, Except.bind, accepted, pure, Except.pure]⟩
+    refine ⟨.cons name sourceType found tail, ?_⟩
+    rw [restorePlanFor]
+    split
+    · rename_i absent
+      rw [found] at absent
+      cases absent
+    · rename_i selected selectedAt
+      have same := Option.some.inj (selectedAt.symm.trans found)
+      subst selected
+      simp only [dite_eq_left rfl, bind, Except.bind, accepted, pure, Except.pure]
 
 /-- A checked restore plan over the current live set supplies every
     local needed by the semantic evaluator. -/

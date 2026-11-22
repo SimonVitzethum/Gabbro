@@ -135,6 +135,7 @@ theorem lowE_slice_descriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
   have capacityFits : capacity < 2 ^ 64 := by omega
   have firstNonnegative : 0 ≤ first.n := bounds.1.trans first.lo_le
   have firstWord : BitVec.ofInt 64 first.n = BitVec.ofNat 64 view.offset := by
+    change BitVec.ofInt 64 first.n = BitVec.ofNat 64 first.n.toNat
     simpa only [BitVec.ofInt_natCast] using congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg firstNonnegative).symm
   have lastWord : BitVec.ofInt 64 (eval world (.sub finish begin) world env).n = BitVec.ofNat 64 view.length := by
     rw [actualLength, BitVec.ofInt_natCast]
