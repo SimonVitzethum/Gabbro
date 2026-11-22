@@ -215,7 +215,7 @@ theorem tso_sys_prefix {layout : Runner.Beweis.Lay}
     load32 (fun a => fetchArgs (sx dest) (sx a)) instruction.f2
   have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step t)) := .priv running rfl
   have fetched : ProcessStep (TSO layout) actI (onThread (IR.step t)) [] (onThread (op 23 t)) :=
-    tso_fetch_opcode before inside 23 instruction.op (by decide)
+    tso_fetch_opcode before inside 23 t instruction.op (by decide)
   refine .cons started ?_
   refine .cons fetched ?_
   refine .cons operand1 ?_
