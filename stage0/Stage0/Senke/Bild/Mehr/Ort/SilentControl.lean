@@ -120,6 +120,16 @@ theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
       simpa only [Nat.succ_sub_succ_eq_sub] using
         ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
 
+private theorem actI_ask_no_terminal {control : Res T}
+    {request : Op} {resume : Ans → Res (Res T)} {reply : Ans} {ending : Ende}
+    (asked : actI control = .ask request resume) (stopped : Res.ende (resume reply) = some ending) : False := by
+  cases control with
+  | next | fault | unk => cases asked
+  | ask _ _ =>
+    change Res.ask _ _ = Res.ask request resume at asked
+    obtain ⟨_, rfl⟩ := Res.ask.inj asked
+    cases stopped
+
 private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
     {before expected : Cfg (SC layout) (Res T)} {ending : Ende} {events : List Ev}
     (reference : SCSchritt layout 0 before expected) (one : before.ths.length = 1)
@@ -140,10 +150,7 @@ private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
       rw [ready] at found
       cases found
       cases stopped
-  | @askStop i control request resume answer memory found asked _ _ stopped =>
-    cases control <;> simp only [actI, reduceCtorEq, Res.ask.injEq] at asked
-    obtain ⟨_, rfl⟩ := asked
-    cases stopped
+  | askStop _ asked _ _ stopped => exact (actI_ask_no_terminal asked stopped).elim
   | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
 
 /-- An actual silent SC run cannot stop while its certified memory
@@ -160,10 +167,13 @@ theorem SCMemoryPrefix.no_terminal {layout : Runner.Beweis.Lay}
   obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
   have remaining := reference.consume takenPath one blind (by omega)
   have active : 0 < available - steps := by omega
-  cases remaining with
-  | nil => omega
-  | cons next _ =>
-    exact stopped (sc_memory_step_continues next (takenPath.silent_slots rfl |>.trans one) terminal rfl)
+  generalize available - steps = count at active remaining
+  cases count with
+  | zero => omega
+  | succ count =>
+    cases remaining with
+    | cons next _ =>
+      exact stopped (sc_memory_step_continues next (takenPath.silent_slots rfl |>.trans one) terminal rfl)
 
 theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
     {before middle after : Cfg (SC layout) (Res T)} {first second : Nat}
