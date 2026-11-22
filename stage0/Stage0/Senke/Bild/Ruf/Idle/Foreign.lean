@@ -71,7 +71,7 @@ theorem torC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
   | none => rfl
   | some row =>
     by_cases allowed : torGut row (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true
-    · simp only [allowed, ite_true]
+    · simp only [allowed, and_self, ite_true]
       cases buffer : ptrParam (D.aparams a) with
       | none => rfl
       | some info =>

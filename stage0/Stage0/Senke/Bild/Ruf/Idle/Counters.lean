@@ -55,7 +55,7 @@ private theorem counterDepthS_ru : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .ret .. | _, _, _, _, .retWhy .. | _, _, _, _, .leave ..
   | _, _, _, _, .next .. | _, _, _, _, .retScoped .. | _, _, _, _, .retWhyScoped .. => rfl
 
-private theorem counterDepthB_ru : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+theorem counterDepthB_ru : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ'), counterDepthB (ruB b) = counterDepthB b
   | _, _, _, _, .nil => rfl
   | _, _, _, _, .cons s rest => kongr₂ max (counterDepthS_ru s) (counterDepthB_ru rest)
