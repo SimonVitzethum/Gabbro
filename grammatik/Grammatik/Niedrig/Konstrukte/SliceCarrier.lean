@@ -53,11 +53,9 @@ theorem decodeArrayCarrier_pack (identity : Nat) {capacity : Nat} {τ : Ty}
     (view : ArraySliceView capacity) (source : Wert D (.arr τ capacity)) :
     decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
       (packSliceCarrier identity view source) = some (view.value source) := by
-  simp only [decodeArrayCarrier, packSliceCarrier, Int.toNat_natCast]
-  split
-  · rfl
-  · rename_i outside
-    exact (outside view.fits).elim
+  change (if fits : view.offset + view.length ≤ capacity then
+    some ((ArraySliceView.mk view.offset view.length fits).value source) else none) = _
+  rw [dite_eq_left view.fits]
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/
@@ -78,11 +76,10 @@ theorem decodeStringCarrier_pack (identity : Nat) {capacity : Nat}
       (packSliceCarrier identity view source) =
         some (strBoundedSliceValue source view.offset (view.offset + view.length)
           ⟨Nat.le_add_right _ _, present⟩) := by
-  simp only [decodeStringCarrier, packSliceCarrier, Int.toNat_natCast]
-  split
-  · rfl
-  · rename_i outside
-    exact (outside present).elim
+  change (if fits : view.offset + view.length ≤ source.1.length then
+    some (strBoundedSliceValue source view.offset (view.offset + view.length)
+      ⟨Nat.le_add_right _ _, fits⟩) else none) = _
+  rw [dite_eq_left present]
 
 theorem decodeStringCarrier_isSome {identity capacity : Nat}
     (stored : Wert D (sliceCarrierType identity capacity (.str capacity))) :
@@ -91,10 +88,10 @@ theorem decodeStringCarrier_isSome {identity capacity : Nat}
   unfold decodeStringCarrier
   dsimp only
   by_cases fits : stored.1.n.toNat + stored.2.1.n.toNat ≤ stored.2.2.1.val.length
-  · rw [dif_pos fits, Option.isSome_some]
+  · rw [dite_eq_left fits, Option.isSome_some]
     exact ⟨fun _ => fits, fun _ => rfl⟩
-  · rw [dif_neg fits, Option.isSome_none]
-    exact ⟨fun impossible => nomatch impossible, fun yes => (fits yes).elim⟩
+  · rw [dite_eq_right fits, Option.isSome_none]
+    exact Iff.intro (fun impossible => Bool.noConfusion impossible) (fun yes => (fits yes).elim)
 
 /-- The concrete carrier premises hold for every array and every
     half-open range, including an empty range at the end. -/
