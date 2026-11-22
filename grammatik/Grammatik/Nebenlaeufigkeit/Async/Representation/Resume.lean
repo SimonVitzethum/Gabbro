@@ -41,9 +41,39 @@ private theorem encodeLiveSlots (frame : Frame (Value D)) (live : List String)
       exact ⟨_, .live used found typed rest⟩
     · exact ⟨_, .dead used rest⟩
 
-/-- A Ready answer initializes the destination of the await at its
-    declared type. Every other live continuation slot keeps its earlier
-    value, and the frame's authority marks are unchanged. -/
+private theorem store_frame {phase nextPhase : Phase} (destination : String)
+    {frame : Frame (Value D)} {record : Wert D (frameType types f)}
+    (current : FrameRep D types f phase frame record)
+    (retain : ∀ name, name ∈ liveAt f nextPhase → name ≠ destination → name ∈ liveAt f phase)
+    {value : Value D} {sourceType : Parser.STyp} {ordinary : Wert D (types.ordinary sourceType)}
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (typed : valueAt D (types.ordinary sourceType) value = some ordinary) :
+    ∃ next, FrameRep D types f nextPhase (save frame destination value) next ∧
+      (save frame destination value).marks = frame.marks := by
+  have declared : (destination, sourceType) ∈ f.params ++ f.fields := by
+    obtain ⟨before, after, placed, _⟩ := List.lookup_eq_some_iff.mp binding
+    rw [placed]
+    exact List.mem_append_right _ List.mem_cons_self
+  obtain ⟨slots, represented⟩ := encodeLiveSlots (types := types) (save frame destination value)
+    (liveAt f nextPhase) (f.params ++ f.fields) (by
+      intro name τ entry needed
+      by_cases same : name = destination
+      · subst name
+        have sameType := sourceTypeUnique current.unique entry declared
+        subst τ
+        exact ⟨value, ordinary, List.lookup_cons_self, typed⟩
+      · obtain ⟨old, oldValue, found, exactType⟩ := liveSlot current.slots entry (retain name needed same)
+        refine ⟨old, oldValue, ?_, exactType⟩
+        simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr same] using found)
+  refine ⟨slots, ⟨represented, ?_, current.unique⟩, rfl⟩
+  intro name needed
+  by_cases same : name = destination
+  · subst name
+    exact List.mem_map_of_mem declared
+  · exact current.declared name (retain name needed same)
+
+/-- A Ready answer initializes the declared destination and retains
+    the values and authority marks needed at the next command. -/
 public theorem await_resume_frame (tag : Nat) (destination : String) (future : FutureExpr)
     (boundary : Boundary) (rest : List Command)
     (command : f.body.drop tag = Command.await destination future boundary :: rest)
@@ -57,32 +87,32 @@ public theorem await_resume_frame (tag : Nat) (destination : String) (future : F
   have tail : f.body.drop (tag + 1) = rest := by
     rw [← List.drop_drop, command]
     rfl
-  have wasLive (name : String) (needed : name ∈ liveAt f (.running (tag + 1)))
-      (different : name ≠ destination) : name ∈ liveAt f (.waiting tag future) := by
-    simp only [liveAt, tail] at needed
-    simp only [liveAt, command, without, List.mem_filter, needed, beq_eq_false_iff_ne.mpr different,
-      Bool.not_false, and_self]
-  have declared : (destination, sourceType) ∈ f.params ++ f.fields := by
-    obtain ⟨before, after, placed, _⟩ := List.lookup_eq_some_iff.mp binding
-    rw [placed]
-    exact List.mem_append_right _ List.mem_cons_self
-  obtain ⟨slots, represented⟩ := encodeLiveSlots (types := types) (save frame destination value)
-    (liveAt f (.running (tag + 1))) (f.params ++ f.fields) (by
-      intro name τ entry needed
-      by_cases same : name = destination
-      · subst name
-        have sameType := sourceTypeUnique waiting.unique entry declared
-        subst τ
-        exact ⟨value, ordinary, List.lookup_cons_self, typed⟩
-      · obtain ⟨old, oldValue, found, exactType⟩ := liveSlot waiting.slots entry (wasLive name needed same)
-        refine ⟨old, oldValue, ?_, exactType⟩
-        simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr same] using found)
-  refine ⟨slots, ⟨represented, ?_, waiting.unique⟩, rfl⟩
-  intro name needed
-  by_cases same : name = destination
-  · subst name
-    exact List.mem_map_of_mem declared
-  · exact waiting.declared name (wasLive name needed same)
+  apply store_frame destination waiting _ binding typed
+  intro name needed different
+  simp only [liveAt, tail] at needed
+  simp only [liveAt, command, without, List.mem_filter, needed, beq_eq_false_iff_ne.mpr different,
+    Bool.not_false, and_self]
+
+/-- An ordinary bind in an async function saves its typed result and
+    retains every other live value in the continuation. -/
+public theorem bind_resume_frame (tag : Nat) (destination : String) (expression : Parser.SExpr)
+    (bound : Nat) (rest : List Command)
+    (command : f.body.drop tag = Command.bind destination expression bound :: rest)
+    {frame : Frame (Value D)} {record : Wert D (frameType types f)}
+    (current : FrameRep D types f (.running tag) frame record)
+    {value : Value D} {sourceType : Parser.STyp} {ordinary : Wert D (types.ordinary sourceType)}
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (typed : valueAt D (types.ordinary sourceType) value = some ordinary) :
+    ∃ next, FrameRep D types f (.running (tag + 1)) (save frame destination value) next ∧
+      (save frame destination value).marks = frame.marks := by
+  have tail : f.body.drop (tag + 1) = rest := by
+    rw [← List.drop_drop, command]
+    rfl
+  apply store_frame destination current _ binding typed
+  intro name needed different
+  simp only [liveAt, tail] at needed
+  simp only [liveAt, command, liveBefore, List.mem_append, without, List.mem_filter, needed,
+    beq_eq_false_iff_ne.mpr different, Bool.not_false, and_self, or_true]
 
 /-- A successful poll of the resolved child restores the typed continuation
     frame. The call semantics may also produce a logic or hardware outcome. -/
@@ -181,6 +211,48 @@ private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
         exact ⟨_, .later _ _ _ _ skipRun continuation⟩
       | await =>
         exact ⟨_, .later _ _ _ _ skipRun (.later _ _ _ _ rfl continuation)⟩
+
+/-- The resolved ordinary expression of a bind produces a representable
+    next state with its exact result and retained authority marks. -/
+public theorem evaluateBind_preserves {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f) (inventory : Inventory D) (tag : Nat)
+    (destination : String) (expression : Parser.SExpr) (bound : Nat) (rest : List Command)
+    (command : f.body.drop tag = Command.bind destination expression bound :: rest)
+    (resolved : BoundExpression D Λ) (known : elaboration.expression expression = some resolved)
+    (frame : Frame (Value D)) (slots : Wert D (frameType types f))
+    (current : FrameRep D types f (.running tag) frame slots)
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.running tag))
+    (locals : Env D (resolved.locals.map Prod.snd))
+    (restored : localsEnv D resolved.locals frame = some locals) (world : World D) :
+    let answer := evaluateBound elaboration expression frame world
+    let resumed := State.running (Child := Child D types) (tag + 1) (save frame destination answer.1)
+    ∃ record, Inv f types inventory resumed record ∧ encode D types f resumed = some record := by
+  have member : Command.bind destination expression bound ∈ f.body :=
+    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
+  obtain ⟨selected, sourceType, selectedAt, binding, exactType⟩ := elaboration.bound destination expression bound member
+  have same := Option.some.inj (selectedAt.symm.trans known)
+  subst selected
+  simp only [evaluateBound_resolved elaboration expression resolved known frame locals restored world]
+  let evaluated := evaluateExpression resolved.expression world locals
+  let value := Value.typed resolved.result evaluated.1
+  let resumed : State (Value D) (Child D types) := .running (tag + 1) (save frame destination value)
+  change ∃ record, Inv f types inventory resumed record ∧ encode D types f resumed = some record
+  have typed : valueAt D (types.ordinary sourceType) value = some (exactType ▸ evaluated.1) := by
+    simp only [value, valueAt, dif_pos exactType]
+  obtain ⟨_, saved, sameMarks⟩ := bind_resume_frame tag destination expression bound rest command current binding typed
+  have within : tag + 1 ≤ f.body.length := by
+    have length := congrArg List.length command
+    simp only [List.length_drop, List.length_cons] at length
+    omega
+  have owned : MarksRep inventory (.running (tag + 1)) resumed := by
+    simpa only [MarksRep, resumed, State.marks, sameMarks, sameInventory] using marks
+  obtain ⟨_, running⟩ := runningPhaseList inventory (tag + 1) saved owned f.body 0 (tag + 1) within
+    (Nat.zero_add (tag + 1)).symm
+  have full : PhaseListRep D types f inventory (phases f) resumed _ :=
+    .later _ _ _ _ rfl (.later _ _ _ _ rfl running)
+  have invariant : Inv f types inventory resumed (_, ()) := full
+  exact ⟨_, invariant, inv_encoded f types inventory resumed _ invariant⟩
 
 /-- A Ready answer from the actual call semantics restores the complete
     encoded state when the enclosing frame retains its own inventory. -/
