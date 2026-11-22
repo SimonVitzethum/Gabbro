@@ -120,31 +120,48 @@ private theorem processStep_eventCount {M : MemSys} {θ : Type} {act : θ → Re
   have counted := (step.prepend (.nil after)).events_le_steps
   simpa only [List.append_nil, Nat.zero_add] using counted
 
-private theorem ImageIRSegment.ofStep {before after : Cfg imageTSO (Res T)} {events : List Ev}
-    (step : ProcessStep imageTSO actI before events after) : ImageIRSegment before events after := by
+private theorem singleObservation {before after : Cfg imageTSO (Res T)} {events : List Ev}
+    (step : ProcessStep imageTSO actI before events after) : events = [] ∨ ∃ event, events = [event] := by
   have length := processStep_eventCount step
   cases events with
-  | nil => exact .silent (.ofStep step)
+  | nil => exact .inl rfl
   | cons event rest =>
     have empty : rest = [] := List.length_eq_zero_iff.mp
       (Nat.eq_zero_of_le_zero (Nat.le_of_succ_le_succ length))
-    subst rest
-    exact .observed (.nil before) step
+    exact .inr ⟨event, congrArg (event :: ·) empty⟩
 
-/-- The same relation and GX history compose across the whole IR run. -/
+/-- Compose entire silent stretches of the IR execution at its
+    observations. Only the last stretch can end inside a block without
+    reaching another observation. -/
 theorem ImageIRRefinement.follow (refinement : ImageIRRefinement output E O memory)
     {history events : List Ev} {before after : Cfg imageTSO (Res T)} {count : Nat}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (run : ProcessPrefix imageTSO actI before events count after)
     (initial : refinement.related history before state) :
     ∃ next, refinement.related (history ++ events) after next ∧ ImageReach output E O state next := by
-  induction run generalizing history state with
-  | nil => exact ⟨state, by simpa only [List.append_nil] using initial, .start⟩
-  | cons step _ ih =>
-    obtain ⟨middle, matched, first, _⟩ :=
-      refinement.segment initial (ImageIRSegment.ofStep step)
-    obtain ⟨next, final, reached⟩ := ih matched
-    exact ⟨next, by simpa only [List.append_assoc] using final, imageReach_trans first reached⟩
+  suffices follow :
+      ∀ {current finish : Cfg imageTSO (Res T)} {future : List Ev} {steps : Nat},
+        ProcessPrefix imageTSO actI current future steps finish →
+        ∀ {anchor silentSteps previous origin},
+          ProcessPrefix imageTSO actI anchor [] silentSteps current →
+          refinement.related previous anchor origin →
+          ∃ next, refinement.related (previous ++ future) finish next ∧ ImageReach output E O origin next
+    from follow run (.nil before) initial
+  intro current finish future steps path
+  induction path with
+  | nil =>
+    intro anchor silentSteps previous origin silent matched
+    obtain ⟨next, endpoint, reached, _⟩ := refinement.segment matched (.silent silent)
+    exact ⟨next, endpoint, reached⟩
+  | cons step _ tail =>
+    intro anchor silentSteps previous origin silent matched
+    rcases singleObservation step with quiet | ⟨event, observed⟩
+    · subst_vars
+      exact tail (silent.trans (.ofStep step)) matched
+    · subst_vars
+      obtain ⟨middle, advanced, first, _⟩ := refinement.segment matched (.observed silent step)
+      obtain ⟨next, endpoint, rest⟩ := tail (.nil _) advanced
+      exact ⟨next, by simpa only [List.append_assoc] using endpoint, imageReach_trans first rest⟩
 
 theorem ImageIRRefinement.terminal (refinement : ImageIRRefinement output E O memory)
     {events : List Ev} {ending : Ende} {count : Nat}
