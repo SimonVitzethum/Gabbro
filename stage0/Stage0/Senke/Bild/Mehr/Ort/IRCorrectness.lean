@@ -1,6 +1,8 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+public import Stage0.Senke.Bild.Emitted
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -21,6 +23,55 @@ structure LoadedIRImage (output : Emitted src reserve options) (memory : imageTS
 def Emitted.irEntry (output : Emitted src reserve options) (memory : imageTSO.St) :
     Cfg imageTSO (Res T) :=
   ⟨memory, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
+
+/-- Every function in the actual payload has the ordinary IR semantics
+    of its typed model body at every representable depth. The same code
+    table is used for all calls, including indirect and recursive calls. -/
+def Emitted.IRFunctionSemantics (output : Emitted src reserve options) (memory : Runner.Mem) : Prop :=
+  let D := declOf output.compiled.unit
+  ∃ (code : D.Fn → List II) (frameWords : Nat),
+    FB + (output.image.depth + 1) * frameWords ≤ output.image.Ks ∧
+    (∀ fn, ∃ top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y fn =
+      some (code fn, top) ∧ top ≤ frameWords ∧
+      CodeAt memory (BitVec.ofNat 64 (output.image.A fn)) (code fn) ∧
+      output.image.A fn + 16 * (code fn).length ≤ output.image.fp0) ∧
+    ∀ (oracle : Orakel D), TorOK output.image.Y oracle → SichtOK oracle →
+      ∀ depth, depth < 2 ^ 64 →
+        FunSpec output.image.Y output.image.A code
+          (rufAt output.compiled.program oracle output.image.passes depth)
+          (BitVec.ofNat 64 depth) ((depth + 1) * frameWords)
+
+theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) :
+    output.IRFunctionSemantics memory.1.m := by
+  obtain ⟨_, _, _, _, packed, _, _, startup, _⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
+  obtain ⟨functions, body, spawns, layout, code, _, entry, roots⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  have exactBytes : BytesAt memory.1.m codeBase (output.image.code.flatMap encII ++
+      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
+    simpa only [packed, Option.getD_some, List.append_nil] using startup
+  rw [code, entry, roots] at exactBytes
+  obtain ⟨lowered, located, _, _, _⟩ := layout.code exactBytes
+  refine ⟨_, maxTop functions, ?_, ?_, ?_⟩
+  · have enough : FB ≤ output.image.Ks := Nat.le_trans (Nat.le_add_right _ _) layout.hroom
+    have reduced : 0 < output.image.depth := layout.depth_pos
+    have quotient : output.image.depth + 1 = (output.image.Ks - FB) / maxTop functions := by
+      rw [layout.hdepth, depthOf] at reduced ⊢
+      omega
+    rw [quotient]
+    have used := Nat.div_mul_le_self (output.image.Ks - FB) (maxTop functions)
+    omega
+  · intro fn
+    obtain ⟨top, built, small⟩ := lowered fn
+    exact ⟨top, built, small, located fn⟩
+  · intro oracle gates visibility depth fitted
+    letI := gates
+    letI := visibility
+    exact layout.funSpec exactBytes depth fitted
 
 /-- Segment refinement at the compiler boundary. A segment may contain
     an arbitrary number of internal IR steps and at most one host event.
@@ -87,7 +138,7 @@ def Stage0Correct : Prop :=
         HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
         ImageFutexAnswers → SichtOK O →
         ∀ (memory : imageTSO.St), LoadedIRImage output memory →
-        ∃ refinement : ImageIRRefinement output E O memory,
+        output.IRFunctionSemantics memory.1.m ∧ ∃ refinement : ImageIRRefinement output E O memory,
           (∀ finish events count, ProcessPrefix imageTSO actI (output.irEntry memory) events count finish →
             ∃ state, refinement.related events finish state ∧
               ImageReach output E O (imageSourceStart E) state ∧ ImageGoalAt output E O state) ∧
@@ -122,7 +173,7 @@ theorem stage0_correct_of_ir_refinement
       (reached : ImageReach output E oracle (imageSourceStart E) state) : ImageGoalAt output E oracle state :=
     gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts oracle
       foreign hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ reached
-  refine ⟨refinement, ?_, ?_⟩
+  refine ⟨loaded.function_semantics, refinement, ?_, ?_⟩
   · intro finish events count run
     obtain ⟨state, matched, reached⟩ := refinement.follow run refinement.initial
     exact ⟨state, matched, reached, goal reached⟩
