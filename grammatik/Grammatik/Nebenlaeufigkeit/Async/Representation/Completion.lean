@@ -1,8 +1,10 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
+public import Grammatik.Nebenlaeufigkeit.Async.CancelTask
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
+import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 
 @[expose] public section
 
@@ -81,44 +83,57 @@ theorem cancelCallBlock_simulates {Γ : Ctx} {l : Bool}
   · exact cancelEpilogue_encoded inventory empty oracle passes calls state _ world after
       environment environment ran
 
-/-- The state-specific child cleanup, the ordinary release and the
-    final clear all run in order. The represented source is the value
-    the dispatcher reads, and the returned world is the one left by
-    both cleanup stages. -/
+/-- The generated block traverses the owned child tree selected from the
+    saved record, releases the remaining ownership and clears the state. -/
+def cancelBody {Γ : Ctx} {l : Bool}
+    (table : (i : Fin (phases f).length) → PhaseDropPlan D types V Λ ((phases f).get i))
+    (state : Var Γ (stateType types f)) (release : Stmt D V l Γ Λ []) :
+    Block D V l Γ Λ [] :=
+  .cons (dropChildren table state) (cancelEpilogue types f state release)
+
+/-- For every encoded state, the generated block follows the recursive
+    cleanup model. A child failure skips release. A normal release
+    produces the Cancelled representation and discharges ownership
+    according to the semantic drop contract. -/
 theorem cancelBody_simulates {Γ : Ctx} {l : Bool}
     (inventory : Inventory D) (empty : inventory.owned Phase.cancelled = [])
+    (table : (i : Fin (phases f).length) → PhaseDropPlan D types V Λ ((phases f).get i))
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (state : Var Γ (stateType types f))
-    (children : (i : Fin (stateCases types f).length) →
-      Block D V l (ArmCtx Γ ((stateCases types f).get i)) Λ Λ)
-    (release : Stmt D V l Γ Λ []) (source : State (Value D) (Child D types))
-    (before between after : World D) (env updated final : Env D Γ)
+    (state : Var Γ (stateType types f)) (release : Stmt D V l Γ Λ [])
+    (source : State (Value D) (Child D types)) (before : World D) (env : Env D Γ)
     (represented : Inv f types inventory source (env.get state))
-    (childRan :
-      let stored := (env.get state).1
-      (execBlock oracle passes calls (children stored.1) before
-        (armEnv (Fall.toNutzlast D.Fn D.passt (stateCases types f) stored.1 stored.2) env)).schrumpfArm
-          ((stateCases types f).get stored.1) = .ok between updated)
-    (released : execStmt oracle passes calls release between updated = .ok after final)
     (own : List Nat → World D → Prop)
     (drop : State (Value D) (Child D types) → World D → List Nat × World D)
     (duty : DropDuty own drop) (once : source.marks.Nodup) (owned : own source.marks before)
-    (sameWorld : (drop source before).2 = after) :
-    encode D types f source = some (env.get state) ∧
-      cancelWith drop source before = (source.marks, .cancelled, after) ∧ own [] after ∧
-      execBlock oracle passes calls (cancelBody types f state children release) before env =
-        .ok after (final.set state (cancelledValue types f D)) ∧
-      encode D types f State.cancelled = some (cancelledValue types f D) := by
-  have cleanup := duty source before once owned
-  have begins := cancelBody_exec types f oracle passes calls state children release before env
-  dsimp only at childRan begins
-  rw [childRan] at begins
-  obtain ⟨cleared, encoded⟩ := cancelEpilogue_encoded inventory empty oracle passes calls state release
-    between after updated final released
-  exact ⟨inv_encoded f types inventory source _ represented,
-    by simp only [cancelWith, cleanup.1, sameWorld], sameWorld ▸ cleanup.2.2,
-    begins.trans cleared, encoded⟩
+    (sameWorld : ∀ index reached after final, (table index).run calls source before = some (.ok reached) →
+      execStmt oracle passes calls release reached env = .ok after final →
+      (drop source before).2 = after) :
+    ∃ index, ∃ outcome : Except (Logik D ⊕ Hardware D) (World D),
+      MarksRep inventory ((phases f).get index) source ∧
+      (table index).run calls source before = some outcome ∧
+      (∀ failure, outcome = .error failure →
+        execBlock oracle passes calls (cancelBody table state release) before env = dropOutcome env (.error failure)) ∧
+      ∀ between after final, outcome = .ok between →
+        execStmt oracle passes calls release between env = .ok after final →
+        cancelWith drop source before = (source.marks, .cancelled, after) ∧ own [] after ∧
+        execBlock oracle passes calls (cancelBody table state release) before env =
+          .ok after (final.set state (cancelledValue types f D)) ∧
+        Inv f types inventory State.cancelled ((final.set state (cancelledValue types f D)).get state) := by
+  obtain ⟨index, _, outcome, _, marks, dropped, executed⟩ :=
+    dropChildren_simulates table inventory state oracle passes calls before env source represented
+  refine ⟨index, outcome, marks, dropped, ?_, ?_⟩
+  · intro failure failed
+    rw [cancelBody, execBlock, executed, failed]
+    cases failure <;> rfl
+  · intro between after final returned released
+    have cleanup := duty source before once owned
+    have same := sameWorld index between after final (dropped.trans (congrArg some returned)) released
+    refine ⟨by simp only [cancelWith, cleanup.1, same], same ▸ cleanup.2.2, ?_, ?_⟩
+    · rw [cancelBody, execBlock, executed, returned]
+      exact cancelEpilogue_success types f oracle passes calls state release between after env final released
+    · rw [Env.get_set_same]
+      exact cancelled_inv types f inventory empty
 
 def completedIndex (types : TypeResolution) (f : AsyncFn) :
     Fin (stateCases types f).length :=

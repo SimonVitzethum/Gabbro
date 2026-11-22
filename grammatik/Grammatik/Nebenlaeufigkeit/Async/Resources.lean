@@ -96,34 +96,4 @@ public theorem cancelEpilogue_failure (types : TypeResolution) (f : AsyncFn)
       .logik failure := by
   simp only [cancelEpilogue, execBlock, failed]
 
-/-- The generated cancellation begins with the actual saved-state arm.
-    Child cleanup can change the world. Only its normal return allows
-    the resource-consuming epilogue to run in that updated world. -/
-public theorem cancelBody_exec (types : TypeResolution) (f : AsyncFn)
-    (oracle : Orakel D) (passes : Nat)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (state : Var Γ (stateType types f))
-    (children : (i : Fin (stateCases types f).length) →
-      Block D V l (ArmCtx Γ ((stateCases types f).get i)) Λ Λ)
-    (release : Stmt D V l Γ Λ [])
-    (world : World D) (env : Env D Γ) :
-    let stored := (env.get state).1
-    let child := (execBlock oracle passes calls (children stored.1) world
-      (armEnv (Fall.toNutzlast D.Fn D.passt (stateCases types f) stored.1 stored.2) env)).schrumpfArm
-        ((stateCases types f).get stored.1)
-    execBlock oracle passes calls (cancelBody types f state children release) world env =
-      match child with
-      | .ok after updated => execBlock oracle passes calls (cancelEpilogue types f state release) after updated
-      | result => result := by
-  intro stored child
-  have selected : execStmt oracle passes calls
-      (dispatch (stateCases types f) (stateDiscriminant types f (.var state)) children) world env =
-      child := by
-    simp only [dispatch, execStmt]
-    change execArms oracle passes calls (dispatchArms (stateCases types f) children) stored world env = child
-    exact dispatchArms_exec oracle passes calls world env _ children stored
-  simp only [cancelBody, execBlock, selected]
-  generalize child = result
-  cases result <;> rfl
-
 end Gabbro.Grammatik.Async

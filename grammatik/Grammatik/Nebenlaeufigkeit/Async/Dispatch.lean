@@ -115,16 +115,4 @@ public theorem stateExpr_dispatch (types : TypeResolution) (f : AsyncFn)
     Block D V l Γ Λ [] :=
   .cons release (.cons (.assignVar state (cancelledExpr types f)) .nil)
 
-/-- Destruction sees the full payload in each arm. After those hooks, an
-    ordinary resource-consuming statement must discharge Λ. Only THEN may the
-    value be overwritten with Cancelled. There is no generic empty cleanup. -/
-@[expose] public def cancelBody (types : TypeResolution) (f : AsyncFn)
-    (state : Var Γ (stateType types f))
-    (children : (i : Fin (stateCases types f).length) →
-      Block D V l (ArmCtx Γ ((stateCases types f).get i)) Λ Λ)
-    (release : Stmt D V l Γ Λ []) : Block D V l Γ Λ [] :=
-  .cons (dispatch (stateCases types f)
-    (stateDiscriminant types f (.var state)) children)
-    (cancelEpilogue types f state release)
-
 end Gabbro.Grammatik.Async
