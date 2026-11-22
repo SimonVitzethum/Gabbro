@@ -261,6 +261,12 @@ theorem runP_runM {r r' : Res T} {m m1 : Mem} (h : RunP r m r' m1) : ∀ {t : T}
     intro t e
     exact .ask hm (ih e)
 
+private theorem RunM.toPrefix {r : Res T} {before after : Mem} {target : T}
+    (run : RunM r before target after) : RunP r before (.next target) after := by
+  induction run with
+  | next => exact .refl _ _
+  | ask answer _ ih => exact .ask answer ih
+
 /-- One more instruction at the end of a memory-only run. -/
 theorem starM_snoc {n : Nat} {t t1 : T} {m m1 : Mem} (h : StarM n t m t1 m1) :
     ∀ {t2 : T} {m2 : Mem}, RunM (step t1) m1 t2 m2 → StarM (n + 1) t m t2 m2 := by
@@ -292,6 +298,38 @@ private theorem RunP.permissions {r r' : Res T} {before after : Mem}
   | ask answered _ ih =>
     have stable := memAns_nurIn answered
     exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
+
+/-- Any number of complete memory instructions in the actual IR
+    consumes the corresponding restricted reference interval. Every
+    effect still awaiting a response remains in the reference. -/
+theorem StarM.align_reference {taken : Nat} {start current : T} {actual now : Mem}
+    {reads writes : W → Prop} (part : StarM taken start actual current now) :
+    ∀ {count : Nat} {reference finish : Mem} {target : T},
+      IRReference count start reference target finish → taken ≤ count →
+      (∀ byte, reference.rd byte = true → reads byte) →
+      (∀ byte, reference.wr byte = true → reads byte ∧ writes byte) →
+      MaskedAgreement reads writes reference actual →
+      ∃ cut, IRReference (count - taken) current cut target finish ∧
+        MaskedAgreement reads writes cut now ∧ cut.rd = reference.rd ∧ cut.wr = reference.wr := by
+  induction part with
+  | refl =>
+    intro count reference finish target ran _ _ _ agrees
+    exact ⟨reference, by simpa only [Nat.sub_zero] using ran, agrees, rfl, rfl⟩
+  | next executed _ tail =>
+    intro count reference finish target ran within readable writable agrees
+    cases ran with
+    | start => exact (Nat.not_succ_le_zero _ within).elim
+    | extend first remaining =>
+      obtain ⟨cut, aligned, stable⟩ := (RunM.toPrefix executed).align_reference first
+        (blind_step _) readable writable agrees
+      have finished := aligned.remaining_run first
+      cases finished
+      obtain ⟨rd, wr⟩ := aligned.permissions
+      obtain ⟨endpoint, rest, memory, rd', wr'⟩ := tail remaining (Nat.le_of_succ_le_succ within)
+        (fun byte permission => readable byte (by simpa only [rd] using permission))
+        (fun byte permission => writable byte (by simpa only [wr] using permission)) stable
+      exact ⟨endpoint, by simpa only [Nat.succ_sub_succ_eq_sub] using rest,
+        memory, rd'.trans rd, wr'.trans wr⟩
 
 /-- One successful restricted run characterizes all memory requests of
     the actual IR up to the corresponding instruction boundary. The
