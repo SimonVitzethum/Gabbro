@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootEntry
+import Stage0.Senke.Bild.Mehr.Ort.Ort
 import Stage0.Senke.Bild.Ruf.RootExit
 import Stage0.Senke.Images.CheckSpawn
 import Stage0.Senke.Bild.StartG
@@ -68,6 +69,63 @@ theorem Emitted.root_requires_local (output : Emitted src reserve options)
     · exact @of_decide_eq_true _ (Classical.propDecidable _) localRead
   · exact (unguarded lock guarded).elim
   · exact ((shared.2.1 root).1 reads).elim
+
+/-- A scheduled GX step of another thread leaves the root's entry
+    requirement unchanged, even when it presents shared atomic values. -/
+theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (hardware : HardwareAnnahmenHw O E.Q)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread issuer : Nat} (different : thread ≠ issuer)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root)
+    {before after : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV E.P E.ws) (imageSourceStart E).m before)
+    (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV E.P E.ws) before issuer after) :
+    ReqAmEintritt E.P.mitRuhe (some root.1) (after.speicher.welt []) (envR root.2) ↔
+      ReqAmEintritt E.P.mitRuhe (some root.1) (before.speicher.welt []) (envR root.2) := by
+  let fs := fsRuhe output.fsA.1
+  let init := initRuhe E.starts
+  let graph := kVon E.P.mitRuhe fs init
+  have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware.2.2.2 accepted).1
+  have transferred := akzeptiertSpecX_mitRuhe E.P output.fsA.2 valid
+  have starts := startZulaessig_aus E output.fsA.1 duties (laufzeit_initRuhe E)
+  have noLocks (i : Nat) : (declOf output.compiled.unit).mitRuhe.haelt (init i).1 = [] := by
+    rcases starts.wurzel i with listed | idle
+    · exact (transferred.wurzeln _ listed).1
+    · exact idle.1
+  have good := gutO_mitRuhe hardware.1
+  have facts := fadenFakten_GX (K := graph) good (fsRuhe_voll output.fsA.2)
+    (fun _ shared => shared.1.1) (speicherR E.sp0) init (startExklusiv_ohne_haelt init noLocks)
+    (fun i => transferred.abg (init i).1) (fun i => reachB_wurzel E.P.mitRuhe fs (init i).1) reached
+  have listed : root.1 ∈ E.ws := by
+    unfold Einheit.ws
+    exact List.mem_map_of_mem (List.mem_append_left _ (List.mem_append_left _ (List.mem_of_getElem? declared)))
+  have entry : (init thread).1 = some root.1 := by
+    change (initRuhe E.starts thread).1 = _
+    rw [initRuhe, declared]
+  have rootInGraph : graph thread (some root.1) = true := by
+    rw [← entry]
+    exact reachB_wurzel E.P.mitRuhe fs (init thread).1
+  have agreement (carrier : _) (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte) :
+      TraegerGleich after.speicher before.speicher carrier := by
+    have original : carrier ∈ (E.P.requires root.1).orte := (requires_mitRuhe_orte E.P root.1) ▸ read
+    have localRead := output.root_requires_local hardware.2.2.2 accepted listed original
+    have apart := getrenntK_of starts (getrennt_mitRuhe E.P output.fsA.2 valid.abg localRead)
+    have noWrite := apart thread issuer different (some root.1) rootInGraph
+      (List.mem_append_left _ (fuss_req E.P.mitRuhe (some root.1) read))
+      (before.faeden issuer).kopf.f (facts.graph issuer _ List.mem_cons_self)
+    have notShared : ¬ GeteiltV E.P E.ws carrier := fun shared => (shared.2.1 root.1).1 original
+    obtain ⟨view, middle, step, presents, changed, kept, _, _, _⟩ := stepped
+    exact traegerGleich_trans (gx_aussen presents changed kept carrier notShared)
+      (traegerGleich_trans (schritt_traeger good step carrier (.inr noWrite)) (presents carrier notShared))
+  have worlds : OrtGleich (fun carrier => carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte)
+      (after.speicher.welt []) (before.speicher.welt []) :=
+    ⟨rfl, fun table => agreement (.inl table), fun global => agreement (.inr global)⟩
+  unfold ReqAmEintritt
+  rw [worlds.wert _ (fun _ read => read) (envR root.2)]
 
 /-- Main enters the same depth initialization protocol through its
     own boot frame after the emitted clone sites. -/
