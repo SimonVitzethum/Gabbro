@@ -228,4 +228,69 @@ theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
   refine ⟨after, ?_, memory, view, other⟩
   simpa only [onThread, List.set_set, List.nil_append] using read.trans result
 
+/-- The call instruction reads its actual target, buffers the return PC
+    and caller frame, and enters the callee with its decoded frame pointer. -/
+theorem tso_call_prefix {layout : Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {caller : T}
+    {targetSlot frameSlot unused : BitVec 32} {target : W}
+    (running : before.ths[i]? = some (some (.next caller)))
+    (instruction : InsAt (before.ms.1.view i) caller.pc 20 targetSlot frameSlot unused)
+    (address : (before.ms.1.view i).rd64 (slot caller.fp (sx targetSlot)) = some target)
+    (writablePC : Mem.all before.ms.1.m.wr (slot caller.fp (sx frameSlot)) 8 = true)
+    (writableFP : Mem.all before.ms.1.m.wr (slot caller.fp (sx frameSlot) + 8) 8 = true) :
+    let frame := slot caller.fp (sx frameSlot)
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [] 7
+        ⟨after, before.ths.set i (some (.next ⟨target, frame⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view i = Mem.write (Mem.write (before.ms.1.view i) frame 8 (nxt caller).pc.toNat)
+        (frame + 8) 8 caller.fp.toNat ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  intro frame
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) := ⟨before.ms, before.ths.set i (some r)⟩
+  let enter : T := ⟨target, frame⟩
+  let storeFrame := wr64 (frame + 8) caller.fp enter
+  let stores (base : W) (callee : W) : Res T :=
+    .ask (.wr (slot caller.fp base) (nxt caller).pc) fun answer => opt answer fun _ =>
+      wr64 (slot caller.fp base + 8) caller.fp ⟨callee, slot caller.fp base⟩
+  let decodeFrame (callee : W) := f2 caller (fun base => stores base callee)
+  let readTarget (index : BitVec 32) := ld caller (sx index) decodeFrame
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step caller)) := .priv running rfl
+  have decoded : ProcessStep (TSO layout) actI (onThread (op 20 caller)) [] (onThread (readTarget targetSlot)) := by
+    have field : rdN (before.ms.1.view i) 4 (caller.pc + 4) = some (targetSlot.setWidth 64) := by
+      simp only [rdN, instruction.f1, Option.map_some]
+    simpa [onThread, op, f1, rd32, readTarget, decodeFrame, stores, nxt] using
+      tso_read_step before inside (fun answer => opt answer fun pair => readTarget (pair.1.setWidth 32)) field
+  have selected : ProcessStep (TSO layout) actI (onThread (readTarget targetSlot)) [] (onThread (decodeFrame target)) :=
+    tso_read_step before inside (width := 8) (address := slot caller.fp (sx targetSlot))
+      (fun answer => opt answer fun pair => decodeFrame pair.1) address
+  have chosen : ProcessStep (TSO layout) actI (onThread (decodeFrame target)) []
+      (onThread (stores (sx frameSlot) target)) := by
+    have field : rdN (before.ms.1.view i) 4 (caller.pc + 8) = some (frameSlot.setWidth 64) := by
+      simp only [rdN, instruction.f2, Option.map_some]
+    simpa [onThread, decodeFrame, f2, rd32] using
+      tso_read_step before inside (fun answer => opt answer fun pair => stores (sx (pair.1.setWidth 32)) target) field
+  let afterDecode := onThread (stores (sx frameSlot) target)
+  have prefix : ProcessPrefix (TSO layout) actI before [] 5 afterDecode :=
+    .cons started (.cons (tso_fetch_opcode before inside 20 caller instruction.op (by decide))
+      (.cons decoded (.cons selected (.cons chosen (.nil _)))))
+  obtain ⟨first, savedPC, committed, firstView, firstOthers⟩ :=
+    tso_write_step (before := afterDecode) (List.getElem?_set_self inside) writablePC
+  let afterPC : Cfg (TSO layout) (Res T) := ⟨first, before.ths.set i (some storeFrame)⟩
+  have savePC : ProcessStep (TSO layout) actI afterDecode [] afterPC := by
+    simpa only [afterDecode, onThread, stores, opt_some, frame, enter, storeFrame, List.set_set] using savedPC
+  have secondWritable : Mem.all afterPC.ms.1.m.wr (frame + 8) 8 = true := by
+    change Mem.all first.1.m.wr _ 8 = true
+    rw [committed]
+    exact writableFP
+  obtain ⟨after, savedFP, finalMemory, finalView, finalOthers⟩ :=
+    tso_write_step (before := afterPC) (List.getElem?_set_self inside) secondWritable
+  have saveFP : ProcessStep (TSO layout) actI afterPC []
+      ⟨after, before.ths.set i (some (.next enter))⟩ := by
+    simpa only [afterPC, storeFrame, wr64, opt_some, List.set_set] using savedFP
+  exact ⟨after, prefix.trans (.cons savePC (.cons saveFP (.nil _))),
+    finalMemory.trans committed, finalView.trans (congrArg (fun m => Mem.write m (frame + 8) 8 caller.fp.toNat) firstView),
+    fun j different => (finalOthers j different).trans (firstOthers j different)⟩
+
 end Gabbro.Stage0.Senke.BildMehr
