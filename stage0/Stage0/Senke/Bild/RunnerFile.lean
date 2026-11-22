@@ -412,6 +412,40 @@ theorem image_plain_gate_preserves_future_frame {src : String} {reserve : Nat} {
   exact ⟨(bytes byte (fun inside => outside inside.1)).symm,
     (congrFun read byte).symm, (congrFun write byte).symm⟩
 
+/-- A result-area gate preserves every other stack when the destination
+    belongs to the issuing thread's reservation. -/
+theorem image_area_gate_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {before after : imageTSO.St}
+    {issuer future low high : Nat} {fp : W} {request : Req} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1) (different : future ≠ issuer)
+    (step : imageTSO.ans before issuer (.sys request) answer after)
+    (destination : ∀ byte, inSlots fp low high byte → imageStackFootprint output issuer byte)
+    (gate : request ≠ cloneReq →
+      Kern.ans request (before.1.view issuer) answer (after.1.view issuer) →
+      AgreeW output.image.Y fp low high (before.1.view issuer) (after.1.view issuer)) :
+    GleichAuf (imageStackFootprint output future) before.1.m after.1.m := by
+  apply image_host_preserves_future_frame stores different step
+  intro ordinary answered byte inFrame
+  have agreement := gate ordinary answered
+  have outside := Nat.not_le_of_lt (imageStackFootprint_before_world inFrame)
+  have outsideArea : ¬ inSlots fp low high byte := fun inside =>
+    different (imageStackFootprint_disjoint inFrame (destination byte inside))
+  exact ⟨(agreement.b byte outsideArea (fun world => outside world.1) (fun lock => outside lock.1)).symm,
+    (congrFun agreement.rd byte).symm, (congrFun agreement.wr byte).symm⟩
+
+/-- The explicit futex boundary preserves the future frame byte for byte. -/
+theorem image_futex_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {before after : imageTSO.St}
+    {issuer future : Nat} {address value mode : W} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1) (different : future ≠ issuer)
+    (host : ImageFutexAnswers) (emitted : mode = 128 ∨ mode = 129)
+    (step : imageTSO.ans before issuer (.sys (futexReq address mode value)) answer after) :
+    GleichAuf (imageStackFootprint output future) before.1.m after.1.m := by
+  apply image_host_preserves_future_frame stores different step
+  intro _ answered byte _
+  rw [(host.unchanged address mode value answer _ _ emitted answered).1]
+  exact GleichAt.refl _ byte
+
 /-- The next allocated slot sees exactly the shared memory, without
     forwarding writes from another thread's buffer. -/
 theorem ImageIdleBuffers.fresh_view {θ : Type} {before : Cfg imageTSO θ}
