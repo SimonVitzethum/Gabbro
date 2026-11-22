@@ -121,9 +121,9 @@ theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
         ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
 
 private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
-    {before expected : Cfg (SC layout) (Res T)} {ending : Ende}
+    {before expected : Cfg (SC layout) (Res T)} {ending : Ende} {events : List Ev}
     (reference : SCSchritt layout 0 before expected) (one : before.ths.length = 1)
-    (actual : Tr (SC layout) actI before [] ending 1) :
+    (actual : Tr (SC layout) actI before events ending 1) (quiet : events = []) :
     ending = .lauf := by
   cases actual with
   | tau invalid _ => cases invalid
@@ -144,6 +144,7 @@ private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
     cases control <;> simp only [actI, reduceCtorEq, Res.ask.injEq] at asked
     obtain ⟨_, rfl⟩ := asked
     cases stopped
+  | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
 
 /-- An actual silent SC run cannot stop while its certified memory
     reference has a next step. This excludes both machine faults and
@@ -155,14 +156,14 @@ theorem SCMemoryPrefix.no_terminal {layout : Runner.Beweis.Lay}
     (one : before.ths.length = 1) (blind : AlleBlind before.ths)
     (within : taken ≤ available) : ending = .lauf := by
   by_contra stopped
-  obtain ⟨boundary, earlier, last, steps, prefix, terminal, events, rfl⟩ := actual.split_stop stopped
+  obtain ⟨boundary, earlier, last, steps, takenPath, terminal, events, rfl⟩ := actual.split_stop stopped
   obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
-  have remaining := reference.consume prefix one blind (by omega)
+  have remaining := reference.consume takenPath one blind (by omega)
   have active : 0 < available - steps := by omega
   cases remaining with
   | nil => omega
   | cons next _ =>
-    exact stopped (sc_memory_step_continues next (prefix.silent_slots rfl |>.trans one) terminal)
+    exact stopped (sc_memory_step_continues next (takenPath.silent_slots rfl |>.trans one) terminal rfl)
 
 theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
     {before middle after : Cfg (SC layout) (Res T)} {first second : Nat}
