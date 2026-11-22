@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
+import Grammatik.Parser.Elab.Uebersetze.Kontext.SyntaxEquality
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -50,8 +51,10 @@ variable {D : Deklaration} {Λ : List (Res D)}
       ⟨.there tail.val, fun inputs => by
         cases inputs with
         | cons value following =>
-          simpa only [initialValues, List.lookup_cons, beq_eq_false_iff_ne.mpr same, Bool.false_eq_true, ite_false,
-            Env.get] using tail.property following⟩
+          exact (show (initialValues types ((label, declared) :: rest) (.cons value following)).lookup name =
+            (initialValues types rest following).lookup name by
+              simp only [initialValues, List.lookup_cons, beq_eq_false_iff_ne.mpr same, Bool.false_eq_true,
+                ite_false]).trans (tail.property following)⟩
 
 /-- Generate the ordinary expressions that fill the live input slots.
     A live declaration with no matching input yields an explicit error. -/
@@ -68,14 +71,12 @@ variable {D : Deklaration} {Λ : List (Res D)}
       if found : f.params.lookup name = some type then
         let selected := inputVar (D := D) types name type f.params found
         let code := Expr.case [none, some (types.ordinary type)] (presentIndex _) (.val (.var selected.val))
-        .ok ⟨.cons code tail.val, by
-            simp only [Args.orte, Expr.orte, NutzlastExpr.orte, code, tail.property.1, List.nil_append],
+        .ok ⟨.cons code tail.val, tail.property.1,
           fun world env => .live used (selected.property env) (valueAt_typed D _ _) (tail.property.2 world env)⟩
       else .error "async: a live entry local has no typed input"
     else
       let code := Expr.case [none, some (types.ordinary type)] ⟨0, Nat.zero_lt_succ 1⟩ .empty
-      .ok ⟨.cons code tail.val, by
-          simp only [Args.orte, Expr.orte, NutzlastExpr.orte, code, tail.property.1, List.nil_append],
+      .ok ⟨.cons code tail.val, tail.property.1,
         fun world env => .dead used (tail.property.2 world env)⟩
 
 /-- The ordinary constructor produces the actual initial async state.
@@ -92,15 +93,17 @@ public structure Constructor (types : TypeResolution) (f : AsyncFn) (inventory :
   if unique : (fieldNames f).Nodup then
     if declared : (liveAt f (.running 0)).all (fieldNames f).contains = true then
       let slots ← initialSlotArgs (Λ := Λ) types f inventory (f.params ++ f.fields)
-      let frame := Expr.prod (types.recordName [0]) slots.val
-      .ok ⟨runningExpr types f 0 (Nat.zero_le _) frame, by
-          rw [runningExpr_reads]; exact slots.property.1, by
+      let frame : Expr D (parameterTypes types f.params) Λ (frameType types f) :=
+        Expr.prod (types.recordName [0]) slots.val
+      .ok ⟨runningExpr types f 0 (Nat.zero_le _) frame,
+        (runningExpr_reads types f 0 _ frame).trans slots.property.1, by
         intro world env
-        rw [runningExpr_eval]
-        apply runningValue_inv
-        · exact ⟨slots.property.2 world env,
+        have saved : FrameRep D types f (.running 0) (entryFrame types f inventory env)
+            (eval world frame world env) :=
+          ⟨slots.property.2 world env,
             fun name member => List.contains_iff_mem.mp (List.all_eq_true.mp declared name member), unique⟩
-        · rfl⟩
+        exact (runningExpr_eval types f 0 _ frame world world env).symm ▸
+          runningValue_inv types f inventory 0 _ _ _ saved rfl⟩
     else .error "async: a live entry name has no declared frame slot"
   else .error "async: duplicate entry frame slot"
 

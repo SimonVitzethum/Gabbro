@@ -148,10 +148,18 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
   have noBindings : expressionBindings function (.lit value) = [] := by
     simp only [expressionBindings, expressionNames, List.contains_nil, List.filter_eq_nil_iff,
       Bool.false_eq_true, not_false_eq_true, implies_true]
-  simp only [resolveExpression, expressionParameters, noBindings, List.mapM_nil, pure, Except.pure]
-  simp only [uWertBody, uRechne, uWertBlatt, lowWertE, LowSide.wert, FrameLocals, List.map_nil,
-    CanonicalExpression.bound, BoundExpression.ofExpr]
-  exact ⟨_, rfl, rfl, rfl⟩
+  have parameters : expressionParameters ctx function (.lit value) = .ok [] := by
+    simp only [expressionParameters, noBindings, List.mapM_nil, pure, Except.pure]
+  have read : uWertBody (expressionContext ctx function (.lit value) []) (.lit value) =
+      .ok (.lit (Int.ofNat value)) := by
+    simp only [uWertBody, uRechne, uWertBlatt]
+  let term : LowWert u [] Λ := ⟨.int value value, .lit value⟩
+  have lowered : lowWertE u [] Λ (expressionFunction fn []) none (.lit value) = .ok term := by
+    simp only [lowWertE, LowSide.wert, term]
+  let resolved : CanonicalExpression u Λ ctx fn function (.lit value) :=
+    ⟨[], .lit value, term, parameters, read, lowered⟩
+  refine ⟨resolved, ?_, rfl, rfl⟩
+  simp only [resolveExpression, parameters, read, FrameLocals, List.map_nil, lowered, resolved]
 
 /-- The poll entry is private to the expansion and cannot collide with
     any source identifier. The same name is used by all child-call sites. -/
