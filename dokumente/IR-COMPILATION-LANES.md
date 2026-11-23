@@ -1,5 +1,10 @@
 # Gabbro-to-IR compilation lanes
 
+Machine-access source policy (owner, 2026-11-23): assembly bodies, `prim fn`, `raw fn` and
+`entrust` are removed and have only the reserved-word refusals `N594`–`N597`. Any older
+lane below proposing source assembly or entrust admission is superseded by the checked
+language constructs in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
+
 ## Native CPU floating point (owner decisions, 2026-11-04 and 2026-11-05)
 
 This decision supersedes the software-floating-point implementation described in the
@@ -2660,12 +2665,8 @@ and isolated artifacts. No build was performed by this document task.
   protection and any barriers; names alone confer neither disjointness nor
   TOCTOU protection. Recommend `own` remain the C09 exclusive loan/move, not an
   extra copyable write bit; this reuses the existing C09 ownership question.
-- **C14 guest meaning:** is existing `entrust` intended to admit an ordinary
-  userspace isolation-service invocation when its fields match a proved ABI?
-  Recommend that bounded interpretation, with software isolation/start behavior
-  proved under C08 and only actual hardware in the profile. Unrestricted guest
-  execution/register-state entry remains excluded. Profile key equality and
-  shipping/test selection already have stated meanings; they are not new choices.
+- **C14 guest meaning:** the owner removed `entrust` on 2026-11-23. The generic
+  guest/isolation model remains; future source constructs follow LOW-LEVEL-SYNTAX-PLAN.
 - **C15 core/reduction meaning:** is the destination the core sampled at update
   entry or the core executing the store, and may reads synchronize? Recommend
   sample-once at entry and per-cell guarded live sampling, with exact reduction
@@ -3945,10 +3946,10 @@ have been split: implementation must use the current modules named here.
 | Providers | `Hardware/Anbieter/Region.lean`: `Strecke`, `Zust`, `Gut`, `PStep.hole/fuell/zurueck/gib`, `Lauf`, `gut_nach`, `lauf_gut`, `lebend_getrennt`, `hole_neu_null`, `ram_gefuellt`, and overlap/outside-commit defect witnesses. | `Nat` spans and a resident-bit map, with freshness/alignment as step premises; no finite physical/virtual alias or epoch model. Its header classifies software-provider promises inconsistently as hardware and user logic. Derive software realization from the actual implementation, retaining the useful transition relation. |
 | C08 software boundary | `Syntax/Syntax/Teil1.lean`: `AxOrigin`, `Deklaration.axHerkunft/axBeleg/asignatur`. `Logik/Ruf/FremdRuf/T4–T6.lean`: `Konzession`, `BoundaryRecord`, `GrantInventory`, `ProviderOk/ProviderRealisiert`, `ForeignPflicht`, `ProviderTreueG`, `GrantsStart`, `ProviderBindung`. | Existing histories and contract predicates are foundations, not an ASM instruction proof. Unresolved origin still reads as hardware in the provisional split. The new certified domain must refuse unresolved provenance and discharge software frame, trace, extent and initialization facts. |
 | Present goal boundary | `Zielsatz/Kern/Spec.lean` is the ONE ASSUMPTION LIST; definitions are in `Spec/Teil1.lean` (`NutzerPflicht`, `HardwareAnnahmen`, `Laufzeit`) and `Spec/Teil2.lean` (`NutzerPflichtA`). `Logik/Ruf/FremdRuf/T8.lean` and `Zielsatz/Atomar/GabbroZielFremd.lean` split `AxVertragOSw` from `AxVertragOHw`; `gabbro_ziel_fremd` recombines the old premise. | The split still assumes whole `GutO`; it does not certify instructions, loader, physical ownership or software extents. Do not label that preparatory theorem complete low-level support. |
-| Canonical ASM syntax | `Parser/Item/ElementTief.lean` imports `Kopf/Teil2.lean`: `SItemTief.asmT : FnSig → String → SItemTief`; `Defs1.lean` captures text. `Uebersetze/Einheit/Signatures.lean` treats ASM signatures as foreign; `Pruefung/Elaborate.lean` gathers their names. | Text is opaque. No decoded body, operand-instance identity or correctness certificate reaches G. `Modules/Substitution.lean` refuses raw-body substitution. Existing signature export is not body refinement. |
+| Removed assembly syntax | `SItemTief` has no assembly constructor. `Defs1.lean` refuses `= asm` as `N594`. | No instruction text reaches elaboration, substitution or export. Checked language constructs replace this path; see LOW-LEVEL-SYNTAX-PLAN. |
 | Entry / boot syntax | `ElementTief/Kopf/Teil1.lean`: `SEingang` carries vector/via, arch, `regIn/regOut`, `erhaelt/kills`, stack, per-core/IST/nesting and dispatch. `Kopf/Teil2.lean`: `entryT`, `bootT` with steps and dispatch; parsing in `Defs4.lean` and `Defs4a.lean`. `Uebersetze/Teil/Teil11.lean` extracts entry metadata. | No generic pre-stack entry proof or instruction-by-instruction boot establishment of mappings, initialization, root arguments and privilege. Existing interrupt declarations/masks are software scheduling resources, not a proof of CPU state. |
-| Entrust | `SItemTief.trustT` stores named code, arch, registers, stack, assumption and optional service; parser `Defs3.lean`. `Uebersetze/Guest/Source.lean` binds a named software service. `Logik/Ruf/Guest/Boundary.lean`: `GuestBoundary`, `GuestTransfer`, `GuestAbi.userspace`, explicit owner/service checks. `Guest/Service.lean`: `GuestServicePflicht`, storage/isolation lemmas. | Current source adapter is bounded and refuses additional region-transfer descriptors it cannot export. `GuestBoundary.check` refuses register-state/privileged transfers. No guest algorithm correctness is supplied by isolation; extend this boundary rather than introduce an independent guest runtime. |
-| Deleted Rust ASM / front end | The deleted frontend (`ast.rs`: `FnRumpf::Asm`, `AsmRumpf.zeilen/ein/aus/zerstoert`; `parse.rs::asmrumpf`; `namen.rs::asm_versiegelt` checked arch/effects/costs and operand names; `zeugnis.rs` inventoried text). | Instruction strings are deliberately unread and treated as assumptions today. The deleted LLVM `assembler.rs::sammle` emitted constrained inline assembly; constraint substitution and target matching do not prove effects or costs. This lane replaces assumption-only certification admission. |
+| Generic guest boundary | `Logik/Ruf/Guest/Boundary.lean` and `Service.lean` retain the generic ownership, software-service and isolation checks used by the goal checker, generator and Stage 0. | The entrust source constructor, wrapper and descriptor adapters are deleted; the reserved word has only refusal `N597`. Future checked guests follow LOW-LEVEL-SYNTAX-PLAN. |
+| Deleted Rust ASM / front end | The deleted frontend (`ast.rs`: `FnRumpf::Asm`, `AsmRumpf.zeilen/ein/aus/zerstoert`; `parse.rs::asmrumpf`; `namen.rs::asm_versiegelt` checked arch/effects/costs and operand names; `zeugnis.rs` inventoried text). | Instruction strings are no longer admitted by the source language. The deleted LLVM `assembler.rs::sammle` emitted constrained inline assembly; constraint substitution and target matching do not prove effects or costs. This lane replaces assumption-only certification admission. |
 | Checked profiles / ABI data | `Kern/Syntax/Profil/Teil1.lean`: `ProfilSchluessel`, `AnnahmeEintrag`, `Profil.gut/gilt`, `erfuellt` (`frei` maps to `True`), mode consistency. `Hardware/Tor/Abi.lean`: `RegName`, `Falle`, `TorAbi`, `ZielDaten`, `gut/deckt/passtZu`, target-data witnesses including AArch64. C14 adds source profile binding and selection. | Free prose and an ABI register assignment do not establish instruction behavior or a boot invariant. No AArch64 EL1 instruction domain or mixed-mode x86 boot domain is supplied by these records. |
 | Device register declarations | `Syntax/Syntax/Teil1.lean`: `Regklasse.r/w/rw/w1c/rc`, `lesbar/schreibbar`; `Deklaration.Reg/rtyp/rklasse/spiegel/rzusage/rtraeger`. `Parser/Item/ElementTief` device syntax and `Uebersetze/Teil/Teil12.lean::uReg/uGeraet/uRegs` export scalar/Bool class, carriers, promises, else checks and mirrors. | Address/offset, access width and actual device transactions are not a proved physical binding in `UReg`. Register fields, per-stage classes, banks and device transition declarations are explicitly refused there; complete these declared register concepts in L05/L12. |
 | Register operations in G | `Syntax/Syntax/Teil2.lean`: `Stmt.regWrite`, `Stmt.transition` (one mirror read, masked write), `Block.regRead/regReadElse`, and both `Endblock` variants. `Semantik/Semantik/T2/Teil2.lean::execStmt/execBlock/execEnd`: reads ask `O.regLies`, decode and check promises; fallible reads evaluate the explicit else predicate. Writes call `O.regSchreib` and leave G memory unchanged; transition uses a fixed 64-bit mask expression. | Write/device state is not represented by these calls; no architectural access event with value/width/order binds it to hardware. `RegLokal` makes carrier-free registers constant across worlds. Transition is not a CPU atomic RMW and may not gain that meaning. Width-specific classes/side effects and typed mirror failures need canonical rules. |
@@ -4091,7 +4092,7 @@ their new replay theorem must handle that history without assuming them equal.
    resumable G/GX control constructors, preserving existing callable contracts.
    Entry ABI state includes PC, registers/flags, stack availability, privilege,
    translation and interrupt state; boot composes user calls and a named dispatch;
-   entrust uses the same transition/call boundary. All intermediate steps remain
+   checked guests reuse the transition/call boundary. All intermediate steps remain
    observable; a nonreturning handoff consumes its context without a return value.
    Prove typed entry/exit, frame composition, dispatch uniqueness, fault accounting
    and resource preservation. Witness a nontrivial register clobber, a stackless
@@ -4273,10 +4274,10 @@ their new replay theorem must handle that history without assuming them equal.
 
 12. **L12 — canonical parser and source-to-model exporter.** Goal: only after
     the model/proofs, admit address/context/view types, `ram_view` and existing
-    ASM/entry/boot/entrust/register forms with checked certificate tails. Append
+    entry/boot/guest/register language constructs, with generic verified lowering. Append
     source-node variants at the end where needed, and retain exact source body,
     operand, profile, proof identity and dispatch through module expansion,
-    substitution and original-metadata checks. Replace the opaque ASM export;
+    substitution and original-metadata checks. Keep instruction strings refused;
     complete `SEingang` contract/stack binding and device fields/banks/transition
     producers rather than reusing table `shift`. A named `proof` resolves to
     evidence indexed by the exact elaborated body; unresolved, duplicate or

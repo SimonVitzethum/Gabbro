@@ -6627,60 +6627,20 @@ contract under its call-site precondition and implementation-link duties.
 `guest_storage_disjoint` includes initial live grants and all preceding calls;
 `guest_failure_inventory` preserves that same inventory on failure.
 
-The source connections are now implemented:
+The unchecked source adapters were removed on 2026-11-23. Assembly bodies, `prim fn`,
+`raw fn` and `entrust` have one parser refusal each (`N594`–`N597`), with poison probes
+1488–1491. `SItemTief` has no assembly or entrust constructor. The source-only
+`UGuest`, wrapper expansion, descriptor export and completeness theorems are deleted.
+`Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass an empty guest list
+to the generic checker; no removed source declaration can be parsed or discarded.
 
-- `SItemTief.trustT` retains `via SERVICE`; namespace resolution predeclares the
-  generated wrapper and resolves the code region and foreign binding lexically.
-  `Uebersetze/Guest/Source.lean` resolves exactly one C08 prototype or syscall,
-  requires a declared nonempty failure channel and requires/ensures mentioning
-  the code region, and generates one wrapper forwarding every parameter, the
-  success result and every failure reason. The wrapper uses the existing
-  `SAnw.bindAxiomOptElse`; ordinary elaboration and Stage-0 lowering handle it.
-- `guestForeign` elaborates the declared predicates in the binding's parameter
-  and result scope. `UAx.software` records the explicit source binding;
-  `herkunftAt` exports `some .software` and `axBeleg` remains `none`. A conflicting
-  named hardware origin is refused. Direct foreign `requires Held(...)` is
-  refused rather than silently dropped. `Guest/Contracts.lean` lowers every
-  foreign contract; `contractGate` refuses any failed lowering and `progOfFn`
-  fills `Programm.axVertrag`. `lowerAllg_axVertrag` proves exact retention on
-  every successful lowering, including the actual pre/postconditions.
-- `Guest/Export.lean` re-resolves every retained `UGuest` against the actual
-  `declOf u`, constructs the typed boundary and applies its canonical check.
-  `sourceGuests_complete` proves that no descriptor is omitted. Both
-  `Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass that
-  complete list to `AkzeptiertX`. `OldSource.restore_axVertrag` and
-  `Compiled.foreign_contracts` retain the same foreign contracts through
-  source postcondition restoration; `Compiled.guest_descriptors` exposes
-  completeness and each admitted descriptor after production checking.
-  `SourceGuestPflicht` explicitly ties the software isolation duty to these
-  exported contracts and actual C08 records, never to `HardwareAnnahmen`.
-
-The source frontend now exports resolved owners through C12/C09. This guest
-source adapter still admits immutable code plus scalar inputs and an ordinary
-returning, fallible service; additional region inputs remain refused until it
-retains their exact transfer descriptors and owner resources. No owner is
-fabricated or transferred region discarded.
-Register state, privileged/stack assumption fields, unknown ABI, missing or
-ambiguous service, absent failure channel and absent region contracts remain
-named refusals. Foreign cost claims retain the metadata gate.
-
-`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` (removed 2026-11-11: it never built) claimed the accepted image
-attempt: real source text calls the generated guest wrapper with a code-region
-capability, carries a nontrivial declared region contract and executable C08
-gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
-and retains the generic canonical-source and image correctness certificates.
-Its source-shape, exact-contract, descriptor-completeness and ordinary fallible
-constructor witnesses prevent an inert or empty-boundary success. Negative
-source twins cover missing service/field, unowned region, register state,
-privileged fields, unknown ABI, infallible service and missing region contract.
-`Guest/Witness.lean` retains the more general owned-region model witnesses.
-None of these new source reductions has yet been measured by this worker.
-
-Worker static checks: 31 changed Lean modules, all using the module system,
-maximum 473 lines; no forbidden proof tokens or folder-entry findings. The
-3,068-file import graph has no cycles and the outgoing diff passes
-`git diff --check`. These checks provide no Lean elaboration or witness-reduction
-evidence.
+Ordinary foreign contract elaboration is in `Uebersetze/Einheit/Foreign.lean` (`uForeign`).
+`Guest/Contracts.lean`, `lowerAllg_axVertrag`, `OldSource.restore_axVertrag` and
+`Compiled.foreign_contracts` retain the existing generic C08 foreign contract connection.
+`GuestBoundary`, `GuestServicePflicht` and the goal acceptance rules remain: the checker,
+generator and Stage 0 still depend on that generic guest/isolation model. Their semantic
+statements are unchanged. Future checked machine constructs follow
+[LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
 
 ## 178. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
 
