@@ -233,6 +233,11 @@ console.put(byte) else timeout;
   the device class requires. Device authority is a linear value handed out once by the platform unit at start.
 - Buffers lent to a device (`lend r to d` / `take back r`) get the generated cache maintenance of the device's
   declared coherence (none on coherent x86 DMA; clean/invalidate by range on non-coherent AArch64/RISC-V devices).
+- **Memory shared with a running device** (descriptor rings, completion queues) is not lent: the device may write
+  it at any time. It is read only through `copy from shared (ring, slot) into r` with the same rule as guest memory
+  (B23 T2): each slot at most once per handling, validation and use on the private copy. Writing the kernel's own
+  entries uses `copy to shared`. On a platform with an IOMMU a device's DMA (bus mastering) can be enabled only
+  after its isolation group is attached (§4.12).
 - That a driver follows its device's protocol is program logic (GabbroProve); the device's answers are its
   declared contract (hardware, named in (c)).
 
@@ -281,13 +286,13 @@ let v = gpu.ring.head.read128() else unsupported;            // 16-byte single-c
 - `enter guest g` leaves to user privilege with the guest's saved frame (generated `iretq`/`sysretq`, `eret`,
   `sret`); `entry syscall (args) { … }` is the generated system-call entry.
 - Guest memory is reached only through `copy from guest (a, n) into r else fault(k)` and `copy to guest … else
-  fault(k)`. Each source byte is loaded at most once per invocation, and validation and use operate on the private
-  copy in kernel memory; this excludes double fetches WITHIN one invocation. No coherent snapshot is implied (other
-  guest threads may change other bytes during the copy, so a structure can be torn) and no consistency across two
-  invocations; a kernel that needs either copies once and validates the copy, or uses a proved protocol over pinned
-  memory. A fault returns through the `else` channel with the number `k` of bytes copied; the first `k` destination
-  bytes are initialised, the rest are not. The user-access guard is opened only inside the copy (x86 `stac`/`clac`,
-  AArch64 PAN, RISC-V `SUM`); the fault-recovery table is generated.
+  fault(k)`. **No TOCTOU over guest memory (B23 T2):** each syscall argument and each guest range handed to an
+  entry is an affine read capability — every guest byte can be copied at most once per entry invocation, a second
+  copy of overlapping bytes is refused by the checker, and validation and use operate only on the private copy in
+  kernel memory. A torn structure (other guest threads changing bytes during the copy) is then harmless: the
+  kernel validates exactly what it uses. A fault returns through the `else` channel with the number `k` of bytes
+  copied; the first `k` destination bytes are initialised, the rest are not. The user-access guard is opened only
+  inside the copy (x86 `stac`/`clac`, AArch64 PAN, RISC-V `SUM`); the fault-recovery table is generated.
 - The isolation theorem of L8 protects every retained carrier against everything the guest may do; no guest
   contract, cost or termination is claimed for an unverified guest.
 
@@ -458,6 +463,7 @@ take back rx_ring from nic else stuck;                                 // revoke
 entry dma_fault (f: dma_fault_info) { … }
 ```
 
+- **The configuration is logic, the unit is the hardware:** which group is attached to which space and which regions are mapped there is the image's program logic (b) under the language's checks (only owned regions can be mapped, every lent region is mapped, DMA is enabled only after attachment); the assumption `Iommu` covers only what the hardware does with that configuration.
 - **The unit of attachment is an isolation group**, never a single device: all functions and devices that share a
   requester identity, sit behind a bridge without access control, or can reach each other peer-to-peer without
   passing the IOMMU. Discovery (DMAR, IVRS, IORT, devicetree, and the PCIe access-control capabilities) yields the
@@ -600,13 +606,13 @@ timed core within 5 us else late {                  // this core: interrupts and
 
 ### 4.19 Inventory: the constructs and their rows
 
-The count that the estimate of PLAN-COMPILER-READY §7 uses (91 constructs; each gets a G rule, an `Akzeptiert`
+The count that the estimate of PLAN-COMPILER-READY §7 uses (92 constructs; each gets a G rule, an `Akzeptiert`
 rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a GIR cell with its lowering theorem):
 
 | Row | Constructs | Count |
 |---|---|---|
 | L1 | `split_at`, `split_pages`, `merge`, `view as`, `address()` | 5 |
-| L2 | device declaration, `device at w as L` from a discovery answer, wide and enqueued stores (`store64`, `enqueue64`, `atomic128`), `lend`, `take back`, device coherence and suspend-state declaration | 6 |
+| L2 | device declaration, `device at w as L` from a discovery answer, wide and enqueued stores (`store64`, `enqueue64`, `atomic128`), `lend`, `take back`, `copy from/to shared`, device coherence and suspend-state declaration | 7 |
 | L4 | `state`, `code … in`, `jump`, `jump long`, `wait for interrupt`, `stop core`, `cpu.caps`/`cpu.has`, `cpu.cycles`, `suspend system`, `suspend core`, resume arrival | 11 |
 | L5 | interrupt, exception, thread-switch and first-entry frames, `per core`, `core.id`, `switch to`, `backtrace` | 8 |
 | L6 | `space.new`, `map` with kinds, `unmap` (token), `protect`, `flush(token)`, `activate` | 6 |
@@ -620,7 +626,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
 | L16 | `io.space.new`, `group_of`, `attach group` (PASID, ATS policy), `dma_fault` entry | 4 |
 | L17 | monitor state with worlds, `monitor_call` entry, `return to world`, `resume world`, `protect physical`, `provide environment` | 6 |
 | L18 | `wait at least`, `wait until`, `timed core within … else late` | 3 |
-| **sum** | | **91** |
+| **sum** | | **92** |
 
 ## 5. Typing, acceptance and the trust boundary
 
@@ -632,7 +638,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   its IOMMU mapping where the platform has an IOMMU, a DMA-capable device granted to an untrusted guest or VM
   without an attached isolation group, a device value used after resume before reinitialisation, a world switch
   with memory not partitioned, a declared register that a construct manages, a memory kind the region or target
-  cannot realise, an entry kind the platform lacks, a device window that is not a discovery answer, a store shape the target never has (outside compile-time selection), CPU code that the compiler did not emit (option ROMs, binary drivers) at any privilege of the image, a timed block whose bound is not proved, unsupported targets by name.
+  cannot realise, an entry kind the platform lacks, a device window that is not a discovery answer, a store shape the target never has (outside compile-time selection), CPU code that the compiler did not emit (option ROMs, binary drivers) at any privilege of the image, a timed block whose bound is not proved, a second copy of guest or shared-device bytes within one invocation, a fact about shared state used after a release point without re-establishing it (B23), DMA enabling before the group is attached, unsupported targets by name.
 - Every construct and generated frame accounts for all architectural effects: register and flag state, hidden stack
   traffic, privilege, translation, masks, faults and their exits, interleavings and the atomic rely. A generated
   construct is not implicitly atomic; masking is not a multicore lock.

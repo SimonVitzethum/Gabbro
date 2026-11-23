@@ -216,7 +216,7 @@
   * `VirtUnit` -- guest entry and exit, the mandatory isolation controls and the requested intercepts, stage-2 translation and its invalidation as the manual says.
   * `Iommu` -- an ENVELOPE of the IOMMU, the interconnect and the endpoints of an isolation group: every DMA path of the group passes the IOMMU (no peer-to-peer bypass),
     requester and PASID identities are owned by the group, translation, faults, invalidation and draining behave as specified; ATS only under its declared endpoint policy.
-    For requests covered by the envelope the DMA part of a device contract (today `ImBereichO`) is PROVED, not assumed.
+    For requests covered by the envelope the DMA part of a device contract (today `ImBereichO`) is PROVED, not assumed. Its configuration (groups, spaces, mappings) is (b).
   * `SecureUnit` -- a PLATFORM envelope (processors, memory controllers, interconnect, DMA masters): the configured world partition is enforced and the monitor is entered
     only through its declared entry; the configuration itself is the proved work of the image's driver.
   * `ClockRate`, `RowTiming` (O26, only inside `timed` blocks and `wait at least`/`until`) -- the cycle counter's declared frequency and monotonicity; per target row an
