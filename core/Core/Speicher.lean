@@ -21,3 +21,5 @@ public import Core.Speicher.GraphmaschineVollstaendig
 public import Core.Speicher.GraphmaschineErfuellbar
 public import Core.Speicher.Kohaerenz
 public import Core.Speicher.Senke
+public import Core.Speicher.MoLetzte
+public import Core.Speicher.Anhaengen
