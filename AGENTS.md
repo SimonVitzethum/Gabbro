@@ -13,7 +13,7 @@ This file holds the standing rules and recommendations for everyone who works in
 
 ## 1. The goal
 
-**A Gabbro user proves only the logic of their own program and chooses named assumptions about hardware and
+**A Gabbro user writes only the logic of their own program and selects named catalogue rows about hardware and
 environment. Everything else is carried by the language**: memory safety, race freedom, lock discipline, contracts
 and invariants where declared, time and memory bounds, isolation, information flow — in concurrent runs too, on
 every supported target. The direction of every change is to move work from the user onto the language model, never
@@ -77,44 +77,21 @@ Consequences:
 
 ## 3. The goal theorem
 
-- **Shape:** for every checker `C`, declaration `D`, unit `E` and enumerations: (a) the checker accepts →
-  (b) the user's duties hold → (c) the named hardware assumptions hold → (d) the runtime starts what is declared →
-  every reachable machine satisfies `Ziel`. The legs of `Ziel`, the atomic rely and the derived statements are
-  listed in `Spec.lean`; the proof files are `Zielsatz/Atomar/BeweisAtomar.lean` and `Zielsatz/Kern/Beweis.lean`.
+- **One source:** the goal theorem `gabbro_ziel`, the model it speaks about and the migration of `grammatik/` onto
+  it are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md) (owner, 2026-11-23). Nothing else —
+  this file, the plans, commit messages, agent briefs — restates, extends or softens it. Until its step S12, the
+  statement in `Spec.lean` is the interim one.
 - **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
   it.
-- **The header of `Spec.lean` is the ONE list** of named assumptions and of what is NOT claimed. Every extension of
-  the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
-- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
-  recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **ONE theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise is a single
-  theorem `gabbro_ziel`; every other statement is a proof step. Its parts:
-  - **Premises:** `Bezeichnet a E` (the text `a` means the unit `E`), `Akzeptiert E` (a perfect checker accepts:
-    the local decidable rules hold and every written clause is TRUE), `Hardware H` (rows of the catalogue). The
-    user and their proofs are not premises.
-  - **Error, abstract, no list:** a run of the implementation (G/GX/W today, the image after B6/C9) is erroneous
-    when no run of the ideal meaning `I` of `E` corresponds to it with the same environment answers, or when a
-    thread hangs while `I` could proceed. Logic is everything `I` allows.
-  - **Inside Gabbro** every state and every interference is known: every condition an effect relies on is proved
-    under the rely of the whole program; a stale decision that violates nothing declared is logic. **Outside
-    Gabbro** (OS, file system, devices, firmware, guests, VMs, guest memory, hardware-changed state) knowledge is
-    valid only at the moment of the answer: the rely for the outside is arbitrary change, except a stability a
-    catalogue row states. A program that needs outside state to stay as observed is refused; environment
-    interfaces offer only operations whose precondition is checked in the same question (handle-based, atomic,
-    with a failure channel). TOCTOU is excluded this way without being named.
-  - **Shape:** non-vacuity (the catalogue is satisfiable, every form occurs in an accepted program, `I` is
-    deterministic up to named choice points with no garbage values, the runs are non-empty, fairness is
-    satisfiable); then for every run ONE corresponding ideal run with bounded stutter, today's legs as EXPLICIT
-    conjuncts (never only corollaries), progress per checked progress class under hardware-only fairness, and
-    bounds on stack, memory and cost as observations. Noninterference is a two-run conjunct of the same theorem.
-  - **Build guards:** `Akzeptiert` depends on no run or step relation (checked semantically, not by names);
-    `I`, `Bezeichnet`, the error notion and the theorem are hash-pinned; no `_ =>` in `I`, the rules and the
-    fundamental proof; one `_erfuellbar` per form; hardware events only from catalogue rows; written clauses
-    state user predicates over `I`, never definedness of `I`. Adding unsound syntax turns the build red; a wrong
-    but consistent `I`-rule or `Bezeichnet`-rule is caught only by the pin and the owner's review.
-  - **Trusted:** `I` and `Bezeichnet` (the language's promise), the catalogue rows, the Lean kernel; until B6/C9
-    the bytes. Errors in dimensions that are not declared observations stay invisible.
+- **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until S12 the
+  header of `Spec.lean` is the interim list. Every extension of the goal is a diff of PERFECT-MODEL.md and then of
+  `Spec.lean`, described as such in the commit.
+- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff of
+  PERFECT-MODEL.md, with a recommendation, before it is merged. Strengthening the language's promise is the default
+  direction.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
+  `sorry` — except that during the migration of PERFECT-MODEL §8 `gabbro_ziel` need not build green (owner,
+  2026-11-23); whenever it builds it is on the standard axioms and without
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
   satisfiability is a proved lemma (`NAME_erfuellbar`: the premises hold jointly), one per premise bundle shared

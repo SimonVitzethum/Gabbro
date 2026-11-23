@@ -198,8 +198,8 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B20 | **linearizability of lock-free structures (owner, 2026-11-14)**: declared abstract specification and linearization points; a generic theorem that every concurrent history is equivalent to a sequential one of the specification; with B12 for the payloads | 8 000–20 000 / 1–2 / — |
 | B21 | **memory bounds (owner, 2026-11-14: definitely; an unbounded heap must stay possible)**: per function and per run an upper bound on region/heap/arena use and on stack, computed and checked like `ZeitAb`, with the allocator contract — wherever a bound is declared or derivable (bounded regions, arenas with a ceiling, stack), also as a bound in the size of the input; OPEN regions (`Deklaration.offen`) without a ceiling stay admitted exactly as today, and for them the statement claims no bound (only what the provider gave), never a refusal | 4 000–10 000 / 1–2 / — |
 | B22 | **crash consistency, hardware-independent (owner, 2026-11-14).** An abstract persistence semantics: writes to persistent places become durable only through explicit flush/fence steps, in any order the abstraction allows (so every medium within the envelope is covered); interruption is possible at EVERY step; declared crash invariants and statements of the form "if interrupted at point x, the persistent state satisfies P_x" are checked by the checker or proved as program logic; recovery code is ordinary Gabbro verified like any other. **Decided:** a separate statement `GabbroZielAbsturz` beside the goal that reuses the safety legs; crash invariants and P_x are decided by the checker in the decidable fragment, the rest is program logic. Design: `persistent` tables/statics, `flush`/`fence` statements, a ghost durable state, one named medium envelope (design file of the lead) | 12 000–30 000 / 2–3 / — |
-| B23 | **no TOCTOU, without naming it (owner, 2026-11-23: "TOCTOU, das von außerhalb Gabbro kommt, ausschließen; innerhalb Gabbro kennt man alle Zustände und kann beweisen, dass kein TOCTOU passieren kann; Sachen, die es von außen brauchen, gehen einfach nicht").** Inside: every condition an effect relies on is proved under the rely of the whole program (the existing rely/guarantee proof). Outside (OS, file system, devices, firmware, guests, VMs, guest memory, hardware-changed state): the rely is arbitrary change between two questions, except stabilities a catalogue row states; answers are owned values, never lasting knowledge. Environment interfaces in the catalogue offer only operations whose precondition is checked in the same question (handle-based, atomic, failure channel); `access`→`open`, double fetch of guest memory and "check, then act later" on outside state are refused. No snapshot kind, no extra freshness rule | 4 000–10 000 / 1–2 / — |
-| B24 | **one theorem: no error except logic and hardware (O27; conditions in AGENTS.md §3).** Premises `Bezeichnet a E`, `Akzeptiert E` (local decidable rules plus truth of the written clauses), `Hardware H` (catalogue rows). Error = no corresponding run of the ideal meaning `I` (derived from G; deterministic up to named choice points; units indivisible; waits enabled exactly when their condition holds; relaxed and acquire/release atomics with their written behaviour, `seq_cst` truly SC) with the same answers, or a hang while `I` could proceed. Shape: non-vacuity conjuncts; one ideal run per run with bounded stutter; today's legs as explicit conjuncts; progress per checked class under hardware-only fairness; stack, memory and cost bounds; noninterference as a two-run conjunct. Proof: per-form compatibility lemmas for `I`, the reduction G ⊑ `I` (DRF-SC, units), progress, linking per module, the elaborator correct and complete against `Bezeichnet`. Step 0 is the build guard (dependency check against any run relation, hash pins, no `_ =>`, `_erfuellbar` per form). Realistic size per the review of 2026-11-23: 150 000–400 000 lines over years; critical path atomics in `I` → DRF-SC → unit reduction → progress. A first unbuilt draft is on the local branch `agent/one-theorem` (`d87d48b94`) | 150 000–400 000 / many / — |
+| B23 | **no TOCTOU** — defined in [PERFECT-MODEL.md](PERFECT-MODEL.md) §4 and built as its step S11; counted in B24 | — |
+| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and the migration of `grammatik/` (steps S0–S12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. Size from PERFECT-MODEL §8 | 163 000–433 000 new (20 000–60 000 removed) |
 
 ### C11 — non-emptiness in the statement
 
@@ -444,10 +444,8 @@ kernel's own scheduler or the OS; the five weak-memory points → the memory-mod
 
 ## 5. Phases and order
 
-**Order (owner, 2026-11-23): `grammatik/` first.** The core of the language is `grammatik/`; Stage 0 holds no
-language forms of its own and is not the core. `grammatik/` is restructured to the perfect model of AGENTS.md §3
-(B24, B23, the build guards of step 0) BEFORE any further restructuring of Stage 0; Stage 0 then follows the
-finished model and becomes simpler. No Stage-0 restructuring work is started until then.
+**Order (owner, 2026-11-23): `grammatik/` first**, by the steps S0–S12 of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8; Stage 0 is
+not restructured before S12. During that migration `gabbro_ziel` need not build green.
 
 ```
 Phase 0  float decoupling merged, documentation pass (D1–D17), S3 lock stage 1 built
@@ -516,15 +514,15 @@ That is **about 31 full grammatik builds** for the goal theorem and the low-leve
 | S Stage 0 complete (S1–S10) | 22 400–59 800 | — |
 | V GabbroV to R2 | 12 400–40 900 | — |
 | A fewer assumptions (A1–A6) | 9 400–25 900 | — |
-| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 236 000–625 000, of which B24 150 000–400 000) | 340 000–898 000 | — |
+| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 245 000–648 000, of which B24 163 000–433 000) | 349 000–921 000 | — |
 | C11 non-emptiness | 200–800 | — |
 | L low-level model (L0–L18, re-estimated 2026-11-23) | 236 000–596 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6, K8) | 92 000–246 000 | 11 000–30 000 |
 | C compiler sources and benchmarks (C7, C8) | — | ≥ 513 000 (C7 ≥ 500 000; C8 13 000–32 000) |
-| **sum** | **≈ 796 400–2 077 400** | **≥ 524 000 (no upper bound)** |
+| **sum** | **≈ 805 400–2 100 400** | **≥ 524 000 (no upper bound)** |
 
-**Everything together: at least about 1 320 000 new lines**: Lean 796 400–2 077 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
+**Everything together: at least about 1 329 000 new lines**: Lean 805 400–2 100 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -533,9 +531,9 @@ Parts of the sum by gate (each includes what the earlier gates need):
 | Up to | Lean LOC | Gabbro LOC |
 |---|---|---|
 | the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 384 400–1 025 400 | — |
-| R4 low-level model (adds L) | 620 400–1 621 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 796 400–2 077 400 | ≥ 524 000 |
+| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 393 400–1 048 400 | — |
+| R4 low-level model (adds L) | 629 400–1 644 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 805 400–2 100 400 | ≥ 524 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -594,7 +592,7 @@ later items, and C7's owner minimum of 500 000 lines leaves the Gabbro total wit
 | O24 | **compile-time selection (owner, 2026-11-23):** "noch eine neue Syntax: `if (<compilerflag>) then {}` mit ggf. `else`" — L14, LOW-LEVEL-SYNTAX-PLAN §4.10 | decided by the owner; the lead's choices of the strongest variant: conditions over declared flags only, never mixed with run-time `if`; every declared configuration checked, dead branches refused; the goal theorem per configuration on the selected unit; K6 counts architecture conditions in the kernel proper (target: none, only feature flags) |
 | O25 | **virtualisation, IOMMU and the rest in, JIT and modules without syntax (owner, 2026-11-23):** "JIT und Kernelmodule brauchen keine neue Syntax, aber alles andere, BESONDERS Virtualisierung und IOMMU, müssen rein" — L15 (virtualisation), L16 (IOMMU), L17 (secure worlds, monitor, provided firmware services), suspend/resume in L4, backtraces in L5, debug and performance units in L7, guest grants in L8, K8 | decided by the owner; the lead's choices of the strongest variant: an IOMMU turns the DMA part of device contracts from an assumption into a proof; a DMA-capable device reaches an untrusted guest or VM only behind an IOMMU attachment; Intel VMX and AMD SVM (VT-d and AMD-Vi) both lowered, chosen at run time; nested virtualisation after the single-level case; the new hardware assumptions `VirtUnit`, `Iommu`, `SecureUnit` join the L0 `Spec.lean` diff |
 | O26 | **every driver writable (owner, 2026-11-23):** "1 ist keine Lücke, das geht, dem Compiler ist das egal, es ist so oder so eine Hardwareannahme"; "4 soll möglich sein, 3 nicht" — devices found at run time (`device at w as L` from a discovery answer), wide and enqueued device stores (`store64`, `enqueue64`, `atomic128`), hard timing (L18); CPU code the compiler did not emit (option ROMs, binary drivers) stays refused | decided by the owner; the lead's choices of the strongest variant: the truth of a discovery answer is part of the device contracts, but a window that overlaps owned memory is refused at run time, so memory safety never rests on it; a missing store instruction takes the `else` channel, never a torn fallback; timing gets named per-row assumptions (`ClockRate`, `RowTiming`) only for timed blocks, and a run-time clock check turns an overrun into `else late` |
-| O27 | **one theorem: no error except logic and hardware (owner, 2026-11-23)**, after four critical reviews: abstract error notion by refinement against the ideal meaning `I`; TOCTOU excluded from outside by an arbitrary-change rely for the outside world and from inside by proof under the program's rely; the user is not a premise; adding unsound syntax turns the build red | decided by the owner; conditions in AGENTS.md §3, work in B23/B24 |
+| O27 | **one theorem: no error except logic and hardware (owner, 2026-11-23)** — settled after five critical reviews and fixed in [PERFECT-MODEL.md](PERFECT-MODEL.md), including the review's last three points decided by the strongest variant: catalogue rows are selected, never written by programs; relaxed atomics follow RC11 without load buffering; lock acquisition is strong-fair | decided; changes only as a diff of PERFECT-MODEL.md |
 
 ### 8.1 Decided 2026-11-13 by the lead on the owner's delegation
 
