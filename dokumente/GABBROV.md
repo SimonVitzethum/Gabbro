@@ -17,7 +17,7 @@ every program. GabbroV states that certificate over the very program Stage 0 low
 | `nutzerA_aus_compiled_logik` | For every compilation `c` and every language form: every function's logic (`LogikFn`), the foreign bodies' locality and Stage 0's decision of the data parts give `NutzerPflichtA` of Stage 0's judged unit over `c.program` -- the premise of the image theorems. |
 | `logik_aus_nutzerA` | Conversely: the duties are not stronger than (b). |
 | `entschieden_sound` | Stage 0's own decisions (`checkUnitLock`, `checkStartRequires`) are the certificate's lock and start duties. |
-| `nutzerA_aus_ziele` | The same from the duties of the unit given as data (`ZielF`, one per function) and the run facts `c.unit = u`, `ohneAltGlobalB c.expanded`. |
+| `nutzerA_aus_ziele` | The same from the duties of the unit given as data (`ZielF`, one per function) and the run facts `c.unit = u` and `altVon c.expanded = alt` (the source postconditions that read `old` of a static, by function). |
 | `programm_von` | The lowered program has at every function the postcondition, body and precondition of that function's lowering. |
 | `nutzerA_aus_ziele_erfuellbar` | The premises hold jointly; the lowering accepts the instance; its duty is proved over its lowered body. |
 
@@ -41,10 +41,9 @@ imports it.
 
 `lake build gabbrov` in `programmlogik/bruecke`, then `gabbrov Proofs.Lexer lexer.gab out/` writes, under
 `out/Proofs/Lexer/`: `Quelle` (the text), `Daten/S<k>` and `Daten` (the unit `u` as data, 16 functions per
-module), `Pflicht/F<i>` (the duty `ziel<i> : ZielF u i`), `Beweis/F<i>` (your proof; written once, never
+module), `Pflicht/F<i>` (the duty `ziel<i> : ZielF u alt i`, over the program with the `old(global)` postconditions restored as Stage 0 restores them: `restored`), `Beweis/F<i>` (your proof; written once, never
 replaced), `Sammlung/S<k>`, `Lexer.lean` with `nutzerBild` (exactly the image theorems' premise (b)) and
-`Pruefung`. Exit 0: (b) is stated; 1: a named refusal (a postcondition reading `old` of a static); 2:
-wrong arguments, or Stage 0 refuses the source or its lowering.
+`Pruefung`. Exit 0: (b) is stated; 2: wrong arguments, or Stage 0 refuses the source or its lowering.
 
 **A Lake package per unit.** `gabbrov` also writes `lakefile.toml`, `lake-manifest.json` and `lean-toolchain` (kept when present): `lean_lib MODULE` on top of GabbroV (`bruecke`, by path), with the packages shared with `grammatik/.lake/packages`, so no second Mathlib is fetched. `lake build` in the output directory checks the unit; after a change of one body it builds again only that body, that function's logic and proof, the source text, the collection and the root.
 
@@ -97,6 +96,5 @@ the 24 that remain:
 ## Open
 
 - Rules for the forms just listed.
-- Units whose postconditions read `old` of a static: the duty over the restored program.
 
 The guardian is `instrumente/pruefe-gabbrov.py`.

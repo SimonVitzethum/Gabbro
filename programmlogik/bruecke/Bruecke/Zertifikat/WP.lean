@@ -23,18 +23,21 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.WP
   Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.Parser.Cover.Differenz
 
 /-- **Open the duty of one function at its own lowering.** -/
-theorem pflicht_oeffnen {u : UProg} {f : Fin u.fns.length}
+theorem pflicht_oeffnen {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} {f : Fin u.fns.length}
     (h : ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn), lowerAllg u = .ok (P, fs) →
       ∀ (v : EnsTy u f × RumpTy u f × ReqTy u f), lowerFnAt u f = .ok v →
-      P.ensures f = v.1 → P.rumpf f = v.2.1 →
+      (restored alt u P).ensures f = ensAltAt alt u f v.1 → P.rumpf f = v.2.1 →
       ∀ (Q : AxEns (declOf u)) (sp : Speicher (declOf u)) (main : (declOf u).Fn)
         (args : Env (declOf u) ((declOf u).params main))
         (roots gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
         (checks : List (CheckDecl (declOf u))),
-        LogikFn (Gabbro.Stage0.OldSource.einheitDer u P Q sp main args roots gestartet checks) f) :
-    ZielF u f := fun P fs hlow Q sp main args roots gestartet checks => by
+        LogikFn (Gabbro.Stage0.OldSource.einheitDer u (restored alt u P) Q sp main args roots gestartet checks) f) :
+    ZielF u alt f := fun P fs hlow Q sp main args roots gestartet checks => by
   obtain ⟨v, hv, he, hb, _⟩ := programm_von hlow f
-  exact h P fs hlow v hv he hb Q sp main args roots gestartet checks
+  have he' : (restored alt u P).ensures f = ensAltAt alt u f v.1 := by
+    show ensAltAt alt u f (P.ensures f) = _
+    rw [he]
+  exact h P fs hlow v hv he' hb Q sp main args roots gestartet checks
 
 /-- The three duties of a function from one statement per duty over its lowered body. -/
 theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.Fn}
@@ -253,6 +256,21 @@ open Lean Elab Tactic Meta in
 #print axioms pflicht_oeffnen
 
 
+open Lean Meta Elab Tactic in
+/-- The function's own postcondition `h : … = ensAltAt alt u f e0` (the restored program) as the one it
+    is (`altGleichung?`); unchanged when it is not of that form. -/
+elab "gabbrov_alt " h:term : tactic => withMainContext do
+  let goal ← getMainGoal
+  let hx ← elabTerm h none
+  let some fv := hx.fvarId? | throwError "gabbrov_alt: not a hypothesis"
+  let ty ← instantiateMVars (← inferType hx)
+  let some (_, lhs, rhs) := ty.eq? | throwError "gabbrov_alt: not an equation"
+  let some (e, pf) ← altGleichung? rhs | return
+  let name := (← fv.getDecl).userName
+  let g ← goal.assert name (← mkEq lhs e) (← mkEqTrans hx pf)
+  let (_, g) ← g.intro1P
+  replaceMainGoal [← g.clear fv]
+
 /-- **The duty of one function, as far as the language carries it**: open the duty at the function's
     own lowering (`pflicht_oeffnen`), put the lowered body into normal form, execute it symbolically by
     the model's exact rules (`gabbrov_wp`) and close the return obligation (`gabbrov_fertig`). Every
@@ -277,6 +295,7 @@ elab "gabbrov_beweis" : tactic => do
     apply Gabbro.Bruecke.pflicht_oeffnen
     intro P fs hlow v hv hens hrumpf Q sp main args roots gestartet checks
     rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
+    gabbrov_alt hens
     gabbrov_normal_at hrumpf
     refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
       intro O' _ _ _ U _ A hA R _ _ σ ρ _ <;>

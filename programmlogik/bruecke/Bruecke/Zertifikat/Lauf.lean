@@ -7,8 +7,8 @@ public import Stage0.Senke.Ausdruck.Old.JudgedUnit
 # The facts of Stage 0's run that GabbroV uses
 
 `stufe0Einheit` is the unit Stage 0 compiles (the steps of `compile` up to its unit);
-`ohneAltGlobalB` decides that no postcondition reads `old` of a static, and `restore_ohneAlt` proves
-that Stage 0's restoration is then the identity on the lowered program. Stage 0's run is the one
+`restored` is the program Stage 0's restoration of `old(global)` postconditions builds from the
+lowered one (`restore_restored`), from the restored functions' source clauses given as data. Stage 0's run is the one
 boundary between a source text and the program the theorems speak about (owner, 2026-11-22).
 -/
 
@@ -52,78 +52,135 @@ def stufe0Einheit (text : String) (options : Profil.Options := {}) : Except Stri
       (widths := source.scopes.widths)).bind (Profil.selectUnit options)
   pure {candidate with exportGate := Konst.checkSourceMetadata gateMembers}
 
-/-- No postcondition of the items reads `old` of a static (`OldSource.hasEntry`). -/
-def ohneAltGlobalB (items : List SItemTief) : Bool :=
-  items.all fun it => match it with
-    | .fnT sig _ => sig.klauseln.all fun k => match k with
-        | .gives e => !Gabbro.Stage0.OldSource.hasEntry e
-        | _ => true
-    | _ => true
+/-! ## `old(global)` in postconditions: the program Stage 0 restores
 
-theorem collect_ok : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n) → Except String (T i))
-    (vals : (i : Fin n) → T i), (∀ i, get i = .ok (vals i)) →
-      Gabbro.Stage0.OldSource.collect n T get = .ok vals
-  | 0, _, _, vals, _ => by
-    simp only [Gabbro.Stage0.OldSource.collect, pure, Except.pure]
-    congr
-    funext i
-    exact i.elim0
-  | n + 1, T, get, vals, h => by
-    simp only [Gabbro.Stage0.OldSource.collect, h 0,
-      collect_ok n (fun i => T i.succ) (fun i => get i.succ) (fun i => vals i.succ) (fun i => h i.succ),
-      bind, Except.bind, pure, Except.pure]
-    congr
-    funext i
-    cases i using Fin.cases <;> rfl
+Stage 0 lowers a postcondition that reads `old` of a static through `OldSource.restore`: only the
+postcondition family changes, each function's from its own source clauses. `altVon` keeps exactly the
+clauses the restoration reads (those of the functions with an entry read, `[]` for all others), `restored`
+is the restored program as a total function of them, and `restore_restored` proves that it is what
+Stage 0 compiles. The duties are stated over `restored alt u P` for clauses `alt` given as data; that
+they are Stage 0's is the run fact `altVon c.expanded = alt` on the unit's functions. -/
 
-/-- **Without `old(global)` the restoration is the identity.** -/
-theorem restore_ohneAlt (items : List SItemTief) (u : UProg) (P : Programm (declOf u))
-    {expanded : List SItemTief} {requirements : List (STyp × String)}
+open Gabbro.Stage0.OldSource (hasEntry clauses koepfeVon predicates) in
+/-- The source postconditions of the function `name` that read `old` of a static, as the restoration
+    reads them; `[]` when none does. -/
+def altVon (items : List SItemTief) (name : String) : List SExpr :=
+  let src := clauses (koepfeVon items) name
+  if src.any hasEntry then src else []
+
+open Gabbro.Stage0.OldSource (hasEntry predicates) in
+/-- `OldSource.atFunction` over the clauses `cl` and the lowered postcondition `e0` of `f`. -/
+def atFunctionMit (cl : String → List SExpr) (u : UProg) (f : Fin u.fns.length) (e0 : EnsTy u f) :
+    Except String (EnsTy u f) := do
+  let src := cl (fnAt u f).name
+  if !src.any hasEntry then return e0
+  let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (verOf u f).ende
+    (fnAt u f) (fnAt u f).ergTy src (fnAt u f).gives
+  pure (by
+    unfold EnsTy
+    rw [← ensCtx_eq u f]
+    exact e)
+
+/-- The restored postcondition of `f` (the lowered one where the restoration refuses; Stage 0 then
+    compiles nothing). -/
+def ensAltAt (alt : String → List SExpr) (u : UProg) (f : Fin u.fns.length) (e0 : EnsTy u f) : EnsTy u f :=
+  match atFunctionMit alt u f e0 with
+  | .ok e => e
+  | .error _ => e0
+
+/-- **The program with the postconditions restored from the clauses `alt`.** -/
+def restored (alt : String → List SExpr) (u : UProg) (P : Programm (declOf u)) : Programm (declOf u) :=
+  { P with ensures := fun f => ensAltAt alt u f (P.ensures f) }
+
+theorem atFunction_mit (K : Tafel FnSig (·.name)) (u : UProg) (P : Programm (declOf u)) (f : Fin u.fns.length) :
+    Gabbro.Stage0.OldSource.atFunction K u P f =
+      atFunctionMit (Gabbro.Stage0.OldSource.clauses K) u f (P.ensures f) := rfl
+
+theorem atFunctionMit_altVon (items : List SItemTief) (u : UProg) (f : Fin u.fns.length) (e0 : EnsTy u f) :
+    atFunctionMit (Gabbro.Stage0.OldSource.clauses (Gabbro.Stage0.OldSource.koepfeVon items)) u f e0 =
+      atFunctionMit (altVon items) u f e0 := by
+  unfold atFunctionMit altVon
+  by_cases h : (Gabbro.Stage0.OldSource.clauses (Gabbro.Stage0.OldSource.koepfeVon items)
+      (fnAt u f).name).any Gabbro.Stage0.OldSource.hasEntry = true
+  · simp only [h, if_true]
+  · simp only [Bool.not_eq_true] at h
+    simp only [h, Bool.false_eq_true, if_false, List.any_nil, Bool.not_false, if_true]
+
+/-- **What Stage 0 compiles is the restored program.** -/
+theorem restore_restored {items expanded : List SItemTief} {requirements : List (STyp × String)}
+    {u : UProg} {P P' : Programm (declOf u)}
     (hx : Modules.prepare items = .ok (expanded, requirements))
-    (hb : ohneAltGlobalB expanded = true) :
-    Gabbro.Stage0.OldSource.restore items u P = .ok P := by
-  unfold Gabbro.Stage0.OldSource.restore
+    (h : Gabbro.Stage0.OldSource.restore items u P = .ok P') :
+    P' = restored (altVon expanded) u P := by
+  obtain ⟨hP', xs, rs, hexp, hat⟩ := Gabbro.Stage0.OldSource.restore_fields items u P P' h
   have hx' : expandU items = .ok (expanded, requirements) := hx
-  simp only [hx', bind, Except.bind]
-  rw [collect_ok _ _ _ P.ensures (fun f => ?_)]
-  · rfl
-  unfold Gabbro.Stage0.OldSource.atFunction
-  have hsrc : (Gabbro.Stage0.OldSource.clauses (Gabbro.Stage0.OldSource.koepfeVon expanded)
-      (fnAt u f).name).any Gabbro.Stage0.OldSource.hasEntry = false := by
-    unfold Gabbro.Stage0.OldSource.clauses
-    split
-    · rename_i sig hsig
-      have hmem := List.mem_of_find?_eq_some hsig
-      obtain ⟨it, hit, hsome⟩ := List.mem_filterMap.mp hmem
-      have hall := List.all_eq_true.mp hb it hit
-      cases it with
-      | fnT s body =>
-        simp only [Option.some.injEq] at hsome
-        subst hsome
-        simp only at hall
-        rw [List.any_eq_false]
-        intro e he
-        obtain ⟨k, hk, hke⟩ := List.mem_filterMap.mp he
-        have hkall := List.all_eq_true.mp hall k hk
-        cases k <;> simp_all
-      | _ => simp at hsome
-    · rfl
-  simp only [hsrc, Bool.not_false, if_true]
+  rw [hx'] at hexp
+  injection hexp with hexp
+  injection hexp with hxs
+  subst hxs
+  rw [hP']
+  unfold restored
+  congr
+  funext f
+  have hf : atFunctionMit (altVon expanded) u f (P.ensures f) = .ok (P'.ensures f) := by
+    exact (atFunctionMit_altVon expanded u f (P.ensures f)).symm.trans (hat f)
+  unfold ensAltAt
+  rw [hf]
+
+theorem ensAltAt_kongruent {alt alt' : String → List SExpr} {u : UProg} {f : Fin u.fns.length}
+    {e0 : EnsTy u f} (h : alt (fnAt u f).name = alt' (fnAt u f).name) :
+    ensAltAt alt u f e0 = ensAltAt alt' u f e0 := by
+  unfold ensAltAt atFunctionMit
+  rw [h]
+
+/-- Clauses that agree on the unit's functions restore the same program. -/
+theorem restored_kongruent {alt alt' : String → List SExpr} {u : UProg} (P : Programm (declOf u))
+    (h : ∀ f : Fin u.fns.length, alt (fnAt u f).name = alt' (fnAt u f).name) :
+    restored alt u P = restored alt' u P := by
+  unfold restored
+  congr
+  funext f
+  exact ensAltAt_kongruent (h f)
+
+/-- A function without an entry read keeps its lowered postcondition. -/
+theorem ensAltAt_ohne {alt : String → List SExpr} {u : UProg} {f : Fin u.fns.length} {e0 : EnsTy u f}
+    (h : (alt (fnAt u f).name).any Gabbro.Stage0.OldSource.hasEntry = false) : ensAltAt alt u f e0 = e0 := by
+  unfold ensAltAt atFunctionMit
+  simp only [h, Bool.not_false, if_true]
   rfl
 
+/-- A function with an entry read has the restored postcondition. -/
+theorem ensAltAt_mit {alt : String → List SExpr} {u : UProg} {f : Fin u.fns.length} {e0 e : EnsTy u f}
+    (h : atFunctionMit alt u f e0 = .ok e) : ensAltAt alt u f e0 = e := by
+  unfold ensAltAt
+  rw [h]
+
+/-- The clauses `alt` as data: a list of the functions with an entry read. -/
+def altAus (l : List (String × List SExpr)) (name : String) : List SExpr := (l.lookup name).getD []
+
 open Gabbro.Stage0 in
-/-- The run fact `hold` of `nutzerA_aus_compiled`, computed as Stage 0 computes its expanded
-    items (the steps of `compile` up to `Modules.prepare`); checked in the generated
-    `Pruefung` module by running it. -/
-def stufe0AltFreiB (text : String) (options : Profil.Options := {}) : Bool :=
+/-- The run fact of `nutzerBild` about `alt`, computed as Stage 0 computes its expanded items (the
+    steps of `compile` up to `Modules.prepare`); checked in the generated `Pruefung` module. -/
+def stufe0AltB (text : String) (u : UProg) (alt : String → List SExpr) (options : Profil.Options := {}) : Bool :=
   match Frontend.source text options with
   | .error _ => false
   | .ok source =>
     match Modules.prepare (pre108 source.prepared.elaborierbar) with
-    | .ok (expanded, _) => ohneAltGlobalB expanded
+    | .ok (expanded, _) => u.fns.all fun fn => beqSExprList (altVon expanded fn.name) (alt fn.name)
     | .error _ => false
 
+open Gabbro.Stage0 in
+/-- The clauses of the unit of `text` as data for the generator. -/
+def stufe0Alt (text : String) (u : UProg) (options : Profil.Options := {}) : List (String × List SExpr) :=
+  match Frontend.source text options with
+  | .error _ => []
+  | .ok source =>
+    match Modules.prepare (pre108 source.prepared.elaborierbar) with
+    | .ok (expanded, _) => u.fns.filterMap fun fn =>
+        let s := altVon expanded fn.name
+        if s.isEmpty then none else some (fn.name, s)
+    | .error _ => []
 
-#print axioms restore_ohneAlt
+#print axioms restore_restored
 
 end Gabbro.Bruecke

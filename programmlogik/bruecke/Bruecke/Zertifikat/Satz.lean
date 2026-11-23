@@ -120,38 +120,40 @@ theorem nutzerA_aus_compiled_logik {text : String} {options : Gabbro.Stage0.Prof
 /-! ## The duties of a unit given as data, one per function -/
 
 /-- **The duty of one function of the unit `u`**: its logic in the judged unit over the program the
-    lowering builds from `u`, for every axiom family, memory, entry, starts and checks. -/
-def ZielF (u : UProg) (f : Fin u.fns.length) : Prop :=
+    lowering builds from `u`, with the postconditions that read `old` of a static restored from their
+    source clauses `alt` (`restored`), for every axiom family, memory, entry, starts and checks. -/
+def ZielF (u : UProg) (alt : String → List Gabbro.Grammatik.Parser.SExpr) (f : Fin u.fns.length) : Prop :=
   ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn), lowerAllg u = .ok (P, fs) →
     ∀ (Q : AxEns (declOf u)) (sp : Speicher (declOf u)) (main : (declOf u).Fn)
       (args : Env (declOf u) ((declOf u).params main))
       (roots gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
       (checks : List (CheckDecl (declOf u))),
-      LogikFn (Gabbro.Stage0.OldSource.einheitDer u P Q sp main args roots gestartet checks) f
+      LogikFn (Gabbro.Stage0.OldSource.einheitDer u (restored alt u P) Q sp main args roots gestartet checks) f
 
 /-- The duty at a position (vacuous outside the unit), so that proofs collect over index lists. -/
-def ZielI (u : UProg) (i : Nat) : Prop := ∀ h : i < u.fns.length, ZielF u ⟨i, h⟩
+def ZielI (u : UProg) (alt : String → List Gabbro.Grammatik.Parser.SExpr) (i : Nat) : Prop :=
+  ∀ h : i < u.fns.length, ZielF u alt ⟨i, h⟩
 
-theorem zielI_nil {u : UProg} : ∀ i ∈ ([] : List Nat), ZielI u i := fun _ h => absurd h List.not_mem_nil
+theorem zielI_nil {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} : ∀ i ∈ ([] : List Nat), ZielI u alt i := fun _ h => absurd h List.not_mem_nil
 
-theorem zielI_cons {u : UProg} {i : Nat} {is : List Nat} (hi : ZielI u i) (hs : ∀ j ∈ is, ZielI u j) :
-    ∀ j ∈ i :: is, ZielI u j := fun j hj => (List.mem_cons.mp hj).elim (fun h => h ▸ hi) (hs j)
+theorem zielI_cons {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} {i : Nat} {is : List Nat} (hi : ZielI u alt i)
+    (hs : ∀ j ∈ is, ZielI u alt j) : ∀ j ∈ i :: is, ZielI u alt j := fun j hj => (List.mem_cons.mp hj).elim (fun h => h ▸ hi) (hs j)
 
-theorem zielI_append {u : UProg} {xs ys : List Nat} (hx : ∀ j ∈ xs, ZielI u j) (hy : ∀ j ∈ ys, ZielI u j) :
-    ∀ j ∈ xs ++ ys, ZielI u j := fun j hj => (List.mem_append.mp hj).elim (hx j) (hy j)
+theorem zielI_append {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} {xs ys : List Nat}
+    (hx : ∀ j ∈ xs, ZielI u alt j) (hy : ∀ j ∈ ys, ZielI u alt j) : ∀ j ∈ xs ++ ys, ZielI u alt j := fun j hj => (List.mem_append.mp hj).elim (hx j) (hy j)
 
 /-- Every function's duty, from the duties at the positions `0 … n-1`. -/
-theorem alle_ziele {u : UProg} {n : Nat} (hn : u.fns.length = n) (h : ∀ i ∈ List.range n, ZielI u i) :
-    ∀ f, ZielF u f := fun f => h f.val (List.mem_range.mpr (hn ▸ f.isLt)) f.isLt
+theorem alle_ziele {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} {n : Nat} (hn : u.fns.length = n)
+    (h : ∀ i ∈ List.range n, ZielI u alt i) : ∀ f, ZielF u alt f := fun f => h f.val (List.mem_range.mpr (hn ▸ f.isLt)) f.isLt
 
 /-- **Premise (b) of Stage 0's image theorem from the duties of the unit given as data**, every
-    language form: the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` (Stage 0's run),
+    language form: the run facts `c.unit = u` and `altVon c.expanded = alt` on its functions (Stage 0's run),
     the foreign bodies' locality (part of the environment contract) and Stage 0's decision of the
     data parts. -/
-theorem nutzerA_aus_ziele {u : UProg} (hz : ∀ f, ZielF u f)
+theorem nutzerA_aus_ziele {u : UProg} {alt : String → List Gabbro.Grammatik.Parser.SExpr} (hz : ∀ f, ZielF u alt f)
     {text : String} {options : Gabbro.Stage0.Profil.Options}
     (c : Gabbro.Stage0.Compiled text options) (hu : c.unit = u)
-    (hold : ohneAltGlobalB c.expanded = true)
+    (halt : ∀ f : Fin u.fns.length, altVon c.expanded (fnAt u f).name = alt (fnAt u f).name)
     (Q : AxEns (declOf c.unit)) (sp : Speicher (declOf c.unit))
     (args : Env (declOf c.unit) ((declOf c.unit).params c.main))
     (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))
@@ -163,11 +165,9 @@ theorem nutzerA_aus_ziele {u : UProg} (hz : ∀ f, ZielF u f)
     NutzerPflichtA (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) := by
   refine nutzerA_aus_compiled_logik c Q sp args roots gestartet checks ?_ hax hent
   obtain ⟨raw, fs, hlow, hr⟩ := c.lowered
-  have hid := restore_ohneAlt _ c.unit raw c.gateExpansion hold
-  rw [hid] at hr
-  injection hr with hP
-  rw [← hP]
+  rw [restore_restored c.gateExpansion hr]
   subst hu
+  rw [restored_kongruent raw halt]
   exact fun f => hz f raw fs hlow Q sp c.main args roots gestartet checks
 
 #print axioms nutzerA_aus_ziele

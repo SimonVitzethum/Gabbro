@@ -44,8 +44,8 @@ def paketDateien (ziel modul : String) : IO Unit := do
 /-- `gabbrov MODULE FILE.gab OUTDIR`: write the duty modules of the unit of `FILE.gab` under the
     module prefix `MODULE` (for example `Proofs.Lexer`) below `OUTDIR`. Generated files are
     replaced on every run; your proof files `MODULE/Beweis/F<i>.lean` are written once and never
-    replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 1: premise (b) is not
-    stated (see the top file); 2: wrong arguments, unreadable file, or Stage 0 refuses the source. -/
+    replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 2: wrong arguments,
+    unreadable file, or Stage 0 refuses the source. -/
 def haupt (args : List String) : IO UInt32 := do
   -- `--ein`: the guardian's form, one module `MODULE/Ein.lean` (`einDatei`)
   let (ein, args) := match args with
@@ -74,11 +74,7 @@ def haupt (args : List String) : IO UInt32 := do
         IO.FS.writeFile datei d.text
         neu := neu + 1
     unless ein do paketDateien ziel modul
-    let abgelehnt := ds.any fun d => (d.text.splitOn "REFUSED").length > 1
     IO.println s!"gabbrov: {neu} files written, {behalten} proof files kept, under {ziel}/{modul.replace "." "/"}"
-    if abgelehnt then
-      IO.println s!"gabbrov: REFUSED -- see {modul.replace "." "/"}.lean"
-      return 1
     return 0
 
 end Gabbro.Bruecke.Vorlage

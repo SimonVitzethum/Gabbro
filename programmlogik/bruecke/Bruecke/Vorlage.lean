@@ -11,8 +11,9 @@ Stage 0 compiles) and writes the certificate of that unit as Lean modules under 
 `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`). The duties are the model's certificate
 (`LogikPflichten`, exactly premise (b) by `logikPflichten_iff`) over the program the lowering builds
 from the unit: ONE theorem (`nutzerA_aus_ziele`) covers every language form; nothing is read into
-another language and no form is refused. The unit is pinned as data; the run facts `c.unit = u` and
-`ohneAltGlobalB c.expanded` are facts of Stage 0's run, checked in `M/Pruefung.lean`.
+another language and no form is refused. The unit and the source postconditions that read `old` of a
+static (`alt`) are pinned as data; the run facts `c.unit = u` and `altVon c.expanded = alt` are facts of
+Stage 0's run, checked in `M/Pruefung.lean`.
 
 * `M/Quelle.lean`        the source text, as pieces;
 * `M/Daten/S<k>.lean`    the elaborated functions of chunk `k` and their list;
@@ -201,13 +202,15 @@ def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
       "def stueck" ++ toString k ++ " : List UFn := [" ++
         String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++ fuss modul }
 
-def datenDatei (modul : String) (u : UProg) (anzahl : Nat) : Datei :=
+def datenDatei (modul : String) (u : UProg) (anzahl : Nat) (al : List (String × List SExpr)) : Datei :=
   let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
   { pfad := modul.replace "." "/" ++ "/Daten"
     text := kopf modul ((List.range anzahl).map (stueckModul modul))
         "The elaborated unit `u` as data (written by `gabbrov`)." ++
       "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++
-      "theorem laenge : u.fns.length = " ++ toString u.fns.length ++ " := rfl\n\n" ++ fuss modul }
+      "theorem laenge : u.fns.length = " ++ toString u.fns.length ++ " := rfl\n\n" ++
+      "/-- The source postconditions that read `old` of a static, by function (`restored`). -/\n" ++
+      "def alt : String → List SExpr := altAus " ++ breit (repr al) ++ "\n\n" ++ fuss modul }
 
 /-- The source contract of a function in a comment line. -/
 def vertrag (f : UFn) : String :=
@@ -227,7 +230,7 @@ def pflichtDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
       "    (`ZielF`): from `requires`, every return meets `ensures` and the owed invariants, and no call\n" ++
       "    stops on a precondition or a logic stop, at every budget, under every call meaning, oracle and\n" ++
       "    environment move the goal theorem quantifies. Nothing else is owed. -/\n" ++
-      "def ziel" ++ si ++ " : Prop := ZielF u ⟨" ++ si ++ ", lt" ++ si ++ "⟩\n\n" ++ fuss modul }
+      "def ziel" ++ si ++ " : Prop := ZielF u alt ⟨" ++ si ++ ", lt" ++ si ++ "⟩\n\n" ++ fuss modul }
 
 def logikModul (modul : String) (i : Nat) : String := modul ++ ".Logik.F" ++ toString i
 
@@ -261,10 +264,10 @@ def sammlungDatei (modul : String) (k : Nat) (is : List Nat) : Datei :=
   let beweis := is.foldr (fun i acc => "zielI_cons (fun _ => beweis" ++ toString i ++ ")\n    (" ++ acc ++ ")") "zielI_nil"
   { pfad := (sammlungModul modul k).replace "." "/"
     text := kopf modul (is.map (beweisModul modul)) ("The duties of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
-      "theorem sammlung" ++ toString k ++ " : ∀ i ∈ " ++ indexListe is ++ ", ZielI u i :=\n  " ++
+      "theorem sammlung" ++ toString k ++ " : ∀ i ∈ " ++ indexListe is ++ ", ZielI u alt i :=\n  " ++
         beweis ++ "\n\n" ++ fuss modul }
 
-def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) (altFrei : Bool) : Datei :=
+def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) : Datei :=
   let ks := List.range stuecke.length
   let listen := stuecke.map indexListe
   let beweis := baum (fun a b => "(zielI_append " ++ a ++ " " ++ b ++ ")") "zielI_nil" 64
@@ -273,14 +276,15 @@ def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) (altFre
     "theorem bereich_eq : List.range " ++ toString u.fns.length ++ " = " ++
       balanciert "++" "[]" 64 listen ++ " := rfl\n\n" ++
     "/-- Every function's duty. -/\n" ++
-    "theorem alle : ∀ f, ZielF u f :=\n  alle_ziele laenge (by rw [bereich_eq]; exact " ++ beweis ++ ")\n\n" ++
-    (if altFrei then
+    "theorem alle : ∀ f, ZielF u alt f :=\n  alle_ziele laenge (by rw [bereich_eq]; exact " ++ beweis ++ ")\n\n" ++
+    (
       "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
       "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`, every language form:\n" ++
-      "    the run facts `hu` and `hold` (checked in `Pruefung`), the environment contract of the foreign\n" ++
+      "    the run facts `hu` and `halt` (checked in `Pruefung`), the environment contract of the foreign\n" ++
       "    bodies (`hax`) and Stage 0's decision of the data parts on the judged unit (`hent`). -/\n" ++
       "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
-      "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
+      "    (halt : ∀ f : Fin u.fns.length, altVon c.expanded (fnAt u f).name = alt (fnAt u f).name)\n" ++
+      "    (Q : AxEns (declOf c.unit))\n" ++
       "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
       "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
       "    (checks : List (CheckDecl (declOf c.unit))) (hax : ∀ a, Gabbro.Grammatik.WP.AxLokalAn Q a)\n" ++
@@ -289,10 +293,7 @@ def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) (altFre
       "      (List.finRange c.unit.locks.length) = true) :\n" ++
       "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
       "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
-      "  nutzerA_aus_ziele alle c hu hold Q sp args roots gestartet checks hax hent\n\n"
-     else
-      "/-! REFUSED: a postcondition reads `old` of a static; Stage 0 restores it in the compiled program,\n" ++
-      "    and the duties above are stated over the unrestored lowering. -/\n\n")
+      "  nutzerA_aus_ziele alle c hu halt Q sp args roots gestartet checks hax hent\n\n")
   { pfad := modul.replace "." "/"
     text := kopf modul ([modul ++ ".Quelle", modul ++ ".Daten"] ++ ks.map (sammlungModul modul))
         ("Premise (b) of the goal theorem for the unit Stage 0 compiles from `quelle` (written by `gabbrov`).\n" ++
@@ -308,8 +309,8 @@ def pruefungDatei (modul : String) : Datei :=
         ("meta import Bruecke.Zertifikat.WP\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
       "#guard stufe0Einheit quelle == .ok u\n\n" ++
-      "-- No postcondition reads `old` of a static (the run fact `hold` of `nutzerBild`).\n" ++
-      "#guard stufe0AltFreiB quelle\n\n" ++
+      "-- The postconditions that read `old` of a static are those Stage 0 restores (the run fact `halt`).\n" ++
+      "#guard stufe0AltB quelle u alt\n\n" ++
       "-- The lowering accepts `u`: the duties are not vacuous.\n" ++
       "#guard (match lowerAllg u with | .ok _ => true | .error _ => false)\n\n" ++ fuss modul }
 
@@ -327,8 +328,8 @@ def dateien (modul src : String) : Except String (List Datei) := do
   let pflichten := fs.map fun (i, f) =>
     [rumpfDatei modul i f, pflichtDatei modul i f, logikDatei modul i f, beweisDatei modul i f]
   let sammlungen := stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1))
-  pure ([quelleDatei modul src, wurzelDatei modul u (stuecke.map (·.map (·.1))) (stufe0AltFreiB src),
-      datenDatei modul u stuecke.length, pruefungDatei modul] ++
+  pure ([quelleDatei modul src, wurzelDatei modul u (stuecke.map (·.map (·.1))),
+      datenDatei modul u stuecke.length (stufe0Alt src u), pruefungDatei modul] ++
     stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
 
 end Gabbro.Bruecke.Vorlage

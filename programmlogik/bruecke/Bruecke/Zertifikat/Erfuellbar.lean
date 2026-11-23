@@ -68,7 +68,7 @@ theorem einheitLeer_senkung (f : Fin einheitLeer.fns.length)
   match f with
   | ⟨0, _⟩ => exact ⟨by with_unfolding_all exact ⟨_, _, rfl⟩, fun _ _ _ => by with_unfolding_all rfl⟩
 
-theorem einheitLeer_ziel : ∀ f, ZielF einheitLeer f := by
+theorem einheitLeer_ziel : ∀ f, ZielF einheitLeer (fun _ => []) f := by
   intro f P fs hlow Q sp main args roots gestartet checks passes
   obtain ⟨v, hv, he, hb, hr⟩ := programm_von hlow f
   have hvw : lowerAtPair einheitLeer f ⟨v, hv⟩ = v := lowerAtPair_von f _ hv
@@ -95,12 +95,12 @@ theorem einheitLeer_ziel : ∀ f, ZielF einheitLeer f := by
 /-- **The premises of `nutzerA_aus_ziele` hold jointly**, and not vacuously: the lowering accepts
     the unit, every function's duty holds, and Stage 0's decision accepts its judged unit. -/
 theorem nutzerA_aus_ziele_erfuellbar :
-    ∃ u : UProg, (∀ f, ZielF u f) ∧ u.fns ≠ [] ∧ u.axs = [] ∧
+    ∃ u : UProg, (∀ f, ZielF u (fun _ => []) f) ∧ u.fns ≠ [] ∧ u.axs = [] ∧
       (∃ (P : Programm (declOf u)) (fs : List (declOf u).Fn), lowerAllg u = .ok (P, fs)) ∧
       ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn), lowerAllg u = .ok (P, fs) →
         ∀ (Q : AxEns (declOf u)) (sp : Speicher (declOf u)) (main : (declOf u).Fn)
           (args : Env (declOf u) ((declOf u).params main)),
-          entschiedenB (Gabbro.Stage0.OldSource.einheitDer u P Q sp main args [] [] [])
+          entschiedenB (Gabbro.Stage0.OldSource.einheitDer u (restored (fun _ => []) u P) Q sp main args [] [] [])
             (List.finRange u.locks.length) = true := by
   refine ⟨einheitLeer, einheitLeer_ziel, by simp [einheitLeer], rfl, ?_, ?_⟩
   · have hk : (match lowerAllg einheitLeer with | .ok _ => true | .error _ => false) = true := by

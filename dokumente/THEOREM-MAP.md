@@ -8382,7 +8382,7 @@ language and none is refused.
 | `entschieden_sound` | `Zertifikat/Satz.lean` | Stage 0's decision of the data parts (`checkUnitLock`, `checkStartRequires`) gives the certificate's lock and start duties. |
 | `nutzerA_aus_logik`, `logik_aus_nutzerA` | `Zertifikat/Satz.lean` | Every function's logic (`LogikFn`), the foreign bodies' locality and the decided data parts give premise (b) for every unit; conversely (b) gives the logic and the locality: the duties are not stronger than (b). |
 | `nutzerA_aus_compiled_logik` | `Zertifikat/Satz.lean` | **Premise (b) of Stage 0's image theorem for every compilation and every language form**, over `c.program` itself. |
-| `nutzerA_aus_ziele`, `alle_ziele` | `Zertifikat/Satz.lean` | The same from the duties of the unit given as data (`ZielF`, one per function), with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded`. |
+| `nutzerA_aus_ziele`, `alle_ziele` | `Zertifikat/Satz.lean` | The same from the duties of the unit given as data (`ZielF`, one per function), with the run facts `c.unit = u` and `altVon c.expanded = alt` on the unit's functions; the duties are over `restored alt u P`. |
 | `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | The premises hold jointly for a unit with one function; Stage 0's decision accepts its judged unit. |
 
 ## 218. GabbroV without a second language: the bridge is the certificate (2026-11-22)
@@ -8394,6 +8394,6 @@ model's certificate of §217 over the program Stage 0 lowers, and the generator.
 | Theorem | File | Statement |
 |---|---|---|
 | `programm_von` | `Zertifikat/Programm.lean` | The program `lowerAllg u` answers has at every function the postcondition, body and precondition of that function's lowering `lowerFnAt`; every form. |
-| `restore_ohneAlt` | `Zertifikat/Lauf.lean` | Without `old` of a static in a postcondition Stage 0's restoration is the identity on the lowered program. |
+| `restore_restored` | `Zertifikat/Lauf.lean` | Stage 0's restoration of `old(global)` postconditions builds `restored (altVon expanded) u P` from the lowered program: only the postconditions change, each from its function's source clauses. |
 | `pflicht_oeffnen`, `logikFn_aus`, tactic `gabbrov_wp` | `Zertifikat/WP.lean` | Open a function's duty at its own lowering; the exact weakest-precondition rules of the model on its body. |
 | `einheitLeer_ziel`, `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | A function's duty proved directly over its lowered body; the premises of `nutzerA_aus_ziele` hold jointly and the lowering accepts the unit. |

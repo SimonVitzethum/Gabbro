@@ -94,6 +94,39 @@ meta def findeLow? : MetaM (Option Lean.Expr) := do
   return none
 
 open Lean Meta in
+/-- For `t = ensAltAt alt u f e0`, the postcondition of `f` in the restored program (`restored`): the
+    postcondition it is, `e0` when `f` reads no `old` of a static (`ensAltAt_ohne`), else the restored
+    predicate the kernel computes (`ensAltAt_mit`), with the equation `t = …`. -/
+meta def altGleichung? (t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  let t := t.cleanupAnnotations
+  unless t.isAppOfArity ``Gabbro.Bruecke.ensAltAt 4 do return none
+  -- without an entry read
+  let c ← mkConstWithFreshMVarLevels ``Gabbro.Bruecke.ensAltAt_ohne
+  let (ms, _, ty) ← forallMetaTelescopeReducing (← inferType c)
+  let some (_, l, r) := ty.eq? | return none
+  unless ← isDefEq l t do return none
+  let hty ← instantiateMVars (← inferType ms.back!)
+  let some (_, cond, _) := hty.eq? | return none
+  if (← kernNormal cond).isConstOf ``Bool.false then
+    ms.back!.mvarId!.assign (← mkExpectedTypeHint (← mkEqRefl (mkConst ``Bool.false)) hty)
+    return some (← instantiateMVars r, ← instantiateMVars (mkAppN c ms))
+  -- with one: the restored predicate, by the kernel's evaluation
+  let c ← mkConstWithFreshMVarLevels ``Gabbro.Bruecke.ensAltAt_mit
+  let (ms, _, ty) ← forallMetaTelescopeReducing (← inferType c)
+  let some (_, l, _) := ty.eq? | return none
+  unless ← isDefEq l t do return none
+  let hty ← instantiateMVars (← inferType ms.back!)
+  let some (_, lhs, _) := hty.eq? | return none
+  let w ← match Kernel.whnf (← getEnv) (← getLCtx) lhs with
+    | .ok w => pure w
+    | .error _ => return none
+  unless w.isAppOfArity ``Except.ok 3 do return none
+  let e ← kernNormal w.appArg!
+  ms[ms.size - 2]!.mvarId!.assign e
+  ms.back!.mvarId!.assign (← mkExpectedTypeHint (← mkEqRefl lhs) (← instantiateMVars hty))
+  return some (e, ← instantiateMVars (mkAppN c ms))
+
+open Lean Meta in
 /-- **The callee's contract without its body**: the equation `P.requires g = …` (`ens = false`) or
     `P.ensures g = …` (`ens = true`) by `requires_vertrag`/`ensures_vertrag`, their side conditions computed
     by the kernel (checked again when the proof is added); for a generated transition function the

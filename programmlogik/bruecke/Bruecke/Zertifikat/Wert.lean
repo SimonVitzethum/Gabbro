@@ -35,6 +35,12 @@ meta def intWert? (e : Lean.Expr) : MetaM (Option Int) := do
     return n.rawNatLit?.map fun k => Int.negSucc k
   return none
 
+/-- The index of a static `⟨k, _⟩` as the kernel computes it. -/
+meta def globIndex? (g : Lean.Expr) : MetaM (Option Nat) := do
+  let g ← kw g
+  unless g.isAppOfArity ``Fin.mk 3 do return none
+  return (← kw (g.getArg! 1)).rawNatLit?
+
 /-- An integer atom: `v.n` of a value `v : Zahl lo hi`, remembered with its range. -/
 meta def atomInt (v : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
   let ty ← kw (← inferType v)
@@ -55,6 +61,9 @@ meta partial def tInt (s0 s : Lean.Expr) (e ρ : Lean.Expr) : StateRefT (Array L
       | some v => pure (toExpr v)
       | none => pure a[n-1]!
   | some `Gabbro.Grammatik.Expr.var => tVarInt ρ a[n-1]!
+  -- a static, and `old` of it: the static in the world (the entry world for `old`), one atom for both
+  | some `Gabbro.Grammatik.Expr.glob => leseGlob s a[n-2]!
+  | some `Gabbro.Grammatik.Expr.oldG => leseGlob s0 a[n-2]!
   | some `Gabbro.Grammatik.Expr.widen => tInt s0 s a[n-1]! ρ
   | some `Gabbro.Grammatik.Expr.add => do mkAppM ``HAdd.hAdd #[← tInt s0 s a[n-2]! ρ, ← tInt s0 s a[n-1]! ρ]
   | some `Gabbro.Grammatik.Expr.sub => do mkAppM ``HSub.hSub #[← tInt s0 s a[n-2]! ρ, ← tInt s0 s a[n-1]! ρ]
@@ -66,6 +75,18 @@ meta partial def tInt (s0 s : Lean.Expr) (e ρ : Lean.Expr) : StateRefT (Array L
       pure (mkApp2 (mkConst ``Int.tmod) (← tInt s0 s a[n-2]! ρ) (← tInt s0 s a[n-1]! ρ))
   | _ => atomInt (← mkAppM `Gabbro.Grammatik.eval #[s0, e, s, ρ])
 
+/-- The integer of the static `g` in the world `w`: its value as the kernel reads it. A read the kernel
+    leaves as it is (`w.globs g`) is one atom per world and index, whatever the index's type or proof
+    (the same static read in a precondition and in a postcondition is one integer). -/
+meta partial def leseGlob (w g : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
+  let r ← kw (← mkAppM ``Gabbro.Grammatik.World.globs #[w, g])
+  if r.isApp && r.appFn!.isProj then
+    if let some k ← globIndex? r.appArg! then
+      for a in (← get) do
+        if a.isApp && a.appFn! == r.appFn! then
+          if (← globIndex? a.appArg!) == some k then return ← atomInt a
+  tWertInt r
+
 /-- The integer of variable `x` of the environment `ρ`. -/
 meta partial def tVarInt (ρ x : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
   let ρ' ← kw ρ
@@ -75,6 +96,12 @@ meta partial def tVarInt (ρ x : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM 
     if x'.isAppOf `Gabbro.Grammatik.Var.here then return ← tWertInt ra[ra.size - 2]!
     if x'.isAppOf `Gabbro.Grammatik.Var.there then return ← tVarInt ra[ra.size - 1]! x'.appArg!
   atomInt (← mkAppM `Gabbro.Grammatik.Env.get #[ρ, x])
+
+/-- An integer term: a literal as a numeral, `v.n` by its value `v`, otherwise the term itself. -/
+meta partial def tZahlN (t : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
+  if let some k ← intWert? t then return toExpr k
+  let t' := t.headBeta
+  if t'.isAppOfArity `Gabbro.Grammatik.Zahl.n 3 then tWertInt t'.appArg! else pure t
 
 /-- The integer of a value term. -/
 meta partial def tWertInt (v : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
@@ -87,6 +114,8 @@ meta partial def tWertInt (v : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Le
       if e.isAppOf `Gabbro.Grammatik.ErgExpr.val then tInt a[a.size-4]! a[a.size-2]! e.appArg! a[a.size-1]!
       else atomInt v
   | some `Gabbro.Grammatik.Zahl.weiter => tWertInt a[a.size-1]!
+  -- a value built in place (a static after a store): its integer
+  | some `Gabbro.Grammatik.Zahl.mk => if a.size == 5 then tZahlN a[2]! else atomInt v
   -- a callee's result at its declared type: the value itself
   | some `Gabbro.Grammatik.ergWert => tWertInt a[a.size-1]!
   | _ => atomInt v
@@ -189,8 +218,25 @@ meta def vertragOffen? (hlow t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.E
   let _ := (satz, hlow)
   let some eqX ← (try vertragsGleichung? f (satz == ``Gabbro.Bruecke.ensures_eq) catch _ => pure none) | return none
   let some (_, _, rhs) := (← inferType eqX).eq? | return none
+  -- in the restored program X is `(restored alt u P).ensures f`, by definition `ensAltAt alt u f (P.ensures f)`
+  let X' := X.cleanupAnnotations
+  -- the program of X: `restored alt u P`, possibly as the program of a judged unit over it
+  let pr? ← if satz == ``Gabbro.Bruecke.ensures_eq && X'.isAppOfArity ``Gabbro.Grammatik.Programm.ensures 3 then
+      match (X'.getArg! 1).find? (·.isAppOfArity ``Gabbro.Bruecke.restored 3) with
+      | some pr => do pure (if ← isDefEq (X'.getArg! 1) pr then some pr else none)
+      | none => pure none
+    else pure none
+  let (eqX, rhs) ← if let some pr := pr? then do
+    let mot := mkApp3 (mkConst ``Gabbro.Bruecke.ensAltAt) (pr.getArg! 0) (pr.getArg! 1) (X'.getArg! 2)
+    let e1 ← mkCongrArg mot eqX
+    match ← altGleichung? (mkApp mot rhs) with
+    | some (e2, pf2) => pure (← mkEqTrans e1 pf2, e2)
+    | none => pure (e1, mkApp mot rhs)
+  else pure (eqX, rhs)
   let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
-  let motiv := mkLambda `r .default (← inferType X) motivRumpf
+  -- the binder at the equation's type (in the restored program `EnsTy`, equal to `X`'s by the kernel)
+  let some (alpha, _, _) := (← inferType eqX).eq? | return none
+  let motiv := mkLambda `r .default alpha motivRumpf
   return some ((mkApp motiv rhs).headBeta, ← mkCongrArg motiv eqX)
 
 /-- Every contract hypothesis (`ReqAmEintritt`, `EnsAmRueck`, and an implication between them, as the
@@ -238,7 +284,8 @@ meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
     let lctx ← getLCtx
     for d in lctx do
       if LocalDecl.isImplementationDetail d then continue
-      if let some p' ← tAussage? (LocalDecl.type d) then
+      -- a hypothesis outside the translation stays as it is (it does not stop the others)
+      if let some p' ← (try tAussage? (LocalDecl.type d) catch _ => pure none) then
         goal ← goal.replaceLocalDeclDefEq d.fvarId p'
         let nm := Name.mkSimple s!"hw{namen.size}"
         goal ← goal.rename d.fvarId nm
@@ -269,12 +316,12 @@ meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
   for nm in namen do
     evalTactic (← `(tactic| try simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true',
       decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false,
-      true_implies, implies_true]
+      true_implies, implies_true, and_true, true_and, or_true, true_or]
       at $(mkIdent nm):ident))
   if imZiel then
     evalTactic (← `(tactic| try simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true',
       decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false,
-      true_implies, implies_true]))
+      true_implies, implies_true, and_true, true_and, or_true, true_or]))
   -- the language's division and remainder round towards zero (`tdiv`/`tmod`); on non-negative operands
   -- they are `omega`'s `/`/`%`
   for nm in namen do
