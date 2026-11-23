@@ -88,33 +88,32 @@ Consequences:
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
 - **ONE theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise is a single
-  theorem whose statement a reviewer can read in a minute, with an ABSTRACT notion of error that needs no list and
-  covers every error class, the unknown ones included (owner: "keine Aufzählung, eine abstrakte Definition, die
-  alle einschließt, ebenso alle, die wir noch nicht kennen"):
-  `Akzeptiert → Logik → Hardware → Laufzeit → every run of the implementation refines a good run of the program's logic`.
-  `Ideal P` is the program as its source says (each thread step by step; shared state changes only at declared
-  synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
-  runs in which every declared specification holds, the behaviour is determined by the source and declared sources
-  of nondeterminism only (environment answers, the order at declared synchronisation points), every effect depends
-  only on current state (a value read before a release point of its state is stale; there is NO escape —
-  owner: "dann ist es wieder möglich, soll es aber nicht, das ist die Zielgarantie der Sprache"),
-  and every thread ends, keeps progressing under the named
-  fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
-  emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
-  list of error kinds exists anywhere — not in the statement, not in its proof (owner). Review reads `Ideal`, `Gut`, the correspondence
-  and the premises (a)–(d). The theorem has two halves (owner: "In C kann 'korrekte' Logik auch Fehler erzeugen, das
-  soll hier aber unmöglich sein"): (i) the language adds no error to the logic — for every accepted program EVERY
-  run of `Ideal P` is in `Gut P`; `Ideal P` has no undefined or error state, every operation is total or its
-  failure is a declared, handled outcome of the program, the checker refuses everything else (no undefined
-  behaviour exists); this includes errors the user writes: a program whose runs would depend on an undeclared
-  interleaving (a data race) or let an effect depend on stale state (TOCTOU) is outside `Gut P` and refused (owner:
-  "was aber, wenn der Nutzer ein Datenrennen oder TOCTOU erzeugt, das soll unmöglich sein für alle Fehler"); (ii) the implementation adds no error to the language — the refinement above. The only
-  possible deviation from the programmer's intent is then a false specification or broken hardware. Theorems that
-  today state single legs become proof steps, never the promise. The user
-  owes only program logic (b) and the named hardware and environment list (c).
-  **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
-  `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
-  follow from it as proved corollaries.
+  theorem `gabbro_ziel`; every other statement is a proof step. Its parts:
+  - **Premises:** `Bezeichnet a E` (the text `a` means the unit `E`), `Akzeptiert E` (a perfect checker accepts:
+    the local decidable rules hold and every written clause is TRUE), `Hardware H` (rows of the catalogue). The
+    user and their proofs are not premises.
+  - **Error, abstract, no list:** a run of the implementation (G/GX/W today, the image after B6/C9) is erroneous
+    when no run of the ideal meaning `I` of `E` corresponds to it with the same environment answers, or when a
+    thread hangs while `I` could proceed. Logic is everything `I` allows.
+  - **Inside Gabbro** every state and every interference is known: every condition an effect relies on is proved
+    under the rely of the whole program; a stale decision that violates nothing declared is logic. **Outside
+    Gabbro** (OS, file system, devices, firmware, guests, VMs, guest memory, hardware-changed state) knowledge is
+    valid only at the moment of the answer: the rely for the outside is arbitrary change, except a stability a
+    catalogue row states. A program that needs outside state to stay as observed is refused; environment
+    interfaces offer only operations whose precondition is checked in the same question (handle-based, atomic,
+    with a failure channel). TOCTOU is excluded this way without being named.
+  - **Shape:** non-vacuity (the catalogue is satisfiable, every form occurs in an accepted program, `I` is
+    deterministic up to named choice points with no garbage values, the runs are non-empty, fairness is
+    satisfiable); then for every run ONE corresponding ideal run with bounded stutter, today's legs as EXPLICIT
+    conjuncts (never only corollaries), progress per checked progress class under hardware-only fairness, and
+    bounds on stack, memory and cost as observations. Noninterference is a two-run conjunct of the same theorem.
+  - **Build guards:** `Akzeptiert` depends on no run or step relation (checked semantically, not by names);
+    `I`, `Bezeichnet`, the error notion and the theorem are hash-pinned; no `_ =>` in `I`, the rules and the
+    fundamental proof; one `_erfuellbar` per form; hardware events only from catalogue rows; written clauses
+    state user predicates over `I`, never definedness of `I`. Adding unsound syntax turns the build red; a wrong
+    but consistent `I`-rule or `Bezeichnet`-rule is caught only by the pin and the owner's review.
+  - **Trusted:** `I` and `Bezeichnet` (the language's promise), the catalogue rows, the Lean kernel; until B6/C9
+    the bytes. Errors in dimensions that are not declared observations stay invisible.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
