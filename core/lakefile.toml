@@ -2,8 +2,8 @@ name = "core"
 version = "0.1.0"
 defaultTargets = ["Core"]
 # The new Gabbro model (PERFECT-MODEL.md, owner 2026-11-23): built fresh, never importing `grammatik`.
-# Resource bounds only; they change no proof.
-weakLeanArgs = ["-j2", "-M4096", "-DElab.async=true"]
+# Resource bounds; maxHeartbeats 100000 forces fast proofs (owner, 2026-11-23; PERFECT-MODEL §6.8).
+weakLeanArgs = ["-j2", "-M4096", "-DElab.async=true", "-DmaxHeartbeats=100000"]
 
 [[require]]
 name = "mathlib"

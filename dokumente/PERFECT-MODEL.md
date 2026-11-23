@@ -296,6 +296,14 @@ first commit, with NO allow-list and no ratchet:
    only together with all of it.
 6. No `_ =>` in `I`, the rules and the fundamental proofs; no hardware or stop kind outside the catalogue.
 7. No `sorry`, `admit`, `native_decide`, `axiom`, `unsafe`, `_zeuge`, `decide +kernel`, no witness modules.
+8. Fast builds (owner, 2026-11-23): `core/` is elaborated under `maxHeartbeats` 100 000 (half of Lean's default,
+   set in its lakefile); a source scan fails the build on any `set_option maxHeartbeats`,
+   `synthInstance.maxHeartbeats` or `maxRecDepth`, on `decide` over anything but small finite goals, on bare `simp`
+   in a terminal position where `simp only` would do, and on unbounded `aesop`. Proofs go by structure (`induction`,
+   `cases`, named lemmas, `simp only [...]`, `omega` on small goals), never by evaluating programs, strings or
+   large terms. Budget, measured from the build log by the lead's acceptance: every declaration under 2 s, every
+   module under 30 s, a full build of `core/` under 15 min with 12 threads; a slower module is a finding and is
+   fixed before more is built on it.
 
 The enforceable promise: **a new constructor keeps the build red until its complete rules, its jointly
 satisfiable premises, the generic preservation of the pinned guarantees and the approved semantic diff exist.**
