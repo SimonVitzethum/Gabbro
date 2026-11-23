@@ -322,10 +322,10 @@ code efi_main(fw: uefi, image: image_handle) in platform.uefi_arrival { … }
   `jump long` that leaves it; enabling A20 without the service is device logic (port `0x92`) in the platform unit.
 - **Resident firmware** — firmware that keeps running after the handoff (SMM handlers under UEFI or BIOS, UEFI
   runtime services, EL3 secure firmware, RISC-V M-mode firmware) — is not covered by a per-call contract: it can
-  run asynchronously between calls. Each platform declares it with a rely contract (`resident firmware smm
-  touches reserved(smram) …`): which entries are asynchronous, the memory it may touch (its reserved regions
-  only) and the time it may take; this is the environment assumption "resident firmware" of the Spec list. An
-  image that provides that firmware itself (§4.17) proves it instead.
+  run asynchronously between calls. The platform selects a pinned resident-firmware catalogue row by name
+  (`resident firmware = catalogue smm_uefi_2_10`); the row supplies the asynchronous entries, the permitted memory
+  footprint (its reserved regions only) and the timing bound (PERFECT-MODEL §3.3). An image that provides that
+  firmware itself (§4.17) proves those properties instead.
 
 ### 4.9 Images, placement and code from data
 
@@ -652,7 +652,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   (a platform envelope), `ResetState` (per processor: the state at the reset vector and at the arrival of a further
   core), device contracts (including the truth of discovery answers; their DMA part only for requests outside the `Iommu` envelope), the memory-model reading.
   Environment: `FirmwareHandoff` (UEFI), `BiosHandoff` (16-bit loader), the firmware services of §4.8 including
-  the resume arrivals they establish, resident firmware with its rely contract. For timed blocks only: `ClockRate` and `RowTiming` (§4.18). Everything else — boot, allocators,
+  the resume arrivals they establish, resident firmware as a selected catalogue row. For timed blocks only: `ClockRate` and `RowTiming` (§4.18). Everything else — boot, allocators,
   page-table code, schedulers, drivers, hypervisors, monitors and provided firmware services — is software inside
   the image and the user's logic (b).
 
