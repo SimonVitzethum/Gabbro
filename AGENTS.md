@@ -94,7 +94,10 @@ Consequences:
   `Akzeptiert → Logik → Hardware → Laufzeit → every run of the implementation refines a good run of the program's logic`.
   `Ideal P` is the program as its source says (each thread step by step; shared state changes only at declared
   synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
-  runs in which every declared specification holds and every thread ends, keeps progressing under the named
+  runs in which every declared specification holds, the behaviour is determined by the source and declared sources
+  of nondeterminism only (environment answers, the order at declared synchronisation points), every effect depends
+  only on current state (a value read before a release point of its state is stale unless declared `snapshot`),
+  and every thread ends, keeps progressing under the named
   fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
   emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
   list of error kinds exists anywhere — not in the statement, not in its proof (owner). Review reads `Ideal`, `Gut`, the correspondence
@@ -102,7 +105,9 @@ Consequences:
   soll hier aber unmöglich sein"): (i) the language adds no error to the logic — for every accepted program EVERY
   run of `Ideal P` is in `Gut P`; `Ideal P` has no undefined or error state, every operation is total or its
   failure is a declared, handled outcome of the program, the checker refuses everything else (no undefined
-  behaviour exists); (ii) the implementation adds no error to the language — the refinement above. The only
+  behaviour exists); this includes errors the user writes: a program whose runs would depend on an undeclared
+  interleaving (a data race) or let an effect depend on stale state (TOCTOU) is outside `Gut P` and refused (owner:
+  "was aber, wenn der Nutzer ein Datenrennen oder TOCTOU erzeugt, das soll unmöglich sein für alle Fehler"); (ii) the implementation adds no error to the language — the refinement above. The only
   possible deviation from the programmer's intent is then a false specification or broken hardware. Theorems that
   today state single legs become proof steps, never the promise. The user
   owes only program logic (b) and the named hardware and environment list (c).
