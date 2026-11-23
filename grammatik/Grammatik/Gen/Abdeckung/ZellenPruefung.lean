@@ -148,7 +148,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     only the contract checker grows; cells and `komp` unchanged.
     The contract proofs for state transitions, explicit float narrowing,
     empty consuming domains and bounded slot inputs extend the closure of
-    `AkzeptiertX`. The numbered admission predicates keep their existing hashes. -/
+    `AkzeptiertX`. The numbered admission predicates keep their existing hashes.
+    Re-pinned 2026-11-23: the removal of `entrust` renamed the generic guest-boundary diagnostics
+    ("entrust:" → "guest boundary:"); no component of `AkzeptiertX` changed. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -162,7 +164,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 12073542765822158576)]
+   ("AkzeptiertX", 6325687284354994849)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
