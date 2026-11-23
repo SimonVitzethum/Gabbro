@@ -46,6 +46,7 @@ public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
 public import Grammatik.Alle.Teil3
 public import Grammatik.Zielsatz.Waechter.Abhaengigkeit
+public import Grammatik.Zielsatz.Waechter.Pins
 
 
 
