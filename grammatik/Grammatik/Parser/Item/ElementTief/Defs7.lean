@@ -309,6 +309,21 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
 
 end
 
+/-- The removed `prim` form is refused for every following token sequence. -/
+theorem parseItemKopfTief_prim_refused (fuel : Nat) (contents : List Token) :
+    parseItemKopfTief (fuel + 1) (.wort "prim" :: contents) =
+      .error "N595: prim fn is not part of Gabbro: machine operations are language constructs (LOW-LEVEL-SYNTAX-PLAN)" := rfl
+
+/-- The removed `raw` form is refused for every following token sequence. -/
+theorem parseItemKopfTief_raw_refused (fuel : Nat) (contents : List Token) :
+    parseItemKopfTief (fuel + 1) (.wort "raw" :: contents) =
+      .error "N596: raw fn is not part of Gabbro: memory access requires checked authority (LOW-LEVEL-SYNTAX-PLAN)" := rfl
+
+/-- The removed `entrust` form is refused for every following token sequence. -/
+theorem parseItemKopfTief_entrust_refused (fuel : Nat) (contents : List Token) :
+    parseItemKopfTief (fuel + 1) (.wort "entrust" :: contents) =
+      .error "N597: entrust is not part of Gabbro: guests are language constructs (LOW-LEVEL-SYNTAX-PLAN)" := rfl
+
 /-- A whole program in depth: the token list must end here. -/
 def parseTopTief (toks : List Token) : Except String (List SItemTief) :=
   match parseItemsTief (toks.length * 8 + 32) toks with

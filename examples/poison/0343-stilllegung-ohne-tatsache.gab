@@ -23,7 +23,6 @@ type Pa = u64;
 
 linear ghost type BootPhase;
 
-raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
 
 fn boot_ende(t : BootPhase)
     retires t from boot falsifier sonde_boot_unerreichbar

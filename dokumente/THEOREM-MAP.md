@@ -801,7 +801,7 @@ head stands at one of these places (a leaf here: a `state` transition).
 | `e0 : Ereignis D` | the declaration has a table, global or lock | (d) declaration-shape datum (§11.2) |
 | `hO : GutO O` | axiom answers inside declared frames; held locks and trace kept | (b) HARDWARE |
 | `hRL : RegLokal O` | register answers from the device carriers; `awaits` visibility from the awaited global | (b) HARDWARE |
-| `hQ : AxVertragO Q O` | every axiom answer that fits its type meets the declared ensures `Q` | (b) HARDWARE (per `extern`/`asm` declaration) |
+| `hQ : AxVertragO Q O` | every axiom answer that fits its type meets the declared ensures `Q` | (b) HARDWARE (per `extern` declaration) |
 | `hlok : AxEnsLokal Q` | `Q` reads only the axiom's declared write carriers | (c) decidable per declaration |
 | `hvoll` | member list complete | (c) |
 | `hFrag : programmImFragmentG` | widened fragment | (c) DECIDABLE, no checker rule (verdict §1) |
@@ -3157,14 +3157,14 @@ Removed on 2026-10-18 with the C backend: this section recorded the stage-(b) si
 
 ## 46. Divergence of accepted never-bodies, and `KeinLogikHaltG` at the spin (lane 231; fix lane F8, 2026-09-22)
 
-**File:** `grammatik/Grammatik/Zielsatz/Eigenschaften/Divergenz.lean` (on `NeverAsm.lean`,
+**File:** `grammatik/Grammatik/Zielsatz/Eigenschaften/Divergenz.lean` (on `ForeignNever.lean`,
 `RufMaschineF.lean`, `ZielOrtGanz.lean`).
 
 | Theorem | What it says | Tied to |
 |---|---|---|
 | `foreverLauf_noexit` | an exit-free step and a true guard make `foreverLauf` answer `hardware (fortschritt a)` at every fuel | the named `progress` assumption (`on_exceeded`) |
 | `forever_noexit_divergiert`, `forever_noexit_kein_logik`, `forever_noexit_kein_zurueck`, `forever_leer_divergiert` | a `forever` with `NoExit` body and `InvWahr` invariant diverges as declared: never `logik`, never a return | lane 225's accepted `never-forever` shape |
-| `asm_never_antwort_leer`, `asm_never_kein_ok` | a `-> never` axiom fits no answer and never continues | the axiom's reading "the asm never returns" -- an ASSUMPTION about the C lowering (review G10 F2; the C side is G04's `for(;;)` after the asm) |
+| `never_antwort_leer`, `never_kein_ok` | a `-> never` axiom fits no answer and never continues | a named assumption that the environment service never returns |
 | `spin_prueft` | a thread at ANY head of the empty spin `forever a invariant true {}` (`SpinKopf`: `.ewig`, the unfolded empty body, `ewigRest`) passes every clause of `PrueftG` | the per-thread content of `KeinLogikHaltG` (ZielOrtGanz.lean) |
 | `ret_prueft` | a thread at a bare `return` head passes every clause of `PrueftG` | the other threads of the witness |
 | `ewig_wahr_schreitet` | the `.ewig` head at budget `n + 1` with guard `true` and empty body takes its G step (`ewigWeiter`) | one step, one head shape |
@@ -5011,7 +5011,7 @@ All axiom lists standard.
 (appended at the end), parsed and printed (`pub` was dropped by the reader before); `pre108` refuses a unit whose
 hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
 
-* **Which kinds carry `pub`** (`darfPub`): functions (body, prototype, `spec`, `asm`), `static`, `const`, `type`,
+* **Which kinds carry `pub`** (`darfPub`): functions (body, prototype, `spec`), `static`, `const`, `type`,
   `atomic`, `table`, `arena`, `lock`, `format`, `device`, `reason`, `use`, `module`; a `pub` before anything else
   (and `pub pub`) is refused.
 * **The export hull is closed** (`N038`): every item a `pub` item's head names (`kopfNamen`: parameter, result and
@@ -5104,8 +5104,8 @@ gate- and profile-free unit). `Speichermodell/Adressen/Platzierung.lean` and `Pa
 static alignment and section (`PlatzOk`, `platzB`, `platzOk_von_platzB`); the elaborator keeps refusing placement
 until the IR layout proofs consume it. `Zielsatz/Projekte/Profil.lean` states `GabbroZielProfil` over a
 `ProfilEinheit` (meaning change described in the header of `Spec.lean`) and proves it from `gabbro_ziel`;
-`Parser/Profil/Eintritt.lean` admits dispatch-only userspace entries and refuses every source `entrust` until a
-proved isolation service has a form. Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
+`Parser/Profil/Eintritt.lean` admits dispatch-only userspace entries. Removed machine-access forms
+are refused by the parser (`N594`–`N597`); see [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md). Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
 Open: the entry/service correspondence and the guest service (C08/C12), function-tail gates, the `Verbund` profile
 transport, and the layout/startup/relocation proofs of placement.
 

@@ -1,0 +1,5 @@
+// erwartet: N597
+// Guests use language constructs.
+module poison::removed_machine_access {
+entrust guest at Code arch x86_64 via service;
+}

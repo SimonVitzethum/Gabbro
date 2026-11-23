@@ -2,7 +2,7 @@ module
 public import Grammatik.Zielsatz.Eigenschaften.Divergenz.Teil2Basis
 import all Grammatik.Zielsatz.Eigenschaften.Divergenz.Teil2Basis
 
-public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
+public import Grammatik.Zielsatz.Eigenschaften.ForeignNever
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 public import Grammatik.Zielsatz.Eigenschaften.Divergenz.Teil1
@@ -127,7 +127,7 @@ theorem divergent_body_zeuge :
       hNo hInv
   · exact ⟨divM2F, divB_erreicht, divB_schreibt⟩
   · exact stelleOk_never_ax (D := divD) () divAx_never
-  · exact asm_never_antwort_leer () divAx_never
+  · exact never_antwort_leer () divAx_never
 
 /-! ## 8. The spin on machine G: a reached `.ewig` head, `KeinLogikHaltG` there
 
@@ -226,7 +226,7 @@ theorem ewig_spin_zeuge :
     `forever_noexit_kein_zurueck` -- the `forever` divergence as declared,
     never `logik`, never a return.
   * `forever_leer_divergiert` -- the empty spin, no evidence premises.
-  * `asm_never_antwort_leer`, `asm_never_kein_ok` -- the `-> never` axiom
+  * `never_antwort_leer`, `never_kein_ok` -- the `-> never` axiom
     fits no answer and never continues.
   * `spin_prueft` -- a thread at any head of the empty true-invariant spin
     passes every clause of `PrueftG`; `ret_prueft` the same at a bare
@@ -264,8 +264,8 @@ theorem ewig_spin_zeuge :
 #print axioms Gabbro.Grammatik.Zielsatz.forever_noexit_kein_logik
 #print axioms Gabbro.Grammatik.Zielsatz.forever_noexit_kein_zurueck
 #print axioms Gabbro.Grammatik.Zielsatz.forever_leer_divergiert
-#print axioms Gabbro.Grammatik.Zielsatz.asm_never_antwort_leer
-#print axioms Gabbro.Grammatik.Zielsatz.asm_never_kein_ok
+#print axioms Gabbro.Grammatik.Zielsatz.never_antwort_leer
+#print axioms Gabbro.Grammatik.Zielsatz.never_kein_ok
 #print axioms Gabbro.Grammatik.Zielsatz.ewig_wahr_schreitet
 #print axioms Gabbro.Grammatik.Zielsatz.bindAxiom_kein_blatt
 #print axioms Gabbro.Grammatik.Zielsatz.spin_prueft

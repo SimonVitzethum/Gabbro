@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
+public import Grammatik.Zielsatz.Eigenschaften.ForeignNever
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 public import Grammatik.Zielsatz.Eigenschaften.Divergenz.Teil1

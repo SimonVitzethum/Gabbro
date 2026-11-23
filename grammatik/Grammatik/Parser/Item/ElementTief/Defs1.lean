@@ -135,6 +135,11 @@ def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
           | .ok r => .ok (.specT sig p, r)
     | _ => .error "fn without body"
 
+/-- Every assembly body is refused before its contents can be interpreted. -/
+theorem parseFnRest_assembly_refused (fuel : Nat) (sig : FnSig) (contents : List Token) :
+    parseFnRest (fuel + 1) sig (.zeichen "=" :: .wort "asm" :: contents) =
+      .error "N594: assembly is not part of Gabbro: privileged operations are language constructs (LOW-LEVEL-SYNTAX-PLAN)" := rfl
+
 /-- A raw `@bitpos`: one number or a `[hi:lo]` group. -/
 def parseBitpos : List Token → Except String (String × List Token)
   | .zeichen "[" :: rest => match sammleAusgewogen rest 0 1 0 with
