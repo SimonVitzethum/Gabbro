@@ -77,22 +77,20 @@ Consequences:
 
 ## 3. The goal theorem
 
-- **One source:** the goal theorem `gabbro_ziel`, the model it speaks about and the migration of `grammatik/` onto
-  it are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md) (owner, 2026-11-23). Nothing else —
-  this file, the plans, commit messages, agent briefs — restates, extends or softens it. Until its step S12, the
-  statement in `Spec.lean` is the interim one.
+- **One source:** the goal theorem `gabbro_ziel`, the model it speaks about and its construction in the package `core/`
+  are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md) (owner, 2026-11-23). Nothing else —
+  this file, the plans, commit messages, agent briefs — restates, extends or softens it. Until its step M12, the
+  statement in `grammatik/`'s `Spec.lean` is the interim one; `grammatik/` is frozen and stays green.
 - **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
   it.
-- **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until S12 the
+- **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until M12 the
   header of `Spec.lean` is the interim list. Every extension of the goal is a diff of PERFECT-MODEL.md and then of
   `Spec.lean`, described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff of
   PERFECT-MODEL.md, with a recommendation, before it is merged. Strengthening the language's promise is the default
   direction.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
-  `sorry` — except that during the migration of PERFECT-MODEL §8 `gabbro_ziel` need not build green (owner,
-  2026-11-23); whenever it builds it is on the standard axioms and without
-  `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
+  `sorry`; `core/` builds green at every commit under the strict guards of PERFECT-MODEL §6. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
   satisfiability is a proved lemma (`NAME_erfuellbar`: the premises hold jointly), one per premise bundle shared
   by all theorems over that bundle, checked in seconds, never a run of the compiler on a source text. **Every new
@@ -242,8 +240,10 @@ Consequences:
 
 | What | Where |
 |---|---|
-| The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
-| The model | `grammatik/Grammatik/Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/`, `Niedrig/` |
+| The goal theorem and the model (definition) | `dokumente/PERFECT-MODEL.md` |
+| The new model, built fresh | `core/` (`Core/Ziel/Form.lean` is the shape of the goal theorem) |
+| The interim goal statement (frozen until M12) | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
+| The interim model (frozen until M12) | `grammatik/Grammatik/Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/`, `Niedrig/` |
 | Test sets M and N | `grammatik/Grammatik/Gen/` |
 | Stage 0 and the runner | `stage0/`, `stage0/runner/` |
 | GabbroV and the bridge | `programmlogik/`, `programmlogik/bruecke/` |
