@@ -96,8 +96,8 @@ Consequences:
   synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
   runs in which every declared specification holds and every thread ends, keeps progressing under the named
   fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
-  emitted image after B6/C9) without a corresponding run in `Gut P`; memory errors, races, TOCTOU, overruns,
-  deadlocks and every class nobody has named yet are such runs. Review reads `Ideal`, `Gut`, the correspondence
+  emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
+  list of error kinds exists anywhere — not in the statement, not in its proof (owner). Review reads `Ideal`, `Gut`, the correspondence
   and the premises (a)–(d). The theorem has two halves (owner: "In C kann 'korrekte' Logik auch Fehler erzeugen, das
   soll hier aber unmöglich sein"): (i) the language adds no error to the logic — for every accepted program EVERY
   run of `Ideal P` is in `Gut P`; `Ideal P` has no undefined or error state, every operation is total or its
