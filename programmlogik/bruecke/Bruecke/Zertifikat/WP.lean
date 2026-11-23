@@ -49,6 +49,10 @@ theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.
 /-- Loops with more passes than this are not unrolled (`gabbrov_wp`); they stay as the program's logic. -/
 meta def schleifenGrenze : Nat := 256
 
+/-- A traverse over more indices than `schleifenGrenze` is walked for this many passes (an early exit);
+    what follows them stays as the program's logic. -/
+meta def breitGrenze : Nat := 8
+
 /-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
     equivalence. Fails when no rule applies. -/
 syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
@@ -86,15 +90,13 @@ open Lean Elab Tactic Meta in
         else pure (goal, t, w)
       let args := t.getAppArgs
       let mitListe (w' : Lean.Expr) := mkAppN t.getAppFn (args.set! pos w')
-      -- the indices one at a time: the next by the kernel's head normal form, at most
-      -- `schleifenGrenze` passes (what follows them stays as the program's logic)
-      if w.isAppOf ``List.filterMap && w.appArg!.isAppOf ``List.range' &&
-          (w.getArg! 2).isAppOf ``Gabbro.Bruecke.indexVon then
-        let src := w.appArg!
-        let nI := (w.getArg! 2).appArg!
-        let some s := (← kw (src.getArg! 0)).rawNatLit? | throwError "gabbrov: traverse start unknown"
-        let some m := (← kw (src.getArg! 1)).rawNatLit? | throwError "gabbrov: traverse length unknown"
-        if s > schleifenGrenze then throwError "gabbrov: traverse beyond {schleifenGrenze} passes"
+      -- the indices of a wide table one at a time, at most `breitGrenze` passes (what follows them stays
+      -- as the program's logic)
+      if w.isAppOfArity ``Gabbro.Bruecke.indizesAb 3 then
+        let nI := w.getArg! 0
+        let some s := (← kw (w.getArg! 1)).rawNatLit? | throwError "gabbrov: traverse start unknown"
+        let some m := (← kw (w.getArg! 2)).rawNatLit? | throwError "gabbrov: traverse length unknown"
+        if s > breitGrenze then throwError "gabbrov: wide traverse beyond {breitGrenze} passes"
         -- the next index (`indizes_ab`, its range fact decided by the kernel) or the end (`indizes_leer`)
         let eq ← if m == 0 then pure (mkApp2 (mkConst ``Gabbro.Bruecke.indizes_leer) nI (mkNatLit s))
           else do
@@ -202,15 +204,15 @@ meta def istAusgangCtor' (x : Lean.Expr) : Bool :=
   | none => false
 
 /-- The continuation `weiterEA`/`weiterBA` at an outcome, unfolded and its `match` taken, where the goal
-    carries the indices of a large table one at a time (`List.range'`): `simp` would visit that list
-    and take seconds. Fails on every other goal. -/
+    carries the indices of a large table one at a time (`indizesAb`): `simp` would visit that list and
+    take seconds. Fails on every other goal. -/
 syntax (name := gabbrovWeiter) "gabbrov_weiter" : tactic
 
 open Lean Elab Tactic Meta in
 @[tactic gabbrovWeiter] meta def evalGabbrovWeiter : Tactic := fun _ => withMainContext do
   let goal ← getMainGoal
   let t ← instantiateMVars (← goal.getType)
-  unless (t.find? (·.isConstOf ``List.range')).isSome do throwError "gabbrov_weiter: not needed"
+  unless (t.find? (·.isConstOf ``Gabbro.Bruecke.indizesAb)).isSome do throwError "gabbrov_weiter: not needed"
   let some t1 ← unfoldDefinition? t.headBeta | throwError "gabbrov_weiter: nothing to unfold"
   replaceMainGoal [← goal.replaceTargetDefEq (← whnfCore t1)]
 

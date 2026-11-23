@@ -108,21 +108,23 @@ theorem wpSA_traverse_lauf {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .
 def indexVon (n : Int) (k : Nat) : Option (Zahl 0 (n - 1)) :=
   if h : ((k : Nat) : Int) ≤ n - 1 then some ⟨((k : Nat) : Int), by omega, h⟩ else none
 
+/-- The indices `s, s+1, …` (`m` of them) of a table of `n` slots, folded: a step that does not know it
+    (`simp`) leaves it as it is instead of building the list. -/
+def indizesAb (n : Int) (s m : Nat) : List (Zahl 0 (n - 1)) := (List.range' s m).filterMap (indexVon n)
+
 /-- **The indices of a table, one at a time.** `List.range` is built from its end, so the kernel cannot take
     the first index of a large table without building them all; `List.range'` gives them from the front. -/
-theorem alleIndizes_faul (n : Int) :
-    alleIndizes n = (List.range' 0 n.toNat).filterMap (indexVon n) := by
-  unfold alleIndizes indexVon
+theorem alleIndizes_faul (n : Int) : alleIndizes n = indizesAb n 0 n.toNat := by
+  unfold alleIndizes indizesAb indexVon
   rw [List.range_eq_range']
 
 /-- The next index of a large table, by an equation (the kernel's head normal form of `List.range'` is
     its internal recursor, which a later step would unfold over the whole table). -/
 theorem indizes_ab (n : Int) (s m : Nat) (h : ((s : Nat) : Int) ≤ n - 1) :
-    (List.range' s (m + 1)).filterMap (indexVon n) =
-      ⟨((s : Nat) : Int), by omega, h⟩ :: (List.range' (s + 1) m).filterMap (indexVon n) := by
-  simp only [List.range'_succ, List.filterMap_cons, indexVon, h, dite_true]
+    indizesAb n s (m + 1) = ⟨((s : Nat) : Int), by omega, h⟩ :: indizesAb n (s + 1) m := by
+  simp only [indizesAb, List.range'_succ, List.filterMap_cons, indexVon, h, dite_true]
 
-theorem indizes_leer (n : Int) (s : Nat) : (List.range' s 0).filterMap (indexVon n) = [] := rfl
+theorem indizes_leer (n : Int) (s : Nat) : indizesAb n s 0 = [] := rfl
 
 theorem wpTravA_nil {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (body : Block D V true (.index (D.count t) :: Γ) Λ Λ) (Q : Ausgang V l Γ → Prop) (σ : World D)
