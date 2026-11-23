@@ -87,22 +87,22 @@ Consequences:
   the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **ONE short goal theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise
-  is a single theorem whose statement a reviewer can read in a minute:
-  `Akzeptiert → Logik → Hardware → every run of the emitted image is a run of machine G with no Fehler`.
-  `Fehler` is ONE definition that NAMES every error class (owner: "ein Fehler kann alles sein, von Speicher bis zu
-  TOCTOU"): memory errors (outside a live carrier or extent, after free, uninitialised, wrong representation),
-  ownership violations, data races, lock violations (invariants included), contract violations at calls and
-  returns, arithmetic outside the declared range, TOCTOU, budget and time overruns, stack overflow, deadlock, an
-  endless wait under the named fairness, a stuck thread, and a stop other than a normal end or a named hardware
-  stop. The proof method is that every class is a side condition of G's rules; the statement is that no class
-  ever occurs. Review therefore reads three things only: the definition of `Fehler`, the premises (a)–(d), and the
-  rules of G. Theorems that today state single legs become proof steps;
-  they are never the promise. The user owes only program logic (b) and the named hardware and environment list (c).
+- **ONE theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise is a single
+  theorem whose statement a reviewer can read in a minute, with an ABSTRACT notion of error that needs no list and
+  covers every error class, the unknown ones included (owner: "keine Aufzählung, eine abstrakte Definition, die
+  alle einschließt, ebenso alle, die wir noch nicht kennen"):
+  `Akzeptiert → Logik → Hardware → Laufzeit → every run of the implementation refines a good run of the program's logic`.
+  `Ideal P` is the program as its source says (each thread step by step; shared state changes only at declared
+  synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
+  runs in which every declared specification holds and every thread ends, keeps progressing under the named
+  fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
+  emitted image after B6/C9) without a corresponding run in `Gut P`; memory errors, races, TOCTOU, overruns,
+  deadlocks and every class nobody has named yet are such runs. Review reads `Ideal`, `Gut`, the correspondence
+  and the premises (a)–(d). Theorems that today state single legs become proof steps, never the promise. The user
+  owes only program logic (b) and the named hardware and environment list (c).
   **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
   `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
-  follow from it as proved corollaries, and it says more — about the emitted image, not only about G, and with
-  TOCTOU, deadlock and the low-level rules excluded.
+  follow from it as proved corollaries.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
