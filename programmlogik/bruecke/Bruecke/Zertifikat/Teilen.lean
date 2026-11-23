@@ -53,6 +53,34 @@ meta def entschieden? (inst : Lean.Expr) : MetaM (Option Bool) := do
   | .error _ => return none
 
 open Lean Meta in
+/-- Take the branch `b` of the `ite`/`dite` with arguments `xa` under the proof `pc` of its condition (or of
+    its negation), by the equation `if_pos`/`if_neg` (`dif_pos`/`dif_neg`), never by a definitional
+    replacement: the kernel would compare `ite c t e` with `t` by unfolding the higher of the two first,
+    which is the branch, i.e. the rest of the program. -/
+meta def nimmZweig (goal : MVarId) (xa : Array Lean.Expr) (abh b : Bool) (pc : Lean.Expr) :
+    MetaM (List MVarId) := do
+  let zweig := if b then xa[3]! else xa[4]!
+  let u ← getLevel xa[0]!
+  let regel := match abh, b with
+    | true, true => ``dif_pos | true, false => ``dif_neg
+    | false, true => ``if_pos | false, false => ``if_neg
+  let gl := mkAppN (mkConst regel [u]) #[xa[1]!, xa[2]!, pc, xa[0]!, xa[3]!, xa[4]!]
+  let neu := if abh then (mkApp zweig pc).headBeta else zweig
+  return [← goal.replaceTargetEq neu gl]
+
+open Lean Meta in
+/-- **A condition an earlier branch already settled**: a branch hypothesis (`hbed`) states the condition
+    `c` or its negation, syntactically. Returns which branch and the hypothesis. -/
+meta def ausBedingung? (goal : MVarId) (c : Lean.Expr) : MetaM (Option (Bool × Lean.Expr)) :=
+  goal.withContext do
+    for d in ← getLCtx do
+      if d.isImplementationDetail || d.userName.eraseMacroScopes != `hbed then continue
+      let ty ← instantiateMVars d.type
+      if ty == c then return some (true, d.toExpr)
+      if ty.not? == some c then return some (false, d.toExpr)
+    return none
+
+open Lean Meta in
 /-- **A branch** `ite`/`dite` at the top of a goal: taken when the kernel decides its condition (a
     `dite` branch gets the proof `of_decide_eq_true rfl`, checked by the kernel), otherwise split into
     both branches, each under its condition (`ite_faelle`, `dite_faelle`). -/
@@ -61,15 +89,14 @@ meta def verzweigung (goal : MVarId) (t : Lean.Expr) : MetaM (List MVarId) := do
   let abh := t.isAppOf ``dite
   match ← entschieden? xa[2]! with
   | some b =>
-    let zweig := if b then xa[3]! else xa[4]!
-    if abh then
-      let rT ← mkEqRefl (mkConst ``Bool.true)
-      let rF ← mkEqRefl (mkConst ``Bool.false)
-      let pc := if b then mkApp3 (mkConst ``of_decide_eq_true) xa[1]! xa[2]! rT
-        else mkApp3 (mkConst ``of_decide_eq_false) xa[1]! xa[2]! rF
-      return [← goal.replaceTargetDefEq (mkApp zweig pc).headBeta]
-    return [← goal.replaceTargetDefEq zweig]
+    let rT ← mkEqRefl (mkConst ``Bool.true)
+    let rF ← mkEqRefl (mkConst ``Bool.false)
+    let pc := if b then mkApp3 (mkConst ``of_decide_eq_true) xa[1]! xa[2]! rT
+      else mkApp3 (mkConst ``of_decide_eq_false) xa[1]! xa[2]! rF
+    nimmZweig goal xa abh b pc
   | none =>
+    if let some (b, pc) ← ausBedingung? goal xa[1]! then
+      return ← nimmZweig goal xa abh b pc
     if abh then
       let G ← withLocalDeclD `p xa[0]! fun p => mkLambdaFVars #[p] p
       let u ← getLevel xa[0]!
@@ -106,17 +133,27 @@ meta def iteHeben? (goal : MVarId) : MetaM (Option (List MVarId)) := do
   if x == t then return none
   let (G, _) ← motivVon goal x
   let xa := x.getAppArgs
+  let abh := x.isAppOf ``dite
+  -- the branch under the proof `pc` of its condition (or its negation), by the equation of `nimmZweig`
+  -- carried through the goal (`congrArg`), never by a definitional replacement
+  let nimm (b : Bool) (pc : Lean.Expr) : MetaM (List MVarId) := do
+    let zweig := if b then xa[3]! else xa[4]!
+    let u ← getLevel xa[0]!
+    let regel := match abh, b with
+      | true, true => ``dif_pos | true, false => ``dif_neg
+      | false, true => ``if_pos | false, false => ``if_neg
+    let gl := mkAppN (mkConst regel [u]) #[xa[1]!, xa[2]!, pc, xa[0]!, xa[3]!, xa[4]!]
+    let neu := if abh then (mkApp zweig pc).headBeta else zweig
+    return [← goal.replaceTargetEq (mkApp G neu).headBeta (← mkCongrArg G gl)]
   match ← entschieden? xa[2]! with
   | some b =>
-    let zweig := if b then xa[3]! else xa[4]!
-    let zweig ← if x.isAppOf ``dite then do
-        let rT ← mkEqRefl (mkConst ``Bool.true)
-        let rF ← mkEqRefl (mkConst ``Bool.false)
-        pure (mkApp zweig (if b then mkApp3 (mkConst ``of_decide_eq_true) xa[1]! xa[2]! rT
-          else mkApp3 (mkConst ``of_decide_eq_false) xa[1]! xa[2]! rF)).headBeta
-      else pure zweig
-    return some [← goal.replaceTargetDefEq (mkApp G zweig).headBeta]
+    let rT ← mkEqRefl (mkConst ``Bool.true)
+    let rF ← mkEqRefl (mkConst ``Bool.false)
+    return some (← nimm b (if b then mkApp3 (mkConst ``of_decide_eq_true) xa[1]! xa[2]! rT
+      else mkApp3 (mkConst ``of_decide_eq_false) xa[1]! xa[2]! rF))
   | none =>
+    if let some (b, pc) ← ausBedingung? goal xa[1]! then
+      return some (← nimm b pc)
     let u ← getLevel xa[0]!
     let satz := if x.isAppOf ``dite then ``Gabbro.Bruecke.dite_faelle else ``Gabbro.Bruecke.ite_faelle
     let pf0 := mkAppN (mkConst satz [u]) #[xa[0]!, G, xa[1]!, xa[2]!, xa[3]!, xa[4]!]

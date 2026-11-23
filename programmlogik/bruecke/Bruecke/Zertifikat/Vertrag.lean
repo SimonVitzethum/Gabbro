@@ -77,4 +77,13 @@ theorem ensures_vertrag {u : UProg} {P : Programm (declOf u)} {fs : List (declOf
   obtain ⟨v, hv, hens, _⟩ := programm_von h c
   rw [hens, (vertrag_von hv ht hname hr he).1]
 
+/-- **No atomic globals, decided on the elaborated program**: the Boolean test over `u.globs` gives the
+    premise of `atomarA_id` for every global of `declOf u`. -/
+theorem atomar_frei {u : UProg} (h : (u.globs.all fun x => !x.atomic) = true) :
+    ∀ g : (declOf u).Glob, (declOf u).atomar g = false := by
+  intro g
+  have hg := List.all_eq_true.mp h _ (List.get_mem u.globs g)
+  show (globAt u g).atomic = false
+  simpa [globAt] using hg
+
 end Gabbro.Bruecke

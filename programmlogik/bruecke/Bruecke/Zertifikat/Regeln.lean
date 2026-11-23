@@ -188,6 +188,25 @@ theorem zurueck_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {v : ErgVal D V.er
 theorem why_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {r : Fin V.gruende} {e : Logik D} :
     (EndAusgang.why σ r : EndAusgang V l Γ) ≠ EndAusgang.logik e := nofun
 
+/-- **Without atomic globals the atomic environment is the identity**: a carrier is shared
+    (`GeteiltA`) only if it is an atomic global (`AtomarAusgenommen`), and `HavocA` lets the environment
+    change shared carriers only. -/
+theorem atomarA_id [DecidableEq D.Fn] {P : Programm D} {ws : List D.Fn} {A : AUmwelt D}
+    (hatom : ∀ g : D.Glob, D.atomar g = false) (hA : HavocA (Zielsatz.GeteiltA P ws) A) : A = idA := by
+  funext X σ
+  obtain ⟨hs, hc⟩ := hA X σ
+  have hgl : ∀ c, TraegerGleich (A X σ).speicher σ.speicher c := fun c =>
+    hc c (fun ⟨_, ht⟩ => by
+      obtain ⟨g, rfl, hg⟩ := ht.1
+      rw [hatom g] at hg
+      cases hg)
+  have e1 : (A X σ).slots = σ.slots := funext fun t => hgl (.inl t)
+  have e2 : (A X σ).globs = σ.globs := funext fun g => hgl (.inr g)
+  show A X σ = σ
+  calc A X σ = ⟨(A X σ).slots, (A X σ).globs, (A X σ).spur⟩ := rfl
+    _ = ⟨σ.slots, σ.globs, σ.spur⟩ := by rw [e1, e2, hs]
+    _ = σ := rfl
+
 /-- Two `logik` outcomes with different stops differ. -/
 theorem logik_ne_logik {l : Bool} {Γ : Ctx} {e e' : Logik D} (h : e ≠ e') :
     (EndAusgang.logik e : EndAusgang V l Γ) ≠ EndAusgang.logik e' :=

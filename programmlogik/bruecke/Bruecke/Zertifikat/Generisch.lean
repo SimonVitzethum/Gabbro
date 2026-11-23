@@ -163,6 +163,18 @@ meta def matchTeilen? (goal : MVarId) : MetaM (Option (List MVarId)) := do
        | none => false)
     | return none
   let some app ← matchMatcherApp? m | return none
+  -- a discriminant the kernel computes to a constructor is computed, not split
+  for d in app.discrs do
+    if d.hasLooseBVars then continue
+    let istCtor (x : Lean.Expr) : MetaM Bool := do
+      match x.getAppFn.constName? with
+      | some c => return ((← getEnv).find? c).any (·.isCtor)
+      | none => return false
+    unless ← istCtor d do
+      if let .ok d' := Kernel.whnf (← getEnv) (← getLCtx) d then
+        if ← istCtor d' then
+          let (G, _) ← motivVon goal d
+          return some [← goal.replaceTargetDefEq (mkApp G d').headBeta]
   for d in app.discrs do
     if let some o ← ersteOffene d then
       return ← wertTeilen goal o

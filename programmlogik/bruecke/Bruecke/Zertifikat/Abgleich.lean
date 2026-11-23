@@ -26,29 +26,40 @@ open Lean Meta in
 /-- The normal form of `e` computed by the KERNEL's reduction (fast where the elaborator's is slow):
     weak head normal form, then the same in every explicit argument of a constructor that is neither a
     proof nor a type. Implicit arguments, types and proofs are kept as they are. -/
-meta partial def kernNormal (e : Lean.Expr) : MetaM Lean.Expr := do
-  let e' ← match Kernel.whnf (← getEnv) (← getLCtx) (← instantiateMVars e) with
+meta partial def kernNormalMit (cache : IO.Ref (Std.HashMap Lean.Expr Lean.Expr)) (e : Lean.Expr) :
+    MetaM Lean.Expr := do
+  -- a shared subterm is normalised once (a term with sharing would otherwise cost exponentially)
+  if let some r := (← cache.get).get? e then return r
+  let e' ← match Kernel.whnf (← getEnv) (← getLCtx) e with
     | .ok r => pure r
     | .error err => do
       logInfo m!"gabbrov: kernel whnf failed: {err.toMessageData (← getOptions)}"
       pure e
   let f := e'.getAppFn
-  match f with
-  | .const n _ =>
-    match (← getEnv).find? n with
-    | some (.ctorInfo _) =>
-      let args := e'.getAppArgs
-      let info ← getFunInfoNArgs f args.size
-      let mut args' := args
-      for i in [:args.size] do
-        if h : i < info.paramInfo.size then
-          if info.paramInfo[i].isExplicit then
-            let a := args[i]!
-            unless (← isProof a) || (← isType a) do
-              args' := args'.set! i (← kernNormal a)
-      return mkAppN f args'
-    | _ => return e'
-  | _ => return e'
+  let r ← match f with
+    | .const n _ =>
+      match (← getEnv).find? n with
+      | some (.ctorInfo _) =>
+        let args := e'.getAppArgs
+        let info ← getFunInfoNArgs f args.size
+        let mut args' := args
+        for i in [:args.size] do
+          if h : i < info.paramInfo.size then
+            if info.paramInfo[i].isExplicit then
+              let a := args[i]!
+              unless (← isProof a) || (← isType a) do
+                args' := args'.set! i (← kernNormalMit cache a)
+        pure (mkAppN f args')
+      | _ => pure e'
+    | _ => pure e'
+  cache.modify (·.insert e r)
+  return r
+
+open Lean Meta in
+/-- `kernNormalMit` with a fresh cache. -/
+meta def kernNormal (e : Lean.Expr) : MetaM Lean.Expr := do
+  let cache ← IO.mkRef ({} : Std.HashMap Lean.Expr Lean.Expr)
+  kernNormalMit cache (← instantiateMVars e)
 
 open Lean in
 /-- The rule of the model for the outermost constructor of the body in a `wpEA`/`wpBA`/`wpSA` goal. -/

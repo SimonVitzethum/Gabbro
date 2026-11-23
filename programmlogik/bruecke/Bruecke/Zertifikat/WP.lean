@@ -197,6 +197,19 @@ open Lean Elab Tactic Meta in
     let s ← saveState
     let t ← instantiateMVars (← g.getType)
     let simpOk := lohntSimp t
+    let spurDatei ← IO.getEnv "GABBROV_SPUR"
+    let spur := spurDatei.isSome
+    let schreibSpur (s : String) : IO Unit := do
+      if let some pfad := spurDatei then
+        let h ← IO.FS.Handle.mk pfad .append
+        h.putStrLn s
+        h.flush
+    let t0 ← IO.monoMsNow
+    if spur then
+      let kopf := t.headBeta.getAppFn.constName?.getD `_
+      let arg := (t.headBeta.getAppArgs.back?.bind (·.getAppFn.constName?)).getD `_
+      let form := (t.headBeta.getAppArgs.toList.reverse.drop 3).head?.bind (·.getAppFn.constName?)
+      schreibSpur s!"gabbrov_wp {budget - fuel}: {kopf} {form.getD `_} / {arg}"
     let ok ← tryCatchRuntimeEx (withCurrHeartbeats do
         if simpOk then
           evalTactic (← `(tactic| first
@@ -210,6 +223,8 @@ open Lean Elab Tactic Meta in
             | gabbrov_generisch))
         pure true)
       (fun _ => do s.restore; pure false)
+    if spur then
+      schreibSpur s!"   {(← IO.monoMsNow) - t0} ms {if ok then "ok" else "stays"}"
     if ok then offen := (← getGoals) ++ offen
     else stehen := stehen ++ [g]
   setGoals (offen ++ stehen)
@@ -248,7 +263,11 @@ macro "gabbrov_beweis" : tactic => `(tactic| (
   rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
   gabbrov_normal_at hrumpf
   refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
-    intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
+    intro O' _ _ _ U _ A hA R _ _ σ ρ _ <;>
+    (first
+      | (have hAid := Gabbro.Bruecke.atomarA_id (Gabbro.Bruecke.atomar_frei (by exact rfl)) hA
+         subst hAid)
+      | skip) <;>
     show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
     rw [hrumpf] <;> gabbrov_wp
   all_goals gabbrov_sicher gabbrov_fertig hens
