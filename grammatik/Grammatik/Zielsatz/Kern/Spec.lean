@@ -202,50 +202,33 @@
     about it (`fifoSperre_aus`).
   * `GabbroZielVerbund`: the two units' hardware assumptions are the same (`E₂.Q = E₁.Q`).
 
-  THE LOW-LEVEL ASSUMPTION LIST (owner, 2026-11-23, decisions O23-O25 of dokumente/PLAN-COMPILER-READY.md; the
-  design is dokumente/LOW-LEVEL-SYNTAX-PLAN.md). Fixed IN ADVANCE and closed: when the low-level constructs (boot
-  from any boundary, execution states with `jump`/`jump long`, address spaces, entries, cores, guests, devices,
-  virtualisation, IOMMU, secure worlds) are connected to machine G, the statements may assume exactly the names
-  below and nothing else; a further name is a new reviewed diff of this file. TODAY NO STATEMENT TAKES THEM: no
-  low-level construct is in G yet, the checker refuses every low-level form, and the goal statements above are
-  unchanged. Each name enters premise (c) together with its construct, as a predicate over the neutral
-  architectural state, with a satisfiability lemma (`NAME_erfuellbar`) and without weakening a leg.
-  Hardware, unconditional, per target-table row or per unit of the processor:
-  * `Hardware T` -- every row of the target table computes its GIR cell: base, float, privileged, entry, and the
-    16- and 32-bit rows of execution states below 64 bit (generalises `RootNativeFloat.Hardware`).
-  * hardware frame -- `GutO` restricted to hardware items after A1: a hardware item writes only its declared
-    carriers, keeps the held locks and leaves its accesses in the trace.
-  * `Mmu` -- the translation unit translates by the installed tables (stage 1) and caches as the architecture
-    manual says, and drops entries when the generated flush says so.
-  * `IrqDelivery` -- replaces `KernPlan`: an interrupt is delivered at an instruction boundary to the installed
-    entry under the mask and priority the kernel set; non-maskable, machine-check, fatal, debug and performance
-    events are delivered to their declared entries as the manual says, regardless of the mask where it says so.
-  * `ResetState` -- per platform: the state at the reset vector, at resume from a sleep state and at the arrival
-    of a further core (width, privilege, usable memory, start address).
-  * `VirtUnit` -- the virtualisation unit enters and leaves guests, applies the declared intercepts and
-    translates guest-physical addresses by the installed stage-2 tables as the manual says.
-  * `Iommu` -- the IOMMU checks and translates every DMA request of an attached device by the installed tables,
-    reports faults and drops entries when the generated completion-waited flush says so. Where it holds, the
-    DMA part of a device contract (today `ImBereichO`) is PROVED for attached devices, not assumed.
-  * `SecureUnit` -- the processor enforces the world partition (TrustZone, PMP, SMRAM) and enters the monitor
-    only through its declared entry.
-  * device contracts -- the declared answers of each device register and port (history-dependent after A2;
-    today `RegLokal` and the hardware part of `AxVertragO`), and the DMA extents of a device NOT attached to an
-    IOMMU (today `ImBereichO`); a platform declares which devices have no IOMMU.
-  * the memory-model reading -- the five points of THE READING below, extended to the emitted privileged steps.
-  Environment, software outside the verified image, each in the conditional form of A1 (the caller proves `pre`,
-  `pre -> post` is named here):
-  * `FirmwareHandoff` -- UEFI boundary: the state at entry, the truth of the memory map, the loaded image.
-  * `BiosHandoff` -- 16-bit loader boundary: the boot sector at its declared place in real mode with the
-    declared registers and memory description.
-  * environment interfaces -- each declared firmware service (UEFI boot services, BIOS services, PSCI, SBI).
-    A service the image provides itself (`provide environment`) is software inside the image and leaves this list.
-  Retired by the same list once the constructs are connected: `Laufzeit.lader` (replaced by the chosen
-  boundary's handoff and the proved image layout), `Laufzeit.start`/`.einmal` for kernels (derived from the
-  kernel's proved start, L9), `KernPlan` (replaced by `IrqDelivery`), `ImBereichO` for attached devices.
-  NOT assumed, ever: anything about software inside the image (boot code, allocators, page-table code,
-  schedulers, drivers, hypervisors, monitors, provided firmware services) -- that is the user's logic (b);
-  guest correctness, cost or termination; a hardware time bound.
+  THE LOW-LEVEL ASSUMPTION LIST (owner, 2026-11-23, O23-O25 of dokumente/PLAN-COMPILER-READY.md, design in dokumente/LOW-LEVEL-SYNTAX-PLAN.md). Fixed IN ADVANCE and
+  closed: once the low-level constructs are connected to machine G the statements may assume exactly these names; a further name is a new reviewed diff of this file.
+  TODAY NO STATEMENT TAKES THEM: no low-level construct is in G, the checker refuses every low-level form, the goal statements above are unchanged. Each name enters (c)
+  with its construct, as a predicate over the neutral architectural state, with its `NAME_erfuellbar` lemma, without weakening a leg.
+  Hardware (unconditional; "as the manual says" includes the manual's blocking rules and terminal outcomes, which the model states as named stops):
+  * `Hardware T` -- every target-table row computes its GIR cell (base, float, privileged, entry, and the rows of 16- and 32-bit states); generalises `RootNativeFloat.Hardware`.
+  * hardware frame -- `GutO` restricted to hardware items after A1. * the memory-model reading -- THE READING below, extended to the emitted privileged steps.
+  * `Mmu` -- translation by the installed stage-1 tables, caching and invalidation as the manual says.
+  * `IrqDelivery` -- replaces `KernPlan`: delivery at an instruction boundary to the installed entry under the kernel's mask and priority; non-maskable, machine-check,
+    fatal, debug and performance events as the manual specifies them, including NMI blocking and the shutdown of a recursive machine check.
+  * `ResetState` -- per processor: the state at the reset vector and at the arrival of a further core (widths, privilege, usable memory, start address).
+  * `VirtUnit` -- guest entry and exit, the mandatory isolation controls and the requested intercepts, stage-2 translation and its invalidation as the manual says.
+  * `Iommu` -- an ENVELOPE of the IOMMU, the interconnect and the endpoints of an isolation group: every DMA path of the group passes the IOMMU (no peer-to-peer bypass),
+    requester and PASID identities are owned by the group, translation, faults, invalidation and draining behave as specified; ATS only under its declared endpoint policy.
+    For requests covered by the envelope the DMA part of a device contract (today `ImBereichO`) is PROVED, not assumed.
+  * `SecureUnit` -- a PLATFORM envelope (processors, memory controllers, interconnect, DMA masters): the configured world partition is enforced and the monitor is entered
+    only through its declared entry; the configuration itself is the proved work of the image's driver.
+  * device contracts -- the declared answers of each register and port (history-dependent after A2; today `RegLokal`, the hardware part of `AxVertragO`), the state a
+    device retains, loses or leaves unknown across suspend, and the DMA extents of requests NOT covered by `Iommu` (today `ImBereichO`); a platform declares them.
+  Environment (software outside the image; per call in A1's conditional form, the caller proves `pre`):
+  * `FirmwareHandoff` (UEFI entry, memory map, loaded image), `BiosHandoff` (boot sector in real mode with the declared registers and memory description).
+  * firmware services -- each declared UEFI, BIOS, PSCI or SBI service, including the resume arrival it establishes (ACPI waking vector, PSCI, SBI SUSP).
+  * resident firmware -- firmware that keeps running after the handoff (SMM, UEFI runtime services, EL3 or M-mode firmware): a rely contract over its asynchronous
+    entries, the memory it may touch (its reserved regions only) and the time it may take. An image that provides that firmware itself proves it instead.
+  Retired once the constructs are connected: `Laufzeit.lader` (the boundary's handoff and the proved image layout), `Laufzeit.start`/`.einmal` for kernels (L9), `KernPlan`
+  (by `IrqDelivery`), `ImBereichO` for requests covered by `Iommu`. NOT assumed, ever: software inside the image (boot code, allocators, page-table code, schedulers,
+  drivers, hypervisors, monitors, provided firmware services) -- the user's logic (b); guest correctness, cost or termination; a hardware time bound.
 
   THE PERMITTED STOPS (`HaltArt`, in `fortschritt`) -- where the statement reports instead of claiming more:
   * `hardware` -- an axiom answer outside its (answerable) declared type, a register answer outside its type or
@@ -503,36 +486,6 @@
 -/
 module
 
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Decode
-import all Init.Data.String.Defs
-import all Init.Data.String.Extra
-import all Init.Data.String.FindPos
-import all Init.Data.String.Hashable
-import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iterate
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.Modify
-import all Init.Data.String.OrderInstances
-import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
-import all Init.Data.String.Pattern.Char
-import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
-import all Init.Data.String.PosRaw
-import all Init.Data.String.Search
-import all Init.Data.String.Slice
-import all Init.Data.String.Stream
-import all Init.Data.String.Subslice
-import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
-import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Spec.Teil2

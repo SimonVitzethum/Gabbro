@@ -224,32 +224,32 @@ the platform unit (registers, addresses, environment interfaces) differs. The de
 | L1 | canonical model of authority: `address<S>` as inert data of the state's width; raw memory owned as regions from the arrival contract (`split_at`, `split_pages`, `merge`, `view as T`, `address()`), no way from a number to a region; the ledger (live spans, space, permissions, class, owner, epoch) as machine state and checker typestate, not a user value; generic preservation; `_erfuellbar` lemmas with a real write | 8 000–20 000 / 3–5 / — |
 | L2 | devices: one syntax for MMIO and I/O ports (`device d at … registers { … }` in the platform unit), register reads, writes, fallible reads and transitions over the lifted `RegLokal` (A2); device authority as a linear value handed out once; device views a memory class that RAM views refuse; `lend r to d` / `take back r` with generated cache maintenance by the device's declared coherence; **driver conformance (owner, 2026-11-14):** the device protocol is a declared contract of the device (hardware side, named in (c)); that a driver follows it is program logic, proved through GabbroProve | 6 000–16 000 / 1–3 / — |
 | L3 | raw byte access below the type level, in hosted programs and in the kernel: byte capabilities with value flow (C01), grant generations (C08) and loans (C09); typed views over bytes need representation, endianness and layout proofs; uninitialised bytes are written before they are read | 6 000–15 000 / 2–4 / — |
-| L4 | execution states and transfers: `state S { width 16/32/64, privilege, translation, guards }`, code items `in S`, `jump` (same state, no return), `jump long … into S with space stack` (any state change below user privilege, one atomic G step with mapped target code and stack, interrupts masked), `wait for interrupt`, `stop core`, `cpu.has(feature)`, `cpu.cycles()`; the neutral per-core state (width, privilege, active space, mask, priority, vector table, per-core base, extended state, run status); refusals for states a target lacks; suspend and resume: `suspend system resume at f`, `suspend core resume at f`, resume arrivals in `ResetState`, device values in the `reset` typestate after resume (§4.13) | 16 000–40 000 / 3–5 / — |
+| L4 | execution states and transfers: `state S { width 16/32/64, privilege, translation, guards }`, code items `in S`, `jump` (same state, no return), `jump long … into S with space stack` (any state change below user privilege, one atomic G step with mapped target code and stack, interrupts masked), `wait for interrupt`, `stop core`, `cpu.has(feature)`, `cpu.cycles()`; the neutral per-core state (width, privilege, active space, mask, priority, vector table, per-core base, extended state, run status); refusals for states a target lacks; suspend and resume: `suspend system resume at f`, `suspend core resume at f`, resume arrivals in `ResetState`, a system suspend protocol quiescing cores and DMA, a global resume generation, device state retained/lost/unknown per device, lost or unknown device values in the `reset` typestate after resume (§4.13); the proved transition protocol of `jump long` over every intermediate state; address width per space, separate from operand width; the capability descriptor `cpu.caps` | 16 000–40 000 / 3–5 / — |
 | L5 | entry and exit frames generated from `entry` declarations: interrupt, exception, system call, thread switch and first entry of a thread, ONE generic theorem per frame kind; the vector table (IDT with IST stacks, VBAR table, `stvec` table) generated from the declarations; per-core base kept and swapped by the frames (`swapgs`, `tpidr_el1`, `tp`/`sscratch`); the full extended register state (XSAVE size from `cpu.has`, FP/SIMD/SVE, F/D/V) saved on thread switch; `backtrace(into buf)` from generated frame descriptors, allowed in every entry kind (§4.15) | 16 000–41 000 / 2–4 / — |
-| L6 | address spaces: `space.new`, `map`, `unmap`, `protect`, `activate` with the table format as compiler knowledge; memory kinds `normal`/`device`/`write_combining`/`uncached` at `map`, large pages chosen by the compiler, `target.page_size` instead of literals; `flush … on cores K` as the generated shootdown (IPI, flush handler, acknowledgement) with the theorem "no core of K translates the range by the old entries"; `unmap` returns frames only after the flush; two aliases share one physical identity; reuse and revocation under quiescence; the unit itself is the named assumption `Mmu` | 14 000–36 000 / 2–4 / — |
-| L7 | interrupts beyond `KernPlan`: scoped `interrupts off { }` and `priority at least p { }` per core, re-entry, nesting, `send interrupt v to core k`; the architectural interrupt controller and the per-core timer as constructs (`route line l to core k priority p`, generated end-of-interrupt, `timer.at`/`timer.after`); `nonmaskable`, `machine_check` and `fatal` entries on their own stacks with lock-free code only (no lock, wait or allocation), delivered regardless of the mask by `IrqDelivery` (was X3); debug and performance units: `watch`, breakpoints on code points, `step` of a thread, guest or vCPU, `counter.start(event …)`, their trap entries, slots saved in frames (§4.14) | 14 000–35 000 / 2–4 / — |
-| L8 | user-mode guests: `enter guest g`, `entry syscall`, the isolation boundary of an unverified or separately verified guest (C12), system-call contracts PROVED by the kernel in the conditional form of A1; guest memory only through `copy from guest … else fault` / `copy to guest … else fault` (every byte fetched once, faults through the `else` channel by a generated recovery table, user-access guard open only inside the copy); no guest contract, cost or termination claimed; grants: `grant ports`, `grant device`, `grant cycles`, `grant register … to guest g`, a DMA-capable device only with IOMMU attachment (§4.16) | 20 000–52 000 / 3–5 / — |
+| L6 | address spaces: `space.new`, `map`, `unmap`, `protect`, `activate` with the table format as compiler knowledge; memory kinds `normal`/`device`/`write_combining`/`uncached` at `map`, large pages chosen by the compiler, `target.page_size` instead of literals; `unmap` returning a revocation token and `flush(token)` as the generated shootdown to every possible user of the space (users and mapping generation tracked, PCID/ASID and global entries handled) with the theorem "no core translates the range by an entry of an earlier generation"; only `flush(token)` returns the frames; two aliases share one physical identity; reuse and revocation under quiescence; the unit itself is the named assumption `Mmu` | 14 000–36 000 / 2–4 / — |
+| L7 | interrupts beyond `KernPlan`: scoped `interrupts off { }` and `priority at least p { }` per core, re-entry, nesting, `send interrupt v to core k`; the architectural interrupt controller and the per-core timer as constructs (`route line l to core k priority p`, generated end-of-interrupt, `timer.at`/`timer.after`); `nonmaskable`, `machine_check` and `fatal` entries on their own stacks with lock-free code only (no lock, wait or allocation), not blocked by the ordinary mask and delivered as the manual specifies, blocking rules and terminal outcomes included (`IrqDelivery`, was X3); an entry kind the platform lacks is refused; debug and performance units: `watch`, breakpoints on code points, `step` of a thread, guest or vCPU, `counter.start(event …)`, their trap entries, slots saved in frames (§4.14) | 14 000–35 000 / 2–4 / — |
+| L8 | user-mode guests: `enter guest g`, `entry syscall`, the isolation boundary of an unverified or separately verified guest (C12), system-call contracts PROVED by the kernel in the conditional form of A1; guest memory only through `copy from guest … else fault` / `copy to guest … else fault` (each byte loaded at most once per invocation, validation on the private copy, no snapshot or cross-invocation consistency claimed; a fault returns the number of bytes copied; generated recovery table; user-access guard open only inside the copy); no guest contract, cost or termination claimed; grants: `grant ports`, `grant device`, `grant cycles`, `grant register … to guest g`, a DMA-capable device only with IOMMU attachment (§4.16) | 20 000–52 000 / 3–5 / — |
 | L9 | the kernel as its own runtime: premise (d) (`Laufzeit.lader/start/einmal`, spawn) derived from the kernel's proved start, `start core k at f(args) stack t` (neutral; lowered to INIT–SIPI plus the platform's 16-bit arrival code on x86-64, to PSCI `CPU_ON` or SBI `hart_start` elsewhere) and scheduler instead of assumed; stacks sized by B9. In the first kernel the threads of the goal theorem are the per-core roots and the declared interrupt handlers; the kernel spawns no Gabbro thread, user processes are guests (L8); spawning kernel threads later needs the refinement "the scheduler implements spawn and switch" | 8 000–20 000 / 1–3 / — |
 | L10 | parser, exporter, checker (typestate of state, regions, devices, services, masks), obligations; refusals by name for everything unmodelled; `asmT` strings, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software `assume` on `entrust` become refusals and are then removed | 25 000–50 000 / 2–4 / — |
 | L11 | positive and negative validation set of the low-level plan §7 (reset to kernel through `jump long`, BIOS and UEFI boundaries, RAM write/read, activate/flush, interrupt entry/return, NMI, second core, guest copy, environment exit; forged region, wraparound, stale epoch, alias, wrong state, `jump long` to unmapped code, bad stack, lock in NMI, double guest fetch, service after exit, missing flush, device through a RAM view, undeclared register) | 5 000–14 000 / 1 / — |
-| L12 | environment interfaces: `environment E abi A { fn … requires … ensures …; }` for firmware services (UEFI, PSCI, SBI, and BIOS services in real mode — `read_sectors`, `memory_map`, `enable_a20` — which the 16-bit loader boundary needs from the start); service values only from an arrival contract, never from an address; generated foreign calling convention; linear end of service (`exit_boot_services` consumes `uefi`, its memory becomes kernel regions); contracts in the conditional form of A1 | 6 000–17 000 / 1–2 / — |
+| L12 | environment interfaces: `environment E abi A { fn … requires … ensures …; }` for firmware services (UEFI, PSCI, SBI, and BIOS services in real mode — `read_sectors`, `memory_map`, `enable_a20` — which the 16-bit loader boundary needs from the start); service values only from an arrival contract, never from an address; generated foreign calling convention; linear end of service (`exit_boot_services` consumes `uefi`, its memory becomes kernel regions); resident firmware (SMM, UEFI runtime services, EL3 or M-mode firmware) declared with a rely contract over its asynchronous entries, the memory it may touch and its time; contracts in the conditional form of A1 | 6 000–17 000 / 1–2 / — |
 | L13 | images and code: `image … format uefi / boot_sector / flash` with entry and placement (`place … below 0x10_0000 aligned 4096`), headers written by the compiler, loader statement and `LayoutOk` proved from the declaration; `make executable r as item` as the only way to code authority (region becomes read-only executable, instruction caches synchronised, the bytes are an item the compiler emitted) | 7 000–20 000 / 1–2 / — |
 | L14 | compile-time selection (O24): `if ( flagcond ) then { … } [else { … }]` at item, statement and expression level; declared flags (`flag n: bool = …`, closed enums) and built-in flags (`target.arch`, `target.width`, `target.page_size`, `platform`, `image`, profile entries); `configurations { … }` in the main unit; selection before `Akzeptiert` as a total function on units with the commutation lemma and `ct_select_erfuellbar`; the checker checks every declared configuration and refuses dead branches, run-time values in the condition and flags in a run-time `if`. A general form: Stage 0's front end may adopt it, as only the selected unit reaches G | 2 000–6 000 / 1 / — |
 | L15 | hardware virtualisation (O25, LOW-LEVEL-SYNTAX-PLAN §4.11): `state … privilege hypervisor`; guest-physical spaces (stage 2) with `map`/`unmap`/`protect`/`flush`; `vm.new(space, intercept { … })` with the control structure as compiler knowledge; vCPU register files as values; `enter vm v vcpu c` returning a neutral `vm_exit`; `inject interrupt` and the virtual interrupt controller; `copy from vm`/`copy to vm`; `assign device d to vm v` through the IOMMU; VMX and SVM both lowered on x86-64, chosen at `vm.new`; nested guests after the single-level case; the isolation theorem for unverified VMs under the named assumption `VirtUnit` | 26 000–65 000 / 4–6 / — |
-| L16 | IOMMU (O25, §4.12): DMA spaces with `map`/`unmap`/`protect`/`flush` (completion-waited, ATS included), `attach device d to s` with PASID and interrupt remapping, `lend`/`take back` through the device's space, `entry dma_fault`; VT-d, AMD-Vi, SMMUv3 and the RISC-V IOMMU as lowerings chosen by discovery; the theorem "an attached device touches only regions mapped in its space" under the named assumption `Iommu`, which removes the DMA part of the device contracts (`ImBereichO`) wherever an IOMMU exists | 12 000–31 000 / 2–4 / — |
-| L17 | secure worlds and the monitor (O25, §4.17): `privilege machine` with a world attribute (EL3/TrustZone, M-mode with PMP, x86 SMM), `entry monitor_call`, `return to world w at f`, `protect physical r for world w`; `provide environment E` so that PSCI, SBI or a UEFI subset written in Gabbro proves its services and the kernel above loses those environment assumptions; named assumption `SecureUnit` | 12 000–32 000 / 2–4 / — |
+| L16 | IOMMU (O25, §4.12): DMA spaces with `map`/`unmap`/`protect`/`flush` (completion-waited, ATS included), `attach group g to s` for an isolation group from discovery (requester and PASID identities owned, blocking domain before attachment, ATS off unless the endpoint is declared trusted, PRI answers carry the generation), interrupt remapping, `lend` and a `take back` that revokes, invalidates and drains before it returns the region and keeps it revoked on timeout, `entry dma_fault`; VT-d, AMD-Vi, SMMUv3 and the RISC-V IOMMU as lowerings chosen by discovery; the theorem "an attached device touches only regions mapped in its space" under the named assumption `Iommu`, which removes the DMA part of the device contracts (`ImBereichO`) wherever an IOMMU exists | 12 000–31 000 / 2–4 / — |
+| L17 | secure worlds and the monitor (O25, §4.17): `privilege machine` with a world attribute (EL3/TrustZone, M-mode with PMP, x86 SMM), `entry monitor_call`, `return to world w at f`, `protect physical r for world w`; `resume world w with saved` (checked transformation of the saved context; x86 SMM as its own 16-bit arrival state left only by RSM), `protect physical` with DMA masters covered by IOMMU, IOPMP or TZASC; `provide environment E` so that PSCI, SBI or a UEFI subset written in Gabbro proves its services and the kernel above loses those environment assumptions; named assumption `SecureUnit` | 12 000–32 000 / 2–4 / — |
 
 ### C — the compiler on GIR (MACHINE-IR-PLAN §12, PLAN-SELF-HOSTING revised)
 
 | ID | Item | Estimate |
 |---|---|---|
-| C1 | GabbroV in Gabbro (V3) with its initial Lean proof | 30 000–70 000 Lean, plus Gabbro sources |
+| C1 | GabbroV in Gabbro (V3) with its initial Lean proof, including the duty rules and the generic bridge of every low-level construct (LOW-LEVEL-SYNTAX-PLAN §4.18), complete before the duty proofs of K5 and K8 | 30 000–70 000 Lean, plus Gabbro sources |
 | C2 | `gir_sem`, base cells, `tile_ok`, `encode_inj` (Lean, may start after R1) | 8 000–20 000 |
 | C3 | `lower_ok` for the Stage-0 fragment, then form by form | 15 000–40 000 |
 | C4 | one small target table, `TargetOk`, emitter shape contract, M for the base cells, first measured CPU run | 8 000–20 000 |
 | C5 | one medium pass proved with GabbroV (GVN with per-region memory) — the measurement that sizes all other passes | 3 000–10 000 |
 | C6 | location assignment, scheduling, idiom cells, optimisation passes, further tables (AArch64 first), vector cells; privileged and boot cells after L | sized after C5 |
-| C7 | the compiler's own Gabbro sources (front end, checker fold, lowering, passes, emitter), ≥ 500 000 lines (owner 2026-11-11) | 112 000–244 000 Gabbro (PLAN-SELF-HOSTING §9 base, before GIR) |
+| C7 | the compiler's own Gabbro sources (front end, checker fold, lowering, passes, emitter), ≥ 500 000 lines (owner 2026-11-11) | ≥ 500 000 Gabbro (owner minimum, 2026-11-11; the PLAN-SELF-HOSTING §9 base of 112 000–244 000 before GIR lies below it, no upper bound is estimated) |
 | C8 | performance: ≥ 100 % of the faster of `gcc -O3`/`clang -O3` per workload class and ISA (owner 2026-10-25) | benchmark suite 13 000–32 000 |
 | C9 | the image theorem for the compiler's own images: concurrent `lower_ok`/`emit_ok` (thread machine over GX, lock refinement, stop mapping, layout, start), reusing the G side of B6 (D16), with privileged and entry cells | 20 000–50 000 |
 
@@ -258,13 +258,13 @@ the platform unit (registers, addresses, environment interfaces) differs. The de
 | ID | Item | Estimate |
 |---|---|---|
 | K1 | freestanding profile and image formats of L13: UEFI PE/COFF, 16-bit boot sector, flash image with reset vector (emulator), no host runtime, no implicit loader; the loader statement `Laufzeit.lader` proved from the image layout and `LayoutOk` | 4 000–10 000 Lean |
-| K2 | GIR cells for every low-level construct and their x86-64 rows, including the 16- and 32-bit rows and the state transitions of `jump long`; `TargetOk`; M for these rows on a bare-metal measurement image (user-mode M cannot run them) | 45 000–125 000 Lean (a cell and a generic lowering theorem per construct, about 83 constructs, plus the x86-64 rows); harness 2 000–5 000 Gabbro |
+| K2 | GIR cells for every low-level construct and their x86-64 rows, including the 16- and 32-bit rows and the state transitions of `jump long`; `TargetOk`; M for these rows on a bare-metal measurement image (user-mode M cannot run them) | 45 000–125 000 Lean (a cell and a generic lowering theorem per construct, 86 constructs, LOW-LEVEL-SYNTAX-PLAN §4.18, plus the x86-64 rows); harness 2 000–5 000 Gabbro |
 | K3 | the x86-64 lowering of the constructs, proved once (generated descriptor and interrupt tables, paging format, shootdown, guest copy, extended state, foreign UEFI calls), and the x86-64 PC platform unit in Gabbro: registers, addresses (interrupt controllers, timer, serial ports, arrival page), arrival states, the UEFI environment interface and the 16-bit further-core arrival code | 10 000–25 000 Lean; platform unit 1 000–3 000 Gabbro |
 | K4 | start of further cores through `start core` (L9): on x86-64 INIT–SIPI and the platform's 16-bit arrival code, written in Gabbro, placed below 1 MiB (L13) and ending in `jump long` into the kernel state; no generated blob, no assembly text | 2 000–6 000 Lean |
 | K5 | the witness kernel, written in Gabbro: boot from the 16-bit loader boundary (`BiosHandoff`, through `jump long` 16→64) and from UEFI with the SAME kernel source, memory authority, translation with shootdown, interrupts with a timer and an NMI handler, two cores, one user-mode guest, one system call with guest copies; proofs of its duties through GabbroV. A reset-vector boot (`ResetState`) runs on an emulator platform | 3 000–8 000 Gabbro; proofs 5 000–15 000 Lean |
 | K6 | AArch64 and RISC-V 64: their rows, lowerings and platform units, running the SAME kernel source; the measure of O23: the kernel-proper diff between the three targets is zero lines, the platform units differ only in registers, addresses, arrival states and environment interfaces | 20 000–50 000 Lean; platform units 2 000–6 000 Gabbro |
 | K7 | the compiler compiles itself natively; the runner and its proofs leave the trust path and the tree (history in git) | after C7 |
-| K8 | the witness hypervisor and firmware (O25): the witness kernel hosts one VM that boots from its own 16-bit reset under stage 2, with every exit kind, interrupt injection and one device passed through behind the IOMMU; DMA of the kernel's own devices through IOMMU spaces; suspend and resume once; on AArch64 or RISC-V a PSCI/SBI monitor written in Gabbro boots the same kernel. Rows for VMX, SVM, EL2, the H extension and the IOMMU queues are part of K2 | 6 000–15 000 Lean; 3 000–8 000 Gabbro |
+| K8 | the witness hypervisor and firmware (O25): the witness kernel hosts one VM that boots from its own 16-bit reset under stage 2, with every exit kind, interrupt injection and one device passed through behind the IOMMU; DMA of the kernel's own devices through IOMMU spaces; suspend and resume once; on AArch64 or RISC-V a PSCI/SBI monitor written in Gabbro boots the same kernel. Rows: VMX, SVM, VT-d and AMD-Vi in K2; EL2, the H extension, SMMUv3 and the RISC-V IOMMU in K6 | 6 000–15 000 Lean; 3 000–8 000 Gabbro |
 
 ### E — satisfiability lemmas instead of witnesses (owner, 2026-11-19)
 
@@ -389,16 +389,17 @@ scheduler, its page-table updates, its drivers' protocol conformance, its system
 | `Hardware T` | every table row computes its cell, privileged rows, the 16- and 32-bit rows and the float rows included (today's separate component `RootNativeFloat.Hardware`, assumed only where `GleitHw` asks for it) | M on silicon; the bare-metal harness for privileged and mode rows; `hardware_satisfiable` for the float contracts |
 | hardware frame (today `GutO`, restricted to hardware items after A1) | a hardware item writes only its declared carriers, keeps the held locks and leaves its accesses in the trace | manual; tests |
 | `Mmu` | the translation unit translates by the installed tables and caches as the architecture manual says, and drops entries when the generated flush says so | manual; differential tests |
-| `IrqDelivery` (replaces the premise `KernPlan`) | an interrupt is delivered at an instruction boundary, to the installed handler, under the mask and priority the kernel set; non-maskable, machine-check and fatal events are delivered regardless of the mask to their declared entries | manual; tests |
-| `ResetState` | per platform: the state at the reset vector, at resume from a sleep state and at the arrival of a further core (width, privilege, which RAM is usable, where execution starts) | manual; emulator and silicon runs |
-| `VirtUnit` | the virtualisation unit enters and leaves guests, applies the declared intercepts and translates guest-physical addresses by the installed stage-2 tables as the architecture manual says | manual; differential tests |
-| `Iommu` | the IOMMU translates and checks every DMA request of an attached device by the installed tables, reports faults, and drops entries when the generated completion-waited flush says so | manual; tests with a misbehaving device model |
-| `SecureUnit` | the processor enforces the world partition (TrustZone, PMP, SMRAM) and enters the monitor only through its declared entry | manual |
+| `IrqDelivery` (replaces the premise `KernPlan`) | an interrupt is delivered at an instruction boundary, to the installed handler, under the mask and priority the kernel set; non-maskable, machine-check, fatal, debug and performance events reach their declared entries as the manual specifies, including NMI blocking and the shutdown of a recursive machine check (named terminal outcomes) | manual; tests |
+| `ResetState` | per processor: the state at the reset vector and at the arrival of a further core (the resume arrival is established by firmware and belongs to its service contract) (width, privilege, which RAM is usable, where execution starts) | manual; emulator and silicon runs |
+| `VirtUnit` | the virtualisation unit enters and leaves guests, enforces the mandatory isolation controls, applies the requested intercepts and translates guest-physical addresses by the installed stage-2 tables as the architecture manual says | manual; differential tests |
+| `Iommu` | an envelope of the IOMMU, the interconnect and the endpoints of an isolation group: every DMA path of the group passes the IOMMU, requester and PASID identities belong to the group, translation, faults, invalidation and draining behave as specified, ATS only under the declared endpoint policy | manual; tests with a misbehaving device model |
+| `SecureUnit` | a platform envelope (processors, memory controllers, interconnect, DMA masters) enforces the configured world partition and enters the monitor only through its declared entry; the configuration is the driver's proved work | manual |
 | the memory-model reading (Spec header, five points) | the weak-memory machine W over-approximates the target for the emitted instructions | published models |
 | device contracts | the declared answers of each device register and port (after A2 they may depend on the history; today `RegLokal` and the hardware part of `AxVertragO`), and, only for a device not attached to an IOMMU (L16), where it writes memory (DMA): only into the carriers and extents its contract names (today `ImBereichO`, which then leaves the leg) | data sheets |
 | `FirmwareHandoff` | UEFI boundary: the state at entry, the truth of the memory map, and that the image and its initial memory are loaded as declared (for the kernel this replaces `Laufzeit.lader`) | firmware specification |
 | `BiosHandoff` | 16-bit loader boundary: the boot sector is loaded at its declared place in real mode with the declared registers and the declared memory description | loader specification |
-| environment interfaces (L12) | each firmware service (UEFI boot services, PSCI, SBI) in the conditional form of A1: assumed `pre → post`, the caller proves `pre` | declared in the platform unit, visible per call |
+| environment interfaces (L12) | each firmware service (UEFI boot and runtime services, BIOS, PSCI, SBI), including the resume arrival it establishes, in the conditional form of A1: assumed `pre → post`, the caller proves `pre` | declared in the platform unit, visible per call |
+| resident firmware (L12) | firmware that keeps running after the handoff (SMM, UEFI runtime services, EL3 or M-mode firmware) enters only where declared, touches only its reserved regions and takes at most its declared time; an image that provides it proves it instead | declared in the platform unit |
 | for a hosted program only: the contract of the operating system behind each system call, in the conditional form of A1 (assumed `pre → post`, the caller proves `pre`) | declared in the binding, visible per call | — |
 | for a hosted program only: the operating system's loader and thread creation (today `Laufzeit.lader`, `Senke.CloneAnswers`, the runner kernel class `Runner.IR.Kern`) and, where liveness or waiting bounds are claimed, its scheduler's fairness (today `Fair`, `FairF` of `GabbroZielLeben`/`GabbroZielWarten`) | declared in the profile | — |
 | for every foreign C function (`extern fn`) and every C caller of an `entry` function (A6) | its declared contract INCLUDING the frame, the extents, no retained Gabbro pointer and no foreign thread on Gabbro memory. **One such assumption, if false, can void every guarantee of the theorem**: C in the same address space is unchecked and unrestricted | declared in the binding, visible at every use |
@@ -452,9 +453,9 @@ Phase 4  R3: B6 (pieces i–viii, stages) → B7 ────────┘
    │
 Phase 5  B10 (after A1 and the C rounds)
    │
-Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L16 → L15 → L17 → L9 → L10 → L11 (after all C packages)
+Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L16 → L15 → L17 → L9 → L10 → L11 (after the C01–C18 packages; before the compiler start)
    │
-Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core (UEFI, then 16-bit loader) → K4 → K5 on two cores → K8 → C9 → K6 (AArch64, RISC-V 64)
+Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core (UEFI, then 16-bit loader) → K4 → K5 on two cores → C9 → K6 (AArch64, RISC-V 64) → K8 (after C1)
    │
 Phase 8  K7: the compiler compiles itself; the runner leaves the tree
 Later    X1, X2, X4, X5
@@ -472,9 +473,9 @@ most one repair run), as for the C packages:
 | G4 | B8 + B9 (`Einheit`, `HaltArt`) | 2 |
 | G5–G7 | B10 by sub-package | 5 |
 | G8–G12 | B6/B7 interfaces in `Zielsatz` and `Code/Conc` | 4 |
-| G13–G23 | L1–L11, one round per item | 6 |
+| G13–G30 | L0–L17, one round per item | 6 |
 
-That is **about 23 full grammatik builds** for the goal theorem and the low-level model (30 min each with
+That is **about 30 full grammatik builds** for the goal theorem and the low-level model (30 min each with
 `LEAN_NUM_THREADS=3`), plus the Stage-0 builds of S, V and B6 (compiler build 4–10 min, full stage0 after a deep
 `Senke` change 20–40 min). The compiler and kernel streams (C, K) build in packages of their own, not sized here.
 
@@ -503,18 +504,18 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 
 | Stream | Lean LOC (estimate) | Gabbro LOC (estimate) |
 |---|---|---|
-| S Stage 0 complete | 8 400–23 800 | — |
+| S Stage 0 complete (S1–S10) | 22 400–59 800 | — |
 | V GabbroV to R2 | 12 400–40 900 | — |
-| A fewer assumptions | 7 400–19 900 | — |
+| A fewer assumptions (A1–A6) | 9 400–25 900 | — |
 | B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B22 82 000–215 000) | 186 000–488 000 | — |
 | C11 non-emptiness | 200–800 | — |
 | L low-level model (L0–L17, re-estimated 2026-11-23) | 218 000–550 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6, K8) | 92 000–246 000 | 11 000–30 000 |
-| C compiler sources and benchmarks (C7, C8) | — | 125 000–276 000 |
-| **sum** | **≈ 608 400–1 579 400** | **≈ 136 000–306 000** |
+| C compiler sources and benchmarks (C7, C8) | — | ≥ 513 000 (C7 ≥ 500 000; C8 13 000–32 000) |
+| **sum** | **≈ 624 400–1 621 400** | **≥ 524 000 (no upper bound)** |
 
-**Everything together: about 744 000 to 1 885 000 new lines**, of which roughly four fifths Lean. Not included: C6
+**Everything together: at least about 1 148 000 new lines**: Lean 624 400–1 621 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -522,10 +523,10 @@ Parts of the sum by gate (each includes what the earlier gates need):
 
 | Up to | Lean LOC | Gabbro LOC |
 |---|---|---|
-| the compiler start (S1, S2, S6, V) | 16 500–54 200 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 214 400–573 400 | — |
-| R4 low-level model (adds L) | 432 400–1 123 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 608 400–1 579 400 | 136 000–306 000 |
+| the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 | — |
+| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 230 400–615 400 | — |
+| R4 low-level model (adds L) | 448 400–1 165 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 624 400–1 621 400 | ≥ 524 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -535,20 +536,22 @@ model, the `walk` and `entry` syntax); the high ends assume per-form case work a
 have no measured calibration at all: no privileged operation, entry frame or translation regime exists in the
 model today, so their ranges are the least certain of the table.
 
-**Re-estimate of the low-level rows (2026-11-23, after O23–O25).** Measured in `grammatik/` on `cb58ef579`:
-546 397 lines for about 160 constructors of `Stmt`, `Block`, `Endblock` and `Expr`; without the generated test
-sets (`Gen`), `Korpus`, the parser and `Niedrig`, the model and goal proof hold about 383 000 lines, i.e. about
-2 400 lines per connected form, and the parser about 590 lines per form. The low-level design has about 83
-constructs (LOW-LEVEL-SYNTAX-PLAN §4.1–§4.17). Bottom-up per row (forms × 1 500–4 000 lines, plus the
-cross-cutting theorems: goal integration of the per-core architectural state with the replay of the goal proof,
-no-bypass, the isolation theorems for guests and VMs, shootdown, DMA confinement, boot handoff, world partition)
-gives 218 000–550 000 lines; top-down (83 × 3 000 plus 60 000–150 000 for those theorems) gives 310 000–400 000,
-inside the range. The compiler side of the same constructs (a GIR cell and a generic lowering theorem each, rows
-and formats for three targets and two x86 vendors) is in K2, K3 and K6. The 9 826 existing lines of `Niedrig`
-follow the replaced `bindCtx` design; parts of `Authority`, `Bytes`, `Maske` and `Uebersetzung` are reusable, which
-the low ends assume. The earlier L estimate (99 000–248 500) and L10 (3 000–8 000) had counted the parser at a
-tenth of its measured cost. The sum line also failed to include the B items added after the table was made; it is
-now the sum of the rows.
+**Re-estimate of the low-level rows (2026-11-23, after O23–O25; numbers reproduced by the review of the same day).**
+Measured in `grammatik/Grammatik` on `cb58ef579`: 546 397 lines in 2 738 files; without the generated test sets
+(`Gen`, 30 268), `Korpus` (5 826), the parser (93 692) and `Niedrig` (9 826) the model and goal proof hold 406 785
+lines. `Stmt`, `Block`, `Endblock` and `Expr` have 34 + 22 + 27 + 64 = 147 constructors: about 2 770 model and goal
+lines and 640 parser lines per constructor, about 3 400 in all. These are scaling evidence, not the marginal cost
+of a new connected construct. The low-level design has 86 constructs (LOW-LEVEL-SYNTAX-PLAN §4.18, with the row of
+each). Bottom-up per row (forms × 1 500–4 000 lines, plus the cross-cutting theorems: goal integration of the
+per-core architectural state with the replay of the goal proof, no-bypass, the isolation theorems for guests and
+VMs, the shootdown and transition protocols, DMA confinement, boot handoff, world partition) gives 218 000–550 000
+lines; top-down (86 × 3 400 plus 60 000–150 000 for those theorems) gives 352 000–442 000, inside the range. The
+compiler side of the same constructs (a GIR cell and a generic lowering theorem each, rows and formats for three
+targets and two x86 vendors) is in K2, K3 and K6. The 9 826 existing lines of `Niedrig` follow the replaced
+`bindCtx` design; parts of `Authority`, `Bytes`, `Maske` and `Uebersetzung` are reusable, which the low ends assume.
+No low-level row has a measured calibration yet. The earlier L estimate (99 000–248 500) counted the parser at a
+tenth of its measured cost. The sum line now adds every row: S and A had omitted S8–S10 and A6, B had missed its
+later items, and C7's owner minimum of 500 000 lines leaves the Gabbro total without an upper bound.
 
 ---
 
