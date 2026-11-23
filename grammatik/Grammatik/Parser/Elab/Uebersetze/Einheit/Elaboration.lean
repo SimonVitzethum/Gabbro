@@ -232,6 +232,7 @@ theorem elabExpandedWithScopes_spaces (items : List SItemTief)
       (narrow := narrow) = .ok u) :
     u.spaces = uSpaces (uOhneSenken items) := by
   unfold elabExpandedWithScopes at accepted
+  simp only [] at accepted
   repeat' first | (split at accepted) | contradiction
   all_goals
     have same := Except.ok.inj accepted

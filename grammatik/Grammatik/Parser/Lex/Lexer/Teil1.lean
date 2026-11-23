@@ -73,7 +73,7 @@ def wortschatz : List String :=
    "Some", "None", "grow", "pb", "blw", "free", "target", "dyn"]
 
 /-- Removed machine-access spellings remain reserved solely for their named refusals. -/
-def verweigerteWoerter : List String := ["asm", "prim", "raw", "entrust"]
+def refusedWords : List String := ["asm", "prim", "raw", "entrust"]
 
 /-- Keyword lookup by first character: buckets of character
     lists, so both the scan (at most 28 candidates) and the
@@ -81,7 +81,7 @@ def verweigerteWoerter : List String := ["asm", "prim", "raw", "entrust"]
     `String ==` through byte arrays. `lex_keywords` checks the
     table against this bucketing word by word, so a misfiled word
     fails the build instead of lexing as an identifier. Removed spellings in
-    `verweigerteWoerter` also stay in these buckets for their named refusals. -/
+    `refusedWords` also stay in these buckets for their named refusals. -/
 def schluesselTafelC : Char → List (List Char)
   | 'N' => [['N','o','n','e']]
   | 'S' => [['S','e','l','f'], ['S','o','m','e']]
