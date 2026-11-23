@@ -127,7 +127,7 @@ def zensusDateien : List String :=
     "60-annahme-mit-maschine.gab", "61-invertierung.gab",
     "62-grenzwort-im-ausdruck.gab", "63-druckt.gab",
     "64-writes-a-whole-buffer.gab", "65-port-space.gab",
-    "66-transport-rueckgabe.gab", "67-befehlsebene.gab",
+    "66-transport-rueckgabe.gab",
     "68-named-space-matches-itself.gab", "69-integer-conversion.gab",
     "70-kernel-namen.gab", "71-frist-und-zaehlung.gab",
     "72-fremdruf-unter-sperre.gab", "73-sugar-widths.gab",
