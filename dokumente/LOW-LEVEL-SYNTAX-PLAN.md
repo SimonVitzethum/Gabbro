@@ -242,8 +242,8 @@ console.put(byte) else timeout;
   (B23 T2): each slot at most once per handling, validation and use on the private copy. Writing the kernel's own
   entries uses `copy to shared`. On a platform with an IOMMU a device's DMA (bus mastering) can be enabled only
   after its isolation group is attached (§4.12).
-- That a driver follows its device's protocol is program logic (GabbroProve); the device's answers are its
-  declared contract (hardware, named in (c)).
+- That a driver follows its device's protocol is program logic (GabbroProve); the device's answers are those of its
+  pinned catalogue row (PERFECT-MODEL §3.3).
 
 **Devices found at run time (O26).** Most devices are not at a fixed address: PCIe BARs, devicetree and ACPI nodes,
 hot-plugged functions. Their window comes from a discovery answer, and that answer being true is a hardware or
@@ -304,21 +304,20 @@ let v = gpu.ring.head.read128() else unsupported;            // 16-byte single-c
 
 ```gabbro
 // platform unit
-environment uefi abi uefi_x64 {
-    fn get_memory_map(buf: region<normal, rw>) -> memory_map or uefi_error requires … ensures …;
-    fn exit_boot_services(key: map_key) consumes uefi or uefi_error;
-}
+environment uefi abi uefi_x64 = catalogue uefi_2_10;   // selects the pinned row; the row supplies the contracts
+//   get_memory_map(buf: region<normal, rw>) -> memory_map or uefi_error
+//   exit_boot_services(key: map_key) consumes uefi or uefi_error
 code efi_main(fw: uefi, image: image_handle) in platform.uefi_arrival { … }
 ```
 
-- An environment interface lists services with contracts; their software runs outside the verified image (named
-  environment assumption in the conditional form of A1: the caller proves `pre`, `pre → post` is named in (c)).
+- An environment interface selects a pinned catalogue row by name (PERFECT-MODEL §3.3); the row lists the services
+  with their contracts; their software runs outside the verified image. A program never writes a service contract.
 - A service value comes only from an arrival contract (the UEFI system table at entry, the PSCI/SBI conduit of the
   platform); it is never built from an address. The compiler generates the foreign calling convention (`abi`).
 - A service value is linear where the firmware ends it: `exit_boot_services` consumes `uefi`, after which no boot
   service can be called and the boot-services memory becomes ordinary RAM regions of the kernel.
 - The 16-bit loader boundary needs the BIOS services from the start (a boot sector has 510 bytes and must load the
-  rest): `environment bios abi bios_int { fn read_sectors(…); fn memory_map(…); fn enable_a20(); }`, lowered to
+  rest): `environment bios abi bios_int = catalogue bios_services` (row services `read_sectors`, `memory_map`, `enable_a20`), lowered to
   software interrupts in state `real16`. The service value is alive only in real mode and is consumed by the
   `jump long` that leaves it; enabling A20 without the service is device logic (port `0x92`) in the platform unit.
 - **Resident firmware** — firmware that keeps running after the handoff (SMM handlers under UEFI or BIOS, UEFI
@@ -551,7 +550,7 @@ state monitor { width 64, privilege machine, translation off }          // EL3, 
 entry monitor_call (call: monitor_args) in monitor { … }                // SMC, ecall from S
 return to world normal at kernel_entry(args);                           // first entry into the normal world
 resume world normal with call.saved;                                    // return to the caller's saved context
-provide environment psci abi smc64 { fn cpu_on(…) requires … ensures …; … }   // firmware written in Gabbro
+provide environment psci abi smc64 { fn cpu_on(…) requires … ensures …; … }   // firmware written in Gabbro: inside the verified image, its contracts are proved, and the callers' catalogue row is the proved provider
 protect physical secure_ram for world secure;                           // PMP/ePMP, TZASC device, SMRAM lock
 ```
 

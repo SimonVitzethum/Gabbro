@@ -224,7 +224,8 @@ question instance; the order inside a context is kept across objects), and CONSU
 separately in both states — an arrived reply is never an implementation-only pending answer. Durability changes
 are effects, and a crash is possible at every concrete cut (B22). Visible events (outside
 questions, device accesses, outputs, stops, atomics read by others, internal and authority effects) appear in the
-same global order as in the run; the map neither invents nor swallows ends, answers or effects. Stutter: in every
+same global order as in the run; the map neither invents nor swallows ends, answers or effects. The initial cut of `ι` is the canonical ideal initialisation of `start ρ`: the initial relation preserves the
+boot input, the declared start assignment and the initial outside state at the catalogue boundary. Stutter: in every
 interval without its ideal step during which its next step stays enabled, a context takes at most the checked
 length bound of its unit of its own implementation steps; a blocked context stutters only invisibly.
 
@@ -299,11 +300,12 @@ ratchet:
    constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
    elaborated type, each field binding of `R₀`, their transitive semantic dependencies down to explicit trusted
    roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`).
-5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax: typed
-   proofs (not names) of its `Parse` and `Elaboriert` rules, its `I` rule with units and commutation, its
-   implementation rule, its preservation lemma, its `Realisiert` evidence (a surface constructor: a source
-   occurrence; a core-only constructor: a checked elaboration or runtime origin) and its joint satisfiability
-   (`_erfuellbar`). A constructor without its complete entry fails the build — so a constructor enters `core/`
+5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax, with
+   typed proofs (not names): each SURFACE constructor carries its `Parse` and `Elaboriert` proofs and a source
+   occurrence as `Realisiert` evidence; each CORE-ONLY constructor (e.g. a continuation node created when an
+   `.await` resumes) carries a checked elaboration-origin or runtime-origin proof instead; both carry their `I`
+   rule with units and commutation, their implementation rule, their preservation lemma and their joint
+   satisfiability (`_erfuellbar`). A constructor without its complete entry fails the build — so a constructor enters `core/`
    only together with all of it.
 6. No `_ =>` in `I`, the rules and the fundamental proofs; no hardware or stop kind outside the catalogue.
 7. No `sorry`, `admit`, `native_decide`, `axiom`, `unsafe`, `_zeuge`, `decide +kernel`, no witness modules.
@@ -353,9 +355,9 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 | **M4 Machines and `I`** | constructor-independent foundations of the implementation machine and of `I` (§3.4, §3.5): states, contexts, events over M3, units at proved linearisation points, lock owners with queue and hand-off, the delay rule, authority and lifetime, the pinned outcome type, `I.Bestimmt`, `I.Fortschritt`; the state contains the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events); statements such as `start`/`child` become real when their constructors enter in M6 | M2, M3 | 26 000–65 000 |
 | **M10 Outside rule** | the foundation of §4: transitive outside provenance, validity at commit, the catalogue admission rule, device typestates | M2, M4 | 4 000–10 000 |
 | **M5 Acceptance** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten` over `I` and the catalogue (with the deadlock part of §3.2), the pinned table of partial operations, the whitelist guard | M4, M10 | 3 000–8 000 |
-| **M6 Today's forms** | every form of today's language, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples) and P1 (aggregates by value, in-place construction), each constructor in ONE guarded commit with its `Parse`, `Elaboriert`, `Lokal`, `I` and implementation rule, preservation, `Realisiert` and `_erfuellbar`; `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5, M10 | 30 000–80 000 |
+| **M6 Today's forms** | every form of today's language, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples) and P1 (aggregates by value, in-place construction), each constructor in ONE guarded commit with its complete registry entry of §6.5 (surface: `Parse`, `Elaboriert`; core-only: its origin proof; both: `Lokal`, `I` and implementation rule, preservation, `Realisiert`, `_erfuellbar`); `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5, M10 | 30 000–80 000 |
 | **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8, with its progress under M8's rules), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
-| **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows); done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit | M6 | 236 000–596 000 |
+| **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows) — outside-interface forms (firmware, OS and device services) select pinned catalogue rows by name, and the selected row supplies the service contract; a program never writes one; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit | M6 | 236 000–596 000 |
 | **M7 Refinement** | `Sim` of §3.6 for every run; STARTS on M4 from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported) and grows with every form; CLOSES only with the cases of M6F and M6L (the acceptance case `flush`; linearisability of lock-free structures, B20) and the missing legs (B10) | starts M4; closes M6, M6F, M6L | 48 000–125 000 |
 | **M9 Observations and NI** | `ImSchranken`: hold bounds and cost and time first (B8), then stack (B9), memory (B21), real time (B19); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope with the B22 forms and their registry entries | M7 | 69 000–178 000 |
 | **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7, model side); waiting bounds and starvation freedom (B13) on M9's hold bounds | M7, M9 (B8 part) | 24 000–63 000 |
