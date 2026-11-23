@@ -1,0 +1,14 @@
+name = "core"
+version = "0.1.0"
+defaultTargets = ["Core"]
+# The new Gabbro model (PERFECT-MODEL.md, owner 2026-11-23): built fresh, never importing `grammatik`.
+# Resource bounds only; they change no proof.
+weakLeanArgs = ["-j2", "-M4096", "-DElab.async=true"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "56a005855ea17e0b0958f73ec801ae140b0a1679"
+
+[[lean_lib]]
+name = "Core"
