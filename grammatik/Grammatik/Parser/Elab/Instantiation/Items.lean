@@ -49,10 +49,6 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
   | .implGroupT _ types effects body => gather [⟨false, []⟩,
       gather (types.map (inspectType scope)), gather (effects.flatten.map (effect scope)), items scope body]
   | .useT _ | .assumT _ _ _ _ | .varT _ | .profT _ _ => {}
-  -- The entrusted region is a carrier, never a function reference.
-  | .trustT _ code _ _ _ _ service =>
-    merge (if scope.carriers.contains code then {} else globalReference code)
-      (optional globalReference service)
   | .typeT _ _ args _ result => merge (gather (args.map (inspectType scope)))
       (optional (inspectType scope) result)
   | .constT _ ty value => merge (inspectType scope ty) (constant scope value)
@@ -62,7 +58,7 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
       (statement (scope.bind (sig.params.map Prod.fst)) body)
   | .transT target sig body => gather [globalReference target, signature scope sig,
       statement (scope.bind (sig.params.map Prod.fst)) body]
-  | .protoT sig | .asmT sig _ => signature scope sig
+  | .protoT sig => signature scope sig
   | .specT sig pred => merge (signature scope sig)
       (expression (scope.bind (sig.params.map Prod.fst)) pred)
   | .formatT _ aligned _ fields => merge (optional (expression scope) aligned)
@@ -142,14 +138,13 @@ def directReferences (source : List SItemTief) : List String :=
   (items { constructors := constructorNames source, carriers := carrierNames source } source).references
 
 def functionName : SItemTief → Option String
-  | .fnT sig _ | .protoT sig | .specT sig _ | .asmT sig _ | .transT _ sig _ => some sig.name
+  | .fnT sig _ | .protoT sig | .specT sig _ | .transT _ sig _ => some sig.name
   | .axiomT name _ _ _ _ _ => some name
   | .callT call => some call.name
-  | .trustT name _ _ _ _ _ _ => some name
   | _ => none
 
-/-- Every callable declaration of the output: functions, foreign items, the wrapper an
-    `entrust` item generates, and the function each declared transition generates. -/
+/-- Every callable declaration of the output: functions, foreign items and
+    the function each declared transition generates. -/
 def functionNames (source : List SItemTief) : List String :=
   source.filterMap functionName ++ source.flatMap fun
     | .stateT _ transitions => transitions.map (·.tname)

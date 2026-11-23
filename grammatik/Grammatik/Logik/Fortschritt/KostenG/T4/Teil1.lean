@@ -167,7 +167,7 @@ theorem frame_schritte_beschraenkt_tief (P : Programm D) (O : Orakel D) (passes 
 
     A call counts the callee's DECLARED cost (`c g` in §1, the `call counts
     DECLARED costs` rule). A foreign edge -- `Stmt.axiomCall` (a syscall, an
-    `extern fn`, `prim`, `asm`) and `Block.bindAxiom` -- had no such number:
+    `extern fn`) and `Block.bindAxiom` -- had no such number:
     §1 counts `1 + args` for it, `spiegelS` excludes it, and `D.Ax` carries
     no cost field. This section closes that gap as an UPPER-BOUND layer,
     without touching §1:

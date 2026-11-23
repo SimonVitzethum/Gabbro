@@ -24,7 +24,7 @@ def materialize (items : List SItemTief) : List SItemTief :=
     | it => it)
 
 def functionHeads (items : List SItemTief) : List FnSig := items.filterMap fun
-  | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => some s
+  | .fnT s _ | .protoT s | .specT s _ => some s
   | .callT s => some
     { art := "", name := s.name, params := s.params, res := s.res,
       fehler := s.fail, klauseln := [], generics := [] }

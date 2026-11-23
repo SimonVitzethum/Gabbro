@@ -4,7 +4,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.Spaces
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Generic.StaticConformance
-public import Grammatik.Parser.Elab.Uebersetze.Guest.Source
+public import Grammatik.Parser.Elab.Uebersetze.Einheit.Foreign
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.SondeCode
 public import Grammatik.Parser.Elab.Uebersetze.Records.Constants
 @[expose] public section
@@ -33,9 +33,6 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     (staticRequirements : List (STyp × String) := []) (ort : Bool := false) (narrow : Bool := false)
     (widths : List (String × (Int × Int)) := []) :
     Except String UProg :=
-  match guestSources msE with
-  | .error e => .error e
-  | .ok (guests, msE) =>
   match uRestFehler msE with
   | .error e => .error e
   | .ok _ =>
@@ -159,14 +156,14 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
-  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
+  match uSeq (fremdPaare.map (fun sig => elabAxKopf alias tabs whys globs (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
   | .error e => .error e
   | .ok axKoepfe0 =>
   match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
-  match uSeq (axKoepfe.map (fun k => guestForeign alias consts tabs globs whys annahmen guests k (eigner := eigner) (spaces := spaces))) with
+  match uSeq (axKoepfe.map (fun k => uForeign alias consts tabs globs whys annahmen k (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
@@ -218,34 +215,27 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=
-      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, markOrders := markOrders, spaces := spaces, records := valueScope.records, eigner := eigner }
+      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, markOrders := markOrders, spaces := spaces, records := valueScope.records, eigner := eigner }
     let u := uMitBoden u
     match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types specFns specTypen with
     | .error error => .error error
     | .ok () => .ok u
 
 /-- Successful source elaboration retains the registry of the actual expanded
-    declarations. Guest expansion and every existing admission error remain in
-    the premise's one canonical producer; no space is supplied by the caller. -/
+    declarations. Every existing admission error remains in the canonical
+    producer; no space is supplied by the caller. -/
 theorem elabExpandedWithScopes_spaces (items : List SItemTief)
     (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (functions : List UKonstFn) (tableLowering : List String → SItemTief → Except String UTab)
     (requirements : List (STyp × String)) (u : UProg) {narrow : Bool}
     (accepted : elabExpandedWithScopes items consts alias functions tableLowering requirements
       (narrow := narrow) = .ok u) :
-    ∃ guests declarations, guestSources items = .ok (guests, declarations) ∧
-      u.spaces = uSpaces (uOhneSenken declarations) := by
+    u.spaces = uSpaces (uOhneSenken items) := by
   unfold elabExpandedWithScopes at accepted
-  cases expanded : guestSources items with
-  | error error => simp only [expanded] at accepted; cases accepted
-  | ok result =>
-    rcases result with ⟨guests, declarations⟩
-    simp only [expanded] at accepted
-    refine ⟨guests, declarations, rfl, ?_⟩
-    repeat' first | (split at accepted) | contradiction
-    all_goals
-      have same := Except.ok.inj accepted
-      cases same
-      rfl
+  repeat' first | (split at accepted) | contradiction
+  all_goals
+    have same := Except.ok.inj accepted
+    cases same
+    rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze

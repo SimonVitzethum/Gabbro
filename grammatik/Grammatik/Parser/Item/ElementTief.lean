@@ -64,8 +64,8 @@ end Gabbro.Grammatik.Parser
      (`pure` by default is a refusal, not a default), and every
      other clause-presence rule (`N200`-`N204`, `P044`) are NOT
      held -- shapes only, no checks.
-  6. `= asm {…}` rides raw and balanced (t17); the `in`/`out`/
-     `clobbers` maps inside are not split.
+  6. Removed machine-access forms have one named refusal each: assembly (`N594`),
+     `prim fn` (`N595`), `raw fn` (`N596`) and `entrust` (`N597`).
   7. A `bank` body rides raw and balanced; registers inside are
      not split (t45).
   8. `use` paths ride split (`List String`); `SItem.useS` keeps

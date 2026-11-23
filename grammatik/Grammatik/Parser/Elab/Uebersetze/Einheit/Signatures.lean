@@ -70,25 +70,21 @@ def uOhneSenken (ms : List SItemTief) : List SItemTief :=
   let mem := uSpeicherNamen ms
   let senken := ms.flatMap fun
     | .protoT sig => uFremdeSchreibe mem sig.klauseln
-    | .asmT sig _ => uFremdeSchreibe mem sig.klauseln
     | .axiomT _ _ _ _ effs _ => uFremdeSchreibe mem [.effs effs]
     | _ => []
   if senken.isEmpty then ms else
   ms.map fun
     | .fnT sig b => .fnT { sig with klauseln := uKlauselnOhne senken sig.klauseln } b
     | .protoT sig => .protoT { sig with klauseln := uKlauselnOhne senken sig.klauseln }
-    | .asmT sig c => .asmT { sig with klauseln := uKlauselnOhne senken sig.klauseln } c
     | .axiomT n ps r q effs k =>
       .axiomT n ps r q (match uKlauselnOhne senken [.effs effs] with | [.effs es] => es | _ => effs) k
     | m => m
 
-/-- The signature of a foreign body item and whether it is `= asm { .. }`: `extern`/`raw`/`prim`/`divergent` declarations,
-    `asm` bodies, and `axiom` items without a `requires` (read as an `extern fn` with their effects). -/
-def uFremdSig : SItemTief → Option (FnSig × Bool)
-  | .protoT sig => some (sig, false)
-  | .asmT sig _ => some (sig, true)
+/-- The signature of a foreign declaration or an `axiom` item without a `requires`. -/
+def uFremdSig : SItemTief → Option FnSig
+  | .protoT sig => some sig
   | .axiomT n ps res .none effs _ =>
-    some ({ art := "extern", name := n, params := ps, res, fehler := .none, klauseln := [.effs effs] }, false)
+    some ({ art := "extern", name := n, params := ps, res, fehler := .none, klauseln := [.effs effs] })
   | _ => none
 
 /-- Arena bounds are compile-time constants with `0 <= lo <= hi` (`N210`): both bounds read as counts

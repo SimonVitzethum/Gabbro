@@ -36,7 +36,7 @@ inductive LexFehler
     table-space binder independently of the linear `owner` binder. -/
 def wortschatz : List String :=
   ["module", "pub", "use", "type", "opaque", "linear", "ghost", "tagged",
-   "const", "static", "fn", "spec", "impl", "raw", "divergent", "prim",
+   "const", "static", "fn", "spec", "impl", "divergent",
    "extern", "section", "arch", "when", "requires", "ensures", "maintains",
    "refines", "breaking", "effects", "costs", "deadline", "decreases",
    "where", "in", "exhaustive", "old", "narrow", "to", "induction",
@@ -62,8 +62,8 @@ def wortschatz : List String :=
    "release", "seq", "relaxed", "nothing", "accumulates", "merge", "max",
    "min", "add", "or", "and", "held", "shared", "embeds", "scale", "walk",
    "levels", "node", "down", "leaf", "mappings", "entry", "syscall",
-   "abi", "number", "errors", "kernel", "entrust", "vector", "regs",
-   "out", "preserves", "clobbers", "asm", "stack", "dispatch", "per",
+   "abi", "number", "errors", "kernel", "vector", "regs",
+   "out", "preserves", "clobbers", "stack", "dispatch", "per",
    "cpu", "ist", "nested", "masked", "awaits", "port", "step", "via",
    "slots", "of", "descendants", "ancestors", "observed", "tree",
    "parent", "child", "sibling", "occupied", "queue", "elems", "threads",
@@ -72,12 +72,16 @@ def wortschatz : List String :=
    "lenof", "aligned", "forall", "exists", "true", "false", "Self",
    "Some", "None", "grow", "pb", "blw", "free", "target", "dyn"]
 
+/-- Removed machine-access spellings remain reserved solely for their named refusals. -/
+def verweigerteWoerter : List String := ["asm", "prim", "raw", "entrust"]
+
 /-- Keyword lookup by first character: buckets of character
     lists, so both the scan (at most 28 candidates) and the
     comparison (`Char ==` on numbers) stay kernel-cheap, unlike
     `String ==` through byte arrays. `lex_keywords` checks the
     table against this bucketing word by word, so a misfiled word
-    fails the build instead of lexing as an identifier. -/
+    fails the build instead of lexing as an identifier. Removed spellings in
+    `verweigerteWoerter` also stay in these buckets for their named refusals. -/
 def schluesselTafelC : Char → List (List Char)
   | 'N' => [['N','o','n','e']]
   | 'S' => [['S','e','l','f'], ['S','o','m','e']]

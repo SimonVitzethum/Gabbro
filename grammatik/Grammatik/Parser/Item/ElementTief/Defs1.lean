@@ -93,7 +93,7 @@ def parseFnSig (f : Nat) (art : String) (toks : List Token) :
     pure ({ art, name, params := ps, res := erg, fehler, klauseln := ks, generics }, r)
 
 /-- Behind the head: a block body (`fnT`), `;`
-    (`protoT`), `= pred ;` (`specT`) or `= asm {…} ;` (`asmT`). -/
+    (`protoT`) or `= pred ;` (`specT`). -/
 def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -121,14 +121,8 @@ def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
               | .ok _ => .error "checks: a function with a body is required"
       else .error "fn without body"
     | .zeichen "=" :: rest => match rest with
-      | .wort s :: rest' =>
-        if strEq s "asm" then match fordereZeichen "{" rest' with
-          | .error e => .error e
-          | .ok r1 => match nimmBereichWorte r1 1 with
-            | .error e => .error e
-            | .ok (h, r2) => match fordereZeichen ";" r2 with
-              | .error e => .error e
-              | .ok r => .ok (.asmT sig ("asm { " ++ h), r)
+      | .wort s :: _ =>
+        if strEq s "asm" then .error "N594: assembly is not part of Gabbro: privileged operations are language constructs (LOW-LEVEL-SYNTAX-PLAN)"
         else match parsePred f rest with
           | .error e => .error e
           | .ok (p, r1) => match fordereZeichen ";" r1 with

@@ -20,7 +20,6 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg3
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Export
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -165,10 +164,8 @@ def akzeptiertU (u : UProg) : Except String Bool :=
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
-    match sourceGuests u with
-    | .error error => .error error
-    | .ok guests => Vertraege.Pruefer.contractVerdict P (sperrFamilie u) fs (sperrQuellen u)
-        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u) (fun _ => none)
+    Vertraege.Pruefer.contractVerdict P (sperrFamilie u) fs (sperrQuellen u)
+        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] [] (sperrQuellen u) (fun _ => none)
           (some (zeigerSignaturen u)))
         (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 

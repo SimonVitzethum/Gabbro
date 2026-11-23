@@ -251,7 +251,9 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
   | f + 1 => match sammleModifikatoren toks with
     | (mods, nach) => match nach with
       | .wort s :: rest =>
-        if strEq s "spec" then parseSpecGroup f nach
+        if strEq s "prim" then .error "N595: prim fn is not part of Gabbro: machine operations are language constructs (LOW-LEVEL-SYNTAX-PLAN)"
+        else if strEq s "raw" then .error "N596: raw fn is not part of Gabbro: memory access requires checked authority (LOW-LEVEL-SYNTAX-PLAN)"
+        else if strEq s "spec" then parseSpecGroup f nach
         else if strEq s "impl" then parseImplGroup f nach
         else if strEq s "module" then parseModulTief f nach
         else if strEq s "use" then parseUseTief nach
@@ -298,7 +300,7 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
         else if strEq s "accumulates" then parseAkkumTief f nach
         else if strEq s "walk" then parseWegTief f nach
         else if strEq s "entry" then parseEingangTief f nach
-        else if strEq s "entrust" then parseAnvertrautTief f nach
+        else if strEq s "entrust" then .error "N597: entrust is not part of Gabbro: guests are language constructs (LOW-LEVEL-SYNTAX-PLAN)"
         else if strEq s "boot" then parseStartTief f nach
         else if strEq s "syscall" then parseSysrufTief f nach
         else if strEq s "target" then parseGoal f nach

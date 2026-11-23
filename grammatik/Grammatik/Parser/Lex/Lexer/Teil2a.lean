@@ -34,7 +34,7 @@ set_option maxRecDepth 100000
     raised recursion depth above is the price of the whole-table
     check (the default depth fails). -/
 theorem lex_keywords :
-    ∀ w ∈ wortschatz, lex w = .ok [Token.wort w, Token.ende] := by
+    ∀ w ∈ wortschatz ++ verweigerteWoerter, lex w = .ok [Token.wort w, Token.ende] := by
   decide
 
 /-- A non-table word lexes as an identifier, not a keyword. -/

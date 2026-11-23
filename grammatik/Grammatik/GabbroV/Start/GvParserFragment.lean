@@ -95,7 +95,7 @@ def istGegenstand : SItemTief → Bool
   | .constT .. | .typeT .. | .tableT .. | .lockT .. | .fnT .. | .entryT .. => false
   | .globT .. | .atomT .. | .arenaT .. | .protoT .. | .assumT .. | .whyT .. => false
   | .callT .. | .varT .. | .goalT .. | .concT .. | .devT .. | .groupT .. => false
-  | .stateT .. | .specT .. | .asmT .. | .transT .. | .checkT .. => false
+  | .stateT .. | .specT .. | .transT .. | .checkT .. => false
   | .axiomT _ _ _ .none _ _ => false
   | item@(.accT ..) => !akkuFormZulaessig item
   | _ => true
@@ -106,7 +106,7 @@ def istAngenommen : SItemTief → Bool
   | .constT .. | .typeT .. | .tableT .. | .lockT .. | .fnT .. | .entryT .. => true
   | .globT .. | .atomT .. | .arenaT .. | .protoT .. | .assumT .. | .whyT .. => true
   | .callT .. | .varT .. | .goalT .. | .concT .. | .devT .. | .groupT .. => true
-  | .stateT .. | .specT .. | .asmT .. | .transT .. | .checkT .. => true
+  | .stateT .. | .specT .. | .transT .. | .checkT .. => true
   | .axiomT _ _ _ .none _ _ => true
   | item@(.accT ..) => akkuFormZulaessig item
   | _ => false

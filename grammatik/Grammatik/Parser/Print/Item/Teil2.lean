@@ -60,7 +60,6 @@ def druckItem : SItemTief → List Token
   | .fnT sig b => (druckFnSig sig ++ druckAnw b)
   | .protoT sig => (druckFnSig sig ++ [.zeichen ";"])
   | .specT sig p => (druckFnSig sig ++ [.zeichen "="] ++ druckPred p ++ [.zeichen ";"])
-  | .asmT sig h => (druckFnSig sig ++ [.zeichen "="] ++ rohToks h ++ [.zeichen ";"])
   | .tableT n von cnt backed owner sh parts space =>
     ([.wort "table", nameTok n] ++
       (match space with
@@ -230,14 +229,6 @@ def druckItem : SItemTief → List Token
   | .bootT n a ss dp =>
     ([.wort "boot", nameTok n, .wort "arch", nameTok a, .zeichen "{"] ++ druckBootSchritte ss ++
       [.wort "dispatch"] ++ pfadToks dp ++ [.zeichen ";", .zeichen "}"])
-  | .trustT n m a [] "" "" service =>
-    [.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a] ++
-      (match service with | some s => [.wort "via", nameTok s] | none => []) ++ [.zeichen ";"]
-  | .trustT n m a ri st g service =>
-    ([.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a] ++
-      (match service with | some s => [.wort "via", nameTok s] | none => []) ++ [.zeichen "{",
-      .wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds ri ++
-      [.zeichen "}", .wort "stack", nameTok st, .wort "assume", nameTok g, .zeichen ";", .zeichen "}"])
   | .profT bedarf es =>
     ((if bedarf then [Token.wort "requires"] else []) ++ [.wort "profile", .zeichen "{"] ++
       druckProfEintraege es ++ [.zeichen "}", .zeichen ";"])

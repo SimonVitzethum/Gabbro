@@ -12,7 +12,7 @@ namespace Gabbro.Grammatik.Parser
     `pub` plus the `fn`/`type` modifiers; `const` is NOT among them
     -- `const fn` splits on the next word, as in `parse.rs`). -/
 def istMod (s : String) : Bool :=
-  ["library", "spec", "impl", "raw", "divergent", "prim", "extern",
+  ["library", "spec", "impl", "divergent", "extern",
    "opaque", "linear", "ghost", "tagged"].any (strEq · s)
 
 set_option maxRecDepth 100000
@@ -187,7 +187,7 @@ def beqSAdapt : SAdapt → SAdapt → Bool
     `const`, `raw`, `divergent`, `prim`, `extern`, else `""` for a
     plain `fn`); `fehler` the `or R` channel; `klauseln` every
     contract clause in source order. The body rides outside
-    (`fnT`/`protoT`/`specT`/`asmT` below). -/
+    (`fnT`/`protoT`/`specT` below). -/
 structure FnSig where
   art : String
   name : String

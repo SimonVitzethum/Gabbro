@@ -96,7 +96,6 @@ def item (groups : Groups) : SItemTief → Except String SItemTief
   | .fnT sig body => return .fnT (← signature groups [] sig) body
   | .protoT sig => return .protoT (← signature groups [] sig)
   | .specT sig body => return .specT (← signature groups [] sig) body
-  | .asmT sig text => return .asmT (← signature groups [] sig) text
   | .transT target sig body => return .transT target (← signature groups [] sig) body
   | .adaptT sig params parent body =>
     let bound := params.filterMap fun | .neu name _ => some name | _ => none

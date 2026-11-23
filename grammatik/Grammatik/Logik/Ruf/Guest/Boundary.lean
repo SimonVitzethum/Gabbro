@@ -80,30 +80,30 @@ def transferB (available : List (Res D)) (t : GuestTransfer D) : Bool :=
     missing origin, owner, ABI or service is repaired by a default. -/
 def check (g : GuestBoundary D) : Except String Unit := do
   let a ← match g.service with
-    | none => throw "entrust: missing isolation service binding"
+    | none => throw "guest boundary: missing isolation service binding"
     | some a => pure a
-  if g.abi != some .userspace then throw "entrust: unknown userspace ABI"
+  if g.abi != some .userspace then throw "guest boundary: unknown userspace ABI"
   if !g.registers.isEmpty || g.privileged then
-    throw "entrust: register-state or privileged transfer is excluded"
+    throw "guest boundary: register-state or privileged transfer is excluded"
   if D.axHerkunft a != some .software || (D.axBeleg a).isSome then
-    throw "entrust: isolation service must be a software binding"
-  if D.agruende a = 0 then throw "entrust: isolation service needs a failure channel"
+    throw "guest boundary: isolation service must be a software binding"
+  if D.agruende a = 0 then throw "guest boundary: isolation service needs a failure channel"
   if !regionB (D := D) g.code || !g.code.rights.read || g.code.rights.write ||
       g.code.rights.owner.isSome then
-    throw "entrust: code needs an immutable region capability"
+    throw "guest boundary: code needs an immutable region capability"
   if !inputsB (D.aparams a) then
-    throw "entrust: nested capability or callback needs an explicit service boundary"
+    throw "guest boundary: nested capability or callback needs an explicit service boundary"
   if !g.transfers.all (transferB g.available) then
-    throw "entrust: caller does not own a transferred region"
+    throw "guest boundary: caller does not own a transferred region"
   if !decide ((g.transfers.map (fun t => t.owner)).Nodup) then
-    throw "entrust: a region owner is transferred more than once"
+    throw "guest boundary: a region owner is transferred more than once"
   if pointerInputs (D.aparams a) != g.code :: g.transfers.map (·.capability) then
-    throw "entrust: transferred regions differ from the service arguments"
+    throw "guest boundary: transferred regions differ from the service arguments"
   match g.behavior with
   | .returns =>
-    if D.aerg a = some .never then throw "entrust: returning service has a never result"
+    if D.aerg a = some .never then throw "guest boundary: returning service has a never result"
   | .noreturn =>
-    if D.aerg a != some .never then throw "entrust: noreturn service needs a never result"
+    if D.aerg a != some .never then throw "guest boundary: noreturn service needs a never result"
 
 def admittedB (g : GuestBoundary D) : Bool := g.check.isOk
 
@@ -117,7 +117,7 @@ theorem admissionB_each {guests : List (GuestBoundary D)}
 
 /-- Admission can never silently choose an invocation service. -/
 theorem missing_service (g : GuestBoundary D) (h : g.service = none) :
-    g.check = .error "entrust: missing isolation service binding" := by
+    g.check = .error "guest boundary: missing isolation service binding" := by
   simp [check, h]; rfl
 
 /-- A transfer accepted by the checker carries the actual owner resource. -/

@@ -140,7 +140,7 @@ def Compiled.checkedDeclarations {text : String} {options : Profil.Options} (res
   match found : uCheckDecls result.unit with
   | .ok checks => ⟨checks, rfl⟩
   | .error _ => False.elim (by
-    obtain ⟨_, _, _, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
+    obtain ⟨_, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
     rw [found] at derived
     cases derived)
 
@@ -310,15 +310,6 @@ theorem Compiled.foreign_contracts {text : String} {options : Profil.Options}
   obtain ⟨raw, fs, lowered, restored⟩ := result.lowered
   rw [OldSource.restore_axVertrag _ result.unit raw result.program restored]
   exact lowerAllg_axVertrag result.unit raw fs lowered a
-
-/-- The exact source descriptor list reaches production admission after all
-    restoration. Its length and per-descriptor verdict remain observable. -/
-theorem Compiled.guest_descriptors {text : String} {options : Profil.Options}
-    (result : Compiled text options) :
-    ∃ guests, sourceGuests result.unit = .ok guests ∧
-      guests.length = result.unit.guests.length ∧
-      ∀ guest ∈ guests, guest.admittedB = true :=
-  OldSource.accepts_guests result.unit result.program result.main result.accepted
 
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical UProg/declOf/lowerAllg endpoint

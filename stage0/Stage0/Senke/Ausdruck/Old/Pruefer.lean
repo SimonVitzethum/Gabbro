@@ -1,7 +1,6 @@
 module
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Grammatik.Parser.Cover.Differenz
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Export
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Bausteine.Kernzelle.Start
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Guest
@@ -91,14 +90,9 @@ theorem accepts_program (u : UProg) (P : Programm (declOf u)) (main : (declOf u)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
       (judgedRoots u main) [] checks [] [] (sperrQuellen u) (fun _ => none)
       (some (zeigerSignaturen u)) = true := by
-  obtain ⟨guests, actual, _, exported, checked⟩ := accepts_core u P main accepted
+  obtain ⟨actual, exported, checked⟩ := accepts_core u P main accepted
   cases Except.ok.inj (exported.symm.trans derived)
-  have split := (@akzeptiertX_guest_eq (declOf u)
-    (inferInstanceAs (DecidableEq (Fin u.fns.length)))
-    (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
-    _ _ _ _ _ _ _ guests (sperrQuellen u) (fun _ => none) (some (zeigerSignaturen u))).symm.trans checked
-  exact (Bool.and_eq_true_iff.mp split).1
-
+  exact checked
 /-- Soundness of the actual checker on the program it judges. The empty
     arena and accumulator lists are those used by `accepts`. -/
 theorem accepts_program_spec [RootNativeFloat.Hardware] (u : UProg) (P : Programm (declOf u))
@@ -106,7 +100,7 @@ theorem accepts_program_spec [RootNativeFloat.Hardware] (u : UProg) (P : Program
     AkzeptiertSpecX P (sperrFamilie u) (List.finRange u.fns.length) (judgedRoots u main) [] [] := by
   letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
-  obtain ⟨_, _, _, derived, _⟩ := accepts_core u P main accepted
+  obtain ⟨_, derived, _⟩ := accepts_core u P main accepted
   refine akzeptiertSpecX_of List.mem_finRange List.mem_finRange ?_ [] (accepts_program u P main accepted derived)
   intro carrier
   cases carrier with
@@ -154,8 +148,7 @@ theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns 
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
     (checks : List (CheckDecl (declOf u))) (derived : uCheckDecls u = .ok checks)
     (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
-    (inv : sperrInvsOk u = true) {guests : List (GuestBoundary (declOf u))}
-    (exported : sourceGuests u = .ok guests) (guest : GuestBoundary.admissionB guests = true) :
+    (inv : sperrInvsOk u = true) :
     (accepts u P main = .ok true ∧ unitStartGeprueftB (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length) = true) ↔
     akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet checks)
@@ -168,13 +161,13 @@ theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns 
     simp only [akzeptiertX_pruefer, checkAkzeptiertX, Bool.and_eq_true] at accepted
     rcases accepted with ⟨⟨⟨⟨core, _⟩, _⟩, invariant⟩, logic⟩
     refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
-    simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, derived, bind, Except.bind]
+    simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, derived, bind, Except.bind]
     apply (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mpr
     refine (@akzeptiertX_guest_eq (declOf u)
       (inferInstanceAs (DecidableEq (Fin u.fns.length)))
       (inferInstanceAs (DecidableEq (Fin u.axs.length)))
-      P (sperrFamilie u) _ _ _ _ _ _ _ guests (sperrQuellen u) (fun _ => none)
-      (some (zeigerSignaturen u))).trans (Bool.and_eq_true_iff.mpr ⟨?_, guest⟩)
+      P (sperrFamilie u) _ _ _ _ _ _ _ [] (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u))).trans (Bool.and_eq_true_iff.mpr ⟨?_, rfl⟩)
     rw [← hws]
     exact (akzeptiertX_inst (declOf u) _ _ _ (fun x y => Classical.propDecidable (x = y))
       P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)

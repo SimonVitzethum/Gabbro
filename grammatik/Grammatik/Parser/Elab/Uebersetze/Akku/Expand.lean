@@ -441,16 +441,16 @@ def uAkkuExpandUnit (ps : List AkkuPlan) (fns : List (FnSig × SAnw))
 def uAkkuVorlauf (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (ms : List SItemTief)
     (fnItems : List (FnSig × SAnw)) : Except String
-    (List (FnSig × SAnw) × List UFnKopf × List (FnSig × Bool)) :=
+    (List (FnSig × SAnw) × List UFnKopf × List FnSig) :=
   match uAkkuGenFns consts alias ms with
   | .error e => .error e
   | .ok gen =>
     let fremdPaare := ms.filterMap uFremdSig
-    match uAkkuExpandUnit (gen.map fun g => g.1) fnItems (fremdPaare.map (·.1)) with
+    match uAkkuExpandUnit (gen.map fun g => g.1) fnItems fremdPaare with
     | .error e => .error e
     | .ok (fnItems', fremdSigs') =>
       .ok (fnItems' ++ gen.flatMap fun g => [g.2.2.1, g.2.2.2.1, g.2.2.2.2],
         gen.map fun g => g.2.1,
-        (fremdPaare.map (·.2)).zip fremdSigs' |>.map Prod.swap)
+        fremdSigs')
 
 end Gabbro.Grammatik.Parser.Uebersetze
