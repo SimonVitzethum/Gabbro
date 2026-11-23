@@ -1,5 +1,9 @@
 # Low-level syntax: one neutral language from the reset vector to the kernel
 
+> Since 2026-11-23 the forms of this plan are built as steps S1b (reference AST) and S6L of
+> [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, on the same level as every other form; the goal theorem they serve is
+> PERFECT-MODEL §2. Where this plan speaks of the goal or of `Spec.lean`, PERFECT-MODEL decides.
+
 Status: design. Ordered for complete implementation by the owner on 2026-11-03; **redesigned by the owner's
 decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur iasm, und GIR soll Compiler- und
 Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump

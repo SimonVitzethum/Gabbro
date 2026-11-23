@@ -198,8 +198,8 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B20 | **linearizability of lock-free structures (owner, 2026-11-14)**: declared abstract specification and linearization points; a generic theorem that every concurrent history is equivalent to a sequential one of the specification; with B12 for the payloads | 8 000–20 000 / 1–2 / — |
 | B21 | **memory bounds (owner, 2026-11-14: definitely; an unbounded heap must stay possible)**: per function and per run an upper bound on region/heap/arena use and on stack, computed and checked like `ZeitAb`, with the allocator contract — wherever a bound is declared or derivable (bounded regions, arenas with a ceiling, stack), also as a bound in the size of the input; OPEN regions (`Deklaration.offen`) without a ceiling stay admitted exactly as today, and for them the statement claims no bound (only what the provider gave), never a refusal | 4 000–10 000 / 1–2 / — |
 | B22 | **crash consistency, hardware-independent (owner, 2026-11-14).** An abstract persistence semantics: writes to persistent places become durable only through explicit flush/fence steps, in any order the abstraction allows (so every medium within the envelope is covered); interruption is possible at EVERY step; declared crash invariants and statements of the form "if interrupted at point x, the persistent state satisfies P_x" are checked by the checker or proved as program logic; recovery code is ordinary Gabbro verified like any other. **Decided:** a separate statement `GabbroZielAbsturz` beside the goal that reuses the safety legs; crash invariants and P_x are decided by the checker in the decidable fragment, the rest is program logic. Design: `persistent` tables/statics, `flush`/`fence` statements, a ghost durable state, one named medium envelope (design file of the lead) | 12 000–30 000 / 2–3 / — |
-| B23 | **no TOCTOU, inside the goal theorem (owner, 2026-11-23: "sollte der Zielsatz nicht alle TOCTOU ausschließen"; "der Zielsatz soll aussagen, dass alles sicher ist und nur Logik läuft, in möglichst einem Theorem, das auch TOCTOU ausschließt").** A new leg `toctouFrei` of the one theorem `gabbro_ziel` (O27), over every reachable machine: (T1) shared program memory — every fact the checker used to admit a step holds in the world of that step; facts about a shared carrier expire at every release point (lock give, `.await`, end of an atomic section, a rely step) unless re-established, so a check and its use can never lie in different critical sections; (T2) external memory — guest memory and memory shared with a device (rings, completion queues) is read only by copy, each external byte at most once per entry invocation (an affine read capability per syscall argument or ring slot), and every use of external data is a use of that copy; (T3) device and environment answers — a decision and its use refer to the same answer (a second read is a second question, `World.fragt`); (T4) every `requires` about shared or external state holds at the call in every interleaving (the contract leg, restated for these states). Not excludable and named as such: the outside world changing after the snapshot a decision was made on (a file renamed after `open`, a device changing state), which hosted libraries reduce with handle-based interfaces; logical properties of the program beyond its declared contracts. Uses `ohneToctou` (`Kern/Semantik/Adressraum.lean`) and the low-level copy rules (LOW-LEVEL-SYNTAX-PLAN §4.6, §4.7) | 6 000–15 000 / 1–2 / — |
-| B24 | **one theorem: no error except logic and hardware (O27). HALTED (owner, 2026-11-23) until the conditions of the general goal theorem are settled; a first unbuilt draft is kept on the local branch `agent/one-theorem` (`d87d48b94`).** `gabbro_ziel : Akzeptiert → Logik → Hardware → Laufzeit → ∀ run of the implementation, it refines a run of Gut P`, with an ABSTRACT error notion and no list (owner: "keine Aufzählung, eine abstrakte Definition, die alle einschließt, ebenso alle, die wir noch nicht kennen"): `Ideal P` (the program as its source says, shared state changing only at declared synchronisation points, every outside read one question, no implementation artefacts), `Gut P` (ideal runs where every declared specification holds and every thread ends, progresses under the named fairness, or stops at a named hardware stop), a forward simulation from the implementation (machine G over GX/W today, the emitted image after B6/C9) into `Gut P` with the same questions, answers, device accesses, outputs, stops and divergence; `Fehler` = a run with no such correspondence. TWO halves (owner: "In C kann 'korrekte' Logik auch Fehler erzeugen, das soll hier aber unmöglich sein"): (i) every run of `Ideal P` of an accepted program is in `Gut P` — progress and preservation of `Ideal P`, no undefined behaviour, every failure a declared handled outcome, `Gut P` never a filter that drops bad runs; `Gut P` also requires DETERMINACY (behaviour fixed by the source and declared sources of nondeterminism only) and FRESHNESS (no effect depends on a value read before a release point of its state; no escape such as a declared snapshot, owner: "dann ist es wieder möglich, soll es aber nicht, das ist die Zielgarantie der Sprache"), so data races and TOCTOU that the user writes are refused (owner: "was aber, wenn der Nutzer ein Datenrennen oder TOCTOU erzeugt, das soll unmöglich sein für alle Fehler"); B23 becomes the freshness part of this; (ii) the refinement. STRONGER than today (owner: "es muss mächtiger als der Zielsatz sein"): `gabbro_ziel_staerker` derives today's `GabbroZiel` and every side statement as corollaries. Checker refusals such as B23's double-read rule stay acceptance rules. The `Spec.lean` header describes `Ideal`, `Gut`, the correspondence and the premises; one `gabbro_ziel_erfuellbar`. The concrete `Spec.lean` diff goes to the owner before merge | 15 000–40 000 / 3–6 / — |
+| B23 | **no TOCTOU** — defined in [PERFECT-MODEL.md](PERFECT-MODEL.md) §4 and built as its step S11; counted in B24 | — |
+| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and the migration of `grammatik/` (steps S0–S12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. Size from PERFECT-MODEL §8 (core; the low-level forms are its step S6L and are counted in the L rows) | 168 000–445 000 new (20 000–60 000 removed) |
 
 ### C11 — non-emptiness in the statement
 
@@ -209,6 +209,12 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 
 
 ### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN, redesigned by O23 on 2026-11-23)
+
+**Since 2026-11-23 (owner): low-level is built as step S6L of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, from the
+start and on the same level as every other form** — every low-level form is a constructor of the reference AST
+(`grammatik/Grammatik/Ast/`, step S1b) and of the core inductives, with a `Bezeichnet` rule, an `I` rule, a
+compatibility lemma and an `_erfuellbar` lemma; there is no separate low-level layer. The rows below keep the
+content and the sizes; their order is PERFECT-MODEL's.
 
 **State 2026-11-13 (built, as LAYERS beside machine G, not yet connected to it):** L1 addresses, context ledger, `ram_view`, boot hand-over (`Niedrig/Authority`, `Niedrig/Boot`); first parts of L2 (register contracts), L3 (byte capabilities with initialisation), L4 (neutral architectural state with `setMask`, `setRoot`, `setVectorBase`, `enterKernel`, `leaveKernel`), L5 (entry frame descriptors with refusals), L6 (translation regime: walk, map, unmap, protect, aliases), L7 (per-core masks, priority nesting). None of these rows is complete: owed for each is the simulation by machine-G steps, the `Akzeptiert` checks and the no-bypass theorem (a review's R1–R3), then parser/exporter. **After O23** the ledger stays as machine state but leaves the surface (no `context<P>` value, no `ram_view(c, a, n)`): the built layers are reused as the model of the constructs of LOW-LEVEL-SYNTAX-PLAN §4, the user-facing operation functions are not built.
 
@@ -444,6 +450,9 @@ kernel's own scheduler or the OS; the five weak-memory points → the memory-mod
 
 ## 5. Phases and order
 
+**Order (owner, 2026-11-23): `grammatik/` first**, by the steps S0–S12 of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8; Stage 0 is
+not restructured before S12. During that migration `gabbro_ziel` need not build green.
+
 ```
 Phase 0  float decoupling merged, documentation pass (D1–D17), S3 lock stage 1 built
    │
@@ -511,15 +520,15 @@ That is **about 31 full grammatik builds** for the goal theorem and the low-leve
 | S Stage 0 complete (S1–S10) | 22 400–59 800 | — |
 | V GabbroV to R2 | 12 400–40 900 | — |
 | A fewer assumptions (A1–A6) | 9 400–25 900 | — |
-| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 103 000–270 000) | 207 000–543 000 | — |
+| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 250 000–660 000, of which B24 168 000–445 000) | 354 000–933 000 | — |
 | C11 non-emptiness | 200–800 | — |
 | L low-level model (L0–L18, re-estimated 2026-11-23) | 236 000–596 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6, K8) | 92 000–246 000 | 11 000–30 000 |
 | C compiler sources and benchmarks (C7, C8) | — | ≥ 513 000 (C7 ≥ 500 000; C8 13 000–32 000) |
-| **sum** | **≈ 663 400–1 722 400** | **≥ 524 000 (no upper bound)** |
+| **sum** | **≈ 810 400–2 112 400** | **≥ 524 000 (no upper bound)** |
 
-**Everything together: at least about 1 187 000 new lines**: Lean 663 400–1 722 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
+**Everything together: at least about 1 334 000 new lines**: Lean 810 400–2 112 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -528,9 +537,9 @@ Parts of the sum by gate (each includes what the earlier gates need):
 | Up to | Lean LOC | Gabbro LOC |
 |---|---|---|
 | the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 251 400–670 400 | — |
-| R4 low-level model (adds L) | 487 400–1 266 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 663 400–1 722 400 | ≥ 524 000 |
+| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 398 400–1 060 400 | — |
+| R4 low-level model (adds L) | 634 400–1 656 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 810 400–2 112 400 | ≥ 524 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -589,7 +598,7 @@ later items, and C7's owner minimum of 500 000 lines leaves the Gabbro total wit
 | O24 | **compile-time selection (owner, 2026-11-23):** "noch eine neue Syntax: `if (<compilerflag>) then {}` mit ggf. `else`" — L14, LOW-LEVEL-SYNTAX-PLAN §4.10 | decided by the owner; the lead's choices of the strongest variant: conditions over declared flags only, never mixed with run-time `if`; every declared configuration checked, dead branches refused; the goal theorem per configuration on the selected unit; K6 counts architecture conditions in the kernel proper (target: none, only feature flags) |
 | O25 | **virtualisation, IOMMU and the rest in, JIT and modules without syntax (owner, 2026-11-23):** "JIT und Kernelmodule brauchen keine neue Syntax, aber alles andere, BESONDERS Virtualisierung und IOMMU, müssen rein" — L15 (virtualisation), L16 (IOMMU), L17 (secure worlds, monitor, provided firmware services), suspend/resume in L4, backtraces in L5, debug and performance units in L7, guest grants in L8, K8 | decided by the owner; the lead's choices of the strongest variant: an IOMMU turns the DMA part of device contracts from an assumption into a proof; a DMA-capable device reaches an untrusted guest or VM only behind an IOMMU attachment; Intel VMX and AMD SVM (VT-d and AMD-Vi) both lowered, chosen at run time; nested virtualisation after the single-level case; the new hardware assumptions `VirtUnit`, `Iommu`, `SecureUnit` join the L0 `Spec.lean` diff |
 | O26 | **every driver writable (owner, 2026-11-23):** "1 ist keine Lücke, das geht, dem Compiler ist das egal, es ist so oder so eine Hardwareannahme"; "4 soll möglich sein, 3 nicht" — devices found at run time (`device at w as L` from a discovery answer), wide and enqueued device stores (`store64`, `enqueue64`, `atomic128`), hard timing (L18); CPU code the compiler did not emit (option ROMs, binary drivers) stays refused | decided by the owner; the lead's choices of the strongest variant: the truth of a discovery answer is part of the device contracts, but a window that overlaps owned memory is refused at run time, so memory safety never rests on it; a missing store instruction takes the `else` channel, never a torn fallback; timing gets named per-row assumptions (`ClockRate`, `RowTiming`) only for timed blocks, and a run-time clock check turns an overrun into `else late` |
-| O27 | **one theorem: no error except logic and hardware (owner, 2026-11-23):** "der Zielsatz soll aussagen, dass alles sicher ist und nur Logik läuft"; "ein mächtiges Theorem statt viele"; "einen Satz, der jeden Fehler ausschließt außer Logik und Hardware, viele sind schwer zu prüfen"; "es muss mächtiger als der Zielsatz sein"; "keine Aufzählung, eine abstrakte Definition, die alle einschließt, ebenso alle, die wir noch nicht kennen" | decided by the owner (AGENTS.md §3): every run of the implementation refines a good run of the program's logic (`Ideal P`, `Gut P`), an abstract error notion that covers every class including unknown ones; stronger than today's goal. Item B24 |
+| O27 | **one theorem: no error except logic and hardware (owner, 2026-11-23)** — settled after five critical reviews and fixed in [PERFECT-MODEL.md](PERFECT-MODEL.md), including the review's last three points decided by the strongest variant: catalogue rows are selected, never written by programs; relaxed atomics follow RC11 without load buffering; lock acquisition is strong-fair | decided; changes only as a diff of PERFECT-MODEL.md |
 
 ### 8.1 Decided 2026-11-13 by the lead on the owner's delegation
 

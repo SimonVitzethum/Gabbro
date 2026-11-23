@@ -13,7 +13,7 @@ This file holds the standing rules and recommendations for everyone who works in
 
 ## 1. The goal
 
-**A Gabbro user proves only the logic of their own program and chooses named assumptions about hardware and
+**A Gabbro user writes only the logic of their own program and selects named catalogue rows about hardware and
 environment. Everything else is carried by the language**: memory safety, race freedom, lock discipline, contracts
 and invariants where declared, time and memory bounds, isolation, information flow — in concurrent runs too, on
 every supported target. The direction of every change is to move work from the user onto the language model, never
@@ -77,45 +77,21 @@ Consequences:
 
 ## 3. The goal theorem
 
-- **Shape:** for every checker `C`, declaration `D`, unit `E` and enumerations: (a) the checker accepts →
-  (b) the user's duties hold → (c) the named hardware assumptions hold → (d) the runtime starts what is declared →
-  every reachable machine satisfies `Ziel`. The legs of `Ziel`, the atomic rely and the derived statements are
-  listed in `Spec.lean`; the proof files are `Zielsatz/Atomar/BeweisAtomar.lean` and `Zielsatz/Kern/Beweis.lean`.
+- **One source:** the goal theorem `gabbro_ziel`, the model it speaks about and the migration of `grammatik/` onto
+  it are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md) (owner, 2026-11-23). Nothing else —
+  this file, the plans, commit messages, agent briefs — restates, extends or softens it. Until its step S12, the
+  statement in `Spec.lean` is the interim one.
 - **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
   it.
-- **The header of `Spec.lean` is the ONE list** of named assumptions and of what is NOT claimed. Every extension of
-  the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
-- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
-  recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **ONE theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise is a single
-  theorem whose statement a reviewer can read in a minute, with an ABSTRACT notion of error that needs no list and
-  covers every error class, the unknown ones included (owner: "keine Aufzählung, eine abstrakte Definition, die
-  alle einschließt, ebenso alle, die wir noch nicht kennen"):
-  `Akzeptiert → Logik → Hardware → Laufzeit → every run of the implementation refines a good run of the program's logic`.
-  `Ideal P` is the program as its source says (each thread step by step; shared state changes only at declared
-  synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
-  runs in which every declared specification holds, the behaviour is determined by the source and declared sources
-  of nondeterminism only (environment answers, the order at declared synchronisation points), every effect depends
-  only on current state (a value read before a release point of its state is stale; there is NO escape —
-  owner: "dann ist es wieder möglich, soll es aber nicht, das ist die Zielgarantie der Sprache"),
-  and every thread ends, keeps progressing under the named
-  fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
-  emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
-  list of error kinds exists anywhere — not in the statement, not in its proof (owner). Review reads `Ideal`, `Gut`, the correspondence
-  and the premises (a)–(d). The theorem has two halves (owner: "In C kann 'korrekte' Logik auch Fehler erzeugen, das
-  soll hier aber unmöglich sein"): (i) the language adds no error to the logic — for every accepted program EVERY
-  run of `Ideal P` is in `Gut P`; `Ideal P` has no undefined or error state, every operation is total or its
-  failure is a declared, handled outcome of the program, the checker refuses everything else (no undefined
-  behaviour exists); this includes errors the user writes: a program whose runs would depend on an undeclared
-  interleaving (a data race) or let an effect depend on stale state (TOCTOU) is outside `Gut P` and refused (owner:
-  "was aber, wenn der Nutzer ein Datenrennen oder TOCTOU erzeugt, das soll unmöglich sein für alle Fehler"); (ii) the implementation adds no error to the language — the refinement above. The only
-  possible deviation from the programmer's intent is then a false specification or broken hardware. Theorems that
-  today state single legs become proof steps, never the promise. The user
-  owes only program logic (b) and the named hardware and environment list (c).
-  **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
-  `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
-  follow from it as proved corollaries.
+- **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until S12 the
+  header of `Spec.lean` is the interim list. Every extension of the goal is a diff of PERFECT-MODEL.md and then of
+  `Spec.lean`, described as such in the commit.
+- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff of
+  PERFECT-MODEL.md, with a recommendation, before it is merged. Strengthening the language's promise is the default
+  direction.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
+  `sorry` — except that during the migration of PERFECT-MODEL §8 `gabbro_ziel` need not build green (owner,
+  2026-11-23); whenever it builds it is on the standard axioms and without
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
   satisfiability is a proved lemma (`NAME_erfuellbar`: the premises hold jointly), one per premise bundle shared

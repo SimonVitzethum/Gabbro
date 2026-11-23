@@ -45,19 +45,14 @@ module
 public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
 public import Grammatik.Alle.Teil3
-public import Grammatik.Kern.Semantik.Semantik.TransitionShift
+public import Grammatik.Zielsatz.Waechter.Abhaengigkeit
+public import Grammatik.Zielsatz.Waechter.Pins
+public import Grammatik.Zielsatz.Waechter.Wildcards
+public import Grammatik.Zielsatz.Waechter.Formen
+public import Grammatik.Zielsatz.Waechter.Ratschen
 
 
 
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
-public import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
-public import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
-public import Grammatik.Parser.Elab.UebersetzeAllg.StringSliceObservations
 
-public import Grammatik.Parser.Elab.Export.ExportMetadataBound
-public import Grammatik.Parser.Elab.Export.CostBinding
-public import Grammatik.Parser.Elab.Export.HeldBinding
-public import Grammatik.Parser.Elab.Export.Held.Satz
-public import Grammatik.Parser.Elab.Export.ForeverBinding
 
 @[expose] public section
