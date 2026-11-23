@@ -10,7 +10,7 @@ before merge; nothing else may restate, extend or soften it. A draft elsewhere i
 
 > For every text `a` that denotes a program `E` which a perfect checker accepts, and for every hardware and
 > environment described by the catalogue rows `E` selects: **every run of the implementation is a run of the
-> ideal meaning `I` of `E` with the same environment answers, and no thread hangs while `I` could proceed.**
+> ideal meaning `I` of `E` with the same environment answers per context, and no thread hangs while `I` could proceed.**
 
 Everything `I` allows is the program's logic. Everything else — known or unknown, from memory errors to TOCTOU —
 is an error and is excluded. The user is not a premise. Hardware enters only as catalogue rows.
@@ -54,8 +54,9 @@ missing any of them.
 
 **3.2 Acceptance — the perfect checker.** `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`.
 - `Lokal`: the decidable local rules (types, ownership, lock ranks, units, provenance of outside answers, every
-  partial operation covered by an `else` path or a guard, waits only on conditions, a stack bound, catalogue rows
-  selected by name).
+  partial operation covered by an `else` path or a guard, waits only on conditions, a stack bound, a length bound
+  per unit, catalogue rows selected by name; data shared with a handler is accessed by the interrupted context
+  only under the mask, and a lock shared between a handler and the context it interrupts is refused).
 - `KlauselnWahr`: every WRITTEN clause (requires, ensures, invariants, `decreases`, lock and loop invariants) is
   true over `I` under the rely of the whole program. Clauses state user predicates over `I`, never definedness of
   `I` or anything about the implementation.
@@ -76,7 +77,9 @@ bindings are ordinary Gabbro functions.
 
 **3.4 The ideal meaning `I`.** Derived from G, defined for every `E`, independent of the implementation.
 - Each thread steps exactly as its source says; shared state changes only at declared synchronisation points;
-  every unit (lock section, atomic operation, handler under its mask, code between two `await`s) is indivisible.
+  every unit is indivisible. A unit is a reducible stretch of one context: lock acquisitions and local accesses,
+  at most one sync point (an atomic operation, a wait, an outside question), then lock releases; a handler under
+  its mask is one unit. `I` states carry lock owners, so a lock section with several sync points is several units.
 - A wait is enabled exactly when its condition holds. Lock acquisition is strong-fair (carried by the language's
   queue/ticket lock).
 - Atomics behave as written: `seq_cst` truly sequentially consistent; `acquire`/`release`/`relaxed` with exactly
@@ -95,7 +98,9 @@ for a large enough budget) over GX with every interleaving and W with true SC fo
 real statements. After B6/C9, the emitted image.
 
 **3.6 Refinement `Sim`.** For every run ONE ideal run, chosen per run (not per prefix), with the same environment
-answers and observations. Stutter is bounded while the thread's `I` step is enabled; a blocked thread may take any
+answers per context (per outside object) and the same observations; answers received inside a running unit are
+pending until the unit ends, where `I` takes the unit in one step. Stutter is bounded by the checked length bound
+of the running unit while the thread's `I` step is enabled; a blocked thread may take any
 number of steps that change no observation. Choice resolutions are preserved by the map.
 
 **3.7 Progress.** `Hängt`: on a hardware-fair run, a thread whose `I` step stays enabled (weak) or is enabled
