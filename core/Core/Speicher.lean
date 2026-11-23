@@ -23,3 +23,4 @@ public import Core.Speicher.Kohaerenz
 public import Core.Speicher.Senke
 public import Core.Speicher.MoLetzte
 public import Core.Speicher.Anhaengen
+public import Core.Speicher.Viele
