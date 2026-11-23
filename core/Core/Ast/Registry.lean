@@ -6,14 +6,24 @@ namespace Gabbro.Core.Registry
 
 universe u v
 
+/-- Surface rules connect a source occurrence to the syntax and elaboration.
+    Core-only rules connect the constructor to checked elaboration or runtime. -/
+inductive OriginRequirements (Case : Type v) where
+  | surface (parse elaborates occurrence : Case → Prop)
+  | coreOnly (checkedElaboration checkedRuntime : Case → Prop)
+
+def OriginRequirements.Holds (origin : OriginRequirements Case) (c : Case) : Prop :=
+  match origin with
+  | .surface parse elaborates occurrence => parse c ∧ elaborates c ∧ occurrence c
+  | .coreOnly checkedElaboration checkedRuntime => checkedElaboration c ∨ checkedRuntime c
+
 /-- The pinned statements for each real constructor. Their case type can
     include the source occurrence, machine states and a matched execution.
     The owner of the underlying definitions fixes these statements before
     the registry supplies proofs. -/
 structure Requirements {Form : Type u} (Case : Form → Type v) where
   premises : (form : Form) → Case form → Prop
-  parse : (form : Form) → Case form → Prop
-  elaborates : (form : Form) → Case form → Prop
+  origin : (form : Form) → OriginRequirements (Case form)
   localRule : (form : Form) → Case form → Prop
   ideal : (form : Form) → Case form → Prop
   units : (form : Form) → Case form → Prop
@@ -27,8 +37,7 @@ structure Requirements {Form : Type u} (Case : Form → Type v) where
     Every rule uses the same jointly satisfiable bundle of premises. -/
 structure Entry {Form : Type u} {Case : Form → Type v}
     (required : Requirements Case) (form : Form) : Prop where
-  parse : ∀ c, required.premises form c → required.parse form c
-  elaborates : ∀ c, required.premises form c → required.elaborates form c
+  origin : ∀ c, required.premises form c → (required.origin form).Holds c
   localRule : ∀ c, required.premises form c → required.localRule form c
   ideal : ∀ c, required.premises form c → required.ideal form c
   units : ∀ c, required.premises form c → required.units form c
