@@ -8,7 +8,7 @@
   progress (§3.7), the bounds and noninterference (§2, §3.8), and today's guarantee `ZielFX`.
 
   This file fixes the shape only; it proves nothing and claims nothing. The construction of `core/` (PERFECT-MODEL §8) builds the
-  real definitions; its last step S12 states `gabbro_ziel` over those concrete constants and the closing guard
+  real definitions; its last step M12 states `gabbro_ziel` over those concrete constants and the closing guard
   checks that its type is `GabbroZielForm R₀` for the ONE value `R₀` whose every field is the pinned real
   definition, with every definition pinned down to the approved foundations. A statement over another `Rahmen`
   is no promise: with trivial fields `GabbroZielForm` is satisfiable without any run (review of 2026-11-23), so

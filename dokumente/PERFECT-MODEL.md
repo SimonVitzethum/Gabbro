@@ -1,8 +1,8 @@
 # PERFECT-MODEL — the one definition of Gabbro's goal theorem, its model and the way there
 
 Status: **binding** (owner, 2026-11-23). This file is the ONLY place where the goal theorem, the model it speaks
-about and the migration of `grammatik/` onto it are defined. `AGENTS.md` §3 and the rows B23, B24 and O27 of
-[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) point here and hold no own version. It was settled after five
+about and the construction of that model in the package `core/` are defined. `AGENTS.md` §3 and the rows B23, B24 and O27 of
+[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) point here and hold no own version. It was settled after ten
 critical reviews (all on 2026-11-23). It changes only by an owner decision, shown as a concrete diff of this file
 before merge; nothing else may restate, extend or soften it. A draft elsewhere is not a decision.
 
@@ -10,42 +10,113 @@ before merge; nothing else may restate, extend or soften it. A draft elsewhere i
 
 > For every text `a` that denotes a program `E` which a perfect checker accepts, and for every hardware and
 > environment described by the catalogue rows `E` selects: **every run of the implementation is a run of the
-> ideal meaning `I` of `E` with the same environment answers per context, and no thread hangs while `I` could proceed.**
+> ideal meaning `I` of `E` with the same environment answers and the same effects in the same order, and
+> under the hardware fairness of the selected rows no thread hangs whose next `I` step is enabled.**
 
 Everything `I` allows is the program's logic. Everything else — known or unknown, from memory errors to TOCTOU —
-is an error and is excluded. The user is not a premise. Hardware enters only as catalogue rows.
+is an error and is excluded. "Effects" are all effects the pinned semantics records: outside questions and
+answers, device accesses, outputs, stops, internal state changes and authority effects — an unauthorised internal
+write that is undone before any output is an error too. The promise is over the modelled machine (G∞, after
+B6/C9 the image). The user is not a premise. Hardware enters only as catalogue rows.
 
 ## 2. The theorem
 
 ```lean
 theorem gabbro_ziel :
-    -- non-vacuity
-    (∀ K, KatalogWohlgeformt K → ∃ H, Hardware K H ∧ Antwortet H ∧ (FairLaeufe H).Nonempty)
-  ∧ (∀ f : Form, ∃ a E, Enthaelt a f ∧ Bezeichnet a E ∧ Akzeptiert E)
-  ∧ (∀ E, Akzeptiert E → I.Bestimmt E ∧ I.Fortschritt E)
-  -- the promise
-  ∧ ∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H, Hardware (katalog E) H →
-      (Laeufe (Impl E ∥ H)).Nonempty
-    ∧ ∀ ρ ∈ Laeufe (Impl E ∥ H), ∃ ι ∈ I.Laeufe E ρ.antworten,
-          Sim E ρ ι                                   -- §3.6: one ideal run per run
-        ∧ (∀ t, ZielX (ρ.zustand t))                  -- today's state legs, explicit
-        ∧ (FairH ρ → Fortschritt (klasse E) ρ ι)      -- §3.7
-        ∧ Beob ρ ≤ Schranke E                         -- stack, memory, cost
-  ∧ NI                                                -- §3.8, over pairs of implementation runs
+    NichtLeer                                             -- §2.1: nothing below holds vacuously
+  ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H, Hardware (katalog E) H →
+      (∃ ρ, Laeufe E H ρ) ∧ ∀ ρ, Laeufe E H ρ → ∃ ι, I.Laeufe E ι ∧ Verfeinert E H ρ ι)
+  ∧ NI                                                    -- §3.8
 ```
 
-`#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`.
+One promise, three parts: it is not vacuous; every run of every accepted program refines ONE run of `I`; no
+secret leaks. `a` ranges over RAW TEXT. The three names are pinned definitions (§2.1):
+
+```lean
+def NichtLeer : Prop :=
+    (∀ a, WohlgeformterText a ↔ ∃ E, Bezeichnet a E)
+  ∧ (∀ a E E', Bezeichnet a E → Bezeichnet a E' → E = E')
+  ∧ (∀ f : Form, ∃ a E, Enthaelt a f ∧ Bezeichnet a E ∧ Akzeptiert E ∧ Realisiert f a E)
+  ∧ (∀ E, Akzeptiert E → KatalogWohlgeformt (katalog E))
+  ∧ (∀ K, KatalogWohlgeformt K → ∃ H h, Hardware K H ∧ FairLaeufe K H h)
+  ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H h, Hardware (katalog E) H →
+        FairLaeufe (katalog E) H h → ∃ ρ, Laeufe E H ρ ∧ hw ρ = h)
+  ∧ (∀ E, Akzeptiert E → I.Bestimmt E ∧ I.Fortschritt E)
+
+def Verfeinert (E H ρ ι) : Prop :=
+    Sim E ρ ι                                             -- §3.6: same effects, same order
+  ∧ (∀ t : Schnitt ρ, ZielFX E H ρ t)                     -- today's guarantee on every cut
+  ∧ (FairLaeufe (katalog E) H (hw ρ) →                    -- §3.7
+       (∀ c, ¬ Haengt E ρ ι c) ∧ Fortschritt (klasse E) ρ ι)
+  ∧ ImSchranken E ρ                                       -- stack, memory, cost, time
+
+def NI : Prop :=
+  ∀ E H₁ H₂ ρ₁ s₂, Akzeptiert E → Hardware (katalog E) H₁ → Hardware (katalog E) H₂ →
+    Laeufe E H₁ ρ₁ → GleicheNiedrigeUmgebung E H₁ H₂ → NiedrigGleich E (start ρ₁) s₂ →
+      (∃ ρ₂, Laeufe E H₂ ρ₂ ∧ start ρ₂ = s₂ ∧ GleichePolitik E ρ₁ ρ₂)
+    ∧ ∀ ρ₂, Laeufe E H₂ ρ₂ → start ρ₂ = s₂ → GleichePolitik E ρ₁ ρ₂ →
+        NiedrigAequiv E (NiedrigeBeob E ρ₁) (NiedrigeBeob E ρ₂)
+```
+
+**2.1 What the names mean.** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`,
+`Quot.sound`. Every name above is ONE pinned concrete definition, never a parameter: the statement of M12 is over
+these constants, and the guard of §6 checks the type of `gabbro_ziel` against this text and pins every definition
+it depends on down to the approved foundations (a wrapper with an unchanged hash over a changed helper fails).
+Bindings that are part of the definitions:
+- Text: `a` is raw text. An independent, source-spanned parse relation accounts for EVERY semantic token of `a`
+  (a parser that reads `print 1; print 2` as `print 1` violates it); the reference parser and the deployed parser
+  are proved to agree with it. `WohlgeformterText` is independently ELABORABLE text — grammar and typing as Lean
+  predicates, defined without `Bezeichnet`, acceptance or any parser — so a total `Bezeichnet` into the
+  intrinsically typed unit is meaningful; printing and parsing round-trip modulo an explicitly defined trivia and
+  canonicalisation relation. `Form` is
+  derived from the actual constructors of the reference AST. `Realisiert f a E` ties ONE occurrence of the
+  constructor in `a` to its corresponding ideal and implementation transitions in one admissible matched run (for
+  a declaration form: its effect on the unit).
+- Catalogue: `KatalogWohlgeformt K` is an approved row selection whose composition is valid; `Akzeptiert E →
+  KatalogWohlgeformt (katalog E)` follows from `Lokal`. `Hardware K H` says the environment `H` behaves as the
+  rows say on the OUTSIDE side of the interaction, mandatory answers included; permitted non-answers are explicit
+  in the rows. `hw ρ` is the run's exogenous opportunity schedule (core steps, interrupt and delivery opportunities)
+  together with the total reactive outside policy; request-specific replies are separate events of the run, and an
+  offered delivery is recorded even when the implementation fails to consume it, so a failure never makes a run
+  inadmissible or unfair. `FairLaeufe K H` are the schedules and policies that are fair in the rows' sense — over
+  hardware alone, independently of any program and of refinement success; the sixth conjunct proves that each of
+  them lifts to a run of every accepted program.
+- Runs: `Laeufe E H` are exactly the maximal runs of the composition from the real loader and `start` under
+  row-conformant outside behaviour; every finite prefix is covered, also one that issues an invalid request,
+  violates authority, gets stuck or prevents a legal reply — an implementation failure stays in scope.
+  `Schnitt ρ` contains every state of the run; `hw ρ` is its hardware projection.
+- `ZielFX` is the transport of today's whole guarantee, not a list of leg names. It starts from the FULL premises
+  of today's `GabbroZiel`: every retained case (checker, oracle, budget, a `Laufzeit` with a partial start
+  assignment, every `lebt0`, every order assignment of `SchwachX`, the address layout) is embedded into an
+  accepted text and an actual loader run, its cut is named, and the exact old conclusion is transported with its
+  nested quantifiers (`spawnSicht`, `SchwachX`, `ZeitAbX`); an old budget stop transports as a finite prefix. A
+  case a new loader or memory rule cannot represent needs a preservation argument or an owner-approved exclusion,
+  listed here (none so far).
+- `NI`: `GleichePolitik` means the same total policies for the LOW outside choices (outside choice-givers,
+  hardware scheduling, answers to low questions), defined on public history before either run; scheduler
+  decisions made by program code and high choices stay inside the compared runs and are never equated by a
+  premise. The domain of comparison starts (`NiedrigGleich`) is defined independently of the existence claim; for
+  every admitted run and every such start a comparison run exists (first part of `NI`). `NiedrigeBeob` is the low
+  trace: EVERY low event of §3.4 with its public metadata — outside questions, answer arrivals, committed device
+  accesses with their addresses (a secret bit choosing between two public MMIO addresses is observed), public
+  memory and outputs, low termination, the declared time of `timed` blocks, for declared
+  constant-time code its control, address and cost observations, and speculative accesses under every predictor
+  the speculation envelope allows (B15–B17). The two traces are related by `NiedrigAequiv`, a pinned relation:
+  equal up to each declared release, differing only as that release authorises; the labelled-flow rule of `Lokal`
+  that proves it is named in the registry.
 
 ## 3. The definitions
 
-**3.1 Text and meaning.** The language is ONE reference AST: a Lean inductive family in `grammatik/Grammatik/Ast/`,
+**3.1 Text and meaning.** The language is ONE reference AST: a Lean inductive family in `core/Core/Ast/`,
 the single definition of every surface form — today's forms, every low-level form of
 [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md) §4 (execution states and transfers, address spaces, entries,
 interrupts and NMIs, cores, devices and DMA, guests, VMs, IOMMU, firmware interfaces, images, timed blocks,
 compile-time selection) and async — all on the same level, none in a separate layer. The parser produces it; the
 doc comment of each constructor is its reference description; `SYNTAX.md` describes it and never defines a form.
-`Bezeichnet : Ast → Einheit` gives one rule per constructor what a text means; it is functional and the parser is
-unambiguous. The elaborator is proved sound (`elab_korrekt`) and complete (`elab_vollstaendig`) against it, and
+`Elaboriert : Ast → Einheit → Prop` gives one rule per constructor what a tree means; the meaning of raw text is
+`Bezeichnet a E := ∃ ast, Parse a ast ∧ Elaboriert ast E`, with `Parse` the source-spanned parse relation of §2.1;
+it is functional and the parser is unambiguous. The elaborator is proved sound (`elab_korrekt`) and complete
+(`elab_vollstaendig`) against `Elaboriert`, and
 printing/parsing round-trips in both directions. The core is the intrinsically typed syntax (`Stmt`, `Block`,
 `Endblock`, `Expr`), extended by the low-level constructors at the end of the same inductives; it stays the one
 definition of the language. A registry records for every constructor of the reference AST its `Bezeichnet` rule,
@@ -77,19 +148,51 @@ bindings are ordinary Gabbro functions.
 
 **3.4 The ideal meaning `I`.** Derived from G, defined for every `E`, independent of the implementation.
 - Each thread steps exactly as its source says; shared state changes only at declared synchronisation points;
-  every unit is indivisible. A unit is a reducible stretch of one context: lock acquisitions and local accesses,
-  at most one sync point (an atomic operation, a wait, an outside question), then lock releases; a handler under
-  its mask is one unit. `I` states carry lock owners, so a lock section with several sync points is several units.
-- A wait is enabled exactly when its condition holds. Lock acquisition is strong-fair (carried by the language's
-  queue/ticket lock).
+  every unit is indivisible. A unit is a stretch of one context with at most one point visible to other contexts
+  or to the outside (an atomic operation another context can read, a wait, an outside question, a device access);
+  `I` takes the whole unit at that point, its linearisation point. The order of source effects (internal effects
+  included) is pinned by `I` independently of the implementation; where mapping a whole unit at one point would
+  reverse a recorded effect against another context's effect, the unit is split there. Every unit has a PROVED linearisation point:
+  the implementation steps before and after it commute with every interleaved step of other contexts. A stretch
+  with several visible points, or without that commutation, is several units. Handlers are cut by the same rule;
+  their exclusion from a context is proved from the concrete mask, ownership and NMI semantics, never assumed
+  from a local mask. Every source rule of `I` names its units and their commutation proof (registry, §3.1).
+- Asynchronous operations are split at their actual visible events: an outside call inside a lock section is
+  acquisition, request, arrival of the reply, continuation and release, each its own transition, with the lock
+  held across them. The ARRIVAL of an outside reply is a visible event in global order, matched at the same global
+  event in `I`; an arrived but unconsumed reply is part of BOTH states across unit boundaries, and only its
+  consumption by the context may wait. An operation with several effects at different times (e.g. `flush`: send interrupts, run
+  remote handlers, wait for acknowledgements, release frames) has one `I` transition per effect — it is the
+  acceptance case of M7.
+- `I` states carry lock owners, the ticket queue and hand-off, so a lock section with several units keeps
+  ownership, hand-off and its protected invariant. A wait is enabled exactly when its condition holds. Lock
+  acquisition is strong-fair (carried by the language's queue/ticket lock).
 - Atomics behave as written: `seq_cst` truly sequentially consistent; `acquire`/`release`/`relaxed` with exactly
-  their RC11 outcomes, with `po ∪ rf` acyclic (no load buffering; the compiler preserves it).
+  their RC11 outcomes, with `po ∪ rf` acyclic (no load buffering; the compiler preserves it). An ideal run
+  carries ONE execution witness (reads-from, coherence, SC order) consistent with RC11, chosen together with the
+  prefix map of §3.6 — neither one current value per location nor a freely chosen plausible value per read.
+- Authority, lifetime, isolation and the reason of every blocking are part of `I`'s state and step rules: a stale
+  handle or a revoked capability has no step; an intended wait names its false condition and where it comes from.
+  `I` distinguishes an INTERNAL deadlock (a cycle of joins, locks or waits whose conditions only the other members
+  can make true — e.g. two threads each awaiting a flag the other sets after its own wait) from a specified
+  outside non-answer of a catalogue row; an internal deadlock — including a lone `await` that no context can
+  enable and every closed set of waiters — is an error: `Akzeptiert` (`WaechterHalten` over `I`'s reachable
+  states) establishes that none is reachable, and it is refused (today's cycle and deadlock
+  legs stay), also at maximal cuts.
+- Scheduling: contexts the language runtime schedules are dispatched by the runtime with a generic dispatch
+  proof. Contexts a program's own scheduler dispatches are scheduled inside `I` by that code: its choice is part
+  of the program's logic, and `I` starves a context exactly when that code does. The boundary: starvation is
+  logic only when it follows from the program's own scheduler executing in `I`; once that code dispatches a
+  context, executing the dispatch is a language obligation. Dispatch and step obligations are defined at the
+  current cut, before a scheduling choice can hide an eligible context.
 - Outcome type pinned to two kinds: a written value or reason exit, and a catalogue event. No logic, budget or
   visibility stop exists in `I`.
 - `I.Bestimmt`: deterministic up to named choice points (scheduler order at sync points, environment answers,
   explicit choice forms); no garbage values (every value has provenance from inputs).
-- `I.Fortschritt`: every non-final state has a step or is blocked, and blocked only at a lock, an `await`, a join
-  or an outstanding catalogue question whose enabling condition is false.
+- `I.Fortschritt`: every non-final state has a step or is blocked, and blocked only at a lock, an `await`, a join,
+  an outstanding catalogue question whose enabling condition is false, or a HARDWARE DELAY: a context whose
+  opportunity is withheld in the exogenous opportunity schedule of the run (a core that stops advancing with a
+  runnable thread and no outstanding question) waits in `I` exactly as long.
 - Observations: environment questions and answers, device accesses, outputs, stops, and the declared dimensions —
   time inside `timed` blocks, memory where bounded, labelled information flow.
 
@@ -97,31 +200,61 @@ bindings are ordinary Gabbro functions.
 for a large enough budget) over GX with every interleaving and W with true SC for `seq_cst`. `start`/`child` are
 real statements. After B6/C9, the emitted image.
 
-**3.6 Refinement `Sim`.** For every run ONE ideal run, chosen per run (not per prefix), with the same environment
-answers per context (per outside object) and the same observations; answers received inside a running unit are
-pending until the unit ends, where `I` takes the unit in one step. Stutter is bounded by the checked length bound
-of the running unit while the thread's `I` step is enabled; a blocked thread may take any
-number of steps that change no observation. Choice resolutions are preserved by the map.
+**3.6 Refinement `Sim`.** For every run ONE ideal run, chosen per run (not per prefix): a state-and-step
+simulation for the whole run. A state relation holds at EVERY matched cut (not only at the start); every
+implementation transition is either matched by its ideal transition or is a checked stutter case; the map is
+monotone along prefixes, covers BOTH runs (no unmatched ideal suffix), and matches termination, blocking and
+divergence; it keeps the same logical contexts and the same choice resolutions. Concrete accesses and authority
+are checked at the transition that uses them, before any projection erases private implementation steps — this
+is what makes an unauthorised write that is undone before output an error. For the image (B6/C9), the proof reconstructs every
+erased source effect in the ordered source trace, with its value and legality proved; only private machine steps
+with no source effect may disappear. ONE event accounting rule holds for `I`, `Sim` and the image: at every cut the
+prefix of ARRIVED answers is equal in both runs (an answer event carries its context instance, outside object and
+question instance; the order inside a context is kept across objects), and CONSUMPTION by the context is tracked
+separately in both states — an arrived reply is never an implementation-only pending answer. Durability changes
+are effects, and a crash is possible at every concrete cut (B22). Visible events (outside
+questions, device accesses, outputs, stops, atomics read by others, internal and authority effects) appear in the
+same global order as in the run; the map neither invents nor swallows ends, answers or effects. Stutter: in every
+interval without its ideal step during which its next step stays enabled, a context takes at most the checked
+length bound of its unit of its own implementation steps; a blocked context stutters only invisibly.
 
-**3.7 Progress.** `Hängt`: on a hardware-fair run, a thread whose `I` step stays enabled (weak) or is enabled
-infinitely often (strong, for lock acquisition) never takes it. `Fortschritt (klasse E)` holds per checked
-progress class: blocking constructs give per-thread progress; `lock_free` constructs give system-wide progress.
-Fairness assumed of the environment is hardware only (cores step, interrupts are delivered): catalogue rows. A
-kernel's scheduler is code, never assumed.
+**3.7 Progress.** State and effect safety (`Sim`, `ZielFX`, bounds) hold on EVERY run. On an unfair hardware
+history, a delay of a context caused by the hardware is the same outside delay in `I` (the ideal run waits too),
+so whole-run matching never needs an ideal step the hardware withheld. `Hängt E ρ ι c` is defined over persistent
+obligations: on a run whose hardware history is fair (finite stuck runs included), an open step instance of context `c` whose `I` step stays enabled on a suffix (weak) or is
+enabled infinitely often (strong, for lock acquisition) is never discharged — an obligation is discharged only by
+taking the step or by a specified exit or cancellation.
+The promise is `¬ Hängt` for EVERY context, per-thread. `Fortschritt (klasse E)` is proved in addition per checked
+progress class (`lock_free` constructs also give system-wide progress); it never replaces `¬ Hängt`. Fairness
+assumed of the environment is hardware only (cores step, interrupts are delivered): catalogue rows. A kernel's
+scheduler is code, never assumed. `ImSchranken` compares the cost, memory and stack determined by the run with the
+concrete bounds of `E`; for `timed` blocks §3.4 fixes which time observation `I` shares and where its values come
+from (catalogue rows).
 
-**3.8 Noninterference.** A two-run statement over pairs of implementation runs with the same resolution of every
-choice point and the same catalogue answers to low questions.
+**3.8 Noninterference.** `NI` of §2: for every admitted run and every low-equal start, a comparison run under the
+same total public-history policies for the low outside choices exists, and every such run has a low trace related
+by `NiedrigAequiv` (§2.1: equal up to each declared release); scheduler decisions of program code and high choices stay
+inside the runs.
 
 ## 4. Inside and outside — how TOCTOU is excluded without being named
 
 - **Inside Gabbro** every state and every interference is known. Every condition an effect relies on — written
-  clause or generated guard — is proved under the rely of the whole program. A stale decision that violates
-  nothing declared is logic.
+  clause or generated guard — is proved under the rely of the whole program. A stale decision that violates no
+  written clause, no generated guard, no internal effect rule and no authority rule is logic.
 - **Outside Gabbro** (operating system, file system, devices, firmware, guests, VMs, guest memory,
   hardware-changed state): knowledge is valid only at the moment of the answer; the rely for the outside is
   arbitrary change, except a stability a catalogue row states.
-- Every outside answer carries the outside object it is about. An effect on that object that depends — by data
-  or control — on an earlier answer about it is refused.
+- Every outside answer carries the outside object and its generation. Outside provenance flows transitively
+  through data, control, aliases, derived handles and object generations. An old answer is historical data: it
+  never proves current authority, identity or a precondition, also not after being stored. Every current
+  identity, right, generation and precondition an effect uses holds at its COMMIT, across every object it
+  touches: established in the same catalogue event through its own handle, or by a pinned row's stability. For an
+  asynchronous outside operation this holds at the effect's commit, not at the request: what was checked when the
+  request left is established again atomically at commit or proved stable through commit under the arbitrary-change
+  rely. A
+  copied snapshot may supply historical data, never currency. An effect whose authorisation (on any object)
+  rests on an earlier answer is refused. An atomically revalidated
+  operation stays writable even when its choice depended on an earlier answer.
 - Catalogue interfaces are admitted only if every query goes through a handle the program owns and every
   precondition is checked in the same question (handle-based, atomic, failure channel); name resolution only in
   operations that return a handle. `access`→`open`, double fetch of guest memory and "check, act later" on outside
@@ -130,69 +263,91 @@ choice point and the same catalogue answers to low questions.
   authority, `lend`/`take back`); DMA addresses and lengths are capabilities of lent regions, never integers.
   Hardware-held copies of inside state (TLB, caches) are invalidated by the language's own protocols before reuse.
 
-## 5. What leaves the language
+## 5. What the model never contains
 
-`D.Annahme`, `AnnahmeEintrag`/`Profil` as program text, `Hardware.fortschritt`, `Hardware.sichtbarkeit`,
-`HaltArt.budget`, `flagge` as a stop (it becomes blocking), `nieZurueck` as a stop (a catalogue row), the `passes`
+`core/` is built without these; they exist only in the frozen `grammatik/`: `D.Annahme`, `AnnahmeEintrag`/`Profil` as program text, `Hardware.fortschritt`, `Hardware.sichtbarkeit`,
+`HaltArt.budget`, `flagge` as a stop (it becomes a wait with a named condition), `nieZurueck` as a stop (a catalogue row with an
+explicit catalogue-bound wait state or a written exit), the `passes`
 budget in the implementation, the spawn over-approximation of `FadenMaschine`, `forever … progress a`,
 `retries … a`, program-written environment contracts, `extern fn` in the same address space, and the premises
 `GutO`, `AxVertragO`, `AxVertragOSw`, `ForeignPflicht`, `CallSitePflicht`, `PostDeckt`, `ProviderTreueG`,
-`RegLokal`, `ImBereichO`, `Laufzeit` (all become catalogue rows or proofs). Unbounded recursion without a
+`RegLokal`, `ImBereichO`, `Laufzeit` (in `core/` they are catalogue rows or proofs). Unbounded recursion without a
 computed stack bound and allocation without a failure channel are refused.
 
 ## 6. Build guards
 
-A Lean module set (`grammatik/Grammatik/Zielsatz/Waechter/`) that fails the build:
-1. `Akzeptiert` whitelist (syntax, `I`, catalogue) and the reverse guard (`I` does not mention `Akzeptiert`).
-2. Hash pins: `I` and its outcome type, `Bezeichnet`, the error notion (`Sim`, `Hängt`), the theorem, every
-   catalogue row.
-3. Shape of `gabbro_ziel`'s type: only the premises of §2.
-4. No `_ =>` in `I`, the rules and the fundamental proof.
-5. The registry of §3.1: for every constructor of the reference AST and of `Stmt`/`Block`/`Endblock`/`Expr` a
-   `Bezeichnet` rule, an `I` rule, a compatibility lemma and an `_erfuellbar` lemma.
-6. No hardware or stop kind outside the catalogue.
-7. No `_zeuge`, no `decide +kernel` outside probe modules.
+Lean modules in `core/Core/Waechter/`, part of the package root, that fail the build of `core/` — strict from its
+first commit, with NO allow-list and no ratchet:
+1. `core/` depends only on Mathlib and its own modules (its lakefile requires nothing else; it never imports
+   `grammatik/`, `stage0/` or `programmlogik/`); every module is reached from `Core.lean`; every file has fewer
+   than 500 lines.
+2. `Akzeptiert` whitelist (syntax, `I`, catalogue) and the reverse guard (`I` does not mention `Akzeptiert`).
+3. Hash pins: the shape (`Rahmen`, `NichtLeer`, `Verfeinert`, `NI`, `GabbroZielForm`), `I` and its outcome type,
+   `Bezeichnet`, `Parse`, `Sim`, `Hängt`, `NiedrigAequiv`, every catalogue row.
+4. The closing guard (from M12): one argument-free `R₀ : Rahmen` with every field bound to its approved concrete
+   constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
+   elaborated type, each field binding of `R₀`, their transitive semantic dependencies down to explicit trusted
+   roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`).
+5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax: typed
+   proofs (not names) of its `Parse` and `Elaboriert` rules, its `I` rule with units and commutation, its
+   implementation rule, its preservation lemma, its `Realisiert` evidence (a surface constructor: a source
+   occurrence; a core-only constructor: a checked elaboration or runtime origin) and its joint satisfiability
+   (`_erfuellbar`). A constructor without its complete entry fails the build — so a constructor enters `core/`
+   only together with all of it.
+6. No `_ =>` in `I`, the rules and the fundamental proofs; no hardware or stop kind outside the catalogue.
+7. No `sorry`, `admit`, `native_decide`, `axiom`, `unsafe`, `_zeuge`, `decide +kernel`, no witness modules.
 
-During the migration each guard is a ratchet: today's measured violations are an allow-list that may only shrink.
-Adding unsound syntax turns the build red. A wrong but consistent `I`-rule or `Bezeichnet`-rule is caught only by
-the pin and the owner's review — that is the trusted part.
+The enforceable promise: **a new constructor keeps the build red until its complete rules, its jointly
+satisfiable premises, the generic preservation of the pinned guarantees and the approved semantic diff exist.**
+A wrong but consistent `I`-rule or `Bezeichnet`-rule is caught only by the pin and the owner's review — the
+review of a new language design stays part of the trusted base.
 
 ## 7. Trusted base and honest limits
 
 Trusted: the definitions of `I` and `Bezeichnet` (the language's promise), the catalogue rows, the Lean kernel;
-until B6/C9 the bytes. Errors in dimensions that are not declared observations stay invisible (undeclared side
+until B6/C9 the bytes. The promise of §1 covers every effect the pinned semantics records (internal state
+changes and authority effects included); physical dimensions outside it stay invisible (undeclared side
 channels, speculation beyond its envelope). `Akzeptiert` is undecidable as a whole; the real checker decides a
 fragment and is connected by `pruefer_korrekt`.
 
-## 8. The migration of `grammatik/` — the plan
+## 8. Building `core/` — the plan
 
-Rules: `grammatik/` first; Stage 0 is not restructured until step S12 is done (it holds no forms and is not the
-core). **`gabbro_ziel` need not build green during the migration** (owner, 2026-11-23); `dev` may be red;
-`master` keeps its gate. When it builds, it is on the standard axioms and without `sorry`. Each step is merged on
-its own when it builds; no step starts its trust-path work before the steps it depends on are merged. Sizes are
-new Lean lines (ranges); no other plan text may restate them.
+Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migrating `grammatik/`. Rules:
+- `grammatik/` is frozen: no new features; only repairs that keep the `master` gate green. Its `gabbro_ziel` stays
+  green and is the interim promise until M12. Deliveries for `grammatik/` that were not merged by 2026-11-23 are
+  not merged; what they contain is ported.
+- Porting, never importing: a piece of `grammatik/` (or of an unmerged branch) enters `core/` as a copy rewritten
+  onto `core/`'s definitions, with its statement reviewed (AGENTS.md §7). The ONLY place that sees both packages is
+  the transport package of M11.
+- `core/` is green at every commit: the guards of §6 hold from the first commit, so a constructor enters only with
+  its complete registry entry, and no step leaves a red build behind.
+- Stage 0 and GabbroV stay on `grammatik/` until M12 and then move onto `core/` (PLAN-COMPILER-READY, phase B).
+- Each step is merged on its own after a green build of `core/`; sizes are new Lean lines (ranges); no other plan
+  text restates them.
 
 | Step | Done when | Depends on | New lines |
 |---|---|---|---|
-| **S0 Guards** | the seven guards of §6 build as ratchets with today's allow-lists | — | 2 000–5 000 |
-| **S1 Purge** | witnesses, fixtures, witness-style `decide +kernel` probes, the `bindCtx`/`context<P>` parts of `Niedrig/` and the 12 wildcards in `Kern/Semantik` are deleted; side statements are lemmas | S0 | 0 (removes 20 000–60 000) |
-| **S1b Reference AST** | `grammatik/Grammatik/Ast/` defines every surface form including all low-level forms (LOW-LEVEL-SYNTAX-PLAN §4) and async; the parser produces it; `Bezeichnet` exists as a relation with the registry of §3.1, every constructor on the guard's ratchet list until its four entries exist | S0 | 5 000–12 000 |
-| **S2 Catalogue and premises** | `Hardware` is the catalogue of §3.3; everything in §5 that is an assumption is a row; `D.Annahme`, `fortschritt`, `sichtbarkeit`, `extern fn` are gone | S0 | 8 000–20 000 |
-| **S3 Honest G** | G∞ with the prefix lemma; `start`/`child` statements; `flagge` blocking; no `budget` | S0 | 6 000–15 000 |
-| **S4 Premise shape** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten`; `gabbro_ziel` without (b) and (d) | S2, S3 | 3 000–8 000 |
-| **S5 Memory model** | W with true SC, RC11 without load buffering, DRF-SC | S0 | 15 000–40 000 |
-| **S6 Ideal meaning** | `I` of §3.4 in `Zielsatz/Ideal/` with `I.Bestimmt`, `I.Fortschritt`, pinned outcome type; its state and steps contain the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events) | S1b, S3, S5 | 20 000–50 000 |
-| **S6L Low-level forms** | every low-level constructor of the reference AST has its core constructor, G rule, `Akzeptiert` rule, `I` rule, compatibility lemma, `_erfuellbar` and `Bezeichnet` rule — the former L rows of the plan, now on the same level as every other form | S1b, S6 | 236 000–596 000 |
-| **S7 Refinement** | `Sim` of §3.6 for every run of G∞, reusing `ZielInvSA` and the race and lock legs; first a prototype on two threads with assignment, lock, atomics, an interrupt handler under a mask preempting a unit, a device register as outside and `lend`/`take back` of a DMA buffer | S6 | 30 000–80 000 |
-| **S8 Progress** | §3.7 per class under hardware-only fairness | S7 | 15 000–40 000 |
-| **S9 Observations and NI** | bounds on stack, memory, cost; §3.8 | S7 | 20 000–55 000 |
-| **S10 Meaning of text** | every `Bezeichnet` rule, `elab_korrekt`, `elab_vollstaendig`, both round trips (the relation and registry exist since S1b) | S1b, S4 | 30 000–80 000 |
-| **S11 Outside rule** | §4: provenance of outside answers, the catalogue admission rule, device typestates | S2 | 4 000–10 000 |
-| **S12 Swap** | linking per module; `gabbro_ziel` of §2 proved; old statements deleted; Spec header replaced by this file's §2 | S4–S11 | 10 000–30 000 |
-| **Total** | | | **404 000–1 041 000** new (core 168 000–445 000, low-level 236 000–596 000), 20 000–60 000 removed |
+| **M0 Package and guards** | `core/` builds (DONE 2026-11-23, with `Core/Ziel/Form.lean`); the seven guards of §6 are Lean modules of the package root | — | 2 000–5 000 |
+| **M1 Text** | raw text, tokens with source spans and trivia, the independent parse relation `Parse`, `WohlgeformterText` as grammar plus typing predicates, the canonicalisation relation of the round trip, the registry type of §3.1 and the INVENTORY of every form (today's forms, every low-level form of LOW-LEVEL-SYNTAX-PLAN §4, async and the M6F forms) as data with its source reference — no constructor yet | M0 | 5 000–12 000 |
+| **M2 Catalogue** | `Hardware` of §3.3 with rows for x86-64, AArch64 and RISC-V 64 (ported from the S2 branch `agent/s2-catalogue`); hardware histories `hw` with `FairLaeufe`, independent of programs; joint satisfiability per platform; folded in from PLAN-COMPILER-READY: A1 foreign software as rows, A2 register answers, A3 float hardware, A4 address ranges and core plan, A6 C interop (outside the address space only), the persistence envelope of B22 | M0 | 16 000–42 000 |
+| **M3 Memory model** | RC11 with truly SC `seq_cst`, `po ∪ rf` acyclic, DRF-SC, the operational graph machine (sound and complete) and the sink lemma, ported from `grammatik/Grammatik/Speichermodell/RC11/` and the branch `agent/s5b-w`; events of runs as graph events | M0 | 15 000–40 000 |
+| **M4 Machines and `I`** | the implementation machine (G∞ over threads, real `start`/`child`, no budget, waits instead of visibility stops) and the ideal meaning `I` of §3.4 (contexts, units at proved linearisation points, lock owners with queue and hand-off, delay rule, authority and lifetime, pinned outcome type, `I.Bestimmt`, `I.Fortschritt`), both over M3's events; their state contains the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events) | M2, M3 | 26 000–65 000 |
+| **M5 Acceptance** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten` over `I` and the catalogue, the pinned table of partial operations, the whitelist guard | M4 | 3 000–8 000 |
+| **M6 Today's forms** | every form of today's language as a constructor with its complete registry entry (`Parse`, `Elaboriert`, `Lokal`, `I` and implementation rule, preservation, `Realisiert`, `_erfuellbar`); `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5 | 30 000–80 000 |
+| **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
+| **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows), on the same level as every other form; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit | M6 | 236 000–596 000 |
+| **M7 Refinement** | `Sim` of §3.6 for every run, grown form by form with M6–M6L; starts from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported); acceptance case `flush`; linearisability of lock-free structures (B20); the missing legs (B10) | M4 | 48 000–125 000 |
+| **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7); waiting bounds and starvation freedom (B13) | M7 | 24 000–63 000 |
+| **M9 Observations and NI** | `ImSchranken`: stack (B9), memory (B21), cost and time (B8), real time (B19); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope (B22) | M7 | 69 000–178 000 |
+| **M9P Probability** | random sources as rows with their draw laws; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (probabilities, expectations, almost-sure statements of `I` hold for the implementation) | M9 | 30 000–80 000 |
+| **M10 Outside rule** | §4: transitive outside provenance, validity at commit, the catalogue admission rule, device typestates | M2, M4 | 4 000–10 000 |
+| **M11 Transport** | a package `uebergang/` that imports `grammatik/` and `core/`: today's whole guarantee embedded and transported (§2.1, `ZielFX`), from the full premises of today's `GabbroZiel`; an excluded case only with the owner's approval | M6–M10 | 6 000–20 000 |
+| **M12 Closing** | `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); the closing guard of §6; zero open registry entries; then `grammatik/` and `uebergang/` are deleted and the header of `Spec.lean` is replaced by this file's §2. The image gate (B6/C9, PLAN-COMPILER-READY phase B) must then lift the whole promise: an image run for every catalogue-conformant start, the lift of every admissible fair hardware history, `Verfeinert` on EVERY image run, `NI` with comparison-run existence | M11 | 4 000–11 000 |
+| **Total** | | | **562 000–1 453 000** new (without the low-level forms 326 000–857 000; M6L 236 000–596 000) |
 
-Critical path: S5 → S6 → S7 → S8 → S12. Riskiest step: S7 (a global ideal run from per-thread replays, with
-interrupts and devices); its prototype comes first and contains low-level from the start. Parallel tracks within
-the agent limit: {S1, S1b, S2, S3, S5} at once; S6L from S6 on, form by form, alongside S7–S9; S10 from S4 on; S11
-after S2; S8 and S9 together. Low-level is never a separate layer: every low-level form is a constructor of the
-reference AST and of the core, with the same four registry entries as every other form.
+Critical path: M3 → M4 → M7 → M8/M9 → M11 → M12. The forms (M6, then M6F and M6L form by form) grow beside
+M7–M9; M1, M2 and M3 start at once. Riskiest step: M7, the refinement to `I`; its prototype exists. Scope: every
+model item of [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) is inside a step above (the L rows, S8–S10, A1–A4, A6,
+B7–B22, C11); Stage 0, GabbroV and the compiler and kernel are not — they are rebuilt on `core/` and get easier
+through it: Stage 0 parses into the reference AST and its input's meaning is `Bezeichnet` with `elab_korrekt`;
+GabbroV generates its duties from the one AST and the registry; the image theorem proves `Verfeinert` for the image.

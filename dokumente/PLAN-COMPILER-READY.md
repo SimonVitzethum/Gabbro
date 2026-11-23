@@ -19,8 +19,10 @@ Where this plan changes a standing owner rule it says so and lists the change in
 
 ## 0. The end state
 
-Five gates. Nothing of a later gate starts its trust-path work before the earlier gate is green; preparatory
-Lean work may run in parallel where §6 says so.
+Five gates. Their ORDER is the phase order of §5, which is authoritative: the model with its low-level part (R4)
+is built first in `core/` (phase A), then R1–R3 on it (phase B), then R5 (phase C). Nothing of a later phase
+starts its trust-path work before the earlier phase is green; preparatory Lean work may run in parallel where §6
+says so.
 
 | Gate | Condition | Meaning |
 |---|---|---|
@@ -181,8 +183,8 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 
 | ID | Item | Estimate |
 |---|---|---|
-| B6 | **image theorem** (R3): every runner state of an image under x86-TSO is the image of a reachable GX thread machine of the elaborated unit, and the legs of `ZielFX` carry over. Pieces: (i)=S6, (ii) thread-machine simulation, (iii)=S3, (iv)=A5, (v) IR process under TSO (`runner_tso` exists) refines W/GX — first a named premise, (vi) `layU` is `LayoutOk`, (vii) every image stop is a named stop of `FortschrittFX`, (viii)=A3. Stages: lock words as state (after S3), rely/guarantee simulation of one thread, process simulation and leg transfer | 30 000–80 000 / 3–7 / 150–400 |
-| B7 | liveness over GX with spawned threads and the ticket lock (after B6) | 3 000–8 000 / 1–3 / — |
+| B6 | **image theorem** (R3), under the whole-promise criterion of PERFECT-MODEL M12: an image run exists for every catalogue-conformant start, every admissible fair hardware history lifts to an image run, EVERY image run (fair or not) has `Verfeinert` (refinement with progress under fairness and bounds) against one ideal run, erased source effects are reconstructed in the ordered source trace, and `NI` holds for images with comparison-run existence; state reachability and `ZielFX` alone do not pass this row. Pieces: (i)=S6, (ii) thread-machine simulation, (iii)=S3, (iv)=A5, (v) IR process under TSO (`runner_tso` exists) refines W/GX — first a named premise, (vi) `layU` is `LayoutOk`, (vii) every image stop is a named stop of `FortschrittFX`, (viii)=A3. Stages: lock words as state (after S3), rely/guarantee simulation of one thread, process simulation and leg transfer | 30 000–80 000 / 3–7 / 150–400 |
+| B7 | liveness with spawned threads and the ticket lock (model side in PERFECT-MODEL M8; the image side after B6) | 3 000–8 000 / 1–3 / — |
 | B8 | time without exceptions: declared costs and hold bounds in `Einheit` and (a) (K001/K002 into the model), hold-time theorem from `held`, per-pass bound for `forever` (`ForeverBinding` soundness), recursion by the measure | 4 000–10 000 / 2–4 / 5–15 |
 | B9 | stack depth: S5, plus a NAMED stop instead of the logic code `abstieg` for recursion beyond the bound (Spec change, owner) | 1 000–3 000 / 2–3 / 3–6 |
 | B10 | missing legs: accumulator fold (C15, run-level history), owner marks (C09, needs A1), arenas across the link, `Q` equal only on shared axioms in `GabbroZielVerbund` | 10 000–25 000 / 4–8 / — |
@@ -199,7 +201,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B21 | **memory bounds (owner, 2026-11-14: definitely; an unbounded heap must stay possible)**: per function and per run an upper bound on region/heap/arena use and on stack, computed and checked like `ZeitAb`, with the allocator contract — wherever a bound is declared or derivable (bounded regions, arenas with a ceiling, stack), also as a bound in the size of the input; OPEN regions (`Deklaration.offen`) without a ceiling stay admitted exactly as today, and for them the statement claims no bound (only what the provider gave), never a refusal | 4 000–10 000 / 1–2 / — |
 | B22 | **crash consistency, hardware-independent (owner, 2026-11-14).** An abstract persistence semantics: writes to persistent places become durable only through explicit flush/fence steps, in any order the abstraction allows (so every medium within the envelope is covered); interruption is possible at EVERY step; declared crash invariants and statements of the form "if interrupted at point x, the persistent state satisfies P_x" are checked by the checker or proved as program logic; recovery code is ordinary Gabbro verified like any other. **Decided:** a separate statement `GabbroZielAbsturz` beside the goal that reuses the safety legs; crash invariants and P_x are decided by the checker in the decidable fragment, the rest is program logic. Design: `persistent` tables/statics, `flush`/`fence` statements, a ghost durable state, one named medium envelope (design file of the lead) | 12 000–30 000 / 2–3 / — |
 | B23 | **no TOCTOU** — defined in [PERFECT-MODEL.md](PERFECT-MODEL.md) §4 and built as its step S11; counted in B24 | — |
-| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and the migration of `grammatik/` (steps S0–S12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. Size from PERFECT-MODEL §8 (core; the low-level forms are its step S6L and are counted in the L rows) | 168 000–445 000 new (20 000–60 000 removed) |
+| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and its construction in `core/` (steps M0–M12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. The migration takes in every model item of this plan (the L rows, S8–S10, A1–A4, A6, B7–B22, C11; owner, 2026-11-23); those rows keep their text, their size counts only here, from PERFECT-MODEL §8 | 562 000–1 453 000 new (20 000–60 000 removed) |
 
 ### C11 — non-emptiness in the statement
 
@@ -210,9 +212,9 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 
 ### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN, redesigned by O23 on 2026-11-23)
 
-**Since 2026-11-23 (owner): low-level is built as step S6L of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, from the
+**Since 2026-11-23 (owner): low-level is built as step M6L of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, from the
 start and on the same level as every other form** — every low-level form is a constructor of the reference AST
-(`grammatik/Grammatik/Ast/`, step S1b) and of the core inductives, with a `Bezeichnet` rule, an `I` rule, a
+(`core/Core/Ast/`, steps M1 and M6L) and of the core inductives, with a `Bezeichnet` rule, an `I` rule, a
 compatibility lemma and an `_erfuellbar` lemma; there is no separate low-level layer. The rows below keep the
 content and the sizes; their order is PERFECT-MODEL's.
 
@@ -258,9 +260,9 @@ the platform unit (registers, addresses, environment interfaces) differs. The de
 | C4 | one small target table, `TargetOk`, emitter shape contract, M for the base cells, first measured CPU run | 8 000–20 000 |
 | C5 | one medium pass proved with GabbroV (GVN with per-region memory) — the measurement that sizes all other passes | 3 000–10 000 |
 | C6 | location assignment, scheduling, idiom cells, optimisation passes, further tables (AArch64 first), vector cells; privileged and boot cells after L | sized after C5 |
-| C7 | the compiler's own Gabbro sources (front end, checker fold, lowering, passes, emitter), ≥ 500 000 lines (owner 2026-11-11) | ≥ 500 000 Gabbro (owner minimum, 2026-11-11; the PLAN-SELF-HOSTING §9 base of 112 000–244 000 before GIR lies below it, no upper bound is estimated) |
-| C8 | performance: ≥ 100 % of the faster of `gcc -O3`/`clang -O3` per workload class and ISA (owner 2026-10-25) | benchmark suite 13 000–32 000 |
-| C9 | the image theorem for the compiler's own images: concurrent `lower_ok`/`emit_ok` (thread machine over GX, lock refinement, stop mapping, layout, start), reusing the G side of B6 (D16), with privileged and entry cells | 20 000–50 000 |
+| C7 | the compiler's own Gabbro sources (front end, checker fold, lowering, passes, emitter), (comes later) | later, in Gabbro; not estimated (owner, 2026-11-23) |
+| C8 | performance: ≥ 100 % of the faster of `gcc -O3`/`clang -O3` per workload class and ISA (owner 2026-10-25) | later, in Gabbro; not estimated (owner, 2026-11-23) |
+| C9 | the image theorem for the compiler's own images, under the same whole-promise criterion as B6 (PERFECT-MODEL M12): concurrent `lower_ok`/`emit_ok` (thread machine over GX, lock refinement, stop mapping, layout, start), reusing the G side of B6 (D16), with privileged and entry cells | 20 000–50 000 |
 
 ### K — kernel ready (R5)
 
@@ -450,96 +452,64 @@ kernel's own scheduler or the OS; the five weak-memory points → the memory-mod
 
 ## 5. Phases and order
 
-**Order (owner, 2026-11-23): `grammatik/` first**, by the steps S0–S12 of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8; Stage 0 is
-not restructured before S12. During that migration `gabbro_ziel` need not build green.
+**Order (owner, 2026-11-23): the model first**, built fresh in `core/` by the steps M0–M12 of
+[PERFECT-MODEL.md](PERFECT-MODEL.md) §8; `grammatik/` is frozen and stays green until M12; Stage 0 is not restructured
+before M12. This section is authoritative for the order across phases; inside phase A, PERFECT-MODEL §8 governs.
 
 ```
-Phase 0  float decoupling merged, documentation pass (D1–D17), S3 lock stage 1 built
+Phase A  the model in `core/`: PERFECT-MODEL §8, M0–M12 — every model item of this plan (L rows, S8–S10, A1–A4, A6,
+         B7–B22, C11) inside its steps; ends with `gabbro_ziel : GabbroZielForm R₀` (R4 is part of it)
    │
-Phase 1  R1: S0m S1 S2 S3 S5 S6 S7 (S4 optional)   ──┐
-   │                                                  │ parallel, Lean only:
-Phase 2  R2: V0 → V1 → V2                            │ A3 A4 C11 B8 B9 A2 A1
-   │                                                  │
-Phase 3  (moved behind phases 4 and 6, owner 2026-11-13) compiler on GIR: C2 C3 C4 → C5 → C6 … (C1 after R2)
-   │                                                  │
-Phase 4  R3: B6 (pieces i–viii, stages) → B7 ────────┘
+Phase B  R1, R2, R3 on the finished model: Stage 0 (S1–S7) and GabbroV (V0–V3) rebuilt on the reference AST,
+         A5, the image theorem B6 under the whole-promise criterion of M12
    │
-Phase 5  B10 (after A1 and the C rounds)
+Phase C  R5, Lean side: compiler on GIR (C1–C5, C9; C6 sized after C5) and kernel rows (K1–K6, K8)
    │
-Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L16 → L15 → L17 → L18 → L9 → L10 → L11 (after the C01–C18 packages; before the compiler start)
-   │
-Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core (UEFI, then 16-bit loader) → K4 → K5 on two cores → C9 → K6 (AArch64, RISC-V 64) → K8 (after C1)
-   │
-Phase 8  K7: the compiler compiles itself; the runner leaves the tree
-Later    X1, X2, X4, X5
+Later    the compiler written in Gabbro (C7, C8), K7, X1, X2, X4, X5 — not planned or estimated here
 ```
 
-**Rounds of full builds.** Every change of `Spec`, `Einheit`, `LogikPflicht`, the replay of `ZielOrt` or
-`HaltArt` forces an almost complete grammatik build. They are batched into rounds (one full build each, plus at
-most one repair run), as for the C packages:
-
-| Round | Content | Phase |
-|---|---|---|
-| G1 | A3 + C11 + D11 | 0 |
-| G2 | A1 + A4 (all changes of premise (c), with the environment class of §4.4) | 1–2, parallel |
-| G3 | A2 (replay) | 1–2, parallel |
-| G4 | B8 + B9 (`Einheit`, `HaltArt`) | 2 |
-| G5–G7 | B10 by sub-package | 5 |
-| G8–G12 | B6/B7 interfaces in `Zielsatz` and `Code/Conc` | 4 |
-| G13–G31 | L0–L18, one round per item | 6 |
-
-That is **about 31 full grammatik builds** for the goal theorem and the low-level model (30 min each with
-`LEAN_NUM_THREADS=3`), plus the Stage-0 builds of S, V and B6 (compiler build 4–10 min, full stage0 after a deep
-`Senke` change 20–40 min). The compiler and kernel streams (C, K) build in packages of their own, not sized here.
+Builds: each PERFECT-MODEL step is merged on its own after a green incremental package build; a change of a
+pinned foundation forces an almost complete grammatik build (30 min with `LEAN_NUM_THREADS=3`), so such changes
+are batched per step. Stage-0 builds start only in phase B.
 
 ---
 
 ## 6. Critical path and parallelism
 
-1. **To the compiler start:** S0m → S2 → S6 → V0 → V1 → V2. With S1, S2, S6 and V this is about 16 500–54 200
-   lines. No day count exists for it: the earlier figure "10–28 working days" (COMPILER-READY §2.3) covered S1 and a
-   bridge that was assumed to carry most forms; V0 measured that it carries 4 of 34 statement forms, and S2 is
-   not sized until S0m has measured it. GabbroV, and inside it the bridge (V2), is the longest single chain.
-2. **To trusted output:** S3 → B6 (stage "lock words as state" → "rely/guarantee simulation of one thread" →
-   "process simulation and leg transfer") → B7. B6's second stage is the largest single uncertainty of the whole
-   plan, and C9 repeats its shape for the compiler.
-3. **To the kernel:** two chains meet in K5. The model chain is A1, A2 → L1 → L4 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L16 → L15 → L17 → L18 → L9 (R4);
-   the compiler chain is C2 → C3 → C4 → K1, K2 → K3. Neither can be shortened by the other. The kernel gate
-   cannot be reached with Stage 0: Stage 0 emits hosted images for the runner only (D16).
-4. **In parallel with all of it, Lean only, no Stage-0 or runner change:** A1, A2, A3, A4, B8, B9, C11. They
-   change the goal statement and need the owner's approval of each `Spec.lean` diff before merge. For the kernel
-   A1, A2, B6/C9 and L7 are required, not optional.
-5. **Gated by the owner:** every Spec change, the rule changes of §8, X1, X4, X5.
+1. **The model (phase A):** M3 → M4 → M7 → M8/M9 → M11 → M12 of PERFECT-MODEL §8; the forms (M6, M6F, M6L) run
+   form by form beside M7–M9. The riskiest step is M7, the refinement to `I`.
+2. **Stage 0, GabbroV and the image theorem (phase B):** only on the finished model; B6 is the largest single
+   uncertainty there, and C9 repeats its shape for the compiler.
+3. **The Lean side of compiler and kernel (phase C):** C2 → C3 → C4 → K1, K2 → K3 → K5; the kernel gate cannot be
+   reached with Stage 0, which emits hosted images for the runner only (D16).
+4. **Gated by the owner:** every change of the goal's meaning (PERFECT-MODEL), the rule changes of §8, X1, X4, X5.
 
 ---
 
 ## 7. Size of everything
 
-| Stream | Lean LOC (estimate) | Gabbro LOC (estimate) |
-|---|---|---|
-| S Stage 0 complete (S1–S10) | 22 400–59 800 | — |
-| V GabbroV to R2 | 12 400–40 900 | — |
-| A fewer assumptions (A1–A6) | 9 400–25 900 | — |
-| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 250 000–660 000, of which B24 168 000–445 000) | 354 000–933 000 | — |
-| C11 non-emptiness | 200–800 | — |
-| L low-level model (L0–L18, re-estimated 2026-11-23) | 236 000–596 000 | — |
-| C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
-| K kernel ready (K1–K6, K8) | 92 000–246 000 | 11 000–30 000 |
-| C compiler sources and benchmarks (C7, C8) | — | ≥ 513 000 (C7 ≥ 500 000; C8 13 000–32 000) |
-| **sum** | **≈ 810 400–2 112 400** | **≥ 524 000 (no upper bound)** |
+| Stream | Lean LOC (estimate) |
+|---|---|
+| M the model, built in `core/` (PERFECT-MODEL §8; includes L0–L18, S8–S10, A1–A4, A6, B7–B22, C11) | 562 000–1 453 000 |
+| S Stage 0 complete (S1–S7) | 8 400–23 800 |
+| V GabbroV to R2 | 12 400–40 900 |
+| A5 (d) for Stage-0 images | 1 500–4 000 |
+| B6 image theorem | 30 000–80 000 |
+| C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 |
+| K kernel ready, Lean side (K1–K6, K8) | 92 000–246 000 |
+| **sum** | **≈ 790 300–2 057 700** |
 
-**Everything together: at least about 1 334 000 new lines**: Lean 810 400–2 112 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
+**Everything together: 790 300–2 057 700 new Lean lines.** Only the Lean part is estimated (owner, 2026-11-23): the compiler written in Gabbro (C7, C8) and the Gabbro parts of the kernel rows come later and are not counted here. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
 Parts of the sum by gate (each includes what the earlier gates need):
 
-| Up to | Lean LOC | Gabbro LOC |
-|---|---|---|
-| the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 398 400–1 060 400 | — |
-| R4 low-level model (adds L) | 634 400–1 656 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 810 400–2 112 400 | ≥ 524 000 |
+| Up to | Lean LOC |
+|---|---|
+| the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 |
+| R3 and R4: trusted Stage-0 output on the migrated model, low-level included (adds M, the rest of S, A5, B6) | 614 300–1 601 700 |
+| R5 kernel ready, Lean side (adds C1–C5, C9, K) | 790 300–2 057 700 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -564,7 +534,7 @@ targets and two x86 vendors) is in K2, K3 and K6. The 9 826 existing lines of `N
 `bindCtx` design; parts of `Authority`, `Bytes`, `Maske` and `Uebersetzung` are reusable, which the low ends assume.
 No low-level row has a measured calibration yet. The earlier L estimate (99 000–248 500) counted the parser at a
 tenth of its measured cost. The sum line now adds every row: S and A had omitted S8–S10 and A6, B had missed its
-later items, and C7's owner minimum of 500 000 lines leaves the Gabbro total without an upper bound.
+later items. Only Lean is counted; the Gabbro compiler (C7, C8) comes later and is not estimated (owner, 2026-11-23).
 
 ---
 
