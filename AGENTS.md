@@ -90,12 +90,14 @@ Consequences:
 - **ONE short goal theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise
   is a single theorem whose statement a reviewer can read in a minute:
   `Akzeptiert → Logik → Hardware → every run of the emitted image is a run of machine G with no Fehler`.
-  `Fehler` is ONE small definition over runs: a reachable machine in which a thread that has not ended can take no
-  step (stuck), a stop other than a normal end or a named hardware stop, a deadlock, or a wait that never ends
-  under the named fairness. Every safety property — memory, ownership, races, locks and their invariants,
-  contracts at calls, TOCTOU, time and memory budgets, the low-level rules — is a side condition of G's rules, so
-  violating it means G has no step, which is a `Fehler`. Review therefore reads three things only: the definition
-  of `Fehler`, the premises (a)–(d), and the rules of G. Theorems that today state single legs become proof steps;
+  `Fehler` is ONE definition that NAMES every error class (owner: "ein Fehler kann alles sein, von Speicher bis zu
+  TOCTOU"): memory errors (outside a live carrier or extent, after free, uninitialised, wrong representation),
+  ownership violations, data races, lock violations (invariants included), contract violations at calls and
+  returns, arithmetic outside the declared range, TOCTOU, budget and time overruns, stack overflow, deadlock, an
+  endless wait under the named fairness, a stuck thread, and a stop other than a normal end or a named hardware
+  stop. The proof method is that every class is a side condition of G's rules; the statement is that no class
+  ever occurs. Review therefore reads three things only: the definition of `Fehler`, the premises (a)–(d), and the
+  rules of G. Theorems that today state single legs become proof steps;
   they are never the promise. The user owes only program logic (b) and the named hardware and environment list (c).
   **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
   `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
