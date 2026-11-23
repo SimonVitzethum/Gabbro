@@ -81,9 +81,12 @@ def baum (verbinde : String → String → String) (leer : String) : Nat → Lis
 def balanciert (op leer : String) (fuel : Nat) (ns : List String) : String :=
   baum (fun a b => "(" ++ a ++ " " ++ op ++ " " ++ b ++ ")") leer fuel ns
 
-/-- The string modules whose bodies the kernel unfolds when it evaluates the lowering. -/
+/-- The core modules whose bodies the kernel unfolds when it evaluates the lowering (strings, their
+    equality in `Init.Prelude`, and `Nat.repr` for names built from numbers). -/
 def stringModule : List String :=
-  ["Init.Data.String.Basic",
+  ["Init.Prelude",
+   "Init.Data.Repr",
+   "Init.Data.String.Basic",
    "Init.Data.String.Bootstrap",
    "Init.Data.String.Decode",
    "Init.Data.String.Defs",
