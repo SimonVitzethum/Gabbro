@@ -4,10 +4,12 @@ import re
 import os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 W = ROOT + '/grammatik/Grammatik/Parser/'
-lx = open(W + 'Lex/Lexer.lean').read()
+lx = open(W + 'Lex/Lexer/Teil1.lean').read()
 a = lx.index('def wortschatz')
 b = lx.index(']', lx.index('"target"', a))
 WORDS = set(re.findall(r'"([^"]+)"', lx[a:b]))
+r = lx.index('def refusedWords')
+WORDS |= set(re.findall(r'"([^"]+)"', lx[r:lx.index(']', r)]))
 PUNCT = ['<<%', '..<', '::', '..', '->', '=>', '==', '!=', '<=', '>=', '<<', '>>', '+=', '+%', '+|', '-=', '-%', '*%',
          '&&', '&=', '||', '|=']
 
