@@ -97,6 +97,10 @@ Consequences:
   violating it means G has no step, which is a `Fehler`. Review therefore reads three things only: the definition
   of `Fehler`, the premises (a)–(d), and the rules of G. Theorems that today state single legs become proof steps;
   they are never the promise. The user owes only program logic (b) and the named hardware and environment list (c).
+  **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
+  `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
+  follow from it as proved corollaries, and it says more — about the emitted image, not only about G, and with
+  TOCTOU, deadlock and the low-level rules excluded.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
