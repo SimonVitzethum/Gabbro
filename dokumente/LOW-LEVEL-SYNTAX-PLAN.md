@@ -5,7 +5,8 @@ decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur ia
 Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump
 oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen."
 The compile-time selection `if (…) then { … } else { … }` (§4.10) is the owner's addition O24 of the same day.
-O26 (same day) adds devices found at run time, wide and enqueued device stores and foreign CPU code (§4.6, §4.19).
+O26 (same day) adds devices found at run time, wide and enqueued device stores (§4.6) and hard timing (§4.18);
+CPU code that the compiler did not emit stays refused.
 O25 (same day) adds hardware virtualisation, IOMMU spaces, suspend/resume, debug and performance units,
 backtraces, guest grants and secure worlds (§4.11–§4.17); JIT and kernel modules get no syntax.
 
@@ -566,44 +567,40 @@ protect physical secure_ram for world secure;                           // PMP/e
   masters) that enforces the configured world partition and enters the monitor only through its declared entry;
   the configuration of the platform controllers is the image driver's proved work, not part of the assumption.
 
-### 4.19 Foreign CPU code: option ROMs and binary drivers (L18, O26)
-
-Code for the CPU that the image did not compile — a device's option ROM (for example the VGA BIOS that initialises
-a graphics card), a vendor's binary-only driver — can be run in two ways. The first keeps every guarantee and is
-the default; the second trusts the code and is visible as a named assumption.
+### 4.18 Hard timing: bit-banging and timed device protocols (L18, O26)
 
 ```gabbro
-// 1. isolated: the foreign code is a guest; nothing is assumed about it
-let rom = pci.config(gpu).option_rom() else absent;            // a discovery answer, copied into a region
-let v   = vm.new(rom_space, intercept { ports all, memory_faults }) else unsupported;
-map(rom_space, 0xC0000, rom_copy, rights { read, execute }, kind normal) else full;
-grant device gpu to vm v;                                      // its windows and its IOMMU group
-let c   = v.vcpu(0, entry_pc = 0xC0003, width 16);              // real-mode entry of the ROM
-match enter vm v vcpu c { io(port, …) => emulate_bios(…), … }  // the hypervisor emulates the BIOS services
-
-// 2. trusted: the foreign code runs in the kernel under a named assumption
-foreign code blob_driver from image_region abi sysv
-    contract { touches regions(dma_bufs), device(gpu); keeps locks; returns; } assume blob_driver_ok;
-blob_driver.init(gpu_ctx) else failed;
+timed core within 5 us else late {                  // this core: interrupts and preemption off for the block
+    pin.data.write(1);
+    wait at least 1_200 ns;                         // lower bound from the clock
+    pin.data.write(0);
+    wait until t0 + 2_500 ns;                       // absolute point on the per-core clock
+    let ack = pin.input.read();
+}
 ```
 
-- **Isolated** (the default): the foreign bytes are data mapped executable in a guest's own space — a user-mode
-  guest (§4.7) or a VM (§4.11), with the devices it needs granted behind their IOMMU group (§4.12). This needs no
-  new trust: the isolation theorems of L8 and L15 hold for every guest, so a wrong or malicious ROM or driver can
-  only produce wrong answers in its own space, which the kernel treats as untrusted data. A real-mode option ROM
-  runs in a 16-bit vCPU; the BIOS services it calls are emulated by the hypervisor (program logic).
-- **Trusted** (`foreign code … assume N`): the bytes become kernel code under a declared calling convention and a
-  declared contract (frame, carriers and extents it touches, locks, return). Like a C function behind `extern fn`
-  (A6, owner 2026-11-14), this is a named environment assumption visible at every use, and **one such assumption,
-  if false, can void every guarantee of the theorem**: code at kernel privilege is unchecked. The publication is
-  that of `make executable` (§4.9: no writable alias, cache synchronisation on every core); the bytes and their
-  provenance are recorded, not checked.
-- Kernel modules written in Gabbro still get no syntax (O25): they are compiled with the kernel. `foreign code`
-  is only for CPU code that no Gabbro compiler produced.
+- `wait at least d` and `wait until t` give LOWER bounds: they read the cycle counter or the per-core timer and
+  spin or idle until the point has passed. Their guarantee rests on the named hardware assumption `ClockRate`
+  (the counter's frequency and monotonicity as the platform declares and `cpu.caps` reports).
+- `timed core within d else late { … }` gives an UPPER bound: the block runs with the core's ordinary interrupts
+  masked and without preemption, contains no lock wait, allocation or unbounded loop, and the compiler proves
+  from the emitted code that it takes at most `d` under the named hardware assumption `RowTiming` (per target
+  row: an upper bound of cycles in the declared state; per memory kind and per device register: an upper bound
+  of access latency, declared in the platform unit and measured by M). Events the mask cannot stop — an NMI, a
+  machine check, a resident-firmware SMI within its declared time — are counted in the bound where the platform
+  declares their worst case, and otherwise detected: the generated code reads the clock at the end of the block
+  and takes the `else late` channel when `d` was exceeded, so no contract and no memory guarantee depends on
+  the timing assumption; only the promise "on time" does.
+- A timed block that the compiler cannot bound (an unbounded loop, a call without a cost bound, a device without
+  a declared latency) is refused. Bounds are per configuration; a different target or core type needs its own
+  rows and is checked by compile-time selection like everything else.
+- This lifts the earlier exclusion of hardware time bounds for exactly these blocks (O26): `ClockRate` and
+  `RowTiming` are named per platform and per row, and everything outside a timed block keeps counting G steps
+  only (`ZeitAb`), with no time claim.
 
-### 4.18 Inventory: the constructs and their rows
+### 4.19 Inventory: the constructs and their rows
 
-The count that the estimate of PLAN-COMPILER-READY §7 uses (89 constructs; each gets a G rule, an `Akzeptiert`
+The count that the estimate of PLAN-COMPILER-READY §7 uses (91 constructs; each gets a G rule, an `Akzeptiert`
 rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a GIR cell with its lowering theorem):
 
 | Row | Constructs | Count |
@@ -622,8 +619,8 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
 | L15 | `space.new_guest`, `vm.new` with mandatory controls and intercepts, `vcpu`, `enter vm`, `vm_exit`, `inject interrupt`, `copy from/to vm`, `assign device`, nested vCPU | 9 |
 | L16 | `io.space.new`, `group_of`, `attach group` (PASID, ATS policy), `dma_fault` entry | 4 |
 | L17 | monitor state with worlds, `monitor_call` entry, `return to world`, `resume world`, `protect physical`, `provide environment` | 6 |
-| L18 | `foreign code … assume` (trusted foreign CPU code); isolated foreign code uses the guest constructs of L8 and L15 | 1 |
-| **sum** | | **89** |
+| L18 | `wait at least`, `wait until`, `timed core within … else late` | 3 |
+| **sum** | | **91** |
 
 ## 5. Typing, acceptance and the trust boundary
 
@@ -635,7 +632,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   its IOMMU mapping where the platform has an IOMMU, a DMA-capable device granted to an untrusted guest or VM
   without an attached isolation group, a device value used after resume before reinitialisation, a world switch
   with memory not partitioned, a declared register that a construct manages, a memory kind the region or target
-  cannot realise, an entry kind the platform lacks, a device window that is not a discovery answer, a store shape the target never has (outside compile-time selection), foreign code without a declared contract and assumption, unsupported targets by name.
+  cannot realise, an entry kind the platform lacks, a device window that is not a discovery answer, a store shape the target never has (outside compile-time selection), CPU code that the compiler did not emit (option ROMs, binary drivers) at any privilege of the image, a timed block whose bound is not proved, unsupported targets by name.
 - Every construct and generated frame accounts for all architectural effects: register and flag state, hidden stack
   traffic, privilege, translation, masks, faults and their exits, interleavings and the atomic rely. A generated
   construct is not implicitly atomic; masking is not a multicore lock.
@@ -646,7 +643,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   (a platform envelope), `ResetState` (per processor: the state at the reset vector and at the arrival of a further
   core), device contracts (including the truth of discovery answers; their DMA part only for requests outside the `Iommu` envelope), the memory-model reading.
   Environment: `FirmwareHandoff` (UEFI), `BiosHandoff` (16-bit loader), the firmware services of §4.8 including
-  the resume arrivals they establish, resident firmware with its rely contract, and each trusted `foreign code` item with its contract (§4.19). Everything else — boot, allocators,
+  the resume arrivals they establish, resident firmware with its rely contract. For timed blocks only: `ClockRate` and `RowTiming` (§4.18). Everything else — boot, allocators,
   page-table code, schedulers, drivers, hypervisors, monitors and provided firmware services — is software inside
   the image and the user's logic (b).
 
@@ -715,12 +712,13 @@ for MMIO, ports and DMA; PCIe through ECAM or ports; ACPI tables and devicetree 
 program logic); reboot and power-off; hardware virtualisation with stage-2 translation, virtual interrupts and
 nested guests (§4.11); IOMMU spaces with PASID and interrupt remapping (§4.12); suspend and resume (§4.13); debug
 and performance units (§4.14); backtraces (§4.15); rights granted to guests (§4.16); secure worlds, the monitor
-and firmware services provided in Gabbro (§4.17); devices found at run time and wide or enqueued device stores (§4.6); option ROMs and binary-only drivers, isolated as guests or trusted under a named assumption (§4.19). Bit-banging with hard timing is writable, but no hardware time bound is claimed.
+and firmware services provided in Gabbro (§4.17); devices found at run time and wide or enqueued device stores (§4.6); bit-banging and other hard timing with proved lower and upper bounds (§4.18).
 
 Deliberately without a construct:
 
 | Item | Status |
 |---|---|
-| JIT compilers, loadable kernel modules written in Gabbro | no new syntax (owner, 2026-11-23); foreign CPU code is §4.19. `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
+| JIT compilers, loadable kernel modules written in Gabbro | no new syntax (owner, 2026-11-23); CPU code the compiler did not emit is refused (O26). `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
+| CPU code the compiler did not emit (option ROMs, binary-only drivers) | refused at every privilege of the image (owner O26). A guest or VM runs whatever code it contains anyway (that is what a guest is), so an option ROM can run inside a VM like any guest code, without support or trust from the language |
 | DRAM initialisation on real boards | not a language gap (driver logic under the reset boundary); vendor details are not public on most platforms, so the reset gate runs on emulator platforms |
 | speculation mitigations, retpolines, fences | compiler work under B17, never a user construct |

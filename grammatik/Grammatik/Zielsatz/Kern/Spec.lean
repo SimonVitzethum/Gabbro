@@ -219,6 +219,8 @@
     For requests covered by the envelope the DMA part of a device contract (today `ImBereichO`) is PROVED, not assumed.
   * `SecureUnit` -- a PLATFORM envelope (processors, memory controllers, interconnect, DMA masters): the configured world partition is enforced and the monitor is entered
     only through its declared entry; the configuration itself is the proved work of the image's driver.
+  * `ClockRate`, `RowTiming` (O26, only inside `timed` blocks and `wait at least`/`until`) -- the cycle counter's declared frequency and monotonicity; per target row an
+    upper bound of cycles in its state, per memory kind and device register an upper bound of access latency. A late block takes its `else late` channel at run time.
   * device contracts -- the declared answers of each register and port (history-dependent after A2; today `RegLokal`, the hardware part of `AxVertragO`), the state a
     device retains, loses or leaves unknown across suspend, and the DMA extents of requests NOT covered by `Iommu` (today `ImBereichO`), and the truth of discovery answers (a device decodes the window and layout
     that PCI configuration, ACPI or devicetree report; O26); a platform declares them. Memory safety does not rest on discovery: windows overlapping owned memory are refused.
@@ -227,11 +229,9 @@
   * firmware services -- each declared UEFI, BIOS, PSCI or SBI service, including the resume arrival it establishes (ACPI waking vector, PSCI, SBI SUSP).
   * resident firmware -- firmware that keeps running after the handoff (SMM, UEFI runtime services, EL3 or M-mode firmware): a rely contract over its asynchronous
     entries, the memory it may touch (its reserved regions only) and the time it may take. An image that provides that firmware itself proves it instead.
-  * trusted foreign code (O26) -- each `foreign code … assume N` item (option ROM or binary driver run at kernel privilege) meets its declared contract (frame,
-    carriers, extents, locks, return). As for `extern fn` (A6), one such assumption, if false, can void every guarantee. Isolated foreign code (a guest) needs none.
   Retired once the constructs are connected: `Laufzeit.lader` (the boundary's handoff and the proved image layout), `Laufzeit.start`/`.einmal` for kernels (L9), `KernPlan`
   (by `IrqDelivery`), `ImBereichO` for requests covered by `Iommu`. NOT assumed, ever: software inside the image (boot code, allocators, page-table code, schedulers,
-  drivers, hypervisors, monitors, provided firmware services) -- the user's logic (b); guest correctness, cost or termination; a hardware time bound.
+  drivers, hypervisors, monitors, provided firmware services) -- the user's logic (b); guest correctness, cost or termination; a hardware time bound outside `ClockRate`/`RowTiming`.
 
   THE PERMITTED STOPS (`HaltArt`, in `fortschritt`) -- where the statement reports instead of claiming more:
   * `hardware` -- an axiom answer outside its (answerable) declared type, a register answer outside its type or
