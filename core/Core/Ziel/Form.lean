@@ -43,14 +43,16 @@ structure Rahmen where
   Hardware : Katalog → Umgebung → Prop
   HwLauf : Type
   FairLaeufe : Katalog → Umgebung → HwLauf → Prop
-  /-- Implementation runs (§3.5): every prefix under row-conformant outside behaviour, also a failing or stuck
-  one; their cuts, their hardware projection and their start. -/
+  /-- Implementation runs (§3.5): `Laeufe` contains the maximal runs under row-conformant outside behaviour,
+  including finite stuck or failing runs; `Schnitt` covers every finite prefix of each run. Their hardware
+  projection, their start, and the catalogue-conformant starts, defined independently of loader success. -/
   Lauf : Type
   Laeufe : Einheit → Umgebung → Lauf → Prop
   Schnitt : Lauf → Type
   hw : Lauf → HwLauf
   Start : Type
   start : Lauf → Start
+  ZulStart : Einheit → Umgebung → Start → Prop
   /-- The ideal meaning `I` (§3.4): its runs, determinacy and progress. -/
   IdealLauf : Type
   IdealLaeufe : Einheit → IdealLauf → Prop
@@ -79,7 +81,8 @@ structure Rahmen where
   NiedrigAequiv : Einheit → Beob → Beob → Prop
 
 /-- §2.1: nothing in the promise holds vacuously — text, catalogues, acceptance and forms are jointly
-satisfiable, every fair hardware history lifts to a run of every accepted program, and `I` is determined and
+satisfiable, every accepted program has an admissible start, and every fair hardware history lifts to a run from
+EVERY admissible start of every accepted program (a loader failure at an admissible start is in scope), and `I` is determined and
 makes progress. -/
 def NichtLeer (R : Rahmen) : Prop :=
     (∀ a, R.WohlgeformterText a ↔ ∃ E, R.Bezeichnet a E)
@@ -87,8 +90,9 @@ def NichtLeer (R : Rahmen) : Prop :=
   ∧ (∀ f : R.Form, ∃ a E, R.enthaelt a f ∧ R.Bezeichnet a E ∧ R.Akzeptiert E ∧ R.realisiert f a E)
   ∧ (∀ E, R.Akzeptiert E → R.KatalogWohlgeformt (R.katalog E))
   ∧ (∀ K, R.KatalogWohlgeformt K → ∃ H h, R.Hardware K H ∧ R.FairLaeufe K H h)
-  ∧ (∀ a E, R.Bezeichnet a E → R.Akzeptiert E → ∀ H h, R.Hardware (R.katalog E) H →
-        R.FairLaeufe (R.katalog E) H h → ∃ ρ, R.Laeufe E H ρ ∧ R.hw ρ = h)
+  ∧ (∀ a E, R.Bezeichnet a E → R.Akzeptiert E → ∀ H, R.Hardware (R.katalog E) H → ∃ s, R.ZulStart E H s)
+  ∧ (∀ a E, R.Bezeichnet a E → R.Akzeptiert E → ∀ H s h, R.Hardware (R.katalog E) H → R.ZulStart E H s →
+        R.FairLaeufe (R.katalog E) H h → ∃ ρ, R.Laeufe E H ρ ∧ R.start ρ = s ∧ R.hw ρ = h)
   ∧ (∀ E, R.Akzeptiert E → R.Bestimmt E ∧ R.IdealFortschritt E)
 
 /-- §2.1: an implementation run `ρ` refines the ideal run `ι` — same effects in the same order, today's guarantee
@@ -103,7 +107,8 @@ def Verfeinert (R : Rahmen) (E : R.Einheit) (H : R.Umgebung) (ρ : R.Lauf) (ι :
 policies exists, and every such run shows a related low trace. -/
 def NI (R : Rahmen) : Prop :=
   ∀ E H₁ H₂ ρ₁ s₂, R.Akzeptiert E → R.Hardware (R.katalog E) H₁ → R.Hardware (R.katalog E) H₂ →
-    R.Laeufe E H₁ ρ₁ → R.GleicheNiedrigeUmgebung E H₁ H₂ → R.NiedrigGleich E (R.start ρ₁) s₂ →
+    R.Laeufe E H₁ ρ₁ → R.GleicheNiedrigeUmgebung E H₁ H₂ → R.ZulStart E H₂ s₂ →
+    R.NiedrigGleich E (R.start ρ₁) s₂ →
       (∃ ρ₂, R.Laeufe E H₂ ρ₂ ∧ R.start ρ₂ = s₂ ∧ R.GleichePolitik E ρ₁ ρ₂)
     ∧ ∀ ρ₂, R.Laeufe E H₂ ρ₂ → R.start ρ₂ = s₂ → R.GleichePolitik E ρ₁ ρ₂ →
         R.NiedrigAequiv E (R.NiedrigeBeob E ρ₁) (R.NiedrigeBeob E ρ₂)
@@ -113,7 +118,8 @@ accepted program refines ONE ideal run; no secret leaks. -/
 def GabbroZielForm (R : Rahmen) : Prop :=
     NichtLeer R
   ∧ (∀ a E, R.Bezeichnet a E → R.Akzeptiert E → ∀ H, R.Hardware (R.katalog E) H →
-      (∃ ρ, R.Laeufe E H ρ) ∧ ∀ ρ, R.Laeufe E H ρ → ∃ ι, R.IdealLaeufe E ι ∧ Verfeinert R E H ρ ι)
+      (∀ s, R.ZulStart E H s → ∃ ρ, R.Laeufe E H ρ ∧ R.start ρ = s)
+    ∧ ∀ ρ, R.Laeufe E H ρ → ∃ ι, R.IdealLaeufe E ι ∧ Verfeinert R E H ρ ι)
   ∧ NI R
 
 end Gabbro.Core.Ziel
