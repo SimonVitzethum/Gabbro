@@ -66,7 +66,10 @@ meta def reste (g : MVarId) : TermElabM (List MVarId) := do
   tryCatchRuntimeEx
     (withCurrHeartbeats <| Term.withoutErrToSorry do
       Tactic.run g (evalTactic (← `(tactic| gabbrov_beweis))))
-    (fun _ => do s.restore; pure [g])
+    (fun e => do
+      s.restore
+      logInfo m!"gabbrov_logik: the automation stopped ({e.toMessageData}); the whole duty stays"
+      pure [g])
 
 meta def geschlossen (r : MVarId) : MetaM Lean.Expr := r.withContext do
   let t ← instantiateMVars (← r.getType)
@@ -107,7 +110,7 @@ syntax (name := gabbrovLogikCmd) "gabbrov_logik " ident " : " ident : command
     let pf ← withCurrHeartbeats <| withLocalDeclD `L (mkSort Level.zero) fun lv => withLocalDeclD `h lv fun h => do
       let g ← mkFreshExprSyntheticOpaqueMVar zielTy
       let rs ← reste g.mvarId!
-      let props ← rs.mapM fun r => (geschlossen r : MetaM Lean.Expr)
+      let props ← rs.mapM fun r => withCurrHeartbeats (geschlossen r : MetaM Lean.Expr)
       let logik := konjunktion props
       let dv : DefinitionVal := {
         name := logikName, levelParams := [], type := mkSort Level.zero, value := logik,
@@ -115,11 +118,11 @@ syntax (name := gabbrovLogikCmd) "gabbrov_logik " ident " : " ident : command
       -- exported with its body: the user's proof file imports it and must see the statement
       withExporting (addDecl (Declaration.defnDecl dv))
       for (r, i) in rs.zipIdx do
-        r.withContext do
+        withCurrHeartbeats <| r.withContext do
           let t ← instantiateMVars (← r.getType)
           let deps ← abhaengige t
           r.assign (mkAppN (teil h props i) deps)
-      let rumpf ← mkLambdaFVars #[h] (← instantiateMVars g)
+      let rumpf ← withCurrHeartbeats do mkLambdaFVars #[h] (← instantiateMVars g)
       return (rumpf.abstract #[lv]).instantiate1 (mkConst logikName)
     if pf.hasExprMVar then throwError "gabbrov_logik: the proof is not closed"
     let ty ← mkArrow (mkConst logikName) zielTy

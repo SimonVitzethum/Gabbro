@@ -256,21 +256,38 @@ open Lean Elab Tactic Meta in
 /-- **The duty of one function, as far as the language carries it**: open the duty at the function's
     own lowering (`pflicht_oeffnen`), put the lowered body into normal form, execute it symbolically by
     the model's exact rules (`gabbrov_wp`) and close the return obligation (`gabbrov_fertig`). Every
-    step is checked by the kernel. What remains is the program's own logic. -/
-macro "gabbrov_beweis" : tactic => `(tactic| (
-  apply Gabbro.Bruecke.pflicht_oeffnen
-  intro P fs hlow v hv hens hrumpf Q sp main args roots gestartet checks
-  rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
-  gabbrov_normal_at hrumpf
-  refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
-    intro O' _ _ _ U _ A hA R _ _ σ ρ _ <;>
-    (first
-      | (have hAid := Gabbro.Bruecke.atomarA_id (Gabbro.Bruecke.atomar_frei (by exact rfl)) hA
-         subst hAid)
-      | skip) <;>
-    show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
-    rw [hrumpf] <;> gabbrov_wp
-  all_goals gabbrov_sicher gabbrov_fertig hens
-  all_goals gabbrov_sicher gabbrov_arith))
+    step is checked by the kernel. What remains is the program's own logic.
+
+    The phases have their own heartbeat budgets: a step of the automation refreshes its budget itself,
+    but what it used still counts for the phase around it, so a phase after a long walk would stop at
+    its first reduction. -/
+elab "gabbrov_beweis" : tactic => do
+  let phase (t : Lean.TSyntax `tactic) : Lean.Elab.Tactic.TacticM Unit :=
+    Lean.withCurrHeartbeats (Lean.Elab.Tactic.evalTactic t)
+  -- a phase on every goal, each goal with its own budget
+  let jedes (t : Lean.TSyntax `tactic) : Lean.Elab.Tactic.TacticM Unit := do
+    let mut out := []
+    for g in ← Lean.Elab.Tactic.getGoals do
+      if ← g.isAssigned then continue
+      Lean.Elab.Tactic.setGoals [g]
+      phase t
+      out := out ++ (← Lean.Elab.Tactic.getGoals)
+    Lean.Elab.Tactic.setGoals out
+  phase (← `(tactic| (
+    apply Gabbro.Bruecke.pflicht_oeffnen
+    intro P fs hlow v hv hens hrumpf Q sp main args roots gestartet checks
+    rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
+    gabbrov_normal_at hrumpf
+    refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
+      intro O' _ _ _ U _ A hA R _ _ σ ρ _ <;>
+      (first
+        | (have hAid := Gabbro.Bruecke.atomarA_id (Gabbro.Bruecke.atomar_frei (by exact rfl)) hA
+           subst hAid)
+        | skip) <;>
+      show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
+      rw [hrumpf])))
+  jedes (← `(tactic| gabbrov_wp))
+  jedes (← `(tactic| gabbrov_sicher gabbrov_fertig hens))
+  jedes (← `(tactic| gabbrov_sicher gabbrov_arith))
 
 end Gabbro.Bruecke

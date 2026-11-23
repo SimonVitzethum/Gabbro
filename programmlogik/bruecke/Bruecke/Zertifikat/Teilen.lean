@@ -69,15 +69,43 @@ meta def nimmZweig (goal : MVarId) (xa : Array Lean.Expr) (abh b : Bool) (pc : L
   return [← goal.replaceTargetEq neu gl]
 
 open Lean Meta in
+/-- The key of a condition `b = r` over a lowered expression: its integer translation (`tBedingung?`)
+    with every read replaced by the kernel's head normal form of the read, and `r`. A value written once
+    is the same term wherever a later state reads it, so a condition on an unchanged value has the same key
+    in every later state. -/
+meta def bedingungsSchluessel? (c : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
+  let some (_, l, r) := c.eq? | return none
+  let some t ← (tBedingung? l).run' #[] | return none
+  let t ← Meta.transform t (post := fun e => do
+    if e.isAppOfArity `Gabbro.Grammatik.Zahl.n 3 then
+      let v ← kw (e.getArg! 2)
+      if v.isAppOfArity `Gabbro.Grammatik.Zahl.mk 5 then return .done (v.getArg! 2)
+      return .done (mkApp3 e.getAppFn (e.getArg! 0) (e.getArg! 1) v)
+    return .continue)
+  return some (t, r)
+
+open Lean Meta in
 /-- **A condition an earlier branch already settled**: a branch hypothesis (`hbed`) states the condition
-    `c` or its negation, syntactically. Returns which branch and the hypothesis. -/
+    `c` or its negation, syntactically or with the same key (`bedingungsSchluessel?`) and accepted by the
+    kernel as the same proposition. Returns which branch and the hypothesis. -/
 meta def ausBedingung? (goal : MVarId) (c : Lean.Expr) : MetaM (Option (Bool × Lean.Expr)) :=
   goal.withContext do
+    let mut kandidaten := #[]
     for d in ← getLCtx do
       if d.isImplementationDetail || d.userName.eraseMacroScopes != `hbed then continue
       let ty ← instantiateMVars d.type
       if ty == c then return some (true, d.toExpr)
       if ty.not? == some c then return some (false, d.toExpr)
+      kandidaten := kandidaten.push (d.toExpr, ty)
+    if kandidaten.isEmpty then return none
+    let some k ← bedingungsSchluessel? c | return none
+    for (h, ty) in kandidaten do
+      let (neg, q) := match ty.not? with | some q => (true, q) | none => (false, ty)
+      let some k' ← bedingungsSchluessel? q | continue
+      unless k' == k do continue
+      match Kernel.isDefEq (← getEnv) (← getLCtx) q c with
+      | .ok true => return some (!neg, h)
+      | _ => continue
     return none
 
 open Lean Meta in
