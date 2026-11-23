@@ -20,7 +20,6 @@
 // module is entered from the HOST kernel's interrupt path: a timer, a device
 // line, a softirq -- none of which owns a vector the program could name, so
 // `via idt vector N` is the wrong word for it and `via irq` is the right one
-// (`messung/proben/kmodul/sperre-takt.gab` is the running probe). The refusal
 // has to reach that spelling, or the module target has no guard at all.
 //
 // The remedy is the counter-probe `examples/0166-eintritt-irq-maskiert.gab`:

@@ -39,8 +39,6 @@ checks, the acceptance run. An agent gets its own working directory.
 
 ## 2. The working rules
 
-*The rule texts below name instruments that were retired on 2026-10-17 (the counters, the document-figure guards, the mutation run). The lesson stands; the instrument is in Git.*
-
 ### W1 — A coverage number counts evidence, not attempts
 *Damage (2026-08-14):* five new rules, five new mutations, summary `37 of 37` — formed from
 `len(MUTATIONEN)`, while an older mutation had lost its anchor and did not run at all. **A dead

@@ -7,7 +7,6 @@
 //     `w ^ u32::max`     0 errors  ->  emittiert `w ^ u32->max`  ->  cc: »u32« nicht deklariert
 //
 // Der Ausweg war die ausbuchstabierte Form, und der Korpus hat sie geschrieben --
-// `messung/netz/udp-echo.gab:111`, `return (b & 65535) ^ 65535;`, RFC 1071.
 //
 // **Warum dafuer ein Zeichen in den Wortschatz kommt** (`OA1`, begruendungspflichtig):
 //

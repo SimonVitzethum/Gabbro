@@ -29,7 +29,6 @@
 //
 // The form below is the one that carries the guarantee, and it needs no new word: two
 // `linear type`s, with the write path declared over the driver-side one alone.
-// `messung/proben/probe-besitz-zwei-typen.gab` is the same shape, green and emitting.
 //
 // The companion is `examples/poison/672`: reclaiming a buffer that was never armed.
 

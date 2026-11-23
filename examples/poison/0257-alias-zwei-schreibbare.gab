@@ -1,5 +1,4 @@
 // erwartet: R007
-// **Die syntaktische Haelfte der Aliasfrage** (2026-08-24, `messung/RACE.md` A1).
 //
 // `verschraenken(r, r)` uebergibt ZWEIMAL denselben Zeiger. `a` und `b` sind damit dasselbe
 // Objekt, der Rumpf schreibt durch beide, und die zweite Zuweisung macht die erste zunichte.

@@ -9,7 +9,6 @@
 // The composition premise this pins: a termination argument must cover EVERY member of
 // the cycle, not just one of them. The half-covered cycle (one measure) is `poison/747`,
 // the three-member cycle `poison/748`, and the rule this will become is `H022`
-// (`messung/PFLICHTEN-ORDNUNG.md`).
 module gift::wechselruf_ohne_mass {
 
 static mut a : u32 = 0;

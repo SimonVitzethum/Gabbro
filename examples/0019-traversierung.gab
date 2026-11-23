@@ -65,7 +65,6 @@ impl fn aktive_zaehlen(w : ptr<normal, r> Werte) -> u32
         // Durchgang, und die Domaene hat NSLOTS Plaetze -- genau die Schranke, die «H2.1»
         // am 2026-08-19 von Hand bewiesen hat und die der `let` seither als Typ traegt.
         // *Mehr ist heute nicht schreibbar:* `n == count(s in slots of w : w.slots[s].aktiv)`
-        // waere die Aussage, die man will, und sie ist «B13» (`messung/AGGREGATION.md`).
         // **`passes` is the number of passes already done** (2026-09-08). `n <= NSLOTS`
         // is true and unprovable: a pass starting at `n == NSLOTS` has to be handled by
         // the rule, and cannot be. `n <= passes` is the sentence that survives a pass,

@@ -15,11 +15,9 @@
 //
 // Refusing over the visible lower bound instead would invert R16, and it is not
 // provably safe: the visible hull over a cycle is built from DECLARED effects, and
-// `messung/proben/460` measures that declared `locks` over-states who takes what (a
 // correct program refused). A lower-bound refusal would refuse correct programs of
 // the 460 shape wherever a cycle passes nearby. So the silence stands documented
 // here, not built. (`sperren.rangordnung` in the pass register and section 5(a)
-// of `messung/H006.md` book the same boundary.)
 module gift::rangumkehr_hinter_zyklus {
 
 const TIEFE : u32 = 16;

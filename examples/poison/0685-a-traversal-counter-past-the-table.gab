@@ -33,7 +33,6 @@
 // > have learned the bound, it would merely have started refusing traversals*, and those
 // > eleven files are what says it did not.
 //
-// `messung/KLEMPNEREI-2026-09-07.md` §5.
 
 module gift::traversal_counter_past_the_table {
 

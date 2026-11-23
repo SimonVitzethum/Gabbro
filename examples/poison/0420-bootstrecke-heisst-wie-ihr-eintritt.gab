@@ -25,7 +25,6 @@
 // > wenn der Schritt eine erklaerte Funktion ruft. `write_cr3` unten ist ein `axiom`, also
 // > schreibt der Erzeuger fuer Schritt 2 nichts -- und ein `const gabbro_boot_x_s2` daneben
 // > waere kein Mangel. *Bis zum 2026-08-31 war es eine Absage* (gemessen, `m9-s4`); jetzt
-// > steht die Bedingung in der Aufzaehlung, und `messung/stille-proben/` haelt die Messung.
 
 module gift::bootstrecke {
 

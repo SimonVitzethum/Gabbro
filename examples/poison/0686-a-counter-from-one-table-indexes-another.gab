@@ -18,7 +18,6 @@
 // > refuses it is that `index into Q` and `index into S` are different types with different
 // > bounds, which is exactly what a human writing the two declarations would have gotten.
 //
-// `messung/KLEMPNEREI-2026-09-07.md` §5.
 
 module gift::counter_from_one_table_indexes_another {
 

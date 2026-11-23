@@ -4,7 +4,6 @@
 // of what a pointer IS -- `mmio` is volatile and device-mapped, `normal` is
 // not, and the emitter lowers them differently"*. Until 2026-09-15 it did not:
 // six functions differing in nothing but the space word emitted six
-// byte-identical C files (`messung/ADRESSRAEUME.md` §2).
 //
 // This file is the pair the claim needs. `lies_normal` and `lies_mmio` differ
 // in one word, and their emitted C differs in one qualifier:

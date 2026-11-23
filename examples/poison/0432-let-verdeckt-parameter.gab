@@ -27,7 +27,6 @@
 // **Die Verdeckung im VERSCHACHTELTEN Block steht hier NICHT.** Sie ist erlaubt, sie
 // uebersetzt, und `0019-let-verdeckt.gab` fuehrt sie seit dem 2026-08-14 als gueltiges
 // Programm. *Was dort offen bleibt, ist ein Mangel des Kostenpasses und keiner des
-// Programms* -- `messung/proben/probe-domaenenschatten.gab` misst ihn.
 
 module gift {
 

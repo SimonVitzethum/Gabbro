@@ -2647,7 +2647,7 @@ Full `lake build` from the changed `Syntax.lean` up, 226 jobs, green, 19 min 44 
 - The `flagge` wait's end, and the never-published flag, are not covered (liveness).
 - A stop inside a critical section leaves the lock's waiters waiting forever (named).
 - `SYNTAX.md` (the outcome table and the float row) and `FLOATING-POINT.md` name `logik bereich`
-  now; `dokumente/SYNTAX.md` and `dokumente/PLAN-TRANSLATION-VALIDATION.md` still say `hardware ieee` (the C runtime
+  now; `dokumente/SYNTAX.md` still says `hardware ieee` (the C runtime
   check `gabbro_hardware(IEEE)` is unchanged and is now a check the user proved passes).
 - Everything named in §22.6.
 
@@ -4179,7 +4179,7 @@ defect `schliesse_ende_noetig`; `Round/RundlaufAnw`..`3`). NOT proved: a round-t
 (assignments, calls, `if`, nested blocks) or for items; elaboration beyond tables, locks, statics and `impl fn` over integers with
 `let`/`if`/`traverse`/`return`. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
 
-## 78. `Code`: the target-independent low-level language and the lowering refinement (Track L, 2026-10-18, `PLAN-TRANSLATION-VALIDATION.md` 9a)
+## 78. `Code`: the target-independent low-level language and the lowering refinement (Track L, 2026-10-18)
 
 `grammatik/Grammatik/Code/` (Model, Lower, Refine, Conc). `Code` is a language of our own, **not LLVM** and
 ISA-neutral by construction: unbounded locals, no flags, a branch tests a word, explicit-width

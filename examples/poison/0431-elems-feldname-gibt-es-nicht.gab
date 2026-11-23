@@ -6,7 +6,6 @@
 // Zelle als ungeprueft und nannte den Grund aus dem Quelltext -- *„`M109` steigt nur in
 // `[index]`-Suffixe ab, nicht in `.feld`"*.
 //
-// GEMESSEN am 2026-08-31 (`messung/proben/probe-elems-feldname.gab`), dieselbe
 // Verfaelschung in drei Stellungen gegen den unveraenderten Pruefer:
 //
 //     …: 8 items, 0 errors, 0 hints

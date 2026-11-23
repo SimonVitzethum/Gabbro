@@ -7,7 +7,6 @@
 // sie betritt diese Datei den RCU-Waechter nie. *Der Leser sieht einen Lesebereich; der
 // Pruefer sieht einen Block.*
 //
-// Gemessen vor dem Bau an `messung/abi-proben/unbekannte-domaene.gab`, das seit dem
 // 2026-08-21 im Ordner steht: 4 Items, **0 Fehler, 0 Hinweise**.
 //
 // Dieselbe Gestalt wie `poison/251` (`H016`), ein Konstrukt weiter: **ein genommener Name,

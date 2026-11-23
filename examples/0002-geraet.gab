@@ -89,7 +89,6 @@ extern fn geraet_haengt() -> never effects { diverges };
 // -- **kein zweiter Mechanismus.** Und die Haelfte, die die Fundstelle schliesst, ist die
 // schwaechere: *wo die Stufe nicht bestimmt ist, gilt, was JEDE Stufe erlaubt.* Eine lineare
 // Marke bleibt damit eine Erlaubnis, die niemand halten muss -- gesagt ist nur, was ohne sie
-// folgt. Die Entscheidung mit beiden abgelehnten Formen steht in `messung/PHASENKLASSE.md`.
 
 // Ein `device … at dma` senkt nur ab, wenn die Kohaerenz AUSGESPROCHEN ist: welche Barriere
 // ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und der Erzeuger baut

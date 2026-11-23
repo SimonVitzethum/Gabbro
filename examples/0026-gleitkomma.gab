@@ -13,7 +13,6 @@
 // gemessen wurde und der Kopf das Gegenteil behauptete.
 //
 // **Was WEITER gilt**: `f32` stand bis zu diesem Tag in keinem Programm des Baumes, und
-// ein Gleitkommaliteral wird im C ein `double` -- siehe `messung/GRAMMATIKTAFEL.md` §3.
 
 module beispiel::gleitkomma {
 

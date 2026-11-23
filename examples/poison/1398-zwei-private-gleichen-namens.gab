@@ -7,7 +7,6 @@
 // answers "redefinition of `f`" after the checker said 0 errors (OFFEN O40, measured with the
 // release binary of `ffce2d5d`). The network stack met it with three private watchdogs of one
 // name. Its clean twins: a body-less `extern fn` beside a body (`examples/29`), and two
-// bodies under different `arch` words (`messung/fragmente/F05.gab`).
 module gift::zwei_private::a {
 
 fn f() -> u32
