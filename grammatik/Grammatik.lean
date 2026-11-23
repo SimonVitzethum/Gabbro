@@ -50,6 +50,7 @@ public import Grammatik.Zielsatz.Waechter.Pins
 public import Grammatik.Zielsatz.Waechter.Wildcards
 public import Grammatik.Zielsatz.Waechter.Formen
 public import Grammatik.Zielsatz.Waechter.Ratschen
+public import Grammatik.Zielsatz.Ideal.Prototyp.Root
 
 
 
