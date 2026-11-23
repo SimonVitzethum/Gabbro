@@ -17,11 +17,10 @@ public import Grammatik.Parser.Profil.Register
     register-state manipulation, a declared stack region that needs the C08 start service and the C12
     forward-only handle) stays REFUSED by name; it is never erased. Extraction runs on the RESOLVED items
     (`pre108`), where dispatch roots and function names are the same keys.
-  * Guest admission is canonical in `Logik/Ruf/Guest/Boundary.lean`; isolation
-    is a `GuestServicePflicht` under C08 user logic. The source form still
-    carries no service binding, so it has a named refusal below. The historical
-    `assume` field cannot supply software isolation. Guest instructions are
-    never executed as G code or given Gabbro body guarantees.
+  * Generic guest admission remains in `Logik/Ruf/Guest/Boundary.lean`; isolation
+    is a `GuestServicePflicht` under C08 user logic. Its former source adapter is
+    deleted. Checked guest language constructs follow LOW-LEVEL-SYNTAX-PLAN.
+    Guest instructions are never executed as G code or given Gabbro body guarantees.
 
   Not here: the generated trampoline, the exact forwarding of C12's `Ty.entry` handle, the stack region and
   the C08 start service, activation/return/join behaviour against `FadenSchritt`/GX starts. Those need the

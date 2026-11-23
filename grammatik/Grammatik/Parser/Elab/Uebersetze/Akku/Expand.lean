@@ -437,7 +437,7 @@ def uAkkuExpandUnit (ps : List AkkuPlan) (fns : List (FnSig × SAnw))
     wrapper per `accumulates` item, expand accumulator uses in the user
     functions and foreign signatures. Returns the user functions with the
     generated ones appended (update, reduction, wrapper, in this order), the
-    query heads and the expanded foreign pairs. -/
+    query heads and the expanded foreign signatures. -/
 def uAkkuVorlauf (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (ms : List SItemTief)
     (fnItems : List (FnSig × SAnw)) : Except String
@@ -445,8 +445,8 @@ def uAkkuVorlauf (consts : List (String × Int))
   match uAkkuGenFns consts alias ms with
   | .error e => .error e
   | .ok gen =>
-    let fremdPaare := ms.filterMap uFremdSig
-    match uAkkuExpandUnit (gen.map fun g => g.1) fnItems fremdPaare with
+    let fremdSigs := ms.filterMap uFremdSig
+    match uAkkuExpandUnit (gen.map fun g => g.1) fnItems fremdSigs with
     | .error e => .error e
     | .ok (fnItems', fremdSigs') =>
       .ok (fnItems' ++ gen.flatMap fun g => [g.2.2.1, g.2.2.2.1, g.2.2.2.2],

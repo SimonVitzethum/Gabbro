@@ -79,8 +79,8 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
   rfl
 
 /-- The production checker proves the model's program judgment with the
-    exact function, lock, carrier and root enumerations. Guest admission
-    is a separate proved conjunct. -/
+    exact function, lock, carrier and root enumerations. Source guest
+    declarations have been removed; the generic guest descriptor list is empty. -/
 theorem accepts_program (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
     (accepted : accepts u P main = .ok true) {checks : List (CheckDecl (declOf u))}
     (derived : uCheckDecls u = .ok checks) :

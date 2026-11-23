@@ -88,7 +88,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   -- C15 use export: query/update/fold per accumulator, then expand uses.
   match uAkkuVorlauf consts alias ms fnItems with
   | .error e => .error e
-  | .ok (fnItems, akkuFrage, fremdPaare) =>
+  | .ok (fnItems, akkuFrage, fremdSigs) =>
   match uFnNamenEindeutig fnItems with
   | .error e => .error e
   | .ok _ =>
@@ -151,7 +151,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
-  match uSeq (fremdPaare.map (fun sig => elabAxKopf alias tabs whys globs (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
+  match uSeq (fremdSigs.map (fun sig => elabAxKopf alias tabs whys globs (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
   | .error e => .error e
   | .ok axKoepfe0 =>
   match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner) (spaces := spaces))) with
