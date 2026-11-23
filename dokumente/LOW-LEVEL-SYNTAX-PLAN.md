@@ -5,6 +5,7 @@ decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur ia
 Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump
 oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen."
 The compile-time selection `if (…) then { … } else { … }` (§4.10) is the owner's addition O24 of the same day.
+O26 (same day) adds devices found at run time, wide and enqueued device stores and foreign CPU code (§4.6, §4.19).
 O25 (same day) adds hardware virtualisation, IOMMU spaces, suspend/resume, debug and performance units,
 backtraces, guest grants and secure worlds (§4.11–§4.17); JIT and kernel modules get no syntax.
 
@@ -233,6 +234,46 @@ console.put(byte) else timeout;
   declared coherence (none on coherent x86 DMA; clean/invalidate by range on non-coherent AArch64/RISC-V devices).
 - That a driver follows its device's protocol is program logic (GabbroProve); the device's answers are its
   declared contract (hardware, named in (c)).
+
+**Devices found at run time (O26).** Most devices are not at a fixed address: PCIe BARs, devicetree and ACPI nodes,
+hot-plugged functions. Their window comes from a discovery answer, and that answer being true is a hardware or
+environment assumption either way — the compiler does not care where the number came from.
+
+```gabbro
+layout nvme_regs { cap: u64 @0x00 r, cc: u32 @0x14 rw, csts: u32 @0x1C r { rdy: bit 0 }, … }
+let bar = pci.config(fn).bar(0) else absent;                 // a discovery answer: an address and a size
+let nvme = device at bar as nvme_regs else overlaps;          // a device value from that answer
+```
+
+- `device at w as L` builds a device value from a window `w` that is a **discovery answer** (a PCI configuration
+  read, an ACPI or devicetree node from the handoff regions, a bus enumeration) with the register layout `L`.
+  The provenance is checked: the window must come from such an answer, not from arithmetic on arbitrary numbers.
+  That the answer is true (the device decodes exactly that window, with that layout) is part of the device
+  contracts (named in (c)); for windows from firmware tables it is part of the firmware handoff.
+- The checker and the generated code keep memory safety independent of that assumption: the window is checked at
+  run time against the ledger, and one that overlaps RAM, the image or another live device value takes the `else`
+  channel (`overlaps`). A wrong answer can therefore make a driver talk to the wrong device, never corrupt
+  memory the program owns.
+- Assigning BARs (writing the window into the configuration space inside a bridge window the kernel owns) is
+  driver logic over the same construct; the bridge window itself is a device region of the platform unit or of
+  the firmware handoff. AML `OperationRegion`s use the same construct.
+
+**Wide and enqueued device stores (O26).**
+
+```gabbro
+layout dsa_portal { submit: [u8; 64] @0x0 w store64 }        // one 64-byte store, never torn
+dsa.portal.submit.write(descriptor) else unsupported;        // MOVDIR64B / ST64B
+let r = dsa.portal.submit.enqueue(descriptor) else unsupported;   // ENQCMD / ST64BV0: accepted or retry
+let v = gpu.ring.head.read128() else unsupported;            // 16-byte single-copy access
+```
+
+- A register field may declare an access shape: `store64` (one 64-byte store), `enqueue64` (a 64-byte store whose
+  device answers accepted or retry), `atomic128` (a 16-byte single-copy read or write), and exact widths 8–64 as
+  today. The compiler lowers them to `MOVDIR64B`, `ENQCMD`/`ENQCMDS`, AArch64 `ST64B`/`ST64BV`/`ST64BV0`, and to
+  16-byte accesses only where the manual gives single-copy atomicity for that width and memory kind.
+- Whether a core has the instruction is decided by `cpu.caps` at run time; without it the operation takes its
+  `else` channel (`unsupported`), never a torn fallback. A target that never has it refuses the shape unless the
+  driver selects another path through compile-time selection (§4.10).
 
 ### 4.7 Guests and system calls (L8)
 
@@ -525,15 +566,50 @@ protect physical secure_ram for world secure;                           // PMP/e
   masters) that enforces the configured world partition and enters the monitor only through its declared entry;
   the configuration of the platform controllers is the image driver's proved work, not part of the assumption.
 
+### 4.19 Foreign CPU code: option ROMs and binary drivers (L18, O26)
+
+Code for the CPU that the image did not compile — a device's option ROM (for example the VGA BIOS that initialises
+a graphics card), a vendor's binary-only driver — can be run in two ways. The first keeps every guarantee and is
+the default; the second trusts the code and is visible as a named assumption.
+
+```gabbro
+// 1. isolated: the foreign code is a guest; nothing is assumed about it
+let rom = pci.config(gpu).option_rom() else absent;            // a discovery answer, copied into a region
+let v   = vm.new(rom_space, intercept { ports all, memory_faults }) else unsupported;
+map(rom_space, 0xC0000, rom_copy, rights { read, execute }, kind normal) else full;
+grant device gpu to vm v;                                      // its windows and its IOMMU group
+let c   = v.vcpu(0, entry_pc = 0xC0003, width 16);              // real-mode entry of the ROM
+match enter vm v vcpu c { io(port, …) => emulate_bios(…), … }  // the hypervisor emulates the BIOS services
+
+// 2. trusted: the foreign code runs in the kernel under a named assumption
+foreign code blob_driver from image_region abi sysv
+    contract { touches regions(dma_bufs), device(gpu); keeps locks; returns; } assume blob_driver_ok;
+blob_driver.init(gpu_ctx) else failed;
+```
+
+- **Isolated** (the default): the foreign bytes are data mapped executable in a guest's own space — a user-mode
+  guest (§4.7) or a VM (§4.11), with the devices it needs granted behind their IOMMU group (§4.12). This needs no
+  new trust: the isolation theorems of L8 and L15 hold for every guest, so a wrong or malicious ROM or driver can
+  only produce wrong answers in its own space, which the kernel treats as untrusted data. A real-mode option ROM
+  runs in a 16-bit vCPU; the BIOS services it calls are emulated by the hypervisor (program logic).
+- **Trusted** (`foreign code … assume N`): the bytes become kernel code under a declared calling convention and a
+  declared contract (frame, carriers and extents it touches, locks, return). Like a C function behind `extern fn`
+  (A6, owner 2026-11-14), this is a named environment assumption visible at every use, and **one such assumption,
+  if false, can void every guarantee of the theorem**: code at kernel privilege is unchecked. The publication is
+  that of `make executable` (§4.9: no writable alias, cache synchronisation on every core); the bytes and their
+  provenance are recorded, not checked.
+- Kernel modules written in Gabbro still get no syntax (O25): they are compiled with the kernel. `foreign code`
+  is only for CPU code that no Gabbro compiler produced.
+
 ### 4.18 Inventory: the constructs and their rows
 
-The count that the estimate of PLAN-COMPILER-READY §7 uses (86 constructs; each gets a G rule, an `Akzeptiert`
+The count that the estimate of PLAN-COMPILER-READY §7 uses (89 constructs; each gets a G rule, an `Akzeptiert`
 rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a GIR cell with its lowering theorem):
 
 | Row | Constructs | Count |
 |---|---|---|
 | L1 | `split_at`, `split_pages`, `merge`, `view as`, `address()` | 5 |
-| L2 | device declaration, `lend`, `take back`, device coherence and suspend-state declaration | 4 |
+| L2 | device declaration, `device at w as L` from a discovery answer, wide and enqueued stores (`store64`, `enqueue64`, `atomic128`), `lend`, `take back`, device coherence and suspend-state declaration | 6 |
 | L4 | `state`, `code … in`, `jump`, `jump long`, `wait for interrupt`, `stop core`, `cpu.caps`/`cpu.has`, `cpu.cycles`, `suspend system`, `suspend core`, resume arrival | 11 |
 | L5 | interrupt, exception, thread-switch and first-entry frames, `per core`, `core.id`, `switch to`, `backtrace` | 8 |
 | L6 | `space.new`, `map` with kinds, `unmap` (token), `protect`, `flush(token)`, `activate` | 6 |
@@ -546,7 +622,8 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
 | L15 | `space.new_guest`, `vm.new` with mandatory controls and intercepts, `vcpu`, `enter vm`, `vm_exit`, `inject interrupt`, `copy from/to vm`, `assign device`, nested vCPU | 9 |
 | L16 | `io.space.new`, `group_of`, `attach group` (PASID, ATS policy), `dma_fault` entry | 4 |
 | L17 | monitor state with worlds, `monitor_call` entry, `return to world`, `resume world`, `protect physical`, `provide environment` | 6 |
-| **sum** | | **86** |
+| L18 | `foreign code … assume` (trusted foreign CPU code); isolated foreign code uses the guest constructs of L8 and L15 | 1 |
+| **sum** | | **89** |
 
 ## 5. Typing, acceptance and the trust boundary
 
@@ -558,7 +635,7 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   its IOMMU mapping where the platform has an IOMMU, a DMA-capable device granted to an untrusted guest or VM
   without an attached isolation group, a device value used after resume before reinitialisation, a world switch
   with memory not partitioned, a declared register that a construct manages, a memory kind the region or target
-  cannot realise, an entry kind the platform lacks, unsupported targets by name.
+  cannot realise, an entry kind the platform lacks, a device window that is not a discovery answer, a store shape the target never has (outside compile-time selection), foreign code without a declared contract and assumption, unsupported targets by name.
 - Every construct and generated frame accounts for all architectural effects: register and flag state, hidden stack
   traffic, privilege, translation, masks, faults and their exits, interleavings and the atomic rely. A generated
   construct is not implicitly atomic; masking is not a multicore lock.
@@ -567,9 +644,9 @@ rule, a parser/exporter form, an `_erfuellbar` lemma, and on the compiler side a
   `Mmu`, `IrqDelivery` (non-maskable, debug and performance events as the manual specifies, blocking rules and
   terminal outcomes included), `VirtUnit`, `Iommu` (an envelope of IOMMU, interconnect and endpoints), `SecureUnit`
   (a platform envelope), `ResetState` (per processor: the state at the reset vector and at the arrival of a further
-  core), device contracts (their DMA part only for requests outside the `Iommu` envelope), the memory-model reading.
+  core), device contracts (including the truth of discovery answers; their DMA part only for requests outside the `Iommu` envelope), the memory-model reading.
   Environment: `FirmwareHandoff` (UEFI), `BiosHandoff` (16-bit loader), the firmware services of §4.8 including
-  the resume arrivals they establish, resident firmware with its rely contract. Everything else — boot, allocators,
+  the resume arrivals they establish, resident firmware with its rely contract, and each trusted `foreign code` item with its contract (§4.19). Everything else — boot, allocators,
   page-table code, schedulers, drivers, hypervisors, monitors and provided firmware services — is software inside
   the image and the user's logic (b).
 
@@ -638,12 +715,12 @@ for MMIO, ports and DMA; PCIe through ECAM or ports; ACPI tables and devicetree 
 program logic); reboot and power-off; hardware virtualisation with stage-2 translation, virtual interrupts and
 nested guests (§4.11); IOMMU spaces with PASID and interrupt remapping (§4.12); suspend and resume (§4.13); debug
 and performance units (§4.14); backtraces (§4.15); rights granted to guests (§4.16); secure worlds, the monitor
-and firmware services provided in Gabbro (§4.17).
+and firmware services provided in Gabbro (§4.17); devices found at run time and wide or enqueued device stores (§4.6); option ROMs and binary-only drivers, isolated as guests or trusted under a named assumption (§4.19). Bit-banging with hard timing is writable, but no hardware time bound is claimed.
 
 Deliberately without a construct:
 
 | Item | Status |
 |---|---|
-| JIT compilers, loadable kernel modules | no new syntax (owner, 2026-11-23). `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
+| JIT compilers, loadable kernel modules written in Gabbro | no new syntax (owner, 2026-11-23); foreign CPU code is §4.19. `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
 | DRAM initialisation on real boards | not a language gap (driver logic under the reset boundary); vendor details are not public on most platforms, so the reset gate runs on emulator platforms |
 | speculation mitigations, retpolines, fences | compiler work under B17, never a user construct |
