@@ -472,8 +472,8 @@ does not change between targets; K6 measures that its diff between the three tar
 1. Model first (PLAN-COMPILER-READY L0–L17): the neutral state of §3 and one G rule per construct, typestate
    acceptance in `Akzeptiert`, generic preservation and an `_erfuellbar` lemma per construct (AGENTS.md §3).
    `gabbro_ziel` stays on the standard axioms; the new assumptions (`ResetState`, `BiosHandoff`, `VirtUnit`,
-   `Iommu`, `SecureUnit`, the environment interfaces, non-maskable delivery) are a `Spec.lean` diff shown to the
-   owner before merge.
+   `Iommu`, `SecureUnit`, the environment interfaces, non-maskable delivery) are the closed LOW-LEVEL
+   ASSUMPTION LIST of the `Spec.lean` header (owner, 2026-11-23); each enters premise (c) with its construct.
 2. Connection to G/GX and the no-bypass theorem: no path reaches privileged state except through these constructs.
 3. Parser/exporter/checker (L10): the constructs above; refusals by name for everything unmodelled. The `asmT`
    string form, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software
