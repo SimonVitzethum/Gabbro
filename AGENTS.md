@@ -63,9 +63,13 @@ Consequences:
 - **Software inside the verified image is user logic; software outside it is a named environment assumption with a
   declared contract.** Nothing is OS-specific: a system or kernel call is a generic call whose contract the program
   or its binding library declares.
-- **No assembly anywhere.** Privileged operations are target-binding calls over linear `context<P>`; their meaning
-  is a neutral IR cell, their bytes are target-table rows; entry and exit code is generated from `entry`
-  declarations. Boot code is user code in Gabbro.
+- **No assembly anywhere, and no instruction-shaped interface (owner, 2026-11-23).** Every machine-level concept is
+  a construct of the language with a model rule — execution states of every width with `jump`/`jump long`, address
+  spaces, entries, cores, guests, devices, firmware services; GIR cells and target-table rows are the compiler's and
+  the model's business, never the user's. No function per instruction, no `context<P>` threaded through such
+  calls. Entry/exit code, vector and descriptor tables are generated. Boot code is user code in Gabbro from the
+  chosen boundary on, down to the 16-bit reset state. The kernel source is the same on every target; only a
+  platform unit (registers, addresses, arrival states, environment interfaces) differs.
 - **No `unsafe`.** All low-level access is checked authority; memory from outside comes as a region, never from a
   number; no int→pointer conversion.
 - **Memory:** regions with a ceiling refuse when full; open regions without a ceiling stay admitted (the provider's

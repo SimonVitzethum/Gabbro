@@ -27,8 +27,8 @@ Lean work may run in parallel where §6 says so.
 | **R1 Stage 0 complete** | every form that the sources of GabbroV and of the compiler need compiles through Stage 0 with a connected generic theorem; the IR corpus is green; `accepts` is proved equal to the goal theorem's checker on the unit it builds | the compiler can be written and run |
 | **R2 GabbroV ready** | the duty files are generated in Lean from the elaborated unit for every Stage-0 form; the bridge derives premise (b) from the user's proved duty statements for every such unit | a user (and the compiler's own sources) can discharge (b) |
 | **R3 Trusted output** | the image theorem: the goal theorem holds on every image Stage 0 emits (owner, 2026-11-12: "stage0 braucht einen Beweis, dass sie korrekt ist, der Zielsatz auf allem gilt, was sie erzeugt") | what Stage 0 emits carries memory safety, race freedom, contracts and time |
-| **R4 Low-level model** | addresses, contexts, bounded views, device registers, privileged operations, entry frames, address translation, nested interrupts, user-mode guests and the kernel as its own runtime are in the Lean model, with `gabbro_ziel` extended and still on the standard axioms | a kernel is a program of the language, not a foreign body |
-| **R5 Kernel ready** | the compiler on GIR emits freestanding images with privileged and entry cells; a witness kernel written in Gabbro boots on x86-64 (firmware emulator and one real machine), its unit meets (a) by computation, (b) through GabbroV, (d) by proof, and (c) is exactly the named environment list of §4.4 | a kernel can be written, and what is left to its author is logic and environment |
+| **R4 Low-level model** | the neutral low-level language of LOW-LEVEL-SYNTAX-PLAN (O23): execution states of every width with `jump`/`jump long`, raw memory as regions, device registers, address spaces with shootdown, entries including non-maskable ones, cores and per-core data, guests with single-fetch guest copies, environment interfaces, images and code from data, the kernel as its own runtime — in the Lean model, with `gabbro_ziel` extended and still on the standard axioms | a kernel is a program of the language, not a foreign body |
+| **R5 Kernel ready** | the compiler on GIR emits freestanding images for every construct; one witness kernel written in Gabbro boots on x86-64 from the 16-bit loader boundary and from UEFI (firmware emulator and one real machine) and, with the SAME kernel source, on AArch64 and RISC-V 64; its unit meets (a) by computation, (b) through GabbroV, (d) by proof, and (c) is exactly the named list of §4.4 | a kernel can be written, and what is left to its author is logic and environment |
 
 **The compiler starts after R1, R2, R3 AND the syntax part of R4 (owner, 2026-11-13).** "Ich würde vor dem
 Compilerstart alle Syntax auch fertig im Modell machen, damit man den Compiler von Anfang an darauf auslegen kann,
@@ -45,10 +45,12 @@ und Stage 0 und GabbroV MÜSSEN formal richtig sein bzw. unter dem Zielsatz steh
 This supersedes the earlier order (owner, 2026-11-11: compiler after R1+R2, R3 and R4 beside it). The compiler
 is still built on GIR from the start. R5 needs all gates.
 
-**What "no assembly anywhere" means in this plan** (details in §4.1): no instruction text in any source, binding
-or library; no assembly file in a kernel, a runtime or a compiled binary. Machine instructions exist in exactly
-one place, as rows of a target table (data: a cell and its encoding template), checked by `TargetOk` and measured
-by M. One assembly listing exists in the repository today, the Stage-0 runner (`stage0/runner/runner.s`), written by Lean from its proved bytes, not by hand; it is
+**What "no assembly anywhere" means in this plan** (details in §4.1, owner O12 and O23): no instruction text in
+any source or library, and no instruction-shaped interface either — no function per machine operation, no
+`context<P>` threaded through such calls (O23: "context ist auch nur iasm"). Every machine-level concept is a
+construct of the language; GIR and its cells are the compiler's and the model's business. Machine instructions
+exist in exactly one place, as rows of a target table (data: a cell and its encoding template), checked by
+`TargetOk` and measured by M. One assembly listing exists in the repository today, the Stage-0 runner (`stage0/runner/runner.s`), written by Lean from its proved bytes, not by hand; it is
 a bootstrap tool, verified against an x86-TSO model (`runner_tso`), it is in no kernel and no compiled binary, and
 it is deleted when the compiler compiles itself (K7).
 
@@ -204,30 +206,34 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | C11 | part of `Spec.lean`: a non-degenerate unit meets all premises jointly and has a non-trivial run (possible without a float instance through `GleitHw` and `n1E_gabbro`) | 200–800 / 1 / — |
 
 
-### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN revised by D12–D14)
+### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN, redesigned by O23 on 2026-11-23)
 
-**State 2026-11-13 (built, as LAYERS beside machine G, not yet connected to it):** L1 addresses, context ledger, `ram_view`, boot hand-over (`Niedrig/Authority`, `Niedrig/Boot`); first parts of L2 (register contracts), L3 (byte capabilities with initialisation), L4 (neutral architectural state), L5 (entry frame descriptors with refusals), L6 (translation regime: walk, map, unmap, protect, aliases), L7 (per-core masks, priority nesting). None of these rows is complete: owed for each is the simulation by machine-G steps, the `Akzeptiert` checks and the no-bypass theorem (a review's R1–R3), then parser/exporter.
+**State 2026-11-13 (built, as LAYERS beside machine G, not yet connected to it):** L1 addresses, context ledger, `ram_view`, boot hand-over (`Niedrig/Authority`, `Niedrig/Boot`); first parts of L2 (register contracts), L3 (byte capabilities with initialisation), L4 (neutral architectural state with `setMask`, `setRoot`, `setVectorBase`, `enterKernel`, `leaveKernel`), L5 (entry frame descriptors with refusals), L6 (translation regime: walk, map, unmap, protect, aliases), L7 (per-core masks, priority nesting). None of these rows is complete: owed for each is the simulation by machine-G steps, the `Akzeptiert` checks and the no-bypass theorem (a review's R1–R3), then parser/exporter. **After O23** the ledger stays as machine state but leaves the surface (no `context<P>` value, no `ram_view(c, a, n)`): the built layers are reused as the model of the constructs of LOW-LEVEL-SYNTAX-PLAN §4, the user-facing operation functions are not built.
 
 Lean model, parser/exporter and checker only; never Stage 0, the runner or GabbroV. Runs IN PARALLEL with the C
 packages (owner, 2026-11-13: "Low level ins Model, kann parallel gebaut werden, soll aber nicht in Stage 0 und
-GabbroV"; this replaces the order of 2026-11-03 that it starts after them). The low-level forms are part of "all
-syntax in the model" and therefore of the compiler's start condition; Stage 0 and the bridge keep refusing them. No `unsafe` anywhere; no instruction text anywhere; boot code
-is user code. The designs behind the items are in §4.
+GabbroV"). The low-level forms are part of "all syntax in the model" and therefore of the compiler's start
+condition; Stage 0 and the bridge keep refusing them. No `unsafe`, no instruction text, no instruction-shaped
+interface (O23); GIR is the compiler's and the model's business; boot code is user code from whatever boundary
+is chosen, down to the 16-bit reset state. The kernel proper compiles from the same source on every target; only
+the platform unit (registers, addresses, environment interfaces) differs. The designs are in §4 and the plan.
 
 | ID | Item | Estimate |
 |---|---|---|
-| L0 | owner decisions of §8 that change rules or the goal statement (O12–O16, decisions 1–4 of the low-level plan), each with its explicit `Spec.lean` diff | — |
-| L1 | canonical model of authority: `address<S>` as inert data, the linear `context<P>` with its ledger (live spans, space, permissions, class, owner, epoch, privilege and interrupt state), `ram_view` as the one producer of a bounded view from an address, the boot transition relation, generic preservation, joint witnesses with a real write and a privilege handoff | 8 000–20 000 / 3–5 / — |
-| L2 | device memory: register reads, writes, fallible reads and register transitions over the lifted `RegLokal` (A2); device views as a memory class of their own that `ram_view` refuses; buffers lent to a device and taken back under quiescence; **driver conformance (owner, 2026-11-14):** the device protocol is a declared contract of the device (hardware side, named in (c)); that a driver follows it is program logic, proved by the user through GabbroProve; the language guarantees register types, authority and declared transitions generically | 4 000–10 000 / 1–3 / — |
+| L0 | owner decisions of §8 that change rules or the goal statement (O12–O16, O23, decisions of the low-level plan), each with its explicit `Spec.lean` diff; new named assumptions `ResetState`, `BiosHandoff`, environment interfaces, non-maskable delivery in `IrqDelivery` | — |
+| L1 | canonical model of authority: `address<S>` as inert data of the state's width; raw memory owned as regions from the arrival contract (`split_at`, `split_pages`, `merge`, `view as T`, `address()`), no way from a number to a region; the ledger (live spans, space, permissions, class, owner, epoch) as machine state and checker typestate, not a user value; generic preservation; `_erfuellbar` lemmas with a real write | 8 000–20 000 / 3–5 / — |
+| L2 | devices: one syntax for MMIO and I/O ports (`device d at … registers { … }` in the platform unit), register reads, writes, fallible reads and transitions over the lifted `RegLokal` (A2); device authority as a linear value handed out once; device views a memory class that RAM views refuse; `lend r to d` / `take back r` with generated cache maintenance by the device's declared coherence; **driver conformance (owner, 2026-11-14):** the device protocol is a declared contract of the device (hardware side, named in (c)); that a driver follows it is program logic, proved through GabbroProve | 4 000–10 000 / 1–3 / — |
 | L3 | raw byte access below the type level, in hosted programs and in the kernel: byte capabilities with value flow (C01), grant generations (C08) and loans (C09); typed views over bytes need representation, endianness and layout proofs; uninitialised bytes are written before they are read | 6 000–15 000 / 2–4 / — |
-| L4 | the architectural state as a neutral interface (privilege level, translation root, interrupt mask, vector base, per-core identity) and the privileged operations as calls of binding functions over `context<P>` with contracts; no source body, no certificate per body (D12) | 5 000–12 000 / 1–3 / — |
-| L5 | entry and exit frames: interrupt and exception entry and return, system-call entry and return, thread switch and first entry of a thread, generated from the `entry` declaration (register maps, preserved set, stack) with ONE generic theorem per frame kind | 6 000–15 000 / 1–3 / — |
-| L6 | address translation: a neutral model of a translation regime over the existing `walk` form, mapping, unmapping and protection as contracted operations on the tables, two aliases sharing one physical identity, reuse and revocation under quiescence of all cores with a proved translation-cache flush; what the translation unit does with installed tables is the named assumption `Mmu` | 6 000–15 000 / 2–3 / — |
-| L7 | interrupts beyond `KernPlan`: re-entry, nesting with priority levels, masking as a per-core state of the context, the handler tables the kernel installs as proved statements about its own tables (was X3) | 5 000–12 000 / 2–3 / — |
-| L8 | user-mode guests: the isolation boundary of an unverified or separately verified guest (C12), system-call contracts PROVED by the kernel in the conditional form of A1, no guest contract, cost or termination claimed for an unverified guest | 8 000–20 000 / 2–4 / — |
-| L9 | the kernel as its own runtime: premise (d) (`Laufzeit.lader/start/einmal`, spawn) derived from the kernel's proved start, core bring-up and scheduler instead of assumed; stacks sized by B9. Shape: in the first kernel the threads of the goal theorem are the per-core roots (one root declared once per core, a pool in the sense of `Mehrfach`, so `einmal` holds unchanged) and the declared interrupt handlers; the kernel spawns no Gabbro thread (`start`/`child`), because (d) assumes every spawn succeeds on an unbounded `Faden` and a kernel has finitely many cores. User processes are guests (L8), not Gabbro threads. Spawning kernel threads later needs a refinement theorem "the kernel's scheduler implements the thread machine's spawn and switch steps" | 6 000–15 000 / 1–3 / — |
-| L10 | parser, exporter, checker, obligations; refusals by name for everything unmodelled; `asmT` strings and software `assume` on `entrust` become refusals and are then removed | 3 000–8 000 / 1–2 / — |
-| L11 | positive and negative validation set of the low-level plan (RAM write/read, context transition, boot-to-root handoff, interrupt entry/return; forged authority, wraparound, stale epoch, alias, bad stack, undeclared clobber, missing barrier, hidden shared write, wrong privilege, device view through `ram_view`) | 1 500–4 000 / 1 / — |
+| L4 | execution states and transfers: `state S { width 16/32/64, privilege, translation, guards }`, code items `in S`, `jump` (same state, no return), `jump long … into S with space stack` (any state change below user privilege, one atomic G step with mapped target code and stack, interrupts masked), `wait for interrupt`, `stop core`, `cpu.has(feature)`, `cpu.cycles()`; the neutral per-core state (width, privilege, active space, mask, priority, vector table, per-core base, extended state, run status); refusals for states a target lacks | 8 000–20 000 / 2–4 / — |
+| L5 | entry and exit frames generated from `entry` declarations: interrupt, exception, system call, thread switch and first entry of a thread, ONE generic theorem per frame kind; the vector table (IDT with IST stacks, VBAR table, `stvec` table) generated from the declarations; per-core base kept and swapped by the frames (`swapgs`, `tpidr_el1`, `tp`/`sscratch`); the full extended register state (XSAVE size from `cpu.has`, FP/SIMD/SVE, F/D/V) saved on thread switch | 6 000–15 000 / 1–3 / — |
+| L6 | address spaces: `space.new`, `map`, `unmap`, `protect`, `activate` with the table format as compiler knowledge; `flush … on cores K` as the generated shootdown (IPI, flush handler, acknowledgement) with the theorem "no core of K translates the range by the old entries"; `unmap` returns frames only after the flush; two aliases share one physical identity; reuse and revocation under quiescence; the unit itself is the named assumption `Mmu` | 6 000–15 000 / 2–3 / — |
+| L7 | interrupts beyond `KernPlan`: scoped `interrupts off { }` and `priority at least p { }` per core, re-entry, nesting, `send interrupt v to core k`; `nonmaskable`, `machine_check` and `fatal` entries on their own stacks with lock-free code only (no lock, wait or allocation), delivered regardless of the mask by `IrqDelivery` (was X3) | 5 000–12 000 / 2–3 / — |
+| L8 | user-mode guests: `enter guest g`, `entry syscall`, the isolation boundary of an unverified or separately verified guest (C12), system-call contracts PROVED by the kernel in the conditional form of A1; guest memory only through `copy from guest … else fault` / `copy to guest … else fault` (every byte fetched once, faults through the `else` channel by a generated recovery table, user-access guard open only inside the copy); no guest contract, cost or termination claimed | 8 000–20 000 / 2–4 / — |
+| L9 | the kernel as its own runtime: premise (d) (`Laufzeit.lader/start/einmal`, spawn) derived from the kernel's proved start, `start core k at f(args) stack t` (neutral; lowered to INIT–SIPI plus the platform's 16-bit arrival code on x86-64, to PSCI `CPU_ON` or SBI `hart_start` elsewhere) and scheduler instead of assumed; stacks sized by B9. In the first kernel the threads of the goal theorem are the per-core roots and the declared interrupt handlers; the kernel spawns no Gabbro thread, user processes are guests (L8); spawning kernel threads later needs the refinement "the scheduler implements spawn and switch" | 6 000–15 000 / 1–3 / — |
+| L10 | parser, exporter, checker (typestate of state, regions, devices, services, masks), obligations; refusals by name for everything unmodelled; `asmT` strings, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software `assume` on `entrust` become refusals and are then removed | 3 000–8 000 / 1–2 / — |
+| L11 | positive and negative validation set of the low-level plan §7 (reset to kernel through `jump long`, BIOS and UEFI boundaries, RAM write/read, activate/flush, interrupt entry/return, NMI, second core, guest copy, environment exit; forged region, wraparound, stale epoch, alias, wrong state, `jump long` to unmapped code, bad stack, lock in NMI, double guest fetch, service after exit, missing flush, device through a RAM view, undeclared register) | 1 500–4 000 / 1 / — |
+| L12 | environment interfaces: `environment E abi A { fn … requires … ensures …; }` for firmware services (UEFI, PSCI, SBI, later BIOS services); service values only from an arrival contract, never from an address; generated foreign calling convention; linear end of service (`exit_boot_services` consumes `uefi`, its memory becomes kernel regions); contracts in the conditional form of A1 | 4 000–10 000 / 1–2 / — |
+| L13 | images and code: `image … format uefi / boot_sector / flash` with entry and placement (`place … below 0x10_0000 aligned 4096`), headers written by the compiler, loader statement and `LayoutOk` proved from the declaration; `make executable r as item` as the only way to code authority (region becomes read-only executable, instruction caches synchronised, the bytes are an item the compiler emitted) | 3 000–8 000 / 1–2 / — |
 
 ### C — the compiler on GIR (MACHINE-IR-PLAN §12, PLAN-SELF-HOSTING revised)
 
@@ -247,12 +253,12 @@ is user code. The designs behind the items are in §4.
 
 | ID | Item | Estimate |
 |---|---|---|
-| K1 | freestanding profile and image profiles: no host runtime, no implicit loader; first image format the firmware-loadable one (§4.2), with the loader statement `Laufzeit.lader` proved from the image layout and `LayoutOk` | 4 000–10 000 Lean |
-| K2 | privileged and entry cells in GIR; their x86-64 rows; `TargetOk`; M for these rows on a bare-metal measurement image (user-mode M cannot run them) | 5 000–12 000 Lean; harness 2 000–5 000 Gabbro |
-| K3 | the x86-64 binding library, written in Gabbro: descriptor and interrupt tables, the paging format behind L6, interrupt controller and timer, the firmware handoff (memory map, exit of boot services) | 5 000–15 000 Gabbro; its proofs 5 000–15 000 Lean |
-| K4 | start of further cores: on x86-64 a core starts in 16-bit mode, so the binding supplies a generated start item made of mode-transition rows with one proved contract ("the core arrives in 64-bit mode with this stack and context"); no assembly text, not written by the user | 3 000–8 000 Lean |
-| K5 | the witness kernel, written in Gabbro: boot, memory authority, translation, interrupts with a timer, two cores, one user-mode guest, one system call; proofs of its duties through GabbroV | 3 000–8 000 Gabbro; proofs 5 000–15 000 Lean |
-| K6 | a second binding (AArch64, the target direction of AGENTS.md) running the SAME kernel sources: the measure of how little is architecture-specific | 4 000–12 000 Gabbro; 4 000–12 000 Lean |
+| K1 | freestanding profile and image formats of L13: UEFI PE/COFF, 16-bit boot sector, flash image with reset vector (emulator), no host runtime, no implicit loader; the loader statement `Laufzeit.lader` proved from the image layout and `LayoutOk` | 4 000–10 000 Lean |
+| K2 | GIR cells for every low-level construct and their x86-64 rows, including the 16- and 32-bit rows and the state transitions of `jump long`; `TargetOk`; M for these rows on a bare-metal measurement image (user-mode M cannot run them) | 7 000–17 000 Lean; harness 2 000–5 000 Gabbro |
+| K3 | the x86-64 lowering of the constructs, proved once (generated descriptor and interrupt tables, paging format, shootdown, guest copy, extended state, foreign UEFI calls), and the x86-64 PC platform unit in Gabbro: registers, addresses (interrupt controllers, timer, serial ports, arrival page), arrival states, the UEFI environment interface and the 16-bit further-core arrival code | 5 000–15 000 Lean; platform unit 1 000–3 000 Gabbro |
+| K4 | start of further cores through `start core` (L9): on x86-64 INIT–SIPI and the platform's 16-bit arrival code, written in Gabbro, placed below 1 MiB (L13) and ending in `jump long` into the kernel state; no generated blob, no assembly text | 2 000–6 000 Lean |
+| K5 | the witness kernel, written in Gabbro: boot from the 16-bit loader boundary (`BiosHandoff`, through `jump long` 16→64) and from UEFI with the SAME kernel source, memory authority, translation with shootdown, interrupts with a timer and an NMI handler, two cores, one user-mode guest, one system call with guest copies; proofs of its duties through GabbroV. A reset-vector boot (`ResetState`) runs on an emulator platform | 3 000–8 000 Gabbro; proofs 5 000–15 000 Lean |
+| K6 | AArch64 and RISC-V 64: their rows, lowerings and platform units, running the SAME kernel source; the measure of O23: the kernel-proper diff between the three targets is zero lines, the platform units differ only in registers, addresses, arrival states and environment interfaces | 8 000–24 000 Lean; platform units 2 000–6 000 Gabbro |
 | K7 | the compiler compiles itself natively; the runner and its proofs leave the trust path and the tree (history in git) | after C7 |
 
 ### E — satisfiability lemmas instead of witnesses (owner, 2026-11-19)
@@ -306,105 +312,120 @@ of every item is to move as much as possible from the user onto the language mod
 Proposed here; each point that changes an owner rule is an owner decision in §8. The aim is the owner's sentence:
 logic and environment are left to the user, nothing else.
 
-### 4.1 No assembly: where machine instructions live
+### 4.1 No assembly and no instruction-shaped interface (O12, O23)
 
-- **Sources hold no instruction.** A privileged operation is a call of a function of the target binding with a
-  contract over the linear `context<P>`: read or install a translation root, set the interrupt mask, load a table
-  register, flush a translation cache, read or write a model-specific register or an I/O port, halt. The kernel
-  calls `cpu::install_root(c, root)`; it never writes `mov cr3`.
-- **A binding function has no body in text.** Its meaning is a GIR cell over the neutral architectural state of
-  L4; the target table assigns the cell its bytes (MACHINE-IR-PLAN §6–§7). The row is data. `TargetOk` checks
-  its shape, M measures it on silicon, and that every row computes its cell is the one hardware assumption
-  `Hardware T`. Privileged rows are measured on a bare-metal image (K2).
-- **Entry and exit code is generated.** Interrupt entry and return, system-call entry and return, thread switch:
-  the compiler emits them from the `entry` declaration, and one generic theorem per frame kind (L5) covers every
-  program. No handwritten stub exists.
-- **What is refused.** The `asmT` string form, `prim fn … = asm { … }`, an `entrust` under a software `assume`,
-  an external symbol without a proved contract. They are refusals first and are deleted when L10 lands.
-- **What stays architecture-specific, and where.** The target table rows, the binding library (K3: descriptor
-  tables, paging format, interrupt controller, timer, firmware handoff), the image profile (K1) and the start of
-  further cores (K4). The kernel proper uses the neutral interface; K6 measures it by running the same sources
-  on a second binding.
+- **Sources hold no instruction and no stand-in for one.** Every machine-level concept is a construct of the
+  language with a rule of machine G (LOW-LEVEL-SYNTAX-PLAN §4): `jump long kernel_main(ram) into kernel with
+  space`, `activate s`, `flush s on cores all`, `interrupts off { … }`, `send interrupt v to core k`, `start core k
+  at f`, `copy from guest … else fault`, `make executable r`. The kernel never writes `mov cr3`, and it never calls
+  `cpu::install_root(c, root)` either: a function per instruction over a threaded `context<P>` is inline assembly
+  with types and is removed (O23).
+- **GIR is the compiler's and the model's business.** The compiler lowers each construct to GIR cells; the target
+  table gives their bytes (MACHINE-IR-PLAN §6–§7); `TargetOk` checks the rows' shape, M measures them on silicon,
+  and that every row computes its cell is the one hardware assumption `Hardware T`. Privileged rows and the 16-
+  and 32-bit rows of x86-64 are measured on a bare-metal image (K2). One generic theorem per construct covers every
+  program.
+- **Generated, not written:** entry and exit frames, vector tables, descriptor tables, page-table entries, the
+  shootdown protocol, foreign calling conventions of firmware services, cache maintenance for code and DMA, the
+  save of the extended register state. No handwritten stub exists.
+- **What is refused.** The `asmT` string form, `prim fn … = asm { … }`, the `context<P>` surface and
+  target-binding operation functions, an `entrust` under a software `assume`, an external symbol without a proved
+  contract. They are refusals first and are deleted when L10 lands.
+- **What stays architecture-specific, and where.** In the compiler: the target table rows and the proved lowering of
+  each construct (K2, K3). In the source: only the platform unit — registers, addresses, arrival states,
+  environment interfaces, and on x86-64 the 16-bit arrival code of further cores, itself ordinary Gabbro. The
+  kernel proper is one source for x86-64, AArch64 and RISC-V 64; K6 measures its diff as zero lines.
 
-### 4.2 Booting on x86-64 without a mode switch
+### 4.2 Booting from any boundary, from 16 bit on (O23)
 
-The first boot boundary is **entry from firmware in 64-bit mode** (UEFI): the processor is already in long mode
-with paging on, the image is a firmware-loadable file the compiler writes (headers are data), and the kernel
-takes over memory by the firmware's memory map and leaves the boot services. The same boundary exists on AArch64,
-so the boot path of the kernel proper is architecture-neutral.
+Every execution state is a declared state (width 16, 32 or 64; privilege; translation), and one statement
+`jump long f(args) into S with space s stack t` moves between them; the compiler generates the whole switch
+(x86-64 16→32→64 with descriptor table, protection, long mode and paging; AArch64 EL3/EL2→EL1; RISC-V M→S). Code
+of any width is Gabbro, tiled by the table's rows for that width. Three boundaries are supported, each with a named
+arrival contract, and the kernel proper is the same behind all of them:
 
-- The firmware is software outside the image. Its handoff state (mode, mappings, stack, the truth of the memory
-  map, what stays reserved) is the named environment assumption `FirmwareHandoff` of §4.4, stated in the profile.
-- A boundary further back (reset in 16-bit mode, a 32-bit loader protocol) needs mode-transition rows; it is
-  possible with the mechanism of K4 and is not part of the first gate. Moving the boundary back means proving
-  more software, never relabelling it as hardware (LOW-LEVEL-SYNTAX-PLAN).
-- Further cores cannot be avoided this way on x86-64: a started core begins in 16-bit mode. K4 supplies the
-  generated start item. The witness kernel boots on one core first and adds the second with K4.
+- **Reset vector** (`ResetState`, hardware, per platform): the first instruction after reset — 16-bit real mode on
+  x86-64, EL3/EL2 on AArch64, M-mode on RISC-V. Memory and device initialisation before RAM is usable is driver
+  logic of the platform; the witness gate runs it on an emulator platform whose reset contract names usable RAM.
+- **16-bit loader** (`BiosHandoff`, environment): a boot sector loaded at `0x7C00` in real mode with the declared
+  registers; the boot code is Gabbro in state `real16` and reaches the kernel by `jump long`.
+- **Firmware entry in 64-bit mode** (`FirmwareHandoff`, environment, UEFI): paging on, the memory map and the
+  boot services alive; the services are an environment interface (L12) whose value only the arrival contract
+  provides; `exit_boot_services` consumes it.
+
+Further cores: `start core k at f(args) stack t` (L9). On x86-64 the core arrives in 16-bit mode at a page below
+1 MiB; it runs the platform's arrival code (Gabbro, state `real16`, placed by L13) that ends in `jump long` into
+the kernel state. On AArch64 and RISC-V the same statement is lowered to the environment call PSCI `CPU_ON` or SBI
+`hart_start`. Moving a boundary back always means proving more software, never relabelling it as hardware.
 
 ### 4.3 Raw addresses, safely
 
-- A number never grants memory or code. An `address<S>` is inert data with a space and a width; arithmetic needs
-  non-wrapping bounds or a failure channel; equal numbers do not imply authority; a physical and a virtual
-  address are different types; no address becomes a function pointer.
-- The only way from an address to memory is `ram_view(c, a, n)`: it checks the whole half-open span, alignment,
-  class, mapping, permissions, liveness and initialisation against the ledger of the context `c` and yields an
-  ordinary bounded region borrowed from `c`. From there the existing region and reference rules, effects, race
-  freedom and extent checks apply unchanged. What can be checked at run time fails into an `else`; what cannot
-  be proved statically is refused.
-- Authority starts in the initial machine state (the firmware handoff) and moves only by proved acquisition,
-  split and merge; a software allocator proves partition and freshness (the provider model). Reuse and revocation
-  need quiescence and an epoch change (L1, L6).
-- Below the type level the same discipline holds for bytes (L3); device memory and buffers lent to devices have
-  their own class and rules (L2). Ordinary integer-to-pointer casts stay refused (`M140`).
+- A number never grants memory or code. An `address<S>` is inert data with a space and the width of the state;
+  arithmetic needs non-wrapping bounds or a failure channel; equal numbers do not imply authority; a physical and
+  a virtual address are different types; no address becomes a reference, a function or a jump target.
+- Raw memory is owned as regions from the first instruction: the arrival contract hands them over (reset RAM, the
+  UEFI memory map, the loader's description). Authority moves only by proved split, merge and transfer; typed
+  views need representation proofs (L3); a software allocator proves partition and freshness (the provider model).
+  There is no lookup from an address to authority, so no context value is needed. Reuse and revocation need
+  quiescence, an epoch change and the shootdown of L6.
+- Device memory and I/O ports have their own class and one syntax (L2); buffers lent to devices are taken back
+  under quiescence with generated cache maintenance. Ordinary integer-to-pointer casts stay refused (`M140`).
 
 ### 4.4 What is left to the user
 
 **Logic (b):** the contracts and invariants of the kernel's own functions, discharged through GabbroV. This
-includes everything the kernel does as software: its allocator, its scheduler, its page-table updates, its
-system-call implementations.
+includes everything the kernel does as software: its boot code from the chosen boundary on, its allocator, its
+scheduler, its page-table updates, its drivers' protocol conformance, its system-call implementations.
 
 **Environment (c), named per unit, each with a declared contract:**
 
 | Assumption | Says | Evidence beside the theorem |
 |---|---|---|
-| `Hardware T` | every table row computes its cell, privileged rows and the float rows included (today's separate component `RootNativeFloat.Hardware`, assumed only where `GleitHw` asks for it) | M on silicon; the bare-metal harness for privileged rows; `hardware_satisfiable` for the float contracts |
+| `Hardware T` | every table row computes its cell, privileged rows, the 16- and 32-bit rows and the float rows included (today's separate component `RootNativeFloat.Hardware`, assumed only where `GleitHw` asks for it) | M on silicon; the bare-metal harness for privileged and mode rows; `hardware_satisfiable` for the float contracts |
 | hardware frame (today `GutO`, restricted to hardware items after A1) | a hardware item writes only its declared carriers, keeps the held locks and leaves its accesses in the trace | manual; tests |
-| `Mmu` | the translation unit translates by the installed tables and caches as the architecture manual says | manual; differential tests |
-| `IrqDelivery` (replaces the premise `KernPlan`) | an interrupt is delivered at an instruction boundary, to the installed handler, under the mask and priority the kernel set | manual; tests |
+| `Mmu` | the translation unit translates by the installed tables and caches as the architecture manual says, and drops entries when the generated flush says so | manual; differential tests |
+| `IrqDelivery` (replaces the premise `KernPlan`) | an interrupt is delivered at an instruction boundary, to the installed handler, under the mask and priority the kernel set; non-maskable, machine-check and fatal events are delivered regardless of the mask to their declared entries | manual; tests |
+| `ResetState` | per platform: the state at the reset vector and at the arrival of a further core (width, privilege, which RAM is usable, where execution starts) | manual; emulator and silicon runs |
 | the memory-model reading (Spec header, five points) | the weak-memory machine W over-approximates the target for the emitted instructions | published models |
 | device contracts | the declared answers of each device register and port (after A2 they may depend on the history; today `RegLokal` and the hardware part of `AxVertragO`), and where a device writes memory (DMA): only into the carriers and extents its contract names (today `ImBereichO`, which then leaves the leg) | data sheets |
-| `FirmwareHandoff` | the state at entry, the truth of the memory map, and that the image and its initial memory are loaded as declared (for the kernel this replaces `Laufzeit.lader`) | firmware specification |
+| `FirmwareHandoff` | UEFI boundary: the state at entry, the truth of the memory map, and that the image and its initial memory are loaded as declared (for the kernel this replaces `Laufzeit.lader`) | firmware specification |
+| `BiosHandoff` | 16-bit loader boundary: the boot sector is loaded at its declared place in real mode with the declared registers and the declared memory description | loader specification |
+| environment interfaces (L12) | each firmware service (UEFI boot services, PSCI, SBI) in the conditional form of A1: assumed `pre → post`, the caller proves `pre` | declared in the platform unit, visible per call |
 | for a hosted program only: the contract of the operating system behind each system call, in the conditional form of A1 (assumed `pre → post`, the caller proves `pre`) | declared in the binding, visible per call | — |
 | for a hosted program only: the operating system's loader and thread creation (today `Laufzeit.lader`, `Senke.CloneAnswers`, the runner kernel class `Runner.IR.Kern`) and, where liveness or waiting bounds are claimed, its scheduler's fairness (today `Fair`, `FairF` of `GabbroZielLeben`/`GabbroZielWarten`) | declared in the profile | — |
 | for every foreign C function (`extern fn`) and every C caller of an `entry` function (A6) | its declared contract INCLUDING the frame, the extents, no retained Gabbro pointer and no foreign thread on Gabbro memory. **One such assumption, if false, can void every guarantee of the theorem**: C in the same address space is unchecked and unrestricted | declared in the binding, visible at every use |
 
-Nothing else may remain: no loader assumption beyond `FirmwareHandoff` (K1, L9), no runtime assumption (L9), no
-foreign-code assumption for software inside the image (A1), no unnamed stop (B6 piece vii, B9), no `ImBereichO` or
-`KernPlan` hidden inside a leg (A4, L7). For the kernel, fairness and hold times are not assumed either: they are
-properties of its own scheduler and lock code, proved as logic (b) where liveness or waiting bounds are claimed.
+Nothing else may remain: no loader assumption beyond the chosen boundary's handoff (K1, L9), no runtime assumption
+(L9), no foreign-code assumption for software inside the image (A1), no unnamed stop (B6 piece vii, B9), no
+`ImBereichO` or `KernPlan` hidden inside a leg (A4, L7). For the kernel, fairness and hold times are not assumed
+either: they are properties of its own scheduler and lock code, proved as logic (b) where liveness or waiting
+bounds are claimed.
 
 Checked against today's ONE ASSUMPTION LIST of `Spec.lean` (2026-11-12): every entry has its place above
 (`GutO` → hardware frame and A1; `RegLokal`, `AxVertragO` → device contracts and A1; `RootNativeFloat.Hardware` →
-`Hardware T` via `GleitHw`; `Laufzeit.lader` → `FirmwareHandoff` or the OS loader; `Laufzeit.start/einmal` → L9
-or the OS; `KernPlan` → `IrqDelivery`; `ImBereichO` → device contracts; `Fair` → the kernel's own scheduler or the
-OS; the five weak-memory points → the memory-model reading).
+`Hardware T` via `GleitHw`; `Laufzeit.lader` → `ResetState`, `BiosHandoff`, `FirmwareHandoff` or the OS loader;
+`Laufzeit.start/einmal` → L9 or the OS; `KernPlan` → `IrqDelivery`; `ImBereichO` → device contracts; `Fair` → the
+kernel's own scheduler or the OS; the five weak-memory points → the memory-model reading). `ResetState`,
+`BiosHandoff`, the environment interfaces and non-maskable delivery are new names of the L0 `Spec.lean` diff.
 
-### 4.5 Three targets and performance (owner, 2026-11-12)
+### 4.5 Three targets and performance (owner, 2026-11-12; O23)
 
 - **x86-64, AArch64 and RISC-V 64 from the start.** Source semantics, the model, GIR, every pass and every proof
-  are target-neutral; a target is a table (rows for the base, privileged and entry cells), a binding library and
-  an image profile. Adding the second and third target must change none of the neutral parts; K6 measures that
-  for AArch64, and RISC-V 64 follows by the same three pieces.
-- **Cross compilation is the normal case.** One source compiles to every target whose table and binding exist; a
-  program names an architecture only inside a binding. Length-parametric vectors and the idiom cells keep sources
-  free of per-target intrinsics (MACHINE-IR-PLAN §1.8, §6).
+  are target-neutral; a target is a table (rows for the base, privileged, mode and entry cells), the proved lowering
+  of the low-level constructs and a platform unit. Adding the second and third target must change none of the
+  neutral parts and none of the kernel source; K6 measures that for AArch64 and RISC-V 64.
+- **Cross compilation is the normal case.** One source compiles to every target whose table, lowering and platform
+  unit exist; a program names an architecture only inside a platform unit, and there only registers, addresses,
+  arrival states and environment interfaces. Length-parametric vectors and the idiom cells keep sources free of
+  per-target intrinsics (MACHINE-IR-PLAN §1.8, §6).
 - **Performance is not traded for neutrality.** The goal stays more than optimised C on every workload class and
-  ISA (AGENTS.md §11): the neutral program is tiled into the widest cells a target's table offers, so special
+  ISA (AGENTS.md §1): the neutral program is tiled into the widest cells a target's table offers, so special
   instructions are used without appearing in a source. What a target lacks is ordinary GIR that tiles into
   smaller cells, never a refusal.
-- **What this forbids now.** No form, model rule, Stage-0 lowering or binding interface may fix a word size,
-  an endianness, a calling convention, a page size, an interrupt-controller shape or a register name outside a
-  target's table, binding or profile. A neutral interface that only one target can implement is a finding.
+- **What this forbids now.** No form, model rule, Stage-0 lowering or platform interface may fix a word size,
+  an endianness, a calling convention, a page size, a page-table format, an interrupt-controller shape or a
+  register name outside a target's table, lowering or platform unit. A neutral construct that only one target can
+  implement is a finding.
 
 ---
 
@@ -423,9 +444,9 @@ Phase 4  R3: B6 (pieces i–viii, stages) → B7 ────────┘
    │
 Phase 5  B10 (after A1 and the C rounds)
    │
-Phase 6  R4: L0 → L1 → L3 → L2 → L4 → L5 → L6 → L7 → L8 → L9 → L10 → L11   (after all C packages)
+Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L9 → L10 → L11   (after all C packages)
    │
-Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core → K4 → K5 on two cores → C9 → K6
+Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core (UEFI, then 16-bit loader) → K4 → K5 on two cores → C9 → K6 (AArch64, RISC-V 64)
    │
 Phase 8  K7: the compiler compiles itself; the runner leaves the tree
 Later    X1, X2, X4, X5
@@ -460,7 +481,7 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 2. **To trusted output:** S3 → B6 (stage "lock words as state" → "rely/guarantee simulation of one thread" →
    "process simulation and leg transfer") → B7. B6's second stage is the largest single uncertainty of the whole
    plan, and C9 repeats its shape for the compiler.
-3. **To the kernel:** two chains meet in K5. The model chain is A1, A2 → L1 → L4 → L5 → L6 → L7 → L8 → L9 (R4);
+3. **To the kernel:** two chains meet in K5. The model chain is A1, A2 → L1 → L4 → L5 → L6 → L7 → L8 → L12 → L13 → L9 (R4);
    the compiler chain is C2 → C3 → C4 → K1, K2 → K3. Neither can be shortened by the other. The kernel gate
    cannot be reached with Stage 0: Stage 0 emits hosted images for the runner only (D16).
 4. **In parallel with all of it, Lean only, no Stage-0 or runner change:** A1, A2, A3, A4, B8, B9, C11. They
@@ -479,13 +500,13 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 | A fewer assumptions | 7 400–19 900 | — |
 | B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B22 82 000–215 000) | 186 000–488 000 | — |
 | C11 non-emptiness | 200–800 | — |
-| L low-level model (L1–L11) | 58 500–146 000 | — |
+| L low-level model (L1–L13) | 68 500–172 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
-| K kernel ready (K1–K6) | 26 000–72 000 | 14 000–40 000 |
+| K kernel ready (K1–K6) | 31 000–87 000 | 8 000–22 000 |
 | C compiler sources and benchmarks (C7, C8) | — | 125 000–276 000 |
-| **sum** | **≈ 244 900–639 400** | **≈ 139 000–316 000** |
+| **sum** | **≈ 259 900–680 400** | **≈ 133 000–298 000** |
 
-**Everything together: about 385 000 to 955 000 new lines**, of which roughly two thirds Lean. Not included: C6
+**Everything together: about 393 000 to 978 000 new lines**, of which roughly two thirds Lean. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -495,8 +516,8 @@ Parts of the sum by gate (each includes what the earlier gates need):
 |---|---|---|
 | the compiler start (S1, S2, S6, V) | 16 500–54 200 | — |
 | R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 76 400–211 400 | — |
-| R4 low-level model (adds L) | 134 900–357 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 244 900–639 400 | 139 000–316 000 |
+| R4 low-level model (adds L) | 144 900–383 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 259 900–680 400 | 133 000–298 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -523,17 +544,18 @@ model today, so their ranges are the least certain of the table.
 | O9 | counting simulation for instruction bounds (X4) | not now |
 | O10 | `bedingt` → `endet` through a measure (X5) | later |
 | O11 | staffing: delegates (AGENTS.md) or the lead alone. Owner, verbatim: to the goal-theorem session "mach alles selbst ohne agents"; to the Stage-0 session "agents bringen nicht viel, 95% deiner zeit wartest du auf Builds" (an observation about waiting, from which the writing-tree rule of `65cc01677` follows) | decide per phase; B6, L and C need several parallel workers, each in its own writing tree |
-| O12 | **no assembly anywhere** (owner 2026-11-12) read as §4.1: no instruction text in sources, bindings or libraries; instructions only as target-table rows. This REPLACES the source ASM bodies of the low-level plan and the bundled `boot16to64` ASM item of 2026-11-03 (D12, D13) | confirm the reading; then correct AGENTS.md and the low-level plan |
-| O13 | first boot boundary: firmware entry in 64-bit mode (§4.2), with `FirmwareHandoff` as a named environment assumption; reset in 16-bit mode later, if at all | yes |
+| O12 | **no assembly anywhere** (owner 2026-11-12) read as §4.1: no instruction text in sources, bindings or libraries; instructions only as target-table rows. This REPLACES the source ASM bodies of the low-level plan and the bundled `boot16to64` ASM item of 2026-11-03 (D12, D13) | confirmed 2026-11-12; sharpened by O23 (no instruction-shaped interface either) |
+| O13 | first boot boundary: firmware entry in 64-bit mode (§4.2), with `FirmwareHandoff` as a named environment assumption; reset in 16-bit mode later, if at all | confirmed 2026-11-12; **replaced by O23**: reset, 16-bit loader and UEFI boundaries are all in the language; UEFI and the 16-bit loader are both in the witness gate |
 | O14 | the environment class (§4.4, D14): software outside the verified image (an operating system below a hosted program, firmware before the entry) is a named assumption with a declared contract; software inside the image is always user logic. This changes the wording of AGENTS.md §3 | confirm; A1 is built with this class: the provenance `AxOrigin` gets a third value beside hardware and software (environment); for both software classes the caller proves the contract's `pre` at every call (`AxVor`, `CallSitePflichtFremd`); the image's own software proves `pre → post` (`ForeignPflicht`), environment software has `pre → post` named in (c); hardware keeps its unconditional contract |
 | O15 | interrupts with re-entry and nesting (L7) and user-mode guests (L8) are in scope, as the kernel needs them | yes |
-| O16 | a second binding (K6, AArch64) as the measure of architecture neutrality, before the kernel gate is called reached | yes |
-| O17 | further cores on x86-64 through a generated start item of the binding (K4), accepted as the one place where 16-bit and 32-bit rows exist | yes; the alternative is a single-core kernel |
+| O16 | a second binding (K6, AArch64) as the measure of architecture neutrality, before the kernel gate is called reached | confirmed 2026-11-12; **widened by O23**: AArch64 AND RISC-V 64 run the same kernel source (K6) |
+| O17 | further cores on x86-64 through a generated start item of the binding (K4), accepted as the one place where 16-bit and 32-bit rows exist | confirmed 2026-11-12; **replaced by O23**: `start core` is a construct, the x86-64 arrival code is Gabbro source in a 16-bit state, no generated blob |
 | O18 | a bounded loop over mutable locals (S0m and the front-end rewrite of 2026-11-13: 36 sweeps as `traverse` cost +44 % lines; `retry` is unrolled by Stage 0) | recommend: `while c bounded N ops on_exceeded h { body }` as a new model statement with `retry`'s safety (static bound, named overrun block, no new stop kind, cost clause and WP rule of `retry`, no `progress` duty); `for i in lo ..< hi` later as sugar over it; no `decreases`-bounded loop (the cost model is static). Independently, Stage 0 lowers `retry` once with a counter (P0, a pure lowering) |
 | O19 | named effect groups: a module declares a name for a set of its places, and other modules write `effects b::group` instead of each table (S0m: cross-module writes need every slot table of the other module in the effect clause; the qualified place `b::T.slots` is a parser case and is done without a decision) | decide: a language addition with a model rule (the group unfolds to its places before `Akzeptiert`), or stay with the listed places |
 | O20 | copy elision and by-reference passing of aggregates (P1): a theorem of the model (unobservable, so always allowed), or additionally a move form in the language | recommend: the theorem first; a move form only if a measured case needs it |
 | O21 | the lock's behaviour under contention (P2): keep wake-all; or a re-wake chain; or spin-then-wait per profile | recommend: keep wake-all until a contended workload is measured; wake-one alone is incorrect |
 | O22 | a future that is neither awaited nor cancelled (S8; was part of O10) | recommend: a future is linear — it is awaited, handed over (`spawn`, `join`) or cancelled explicitly; cancellation runs the destructor of the saved state under the user's contract; dropping it silently is refused (no implicit drop, no leaked lock or mark) |
+| O23 | **syntax for everything, GIR is the compiler's (owner, 2026-11-23):** "context ist auch nur iasm, und GIR soll Compiler- und Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen." Every machine-level concept is a language construct with a G rule (LOW-LEVEL-SYNTAX-PLAN §4): execution states of every width, `jump`/`jump long`, regions from the arrival contract instead of `ram_view` over a context, spaces with generated shootdown, entries incl. non-maskable, `start core`, extended state in generated frames, guest copies, environment interfaces, images and `make executable`. The `context<P>` surface and target-binding operation functions are removed before they are built; only registers, addresses, arrival states and environment interfaces stay per platform | decided by the owner; L and K rewritten accordingly; the new named assumptions (`ResetState`, `BiosHandoff`, environment interfaces, non-maskable delivery) go to the owner as the L0 `Spec.lean` diff before merge |
 
 ### 8.1 Decided 2026-11-13 by the lead on the owner's delegation
 
@@ -570,7 +592,9 @@ every change of `Spec.lean`'s meaning is still described in its commit and repor
 
 
 O12–O17 were put to the owner on 2026-11-12 with this plan and answered "passt alles": they are confirmed. AGENTS.md
-and LOW-LEVEL-SYNTAX-PLAN.md are corrected to them in the Phase-0 documentation pass (D12–D14).
+and LOW-LEVEL-SYNTAX-PLAN.md are corrected to them in the Phase-0 documentation pass (D12–D14). O23 (owner,
+2026-11-23) replaces O13 and O17 and sharpens O12 and O16; AGENTS.md, README.md and LOW-LEVEL-SYNTAX-PLAN.md follow
+it.
 
 ---
 

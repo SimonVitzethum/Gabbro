@@ -37,8 +37,9 @@ yet proved. [What is and is not claimed](#what-is-and-is-not-claimed) says exact
   the compiled code carries no bounds or size checks. Data from outside — program arguments, system calls, devices,
   foreign code — is checked once, where it comes in.
 - **No `unsafe`.** No integer → pointer casts either. Code from outside the language (`extern fn`) enters only behind a
-  named assumption, and the old inline-`asm` form is being replaced by checked target-binding calls, so that device
-  access becomes checked authority too.
+  named assumption, and the old inline-`asm` form is being replaced by language constructs for every machine-level
+  concept (boot from 16 bit on, address spaces, interrupts, cores, devices), so that low-level code is checked
+  authority too and the same kernel source compiles for every architecture.
 - **Refuse, never warn.** What the checker can decide, it decides at compile time. What it can't decide, it refuses.
 
 > [!IMPORTANT]
