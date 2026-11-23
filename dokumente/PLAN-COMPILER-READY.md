@@ -199,7 +199,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B21 | **memory bounds (owner, 2026-11-14: definitely; an unbounded heap must stay possible)**: per function and per run an upper bound on region/heap/arena use and on stack, computed and checked like `ZeitAb`, with the allocator contract — wherever a bound is declared or derivable (bounded regions, arenas with a ceiling, stack), also as a bound in the size of the input; OPEN regions (`Deklaration.offen`) without a ceiling stay admitted exactly as today, and for them the statement claims no bound (only what the provider gave), never a refusal | 4 000–10 000 / 1–2 / — |
 | B22 | **crash consistency, hardware-independent (owner, 2026-11-14).** An abstract persistence semantics: writes to persistent places become durable only through explicit flush/fence steps, in any order the abstraction allows (so every medium within the envelope is covered); interruption is possible at EVERY step; declared crash invariants and statements of the form "if interrupted at point x, the persistent state satisfies P_x" are checked by the checker or proved as program logic; recovery code is ordinary Gabbro verified like any other. **Decided:** a separate statement `GabbroZielAbsturz` beside the goal that reuses the safety legs; crash invariants and P_x are decided by the checker in the decidable fragment, the rest is program logic. Design: `persistent` tables/statics, `flush`/`fence` statements, a ghost durable state, one named medium envelope (design file of the lead) | 12 000–30 000 / 2–3 / — |
 | B23 | **no TOCTOU** — defined in [PERFECT-MODEL.md](PERFECT-MODEL.md) §4 and built as its step S11; counted in B24 | — |
-| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and the migration of `grammatik/` (steps S0–S12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. Size from PERFECT-MODEL §8 | 163 000–433 000 new (20 000–60 000 removed) |
+| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and the migration of `grammatik/` (steps S0–S12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. Size from PERFECT-MODEL §8 (core; the low-level forms are its step S6L and are counted in the L rows) | 168 000–445 000 new (20 000–60 000 removed) |
 
 ### C11 — non-emptiness in the statement
 
@@ -209,6 +209,12 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 
 
 ### L — the low-level model (R4; LOW-LEVEL-SYNTAX-PLAN, redesigned by O23 on 2026-11-23)
+
+**Since 2026-11-23 (owner): low-level is built as step S6L of [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, from the
+start and on the same level as every other form** — every low-level form is a constructor of the reference AST
+(`grammatik/Grammatik/Ast/`, step S1b) and of the core inductives, with a `Bezeichnet` rule, an `I` rule, a
+compatibility lemma and an `_erfuellbar` lemma; there is no separate low-level layer. The rows below keep the
+content and the sizes; their order is PERFECT-MODEL's.
 
 **State 2026-11-13 (built, as LAYERS beside machine G, not yet connected to it):** L1 addresses, context ledger, `ram_view`, boot hand-over (`Niedrig/Authority`, `Niedrig/Boot`); first parts of L2 (register contracts), L3 (byte capabilities with initialisation), L4 (neutral architectural state with `setMask`, `setRoot`, `setVectorBase`, `enterKernel`, `leaveKernel`), L5 (entry frame descriptors with refusals), L6 (translation regime: walk, map, unmap, protect, aliases), L7 (per-core masks, priority nesting). None of these rows is complete: owed for each is the simulation by machine-G steps, the `Akzeptiert` checks and the no-bypass theorem (a review's R1–R3), then parser/exporter. **After O23** the ledger stays as machine state but leaves the surface (no `context<P>` value, no `ram_view(c, a, n)`): the built layers are reused as the model of the constructs of LOW-LEVEL-SYNTAX-PLAN §4, the user-facing operation functions are not built.
 
@@ -514,15 +520,15 @@ That is **about 31 full grammatik builds** for the goal theorem and the low-leve
 | S Stage 0 complete (S1–S10) | 22 400–59 800 | — |
 | V GabbroV to R2 | 12 400–40 900 | — |
 | A fewer assumptions (A1–A6) | 9 400–25 900 | — |
-| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 245 000–648 000, of which B24 163 000–433 000) | 349 000–921 000 | — |
+| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B24 250 000–660 000, of which B24 168 000–445 000) | 354 000–933 000 | — |
 | C11 non-emptiness | 200–800 | — |
 | L low-level model (L0–L18, re-estimated 2026-11-23) | 236 000–596 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6, K8) | 92 000–246 000 | 11 000–30 000 |
 | C compiler sources and benchmarks (C7, C8) | — | ≥ 513 000 (C7 ≥ 500 000; C8 13 000–32 000) |
-| **sum** | **≈ 805 400–2 100 400** | **≥ 524 000 (no upper bound)** |
+| **sum** | **≈ 810 400–2 112 400** | **≥ 524 000 (no upper bound)** |
 
-**Everything together: at least about 1 329 000 new lines**: Lean 805 400–2 100 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
+**Everything together: at least about 1 334 000 new lines**: Lean 810 400–2 112 400, Gabbro from 524 000 with no upper bound, because C7 has only the owner's minimum. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -531,9 +537,9 @@ Parts of the sum by gate (each includes what the earlier gates need):
 | Up to | Lean LOC | Gabbro LOC |
 |---|---|---|
 | the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 | — |
-| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 393 400–1 048 400 | — |
-| R4 low-level model (adds L) | 629 400–1 644 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 805 400–2 100 400 | ≥ 524 000 |
+| R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 398 400–1 060 400 | — |
+| R4 low-level model (adds L) | 634 400–1 656 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 810 400–2 112 400 | ≥ 524 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`

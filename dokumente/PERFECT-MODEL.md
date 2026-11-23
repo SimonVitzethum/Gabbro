@@ -38,11 +38,19 @@ theorem gabbro_ziel :
 
 ## 3. The definitions
 
-**3.1 Text and meaning.** The parser AST (`SExpr`, `SItemTief`, …) is the language. `Bezeichnet : AST → Einheit`
-gives one rule per surface form what a text means; it is functional and the parser is unambiguous. The elaborator
-is proved sound (`elab_korrekt`) and complete (`elab_vollstaendig`) against it, and printing/parsing round-trips
-in both directions. The core is today's intrinsically typed syntax (`Stmt`, `Block`, `Endblock`, `Expr`); it stays
-the one definition of the language.
+**3.1 Text and meaning.** The language is ONE reference AST: a Lean inductive family in `grammatik/Grammatik/Ast/`,
+the single definition of every surface form — today's forms, every low-level form of
+[LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md) §4 (execution states and transfers, address spaces, entries,
+interrupts and NMIs, cores, devices and DMA, guests, VMs, IOMMU, firmware interfaces, images, timed blocks,
+compile-time selection) and async — all on the same level, none in a separate layer. The parser produces it; the
+doc comment of each constructor is its reference description; `SYNTAX.md` describes it and never defines a form.
+`Bezeichnet : Ast → Einheit` gives one rule per constructor what a text means; it is functional and the parser is
+unambiguous. The elaborator is proved sound (`elab_korrekt`) and complete (`elab_vollstaendig`) against it, and
+printing/parsing round-trips in both directions. The core is the intrinsically typed syntax (`Stmt`, `Block`,
+`Endblock`, `Expr`), extended by the low-level constructors at the end of the same inductives; it stays the one
+definition of the language. A registry records for every constructor of the reference AST its `Bezeichnet` rule,
+its `I` rule, its compatibility lemma and its `_erfuellbar` lemma; a guard (§6) fails the build for a constructor
+missing any of them.
 
 **3.2 Acceptance — the perfect checker.** `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`.
 - `Lokal`: the decidable local rules (types, ownership, lock ranks, units, provenance of outside answers, every
@@ -135,7 +143,8 @@ A Lean module set (`grammatik/Grammatik/Zielsatz/Waechter/`) that fails the buil
    catalogue row.
 3. Shape of `gabbro_ziel`'s type: only the premises of §2.
 4. No `_ =>` in `I`, the rules and the fundamental proof.
-5. One `_erfuellbar` per constructor of `Stmt`/`Block`/`Endblock`/`Expr`, by an explicit registry.
+5. The registry of §3.1: for every constructor of the reference AST and of `Stmt`/`Block`/`Endblock`/`Expr` a
+   `Bezeichnet` rule, an `I` rule, a compatibility lemma and an `_erfuellbar` lemma.
 6. No hardware or stop kind outside the catalogue.
 7. No `_zeuge`, no `decide +kernel` outside probe modules.
 
@@ -162,21 +171,23 @@ new Lean lines (ranges); no other plan text may restate them.
 |---|---|---|---|
 | **S0 Guards** | the seven guards of §6 build as ratchets with today's allow-lists | — | 2 000–5 000 |
 | **S1 Purge** | witnesses, fixtures, witness-style `decide +kernel` probes, the `bindCtx`/`context<P>` parts of `Niedrig/` and the 12 wildcards in `Kern/Semantik` are deleted; side statements are lemmas | S0 | 0 (removes 20 000–60 000) |
+| **S1b Reference AST** | `grammatik/Grammatik/Ast/` defines every surface form including all low-level forms (LOW-LEVEL-SYNTAX-PLAN §4) and async; the parser produces it; `Bezeichnet` exists as a relation with the registry of §3.1, every constructor on the guard's ratchet list until its four entries exist | S0 | 5 000–12 000 |
 | **S2 Catalogue and premises** | `Hardware` is the catalogue of §3.3; everything in §5 that is an assumption is a row; `D.Annahme`, `fortschritt`, `sichtbarkeit`, `extern fn` are gone | S0 | 8 000–20 000 |
 | **S3 Honest G** | G∞ with the prefix lemma; `start`/`child` statements; `flagge` blocking; no `budget` | S0 | 6 000–15 000 |
 | **S4 Premise shape** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten`; `gabbro_ziel` without (b) and (d) | S2, S3 | 3 000–8 000 |
 | **S5 Memory model** | W with true SC, RC11 without load buffering, DRF-SC | S0 | 15 000–40 000 |
-| **S6 Ideal meaning** | `I` of §3.4 in `Zielsatz/Ideal/` with `I.Bestimmt`, `I.Fortschritt`, pinned outcome type, one `_erfuellbar` per form | S3, S5 | 20 000–50 000 |
-| **S7 Refinement** | `Sim` of §3.6 for every run of G∞, reusing `ZielInvSA` and the race and lock legs; first a prototype on two threads with assignment, lock and atomics | S6 | 30 000–80 000 |
+| **S6 Ideal meaning** | `I` of §3.4 in `Zielsatz/Ideal/` with `I.Bestimmt`, `I.Fortschritt`, pinned outcome type; its state and steps contain the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events) | S1b, S3, S5 | 20 000–50 000 |
+| **S6L Low-level forms** | every low-level constructor of the reference AST has its core constructor, G rule, `Akzeptiert` rule, `I` rule, compatibility lemma, `_erfuellbar` and `Bezeichnet` rule — the former L rows of the plan, now on the same level as every other form | S1b, S6 | 236 000–596 000 |
+| **S7 Refinement** | `Sim` of §3.6 for every run of G∞, reusing `ZielInvSA` and the race and lock legs; first a prototype on two threads with assignment, lock, atomics, an interrupt handler under a mask preempting a unit, a device register as outside and `lend`/`take back` of a DMA buffer | S6 | 30 000–80 000 |
 | **S8 Progress** | §3.7 per class under hardware-only fairness | S7 | 15 000–40 000 |
 | **S9 Observations and NI** | bounds on stack, memory, cost; §3.8 | S7 | 20 000–55 000 |
-| **S10 Meaning of text** | `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | S4 | 30 000–80 000 |
+| **S10 Meaning of text** | every `Bezeichnet` rule, `elab_korrekt`, `elab_vollstaendig`, both round trips (the relation and registry exist since S1b) | S1b, S4 | 30 000–80 000 |
 | **S11 Outside rule** | §4: provenance of outside answers, the catalogue admission rule, device typestates | S2 | 4 000–10 000 |
 | **S12 Swap** | linking per module; `gabbro_ziel` of §2 proved; old statements deleted; Spec header replaced by this file's §2 | S4–S11 | 10 000–30 000 |
-| **Total** | | | **163 000–433 000** new, 20 000–60 000 removed |
+| **Total** | | | **404 000–1 041 000** new (core 168 000–445 000, low-level 236 000–596 000), 20 000–60 000 removed |
 
-Critical path: S5 → S6 → S7 → S8 → S12. Riskiest step: S7 (a global ideal run from per-thread replays); its
-prototype comes first. Parallel tracks within the agent limit: {S1, S2, S3, S5} at once; S10 from S4 on; S11
-after S2; S8 and S9 together. The low-level forms of [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md) are
-built onto `I` after S6 with one `_erfuellbar` and one compatibility lemma each; their size stays in the plan's
-L rows.
+Critical path: S5 → S6 → S7 → S8 → S12. Riskiest step: S7 (a global ideal run from per-thread replays, with
+interrupts and devices); its prototype comes first and contains low-level from the start. Parallel tracks within
+the agent limit: {S1, S1b, S2, S3, S5} at once; S6L from S6 on, form by form, alongside S7–S9; S10 from S4 on; S11
+after S2; S8 and S9 together. Low-level is never a separate layer: every low-level form is a constructor of the
+reference AST and of the core, with the same four registry entries as every other form.
