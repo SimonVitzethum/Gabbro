@@ -83,7 +83,7 @@ def kopfNamen : SItemTief → List String
   | .effectGroupT _ es => es.flatMap (namenE [])
   | .specGroupT _ ts es fs =>
     (fs.flatMap namenSig).filter fun n => !((ts ++ es).any (strEq n))
-  | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => namenSig s
+  | .fnT s _ | .protoT s | .specT s _ => namenSig s
   | .transT target s _ => target :: namenSig s
   | .globT _ _ t _ _ _ _ | .constT _ t _ | .atomT _ t _ _ _ | .arenaT _ _ _ _ t _ => namenT t
   | .typeT _ _ args _ t => args.flatMap namenT ++ namenTO t
@@ -95,7 +95,7 @@ def kopfNamen : SItemTief → List String
 
 /-- **The kinds that can carry `pub`.** -/
 def darfPub : SItemTief → Bool
-  | .fnT .. | .protoT .. | .specT .. | .asmT .. | .globT .. | .constT .. | .typeT .. | .atomT ..
+  | .fnT .. | .protoT .. | .specT .. | .globT .. | .constT .. | .typeT .. | .atomT ..
   | .tableT .. | .arenaT .. | .lockT .. | .formatT .. | .devT .. | .whyT .. | .useT .. | .modT ..
   | .specGroupT .. | .effectGroupT .. => true
   | _ => false
@@ -195,7 +195,6 @@ def kanaeleI : Pfad → SItemTief → List (Pfad × String)
   | von, .fnT s _ => s.fehler.toList.map (fun r => (von, r))
   | von, .protoT s => s.fehler.toList.map (fun r => (von, r))
   | von, .specT s _ => s.fehler.toList.map (fun r => (von, r))
-  | von, .asmT s _ => s.fehler.toList.map (fun r => (von, r))
   | von, .specGroupT _ _ _ fs => fs.filterMap fun s => s.fehler.map (fun r => (von, r))
   | von, .implGroupT _ _ _ fs => fs.flatMap (kanaeleI von)
   | von, .adaptT s _ _ _ => s.fehler.toList.map (fun r => (von, r))

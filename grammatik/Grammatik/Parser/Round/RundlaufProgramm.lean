@@ -283,8 +283,8 @@ end Gabbro.Grammatik.Parser
   CUTS: what the item round trip does not cover yet, and why.
 
   * Item kinds not in `ItemGut`: `type`, `format`, `arena`, `state`, `assume`,
-    `axiom`, `check`, `rcu`, `accumulates`, `walk`, `entrust`, `boot`, `syscall`,
-    `target`, `translator`, `profile`, the spec/asm function bodies (`= pred ;`, `= asm {..} ;`) and
+    `axiom`, `check`, `rcu`, `accumulates`, `walk`, `boot`, `syscall`,
+    `target`, `translator`, `profile`, the spec function bodies (`= pred ;`) and
     the `when TESTBUILD` gate; slot bit positions as a `[hi:lo]` group. Each is one more constructor of `ItemGut` with its reader lemma in
     the pattern of `item_lock`/`item_atom` (a named recursive tail reader is a step lemma per
     clause; a `do` block is a case split over its optional clauses). Devices: see

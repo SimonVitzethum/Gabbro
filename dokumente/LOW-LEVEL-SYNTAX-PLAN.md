@@ -686,9 +686,9 @@ they are not part of that measure, and neither is the choice of the discovery pa
    `Iommu`, `SecureUnit`, the firmware services, resident firmware, non-maskable delivery) are the closed LOW-LEVEL
    ASSUMPTION LIST of the `Spec.lean` header (owner, 2026-11-23); each enters premise (c) with its construct.
 2. Connection to G/GX and the no-bypass theorem: no path reaches privileged state except through these constructs.
-3. Parser/exporter/checker (L10): the constructs above; refusals by name for everything unmodelled. The `asmT`
-   string form, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software
-   `assume` on `entrust` are refused and then removed (no legacy). The duty rules of every construct and their
+3. Parser/exporter/checker (L10): the constructs above; refusals by name for everything unmodelled. Assembly bodies, `prim fn`, `raw fn` and
+   `entrust` are deleted (2026-11-23), with the reserved-word refusals `N594`–`N597`. The `context<P>` surface
+   and target-binding operation functions remain excluded (no legacy). The duty rules of every construct and their
    generic bridge come with GabbroV in Gabbro (C1), complete before the duty proofs of K5 and K8.
 4. Compiler (C6, K2, K3): GIR cells and rows per construct, width-16/32 rows on x86-64, generic lowering theorems.
 5. Validation (L11): positive — reset to kernel through `jump long`, BIOS and UEFI boundaries, RAM write/read,

@@ -1,5 +1,5 @@
 /- Explicit configuration for the existing Stage0 runner image. This is a checked adapter,
-   not semantics for boot, entrust or hardware profiles. -/
+   not semantics for boot or hardware profiles. -/
 module
 public import Stage0.Senke.Sperre.Bindung.LockWait
 public import Grammatik.Parser.Profil.Auswahl
@@ -88,8 +88,6 @@ def checkItems : Nat → List SItemTief → Except String Unit
     | .pubT body => checkItems fuel [body]
     | .entryT e => checkEntry e
     | .bootT .. => throw "ir: boot is outside userspace compilation"
-    | .trustT _ _ arch regs stack assumption service =>
-      ProfilBindung.gastQuellePruefung arch regs stack assumption service
     | .profT .. => throw "ir: profile: canonical source-to-goal profile binding missing"
     | .gateT .. => throw "ir: when TESTBUILD: canonical conditional selection proof missing"
     | _ => pure ()

@@ -671,7 +671,7 @@ arbitrary declared function is the decision's reach, not a built form). Quantifi
 ## 7. Functions, contracts, costs
 
 ```text
-fndecl = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
+fndecl = [ "pub" ] [ "spec" | "impl" | "divergent" | "extern" ]
          "fn" ident "(" [ params ] ")" [ "->" typeexpr [ "or" reason ] ]
          [ "requires" predlist ] [ "ensures" predlist ] [ "maintains" identlist ]
          [ "effects" "{" efflist "}" ] [ "costs" "<=" expr "ops" ]
@@ -701,7 +701,7 @@ Contracts stand **before** the body in this fixed order, so a tool that does not
 **`effects` is not fail-open.** Where the body settles the hull, an omitted clause is *derived*
 and checked exactly like a written one; whoever touches nothing derives `effects { pure }`. A
 written clause is the enforced bound: the body must stay inside it (`E008`, `E010` for reads).
-Where nothing settles — no body (`extern`, `prim`), an unresolvable edge, a callee promising
+Where nothing settles — no body (`extern`), an unresolvable edge, a callee promising
 more than its deeds cover — the omission is refused with the reason (`N305`). `gabbro abgeleitet`
 prints the derived clause per routine.
 
@@ -728,10 +728,8 @@ the body is held against (`K001`); calling a gate or `extern fn` with no countab
 2. What stands after a branch that **always leaves** lies on the other path — otherwise every
    early return pays twice and the number measures a path no run takes.
 
-`raw fn` demands `&BootPhase` (§12.2); `divergent fn` is spoken-out non-termination (idle loop,
-main loop); `prim fn … -> never` is a primitive that does not return (`switch_to`, `resume`: a
-stack switch is expressible in no structured language, so it is *emitted*, not written); `spec fn`
-is a specification, never code.
+`divergent fn` declares non-termination; `spec fn` is a specification, never code.
+Machine operations use checked language constructs (see §12.2).
 
 ---
 
@@ -1249,37 +1247,24 @@ reference (`N215`–`N219`), so linking adds no premise. The execution-image ent
 are the same. The image option `--environment` must agree with any source entry; the existing
 Linux runner image remains the default. This entry binds lock waiting, not unrelated image services.
 
-### 12.2 Boot code with proof that it never runs again
+### 12.2 Boot and checked machine access
 
-The demand is not "as little `unsafe` as possible" but **"`unsafe`, but demonstrably expired"** —
-strictly stronger than affine systems can say, because the token is **linear** (cannot be copied
-or restored).
+Assembly bodies, `prim fn`, `raw fn` and `entrust` are refused. Their words remain
+reserved only to report one dedicated diagnostic per form. Machine access uses the checked
+language constructs described in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
+`extern fn` remains the general named-assumption interface to environment services with a contract.
 
-```text
-linear ghost type BootPhase order { roh, mmu, geraete };
-raw fn phys_write(p : Pa, w : u64) requires &BootPhase;
-fn boot_end(t : BootPhase, root : ptr<normal, rw> PageTable)
-    ensures !exists m in mappings of root : m.frame >= BOOT_LOW && m.frame < BOOT_HIGH
-    retires t from boot falsifier probe_boot_gone
-    effects { consumes t, writes root };
-```
+| removed form | refusal | poison probe |
+|---|---|---|
+| `= asm { … }` | `N594` | `1488-assembly-refused.gab` |
+| `prim fn` | `N595` | `1489-prim-function-refused.gab` |
+| `raw fn` | `N596` | `1490-raw-function-refused.gab` |
+| `entrust` | `N597` | `1491-entrust-refused.gab` |
 
-| layer | rule | covers | trust | built |
-|---|---|---|---|---|
-| **S1 types** | every `raw fn` demands `&BootPhase`; it arises once in the boot `entry`, `boot_end` consumes it; afterwards no call types | every static chain | checker (M2) | `O008` (clause demanded), `O001`–`O007` (phase order) |
-| **S2 references** | `raw fn` lies in `section ".boot"`; **taking the address of a `raw fn` is not writable** | dynamic reachability via pointers | checker (M3/D2) | `O009` for the half that bites (`&f` refused); the section placement is **not** enforced |
-| **S3 hardware** | `boot_end` consumes the token **and** retires the address space, one event: `retires t from boot falsifier <probe>`; the probe at a `.boot` address must fault | jumps S1/S2 do not see | axiom layer + falsifier | `O010`–`O012` for the formulable half; "no mapping ⟹ unreachable" is booked as an assumption with the probe it names |
-
-A theorem "no call after `boot_end` types" alone would be a request (a kill switch gets set and
-never taken back); one whose code is *unmapped* is an assurance. **Outside the language:** the
-trampoline before the first Gabbro line and the linker script (section bounds) are named
-assumptions. A `boot` declaration lists `step`s and a `dispatch`; the checker chains the steps
-by their `advances` clauses (`O007`, checked where declared, not where run — a step without
-`advances` is skipped). **Designed, not built:** an architecture's mode ladder as a *token flow*
-(`write_cr0(PG)` would require the tokens of `PAE`, `LME` and `CR3`, so breaking the order is a
-missing token), precomputed boot page tables as a `walk`-checked constant, and descriptor tables
-as `format` in the `normal` space with mandatory right `w` (the CPU writes the accessed bit into
-the GDT, so a placement in a read-only section is the trap).
+`entry`, `boot`, `axiom`/`assume`, `syscall` and device registers remain available.
+Boot uses linear phase marks, stage transitions and declared retirement obligations.
+A phase mark never grants number-addressed access. There is no unchecked boot phase or
+instruction-shaped foreign function interface. Model rules precede acceptance and lowering.
 
 ### 12.3 `entry` — syscalls and interrupts from one declaration
 
@@ -1301,8 +1286,7 @@ opens is held by the lock passes (`H013`, `H101`/`H102`). `dispatch` points at a
 function with a bounded, exhaustive `match`, so M1–M4 hold from the first Gabbro line. `Has(F)`
 witnesses (CPUID as the only generator, affine) make an instruction on a feature the machine may
 lack a compile error: `N016` demands the witness at the call site; the generating probe itself
-is **not built**. `entrust` is a room whose *content* Gabbro does not know, with a falsifiable
-contract at entry (`N004`/`N005`, `N006`).
+is **not built**. The generic guest/isolation model remains; it has no `entrust` source adapter.
 
 **Designed, not checked:** register sets *complete* (every architecture register in exactly one
 of `regs in/out`, `preserves`, `clobbers` — D2 on registers); the `clobbers` set derived from the
@@ -1313,7 +1297,7 @@ in `switch_to`/`resume` with a linear saved `Context`; a `regs out` register car
 result only through a declared encoding with non-overlapping ranges; FP state as an opaque save
 area saved eagerly in `switch_to` (the lazy variant is a known leak). **What does not fall,
 honestly:** entry has no downstream prover — the emission comes from one site, probes sit in the
-acceptance series; the LLVM backend lowers `entry` (x86_64 IDT stubs, aarch64 vector table) and refuses `boot`/`entrust` by name.
+acceptance series; the LLVM backend lowers `entry` (x86_64 IDT stubs, aarch64 vector table) and refuses `boot` by name. Removed source forms are refused before lowering.
 
 ### 12.4 Not built, named
 

@@ -173,7 +173,6 @@ def itemName : SItemTief → Option String
   | .fnT s _ => some s.name
   | .protoT s => some s.name
   | .specT s _ => some s.name
-  | .asmT s _ => some s.name
   | .formatT n _ _ _ => some n
   | .tableT n _ _ _ _ _ _ _ => some n
   | .arenaT n _ _ _ _ _ => some n
@@ -190,7 +189,6 @@ def itemName : SItemTief → Option String
   | .accT n _ _ _ _ => some n
   | .walkT w => some w.name
   | .entryT e => some e.name
-  | .trustT name .. => some name
   | .callT c => some c.name
   | .varT n => some n
   | .transT _ s _ => some s.name

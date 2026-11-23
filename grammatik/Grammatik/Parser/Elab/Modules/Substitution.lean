@@ -79,7 +79,6 @@ def substituteItem (env : Environment) (bindings : Bindings) : SItemTief → Rew
   | .specT sig pred => do
     return .specT (← signature env bindings sig)
       (← rewriteExpression env ((underGenerics bindings sig.generics).without (sig.params.map Prod.fst)) pred)
-  | .asmT _ _ => liftResult (.error "parametric-module-assembly: raw bodies have no substitution rule")
   | .transT target sig body => do
     return .transT target (← signature env bindings sig)
       (← rewriteBody env ((underGenerics bindings sig.generics).without (sig.params.map Prod.fst)) body)

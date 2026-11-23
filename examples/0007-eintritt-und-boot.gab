@@ -4,10 +4,8 @@
 // `entry` beschreibt ihn EINMAL je Vektor, statt ihn je Fundstelle zu schreiben: eine
 // Emissionsstelle statt einhunderteinundsechzig.
 //
-// Der unsichere Bootcode wird zweistufig unerreichbar: eine **lineare** Marke, die
-// `boot_end` verbraucht (nicht kopierbar -- das kann Rust nicht), UND der `.boot`-Abschnitt
-// wird im selben Zug abgebildet. Eine Sonde dorthin muss danach faulten.
-
+// Boot retirement consumes a linear phase mark and declares its mapping obligation.
+// Machine access uses checked language constructs (LOW-LEVEL-SYNTAX-PLAN), never numeric pointers.
 module beispiel::eintritt {
 
 opaque type Pa      = u64;
@@ -110,10 +108,6 @@ axiom wrmsr_efer(bits : u64) effects { writes efer } falsifier sonde_efer;
 axiom write_cr0(bits : u64) effects { writes cr0, writes paging } falsifier sonde_cr0;
 axiom write_cr3(wurzel : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
 
-// `raw fn` verlangt die Bootphase geliehen; `boot_ende` VERBRAUCHT sie und blendet den
-// Bootraum im selben Zug aus. Danach ist der Bootcode nicht mehr aufrufbar -- nicht durch
-// Vereinbarung, sondern weil die Marke weg ist.
-raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
 
 // **Bis zum 2026-08-28 stand hier `effects { consumes t, writes code_abbildung }`** --
 // ein WIRKUNGSNAME neben der Verbrauchszeile, von keinem Pass gelesen und von allem
@@ -142,14 +136,7 @@ fn boot_ende(t : BootPhase, kern_wurzel : ptr<normal, rw> Seitentabelle)
 const BOOT_RAHMEN_UNTEN : u64 = 0x1000;
 const BOOT_RAHMEN_OBEN  : u64 = 0x2000;
 
-// Der Stapelwechsel ist in keiner strukturierten Sprache ausdrueckbar; deshalb `prim`.
-// `effects` bleibt Pflicht -- auch hier, und gerade hier: SYNTAX.md §14 laesst es in
-// seinem Beispiel weg, §7 verlangt es. Der Uebersetzer haelt sich an §7.
-prim fn wechseln(von : ptr<normal, rw> Kontext, nach : ptr<normal, r> Kontext) -> never
-    effects { writes maschinenzustand, writes stapel, diverges };
-prim fn fortsetzen(k : ptr<normal, r> Kontext) -> never
-    effects { writes maschinenzustand, diverges };
-
+// Context transitions require checked language constructs (LOW-LEVEL-SYNTAX-PLAN).
 divergent fn leerlauf() effects { diverges };
 
 extern fn syscall_verteiler(nr : u64, a0 : u64, a1 : u64, a2 : u64, a3 : u64) -> u64
@@ -161,6 +148,5 @@ extern fn tabellen_laden(wurzel : Pa) effects { writes phys };
 extern fn gdt_laden(g : u64) effects { writes gdt };
 extern fn bss_nullen(a : Va, e : Va) effects { writes phys };
 
-type Kontext = { rsp : u64, rip : u64, };
 
 }

@@ -75,7 +75,6 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
       return .fnT s (← { w with result := s.res }.statement s.params f body)
     | .protoT s => return .protoT (← w.signature s)
     | .specT s p => return .specT (← w.signature s) (← w.expr s.params f p)
-    | .asmT s raw => return .asmT (← w.signature s) raw
     | .typeT fl n args ord t => return .typeT fl n (← args.mapM ty) ord (← t.mapM ty)
     | .constT n t v => return .constT n (← ty t) (← { w with expected := some (← ty t) }.constant f v)
     | .globT b n t v a s sh => return .globT b n (← ty t) (← { w with expected := some (← ty t) }.constant f v) (← a.mapM ex) s sh

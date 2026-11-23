@@ -31,15 +31,14 @@ set_option maxRecDepth 100000
 @[expose] def uCheckDoppelt (bekannt : List String) (n : String) : Except String Unit :=
   if bekannt.any (fun m => strEq m n) then .error ("duplicate check: " ++ n) else .ok ()
 
-/-- The foreign bodies of the unit that a gate may name (C08): `extern`/`raw`/`prim`
-    declarations and `asm` bodies (`protoT`/`asmT`), `axiom` items without `requires`
+/-- The foreign bodies of the unit that a gate may name (C08): `extern`/`divergent`
+    declarations (`protoT`), `axiom` items without `requires`
     (read as `extern fn`), and `syscall` gates. Mirrors the canonical `uFremdSig`
     name set (`Einheit/Signatures`), inlined here: that module already imports this
     one, so importing it would close a cycle. -/
 @[expose] def uFremdNamen : List SItemTief → List String
   | [] => []
   | .protoT sig :: rest => sig.name :: uFremdNamen rest
-  | .asmT sig _ :: rest => sig.name :: uFremdNamen rest
   | .axiomT n _ _ .none _ _ :: rest => n :: uFremdNamen rest
   | .callT sc :: rest => sc.name :: uFremdNamen rest
   | _ :: rest => uFremdNamen rest

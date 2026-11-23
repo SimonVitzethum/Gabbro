@@ -16,12 +16,12 @@ structure Expansion where
 
 /-- Every declaration namespace is checked before generated names are inserted. -/
 def sourceName : SItemTief → Option String
-  | .fnT sig _ | .protoT sig | .specT sig _ | .asmT sig _ | .transT _ sig _ | .adaptT sig _ _ _ => some sig.name
+  | .fnT sig _ | .protoT sig | .specT sig _ | .transT _ sig _ | .adaptT sig _ _ _ => some sig.name
   | .typeT _ n _ _ _ | .constT n _ _ | .globT _ n _ _ _ _ _ | .formatT n _ _ _ |
     .tableT n _ _ _ _ _ _ _ | .arenaT n _ _ _ _ _ | .whyT n _ _ | .stateT n _ |
     .devT n _ _ _ | .assumT n _ _ _ | .axiomT n _ _ _ _ _ | .atomT n _ _ _ _ |
     .lockT n _ _ _ _ _ _ | .rcuT n _ _ | .groupT n _ _ | .accT n _ _ _ _ |
-    .trustT n _ _ _ _ _ _ | .bootT n _ _ _ | .varT n | .goalT n _ | .effectGroupT n _ => some n
+    .bootT n _ _ _ | .varT n | .goalT n _ | .effectGroupT n _ => some n
   | .checkT check => some check.cname
   | .walkT walk => some walk.name
   | .entryT entry => some entry.name
@@ -51,7 +51,7 @@ def rewriteConstants (env : Environment) : List SKonstWert → RewriteM (List SK
   | row :: rest => return (← rewriteConstant env row) :: (← rewriteConstants env rest)
 end
 
-/-- Templates are removed. Generic prototypes, predicates and assembly bodies have no instance
+/-- Templates are removed. Generic prototypes and predicates have no instance
     body rule here and are refused, including unreachable ones. Other items retain their existing gates. -/
 def rewriteItem (env : Environment) : SItemTief → RewriteM (List SItemTief)
   | .fnT sig body => do
@@ -64,9 +64,6 @@ def rewriteItem (env : Environment) : SItemTief → RewriteM (List SItemTief)
     if sig.generics.isEmpty then return [.specT (← rewriteSignature env {} sig)
       (← rewriteExpression env {} predicate)]
     else liftResult (.error "generic spec function requires a function body")
-  | .asmT sig raw =>
-    if sig.generics.isEmpty then pure [.asmT sig raw]
-    else liftResult (.error "generic assembly body has no instantiation rule")
   | .transT target sig body =>
     if sig.generics.isEmpty then return [.transT target (← rewriteSignature env {} sig)
       (← rewriteBody env {} body)]
@@ -170,7 +167,7 @@ def expandTemplates (source : List SItemTief)
 
 /-- Generic syntax belongs to ordinary function bodies in this implementation. -/
 def genericHeader : SItemTief → Bool
-  | .fnT sig _ | .protoT sig | .specT sig _ | .asmT sig _ | .transT _ sig _ => !sig.generics.isEmpty
+  | .fnT sig _ | .protoT sig | .specT sig _ | .transT _ sig _ => !sig.generics.isEmpty
   | _ => false
 
 /-- Preserve the generation log while resolving known specification calls on ordinary units. -/

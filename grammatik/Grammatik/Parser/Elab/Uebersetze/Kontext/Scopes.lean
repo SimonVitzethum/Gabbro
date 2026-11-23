@@ -219,7 +219,7 @@ def UFn.ergTy (f : UFn) : Option Ty :=
       | some (_, n) => some (Ty.why n)
       | none => f.res.map fun r => .int r.1 r.2
 
-/-- One foreign body (`extern fn`, `= asm { .. }`, `D.Ax`): its parameters, its answer (`none`, a number, a truth
+/-- One foreign body (`extern fn`, `D.Ax`): its parameters, its answer (`none`, a number, a truth
     value or `never`) and what it writes (`effects { writes .. }`: `D.aschreibt`/`D.agschreibt`). -/
 structure UAx where
   name : String
@@ -235,7 +235,7 @@ structure UAx where
   /-- The resolved `assume` index witnessing a hardware origin (`none` for
       software items and while unresolved; a dangling index reads as `none`). -/
   beleg : Option Nat := none
-  /-- Explicit software origin, resolved from an entrust service binding. -/
+  /-- Explicit software origin, for a generic environment service. -/
   software : Bool := false
   names : List String := []
   needs : List UEns := []
@@ -243,14 +243,6 @@ structure UAx where
   deriving DecidableEq, Repr
 
 deriving instance DecidableEq for Except
-
-/-- Exact admitted source descriptor; typed admission resolves both names again. -/
-structure UGuest where
-  name : String
-  code : String
-  arch : String
-  service : String
-  deriving DecidableEq, Repr
 
 /-- What compiled code reads instead of walking a unit's function lists: the signatures (`fns`, then
     `ptrs`) as an array and the functions by name with their positions. It records the lists it was
@@ -274,7 +266,6 @@ structure UProg where
   fns : List UFn
   /-- The foreign bodies (`extern fn`). -/
   axs : List UAx := []
-  guests : List UGuest := []
   /-- The `assume` items, in order (`D.Annahme`). -/
   annahmen : List String := []
   /-- The `reason` declarations, in order. -/

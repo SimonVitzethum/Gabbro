@@ -117,7 +117,7 @@ register from `preserves`; (2) it writes no register outside
 statable over the Lean semantics:
 (a) there is NO entry-path syntax -- the only function-entry
     construct is the foreign body (`D.Ax`: every `extern fn`,
-    `prim fn`, `asm`, `entry`, `entrust`), whose body is invisible
+    `entry`), whose body is invisible
     (it acts through `Orakel.wirkt`);
 (b) `World` has NO register file -- registers live behind
     `Orakel.regLies` / `Orakel.regSchreib`; no world transition can

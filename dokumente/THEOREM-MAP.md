@@ -801,7 +801,7 @@ head stands at one of these places (a leaf here: a `state` transition).
 | `e0 : Ereignis D` | the declaration has a table, global or lock | (d) declaration-shape datum (§11.2) |
 | `hO : GutO O` | axiom answers inside declared frames; held locks and trace kept | (b) HARDWARE |
 | `hRL : RegLokal O` | register answers from the device carriers; `awaits` visibility from the awaited global | (b) HARDWARE |
-| `hQ : AxVertragO Q O` | every axiom answer that fits its type meets the declared ensures `Q` | (b) HARDWARE (per `extern`/`asm` declaration) |
+| `hQ : AxVertragO Q O` | every axiom answer that fits its type meets the declared ensures `Q` | (b) HARDWARE (per `extern` declaration) |
 | `hlok : AxEnsLokal Q` | `Q` reads only the axiom's declared write carriers | (c) decidable per declaration |
 | `hvoll` | member list complete | (c) |
 | `hFrag : programmImFragmentG` | widened fragment | (c) DECIDABLE, no checker rule (verdict §1) |
@@ -3157,14 +3157,14 @@ Removed on 2026-10-18 with the C backend: this section recorded the stage-(b) si
 
 ## 46. Divergence of accepted never-bodies, and `KeinLogikHaltG` at the spin (lane 231; fix lane F8, 2026-09-22)
 
-**File:** `grammatik/Grammatik/Zielsatz/Eigenschaften/Divergenz.lean` (on `NeverAsm.lean`,
+**File:** `grammatik/Grammatik/Zielsatz/Eigenschaften/Divergenz.lean` (on `ForeignNever.lean`,
 `RufMaschineF.lean`, `ZielOrtGanz.lean`).
 
 | Theorem | What it says | Tied to |
 |---|---|---|
 | `foreverLauf_noexit` | an exit-free step and a true guard make `foreverLauf` answer `hardware (fortschritt a)` at every fuel | the named `progress` assumption (`on_exceeded`) |
 | `forever_noexit_divergiert`, `forever_noexit_kein_logik`, `forever_noexit_kein_zurueck`, `forever_leer_divergiert` | a `forever` with `NoExit` body and `InvWahr` invariant diverges as declared: never `logik`, never a return | lane 225's accepted `never-forever` shape |
-| `asm_never_antwort_leer`, `asm_never_kein_ok` | a `-> never` axiom fits no answer and never continues | the axiom's reading "the asm never returns" -- an ASSUMPTION about the C lowering (review G10 F2; the C side is G04's `for(;;)` after the asm) |
+| `never_antwort_leer`, `never_kein_ok` | a `-> never` axiom fits no answer and never continues | a named assumption that the environment service never returns |
 | `spin_prueft` | a thread at ANY head of the empty spin `forever a invariant true {}` (`SpinKopf`: `.ewig`, the unfolded empty body, `ewigRest`) passes every clause of `PrueftG` | the per-thread content of `KeinLogikHaltG` (ZielOrtGanz.lean) |
 | `ret_prueft` | a thread at a bare `return` head passes every clause of `PrueftG` | the other threads of the witness |
 | `ewig_wahr_schreitet` | the `.ewig` head at budget `n + 1` with guard `true` and empty body takes its G step (`ewigWeiter`) | one step, one head shape |
@@ -5011,7 +5011,7 @@ All axiom lists standard.
 (appended at the end), parsed and printed (`pub` was dropped by the reader before); `pre108` refuses a unit whose
 hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
 
-* **Which kinds carry `pub`** (`darfPub`): functions (body, prototype, `spec`, `asm`), `static`, `const`, `type`,
+* **Which kinds carry `pub`** (`darfPub`): functions (body, prototype, `spec`), `static`, `const`, `type`,
   `atomic`, `table`, `arena`, `lock`, `format`, `device`, `reason`, `use`, `module`; a `pub` before anything else
   (and `pub pub`) is refused.
 * **The export hull is closed** (`N038`): every item a `pub` item's head names (`kopfNamen`: parameter, result and
@@ -5104,8 +5104,8 @@ gate- and profile-free unit). `Speichermodell/Adressen/Platzierung.lean` and `Pa
 static alignment and section (`PlatzOk`, `platzB`, `platzOk_von_platzB`); the elaborator keeps refusing placement
 until the IR layout proofs consume it. `Zielsatz/Projekte/Profil.lean` states `GabbroZielProfil` over a
 `ProfilEinheit` (meaning change described in the header of `Spec.lean`) and proves it from `gabbro_ziel`;
-`Parser/Profil/Eintritt.lean` admits dispatch-only userspace entries and refuses every source `entrust` until a
-proved isolation service has a form. Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
+`Parser/Profil/Eintritt.lean` admits dispatch-only userspace entries. Removed machine-access forms
+are refused by the parser (`N594`–`N597`); see [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md). Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
 Open: the entry/service correspondence and the guest service (C08/C12), function-tail gates, the `Verbund` profile
 transport, and the layout/startup/relocation proofs of placement.
 
@@ -6627,60 +6627,20 @@ contract under its call-site precondition and implementation-link duties.
 `guest_storage_disjoint` includes initial live grants and all preceding calls;
 `guest_failure_inventory` preserves that same inventory on failure.
 
-The source connections are now implemented:
+The unchecked source adapters were removed on 2026-11-23. Assembly bodies, `prim fn`,
+`raw fn` and `entrust` have one parser refusal each (`N594`–`N597`), with poison probes
+1488–1491. `SItemTief` has no assembly or entrust constructor. The source-only
+`UGuest`, wrapper expansion, descriptor export and completeness theorems are deleted.
+`Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass an empty guest list
+to the generic checker; no removed source declaration can be parsed or discarded.
 
-- `SItemTief.trustT` retains `via SERVICE`; namespace resolution predeclares the
-  generated wrapper and resolves the code region and foreign binding lexically.
-  `Uebersetze/Guest/Source.lean` resolves exactly one C08 prototype or syscall,
-  requires a declared nonempty failure channel and requires/ensures mentioning
-  the code region, and generates one wrapper forwarding every parameter, the
-  success result and every failure reason. The wrapper uses the existing
-  `SAnw.bindAxiomOptElse`; ordinary elaboration and Stage-0 lowering handle it.
-- `guestForeign` elaborates the declared predicates in the binding's parameter
-  and result scope. `UAx.software` records the explicit source binding;
-  `herkunftAt` exports `some .software` and `axBeleg` remains `none`. A conflicting
-  named hardware origin is refused. Direct foreign `requires Held(...)` is
-  refused rather than silently dropped. `Guest/Contracts.lean` lowers every
-  foreign contract; `contractGate` refuses any failed lowering and `progOfFn`
-  fills `Programm.axVertrag`. `lowerAllg_axVertrag` proves exact retention on
-  every successful lowering, including the actual pre/postconditions.
-- `Guest/Export.lean` re-resolves every retained `UGuest` against the actual
-  `declOf u`, constructs the typed boundary and applies its canonical check.
-  `sourceGuests_complete` proves that no descriptor is omitted. Both
-  `Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass that
-  complete list to `AkzeptiertX`. `OldSource.restore_axVertrag` and
-  `Compiled.foreign_contracts` retain the same foreign contracts through
-  source postcondition restoration; `Compiled.guest_descriptors` exposes
-  completeness and each admitted descriptor after production checking.
-  `SourceGuestPflicht` explicitly ties the software isolation duty to these
-  exported contracts and actual C08 records, never to `HardwareAnnahmen`.
-
-The source frontend now exports resolved owners through C12/C09. This guest
-source adapter still admits immutable code plus scalar inputs and an ordinary
-returning, fallible service; additional region inputs remain refused until it
-retains their exact transfer descriptors and owner resources. No owner is
-fabricated or transferred region discarded.
-Register state, privileged/stack assumption fields, unknown ABI, missing or
-ambiguous service, absent failure channel and absent region contracts remain
-named refusals. Foreign cost claims retain the metadata gate.
-
-`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` (removed 2026-11-11: it never built) claimed the accepted image
-attempt: real source text calls the generated guest wrapper with a code-region
-capability, carries a nontrivial declared region contract and executable C08
-gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
-and retains the generic canonical-source and image correctness certificates.
-Its source-shape, exact-contract, descriptor-completeness and ordinary fallible
-constructor witnesses prevent an inert or empty-boundary success. Negative
-source twins cover missing service/field, unowned region, register state,
-privileged fields, unknown ABI, infallible service and missing region contract.
-`Guest/Witness.lean` retains the more general owned-region model witnesses.
-None of these new source reductions has yet been measured by this worker.
-
-Worker static checks: 31 changed Lean modules, all using the module system,
-maximum 473 lines; no forbidden proof tokens or folder-entry findings. The
-3,068-file import graph has no cycles and the outgoing diff passes
-`git diff --check`. These checks provide no Lean elaboration or witness-reduction
-evidence.
+Ordinary foreign contract elaboration is in `Uebersetze/Einheit/Foreign.lean` (`uForeign`).
+`Guest/Contracts.lean`, `lowerAllg_axVertrag`, `OldSource.restore_axVertrag` and
+`Compiled.foreign_contracts` retain the existing generic C08 foreign contract connection.
+`GuestBoundary`, `GuestServicePflicht` and the goal acceptance rules remain: the checker,
+generator and Stage 0 still depend on that generic guest/isolation model. Their semantic
+statements are unchanged. Future checked machine constructs follow
+[LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
 
 ## 178. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
 

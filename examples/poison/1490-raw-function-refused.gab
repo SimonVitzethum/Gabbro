@@ -1,0 +1,6 @@
+// erwartet: N596
+// Memory access requires checked authority.
+module poison::removed_machine_access {
+opaque type Pa = u64;
+raw fn phys_write(p : Pa, w : u64) effects { pure };
+}

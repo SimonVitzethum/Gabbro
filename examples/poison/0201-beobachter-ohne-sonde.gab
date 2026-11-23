@@ -5,8 +5,7 @@
 // steht -- und schiebt die Zusage damit in die Annahmenschicht. Dort gilt, was dort seit
 // jeher gilt: eine Annahme muss erklaert und FALSIFIZIERBAR sein.
 //
-// > *Eine Annahme, der keine Sonde je widersprechen kann, ist keine Isolation, sondern ein
-// > Wunsch* -- `examples/25` sagt den Satz ueber `entrust`, und er gilt hier woertlich.
+// A promise about the environment needs its declared falsifier.
 //
 // Ohne diese Regel waere `observed by irgendwas` der bequemste Weg, `V001` loszuwerden.
 

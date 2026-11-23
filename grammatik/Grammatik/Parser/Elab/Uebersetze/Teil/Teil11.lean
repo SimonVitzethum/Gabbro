@@ -215,7 +215,6 @@ def uRestFehler : List SItemTief → Except String Unit
   | .groupT .. :: rest => uRestFehler rest
   | .stateT .. :: rest => uRestFehler rest
   | .specT .. :: rest => uRestFehler rest
-  | .asmT .. :: rest => uRestFehler rest
   -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
   -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
@@ -307,21 +306,14 @@ def archAusKlauseln : List SKlausel → List String
   | .arch x :: rest => x :: archAusKlauseln rest
   | _ :: rest => archAusKlauseln rest
 
-/-- The machines a unit declares (`A005`): the `arch` of every `entry`, `entrust` and `boot`,
-    and the `arch` clause of every function with a body -- `fn`, including `= asm` bodies, whose
-    text is machine code for that machine (`A001` makes the clause mandatory there). Like every
-    other collector of the driver (`uSpeicherNamen`, `uFremdSig`, the assumption names) this reads
-    top-level items only: name resolution opens the modules before elaboration
-    (`Aufloesung.loese`). A bodiless foreign declaration (`extern`/`raw`/`prim`/`divergent`, and
-    the `axiom` items read as `extern`) merely claims a machine and never declares one: its
-    clause is held against this set. -/
+/-- The machines a unit declares (`A005`): the architecture of every `entry`, `boot`
+    and ordinary function body. Bodiless foreign declarations only claim a machine;
+    their clauses are checked against this set after module resolution. -/
 def uErklaerteArch : List SItemTief → List String
   | [] => []
   | .entryT e :: rest => e.arch :: uErklaerteArch rest
-  | .trustT _ _ a _ _ _ _ :: rest => a :: uErklaerteArch rest
   | .bootT _ a _ _ :: rest => a :: uErklaerteArch rest
   | .fnT sig _ :: rest => archAusKlauseln sig.klauseln ++ uErklaerteArch rest
-  | .asmT sig _ :: rest => archAusKlauseln sig.klauseln ++ uErklaerteArch rest
   | _ :: rest => uErklaerteArch rest
 
 /-- Foreign effects are checked here; retained pre/postconditions lower through the shared contract gate. -/
