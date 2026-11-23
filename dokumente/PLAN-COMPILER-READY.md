@@ -444,6 +444,11 @@ kernel's own scheduler or the OS; the five weak-memory points → the memory-mod
 
 ## 5. Phases and order
 
+**Order (owner, 2026-11-23): `grammatik/` first.** The core of the language is `grammatik/`; Stage 0 holds no
+language forms of its own and is not the core. `grammatik/` is restructured to the perfect model of AGENTS.md §3
+(B24, B23, the build guards of step 0) BEFORE any further restructuring of Stage 0; Stage 0 then follows the
+finished model and becomes simpler. No Stage-0 restructuring work is started until then.
+
 ```
 Phase 0  float decoupling merged, documentation pass (D1–D17), S3 lock stage 1 built
    │
