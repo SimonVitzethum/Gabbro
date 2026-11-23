@@ -3,8 +3,7 @@
 //
 // `nirgends_erklaert` stands in no `assume` and no `axiom`. The per-call
 // assumption is a clause that names something, so it names something this unit
-// declares -- the same rule an `entrust` answers to (`N004`), asked of the
-// declaration instead of the guest.
+// declares. The declared service cannot refer to an absent assumption.
 
 module gift::syscall_annahme_nirgends {
 

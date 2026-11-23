@@ -1,6 +1,5 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Export
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Uebersetze UebersetzeAllg
@@ -23,9 +22,9 @@ theorem lowerAllg_axVertrag (u : UProg) (P : Programm (declOf u))
         exact axVertragOf_exact u a ((Bool.and_eq_true _ _).mp hg).2
       · cases h
 
-/-- A source software origin is disjoint from a named hardware witness.
+/-- A software origin is disjoint from a named hardware witness.
     The service must separately establish ForeignPflicht and isolation. -/
-theorem source_software_origin (u : UProg) (a : Fin u.axs.length)
+theorem software_origin (u : UProg) (a : Fin u.axs.length)
     (software : (u.axs.get a).software = true)
     (witness : (u.axs.get a).beleg = none) :
     (declOf u).axHerkunft a = some AxOrigin.software ∧

@@ -209,10 +209,9 @@ def accepts (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) : Excep
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
-  let guests ← sourceGuests u
   let checks ← uCheckDecls u
   Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] checks [] guests (sperrQuellen u)
+    (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] checks [] [] (sperrQuellen u)
       (fun _ => none) (some (zeigerSignaturen u)))
     (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 
@@ -228,10 +227,9 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
-  let guests ← sourceGuests u
   let checks ← uCheckDecls u
   Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] checks [] guests (sperrQuellen u)
+    (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] checks [] [] (sperrQuellen u)
       (fun _ => none) (some (zeigerSignaturen u)))
     (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 
@@ -241,19 +239,16 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
   unfold accepts acceptsSchnell
   split
   · rfl
-  · cases sourceGuests u with
+  · cases uCheckDecls u with
     | error e => rfl
-    | ok guests =>
-      cases uCheckDecls u with
-      | error e => rfl
-      | ok checks =>
-        exact congrArg (fun accepted => Vertraege.Pruefer.contractVerdict P (sperrFamilie u)
-          (List.finRange u.fns.length) (sperrQuellen u) accepted
-          (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u))))
-          (@akzeptiertX_voll (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
-            (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u) _
-            (fun g => List.mem_finRange g) _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
-            (some (zeigerSignaturen u)))
+    | ok checks =>
+      exact congrArg (fun accepted => Vertraege.Pruefer.contractVerdict P (sperrFamilie u)
+        (List.finRange u.fns.length) (sperrQuellen u) accepted
+        (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u))))
+        (@akzeptiertX_voll (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+          (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u) _
+          (fun g => List.mem_finRange g) _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+          (some (zeigerSignaturen u)))
 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)
@@ -262,48 +257,32 @@ theorem restore_axVertrag (items : List SItemTief) (u : UProg)
   have same := congrArg Programm.axVertrag (restore_fields items u P Q h).1
   exact same
 
-/-- Invert the production decision on its exact program, roots, and guest
-    export. The diagnostic path cannot turn a rejected Bool into acceptance. -/
+/-- Invert the production decision on its exact program, roots, and check
+    descriptors. The diagnostic path cannot turn a rejected Bool into acceptance. -/
 theorem accepts_core (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
     (accepted : accepts u P main = .ok true) :
-    ∃ guests checks, sourceGuests u = .ok guests ∧ uCheckDecls u = .ok checks ∧
+    ∃ checks, uCheckDecls u = .ok checks ∧
       @AkzeptiertX (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
         (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
         (List.finRange u.fns.length) (List.finRange u.locks.length)
         ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-        (judgedRoots u main) [] checks [] guests (sperrQuellen u) (fun _ => none)
+        (judgedRoots u main) [] checks [] [] (sperrQuellen u) (fun _ => none)
         (some (zeigerSignaturen u)) = true := by
   unfold accepts at accepted
   split at accepted
   · cases accepted
-  · cases hg : sourceGuests u with
-    | error error => simp only [hg, bind, Except.bind, reduceCtorEq] at accepted
-    | ok guests =>
-      cases hc : uCheckDecls u with
-      | error error => simp only [hg, hc, bind, Except.bind, reduceCtorEq] at accepted
-      | ok checks =>
-        simp only [hg, hc, bind, Except.bind] at accepted
-        exact ⟨guests, checks, rfl, rfl, (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted⟩
-
-/-- Successful production admission retains one canonically admitted descriptor
-    per source guest. In particular, an empty adapter cannot hide a guest. -/
-theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
-    (accepted : accepts u P main = .ok true) :
-    ∃ guests, sourceGuests u = .ok guests ∧ guests.length = u.guests.length ∧
-      ∀ guest ∈ guests, guest.admittedB = true := by
-  obtain ⟨guests, _, exported, _, checked⟩ := accepts_core u P main accepted
-  refine ⟨guests, exported, sourceGuests_complete u guests exported, ?_⟩
-  unfold AkzeptiertX at checked
-  exact fun guest member => GuestBoundary.admissionB_each
-    (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp checked).1).2 guest member
-
+  · cases hc : uCheckDecls u with
+    | error error => simp only [hc, bind, Except.bind, reduceCtorEq] at accepted
+    | ok checks =>
+      simp only [hc, bind, Except.bind] at accepted
+      exact ⟨checks, rfl, (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted⟩
 /-- Stage 0's verdict discharges every restored function's semantic contract
     duties, including its frame and invariants. The enumeration is complete
     even for units outside the whole-image exporter's certified fragment. -/
 theorem accepts_contract_duties (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
     (accepted : accepts u P main = .ok true) :
     ∀ f, Vertraege.Pruefer.ContractDuties P (sperrFamilie u) f := by
-  obtain ⟨_, _, _, _, checked⟩ := accepts_core u P main accepted
+  obtain ⟨_, _, checked⟩ := accepts_core u P main accepted
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, ← Bool.and_assoc] at checked
   exact Vertraege.Pruefer.KontrakteGeprueftB_sound List.mem_finRange
     (Bool.and_eq_true_iff.mp checked).2

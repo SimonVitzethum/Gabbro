@@ -24,9 +24,8 @@ variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List 
 /-! ## 1. The goodness condition: a `never` axiom delivers no out value -/
 
 /-- **Goodness: an axiom with a `never` result delivers no out value.** Its answer class
-    is empty: no raw word of any oracle fits the declared result. A `-> never` foreign
-    body with an `out` -- the contradictory source form -- has no fitting answer in the
-    model; whatever the machine says, the call is the foreign code breaking its
+    is empty: no raw word of any oracle fits the declared result. A non-returning foreign
+    body has no fitting answer in the model; whatever the machine says, the call is the foreign code breaking its
     declaration. -/
 def AxNeverGut (D : Deklaration) : Prop :=
   ∀ a : D.Ax, D.aerg a = some .never → AntwortLeer D (D.aerg a)

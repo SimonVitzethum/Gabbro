@@ -44,7 +44,7 @@
     §12 assume/axiom                           -> `Annahme`, `Ax`
     §13 check                                  -> eine Marke (`Duty`): erzeugt vom `check`,
                                                verbraucht von `gates` (`konsumiert`)
-    §14 boot/entry/entrust/asm/prim/divergent  -> fremde Ruempfe sind `Ax`; `-> never` ist
+    §14 boot/entry/divergent: foreign bodies are `Ax`; `-> never` is
                                                `Ty.never` (kein `return` ableitbar); `retires`
                                                ist `Stmt.retires` (Marke weg, Annahme genannt)
     «F» f32/f64/rounded/finite                -> `Ty.fl`, `Block.gleit*` -- jede Rechnung
@@ -232,7 +232,7 @@ structure Deklaration where
   Inv : Type
   traeger : Inv → List (Tab ⊕ Glob)
   invs : List Inv
-  /-- `axiom`, und jeder FREMDE Rumpf: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`. -/
+  /-- `axiom` and every foreign body: `extern fn`, `entry`. -/
   Ax : Type
   aparams : Ax → List Ty
   aerg : Ax → Option Ty

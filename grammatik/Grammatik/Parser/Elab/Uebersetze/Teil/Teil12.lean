@@ -110,11 +110,10 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (asm : Bool) (eigner : List String := []) (spaces : List String := []) (erklaert : List String := []) : FnSig → Except String UFnKopf
+    (eigner : List String := []) (spaces : List String := []) (erklaert : List String := []) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln, generics := _ } =>
-    -- `extern`, `raw`, `prim` and `= asm { .. }`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
-    -- answer is `never`
-    if !(asm || strEq art "extern" || strEq art "raw" || strEq art "prim" || strEq art "divergent") then
+    -- A body-less `divergent fn` is a foreign declaration with a `never` result.
+    if !(strEq art "extern" || strEq art "divergent") then
       .error "foreign fn without G form"
     else if strEq art "divergent" && res.isSome then .error "divergent fn with a result without G form"
     else

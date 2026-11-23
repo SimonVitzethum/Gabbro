@@ -22,7 +22,7 @@
    test-driver policy (C14), not an auto-run of every gate.
 
    A gate may also name a C08 foreign body (`extern`/`raw`/`prim`/`divergent`
-   declarations, `asm` bodies, `axiom` items without `requires`, `syscall`
+   declarations, `axiom` items without `requires`, `syscall`
    gates): the wrapper is still an ordinary nullary `UFn` threading the Duty,
    and the gate call is the ordinary foreign call Stage 0 already lowers.
    Infallible answer-less foreign bodies ride `axCall`; infallible `int`/`bool`

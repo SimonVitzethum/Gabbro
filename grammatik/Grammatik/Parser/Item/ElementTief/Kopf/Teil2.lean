@@ -145,14 +145,14 @@ def beqGrundFallList : List (String × SExpr × String) → List (String × SExp
     `useT` = `Use`, `typeT` = `Typ`, `constT` = `Konst`, `globT` =
     `Statisch`, `fnT` = `Funktion`, `protoT` = a bodiless
     declaration (`fn …;`), `specT` = `spec fn … = pred;`,
-    `asmT` = `= asm {…};`, `formatT` = `Format`, `tableT` =
+    `formatT` = `Format`, `tableT` =
     `Tabelle`, `arenaT` = `Arena`, `whyT` = `Reason`,
     `stateT` = `State`, `devT` = `Device`, `assumT` =
     `Assume`, `axiomT` = `Axiom`, `checkT` = `Check`,
     `atomT` = `Atomic`, `lockT` = `Lock`, `rcuT` = `Rcu`,
     `groupT` = `Gruppe`, `concT` = `Concurrent`, `accT` =
     `Accumulates`, `walkT` = `Walk`, `entryT` = `Entry`,
-    `trustT` = `Entrust`, `startT` = `Boot`, `callT` =
+    `startT` = `Boot`, `callT` =
     `Syscall`, `transT` = `Translator`, `profT` =
     `Profil` / `ProfilBedarf` (`bedarf` flag), `gateT` = the `when
     TESTBUILD` gate. -/
@@ -165,7 +165,6 @@ inductive SItemTief
   | fnT : FnSig → SAnw → SItemTief
   | protoT : FnSig → SItemTief
   | specT : FnSig → SExpr → SItemTief
-  | asmT : FnSig → String → SItemTief
   | formatT : String → Option SExpr → Option String → List SFeld → SItemTief
   | tableT (name : String) (provider : Option String) (count : Option SExpr)
       (backed owner : Option String) (shared : Bool) (parts : List STabTeil)
@@ -186,7 +185,6 @@ inductive SItemTief
   | accT : String → STyp → String → Option SExpr → Option String → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
-  | trustT : String → String → String → List SRegBind → String → String → Option String → SItemTief
   | bootT : String → String → List SBootSchritt → List String → SItemTief
   | callT : SSyscall → SItemTief
   /-- `syscall V;`: a system call as a named variable (SYNTAX.md 12.3). -/
@@ -250,7 +248,6 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .fnT s b, .fnT t d => beqFnSig s t && beqSAnw b d
   | .protoT s, .protoT t => beqFnSig s t
   | .specT s p, .specT t q => beqFnSig s t && beqSExpr p q
-  | .asmT s a, .asmT t b => beqFnSig s t && strEq a b
   | .formatT a v e f, .formatT b w g h =>
     strEq a b && beqOptExpr v w && beqOptWort e g && beqSFeldList f h
   | .tableT a v c b o g p s, .tableT d w f e h i q t =>
@@ -285,9 +282,6 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     strEq a b && beqSTyp t u && strEq m n && beqOptExpr p r && beqOptWort q s
   | .walkT a, .walkT b => beqSWeg a b
   | .entryT a, .entryT b => beqSEingang a b
-  | .trustT a b c r s t x, .trustT d e f u v w y =>
-    strEq a d && strEq b e && strEq c f && beqSRegBindList r u &&
-    strEq s v && strEq t w && beqOptWort x y
   | .bootT a c s d, .bootT b e t f =>
     strEq a b && strEq c e && beqSBootSchrittList s t && beqWorte d f
   | .callT a, .callT b => beqSSyscall a b

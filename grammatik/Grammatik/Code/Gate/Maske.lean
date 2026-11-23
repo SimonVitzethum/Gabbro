@@ -11,7 +11,7 @@ public import Grammatik.Code.Conc.Masks.Mask
   `Code` has the abstract instruction `Instr.imsk d p v` (`d := old word; word := v`) and the named
   assumption `MaskHw` (`Conc/MaskNeed.lean`); the compiler lowered it with a table of its own (x86
   `pushfq; cli; popq`, aarch64 `mrs daif; msr daifset`). The proposal is that the PROGRAM declares the
-  exchange as a gate, `mask via xmask;` with `xmask` a user `asm` function whose contract is the
+  exchange as a gate, `mask via xmask;` with `xmask` a declared environment service whose contract is the
   exchange, so no mask instruction is built into the compiler. This file shows the exchange gate IS
   `imsk`: the contract `maskSpec` has exactly one outcome (`maskSpec_eindeutig`), and it is the one
   `stepI` of `imsk` computes (`maskSpec_ist_imsk`). So `imsk` needs no instruction of its own in the

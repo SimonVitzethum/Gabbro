@@ -18,20 +18,7 @@
 // not in the NO-FORM list the exporter writes into its own header. *A clause that changes
 // neither the artefact nor an obligation is a promise nobody keeps, and it looks kept.*
 //
-// > **`LANGUAGE.md` §S2 asks for exactly this placement** -- `raw fn` lies forcibly in
-// > `section ".boot"` -- **and says in the same row that it is NOT enforced**;
-// > `messung/BOOT-S3.md` item 4 books it as open. The refusal is the honest interim
-// > state, not a verdict against the form: it makes the gap loud, and it goes the day the
-// > emitter carries the attribute for a function.
-//
-// `// erwartet: N320 allein` is the sharper claim and it is the right one here: without
-// this rule NOTHING falls -- the emitted C is valid and `cc -Werror` takes it. That is
-// the counterfactual the sentence `namen.section_an_funktion` needs.
-//
-// Measured over `examples/*.gab` before the rule: two `section` sites, **both on a
-// `static`** (`05-nebenlaeufigkeit`, `40-werte-und-griffe`). No corpus program places a
-// function, so the refusal costs the corpus nothing.
-
+// Function placement stays refused until the image layout proves its obligations.
 module gift::section_an_einer_funktion {
 
 impl fn heiss(a : u32 in 0 .. 100) -> u32 in 0 .. 100

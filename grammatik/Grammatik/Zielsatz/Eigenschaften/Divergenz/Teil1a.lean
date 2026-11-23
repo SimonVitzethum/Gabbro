@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
+public import Grammatik.Zielsatz.Eigenschaften.ForeignNever
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 import all Init.Data.Repr
@@ -154,14 +154,14 @@ theorem forever_leer_divergiert {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ
     fun _ _ => rfl
   exact forever_noexit_divergiert O passes R a .tru .nil σ ρ hNo hInv
 
-/-! ## 3. `asm`: a `-> never` foreign body never comes back -/
+/-! ## 3. A `-> never` foreign body never comes back -/
 
-/-- **The exit evidence for `asm`**: a `-> never` axiom's answer class is
+/-- **The exit evidence for a foreign body**: a `-> never` axiom's answer class is
     empty -- no raw word of any oracle image fits the declared result. A
-    `-> never` foreign body with an `out` has no fitting answer in the
+    non-returning foreign body has no fitting answer in the
     model; whatever the machine says, the call is the foreign code breaking
-    its declaration. (Per-axiom form of `axNeverGut_gilt`, NeverAsm.lean.) -/
-theorem asm_never_antwort_leer {D : Deklaration} (a : D.Ax)
+    its declaration. (Per-axiom form of `axNeverGut_gilt`, ForeignNever.lean.) -/
+theorem never_antwort_leer {D : Deklaration} (a : D.Ax)
     (h : D.aerg a = some .never) : AntwortLeer D (D.aerg a) := by
   rw [h]
   exact antwortLeer_never
@@ -171,7 +171,7 @@ theorem asm_never_antwort_leer {D : Deklaration} (a : D.Ax)
     The outcome is `hardware (annahme a)` (`execBlock_bindAxiom_never`), the
     named assumption that owns the foreign effects, so divergence holds per
     the declared effects and never by assertion. -/
-theorem asm_never_kein_ok {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+theorem never_kein_ok {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {τ : Ty} (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
@@ -254,7 +254,7 @@ theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {p
     discrimination fact, vacuous -- the two leaf clauses of `PrueftG` never
     fire at a call head, whatever the axiom). It says nothing specific about
     `-> never` axioms; their stop is `nieZurueck` (`kopf_nieZurueck_never`,
-    NeverAsm.lean), never `hardware` (`kein_hardware_an_never`). -/
+    ForeignNever.lean), never `hardware` (`kein_hardware_an_never`). -/
 theorem bindAxiom_kein_blatt {D : Deklaration} {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {a : D.Ax} {τ : Ty} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ}

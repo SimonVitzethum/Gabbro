@@ -1,16 +1,5 @@
 // erwartet: O011
-//
-// **Die Klausel legt `t` still, und verbraucht wird `u` -- und damit sind es wieder ZWEI.**
-//
-// Das ist die Bewegung, gegen die die ganze Klausel gebaut ist. Der Bootsatz verlangt EIN
-// Ereignis; wer den Raum ueber der einen Marke ausblendet und die andere verbraucht, hat
-// zwei Zusagen nebeneinandergestellt, die einzeln erfuellbar sind. **`BootPhase` lebt hier
-// weiter** -- `phys_schreiben` bleibt rufbar -- und trotzdem steht daneben, `boot` sei
-// stillgelegt.
-//
-// *Ein Ereignis, dessen zwei Haelften an zwei verschiedenen Gegenstaenden haengen, ist kein
-// Ereignis, sondern eine Nachbarschaft.*
-
+// Retirement must consume the same phase mark that its clause names.
 module gift::stilllegunganderemarke {
 
 type Pa = u64;
@@ -34,7 +23,6 @@ format Pte endian little {
     nx         : bool @63,
 }
 
-raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
 
 fn boot_ende(t : BootPhase, u : Cr3Gesetzt, kern_wurzel : Seitentabelle)
     ensures !exists m in mappings of kern_wurzel : m.rahmen == 1

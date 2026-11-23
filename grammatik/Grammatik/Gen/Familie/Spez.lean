@@ -87,7 +87,7 @@ structure InvZ where
   traeger : List Nat
   deriving DecidableEq, Repr
 
-/-- A foreign body (`axiom`, `extern`, `syscall`, `asm`). -/
+/-- A foreign body (`axiom`, `extern`, `syscall`). -/
 structure AxZ where
   params : List Ty := []
   erg : Option Ty := none

@@ -101,7 +101,7 @@
          `exited`- und `left`-Zeilen) steht nicht hier: DASS der Koerper seine
          Pflicht haelt, ist die Logik des Schreibers und die Arbeit des
          Pruefers. Diese Datei zeigt nur, WOHIN die Pflicht gehoben wird.
-    (C3) Fremde Ruempfe (`extern`, `asm`, anvertraut) haben keine Zeile und
+    (C3) Foreign bodies (`extern`) haben keine Zeile und
          damit keinen Vertrag: ihre Vertraege bleiben Hypothesen ueber `laeuft`.
   (C4) Nicht in `Grammatik.lean` verdrahtet: der Bahnumfang verbietet den
        Indexeingriff; pruefe diese Datei unmittelbar mit

@@ -106,6 +106,7 @@ theorem parseItemTief_module (fuel : Nat) (tokens : List Token) :
     | cons head tail => cases head <;> rfl
   conv => lhs; unfold parseItemKopfTief
   simp only [modifiers,
+    show strEq "module" "prim" = false by decide, show strEq "module" "raw" = false by decide,
     show strEq "module" "spec" = false by decide, show strEq "module" "impl" = false by decide,
     show strEq "module" "module" = true by decide, Bool.false_eq_true, ↓reduceIte]
 

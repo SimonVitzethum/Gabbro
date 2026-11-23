@@ -66,7 +66,7 @@ rules('grammatik/Grammatik/Zielsatz', [
     (r'^Atomar\w*|^BeweisAtomar$', 'Atomar'),
     (r'^(Akzeptiert|AkzeptiertZeuge|Spec|SpecProben|Beweis|Proben|ProbenG1|ProbenW1)$', 'Kern'),
     (r'^(Faeden|FaedenVor|FaedenZeuge|Ruhe|RuheNutzer|RuheZeuge|PoolSym|PoolZeuge|Verbund|VerbundZeuge)$', 'Faeden'),
-    (r'^(Invarianten|InvariantenZeuge|Masken|MaskenZeuge|Divergenz|Schwach|FolgeZiel|NeverAsm)$', 'Eigenschaften'),
+    (r'^(Invarianten|InvariantenZeuge|Masken|MaskenZeuge|Divergenz|Schwach|FolgeZiel|ForeignNever)$', 'Eigenschaften'),
 ])
 
 rules('grammatik/Grammatik/Speichermodell', [

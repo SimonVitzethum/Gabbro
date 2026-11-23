@@ -238,8 +238,6 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
     else !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
-  | .trustT _ _ _ regs stack assumption service =>
-    !regs.isEmpty || !stack.isEmpty || !assumption.isEmpty || service.isNone
   | .whyT .. => false
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
@@ -252,7 +250,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       published through a `relaxed` atomic has no rule and stays refused. -/
   | .atomT _ ty payload ordering _ => typeMetadata ty ||
       (ordering == some "relaxed" && !(payload.getD []).isEmpty)
-  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .axiomT .. | .rcuT ..
+  | .modT .. | .useT .. | .formatT .. | .devT .. | .axiomT .. | .rcuT ..
   | .walkT .. | .entryT .. | .bootT .. | .profT .. | .gateT .. | .pubT .. | .arenaT .. => true
 /-- Inspect one item in its complete unit's signature context. -/
 def unitItemMetadata (items : List SItemTief) (item : SItemTief) : Bool :=

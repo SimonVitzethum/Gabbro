@@ -12,9 +12,6 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
     (staticRequirements : List (STyp × String) := []) (ort : Bool := false) (narrow : Bool := false)
     (widths : List (String × (Int × Int)) := []) :
     Except String UProg :=
-  match guestSources msE with
-  | .error e => .error e
-  | .ok (guests, msE) =>
   match uRestFehler msE with
   | .error e => .error e
   | .ok _ =>
@@ -91,7 +88,7 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   -- C15 use export: query/update/fold per accumulator, then expand uses.
   match uAkkuVorlauf consts alias ms fnItems with
   | .error e => .error e
-  | .ok (fnItems, akkuFrage, fremdPaare) =>
+  | .ok (fnItems, akkuFrage, fremdSigs) =>
   match uFnNamenEindeutig fnItems with
   | .error e => .error e
   | .ok _ =>
@@ -154,14 +151,14 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
-  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
+  match uSeq (fremdSigs.map (fun sig => elabAxKopf alias tabs whys globs (eigner := eigner) (spaces := spaces) (erklaert := uErklaerteArch ms) sig)) with
   | .error e => .error e
   | .ok axKoepfe0 =>
   match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
-  match uSeq (axKoepfe.map (fun k => guestForeign alias consts tabs globs whys annahmen guests k (eigner := eigner) (spaces := spaces))) with
+  match uSeq (axKoepfe.map (fun k => uForeign alias consts tabs globs whys annahmen k (eigner := eigner) (spaces := spaces))) with
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
@@ -222,7 +219,6 @@ def elabExpandedWithScopesFast (msE : List SItemTief) (consts : List (String × 
         globs := globs
         gestartet := gestartet
         axs := axs
-        guests := guests
         annahmen := annahmen
         whys := whys
         sums := sums

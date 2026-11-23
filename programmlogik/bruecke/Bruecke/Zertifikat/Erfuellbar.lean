@@ -55,7 +55,7 @@ def mainLeer : UFn :=
     gives := [], body := [], ret := .empty }
 
 def einheitLeer : UProg :=
-  { tabs := [], locks := [], fns := [mainLeer], axs := [], guests := [], annahmen := [],
+  { tabs := [], locks := [], fns := [mainLeer], axs := [], annahmen := [],
     whys := [], sums := [], gestartet := [], roots := [], hands := [], globs := [], regs := [],
     invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [], exportGate := Except.ok (),
     records := [], checks := [], marken := [], spaces := ["normal"], eigner := [], markOrders := [] }

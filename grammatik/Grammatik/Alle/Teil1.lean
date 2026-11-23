@@ -259,7 +259,7 @@ public import Grammatik.Zielsatz.Eigenschaften.Invarianten
 public import Grammatik.Zielsatz.Faeden.FaedenVor
 public import Grammatik.Zielsatz.Kern.Erfuellbarkeit
 public import Grammatik.Logik.Vertraege.EinpassenVoll
-public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
+public import Grammatik.Zielsatz.Eigenschaften.ForeignNever
 public import Grammatik.Parser.Elab.UebersetzeAllg2
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Parser.Elab.UebersetzeAllg3

@@ -114,7 +114,6 @@ def item (k : Kontext) : SItemTief → SItemTief
     .transT (k.ref target) (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .protoT s => .protoT (sig k s)
   | .specT s p => .specT (sig k s) (aus (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) p)
-  | .asmT s h => .asmT (sig k s) h
   | .tableT n v c b o sh ps space => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k)) space
   | .lockT n ps rk h sh m i =>
     .lockT (k.eigen n) (ps.map (aus k)) (aus k rk) (ausO k h) (ausO k sh) m (ausO k i)
@@ -129,8 +128,6 @@ def item (k : Kontext) : SItemTief → SItemTief
     let inner := k.mit (params.map Prod.fst)
     .axiomT (k.eigen name) (params.map fun (n, t) => (n, typ k t)) (typO k result)
       (ausO inner pre) (effects.map (effekt inner)) kind
-  | .trustT name code arch regs stack assumption service =>
-    .trustT (k.eigen name) (k.ref code) arch regs stack assumption (service.map k.ref)
   | .varT n => .varT (k.eigen n)
   | .goalT n o => .goalT n (o.map fun (abi, arch, bs) => (abi, arch, bs.map fun (v, b, h) =>
       (k.ref v, bindung k b, herkunft k h)))

@@ -172,7 +172,7 @@
     budget `p` is a run at every larger budget).
 
   THE ONE ASSUMPTION LIST -- everything the statements assume that is neither the checker's Bool nor the user's proof:
-  * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`) writes only its
+  * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `entry`) writes only its
     declared carriers, keeps the held locks and leaves its accesses in the trace. Nothing in the language can check
     foreign code. (Carriers, not indices: that it writes inside the declared extents is `ImBereichO`, below.)
   * (c) `RegLokal O` -- a register read answers from the carriers declared for its device; `awaits g` depends only

@@ -1,0 +1,5 @@
+// erwartet: N594
+// Assembly bodies are outside the language.
+module poison::removed_machine_access {
+impl fn machine() effects { pure } costs <= 1 ops = asm { "nop" };
+}

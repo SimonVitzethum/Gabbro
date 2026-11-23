@@ -7,7 +7,7 @@ what they are there for; here stands how one writes them down — **and what eve
 has to carry so that it may be written at all.** What does not stand here is not writable.
 
 Third version, 2026-09-09. The second version (2026-08-13 … 2026-09-05) is in the `git`
-history of this file; nothing of its surface was removed, every production of it stands below.
+history of this file. Unchecked machine-access forms were removed on 2026-11-23; their refusals stand below.
 What is new is that **every production carries its attributes** — the range at a number, the
 bound at an index, the held witness at a guarded place, the write right at an assignment, the
 consumed mark at a call, the rank at a `locks`, the stage at a phase mark, the class at a
@@ -41,9 +41,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **193** (the 190 above plus `adaptfn`, `adaptparams`, `adaptparam` (§6, phase 1); the `?` alternatives reuse `letstmt`/`exprstmt` (§7) — 192 defined, 0 open, 0 unreachable from `program`; 190 before the phase-1 desugaring, 189 before `startstmt`, 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); `adaptfn`, `adaptparams`, `adaptparam` (phase 1, §6); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **211** unique definitions in the fenced EBNF; assembly-body and entrust productions are removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **246 table words + 4 Sonderformen** measured (by the retired `pruefe-wortschatz`, historical: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23») |, `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3), `borrows` (C12 call-scoped owner loan, §6) |
+| vocabulary words | 221 | **247** active Lean table words; **4** additional words reserved solely for removal refusals (`asm`, `prim`, `raw`, `entrust`); special forms are unchanged |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | the grammar and reserved-word table checks of `instrumente/pruefe-lean.py` (the `lex_keywords` whole-table theorem in `Parser/Lex/Lexer/Teil2a.lean`); the retired `pruefe-syntax` (2026-10-17, see git history) also held closure of the rules, reachability from `program` and terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it read the same grammar |
@@ -80,7 +80,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
-             spec impl raw divergent prim extern section arch when
+             spec impl divergent extern section arch when
   Vertraege  requires ensures maintains refines breaking effects costs where in
               exhaustive old narrow to induction order advances retires deadline
   Wirkungen  reads writes locks masks allocs consumes borrows moves mints publishes diverges pure
@@ -101,7 +101,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
              embeds scale walk levels node down leaf mappings
-             entry entrust vector regs out preserves clobbers stack dispatch asm
+             entry vector regs out preserves clobbers stack dispatch
              per cpu ist nested masked awaits port step via
   Fremdkoerper syscall abi number errors kernel target
   Domaenen   slots of chain descendants ancestors queue elems fields threads
@@ -110,6 +110,8 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held TESTBUILD    (NOT vocabulary words -- see footnote G6)
 ```
+
+Removed spellings reserved for refusal: `asm`, `prim`, `raw`, `entrust` (see §14).
 
 **Everything else is an identifier.** A new word is a language change and needs an entry here.
 **`owner` is the one new word of the third version** («SG-9», §9): it names the linear mark
@@ -242,7 +244,7 @@ entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 reports, the vocabulary table. German stays in the working documents of the folder, in source
 comments and in every identifier a *user* chooses.
 
-Strings only in `claim`, `reason`, `assume`, `retires … unfalsifiable`, `section` and `asm`.
+Strings only in `claim`, `reason`, `assume`, `retires … unfalsifiable` and `section`.
 
 *Lean:* the lexis has no constructor. A Lean term is a **tree**, and a tree has no tokens; the
 map from the token stream to the tree is the parser, and the retired `dokumente/SYNTAX.md` §4 (in the history) said when it
@@ -257,7 +259,7 @@ program    = { item } ;
 item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | arena | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
+             | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl
              | bootdecl | syscalldecl | targetdecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro build --testbuild` opens it, its absence is the shipping build, and a
@@ -277,19 +279,6 @@ entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "
                entryextra
                "dispatch" path ";"
              "}" ;
-entrustdecl = "entrust" ident "at" ident "arch" ident "via" ident ";" ;
-(* `at` names an immutable code-region capability, never a computed address.
-   `via` resolves one declared C08 foreign binding with an explicit failure
-   channel and requires/ensures mentioning the region. The item defines an
-   ordinary wrapper with the binding's parameter, result and reason types;
-   calling it forwards through the existing fallible foreign-call binder.
-   Isolation and implementation correctness are software user-logic duties
-   on that contract; guest instructions receive no Gabbro body guarantee.
-   The Lean source path exports software provenance without a hardware
-   assumption. Additional region arguments need real owner resources and
-   remain refused while the source unit has no owner export. Historical
-   register/stack/assume blocks are parsed only to report named exclusions;
-   they cannot establish software isolation. Unknown ABIs are refused. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a
@@ -401,8 +390,7 @@ the existing G exporter and checker; module instantiation changes no G rule or g
 Recursive module application is refused as `parametric-module-recursion`, even with identical
 arguments. Expansion-budget exhaustion is `parametric-module-limit`; duplicate aliases and generated
 name collisions are `parametric-module-alias-collision` and `parametric-module-name-collision`.
-An item without a module substitution rule is refused as `parametric-module-item` (raw assembly has
-the separate `parametric-module-assembly` refusal). The Lean source/export/lowering
+An item without a module substitution rule is refused as `parametric-module-item`. The Lean source/export/lowering
 path above is the whole migration; no second frontend remains. Parser, stack, disjoint-storage and actual-exporter witnesses live in
 `Parser/Elab/Modules/Witness.lean` and `PipelineWitness.lean`; they require Lean checking.
 
@@ -412,7 +400,7 @@ path above is the whole migration; no second frontend remains. Parser, stack, di
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
 | `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one, each element lies in the element type (`K191`/`K194` are not yet Lean judgments) | no constructor — not yet decided by the Lean checker; the model certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
-| `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
+| `bootdecl`, `entrydecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
 | `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (Lean: `N446`/`N448`/`N449`/`N451`/`N452` in `Bausteine/Schablonen/SchablonenFaden.lean`, `N456`/`N457` in `Nebenlaeufigkeit/Allgemein/Threads/FadenMaschine.lean`; `N447`/`N450` and emitter `C185` are not yet Lean judgments) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
 | `targetdecl`, `syscall V;`, `via V` (§12.3, Opus agent L) | **a gate's kernel is a binding, not its text**: the parser fills every `via` gate from the active target's binding before any pass runs, and the checker holds every binding (`N562`-`N567` are not yet Lean judgments, inactive targets included) | none of its own — the filled gate is the `syscalldecl` row above; the target's named assumption is the gate's `D.Ax` assumption |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
@@ -457,7 +445,7 @@ indexty    = [ "option" ] "index" "into" ident ;
 (* The GENERATED index type of a table: `0 ..< count`. It stands as a `typeexpr` because it
    must be nameable in a signature -- otherwise the bound would again be a hand-written type
    beside the table. *)
-nevertype  = "never" ;                             (* return type of prim/divergent *)
+nevertype  = "never" ;                             (* result type of non-returning functions *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" | uint | int ) [ "in" range ] ;
 uint       = "u" nonzero ;                             (* 1 .. 64, storage is the next standard width *)
 int        = "i" nonzero ;                             (* 1 .. 64, storage is the next standard width *)
@@ -699,7 +687,7 @@ version answers the question at the type instead of at an alias analysis:
 | **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `LANGUAGE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (THEOREM-MAP §74, §75) |
 | **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own@m> T` is SUGAR for *"`T` is `owner m` and the callee `borrows m`"* — the mark is loaned for the call (`OwnerFlow.loans`) and comes back on normal return (`nachSig` erases and re-appends it; ordinary `produziert` still never mints an owner). Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt`, `Expr.thruOwn`, `Stmt.assignThruOwn` |
 | **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
-| **`x`** | code space; a pointer with `x` is a `fnptr` (§2) or an `entrust` target (§1) | `Ty.fnptr` |
+| **`x`** | code space; a pointer with `x` is a `fnptr` (§2) for executable code | `Ty.fnptr` |
 
 > **Bytes — in the core since the evening of 2026-09-09 («SG-16»).** A byte carrier is a table
 > whose field is `u8 in 0 .. 255`; `n` bytes from index `i` are ONE number in `0 .. 256ⁿ−1`
@@ -999,7 +987,7 @@ index binding and held-guard requirements remain identical. Unsupported domains 
 ## 6. Functions and contracts — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
+fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "divergent" | "extern" ]
            "fn" ident [ "[" gparams "]" ] "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
            [ "payload" path ]
@@ -1037,7 +1025,7 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "diverg
            { "checks" pred "else" path }
            (* owner 2026-11-22: a run-time checked precondition, the last clauses before the body:
               `if !pred { return path; }` at the start of the body; the caller owes nothing. *)
-           ( endblock | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
+           ( endblock | "=" pred ";" | ";" ) ;
            (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
               off. A function with a return type ends in `return e;`, one without in `return;`
               or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
@@ -1052,12 +1040,6 @@ gcall    = path "::" "[" garglist "]" "(" [ arglist ] ")" ;
 garglist = garg { "," garg } ;
 garg     = typeexpr | constexpr | path | fnlit ;
 fnlit    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract endblock ;
-asmrumpf = "asm" "{" { string }
-             [ "in"  "{" asmops "}" ]
-             [ "out" "{" asmops "}" ]
-             [ "clobbers" "{" identlist "}" ] "}" ;
-asmops   = asmop { "," asmop } ;
-asmop    = ( ident | "result" ) ":" string ;
 inductlist = induct { "," induct } ;
 induct     = "induction" "over" domain ;      (* names the SCHEME -- no lemma, no proof step *)
 efflist  = eff { "," eff } ;
@@ -1196,7 +1178,7 @@ each named carrier.
 **`effects` is NOT fail-open.** A function **without** `effects` over a body
 derives it (lane 191: the derived hull is checked exactly like a written
 line); whoever touches nothing derives `effects { pure }`. Without a body —
-`extern`, `prim` — and where the derivation settles nothing, the omission is
+`extern` — and where the derivation settles nothing, the omission is
 a compile error with the reason (`E001`, `N305`).
 
 **`decreases <expr>` — the descent measure of the RECURSION** («K5.4»): `costs` at a
@@ -1224,7 +1206,7 @@ not fall.
 | `by induction over d` | names the scheme; no term | none |
 | `spec fn … = pred` | a typed predicate helper, checked before substitution (below) | SUGAR |
 | `const fn` | a translation-time number: a literal at every use | `Expr.lit` (SUGAR) |
-| `raw fn`, `prim fn`, `extern fn`, `= asm { … }` | a **foreign body**: its contract is all Gabbro knows; the body is the machine | `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
+| `extern fn` | a **foreign body**: its contract is all Gabbro knows; the body is the machine | `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
 | `-> never`, `divergent fn` | no `return` derivable; the only exits are `leave`/`next` of an enclosing loop, a `return R::F`, or a foreign body | `Ty.never`, theorem `never_leer` |
 | `requires Held(L), …` | **the lock set is part of the contract**: the `Held` list of a signature names EXACTLY the locks held at every call — `∀ L, Held(L) ∈ Λ ↔ L ∈ haelt(S)` («SG-20», evening of 2026-09-09). Only so can a `locks` inside the callee stand above *everything* held (`H006` across call boundaries); a helper used under two lock sets is two signatures; **at a call every `Held(L)` of the callee stands in the caller's Λ** (`N587`: an enclosing `locks L` or the caller's own `Held(L)`, never an `effects` line) | `Signatur.haelt`, `RufPasst.hh`, `Signatur.anfang`, `Vertrag.ende` |
 | a **call** `f(a, b);` | the callee's `writes` ⊆ the caller's, its `consumes` ⊆ Λ, its `Held` = the held set, and a callee with `or R` is callable only through `let … else` | `Stmt.call f args hp hr` with `hp : RufPasst`, `hr : gruende = 0`; theorem `ruf_hat_alles` |
@@ -1779,8 +1761,7 @@ plus the four things only a library declaration can fail:
   module outward (`N060`). It stands behind the signature because it extends
   the call shape (what the translator fills), not the contract.
 * **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
-  no `= asm`). The transitive call hull holds no `extern`, `raw`, `prim`
-  or `asm` (`N059`, `CHECKER.md` §0c) — structure, never prose
+  no foreign body). The transitive call hull holds no `extern` (`N059`, `CHECKER.md` §0c) — structure, never prose
   comparison.
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
@@ -1861,7 +1842,7 @@ RUNS.
 
 **The checks** — the body is an ordinary function body: types, contracts,
 effects and costs are checked by the ordinary checker, and the transitive
-call hull holds no `extern`, `raw`, `prim` or `asm` (`N059`,
+call hull holds no `extern` (`N059`,
 `CHECKER.md` §0c). Five new refusals hold the five things only the
 linkage can fail:
 
@@ -2654,7 +2635,7 @@ footnote: *memory-safe under A1…An*.
 
 | spelling | reading | Lean |
 |---|---|---|
-| `assume a "…" falsifier p` | a **named** assumption; the grammar makes sure it is named at every site that rests on it (`progress`, `retires`, `observed by`, `entrust … assume`) | `D.Annahme`; `Hardware.fortschritt a` |
+| `assume a "…" falsifier p` | a **named** assumption; the grammar makes sure it is named at every site that rests on it (`progress`, `retires`, `observed by`) | `D.Annahme`; `Hardware.fortschritt a` |
 | `axiom x(params) -> τ requires p effects { … } falsifier q` | a **foreign body**: the machine acts (H1, the `Orakel`), the answer is held against `τ`; `requires p` is a `pruefung` before the call (SUGAR); the axiom's `writes` ⊆ the caller's | `D.Ax`, `Orakel.wirkt`; `Stmt.axiomCall`, `Block.bindAxiom` → **`hardware (annahme a)`** |
 | that an axiom writes **only** its `effects` | **an assumption, not a theorem** (`SYNTAX.md` v2:1646 booked it as A_n) — the premise `RahmenO` of `exec_rahmen` | `RahmenO O` |
 
@@ -2993,62 +2974,25 @@ name"*: not derivable.
 
 ---
 
-## 14. Boot phase, machine state, assembler
+## 14. Boot and checked machine access
 
-```gabbro
-opaque type Pa = u64;
-linear ghost type BootPhase order { roh, mmu, geraete };
-type Context = { sp : u64, };
+Assembly bodies, `prim fn`, `raw fn` and `entrust` are refused. Their words remain
+reserved only to report one dedicated diagnostic per form. Machine access uses the checked
+language constructs described in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
+`extern fn` remains the general named-assumption interface to environment services with a contract.
 
-walk PageTable levels 4 {
-    node : [Pte; 512],
-    down : frame when it.present && !it.large,
-    leaf : it.present && it.large,
-}
-
-format Pte endian little {
-    present : bool @0,
-    large   : bool @1,
-    pte_low : u64 @[11:2]  reserved,
-    frame   : u64 embeds [51:12] scale 4096,
-    pte_hi  : u64 @[62:52] reserved,
-    nx      : bool @63,
-}
-
-const BOOT_FRAME_LOW  : u64 = 0x1000;
-const BOOT_FRAME_HIGH : u64 = 0x2000;
-
-raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
-
-fn boot_end(t: BootPhase, root: PageTable)
-    ensures !exists m in mappings of root :
-        m.frame >= BOOT_FRAME_LOW && m.frame < BOOT_FRAME_HIGH
-    retires t from boot falsifier probe_boot_unreachable
-    effects { consumes t, writes root };
-
-prim fn switch_to(von: ptr<normal,rw> Context, zu: ptr<normal,r> Context) -> never
-    effects { writes kontext };
-prim fn resume(k: ptr<normal,r> Context) -> never effects { reads k };
-divergent fn idle() effects { diverges };
-```
-
-`boot_end` consumes the **linear** token **and** retires the boot space — **one clause**
-(`O011`); what disappears is said as a `walk` fact and demanded (`O012`); that an address without
-a mapping is **unreachable** is a statement about the MMU and the probe the clause names is the
-falsifier.
-
-**Attributes and Lean («SG-18»).**
-
-| spelling | reading | Lean |
+| removed form | refusal | poison probe |
 |---|---|---|
-| `raw fn`, `prim fn`, `extern fn`, `= asm { … }`, `entry`, `entrust`, `boot` | a foreign body: contract known, body the machine | `D.Ax`; `Stmt.axiomCall` → `hardware (annahme a)` |
-| `-> never` | no `return` derivable | `Ty.never` |
-| `divergent fn … effects { diverges }` | a foreign body that does not return: the call has no continuation — the statement after it is not derivable (the call is the `endstmt`) | `Ty.never` as `aerg` |
-| `requires BootPhase` at a `raw fn` | the mark in Λ at the call (`O010`: somebody must retire it) | `Signatur.konsumiert` … `produziert` (borrowed) |
-| `retires t from boot falsifier p` | Λ loses `t`; `p` is named in the term | `Stmt.retires` |
-| `advances roh -> mmu` | the stage moves | `Stmt.advances` |
-| `mappings of root` in `ensures` | nested `forallSlots` over the four level tables | SUGAR («SG-16») |
-| `walk … levels 4 { node : [Pte; 512] … }` | four tables of `count 512` | `D.Tab` per level |
+| `= asm { … }` | `N594` | `1488-assembly-refused.gab` |
+| `prim fn` | `N595` | `1489-prim-function-refused.gab` |
+| `raw fn` | `N596` | `1490-raw-function-refused.gab` |
+| `entrust` | `N597` | `1491-entrust-refused.gab` |
+
+`entry`, `boot`, `axiom`/`assume`, `syscall` and device registers remain language forms.
+Boot phase marks use the ordinary linear ownership and stage discipline. A retirement clause
+consumes its named mark and carries its declared mapping obligation and falsifier; it grants
+no unchecked access to a numeric address. Unsupported machine constructs are refused until
+model rules and verified lowering exist. There is no instruction-text escape hatch.
 
 ---
 
@@ -3170,7 +3114,7 @@ configuration), DATA (an object, not an obligation). Full map: `dokumente/THEORE
 |---|---|---|
 | `KoerperGutG` — one triple per function plus caller duty | USER | the `requires` / `ensures` / `invariant` / `decreases` clauses and the `state` pre-state (§§5–8); Lean legs `hoare_call` (`HoareRuf.lean`) and `rufG_treu` (`RufMaschineG.lean`). It quantifies over ALL frame-respecting register-local oracles, so the sequential proof must survive register answers that change between reads — locality may be assumed, stability may not. |
 | `StartGut` — every start function's `requires` at the start world | USER (boot) | the boot assignment `init` against the entry contracts (`ZielOrt.lean`). |
-| `GutO` — axiom answers inside declared frames, held locks and trace untouched | HARDWARE | the `effects` of every `axiom` / `raw` / `prim` / `extern` / `asm` body (§§1, 6, 14); the per-syscall instance from the kernel contract (`syscall_paarung`, `SyscallPaarung.lean`); the fixture instance `refO_gut` (`ReferenzB.lean`). |
+| `GutO` — axiom answers inside declared frames, held locks and trace untouched | HARDWARE | the `effects` of every `axiom` / `extern` body (§§1, 6, 14); the per-syscall instance from the kernel contract (`syscall_paarung`, `SyscallPaarung.lean`); the fixture instance `refO_gut` (`ReferenzB.lean`). |
 | `RegLokal` — register answers from the register's device carriers, `awaits` visibility from the awaited global only | HARDWARE, named | the `device` / `reg` declarations with `mirrors`, class, and `requires` promises (§10); transfer `regLies_gleich` / `sichtbar_gleich` (`ZielOrtGeraetSem.lean`). |
 | waiting — fair scheduling (`FairF`) | runtime assumption, named | the waiting bound `GabbroZielWarten` (`wartezeit`) holds under the fairness window `F`; the hold time of every section is no assumption: it follows from the checked hold bound (`lock L … held <= N ops`, §11, `K002` as the model Bool `haltPasst`) by `haltezeit_aus` (Logik/Fortschritt/Halten/Haltezeit.lean, 2026-11-13). |
 | `programmImFragmentG = true` — every body in the widened `gOk` fragment | DECIDABLE | all forms including loops, exits, reasons, axioms; indirect calls only where `KandOk` holds (every function of the pointer's signature keeps its contract carriers in the caller's footprint); register reads only with their device carriers in the footprint. Soundness: `programmImFragmentG_ok`. Lean-decidable, not yet a checker rule — wiring it per program is emitter work. |
@@ -3418,7 +3362,7 @@ invariant, `leave` ends the visitation early. Recursion through a loop body
 nests the inductions in a fixed order: the measure induction outside, the
 loop rule inside.
 
-**Foreign bodies stay hypotheses.** `extern`, `asm`, and entrusted routines
+**Foreign bodies stay hypotheses.** `extern` services
 have no row and hence no duty; their contracts remain hypotheses about the
 environment, threaded through rather than closed.
 

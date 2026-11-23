@@ -1,0 +1,5 @@
+// erwartet: N595
+// Machine operations use language constructs.
+module poison::removed_machine_access {
+prim fn machine() -> never effects { diverges };
+}

@@ -51,12 +51,11 @@ RULES = [
     ("regbind", "lex", "S", ".", ".", ".", None, "`SRegBind`"),
     # --- section 1: program, items
     ("program", "item", "S", "E", "M", "U", None, "`parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries"),
-    ("item", "item", "S", "E", "M", "U", None, "`SItemTief`, 32 constructors"),
+    ("item", "item", "S", "E", "M", "U", None, "`SItemTief`, 40 constructors"),
     ("buildgate", "item", "S", "E", "M", ".", r"\bwhen\s+TESTBUILD", "`gateT`"),
     ("bootdecl", "item", "S", "E", "M", ".", r"^\s*boot\s", "`bootT`"),
     ("bootstep", "item", "S", "E", "M", ".", r"^\s*step\s", "`SBootSchritt`"),
     ("entrydecl", "item", "S", "E", "M", "U", r"^\s*(pub\s+)?entry\s+[a-z_A-Z]", "`SEingang`; `elabU` reads only the dispatch roots"),
-    ("entrustdecl", "item", "S", "E", "M", ".", r"^\s*entrust\s", ""),
     ("entryextra", "item", "S", "E", "M", ".", r"\bnested\s+(never|masked|bounded)|\bper\s+cpu\b", ""),
     ("syscalldecl", "item", "S", "E", "M", ".", "^\\s*(pub\\s+)?syscall\\s", "literal, `via V` and `syscall V;` forms"),
     ("sysbind", "item", "S", "E", "M", ".", r"\bnumber\s", ""),
@@ -145,9 +144,6 @@ RULES = [
     ("predlist", "pred", "S", "E", "M", "U", None, ""),
     # --- section 6: function declarations
     ("fndecl", "fn", "S", "E", "M", "U", r"\bfn\s+[a-z_A-Z]", "`FnSig` + `SAnw`; elab: `impl fn` (with an `or R` channel) and `extern fn`"),
-    ("asmrumpf", "fn", "R", "E", "M", ".", r"=\s*asm\s*\{", "`asmT`, body raw"),
-    ("asmops", "fn", "R", "E", "M", ".", None, ""),
-    ("asmop", "fn", "R", "E", "M", ".", None, ""),
     ("inductlist", "fn", "R", "E", "M", ".", r"\binduction\s+over\b", "raw string"),
     ("induct", "fn", "R", "E", "M", ".", None, ""),
     ("efflist", "fn", "S", "E", "M", "U", None, ""),
