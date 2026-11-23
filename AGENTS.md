@@ -87,13 +87,16 @@ Consequences:
   the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **ONE powerful goal theorem, not many (owner, 2026-11-23, O27).** Every promise of the language is a leg of the
-  single theorem `gabbro_ziel`: safety (memory, races, locks, contracts, ownership, bounds, the low-level legs, no
-  TOCTOU) and every other kind (linking, liveness, waiting, termination, information flow, probability, …). A leg
-  that needs a premise of its own (fairness of the scheduler, a termination measure, a declared random source)
-  carries it as a hypothesis INSIDE the leg, so the one theorem holds for every program and each leg says exactly
-  when it applies. The user owes only program logic and the named assumptions. Separate top-level statements are
-  allowed only as stepping stones of the proof, never as the language's promise.
+- **ONE short goal theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise
+  is a single theorem whose statement a reviewer can read in a minute:
+  `Akzeptiert → Logik → Hardware → every run of the emitted image is a run of machine G with no Fehler`.
+  `Fehler` is ONE small definition over runs: a reachable machine in which a thread that has not ended can take no
+  step (stuck), a stop other than a normal end or a named hardware stop, a deadlock, or a wait that never ends
+  under the named fairness. Every safety property — memory, ownership, races, locks and their invariants,
+  contracts at calls, TOCTOU, time and memory budgets, the low-level rules — is a side condition of G's rules, so
+  violating it means G has no step, which is a `Fehler`. Review therefore reads three things only: the definition
+  of `Fehler`, the premises (a)–(d), and the rules of G. Theorems that today state single legs become proof steps;
+  they are never the promise. The user owes only program logic (b) and the named hardware and environment list (c).
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
