@@ -87,7 +87,9 @@ Consequences:
   the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **Extensions stand beside the goal, not inside it,** when they are a different kind of statement (linking,
+- **Every safety property is a leg of the ONE goal theorem `gabbro_ziel`** (owner, 2026-11-23, O27), the absence of
+  TOCTOU included; the user owes only program logic and the named assumptions. **Extensions stand beside the goal,
+  not inside it,** only when they are a different kind of statement (linking,
   liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
