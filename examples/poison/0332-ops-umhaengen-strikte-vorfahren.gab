@@ -15,7 +15,6 @@
 // `umhaengen_erhaelt` verlangt `¬ ueber σ p s`, und `ueber` ist REFLEXIV-transitiv: `s`
 // liegt auf `p`s Kette, **`p` selbst eingeschlossen**. Die Gabbro-Form dafuer ist
 // `!(o.slots[p] reaches o.slots[s] via elter)` -- eine Klausel statt zweier, und genau
-// deshalb hat `messung/OPS-RELABEL.md` §4 so entschieden.
 //
 // *Dieselbe Klasse wie Gift 324:* dort das schwaechere `ist_blatt`, hier die strikte
 // Vorfahrenmenge. **Eine Voraussetzung, die schwaecher ist als die des Satzes, ist genau

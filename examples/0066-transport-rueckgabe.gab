@@ -38,7 +38,6 @@
 //
 //    What the ghost form loses by not being the two-type form is the EXCLUSION,
 //    and that is caprock's whole assurance rather than a detail -- see the block
-//    at the bottom of this file. `messung/proben/probe-besitz-zwei-typen.gab`
 //    carries the capability in the form that keeps it.
 //  * `advances geraet -> fahrer` (the way BACK as a forward step): `O002`
 //    refuses -- order is order. The return trip is a second function on the
@@ -170,7 +169,6 @@ impl fn tritt(basis : u64 in 0 .. 1099511627776, versatz : u16, faktor : u32 in 
 // **The language is not what is missing -- this file's choice of form is.**
 // Two `linear type`s with the write path declared over the driver side alone give
 // all three back, with no new word and no pass change:
-// `messung/proben/probe-besitz-zwei-typen.gab` (green, emits, compiles),
 // `examples/poison/671` (the write while armed), `examples/poison/672` (the reclaim
 // without an arm) and `examples/poison/673` (the receipt invented outside the
 // declaring module, which is `pub(crate)` said with a module boundary).

@@ -25,7 +25,6 @@
 // anywhere else -- that is `D004`, and `examples/0029-undurchsichtig.gab` is the door it uses.
 // This file is the driver reaching past it.
 //
-// The working version is `messung/proben/probe-besitz-zwei-typen.gab`, which puts the
 // transport and the driver in two modules for exactly this reason. Its companions are
 // `examples/poison/671` (writing while the device owns the buffer) and `examples/poison/672`
 // (reclaiming a buffer that was never armed).

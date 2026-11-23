@@ -9,16 +9,13 @@
 // `N021` und `N022` finden ihre Groesse ueber einen Namensvergleich gegen `measures`. Steht
 // dort ein Name, den es nicht gibt, vergleicht sich der Vergleich mit nichts, und *beide
 // Regeln schweigen.* Gemessen am 2026-08-31 (`dokumente/CHECKER.md`):
-// `messung/tor-proben/t11` ist byteweise `poison/0155-messung-schreibt-sich-selbst.gab` mit
 // `measures kk` statt `measures k` -- die Vorlage meldet `N027` UND `N021`, die Kopie nur
 // `N027`. **Ein Buchstabe, und die Regel ist weg.**
 //
 // *Die Absage fiel bei ihrem ersten Lauf zweimal im eigenen Korpus:*
 // `poison/0187-can-fail-schreibt.gab` nannte `tiefe_lebend` und `kerne_gemessen`, die beim
 // Kuerzen aus `examples/06` weggefallen waren -- damit schwieg dort `N022` ueber
-// `floor kerne_gemessen >= 2` --, und `messung/fragmente/F06.gab` misst vier Felder eines
 // Traegers `eich`, den es in der Datei nicht gibt. Dieselbe Stelle, an der `N040` seinen
-// ersten Fall fand (`messung/fragmente/F01.gab`).
 module gift::measures_nennt_nichts {
 
 static mut k : u32 = 0;

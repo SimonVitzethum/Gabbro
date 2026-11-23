@@ -4,7 +4,6 @@
 // Diese Datei ist die VEREINIGUNG, so wie `gabbro pruefe --with a.gabi --with b.gabi c.gab`
 // sie dem Pruefer vorlegt: zuerst die beiden Schnittstellen, dann die Einheit, die beide
 // benutzt. **Woertlich das, was `gabbro abi` schreibt** -- die zwei `module`-Bloecke oben
-// sind aus `messung/abi-proben/lib-speicher.gab` und `.../lib-geraet.gab` erzeugt, nicht
 // von Hand gesetzt. Die Zweidateienfassung steht daneben und laeuft als eigener Test
 // (`ring_ueber_zwei_bibliotheken`, `crates/gabbro-check/tests/beispiele.rs`).
 //

@@ -2,7 +2,6 @@
 // **Eine Warteschlange ist ein Verbund mit genau EINEM Feldarray, keine `table`.**
 //
 // Diese Probe steht hier, weil der eigene Korpus sie geliefert hat.
-// `messung/proben/probe-vier-zellen.gab` trug bis zum 2026-08-31 `traverse i over queue q`
 // ueber `q : ptr<normal, rw> Warteschlange` -- ueber einem TABELLENZEIGER. Der Pruefer
 // schwieg, und mit einer Kostenzusage sagte `K003`: *„die Domaene `queue` der Traversierung
 // hat keine Schranke aus der Deklaration"*.

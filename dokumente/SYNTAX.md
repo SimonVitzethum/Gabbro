@@ -3273,15 +3273,14 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
       and retired `pruefe-grammatiktafel` need a Rust toolchain and abort without one — a
       pre-existing environment limit, not a finding about the grammar.
 - [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
-      T3 (`dokumente/PLAN-TRANSLATION-VALIDATION.md`): the token-to-tree map with a
+      T3: the token-to-tree map with a
       certificate, so the handwritten parser leaves the trusted base. Production-to-constructor table
       161 mapped-or-named in the retired `messung/SYNTAX-PARSER-ENTWURF.md` (in the history). This is what turns 16.4
       (8) into a corpus measurement.
 - [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09; race freedom now
       proved over machine G as `rennfrei_g` (lane 130).
 - [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
-- [x] **The implementation in checker and emitter** — `PLAN-TRANSLATION-VALIDATION.md`
-  (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
+- [x] **The implementation in checker and emitter** — rows `V006`/`V007`, `K`-`deadline`, `D`-`count`: `deadline` checks
   (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
   counter lowering in the deleted emitter — all green on 2026-09-13, `examples/71` lowers and `cc`

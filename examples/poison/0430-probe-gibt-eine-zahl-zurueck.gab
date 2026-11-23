@@ -5,7 +5,6 @@
 // Urteil fehlt, `M135` sieht, ob das vorhandene ueberhaupt eines ist.
 //
 // Gemessen am 2026-08-31 gegen den unveraenderten Pruefer
-// (`messung/proben/probe-probenurteil-typ.gab`): diese Datei prueft mit **0 Fehlern**, der
 // Erzeuger schreibt
 //
 //     bool pruefe_c(void) {
@@ -31,7 +30,6 @@
 //
 // und `Typ::Wahrheit` hat keinen Bereich -- also schwieg der Vergleich, sobald `bool` auf
 // einer der beiden Seiten stand. An JEDER Rueckgabe, jeder Zuweisung, jedem Argument.
-// `messung/proben/probe-rueckgabetyp.gab` verfaelscht vier Rueckgaben, und genau eine fiel:
 // die, an der beide Seiten einen Bereich hatten.
 //
 // DIE GEGENPROBE STEHT IN DERSELBEN DATEI

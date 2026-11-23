@@ -4,7 +4,6 @@
 // Companion to `704` (exact overlap, one hull string): here the hull strings
 // differ (`writes T.slots[0].x` vs `writes T.slots[0].y`), so the exact arm
 // stays silent and ONLY the table-level interim rule over open question 4
-// (`messung/NEBENLAEUFIGKEIT-ENTWURF.md` §6.4) refuses -- row-level
 // disjointness needs index analysis the checker lacks. No lock in either
 // hull; shared reads would stay free.
 module gift708 {

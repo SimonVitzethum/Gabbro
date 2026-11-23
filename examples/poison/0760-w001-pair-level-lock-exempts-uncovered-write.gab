@@ -10,7 +10,6 @@
 // to say): it guards `Y`, which is written under it. It guards NOTHING around
 // `X = 1` / `X = 2`. The pass compares hull SETS (`nebeneinander.rs`,
 // `ueberlappung`: a shared lock returns no overlap at all), never sites -- the
-// open question 1 of `messung/NEBENLAEUFIGKEIT-ENTWURF.md` (held-set analysis).
 // A clock that says "L orders these writes" from co-occurrence, with no site
 // where L is held across the access.
 //

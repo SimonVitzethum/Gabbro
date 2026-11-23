@@ -264,7 +264,7 @@ Required, not optional, but ONLY in a form that gives exactly what 7.2 gives:
    order) -- a reviewed `Spec.lean` diff -- with a theorem that "each unit accepted alone + link check" implies the
    whole-program acceptance. Then a dependency is checked ONCE and its verdict reused by content fingerprint.
 2. The LLVM backend emits units with external linkage, every static defined once.
-3. Translation validation covers each object and the link step (`PLAN-TRANSLATION-VALIDATION.md`).
+3. Translation validation covers each object and the link step.
 Lean, done (2026-10-25, `Zielsatz/Projekte/Verbund.lean`, THEOREM-MAP §99): `gabbro_ziel_verbund_n` for any
 number of units, each accepted ALONE, plus the link check `BindeSpec` (decided by `bindeB`, `bindeB_sound`) --
 callbacks, shared atomics, ownership across units, differing assumptions and initial memories, one lock order.

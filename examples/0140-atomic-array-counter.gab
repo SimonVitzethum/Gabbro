@@ -5,7 +5,6 @@
 // update and the emitter refused the DECLARATION (`C001`, *"`atomic` of an
 // unresolvable type"*) -- so a program that needed one counter per rule wrote
 // 256 scalar atomics and a flat if-dispatch to pick between them. Measured in
-// a firewall written outside this tree (`messung/muse/OPUS-BERICHT-ATOMFELD.md`):
 // 5136 lines and 1797 ops for a single increment, instead of the ~60 lines here.
 //
 // **What the lowering is.** `_Atomic uint32_t REGEL[256];` -- C11 6.7.2.4p3

@@ -17,7 +17,6 @@
 // halves are not the same rule, and only one of them exists.
 //
 // With two `linear type`s the precondition is back where caprock has it -- in the parameter
-// type -- and it costs no new word. `messung/proben/probe-besitz-zwei-typen.gab` carries the
 // working version; `examples/poison/671` is the other refusal, the write while armed.
 
 module gift::zurueck_ohne_hingabe {

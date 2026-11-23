@@ -35,7 +35,6 @@
 //
 // WHAT IT COST IN THE FROZEN CORPUS
 // ----------------------------------
-// `messung/fragmente/F03.gab`:210 writes `owner_core(picked)` against
 // `extern fn owner_core(d : ptr<normal, r> SchedOps, t : u32)` -- **one argument, two
 // parameters**, on a line of the frozen excerpt. It surfaced as `M140` about parameter `d`,
 // a statement about the wrong thing: had both parameters been `u32`, the call would have

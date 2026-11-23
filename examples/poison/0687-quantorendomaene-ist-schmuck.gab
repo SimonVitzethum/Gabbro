@@ -1,9 +1,7 @@
 // erwartet: D022
 // **The quantifier domain was decoration, and this is the shape that measured it.**
 //
-// `messung/OFFEN-PRUEFER-UND-GRAMMATIK-2026-09-07.md` §1.1 wrote the finding at ONE domain
 // and asserted the other eight. On 2026-09-08 the differential was run at all nine, one
-// probe per domain, on `messung/proben/probe-neun-domaenen.gab`:
 //
 //     domain           | errors | hints | emit md5   | verdict
 //     -----------------|--------|-------|------------|-----------

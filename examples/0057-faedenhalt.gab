@@ -136,7 +136,6 @@ impl fn alle_anhalten()
 {
     // **Die Laufform nennt ihre Menge, die Zusicherung nicht.** Hier steht `slots of Faden`,
     // weil eine Traversierung eine Schranke braucht -- und `traverse … over threads` sagt
-    // der Erzeuger namentlich ab (`C001`, `messung/proben/probe-vier-zellen.gab`).
     traverse t over slots of Faden by unvisited
         touches writes Faden.slots
     {

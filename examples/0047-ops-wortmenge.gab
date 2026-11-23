@@ -29,7 +29,6 @@
 // > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
 // > ueberlebt. *Das ist der Posten, den eine Handmutation vergisst.*
 //
-// > **UND SEIT DEM 2026-08-28 NACHMITTAG WIRD GERUFEN** (`messung/OPS-RUFFORM.md`).
 // > Am Vormittag trugen die erzeugten Funktionen `__attribute__((unused))`: in ihrer
 // > Uebersetzungseinheit rief sie niemand, **weil die Sprache keine Form dafuer hatte.**
 // > *Ein Verbot (`D001`) mit einem Ersatz, den niemand erreicht.*
@@ -45,7 +44,6 @@
 // > nichts -- ein Wort einer GESCHLOSSENEN Menge, das niemand rufen konnte, bei 127
 // > gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor, Praezedenzfall
 // > `verbund.konstruktor`): `umhaengen_erhaelt` (U-3) nennt die Bedingung, `umhaengen_faellt`
-// > bleibt als Beleg stehen, dass sie noetig ist. `messung/OPS-RELABEL.md`.
 //
 // Die Gegenprobe steht in `examples/poison/0221-ops-erfundenes-wort.gab`; die Gegenproben zur
 // Rufform in `examples/poison/321`-`324` und `331`-`334`.
@@ -67,7 +65,6 @@ table Verzeichnis count N {
     // **`occupied` sagt, WELCHES Feld die Belegung traegt** (2026-08-28, Zuschnitt (c)).
     // Ohne es hat `sigma n = None` aus `Table_Ops_Erhaltung.thy` kein Subjekt, und `D011`
     // weist die Tabelle ab. *Der Korpus nennt dieses Feld unter elf Namen -- eine
-    // Namensheuristik ist widerlegt, nicht bezweifelt (`messung/OPS-ERZEUGER.md`).*
     occupied benutzt;
 
     invariant marke_null_wenn_frei :
@@ -194,7 +191,6 @@ impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
 // Und genau darum steht hier `!(… reaches …)` und nicht `forall a in ancestors of … : a != s`:
 // `ancestors of` ist STRIKT (*„a node is not its own ancestor"*), liesse also `relabel(o, s, s)`
 // durch -- die Schlinge, und die bricht die Invariante wie der Zweislotzyklus.
-// `messung/OPS-RELABEL.md` §3 waegt beide Seiten beider Formen.
 impl fn umhaengen(o : ptr<normal, rw> Ordner,
                   s : index into Ordner,
                   p : index into Ordner)

@@ -3,7 +3,6 @@
 //
 // Das ist die andere Richtung als die meisten Dateien in diesem Ordner: keine falsche
 // Ablehnung, sondern eine falsche BESTAETIGUNG. Gemessen am 2026-08-25 an
-// `messung/fragmente/F01.gab`: `Allok` und `PhysAllocator` stehen dort als Zeigerziele und
 // sind nirgends deklariert.
 //
 //     $ gabbro pruefe ptr.gab      ->  3 Items, 0 Fehler, 0 Hinweise

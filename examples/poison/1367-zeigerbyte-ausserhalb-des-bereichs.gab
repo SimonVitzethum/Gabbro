@@ -27,7 +27,6 @@
 // -------------------------------------------------------
 // After the repair, `0 of 146` files in `examples/` change their coverage number by a single
 // expression: **not one example indexes a pointer.** Over the whole tree it is 7 files and 12
-// expressions (`examples/poison/764`, `765`, `784`-`786`, `messung/k3-fragmente/K01`, `K04`).
 // *A pointer element read is not a construct -- it is what one does when one writes a program*,
 // and this corpus is written per construct. The program that needed it is a network stack
 // (`~/gabbro-netz`, phase 2): a frame arrives in a buffer and every header field is bytes out

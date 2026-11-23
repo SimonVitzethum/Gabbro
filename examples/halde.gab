@@ -5,7 +5,6 @@
 // = 120 MiB. Ein Koerper entsteht hier ohnehin nicht: `Arena` laeuft als `ptr<…> Arena`
 // durch die Parameter, und wer die Tabelle beim NAMEN nennt, bekommt erst `static Arena
 // Arena_speicher;` (`emit.rs`). *Der 2-GiB-Uebergang liegt woanders und ist in
-// `messung/proben/probe-zwei-gibibyte.gab` gemessen.*
 //
 // Bis zum 2026-08-31 war dies die einzige Datei im Baum, die nie emittiert wurde: sie fiel
 // an einem `L104`, das ein Fehlalarm war -- `narrow … else` lief in M2 als geradliniger

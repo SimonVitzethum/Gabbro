@@ -7,7 +7,6 @@
 // (`unvollstaendig`), and an `E009` hint is all that names the call. A derivation
 // that cannot resolve a target must refuse AT THE CALLER -- that refusal is `H021`
 // (assigned, verified free; the rule stands ready in `ableitung.rs`, unwired:
-// central assembly is frozen for this lane -- see `messung/ABLEITUNG-WEG.md`).
 //
 // The twin (`ruft_rand`) calls the same shape WITH a declared line: the edge of the
 // checked world (`Rand`), silent by design -- `H021` must never touch it. This file

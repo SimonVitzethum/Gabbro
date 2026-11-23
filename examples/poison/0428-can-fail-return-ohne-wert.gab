@@ -10,7 +10,6 @@
 // unveraenderten Pruefer: `gabbro pruefe` 0 Fehler, `gabbro emit` kein `C001`, und erst
 // `cc` weist ab. *Drei Stufen liefen durch, und die vierte gehoert nicht zur Sprache.*
 //
-// Sechs der zwoelf Dateien in `messung/tor-proben/` trugen genau diese Zeile, und
 // `examples/0006-annahmen.gab` trug den Befund seit dem 2026-08-20 als KOMMENTAR neben
 // seinem eigenen, reparierten Rumpf -- ohne eine Zeile, die ihn faengt.
 //

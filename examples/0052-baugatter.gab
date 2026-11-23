@@ -1,6 +1,5 @@
 // 52 -- **Das Baugatter: `when TESTBUILD`, und im Auslieferungs-C steht keine Zeile davon.**
 //
-// `messung/GEGENRECHNUNG.md` §8 fuehrt den einen Posten der Caprock-Messung, der die
 // Nachrechnung ohne Abzug uebersteht -- und er wurde dabei GROESSER: **29,8 % des Baumes
 // sind Mess- und Selbsttestgeruest**, 19 849 Zeilen, davon 15 154 Code. So gross wie der
 // nebenlaeufige Kern und die Tabellen zusammen, fast zehnmal so gross wie aller Beweis im

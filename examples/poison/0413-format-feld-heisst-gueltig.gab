@@ -4,7 +4,6 @@
 // > **DER VERTRAG DIESER DATEI HAT SICH GEAENDERT, und das ist der ganze Ertrag.**
 // > Sie stand bis zum 2026-08-31 auf `// erwartet: cc`: der Pruefer musste SCHWEIGEN und
 // > `cc` musste abweisen. **Jetzt sagt es der PRUEFER**, mit `N042`, und zwar an beiden
-// > Formen unten. Der W24-Vorlauf dazu steht in `messung/ERZEUGERNAMEN.md` -- es sind NEUN
 // > Kollisionsformen und nicht zwei, und eine zehnte, die `cc` gar nicht findet.
 // >
 // > *Die Bahn, an der `beispiele.rs` den `cc`-Zweig fuehrt, verliert damit ihren einzigen
@@ -36,19 +35,15 @@
 // *redefinition of `Eintrag_gueltig`* bzw. *conflicting types for `Eintrag2_setz_a`*.
 //
 // > **Gefunden am 2026-08-31 beim Schreiben des zweiten `walk`**
-// > (`messung/grammatik/blocklauf.gab`), an einem Feld, das in seiner Domaene das
 // > naheliegendste Wort ueberhaupt ist: der Gueltigkeitsbit eines Blockzeigers. Nicht
 // > gesucht -- **hingeschrieben und hingefallen.**
 //
-// WARUM DIESE DATEI IN `poison/` LIEGT UND NICHT IN `messung/proben/`
 // -------------------------------------------------------------------
 // Sie EMITTIERT, und ihr C uebersetzt nicht. Stufe 9 von `pruefe-emission.sh` faehrt
-// `examples/*.gab` und `messung/*/*.gab`; in `messung/proben/` haette sie einen zweiten
 // Waechter rot gemacht, an dem in derselben Nacht eine andere Bahn arbeitet.
 //
 // **Gehalten wird sie trotzdem** -- von `instrumente/pruefe-grammatiktafel.py`, dessen
 // Uebersetzungstor ueber den GANZEN Korpus laeuft und `examples/poison/` einschliesst. Genau
-// die vier Dateien Reichweitenunterschied, die `messung/GRAMMATIKTAFEL.md` §7 gemessen hat,
 // fangen hier zum ersten Mal etwas: die Tafel meldet die Datei mit Adresse und Diagnose.
 //
 // *Dass Stufe 9 sie NICHT sieht, ist der zweite Befund dieser Datei und gehoert der Bahn,

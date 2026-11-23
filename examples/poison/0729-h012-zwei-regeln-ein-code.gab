@@ -5,8 +5,6 @@
 // `H012` is issued at two sites in `geteilt.rs` with two different rules: the lock order
 // across the call boundary (isolated by `poison/142`) and a reclaim without the writer
 // lock (isolated by `poison/720`). Both write the same code, so a guardian that counts
-// codes -- `pruefe-vergabe.py`, the coverage table in `messung/DECKUNGSLUECKE.md` --
-// cannot tell which rule a probe pins (section 1.1 of `messung/RACE.md`).
 //
 // This file fires both rules at once: `falsch` calls `nimmt_l1` (rank 1) while `L2`
 // (rank 2) is held, and `zurueckgeben_ohne_sperre` reclaims `frei` without holding

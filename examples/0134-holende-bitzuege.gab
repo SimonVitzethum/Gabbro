@@ -19,7 +19,6 @@
 // a side condition answers in the atomic's own type for every value the
 // atomic holds, and a checked `+1` shifts the interval by one. The saturating
 // shape (`examples/05`, `41`, `42`) keeps its loop, and so does the ticket
-// draw in `laufzeit/sperre.gab` -- see `messung/muse/OPUS-BERICHT-FETCHADD.md`.
 module beispiel134 {
 
 // One word of flags, drawn and published by nobody: the ordering word is the

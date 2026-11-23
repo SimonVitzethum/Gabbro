@@ -19,7 +19,6 @@
 // *Die Luecke, die diese Probe gebucht hat, ist geschlossen; die Probe bleibt und prueft
 // jetzt die Absage, die an ihre Stelle getreten ist.* Der Erzeugerzweig fuer `old(place)`
 // ausserhalb eines `exchange` steht weiter in `emit.rs` -- was ihn erreicht, sagt
-// `messung/WORTSTELLUNG.md` §6.
 //
 // Gefunden 2026-08-20 beim Nachziehen einer Testzusicherung, die vorher am `!` hing.
 

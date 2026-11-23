@@ -6,8 +6,6 @@
 // `locks` effect nobody redeems (the paper lock, isolated by `poison/141`) and a reclaim
 // inside one's own `observes` region (isolated by `poison/103`). Both write the same
 // code, so a guardian that counts codes -- `pruefe-vergabe.py`, the coverage table in
-// `messung/DECKUNGSLUECKE.md` -- cannot tell which rule a probe pins (section 1.1
-// of `messung/RACE.md`).
 //
 // This file fires both rules at once: `schreibt` declares `locks L` and never takes it,
 // `falsch` reclaims `frei` inside `observes BACCT`. The grace-period assumption names

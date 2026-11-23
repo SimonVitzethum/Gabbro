@@ -3,7 +3,6 @@
 // Bis zum 2026-08-24 gab es diese Form nicht. `spec` und `impl` waren Qualifizierer an
 // `fndecl`, kein Wort verband sie -- und deshalb hatte die Kopfform von P6 **null
 // Fundstellen**. Das war keine Korpusluecke, sondern eine fehlende Produktion
-// (`messung/VERFEINERUNG.md`).
 //
 // **Warum das die einzige Datei mit `refines` ist:** sie ist die erste. Was hier gemessen
 // wird, ist nicht der Inhalt, sondern die KETTE -- ob aus einer geschriebenen Paarung eine

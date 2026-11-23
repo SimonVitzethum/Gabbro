@@ -20,7 +20,6 @@
 // einem Mehrkerner ist sie ohne ihn leer. `breaking` verspricht das Gegenteil und ist damit
 // haltbar: der Zwischenzustand IST da, er steht benannt in der Quelle, und die Sperre `EPS`
 // sagt, wer ihn nicht sieht. *Sichtbarkeit statt Verstecken* -- die Abwaegung steht in
-// `messung/ZWEI-ORTE.md`.
 
 module beispiel::zwei_orte {
 

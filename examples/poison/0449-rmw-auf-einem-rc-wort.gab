@@ -16,8 +16,6 @@
 // > nennt sie einzeln beim Namen -- eine gemeinsame Absage haette den `rc`-Grund als
 // > `w1c`-Grund ausgegeben.
 //
-// *Regel A:* der Bedarfsbeleg fuer `rc` steht in `messung/grammatik/raumworte.gab`:67 und
-// `messung/grammatik/geraeteworte.gab`:26 -- zwei erklaerte `rc`-Register, beide bis heute
 // nur gelesen. Diese Probe zeigt, was passierte, wenn eines von ihnen ein Bit bekaeme.
 
 module gift449 {
