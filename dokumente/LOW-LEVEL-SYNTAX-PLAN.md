@@ -5,6 +5,8 @@ decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur ia
 Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump
 oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen."
 The compile-time selection `if (…) then { … } else { … }` (§4.10) is the owner's addition O24 of the same day.
+O25 (same day) adds hardware virtualisation, IOMMU spaces, suspend/resume, debug and performance units,
+backtraces, guest grants and secure worlds (§4.11–§4.17); JIT and kernel modules get no syntax.
 
 O23 replaces the earlier design of this plan, in which privileged operations were calls of target-binding
 functions over a linear `context<P>` (one contracted function per machine operation). Such an interface is inline
@@ -277,22 +279,171 @@ let n = if (trace) then { 4096 } else { 0 };
   carries feature flags (`smp`, `trace`) only, and architecture conditions live in the platform unit and the driver
   selection.
 
+### 4.11 Hardware virtualisation (L15, O25)
+
+```gabbro
+state hyp { width 64, privilege hypervisor, translation on }           // VMX root / SVM host, EL2, HS-mode
+
+let gpa  = space.new_guest(tables);                                    // stage 2: EPT/NPT, ARM stage 2, RISC-V G-stage
+map(gpa, 0x0, guest_ram, rights { read, write, execute }, kind normal) else full;
+let v    = vm.new(gpa, intercept { ports 0x0 .. 0x1_0000, system_registers all, halt, hypercall })
+           else unsupported;
+let c    = v.vcpu(0, entry_pc = 0xFFF0, width 16);                      // the guest may start at its own reset
+loop {
+    match enter vm v vcpu c {
+        memory_fault(addr, access) => emulate_mmio(v, c, addr, access),
+        io(port, size, dir)        => emulate_port(v, c, port, size, dir),
+        system_register(r, dir)    => emulate_sysreg(v, c, r, dir),
+        hypercall(args)            => hypercall(v, c, args),
+        external_interrupt         => { },                                // the host's own entry already ran
+        halt                       => wait for interrupt,
+        shutdown                   => break,
+    }
+}
+inject interrupt 32 into vm v vcpu c;
+copy from vm v (guest_addr, n) into buf else fault;                    // through stage 2, single fetch
+```
+
+- `state … privilege hypervisor` is the host state (x86-64 VMX root or SVM host in ring 0, AArch64 EL2 with or
+  without VHE, RISC-V HS-mode). Enabling the unit (VMXON with its region, EFER.SVME, HCR_EL2, `hstatus`) is
+  generated at the first `vm.new`; a target or core without the unit fails into the `else` channel.
+- A guest-physical space is a `space` like §4.3: `map`, `unmap`, `protect`, `flush` (INVEPT/INVLPGA, `tlbi ipas2`,
+  `hfence.gvma`) with the same shootdown and quiescence rules. Memory kinds and execute rights apply.
+- `vm.new(space, intercept { … })` builds the control structure (VMCS, VMCB, EL2 trap configuration, `hedeleg`/
+  `hideleg`/`henvcfg`); its format is compiler knowledge like page tables. `v.vcpu(i, …)` gives a vCPU whose
+  register file is a value: the neutral part (pc, sp, flags, width, privilege) plus the target's registers by name
+  (the register exception of O23).
+- `enter vm v vcpu c` runs the guest until an exit and returns a neutral `vm_exit` value; the compiler generates
+  entry and exit (VMLAUNCH/VMRESUME, VMRUN, `eret` to EL1 under HCR, `sret` with `hstatus.SPV`) with the saved host
+  state, extended state and per-core base. On x86-64 both VMX (Intel) and SVM (AMD) are lowered; which one runs is
+  chosen once at `vm.new` from the feature set, so one image runs on both (vendor neutrality, AGENTS.md §4).
+- `inject interrupt` and the virtual interrupt controller (posted interrupts/APICv/AVIC, vGIC with list registers,
+  AIA guest interrupt files) are constructs; exits for interrupt windows are part of `vm_exit`.
+- The hypervisor reaches guest memory only through `copy from vm`/`copy to vm` (stage-2 translation, single fetch,
+  fault channel). A device is handed to a VM only through its IOMMU space (§4.12): `assign device d to vm v`.
+- Nested virtualisation: a vCPU created with `privilege hypervisor` runs a guest hypervisor (VMCS shadowing, AMD
+  nested, ARM NV2, RISC-V nested H) after the single-level case is complete; until then it is refused by name.
+- Isolation theorem (extends L8): whatever an unverified guest does, it changes only its vCPU values, the regions
+  mapped into its guest-physical space with the granted rights and the devices assigned to it; every exit returns
+  to the declared host code; host carriers stay intact. No guest correctness, cost or termination is claimed.
+  The unit itself is the named hardware assumption `VirtUnit` (entry, exit, intercepts and stage-2 translation as
+  the architecture manual says).
+
+### 4.12 IOMMU: device address spaces (L16, O25)
+
+```gabbro
+let io  = platform.iommu(0);                                          // VT-d, AMD-Vi, SMMUv3 or RISC-V IOMMU
+let ds  = io.space.new(tables);
+attach device nic to ds;                                               // by requester id / stream id
+map(ds, 0x1000_0000, rx_ring, rights { read, write }, kind normal) else full;
+lend rx_ring to nic;
+…
+take back rx_ring from nic;                                            // unmap, IOTLB flush with completion, quiescence
+entry dma_fault (f: dma_fault_info) { … }
+```
+
+- A DMA space is a `space` whose user is a device: `map`/`unmap`/`protect`/`flush`. `flush` waits for completion
+  of the invalidation (VT-d invalidation queue with wait descriptor, AMD-Vi completion wait, SMMU `CMD_TLBI_*` +
+  `CMD_SYNC`, RISC-V IOMMU `IOTINVAL` + `IOFENCE.C`), including device-side caches (ATS) where enabled.
+- `attach device d to s` binds the device's request identity (and a PASID/substream with `pasid p`, also to a
+  process space or a VM's guest-physical space for shared virtual addressing). Interrupt remapping is part of the
+  attachment: a device's message-signalled interrupts reach only the lines routed to it.
+- `lend r to d` requires `r` mapped in `d`'s space; `take back` returns `r` only after unmap and completed flush.
+- The table and queue formats are compiler knowledge; the platform unit names the IOMMU kind, its registers and
+  addresses; discovery (DMAR, IVRS, IORT, devicetree) chooses at run time between the lowerings of one target.
+- Theorem: a device attached to a space writes and reads memory only inside the regions mapped there with their
+  rights. With an IOMMU the DMA part of the device contract (today `ImBereichO`) is PROVED from the tables under
+  the named hardware assumption `Iommu`; only devices on a platform without an IOMMU keep it as an assumption, and
+  a platform must declare that. Assigning a DMA-capable device to an untrusted guest or VM without an IOMMU
+  attachment is refused.
+
+### 4.13 Suspend and resume (L4)
+
+- `suspend system resume at f(args) else failed;` enters a sleep state in which RAM keeps its contents; execution
+  resumes in the platform's `resume` arrival state at code item `f` (x86-64: the ACPI waking vector in 16-bit
+  real mode, reaching the kernel by `jump long`; AArch64: PSCI `SYSTEM_SUSPEND` arrival with translation off;
+  RISC-V: SBI `SUSP` arrival). `suspend core resume at f` is the per-core deep idle state with the same rule.
+- Regions and the ownership ledger survive; device values do not: after resume each device value is in the
+  `reset` typestate and its driver must reinitialise it before use (checked). Generated state (vector tables,
+  per-core base, translation) is re-established by the generated resume path before `f` runs.
+- `ResetState` gains the resume arrivals; the sleep request itself is a device (ACPI PM1 control) or an
+  environment call (PSCI, SBI).
+
+### 4.14 Debug and performance units (L7)
+
+```gabbro
+watch(addr, 8, on write) else no_slot;                                  // DR0–3/DR7, DBGWVR/WCR, Sdtrig
+entry watchpoint (w: watch_info) { … }
+entry breakpoint (b: break_info) { … }                                 // from a declared code point
+step thread t;                                                         // single step: TF, MDSCR.SS, Sdtrig icount
+let k = counter.start(event cycles) else no_counter;                   // cycles, instructions, cache_misses, branch_misses
+entry perf_overflow (o: overflow_info) { … }
+```
+
+- Watchpoints, breakpoints on named code points, single step of a thread, a guest or a vCPU, and performance
+  counters are constructs. Neutral events cover the common set; raw events are platform registers by number.
+- Counters and watch slots belong to a thread or a core as declared; generated frames save and restore them.
+- Their trap entries are delivered as `IrqDelivery` states (non-maskable when the architecture says so).
+
+### 4.15 Backtraces (L5)
+
+- `backtrace(into buf) -> n` fills `buf` with the code items and offsets of the current frames. The compiler emits
+  frame descriptors as data and a generated walker; the walker reads only the current stack region and is proved
+  to terminate on it. It is allowed in every entry kind, `fatal` included. Gabbro has no exceptions, so there is no
+  unwinding; a panic is a `fatal` path that may print the backtrace and stop.
+
+### 4.16 Rights granted to guests (L8)
+
+- `grant ports p .. q to guest g` (generated I/O permission bitmap on x86-64; refused by name on targets without
+  ports), `grant device d to guest g` (its window mapped with kind `device`; a DMA-capable device only together
+  with an IOMMU attachment to the guest's space), `grant cycles to guest g` and `grant register r to guest g read`
+  for registers the architecture allows user access to (counter, timer and feature registers).
+- For VMs the intercept set of §4.11 replaces grants: a register or port not intercepted is passed through.
+
+### 4.17 Secure worlds and the monitor (L17, O25)
+
+```gabbro
+state monitor { width 64, privilege machine, translation off }          // EL3, RISC-V M-mode, x86 SMM
+provide environment psci abi smc64 { fn cpu_on(…) requires … ensures …; … }   // firmware written in Gabbro
+entry monitor_call (call: monitor_args) in monitor { … }                // SMC, ecall from S, SMI
+protect physical secure_ram for world secure;                           // PMP/ePMP, TZASC device, SMRAM lock
+return to world normal at kernel_entry(args);
+```
+
+- `privilege machine` with a `world` attribute (`secure`, `normal`; Realm later) models EL3 with TrustZone, RISC-V
+  M-mode with PMP (and WorldGuard/Smmtt where present) and x86 SMM. `return to world w at f` is the generated
+  world switch (ERET with `SCR_EL3.NS`, `mret` with PMP reconfiguration, RSM).
+- `protect physical r for world w` partitions physical memory: PMP and SMRAM locking are generated from the
+  construct; a TrustZone address-space controller is a device of the platform unit, programmed by its driver.
+- `provide environment E` is the other side of §4.8: a firmware written in Gabbro implements PSCI, SBI or a UEFI
+  subset, and as software inside the image it proves `pre → post` of every service (A1). The boundary moves back:
+  a kernel booted by such a firmware has no environment assumption for those services left.
+- SMM handlers need the reset boundary (SMBASE relocation and SMRAM locking happen in firmware), so they are
+  written on platforms whose reset path the image owns; the emulator platform comes first.
+- Named hardware assumption `SecureUnit`: the processor enforces the world partition and the monitor entry as the
+  manual says.
+
 ## 5. Typing, acceptance and the trust boundary
 
 - The checker tracks the execution state, held regions, device values, environment services and mask/priority
   facts at every code point (a typestate). It refuses: a construct in a state that lacks it, a jump into another
   state without `jump long`, a `jump long` whose target code or stack is not mapped in the target space, a region
   used after it was moved, a lock or wait in a nonmaskable entry, a guest access outside §4.7, a service used after
-  it was consumed, a device through a RAM view, an unmapped or unflushed reuse, unsupported targets by name.
+  it was consumed, a device through a RAM view, an unmapped or unflushed reuse, a device lent or assigned without
+  its IOMMU mapping where the platform has an IOMMU, a DMA-capable device granted to an untrusted guest or VM
+  without IOMMU attachment, a device value used after resume before reinitialisation, a world switch with memory
+  not partitioned, unsupported targets by name.
 - Every construct and generated frame accounts for all architectural effects: register and flag state, hidden stack
   traffic, privilege, translation, masks, faults and their exits, interleavings and the atomic rely. A generated
   construct is not implicitly atomic; masking is not a multicore lock.
 - Trusted base: Lean's kernel and `propext`, `Classical.choice`, `Quot.sound`. Below the model: `Hardware T` (every
   row computes its cell — now including the 16- and 32-bit rows and the privileged rows), the hardware frame,
-  `Mmu`, `IrqDelivery` (with non-maskable delivery), `ResetState` (per platform: the state at the reset vector and
-  at the arrival of a further core), device contracts, the memory-model reading. Environment: `FirmwareHandoff`
+  `Mmu`, `IrqDelivery` (with non-maskable delivery and debug/performance traps), `VirtUnit`, `Iommu`, `SecureUnit`,
+  `ResetState` (per platform: the state at the reset vector, at resume and at the arrival of a further core), device
+  contracts (their DMA part only without an IOMMU), the memory-model reading. Environment: `FirmwareHandoff`
   (UEFI), `BiosHandoff` (16-bit loader), the environment interfaces of §4.8. Everything else — boot, allocators,
-  page-table code, schedulers, drivers — is software inside the image and the user's logic (b).
+  page-table code, schedulers, drivers, hypervisors, monitors and provided firmware services — is software inside
+  the image and the user's logic (b).
 
 ## 6. The platform unit
 
@@ -309,6 +460,8 @@ same source on every architecture:
 | arrival code (Gabbro) | 16-bit further-core arrival ending in `jump long` | none | none |
 | interrupt controller, timer | local APIC + I/O APIC, TSC deadline | GICv3, generic timer | AIA or PLIC, Sstc or SBI timer |
 | page size, discovery | 4 KiB; ACPI | 4/16/64 KiB granule; devicetree or ACPI | 4 KiB; devicetree |
+| virtualisation, IOMMU | VMX and SVM; VT-d and AMD-Vi | EL2 (VHE); SMMUv3 | H extension; RISC-V IOMMU |
+| secure world, monitor | SMM | EL3, TrustZone (TZASC a device) | M-mode, PMP/ePMP |
 | driver selection | `if (platform == pc) then { use … }` (§4.10) | same form | same form |
 
 The arrival code is ordinary Gabbro in a declared state; it uses only the constructs of §4. The kernel proper
@@ -316,10 +469,11 @@ does not change between targets; K6 measures that its diff between the three tar
 
 ## 7. Implementation and validation order
 
-1. Model first (PLAN-COMPILER-READY L0–L14): the neutral state of §3 and one G rule per construct, typestate
+1. Model first (PLAN-COMPILER-READY L0–L17): the neutral state of §3 and one G rule per construct, typestate
    acceptance in `Akzeptiert`, generic preservation and an `_erfuellbar` lemma per construct (AGENTS.md §3).
-   `gabbro_ziel` stays on the standard axioms; the new assumptions (`ResetState`, `BiosHandoff`, the environment
-   interfaces, non-maskable delivery) are a `Spec.lean` diff shown to the owner before merge.
+   `gabbro_ziel` stays on the standard axioms; the new assumptions (`ResetState`, `BiosHandoff`, `VirtUnit`,
+   `Iommu`, `SecureUnit`, the environment interfaces, non-maskable delivery) are a `Spec.lean` diff shown to the
+   owner before merge.
 2. Connection to G/GX and the no-bypass theorem: no path reaches privileged state except through these constructs.
 3. Parser/exporter/checker (L10): the constructs above; refusals by name for everything unmodelled. The `asmT`
    string form, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software
@@ -328,30 +482,31 @@ does not change between targets; K6 measures that its diff between the three tar
 5. Validation (L11): positive — reset to kernel through `jump long`, BIOS and UEFI boundaries, RAM write/read,
    activate/flush, interrupt entry/return, NMI, second core, guest copy, environment exit; negative — forged region,
    wraparound, stale epoch, alias, wrong state, `jump long` to unmapped code, bad stack, lock in NMI, double guest
-   fetch, service after exit, missing flush, device through RAM view, undeclared register.
+   fetch, service after exit, missing flush, device through RAM view, undeclared register. Virtualisation: a VM
+   booting from its own 16-bit reset with stage 2, every exit kind, interrupt injection, a passed-through device
+   behind the IOMMU; negative: guest-physical alias into host memory, device DMA outside its space, unflushed IOTLB
+   on take back, untrusted guest with a DMA device and no IOMMU, nested guest before it is modelled. Further:
+   suspend/resume with device reinitialisation, a watchpoint, a counter overflow, a backtrace from a fatal entry,
+   a port grant, a world switch to a normal-world kernel by a Gabbro PSCI/SBI monitor.
 
 Totality claims name their domain: parsing/refusal is total over source input; certified lowering covers the
 modelled states, constructs and targets. Unsupported forms refuse; they are never silently erased.
 
-## 8. What is still not writable (2026-11-23)
+## 8. Coverage and what has no construct (2026-11-23)
 
-Checked against what a general-purpose kernel does. Writable with §4: boot from reset, BIOS loader or UEFI;
-memory management, demand paging, copy-on-write; translation with shootdown; interrupts, NMI, timers, IPIs; SMP
-start and stop; threads, extended state, async; user processes, system calls, signals (guest frames are values
-`enter guest` takes); drivers for MMIO, ports and DMA; PCIe through ECAM or ports; ACPI tables and devicetree as
-data from the handoff regions (an AML interpreter is ordinary program logic); reboot and power-off through devices,
-PSCI or SBI. Not writable yet, each a construct still to be designed (model first) or deliberately refused:
+Checked against what a general-purpose kernel, a hypervisor and a firmware do. Writable with §4: boot from reset,
+BIOS loader or UEFI; memory management, demand paging, copy-on-write; translation with shootdown; interrupts, NMI,
+timers, IPIs; SMP start and stop; threads, extended state, async; user processes, system calls, signals; drivers
+for MMIO, ports and DMA; PCIe through ECAM or ports; ACPI tables and devicetree as data (an AML interpreter is
+program logic); reboot and power-off; hardware virtualisation with stage-2 translation, virtual interrupts and
+nested guests (§4.11); IOMMU spaces with PASID and interrupt remapping (§4.12); suspend and resume (§4.13); debug
+and performance units (§4.14); backtraces (§4.15); rights granted to guests (§4.16); secure worlds, the monitor
+and firmware services provided in Gabbro (§4.17).
 
-| Gap | Why it is not writable today | Proposed |
-|---|---|---|
-| hardware virtualisation (VMX/SVM, EL2 guests, RISC-V H) | no construct for a virtual machine, its entry/exit and stage-2 translation | `vm` spaces and `enter vm` beside `enter guest`; later item |
-| IOMMU (VT-d, SMMU, RISC-V IOMMU) | DMA safety rests on the device contract (named assumption); no device address space | `space` for devices with the same `map`/`flush`; turns the DMA assumption into a proof |
-| runtime code: JIT, loadable kernel modules | `make executable` accepts only items the compiler emitted | a verified emitter in the image whose output is proved to compute its cells, or refuse for good |
-| suspend to RAM and resume | the resume vector is an arrival state not yet declared | `ResetState` gets a resume arrival; resume code is Gabbro like the reset path |
-| performance counters, debug breakpoints, single step | registers are writable through the platform unit, but no entry kinds for their traps | `entry debug`/`entry perf` kinds |
-| backtraces and unwinding for panics | no construct reads the frame chain | generated frame descriptors and `backtrace()`; low priority |
-| port-I/O rights for guests (x86 I/O bitmap), per-guest MSR access | no grant from kernel authority to a guest beyond memory | `grant d to guest g` for devices and ports |
-| secure monitor / TEE (EL3, TrustZone, SMM, M-mode firmware runtime) | privilege `machine` exists, but no secure/normal world split and no world switch | a later boundary; SMM stays outside (firmware) |
-| DRAM initialisation on real boards | writable as driver logic, but vendor details are not public on most platforms | not a language gap; reset boot stays on emulator platforms |
+Deliberately without a construct:
 
-Speculation mitigations, retpolines and fences are not user constructs: they are compiler work under B17.
+| Item | Status |
+|---|---|
+| JIT compilers, loadable kernel modules | no new syntax (owner, 2026-11-23). `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
+| DRAM initialisation on real boards | not a language gap (driver logic under the reset boundary); vendor details are not public on most platforms, so the reset gate runs on emulator platforms |
+| speculation mitigations, retpolines, fences | compiler work under B17, never a user construct |
