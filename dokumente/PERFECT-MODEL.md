@@ -25,7 +25,8 @@ B6/C9 the image). The user is not a premise. Hardware enters only as catalogue r
 theorem gabbro_ziel :
     NichtLeer                                             -- §2.1: nothing below holds vacuously
   ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H, Hardware (katalog E) H →
-      (∃ ρ, Laeufe E H ρ) ∧ ∀ ρ, Laeufe E H ρ → ∃ ι, I.Laeufe E ι ∧ Verfeinert E H ρ ι)
+      (∀ s, ZulStart E H s → ∃ ρ, Laeufe E H ρ ∧ start ρ = s)
+    ∧ ∀ ρ, Laeufe E H ρ → ∃ ι, I.Laeufe E ι ∧ Verfeinert E H ρ ι)
   ∧ NI                                                    -- §3.8
 ```
 
@@ -39,8 +40,9 @@ def NichtLeer : Prop :=
   ∧ (∀ f : Form, ∃ a E, Enthaelt a f ∧ Bezeichnet a E ∧ Akzeptiert E ∧ Realisiert f a E)
   ∧ (∀ E, Akzeptiert E → KatalogWohlgeformt (katalog E))
   ∧ (∀ K, KatalogWohlgeformt K → ∃ H h, Hardware K H ∧ FairLaeufe K H h)
-  ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H h, Hardware (katalog E) H →
-        FairLaeufe (katalog E) H h → ∃ ρ, Laeufe E H ρ ∧ hw ρ = h)
+  ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H, Hardware (katalog E) H → ∃ s, ZulStart E H s)
+  ∧ (∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H s h, Hardware (katalog E) H → ZulStart E H s →
+        FairLaeufe (katalog E) H h → ∃ ρ, Laeufe E H ρ ∧ start ρ = s ∧ hw ρ = h)
   ∧ (∀ E, Akzeptiert E → I.Bestimmt E ∧ I.Fortschritt E)
 
 def Verfeinert (E H ρ ι) : Prop :=
@@ -52,7 +54,7 @@ def Verfeinert (E H ρ ι) : Prop :=
 
 def NI : Prop :=
   ∀ E H₁ H₂ ρ₁ s₂, Akzeptiert E → Hardware (katalog E) H₁ → Hardware (katalog E) H₂ →
-    Laeufe E H₁ ρ₁ → GleicheNiedrigeUmgebung E H₁ H₂ → NiedrigGleich E (start ρ₁) s₂ →
+    Laeufe E H₁ ρ₁ → GleicheNiedrigeUmgebung E H₁ H₂ → ZulStart E H₂ s₂ → NiedrigGleich E (start ρ₁) s₂ →
       (∃ ρ₂, Laeufe E H₂ ρ₂ ∧ start ρ₂ = s₂ ∧ GleichePolitik E ρ₁ ρ₂)
     ∧ ∀ ρ₂, Laeufe E H₂ ρ₂ → start ρ₂ = s₂ → GleichePolitik E ρ₁ ρ₂ →
         NiedrigAequiv E (NiedrigeBeob E ρ₁) (NiedrigeBeob E ρ₂)
@@ -81,11 +83,16 @@ Bindings that are part of the definitions:
   inadmissible or unfair. `FairLaeufe K H` are the schedules and policies that are fair in the rows' sense — over
   hardware alone, independently of any program and of refinement success; the sixth conjunct proves that each of
   them lifts to a run of every accepted program.
+- Starts: `ZulStart E H s` are the catalogue-conformant starts (every legal boot input, start assignment and
+  initial outside state the rows allow), defined independently of loader success; every run starts at one. For
+  EVERY admissible start a run exists and every admissible fair history lifts to a run from it, so a loader that
+  drops a legal input is caught; a loader failure at an admissible start is in scope.
 - Runs: `Laeufe E H` are exactly the maximal runs of the composition from the real loader and `start` under
-  row-conformant outside behaviour; every finite prefix is covered, also one that issues an invalid request,
+  row-conformant outside behaviour, including finite stuck or failing runs; `Schnitt` covers every finite prefix, also one that issues an invalid request,
   violates authority, gets stuck or prevents a legal reply — an implementation failure stays in scope.
   `Schnitt ρ` contains every state of the run; `hw ρ` is its hardware projection.
-- `ZielFX` is the transport of today's whole guarantee, not a list of leg names. It starts from the FULL premises
+- `ZielFX` is defined and proved in `core/` as the core-native form of today's whole guarantee, not a list of leg
+  names; the transport package `uebergang/` (M11) proves that it preserves today's guarantee. That proof starts from the FULL premises
   of today's `GabbroZiel`: every retained case (checker, oracle, budget, a `Laufzeit` with a partial start
   assignment, every `lebt0`, every order assignment of `SchwachX`, the address layout) is embedded into an
   accepted text and an actual loader run, its cut is named, and the exact old conclusion is transported with its
@@ -132,8 +139,9 @@ missing any of them.
   true over `I` under the rely of the whole program. Clauses state user predicates over `I`, never definedness of
   `I` or anything about the implementation.
 - `WaechterHalten`: generated from a pinned table of `I`'s partial operations — every guard of a partial
-  operation without an `else` holds in every reachable `I` state. Nobody writes it; the checker proves it. This
-  is what makes "correct logic produces an error" impossible.
+  operation without an `else` holds in every reachable `I` state, AND no reachable ideal cut, a maximal cut
+  included, contains an internal deadlock or a closed waiting set as defined in §3.4. Nobody writes it; the
+  checker proves it. This is what makes "correct logic produces an error" impossible.
 - `Akzeptiert` may use only the syntax, `I` and the catalogue (whitelist); never G, GX, W, the image, runs or the
   error notion. `I` never mentions `Akzeptiert`. The real checker is a separate algorithm with
   `pruefer_korrekt : C.akzeptiert E = true → Akzeptiert E`.
@@ -196,9 +204,11 @@ bindings are ordinary Gabbro functions.
 - Observations: environment questions and answers, device accesses, outputs, stops, and the declared dimensions —
   time inside `timed` blocks, memory where bounded, labelled information flow.
 
-**3.5 The implementation `Impl`.** Machine G∞ (G without the loop budget `passes`; every finite prefix is a G run
-for a large enough budget) over GX with every interleaving and W with true SC for `seq_cst`. `start`/`child` are
-real statements. After B6/C9, the emitted image.
+**3.5 The implementation `Impl`.** `I` and the implementation machine are defined over `core/`'s OWN syntax and
+events (M3, M4): threads with every interleaving, the memory model of M3 with true SC for `seq_cst`, no loop
+budget, real `start`/`child` statements, waits instead of visibility stops. The correspondence to the budgeted
+machine G of the frozen `grammatik/` (every finite prefix of a run of the retained fragment is a G run for a large
+enough budget) is proved in M11 for the retained fragment only. After B6/C9, the emitted image.
 
 **3.6 Refinement `Sim`.** For every run ONE ideal run, chosen per run (not per prefix): a state-and-step
 simulation for the whole run. A state relation holds at EVERY matched cut (not only at the start); every
@@ -214,7 +224,8 @@ question instance; the order inside a context is kept across objects), and CONSU
 separately in both states — an arrived reply is never an implementation-only pending answer. Durability changes
 are effects, and a crash is possible at every concrete cut (B22). Visible events (outside
 questions, device accesses, outputs, stops, atomics read by others, internal and authority effects) appear in the
-same global order as in the run; the map neither invents nor swallows ends, answers or effects. Stutter: in every
+same global order as in the run; the map neither invents nor swallows ends, answers or effects. The initial cut of `ι` is the canonical ideal initialisation of `start ρ`: the initial relation preserves the
+boot input, the declared start assignment and the initial outside state at the catalogue boundary. Stutter: in every
 interval without its ideal step during which its next step stays enabled, a context takes at most the checked
 length bound of its unit of its own implementation steps; a blocked context stutters only invisibly.
 
@@ -277,7 +288,8 @@ computed stack bound and allocation without a failure channel are refused.
 ## 6. Build guards
 
 Lean modules in `core/Core/Waechter/`, part of the package root, that fail the build of `core/` — strict from its
-first commit, with NO allow-list and no ratchet:
+first semantic commit (M0; the scaffolding commit before it holds only the shape), with NO allow-list and no
+ratchet:
 1. `core/` depends only on Mathlib and its own modules (its lakefile requires nothing else; it never imports
    `grammatik/`, `stage0/` or `programmlogik/`); every module is reached from `Core.lean`; every file has fewer
    than 500 lines.
@@ -288,11 +300,12 @@ first commit, with NO allow-list and no ratchet:
    constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
    elaborated type, each field binding of `R₀`, their transitive semantic dependencies down to explicit trusted
    roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`).
-5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax: typed
-   proofs (not names) of its `Parse` and `Elaboriert` rules, its `I` rule with units and commutation, its
-   implementation rule, its preservation lemma, its `Realisiert` evidence (a surface constructor: a source
-   occurrence; a core-only constructor: a checked elaboration or runtime origin) and its joint satisfiability
-   (`_erfuellbar`). A constructor without its complete entry fails the build — so a constructor enters `core/`
+5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax, with
+   typed proofs (not names): each SURFACE constructor carries its `Parse` and `Elaboriert` proofs and a source
+   occurrence as `Realisiert` evidence; each CORE-ONLY constructor (e.g. a continuation node created when an
+   `.await` resumes) carries a checked elaboration-origin or runtime-origin proof instead; both carry their `I`
+   rule with units and commutation, their implementation rule, their preservation lemma and their joint
+   satisfiability (`_erfuellbar`). A constructor without its complete entry fails the build — so a constructor enters `core/`
    only together with all of it.
 6. No `_ =>` in `I`, the rules and the fundamental proofs; no hardware or stop kind outside the catalogue.
 7. No `sorry`, `admit`, `native_decide`, `axiom`, `unsafe`, `_zeuge`, `decide +kernel`, no witness modules.
@@ -327,7 +340,7 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 - Porting, never importing: a piece of `grammatik/` (or of an unmerged branch) enters `core/` as a copy rewritten
   onto `core/`'s definitions, with its statement reviewed (AGENTS.md §7). The ONLY place that sees both packages is
   the transport package of M11.
-- `core/` is green at every commit: the guards of §6 hold from the first commit, so a constructor enters only with
+- `core/` is green at every commit: the guards of §6 hold from the first semantic commit (M0), so a constructor enters only with
   its complete registry entry, and no step leaves a red build behind.
 - Stage 0 and GabbroV stay on `grammatik/` until M12 and then move onto `core/` (PLAN-COMPILER-READY, phase B).
 - Each step is merged on its own after a green build of `core/`; sizes are new Lean lines (ranges); no other plan
@@ -335,26 +348,31 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 
 | Step | Done when | Depends on | New lines |
 |---|---|---|---|
-| **M0 Package and guards** | `core/` builds (DONE 2026-11-23, with `Core/Ziel/Form.lean`); the seven guards of §6 are Lean modules of the package root | — | 2 000–5 000 |
-| **M1 Text** | raw text, tokens with source spans and trivia, the independent parse relation `Parse`, `WohlgeformterText` as grammar plus typing predicates, the canonicalisation relation of the round trip, the registry type of §3.1 and the INVENTORY of every form (today's forms, every low-level form of LOW-LEVEL-SYNTAX-PLAN §4, async and the M6F forms) as data with its source reference — no constructor yet | M0 | 5 000–12 000 |
-| **M2 Catalogue** | `Hardware` of §3.3 with rows for x86-64, AArch64 and RISC-V 64 (ported from the S2 branch `agent/s2-catalogue`); hardware histories `hw` with `FairLaeufe`, independent of programs; joint satisfiability per platform; folded in from PLAN-COMPILER-READY: A1 foreign software as rows, A2 register answers, A3 float hardware, A4 address ranges and core plan, A6 C interop (outside the address space only), the persistence envelope of B22 | M0 | 16 000–42 000 |
-| **M3 Memory model** | RC11 with truly SC `seq_cst`, `po ∪ rf` acyclic, DRF-SC, the operational graph machine (sound and complete) and the sink lemma, ported from `grammatik/Grammatik/Speichermodell/RC11/` and the branch `agent/s5b-w`; events of runs as graph events | M0 | 15 000–40 000 |
-| **M4 Machines and `I`** | the implementation machine (G∞ over threads, real `start`/`child`, no budget, waits instead of visibility stops) and the ideal meaning `I` of §3.4 (contexts, units at proved linearisation points, lock owners with queue and hand-off, delay rule, authority and lifetime, pinned outcome type, `I.Bestimmt`, `I.Fortschritt`), both over M3's events; their state contains the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events) | M2, M3 | 26 000–65 000 |
-| **M5 Acceptance** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten` over `I` and the catalogue, the pinned table of partial operations, the whitelist guard | M4 | 3 000–8 000 |
-| **M6 Today's forms** | every form of today's language as a constructor with its complete registry entry (`Parse`, `Elaboriert`, `Lokal`, `I` and implementation rule, preservation, `Realisiert`, `_erfuellbar`); `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5 | 30 000–80 000 |
-| **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
-| **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows), on the same level as every other form; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit | M6 | 236 000–596 000 |
-| **M7 Refinement** | `Sim` of §3.6 for every run, grown form by form with M6–M6L; starts from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported); acceptance case `flush`; linearisability of lock-free structures (B20); the missing legs (B10) | M4 | 48 000–125 000 |
-| **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7); waiting bounds and starvation freedom (B13) | M7 | 24 000–63 000 |
-| **M9 Observations and NI** | `ImSchranken`: stack (B9), memory (B21), cost and time (B8), real time (B19); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope (B22) | M7 | 69 000–178 000 |
-| **M9P Probability** | random sources as rows with their draw laws; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (probabilities, expectations, almost-sure statements of `I` hold for the implementation) | M9 | 30 000–80 000 |
-| **M10 Outside rule** | §4: transitive outside provenance, validity at commit, the catalogue admission rule, device typestates | M2, M4 | 4 000–10 000 |
-| **M11 Transport** | a package `uebergang/` that imports `grammatik/` and `core/`: today's whole guarantee embedded and transported (§2.1, `ZielFX`), from the full premises of today's `GabbroZiel`; an excluded case only with the owner's approval | M6–M10 | 6 000–20 000 |
-| **M12 Closing** | `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); the closing guard of §6; zero open registry entries; then `grammatik/` and `uebergang/` are deleted and the header of `Spec.lean` is replaced by this file's §2. The image gate (B6/C9, PLAN-COMPILER-READY phase B) must then lift the whole promise: an image run for every catalogue-conformant start, the lift of every admissible fair hardware history, `Verfeinert` on EVERY image run, `NI` with comparison-run existence | M11 | 4 000–11 000 |
+| **M0 Package and guards** | the first commit (DONE 2026-11-23: the package and `Core/Ziel/Form.lean`) is scaffolding; guards 1–3 and 5–8 of §6 are Lean modules of the package root BEFORE the first semantic commit (until then nothing but the shape enters); guard 4 is activated at M12 | — | 2 000–5 000 |
+| **M1 Text** | constructor-independent foundations: raw text, tokens with source spans and trivia, the FRAMEWORK of the parse relation `Parse` and of `WohlgeformterText` (each constructor adds its rule when it enters), the canonicalisation relation of the round trip, the registry type of §3.1, and the INVENTORY as data with source reference and owning step: today's forms, every low-level form (LOW-LEVEL-SYNTAX-PLAN §4), async, the M6F forms, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples), aggregate passing and in-place construction (PLAN P1), the clause forms of B11 and the persistence forms of B22 | M0 | 5 000–12 000 |
+| **M2 Catalogue** | `Hardware` of §3.3 with rows for x86-64, AArch64 and RISC-V 64 (ported from the S2 branch `agent/s2-catalogue`); catalogue-conformant starts `ZulStart`; hardware histories `hw` with `FairLaeufe`, independent of programs; joint satisfiability per platform; folded in: A1 foreign software as rows, A2 register answers, A3 float hardware, A4 address ranges and core plan, A6 C interop (only outside the address space, as rows — never `extern fn` or a program-written assumption, §3.3 and §5), the persistence envelope of B22 | M0 | 16 000–42 000 |
+| **M3 Memory model** | RC11 with truly SC `seq_cst`, `po ∪ rf` acyclic, DRF-SC, the operational graph machine (sound and complete), the sink and append lemmas, ported from `grammatik/Grammatik/Speichermodell/RC11/` and the branch `agent/s5b-w`; an event type that the machines of M4 and `I` both produce | M0 | 15 000–40 000 |
+| **M4 Machines and `I`** | constructor-independent foundations of the implementation machine and of `I` (§3.4, §3.5): states, contexts, events over M3, units at proved linearisation points, lock owners with queue and hand-off, the delay rule, authority and lifetime, the pinned outcome type, `I.Bestimmt`, `I.Fortschritt`; the state contains the low-level concepts from the start (per-core state, privilege, active space, masks, interrupt and NMI preemption, devices, DMA and guests as outside with typestates, catalogue events); statements such as `start`/`child` become real when their constructors enter in M6 | M2, M3 | 26 000–65 000 |
+| **M10 Outside rule** | the foundation of §4: transitive outside provenance, validity at commit, the catalogue admission rule, device typestates | M2, M4 | 4 000–10 000 |
+| **M5 Acceptance** | `Akzeptiert := Lokal ∧ KlauselnWahr ∧ WaechterHalten` over `I` and the catalogue (with the deadlock part of §3.2), the pinned table of partial operations, the whitelist guard | M4, M10 | 3 000–8 000 |
+| **M6 Today's forms** | every form of today's language, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples) and P1 (aggregates by value, in-place construction), each constructor in ONE guarded commit with its complete registry entry of §6.5 (surface: `Parse`, `Elaboriert`; core-only: its origin proof; both: `Lokal`, `I` and implementation rule, preservation, `Realisiert`, `_erfuellbar`); `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5, M10 | 30 000–80 000 |
+| **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8, with its progress under M8's rules), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
+| **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows) — outside-interface forms (firmware, OS and device services) select pinned catalogue rows by name, and the selected row supplies the service contract; a program never writes one; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit | M6 | 236 000–596 000 |
+| **M7 Refinement** | `Sim` of §3.6 for every run; STARTS on M4 from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported) and grows with every form; CLOSES only with the cases of M6F and M6L (the acceptance case `flush`; linearisability of lock-free structures, B20) and the missing legs (B10) | starts M4; closes M6, M6F, M6L | 48 000–125 000 |
+| **M9 Observations and NI** | `ImSchranken`: hold bounds and cost and time first (B8), then stack (B9), memory (B21), real time (B19); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope with the B22 forms and their registry entries | M7 | 69 000–178 000 |
+| **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7, model side); waiting bounds and starvation freedom (B13) on M9's hold bounds | M7, M9 (B8 part) | 24 000–63 000 |
+| **M9P Probability** | random sources as rows with their draw laws; the B11 clause forms with their registry entries; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (model side) | M9 | 30 000–80 000 |
+| **M11 Transport** | `ZielFX` is defined and proved in `core/`; the package `uebergang/` imports `grammatik/` and `core/` and proves that `ZielFX` preserves today's whole guarantee from the full premises of today's `GabbroZiel` (§2.1), including the budgeted-G prefix correspondence for the retained fragment (§3.5); an excluded case only with the owner's approval | M6, M6F, M6L, M7, M8, M9, M9P, M10 | 6 000–20 000 |
+| **M12 Closing** | the model is closed: `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); the closing guard of §6 active; zero open registry entries. `grammatik/` and `uebergang/` stay until Stage 0, the bridge and the guardians have switched to `core/` (PLAN-COMPILER-READY phase B); then both are removed in one green cutover and the header of `Spec.lean` gives way to this file's §2 | M11 | 4 000–11 000 |
 | **Total** | | | **562 000–1 453 000** new (without the low-level forms 326 000–857 000; M6L 236 000–596 000) |
 
-Critical path: M3 → M4 → M7 → M8/M9 → M11 → M12. The forms (M6, then M6F and M6L form by form) grow beside
-M7–M9; M1, M2 and M3 start at once. Riskiest step: M7, the refinement to `I`; its prototype exists. Scope: every
+**Image gate** (PLAN-COMPILER-READY B6 in phase B, C9 in phase C; outside this plan): it lifts the WHOLE promise
+to images — an image run for every catalogue-conformant start, the lift of every admissible fair hardware history,
+`Verfeinert` on EVERY image run (fair or not), and `NI` with comparison-run existence; state reachability alone
+does not pass it.
+
+Critical path: M3 → M4 → M10 → M5 → M6 → M6L → M7 (close) → M9 → M8 → M11 → M12. M1, M2 and M3 start at once;
+M7 starts on M4 and grows with every form; M6F and M6L run form by form beside M7–M9. Riskiest step: M7, the refinement to `I`; its prototype exists. Scope: every
 model item of [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) is inside a step above (the L rows, S8–S10, A1–A4, A6,
 B7–B22, C11); Stage 0, GabbroV and the compiler and kernel are not — they are rebuilt on `core/` and get easier
 through it: Stage 0 parses into the reference AST and its input's meaning is `Bezeichnet` with `elab_korrekt`;

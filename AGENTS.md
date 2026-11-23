@@ -60,9 +60,10 @@ Consequences:
   the user no longer owes it.
 - **Hardware enters only as named per-row or per-envelope assumptions** (a target-table row, a speculation
   envelope, a persistence envelope); every statement above the table is hardware-independent.
-- **Software inside the verified image is user logic; software outside it is a named environment assumption with a
-  declared contract.** Nothing is OS-specific: a system or kernel call is a generic call whose contract the program
-  or its binding library declares.
+- **Software inside the verified image is user logic; software outside it is a catalogue row.** Nothing is
+  OS-specific: a system, kernel or firmware call is a generic call to an outside interface that selects a pinned
+  catalogue row by name; the selected row supplies the service contract, and a program never writes one
+  (PERFECT-MODEL §3.3, §5).
 - **No assembly anywhere, and no instruction-shaped interface (owner, 2026-11-23).** Every machine-level concept is
   a construct of the language with a model rule — execution states of every width with `jump`/`jump long`, address
   spaces, entries, cores, guests, devices, firmware services; GIR cells and target-table rows are the compiler's and
