@@ -4,12 +4,11 @@
     ./instrumente/pruefe-gabbrov.py
 
 Stages:
-  1. `lake build` in `programmlogik/passlogik/` (the pass logic) is green.
-  2. No Lean file under `programmlogik/` carries `sorry`, `admit`, `native_decide` or `axiom`.
-  3. GabbroV (`programmlogik/bruecke/`: the certificate theorems and the generator `gabbrov`): `lake build`
+  1. No Lean file under `programmlogik/` carries `sorry`, `admit`, `native_decide` or `axiom`.
+  2. GabbroV (`programmlogik/bruecke/`: the certificate theorems and the generator `gabbrov`): `lake build`
      there is green, and every `#print axioms` of a theorem there names exactly `propext`,
      `Classical.choice`, `Quot.sound`.
-  4. The automation on every IR probe (`stage0/proben-ir/*.gab`): `gabbrov --ein` writes the unit as ONE
+  3. The automation on every IR probe (`stage0/proben-ir/*.gab`): `gabbrov --ein` writes the unit as ONE
      module (source, data, duties, logic statements), checked by one `lean` process within `GABBROV_ZEIT`
      seconds (default 60); `gabbrov_logik` never fails, it states what remains, and every
      `logik<i>.genuegt` depends on exactly the three standard axioms. Reported: duties without and with
@@ -22,7 +21,6 @@ import os, pathlib, re, subprocess, sys
 W = pathlib.Path(__file__).resolve().parent.parent
 P = W / "programmlogik"
 B = P / "bruecke"
-L = P / "passlogik"
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
@@ -41,29 +39,19 @@ def ohne_kommentare(t):
     return "".join(out)
 
 
-def stufe_passlogik():
-    if not L.is_dir():
-        print("  1 passlogik: NICHT GEMESSEN (programmlogik/passlogik/ fehlt)"); return None
-    p = subprocess.run(["lake", "build"], cwd=L, env=ENV, capture_output=True, text=True, timeout=3600)
-    jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", p.stdout + p.stderr)
-    ok = p.returncode == 0 and bool(jobs)
-    print(f"  1 passlogik: {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else 'kein Abschluss'})")
-    return ok
-
-
 def stufe_sorry():
     dateien = [f for f in sorted(P.rglob("*.lean")) if ".lake" not in f.parts]
     bad = [f"{f.relative_to(W)}: {m.group(1)}" for f in dateien
            for m in VERBOTEN.finditer(ohne_kommentare(f.read_text(encoding="utf-8")))]
     ok = bool(dateien) and not bad
-    print(f"  2 sorry:     {'ok' if ok else 'ROT'} ({len(dateien)} Dateien, {len(bad)} Verstoesse)")
+    print(f"  1 sorry:     {'ok' if ok else 'ROT'} ({len(dateien)} Dateien, {len(bad)} Verstoesse)")
     for b in bad[:10]: print("     ", b)
     return ok
 
 
 def stufe_gabbrov():
     if not B.is_dir():
-        print("  3 gabbrov:   NICHT GEMESSEN (programmlogik/bruecke/ fehlt)"); return None
+        print("  2 gabbrov:   NICHT GEMESSEN (programmlogik/bruecke/ fehlt)"); return None
     p = subprocess.run(["lake", "build", "Bruecke", "gabbrov"], cwd=B, env=ENV, capture_output=True, text=True,
                        timeout=3600)
     aus = p.stdout + p.stderr
@@ -71,7 +59,7 @@ def stufe_gabbrov():
     saetze = re.findall(r"Bruecke/\S+: '([^']+)' depends on axioms: \[([^\]]*)\]", aus)
     fremd = [n for n, ax in saetze if set(a.strip() for a in ax.split(",")) != STANDARD]
     ok = p.returncode == 0 and bool(jobs) and bool(saetze) and not fremd
-    print(f"  3 gabbrov:   {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else 'kein Abschluss'}, "
+    print(f"  2 gabbrov:   {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else 'kein Abschluss'}, "
           f"{len(saetze)} Saetze geprueft, {len(fremd)} mit anderen Axiomen)")
     for x in fremd[:10]: print("     ", x)
     return ok
@@ -135,7 +123,7 @@ def stufe_proben():
     proben = sorted((W / "stage0" / "proben-ir").glob("*.gab"))
     pfad = lean_pfad()
     if not proben or pfad is None:
-        print("  4 proben:    NICHT GEMESSEN (keine Proben oder kein LEAN_PATH)"); return None
+        print("  3 proben:    NICHT GEMESSEN (keine Proben oder kein LEAN_PATH)"); return None
     aus = B / ".lake" / "gabbrov-proben"
     zeit = int(os.environ.get("GABBROV_ZEIT", "60"))
     t0 = time.time()
@@ -151,7 +139,7 @@ def stufe_proben():
     frei = sum(1 for k in pflichten if k == 0)
     ganz = sum(1 for e in gemessen if e["rest"] and all(k == 0 for k in e["rest"]))
     ok = bool(gemessen) and not fehler and not fremd
-    print(f"  4 proben:    {'ok' if ok else 'ROT'} ({len(proben)} Proben in {time.time() - t0:.0f} s mit {n} Jobs, "
+    print(f"  3 proben:    {'ok' if ok else 'ROT'} ({len(proben)} Proben in {time.time() - t0:.0f} s mit {n} Jobs, "
           f"{len(abgelehnt)} vom Generator abgelehnt; {len(pflichten)} Pflichten: {frei} ohne Rest, "
           f"{len(pflichten) - frei} mit Logik; {ganz} Einheiten ganz ohne Rest; {len(langsam)} ueber {zeit} s, "
           f"{len(fehler)} Fehler, {len(fremd)} mit anderen Axiomen)")
@@ -162,8 +150,8 @@ def stufe_proben():
 def main():
     if not P.is_dir(): print("ABBRUCH: programmlogik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 2: GabbroV ==")
-    erg = [stufe_passlogik(), stufe_sorry(), stufe_gabbrov()]
-    erg.append(stufe_proben() if erg[2] else None)
+    erg = [stufe_sorry(), stufe_gabbrov()]
+    erg.append(stufe_proben() if erg[1] else None)
     if False in erg: print("== GABBROV: ROT =="); return 1
     if None in erg: print("== GABBROV: TEILMESSUNG =="); return 2
     print("== GABBROV: GRUEN =="); return 0

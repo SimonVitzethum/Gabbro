@@ -347,7 +347,6 @@ stage0/                 Stage 0, the bootstrap compiler (Lean), and its probes (
   runner/               the proved x86-64 runner that executes S0IR
 programmlogik/          GabbroV: the bootstrap program logic
   bruecke/              bridge from GabbroV to machine G
-  passlogik/            the checker's pass logic as Lean theorems
 examples/               example programs
   poison/               programs written to be refused
 dokumente/              language reference, syntax, plans, theorem map
