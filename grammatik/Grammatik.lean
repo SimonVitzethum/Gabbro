@@ -48,6 +48,7 @@ public import Grammatik.Alle.Teil3
 public import Grammatik.Zielsatz.Waechter.Abhaengigkeit
 public import Grammatik.Zielsatz.Waechter.Pins
 public import Grammatik.Zielsatz.Waechter.Wildcards
+public import Grammatik.Zielsatz.Waechter.Formen
 
 
 
