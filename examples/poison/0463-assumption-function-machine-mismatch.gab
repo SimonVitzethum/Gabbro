@@ -1,0 +1,8 @@
+// erwartet: A005
+// A function body alone declares the unit's machine; its assumption must match.
+module poison::assumption_function_machine {
+assume counter_is_monotonic arch aarch64
+    "The environment counter does not decrease."
+    falsifier probe_counter;
+impl fn barrier() effects { pure } costs <= 1 ops arch x86_64 { }
+}
