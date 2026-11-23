@@ -5,3 +5,4 @@
 -/
 module
 public import Core.Ziel.Form
+public import Core.Text.Model
