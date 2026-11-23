@@ -6,3 +6,5 @@
 module
 public import Core.Ziel.Form
 public import Core.Speicher
+public import Core.Maschine
+public import Core.Ideal
