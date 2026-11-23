@@ -96,7 +96,8 @@ Consequences:
   synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
   runs in which every declared specification holds, the behaviour is determined by the source and declared sources
   of nondeterminism only (environment answers, the order at declared synchronisation points), every effect depends
-  only on current state (a value read before a release point of its state is stale unless declared `snapshot`),
+  only on current state (a value read before a release point of its state is stale; there is NO escape —
+  owner: "dann ist es wieder möglich, soll es aber nicht, das ist die Zielgarantie der Sprache"),
   and every thread ends, keeps progressing under the named
   fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
   emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
