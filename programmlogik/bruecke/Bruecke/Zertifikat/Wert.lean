@@ -64,6 +64,9 @@ meta partial def tInt (s0 s : Lean.Expr) (e ρ : Lean.Expr) : StateRefT (Array L
   -- a static, and `old` of it: the static in the world (the entry world for `old`), one atom for both
   | some `Gabbro.Grammatik.Expr.glob => leseGlob s a[n-2]!
   | some `Gabbro.Grammatik.Expr.oldG => leseGlob s0 a[n-2]!
+  -- a table cell, and `old` of it (the index evaluated now, the cell read in the entry world)
+  | some `Gabbro.Grammatik.Expr.slot => leseSlot s s0 s ρ a[n-4]! a[n-3]! a[n-2]!
+  | some `Gabbro.Grammatik.Expr.oldS => leseSlot s0 s0 s ρ a[n-4]! a[n-3]! a[n-2]!
   | some `Gabbro.Grammatik.Expr.widen => tInt s0 s a[n-1]! ρ
   | some `Gabbro.Grammatik.Expr.add => do mkAppM ``HAdd.hAdd #[← tInt s0 s a[n-2]! ρ, ← tInt s0 s a[n-1]! ρ]
   | some `Gabbro.Grammatik.Expr.sub => do mkAppM ``HSub.hSub #[← tInt s0 s a[n-2]! ρ, ← tInt s0 s a[n-1]! ρ]
@@ -85,6 +88,25 @@ meta partial def leseGlob (w g : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM 
       for a in (← get) do
         if a.isApp && a.appFn! == r.appFn! then
           if (← globIndex? a.appArg!) == some k then return ← atomInt a
+  tWertInt r
+
+/-- The integer of the cell `i` of field `f` of table `t` read in the world `w` (the index evaluated in
+    `s`): its value as the kernel reads it; a read the kernel leaves as it is is one atom per world, table,
+    constant index and field. -/
+meta partial def leseSlot (w s0 s ρ t f i : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
+  let idx ← mkAppM ``Gabbro.Grammatik.Zahl.n #[← mkAppM ``Gabbro.Grammatik.eval #[s0, i, s, ρ]]
+  let r ← kw (← mkAppM ``Gabbro.Grammatik.World.slots #[w, t, idx, f])
+  let ra := r.getAppArgs
+  if r.getAppFn.isProj && ra.size == 3 then
+    let kt ← globIndex? ra[0]!
+    let ki ← intWert? ra[1]!
+    let kf ← globIndex? ra[2]!
+    if kt.isSome && ki.isSome && kf.isSome then
+      for a in (← get) do
+        let aa := a.getAppArgs
+        if a.getAppFn == r.getAppFn && aa.size == 3 then
+          if (← globIndex? aa[0]!) == kt && (← intWert? aa[1]!) == ki && (← globIndex? aa[2]!) == kf then
+            return ← atomInt a
   tWertInt r
 
 /-- The integer of variable `x` of the environment `ρ`. -/

@@ -65,19 +65,50 @@ open Lean Elab Tactic Meta in
       let t' := mkAppN t.getAppFn (args.set! (args.size - 4) w')
       pure (← goal.replaceTargetDefEq t', t')
     else if (t.isAppOf ``Gabbro.Bruecke.wpRetryA || t.isAppOf ``Gabbro.Bruecke.wpTravA) && args.size ≥ 4 then
-      let w := args[args.size - 4]!
+      let pos := args.size - 4
+      let w := args[pos]!
       -- a loop is unrolled only up to `schleifenGrenze` passes; a wider one stays as the program's logic
       if let some k := w.rawNatLit? then
         if k > schleifenGrenze then throwError "gabbrov: retry bound {k} too wide to unroll"
-      if w.isAppOf ``Gabbro.Grammatik.alleIndizes then
-        if let some n ← intWert? w.appArg! then
-          if n > schleifenGrenze then throwError "gabbrov: traverse over {n} indices too wide to unroll"
-        else throwError "gabbrov: traverse over an unknown number of indices"
+      -- a large table: its indices one at a time (`alleIndizes_faul`, an equation: the two lists are
+      -- not equal by evaluation without building the whole list)
+      let (goal, t, w) ← do
+        if w.isAppOf ``Gabbro.Grammatik.alleIndizes then
+          let some n ← intWert? w.appArg! | throwError "gabbrov: traverse over an unknown number of indices"
+          if n > schleifenGrenze then
+            let eq := mkApp (mkConst ``Gabbro.Bruecke.alleIndizes_faul) w.appArg!
+            let some (_, _, w') := (← inferType eq).eq? | throwError "gabbrov: alleIndizes_faul"
+            let motiv ← withLocalDeclD `w (← inferType w) fun x =>
+              mkLambdaFVars #[x] (mkAppN t.getAppFn (args.set! pos x))
+            let t' := mkAppN t.getAppFn (args.set! pos w')
+            pure (← goal.replaceTargetEq t' (← mkCongrArg motiv eq), t', w')
+          else pure (goal, t, w)
+        else pure (goal, t, w)
+      let args := t.getAppArgs
+      let mitListe (w' : Lean.Expr) := mkAppN t.getAppFn (args.set! pos w')
+      -- the indices one at a time: the next by the kernel's head normal form, at most
+      -- `schleifenGrenze` passes (what follows them stays as the program's logic)
+      if w.isAppOf ``List.filterMap && w.appArg!.isAppOf ``List.range' &&
+          (w.getArg! 2).isAppOf ``Gabbro.Bruecke.indexVon then
+        let src := w.appArg!
+        let nI := (w.getArg! 2).appArg!
+        let some s := (← kw (src.getArg! 0)).rawNatLit? | throwError "gabbrov: traverse start unknown"
+        let some m := (← kw (src.getArg! 1)).rawNatLit? | throwError "gabbrov: traverse length unknown"
+        if s > schleifenGrenze then throwError "gabbrov: traverse beyond {schleifenGrenze} passes"
+        -- the next index (`indizes_ab`, its range fact decided by the kernel) or the end (`indizes_leer`)
+        let eq ← if m == 0 then pure (mkApp2 (mkConst ``Gabbro.Bruecke.indizes_leer) nI (mkNatLit s))
+          else do
+            let c := mkApp3 (mkConst ``Gabbro.Bruecke.indizes_ab) nI (mkNatLit s) (mkNatLit (m - 1))
+            let .forallE _ hty _ _ ← whnf (← inferType c) | throwError "gabbrov: indizes_ab"
+            pure (mkApp c (← mkDecideProof hty))
+        let some (_, _, w') := (← inferType eq).eq? | throwError "gabbrov: indizes"
+        let motiv ← withLocalDeclD `w (← inferType w) fun x => mkLambdaFVars #[x] (mitListe x)
+        pure (← goal.replaceTargetEq (mitListe w') (← mkCongrArg motiv eq), mitListe w')
+      else
       let fertig := w.rawNatLit?.isSome || w.isAppOf ``List.nil || w.isAppOf ``List.cons
       if fertig then pure (goal, t) else
       let w' ← kernNormal w
-      let t' := mkAppN t.getAppFn (args.set! (args.size - 4) w')
-      pure (← goal.replaceTargetDefEq t', t')
+      pure (← goal.replaceTargetDefEq (mitListe w'), mitListe w')
     else pure (goal, t)
   if let some g ← gerade? goal t then replaceMainGoal [g] else
   if let some gs ← rufSchritt? goal t then replaceMainGoal gs else
@@ -170,6 +201,19 @@ meta def istAusgangCtor' (x : Lean.Expr) : Bool :=
   | some c => c.getPrefix == ``Gabbro.Grammatik.Ausgang || c.getPrefix == ``Gabbro.Grammatik.EndAusgang
   | none => false
 
+/-- The continuation `weiterEA`/`weiterBA` at an outcome, unfolded and its `match` taken, where the goal
+    carries the indices of a large table one at a time (`List.range'`): `simp` would visit that list
+    and take seconds. Fails on every other goal. -/
+syntax (name := gabbrovWeiter) "gabbrov_weiter" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovWeiter] meta def evalGabbrovWeiter : Tactic := fun _ => withMainContext do
+  let goal ← getMainGoal
+  let t ← instantiateMVars (← goal.getType)
+  unless (t.find? (·.isConstOf ``List.range')).isSome do throwError "gabbrov_weiter: not needed"
+  let some t1 ← unfoldDefinition? t.headBeta | throwError "gabbrov_weiter: nothing to unfold"
+  replaceMainGoal [← goal.replaceTargetDefEq (← whnfCore t1)]
+
 /-- A step by `simp`/`dsimp` pays only where its lemma can fire: the continuation applied to an outcome
     (`weiterEA`, `weiterBA` at the head), or a shrinking of a constructor somewhere in the goal. -/
 meta def lohntSimp (t : Lean.Expr) : Bool :=
@@ -216,6 +260,7 @@ open Lean Elab Tactic Meta in
     let ok ← tryCatchRuntimeEx (withCurrHeartbeats do
         if simpOk then
           evalTactic (← `(tactic| first
+            | gabbrov_weiter
             | simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA]
             | gabbrov_schritt | gabbrov_generisch))
         else
