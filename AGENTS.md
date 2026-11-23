@@ -63,9 +63,13 @@ Consequences:
 - **Software inside the verified image is user logic; software outside it is a named environment assumption with a
   declared contract.** Nothing is OS-specific: a system or kernel call is a generic call whose contract the program
   or its binding library declares.
-- **No assembly anywhere.** Privileged operations are target-binding calls over linear `context<P>`; their meaning
-  is a neutral IR cell, their bytes are target-table rows; entry and exit code is generated from `entry`
-  declarations. Boot code is user code in Gabbro.
+- **No assembly anywhere, and no instruction-shaped interface (owner, 2026-11-23).** Every machine-level concept is
+  a construct of the language with a model rule — execution states of every width with `jump`/`jump long`, address
+  spaces, entries, cores, guests, devices, firmware services; GIR cells and target-table rows are the compiler's and
+  the model's business, never the user's. No function per instruction, no `context<P>` threaded through such
+  calls. Entry/exit code, vector and descriptor tables are generated. Boot code is user code in Gabbro from the
+  chosen boundary on, down to the 16-bit reset state. The kernel source is the same on every target; only a
+  platform unit (registers, addresses, arrival states, environment interfaces) differs.
 - **No `unsafe`.** All low-level access is checked authority; memory from outside comes as a region, never from a
   number; no int→pointer conversion.
 - **Memory:** regions with a ceiling refuse when full; open regions without a ceiling stay admitted (the provider's
@@ -83,8 +87,34 @@ Consequences:
   the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **Extensions stand beside the goal, not inside it,** when they are a different kind of statement (linking,
-  liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
+- **ONE theorem: no error except logic and hardware (owner, 2026-11-23, O27).** The language's promise is a single
+  theorem whose statement a reviewer can read in a minute, with an ABSTRACT notion of error that needs no list and
+  covers every error class, the unknown ones included (owner: "keine Aufzählung, eine abstrakte Definition, die
+  alle einschließt, ebenso alle, die wir noch nicht kennen"):
+  `Akzeptiert → Logik → Hardware → Laufzeit → every run of the implementation refines a good run of the program's logic`.
+  `Ideal P` is the program as its source says (each thread step by step; shared state changes only at declared
+  synchronisation points; every outside read is one question; no implementation artefacts). `Gut P` are the ideal
+  runs in which every declared specification holds, the behaviour is determined by the source and declared sources
+  of nondeterminism only (environment answers, the order at declared synchronisation points), every effect depends
+  only on current state (a value read before a release point of its state is stale; there is NO escape —
+  owner: "dann ist es wieder möglich, soll es aber nicht, das ist die Zielgarantie der Sprache"),
+  and every thread ends, keeps progressing under the named
+  fairness, or stops at a named hardware stop. A `Fehler` is any run of the implementation (machine G today, the
+  emitted image after B6/C9) without a corresponding run in `Gut P`; every error, known or unknown, is such a run, and no
+  list of error kinds exists anywhere — not in the statement, not in its proof (owner). Review reads `Ideal`, `Gut`, the correspondence
+  and the premises (a)–(d). The theorem has two halves (owner: "In C kann 'korrekte' Logik auch Fehler erzeugen, das
+  soll hier aber unmöglich sein"): (i) the language adds no error to the logic — for every accepted program EVERY
+  run of `Ideal P` is in `Gut P`; `Ideal P` has no undefined or error state, every operation is total or its
+  failure is a declared, handled outcome of the program, the checker refuses everything else (no undefined
+  behaviour exists); this includes errors the user writes: a program whose runs would depend on an undeclared
+  interleaving (a data race) or let an effect depend on stale state (TOCTOU) is outside `Gut P` and refused (owner:
+  "was aber, wenn der Nutzer ein Datenrennen oder TOCTOU erzeugt, das soll unmöglich sein für alle Fehler"); (ii) the implementation adds no error to the language — the refinement above. The only
+  possible deviation from the programmer's intent is then a false specification or broken hardware. Theorems that
+  today state single legs become proof steps, never the promise. The user
+  owes only program logic (b) and the named hardware and environment list (c).
+  **It must be STRONGER than today's goal (owner, 2026-11-23: "es muss mächtiger als der Zielsatz sein"):** today's
+  `GabbroZiel` and every side statement (liveness, waiting, termination, linking, atomic and weak-memory forms)
+  follow from it as proved corollaries.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its

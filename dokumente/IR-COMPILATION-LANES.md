@@ -3894,6 +3894,11 @@ statement parser refusal; they do not substitute for the generic proof.
 
 ### Low-level lane design (2026-11-03)
 
+> **Superseded** by O12 (2026-11-12) and O23 (2026-11-23): no ASM items or `boot16to64` stub, no
+> target-binding operation functions over `context<P>`. The current design is
+> [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md) with rows L0–L13 and K1–K7 of
+> [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §3; this section is kept only for its inventories.
+
 **Authority and scope.** This is a document-only design against integration commit
 `a4783537dd56d44193eaf5e6e3f2e908e2628926` on `c-runde1`, inspected in `low-plan`.
 It records no build, theorem recheck, source compilation or execution measurement.

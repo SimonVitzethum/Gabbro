@@ -202,6 +202,37 @@
     about it (`fifoSperre_aus`).
   * `GabbroZielVerbund`: the two units' hardware assumptions are the same (`E₂.Q = E₁.Q`).
 
+  THE LOW-LEVEL ASSUMPTION LIST (owner, 2026-11-23, O23-O25 of dokumente/PLAN-COMPILER-READY.md, design in dokumente/LOW-LEVEL-SYNTAX-PLAN.md). Fixed IN ADVANCE and
+  closed: once the low-level constructs are connected to machine G the statements may assume exactly these names; a further name is a new reviewed diff of this file.
+  TODAY NO STATEMENT TAKES THEM: no low-level construct is in G, the checker refuses every low-level form, the goal statements above are unchanged. Each name enters (c)
+  with its construct, as a predicate over the neutral architectural state, with its `NAME_erfuellbar` lemma, without weakening a leg.
+  Hardware (unconditional; "as the manual says" includes the manual's blocking rules and terminal outcomes, which the model states as named stops):
+  * `Hardware T` -- every target-table row computes its GIR cell (base, float, privileged, entry, and the rows of 16- and 32-bit states); generalises `RootNativeFloat.Hardware`.
+  * hardware frame -- `GutO` restricted to hardware items after A1. * the memory-model reading -- THE READING below, extended to the emitted privileged steps.
+  * `Mmu` -- translation by the installed stage-1 tables, caching and invalidation as the manual says.
+  * `IrqDelivery` -- replaces `KernPlan`: delivery at an instruction boundary to the installed entry under the kernel's mask and priority; non-maskable, machine-check,
+    fatal, debug and performance events as the manual specifies them, including NMI blocking and the shutdown of a recursive machine check.
+  * `ResetState` -- per processor: the state at the reset vector and at the arrival of a further core (widths, privilege, usable memory, start address).
+  * `VirtUnit` -- guest entry and exit, the mandatory isolation controls and the requested intercepts, stage-2 translation and its invalidation as the manual says.
+  * `Iommu` -- an ENVELOPE of the IOMMU, the interconnect and the endpoints of an isolation group: every DMA path of the group passes the IOMMU (no peer-to-peer bypass),
+    requester and PASID identities are owned by the group, translation, faults, invalidation and draining behave as specified; ATS only under its declared endpoint policy.
+    For requests covered by the envelope the DMA part of a device contract (today `ImBereichO`) is PROVED, not assumed. Its configuration (groups, spaces, mappings) is (b).
+  * `SecureUnit` -- a PLATFORM envelope (processors, memory controllers, interconnect, DMA masters): the configured world partition is enforced and the monitor is entered
+    only through its declared entry; the configuration itself is the proved work of the image's driver.
+  * `ClockRate`, `RowTiming` (O26, only inside `timed` blocks and `wait at least`/`until`) -- the cycle counter's declared frequency and monotonicity; per target row an
+    upper bound of cycles in its state, per memory kind and device register an upper bound of access latency. A late block takes its `else late` channel at run time.
+  * device contracts -- the declared answers of each register and port (history-dependent after A2; today `RegLokal`, the hardware part of `AxVertragO`), the state a
+    device retains, loses or leaves unknown across suspend, and the DMA extents of requests NOT covered by `Iommu` (today `ImBereichO`), and the truth of discovery answers (a device decodes the window and layout
+    that PCI configuration, ACPI or devicetree report; O26); a platform declares them. Memory safety does not rest on discovery: windows overlapping owned memory are refused.
+  Environment (software outside the image; per call in A1's conditional form, the caller proves `pre`):
+  * `FirmwareHandoff` (UEFI entry, memory map, loaded image), `BiosHandoff` (boot sector in real mode with the declared registers and memory description).
+  * firmware services -- each declared UEFI, BIOS, PSCI or SBI service, including the resume arrival it establishes (ACPI waking vector, PSCI, SBI SUSP).
+  * resident firmware -- firmware that keeps running after the handoff (SMM, UEFI runtime services, EL3 or M-mode firmware): a rely contract over its asynchronous
+    entries, the memory it may touch (its reserved regions only) and the time it may take. An image that provides that firmware itself proves it instead.
+  Retired once the constructs are connected: `Laufzeit.lader` (the boundary's handoff and the proved image layout), `Laufzeit.start`/`.einmal` for kernels (L9), `KernPlan`
+  (by `IrqDelivery`), `ImBereichO` for requests covered by `Iommu`. NOT assumed, ever: software inside the image (boot code, allocators, page-table code, schedulers,
+  drivers, hypervisors, monitors, provided firmware services) -- the user's logic (b); guest correctness, cost or termination; a hardware time bound outside `ClockRate`/`RowTiming`.
+
   THE PERMITTED STOPS (`HaltArt`, in `fortschritt`) -- where the statement reports instead of claiming more:
   * `hardware` -- an axiom answer outside its (answerable) declared type, a register answer outside its type or
     against its declared promise (`D.rzusage`), a leaf's hardware outcome: foreign code or a device breaking its
@@ -458,36 +489,6 @@
 -/
 module
 
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Decode
-import all Init.Data.String.Defs
-import all Init.Data.String.Extra
-import all Init.Data.String.FindPos
-import all Init.Data.String.Hashable
-import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iterate
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.Modify
-import all Init.Data.String.OrderInstances
-import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
-import all Init.Data.String.Pattern.Char
-import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
-import all Init.Data.String.PosRaw
-import all Init.Data.String.Search
-import all Init.Data.String.Slice
-import all Init.Data.String.Stream
-import all Init.Data.String.Subslice
-import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
-import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Spec.Teil2
