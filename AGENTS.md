@@ -85,8 +85,8 @@ Consequences:
 - **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
   it.
 - **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until M12 the
-  header of `Spec.lean` is the interim list. Every extension of the goal is a diff of PERFECT-MODEL.md and then of
-  `Spec.lean`, described as such in the commit.
+  header of `Spec.lean` is the interim list. Every extension of the goal changes PERFECT-MODEL.md and the
+  corresponding concrete theorem in `core/`, and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff of
   PERFECT-MODEL.md, with a recommendation, before it is merged. Strengthening the language's promise is the default
   direction.
