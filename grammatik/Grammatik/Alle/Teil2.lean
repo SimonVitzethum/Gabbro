@@ -75,6 +75,7 @@ public import Grammatik.Speichermodell.Adressen.Capabilities
 public import Grammatik.Speichermodell.Maschine.Sicht
 public import Grammatik.Speichermodell.Maschine.MaschineW
 public import Grammatik.Speichermodell.Maschine.DRF
+public import Grammatik.Speichermodell.RC11
 public import Grammatik.Zielsatz.Eigenschaften.Schwach
 public import Grammatik.Speichermodell.Darstellung
 public import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeZelle
