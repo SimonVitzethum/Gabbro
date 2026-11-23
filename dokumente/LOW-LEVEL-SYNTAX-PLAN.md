@@ -4,13 +4,14 @@ Status: design. Ordered for complete implementation by the owner on 2026-11-03; 
 decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur iasm, und GIR soll Compiler- und
 Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump
 oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen."
+The compile-time selection `if (…) then { … } else { … }` (§4.10) is the owner's addition O24 of the same day.
 
 O23 replaces the earlier design of this plan, in which privileged operations were calls of target-binding
 functions over a linear `context<P>` (one contracted function per machine operation). Such an interface is inline
 assembly with types: the user still picks machine operations one by one and in architecture order, and every
 kernel source names its architecture's operation set. It is removed before it is built. The syntax below is not
 accepted until its canonical Lean rules exist (AGENTS.md §2: the model comes first). Its implementation targets are
-the Lean model, the parser/exporter and the checker (rows L0–L13 of PLAN-COMPILER-READY §3), then the compiler on
+the Lean model, the parser/exporter and the checker (rows L0–L14 of PLAN-COMPILER-READY §3), then the compiler on
 GIR (C, K); Stage 0, the runner and GabbroV keep refusing these forms.
 
 ## 1. The rule
@@ -122,7 +123,10 @@ activate s;                                 // installs the root on this core
 ```
 
 - The table format (x86-64 4/5-level entries, AArch64 descriptors with granule, RISC-V Sv39/48/57) is target
-  knowledge in the compiler; the user maps regions, never writes an entry.
+  knowledge in the compiler; the user maps regions, never writes an entry. `map` takes a memory kind
+  (`normal`, `device`, `write_combining`, `uncached`), lowered to PAT/MAIR/Svpbmt attributes; a device region can
+  only be mapped as `device` or `uncached`. Large pages are chosen by the compiler where extent and alignment
+  allow; a kernel never writes a page size as a literal but uses `target.page_size` (4 KiB, or 16/64 KiB granules).
 - `flush … on cores K` is the TLB shootdown: the compiler emits the inter-processor interrupt, the generated flush
   handler and the acknowledgement wait (x86 IPI + `invlpg`/`invpcid`, AArch64 broadcast `tlbi … is` + `dsb`,
   RISC-V SBI remote fence or IPI + `sfence.vma`); one generic theorem says that after the statement no core of
@@ -146,6 +150,11 @@ send interrupt timer to core k;                    // inter-processor interrupt
 - The compiler generates the vector table (IDT with gates and IST stacks, VBAR table, `stvec` table) and every
   entry/exit frame from the declarations (L5, one generic theorem per frame kind). Interrupt numbers that differ
   per platform are platform register/address data (§6), bound to the neutral names.
+- The interrupt controller's architectural part and the per-core timer are constructs, not drivers, because every
+  target has a different one: `route line l to core k priority p`, end-of-interrupt generated in the entry frame,
+  `timer.at(t)` / `timer.after(d)` per core (x86-64 local APIC with TSC deadline, AArch64 GIC CPU interface and
+  generic timer, RISC-V AIA/PLIC with Sstc or the SBI timer). The platform unit names the controller kind and its
+  addresses; external interrupt sources behind it are ordinary devices.
 - `nonmaskable`, `machine_check` and `fatal` entries are delivered regardless of the mask: the checker allows only
   lock-free code there (no lock, no wait, no allocation), on a declared own stack; `IrqDelivery` (hardware) states
   their delivery including non-maskability. A platform without NMI maps `nonmaskable` to none and refuses nothing.
@@ -209,6 +218,10 @@ code efi_main(fw: uefi, image: image_handle) in platform.uefi_arrival { … }
   platform); it is never built from an address. The compiler generates the foreign calling convention (`abi`).
 - A service value is linear where the firmware ends it: `exit_boot_services` consumes `uefi`, after which no boot
   service can be called and the boot-services memory becomes ordinary RAM regions of the kernel.
+- The 16-bit loader boundary needs the BIOS services from the start (a boot sector has 510 bytes and must load the
+  rest): `environment bios abi bios_int { fn read_sectors(…); fn memory_map(…); fn enable_a20(); }`, lowered to
+  software interrupts in state `real16`. The service value is alive only in real mode and is consumed by the
+  `jump long` that leaves it; enabling A20 without the service is device logic (port `0x92`) in the platform unit.
 
 ### 4.9 Images, placement and code from data
 
@@ -220,11 +233,49 @@ place platform.core_arrival below 0x10_0000 aligned 4096;
 ```
 
 - The compiler writes the image format and its headers (PE/COFF for UEFI, a boot sector, a flash image with the
-  reset vector, ELF later); `LayoutOk` and the loader statement are proved from the declaration (K1).
+  reset vector, ELF later); `LayoutOk` and the loader statement are proved from the declaration (K1). A format
+  with a size limit refuses an item that does not fit (a boot sector beyond 510 bytes plus signature); a 16-bit
+  boot is therefore two items: the sector loads the second stage through `bios.read_sectors` and jumps to it.
 - `make executable r as code_item` turns a written region into code authority: the region becomes read-only and
   executable, the instruction caches are synchronised (generated `ic ivau`/`dsb`/`isb`, `fence.i`, nothing on
   x86), and the code item must be one the compiler emitted (copying the arrival code below 1 MiB when the loader
   placed the image elsewhere); there is no other way to code.
+
+### 4.10 Compile-time selection: `if (…) then { … } else { … }` (O24)
+
+```gabbro
+// main unit: flags with types and defaults; configurations the checker must accept
+flag smp: bool = true;
+flag trace: bool = false;
+configurations { pc_uefi: target x86_64, platform pc, image pc_uefi;
+                 pc_bios: target x86_64, platform pc, image pc_bios;
+                 arm_virt: target aarch64, platform virt; rv_virt: target riscv64, platform virt, smp = false; }
+
+if (smp) then { start core 1 at core_main() stack s1; }
+if (target.arch == x86_64) then { use driver::i8042; } else { use driver::pl050; }
+let n = if (trace) then { 4096 } else { 0 };
+```
+
+- **Form.** `if ( flagcond ) then { … } [ else { … } ]`, at item level (declarations, `use`, devices, entries),
+  statement level and expression level (both branches of one type). `else if (…) then` chains. The parentheses
+  and `then` mark the compile-time form; the run-time `if c { … }` never takes `then`.
+- **Conditions are flags only.** Atoms are declared flags (`bool` or a closed enum) and the built-in flags
+  `target.arch`, `target.width`, `target.page_size`, `platform`, `image` and the profile entries; operators `!`,
+  `&&`, `||`, `==`, `!=`. A run-time value, a function call or an undeclared flag in the condition is refused, and a
+  flag inside a run-time `if` is refused with the hint to use the compile-time form, so the two never mix.
+- **Values** come from the selected configuration, then from `--flag name=value`, then from the default; a flag
+  without a value is refused. There is no implicit environment variable and no flag that a library sets for its
+  user.
+- **Meaning.** Selection happens before name resolution of the unselected branch's effects and before
+  `Akzeptiert`: the elaborator turns a unit and a configuration into an ordinary unit without flags. Machine G and
+  the goal theorem see only that unit; the theorem holds per configuration. Lean: selection as a total function
+  with the lemma that it commutes with elaboration of the remaining forms, and `ct_select_erfuellbar`.
+- **Checking.** Every branch is parsed and name-resolved. `gabbro check` checks the unit under EVERY declared
+  configuration (not under all flag combinations, which is exponential); a build compiles one. A branch that no
+  declared configuration selects is refused as dead, so nothing rots unchecked.
+- **Neutrality.** The language allows a `target.arch` condition anywhere; K6's measure counts it: the kernel proper
+  carries feature flags (`smp`, `trace`) only, and architecture conditions live in the platform unit and the driver
+  selection.
 
 ## 5. Typing, acceptance and the trust boundary
 
@@ -245,22 +296,27 @@ place platform.core_arrival below 0x10_0000 aligned 4096;
 
 ## 6. The platform unit
 
-A platform unit contains only data and is the only per-target source:
+A platform unit contains data (and on x86-64 the arrival code) and is the only per-target source; the drivers of
+the devices a platform has are chosen by compile-time selection (§4.10), and a driver for the same device is the
+same source on every architecture:
 
 | Kind | x86-64 PC | AArch64 virt/board | RISC-V 64 virt/board |
 |---|---|---|---|
 | registers | MSRs by number (PAT, …), device registers | system registers by name, device registers | CSRs by number, device registers |
 | addresses | device windows, I/O ports, reset vector, the < 1 MiB arrival page, interrupt vector numbers | device windows, interrupt IDs | device windows, interrupt IDs |
 | arrival states | reset (16-bit), BIOS loader (16-bit), UEFI (64-bit), further core (16-bit) | reset (EL3/EL2), UEFI (EL2/EL1), PSCI core start | reset (M), SBI (S), SBI hart start |
-| environment interfaces | UEFI | UEFI, PSCI | SBI, UEFI |
+| environment interfaces | UEFI, BIOS | UEFI, PSCI | SBI, UEFI |
 | arrival code (Gabbro) | 16-bit further-core arrival ending in `jump long` | none | none |
+| interrupt controller, timer | local APIC + I/O APIC, TSC deadline | GICv3, generic timer | AIA or PLIC, Sstc or SBI timer |
+| page size, discovery | 4 KiB; ACPI | 4/16/64 KiB granule; devicetree or ACPI | 4 KiB; devicetree |
+| driver selection | `if (platform == pc) then { use … }` (§4.10) | same form | same form |
 
 The arrival code is ordinary Gabbro in a declared state; it uses only the constructs of §4. The kernel proper
 does not change between targets; K6 measures that its diff between the three targets is zero lines.
 
 ## 7. Implementation and validation order
 
-1. Model first (PLAN-COMPILER-READY L0–L13): the neutral state of §3 and one G rule per construct, typestate
+1. Model first (PLAN-COMPILER-READY L0–L14): the neutral state of §3 and one G rule per construct, typestate
    acceptance in `Akzeptiert`, generic preservation and an `_erfuellbar` lemma per construct (AGENTS.md §3).
    `gabbro_ziel` stays on the standard axioms; the new assumptions (`ResetState`, `BiosHandoff`, the environment
    interfaces, non-maskable delivery) are a `Spec.lean` diff shown to the owner before merge.
@@ -276,3 +332,26 @@ does not change between targets; K6 measures that its diff between the three tar
 
 Totality claims name their domain: parsing/refusal is total over source input; certified lowering covers the
 modelled states, constructs and targets. Unsupported forms refuse; they are never silently erased.
+
+## 8. What is still not writable (2026-11-23)
+
+Checked against what a general-purpose kernel does. Writable with §4: boot from reset, BIOS loader or UEFI;
+memory management, demand paging, copy-on-write; translation with shootdown; interrupts, NMI, timers, IPIs; SMP
+start and stop; threads, extended state, async; user processes, system calls, signals (guest frames are values
+`enter guest` takes); drivers for MMIO, ports and DMA; PCIe through ECAM or ports; ACPI tables and devicetree as
+data from the handoff regions (an AML interpreter is ordinary program logic); reboot and power-off through devices,
+PSCI or SBI. Not writable yet, each a construct still to be designed (model first) or deliberately refused:
+
+| Gap | Why it is not writable today | Proposed |
+|---|---|---|
+| hardware virtualisation (VMX/SVM, EL2 guests, RISC-V H) | no construct for a virtual machine, its entry/exit and stage-2 translation | `vm` spaces and `enter vm` beside `enter guest`; later item |
+| IOMMU (VT-d, SMMU, RISC-V IOMMU) | DMA safety rests on the device contract (named assumption); no device address space | `space` for devices with the same `map`/`flush`; turns the DMA assumption into a proof |
+| runtime code: JIT, loadable kernel modules | `make executable` accepts only items the compiler emitted | a verified emitter in the image whose output is proved to compute its cells, or refuse for good |
+| suspend to RAM and resume | the resume vector is an arrival state not yet declared | `ResetState` gets a resume arrival; resume code is Gabbro like the reset path |
+| performance counters, debug breakpoints, single step | registers are writable through the platform unit, but no entry kinds for their traps | `entry debug`/`entry perf` kinds |
+| backtraces and unwinding for panics | no construct reads the frame chain | generated frame descriptors and `backtrace()`; low priority |
+| port-I/O rights for guests (x86 I/O bitmap), per-guest MSR access | no grant from kernel authority to a guest beyond memory | `grant d to guest g` for devices and ports |
+| secure monitor / TEE (EL3, TrustZone, SMM, M-mode firmware runtime) | privilege `machine` exists, but no secure/normal world split and no world switch | a later boundary; SMM stays outside (firmware) |
+| DRAM initialisation on real boards | writable as driver logic, but vendor details are not public on most platforms | not a language gap; reset boot stays on emulator platforms |
+
+Speculation mitigations, retpolines and fences are not user constructs: they are compiler work under B17.

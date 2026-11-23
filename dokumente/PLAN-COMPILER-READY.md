@@ -226,14 +226,15 @@ the platform unit (registers, addresses, environment interfaces) differs. The de
 | L3 | raw byte access below the type level, in hosted programs and in the kernel: byte capabilities with value flow (C01), grant generations (C08) and loans (C09); typed views over bytes need representation, endianness and layout proofs; uninitialised bytes are written before they are read | 6 000–15 000 / 2–4 / — |
 | L4 | execution states and transfers: `state S { width 16/32/64, privilege, translation, guards }`, code items `in S`, `jump` (same state, no return), `jump long … into S with space stack` (any state change below user privilege, one atomic G step with mapped target code and stack, interrupts masked), `wait for interrupt`, `stop core`, `cpu.has(feature)`, `cpu.cycles()`; the neutral per-core state (width, privilege, active space, mask, priority, vector table, per-core base, extended state, run status); refusals for states a target lacks | 8 000–20 000 / 2–4 / — |
 | L5 | entry and exit frames generated from `entry` declarations: interrupt, exception, system call, thread switch and first entry of a thread, ONE generic theorem per frame kind; the vector table (IDT with IST stacks, VBAR table, `stvec` table) generated from the declarations; per-core base kept and swapped by the frames (`swapgs`, `tpidr_el1`, `tp`/`sscratch`); the full extended register state (XSAVE size from `cpu.has`, FP/SIMD/SVE, F/D/V) saved on thread switch | 6 000–15 000 / 1–3 / — |
-| L6 | address spaces: `space.new`, `map`, `unmap`, `protect`, `activate` with the table format as compiler knowledge; `flush … on cores K` as the generated shootdown (IPI, flush handler, acknowledgement) with the theorem "no core of K translates the range by the old entries"; `unmap` returns frames only after the flush; two aliases share one physical identity; reuse and revocation under quiescence; the unit itself is the named assumption `Mmu` | 6 000–15 000 / 2–3 / — |
-| L7 | interrupts beyond `KernPlan`: scoped `interrupts off { }` and `priority at least p { }` per core, re-entry, nesting, `send interrupt v to core k`; `nonmaskable`, `machine_check` and `fatal` entries on their own stacks with lock-free code only (no lock, wait or allocation), delivered regardless of the mask by `IrqDelivery` (was X3) | 5 000–12 000 / 2–3 / — |
+| L6 | address spaces: `space.new`, `map`, `unmap`, `protect`, `activate` with the table format as compiler knowledge; memory kinds `normal`/`device`/`write_combining`/`uncached` at `map`, large pages chosen by the compiler, `target.page_size` instead of literals; `flush … on cores K` as the generated shootdown (IPI, flush handler, acknowledgement) with the theorem "no core of K translates the range by the old entries"; `unmap` returns frames only after the flush; two aliases share one physical identity; reuse and revocation under quiescence; the unit itself is the named assumption `Mmu` | 6 500–16 000 / 2–3 / — |
+| L7 | interrupts beyond `KernPlan`: scoped `interrupts off { }` and `priority at least p { }` per core, re-entry, nesting, `send interrupt v to core k`; the architectural interrupt controller and the per-core timer as constructs (`route line l to core k priority p`, generated end-of-interrupt, `timer.at`/`timer.after`); `nonmaskable`, `machine_check` and `fatal` entries on their own stacks with lock-free code only (no lock, wait or allocation), delivered regardless of the mask by `IrqDelivery` (was X3) | 5 500–13 000 / 2–3 / — |
 | L8 | user-mode guests: `enter guest g`, `entry syscall`, the isolation boundary of an unverified or separately verified guest (C12), system-call contracts PROVED by the kernel in the conditional form of A1; guest memory only through `copy from guest … else fault` / `copy to guest … else fault` (every byte fetched once, faults through the `else` channel by a generated recovery table, user-access guard open only inside the copy); no guest contract, cost or termination claimed | 8 000–20 000 / 2–4 / — |
 | L9 | the kernel as its own runtime: premise (d) (`Laufzeit.lader/start/einmal`, spawn) derived from the kernel's proved start, `start core k at f(args) stack t` (neutral; lowered to INIT–SIPI plus the platform's 16-bit arrival code on x86-64, to PSCI `CPU_ON` or SBI `hart_start` elsewhere) and scheduler instead of assumed; stacks sized by B9. In the first kernel the threads of the goal theorem are the per-core roots and the declared interrupt handlers; the kernel spawns no Gabbro thread, user processes are guests (L8); spawning kernel threads later needs the refinement "the scheduler implements spawn and switch" | 6 000–15 000 / 1–3 / — |
 | L10 | parser, exporter, checker (typestate of state, regions, devices, services, masks), obligations; refusals by name for everything unmodelled; `asmT` strings, `prim fn … = asm { … }`, the `context<P>` surface, target-binding operation functions and software `assume` on `entrust` become refusals and are then removed | 3 000–8 000 / 1–2 / — |
 | L11 | positive and negative validation set of the low-level plan §7 (reset to kernel through `jump long`, BIOS and UEFI boundaries, RAM write/read, activate/flush, interrupt entry/return, NMI, second core, guest copy, environment exit; forged region, wraparound, stale epoch, alias, wrong state, `jump long` to unmapped code, bad stack, lock in NMI, double guest fetch, service after exit, missing flush, device through a RAM view, undeclared register) | 1 500–4 000 / 1 / — |
-| L12 | environment interfaces: `environment E abi A { fn … requires … ensures …; }` for firmware services (UEFI, PSCI, SBI, later BIOS services); service values only from an arrival contract, never from an address; generated foreign calling convention; linear end of service (`exit_boot_services` consumes `uefi`, its memory becomes kernel regions); contracts in the conditional form of A1 | 4 000–10 000 / 1–2 / — |
+| L12 | environment interfaces: `environment E abi A { fn … requires … ensures …; }` for firmware services (UEFI, PSCI, SBI, and BIOS services in real mode — `read_sectors`, `memory_map`, `enable_a20` — which the 16-bit loader boundary needs from the start); service values only from an arrival contract, never from an address; generated foreign calling convention; linear end of service (`exit_boot_services` consumes `uefi`, its memory becomes kernel regions); contracts in the conditional form of A1 | 4 500–11 000 / 1–2 / — |
 | L13 | images and code: `image … format uefi / boot_sector / flash` with entry and placement (`place … below 0x10_0000 aligned 4096`), headers written by the compiler, loader statement and `LayoutOk` proved from the declaration; `make executable r as item` as the only way to code authority (region becomes read-only executable, instruction caches synchronised, the bytes are an item the compiler emitted) | 3 000–8 000 / 1–2 / — |
+| L14 | compile-time selection (O24): `if ( flagcond ) then { … } [else { … }]` at item, statement and expression level; declared flags (`flag n: bool = …`, closed enums) and built-in flags (`target.arch`, `target.width`, `target.page_size`, `platform`, `image`, profile entries); `configurations { … }` in the main unit; selection before `Akzeptiert` as a total function on units with the commutation lemma and `ct_select_erfuellbar`; the checker checks every declared configuration and refuses dead branches, run-time values in the condition and flags in a run-time `if`. A general form: Stage 0's front end may adopt it, as only the selected unit reaches G | 1 500–4 000 / 1 / — |
 
 ### C — the compiler on GIR (MACHINE-IR-PLAN §12, PLAN-SELF-HOSTING revised)
 
@@ -444,7 +445,7 @@ Phase 4  R3: B6 (pieces i–viii, stages) → B7 ────────┘
    │
 Phase 5  B10 (after A1 and the C rounds)
    │
-Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L9 → L10 → L11   (after all C packages)
+Phase 6  R4: L0 → L1 → L4 → L3 → L2 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L9 → L10 → L11 (after all C packages)
    │
 Phase 7  R5: K1 K2 (after C4 and L4/L5) → K3 → K5 on one core (UEFI, then 16-bit loader) → K4 → K5 on two cores → C9 → K6 (AArch64, RISC-V 64)
    │
@@ -481,7 +482,7 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 2. **To trusted output:** S3 → B6 (stage "lock words as state" → "rely/guarantee simulation of one thread" →
    "process simulation and leg transfer") → B7. B6's second stage is the largest single uncertainty of the whole
    plan, and C9 repeats its shape for the compiler.
-3. **To the kernel:** two chains meet in K5. The model chain is A1, A2 → L1 → L4 → L5 → L6 → L7 → L8 → L12 → L13 → L9 (R4);
+3. **To the kernel:** two chains meet in K5. The model chain is A1, A2 → L1 → L4 → L5 → L6 → L7 → L8 → L12 → L13 → L14 → L9 (R4);
    the compiler chain is C2 → C3 → C4 → K1, K2 → K3. Neither can be shortened by the other. The kernel gate
    cannot be reached with Stage 0: Stage 0 emits hosted images for the runner only (D16).
 4. **In parallel with all of it, Lean only, no Stage-0 or runner change:** A1, A2, A3, A4, B8, B9, C11. They
@@ -500,13 +501,13 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 | A fewer assumptions | 7 400–19 900 | — |
 | B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000; B12 payloads 15 000–40 000; B13/B14 11 000–27 000; B15–B22 82 000–215 000) | 186 000–488 000 | — |
 | C11 non-emptiness | 200–800 | — |
-| L low-level model (L1–L13) | 68 500–172 000 | — |
+| L low-level model (L1–L14) | 71 500–179 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
 | K kernel ready (K1–K6) | 31 000–87 000 | 8 000–22 000 |
 | C compiler sources and benchmarks (C7, C8) | — | 125 000–276 000 |
-| **sum** | **≈ 259 900–680 400** | **≈ 133 000–298 000** |
+| **sum** | **≈ 262 900–687 400** | **≈ 133 000–298 000** |
 
-**Everything together: about 393 000 to 978 000 new lines**, of which roughly two thirds Lean. Not included: C6
+**Everything together: about 396 000 to 985 000 new lines**, of which roughly two thirds Lean. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -516,8 +517,8 @@ Parts of the sum by gate (each includes what the earlier gates need):
 |---|---|---|
 | the compiler start (S1, S2, S6, V) | 16 500–54 200 | — |
 | R3 trusted Stage-0 output (adds the rest of S, A, B, C11) | 76 400–211 400 | — |
-| R4 low-level model (adds L) | 144 900–383 400 | — |
-| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 259 900–680 400 | 133 000–298 000 |
+| R4 low-level model (adds L) | 147 900–390 400 | — |
+| R5 kernel ready (adds C1–C5, C9, K, C7, C8) | 262 900–687 400 | 133 000–298 000 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`
@@ -556,6 +557,7 @@ model today, so their ranges are the least certain of the table.
 | O21 | the lock's behaviour under contention (P2): keep wake-all; or a re-wake chain; or spin-then-wait per profile | recommend: keep wake-all until a contended workload is measured; wake-one alone is incorrect |
 | O22 | a future that is neither awaited nor cancelled (S8; was part of O10) | recommend: a future is linear — it is awaited, handed over (`spawn`, `join`) or cancelled explicitly; cancellation runs the destructor of the saved state under the user's contract; dropping it silently is refused (no implicit drop, no leaked lock or mark) |
 | O23 | **syntax for everything, GIR is the compiler's (owner, 2026-11-23):** "context ist auch nur iasm, und GIR soll Compiler- und Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen." Every machine-level concept is a language construct with a G rule (LOW-LEVEL-SYNTAX-PLAN §4): execution states of every width, `jump`/`jump long`, regions from the arrival contract instead of `ram_view` over a context, spaces with generated shootdown, entries incl. non-maskable, `start core`, extended state in generated frames, guest copies, environment interfaces, images and `make executable`. The `context<P>` surface and target-binding operation functions are removed before they are built; only registers, addresses, arrival states and environment interfaces stay per platform | decided by the owner; L and K rewritten accordingly; the new named assumptions (`ResetState`, `BiosHandoff`, environment interfaces, non-maskable delivery) go to the owner as the L0 `Spec.lean` diff before merge |
+| O24 | **compile-time selection (owner, 2026-11-23):** "noch eine neue Syntax: `if (<compilerflag>) then {}` mit ggf. `else`" — L14, LOW-LEVEL-SYNTAX-PLAN §4.10 | decided by the owner; the lead's choices of the strongest variant: conditions over declared flags only, never mixed with run-time `if`; every declared configuration checked, dead branches refused; the goal theorem per configuration on the selected unit; K6 counts architecture conditions in the kernel proper (target: none, only feature flags) |
 
 ### 8.1 Decided 2026-11-13 by the lead on the owner's delegation
 
