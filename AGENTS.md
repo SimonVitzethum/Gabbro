@@ -87,10 +87,13 @@ Consequences:
   the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
 - **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
   recommendation, before it is merged. Strengthening the language's promise is the default direction.
-- **Every safety property is a leg of the ONE goal theorem `gabbro_ziel`** (owner, 2026-11-23, O27), the absence of
-  TOCTOU included; the user owes only program logic and the named assumptions. **Extensions stand beside the goal,
-  not inside it,** only when they are a different kind of statement (linking,
-  liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
+- **ONE powerful goal theorem, not many (owner, 2026-11-23, O27).** Every promise of the language is a leg of the
+  single theorem `gabbro_ziel`: safety (memory, races, locks, contracts, ownership, bounds, the low-level legs, no
+  TOCTOU) and every other kind (linking, liveness, waiting, termination, information flow, probability, …). A leg
+  that needs a premise of its own (fairness of the scheduler, a termination measure, a declared random source)
+  carries it as a hypothesis INSIDE the leg, so the one theorem holds for every program and each leg says exactly
+  when it applies. The user owes only program logic and the named assumptions. Separate top-level statements are
+  allowed only as stepping stones of the proof, never as the language's promise.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
