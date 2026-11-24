@@ -88,7 +88,7 @@ theorem protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) : Protoko
           rw [atCut] at tick
           cases tick with
           | schritt _ step =>
-              rename_i event
+              rename_i label event
               cases step with
               | schritt impl =>
                   have pres := h _ _ _ _ _ _ _ _ _
@@ -114,7 +114,7 @@ theorem ideal_protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) :
   | succ n ih =>
       cases η.zeit.takt n with
       | schritt _ step =>
-          rename_i event
+          rename_i label event
           have pres := h _ _ _ _ _ _ _ _ _
             (einheitVon P t).einrichtung (einheitVon P t).system
             (einheitVon P t).katalog η.hw n (η.zeit.zustand n) (η.zeit.zustand (n + 1)) event ih
