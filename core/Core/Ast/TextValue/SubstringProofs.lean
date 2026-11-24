@@ -52,9 +52,13 @@ private theorem substringInfixPrecLe7 (op : Infix) : op.precedence ≤ 7 := by
 private theorem substringNoOpAtSlice : ¬ Continues minimum (sliceRange :: more) := by
   rintro ⟨op, _, same, _⟩
   have htok : op.token = sliceRange := (List.cons.inj same).1.symm
-  cases op <;> (try (rename_i operation; cases operation)) <;>
-    simp only [Infix.token, Arith.token, Compare.spelling, Logic.spelling, sliceRange,
-      Token.punctuation.injEq, String.reduceToList, List.cons.injEq, Char.reduceEq] at htok
+  cases op with
+  | arith a => cases a <;> simp [Infix.token, Arith.token, sliceRange] at htok
+  | div => simp [Infix.token, sliceRange] at htok
+  | compare c => cases c <;> simp [Infix.token, Compare.spelling, sliceRange] at htok
+  | logic l => cases l <;> simp [Infix.token, Logic.spelling, sliceRange] at htok
+  | index => simp [Infix.token, openBracket, sliceRange] at htok
+  | projection => simp [Infix.token, dot, sliceRange] at htok
 
 private theorem substringPrintTokens
     (base : Expr scope (.text capacity))
@@ -71,6 +75,7 @@ private theorem substringPrintTokens
     (show (Token.punctuation "..".toList : Token) = sliceRange by decide),
     (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
     (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+  rfl
 
 private theorem substringPrint (scope : Scope) (args : SubstringArgs scope) :
     (substring scope).production args
@@ -85,7 +90,7 @@ private theorem substringPrint (scope : Scope) (args : SubstringArgs scope) :
   refine ⟨args.base.printTokens ++ [openBracket] ++ args.first.printTokens ++
     [sliceRange] ++ args.last.printTokens ++ [closeBracket, closeParen], rfl, ?_⟩
   refine ⟨args.first.printTokens ++ [sliceRange] ++ args.last.printTokens ++
-    [closeBracket, closeParen], ?_, ?_⟩
+    [closeBracket, closeParen], args.last.printTokens ++ [closeBracket, closeParen], ?_, ?_, ?_⟩
   · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
       (Expr.printReads (minimum := 8)
         (rest := openBracket :: (args.first.printTokens ++ [sliceRange] ++
@@ -95,19 +100,18 @@ private theorem substringPrint (scope : Scope) (args : SubstringArgs scope) :
           obtain ⟨op, more, same, allowed⟩ := cont
           have prec := substringInfixPrecLe7 op
           omega))
-  · refine ⟨args.last.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-    · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
-        (Expr.printReads (minimum := 0)
-          (rest := sliceRange :: (args.last.printTokens ++ [closeBracket, closeParen]))
-          args.first substringNoOpAtSlice)
-    · exact Expr.printReads (rest := [closeBracket, closeParen]) args.last noOperatorAtCloseBracket
+  · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
+      (Expr.printReads (minimum := 0)
+        (rest := sliceRange :: (args.last.printTokens ++ [closeBracket, closeParen]))
+        args.first substringNoOpAtSlice)
+  · exact Expr.printReads (rest := [closeBracket, closeParen]) args.last noOperatorAtCloseBracket
 
 private theorem substringErfuellbar (scope : Scope) : (substring scope).Satisfiable := by
   let base : Expr scope (.text (sourceUtf8 []).size) := .textLiteral []
   let args : SubstringArgs scope := ⟨(sourceUtf8 []).size, 0, 0, 0, 0, base, .lit 0, .lit 0⟩
   exact Rule.satisfiableOfPrint args (substringPrint scope args)
 
-private theorem substringDerivationLocal : SubstringDerivationAussage := by
+private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDerivationAussage := by
   intro scope
   refine ⟨?_, ?_, ?_⟩
   · intro args tokens production
@@ -150,10 +154,9 @@ private theorem substringRootLookup (p : Fragment) (b : Befehl) :
 
 private theorem substringAmOrt (scope : Scope) : (substringForm scope).RegelAmOrt := by
   intro args
-  let p := ((expr 0 args.base).anhaengen (expr 1 args.first)).anhaengen (expr 2 args.last)
-  let b : Befehl := .substring 0 args.capacity
-  change (p.anhaengen (.einzel b)).code[p.code.length]? = some b
-  exact substringRootLookup p b
+  simp only [Quellform.RegelAmOrt, substringForm, Quellform.fragment, fragment,
+    Fragment.anhaengen, Fragment.einzel, List.length_append, List.getElem?_append_right,
+    Nat.sub_self, List.getElem?_cons_zero]
 
 theorem substringDerivation : SubstringDerivationAussage :=
   Surface.substringDerivationLocal
@@ -166,8 +169,7 @@ theorem substringSuffix : SubstringSuffixAussage := by
       exact (blocked ⟨.index, first, htok.symm, allowed⟩).elim
   | textConcat left right hle rightRead tail =>
       have hname : openBracket = Arith.add.token := (List.cons.inj htok).1
-      simp only [Arith.token, openBracket, Token.punctuation.injEq, String.reduceToList,
-        List.cons.injEq, Char.reduceEq] at hname
+      simp [Arith.token, openBracket] at hname
   | textIndex tbase offset hle offsetRead tail =>
       have hfirst : first = _ := (List.cons.inj htok).2
       subst first
@@ -193,6 +195,7 @@ theorem substringBytes : SubstringBytesAussage := by
   let next : Rahmen := b.auswerten frame
   have hguard : b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ := by
     simp [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound]
+    rfl
   change b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ ∧
     (waechterBedarf .teilfolge (i, j, text.bytes.size) →
       let out := text.slice i.toNat j.toNat
@@ -213,13 +216,14 @@ theorem substringBytes : SubstringBytesAussage := by
       simp [Rahmen.schreibe]
     · rw [haus]
       rfl
-    · rw [haus]
-      change (text.slice i.toNat j.toNat).bytes.size = j.toNat - i.toNat
+    · change (text.slice i.toNat j.toNat).bytes.size = j.toNat - i.toNat
       simp only [TextValue.slice, ByteArray.size_extract]
       rw [min_eq_left hjle]
     · intro k hk
       have hk' : k < (text.bytes.extract i.toNat j.toNat).size := by
         simpa [TextValue.slice] using hk
+      have hk'' : k < j.toNat - i.toNat := by
+        simpa [ByteArray.size_extract, min_eq_left hjle] using hk'
       have hik : i.toNat + k < text.bytes.size := by omega
       change (text.bytes.extract i.toNat j.toNat)[k]? = text.bytes[i.toNat + k]?
       rw [show (text.bytes.extract i.toNat j.toNat)[k]? = some ((text.bytes.extract i.toNat j.toNat)[k]'hk') by simp [hk']]
@@ -281,15 +285,14 @@ theorem substringRegelSicher : SubstringRegelSicherAussage := by
 
 theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   intro scope platform args
-  let form := substringForm scope
-  let p := form.fragment args
-  let b := form.befehl args
-  intro t c s choice stepPlan u spur next head impl execute
-  obtain ⟨hspur, _⟩ := b.vollzug_genau (e := p.einheit platform) impl execute
-  have hs : [stepPlan] = [plan] := impl.1
-  have steq : stepPlan = plan := (List.cons.inj hs).1
+  dsimp only
+  intro tstamp ctx st choice stepPlan u spur trail nextState hhead hImpl hExec
+  let p := (substringForm scope).fragment args
+  let b := (substringForm scope).befehl args
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
+  have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
-  subst spur
+  subst trail
   constructor
   · intro answer
     simp [plan]
@@ -298,15 +301,14 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
 
 theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   intro scope platform args
-  let form := substringForm scope
-  let p := form.fragment args
-  let b := form.befehl args
-  intro t c s choice stepPlan u spur next head impl execute
-  obtain ⟨hspur, _⟩ := b.vollzug_genau (e := p.einheit platform) impl execute
-  subst spur
+  dsimp only
+  intro tstamp ctx st choice stepPlan u spur trail nextState hhead hImpl hExec
+  let p := (substringForm scope).fragment args
+  let b := (substringForm scope).befehl args
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
+  subst trail
   refine ⟨rfl, rfl, ?_⟩
-  have hs : [stepPlan] = [plan] := impl.1
-  have steq : stepPlan = plan := (List.cons.inj hs).1
+  have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
   simp
 
@@ -331,11 +333,13 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   let b : Befehl := form.befehl args
   let zero : Ganzzahl := ⟨0, 0, Zahl.literal 0⟩
   have ht0 : (s₃.lokal eintritt).temp 0 = some ⟨.text cap, TextValue.literal []⟩ := by
-    simp [s₃, s₂, s₁, s₀, Rahmen.schreibe, cap]
+    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, cap]
   have ht1 : (s₃.lokal eintritt).zahl 1 = some zero := by
-    simp [s₃, s₂, s₁, s₀, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, zero]
+    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+      alsGanzzahl, zero]
   have ht2 : (s₃.lokal eintritt).zahl 2 = some zero := by
-    simp [s₃, s₂, s₁, s₀, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, zero]
+    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+      alsGanzzahl, zero]
   have hb := substringBytes cap (TextValue.literal []) zero zero (s₃.lokal eintritt) ht0 ht1 ht2
   dsimp [Quellform.TextErfuellbar]
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₃,
@@ -344,7 +348,7 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   · intro g guard
     have hgval : b.guard (s₃.lokal eintritt) =
         some ⟨.teilfolge, (0, 0, (TextValue.literal [] : TextValue cap).bytes.size)⟩ := by
-      simpa [b, zero] using hb.1
+      simpa [b, zero, Zahl.literal] using hb.1
     rw [hgval] at guard
     cases guard
     simp [waechterBedarf]
