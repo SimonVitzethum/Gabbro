@@ -101,12 +101,12 @@ theorem activate_meaning : ActivateMeaningAussage := by
   intro target s c sp
   constructor
   · intro missing
-    simp only [MemInstruction.evaluate, missing, Option.bind_none]
+    simp only [MemInstruction.evaluate, missing, Option.bind_eq_bind, Option.bind_none]
   · intro space found
     constructor
     · intro valid
-      simp only [MemInstruction.evaluate, found, Option.bind_some, if_pos valid]
+      simp only [MemInstruction.evaluate, found, Option.bind_eq_bind, Option.bind_some, if_pos valid, Option.pure_def]
     · intro invalid
-      simp only [MemInstruction.evaluate, found, Option.bind_some, if_neg invalid]
+      simp only [MemInstruction.evaluate, found, Option.bind_eq_bind, Option.bind_some, if_neg invalid]
 
 end Gabbro.Core.Ast.LowLevel

@@ -73,13 +73,13 @@ theorem splitAt_meaning : SplitAtMeaningAussage := by
   intro target s c slot point
   constructor
   · intro missing
-    simp only [MemInstruction.evaluate, missing, Option.bind_none]
+    simp only [MemInstruction.evaluate, missing, Option.bind_eq_bind, Option.bind_none]
   · intro region held
     constructor
     · intro inside
-      exact ⟨_, by simp only [MemInstruction.evaluate, held, Option.bind_some, if_pos inside],
+      exact ⟨_, by simp only [MemInstruction.evaluate, held, Option.bind_eq_bind, Option.bind_some, if_pos inside, Option.pure_def],
         partition_post (s.lokal c) slot region point inside⟩
     · intro outside
-      simp only [MemInstruction.evaluate, held, Option.bind_some, if_neg outside]
+      simp only [MemInstruction.evaluate, held, Option.bind_eq_bind, Option.bind_some, if_neg outside]
 
 end Gabbro.Core.Ast.LowLevel
