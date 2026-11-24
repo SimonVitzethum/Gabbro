@@ -43,8 +43,6 @@ theorem kostenErwartung_widerlegt
       (fun band => ⟨2, by simp only [Set.mem_empty_iff_false, not_false_eq_true], by norm_num⟩)
     unfold KostenForm at hres
     norm_num at hres
-    rw [lintegral_const, IsProbabilityMeasure.measure_univ, mul_one] at hres
-    norm_num at hres
   exact hwider hk
 
 end Gabbro.Core.Beobachtung
