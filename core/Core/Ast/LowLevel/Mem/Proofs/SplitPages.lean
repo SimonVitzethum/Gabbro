@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 
 @[expose] public section
 
@@ -301,7 +302,7 @@ private theorem memKosten (form : MemForm) : MemKostenAussage form := by
 theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   refine ⟨?_, ?_, ?_⟩
-  · refine ⟨hwf, ?_, memProgramAussenLokal k code⟩
+  · refine ⟨hwf, ?_, ⟨memProgramAussenLokal k code, memProgramFlussLokal k code⟩⟩
     intro i c s u w plan hideal
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hideal
     obtain ⟨frame, _, hp, hu⟩ := hideal

@@ -263,15 +263,15 @@ private theorem memAussenLokal (k : Katalog) (op : MemInstruction) :
       (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
 
 /-- Every memory instruction uses the public frame and region authority and emits no output. -/
-theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
-    Beobachtung.FlussLokal (memUnit k op) := by
+theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
+    Beobachtung.FlussLokal (memProgram k code) := by
   constructor
   · intro s₁ s₂ same
     have regions : s₁.regions = s₂.regions := congrArg (fun p => p.2.2.1) same
     refine ⟨?_, fun _ => rfl, fun _ => rfl, ?_, rfl, fun _ => rfl⟩
     · intro c _ _
-      simp only [I.start, memUnit, memProgram, memBoot, Zustand.start, regions]
-    · simp only [I.start, memUnit, memProgram, memBoot, Zustand.start, regions]
+      simp only [I.start, memProgram, memBoot, Zustand.start, regions]
+    · simp only [I.start, memProgram, memBoot, Zustand.start, regions]
   · intro f
     constructor
     · intro c v w p u _
@@ -292,9 +292,9 @@ theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
       intro d _ _
       simp only [MemFrame.advance, localEq]
 
-private theorem memLokal (form : MemForm) : MemAussenLokalAussage form := by
-  intro k scope tree op _
-  exact memAussenLokal k op
+theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
+    Beobachtung.FlussLokal (memUnit k op) := memProgramFlussLokal k [op]
+
 private theorem memKosten (k : Katalog) (op : MemInstruction) :
     ∀ t c s w middle next p trace, op.step k.plattform.ziel c s w [p] middle →
       FuehrtSchrittAus (memUnit k op).einrichtung t c s middle p trace next →
@@ -491,7 +491,8 @@ theorem newSpace_aussage : NewSpaceAussage := by
   exact ⟨memParse_newSpace, memInversion_newSpace, memEindeutig_newSpace, memDruck_newSpace,
     memElaboriert .newSpace, memRealisiert .newSpace, memAnnahme .newSpace, memIdeal .newSpace,
     memEinheit .newSpace, memImpl .newSpace, memFortschritt .newSpace, memErhaltung .newSpace,
-    memSicher .newSpace, memRegelAntwortSicher .newSpace, memLokal .newSpace, memKostenForm .newSpace,
+    memSicher .newSpace, memRegelAntwortSicher .newSpace,
+    (fun k _ _ op _ => memAussenLokal k op), memKostenForm .newSpace,
     memSchranken, memEtiketten, memFluss⟩
 
 end Gabbro.Core.Ast.LowLevel
