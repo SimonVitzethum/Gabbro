@@ -182,7 +182,9 @@ theorem stummer_schritt_koppelt
   have centry : c = Ast.Semantik.eintritt := by
     by_contra hc
     have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor c).symm.trans kopf
-    simp only [Ast.Semantik.kopf, if_neg hc] at h
+    unfold Ast.Semantik.kopf at h
+    rw [if_neg hc] at h
+    cases h
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
@@ -269,7 +271,9 @@ theorem stummer_schritt_koppelt
                 by_contra hc
                 have h : Ast.Semantik.kopf p.code w₂ c' = some f₂ :=
                   (sysKopf w₂ c').symm.trans kopf₂'
-                simp only [Ast.Semantik.kopf, if_neg hc] at h
+                unfold Ast.Semantik.kopf at h
+                rw [if_neg hc] at h
+                cases h
               -- both sides run at the entry context
               have c_eq : c' = c := centry'.trans centry.symm
               rw [c_eq] at kopf₂'
