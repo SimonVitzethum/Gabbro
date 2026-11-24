@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Expression.Resolution
+public import Core.Ast.Expression.Projections
 public import Core.Ast.Expression.Suffix
 
 @[expose] public section
@@ -293,6 +293,14 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       cases same
       cases (List.cons.inj suffix).2
       exact tailDet otherTail
+  case tupleField =>
+    intros
+    rename_i index allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.tupleProjection index allowed rfl)
+  case recordField =>
+    intros
+    rename_i field index written allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.recordProjection field index written allowed rfl)
   case textConcat =>
     intros
     rename_i allowed rightRead tailRead rightDet tailDet _ _ _ otherRead
@@ -334,10 +342,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       exact tailDet otherTail
   case optionIsSome =>
     intros
-    rename_i allowed tailRead tailDet _ _ _ otherRead
-    cases otherRead with
-    | stop blocked => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
-    | optionIsSome _ _ _ _ otherTail => exact tailDet otherTail
+    rename_i ref visible ordinary allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.optionProjection ref visible ordinary allowed rfl)
   case itemsClose =>
     intros
     rename_i _ _ _ delimiter otherRead
