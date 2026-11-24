@@ -306,7 +306,8 @@ private theorem jlAkzeptiert (code : List ExecInstruction) :
         exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
           (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact execProgramFlussLokal Plattform.x86_64.katalog code
-  · exact schrankenLokal_leer rfl rfl rflprivate theorem jumpLongJoint : JumpLongJointAussage := by
+  · exact schrankenLokal_leer rfl rfl rfl
+private theorem jumpLongJoint : JumpLongJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
   let extent : Strecke := ⟨0, 4096⟩
   let scope : ExecScope :=
