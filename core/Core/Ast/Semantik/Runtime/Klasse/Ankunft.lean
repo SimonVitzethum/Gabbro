@@ -44,7 +44,7 @@ private theorem eintrittArgumente_arrival {frame : Rahmen} {types : List (Ty .va
 private theorem ruf_arrival (frame : Rahmen) (name : Identifier) (sources : List (Ty .value))
     (bind : Option (Ty .value)) :
     (frame.ruf name sources bind).arrivalRegions = frame.arrivalRegions := by
-  simp only [Rahmen.ruf, Id.run]
+  simp only [Rahmen.ruf, Id.run, Id.pure, Id.bind]
   repeat
     first
     | rfl
@@ -59,7 +59,8 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   intro b frame live
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
-      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, Rahmen.rueckkehr, Rahmen.bindeRegion, Id.run]
+      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, Rahmen.rueckkehr, Rahmen.bindeRegion,
+      Id.run, Id.pure, Id.bind]
   all_goals
     repeat
       first
@@ -70,11 +71,11 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
 
 private def ankuenftsRahmen (regions : List Katalog.Strecke) : Rahmen :=
   { Rahmen.start [] with
-    lokale := [some ⟨.ownedRegion, 0⟩]
+    lokale := [some ⟨.ownedRegion, (0 : Nat)⟩]
     arrivalRegions := regions }
 
 private theorem ankuenftsReceiver (regions : List Katalog.Strecke) :
-    (ankuenftsRahmen regions).lokale[0]?.join.bind (wertAls .ownedRegion) = some 0 := by
+    (ankuenftsRahmen regions).lokale[0]?.join.bind (wertAls .ownedRegion) = some (0 : Nat) := by
   simp only [ankuenftsRahmen, List.getElem?_cons_zero, Option.join, Option.bind_some, id_eq,
     wertAls, dif_pos rfl]
 
@@ -94,28 +95,28 @@ theorem ankunft_wird_gelesen :
   let extent : Katalog.Strecke := ⟨0, 4096⟩
   let frame : Rahmen := ankuenftsRahmen [extent]
   have hpos : extent.von < 2 ^ frame.platform.ziel.physicalBits :=
-    Nat.pow_pos (by decide) _
+    Nat.pow_pos (by decide)
   let value : Dynamisch :=
     ⟨.address .physical, ⟨frame.platform.ziel.physicalBits, extent.von, hpos⟩⟩
   have hvalue : LowLevel.RegionInitializer.value frame.platform.ziel 0 extent .address =
       some value := by
-    simp only [LowLevel.RegionInitializer.value, dif_pos hpos]
+    simp only [LowLevel.RegionInitializer.value, value, dif_pos hpos]
   have success : (Befehl.bindeRegion 0 .address).auswerten frame (fun _ => true) =
       { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale } := by
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, Id.pure, Id.bind, ankuenftsReceiver,
       List.getElem?_cons_zero, ankuenftsUnborrowed, Bool.not_true, Bool.false_or,
       Bool.false_eq_true, ite_false, hvalue]
     rfl
   have refused : (Befehl.bindeRegion 0 .address).auswerten
         { frame with arrivalRegions := [] } (fun _ => true) =
-      ({ frame with arrivalRegions := [] } : Rahmen).halt .ungueltigerBereich := by
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
+      ({ frame with arrivalRegions := [] } : Rahmen).halt Abschluss.ungueltigerBereich := by
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, Id.pure, Id.bind, ankuenftsReceiver,
       List.getElem?_nil, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
   refine ⟨frame, [], ?_⟩
   intro equal
   have hs := congrArg (fun f : Rahmen => f.stopp) equal
   rw [success, refused] at hs
-  change none = some .ungueltigerBereich at hs
+  change none = some Abschluss.ungueltigerBereich at hs
   cases hs
 
 end Gabbro.Core.Ast.Semantik
