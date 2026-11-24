@@ -26,12 +26,6 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
-@[simp] private theorem printCommaVal : printComma.value = comma := by rfl
-@[simp] private theorem printColonVal : printColon.value = colon := by rfl
-@[simp] private theorem printOpenVal : printOpen.value = openParen := by rfl
-@[simp] private theorem printCloseVal : printClose.value = closeParen := by rfl
-
 private theorem recordValue_reads (scope : Scope) (args : RecordValueArgs scope) {tokens : List Token}
     (prod : (recordValue scope).production args tokens) :
     (Category.expression scope).reads tokens ((recordValue scope).tree args) := by
