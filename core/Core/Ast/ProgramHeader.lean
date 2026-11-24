@@ -363,14 +363,13 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
+          simp only [List.nil_append, List.map_append, List.append_assoc]
           apply ParamsRead.first
-          · simpa only [commaSeparated, List.nil_append, List.append_nil, List.map_append, List.map_cons, List.map_nil,
-              List.singleton_append, List.append_assoc, List.cons_append, hClose, hComma, Parameter.printPieces] using
+          · simpa [hClose, hComma, List.map_append, List.append_assoc] using
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-                (by intro more h; cases h))
-          · simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
-              hClose] using (ParamsTail.comma ih)
+                (by simp_all [hComma, comma, keyword]))
+          · simpa [List.map_append, List.append_assoc, hClose] using (ParamsTail.comma ih)
 
 -- Mirror BlockItems.deterministic and apply ExprReads.deterministic at each argument.
 theorem ArgsRead.deterministic (left : ArgsRead scope input a rest) (right : ArgsRead scope input b more) :
