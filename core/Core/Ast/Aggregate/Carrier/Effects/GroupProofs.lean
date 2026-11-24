@@ -250,12 +250,12 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
       intro ys h
       simp only [List.mapM_cons] at h
       cases hfx : f x with
-      | none => simp_all [hfx]
+      | none => simp only [hfx, Option.bind_none] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp_all [hfx, hrest]
+          | none => simp only [hfx, hrest, Option.bind_none, Option.bind_some] at h
           | some ys' =>
-              simp_all [hfx, hrest]
+              simp only [hfx, hrest, Option.bind_none, Option.bind_some] at h
               subst ys
               simpa [ih ys' hrest]
 private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
@@ -270,12 +270,12 @@ private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
       intro ys i hi hi' h
       simp only [List.mapM_cons] at h
       cases hfx : f x with
-      | none => simp_all [hfx]
+      | none => simp only [hfx, Option.bind_none] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp_all [hfx, hrest]
+          | none => simp only [hfx, hrest, Option.bind_none, Option.bind_some] at h
           | some ys' =>
-              simp_all [hfx, hrest]
+              simp only [hfx, hrest, Option.bind_none, Option.bind_some] at h
               subst ys
               cases i with
               | zero => exact hfx
