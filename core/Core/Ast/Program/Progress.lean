@@ -373,7 +373,7 @@ theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung 
         out.globale = some value :: frame.globale)
   obtain ⟨widened, value, _⟩ := wertIn_widen a.fits (a.value.wert env)
   obtain ⟨n, middle, limit, counted, atEnd, tmp, preserved⟩ :=
-    expr_laufN 0 a.value env frame typed active initial [bind]
+    expr_laufN 0 a.value env frame typed active initial [bind] checked
   have live : middle.Aktiv := by
     rw [preserved]
     exact active

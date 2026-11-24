@@ -82,7 +82,7 @@ private theorem expression_at_slot (tree : Expr scope type) : ∀ slot,
     (fun _ _ t => ∀ slot, Ausdruckscode (labeledCode slot t).code)
     (fun _ t => ∀ slot, Ausdruckscode (caseCode slot t).code)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree
   all_goals
     intros
     simp only [expr, itemCode, labeledCode, caseCode, Fragment.anhaengen, Fragment.einzel]
