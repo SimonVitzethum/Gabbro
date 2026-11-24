@@ -167,5 +167,6 @@ theorem textLiteralErfuellbarAm : TextLiteralErfuellbarAmAussage := by
     · change (s.lokal eintritt).stopp = none
       rfl
     · simp only [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_self]
+      rfl
 
 end Gabbro.Core.Ast.Semantik
