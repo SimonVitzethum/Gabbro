@@ -16,6 +16,7 @@ meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Verfeinerung.Formen.Registry
+public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
@@ -314,7 +315,7 @@ elab "#check_core" : command => do
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
     let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-      ++ safetyErrors env index safety
+      ++ safetyErrors env index safety ++ aussagePinErrors env index pins
     let pinNames := pins.map (·.1)
     let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
