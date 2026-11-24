@@ -40,9 +40,9 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout
   | _, .text capacity => TextValue capacity
-  | _, .address _ => AddressValue
+  | _, .address _space => AddressValue
   | _, .ownedRegion => Nat
-  | _, .regionView _ => RegionViewValue
+  | _, .regionView _element => RegionViewValue
 
 def indexOptionPresent (value : Wert (indexOptionType count)) : Bool :=
   match value with

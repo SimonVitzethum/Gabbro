@@ -49,7 +49,8 @@ def layout (target : ZielDaten) : WrittenType → Option Layout
     if width ∈ ([8, 16, 32, 64] : List Nat) ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum then
       some ⟨written, width / 8, width / 8, .ofTarget target⟩
     else none
-  | _ => none
+  | .bool | .array .. | .tuple .. | .text .. | .index .. | .indexOption ..
+  | .address .. | .ownedRegion => none
 
 def Layout.fits (shape : Layout) (extent : Strecke) : Prop :=
   extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis

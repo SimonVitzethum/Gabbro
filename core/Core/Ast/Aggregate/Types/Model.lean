@@ -83,8 +83,13 @@ abbrev Scope := List Binding
 /-- The nearest declaration of a written carrier name fixes its index bound. -/
 def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
   match scope.find? (fun binding => binding.name.val == name.val) with
-  | some ⟨_, .carrierSchema count _ _ _, _, _⟩ => some count
-  | _ => none
+  | some binding =>
+    match binding.type with
+    | .carrierSchema count .. => some count
+    | .int .. | .bool | .array .. | .productEnd | .product .. | .record .. | .recordSchema ..
+    | .sumEnd | .sum .. | .variant .. | .variantSchema .. | .text .. | .effectGroupSchema ..
+    | .address .. | .ownedRegion | .regionView .. => none
+  | none => none
 
 /-- Finite carriers of equal count share the same checked numerical index type. -/
 def indexType (count : Nat) : Ty .value := .int 0 ((count : Int) - 1)

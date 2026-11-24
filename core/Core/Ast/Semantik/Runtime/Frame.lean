@@ -251,7 +251,10 @@ def Rahmen.eintrittArgumente (frame : Rahmen) (types : List (Ty .value)) : Optio
 
 def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
   | ⟨.regionView _, view⟩ => view.slot == slot
-  | _ => false
+  | ⟨.int .., _⟩ | ⟨.bool, _⟩ | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩
+  | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩ | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩
+  | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text .., _⟩
+  | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema .., _⟩ | ⟨.address .., _⟩ | ⟨.ownedRegion, _⟩ => false
 
 def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
   let hasView := fun (values : List (Option Dynamisch)) =>

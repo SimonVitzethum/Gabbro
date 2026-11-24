@@ -231,9 +231,9 @@ def WrittenType.valid (scope : Scope) : WrittenType → Prop
     let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
-  | .array element _ => element.valid scope
+  | .array element _count => element.valid scope
   | .tuple first second rest => first.valid scope ∧ second.valid scope ∧ rest.valid scope
-  | .text _ => True
+  | .text _capacity => True
   | .index carrier count | .indexOption carrier count => scope.carrierCount carrier = some count
   | .address _ | .ownedRegion => True
 
