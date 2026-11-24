@@ -58,7 +58,8 @@ theorem division_guard_exact (frame : Rahmen) (slot : Nat)
     intro zero
     exact hbne (Int.natAbs_eq_zero.mp zero)
   constructor
-  · simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, left, right, Option.bind_some, Option.pure_def]
+  · simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, left, right,
+      Option.bind_eq_bind, Option.bind_some, Option.pure_def]
   · exact habs
 
 -- Mirror expr_ergebnis_typ's temporary-frame proof using List.set and wertIn_widen.
@@ -85,9 +86,10 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
       by_contra hnot
       rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_gt hnot)] at b
       cases b
-    simp only [List.getElem?_set, if_pos rfl, if_pos hlt]
+    rw [List.getElem?_set_self hlt]
   · intro i different
-    simp only [List.getElem?_set, if_neg (Ne.symm different)]
+    rw [List.getElem?_set]
+    simp only [if_neg (Ne.symm different)]
   · trivial
   · trivial
 
@@ -127,8 +129,15 @@ theorem branch_effect (frame : Rahmen) (bit : Bool)
     after.pc = frame.pc + (if bit = whenValue then offset else 1) ∧
       after.lokale = frame.lokale ∧ after.temp = frame.temp ∧ after.rueckgabe = frame.rueckgabe := by
   dsimp only
-  by_cases h : bit = whenValue <;>
-    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, h, if_true, if_false]
+  by_cases h : bit = whenValue
+  · have hs : some bit = some whenValue := congrArg some h
+    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_pos hs, if_true]
+    repeat' constructor <;> rfl
+  · have hs : some bit ≠ some whenValue := by
+      intro same
+      exact h (Option.some.inj same)
+    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_neg hs, if_false]
+    repeat' constructor <;> rfl
 
 -- Mirror Block.printItems_reads by following the scope extension through each statement.
 theorem block_scope_extends (body : Block result before after) : before <:+ after := by
