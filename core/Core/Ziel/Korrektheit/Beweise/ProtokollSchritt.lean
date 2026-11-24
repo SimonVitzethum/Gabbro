@@ -24,6 +24,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
+open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
 variable {e : Einrichtung L Ort Wert Raum Lok Grund Bedingung}
@@ -64,7 +65,7 @@ theorem sperrSchritt_erhaelt {a : SperrAktion} {c : Kontext} {z z' : SperrZustan
     constructor
     · exact (List.nodup_cons.mp gut.1).2
     · intro d hbes
-      have hdc : d = c := Option.some.inj hbes
+      have hdc : d = c := Option.some.inj hbes.symm
       subst d
       exact (List.nodup_cons.mp gut.1).1
   | geben hg =>
@@ -80,7 +81,7 @@ theorem sperrSchritt_erhaelt {a : SperrAktion} {c : Kontext} {z z' : SperrZustan
         cases hbes
       | cons h₀ rest =>
         change some h₀ = some d at hbes
-        have hdc : d = h₀ := Option.some.inj hbes
+        have hdc : d = h₀ := Option.some.inj hbes.symm
         subst d
         change h₀ ∉ rest
         exact (List.nodup_cons.mp gut.1).1
@@ -104,17 +105,14 @@ theorem fuehrtAus_sperren_gut {t c s u aktion mem ev v}
   intro l
   match haktion : aktion with
   | .intern =>
-    rw [haktion] at h
     cases h
     have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
     rwa [hl]
   | .warte _ =>
-    rw [haktion] at h
     cases h
     have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
     rwa [hl]
   | .sperre ll a =>
-    rw [haktion] at h
     obtain ⟨next, hss, hvl, hvlne⟩ := fuehrtAus_sperre_inv_e h
     by_cases hl : l = ll
     · subst hl
@@ -123,17 +121,14 @@ theorem fuehrtAus_sperren_gut {t c s u aktion mem ev v}
     · have h' : v.sperren l = s.sperren l := hvlne l hl
       rwa [h']
   | .frage _ =>
-    rw [haktion] at h
     cases h
     have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
     rwa [hl]
   | .verbrauche _ =>
-    rw [haktion] at h
     cases h
     have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
     rwa [hl]
   | .rueckkehr =>
-    rw [haktion] at h
     cases h
     have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
     rwa [hl]
@@ -143,8 +138,11 @@ theorem fuehrtSchrittAus_erhaelt {t c s u plan spur s'}
     (aus : FuehrtSchrittAus e t c s u plan spur s') (gut : ProtokollGut s) : ProtokollGut s' := by
   refine ⟨(aus.viele e).gut gut.speicher.1 gut.speicher.2, aus.verbrauch gut.verbrauch, ?_⟩
   obtain ⟨rahmen, _, _, v, haus, _, state⟩ := aus
-  rw [state]
-  exact fuehrtAus_sperren_gut rahmen haus gut
+  have hsperr : ∀ l, s'.sperren l = v.sperren l := fun l =>
+    (congrArg (fun z : Zustand L Ort Wert Raum Lok Grund => z.sperren l) state).trans rfl
+  intro l
+  rw [hsperr l]
+  exact fuehrtAus_sperren_gut rahmen haus gut l
 
 /-- An arrival keeps all three invariants. -/
 theorem antwortSchritt_erhaelt {s spur s'} {a : AntwortEreignis}
