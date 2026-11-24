@@ -143,6 +143,8 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements optionLetForm OptionLetErfuellbarAmAussage constructor⟩
   else if constructor = ``Stmt.retOption then
     ⟨.surface, Quellform.statements optionReturnForm OptionReturnErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.forever then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => foreverForm ctx.1 ctx.2) foreverJoint constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=

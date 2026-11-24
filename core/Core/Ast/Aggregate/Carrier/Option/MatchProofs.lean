@@ -96,22 +96,22 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     (fun s a l p ar => VariantArmsRead result s a
       (ar.printPieces.map PrintedToken.value ++ closeBrace :: more) ar more)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
-  case refine_21 =>
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
+  case refine_22 =>
     intro s a
     simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
     exact .done
-  case refine_22 =>
+  case refine_23 =>
     intro s l p a label caseName body rest ih3 ih4
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
       (.nullary label caseName
         (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
-  case refine_23 =>
+  case refine_24 =>
     intro ty s l p a label binder ord body rest ih3 ih4
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
       (.payload label binder ord body
         (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
-  case refine_24 =>
+  case refine_25 =>
     intro s l p body nonempty shape ih3
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
       (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more)))

@@ -19,7 +19,7 @@ private theorem tupleBindDirectCallWiderspruch {scope : Scope} {input : List Tok
   have headEq : letKeyword = .word call.name.val := (List.cons.inj same).1
   have nameEq : call.name.val = "let".toList := by
     simpa [letKeyword] using headEq.symm
-  have inList : call.name.val ∈ ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList := by
+  have inList : call.name.val ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"].map String.toList := by
     rw [nameEq]
     exact List.mem_map.2 ⟨"let", List.mem_cons_self, rfl⟩
   exact (call.ordinary.2 inList).elim

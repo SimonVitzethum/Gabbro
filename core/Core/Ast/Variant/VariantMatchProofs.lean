@@ -60,7 +60,7 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     (fun _ _ blk => (block blk).klauseln.invariant = [])
     (fun _ br => (bracedBlock br).klauseln.invariant = [])
     (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
     Fragment.anhaengen, Fragment.einzel, Fragment.leer,
@@ -119,7 +119,7 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
   refine @Gabbro.Core.Ast.VariantArms.rec result
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => (variantArms ar).branches.length = p.length)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
 
@@ -154,7 +154,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => ∀ (i : Nat) (hib : i < (variantArms ar).branches.length),
       ((variantArms ar).branches[i]).2 = true → (p[i]?).join.isSome = true)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
   · intro scope labels payloads label caseName body rest ih i hib hb

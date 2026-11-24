@@ -11,9 +11,14 @@ open Gabbro.Core.Text
 namespace StatementComparison
 
 private theorem callNotReserved (call : DirectCall scope) (spelling : String)
-    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match"])
+    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"])
     (same : Token.word call.name.val :: first = keyword spelling :: second) : False :=
   call.ordinary.2 (List.mem_map.mpr ⟨spelling, reserved, (Token.word.inj (List.cons.inj same).1).symm⟩)
+
+private theorem foreverReserved :
+    "forever" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"] :=
+  List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+    (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))
 
 local macro "deny_statement" equality:ident : tactic =>
   `(tactic|
@@ -82,6 +87,7 @@ theorem directCall (call : DirectCall scope)
   | retOption _ _ => exact (callNotReserved call "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) eq).elim
   | ite _ _ _ => exact (callNotReserved call "if" (List.Mem.tail _ (List.Mem.head _)) eq).elim
   | whileBounded _ _ _ _ _ _ _ => exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq).elim
+  | forever _ _ _ => exact (callNotReserved call "forever" foreverReserved eq).elim
   | variantMatch _ _ => exact (callNotReserved call "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) eq).elim
   | tupleBind _ _ _ _ => exact (callNotReserved call "let" (List.Mem.head _) eq).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
@@ -149,6 +155,34 @@ theorem whileBounded (nonnegative : 0 ≤ lo) (overflow : Identifier)
     cases callRead
     rename_i call _ _
     exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq.symm).elim
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
+  | _ => deny_statement eq
+
+theorem forever (label : Option Identifier)
+    (labelRead : LoopLabelReads input label bodyInput)
+    (bodyRead : BlockReads result scope bodyInput body rest)
+    (bodyDet : ∀ {b suffix}, BlockReads result scope bodyInput b suffix → body = b ∧ rest = suffix)
+    (other : StmtReads result scope (keyword "forever" :: input) b suffix) :
+    (⟨scope, .forever label body⟩ : Statement result scope) = b ∧ rest = suffix := by
+  generalize eq : (keyword "forever" :: input) = tokens at other
+  cases other with
+  | forever otherLabel otherLabelRead otherBody =>
+    cases (List.cons.inj eq).2
+    obtain ⟨sameLabel, bodySame⟩ := labelRead.deterministic otherLabelRead
+    cases sameLabel
+    cases bodySame
+    obtain ⟨rfl, rfl⟩ := bodyDet otherBody
+    exact ⟨rfl, rfl⟩
+  | assignVar _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at labelRead
+    exact labelRead.not_assignment.elim
+  | assignField _ _ _ _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at labelRead
+    exact labelRead.not_dot.elim
+  | directCall callRead =>
+    cases callRead
+    rename_i call _ _
+    exact (callNotReserved call "forever" foreverReserved eq.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
@@ -243,6 +277,9 @@ theorem assignField (ref : Local scope (recordValueType name labels types)) (vis
   | whileBounded _ _ _ _ otherCond _ _ =>
     rw [← (List.cons.inj eq).2] at otherCond
     exact otherCond.not_dot.elim
+  | forever _ otherLabel _ =>
+    rw [← (List.cons.inj eq).2] at otherLabel
+    exact otherLabel.not_dot.elim
   | variantMatch otherValue _ =>
     rw [← (List.cons.inj eq).2] at otherValue
     exact otherValue.not_dot.elim
