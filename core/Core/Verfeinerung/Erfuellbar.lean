@@ -1,6 +1,7 @@
 module
 
 public import Core.Verfeinerung.LetztesAngebot
+public import Core.Verfeinerung.Formpflichten
 
 @[expose] public section
 
@@ -10,43 +11,6 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
-
-omit [DecidableEq L] in
-private theorem zustandsbezug_eq {s i : Zustand L Ort Wert Raum Lok Grund}
-    (gleich : E.lokalerBezug = Eq) (rel : Zustandsbezug E s i) : s = i := by
-  obtain ⟨shared, localEq⟩ := rel
-  change { s with lokal := i.lokal } = i at shared
-  rw [gleich] at localEq
-  rw [← localEq] at shared
-  exact shared
-
-/-- At a unit boundary with identical machine states, matching forward and
-    backward form rules discharge the M4 obligations with no private steps. -/
-theorem abgleich_aus_gleichen_regeln
-    (gleich : E.lokalerBezug = Eq)
-    (laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
-      E.laden s (h.lade E.bild) = some (start E s).2)
-    (regeln : ∀ f c s w plans u, (E.system.regel f).impl c s w plans u ↔
-      (E.system.regel f).ideal c s w plans u)
-    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → StotterSchranke η) :
-    AbgleichPflichten E := by
-  have reflexiv l : E.lokalerBezug l l := gleich.symm ▸ rfl
-  refine ⟨reflexiv, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, reflexiv _⟩, ?_, ?_, schranke⟩
-  · intro f hw t c w s u s' i plan spur rel normal bereit kopf impl execute
-    have same := zustandsbezug_eq gleich rel
-    subst i
-    exact Or.inl ⟨s', .kontext normal bereit ⟨f, kopf, (regeln f c s w [plan] u).mp impl⟩ execute,
-      ProtokollBezug.refl _, reflexiv _⟩
-  · intro hw t s i rel stuck label next step
-    have same := zustandsbezug_eq gleich rel
-    subst i
-    cases step with
-    | kontext normal ready rule execute =>
-      obtain ⟨f, kopf, form⟩ := rule
-      exact stuck _ _ (.schritt (.kontext normal ready ⟨f, kopf, (regeln _ _ _ _ _ _).mpr form⟩ execute))
-    | antwort normal arrives => exact stuck _ _ (.schritt (.antwort normal arrives))
-    | interrupt normal enters => exact stuck _ _ (.schritt (.interrupt normal enters))
-    | absturz crash => exact stuck _ _ (.schritt (.absturz crash))
 
 private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E} {entry : Kontext}
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
@@ -134,7 +98,7 @@ theorem fortschritt_erfuellbar :
         cases occupied
       obtain ⟨before, load, rel⟩ := matched.zustand t
       obtain ⟨after, loadedAfter, relAfter⟩ := matched.zustand (t + 1)
-      have same := (zustandsbezug_eq rfl relAfter).trans ((η.zeit.wartet idle).1.trans (zustandsbezug_eq rfl rel).symm)
+      have same := (relAfter.gleich rfl).trans ((η.zeit.wartet idle).1.trans (rel.gleich rfl).symm)
       have tick := ρ.zeit.takt t
       rw [load, loadedAfter, label, same] at tick
       cases tick with
@@ -154,18 +118,16 @@ theorem fortschritt_erfuellbar :
             rw [Function.update_self] at impossible
             have toggles (b : Bool) : b ≠ !b := by intro eq; cases b <;> cases eq
             exact (toggles _ impossible).elim
-  have abgleich : AbgleichPflichten E₀ :=
-    abgleich_aus_gleichen_regeln rfl (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
-      (fun _ _ _ _ matched => StotterSchranke.ohne_stottern (frei matched))
-  have pflicht : SimPflichten E₀ := by
-    refine ⟨abgleich, ?_, ?_⟩
-    · intro _h _run _valid _t _s _next _c _w _spur _u _plan _load _after _label _normal _ready form _execute
-      obtain ⟨_, _, planEq, _⟩ := form
-      cases (List.cons.inj planEq).1
-      exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
-    · intro s i rel
-      cases zustandsbezug_eq rfl rel
-      exact fun _ => ⟨rfl, Iff.rfl, fun _ => Iff.rfl⟩
+  have basis : SimBasisPflichten E₀ := by
+    apply SimBasisPflichten.aus_gleichen_regeln rfl (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ h => h)
+    intro f c s w p u form
+    cases (List.cons.inj form.1).1
+    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
+  have pflicht : SimPflichten E₀ :=
+    ⟨⟨basis.abgleich, fun _ => RegelSimSchritt.aus_gleicher_regel rfl (fun _ _ _ _ _ h => h),
+      fun _ _ _ _ matched _ => StotterSchranke.ohne_stottern (frei matched)⟩,
+      basis.autoritaet, basis.fortsetzung⟩
+  have abgleich := pflicht.abgleich
   let sicht : Nat → AussenVerlauf → AussenSicht :=
     fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let hw := Umgebung.referenzLauf k 1 sicht
@@ -216,12 +178,12 @@ theorem fortschritt_erfuellbar :
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
-  obtain ⟨η, ideal, matched, env⟩ := laufabgleich abgleich konkret
-  have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched)
+  obtain ⟨η, ideal, matched, checked, env⟩ := laufabgleich abgleich konkret
+  have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched checked)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
   have idealState (t : Nat) : η.zeit.zustand t = zustand t := by
     obtain ⟨x, state, rel⟩ := matched.zustand t
-    exact (zustandsbezug_eq rfl rel).symm.trans ((Option.some.inj state).symm)
+    exact (rel.gleich rfl).symm.trans ((Option.some.inj state).symm)
   have idealEvent (t : Nat) : η.zeit.spur t = some label := by
     have aligned : SpurAbgleich (some label) (η.zeit.spur t) := matched.spur t
     rcases aligned.ideales_etikett with event | step
@@ -249,7 +211,7 @@ theorem fortschritt_erfuellbar :
       · cases running
     · exact fun _ => ⟨(), rfl⟩
     · exact fun t => ⟨(), label.2, rfl, idealEvent t⟩
-  have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched) progress (env.symm ▸ fair)
+  have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched checked) progress (env.symm ▸ fair)
   have lastReady : KannSchreiten (letztesAngebot hw) 0 entry z :=
     ⟨0, opportunity 0, dispatch, live⟩
   have privateStep : ImplSchritt e sy k (letztesAngebot hw) 0 z label z' :=

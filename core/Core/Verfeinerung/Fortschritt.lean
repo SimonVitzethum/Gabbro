@@ -171,8 +171,8 @@ theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E)
       FairLaeufe E.katalog h ρ.hw → ∃ nutzbar, FortschrittsPflichten klasse ρ η nutzbar) :
     ∃ η, Laeufe E η ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
       (FairLaeufe E.katalog h ρ.hw → (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η) := by
-  obtain ⟨η, valid, matched, environment⟩ := laufabgleich pflicht.abgleich run
-  have bound := pflicht.abgleich.schranke h ρ η run matched
+  obtain ⟨η, valid, matched, checked, environment⟩ := laufabgleich pflicht.abgleich run
+  have bound := pflicht.abgleich.schranke h ρ η run matched checked
   have sim := matched.sim valid bound (pflicht.autoritaet h ρ run) pflicht.fortsetzung
   refine ⟨η, valid, sim, pflicht.zielFX run, fun fair => ?_⟩
   obtain ⟨_, pf⟩ := fortschritt η valid matched environment fair

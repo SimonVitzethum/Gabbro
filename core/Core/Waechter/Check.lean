@@ -144,6 +144,12 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.I.Bestimmt, 7049320253757918330),
   (`Gabbro.Core.Maschine.I.Fortschritt, 7327703375541758626),
   (`Gabbro.Core.Maschine.I.Sim, 953337358041712979),
+  (`Gabbro.Core.Ast.Semantik.SkalarSimAussage, 18380939414404255250),
+  (`Gabbro.Core.Ast.Semantik.KontrollflussSimAussage, 10945632447793436680),
+  (`Gabbro.Core.Ast.Semantik.AufrufSchleifeSimAussage, 9855836588745167689),
+  (`Gabbro.Core.Ast.Semantik.AggregatSimAussage, 14318815212743461168),
+  (`Gabbro.Core.Ast.Semantik.VarianteSimAussage, 16839990127269568210),
+  (`Gabbro.Core.Ast.Semantik.TextSimAussage, 6803936463626193646),
   (`Gabbro.Core.Maschine.I.Haengt, 6894787070203168920),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 2131622631997208645),
   (`Gabbro.Core.Annahme.Akzeptiert, 14785600931209126213),
@@ -325,7 +331,13 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket),
   (`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket),
   (`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket),
-  (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage)]
+  (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.skalar, `Gabbro.Core.Ast.Semantik.SkalarSimAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.kontrollfluss, `Gabbro.Core.Ast.Semantik.KontrollflussSimAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.aufrufSchleife, `Gabbro.Core.Ast.Semantik.AufrufSchleifeSimAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.aggregat, `Gabbro.Core.Ast.Semantik.AggregatSimAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.variante, `Gabbro.Core.Ast.Semantik.VarianteSimAussage),
+  (`Gabbro.Core.Ast.Semantik.SimFamilie.text, `Gabbro.Core.Ast.Semantik.TextSimAussage)]
 
 private meta def wildcardRoots : Array Name := #[
   `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,
