@@ -41,8 +41,9 @@ theorem definiereSicht : DefiniereSichtAussage := by
         r₁.funktionen =
       (⟨name, r₂.pc + 1, ps, res, glob, meas, calls, effs⟩ : Funktion) ::
         r₂.funktionen := by
-    have hFu : r₁.funktionen = r₂.funktionen :=
-      congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
+    have hFu : r₁.funktionen = r₂.funktionen := by
+      simpa only [Rahmen.sicht] using
+        congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
     rw [pcEq, hFu]
   rw [sicht_definiere, sicht_definiere, h, pcEq, hTe, hLe, hF]
 
@@ -88,8 +89,9 @@ theorem setzePasszahlSicht : SetzePasszahlSichtAussage := by
     rw [h]
   | some value =>
     have hZ₂ : r₂.zahl quelle = some value := by rw [← hZ, hZc]
-    have hZaehler : r₁.zaehler = r₂.zaehler :=
-      congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
+    have hZaehler : r₁.zaehler = r₂.zaehler := by
+      simpa only [Rahmen.sicht] using
+        congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
     simp only [Befehl.auswerten, hZc, hZ₂, sicht_setzePasszahl_some, h, pcEq, hTe,
       hLe, hZaehler]
 

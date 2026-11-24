@@ -100,8 +100,9 @@ theorem waehleUmgebungSicht : WaehleUmgebungSichtAussage := by
     maskiere_gleich_mono hL 0 _ _ lokEq
   have hEnv : ((name, abi, row) :: r₁.environment) =
       ((name, abi, row) :: r₂.environment) := by
-    have e : r₁.environment = r₂.environment :=
-      congrArg (fun r : Rahmen => (r.sicht β).environment) h
+    have e : r₁.environment = r₂.environment := by
+      simpa only [Rahmen.sicht] using
+        congrArg (fun r : Rahmen => (r.sicht β).environment) h
     rw [e]
   rw [sicht_waehleUmgebung, sicht_waehleUmgebung, h, pcEq, hTe, hLe, hEnv]
 

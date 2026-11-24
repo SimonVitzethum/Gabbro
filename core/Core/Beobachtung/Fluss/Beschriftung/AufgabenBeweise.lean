@@ -307,15 +307,18 @@ theorem installSchemaSicht (β : Beschriftung) (pc : Nat) (schema : Dynamisch)
     (xs := r₁.lokale) (ys := r₂.lokale) (v₁ := some schema) (v₂ := some schema)
     hL (fun _ => rfl) lokEq
   have hGl : (some schema :: r₁.globale) = (some schema :: r₂.globale) := by
-    have e : r₁.globale = r₂.globale :=
-      congrArg (fun r : Rahmen => (r.sicht β).globale) h
+    have e : r₁.globale = r₂.globale := by
+      simpa only [Rahmen.sicht] using
+        congrArg (fun r : Rahmen => (r.sicht β).globale) h
     rw [e]
   rw [sicht_installSchema, sicht_installSchema, h, pcEq, hTe, hLe, hGl]
 
 /-- The view after a return with an empty continuation stack: the frame ends with the
     given result, everything else is the fall-through view. -/
 theorem sicht_rueckkehr_ohne (β : Beschriftung) (r : Rahmen) (result : Option Dynamisch) :
-    ({ r with pc := r.pc + 1, rueckgabe := result,
+    ({ r with
+      pc := r.pc + 1
+      rueckgabe := result
       stopp := if result.isSome then (none : Option Abschluss)
         else some .fertig }).sicht β =
       { r.sicht β with
@@ -328,20 +331,28 @@ theorem sicht_rueckkehr_ohne (β : Beschriftung) (r : Rahmen) (result : Option D
 /-- The view after a return into a saved continuation: the saved state is restored. -/
 theorem sicht_rueckkehr_mit (β : Beschriftung) (r : Rahmen) (k : Fortsetzung)
     (stack : List Fortsetzung) (result : Option Dynamisch) :
-    ({ r with pc := k.pc, temp := k.temp,
+    ({ r with
+      pc := k.pc
+      temp := k.temp
       lokale := match k.eingang with
         | none => k.lokale
-        | some target => result.bind (wertIn target) :: k.lokale,
-      zaehler := k.zaehler, obergrenzen := k.obergrenzen,
-      funktion := k.funktion, mass := k.mass, fortsetzungen := stack }).sicht β =
+        | some target => result.bind (wertIn target) :: k.lokale
+      zaehler := k.zaehler
+      obergrenzen := k.obergrenzen
+      funktion := k.funktion
+      mass := k.mass
+      fortsetzungen := stack }).sicht β =
       { r.sicht β with
         pc := k.pc
         temp := fun s => if oeffentlich (β.temp k.pc s) = true then k.temp s else none
         lokale := maskiere (β.lokal k.pc) 0 (match k.eingang with
           | none => k.lokale
           | some target => result.bind (wertIn target) :: k.lokale)
-        zaehler := k.zaehler, obergrenzen := k.obergrenzen,
-        funktion := k.funktion, mass := k.mass, fortsetzungen := stack,
+        zaehler := k.zaehler
+        obergrenzen := k.obergrenzen
+        funktion := k.funktion
+        mass := k.mass
+        fortsetzungen := stack
         rueckgabe := if oeffentlich β.ergebnis = true then r.rueckgabe else none } := rfl
 
 end Gabbro.Core.Ast.Semantik
