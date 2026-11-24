@@ -92,7 +92,7 @@ def intTypeName (signed : Bool) (width : Nat) : Identifier :=
     cases signed <;> exact .inl (.inl ⟨by decide, by decide⟩), by
     intro c member
     right; change IsDecimalDigit c
-    have member' : c ∈ Nat.toDigits 10 width := by simpa only [Nat.toString_eq_ofList_toDigits] using member
+    have member' : c ∈ Nat.toDigits 10 width := by simpa only [Nat.toString_eq_ofList_toDigits, String.toList_ofList] using member
     have digit : c.isDigit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (Nat.zero_lt_succ _) (Nat.le_refl _) (c := c) member'
     simpa only [IsDecimalDigit, Char.le_def, Char.isDigit, Bool.and_eq_true, decide_eq_true_eq] using digit⟩
 
@@ -167,22 +167,19 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
   have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
     intro s w h
     have hh := congrArg List.head? h
-    have hc : (if s then 'i' else 'u') = 'b' := by simpa only [intSpelling, List.head?_cons] using hh
+    have hc : (if s then 'i' else 'u') = 'b' := by
+      simpa only [intSpelling, List.head?_cons, Option.some.injEq, String.toList_ofList, List.head?_cons] using hh
     cases s <;> cases hc
   have spelling_inj : ∀ {s w s' w'}, intSpelling s w = intSpelling s' w' → s = s' ∧ w = w' := by
     intro s w s' w' h
     have hh := congrArg List.head? h; have ht := congrArg List.tail h
     have hc : (if s then 'i' else 'u') = (if s' then 'i' else 'u') := by
-      simpa only [intSpelling, List.head?_cons] using hh
-    have hs : s = s' := by
-      cases s <;> cases s'
-      · rfl
-      · cases hc
-      · cases hc
-      · rfl
+      simpa only [intSpelling, List.head?_cons, Option.some.injEq] using hh
+    have hs : s = s' := by cases s <;> cases s' <;> first | rfl | cases hc
     cases hs
     have ht' : (toString w).toList = (toString w').toList := by simpa only [intSpelling, List.tail_cons] using ht
-    have hdigits : Nat.toDigits 10 w = Nat.toDigits 10 w' := by simpa only [Nat.toString_eq_ofList_toDigits] using ht'
+    have hdigits : Nat.toDigits 10 w = Nat.toDigits 10 w' := by
+      simpa only [Nat.toString_eq_ofList_toDigits, String.toList_ofList] using ht'
     have hv : w = w' := by
       have hv' := congrArg (fun l => Nat.ofDigitChars 10 l 0) hdigits
       simpa only [Nat.ofDigitChars_ten_toDigits] using hv'
@@ -284,7 +281,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
       | some bounds =>
           have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest); have hiRead := signed_printReads bounds.2 rest
           simpa only [WrittenType.printPieces, hpInt, hpIn, hpRange, List.map_append, List.map_cons, List.map_nil,
-            List.singleton_append, List.append_assoc] using
+            List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using
             (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
 
 -- Mirror BlockItems.deterministic, applying TypeReads.deterministic to each parameter.
@@ -352,7 +349,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           (match ps with | [] => [] | _ => [printComma] ++ commaSeparated (ps.map Parameter.printPieces)) := by
     intro p ps
     cases ps with
-    | nil => simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons]
+    | nil => simp only [commaSeparated, List.map_cons, List.map_nil, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons, List.append_nil]
     | cons q qs => simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc, List.map_cons]
   have hClose : printClose.value = closeParen := by rfl
   have hComma : printComma.value = comma := by rfl
@@ -366,7 +363,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
           apply ParamsRead.first
           · exact p.written.printReads p.valid (rest := ([printClose].map PrintedToken.value ++ rest))
-              (by simp only [hClose, closeParen, keyword, Token.noConfusion])
+              (by simp only [List.map_cons, List.map_nil, List.singleton_append, hClose, closeParen, keyword, Token.noConfusion])
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
@@ -376,7 +373,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
               List.append_assoc] using
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-                (by simp only [hComma, comma, keyword, Token.noConfusion]))
+                (by simp only [hComma, comma, keyword, List.cons.injEq, Token.noConfusion]))
           · simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
               hClose] using (ParamsTail.comma ih)
 
@@ -455,7 +452,7 @@ theorem DirectCall.printReads (call : DirectCall scope) :
           (match es with | [] => [] | _ => [printComma] ++ commaSeparated (es.map (fun exp => exp.2.printPieces))) := by
     intro e es
     cases es with
-    | nil => simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons]
+    | nil => simp only [commaSeparated, List.map_cons, List.map_nil, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons, List.append_nil]
     | cons f fs => simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc, List.map_cons]
   have noComma : ∀ (more : List Token), ¬ Continues 0 (comma :: more) := by
     intro more h
@@ -472,20 +469,22 @@ theorem DirectCall.printReads (call : DirectCall scope) :
       call.args rest := by
     induction call.args with
     | nil =>
-        simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hpClose]
+        simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.map_cons, List.nil_append,
+          List.singleton_append, hpClose]
         exact ArgsRead.empty
     | cons exp exps ih =>
         cases exps with
         | nil =>
-            simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hpClose]
+            simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.map_cons, List.nil_append,
+              List.singleton_append, hpClose]
             apply ArgsRead.first
-            · exact exp.2.printReads noOperatorAtClose
+            · exact exp.2.printReads (minimum := 0) noOperatorAtClose
             · exact ArgsTail.close
         | cons e es =>
             rw [comma_cons]
             apply ArgsRead.first
             · simpa only [Expr.printTokens, hComma, hpClose, List.map_append, List.map_cons, List.map_nil,
-                List.singleton_append, List.append_assoc] using
+                List.singleton_append, List.append_assoc, List.cons_append] using
                 (exp.2.printReads
                   (rest := comma :: ((commaSeparated ((e :: es).map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest))
                   (noComma _))
@@ -494,6 +493,6 @@ theorem DirectCall.printReads (call : DirectCall scope) :
   have hpName : call.name.print.value = Token.word call.name.val := by rfl
   have hpOpen : printOpen.value = openParen := by rfl
   simpa only [DirectCall.printPieces, hpName, hpOpen, hpClose, List.map_append, List.map_cons, List.map_nil,
-    List.singleton_append, List.append_assoc] using (CallReads.applied call argsRead)
+    List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using (CallReads.applied call argsRead)
 
 end Gabbro.Core.Ast
