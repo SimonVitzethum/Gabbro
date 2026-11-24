@@ -1,6 +1,7 @@
 module
 public meta import Lean
 meta import Lean.Elab.Task
+meta import Core.Ast.Inventory.Entries.ArrayIndex
 meta import Core.Ast.Inventory.Entries.Arrays
 meta import Core.Ast.Inventory.Entries.Option
 meta import Core.Ast.Inventory.Entries.WrittenTypeStatements
@@ -297,7 +298,7 @@ private meta def registry : Array RegistryFamily := #[
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Expr.arrayValue, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket, some `Gabbro.Core.Ast.Semantik.arrayValueEntry⟩,
-  ⟨`Gabbro.Core.Ast.Expr.arrayIndex, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Expr.arrayIndex, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, some `Gabbro.Core.Ast.Semantik.arrayIndexEntry⟩,
   ⟨`Gabbro.Core.Ast.Expr.tupleValue, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.tupleField, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.recordValue, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, none⟩,
@@ -320,7 +321,7 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Decl.table, `Gabbro.Core.Ast.Semantik.TableProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Decl.effectGroup, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueArray, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket, some `Gabbro.Core.Ast.Semantik.buildArrayEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesArray, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesArray, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, some `Gabbro.Core.Ast.Semantik.liesArrayEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueTupel, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesTupelfeld, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueRecord, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, none⟩,
@@ -343,7 +344,7 @@ private meta def scopedEntries : Array RegistryPacket := #[
 private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, some `Gabbro.Core.Ast.Semantik.arrayTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.Semantik.TupleTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, none⟩,
