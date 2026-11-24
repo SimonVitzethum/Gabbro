@@ -198,7 +198,8 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp only [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
         system, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
         Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength,
-        if_pos rfl, if_true, Option.isNone, List.getElem?_cons_zero]
+        if_pos rfl, if_true, Option.isNone, List.cons_append, List.nil_append,
+        List.getElem?_cons_zero]
     · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
