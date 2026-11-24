@@ -137,9 +137,9 @@ private theorem kontextkosten_fremd {ρ : Lauf E} {c : Kontext} {a k t : Nat}
 /-- An idle tick preserves the whole B8 prefix: the state is unchanged and neither cost
     counter moves. -/
 private theorem leerlauf_erhaelt {ρ : Lauf E} {t : Nat}
-    (idle : ρ.zeit.spur t = none) (prefix : B8Prefix E ρ t) :
+    (idle : ρ.zeit.spur t = none) (hyp : B8Prefix E ρ t) :
     B8Prefix E ρ (t + 1) := by
-  obtain ⟨kosten, halte, zeit⟩ := prefix
+  obtain ⟨kosten, halte, zeit⟩ := hyp
   obtain ⟨gleich, _⟩ := ρ.zeit.wartet idle
   have fremd : ∀ (c : Kontext) d w spur,
       ρ.zeit.spur t = some (.kontext d w, spur) → d ≠ c := by
@@ -206,7 +206,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | antwort _ => exact pflicht.protokoll run t _ _ ih vorEq tick trivial nachEq
+            | antwort _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
       | interrupt _ =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -219,7 +219,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | interrupt _ => exact pflicht.protokoll run t _ _ ih vorEq tick trivial nachEq
+            | interrupt _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
       | absturz =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -232,7 +232,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | absturz _ => exact pflicht.protokoll run t _ _ ih vorEq tick trivial nachEq
+            | absturz _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
       | kontext c w =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
