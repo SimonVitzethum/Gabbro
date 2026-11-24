@@ -86,7 +86,7 @@ private theorem egTokens_eq (written : List WrittenCarrierEffect) :
   | nil => rfl
   | cons effect more ih =>
       cases more with
-      | nil => rfl
+      | nil => simp only [egTokens, commaSeparated, List.intersperse, List.flatten, List.map_cons, List.map_nil, List.append_nil, List.nil_append]
       | cons effect2 rest =>
           change (WrittenCarrierEffect.printPieces effect).map PrintedToken.value ++
             comma :: egTokens (effect2 :: rest) =
