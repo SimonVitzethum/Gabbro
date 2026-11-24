@@ -65,9 +65,7 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
         ((tupleAnnotation_consumes _ _ _ annotationRead).trans
           (tuplePattern_consumes input _ _ patternRead))
-  all_goals
-    try cases htok
-    simp at htok
+  all_goals simp_all
 
 end Gabbro.Core.Ast.Surface
 
@@ -173,7 +171,7 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simp [pattern, TuplePattern.names]
-    · simpa only [List.map_nil] using (List.nodup_nil : ([] : List Identifier).Nodup)
+    · simpa only [TuplePattern.names, List.map_nil] using (List.nodup_nil : ([] : List Identifier).Nodup)
     · intro name mem
       simp [pattern, TuplePattern.names] at mem
     · intro written mem
