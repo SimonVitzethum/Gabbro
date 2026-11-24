@@ -125,4 +125,24 @@ theorem unmap_meaning : UnmapMeaningAussage := by
     rw [hd]
     simp only [Bool.false_and, Bool.and_false, Bool.false_eq_true, not_false_eq_true]
 
+theorem unmapMemGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
+    {trace : SchrittSpur Nat UInt8} {next : MemState}
+    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
+    trace = ⟨[], []⟩ ∧ next = u := by
+  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
+  cases trace with
+  | mk events outside =>
+      cases action
+      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+      have unchanged : ∀ {recorded graph},
+          Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
+            recorded = [] ∧ graph = s.graph := by
+        intro _ _ run
+        cases run
+        exact ⟨rfl, rfl⟩
+      obtain ⟨rfl, graph⟩ := unchanged memory
+      rw [graph] at nextEq
+      rw [← rahmen.graph] at nextEq
+      exact ⟨rfl, nextEq⟩
+
 end Gabbro.Core.Ast.LowLevel
