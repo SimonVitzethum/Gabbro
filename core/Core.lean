@@ -26,6 +26,9 @@ public import Core.Fortschritt.Verhungern
 public import Core.Fortschritt.Sackgasse
 public import Core.Fortschritt.WarteBeispiel
 public import Core.Fortschritt.WarteBundle
+public import Core.Fortschritt.SperrErhalt
+public import Core.Fortschritt.SperrGegenbeispiel
+public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme
@@ -37,6 +40,26 @@ public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
+public import Core.Beobachtung.Fluss.Abschluss
+public import Core.Beobachtung.Fluss.Beschriftung.Sicht
+public import Core.Beobachtung.Fluss.Beschriftung.Einheit
+public import Core.Beobachtung.Fluss.Beschriftung.Regel
+public import Core.Beobachtung.Fluss.Beschriftung.Schreiben
+public import Core.Beobachtung.Fluss.Beschriftung.Skalar
+public import Core.Beobachtung.Fluss.Beschriftung.Sprung
+public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
+public import Core.Beobachtung.Fluss.Beschriftung.Leck
+public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
+public import Core.Beobachtung.Fluss.Beschriftung.Aufgaben
+public import Core.Beobachtung.Fluss.Erfuellbar
+public import Core.Beobachtung.Fluss.Region
+public import Core.Beobachtung.Fluss.Speicherverwaltung
+public import Core.Beobachtung.Fluss.Geraet
+public import Core.Beobachtung.SchrankenB8
+public import Core.Beobachtung.SchrankenB8Aussagen
+public import Core.Beobachtung.SchrankenB8Beweise
+public import Core.Beobachtung.SchrankenB8Zeit
+public import Core.Beobachtung.SchrankenB8Erfuellbar
 meta import Core.Waechter.Check
 
 #check_core

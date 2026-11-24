@@ -261,9 +261,40 @@ private theorem memAussenLokal (k : Katalog) (op : MemInstruction) :
     obtain ⟨rfl, rfl⟩ := memGenauInternal execute
     exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
       (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-private theorem memLokal (form : MemForm) : MemAussenLokalAussage form := by
-  intro k scope tree op _
-  exact memAussenLokal k op
+
+/-- Every memory instruction uses the public frame and region authority and emits no output. -/
+theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
+    Beobachtung.FlussLokal (memProgram k code) := by
+  constructor
+  · intro s₁ s₂ same
+    have regions : s₁.regions = s₂.regions := congrArg (fun p => p.2.2.1) same
+    refine ⟨?_, fun _ => rfl, fun _ => rfl, ?_, rfl, fun _ => rfl⟩
+    · intro c _ _
+      simp only [I.start, memProgram, memBoot, Zustand.start, regions]
+    · simp only [I.start, memProgram, memBoot, Zustand.start, regions]
+  · intro f
+    constructor
+    · intro c v w p u _
+      refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun privateControl => ?_⟩
+      exact (Bool.false_ne_true privateControl.symm).elim
+    · intro _ c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ same step₁ step₂
+      have run₁ : f.step k.plattform.ziel c v₁ w₁ [p₁] u₁ := step₁.2
+      have run₂ : f.step k.plattform.ziel c v₂ w₂ [p₂] u₂ := step₂.2
+      obtain ⟨frame₁, eval₁, plan₁, rfl⟩ := run₁
+      obtain ⟨frame₂, eval₂, plan₂, rfl⟩ := run₂
+      obtain ⟨locals, ends, initial, rights, loans, answers⟩ := same
+      have localEq : v₁.lokal = v₂.lokal :=
+        funext fun d => locals d ⟨0, Nat.zero_lt_succ _⟩ rfl
+      rw [← f.evaluate_congr _ _ localEq rights loans, eval₁] at eval₂
+      cases eval₂
+      rw [(List.cons.inj plan₁).1, (List.cons.inj plan₂).1]
+      refine ⟨⟨?_, ends, initial, rights, loans, answers⟩, rfl, rfl⟩
+      intro d _ _
+      simp only [MemFrame.advance, localEq]
+
+theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
+    Beobachtung.FlussLokal (memUnit k op) := memProgramFlussLokal k [op]
+
 private theorem memKosten (k : Katalog) (op : MemInstruction) :
     ∀ t c s w middle next p trace, op.step k.plattform.ziel c s w [p] middle →
       FuehrtSchrittAus (memUnit k op).einrichtung t c s middle p trace next →
@@ -365,7 +396,7 @@ private theorem memWaechter (k : Katalog) (op : MemInstruction) :
     exact hblock
 private theorem memAkzeptiertX86 (op : MemInstruction) :
     Annahme.Akzeptiert (memUnit Plattform.x86_64.katalog op) := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, memAussenLokal _ op⟩,
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨memAussenLokal _ op, memFlussLokal _ op⟩⟩,
     memKlauseln _ op, memWaechter _ op⟩
   intro i
   exact memRegelLokal _ i
@@ -460,7 +491,8 @@ theorem newSpace_aussage : NewSpaceAussage := by
   exact ⟨memParse_newSpace, memInversion_newSpace, memEindeutig_newSpace, memDruck_newSpace,
     memElaboriert .newSpace, memRealisiert .newSpace, memAnnahme .newSpace, memIdeal .newSpace,
     memEinheit .newSpace, memImpl .newSpace, memFortschritt .newSpace, memErhaltung .newSpace,
-    memSicher .newSpace, memRegelAntwortSicher .newSpace, memLokal .newSpace, memKostenForm .newSpace,
+    memSicher .newSpace, memRegelAntwortSicher .newSpace,
+    (fun k _ _ op _ => memAussenLokal k op), memKostenForm .newSpace,
     memSchranken, memEtiketten, memFluss⟩
 
 end Gabbro.Core.Ast.LowLevel

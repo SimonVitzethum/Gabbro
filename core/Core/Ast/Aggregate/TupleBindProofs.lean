@@ -25,6 +25,8 @@ public import Core.Ast.Semantik.Formbeweise
 - `TupleBindLocalsAussage`
 -/
 
+@[expose] public section
+
 namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
