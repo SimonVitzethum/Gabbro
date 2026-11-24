@@ -18,6 +18,11 @@ inductive ExecForm where
   | waitInterrupt
   | stopCore
   | entryDecl
+  | cpuCaps
+  | cpuCycles
+  | suspendSystem
+  | suspendCore
+  | resumeArrival
   deriving DecidableEq
 
 /-- Low-level execution leaves of the reference AST. Code items, states,
@@ -38,6 +43,17 @@ inductive ExecTree : ExecForm → Type where
   /-- `entry NAME KIND stack per core|own [priority N];`. -/
   | entryDecl (name : Identifier) (kind : EntryKind) (stack : EntryStack)
       (priority : Option Nat) : ExecTree .entryDecl
+  /-- Inventory `low.L4.7`: `cpu.caps` or `cpu.has(f)`. Rejected until enabled. -/
+  | cpuCaps (feature : Option Identifier) : ExecTree .cpuCaps
+  /-- Inventory `low.L4.8`: `cpu.cycles()`. Rejected until enabled. -/
+  | cpuCycles : ExecTree .cpuCycles
+  /-- Inventory `low.L4.9`: `suspend system resume at f(args) else failed;`. Rejected until enabled. -/
+  | suspendSystem (resume : Identifier) (arguments : List Identifier)
+      (failure : Identifier) : ExecTree .suspendSystem
+  /-- Inventory `low.L4.10`: `suspend core resume at f;`. Rejected until enabled. -/
+  | suspendCore (resume : Identifier) : ExecTree .suspendCore
+  /-- Inventory `low.L4.11`: the firmware-provided resume arrival state. Rejected until enabled. -/
+  | resumeArrival (state : Identifier) : ExecTree .resumeArrival
 
 def privilegeKeyword : ExecPrivilege → Token
   | .machine => keyword "machine"
@@ -109,6 +125,20 @@ def ExecTree.printPieces : ExecTree form → List PrintedToken
         (match stack with | .perCore => [lowWord 'p' "er", lowWord 'c' "ore"] | .own => [lowWord 'o' "wn"]) ++
         (priority.map (fun n => [lowWord 'p' "riority", printInteger n])).getD [] ++
         [printSemicolon]
+  | .cpuCaps feature =>
+      [lowWord 'c' "pu", printDot, lowWord 'c' "aps"] ++
+        (feature.map (fun f => [printDot, lowWord 'h' "as", printOpen, f.print, printClose])).getD []
+  | .cpuCycles =>
+      [lowWord 'c' "pu", printDot, lowWord 'c' "ycles", printOpen, printClose]
+  | .suspendSystem resume arguments failure =>
+      [lowWord 's' "uspend", lowWord 's' "ystem", lowWord 'r' "esume", lowWord 'a' "t", resume.print,
+        printOpen] ++ (arguments.map Identifier.print).intersperse printComma ++
+      [printClose, lowWord 'e' "lse", failure.print, printSemicolon]
+  | .suspendCore resume =>
+      [lowWord 's' "uspend", lowWord 'c' "ore", lowWord 'r' "esume", lowWord 'a' "t", resume.print,
+        printSemicolon]
+  | .resumeArrival state =>
+      [lowWord 'r' "esume", lowWord 'a' "rrival", state.print, printSemicolon]
 
 def guardsTokens (guards : List ExecGuard) : List Token :=
   (guards.map guardKeyword).intersperse comma
@@ -153,6 +183,11 @@ def ExecTree.production : ExecTree form → List Token → Prop
         tokens = [keyword "entry", .word name.val, entryKindKeyword kind, keyword "stack"] ++
           (match stack with | .perCore => [keyword "per", keyword "core"] | .own => [keyword "own"]) ++
           [keyword "priority", .natural n, semicolon])
+  | .cpuCaps _ => fun _ => False
+  | .cpuCycles => fun _ => False
+  | .suspendSystem _ _ _ => fun _ => False
+  | .suspendCore _ => fun _ => False
+  | .resumeArrival _ => fun _ => False
 
 def ExecParse (text : RawText) (tree : ExecTree form) : Prop :=
   Text.Parse (tokenGrammar (fun tokens (tree : ExecTree form) => tree.production tokens)) text tree

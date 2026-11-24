@@ -108,7 +108,12 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jumpLong, `Gabbro.Core.Ast.LowLevel.JumpLongAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.waitInterrupt, `Gabbro.Core.Ast.LowLevel.WaitAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.stopCore, `Gabbro.Core.Ast.LowLevel.StopAussage),
-    (`Gabbro.Core.Ast.LowLevel.ExecTree.entryDecl, `Gabbro.Core.Ast.LowLevel.EntryAussage)]⟩,
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.entryDecl, `Gabbro.Core.Ast.LowLevel.EntryAussage)], #[
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.cpuCaps, `Gabbro.Core.Ast.LowLevel.CpuCapsAbgelehntAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.cpuCycles, `Gabbro.Core.Ast.LowLevel.CpuCyclesAbgelehntAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.suspendSystem, `Gabbro.Core.Ast.LowLevel.SuspendSystemAbgelehntAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.suspendCore, `Gabbro.Core.Ast.LowLevel.SuspendCoreAbgelehntAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.resumeArrival, `Gabbro.Core.Ast.LowLevel.ResumeArrivalAbgelehntAussage)]⟩,
   ⟨`Gabbro.Core.Ast.LowLevel.Tree, `Gabbro.Core.Ast.LowLevel.schema, #[
     (`Gabbro.Core.Ast.LowLevel.Tree.addressType, `Gabbro.Core.Ast.LowLevel.addressTypeTreeEntry),
     (`Gabbro.Core.Ast.LowLevel.Tree.regionAddress, `Gabbro.Core.Ast.LowLevel.regionAddressTreeEntry),
