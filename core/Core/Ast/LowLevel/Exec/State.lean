@@ -6,7 +6,7 @@ public import Core.Ast.LowLevel.Syntax
 
 namespace Gabbro.Core.Ast.LowLevel
 
-open Gabbro.Core.Text Katalog
+open Gabbro.Core.Text Katalog Maschine
 
 /-- Operand width of a declared execution state (16, 32 or 64). -/
 inductive ExecWidth where
