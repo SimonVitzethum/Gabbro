@@ -77,8 +77,10 @@ public meta def binderFindings (env : Environment) (pinned : Name → Bool) (clo
     let scanned ← try
         Core.withCurrHeartbeats do
           let mut found : Array String := #[]
-          for n in (← unusedBinders (info.value.approxDepth.toNat + 2) info.value) do
-            found := found.push s!"statement {name} has the unused data binder {n}"
+          let depth := info.value.approxDepth.toNat
+          if strict || depth ≤ 60 then
+            for n in (← unusedBinders (depth + 2) info.value) do
+              found := found.push s!"statement {name} has the unused data binder {n}"
           for n in (← functionParameters info.type) do
             found := found.push
               s!"statement {name} takes the free function parameter {n} that nothing binds to the model"
