@@ -80,13 +80,13 @@ def TableErfuellbarAmAussage : Prop :=
     ∃ (item : TableDeclaration []) (after : Scope) (rest : UnitBody [item.binding] after)
       (text : RawText) (s : Zustand),
       let tree : Ast.Unit := ⟨after, .step (.table item) rest⟩
-      let E := elaborieren platform tree
+      let E := elaborieren (category := .unit) platform tree
       item.count > 0 ∧
       (∃ (args : Surface.FunctionArgs [item.binding]) (tail : UnitBody [item.binding] after),
         rest = .step args.declaration tail ∧
         (∃ p ∈ args.parameters, p.written = .index item.name item.count) ∧
         (∃ p ∈ args.parameters, p.written = .indexOption item.name item.count)) ∧
-      Ast.Parse text tree ∧ Elaboriert platform tree E ∧
+      Ast.Parse (category := .unit) text tree ∧ Elaboriert (category := .unit) platform tree E ∧
       E.system.IErreichbar (I.start E start).2 s ∧
       E.system.kopf s eintritt = some (tableInstruction item) ∧
       E.system.ISchritt eintritt s () [plan] ((tableInstruction item).nach eintritt s) ∧

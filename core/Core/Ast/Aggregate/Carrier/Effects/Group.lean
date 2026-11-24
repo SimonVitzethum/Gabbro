@@ -126,12 +126,12 @@ def EffectGroupUseErfuellbarAussage : Prop :=
     ∃ (carrier : TableDeclaration []) (group : EffectGroupDeclaration [carrier.binding])
       (a : Surface.FunctionArgs [group.binding, carrier.binding]) (text : RawText) (s : Zustand),
       let tree : Ast.Unit := ⟨_, .step (.table carrier) (.step (.effectGroup group) (.step a.declaration .done))⟩
-      let E := elaborieren platform tree
+      let E := elaborieren (category := .unit) platform tree
       let b := (functionForm [group.binding, carrier.binding]).befehl a
       let after := b.auswerten (s.lokal eintritt)
       group.resolved ≠ [] ∧
       (∃ clause, a.effects = some clause ∧ clause.written = [.group group.name]) ∧
-      Ast.Parse text tree ∧ Elaboriert platform tree E ∧
+      Ast.Parse (category := .unit) text tree ∧ Elaboriert (category := .unit) platform tree E ∧
       E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
       E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
       E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) ∧
