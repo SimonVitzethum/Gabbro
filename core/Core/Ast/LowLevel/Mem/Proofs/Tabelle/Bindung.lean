@@ -59,12 +59,12 @@ theorem MmuGebunden.tabellen {frame : MemFrame} {sicht : MmuSicht}
 
 /-- The bound translation step of the composed machine: thread the acting frame into each
     `translate` call. Every memory access translates over `(s.lokal c).mmuSicht`. -/
-def GebundeneUebersetzung (h : Umgebung) (frame : MemFrame)
+def GebundeneUebersetzung (h : Katalog.Umgebung) (frame : MemFrame)
     (core space addr : Nat) (right : Speicherdienst) : Except MmuFehler (Nat × Nat) :=
   h.translate frame.mmuSicht core space addr right
 
 /-- The bound step decodes exactly as the catalogue row demands. -/
-theorem gebundeneUebersetzung_eq {k : Katalog} {h : Umgebung} (hw : Hardware k h)
+theorem gebundeneUebersetzung_eq {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k h)
     (frame : MemFrame) (core space addr : Nat) (right : Speicherdienst) :
     GebundeneUebersetzung h frame core space addr right =
       uebersetze h.ziel frame.mmuSicht core space addr right := by
@@ -72,7 +72,7 @@ theorem gebundeneUebersetzung_eq {k : Katalog} {h : Umgebung} (hw : Hardware k h
   exact translate_mmuSicht hw frame core space addr right
 
 /-- The old foreign view is not bound to the empty frame. -/
-theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
+private theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
   intro h
   have heq := MmuGebunden.tabellen h 0 0
   have hleer : leerFrame.tabellenSicht 0 0 = none := by
