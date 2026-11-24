@@ -22,7 +22,7 @@ private theorem hoch_verborgen : oeffentlich hoch = false := by
   exact Finset.notMem_empty _ mem
 
 private theorem verdeckt (a : A) : sichtbar hoch a = none := by
-  simp only [sichtbar, hoch_verborgen, Bool.false_eq_true, if_false]
+  simp only [sichtbar, hoch_verborgen, Bool.false_eq_true, ite_false]
 
 private theorem frage_hoch (q : Frage) : einheit.etiketten.frage q = hoch := by
   change (q.zugriffe.map (fun _ => hoch)).foldl (· ∪ ·) hoch = hoch
@@ -63,7 +63,8 @@ private theorem politik_gleich (p₁ p₂ : AussenPolitik) :
 private theorem umgebung_gleich (b₁ b₂ : List UInt8) :
     GleicheNiedrigeUmgebung einheit (umgebung b₁) (umgebung b₂) := by
   unfold GleicheNiedrigeUmgebung umgebungsProjektion
-  rw [politik_gleich (umgebung b₁).politik (umgebung b₂).politik] <;> rfl
+  rw [politik_gleich (umgebung b₁).politik (umgebung b₂).politik]
+  rfl
 
 private theorem hw_gleich (b₁ b₂ : List UInt8) :
     hwPolitikProjektion einheit (hardware b₁) = hwPolitikProjektion einheit (hardware b₂) :=
@@ -83,7 +84,8 @@ private theorem verborgen_frage (s : AussenStart) :
 
 private theorem verborgen_antwort (s : AussenStart) (bytes : List UInt8) :
     aussenBeob einheit (.antwort (angekommen s bytes)) = [] := by
-  simp only [aussenBeob, frage_hoch, verdeckt] <;> rfl
+  simp only [aussenBeob, frage_hoch, verdeckt]
+  rfl
 
 private theorem schritte_stumm {s : AussenStart} {bytes : List UInt8} {ρ : Lauf einheit}
     {g g' : SpeicherGraph Unit Unit}
@@ -100,17 +102,20 @@ private theorem schritte_stumm {s : AussenStart} {bytes : List UInt8} {ρ : Lauf
   | 0 =>
     rw [schrittBeob, e₀, z₀, z₁]
     have kein := endet_nicht (startZustand s) (binde (startZustand s)) (fun _ => Or.inr rfl)
-    simp only [kein, if_false] <;> rfl
+    simp only [kein, ite_false]
+    rfl
   | 1 =>
     rw [schrittBeob, e₁, z₁, z₂]
     have kein := endet_nicht (binde (startZustand s)) (fragend s g) (fun _ => Or.inl rfl)
     simp only [frageSpur, List.flatMap_cons, List.flatMap_nil, verborgen_frage,
-      kein, if_false, List.append_nil] <;> rfl
+      kein, ite_false, List.append_nil]
+    rfl
   | 2 =>
     rw [schrittBeob, e₂, z₂, z₃]
     have kein := endet_nicht (fragend s g) (fertig s bytes g g') (fun _ => Or.inl rfl)
     simp only [antwortSpur, List.flatMap_cons, List.flatMap_nil, verborgen_antwort,
-      kein, if_false, List.append_nil] <;> rfl
+      kein, ite_false, List.append_nil]
+    rfl
   | t + 3 => simp only [schrittBeob, still]
 
 private theorem beob_konstant {ρ : Lauf einheit} {s : AussenStart} (p : Praediktor)
@@ -118,7 +123,8 @@ private theorem beob_konstant {ρ : Lauf einheit} {s : AussenStart} (p : Praedik
     NiedrigeBeob einheit ρ p t = [.anfangsspeicher (fun _ => some ())] := by
   induction t with
   | zero =>
-    simp only [NiedrigeBeob, NiedrigeBeob.praefix, anfang] <;> rfl
+    simp only [NiedrigeBeob, NiedrigeBeob.praefix, anfang]
+    rfl
   | succ t ih =>
     change NiedrigeBeob einheit ρ p t ++ schrittBeob ρ p t = _
     rw [ih, still, List.append_nil]
