@@ -56,7 +56,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       ⟨⟨name, ty, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
     rw [Stmt.printTokens_let]
     exact .letBinding name ordinary
-      (by simpa only [List.nil_append, List.append_assoc, List.singleton_append] using
+      (by simpa using
         (expr.printReads (rest := semicolon :: rest) noOperatorAtSemicolon)) .plain
   · intros
     rename_i ref visible writable value fits rest
@@ -85,7 +85,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     exact .done
   · intros
     rename_i first next ihFirst ihNext rest
-    exact .step (ihFirst _) (ihNext _)
+    exact .step (ihFirst (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihNext rest)
   · intros
     rename_i body ihBody rest
     simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
@@ -100,7 +100,7 @@ theorem Block.printItems_reads (tree : Block result before after) (rest : List T
       BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest)
     (motive_3 := fun before tree => ∀ rest,
       BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
-    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ ?_ tree) rest
+    (by intros; trivial) (by intros; trivial) (by intros; trivial) (by intros; trivial) ?_ ?_ ?_ tree) rest
   · intros
     rename_i rest
     exact .done
