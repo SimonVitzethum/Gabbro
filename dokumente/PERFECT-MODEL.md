@@ -16,7 +16,8 @@ before merge; nothing else may restate, extend or soften it. A draft elsewhere i
 Everything `I` allows is the program's logic. Everything else — known or unknown, from memory errors to TOCTOU —
 is an error and is excluded. "Effects" are all effects the pinned semantics records: outside questions and
 answers, device accesses, outputs, stops, internal state changes and authority effects — an unauthorised internal
-write that is undone before any output is an error too. The promise is over the modelled machine (G∞, after
+write that is undone before any output is an error too. The promise is over the modelled machine of `core/` (for the
+fragment retained from today's model also G∞, transported in M11; new low-level forms have no G counterpart; after
 B6/C9 the image). The user is not a premise. Hardware enters only as catalogue rows.
 
 ## 2. The theorem
@@ -71,13 +72,15 @@ Bindings that are part of the definitions:
   predicates, defined without `Bezeichnet`, acceptance or any parser — so a total `Bezeichnet` into the
   intrinsically typed unit is meaningful; printing and parsing round-trip modulo an explicitly defined trivia and
   canonicalisation relation. `Form` is
-  derived from the actual constructors of the reference AST. `Realisiert f a E` ties ONE occurrence of the
+  derived from the actual constructors of the reference AST (surface constructors only; core-only constructors
+  carry an origin proof instead, §6.5). `Realisiert f a E` ties ONE occurrence of the
   constructor in `a` to its corresponding ideal and implementation transitions in one admissible matched run (for
   a declaration form: its effect on the unit).
 - Catalogue: `KatalogWohlgeformt K` is an approved row selection whose composition is valid; `Akzeptiert E →
   KatalogWohlgeformt (katalog E)` follows from `Lokal`. `Hardware K H` says the environment `H` behaves as the
   rows say on the OUTSIDE side of the interaction, mandatory answers included; permitted non-answers are explicit
-  in the rows. `hw ρ` is the run's exogenous opportunity schedule (core steps, interrupt and delivery opportunities)
+  in the rows. `hw ρ` is the run's exogenous opportunity schedule (core steps, interrupt and delivery opportunities, and
+  crash points with their recovery continuation under the persistence envelope of B22)
   together with the total reactive outside policy; request-specific replies are separate events of the run, and an
   offered delivery is recorded even when the implementation fails to consume it, so a failure never makes a run
   inadmissible or unfair. `FairLaeufe K H` are the schedules and policies that are fair in the rows' sense — over
@@ -151,8 +154,9 @@ missing any of them.
   error notion. `I` never mentions `Akzeptiert`. The real checker is a separate algorithm with
   `pruefer_korrekt : C.akzeptiert E = true → Akzeptiert E`. Soundness alone holds for a checker that refuses
   everything, so the deployed checker also proves `pruefer_vollstaendig : Fragment E → Akzeptiert E →
-  C.akzeptiert E = true` for a named decidable fragment that contains an instance of every registry form (a phase B
-  obligation beside the goal, not inside it).
+  C.akzeptiert E = true` for a named decidable fragment, and for every registry form an instance `E` with `Fragment E` and
+  `Akzeptiert E` jointly proved, so a checker that refuses everything cannot meet it (a phase B obligation beside
+  the goal, not inside it).
 
 **3.3 The catalogue (`Hardware`).** Pinned, reviewed Lean objects in the repository: target-table rows, CPU, MMU,
 interrupt delivery, devices, firmware, operating-system interfaces, float hardware, the loader. A program SELECTS
@@ -248,7 +252,9 @@ progress class (`lock_free` constructs also give system-wide progress); it never
 assumed of the environment is hardware only (cores step, interrupts are delivered): catalogue rows. A kernel's
 scheduler is code, never assumed. `ImSchranken` compares the cost, memory and stack determined by the run with the
 concrete bounds of `E`; for `timed` blocks §3.4 fixes which time observation `I` shares and where its values come
-from (catalogue rows).
+from (catalogue rows). A numeric time bound holds only under a selected row with a guaranteed maximum
+duration; a `timed` block whose deadline the rows allow to be missed (L18 `else late`) is bounded by its declared
+`late` path, and that legal run satisfies `ImSchranken` through it, never violates it.
 
 **3.8 Noninterference.** `NI` of §2: for every admitted run, every environment with the same public projection
 (§2.1; its high parts free) and every low-equal start, a comparison run under the
@@ -308,7 +314,12 @@ ratchet:
 4. The closing guard (from M12): one argument-free `R₀ : Rahmen` with every field bound to its approved concrete
    constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
    elaborated type, each field binding of `R₀`, their transitive semantic dependencies down to explicit trusted
-   roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`).
+   roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`). It also checks that `Akzeptiert` of
+   `R₀` unfolds to `Lokal ∧ KlauselnWahr ∧ WaechterHalten` of §3.2 with the outside rule of §4 inside `Lokal`, and
+   that the public projections of §2.1 and the releases of `NiedrigAequiv` are the pinned label constants; beside
+   the goal, M12 proves NI non-degenerate (`ni_erfuellbar`: an accepted program, an admitted run of it, a second environment and a start
+   that jointly satisfy the whole comparison premise of `NI`, and in the two runs the same high question receives
+   different high answers).
 5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax, with
    typed proofs (not names): each SURFACE constructor carries its `Parse` and `Elaboriert` proofs and a source
    occurrence as `Realisiert` evidence; each CORE-ONLY constructor (e.g. a continuation node created when an
@@ -367,7 +378,7 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 | **M6 Today's forms** | every form of today's language, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples) and P1 (aggregates by value, in-place construction), each constructor in ONE guarded commit with its complete registry entry of §6.5 (surface constructors: `Parse`, `Elaboriert` and `Realisiert`; core-only constructors: a checked origin proof; both: `Lokal`, `I` and implementation rule, preservation and `_erfuellbar`); `Bezeichnet`, `elab_korrekt`, `elab_vollstaendig`, both round trips | M1, M4, M5, M10 | 30 000–80 000 |
 | **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8) with complete registry entries (M8 proves their progress after M7 closes), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
 | **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows) — outside-interface forms (firmware, OS and device services) select pinned catalogue rows by name, and the selected row supplies the service contract; a program never writes one; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit; for timed low-level forms (L18) M6L delivers the time semantics and its local preservation, and their numeric upper bounds close in M9 with B19 | M6 | 236 000–596 000 |
-| **M7 Refinement** | `Sim` of §3.6 for every run; STARTS on M4 from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported) and grows with every form; CLOSES only with the cases of M6F and M6L (the acceptance case `flush`; linearisability of lock-free structures, B20) and the missing legs (B10) | starts M4; closes M6, M6F, M6L | 48 000–125 000 |
+| **M7 Refinement** | `Sim` of §3.6 for every run; STARTS on M4 from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported) and grows with every form; CLOSES only with the cases of M6F and M6L (the acceptance case `flush`; linearisability of lock-free structures, B20) and the missing legs (B10); `Sim` covers crash points and the recovery continuation generically from M4 on, and M9 re-closes `Sim` for the persistence forms of B22 | starts M4; closes M6, M6F, M6L | 48 000–125 000 |
 | **M9 Observations and NI** | `ImSchranken`: hold bounds and cost and time first (B8), then stack (B9), memory (B21), real time (B19, including the numeric upper bounds of the L18 forms); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope with the B22 forms and their registry entries | M7 | 69 000–178 000 |
 | **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7, model side); waiting bounds and starvation freedom (B13) on M9's hold bounds | M7, M9 (B8 part) | 24 000–63 000 |
 | **M9P Probability** | random sources as rows with their draw laws; the B11 clause forms with their registry entries; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (model side) | M9 | 30 000–80 000 |
