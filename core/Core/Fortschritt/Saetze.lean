@@ -131,7 +131,7 @@ theorem deadlockfrei_aus_waechter {η : I.Lauf E}
   obtain ⟨C, hC⟩ := hC
   obtain ⟨k, _, same⟩ := Zeitlauf.schnitt_deckt η.zeit t
   rw [← same] at hC
-  exact (h.2 η valid k) ⟨C, hC⟩
+  exact (h.2.1 η valid k) ⟨C, hC⟩
 
 /-- `waitFree` from the run match and the checked stutter bound: an open interval without
     discharge is a stutter interval, so the context's own steps on it are private occupancy —

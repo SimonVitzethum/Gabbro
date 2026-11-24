@@ -161,7 +161,7 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     · intro p hp; cases hp
     · intro t p hp; cases hp
     · intro t fertig p hp; cases hp
-  · constructor
+  · refine ⟨?_, ?_, ?_⟩
     · intro rho lauf t op args need
       change (memProgram k code).quelltabellen.guard (rho.zeit.zustand t.val) op args at need
       cases need
@@ -170,6 +170,8 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       obtain ⟨b, blocked, intern, locks, joins⟩ := rest c hc
       change False at blocked
       cases blocked
+    · intro rho lauf t l h _ hne
+      exact (hne rfl).elim
 
 private theorem partitionPost (frame : MemFrame) (slot : Nat) (region : MemRegion) (point : Nat)
     (inside : region.extent.von < point ∧ point < region.extent.bis) :
