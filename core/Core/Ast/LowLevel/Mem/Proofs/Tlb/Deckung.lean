@@ -83,7 +83,7 @@ theorem MemFrame.TlbGedeckt.keine_Zelle {frame : MemFrame} (inv : frame.TlbGedec
     ∀ zelle ∈ frame.tlb.zellen, zelle.imBereich sp base pages = false := by
   intro zelle mem
   cases him : zelle.imBereich sp base pages with
-  | false => exact him
+  | false => rfl
   | true =>
       have drin : zelle.raum = sp ∧ pageRange base pages zelle.seite := by
         simpa only [TlbZelle.imBereich, decide_eq_true_eq] using him
@@ -119,6 +119,7 @@ theorem TranslationCache.invalidate_eq_self (cache : TranslationCache) (space ba
       apply List.filter_eq_self.mpr
       intro zelle hz
       rw [h zelle hz]
+      rfl
 
 /-! ## Instructions that touch neither the spaces nor the cache -/
 
