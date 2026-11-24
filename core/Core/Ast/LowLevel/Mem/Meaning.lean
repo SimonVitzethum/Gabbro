@@ -144,8 +144,7 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
       let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation⟩)
       pure { frame with
         result := some .mapped
-        spaces := frame.spaces.set sp { space with entries := space.entries ++ entries },
-        tlb := frame.tlb.invalidate sp base pages }
+        spaces := frame.spaces.set sp { space with entries := space.entries ++ entries } }
     else none
   | .protectSpace sp virt pages rights => do
     let space ← frame.spaces[sp]?

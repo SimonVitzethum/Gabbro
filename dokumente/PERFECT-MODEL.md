@@ -214,8 +214,10 @@ bindings are ordinary Gabbro functions.
   range; the shootdown (send, handler on every existing core, acknowledgement) is the protocol that makes it
   true (`FlushProtokoll`, which names every existing core), never a side effect of the release. No step
   of `I` or of the implementation may clear another core's cache atomically; `protect` (rights narrowing,
-  which also needs the stale wide-rights cells gone before it completes) and `map` still do in the model
-  (open item P1 of THEOREM-MAP §219).
+  which also needs the stale wide-rights cells gone before it completes) still does in the model
+  (open item P1 of THEOREM-MAP §219). `map` no longer clears its page range: it only maps pages with no
+  table entry and no pending token, and `tlbGedeckt_erreichbar` proves no cell of such a range exists, so
+  the old clearing was the identity on every reachable state — a refinement, not a lost guarantee.
 - `I` states carry lock owners, the ticket queue and hand-off, so a lock section with several units keeps
   ownership, hand-off and its protected invariant. A wait is enabled exactly when its condition holds. Lock
   acquisition is strong-fair (carried by the language's queue/ticket lock).

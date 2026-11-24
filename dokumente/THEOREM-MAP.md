@@ -8364,8 +8364,12 @@ The memory forms modelled the shootdown of a revoked mapping as ONE step that cl
 translation cache and released the frames (implementation rule = ideal rule, stutter budget 0), and the
 cache could not be filled at all (`tlb` was never populated), so no stale translation was expressible and
 the safety of reuse held only because nothing could go wrong. Now the cache is a finite list of cells
-(core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `protect` and
-`map` still clear their range on all cores in one step (open item P1: a staged `protect` — narrow the table, shoot down, complete once no cell with wider rights remains — and dropping `map`'s clearing, a no-op by `tlbGedeckt_erreichbar`); `flush` is the RELEASE
+(core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `protect` still
+clears its range on all cores in one step (open item P1: a staged `protect` — narrow the table, shoot down,
+complete once no cell with wider rights remains). `map` no longer clears its range: it maps only pages with
+neither a table entry nor a pending token, and `tlbGedeckt_erreichbar` proves no cell of such a range exists,
+so the former clearing was the identity on every reachable state — a refinement that drops an atomic
+invalidation no hardware performs, without losing a guarantee. `flush` is the RELEASE
 step and refuses while any core caches a translation of the token's range, so the invalidation on the other
 cores is the work of their handlers (`FlushProtokoll`), never implied by the release.
 
@@ -8374,6 +8378,9 @@ cores is the work of their handlers (`FlushProtokoll`), never implied by the rel
 | `FlushMeaningAussage` | `Mem/SpaceObligations.lean` | The release step: enabled exactly when the token is pending, its table entries are cleared AND `tlb.Frei` holds; the cache is untouched; refused otherwise (pinned `FlushAussage`). |
 | `MemFrame.TlbGedeckt`, `tlbGedeckt_evaluate` | `Mem/Proofs/Tlb/Deckung.lean`, `Lauf.lean` | Every cached cell is explained by an active table entry of its space or by a pending token of its space; every memory instruction keeps this, including a fill and any drop by hardware (`TlbGedeckt.verdraengt`). |
 | `tlbGedeckt_erreichbar` | `Mem/Proofs/Tlb/Lauf.lean` | Every state any Mem unit reaches, for every code and every start, satisfies it. |
+| `MemFrame.TlbGedeckt.keine_Zelle`, `TranslationCache.invalidate_eq_self` | `Mem/Proofs/Tlb/Deckung.lean` | A range with no table entry and no pending token has no cached cell under `TlbGedeckt`; clearing it is the identity. |
+| `tlbGedeckt_map_invalidate_erreichbar` | `Mem/Proofs/Tlb/Lauf.lean` | On every reachable state of a Mem unit, the clearing `map` used to perform is the identity (proof of the refinement). |
+| `MapMeaningAussage` (pinned) | `Mem/SpaceObligations.lean` | `map` leaves the cache untouched, adds the entries, and still refuses a pending token. |
 | `nicht_unreserviert` | `Mem/Proofs/Tlb/Reserviert.lean` | A frame a core still caches is never `unreserved`: no region operation can hand it out again. |
 | `flush_verweigert_gecachte_uebersetzung`, `freigabe_ohne_pflicht_unsicher` | `Mem/Proofs/Tlb/Reserviert.lean` | The guard has teeth, and it is necessary: a release that leaves the cell behind breaks the invariant. |
 | `FlushKette.ohne_abdeckung`, `FlushProtokoll` | `Verfeinerung/Abnahme/Flush.lean` | The old protocol admitted a release after a send to nobody; the protocol now also requires the send to name every existing core. |

@@ -77,4 +77,19 @@ theorem tlbGedeckt_erreichbar (k : Katalog) (code : List MemInstruction) (start 
     obtain ⟨op, _, ideal⟩ := step
     exact MemInstruction.tlbGedeckt_schritt k.plattform.ziel op c _ w es _ ideal ih
 
+/-- On every reachable state, clearing the page range `map` writes is the identity: `map` needs no
+    table entry and no pending token there, so `tlbGedeckt_erreichbar` leaves no cell to clear. The
+    clearing of all cores in one step has therefore been dropped from `map` in the model without
+    losing a guarantee; it described no hardware step. -/
+theorem tlbGedeckt_map_invalidate_erreichbar (k : Katalog) (code : List MemInstruction)
+    (start : AussenStart) {s : MemState}
+    (reach : (memProgram k code).system.IErreichbar (I.start (memProgram k code) start).2 s)
+    (c : Kontext) (sp base pages : Nat) {space : Adressraum}
+    (found : (s.lokal c).spaces[sp]? = some space)
+    (habb : ∀ i < pages, space.abbildung (base + i) = none)
+    (htok : ∀ token ∈ space.ausstehend, ∀ i < pages, ¬ token.contains (base + i)) :
+    (s.lokal c).tlb.invalidate sp base pages = (s.lokal c).tlb := by
+  exact TranslationCache.invalidate_eq_self _ sp base pages
+    (MemFrame.TlbGedeckt.keine_Zelle (tlbGedeckt_erreichbar k code start reach c) found habb htok)
+
 end Gabbro.Core.Ast.LowLevel
