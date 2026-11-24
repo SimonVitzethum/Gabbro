@@ -44,7 +44,7 @@ theorem MemFrame.tabellenSicht_set {frame : MemFrame} {sp : Nat} {new : Adressra
     ({ frame with spaces := frame.spaces.set sp new } : MemFrame).tabellenSicht sp page =
       new.abbildung page := by
   have found : (frame.spaces.set sp new)[sp]? = some new :=
-    List.getElem?_set_self (by simp only [List.length_set]; exact lt)
+    List.getElem?_set_self lt
   have hfound : ({ frame with spaces := frame.spaces.set sp new } : MemFrame).spaces[sp]? =
       some new :=
     found
