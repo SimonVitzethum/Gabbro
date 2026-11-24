@@ -517,11 +517,11 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
         have hnone : (zAB0.kerne (Nat.succ (Nat.succ m))).laeuft = none := rfl
         rw [hnone] at hdispk
         cases hdispk
-    · intro a hactive
-      by_cases ha : a % 2 = 0
-        · exact  ⟨a, Nat.le_refl _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq ha⟩⟩
-        · have h1 : (a + 1) % 2 = 0 := by omega
-          exact ⟨a + 1, Nat.le_succ _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq h1⟩⟩
+  · intro a hactive
+    by_cases ha : a % 2 = 0
+      · exact  ⟨a, Nat.le_refl _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq ha⟩⟩
+      · have h1 : (a + 1) % 2 = 0 := by omega
+        exact ⟨a + 1, Nat.le_succ _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq h1⟩⟩
 
 /-- … but `waitFree` fails for `B`: unboundedly many own steps, never discharged. -/
 theorem ab_waitfrei_neg : ¬ WaitFrei (E := E_w dispatch2) ρAB ηAB := by
