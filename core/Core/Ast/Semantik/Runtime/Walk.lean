@@ -50,7 +50,7 @@ theorem Rahmen.WaechterHalten.after (checked : first.WaechterHalten code)
   intro frame reached running active instruction lookup demand guard
   exact checked frame (walk.trans reached) running active instruction lookup demand guard
 
-theorem Rahmen.WaechterHalten.prefix (checked : frame.WaechterHalten (code ++ suffix)) :
+theorem Rahmen.WaechterHalten.prefix {frame : Rahmen} (checked : frame.WaechterHalten (code ++ suffix)) :
     frame.WaechterHalten code := by
   intro current reached running active instruction lookup demand guard
   have inside := (List.getElem?_eq_some_iff.mp lookup).1

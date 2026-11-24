@@ -132,11 +132,9 @@ theorem variable_reads (scope : Scope) (args : VariableArgs scope)
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem variable_erfuellbar  : ∃ scope, (localValue scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (by intro c h; cases h)
-  let scope : Scope := [⟨name, .bool, false⟩]
-  let ordinary : ordinaryLocal name := by
-    change ['x'] ≠ "true".toList ∧ ['x'] ≠ "false".toList
-    simp
-  let args : VariableArgs scope := ⟨.here, trivial, ordinary⟩
+  let scope : Scope := [⟨name, .bool, false, false⟩]
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
+  let args : VariableArgs scope := ⟨.here, ⟨trivial, trivial⟩, ordinary⟩
   exact ⟨scope, Rule.satisfiableOfPrint args (variable_print args)⟩
 
 def negativeLit (scope : Scope) : Rule (.expression scope) Nat where
