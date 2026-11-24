@@ -326,7 +326,7 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (value : Expr scope type) : Stmt result scope (⟨name, type, true, false⟩ :: scope)
   /-- Each arm consumes exactly the next declared tag and payload shape. -/
   | variantMatch (value : Expr scope (variantValueType name labels payloads))
-      (arms : VariantArms result scope labels payloads) : Stmt result scope scope
+      (arms : VariantArms result scope false labels payloads) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -339,18 +339,18 @@ inductive BracedBlock (result : Option (Ty .value)) : Scope → Type where
 
 /-- Exhaustiveness is the index of an arm sequence. The optional final wildcard
     consumes every remaining declared case without binding a payload. -/
-inductive VariantArms (result : Option (Ty .value)) : Scope →
+inductive VariantArms (result : Option (Ty .value)) : Scope → Bool →
     List Identifier → List (Option (Ty .value)) → Type where
-  | done : VariantArms result scope [] []
+  | done : VariantArms result scope allowWildcard [] []
   | nullary (label : Identifier) (caseName : label.val ≠ ['_']) (body : BracedBlock result scope)
-      (rest : VariantArms result scope labels payloads) :
-      VariantArms result scope (label :: labels) (none :: payloads)
+      (rest : VariantArms result scope true labels payloads) :
+      VariantArms result scope allowWildcard (label :: labels) (none :: payloads)
   | payload (label binder : Identifier) (ordinary : ordinaryLocal binder)
       (body : BracedBlock result (payloadBinding binder type :: scope))
-      (rest : VariantArms result scope labels payloads) :
-      VariantArms result scope (label :: labels) (some type :: payloads)
+      (rest : VariantArms result scope true labels payloads) :
+      VariantArms result scope allowWildcard (label :: labels) (some type :: payloads)
   | wildcard (body : BracedBlock result scope) (nonempty : labels ≠ [])
-      (shape : labels.length = payloads.length) : VariantArms result scope labels payloads
+      (shape : labels.length = payloads.length) : VariantArms result scope true labels payloads
 
 end
 
@@ -368,7 +368,7 @@ def Block.returns : Block result before after → Bool
 def BracedBlock.returns : BracedBlock result before → Bool
   | .braces body => body.returns
 
-def VariantArms.returns : VariantArms result scope labels payloads → Bool
+def VariantArms.returns : VariantArms result scope allowed labels payloads → Bool
   | .done => true
   | .nullary _ _ body rest | .payload _ _ _ body rest => body.returns && rest.returns
   | .wildcard body _ _ => body.returns

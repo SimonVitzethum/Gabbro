@@ -26,7 +26,7 @@ def ArrayTypeIndexAussage : Prop :=
   ∀ (element : WrittenType) count, (WrittenType.array element count).type = .array element.type count
 
 def ArrayTypeSyntaxErfuellbarAussage : Prop :=
-  ∃ (element : WrittenType) count text pieces,
+  ∃ (element : WrittenType) (count : Nat) (text : RawText) (pieces : List Piece),
     (WrittenType.array element count).valid ∧ Lexed text pieces ∧
       TypeReads (canonicalTokens pieces) (.array element count) []
 
@@ -50,7 +50,7 @@ def TupleTypeIndexAussage : Prop :=
     (WrittenType.tuple first second tail).type = tupleType (first.type :: second.type :: tail.types)
 
 def TupleTypeSyntaxErfuellbarAussage : Prop :=
-  ∃ (first second : WrittenType) tail text pieces,
+  ∃ (first second : WrittenType) (tail : WrittenTypes) (text : RawText) (pieces : List Piece),
     (WrittenType.tuple first second tail).valid ∧ Lexed text pieces ∧
       TypeReads (canonicalTokens pieces) (.tuple first second tail) []
 

@@ -125,7 +125,7 @@ def Block.rangeUses (index : Identifier) : Block result before after → Bool ×
 
 def BracedBlock.rangeUses (index : Identifier) : BracedBlock result before → Bool × Bool
   | .braces body => Block.rangeUses index body
-def VariantArms.rangeUses (index : Identifier) : VariantArms result scope labels payloads → Bool × Bool
+def VariantArms.rangeUses (index : Identifier) : VariantArms result scope allowed labels payloads → Bool × Bool
   | .done => (false, false)
   | .nullary _ _ body rest =>
     let a := BracedBlock.rangeUses index body
@@ -205,7 +205,7 @@ def bracedBlock : BracedBlock result before → Fragment
   | @BracedBlock.braces _ _ after body =>
     (block body).anhaengen (.einzel (.blockEnde (after.length - before.length)))
 
-def variantArms : VariantArms result scope labels payloads → MatchCode
+def variantArms : VariantArms result scope allowed labels payloads → MatchCode
   | .done => ⟨.leer, []⟩
   | .nullary _ _ body rest => (variantArms rest).prepend (bracedBlock body) false
   | .payload _ _ _ body rest => (variantArms rest).prepend (bracedBlock body) true

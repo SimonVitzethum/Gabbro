@@ -49,14 +49,14 @@ structure VariantMatchArgs (ctx : Scope × Option (Ty .value)) where
   labels : List Identifier
   payloads : List (Option (Ty .value))
   value : Expr ctx.1 (variantValueType name labels payloads)
-  arms : VariantArms ctx.2 ctx.1 labels payloads
+  arms : VariantArms ctx.2 ctx.1 false labels payloads
 
 def variantMatch (ctx : Scope × Option (Ty .value)) :
     Rule (.statement ctx.1 ctx.2) (VariantMatchArgs ctx) where
   tree := fun a => ⟨_, .variantMatch a.value a.arms⟩
   production := fun a tokens =>
     ∃ input arms, tokens = keyword "match" :: input ∧
-      ExprReads ctx.1 0 input a.value (openBrace :: arms) ∧ VariantArmsRead ctx.2 ctx.1 arms a.arms []
+      ExprReads ctx.1 0 input a.value (openBrace :: arms) ∧ VariantArmsRead ctx.2 ctx.1 false arms a.arms []
 
 def TaggedDeclInversionAussage : Prop :=
   ∀ {scope input tree rest} (exported : Bool) (name : Identifier),
@@ -89,12 +89,12 @@ def VariantValueDerivationAussage : Prop :=
 def VariantMatchInversionAussage : Prop :=
   ∀ {scope result input tree rest}, StmtReads result scope (keyword "match" :: input) tree rest →
     ∃ (a : VariantMatchArgs (scope, result)) (arms : List Token),
-      ExprReads scope 0 input a.value (openBrace :: arms) ∧ VariantArmsRead result scope arms a.arms rest ∧
+      ExprReads scope 0 input a.value (openBrace :: arms) ∧ VariantArmsRead result scope false arms a.arms rest ∧
       tree = (variantMatch (scope, result)).tree a
 
 def VariantMatchSuffixAussage : Prop :=
-  ∀ {scope result labels payloads input rest} {arms : VariantArms result scope labels payloads},
-    VariantArmsRead result scope input arms rest → rest <:+ input
+  ∀ {scope result allowed labels payloads input rest} {arms : VariantArms result scope allowed labels payloads},
+    VariantArmsRead result scope allowed input arms rest → rest <:+ input
 
 def VariantMatchDerivationAussage : Prop :=
   ∀ ctx, (variantMatch ctx).Entry

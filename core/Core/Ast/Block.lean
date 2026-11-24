@@ -55,7 +55,7 @@ def Block.printItems : Block result before after → List PrintedToken
 def BracedBlock.printPieces : BracedBlock result before → List PrintedToken
   | .braces body => printOpenBrace :: body.printItems ++ [printCloseBrace]
 
-def VariantArms.printPieces : VariantArms result scope labels payloads → List PrintedToken
+def VariantArms.printPieces : VariantArms result scope allowed labels payloads → List PrintedToken
   | .done => []
   | .nullary label _ body rest => [label.print, printMatchArrow] ++ body.printPieces ++ rest.printPieces
   | .payload label binder _ body rest =>
