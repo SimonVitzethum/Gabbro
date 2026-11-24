@@ -201,13 +201,14 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
   case substring =>
     intros
     rename_i base first last baseIH firstIH lastIH rest
-    have baseRead := baseIH (openBracket :: first.printTokens ++ sliceRange :: last.printTokens ++
-      closeBracket :: closeParen :: rest)
+    let lastInput := last.printTokens ++ (closeBracket :: closeParen :: rest)
+    let firstInput := first.printTokens ++ (sliceRange :: lastInput)
+    have baseRead := baseIH (openBracket :: firstInput)
     have firstRead := ExprReads.atom (minimum := 0)
-      (firstIH (sliceRange :: last.printTokens ++ closeBracket :: closeParen :: rest))
+      (firstIH (sliceRange :: lastInput))
       (.stop noOperatorAtSliceRange)
     have lastRead := ExprReads.atom (minimum := 0) (lastIH (closeBracket :: closeParen :: rest)) (.stop noOperatorAtCloseBracket)
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, openBracketToken, closeBracketToken, sliceToken] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, openBracketToken, closeBracketToken, sliceToken, firstInput, lastInput] using
       (AtomReads.grouped (.atom baseRead (.substring base first last (Nat.zero_le _)
         firstRead lastRead (.stop noOperatorAtClose))))
   case textLength =>
