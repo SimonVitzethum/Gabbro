@@ -55,7 +55,8 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | array element count =>
       by_cases h : count = 0
       · simp only [Fits, h]
-      · rfl
+      · change element.array count = element.array count
+        rfl
   | productEnd => rfl
   | product head tail => rfl
   | record name labels layout => rfl

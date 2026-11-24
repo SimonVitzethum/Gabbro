@@ -289,7 +289,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
         change some (⟨PartielleOperation.index,
             (if offset.wert < 0 then count + 1 else offset.wert.toNat, count + 1)⟩ : Bedarf) =
           some (⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩ : Bedarf)
-        rw [if_neg (not_lt_of_ge nonneg), posval]
+        rw [if_neg (not_lt_of_ge nonneg)]
+        rfl
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
@@ -307,7 +308,7 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
         simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, harr', hoff, wert, val,
-          Rahmen.zahl, alsGanzzahl, Option.bind, Option.bind_some,
+          Rahmen.zahl, alsGanzzahl, Option.bind_some,
           if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
           indexPosition, Option.some.injEq, id_eq]
         rfl
