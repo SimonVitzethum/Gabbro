@@ -14,6 +14,13 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.RechteLauf
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Stufung
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Erfuellbar
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Fuellung
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Sicht
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Deckung
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Erhaltung
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.ErhaltungLauf
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Sicher
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Erfuellbar
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Bindung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowJoint
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowWide
