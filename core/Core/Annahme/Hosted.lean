@@ -134,7 +134,7 @@ private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s
   · exact ⟨c, rfl, rechte⟩
 
 theorem akzeptiert : Akzeptiert einheit := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, fluss_lokal⟩, ?_, ?_⟩
+  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, fluss_lokal, ?_⟩, ?_, ?_⟩
   · intro i c s u w plan h
     change regel c s w [plan] u at h
     rcases h.2 with ⟨eq, _, _⟩ | ⟨eq, _, _⟩ <;>
@@ -163,6 +163,7 @@ theorem akzeptiert : Akzeptiert einheit := by
         intro ev mem
         cases Ereignis.frage.inj (List.mem_singleton.mp mem)
         exact ⟨ausgewaehlt, rechte⟩
+  · exact schrankenLokal_leer rfl rfl rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

@@ -85,6 +85,7 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
+public import Core.Beobachtung.SchrankenB9B21Pflichten
 meta import Core.Waechter.Check
 
 #check_core
