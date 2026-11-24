@@ -59,7 +59,7 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
       | some n =>
         rw [hn] at step
         cases step with
-        | schritt _ => exact ⟨n, hn⟩
+        | schritt _ => exact ⟨n, rfl⟩
     | wartet _ gleich _ =>
       exact ⟨s, gleich⟩
 
