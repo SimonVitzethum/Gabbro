@@ -183,7 +183,6 @@ theorem stummer_schritt_koppelt
     by_contra hc
     have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor c).symm.trans kopf
     simp only [Ast.Semantik.kopf, if_neg hc] at h
-  subst centry
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
@@ -271,10 +270,13 @@ theorem stummer_schritt_koppelt
                 have h : Ast.Semantik.kopf p.code w₂ c' = some f₂ :=
                   (sysKopf w₂ c').symm.trans kopf₂'
                 simp only [Ast.Semantik.kopf, if_neg hc] at h
-              subst centry'
+              -- both sides run at the entry context
+              have c_eq : c' = c := centry'.trans centry.symm
+              rw [c_eq] at kopf₂'
               have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
               subst ff₂
               obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau f impl₂'rule aus₂'
+              rw [c_eq] at nachGlied₂
               have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                 rw [nachEq₂, nachGlied₂]
               have still₂ : schrittBeob ρ₂ predictor t = [] :=
