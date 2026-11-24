@@ -120,6 +120,14 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
+  · intro scope labels payloads label caseName body rest ih i hib hb
+    cases i with
+    | zero => simp at hb
+    | succ j =>
+        have hj : j < (variantArms rest).branches.length := by omega
+        have hb' : ((variantArms rest).branches[j]).2 = true := by
+          simpa using hb
+        simpa using ih j hj hb'
 
 private theorem vm_case_lt (cases : List (Option (Ty .value))) :
     ∀ value : Wert (variantLayout cases), (variantCase cases value).1 < cases.length := by
@@ -197,12 +205,13 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
   have hget : branches[i]? = some entry := List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
   have hval : (frame.temp 0).bind
       (wertAls (variantValueType a.name a.labels a.payloads)) = some value := by
-    simp [hv, wertAls]
+    simp [hv, wertAls, variantValueType]
   have hnext : ((variantMatchForm ctx).befehl a).auswerten frame =
       { frame with
         pc := frame.pc + entry.1
         lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
-    simp [Befehl.auswerten, variantMatchForm, hval, i, payload, branches, entry, hget, wertAls]
+    simp [Befehl.auswerten, variantMatchForm, hval, i, payload, branches, entry, hget,
+      wertAls, variantValueType]
   refine ⟨entry.1, entry.2, hget, ?_⟩
   dsimp
   rw [hnext]

@@ -112,10 +112,10 @@ theorem variantValue_payload : VariantValuePayloadAussage := by
   intro scope a frame payload h
   constructor
   · change ((variantActual (a.payloads.get a.index) (frame.temp 0)).bind
-      (fun value => some ⟨variantValueType a.ref.name.val a.labels a.payloads,
-        variantInject a.payloads a.index value⟩)) =
-      some ⟨variantValueType a.ref.name.val a.labels a.payloads,
-        variantInject a.payloads a.index payload⟩
+      (fun value => (some ⟨variantValueType a.ref.name.val a.labels a.payloads,
+        variantInject a.payloads a.index value⟩ : Option Dynamisch))) =
+      (some ⟨variantValueType a.ref.name.val a.labels a.payloads,
+        variantInject a.payloads a.index payload⟩ : Option Dynamisch)
     rw [h]
     rfl
   · exact vv_case_inject a.payloads a.index payload
