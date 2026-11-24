@@ -249,9 +249,10 @@ def befehlDecode (n : Nat) : Option Befehl := do
       some (.bindeRegion receiver init')
   | _ => none
 
+set_option maxHeartbeats 800000 in
 instance : Encodable Befehl :=
   Encodable.ofLeftInjection befehlCode befehlDecode (by
     intro b
-    cases b <;> simp only [befehlCode, befehlDecode, Encodable.encodek])
+    cases b <;> simp [befehlCode, befehlDecode, Encodable.encodek])
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
