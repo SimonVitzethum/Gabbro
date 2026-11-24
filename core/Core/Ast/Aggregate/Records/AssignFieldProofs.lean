@@ -30,7 +30,7 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   generalize htok : (.word name :: dot :: .word field :: assignment :: input) = toks at read
   cases read with
   | assignField ref visible writable fld index checked fits valueRead =>
-      rename_i nm labs tys input' value
+      rename_i name nm labs tys input' value
       injection htok with hName hTail
       injection hTail with hDot hTail2
       injection hTail2 with hWord hTail3
@@ -40,21 +40,21 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
       have inputEq : input = input' := hInput
       have valueRead' : ExprReads scope 0 input value (semicolon :: rest) := by
         simpa only [inputEq] using valueRead
-      exact ⟨⟨nm, labs, tys, ref, visible, writable, fld, index, checked, _, value, fits⟩,
+      exact ⟨⟨name, nm, labs, tys, ref, visible, writable, fld, index, checked, _, value, fits⟩,
         hn.symm, hf.symm, valueRead', rfl⟩
-  case assignVar => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case letBinding => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case ret => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case ite => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case retVoid => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case letMutable => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case directCall => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case forRange => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case tupleBind => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case letMutableValue => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
-  case variantMatch => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | assignVar => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | letBinding => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | ret => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | ite => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | retVoid => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | letMutable => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | directCall => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | forRange => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | tupleBind => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | letMutableValue => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  | variantMatch => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read
