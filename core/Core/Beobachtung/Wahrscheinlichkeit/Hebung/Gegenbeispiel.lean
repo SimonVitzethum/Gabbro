@@ -42,15 +42,19 @@ theorem hebeAussage_falsch : ¬ hebeAussage := by
   let h : Umgebung := Umgebung.referenz k 2 (fun _ _ => AussenSicht.leer)
   have hw : Hardware k h :=
     Umgebung.referenz_hardware k 2 (fun _ _ => AussenSicht.leer)
-      (Plattform.katalog_wohlgeformt .x86_64) (by decide)
+      (Plattform.katalog_wohlgeformt .x86_64) (by omega)
   let Q : Zufallsquelle := muenzQuelle
   let B : Zufallsbindung := ⟨Q, .hosted, []⟩
   let S : Scheduler := ⟨fun _ _ => 0⟩
   let E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { trivialeEinheit with katalog := k, bild := ⟨Bildformat.elf, fun _ => none, [0]⟩ }
   have selected : E.katalog.enthaelt (Zeile.zufall B.quelle.id) := by
-    simpa only [E, B, Q, muenzQuelle, k, Plattform.katalog, Katalog.enthaelt] using
-      (show Zeile.zufall 0 ∈ Plattform.x86_64.katalog.zeilen by decide)
+    change Zeile.zufall 0 ∈ Plattform.x86_64.katalog.zeilen
+    simp only [Plattform.katalog, Plattform.zeilen, ZielZeilen, Plattform.endpunkte,
+      Plattform.dauerZeilen, Plattform.zufallZeilen, List.append_nil, List.cons_append,
+      List.nil_append, List.mem_append, List.mem_cons, List.mem_singleton, List.mem_map,
+      List.not_mem_nil, false_or, or_false, or_true, reduceCtorEq, Zeile.zufall.injEq,
+      Zeile.endpoint.injEq]
   obtain ⟨hb, _⟩ := H Unit Unit Unit Unit Unit Unit Unit Unit Unit E B S h hw selected
   have gueltig := buendel_braucht_bild B S E h hb
   have ungueltig : ¬ E.bild.gueltig E.katalog.plattform.ziel := by

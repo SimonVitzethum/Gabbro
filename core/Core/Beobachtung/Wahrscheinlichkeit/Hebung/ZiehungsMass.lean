@@ -74,7 +74,17 @@ instance bandMass_istWMass (Q : Zufallsquelle) : IsProbabilityMeasure (bandMass 
 theorem zylinderMenge_messbar (Q : Zufallsquelle) (pfad : List (Nat × Fin Q.anz)) :
     MeasurableSet {band : Band | ∀ p ∈ pfad, band Q.id p.1 % Q.anz = p.2.val} := by
   induction pfad with
-  | nil => simp
+  | nil =>
+      have hset : {band : Band | ∀ p ∈ ([] : List (Nat × Fin Q.anz)),
+          band Q.id p.1 % Q.anz = p.2.val} = Set.univ := by
+        ext band
+        constructor
+        · intro _
+          trivial
+        · intro _ p hp
+          cases hp
+      rw [hset]
+      exact MeasurableSet.univ
   | cons p ps ih =>
       have hcoord : MeasurableSet {band : Band | band Q.id p.1 % Q.anz = p.2.val} := by
         measurability
