@@ -86,7 +86,7 @@ theorem unmap_meaning : UnmapMeaningAussage := by
     have hip : i < pages := List.mem_range.mp hi
     rw [hframes i hip]
     exact beq_self_eq_true _
-  let token : Zuruecknahme := ⟨sp, base, pages, space.generation + 1, first.frame⟩
+  let token : Zuruecknahme := ⟨sp, base, pages, space.generation + 1, first.frame, false⟩
   let entries := space.entries.filter (fun (page, _) => !decide (pageRange base pages page))
   let cleared : Adressraum := ⟨space.tabellen, entries, token.generation,
     token :: space.ausstehend⟩

@@ -158,4 +158,162 @@ theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
   rw [phases, crash]
   exact pflicht.2 η valid
 
+/-- The protocol is satisfiable: the four-phase run of the single core `0`, with no crash and with
+    `kern` naming exactly that core, is a legal trace - including the coverage requirement. -/
+theorem FlushProtokoll_erfuellbar :
+    ∃ spur : Nat → Option (Nat × FlushPhase),
+      spur 0 = some (0, .senden [0]) ∧
+      spur 1 = some (0, .handler 0) ∧
+      spur 2 = some (0, .bestaetigen 0) ∧
+      spur 3 = some (0, .freigeben) ∧
+      FlushProtokoll spur (fun _ => False) (fun k => k = 0) := by
+  let spur : Nat → Option (Nat × FlushPhase) := fun t =>
+    if t = 0 then some (0, .senden [0])
+    else if t = 1 then some (0, .handler 0)
+    else if t = 2 then some (0, .bestaetigen 0)
+    else if t = 3 then some (0, .freigeben)
+    else none
+  have inv : ∀ t id phase, spur t = some (id, phase) →
+      (t = 0 ∧ id = 0 ∧ phase = .senden [0]) ∨
+      (t = 1 ∧ id = 0 ∧ phase = .handler 0) ∨
+      (t = 2 ∧ id = 0 ∧ phase = .bestaetigen 0) ∨
+      (t = 3 ∧ id = 0 ∧ phase = .freigeben) := by
+    intro t id phase h
+    by_cases t0 : t = 0
+    · have e : spur t = some (0, FlushPhase.senden [0]) := by simp only [spur, if_pos t0]
+      rw [e] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      exact Or.inl ⟨t0, h.1.symm, h.2.symm⟩
+    · by_cases t1 : t = 1
+      · have e : spur t = some (0, FlushPhase.handler 0) := by
+          simp only [spur, if_neg t0, if_pos t1]
+        rw [e] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        exact Or.inr (Or.inl ⟨t1, h.1.symm, h.2.symm⟩)
+      · by_cases t2 : t = 2
+        · have e : spur t = some (0, FlushPhase.bestaetigen 0) := by
+            simp only [spur, if_neg t0, if_neg t1, if_pos t2]
+          rw [e] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          exact Or.inr (Or.inr (Or.inl ⟨t2, h.1.symm, h.2.symm⟩))
+        · by_cases t3 : t = 3
+          · have e : spur t = some (0, FlushPhase.freigeben) := by
+              simp only [spur, if_neg t0, if_neg t1, if_neg t2, if_pos t3]
+            rw [e] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            exact Or.inr (Or.inr (Or.inr ⟨t3, h.1.symm, h.2.symm⟩))
+          · have e : spur t = none := by
+              simp only [spur, if_neg t0, if_neg t1, if_neg t2, if_neg t3]
+            rw [e] at h
+            cases h
+  let phasenIndex : FlushPhase → Nat := fun phase =>
+    match phase with
+    | .senden _ => 0
+    | .handler _ => 1
+    | .bestaetigen _ => 2
+    | .freigeben => 3
+  have posIndex : ∀ {t id phase}, spur t = some (id, phase) → t = phasenIndex phase := by
+    intro t id phase h
+    cases phase with
+    | senden ziele =>
+        rcases inv t id (.senden ziele) h with h0 | h0 | h0 | h0
+        · exact h0.1
+        · cases h0.2.2
+        · cases h0.2.2
+        · cases h0.2.2
+    | handler k =>
+        rcases inv t id (.handler k) h with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · exact h0.1
+        · cases h0.2.2
+        · cases h0.2.2
+    | bestaetigen k =>
+        rcases inv t id (.bestaetigen k) h with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · cases h0.2.2
+        · exact h0.1
+        · cases h0.2.2
+    | freigeben =>
+        rcases inv t id .freigeben h with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · cases h0.2.2
+        · cases h0.2.2
+        · exact h0.1
+  refine ⟨spur, ?_, ?_, ?_, ?_, ?_⟩
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · refine ⟨?_, ?_⟩
+    · refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro id phase t u ht hu
+        have ht' := posIndex ht
+        have hu' := posIndex hu
+        omega
+      · intro id xs ys t u ht hu
+        have ht' := posIndex ht
+        have hu' := posIndex hu
+        change t = 0 at ht'
+        change u = 0 at hu'
+        omega
+      · intro id k t ht
+        rcases inv t id (.handler k) ht with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · have ht1 : t = 1 := h0.1
+          have hid0 : id = 0 := h0.2.1
+          have hkEq : (FlushPhase.handler k) = FlushPhase.handler 0 := h0.2.2
+          cases hkEq
+          subst t
+          subst id
+          refine ⟨0, [0], by omega, ?_, ?_, ?_⟩
+          · rfl
+          · simp only [List.mem_singleton]
+          · intro u hus huu hcrash
+            exact hcrash
+        · cases h0.2.2
+        · cases h0.2.2
+      · intro id k t ht
+        rcases inv t id (.bestaetigen k) ht with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · cases h0.2.2
+        · have ht2 : t = 2 := h0.1
+          have hid0 : id = 0 := h0.2.1
+          have hkEq : (FlushPhase.bestaetigen k) = FlushPhase.bestaetigen 0 := h0.2.2
+          cases hkEq
+          subst t
+          subst id
+          refine ⟨1, by omega, ?_, ?_⟩
+          · rfl
+          · intro u hu1 hu2 hcrash
+            exact hcrash
+        · cases h0.2.2
+      · intro id t ht
+        rcases inv t id .freigeben ht with h0 | h0 | h0 | h0
+        · cases h0.2.2
+        · cases h0.2.2
+        · cases h0.2.2
+        · have ht3 : t = 3 := h0.1
+          have hid0 : id = 0 := h0.2.1
+          subst t
+          subst id
+          refine ⟨0, [0], by omega, ?_, ?_, ?_⟩
+          · rfl
+          · intro u hu0 hu3 hcrash
+            exact hcrash
+          · intro k hk
+            simp only [List.mem_singleton] at hk
+            subst k
+            refine ⟨1, 2, by omega, by omega, by omega, ?_, ?_⟩
+            · rfl
+            · rfl
+    · intro id ziele t ht
+      rcases inv t id (.senden ziele) ht with h0 | h0 | h0 | h0
+      · cases h0.2.2
+        intro k hk
+        simp only [List.mem_singleton]
+        exact hk
+      · cases h0.2.2
+      · cases h0.2.2
+      · cases h0.2.2
+
 end Gabbro.Core.Maschine.I
