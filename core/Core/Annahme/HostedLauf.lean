@@ -94,10 +94,11 @@ private theorem antwort_aus (s : AussenStart) (bytes : List UInt8) {g : Speicher
   obtain ⟨g', step⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2
     (SpeicherAkteur.aussen : SpeicherAkteur Unit)
     (aussenEtikett einrichtung (.antwort (angekommen s bytes))) id
-  have offered : z.AntwortAngeboten einheit.katalog (hardware bytes) 2 (angekommen s bytes) :=
-    ⟨rfl, ⟨decide_eq_true ausgewaehlt, antwort_atomar _ _⟩, ausgewaehlt,
+  have offered : z.AntwortAngeboten einheit.katalog (hardware bytes) 2 (angekommen s bytes) := by
+    refine ⟨rfl, ⟨decide_eq_true ausgewaehlt, ?_⟩, ausgewaehlt,
       ⟨gestellt s, List.mem_cons_self, Nat.zero_le _, Nat.le_succ _, rfl, rfl, rfl⟩,
       fun _ mem => (List.not_mem_nil mem).elim⟩
+    exact antwort_atomar z.verlauf bytes
   exact ⟨g', offered, rfl, .cons (.ohne (Or.inl rfl)) step (.nil _), rfl⟩
 
 private theorem antwortfertig {s : AussenStart} {bytes : List UInt8} {g : SpeicherGraph Unit Unit}
@@ -123,7 +124,7 @@ private theorem beendet {s : AussenStart} {bytes : List UInt8} {g g'}
 private theorem kein_interrupt {s : AussenStart} {bytes : List UInt8} {g g'}
     {t id spur nach}
     (step : UnterbrechungsSchritt einrichtung (hardware bytes) t id (fertig s bytes g g') spur nach) : False := by
-  obtain ⟨_, _, _, _, _, _, angeboten, _, _⟩ := step
+  obtain ⟨_, _, _, _, _, angeboten, _⟩ := step
   have eq := angeboten.2.2.1
   change ([] : List (Nat × Unterbrechung))[id.2]? = some _ at eq
   rw [List.getElem?_nil] at eq
@@ -176,8 +177,7 @@ def dreiTakte {S Ev : Type} {schritt : Nat → S → Ev → S → Prop}
     | 2 => .schritt rfl h₂
     | t + 3 => .wartet rfl rfl (ende t)
 
-theorem protokoll_erfuellbar {s : AussenStart} (zul : einheit.ZulStart (umgebung []) s)
-    (bytes : List UInt8) :
+theorem protokoll_erfuellbar (s : AussenStart) (bytes : List UInt8) :
     ∃ g g',
       FuehrtSchrittAus einrichtung 0 kontext (startZustand s) (binde (startZustand s))
         bindePlan ⟨[], []⟩ (binde (startZustand s)) ∧
@@ -212,7 +212,7 @@ theorem akzeptiert_ideal_mit_antwort :
       η.zeit.spur 2 = some (.antwort a, resp) ∧ resp.aussen = [.antwort a] ∧ a.zu q ∧ a.reply.result.isOk = true ∧
       Aussen.GueltigBeiCommit E.katalog.plattform (η.hw.politik.sicht 2 (η.zeit.zustand 2).verlauf) a.question := by
   obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
-  obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar zul []
+  obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar s []
   let bytes : List UInt8 := []
   let h₀ : I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes) 0
       (startZustand s) (.kontext kontext (), ⟨[], []⟩) (binde (startZustand s)) :=
@@ -224,7 +224,8 @@ theorem akzeptiert_ideal_mit_antwort :
       (fragend s g) (.antwort (angekommen s bytes), antwortSpur s bytes) (fertig s bytes g g') :=
     .antwort rfl reply
   let zeit := dreiTakte h₀ h₁ h₂ (fun t => ideal_still (t + 3))
-  let pause := fun t (_ : Zustand) (_ : KeinSchritt _ t _) => ruhe_erlaubt bytes t
+  let pause := fun t z (_ : KeinSchritt (I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes)) t z) =>
+    ruhe_erlaubt bytes t
   let η : I.Lauf einheit := ⟨s, umgebung bytes, hardware bytes, zeit.erlaubePausen pause, fun _ => none⟩
   have lauf : I.Laeufe einheit η := ⟨erlaubt bytes, konform bytes, zul, rfl,
     zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩
@@ -243,7 +244,7 @@ theorem konkreter_lauf {s : AussenStart} (zul : einheit.ZulStart (umgebung []) s
       ρ.zeit.spur 1 = some (.kontext kontext (), frageSpur s) ∧
       ρ.zeit.spur 2 = some (.antwort (angekommen s bytes), antwortSpur s bytes) ∧
       ∀ t, ρ.zeit.spur (t + 3) = none := by
-  obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar zul bytes
+  obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar s bytes
   let h₀ : Lauffolge einheit (hardware bytes) 0 (some (startZustand s))
       (.kontext kontext (), ⟨[], []⟩) (some (binde (startZustand s))) :=
     .schritt (.kontext rfl ⟨0, rfl, rfl, rfl⟩ (form_binden zul) grant)
