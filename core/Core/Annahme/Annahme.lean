@@ -203,7 +203,7 @@ theorem geschlossen_nicht_akzeptiert [DecidableEq L]
     (C : Kontext → Prop) (h : GeschlossenWartend E (ρ.zeit.zustand t.val) C) :
     ¬ Akzeptiert E := by
   intro ha
-  exact ha.2.2.1 ρ hρ t ⟨C, h⟩
+  exact ha.2.2.2.1 ρ hρ t ⟨C, h⟩
 
 /-- Two locks held cross-wise: each holder waits on the lock the other holds. -/
 def kreuzSperren : Bool → SperrZustand
