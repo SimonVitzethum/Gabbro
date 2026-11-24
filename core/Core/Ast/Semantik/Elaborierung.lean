@@ -298,25 +298,30 @@ def zugelassen (platform : Plattform) : (category : Category) → category.Tree 
 
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=
-  E = elaborieren platform tree ∧ zugelassen platform category tree
+  E = elaborieren platform tree
 
-theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree)
-    (allowed : zugelassen platform category tree) :
-    Elaboriert platform tree (elaborieren platform tree) := ⟨rfl, allowed⟩
+theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree) :
+    Elaboriert platform tree (elaborieren platform tree) := rfl
 
 theorem elab_vollstaendig {category : Category} {tree : category.Tree}
-    (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning.1
+    (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning
 
 theorem Elaboriert.deterministisch {category : Category} {tree : category.Tree}
     (a : Elaboriert platform tree E) (b : Elaboriert platform tree F) : E = F :=
-  a.1.trans b.1.symm
+  a.trans b.symm
+
+/-- The source denotes its elaborated unit only under the platform admission rules.
+    Compositional elaboration can also describe intermediate fragments. -/
+def ZugelassenElaboriert (platform : Plattform) {category : Category}
+    (tree : category.Tree) (E : Einheit) : Prop :=
+  Elaboriert platform tree E ∧ zugelassen platform category tree
 
 def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → Einheit → Prop :=
-  Ast.Bezeichnet (@Elaboriert platform category)
+  Ast.Bezeichnet (@ZugelassenElaboriert platform category)
 
 theorem bezeichnet_deterministisch
     (a : Bezeichnet platform category text E) (b : Bezeichnet platform category text F) : E = F :=
-  Ast.bezeichnet_deterministic (elaborates := @Elaboriert platform category)
-    (fun left right => left.deterministisch right) a b
+  Ast.bezeichnet_deterministic (elaborates := @ZugelassenElaboriert platform category)
+    (fun left right => left.1.deterministisch right.1) a b
 
 end Gabbro.Core.Ast.Semantik

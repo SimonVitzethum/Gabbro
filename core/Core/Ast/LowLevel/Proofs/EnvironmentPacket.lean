@@ -8,7 +8,7 @@ public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 namespace Gabbro.Core.Ast.Semantik
 
 def EnvironmentUnitAussage : Prop :=
-  environmentUnitForm.ParseAussage ∧ environmentUnitForm.ElaboriertAussage ∧
+  environmentUnitForm.ParseAussage ∧ EnvironmentUnitElaboriertAussage ∧
     environmentUnitForm.RealisiertAussage ∧ EnvironmentUnitAdmissionAussage ∧
     EnvironmentUnitTransferAussage ∧ environmentUnitForm.AnnahmeAussage ∧
     environmentUnitForm.IdealAussage ∧ environmentUnitForm.EinheitAussage ∧

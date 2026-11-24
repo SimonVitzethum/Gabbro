@@ -59,7 +59,7 @@ theorem environmentUnit_realisiert : environmentUnitForm.RealisiertAussage :=
     catalogue, including when later declarations are valid. -/
 def EnvironmentUnitAdmissionAussage : Prop :=
   ∀ (p : Plattform) (args : EnvironmentArgs) (E : Einheit),
-    Elaboriert (category := .unit) p args.unit E →
+    ZugelassenElaboriert (category := .unit) p args.unit E →
     args.row.zugelassen E.katalog args.abi ∧
     ((programm args.unit).environment.map (fun e => e.1.val)).Nodup
 
@@ -71,7 +71,7 @@ theorem environmentUnit_admission : EnvironmentUnitAdmissionAussage := by
   exact ⟨allowed _ present, unique⟩
 
 theorem environmentUnit_psci_x86_refused (args : EnvironmentArgs) (row : args.row = .psci)
-    (E : Einheit) : ¬ Elaboriert (category := .unit) .x86_64 args.unit E := by
+    (E : Einheit) : ¬ ZugelassenElaboriert (category := .unit) .x86_64 args.unit E := by
   intro meaning
   have selected := (environmentUnit_admission .x86_64 args E meaning).1
   rw [row] at selected
@@ -102,9 +102,12 @@ def EnvironmentUnitErfuellbarAussage : Prop :=
     Annahme.Akzeptiert E ∧ Hardware E.katalog env ∧ E.ZulStart env start ∧
     E.system.IErreichbar (I.start E start).2 s ∧ Realisiert environmentUnitForm p args s
 
-theorem environmentUnit_elaboriert : environmentUnitForm.ElaboriertAussage := by
-  intro platform args allowed
-  exact elab_korrekt platform (environmentUnitForm.produktion.tree args) allowed
+def EnvironmentUnitElaboriertAussage : Prop :=
+  ∀ platform args, zugelassen platform .unit args.unit →
+    ZugelassenElaboriert (category := .unit) platform args.unit (environmentUnitForm.einheit platform args)
+
+theorem environmentUnit_elaboriert : EnvironmentUnitElaboriertAussage :=
+  fun _ _ allowed => ⟨rfl, allowed⟩
 
 theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
   intro platform args
