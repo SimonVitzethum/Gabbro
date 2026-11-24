@@ -70,7 +70,7 @@ inductive SignedReads : List Token → Int → List Token → Prop where
 
 mutual
 
-inductive TypeReads scope (scope : Scope) : List Token → WrittenType → List Token → Prop where
+inductive TypeReads (scope : Scope) : List Token → WrittenType → List Token → Prop where
   | bool : TypeReads scope (keyword "bool" :: rest) .bool rest
   | integer (valid : (WrittenType.integer signed width none).valid scope)
       (closed : ∀ more, rest ≠ keyword "in" :: more) :
@@ -92,7 +92,7 @@ inductive TypeReads scope (scope : Scope) : List Token → WrittenType → List 
       TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest)
         (.indexOption carrier count) rest
 
-inductive TypeItemsTail scope (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
+inductive TypeItemsTail (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
   | close : TypeItemsTail scope (closeParen :: rest) .empty rest
   | comma : TypeReads scope input head more → TypeItemsTail scope more tail rest →
       TypeItemsTail scope (comma :: input) (.next head tail) rest
@@ -118,8 +118,10 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     | false => cases h
     | true =>
       have tail : (toString w).toList = ['n', 'd', 'e', 'x'] := (List.cons.inj h).2
+      have digits : (toString w).toList = Nat.toDigits 10 w := by
+        rw [Nat.toString_eq_ofList_toDigits, String.toList_ofList]
       have member : 'n' ∈ Nat.toDigits 10 w := by
-        rw [← String.toList_ofList, ← Nat.toString_eq_ofList_toDigits, tail]
+        rw [← digits, tail]
         exact List.mem_cons_self
       have digit := Nat.isDigit_of_mem_toDigits (b := 10) (by decide) (by decide) member
       contradiction
@@ -324,19 +326,20 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
       TypeItemsTail scope (trees.printTail.map PrintedToken.value ++ closeParen :: rest) trees rest)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid
   · intro _ rest _
-      have hp : printBoolType.value = keyword "bool" := by rfl
-      simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
-        (TypeReads.bool (rest := rest))
+    have hp : printBoolType.value = keyword "bool" := by rfl
+    simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
+      (TypeReads.bool (rest := rest))
   · intro signed width interval valid rest closed
-      cases interval with
-      | none =>
-          simpa only [WrittenType.printPieces, hpInt, List.map_cons, List.map_nil, List.singleton_append] using
-            (TypeReads.integer (signed := signed) (width := width) valid closed)
-      | some bounds =>
-          have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest); have hiRead := signed_printReads bounds.2 rest
-          simpa only [WrittenType.printPieces, hpInt, hpIn, hpRange, List.map_append, List.map_cons, List.map_nil,
-            List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using
-            (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
+    cases interval with
+    | none =>
+        simpa only [WrittenType.printPieces, hpInt, List.map_cons, List.map_nil, List.singleton_append] using
+          (TypeReads.integer (signed := signed) (width := width) valid closed)
+    | some bounds =>
+        have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest)
+        have hiRead := signed_printReads bounds.2 rest
+        simpa only [WrittenType.printPieces, hpInt, hpIn, hpRange, List.map_append, List.map_cons, List.map_nil,
+          List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using
+          (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
 
   · intro element count elementPrint valid rest _
     have boundRead : ExprReads [] 0 (.natural count :: closeBracket :: rest)
