@@ -39,7 +39,7 @@ namespace Gabbro.Core.Beobachtung
     source law; the run event's preimage contains the cylinder, so the checker's
     inequality `w ≥ p` carries over. -/
 def prEreignisAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
@@ -53,7 +53,7 @@ def prEreignisAussage : Prop :=
     has measure at most `(1 - q)^n` by decay; the geometric series sums to
     `c / q ≤ b` by the checker's certificate. -/
 def kostenErwartungAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
@@ -68,7 +68,7 @@ def kostenErwartungAussage : Prop :=
     measure zero; the exit link puts the target's preimage above the complement,
     hence measure one. -/
 def fastSicherAbschlussAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
@@ -82,7 +82,7 @@ def fastSicherAbschlussAussage : Prop :=
     the set of bands that have not yet succeeded by cut `n`; geometric decay
     drives it to zero, the exit link yields the goal with measure one. -/
 def fastSicherFortschrittAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
@@ -96,7 +96,7 @@ def fastSicherFortschrittAussage : Prop :=
     Sketch: fix the program; bound the adversary's distinguishing advantage by
     the query budget and the primitive's named hardness; no checker step. -/
 def infoTheoretischAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
@@ -113,7 +113,7 @@ def infoTheoretischAussage : Prop :=
     adversary as a black box, so its success bounds the scheme's success up to
     the stated factor; the primitive's hardness stays a named assumption. -/
 def reduktionAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Bedingung Wahl Form : Type) [DecidableEq L]
+  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
     (hb : Hebebuendel B S E h)
