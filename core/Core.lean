@@ -91,6 +91,8 @@ public import Core.Beobachtung.Unentscheidbar.Modell
 public import Core.Beobachtung.Unentscheidbar.Reduktion
 public import Core.Beobachtung.Unentscheidbar.Rice
 public import Core.Beobachtung.SchrankenBeweise.Leicht
+public import Core.Beobachtung.SchrankenBeweise.Mittel
+public import Core.Beobachtung.SchrankenBeweise.Gegenbeispiel
 meta import Core.Waechter.Check
 
 #check_core
