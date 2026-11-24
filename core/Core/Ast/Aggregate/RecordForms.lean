@@ -77,8 +77,10 @@ def AssignFieldFrameAussage : Prop :=
     frame.temp 0 = some ⟨args.source, value⟩ →
     let next := ((assignFieldForm ctx).befehl args).auswerten frame
     let widened := Wert.widen args.source (args.types.get args.index) args.fits value
-    next.lokale[args.ref.index]? =
-      some (some ⟨recordValueType args.name args.labels args.types, tupleSet args.types args.index widened record⟩) ∧
+    let layout : Wert (tupleType args.types) := record
+    let updated : Wert (recordValueType args.name args.labels args.types) :=
+      tupleSet args.types args.index widened layout
+    next.lokale[args.ref.index]? = some (some ⟨recordValueType args.name args.labels args.types, updated⟩) ∧
       (∀ i, i ≠ args.ref.index → next.lokale[i]? = frame.lokale[i]?) ∧
       next.pc = frame.pc + 1 ∧ next.temp = frame.temp
 
