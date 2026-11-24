@@ -188,6 +188,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
   · intros
     rename_i name ordinary exprRead letTail tree rest other
+    trace_state
     obtain ⟨name', ordinary', _, value', more', sameName, read', tail'⟩ := other.let_header
     have nameEq : name' = name := Subtype.ext sameName
     cases nameEq
@@ -196,6 +197,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     exact LetTailReads.deterministic letTail tail'
   · intros
     rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead tree rest other
+    trace_state
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
     cases treeEq
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local s t) = ⟨_, ref'⟩ :=
@@ -206,6 +208,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     exact ⟨rfl, (List.cons.inj suffix).2⟩
   · intros
     rename_i declared fits exprRead tree rest other
+    trace_state
     cases declared
     rcases other.ret_inversion with ⟨t, value', fits', read', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
@@ -218,6 +221,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       | atom a t => exact AtomReads.not_assignment a
   · intros
     rename_i condExpr first yesBlock more noBlock condRead yesRead noRead ihYes ihNo tree rest other
+    trace_state
     rcases other.ite_inversion with ⟨cond', first', yes', more', no', condRead', yesRead', noRead', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
       obtain ⟨same, firstEq⟩ := ExprReads.deterministic condRead condRead'
@@ -235,10 +239,12 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       | atom a t => exact AtomReads.not_assignment a
   · intros
     rename_i other
+    trace_state
     cases other
     exact ⟨rfl, rfl⟩
   · intros
     rename_i first next stRead blockRead ihFirst ihBlock other
+    trace_state
     cases other with
     | done => exact (StmtReads.disjoint_closeBrace stRead).elim
     | step first' next' stRead' blockRead' =>
@@ -250,6 +256,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
         exact ⟨rfl, restEq⟩
   · intros
     rename_i body inner ih other
+    trace_state
     cases other with
     | braced inner' =>
         obtain ⟨same, rfl⟩ := ih inner'
@@ -269,6 +276,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     exact ⟨rfl, rfl⟩
   · intros
     rename_i first next stRead blockRead ihBlock other
+    trace_state
     trace_state
     cases other with
     | done => exact (StmtReads.disjoint_closeBrace stRead).elim
