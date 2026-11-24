@@ -145,23 +145,6 @@ theorem fragment_kontext_schritt_still
           simp only [List.filterMap_nil, List.flatMap_nil, List.nil_append, hKontext,
             hKeinEnde, if_false]
 
-/-- A live head sits at the entry context. -/
-theorem kopf_eintritt {p : Fragment} {s : Ast.Semantik.Zustand} {f : Befehl} {c : Kontext}
-    (h : Ast.Semantik.kopf p.code s c = some f) : c = Ast.Semantik.eintritt := by
-  cases c with
-  | faden k =>
-    cases k with
-    | zero => rfl
-    | succ k =>
-      simp only [Ast.Semantik.kopf] at h
-      cases h
-  | handler _ _ _ =>
-    simp only [Ast.Semantik.kopf] at h
-    cases h
-  | nmi _ _ =>
-    simp only [Ast.Semantik.kopf] at h
-    cases h
-
 /-- A silent fragment step preserves the coupling. Same-cut offers coincide, so the
     right run provably takes the same silent step (lockstep through step kinds); both
     sides advance to publicly equal post-states with empty observations. -/
@@ -195,9 +178,6 @@ theorem stummer_schritt_koppelt
       simp only [Ast.Semantik.kopf, lokEqFun.symm, statusEq.symm]
     rw [sysKopf, h, ← sysKopf]
     exact kopf
-  -- a live head sits at the entry context
-  have centry : c = Ast.Semantik.eintritt :=
-    kopf_eintritt ((sysKopf vor c).symm.trans kopf)
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
@@ -283,12 +263,19 @@ theorem stummer_schritt_koppelt
               cases step₂' with
               | schritt impl₂' =>
                 cases impl₂' with
-                | kontext _ _ regel₂' aus₂' =>
+                | kontext _ bereit₂' regel₂' aus₂' =>
                   obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
-                  have centry' : c₂ = Ast.Semantik.eintritt :=
-                    kopf_eintritt ((sysKopf w₂ c₂).symm.trans kopf₂')
-                  -- both sides run at the entry context
-                  have c_eq : c₂ = c := centry'.trans centry.symm
+                  -- both sides run the context the same core runs: the opportunities and the cores coincide
+                  have c_eq : c₂ = c := by
+                    obtain ⟨k₁, geleg₁, kern₁, _⟩ := bereit₁
+                    obtain ⟨k₂, geleg₂, kern₂, _⟩ := bereit₂'
+                    have core₁ : (ρ₁.hw.angebot t).core = some k₁ := geleg₁
+                    have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
+                    have kk : k₁ = k₂ := Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
+                    have gleich : (w₂.kerne k₂).laeuft = some c := by
+                      rw [← kk, ← kerneEq]
+                      exact kern₁
+                    exact Option.some.inj (kern₂.symm.trans gleich)
                   rw [c_eq] at kopf₂'
                   have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                   subst ff₂
@@ -307,15 +294,15 @@ theorem stummer_schritt_koppelt
                     change NiedrigeBeob _ ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
                     rw [still₂, List.append_nil]
                   -- post-state equality from the coupled pre-states
-                  have regionEq : Ast.Semantik.Zustand.regionLive vor c =
-                      Ast.Semantik.Zustand.regionLive w₂ c := by
+                  have regionEq : Ast.Semantik.Zustand.regionLive vor =
+                      Ast.Semantik.Zustand.regionLive w₂ := by
                     funext slot
                     simp only [Ast.Semantik.Zustand.regionLive, rechteGleich, leihenGleich]
                   have lokPost : (f.nach c vor).lokal = (f.nach c w₂).lokal := by
                     show Function.update vor.lokal c
-                        (f.auswerten (vor.lokal c) (Ast.Semantik.Zustand.regionLive vor c)) =
+                        (f.auswerten (vor.lokal c) (Ast.Semantik.Zustand.regionLive vor)) =
                       Function.update w₂.lokal c
-                        (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂ c))
+                        (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
                   refine ⟨?_, ?_, ?_⟩
                   · -- prefix: both sides append nothing
