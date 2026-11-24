@@ -92,7 +92,7 @@ inductive EntryStack where
 structure ExecScope where
   states : List Identifier
   spaces : List Identifier
-  stacks : List Identifier
+  stapel : List Identifier
   code : List (Identifier × Identifier)
   entries : List Identifier
 
@@ -103,7 +103,7 @@ def ExecScope.slotSpace (scope : ExecScope) (name : Identifier) : Option Nat :=
   List.idxOf? name.val (scope.spaces.map Subtype.val)
 
 def ExecScope.slotStack (scope : ExecScope) (name : Identifier) : Option Nat :=
-  List.idxOf? name.val (scope.stacks.map Subtype.val)
+  List.idxOf? name.val (scope.stapel.map Subtype.val)
 
 def ExecScope.slotCode (scope : ExecScope) (name : Identifier) : Option Nat :=
   List.idxOf? name.val ((scope.code.map Prod.fst).map Subtype.val)
@@ -131,7 +131,7 @@ structure ExecFrame where
   current : Option Nat := none
   activeSpace : Option Nat := none
   halted : Bool := false
-  stacks : List Nat := []
+  stapel : List Nat := []
   spaces : List Nat := []
   entries : List (Identifier × EntryKind) := []
   result : Option ExecResult := none

@@ -38,7 +38,7 @@ def execHead (code : List ExecInstruction) (s : ExecState) (c : Kontext) :
 def execBoot (regions : List Strecke) (core : Option Nat) :
     Startdaten UInt8 PUnit ExecFrame PUnit :=
   ⟨fun c => if c = entryContext then
-      { pc := 0, stacks := List.range regions.length } else {},
+      { pc := 0, stapel := List.range regions.length } else {},
     fun c => if c = entryContext then .laeuft else .ruht,
     fun n => ⟨if some n = core then some entryContext else none, .nutzer, (),
       fun _ => false, 0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩

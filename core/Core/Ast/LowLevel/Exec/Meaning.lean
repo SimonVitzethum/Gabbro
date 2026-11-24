@@ -65,7 +65,7 @@ def ExecInstruction.evaluate (op : ExecInstruction) (s : ExecState) (c : Kontext
       let cur ← frame.current
       let dst ← frame.states[dest]?
       if cur != dest ∧ ¬ frame.halted ∧
-          (match stack with | some st => st < frame.stacks.length | none => True) ∧
+          (match stack with | some st => st < frame.stapel.length | none => True) ∧
           (match dst.translation, space with
             | .on, some sp => sp < frame.spaces.length
             | .off, none => True

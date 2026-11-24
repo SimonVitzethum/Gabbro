@@ -103,7 +103,7 @@ def ExecErfuellbarNach (form : ExecForm) (precedes : List ExecInstruction → Ex
     let E := execProgram k («prefix» ++ [op])
     precedes «prefix» op ∧ Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
     (scope.states.map Subtype.val).Nodup ∧ (scope.spaces.map Subtype.val).Nodup ∧
-    (scope.stacks.map Subtype.val).Nodup ∧ (scope.entries.map Subtype.val).Nodup ∧
+    (scope.stapel.map Subtype.val).Nodup ∧ (scope.entries.map Subtype.val).Nodup ∧
     BezeichnetExec k scope text (execUnit k op) form ∧ ExecParse text tree ∧
     elaborateExec scope tree = some op ∧ E.system.IErreichbar (I.start E start).2 s ∧
     E.system.kopf s entryContext = some op ∧ op.evaluate s entryContext = some next ∧
