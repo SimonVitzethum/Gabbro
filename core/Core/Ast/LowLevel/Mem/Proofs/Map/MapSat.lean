@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Mem.Proofs.Map.MapAux
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -285,9 +286,9 @@ theorem map_joint : MapJointAussage := by
   · exact satScopeNodup.1
   · exact satScopeNodup.2.1
   · exact satScopeNodup.2.2
-  · refine ⟨tree, (mapMemDruck .mapSpace tree).2, ?_⟩
+  · refine ⟨tree, (memDruckKern .mapSpace tree).2, ?_⟩
     exact ⟨satOp, satElab, rfl⟩
-  · exact (mapMemDruck .mapSpace tree).2
+  · exact (memDruckKern .mapSpace tree).2
   · exact satElab
   · exact satHead2
   · exact ⟨satOp, satHead2, ⟨s2frame, satEval2, rfl, rfl⟩⟩

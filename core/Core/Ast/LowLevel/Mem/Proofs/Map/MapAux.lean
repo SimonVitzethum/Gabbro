@@ -84,32 +84,6 @@ private theorem memParseOfPrint {form : MemForm} (tree : MemTree form) : MemPars
   rw [aligned]
   exact memPrintProduction tree
 
-theorem mapMemParse (form : MemForm) : MemParseAussage form := by
-  intro text tree
-  constructor
-  · intro parsed
-    rcases parsed with ⟨_, pieces, lexed, derives⟩
-    refine ⟨pieces, lexed, ?_⟩
-    cases derives with
-    | production production children =>
-        obtain ⟨expected, rfl, reads⟩ := production
-        have h : semanticTokens pieces = expected := DerivesSymbols.terminalTokens children
-        simpa [canonicalTokens, h] using reads
-  · rintro ⟨pieces, lexed, prod⟩
-    refine ⟨True.intro, pieces, lexed, ?_⟩
-    exact memDerivesTerminals (semanticTokens pieces) (by simpa [canonicalTokens] using prod)
-
-theorem mapMemInversion (form : MemForm) : MemInversionAussage form := by
-  intro tree tokens prod
-  obtain ⟨pieces, lexed, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
-  refine ⟨pieces, lexed, ?_⟩
-  rw [aligned]
-  exact memPrintValueEqTokens tree tokens prod
-
-theorem mapMemDruck (form : MemForm) : MemDruckAussage form := by
-  intro tree
-  exact ⟨memPrintProduction tree, memParseOfPrint tree⟩
-
 private theorem rightsToken_injective : Function.Injective rightsToken := by
   intro a b h
   cases a <;> cases b <;> first | rfl | cases h
@@ -165,36 +139,5 @@ private theorem rightsTokens_inj : ∀ {a b : List Speicherdienst}, rightsTokens
               subst rb
               cases heq
               rfl
-
-theorem mapEindeutig : MemEindeutigAussage .mapSpace := by
-  intro a b tokens ha hb
-  cases a with
-  | mapSpace space virt frames rights =>
-      cases b with
-      | mapSpace space' virt' frames' rights' =>
-          simp only [MemTree.production] at ha hb
-          rw [ha] at hb
-          simp only [List.cons_append, List.nil_append] at hb
-          have h1 := List.cons.inj hb
-          have h2 := List.cons.inj h1.2
-          have h3 := List.cons.inj h2.2
-          have h4 := List.cons.inj h3.2
-          have h5 := List.cons.inj h4.2
-          have h6 := List.cons.inj h5.2
-          have h7 := List.cons.inj h6.2
-          have h8 := List.cons.inj h7.2
-          have h9 := List.cons.inj h8.2
-          have h10 := List.cons.inj h9.2
-          have hsp : space = space' := Subtype.ext (by simpa using h3.1)
-          have hvi : virt = virt' := by simpa using h5.1
-          have hfr : frames = frames' := Subtype.ext (by simpa using h7.1)
-          cases hsp
-          cases hvi
-          cases hfr
-          have hmid : rightsTokens rights ++ [closeBrace, closeParen, keyword "else", keyword "full"] =
-              rightsTokens rights' ++ [closeBrace, closeParen, keyword "else", keyword "full"] := h10.2
-          have hr := rightsTokens_inj (List.append_cancel_right hmid)
-          cases hr
-          rfl
 
 end Gabbro.Core.Ast.LowLevel
