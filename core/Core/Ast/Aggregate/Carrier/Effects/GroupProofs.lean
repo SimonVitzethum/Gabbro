@@ -497,18 +497,18 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let s := bg.nach eintritt s1
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
     change kopf (programm tree).code s0 eintritt = some bt
-    simp [E, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
+    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
       startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
       elaborieren, fragment, eintritt, Rahmen.start, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
     change kopf (programm tree).code s1 eintritt = some bg
-    simp [E, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
+    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
       startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
       elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach,
       Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
     change kopf (programm tree).code s eintritt = some b
-    simp [E, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start,
+    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start,
       Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel,
       Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema,
       Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
