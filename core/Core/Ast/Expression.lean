@@ -235,7 +235,7 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   cases read
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
-  · rename_i _ _ ty rest ref vis ord _ _ _ otherRead
+  · rename_i _ ty rest ref vis ord _ _ _ otherRead
     have hty : ty = type := rfl
     cases hty
     refine ⟨ref, vis, ord, rfl, ?_, rfl⟩
