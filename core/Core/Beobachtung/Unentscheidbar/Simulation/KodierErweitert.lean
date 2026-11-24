@@ -219,13 +219,17 @@ def regionInitializerCode (i : RegionInitializer) : Nat :=
     | .address => Option.none
     | .view written _ => Option.some (Encodable.encode written)
 
-noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer := by
+noncomputable def viewRegion (written : WrittenType) : Option RegionInitializer := by
   classical
-  match (Encodable.decode n : Option Nat) with
-  | Option.none => exact Option.some .address
+  if h : written.valid [] then Option.some (.view written h) else Option.none
+
+noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer := do
+  let o : Option Nat ← Encodable.decode n
+  match o with
+  | Option.none => Option.some .address
   | Option.some w => do
       let written : WrittenType ← Encodable.decode w
-      if h : written.valid [] then Option.some (.view written h) else Option.none
+      viewRegion written
 
 instance : Encodable RegionInitializer :=
   Encodable.ofLeftInjection regionInitializerCode regionInitializerDecode (by
