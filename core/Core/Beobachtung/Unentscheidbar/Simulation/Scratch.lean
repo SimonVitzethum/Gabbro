@@ -50,7 +50,7 @@ theorem miniVonCode_miniZuCode : ∀ m : Mini, miniVonCode (miniZuCode m) = some
   | .leaf n => by
       change miniVonCode (Code.pair Code.zero (natZuCode n)) = some (.leaf n)
       unfold miniVonCode
-      simp [codeZuNat_natZuCode]
+      simp [codeZuNat, natZuCode, codeZuNat_natZuCode]
   | .node a b => by
       have ih1 := miniVonCode_miniZuCode a
       have ih2 := miniVonCode_miniZuCode b
