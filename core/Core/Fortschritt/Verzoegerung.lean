@@ -36,29 +36,37 @@ theorem impl_schritt_braucht_gelegenheit {ρ : Maschine.Lauf E} {t c w spur}
     | wartet label _ _ =>
       cases label.symm.trans hstep
   | some s =>
-    cases htakt : ρ.zeit.takt t with
-    | schritt label step =>
-      rw [hz] at step
-      cases step with
-      | schritt h =>
-        cases h with
-        | @kontext _ _ _ _ _ d _ _ _ bereit _ _ =>
-          have heq := Option.some.inj (label.symm.trans hstep)
-          have hc : d = c :=
-            (SchrittWahl.kontext.inj (congrArg Prod.fst heq)).1
-          subst hc
-          exact ⟨s, hz, bereit⟩
-        | antwort _ _ =>
-          have hcontra := Option.some.inj (label.symm.trans hstep)
-          cases congrArg Prod.fst hcontra
-        | interrupt _ _ =>
-          have hcontra := Option.some.inj (label.symm.trans hstep)
-          cases congrArg Prod.fst hcontra
-        | absturz _ =>
-          have hcontra := Option.some.inj (label.symm.trans hstep)
-          cases congrArg Prod.fst hcontra
-    | wartet label _ _ =>
-      cases label.symm.trans hstep
+    cases hp : ρ.zeit.zustand (t + 1) with
+    | none =>
+      cases htakt : ρ.zeit.takt t with
+      | schritt label step =>
+        rw [hz, hp] at step
+        cases step
+      | wartet label _ _ =>
+        cases label.symm.trans hstep
+    | some s' =>
+      cases htakt : ρ.zeit.takt t with
+      | schritt label step =>
+        rw [hz, hp] at step
+        cases step with
+        | schritt h =>
+          cases h with
+          | kontext _ bereit _ _ =>
+            have label' := label
+            rw [hstep] at label'
+            cases label'
+            exact ⟨s, hz, bereit⟩
+          | antwort _ _ =>
+            have hcontra := Option.some.inj (label.symm.trans hstep)
+            cases congrArg Prod.fst hcontra
+          | interrupt _ _ =>
+            have hcontra := Option.some.inj (label.symm.trans hstep)
+            cases congrArg Prod.fst hcontra
+          | absturz _ =>
+            have hcontra := Option.some.inj (label.symm.trans hstep)
+            cases congrArg Prod.fst hcontra
+      | wartet label _ _ =>
+        cases label.symm.trans hstep
 
 /-- An ideal step of a context needs its physical opportunity. -/
 theorem ideal_schritt_braucht_gelegenheit {η : I.Lauf E} {t c w spur}
@@ -67,10 +75,10 @@ theorem ideal_schritt_braucht_gelegenheit {η : I.Lauf E} {t c w spur}
   cases htakt : η.zeit.takt t with
   | schritt label step =>
     cases step with
-    | @kontext _ _ _ _ _ d _ _ _ bereit _ _ =>
-      have heq := Option.some.inj (label.symm.trans hstep)
-      have hc : d = c := (SchrittWahl.kontext.inj (congrArg Prod.fst heq)).1
-      subst hc
+    | kontext _ bereit _ _ =>
+      have label' := label
+      rw [hstep] at label'
+      cases label'
       exact bereit
     | antwort _ _ =>
       have hcontra := Option.some.inj (label.symm.trans hstep)
