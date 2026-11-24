@@ -98,7 +98,7 @@ private theorem memProgramAkzeptiert (code : List MemInstruction) :
     exact ⟨fun _ h => (List.not_mem_nil h).elim,
       fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨?_, ?_⟩
+  · refine ⟨?_, ?_, ?_⟩
     · intro ρ lauf t op args need
       exact False.elim need
     · intro ρ lauf t waiting
@@ -106,6 +106,8 @@ private theorem memProgramAkzeptiert (code : List MemInstruction) :
       obtain ⟨c, hc⟩ := nonEmpty
       obtain ⟨b, hb, _⟩ := blocked c hc
       simpa only [memProgram] using hb
+    · intro ρ lauf t l h _ hne
+      exact (hne rfl).elim
 
 private def flushName : Identifier :=
   keywordName 't' [] (by decide) (by intro c h; cases h)
