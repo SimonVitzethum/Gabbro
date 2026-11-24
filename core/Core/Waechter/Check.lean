@@ -4,6 +4,7 @@ meta import Lean.Elab.Task
 meta import Core.Ast.Inventory.Entries.Arrays
 meta import Core.Ast.Inventory.Entries.Option
 meta import Core.Ast.Inventory.Entries.WrittenTypeStatements
+meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
@@ -341,8 +342,8 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, none⟩]
 
 private meta def auxiliaryEntries : Array RegistryPacket := #[
-  ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.boolTypeEntry⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.integerTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.Semantik.TupleTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket, none⟩,
