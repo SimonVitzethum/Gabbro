@@ -58,7 +58,7 @@ theorem division_guard_exact (frame : Rahmen) (slot : Nat)
     intro zero
     exact hbne (Int.natAbs_eq_zero.mp zero)
   constructor
-  · simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, left, right, Option.bind_some]
+  · simp [Befehl.guard, Rahmen.zahl, alsGanzzahl, left, right]
   · exact habs
 
 -- Mirror expr_ergebnis_typ's temporary-frame proof using List.set and wertIn_widen.
@@ -77,17 +77,11 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
   obtain ⟨widened, valueEq, contents⟩ := wertIn_widen fits value
   have typed : (frame.temp slot).bind (wertIn (.int lo hi)) = some ⟨.int lo hi, widened⟩ := by
     rw [temp]
-    change (wertIn (.int lo hi) ⟨source, value⟩).map (fun w => ⟨.int lo hi, w⟩) =
-      some ⟨.int lo hi, widened⟩
-    rw [valueEq]
-    rfl
-  rw [typed]
+    exact valueEq
+  simp only [Befehl.auswerten, typed]
   refine ⟨widened, ?_, contents, ?_, rfl, rfl⟩
-  · change (frame.lokale.set ref.index (some ⟨.int lo hi, widened⟩))[ref.index]? =
-      some (some ⟨.int lo hi, widened⟩)
-    simp only [List.getElem?_set_self]
+  · simp only [List.getElem?_set_self]
   · intro i different
-    change (frame.lokale.set ref.index (some ⟨.int lo hi, widened⟩))[i]? = frame.lokale[i]?
     simp only [List.getElem?_set_of_ne different]
 
 -- Mirror Quellform.realisiert's instruction lookup, using wertIn_widen to establish a return.
@@ -100,11 +94,9 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
       ∀ code, kopf code after eintritt = none := by
   dsimp only
   obtain ⟨widened, valueEq, contents⟩ := wertIn_widen fits value
-  have typed : (s.lokal eintritt).temp slot |>.bind (wertIn target) = some ⟨target, widened⟩ := by
+  have typed : ((s.lokal eintritt).temp slot).bind (wertIn target) = some ⟨target, widened⟩ := by
     rw [temp]
-    change (wertIn target ⟨source, value⟩).map (fun w => ⟨target, w⟩) = some ⟨target, widened⟩
-    rw [valueEq]
-    rfl
+    exact valueEq
   refine ⟨widened, ?_, contents, ?_⟩
   · simp only [Befehl.nach, Befehl.auswerten, Function.update_same, typed]
   · intro code
@@ -129,19 +121,26 @@ theorem branch_effect (frame : Rahmen) (bit : Bool)
     after.pc = frame.pc + (if bit = whenValue then offset else 1) ∧
       after.lokale = frame.lokale ∧ after.temp = frame.temp ∧ after.rueckgabe = frame.rueckgabe := by
   dsimp only
-  cases h : bit = whenValue <;> simp only [Befehl.auswerten, value, alsBoolean, h, if_true, if_false]
+  by_cases h : bit = whenValue <;> simp [Befehl.auswerten, value, alsBoolean, h]
 
 -- Mirror Block.printItems_reads by following the scope extension through each statement.
 theorem block_scope_extends (body : Block result before after) : before <:+ after := by
-  have stmtExtends : ∀ {r b a} (tree : Stmt r b a), b <:+ a := by
-    intro r b a tree
-    cases tree with
-    | letValue name ordinary value => exact List.suffix_cons _ _
-    | assignVar ref visible writable value fits => exact List.suffix_refl _
-    | ret declared value fits => exact List.suffix_refl _
-    | ite condition yes no => exact List.suffix_refl _
-  induction body with
-  | done => exact List.suffix_refl _
-  | step first rest restIH => exact (stmtExtends first).trans restIH
+  refine @Block.rec result
+    (fun b a t => b <:+ a)
+    (fun b a t => b <:+ a)
+    (fun b t => True)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
+  · simp
+  · intro scope lo hi valueLo valueHi ref visible writable value fits
+    exact List.suffix_refl _
+  · intro expected scope type declared value fits
+    exact List.suffix_refl _
+  · intro scope condition yes no yesIH noIH
+    exact List.suffix_refl _
+  · simp
+  · intro before middle after first rest firstIH restIH
+    exact firstIH.trans restIH
+  · intro before after body bodyIH
+    trivial
 
 end Gabbro.Core.Ast.Semantik
