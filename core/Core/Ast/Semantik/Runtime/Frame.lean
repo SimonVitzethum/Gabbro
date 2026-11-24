@@ -4,6 +4,7 @@ public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
 public import Core.Katalog.FirmwareNamen
 public import Core.Ast.LowLevel.Meaning
+public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 
 @[expose] public section
 
@@ -235,8 +236,8 @@ def Rahmen.pass (frame : Rahmen) (takePass : Bool) (exit : Nat)
       { frame with pc := frame.pc + 1, zaehler := Function.update frame.zaehler frame.pc (some n) }
     | some 0 | none => frame.halt (.ueberlauf handler)
 
-abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
-abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
+abbrev Zustand := Maschine.Zustand Nat Zelle Int Nat Rahmen PUnit
+abbrev Plan := SchrittPlan Nat Zelle Int PUnit
 abbrev Regel := Maschine.Regel Zustand Plan PUnit
 
 

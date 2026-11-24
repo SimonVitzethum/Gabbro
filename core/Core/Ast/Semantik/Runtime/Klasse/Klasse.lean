@@ -1,0 +1,66 @@
+/-
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/Klasse.lean
+  Subject:   THE EFFECT CLASS OF AN INSTRUCTION (MK-03). Every instruction has exactly one class, and the
+             class fixes what its step may touch. The machine obligations of an instruction (simulation,
+             locality, progress, determinacy, safety, the footprint on the bounds) are proved ONCE PER CLASS;
+             an instruction pays its class assignment and, for a class that moves frame data, the frame-level
+             facts of that class. A new class is a new constructor at the END of `Wirkungsklasse`, and the
+             guard demands its generic packet before an instruction can use it (`Befehl.klasse` has no
+             wildcard, so a new instruction must be classified).
+             Both classes below change the acting frame only; the classes of the shared memory, the locks, the
+             outside world, threads, authority, time, persistence, randomness and guests are appended by the
+             packages that introduce their first instruction.
+-/
+module
+
+public import Core.Ast.Semantik.Runtime.Regeln
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+/-- **The effect class of an instruction.**
+    * `lokal`: one private step whose only effect is the acting frame; it never deepens the call stack.
+    * `ruf`: the same, but the step may push one continuation (a call, or the start of the program). -/
+inductive Wirkungsklasse where
+  | lokal
+  | ruf
+
+/-- Classify every instruction. A new instruction must be classified: there is no wildcard. -/
+def Befehl.klasse : Befehl → Wirkungsklasse
+  | .rufe .. | .starte .. => .ruf
+  | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
+  | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
+  | .binden .. | .springeWenn .. | .zuweisen .. | .zurueck .. | .springe ..
+  | .blockEnde .. | .bindeWert .. | .ende | .bindeRegion ..
+  | .definiere .. | .rueckVoid | .pruefeMass .. | .setzePasszahl ..
+  | .whileTest .. | .forAnfang .. | .forTest .. | .forNaechster .. | .zurueckSprung ..
+  | .baueArray .. | .liesArray .. | .baueTupel .. | .liesTupelfeld .. | .bindeTupel ..
+  | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
+  | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
+  | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .lokal
+
+/-- **The stack effect of an instruction**: the frame it steps grows its continuation stack by at
+    most `k`. -/
+def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
+  ∀ (frame : Rahmen) (live : Nat → Bool),
+    (b.auswerten frame live).fortsetzungen.length ≤ frame.fortsetzungen.length + k
+
+/-- **The stack effect of a class**: a `lokal` instruction never deepens the stack, a `ruf` instruction
+    deepens it by at most one frame. -/
+def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
+  | .lokal => 0
+  | .ruf => 1
+
+/-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
+    Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is
+    `Rahmen.schreibe`, a `{ frame with … }` update that keeps `fortsetzungen`, `Rahmen.halt`, or
+    `Rahmen.rueckkehr` (which pops); `rufe` and `starte` end in `Rahmen.ruf`, which pushes one
+    continuation or halts; the `Id.run do` bodies (`forAnfang`, `forTest`, `forNaechster`, `starte`,
+    `bindeRegion`, `textIndex`, `substring`, `waehleVariante`) split on their guards and end in one of
+    these updates. -/
+def KlassenStapelAussage : Prop :=
+  ∀ b : Befehl, b.Stapelwirkung b.klasse.Stapel
+
+end Gabbro.Core.Ast.Semantik

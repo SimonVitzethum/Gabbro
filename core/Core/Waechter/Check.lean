@@ -248,24 +248,20 @@ private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.ownedRegion, `Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.ownedRegionTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.ptr, `Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.pointerTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.skalar, `Gabbro.Core.Ast.Semantik.SkalarSimAussage, some `Gabbro.Core.Ast.Semantik.skalarEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.kontrollfluss, `Gabbro.Core.Ast.Semantik.KontrollflussSimAussage, some `Gabbro.Core.Ast.Semantik.kontrollflussEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.aufrufSchleife, `Gabbro.Core.Ast.Semantik.AufrufSchleifeSimAussage, some `Gabbro.Core.Ast.Semantik.aufrufSchleifeEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.aggregat, `Gabbro.Core.Ast.Semantik.AggregatSimAussage, some `Gabbro.Core.Ast.Semantik.aggregatEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.variante, `Gabbro.Core.Ast.Semantik.VarianteSimAussage, some `Gabbro.Core.Ast.Semantik.varianteEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.text, `Gabbro.Core.Ast.Semantik.TextSimAussage, some `Gabbro.Core.Ast.Semantik.textEntry⟩]
+  ⟨`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lokal, `Gabbro.Core.Ast.Semantik.LokalSimAussage, some `Gabbro.Core.Ast.Semantik.lokalEntry⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Wirkungsklasse.ruf, `Gabbro.Core.Ast.Semantik.RufSimAussage, some `Gabbro.Core.Ast.Semantik.rufEntry⟩]
 
 private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage),
 ]
 
 private meta def flowEntries : Array RegistryPacket := #[
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.skalar, `Gabbro.Core.Beobachtung.SkalarNIAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.kontrollfluss, `Gabbro.Core.Beobachtung.KontrollflussNIAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.aufrufSchleife, `Gabbro.Core.Beobachtung.AufrufSchleifeNIAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.aggregat, `Gabbro.Core.Beobachtung.AggregatNIAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.variante, `Gabbro.Core.Beobachtung.VarianteNIAussage, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.text, `Gabbro.Core.Beobachtung.TextNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.skalar, `Gabbro.Core.Beobachtung.SkalarNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.kontrollfluss, `Gabbro.Core.Beobachtung.KontrollflussNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.aufrufSchleife, `Gabbro.Core.Beobachtung.AufrufSchleifeNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.aggregat, `Gabbro.Core.Beobachtung.AggregatNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.variante, `Gabbro.Core.Beobachtung.VarianteNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.text, `Gabbro.Core.Beobachtung.TextNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.antwort, `Gabbro.Core.Beobachtung.AntwortNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.interrupt, `Gabbro.Core.Beobachtung.InterruptNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.absturz, `Gabbro.Core.Beobachtung.AbsturzNIAussage, none⟩,
@@ -320,10 +316,10 @@ elab "#check_core" : command => do
     let pinNames := pins.map (·.1)
     let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
-    let covered := #[`Gabbro.Core.Ast.Semantik.SimFamilie, `Gabbro.Core.Ast.WrittenType]
+    let covered := #[`Gabbro.Core.Ast.Semantik.Wirkungsklasse, `Gabbro.Core.Ast.WrittenType]
     errors := errors ++ (← auxiliaryRegistryErrors auxiliary pinNames closing.isSome covered)
     errors := errors ++ (← auxiliaryRegistryErrors flowEntries pinNames closing.isSome
-      #[`Gabbro.Core.Ast.Semantik.SimFamilie])
+      #[`Gabbro.Core.Ast.Semantik.LokalFamilie])
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)

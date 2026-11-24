@@ -53,7 +53,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   let code := [defTarget, truth, ret, .blockEnde 0, .rueckVoid,
     defMain, discard, bind, .blockEnde 1, .rueckVoid, launch, .ende]
   have compiled : (programm unit).code = code := rfl
-  let f₀ := (startdaten [] (start.assignment 0) platform start.regions).lokal eintritt
+  let f₀ := (startdaten [] (fun _ => none) (start.assignment 0) platform start.regions).lokal eintritt
   let f₁ := defTarget.auswerten f₀
   let f₂ := defMain.auswerten f₁
   let saved : Fortsetzung := ⟨11, f₂.temp, [], f₂.zaehler, f₂.obergrenzen, none, none, none⟩
@@ -77,7 +77,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   have returned : ret.auswerten f₅ = f₆ := rfl
   have nextFrame {s : Zustand} {b : Befehl} {before after : Rahmen}
       (localEq : s.lokal eintritt = before)
-      (transfer : b.auswerten before (s.regionLive eintritt) = after) :
+      (transfer : b.auswerten before s.regionLive = after) :
       (b.nach eintritt s).lokal eintritt = after := by
     simp only [Befehl.nach, Function.update_self, localEq, transfer]
   have local₀ : s₀.lokal eintritt = f₀ := rfl

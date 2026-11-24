@@ -132,7 +132,7 @@ theorem absturzNI_aus_laengengleichheit (p : Fragment) (plattform : Plattform)
   obtain ⟨u, hu⟩ := abgedeckt
   let L₁ := NiedrigeBeob E ρ₁ predictor t
   let L₂ := NiedrigeBeob E ρ₂ predictor t
-  let crashEvent : NiedrigesEreignis PUnit.{1} Int PUnit.{1} Befehl :=
+  let crashEvent : NiedrigesEreignis Ast.Semantik.Zelle Int PUnit Befehl :=
     .katalog (.persistenz .crash)
   have len : L₁.length = L₂.length := laengen predictor t
   have lenU : L₁.length ≤ (NiedrigeBeob E ρ₂ predictor u).length := by

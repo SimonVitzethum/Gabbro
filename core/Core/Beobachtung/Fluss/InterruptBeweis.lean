@@ -90,7 +90,7 @@ theorem interruptNI : InterruptNIAussage := by
       .ohne (Or.inl (by rfl))
     obtain ⟨g₁, hs⟩ := Speicher.Zustand.schritt_ohne_lesen gutW.1 gutW.2 .aussen label
       (by simp only [label, aussenEtikett, Speicher.Art.liest, not_false_eq_true])
-    let spur₂ : SchrittSpur PUnit Int :=
+    let spur₂ : SchrittSpur Ast.Semantik.Zelle Int :=
       { speicher := [(.aussen, label)]
         aussen := [Ereignis.interrupt k irq Eintritt.handler] }
     let next₂ := { Zustandseintritt v₂ k id c nmi with graph := g₁ }
@@ -147,7 +147,7 @@ theorem interruptNI : InterruptNIAussage := by
           cases hcEq
           cases hnEq
           have interruptBeob :
-              ∀ (ρ : Lauf E) (spurρ : SchrittSpur PUnit Int) (vρ nρ : Ast.Semantik.Zustand),
+              ∀ (ρ : Lauf E) (spurρ : SchrittSpur Ast.Semantik.Zelle Int) (vρ nρ : Ast.Semantik.Zustand),
                 ρ.zeit.spur t = some (SchrittWahl.interrupt id, spurρ) →
                 ρ.zeit.zustand t = some vρ →
                 ρ.zeit.zustand (t + 1) = some nρ →
@@ -158,8 +158,8 @@ theorem interruptNI : InterruptNIAussage := by
                 schrittBeob ρ predictor t = [.katalog (.interrupt k irq .handler)] := by
             intro ρ spurρ vρ nρ tickρ atV atN aussenρ appendρ ruhtρ nextρ
             have speicherLeer : spurρ.speicher.filterMap (speicherBeob E.etiketten) =
-                ([] : List (NiedrigesEreignis PUnit Int PUnit Ast.Semantik.Befehl)) := by
-              have spAux : ∀ {es : List (SpeicherAkteur PUnit × Speicher.Etikett PUnit Int)},
+                ([] : List (NiedrigesEreignis Ast.Semantik.Zelle Int PUnit Ast.Semantik.Befehl)) := by
+              have spAux : ∀ {es : List (SpeicherAkteur Ast.Semantik.Zelle × Speicher.Etikett Ast.Semantik.Zelle Int)},
                   Speicherfolge vρ.initial .aussen vρ.graph [label] es nρ.graph →
                   es = [(.aussen, label)] := by
                 intro es folge
