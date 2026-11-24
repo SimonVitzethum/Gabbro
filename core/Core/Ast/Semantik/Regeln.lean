@@ -86,6 +86,7 @@ structure Rahmen where
   fortsetzungen : List Fortsetzung := []
   funktion : Option Identifier := none
   mass : Option Nat := none
+  environment : List (Identifier × Katalog.DienstAbi × Katalog.FirmwareZeile) := []
 
 /-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
     A source unit starts with the empty scope. -/
@@ -247,6 +248,7 @@ inductive Befehl where
       (cases : List (Option (Ty .value))) (index : Fin cases.length)
   | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
       (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
+  | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -399,6 +401,9 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let some (offset, bind) := branches[tag]? | return frame.halt .ungueltigerWert
     return { frame with pc := frame.pc + offset, lokale :=
       if bind then payload :: frame.lokale else frame.lokale }
+
+  | .waehleUmgebung name abi row, frame =>
+    { frame with pc := frame.pc + 1, environment := (name, abi, row) :: frame.environment }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

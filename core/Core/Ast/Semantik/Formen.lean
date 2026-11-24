@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.ProgramForms
+public import Core.Ast.LowLevel.Proofs.EnvironmentUnit
 public import Core.Ast.Aggregate.Arrays
 public import Core.Ast.Aggregate.Tuples
 public import Core.Ast.Aggregate.TupleBindings
@@ -129,6 +130,9 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
   else if constructor = ``Decl.tagged then
     ⟨.surface, Quellform.statements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.environment then
+    ⟨.surface, Quellform.statements (Context := PUnit) (fun _ => environmentUnitForm)
+      EnvironmentUnitErfuellbarAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

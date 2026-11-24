@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Block
 public import Core.Ast.Aggregate.RecordGrammar
+public import Core.Ast.LowLevel.Syntax
 
 @[expose] public section
 
@@ -52,6 +53,11 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       DeclReads before
         (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
         ⟨_, .tagged exported name first tail valid distinct⟩ rest
+  | environment (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile) :
+      DeclReads before
+        (keyword "environment" :: .word name.val :: keyword "abi" :: keyword abi.name ::
+          assignment :: keyword "catalogue" :: keyword row.name :: semicolon :: rest)
+        ⟨before, .environment name abi row⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
@@ -74,6 +80,7 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .tagged exported name first tail _ _ =>
     taggedDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
       commaSeparated ((first :: tail).map VariantMember.printPieces) ++ [printCloseBrace, printSemicolon]
+  | .environment name abi row => (LowLevel.Tree.environment name abi row).printPieces
 
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion

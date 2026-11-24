@@ -178,6 +178,9 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.definiereVariante then
     ⟨.core, Quellform.kernStatements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.waehleUmgebung then
+    ⟨.core, Quellform.kernStatements (Context := PUnit) (fun _ => environmentUnitForm)
+      EnvironmentUnitErfuellbarAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor

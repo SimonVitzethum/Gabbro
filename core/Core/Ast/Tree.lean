@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.ModelTypes
+public import Core.Katalog.FirmwareNamen
 
 @[expose] public section
 
@@ -427,6 +428,9 @@ inductive Decl : Scope → Scope → Type where
       (valid : ∀ member ∈ first :: tail, member.valid)
       (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
       Decl before (variantBinding name (first :: tail) :: before)
+  /-- A name for a firmware interface whose contract comes from the selected catalogue. -/
+  | environment (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile) :
+      Decl before before
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where
