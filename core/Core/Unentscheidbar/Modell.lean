@@ -48,24 +48,49 @@ def HaeltMit (prog : List Befehl) (start : Rahmen) (a : Nat) : Prop :=
 def OffenesFragment (r : Rahmen) : Prop :=
   ∀ slot, r.obergrenzen slot = none
 
-/-- Simulationstreue: `programm` bildet jeden μ-rekursiven Code auf ein
-    Befehlsprogramm ab, `start` bettet Code und Eingabe in einen offenen
-    Startrahmen ein, und Auswertung trifft Haldung mit gleicher Ausgabe:
-    `eval c n = some a` genau dann, wenn die Maschine ab `start c n` mit `a` hält.
+/-- Das Simulationssubstrat: alles, was Hy2/Hy4 liefern müssen, in einer
+    Struktur. Der Prüfer sieht nur Gabbro-Programme — über ihre Kodierung
+    (`kodiere`) als natürliche Zahlen; kein Prädikat spricht je über den
+    μ-rekursiven Code `c` als Prüfgegenstand, und der Startrahmen hängt nur
+    von der Eingabe `n` ab (`startVon`), nie vom Code:
+    - `programm` bildet jeden μ-rekursiven Code auf ein Befehlsprogramm ab;
+    - `kodiere`/`dekodiere` ist die berechenbare Kodierung ℕ ↔ Programm
+      (statt einer `Primcodable`-Instanz für `Befehl`: erststufig, ohne
+      Funktionsanteile — die konkrete Gödel-Nummerierung baut Hy2/Hy4);
+    - `komposition_berechenbar` verlangt `Computable (kodiere ∘ programm)`
+      — das braucht nur `Primcodable Code` und `Primcodable ℕ`, und genau
+      diese Funktion ist die Reduktionsfunktion;
+    - `treue`: Auswertung trifft Haldung mit gleicher Ausgabe.
     Die Schleifen der Simulation (`springe`, `springeWenn`, `zurueckSprung`)
     und die Nat-Arithmetik (`literal`, `binaer`, `vergleichen`) sind die
     unbeschränkten Bausteine aus dem Kernmodell. -/
-def SimulationsTreue (programm : Nat.Partrec.Code → List Befehl)
-    (start : Nat.Partrec.Code → ℕ → Rahmen) : Prop :=
-  ∀ c n, OffenesFragment (start c n) →
-    ∀ a, (Nat.Partrec.Code.eval c n = Part.some a ↔
-      HaeltMit (programm c) (start c n) a)
+structure SimulationsSubstrat where
+  programm : Nat.Partrec.Code → List Befehl
+  kodiere : List Befehl → ℕ
+  dekodiere : ℕ → Option (List Befehl)
+  startVon : ℕ → Rahmen
+  komposition_berechenbar : Computable (fun c => kodiere (programm c))
+  dekodiere_links : ∀ p, dekodiere (kodiere p) = some p
+  start_offen : ∀ n, OffenesFragment (startVon n)
+  treue : ∀ c n a, (Nat.Partrec.Code.eval c n = Part.some a ↔
+    HaeltMit (programm c) (startVon n) a)
 
-/-- Die pinnierte Aussage: es gibt eine treue Simulation aller μ-rekursiven
-    Codes durch offene Gabbro-Maschinenläufe. Der Existenzbeweis (Compiler)
-    ist Arbeit von Hy2/Hy4; die Reduktions- und Rice-Module bauen darauf auf. -/
-def SimulationstreueAussage : Prop :=
-  ∃ programm start, SimulationsTreue programm start
+/-- Die pinnierte Grundaussage: ein solches Substrat existiert. Der
+    Existenzbeweis (Kodierung + Compiler + Treuebeweis) ist Arbeit von
+    Hy2/Hy4; die Reduktions- und Rice-Sätze bauen bedingt darauf auf. -/
+def SubstratAussage : Prop :=
+  Nonempty SimulationsSubstrat
+
+/-- Aus der Linksinversen folgt die Injektivität der Kodierung: verschiedene
+    Programme erhalten verschiedene Nummern. -/
+theorem kodiere_injektiv (s : SimulationsSubstrat) :
+    Function.Injective s.kodiere := by
+  intro p₁ p₂ h
+  have h1 := s.dekodiere_links p₁
+  have h2 := s.dekodiere_links p₂
+  rw [h] at h1
+  have h3 : some p₁ = some p₂ := h1.symm.trans h2
+  exact Option.some_injective h3
 
 theorem erreicht_refl (prog : List Befehl) (r : Rahmen) : Erreicht prog r r :=
   ⟨0, rfl⟩
