@@ -185,4 +185,100 @@ theorem EffectClauseReads.consumes (read : EffectClauseReads scope ps input effe
     exact ((EffectListReads.consumes EffectTermReads.consumes terms).trans (List.suffix_cons _ _)).trans
       (List.suffix_cons _ _)
 
+theorem CarrierEffectReads.printReads (effect : WrittenCarrierEffect) (rest : List Token) :
+    CarrierEffectReads (effect.printPieces.map PrintedToken.value ++ rest) effect rest := by
+  rcases effect with ⟨access, name, slots⟩
+  cases slots
+  · exact .bare access name
+  · exact .slots access name
+
+private def EffectTerm.printable : EffectTerm → Prop
+  | .group name => name.val ≠ "pure".toList
+  | _ => True
+
+private theorem EffectTermReads.printReads (term : EffectTerm) (rest : List Token)
+    (valid : term.printable) :
+    EffectTermReads (term.printPieces.map PrintedToken.value ++ rest) term rest := by
+  cases term with
+  | carrier effect => exact .carrier (CarrierEffectReads.printReads effect rest)
+  | group name => exact .group name valid
+  | pure => exact .pure
+
+theorem EffectListReads.printReads (items : List α) (printItem : α → List PrintedToken)
+    (itemRead : ∀ item ∈ items, ∀ suffix, read ((printItem item).map PrintedToken.value ++ suffix) item suffix) :
+    EffectListReads read ((commaSeparated (items.map printItem) ++ [printCloseBrace]).map PrintedToken.value ++ rest)
+      items rest := by
+  have hpClose : printCloseBrace.value = closeBrace := rfl
+  have hpComma : printComma.value = comma := rfl
+  induction items with
+  | nil => exact .close
+  | cons head tail ih =>
+    cases tail with
+    | nil =>
+      simpa only [List.map_cons, List.map_nil, commaSeparated, List.intersperse_singleton,
+        List.flatten_cons, List.flatten_nil, List.append_nil, List.map_append, List.cons_append,
+        List.nil_append, List.append_assoc, hpClose] using
+        (EffectListReads.last (itemRead head List.mem_cons_self (closeBrace :: rest)))
+    | cons next tail =>
+      let tailTokens := (commaSeparated ((next :: tail).map printItem) ++ [printCloseBrace]).map
+        PrintedToken.value ++ rest
+      have first := itemRead head List.mem_cons_self (comma :: tailTokens)
+      have more := ih (fun item member => itemRead item (List.mem_cons_of_mem _ member))
+      have tokens : commaSeparated ((head :: next :: tail).map printItem) =
+          printItem head ++ [printComma] ++ commaSeparated ((next :: tail).map printItem) := by
+        simp only [commaSeparated, List.map_cons, List.intersperse_cons_cons, List.flatten_cons,
+          List.append_assoc, List.cons_append, List.nil_append]
+      rw [tokens]
+      simpa only [tailTokens, List.map_append, List.map_cons, List.map_nil, List.append_assoc,
+        List.cons_append, List.nil_append, hpComma] using (EffectListReads.next first more)
+
+private theorem mapM_member (f : α → Option β) {items : List α}
+    (mapped : ∃ values, items.mapM f = some values) (member : item ∈ items) :
+    ∃ value, f item = some value := by
+  induction items with
+  | nil => cases member
+  | cons head tail ih =>
+    obtain ⟨values, mapped⟩ := mapped
+    rw [List.mapM_cons] at mapped
+    cases hhead : f head with
+    | none => simp only [hhead, bind, Option.bind, reduceCtorEq] at mapped
+    | some first =>
+      rcases List.mem_cons.mp member with eq | member
+      · cases eq
+        exact ⟨first, hhead⟩
+      · cases htail : tail.mapM f with
+        | none => simp only [hhead, htail, bind, Option.bind, reduceCtorEq] at mapped
+        | some tailValues => exact ih ⟨tailValues, htail⟩ member
+
+private theorem EffectClause.term_printable (clause : EffectClause scope ps)
+    (member : term ∈ clause.written) : term.printable := by
+  have mapped : ∃ values,
+      clause.written.mapM (EffectTerm.resolve scope (ps.map (fun p => p.name.val))) = some values := by
+    cases found : clause.written.mapM (EffectTerm.resolve scope (ps.map (fun p => p.name.val))) with
+    | none =>
+      have checked := clause.checked
+      simp only [expandEffects, found, Option.map_none, reduceCtorEq] at checked
+    | some values => exact ⟨values, rfl⟩
+  obtain ⟨value, resolved⟩ := mapM_member _ mapped member
+  cases term with
+  | carrier _ => trivial
+  | pure => trivial
+  | group name =>
+    intro reserved
+    simp only [EffectTerm.resolve, reserved, true_or, if_true, reduceCtorEq] at resolved
+
+theorem EffectClauseReads.printReads (clause : Option (EffectClause scope ps))
+    (closed : ∀ tail, rest ≠ keyword "effects" :: tail) :
+    EffectClauseReads scope ps ((effectClausePieces clause).map PrintedToken.value ++ rest) clause rest := by
+  cases clause with
+  | none => exact .absent closed
+  | some clause =>
+    have hpEffects : printEffects.value = keyword "effects" := rfl
+    have hpOpen : printOpenBrace.value = openBrace := rfl
+    have items := EffectListReads.printReads (rest := rest) clause.written EffectTerm.printPieces
+      (fun item member suffix => EffectTermReads.printReads item suffix (clause.term_printable member))
+    simpa only [effectClausePieces, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpEffects, hpOpen] using
+      (EffectClauseReads.present clause items)
+
 end Gabbro.Core.Ast
