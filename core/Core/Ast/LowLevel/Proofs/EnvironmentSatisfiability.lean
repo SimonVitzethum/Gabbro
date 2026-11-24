@@ -78,6 +78,7 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
   obtain ⟨env, _, hardware, _⟩ := katalog_nichtLeer E.katalog Plattform.x86_64.katalog_wohlgeformt
   obtain ⟨start, allowedStart⟩ := zulStart_erfuellbar hardware image
   have allowed : zugelassen .x86_64 .unit args.unit := by
+    refine ⟨?_, rfl⟩
     change ([name.val] : List RawText).Nodup ∧
       ∀ e ∈ [(name, DienstAbi.biosInterrupt, FirmwareZeile.biosServices)],
         e.2.2.zugelassen Plattform.x86_64.katalog e.2.1

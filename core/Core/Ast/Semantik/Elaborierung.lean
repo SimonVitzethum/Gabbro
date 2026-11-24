@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Grammar
-public import Core.Ast.Semantik.Regeln
+public import Core.Ast.LowLevel.Admission
 
 @[expose] public section
 
@@ -102,7 +102,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
-  | .letMutableValue name _ _ => (name.val == index.val, false)
+  | .letMutableValue name _ _ | .letRegion name _ _ _ _ => (name.val == index.val, false)
   | .tupleBind pattern _ _ _ =>
     ((pattern.names.filterMap id).any (fun name => name.val == index.val), false)
   | .ite _ yes no =>
@@ -151,6 +151,7 @@ def MatchCode.prepend (rest : MatchCode) (arm : Fragment) (bind : Bool) : MatchC
 mutual
 
 def stmt : Stmt result before after → Fragment
+  | .letRegion _ _ region _ init => .einzel (.bindeRegion region.index init)
   | .letValue name _ value => (expr 0 value).anhaengen (.einzel (.binden name 0))
   | .assignVar ref _ _ value _ =>
     (expr 0 value).anhaengen (.einzel (.zuweisen 0 ref.index ref.binding.type))
@@ -265,10 +266,13 @@ def fragment : (category : Category) → category.Tree → Fragment
 abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
 
 
-def startdaten (scope : Scope) (kern : Option Nat) : Startdaten Int PUnit Rahmen PUnit :=
-  ⟨fun _ => .start scope, fun c => if c = eintritt then .laeuft else .ruht,
+def startdaten (scope : Scope) (kern : Option Nat) (platform : Plattform := .x86_64)
+    (regions : List Strecke := []) : Startdaten Int PUnit Rahmen PUnit :=
+  ⟨fun c => { Rahmen.start scope with platform := platform,
+      arrivalRegions := if c = eintritt then regions else [] },
+    fun c => if c = eintritt then .laeuft else .ruht,
     fun k => ⟨if some k = kern then some eintritt else none, .nutzer, (), fun _ => false,
-      0, false, []⟩, ⟨fun _ => false, fun _ => 0⟩⟩
+      0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
 
 def einrichtung (scope : Scope) : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit :=
   ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False, fun _ _ => True,
@@ -280,9 +284,9 @@ def bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
 def startmedium (_ : AussenStart) (_ : Nat) : UInt8 := 0
 
-def laden (scope : Scope) (start : AussenStart) (image : Ladung) : Option Zustand :=
+def laden (scope : Scope) (platform : Plattform) (start : AussenStart) (image : Ladung) : Option Zustand :=
   if image.starts 0 = some 0 ∧ image.bytes 0 = some 0 then
-    let d := startdaten scope (start.assignment 0)
+    let d := startdaten scope (start.assignment 0) platform start.regions
     some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope).initial
       (.leer (startmedium start)))
   else none
@@ -299,9 +303,9 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   bild := bild
   einrichtung := einrichtung p.eingang
   system := system p.code
-  startdaten := fun start => startdaten p.eingang (start.assignment 0)
+  startdaten := fun start => startdaten p.eingang (start.assignment 0) platform start.regions
   startmedium := startmedium
-  laden := laden p.eingang
+  laden := laden p.eingang platform
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := p.tabellen
@@ -328,9 +332,9 @@ def Fragment.environmentAllowed (p : Fragment) (k : Katalog) : Prop :=
 /-- Whole-unit elaboration checks catalogue availability and name uniqueness.
     An isolated declaration gets the same admission check as its occurrence in a unit. -/
 def zugelassen (platform : Plattform) : (category : Category) → category.Tree → Prop
-  | .unit, tree => (programm tree).environmentAllowed platform.katalog
-  | .declaration _, tree => (decl tree.2).environmentAllowed platform.katalog
-  | .expression _, _ | .statement .., _ | .block .., _ => True
+  | category, tree =>
+    let p := fragment category tree
+    p.environmentAllowed platform.katalog ∧ p.code.all (Befehl.platformAllowed platform) = true
 
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=

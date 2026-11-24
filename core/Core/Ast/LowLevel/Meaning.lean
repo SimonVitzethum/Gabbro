@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Syntax
+public import Core.Ast.Semantik.Arithmetik
 public import Core.Maschine.Start
 
 @[expose] public section
@@ -48,7 +49,27 @@ def layout (target : ZielDaten) : WrittenType → Option Layout
     if width ∈ ([8, 16, 32, 64] : List Nat) ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum then
       some ⟨written, width / 8, width / 8, .ofTarget target⟩
     else none
-  | .bool | .array .. | .tuple .. => none
+  | .bool | .array .. | .tuple .. | .address _ | .ownedRegion => none
+
+def Layout.fits (shape : Layout) (extent : Strecke) : Prop :=
+  extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
+
+instance (shape : Layout) (extent : Strecke) : Decidable (shape.fits extent) :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
+/-- Both the low-level meaning and the ordinary binding use the same layout,
+    alignment and extent test. Forming a view does not read its bytes. -/
+def RegionInitializer.value (target : ZielDaten) (slot : Nat) (extent : Strecke) :
+    RegionInitializer → Option Dynamisch
+  | .address =>
+    if h : extent.von < 2 ^ target.physicalBits then
+      some ⟨.address .physical, ⟨target.physicalBits, extent.von, h⟩⟩
+    else none
+  | .view written _ => do
+    let shape ← layout target written
+    if shape.fits extent then
+      some ⟨.regionView written.type, ⟨slot, extent.von, shape.bytes, target.big⟩⟩
+    else none
 
 /-- A source scope associates names with arrival-region slots. A slot identifies
     an object in the boundary contract, independently of the object's address. -/
@@ -122,7 +143,7 @@ def Instruction.evaluate {k : Katalog} (op : Instruction k) (s : State k) (c : K
     else none
   | .borrowView slot shape => do
     let (handle, extent) ← heldRegion s c slot
-    if extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis then
+    if shape.fits extent then
       pure ⟨.view slot handle ⟨extent.von, extent.von + shape.bytes⟩ shape, some handle⟩
     else none
   | .selectEnvironment name abi row _ => some ⟨.environment name row abi, none⟩

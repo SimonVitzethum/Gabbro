@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
+public import Core.Ast.LowLevel.Meaning
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -22,11 +23,13 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
@@ -86,6 +89,9 @@ structure Rahmen where
   fortsetzungen : List Fortsetzung := []
   funktion : Option Identifier := none
   mass : Option Nat := none
+  arrivalRegions : List Katalog.Strecke := []
+  platform : Katalog.Plattform := .x86_64
+  borrowedRegions : List Nat := []
   environment : List (Identifier × Katalog.DienstAbi × Katalog.FirmwareZeile) := []
 
 /-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
@@ -195,6 +201,28 @@ def Rahmen.pass (frame : Rahmen) (takePass : Bool) (exit : Nat)
       { frame with pc := frame.pc + 1, zaehler := Function.update frame.zaehler frame.pc (some n) }
     | some 0 | none => frame.halt (.ueberlauf handler)
 
+/-- Entry slots are the positions of the platform's owned RAM grants.
+    Ordinary calls cannot supply regions through copyable expressions. -/
+def Rahmen.eintrittArgumente (frame : Rahmen) (types : List (Ty .value)) : Option Rahmen :=
+  if types = [] then some { frame with lokale := [] }
+  else if types.all (· == .ownedRegion) && types.length ≤ frame.arrivalRegions.length then
+    some { frame with lokale := [], temp := fun slot =>
+      if slot < types.length then some ⟨.ownedRegion, slot⟩ else none }
+  else none
+
+def Rahmen.bindeRegion (frame : Rahmen) (receiver : Nat) (init : RegionInitializer)
+    (live : Nat → Bool) : Rahmen := Id.run do
+  let refused := frame.halt .ungueltigerBereich
+  let some slot := frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) | return refused
+  let some extent := frame.arrivalRegions[slot]? | return refused
+  if !live slot || frame.borrowedRegions.contains slot then return refused
+  let some value := LowLevel.RegionInitializer.value frame.platform.ziel slot extent init | return refused
+  let borrowed := match init with
+    | .address => frame.borrowedRegions
+    | .view .. => slot :: frame.borrowedRegions
+  return { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale,
+    borrowedRegions := borrowed }
+
 abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
 abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
 abbrev Regel := Maschine.Regel Zustand Plan PUnit
@@ -249,9 +277,11 @@ inductive Befehl where
   | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
       (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
   | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
+  | bindeRegion (receiver : Nat) (init : RegionInitializer)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
-def Befehl.auswerten : Befehl → Rahmen → Rahmen
+def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _ => false) : Rahmen :=
+  match b, frame with
   | .literal dst val, frame =>
     frame.schreibe dst (some ⟨.int val val, Zahl.literal val⟩)
   | .binaer op left, frame =>
@@ -350,8 +380,9 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     if let some bad := (frame.funktionen.flatMap Funktion.ruft).find? (fun call =>
         !(call.passt frame.funktionen)) then
       return frame.halt (.ungueltigerRuf bad.name)
-    let result := (Funktion.finde frame.funktionen name).bind Funktion.result
-    return ({ frame with lokale := [] }).ruf name [] result
+    let some target := Funktion.finde frame.funktionen name | return frame.halt (.ungueltigerRuf name)
+    let some entry := frame.eintrittArgumente target.parameter | return frame.halt (.ungueltigerRuf name)
+    return entry.ruf name target.parameter target.result
   | .ende, frame => { frame with stopp := some .fertig, rueckgabe := frame.lokale.head?.join }
   | .baueArray dst element count, frame => frame.schreibe dst (do
     let values ← Vector.ofFnM (n := count) fun i => (frame.temp (dst + i.val)).bind (wertAls element)
@@ -402,6 +433,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     return { frame with pc := frame.pc + offset, lokale :=
       if bind then payload :: frame.lokale else frame.lokale }
 
+  | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
   | .waehleUmgebung name abi row, frame =>
     { frame with
       pc := frame.pc + 1
@@ -423,7 +455,9 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
-  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c)) }
+  let live := fun slot => c == Kontext.faden 0 && s.rechte.lebt slot &&
+    s.rechte.gen slot == 0 && (match s.leihen slot with | .eigen => true | .verliehen _ => false)
+  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) live) }
 
 /-- The context-local transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})

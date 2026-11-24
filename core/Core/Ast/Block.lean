@@ -15,6 +15,9 @@ def overflowPieces : Option Identifier → List PrintedToken
 mutual
 
 def Stmt.printPieces : Stmt result before after → List PrintedToken
+  | .letRegion name _ region _ initializer =>
+    [letName.print, name.print, printAssignment] ++
+      LowLevel.printRegion region.binding.name initializer ++ [printSemicolon]
   | .letValue name _ value =>
     [letName.print, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
   | .assignVar ref _ _ value _ =>

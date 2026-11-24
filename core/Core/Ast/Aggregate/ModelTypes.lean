@@ -16,6 +16,27 @@ def Identifier := { name : RawText // ∃ c rest, name = c :: rest ∧
 inductive Kind where
   | value
 
+namespace LowLevel
+
+/-- The space indexes inert address data. Arithmetic and executable operands
+    have separate rules; this index never carries authority. -/
+inductive AddressSpace where
+  | physical
+  | virtual
+  | port
+  | guestPhysical
+  | ioVirtual
+  deriving DecidableEq, Repr
+
+def AddressSpace.name : AddressSpace → String
+  | .physical => "physical"
+  | .virtual => "virtual"
+  | .port => "port"
+  | .guestPhysical => "guest_physical"
+  | .ioVirtual => "io_virtual"
+
+end LowLevel
+
 inductive Ty : Kind → Type where
   /-- Integers with inclusive, architecture-independent bounds. -/
   | int (lo hi : Int) : Ty .value
@@ -29,6 +50,9 @@ inductive Ty : Kind → Type where
   | sum (head tail : Ty .value) : Ty .value
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
+  | address (space : LowLevel.AddressSpace) : Ty .value
+  | ownedRegion : Ty .value
+  | regionView (element : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -74,7 +98,7 @@ def Local.nameVisible : Local scope type → Prop
   | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.nameVisible
 
 def Ty.valueBinding : Ty .value → Prop
-  | .recordSchema .. | .variantSchema .. => False
+  | .recordSchema .. | .variantSchema .. | .ownedRegion | .regionView _ => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=

@@ -14,6 +14,48 @@ def openRange : Token := .punctuation "..<".toList
 
 def keyword (word : String) : Token := .word word.toList
 
+namespace LowLevel
+
+/-- Build the ordinary word token for a closed vocabulary whose spelling is
+    checked against the same character grammar as a user-written identifier. -/
+def word (head : Char) (tail : List Char) (first : isNameStart head)
+    (others : ∀ c ∈ tail, isNamePart c) : PrintedToken :=
+  Identifier.print ⟨head :: tail, head, tail, rfl, first, others⟩
+
+macro "lowWord" head:char tail:str : term =>
+  `(word $head ($tail).toList
+    (.inl (.inl (by
+      simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
+    (by
+      simp only [String.reduceToList, List.forall_mem_cons, List.forall_mem_nil, and_true]
+      repeat' apply And.intro
+      all_goals first
+      | intro c absent; exact (List.not_mem_nil absent).elim
+      | exact Or.inl (Or.inr rfl)
+      | apply Or.inl; apply Or.inl; apply Or.inl
+        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide
+      | apply Or.inr
+        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide))
+
+def AddressSpace.print : AddressSpace → PrintedToken
+  | .physical => lowWord 'p' "hysical"
+  | .virtual => lowWord 'v' "irtual"
+  | .port => lowWord 'p' "ort"
+  | .guestPhysical => lowWord 'g' "uest_physical"
+  | .ioVirtual => lowWord 'i' "o_virtual"
+
+def AddressSpace.tokens (space : AddressSpace) : List Token :=
+  [keyword "address", .punctuation ['<'], keyword space.name, .punctuation ['>']]
+
+def AddressSpace.printPieces (space : AddressSpace) : List PrintedToken :=
+  [lowWord 'a' "ddress", Compare.lt.print, space.print, Compare.gt.print]
+
+theorem AddressSpace.printTokens (space : AddressSpace) :
+    space.printPieces.map PrintedToken.value = space.tokens := by
+  cases space <;> rfl
+
+end LowLevel
+
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 def printClosedRange : PrintedToken := printPunctuation ".." (by
@@ -77,6 +119,9 @@ mutual
 
 def WrittenType.printPieces : WrittenType → List PrintedToken
   | .bool => [printBoolType]
+  | .address space => space.printPieces
+  | .ownedRegion => [lowWord 'r' "egion", Compare.lt.print,
+      lowWord 'n' "ormal", printComma, lowWord 'r' "w", Compare.gt.print]
   | .integer signed width none => [(intTypeName signed width).print]
   | .integer signed width (some (lo, hi)) =>
     [(intTypeName signed width).print, printIn] ++ signedPieces lo ++ [printClosedRange] ++ signedPieces hi
@@ -112,6 +157,12 @@ inductive TypeReads : List Token → WrittenType → List Token → Prop where
       TypeReads (openBracket :: input) (.array element count) rest
   | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
       TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
+
+  | address (space : LowLevel.AddressSpace) :
+      TypeReads (space.tokens ++ rest) (.address space) rest
+  | ownedRegion : TypeReads
+      ([keyword "region", .punctuation ['<'], keyword "normal", comma, keyword "rw", .punctuation ['>']] ++ rest)
+      .ownedRegion rest
 
 inductive TypeItemsTail : List Token → WrittenTypes → List Token → Prop where
   | close : TypeItemsTail (closeParen :: rest) .empty rest

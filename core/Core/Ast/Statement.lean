@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Variant.Grammar
+public import Core.Ast.LowLevel.Syntax
 
 @[expose] public section
 
@@ -114,6 +115,12 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       VariantArmsRead result scope false armsInput arms rest →
       StmtReads result scope (keyword "match" :: input) ⟨_, .variantMatch value arms⟩ rest
 
+  | letRegion (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible) :
+      LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: .word name.val :: assignment :: input)
+        ⟨_, .letRegion name ordinary region visible initializer⟩ rest
+
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :
     (before : Scope) → List Token → Statements result before → List Token → Prop where
@@ -151,11 +158,21 @@ end
 -- Extend the original StmtReads.let_header using the word/equals discriminator.
 theorem StmtReads.let_header
     (read : StmtReads result scope (letKeyword :: .word spelling :: assignment :: input) tree rest) :
-    ∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
+    (∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
-      LetTailReads result scope name ordinary value more tree rest := by
-  sorry
+      LetTailReads result scope name ordinary value more tree rest) ∨
+    (∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+        (region : Local scope .ownedRegion) (visible : region.nameVisible) (initializer : RegionInitializer),
+      name.val = spelling ∧
+      LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) ∧
+      tree = ⟨_, .letRegion name ordinary region visible initializer⟩) := by
+  cases read with
+  | letBinding name ordinary value tail => exact Or.inl ⟨name, ordinary, _, _, _, rfl, value, tail⟩
+  | letRegion name ordinary region visible read =>
+    exact Or.inr ⟨name, ordinary, region, visible, _, rfl, read, rfl⟩
+  | directCall call => cases call
+  | tupleBind pattern _ _ => cases pattern
 
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by

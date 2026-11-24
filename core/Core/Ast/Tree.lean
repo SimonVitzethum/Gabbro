@@ -175,6 +175,8 @@ inductive WrittenType where
   | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
   | array (element : WrittenType) (count : Nat)
   | tuple (first second : WrittenType) (rest : WrittenTypes)
+  | address (space : LowLevel.AddressSpace)
+  | ownedRegion
 
 inductive WrittenTypes where
   | empty
@@ -195,6 +197,8 @@ def WrittenType.type : WrittenType → Ty .value
     .int lo hi
   | .array element count => .array element.type count
   | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
+  | .address space => .address space
+  | .ownedRegion => .ownedRegion
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -212,6 +216,7 @@ def WrittenType.valid : WrittenType → Prop
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
   | .array element _ => element.valid
   | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
+  | .address _ | .ownedRegion => True
 
 def WrittenTypes.valid : WrittenTypes → Prop
   | .empty => True
@@ -219,7 +224,18 @@ def WrittenTypes.valid : WrittenTypes → Prop
 
 end
 
+/-- Region work occurs at the binding instruction. The ordinary expression
+    grammar cannot duplicate an owned region or a typed view. -/
+inductive RegionInitializer where
+  | address
+  | view (written : WrittenType) (valid : written.valid)
+
+def RegionInitializer.type : RegionInitializer → Ty .value
+  | .address => .address .physical
+  | .view written _ => .regionView written.type
+
 structure Parameter where
+
   name : Identifier
   written : WrittenType
   valid : written.valid
@@ -328,6 +344,12 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- Each arm consumes exactly the next declared tag and payload shape. -/
   | variantMatch (value : Expr scope (variantValueType name labels payloads))
       (arms : VariantArms result scope false labels payloads) : Stmt result scope scope
+
+  /-- Bind an inert address or a typed, non-copyable view. -/
+  | letRegion (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (initializer : RegionInitializer) :
+      Stmt result scope (⟨name, initializer.type, false, false⟩ :: scope)
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
