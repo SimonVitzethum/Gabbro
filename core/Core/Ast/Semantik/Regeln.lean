@@ -20,11 +20,15 @@ def Ganzzahl.pack (value : Ganzzahl) : Dynamisch := ⟨.int value.lo value.hi, v
 
 def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
-  | _ => none
+  | ⟨.bool, _⟩ => none
+  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
-  | _ => none
+  | ⟨.int .., _⟩ => none
+  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩

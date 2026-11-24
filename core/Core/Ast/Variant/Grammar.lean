@@ -23,8 +23,10 @@ def printMatch : PrintedToken :=
 
 def matchArrow : Token := .punctuation ['=', '>']
 
-def printMatchArrow : PrintedToken := printPunctuation "=>" (by decide)
-  (fun _ first => tokenHead (c := '=') first (punctuationHead (by decide)))
+def printMatchArrow : PrintedToken := printPunctuation "=>" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ first => tokenHead (c := '=') first (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
 def taggedDeclarationHead (exported : Bool) : List PrintedToken :=
   if exported then [printPub, printTagged, printTypeDecl] else [printTagged, printTypeDecl]

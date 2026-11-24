@@ -7,11 +7,11 @@ public import Core.Ast.Aggregate.Runtime
 namespace Gabbro.Core.Ast.Semantik
 
 def variantActual : (type : Option (Ty .value)) → Option Dynamisch → Option (Wert (type.getD .productEnd))
-  | none, _ => some PUnit.unit
+  | none, _value => some PUnit.unit
   | some type, value => value.bind (wertAls type)
 
 def variantPayload : (type : Option (Ty .value)) → Wert (type.getD .productEnd) → Option Dynamisch
-  | none, _ => none
+  | none, _value => none
   | some type, value => some ⟨type, value⟩
 
 def variantCase : (types : List (Option (Ty .value))) → Wert (variantLayout types) → Nat × Option Dynamisch

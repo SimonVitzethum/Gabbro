@@ -156,20 +156,30 @@ def returnName : Identifier := keywordName 'r' ['e', 't', 'u', 'r', 'n']
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl | rfl <;> decide)
 
-def printOpenBracket : PrintedToken := printPunctuation "[" (by decide)
-  (fun _ same => tokenHead (c := '[') same (punctuationHead (by decide)))
+def printOpenBracket : PrintedToken := printPunctuation "[" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '[') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
-def printCloseBracket : PrintedToken := printPunctuation "]" (by decide)
-  (fun _ same => tokenHead (c := ']') same (punctuationHead (by decide)))
+def printCloseBracket : PrintedToken := printPunctuation "]" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ']') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
-def printDot : PrintedToken := printPunctuation "." (by decide)
-  (fun _ same => tokenHead (c := '.') same (punctuationHead (by decide)))
+def printDot : PrintedToken := printPunctuation "." (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '.') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
-def printComma : PrintedToken := printPunctuation "," (by decide)
-  (fun _ same => tokenHead (c := ',') same (punctuationHead (by decide)))
+def printComma : PrintedToken := printPunctuation "," (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ',') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
-def printColon : PrintedToken := printPunctuation ":" (by decide)
-  (fun _ same => tokenHead (c := ':') same (punctuationHead (by decide)))
+def printColon : PrintedToken := printPunctuation ":" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ':') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
 mutual
 

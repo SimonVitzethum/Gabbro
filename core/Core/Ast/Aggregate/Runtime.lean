@@ -39,12 +39,12 @@ def liesRecord (temp : Nat → Option Dynamisch) :
     let value ← (temp slot).bind (wertAls head)
     let more ← liesRecord temp tail sources
     pure (value, more)
-  | _, _ => none
+  | [], _slot :: _sources | _head :: _tail, [] => none
 
 def tupleLocals : (types : List (Ty .value)) → Wert (tupleType types) → List Bool → List (Option Dynamisch)
   | head :: tail, values, keep :: more =>
     let rest := tupleLocals tail values.2 more
     if keep then some ⟨head, values.1⟩ :: rest else rest
-  | _, _, _ => []
+  | [], _values, _kept | _head :: _tail, _values, [] => []
 
 end Gabbro.Core.Ast.Semantik

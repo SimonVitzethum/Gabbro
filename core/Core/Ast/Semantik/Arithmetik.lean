@@ -45,7 +45,7 @@ def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : 
 
 def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
     Wert (tupleType types) → Wert (types.get i)
-  | [], index, _ => Fin.elim0 index
+  | [], index, _value => Fin.elim0 index
   | _ :: rest, ⟨0, _⟩, values => values.1
   | _ :: rest, ⟨n + 1, bound⟩, values => tupleGet rest ⟨n, Nat.lt_of_succ_lt_succ bound⟩ values.2
 
@@ -56,14 +56,14 @@ def tupleOfFn : (types : List (Ty .value)) → ((i : Fin types.length) → Wert 
 
 def tupleSet : (types : List (Ty .value)) → (i : Fin types.length) →
     Wert (types.get i) → Wert (tupleType types) → Wert (tupleType types)
-  | [], i, _, _ => Fin.elim0 i
+  | [], i, _value, _old => Fin.elim0 i
   | _ :: _, ⟨0, _⟩, value, old => (value, old.2)
   | _ :: tail, ⟨n + 1, bound⟩, value, old =>
     (old.1, tupleSet tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value old.2)
 
 def variantInject : (cases : List (Option (Ty .value))) → (index : Fin cases.length) →
     Wert ((cases.get index).getD .productEnd) → Wert (variantLayout cases)
-  | [], index, _ => Fin.elim0 index
+  | [], index, _value => Fin.elim0 index
   | _ :: _, ⟨0, _⟩, value => .inl value
   | _ :: tail, ⟨n + 1, bound⟩, value =>
     .inr (variantInject tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value)

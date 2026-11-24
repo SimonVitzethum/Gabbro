@@ -114,12 +114,16 @@ def NegationStart (tokens : List Token) : Prop :=
 theorem Infix.token_ne_delimiter (op : Infix) :
     op.token ≠ comma ∧ op.token ≠ closeBracket := by
   cases op with
-  | arith operation => cases operation <;> decide
-  | div => decide
-  | compare operation => cases operation <;> decide
-  | logic operation => cases operation <;> decide
-  | index => decide
-  | projection => decide
+  | arith operation => cases operation
+  | div => skip
+  | compare operation => cases operation
+  | logic operation => cases operation
+  | index => skip
+  | projection => skip
+  all_goals
+    constructor <;> intro same <;>
+      simp [Infix.token, Arith.token, Compare.spelling, Logic.spelling, comma, closeBracket,
+        openBracket, dot] at same
 
 theorem noOperatorAtComma : ¬ Continues minimum (comma :: more) := by
   rintro ⟨op, _, same, _⟩
