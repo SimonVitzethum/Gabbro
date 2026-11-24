@@ -14,25 +14,8 @@ open Lean (Name)
 
 theorem kopf_code (head : kopf code s c = some b) : code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
-  split at head
-  · cases status : s.status c with
-    | ruht =>
-      rw [status] at head
-      cases head
-    | laeuft =>
-      cases returned : (s.lokal c).rueckgabe with
-      | none =>
-        simp only [status, returned] at head
-        split at head
-        · exact head
-        · cases head
-      | some _ =>
-        simp only [status, returned] at head
-        cases head
-    | beendet _ =>
-      rw [status] at head
-      cases head
-  · cases head
+  repeat' split at head
+  all_goals first | exact head | cases head
 
 /-- Every executing instruction of an elaborated unit came from its reference
     tree at the acting context's indicated instruction position. -/

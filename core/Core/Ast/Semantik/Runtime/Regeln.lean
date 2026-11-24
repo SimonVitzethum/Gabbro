@@ -288,12 +288,15 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
-def Zustand.regionLive (s : Zustand) (c : Kontext) (slot : Nat) : Bool :=
-  c == Kontext.faden 0 && s.rechte.lebt slot && s.rechte.gen slot == 0 &&
+/-- A region is live while its object lives in its arrival generation and is not lent out. The
+    acting context's own authority is its frame: only a frame that holds the owned-region value and
+    lists the arrival extent can bind it, and a start gives the arrival regions to one context. -/
+def Zustand.regionLive (s : Zustand) (slot : Nat) : Bool :=
+  s.rechte.lebt slot && s.rechte.gen slot == 0 &&
     (match s.leihen slot with | .eigen => true | .verliehen _device => false)
 
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
-  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) (s.regionLive c)) }
+  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) s.regionLive) }
 
 /-- The context-local transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
@@ -310,18 +313,20 @@ def Befehl.regel (b : Befehl) : Regel := ⟨b.impl, b.ideal⟩
 
 abbrev LokalSystem := MaschinenSystem PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
 
+/-- The entry context: the boot context whose body starts at the first instruction. -/
 def eintritt : Kontext := .faden 0
 
+/-- **The head of any context.** A context that runs, has returned nothing and has not stopped
+    executes the instruction at its own position; every other context has no head. The head
+    depends on the status and the frame of that context alone. -/
 def kopf (code : List Befehl) (s : Zustand) (c : Kontext) : Option Befehl :=
-  if c = eintritt then
-    match s.status c with
-    | .ruht => none
-    | .laeuft =>
-      match (s.lokal c).rueckgabe with
-      | none => if (s.lokal c).stopp.isNone then code[(s.lokal c).pc]? else none
-      | some _ => none
-    | .beendet _ => none
-  else none
+  match s.status c with
+  | .ruht => none
+  | .laeuft =>
+    match (s.lokal c).rueckgabe with
+    | none => if (s.lokal c).stopp.isNone then code[(s.lokal c).pc]? else none
+    | some _ => none
+  | .beendet _ => none
 
 def system (code : List Befehl) : LokalSystem :=
   ⟨Befehl.regel, kopf code, fun s c => kopf code s c = none, fun _ _ _ => False⟩

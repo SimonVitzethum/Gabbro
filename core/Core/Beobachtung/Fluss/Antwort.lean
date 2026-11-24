@@ -93,7 +93,7 @@ theorem antwort_fragen_leer (p : Fragment) (plattform : Plattform)
   | zero =>
       rw [lauf.2.2.2]
       have ladenEq : (p.einheit plattform).laden =
-          Gabbro.Core.Ast.Semantik.laden p.eingang plattform := rfl
+          Gabbro.Core.Ast.Semantik.laden p.eingang p.eintritte plattform := rfl
       rw [ladenEq]
       unfold Gabbro.Core.Ast.Semantik.laden
       split

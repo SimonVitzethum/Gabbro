@@ -235,20 +235,25 @@ def fragment : (category : Category) → category.Tree → Fragment
 abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
 
 
-def startdaten (scope : Scope) (kern : Option Nat) (platform : Plattform := .x86_64)
-    (regions : List Strecke := []) : Startdaten Int PUnit Rahmen PUnit :=
+/-- **Boot data of every context.** The entry context starts at the first instruction and owns the
+    arrival regions; every other context rests, with its frame at the entry of its own body (the
+    position `eintritte` gives, `0` if it has none). -/
+def startdaten (scope : Scope) (eintritte : Kontext → Option Nat) (kern : Option Nat)
+    (platform : Plattform := .x86_64) (regions : List Strecke := []) :
+    Startdaten Int PUnit Rahmen PUnit :=
   let bootFrame (c : Kontext) : Rahmen :=
     { Rahmen.start scope with
       platform := platform
+      pc := if c = eintritt then 0 else (eintritte c).getD 0
       arrivalRegions := if c = eintritt then regions else [] }
   ⟨bootFrame,
     fun c => if c = eintritt then .laeuft else .ruht,
     fun k => ⟨if some k = kern then some eintritt else none, .nutzer, (), fun _ => false,
       0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
 
-def einrichtung (scope : Scope) : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit :=
+def einrichtung (scope : Scope) (eintritte : Kontext → Option Nat) : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit :=
   ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 /-- The model's entry slot. An image compiler and its byte-level proof are later milestones. -/
@@ -256,10 +261,11 @@ def bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
 def startmedium (_ : AussenStart) (_ : Nat) : UInt8 := 0
 
-def laden (scope : Scope) (platform : Plattform) (start : AussenStart) (image : Ladung) : Option Zustand :=
+def laden (scope : Scope) (eintritte : Kontext → Option Nat) (platform : Plattform)
+    (start : AussenStart) (image : Ladung) : Option Zustand :=
   if image.starts 0 = some 0 ∧ image.bytes 0 = some 0 then
-    let d := startdaten scope (start.assignment 0) platform start.regions
-    some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope).initial
+    let d := startdaten scope eintritte (start.assignment 0) platform start.regions
+    some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope eintritte).initial
       (.leer (startmedium start)))
   else none
 
@@ -278,11 +284,11 @@ def fragmentFlussdaten : Beobachtung.Flussdaten Befehl Rahmen PUnit Int :=
 def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   katalog := platform.katalog
   bild := bild
-  einrichtung := einrichtung p.eingang
+  einrichtung := einrichtung p.eingang p.eintritte
   system := system p.code
-  startdaten := fun start => startdaten p.eingang (start.assignment 0) platform start.regions
+  startdaten := fun start => startdaten p.eingang p.eintritte (start.assignment 0) platform start.regions
   startmedium := startmedium
-  laden := laden p.eingang platform
+  laden := laden p.eingang p.eintritte platform
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := p.tabellen

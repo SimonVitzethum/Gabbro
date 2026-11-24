@@ -39,7 +39,7 @@ private def gegenRegel (b : Semantik.Befehl) : Regel Semantik.Zustand Semantik.P
     fun c s _ plans u => plans = [Semantik.plan] ∧ u = gegenZustand s c⟩
 
 private theorem gegen_aus (t : Nat) (s : Semantik.Zustand) (c : Kontext) :
-    FuehrtSchrittAus (Semantik.einrichtung []) t c s (gegenZustand s c) Semantik.plan
+    FuehrtSchrittAus (Semantik.einrichtung [] (fun _ => none)) t c s (gegenZustand s c) Semantik.plan
       ⟨[], []⟩ (gegenZustand s c) := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, ?_, ?_⟩
   · intro l mem
@@ -55,11 +55,11 @@ private def gegenSystem (b : Semantik.Befehl) : Semantik.LokalSystem :=
 private def gegenEinheit (b : Semantik.Befehl) : Semantik.Einheit :=
   { katalog := Plattform.x86_64.katalog
     bild := Semantik.bild
-    einrichtung := Semantik.einrichtung []
+    einrichtung := Semantik.einrichtung [] (fun _ => none)
     system := gegenSystem b
-    startdaten := fun s => Semantik.startdaten [] (s.assignment 0) Plattform.x86_64 s.regions
+    startdaten := fun s => Semantik.startdaten [] (fun _ => none) (s.assignment 0) Plattform.x86_64 s.regions
     startmedium := Semantik.startmedium
-    laden := Semantik.laden [] Plattform.x86_64
+    laden := Semantik.laden [] (fun _ => none) Plattform.x86_64
     lokalerBezug := Eq
     stotterLaenge := fun _ => 0
     quelltabellen := .leer
@@ -87,12 +87,12 @@ private theorem gegen_bereit (b : Semantik.Befehl) (start : AussenStart) (t : Na
   · simp only [HwLauf.gelegenheit, Umgebung.referenzLauf]
     exact congrArg some (Nat.mod_one t)
   · rw [felder.1]
-    change ((Semantik.startdaten [] (start.assignment 0) Plattform.x86_64 start.regions).kerne 0).laeuft =
+    change ((Semantik.startdaten [] (fun _ => none) (start.assignment 0) Plattform.x86_64 start.regions).kerne 0).laeuft =
       some Semantik.eintritt
     rw [zu]
     simp only [Semantik.startdaten, ↓reduceIte]
   · rw [felder.2]
-    change (Semantik.startdaten [] (start.assignment 0) Plattform.x86_64 start.regions).status
+    change (Semantik.startdaten [] (fun _ => none) (start.assignment 0) Plattform.x86_64 start.regions).status
       Semantik.eintritt = .laeuft
     rw [zu]
     simp only [Semantik.startdaten, ↓reduceIte]
@@ -146,7 +146,7 @@ private theorem regelSchranken_wachsend_falsch (b : Semantik.Befehl) :
     exact (Nat.not_succ_le_zero _) bound
   · intro c n eq
     cases Option.some.inj eq
-    change ((Semantik.startdaten [] (start.assignment 0) Plattform.x86_64 start.regions).lokal c).fortsetzungen.length ≤ 0
+    change ((Semantik.startdaten [] (fun _ => none) (start.assignment 0) Plattform.x86_64 start.regions).lokal c).fortsetzungen.length ≤ 0
     simp only [Semantik.startdaten, Semantik.Rahmen.start, List.map_nil, List.length_nil]
     exact Nat.zero_le _
   · intro n eq
