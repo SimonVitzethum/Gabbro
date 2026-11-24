@@ -38,7 +38,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   let s₀ := (I.start E start).2
   let defTarget : Befehl := .definiere name [] (some .bool) 0 5 false [] none
   let defMain : Befehl := .definiere mainName [] none 0 5 false
-    [⟨name, [], none⟩, ⟨name, [], some .bool⟩] none
+    [⟨name, [], none, none⟩, ⟨name, [], some .bool, none⟩] none
   let launch : Befehl := .starte mainName
   let discard := (directCallForm [] none).befehl call
   let bind := (bindDirectForm [] none).befehl binding
