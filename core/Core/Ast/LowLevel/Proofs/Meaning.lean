@@ -48,8 +48,7 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
   rw [decide_eq_true h]
   rw [Bool.not_true]
   rw [Bool.and_false]
-  rw [Bool.false_eq_true]
-  rw [if_false]
+  rw [if_neg (by intro h; cases h)]
   cases (s.lokal c).regions[slot]? <;> rfl
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
@@ -74,14 +73,14 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
       subst op
       cases hhr : heldRegion s c slot with
       | none =>
-          unfold Instruction.evaluate at heval
+          simp only [Instruction.evaluate] at heval
           rw [hhr] at heval
           rw [Option.bind_none] at heval
           cases heval
       | some pair =>
           rcases pair with ⟨handleV, extent⟩
           by_cases hlt : extent.von < 2 ^ k.plattform.ziel.physicalBits
-          · unfold Instruction.evaluate at heval
+          · simp only [Instruction.evaluate] at heval
             rw [hhr] at heval
             rw [Option.bind_some] at heval
             rw [dif_pos hlt] at heval
@@ -89,7 +88,7 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
             subst transfer
             exact ⟨slot, handleV, extent, ⟨k.plattform.ziel.physicalBits, extent.von, rfl, hlt⟩,
               (by first | exact hslot | rfl), hhr, rfl, rfl, rfl⟩
-          · unfold Instruction.evaluate at heval
+          · simp only [Instruction.evaluate] at heval
             rw [hhr] at heval
             rw [Option.bind_some] at heval
             rw [dif_neg hlt] at heval
@@ -113,14 +112,14 @@ theorem viewMeaning : ViewMeaningAussage := by
           subst op
           cases hhr : heldRegion s c slot with
           | none =>
-              unfold Instruction.evaluate at heval
+              simp only [Instruction.evaluate] at heval
               rw [hhr] at heval
               rw [Option.bind_none] at heval
               cases heval
           | some pair =>
               rcases pair with ⟨handleV, extent⟩
               by_cases hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
-              · unfold Instruction.evaluate at heval
+              · simp only [Instruction.evaluate] at heval
                 rw [hhr] at heval
                 rw [Option.bind_some] at heval
                 rw [if_pos hcond] at heval
@@ -166,7 +165,7 @@ theorem viewMeaning : ViewMeaningAussage := by
                     some handleV⟩ : Transfer k).apply c s) c slot hb
                 exact ⟨slot, handleV, extent, shape, (by first | exact hslot | rfl), hhr,
                   (by first | exact hlayout | rfl), hendian, hcond.1, hcond.2, rfl, rfl, hlast⟩
-              · unfold Instruction.evaluate at heval
+              · simp only [Instruction.evaluate] at heval
                 rw [hhr] at heval
                 rw [Option.bind_some] at heval
                 rw [if_neg hcond] at heval
