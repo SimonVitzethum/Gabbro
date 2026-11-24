@@ -401,8 +401,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           · rename_i hc
             exact False.elim (hs hc)
           · rename_i hc
-            rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-              Nat.add_zero]
+            simp only [L, List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
             omega
         have boundAfter : (sw.auswerten mid).traegt env := by
           intro ty ref
