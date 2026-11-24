@@ -83,6 +83,7 @@ theorem regionUnit_transfer (init : RegionInitializer) : RegionUnitTransferAussa
   intro frame receiver live slot extent value resolved granted owns unborrowed result
   simp only [Rahmen.bindeRegion, Id.run, resolved, granted, owns, unborrowed, result,
     Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
+  rfl
 
 def RegionUnitErfuellbarAussage (init : RegionInitializer) : Prop :=
   ∃ platform args start env text s after,
