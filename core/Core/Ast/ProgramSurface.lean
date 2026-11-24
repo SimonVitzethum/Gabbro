@@ -97,7 +97,7 @@ theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : Dire
 theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (directCall scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : directName name := by simp [directName, name, keywordName]
+  have ordinaryName : directName name := by simp [directName, ordinaryLocal, name, keywordName]
   let a : DirectCallArgs scope result := ⟨name, ordinaryName, []⟩
   exact Rule.satisfiableOfPrint a (directCall_print a)
 
@@ -140,7 +140,7 @@ theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
       cases h
     · exact ordinaryName
   let callName : Identifier := keywordName 'y' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have callOrdinary : directName callName := by simp [directName, callName, keywordName]
+  have callOrdinary : directName callName := by simp [directName, ordinaryLocal, callName, keywordName]
   let a : BindDirectArgs scope result := ⟨name, ordinary, .bool, trivial, ⟨callName, callOrdinary, []⟩⟩
   exact Rule.satisfiableOfPrint a (bindDirect_print a)
 
@@ -297,7 +297,7 @@ theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List T
 theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by simp [directName, name, keywordName]
+  have ordinary : directName name := by simp [directName, ordinaryLocal, name, keywordName]
   let a : FunctionArgs scope :=
     ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
   exact Rule.satisfiableOfPrint a (function_print a)
@@ -334,7 +334,7 @@ theorem program_reads {a : ProgramArgs} {tokens : List Token}
 theorem program_syntax_erfuellbar  :
     (program).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by simp [directName, name, keywordName]
+  have ordinary : directName name := by simp [directName, ordinaryLocal, name, keywordName]
   let first : Decl [] [] :=
     .function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
   let a : ProgramArgs := ⟨[], [], first, .done⟩
