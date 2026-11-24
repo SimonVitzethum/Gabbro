@@ -294,72 +294,72 @@ theorem stummer_schritt_koppelt
                   subst ff₂
                   obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := _) f impl₂'rule aus₂'
                   rw [c_eq] at nachGlied₂
-              have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
-                rw [nachEq₂, nachGlied₂]
-              have still₂ : schrittBeob ρ₂ predictor t = [] :=
-                fragment_kontext_schritt_still p plattform label₂
-              have e₁ : NiedrigeBeob (p.einheit plattform) ρ₁ predictor (t + 1) =
-                  NiedrigeBeob (p.einheit plattform) ρ₁ predictor t := by
-                change NiedrigeBeob _ ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
-                rw [fragment_kontext_schritt_still p plattform spurGlied, List.append_nil]
-              have e₂ : NiedrigeBeob (p.einheit plattform) ρ₂ predictor (t + 1) =
-                  NiedrigeBeob (p.einheit plattform) ρ₂ predictor t := by
-                change NiedrigeBeob _ ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
-                rw [still₂, List.append_nil]
-              -- post-state equality from the coupled pre-states
-              have regionEq : Ast.Semantik.Zustand.regionLive vor c =
-                  Ast.Semantik.Zustand.regionLive w₂ c := by
-                funext slot
-                simp only [Ast.Semantik.Zustand.regionLive, rechteGleich, leihenGleich]
-              have lokPost : (f.nach c vor).lokal = (f.nach c w₂).lokal := by
-                show Function.update vor.lokal c
-                    (f.auswerten (vor.lokal c) (Ast.Semantik.Zustand.regionLive vor c)) =
-                  Function.update w₂.lokal c
-                    (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂ c))
-                rw [lokEqFun, regionEq]
-              refine ⟨?_, ?_, ?_⟩
-              · -- prefix: both sides append nothing
-                rw [e₁, e₂]
-                exact cov
-              · -- state: publicly equal post-states, preserved machine fields
-                intro a b ha hb
-                rw [zustandNach₁] at ha
-                rw [zustandNach₂] at hb
-                obtain rfl := Option.some.inj ha
-                obtain rfl := Option.some.inj hb
-                refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
-                · intro d p hp
-                  exact congrFun lokPost d
-                · intro d
-                  have s1 : (f.nach c vor).status = vor.status := rfl
-                  have s2 : (f.nach c w₂).status = w₂.status := rfl
-                  simp only [s1, s2, statusEq]
-                · intro x
-                  have i1 : (f.nach c vor).initial = vor.initial := rfl
-                  have i2 : (f.nach c w₂).initial = w₂.initial := rfl
-                  simp only [i1, i2]
-                  exact initialGleich x
-                · have r1 : (f.nach c vor).rechte = vor.rechte := rfl
-                  have r2 : (f.nach c w₂).rechte = w₂.rechte := rfl
-                  simp only [r1, r2]
-                  exact rechteGleich
-                · have l1 : (f.nach c vor).leihen = vor.leihen := rfl
-                  have l2 : (f.nach c w₂).leihen = w₂.leihen := rfl
-                  simp only [l1, l2]
-                  exact leihenGleich
-                · intro d
-                  simp only [AntwortSicht]
-                  have q1 : (f.nach c vor).naechsteAntwort d = vor.naechsteAntwort d := rfl
-                  have q2 : (f.nach c w₂).naechsteAntwort d = w₂.naechsteAntwort d := rfl
-                  rw [q1, q2]
-                  exact antwortGleich d
-                · simp only [Befehl.nach, epocheEq]
-                · simp only [Befehl.nach, geliefertEq]
-                · simp only [Befehl.nach, kerneEq]
-                · simp only [Befehl.nach, statusEq]
-              · -- length: both sides append nothing
-                rw [e₁, e₂]
-                exact len
+                  have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
+                    rw [nachEq₂, nachGlied₂]
+                  have still₂ : schrittBeob ρ₂ predictor t = [] :=
+                    fragment_kontext_schritt_still p plattform label₂
+                  have e₁ : NiedrigeBeob (p.einheit plattform) ρ₁ predictor (t + 1) =
+                      NiedrigeBeob (p.einheit plattform) ρ₁ predictor t := by
+                    change NiedrigeBeob _ ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
+                    rw [fragment_kontext_schritt_still p plattform spurGlied, List.append_nil]
+                  have e₂ : NiedrigeBeob (p.einheit plattform) ρ₂ predictor (t + 1) =
+                      NiedrigeBeob (p.einheit plattform) ρ₂ predictor t := by
+                    change NiedrigeBeob _ ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
+                    rw [still₂, List.append_nil]
+                  -- post-state equality from the coupled pre-states
+                  have regionEq : Ast.Semantik.Zustand.regionLive vor c =
+                      Ast.Semantik.Zustand.regionLive w₂ c := by
+                    funext slot
+                    simp only [Ast.Semantik.Zustand.regionLive, rechteGleich, leihenGleich]
+                  have lokPost : (f.nach c vor).lokal = (f.nach c w₂).lokal := by
+                    show Function.update vor.lokal c
+                        (f.auswerten (vor.lokal c) (Ast.Semantik.Zustand.regionLive vor c)) =
+                      Function.update w₂.lokal c
+                        (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂ c))
+                    rw [lokEqFun, regionEq]
+                  refine ⟨?_, ?_, ?_⟩
+                  · -- prefix: both sides append nothing
+                    rw [e₁, e₂]
+                    exact cov
+                  · -- state: publicly equal post-states, preserved machine fields
+                    intro a b ha hb
+                    rw [zustandNach₁] at ha
+                    rw [zustandNach₂] at hb
+                    obtain rfl := Option.some.inj ha
+                    obtain rfl := Option.some.inj hb
+                    refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+                    · intro d p hp
+                      exact congrFun lokPost d
+                    · intro d
+                      have s1 : (f.nach c vor).status = vor.status := rfl
+                      have s2 : (f.nach c w₂).status = w₂.status := rfl
+                      simp only [s1, s2, statusEq]
+                    · intro x
+                      have i1 : (f.nach c vor).initial = vor.initial := rfl
+                      have i2 : (f.nach c w₂).initial = w₂.initial := rfl
+                      simp only [i1, i2]
+                      exact initialGleich x
+                    · have r1 : (f.nach c vor).rechte = vor.rechte := rfl
+                      have r2 : (f.nach c w₂).rechte = w₂.rechte := rfl
+                      simp only [r1, r2]
+                      exact rechteGleich
+                    · have l1 : (f.nach c vor).leihen = vor.leihen := rfl
+                      have l2 : (f.nach c w₂).leihen = w₂.leihen := rfl
+                      simp only [l1, l2]
+                      exact leihenGleich
+                    · intro d
+                      simp only [AntwortSicht]
+                      have q1 : (f.nach c vor).naechsteAntwort d = vor.naechsteAntwort d := rfl
+                      have q2 : (f.nach c w₂).naechsteAntwort d = w₂.naechsteAntwort d := rfl
+                      rw [q1, q2]
+                      exact antwortGleich d
+                    · simp only [Befehl.nach, epocheEq]
+                    · simp only [Befehl.nach, geliefertEq]
+                    · simp only [Befehl.nach, kerneEq]
+                    · simp only [Befehl.nach, statusEq]
+                  · -- length: both sides append nothing
+                    rw [e₁, e₂]
+                    exact len
             | antwort a =>
               exact (keineAntwort₂ a sp₂ label₂).elim
             | interrupt id =>
