@@ -195,7 +195,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     cases same
     exact LetTailReads.deterministic letTail tail'
   · intros
-    rename_i s inputS ref visible writable fits exprRead tree rest other
+    rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead tree rest other
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
     cases treeEq
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local s t) = ⟨_, ref'⟩ :=
@@ -212,12 +212,12 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       obtain ⟨same, suffix⟩ := ExprReads.deterministic exprRead read'
       cases same
       exact ⟨rfl, (List.cons.inj suffix).2⟩
-      exfalso
+    · exfalso
       cases inputEq
-      cases condRead with
+      cases exprRead with
       | atom a t => exact AtomReads.not_assignment a
   · intros
-    rename_i condition yes no condRead yesRead noRead ihYes ihNo tree rest other
+    rename_i condExpr first yesBlock more noBlock condRead yesRead noRead ihYes ihNo tree rest other
     rcases other.ite_inversion with ⟨cond', first', yes', more', no', condRead', yesRead', noRead', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
       obtain ⟨same, firstEq⟩ := ExprReads.deterministic condRead condRead'
@@ -229,3 +229,114 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       obtain ⟨sameNo, restEq⟩ := ihNo noRead'
       cases sameNo
       exact ⟨rfl, restEq⟩
+    · exfalso
+      cases inputEq
+      cases condRead with
+      | atom a t => exact AtomReads.not_assignment a
+  · intros
+    rename_i other
+    cases other
+    exact ⟨rfl, rfl⟩
+  · intros
+    rename_i first next stRead blockRead ihFirst ihBlock other
+    cases other with
+    | done => exact (StmtReads.disjoint_closeBrace stRead).elim
+    | step first' next' stRead' blockRead' =>
+        obtain ⟨sameFirst, moreEq⟩ := ihFirst stRead'
+        cases sameFirst
+        cases moreEq
+        obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
+        cases sameNext
+        exact ⟨rfl, restEq⟩
+  · intros
+    rename_i body inner ih other
+    cases other with
+    | braced inner' =>
+        obtain ⟨same, rfl⟩ := ih inner'
+        cases same
+        exact ⟨rfl, rfl⟩
+
+theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
+    (right : BlockItems result scope input b rest') : a = b ∧ rest = rest' := by
+  refine (BlockItems.rec
+    (motive_1 := fun before input tree rest _ => True)
+    (motive_2 := fun before input tree rest _ =>
+      ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
+    (motive_3 := fun before input tree rest _ => True)
+    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ (by trivial) left) right
+  · intro other
+    cases other
+    exact ⟨rfl, rfl⟩
+  · intros
+    rename_i first next stRead blockRead ihBlock other
+    cases other with
+    | done => exact (StmtReads.disjoint_closeBrace stRead).elim
+    | step first' next' stRead' blockRead' =>
+        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic stRead stRead'
+        cases sameFirst
+        cases moreEq
+        obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
+        cases sameNext
+        exact ⟨rfl, restEq⟩
+
+theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : rest <:+ input := by
+  refine StmtReads.rec
+    (motive_1 := fun scope input tree rest _ => rest <:+ input)
+    (motive_2 := fun before input tree rest _ => rest <:+ input)
+    (motive_3 := fun before input tree rest _ => rest <:+ input)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+  · intros
+    rename_i name ordinary value more exprRead tail
+    exact (tail.consumes.trans exprRead.consumes).trans
+      (List.suffix_append [letKeyword, .word name.val, assignment] _)
+  · intros
+    rename_i ref visible writable fits exprRead
+    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+  · intros
+    rename_i declared fits exprRead
+    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+  · intros
+    rename_i condition yes no condRead yesRead noRead
+    exact (((noRead.consumes.trans (List.suffix_cons elseKeyword _)).trans yesRead.consumes).trans
+      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+  · exact List.suffix_cons _ _
+  · intros
+    rename_i first next stRead blockRead ihSt ihBlock
+    exact ihBlock.trans ihSt
+  · intros
+    rename_i body inner ih
+    exact ih.trans (List.suffix_cons openBrace _)
+
+theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : rest <:+ input := by
+  refine BlockItems.rec
+    (motive_1 := fun before input tree rest _ => rest <:+ input)
+    (motive_2 := fun before input tree rest _ => rest <:+ input)
+    (motive_3 := fun before input tree rest _ => rest <:+ input)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+  · intros
+    rename_i name ordinary value more exprRead tail
+    exact (tail.consumes.trans exprRead.consumes).trans
+      (List.suffix_append [letKeyword, .word name.val, assignment] _)
+  · intros
+    rename_i ref visible writable fits exprRead
+    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+  · intros
+    rename_i declared fits exprRead
+    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+  · intros
+    rename_i condition yes no condRead yesRead noRead
+    exact (((noRead.consumes.trans (List.suffix_cons elseKeyword _)).trans yesRead.consumes).trans
+      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+  · exact List.suffix_cons _ _
+  · intros
+    rename_i first next stRead blockRead ihSt ihBlock
+    exact ihBlock.trans ihSt
+  · intros
+    rename_i body inner ih
+    exact ih.trans (List.suffix_cons openBrace _)
+
+theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : rest <:+ input := by
+  cases read with
+  | braced body => exact body.consumes.trans (List.suffix_cons openBrace _)
+
+end Gabbro.Core.Ast
