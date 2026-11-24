@@ -143,11 +143,10 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
       regions := (frame.regions.set 0 (some joined)).set 1 none }
   have hslotL : scope.slotRegion memNameL = some 0 := by
     change List.idxOf? memNameL.val [memNameL.val, memNameR.val] = some 0
-    simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
+    decide
   have hslotR : scope.slotRegion memNameR = some 1 := by
     change List.idxOf? memNameR.val [memNameL.val, memNameR.val] = some 1
-    simp only [memNameL, memNameR, List.idxOf?_cons, beq_self_eq_true, if_true, if_false,
-      Option.map_some]
+    decide
   have hleft : heldMemRegion k.plattform.ziel s entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
     dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
     rfl
@@ -207,15 +206,17 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
       · subst r
         exact memRegionOk extentL
           ⟨by change 0x1000 < 0x2000; omega, by change 0x2000 ≤ 2 ^ (52 : Nat); omega⟩
-          (by unfold Strecke.getrennt
-             change 0x2000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x1000
-             exact Or.inl (by omega))
+          (by
+            unfold Strecke.getrennt
+            change 0x2000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x1000
+            exact Or.inl (by omega))
       · subst r
         exact memRegionOk extentR
           ⟨by change 0x2000 < 0x3000; omega, by change 0x3000 ≤ 2 ^ (52 : Nat); omega⟩
-          (by unfold Strecke.getrennt
-             change 0x3000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x2000
-             exact Or.inl (by omega))
+          (by
+            unfold Strecke.getrennt
+            change 0x3000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x2000
+            exact Or.inl (by omega))
   constructor
   · apply memProgram_akzeptiert
     simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
