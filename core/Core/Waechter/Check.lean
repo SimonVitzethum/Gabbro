@@ -70,7 +70,9 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.Akzeptiert,
     `Gabbro.Core.Annahme.akzeptiert_katalog],
   syntaxModules := #[`Core.Ast],
-  idealModules := #[`Core.Maschine, `Core.Ideal],
+  -- `Core.Speicher` is the shared M3 state foundation both machines step over: `I` runs
+  -- quantify over `Zustand`, so the ideal layer includes it.
+  idealModules := #[`Core.Maschine, `Core.Ideal, `Core.Speicher],
   catalogueModules := #[`Core.Katalog, `Core.Aussen],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[]
