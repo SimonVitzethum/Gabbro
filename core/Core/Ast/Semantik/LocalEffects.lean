@@ -93,34 +93,51 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
   · trivial
   · trivial
 
--- Mirror Quellform.realisiert's instruction lookup, using wertIn_widen to establish a return.
+/-- Return a widened value to the entry context or restore the saved caller.
+    A caller with no result binding discards the value. -/
 theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zustand)
     (temp : (s.lokal eintritt).temp slot = some ⟨source, value⟩) :
     let after := (Befehl.zurueck slot target).nach eintritt s
     ∃ widened : Wert target,
-      (after.lokal eintritt).rueckgabe = some ⟨target, widened⟩ ∧
       wertInhalt source value = wertInhalt target widened ∧
-      ∀ code, kopf code after eintritt = none := by
+      match (s.lokal eintritt).fortsetzungen with
+      | [] =>
+        (after.lokal eintritt).rueckgabe = some ⟨target, widened⟩ ∧
+          ∀ code, kopf code after eintritt = none
+      | saved :: stack =>
+        after.lokal eintritt = { s.lokal eintritt with
+          pc := saved.pc, temp := saved.temp,
+          lokale := match saved.eingang with
+            | none => saved.lokale
+            | some written => wertIn written ⟨target, widened⟩ :: saved.lokale,
+          zaehler := saved.zaehler, obergrenzen := saved.obergrenzen,
+          funktion := saved.funktion, mass := saved.mass, fortsetzungen := stack } := by
   dsimp only
   obtain ⟨widened, valueEq, contents⟩ := wertIn_widen fits value
   have typed : ((s.lokal eintritt).temp slot).bind (wertIn target) = some ⟨target, widened⟩ := by
     rw [temp]
     exact valueEq
-  refine ⟨widened, ?_, contents, ?_⟩
-  · simp only [Befehl.nach, Befehl.auswerten, Function.update_self, typed]
-  · intro code
-    unfold kopf
-    rw [if_pos rfl]
-    simp only [Befehl.nach]
-    cases hstatus : (s.status eintritt) with
-    | ruht => rfl
-    | beendet _ => rfl
-    | laeuft =>
-      have hret : (Function.update s.lokal eintritt
-          ((Befehl.zurueck slot target).auswerten (s.lokal eintritt)) eintritt).rueckgabe =
-          some ⟨target, widened⟩ := by
-        simp only [Function.update_self, Befehl.auswerten, typed]
-      rw [hret]
+  have afterFrame : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt =
+      (s.lokal eintritt).rueckkehr (some ⟨target, widened⟩) := by
+    simp only [Befehl.nach, Function.update_self, Befehl.auswerten, typed]
+  refine ⟨widened, contents, ?_⟩
+  cases stackEq : (s.lokal eintritt).fortsetzungen with
+  | nil =>
+    have returned : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt |>.rueckgabe =
+        some ⟨target, widened⟩ := by
+      rw [afterFrame]
+      simp only [Rahmen.rueckkehr, stackEq]
+    refine ⟨returned, ?_⟩
+    intro code
+    simp only [kopf, if_pos rfl, returned]
+    change (match s.status eintritt with
+      | .ruht => none
+      | .laeuft => none
+      | .beendet _ => none) = (none : Option Befehl)
+    cases s.status eintritt <;> rfl
+  | cons saved stack =>
+    rw [afterFrame]
+    simp only [Rahmen.rueckkehr, stackEq, Option.bind_some]
 
 -- Mirror the pc equality of expr_ergebnis_typ and split on the actual Boolean input.
 theorem branch_effect (frame : Rahmen) (bit : Bool)
@@ -147,7 +164,7 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
     (fun b a t => b <:+ a)
     (fun b a t => b <:+ a)
     (fun b t => True)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
   · intro scope type name ordinary value
     exact List.suffix_cons _ _
   · intro scope lo hi valueLo valueHi ref visible writable value fits
@@ -157,6 +174,16 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
   · intro scope condition yes no yesIH noIH
     exact List.suffix_refl _
   · intro scope
+    exact List.suffix_refl _
+  · intros
+    exact List.suffix_cons _ _
+  · intros
+    exact List.suffix_refl _
+  · intros
+    exact List.suffix_cons _ _
+  · intros
+    exact List.suffix_refl _
+  · intros
     exact List.suffix_refl _
   · intro before middle after first rest firstIH restIH
     exact firstIH.trans restIH
