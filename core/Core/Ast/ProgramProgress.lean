@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.ProgramRegistry
 public import Core.Ast.Semantik.Auswertung
+public import Core.Ast.Program.Recursion
 
 /-!
 The program forms' control obligations belong with the instruction semantics.
@@ -163,19 +164,6 @@ theorem function_rekursionstiefe (mass : Nat → Nat) (depth : Nat)
       omega
   have := strong depth decreases
   omega
-
-inductive Rufpfad (table : List Funktion) : Identifier → Identifier → Prop where
-  | direkt : Funktion.finde table source = some function → call ∈ function.ruft →
-      Rufpfad table source call.name
-  | weiter : Funktion.finde table source = some function → call ∈ function.ruft →
-      Rufpfad table call.name target → Rufpfad table source target
-
-theorem function_rekursiv_korrekt (table : List Funktion) (function : Funktion)
-    (unique : (table.map (fun f => f.name.val)).Nodup)
-    (member : function ∈ table) :
-    Funktion.rekursiv table function = true ↔ Rufpfad table function.name function.name := by
-  -- Mirror function_rekursionstiefe on simple paths after removing repeated intermediate vertices.
-  sorry
 
 /-- A program with any syntactic recursive cycle containing a function with a
     missing measure is refused at launch before it selects an entry frame. -/
