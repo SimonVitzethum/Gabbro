@@ -105,7 +105,7 @@ private theorem for_occurrences :
     (∀ platform start, ProgramInstructionPremises ``Befehl.forAnfang platform start) ∧
       (∀ platform start, ProgramInstructionPremises ``Befehl.forNaechster platform start) := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
-  have ordinary : ordinaryLocal name := ⟨by decide, by decide⟩
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.ForRangeArgs [] none :=
     ⟨name, ordinary, 1, 1, 3, 3, .lit 1, .lit 3, ⟨trivial, trivial⟩, none, .braces .done⟩
   let form := forRangeForm [] none
@@ -132,11 +132,7 @@ private theorem for_occurrences :
 private theorem unit_occurrences :
     (∀ platform start, ProgramInstructionPremises ``Befehl.pruefeMass platform start) ∧
       (∀ platform start, ProgramInstructionPremises ``Befehl.ende platform start) := by
-  have ordinary : directName mainName := by
-    change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
-      ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    exact ⟨⟨by decide, by decide⟩, by decide⟩
+  have ordinary : directName mainName := mainName_direct
   let main : Decl [] [] := .function mainName ordinary [] none (by intro _ h; cases h)
     (some ⟨0, 0, .lit 0, by omega⟩) (.braces .done) List.nodup_nil (by intro h; cases h)
   let unit : Ast.Unit := ⟨[], .step main .done⟩

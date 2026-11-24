@@ -16,26 +16,40 @@ def openRange : Token := .punctuation "..<".toList
 
 def keyword (word : String) : Token := .word word.toList
 
+theorem programPunctuationHead (member : c ∈ [':', ',', '-', '.']) : UnquotedStart c := by
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl <;>
+    refine ⟨?_, ?_, ?_, ?_⟩ <;>
+    first
+    | simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true]
+    | intro h
+      cases h
+
 def printColon : PrintedToken := printPunctuation ":" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : ':' = c := Option.some.inj (by simpa using same)
-  exact ⟨by simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true], by decide, by decide, by decide⟩)
+  exact programPunctuationHead (by
+    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 def printComma : PrintedToken := printPunctuation "," (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : ',' = c := Option.some.inj (by simpa using same)
-  exact ⟨by simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true], by decide, by decide, by decide⟩)
+  exact programPunctuationHead (by
+    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : '-' = c := Option.some.inj (by simpa using same)
-  exact ⟨by simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true], by decide, by decide, by decide⟩)
+  exact programPunctuationHead (by
+    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 def printClosedRange : PrintedToken := printPunctuation ".." (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : '.' = c := Option.some.inj (by simpa using same)
-  exact ⟨by simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true], by decide, by decide, by decide⟩)
+  exact programPunctuationHead (by
+    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 def printOpenRange : PrintedToken := printPunctuation "..<" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : '.' = c := Option.some.inj (by simpa using same)
-  exact ⟨by simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true], by decide, by decide, by decide⟩)
+  exact programPunctuationHead (by
+    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 
 /-- The finite keywords used by these productions are unquoted words. -/
 def printProgramWord (head : Char) (tail : List Char) (first : 'a' ≤ head ∧ head ≤ 'z')

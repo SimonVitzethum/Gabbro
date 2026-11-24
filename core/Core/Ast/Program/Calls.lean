@@ -17,14 +17,15 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
       ((bindDirectForm [] none).ErfuellbarAm platform start binding ∧
         LaufenderRuf platform start ((bindDirectForm [] none).befehl binding)) := by
   let name : Identifier := keywordName 'f' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
-  have ordinary : directName name := ⟨⟨by decide, by decide⟩, by decide⟩
-  have ordinaryMain : directName mainName := by
-    change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
-      ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    exact ⟨⟨by decide, by decide⟩, by decide⟩
+  have ordinary : directName name := directName_of_singleton rfl
+  have ordinaryMain : directName mainName := mainName_direct
   let call : DirectCall [] := ⟨name, ordinary, []⟩
-  let binding : Surface.BindDirectArgs [] none := ⟨name, ⟨by decide, ordinary.1⟩, .bool, trivial, call⟩
+  have notMutableKeyword : name.val ≠ "mut".toList := by
+    change ['f'] ≠ ['m', 'u', 't']
+    intro same
+    cases same
+  let binding : Surface.BindDirectArgs [] none :=
+    ⟨name, ⟨notMutableKeyword, ordinary.1⟩, .bool, trivial, call⟩
   let target : Decl [] [] := .function name ordinary [] (some .bool)
     (by intro t mem; have h : t = WrittenType.bool := List.mem_singleton.mp mem; subst t; trivial)
     none (.braces (.step (.ret rfl .trueLit trivial) .done)) List.nodup_nil (fun _ => rfl)
@@ -58,7 +59,12 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   let saved : Fortsetzung := ⟨11, f₂.temp, [], f₂.zaehler, f₂.obergrenzen, none, none, none⟩
   let f₃ : Rahmen := { f₂ with pc := 6, funktion := some mainName, fortsetzungen := [saved] }
   have launched : launch.auswerten f₂ = f₃ := by
-    have unique : (f₂.funktionen.map (fun f => f.name.val)).Nodup := by decide
+    have unique : (f₂.funktionen.map (fun f => f.name.val)).Nodup := by
+      change ([['m', 'a', 'i', 'n'], ['f']] : List (List Char)).Nodup
+      simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, List.nodup_nil,
+        and_true, not_false_eq_true, true_and]
+      intro same
+      cases same
     have measured : f₂.funktionen.find? (fun f =>
         !f.misstAbstieg && Funktion.rekursiv f₂.funktionen f) = none := rfl
     have checked : (f₂.funktionen.flatMap Funktion.ruft).find? (fun call =>

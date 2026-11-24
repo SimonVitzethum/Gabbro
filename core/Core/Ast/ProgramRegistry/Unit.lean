@@ -185,12 +185,7 @@ theorem program_erfuellbar : programJoint := by
   intro platform start
   let form := programForm
   let name : Identifier := mainName
-  have ord : directName name := by
-    change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧ ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+  have ord : directName name := mainName_direct
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
     intro t mem
     cases mem

@@ -140,12 +140,7 @@ theorem function_erfuellbar : functionJoint := by
   let ctx : Scope := []
   let form := functionForm ctx
   let name : Identifier := keywordName 'f' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : directName name := by
-    change (['f'] ≠ ['t', 'r', 'u', 'e'] ∧ ['f'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['f'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+  have ordinaryName : directName name := directName_of_singleton rfl
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
     intro t mem
     cases mem
