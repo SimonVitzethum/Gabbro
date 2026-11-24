@@ -58,6 +58,10 @@ Consequences:
   particular programs. There are no per-program Lean files and no witnesses (owner, 2026-11-19).
 - **A decidable declared property is a capability of the language**, not user logic; once the checker decides it,
   the user no longer owes it.
+- **Undecidability is proved, not assumed** (owner, 2026-11-24): a declared property that the checker does not
+  decide and that becomes a user obligation (GabbroProve) carries a Lean proof that no checker decides it
+  (`¬ ComputablePred …`, by reduction from the halting problem over the model's program encoding), at least for
+  every planned form; a decidable sub-fragment stays a checker rule. An unproved "undecidable" is a finding.
 - **Hardware enters only as named per-row or per-envelope assumptions** (a target-table row, a speculation
   envelope, a persistence envelope); every statement above the table is hardware-independent.
 - **Software inside the verified image is user logic; software outside it is a catalogue row.** Nothing is
