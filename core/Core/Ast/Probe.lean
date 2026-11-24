@@ -1,6 +1,7 @@
 module
 
-import Core.Ast.Tree
+public import Core.Ast.Tree
+public import Core.Text.Token
 
 @[expose] public section
 
