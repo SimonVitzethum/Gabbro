@@ -49,6 +49,8 @@ def bang : Token := .punctuation ['!']
 def openBracket : Token := .punctuation ['[']
 def closeBracket : Token := .punctuation [']']
 def dot : Token := .punctuation ['.']
+def lenofKeyword : Token := .word "lenof".toList
+
 def sliceRange : Token := .punctuation ['.', '.']
 
 def comma : Token := .punctuation [',']
@@ -172,6 +174,8 @@ inductive AtomReads (scope : Scope) :
       CasePayloadRead scope input payload rest →
       AtomReads scope (.word label.val :: input) (.variantValue ref label index written ordinary available payload) rest
   | textLiteral : AtomReads scope (.string decoded :: rest) (.textLiteral decoded) rest
+  | textLength : ExprReads scope 0 input (base : Expr scope (.text capacity)) (closeParen :: rest) →
+      AtomReads scope (lenofKeyword :: openParen :: input) (.textLength base) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
     refuses a comparison at the head of its continuation. -/
@@ -285,7 +289,7 @@ theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest)
   sorry
 
 -- Mirror AtomReads.lit_inversion, leaving the lookup evidence existential.
-theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
+theorem AtomReads.variable_inversion (ordinary : ordinaryAtomWord word)
     (bound : ∃ (type : Ty .value) (ref : Local scope type), ref.visible ∧ ref.binding.name.val = word)
     (read : AtomReads scope (.word word :: rest) tree suffix) :
 

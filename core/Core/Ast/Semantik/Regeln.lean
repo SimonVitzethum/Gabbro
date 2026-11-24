@@ -251,6 +251,7 @@ inductive Befehl where
   | textConcat (basis a b : Nat)
   | textIndex (basis capacity : Nat)
   | substring (basis capacity : Nat)
+  | textLength (basis capacity : Nat)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -426,6 +427,10 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     if 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧ last.zahl.wert ≤ (text.bytes.size : Int) then
       return frame.schreibe base (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩)
     return frame.halt .ungueltigerWert
+
+  | .textLength base capacity, frame =>
+    frame.schreibe base ((frame.temp base).bind (wertAls (.text capacity)) |>.map
+      fun text => ⟨.int 0 capacity, text.lengthValue⟩)
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

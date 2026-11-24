@@ -184,6 +184,8 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.textIndex then
     ⟨.core, Quellform.kernStatements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textLength then
+    ⟨.core, Quellform.kernStatements textLengthForm TextLengthErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.substring then
     ⟨.core, Quellform.kernStatements substringForm SubstringErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then

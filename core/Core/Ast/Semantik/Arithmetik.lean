@@ -140,6 +140,9 @@ def byteValue (byte : UInt8) : Zahl 0 255 :=
     change byte.toNat < 256 at this
     omega⟩
 
+def TextValue.lengthValue (text : TextValue capacity) : Zahl 0 capacity :=
+  ⟨text.bytes.size, Int.natCast_nonneg _, Int.ofNat_le.mpr text.bound⟩
+
 def Umgebung (scope : Scope) := ∀ {type}, Local scope type → Wert type
 
 def leereUmgebung : Umgebung [] := by
@@ -188,6 +191,7 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
     byteValue ((base.wert env).bytes[(offset.wert env).wert.toNat]?.getD 0)
   | .substring base first last =>
     (base.wert env).slice (first.wert env).wert.toNat (last.wert env).wert.toNat
+  | .textLength base => (base.wert env).lengthValue
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit

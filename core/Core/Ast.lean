@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.Inventory
-public import Core.Ast.Registry
+public import Core.Ast.Inventory.Registry
 public import Core.Ast.BatchSurface
 public import Core.Ast.SemantikRezept
 public import Core.Ast.ProgramProgress
@@ -22,6 +22,7 @@ public import Core.Ast.Variant.TaggedDeclProofs
 public import Core.Ast.Variant.VariantValueProofs
 public import Core.Ast.Variant.VariantMatchProofs
 public import Core.Ast.TextValue.LiteralProofs
+public import Core.Ast.TextValue.LengthProofs
 public import Core.Ast.TextValue.ConcatProofs
 public import Core.Ast.TextValue.IndexProofs
 public import Core.Ast.TextValue.SubstringProofs
@@ -272,5 +273,6 @@ Each group has one proof file. Fill the statements listed in that file.
 | Concatenation | `ConcatProofs` | 16 |
 | Byte indexing | `IndexProofs` | 16 |
 | Half-open substring | `SubstringProofs` | 16 |
+| Current byte length | `LengthProofs` | 16 |
 | Bounded string type and widening | `TypeProofs` | 16 |
 -/

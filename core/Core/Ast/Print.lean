@@ -181,6 +181,11 @@ def printColon : PrintedToken := printPunctuation ":" (by
   (fun _ same => tokenHead (c := ':') same (punctuationHead (by
     simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
+def printLenof : PrintedToken :=
+  (keywordName 'l' ['e', 'n', 'o', 'f'] (by decide) (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
+    rintro c (rfl | rfl | rfl | rfl) <;> decide)).print
+
 def printSliceRange : PrintedToken := printPunctuation ".." (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
   (fun _ same => tokenHead (c := '.') same (punctuationHead (by
@@ -230,6 +235,7 @@ def Expr.printPieces : Expr scope type → List PrintedToken
   | .substring base first last =>
     [printOpen] ++ base.printPieces ++ [printOpenBracket] ++ first.printPieces ++
       [printSliceRange] ++ last.printPieces ++ [printCloseBracket, printClose]
+  | .textLength base => [printLenof, printOpen] ++ base.printPieces ++ [printClose]
 
 def ExprItems.printPieces : ExprItems scope types → List PrintedToken
   | .empty => []

@@ -47,6 +47,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, 11038571891011661513),
   (`Gabbro.Core.Ast.Semantik.TupleTypeProofPacket, 7659821294734326103),
   (`Gabbro.Core.Ast.Semantik.TextLiteralProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.TextLengthProofPacket, 0),
   (`Gabbro.Core.Ast.Semantik.TextConcatProofPacket, 0),
   (`Gabbro.Core.Ast.Semantik.TextIndexProofPacket, 0),
   (`Gabbro.Core.Ast.Semantik.SubstringProofPacket, 0),
@@ -166,6 +167,7 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Expr.textLiteral, `Gabbro.Core.Ast.Semantik.TextLiteralProofPacket),
     (`Gabbro.Core.Ast.Expr.textConcat, `Gabbro.Core.Ast.Semantik.TextConcatProofPacket),
     (`Gabbro.Core.Ast.Expr.textIndex, `Gabbro.Core.Ast.Semantik.TextIndexProofPacket),
+    (`Gabbro.Core.Ast.Expr.textLength, `Gabbro.Core.Ast.Semantik.TextLengthProofPacket),
     (`Gabbro.Core.Ast.Expr.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket) ]⟩,
   ⟨`Gabbro.Core.Ast.Stmt, `Gabbro.Core.Ast.Semantik.stmtSchema, #[
     (`Gabbro.Core.Ast.Stmt.letValue, `Gabbro.Core.Ast.Semantik.letEntry),
@@ -233,6 +235,7 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.textLiteral, `Gabbro.Core.Ast.Semantik.TextLiteralProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.textConcat, `Gabbro.Core.Ast.Semantik.TextConcatProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.textIndex, `Gabbro.Core.Ast.Semantik.TextIndexProofPacket),
+    (`Gabbro.Core.Ast.Semantik.Befehl.textLength, `Gabbro.Core.Ast.Semantik.TextLengthProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket) ]⟩]
 
 private meta def openTypeEntries : Array (Name × Name) := #[

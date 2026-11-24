@@ -46,8 +46,10 @@ def quotientBounds (lo hi divisorLo : Int) : Int × Int :=
 def quotientType (lo hi divisorLo : Int) : Ty .value :=
   .int (quotientBounds lo hi divisorLo).1 (quotientBounds lo hi divisorLo).2
 
-def ordinaryLocal (name : Identifier) : Prop :=
-  name.val ≠ "true".toList ∧ name.val ≠ "false".toList
+def ordinaryAtomWord (word : RawText) : Prop :=
+  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList
+
+def ordinaryLocal (name : Identifier) : Prop := ordinaryAtomWord name.val
 
 /-- The implicit widening at a typed destination is inclusion of the source interval. -/
 def Fits : Ty .value → Ty .value → Prop
@@ -120,6 +122,7 @@ inductive Expr (scope : Scope) : Ty .value → Type where
       Expr scope (.int 0 255)
   | substring (base : Expr scope (.text capacity)) (first : Expr scope (.int lo₁ hi₁))
       (last : Expr scope (.int lo₂ hi₂)) : Expr scope (.text capacity)
+  | textLength (base : Expr scope (.text capacity)) : Expr scope (.int 0 capacity)
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
@@ -159,6 +162,7 @@ def Expr.static : Expr scope type → Prop
   | .textConcat left right => left.static ∧ right.static
   | .textIndex base offset => base.static ∧ offset.static
   | .substring base first last => base.static ∧ first.static ∧ last.static
+  | .textLength base => base.static
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop

@@ -70,6 +70,8 @@ def expr (slot : Nat) : Expr scope type → Fragment
   | .substring (capacity := capacity) base first last =>
     (((expr slot base).anhaengen (expr (slot + 1) first)).anhaengen (expr (slot + 2) last)).anhaengen
       (.einzel (.substring slot capacity))
+  | .textLength (capacity := capacity) base =>
+    (expr slot base).anhaengen (.einzel (.textLength slot capacity))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer

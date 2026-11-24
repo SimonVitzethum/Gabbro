@@ -9,6 +9,7 @@ public import Core.Ast.Aggregate.Records.Construction
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Variant.Obligations
 public import Core.Ast.TextValue.Literal
+public import Core.Ast.TextValue.Length
 public import Core.Ast.TextValue.Concat
 public import Core.Ast.TextValue.Index
 public import Core.Ast.TextValue.Substring
@@ -97,6 +98,8 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.textIndex then
     ⟨.surface, Quellform.statements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textLength then
+    ⟨.surface, Quellform.statements textLengthForm TextLengthErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.substring then
     ⟨.surface, Quellform.statements substringForm SubstringErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor

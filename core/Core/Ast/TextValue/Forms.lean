@@ -63,6 +63,15 @@ def substring (scope : Scope) : Rule (.expression scope) (SubstringArgs scope) w
       ExprReads scope 0 first arg.first (sliceRange :: last) ∧
       ExprReads scope 0 last arg.last (closeBracket :: rest)
 
+structure TextLengthArgs (scope : Scope) where
+  capacity : Nat
+  base : Expr scope (.text capacity)
+
+def textLength (scope : Scope) : Rule (.expression scope) (TextLengthArgs scope) where
+  tree := fun arg => (Expr.textLength arg.base).typed
+  production := fun arg tokens =>
+    ∃ input, tokens = lenofKeyword :: openParen :: input ∧ ExprReads scope 0 input arg.base [closeParen]
+
 end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
@@ -88,6 +97,11 @@ def substringForm (scope : Scope) : Quellform (.expression scope) (Surface.Subst
   produktion := Surface.substring scope
   befehl := fun a => .substring 0 a.capacity
   position := fun a => (expr 0 a.base).code.length + (expr 1 a.first).code.length + (expr 2 a.last).code.length
+
+def textLengthForm (scope : Scope) : Quellform (.expression scope) (Surface.TextLengthArgs scope) where
+  produktion := Surface.textLength scope
+  befehl := fun a => .textLength 0 a.capacity
+  position := fun a => (expr 0 a.base).code.length
 
 def textTypeUse : WrittenType → Prop
   | .text _ => True
