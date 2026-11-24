@@ -87,8 +87,8 @@ theorem ResultReads.deterministic (read : ResultReads before input result rest) 
           obtain ⟨weq, oeq⟩ := TypeReads.deterministic tr tr'
           exact ⟨congrArg some weq, oeq⟩
 
-theorem MeasureReads.deterministic (read : MeasureReads scope input measure rest) :
-    ∀ {measure' rest'}, MeasureReads scope input measure' rest' → measure = measure' ∧ rest = rest' := by
+theorem MeasureReads.deterministic (read : MeasureReads scope input selected rest) :
+    ∀ {selected' rest'}, MeasureReads scope input selected' rest' → selected = selected' ∧ rest = rest' := by
   cases read with
   | absent closed =>
       intro m' o' read'
@@ -314,12 +314,14 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
       have h4 := h3.trans paramsRead.consumes
       exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
 
-  | record exported _ _ _ members =>
-    exact ((List.suffix_cons _ _).trans members.consumes).trans
-      ((List.suffix_append _ _).trans (List.suffix_append _ _))
-  | tagged exported _ _ _ first tail =>
-    exact (((List.suffix_cons _ _).trans tail.consumes).trans first.consumes).trans
-      ((List.suffix_append _ _).trans (List.suffix_append _ _))
+  | record exported name _ _ members =>
+    refine ((List.suffix_cons _ _).trans members.consumes).trans ?_
+    simpa only [List.append_assoc] using
+      (List.suffix_append (recordDeclarationPrefix exported ++ [Token.word name.val, assignment, openBrace]) _)
+  | tagged exported name _ _ first tail =>
+    refine (((List.suffix_cons _ _).trans tail.consumes).trans first.consumes).trans ?_
+    simpa only [List.append_assoc] using
+      (List.suffix_append (taggedDeclarationPrefix exported ++ [Token.word name.val, assignment, openBrace]) _)
   | table item members =>
     exact ((List.suffix_cons _ _).trans members.consumes).trans (List.suffix_append _ _)
   | effectGroup item effects =>
@@ -385,6 +387,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
         apply MeasureReads.absent
         intro tail same
         obtain ⟨_, head⟩ := bodyHead
+        change afterMeasure = keyword "decreases" :: tail at same
         rw [head] at same
         cases same
       | some m =>
