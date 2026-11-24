@@ -41,29 +41,19 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
--- Extend the original expr_keine_invarianten with Fragment.anhaengen for each operator.
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
-  induction tree generalizing slot with
-  | binary op left right leftIH rightIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, leftIH, rightIH]
-  | neg operand operandIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, operandIH]
-  | not operand operandIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, operandIH]
-  | div left right nonzero leftIH rightIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, leftIH, rightIH]
-  | compare op left right leftIH rightIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, leftIH, rightIH]
-  | logic op left right leftIH rightIH =>
-      simp only [expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, leftIH, rightIH]
-  | _ => rfl
+  refine @Expr.rec scope
+    (fun _ t => ∀ i, (expr i t).klauseln.invariant = [])
+    (fun _ t => ∀ i, (itemCode i t).klauseln.invariant = [])
+    (fun _ _ t => ∀ i, (labeledCode i t).klauseln.invariant = [])
+    (fun _ t => ∀ i, (caseCode i t).klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree slot
+  all_goals
+    intros
+    simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.leer, Fragment.anhaengen,
+      Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append]
 
 private theorem argsCode_keine_invarianten (slot : Nat) (args : List (TypedExpr scope)) :
     (argsCode slot args).klauseln.invariant = [] := by
@@ -73,51 +63,26 @@ private theorem argsCode_keine_invarianten (slot : Nat) (args : List (TypedExpr 
     simp only [argsCode, Fragment.anhaengen, Quellklauseln.anhaengen,
       expr_keine_invarianten, ih, List.nil_append]
 
--- Extend the original stmt_keine_invarianten by mutual recursion over Stmt and Block.
+private theorem optionCode_keine_invarianten (slot : Nat) (value : OptionInitializer scope count) :
+    (optionCode slot value).klauseln.invariant = [] := by
+  cases value <;>
+    simp only [optionCode, optionOperand, Fragment.leer, Fragment.anhaengen, Fragment.einzel,
+      Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten, List.nil_append]
+
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
   refine @Stmt.rec result
-    (fun b a t => (stmt t).klauseln.invariant = [])
-    (fun b a t => (block t).klauseln.invariant = [])
-    (fun b t => (bracedBlock t).klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
-  · intro scope type name ordinary value
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intro scope lo hi valueLo valueHi ref visible writable value fits
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intro expected scope type declared value fits
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intro scope condition yes no yesIH noIH
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
-  · intros
-    rfl
-  · intros
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intros
-    simp only [stmt, callCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, argsCode_keine_invarianten]
-  · intros
-    simp only [stmt, callCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, argsCode_keine_invarianten]
-  · intros
-    simp_all only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intros
-    simp_all only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intro scope
-    simp only [block, Fragment.leer, Quellklauseln.leer]
-  · intro before middle after first rest firstIH restIH
-    simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-      firstIH, restIH, List.nil_append]
-  · intro before after body bodyIH
-    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, bodyIH]
+    (fun _ _ t => (stmt t).klauseln.invariant = [])
+    (fun _ _ t => (block t).klauseln.invariant = [])
+    (fun _ t => (bracedBlock t).klauseln.invariant = [])
+    (fun _ _ _ _ t => (variantArms t).body.klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+  all_goals
+    intros
+    simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
+      ↓reduceIte, Fragment.leer, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten, argsCode_keine_invarianten,
+      optionCode_keine_invarianten, List.nil_append]
 
 theorem bracedBlock_keine_invarianten (tree : BracedBlock result scope) :
     (bracedBlock tree).klauseln.invariant = [] := by

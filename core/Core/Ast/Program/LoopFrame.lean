@@ -122,6 +122,11 @@ private theorem Befehl.schrittForm (b : Befehl) (frame : Rahmen) (key : Nat) :
         (SchrittForm.rufform { frame with lokale := [] } name []
           ((Funktion.finde frame.funktionen name).bind Funktion.result))
     | split
+  case textIndex | substring =>
+    repeat' first
+    | exact SchrittForm.halt frame _
+    | exact .lokal rfl (Nat.le_succ _) (fun _ => rfl)
+    | split
   case waehleVariante =>
     repeat' first
     | exact SchrittForm.halt frame _
