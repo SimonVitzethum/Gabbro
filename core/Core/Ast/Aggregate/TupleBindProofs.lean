@@ -68,8 +68,8 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
   all_goals
     first
     | contradiction
-    | simp at htok
     | cases htok
+    | simp at htok
 
 end Gabbro.Core.Ast.Surface
 
@@ -175,7 +175,7 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simp [pattern, TuplePattern.names]
-    · simp [pattern, TuplePattern.names]
+    · exact List.Nodup.nil
     · intro name mem
       simp [pattern, TuplePattern.names] at mem
     · intro written mem
