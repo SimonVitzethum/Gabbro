@@ -193,5 +193,6 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
     some ⟨args.types.get args.index, tupleGet args.types args.index record⟩
   simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, Option.bind,
     Function.update_self, h, dif_pos]
+  rfl
 
 end Gabbro.Core.Ast.Semantik
