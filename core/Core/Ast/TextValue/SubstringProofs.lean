@@ -219,6 +219,7 @@ private theorem substringAmOrt (scope : Scope) : (substringForm scope).RegelAmOr
   have hlen : p.code.length = (expr 0 args.base).code.length +
       (expr 1 args.first).code.length + (expr 2 args.last).code.length := by
     simp [p, Fragment.anhaengen, List.length_append]
+    omega
   rw [← hlen]
   exact substringRootLookup p b
 
@@ -356,7 +357,7 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
-  subst trail
+  subst spur
   constructor
   · intro answer
     simp [plan]
@@ -370,7 +371,7 @@ theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
   obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
-  subst trail
+  subst spur
   refine ⟨rfl, rfl, ?_⟩
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
@@ -412,7 +413,7 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   · intro g guard
     have hgval : (form.befehl args).guard (s₃.lokal eintritt) =
         some ⟨.teilfolge, (0, 0, (TextValue.literal [] : TextValue cap).bytes.size)⟩ := by
-      simpa [form, b, zero, Zahl.literal] using hb.1
+      simpa [form, substringForm, args, b, zero, Zahl.literal] using hb.1
     rw [hgval] at guard
     cases guard
     simp [waechterBedarf]
@@ -420,11 +421,14 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
         (0, 0, (TextValue.literal [] : TextValue cap).bytes.size) := by
       simp [waechterBedarf]
     have hgood := hb.2.1 hw
-    change ((form.befehl args).auswerten (s₃.lokal eintritt)).stopp = none ∧
-      (((form.befehl args).auswerten (s₃.lokal eintritt)).temp 0).isSome = true
     refine ⟨?_, ?_⟩
-    · simp [form, b, s₃, s₂, s₁, s₀, Befehl.auswerten, Rahmen.schreibe, waechterBedarf, cap]
+    · simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.auswerten,
+        Rahmen.schreibe, waechterBedarf, cap]
     · have ht := hgood.1
-      simpa [b, zero, Zahl.literal] using congrArg (fun frame : Rahmen => (frame.temp 0).isSome) ht
+      have hsame : (b.nach eintritt s₃).lokal eintritt =
+          (Befehl.substring 0 cap).auswerten (s₃.lokal eintritt) := by
+        simp [b, substringForm, args, Befehl.nach]
+      rw [hsame]
+      simpa [zero, Zahl.literal] using congrArg (fun frame : Rahmen => (frame.temp 0).isSome) ht
 
 end Gabbro.Core.Ast.Semantik
