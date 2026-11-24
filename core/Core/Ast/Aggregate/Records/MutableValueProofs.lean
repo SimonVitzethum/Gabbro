@@ -25,16 +25,16 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
-@[simp] private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
+private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
+private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
-@[simp] private theorem ppValue (s : String) (p1 p2) :
+private theorem ppValue (s : String) (p1 p2) :
     (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
-@[simp] private theorem letKeywordVal : letKeyword = Token.word ['l', 'e', 't'] := by rfl
-@[simp] private theorem keywordMutVal : keyword "mut" = Token.word ['m', 'u', 't'] := by rfl
-@[simp] private theorem assignmentVal : assignment = Token.punctuation ['='] := by rfl
-@[simp] private theorem semicolonVal : semicolon = Token.punctuation [';'] := by rfl
-@[simp] private theorem keywordNameVal (c : Char) (r : List Char) (p1 p2) :
+private theorem letKeywordVal : letKeyword = Token.word ['l', 'e', 't'] := by rfl
+private theorem keywordMutVal : keyword "mut" = Token.word ['m', 'u', 't'] := by rfl
+private theorem assignmentVal : assignment = Token.punctuation ['='] := by rfl
+private theorem semicolonVal : semicolon = Token.punctuation [';'] := by rfl
+private theorem keywordNameVal (c : Char) (r : List Char) (p1 p2) :
     (keywordName c r p1 p2 : Identifier).val = c :: r := by rfl
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
@@ -54,13 +54,13 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
       · rfl
   | directCall callRead =>
       cases callRead
-      simp [keyword, letKeyword, openParen] at hh
+      simp_all [keyword, letKeyword, openParen]
   | tupleBind checked patternRead annotationRead valueRead =>
       cases patternRead
-      simp [keyword, letKeyword, openParen] at hh
+      simp_all [keyword, letKeyword, openParen]
   | _ =>
-      simp [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,
-        openParen, openBrace, semicolon] at hh
+      simp_all [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,
+        openParen, openBrace, semicolon]
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
   intro scope result name input tree rest read
@@ -71,8 +71,10 @@ private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : M
     (mutableValue ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
   refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
-  · simp [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens,
-      letName, printMut, printAssignment, printSemicolon, letKeyword, keyword]
+  · simp_all [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens,
+      letName, printMut, printAssignment, printSemicolon, letKeyword, keyword,
+      identPrintVal, ppwVal, ppValue, letKeywordVal, keywordMutVal, assignmentVal,
+      semicolonVal, keywordNameVal, List.map_cons, List.map_append, List.map_nil]
   · simpa [Expr.printTokens] using
       (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 

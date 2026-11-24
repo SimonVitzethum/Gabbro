@@ -26,17 +26,17 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
-@[simp] private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
+private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
+private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
-@[simp] private theorem ppValue (s : String) (p1 p2) :
+private theorem ppValue (s : String) (p1 p2) :
     (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
-@[simp] private theorem printColonVal : printColon.value = colon := by rfl
-@[simp] private theorem printCommaVal : printComma.value = comma := by rfl
-@[simp] private theorem printAssignmentVal : printAssignment.value = assignment := by rfl
-@[simp] private theorem printOpenBraceVal : printOpenBrace.value = openBrace := by rfl
-@[simp] private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rfl
-@[simp] private theorem printSemicolonVal : printSemicolon.value = semicolon := by rfl
+private theorem printColonVal : printColon.value = colon := by rfl
+private theorem printCommaVal : printComma.value = comma := by rfl
+private theorem printAssignmentVal : printAssignment.value = assignment := by rfl
+private theorem printOpenBraceVal : printOpenBrace.value = openBrace := by rfl
+private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rfl
+private theorem printSemicolonVal : printSemicolon.value = semicolon := by rfl
 
 theorem recordDecl_inversion : RecordDeclInversionAussage := by
   intro scope input tree rest ex name read
@@ -45,7 +45,7 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
   | record e n valid distinct memberRead =>
       rename_i fields input'
       have he : e = ex := by
-        cases e <;> cases ex <;> simp [recordDeclarationPrefix, keyword] at hh ⊢
+        cases e <;> cases ex <;> simp_all [recordDeclarationPrefix, keyword]
       subst e
       have hh' : recordDeclarationPrefix ex ++ ([Token.word name.val, assignment, openBrace] ++ input) =
           recordDeclarationPrefix ex ++ ([Token.word n.val, assignment, openBrace] ++ input') := by
@@ -61,10 +61,10 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
         exact memberRead
       · rfl
   | tagged ex' n valid distinct firstRead tailRead =>
-      cases ex <;> cases ex' <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix, keyword] at hh
+      cases ex <;> cases ex' <;> simp_all [recordDeclarationPrefix, taggedDeclarationPrefix, keyword]
   | _ =>
-      cases ex <;> simp [recordDeclarationPrefix, keyword, assignment, colon, openBrace,
-        openParen, semicolon] at hh
+      cases ex <;> simp_all [recordDeclarationPrefix, keyword, assignment, colon, openBrace,
+        openParen, semicolon]
 
 private theorem recordMembers_consumes {input : List Token} {fields : List RecordMember} {rest : List Token}
     (read : RecordMembersRead input fields rest) : rest <:+ input := by
@@ -90,12 +90,12 @@ private theorem recordMembers_print_reads (fields : List RecordMember)
     RecordMembersRead (memberTokenList fields ++ [closeBrace, semicolon]) fields [semicolon] := by
   induction fields with
   | nil =>
-      simp [memberTokenList]
+      simp_all [memberTokenList]
       exact .close
   | cons m ms ih =>
       simpa [memberTokenList] using
         (RecordMembersRead.next m.name
-          (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
+          (WrittenType.printReads m.written (valid m (by simp_all)) (by intro more same; cases same))
           (ih (fun x hx => valid x (List.mem_cons_of_mem m hx))))
 
 private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
@@ -111,8 +111,11 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
         memberTokenList args.members := by
       simpa [List.flatMap, Function.comp_def] using hmem
     by_cases h : args.exported <;>
-      simp [h, hmem', List.flatMap, Function.comp_def, recordDecl, Category.printPieces, Decl.printPieces,
-        recordDeclarationHead, recordDeclarationPrefix, keyword, printPub, printTypeDecl]
+      simp_all [h, hmem', List.flatMap, Function.comp_def, recordDecl, Category.printPieces, Decl.printPieces,
+        recordDeclarationHead, recordDeclarationPrefix, keyword, printPub, printTypeDecl,
+        identPrintVal, ppwVal, ppValue, printColonVal, printCommaVal, printAssignmentVal,
+        printOpenBraceVal, printCloseBraceVal, printSemicolonVal,
+        List.map_cons, List.map_append, List.map_nil]
   · exact recordMembers_print_reads args.members args.valid
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by
@@ -198,6 +201,6 @@ theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
 
 theorem recordDecl_binding : RecordDeclBindingAussage := by
   intro scope args frame
-  simp [recordDeclForm, Befehl.auswerten, recordBinding]
+  simp_all [recordDeclForm, Befehl.auswerten, recordBinding]
 
 end Gabbro.Core.Ast.Semantik
