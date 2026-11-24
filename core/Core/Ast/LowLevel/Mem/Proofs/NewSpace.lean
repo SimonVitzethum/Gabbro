@@ -302,7 +302,7 @@ private theorem memWaechter (k : Katalog) (op : MemInstruction) :
   · intro ρ runs t l h _ hne; exact (hne rfl).elim
 private theorem memAkzeptiertX86 (op : MemInstruction) :
     Annahme.Akzeptiert (memUnit Plattform.x86_64.katalog op) := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨memAussenLokal _ op, memFlussLokal _ op⟩, ?_⟩,
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, memAussenLokal _ op, memFlussLokal _ op, ?_⟩,
     memKlauseln _ op, memWaechter _ op⟩
   · intro i
     exact memRegelLokal _ i
