@@ -63,7 +63,7 @@ theorem sicherheit_aus_regeln_erfuellbar :
     change ['x'] ≠ ['m', 'u', 't']
     intro eq
     cases eq
-  let tree := Stmt.letValue (scope := []) name ordinary
+  let tree := Stmt.letValue (result := none) (scope := []) name ordinary
     (.binary .add (.lit 1) (.binary .mul (.lit 2) (.lit 3)))
   let p := stmt tree
   have keine : p.klauseln.invariant = [] := stmt_keine_invarianten tree
