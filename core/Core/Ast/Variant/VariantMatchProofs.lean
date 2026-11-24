@@ -51,31 +51,42 @@ theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
 
 private theorem vm_block_inv {result before after} (b : Block result before after) :
     (block b).klauseln.invariant = [] := by
-  induction b with
+  cases b with
   | done => rfl
-  | step first rest ih => simp [block, stmt_keine_invarianten, ih]
+  | step first rest =>
+      simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+        stmt_keine_invarianten first, vm_block_inv rest, List.nil_append]
 
 private theorem vm_braced_inv {result before} (b : BracedBlock result before) :
     (bracedBlock b).klauseln.invariant = [] := by
   cases b with
-  | braces body => simpa [bracedBlock] using vm_block_inv body
+  | braces body =>
+      simpa only [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append] using vm_block_inv body
 
 private theorem vm_arms_inv {result scope allowed labels payloads}
     (arms : VariantArms result scope allowed labels payloads) :
     (variantArms arms).body.klauseln.invariant = [] := by
-  induction arms with
+  cases arms with
   | done => rfl
-  | nullary label caseName body rest ih => simp [variantArms, MatchCode.prepend, vm_braced_inv, ih]
-  | payload label binder ordinary body rest ih => simp [variantArms, MatchCode.prepend, vm_braced_inv, ih]
-  | wildcard body nonempty shape => simp [variantArms, vm_braced_inv]
+  | nullary label caseName body rest =>
+      simp [variantArms, MatchCode.prepend, vm_braced_inv body, vm_arms_inv rest]
+  | payload label binder ordinary body rest =>
+      simp [variantArms, MatchCode.prepend, vm_braced_inv body, vm_arms_inv rest]
+  | wildcard body nonempty shape =>
+      simp [variantArms, vm_braced_inv body]
 
 theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
   intro ctx platform args
   let p := (variantMatchForm ctx).fragment args
   let b := (variantMatchForm ctx).befehl args
   have inv : p.klauseln.invariant = [] := by
-    dsimp [p, Quellform.fragment, fragment]
-    simp [expr_keine_invarianten, vm_arms_inv]
+    change ((((expr 0 args.value).anhaengen
+      (Fragment.einzel (Befehl.waehleVariante 0 args.name args.labels args.payloads
+        (variantArms args.arms).branches))).anhaengen
+        (variantArms args.arms).body).klauseln.invariant = [])
+    simp [Fragment.anhaengen, Quellklauseln.anhaengen, Quellklauseln.leer,
+      expr_keine_invarianten, vm_arms_inv]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform inv⟩
 

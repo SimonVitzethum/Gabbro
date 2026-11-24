@@ -46,15 +46,20 @@ theorem variantValue_annahme : VariantValueAnnahmeAussage := by
     obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau (w := w) step execute
     exact List.not_mem_nil
 
+private theorem vv_caseCode_inv (slot : Nat) {ty : Option (Ty .value)}
+    (payload : CasePayload scope ty) : (caseCode slot payload).klauseln.invariant = [] := by
+  cases payload with
+  | nullary paren => rfl
+  | value e => simpa [caseCode] using expr_keine_invarianten slot e
+
 theorem variantValue_erhaltung : VariantValueErhaltungAussage := by
   intro scope platform args
   let p := (variantValueForm scope).fragment args
   let b := (variantValueForm scope).befehl args
   have inv : p.klauseln.invariant = [] := by
-    dsimp [p, Quellform.fragment, fragment]
-    cases hp : args.payload with
-    | nullary paren => rfl
-    | value e => simpa [caseCode, hp] using expr_keine_invarianten 0 e
+    change (((caseCode 0 args.payload).anhaengen (Fragment.einzel b)).klauseln.invariant = [])
+    simpa [Fragment.anhaengen, Quellklauseln.anhaengen, Quellklauseln.leer] using
+      vv_caseCode_inv 0 args.payload
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform inv⟩
 
