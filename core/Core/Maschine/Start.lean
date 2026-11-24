@@ -10,8 +10,10 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
-/-- The unit supplies its rules, image declaration, canonical source initialisation and the
-    implementation loader. Loader failure is represented by an empty implementation state. -/
+/-- The unit supplies its rules, image declaration, canonical source initialisation,
+    implementation loader and refinement data. M6 unit constructors derive the
+    local relation from the source forms and supply their checked length bounds.
+    Loader failure is represented by an empty implementation state. -/
 structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   katalog : Katalog.Katalog
   bild : Bild
@@ -20,6 +22,8 @@ structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   startdaten : AussenStart → Startdaten Wert Raum Lok Grund
   startmedium : AussenStart → Nat → UInt8
   laden : AussenStart → Ladung → Option (Zustand L Ort Wert Raum Lok Grund)
+  lokalerBezug : (Kontext → Lok) → (Kontext → Lok) → Prop
+  stotterLaenge : ι → Nat
 
 variable (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 

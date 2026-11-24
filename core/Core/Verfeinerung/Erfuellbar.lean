@@ -13,30 +13,32 @@ variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
 omit [DecidableEq L] in
 private theorem zustandsbezug_eq {s i : Zustand L Ort Wert Raum Lok Grund}
-    (rel : Zustandsbezug Eq s i) : s = i := by
+    (gleich : E.lokalerBezug = Eq) (rel : Zustandsbezug E s i) : s = i := by
   obtain ⟨shared, localEq⟩ := rel
   change { s with lokal := i.lokal } = i at shared
+  rw [gleich] at localEq
   rw [← localEq] at shared
   exact shared
 
 /-- At a unit boundary with identical machine states, matching forward and
     backward form rules discharge the M4 obligations with no private steps. -/
 theorem abgleich_aus_gleichen_regeln
-    {laenge : F → Nat}
+    (gleich : E.lokalerBezug = Eq)
     (laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
       E.laden s (h.lade E.bild) = some (start E s).2)
     (regeln : ∀ f c s w plans u, (E.system.regel f).impl c s w plans u ↔
       (E.system.regel f).ideal c s w plans u)
-    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η Eq → StotterSchranke laenge η) :
-    AbgleichPflichten E Eq laenge := by
-  refine ⟨fun _ => rfl, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, rfl⟩, ?_, ?_, schranke⟩
+    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → StotterSchranke η) :
+    AbgleichPflichten E := by
+  have reflexiv l : E.lokalerBezug l l := gleich.symm ▸ rfl
+  refine ⟨reflexiv, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, reflexiv _⟩, ?_, ?_, schranke⟩
   · intro f hw t c w s u s' i plan spur rel normal bereit kopf impl execute
-    have same := zustandsbezug_eq rel
+    have same := zustandsbezug_eq gleich rel
     subst i
     exact Or.inl ⟨s', .kontext normal bereit ⟨f, kopf, (regeln f c s w [plan] u).mp impl⟩ execute,
-      ProtokollBezug.refl _, rfl⟩
+      ProtokollBezug.refl _, reflexiv _⟩
   · intro hw t s i rel stuck label next step
-    have same := zustandsbezug_eq rel
+    have same := zustandsbezug_eq gleich rel
     subst i
     cases step with
     | kontext normal ready rule execute =>
@@ -74,26 +76,30 @@ private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E
     exact (absent ⟨a, Nat.le_refl _, Or.inr ⟨entry, f, w, spur, trivial, form, event⟩⟩).elim
 
 /-- A one-form unit repeatedly changes a local value on a fair hardware
-    history. The concrete, simulation, safety and progress premises hold jointly. -/
+    history. The concrete, simulation, safety and progress premises hold
+    jointly. A unit with a private local change exhibits both sides of the
+    checked length boundary on the final hardware opportunity. -/
 theorem fortschritt_erfuellbar :
     ∃ E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
-      SimPflichten E Eq (fun _ => 1) ∧
+      SimPflichten E ∧
       ∃ (h : Umgebung) (ρ : Maschine.Lauf E) (η : Lauf E),
         Maschine.Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ Laeufe E η ∧
-        Laufabgleich ρ η Eq ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
+        Laufabgleich ρ η ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
         (∃ nutzbar, FortschrittsPflichten (.lockFree (fun _ => True)) ρ η nutzbar) ∧
         (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse (.lockFree (fun _ => True)) η ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
           before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true ∧
-          ∃ (ρ' : Maschine.Lauf E) (η' : Lauf E),
-            Maschine.Laeufe E h ρ' ∧ Laeufe E η' ∧ Laufabgleich ρ' η' (fun _ _ => True) ∧
-            ¬ FairLaeufe E.katalog h ρ'.hw ∧ ρ'.zeit.Endlich ∧ η'.zeit.Endlich ∧
-            StotterSchranke (fun _ => 1) η' ∧
-            ρ'.zeit.spur 0 = some (.kontext (.faden 0) (), ⟨[], []⟩) ∧
-            η'.belegt 0 = some (.faden 0) ∧ (∀ t, η'.zeit.spur t = none) ∧
-            (∃ w spur next, Schritt E.einrichtung E.system E.katalog η'.hw 0 (η'.zeit.zustand 0)
-              (.kontext (.faden 0) w, spur) next) := by
+          ∀ laenge, ∃ E' : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
+            E'.stotterLaenge () = laenge ∧
+            ∃ (ρ' : Maschine.Lauf E') (η' : Lauf E'),
+              Maschine.Laeufe E' h ρ' ∧ Laeufe E' η' ∧ Laufabgleich ρ' η' ∧
+              ¬ FairLaeufe E'.katalog h ρ'.hw ∧ ρ'.zeit.Endlich ∧ η'.zeit.Endlich ∧
+              (StotterSchranke η' ↔ 1 ≤ laenge) ∧ (laenge = 0 → ¬ Sim E' ρ' η') ∧
+              ρ'.zeit.spur 0 = some (.kontext (.faden 0) (), ⟨[], []⟩) ∧
+              η'.belegt 0 = some (.faden 0) ∧ (∀ t, η'.zeit.spur t = none) ∧
+              (∃ w spur next, Schritt E'.einrichtung E'.system E'.katalog η'.hw 0 (η'.zeit.zustand 0)
+                (.kontext (.faden 0) w, spur) next) := by
   let k := Plattform.x86_64.katalog
   let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
   let entry := Kontext.faden 0
@@ -112,10 +118,11 @@ theorem fortschritt_erfuellbar :
     ⟨fun _ => ⟨impl, impl⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
   let E₀ : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     ⟨k, bild, e, sy, fun s => daten s.bootCore, fun _ _ => 0,
-      fun s _ =>
+      (fun s _ =>
         let d := daten s.bootCore
-        some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))⟩
-  have frei {ρ : Maschine.Lauf E₀} {η : Lauf E₀} (matched : Laufabgleich ρ η Eq) (t : Nat) :
+        some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
+      Eq, fun _ => 1⟩
+  have frei {ρ : Maschine.Lauf E₀} {η : Lauf E₀} (matched : Laufabgleich ρ η) (t : Nat) :
       η.belegt t = none := by
     cases occupied : η.belegt t with
     | none => rfl
@@ -127,7 +134,7 @@ theorem fortschritt_erfuellbar :
         cases occupied
       obtain ⟨before, load, rel⟩ := matched.zustand t
       obtain ⟨after, loadedAfter, relAfter⟩ := matched.zustand (t + 1)
-      have same := (zustandsbezug_eq relAfter).trans ((η.zeit.wartet idle).1.trans (zustandsbezug_eq rel).symm)
+      have same := (zustandsbezug_eq rfl relAfter).trans ((η.zeit.wartet idle).1.trans (zustandsbezug_eq rfl rel).symm)
       have tick := ρ.zeit.takt t
       rw [load, loadedAfter, label, same] at tick
       cases tick with
@@ -147,17 +154,17 @@ theorem fortschritt_erfuellbar :
             rw [Function.update_self] at impossible
             have toggles (b : Bool) : b ≠ !b := by intro eq; cases b <;> cases eq
             exact (toggles _ impossible).elim
-  have abgleich : AbgleichPflichten E₀ Eq (fun _ => 1) :=
-    abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
+  have abgleich : AbgleichPflichten E₀ :=
+    abgleich_aus_gleichen_regeln rfl (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
       (fun _ _ _ _ matched => StotterSchranke.ohne_stottern (frei matched))
-  have pflicht : SimPflichten E₀ Eq (fun _ => 1) := by
+  have pflicht : SimPflichten E₀ := by
     refine ⟨abgleich, ?_, ?_⟩
     · intro _h _run _valid _t _s _next _c _w _spur _u _plan _load _after _label _normal _ready form _execute
       obtain ⟨_, _, planEq, _⟩ := form
       cases (List.cons.inj planEq).1
       exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
     · intro s i rel
-      cases zustandsbezug_eq rel
+      cases zustandsbezug_eq rfl rel
       exact fun _ => ⟨rfl, Iff.rfl, fun _ => Iff.rfl⟩
   let sicht : Nat → AussenVerlauf → AussenSicht :=
     fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
@@ -214,7 +221,7 @@ theorem fortschritt_erfuellbar :
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
   have idealState (t : Nat) : η.zeit.zustand t = zustand t := by
     obtain ⟨x, state, rel⟩ := matched.zustand t
-    exact (zustandsbezug_eq rel).symm.trans ((Option.some.inj state).symm)
+    exact (zustandsbezug_eq rfl rel).symm.trans ((Option.some.inj state).symm)
   have idealEvent (t : Nat) : η.zeit.spur t = some label := by
     have aligned : SpurAbgleich (some label) (η.zeit.spur t) := matched.spur t
     rcases aligned.ideales_etikett with event | step
@@ -249,14 +256,22 @@ theorem fortschritt_erfuellbar :
     .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
   have idealStep : Schritt e sy k (letztesAngebot hw) 0 z label z' :=
     .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
-  have lastRun := lauf_mit_letztem_privattakt (E := E₀) (lokal := fun _ _ => True) (z := z) (z' := z')
-    fair.hardware admissible fair.konform rfl ⟨ProtokollBezug.refl z, trivial⟩
-    ⟨(show ProtokollBezug z' z from rfl), trivial⟩ privateStep rfl
-    lastReady (f := ()) rfl ⟨(), label.2, z', idealStep⟩
   refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, pflicht.zielFX konkret,
-    ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_, lastRun⟩
-  change Function.update z.lokal entry (!z.lokal entry) entry = true
-  rw [Function.update_self]
-  rfl
+    ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_, ?_⟩
+  · change Function.update z.lokal entry (!z.lokal entry) entry = true
+    rw [Function.update_self]
+    rfl
+  · intro laenge
+    let E' := { E₀ with
+      lokalerBezug := fun l i => ∀ c, c ≠ entry → l c = i c
+      stotterLaenge := fun _ => laenge }
+    obtain ⟨ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, step, mark, pause, possible⟩ :=
+      lauf_mit_letztem_privattakt (E := E') (z := z) (z' := z')
+        fair.hardware admissible fair.konform rfl ⟨ProtokollBezug.refl z, fun _ _ => rfl⟩
+        ⟨(show ProtokollBezug z' z from rfl), fun c h => Function.update_of_ne h _ _⟩ privateStep rfl
+        lastReady (f := ()) rfl ⟨(), label.2, z', idealStep⟩
+    refine ⟨E', rfl, ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, ?_, step, mark, pause, possible⟩
+    rintro rfl ⟨_, _, stutter, _⟩
+    exact Nat.not_succ_le_zero _ (bound.mp stutter)
 
 end Gabbro.Core.Maschine.I

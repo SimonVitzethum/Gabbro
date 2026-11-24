@@ -85,7 +85,7 @@ structure FortschrittsPflichten (klasse : FortschrittsKlasse F)
       ∀ a, SystemAktiv forms η a → ¬ SystemSchritt forms η a →
         ∃ t c f, a ≤ t ∧ forms f ∧ BleibtOffen η c f t ∧ Aktiviert η c t
 
-variable {ρ : Maschine.Lauf E} {η : Lauf E} {lokal : LokalerBezug Lok} {laenge : F → Nat}
+variable {ρ : Maschine.Lauf E} {η : Lauf E}
 variable {klasse : FortschrittsKlasse F} {nutzbar : Nat → Kontext → Prop}
 
 theorem FortschrittsPflichten.vollzug (pf : FortschrittsPflichten klasse ρ η nutzbar)
@@ -113,8 +113,8 @@ theorem SpurAbgleich.ideales_etikett {event : SchrittWahl Wahl × SchrittSpur Or
   | privat _ _ => exact Or.inl rfl
   | schritt _ => exact Or.inr rfl
 
-theorem Laufabgleich.entladet (matchRun : Laufabgleich ρ η lokal) (valid : Laeufe E η)
-    (bound : StotterSchranke laenge η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
+theorem Laufabgleich.entladet (matchRun : Laufabgleich ρ η) (valid : Laeufe E η)
+    (bound : StotterSchranke η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw) {a c f}
     (openStep : BleibtOffen η c f a) (enabled : Aktiviert η c a) : False := by
   classical
@@ -140,18 +140,18 @@ theorem Laufabgleich.entladet (matchRun : Laufabgleich ρ η lokal) (valid : Lae
           have context := (SchrittWahl.kontext.inj (congrArg Prod.fst (Option.some.inj (event.symm.trans chosen)))).1
           exact ⟨t, later, context ▸ captured⟩
       · exact (openTick (Or.inl ⟨w, spur, step⟩)).elim
-  have limited n : zaehle (fun t => decide (η.belegt t = some c)) a n ≤ laenge f :=
+  have limited n : zaehle (fun t => decide (η.belegt t = some c)) a n ≤ E.stotterLaenge f :=
     bound c f a n (fun t after _ => by
       obtain ⟨head, _, uncompleted⟩ := openStep.2 t after
       exact ⟨head, fun w spur h => uncompleted (Or.inl ⟨w, spur, h⟩), fun h => uncompleted (Or.inr (Or.inl h))⟩)
-  obtain ⟨q, quiet⟩ := markierungen_endlich (fun t => decide (η.belegt t = some c)) a (laenge f) limited
+  obtain ⟨q, quiet⟩ := markierungen_endlich (fun t => decide (η.belegt t = some c)) a (E.stotterLaenge f) limited
   obtain ⟨t, later, mark⟩ := marks (max a q) (Nat.le_max_left _ _)
   have never := quiet t ((Nat.le_max_right _ _).trans later)
   simp only [mark, decide_true] at never
   cases never
 
-theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η lokal) (valid : Laeufe E η)
-    (bound : StotterSchranke laenge η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
+theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η) (valid : Laeufe E η)
+    (bound : StotterSchranke η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw) :
     (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η := by
   refine ⟨?_, fortschritt_im_lauf valid pf.fertig pf.regeln pf.komponierbar, ?_⟩
@@ -165,9 +165,9 @@ theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η lokal) (valid : L
       obtain ⟨_, _, _, _, _, opened, enabled⟩ := pf.systemweit fair a active absent
       exact matched.entladet valid bound pf fair opened enabled
 
-theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E lokal laenge)
+theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E)
     (run : Maschine.Laeufe E h ρ)
-    (fortschritt : ∀ η, Laeufe E η → Laufabgleich ρ η lokal → η.umgebung = h →
+    (fortschritt : ∀ η, Laeufe E η → Laufabgleich ρ η → η.umgebung = h →
       FairLaeufe E.katalog h ρ.hw → ∃ nutzbar, FortschrittsPflichten klasse ρ η nutzbar) :
     ∃ η, Laeufe E η ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
       (FairLaeufe E.katalog h ρ.hw → (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η) := by

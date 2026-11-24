@@ -64,27 +64,28 @@ private theorem letztesAngebot_konkret {hw} (t : Nat) (s : Zustand L Ort Wert Ra
     | absturz crash => exact Bool.false_ne_true crash.1.2
 
 private theorem hoechstens_eine_markierung (markiert : Nat → Bool)
-    (spaeter : ∀ t, markiert (t + 1) = false) (a n : Nat) : zaehle markiert a n ≤ 1 := by
+    (spaeter : ∀ t, markiert (t + 1) = false) (a n : Nat) :
+    zaehle markiert a n ≤ if markiert a then 1 else 0 := by
   induction n with
   | zero => exact Nat.zero_le _
   | succ n ih =>
     cases n with
     | zero =>
-      change 0 + (if markiert a then 1 else 0) ≤ 1
-      cases marked : markiert a with
-      | false => simp only [marked, Bool.false_eq_true, if_false, Nat.add_zero, Nat.zero_le]
-      | true => simp only [marked, if_true, Nat.zero_add, Nat.le_refl]
+      exact (Nat.zero_add _).le
     | succ n =>
-      change zaehle markiert a (n + 1) + (if markiert ((a + n) + 1) then 1 else 0) ≤ 1
+      change zaehle markiert a (n + 1) + (if markiert ((a + n) + 1) then 1 else 0) ≤
+        if markiert a then 1 else 0
       simpa only [spaeter, Bool.false_eq_true, if_false, Nat.add_zero] using ih
 
 /-- A single private transition can consume the last hardware opportunity
-    while an ideal step is possible. Both runs remain maximal and finite. -/
+    while an ideal step is possible. Both runs remain maximal and finite.
+    This match respects the unit's checked bound exactly when the form
+    allows at least one private step. -/
 theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLauf}
-    {z z' : Zustand L Ort Wert Raum Lok Grund} {c : Kontext} {w : Wahl} {f : F} {lokal : LokalerBezug Lok}
+    {z z' : Zustand L Ort Wert Raum Lok Grund} {c : Kontext} {w : Wahl} {f : F}
     (hardware : Hardware E.katalog h) (zul : E.ZulStart h s) (valid : hw.konform E.katalog h)
     (loaded : E.laden s (h.lade E.bild) = some z)
-    (initial : Zustandsbezug lokal z (start E s).2) (final : Zustandsbezug lokal z' (start E s).2)
+    (initial : Zustandsbezug E z (start E s).2) (final : Zustandsbezug E z' (start E s).2)
     (first : ImplSchritt E.einrichtung E.system E.katalog (letztesAngebot hw) 0 z (.kontext c w, ⟨[], []⟩) z')
     (normal : (hw.angebot 0).crash = false)
     (ready : KannSchreiten (letztesAngebot hw) 0 c (start E s).2)
@@ -92,8 +93,9 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
     (enabled : ∃ w' spur next, Schritt E.einrichtung E.system E.katalog (letztesAngebot hw)
       0 (start E s).2 (.kontext c w', spur) next) :
     ∃ (ρ : Maschine.Lauf E) (η : Lauf E),
-      Maschine.Laeufe E h ρ ∧ Laeufe E η ∧ Laufabgleich ρ η lokal ∧
-      ¬ FairLaeufe E.katalog h ρ.hw ∧ ρ.zeit.Endlich ∧ η.zeit.Endlich ∧ StotterSchranke (fun _ => 1) η ∧
+      Maschine.Laeufe E h ρ ∧ Laeufe E η ∧ Laufabgleich ρ η ∧
+      ¬ FairLaeufe E.katalog h ρ.hw ∧ ρ.zeit.Endlich ∧ η.zeit.Endlich ∧
+      (StotterSchranke η ↔ 1 ≤ E.stotterLaenge f) ∧
       ρ.zeit.spur 0 = some (.kontext c w, ⟨[], []⟩) ∧ η.belegt 0 = some c ∧
       (∀ t, η.zeit.spur t = none) ∧
       (∃ w' spur next, Schritt E.einrichtung E.system E.katalog η.hw
@@ -125,7 +127,7 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
       cases t with
       | zero => exact ⟨rfl, Option.some.inj marked ▸ ready⟩
       | succ _ => exact (Option.some_ne_none _ marked.symm).elim
-  have matched : Laufabgleich ρ η lokal := by
+  have matched : Laufabgleich ρ η := by
     refine ⟨rfl, rfl, ?_, ?_, ?_, ?_⟩
     · intro t
       cases t with
@@ -155,10 +157,31 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
     | zero => exact (Nat.not_succ_le_zero _ after).elim
     | succ _ => exact Option.some_ne_none _ offer.symm
   have idealFinite : η.zeit.Endlich := ⟨⟨0, Or.inl rfl⟩, fun _ _ => rfl⟩
-  have bound : StotterSchranke (fun _ => 1) η := by
-    intro d _ a n _
-    exact hoechstens_eine_markierung (fun t => decide (η.belegt t = some d))
-      (fun _ => decide_eq_false (fun h => Option.some_ne_none d h.symm)) a n
+  have bound : StotterSchranke η ↔ 1 ≤ E.stotterLaenge f := by
+    constructor
+    · intro bound
+      have interval : Stotterintervall η c f 0 1 :=
+        fun _ _ _ => ⟨head, fun _ _ h => Option.some_ne_none _ h.symm, fun h => Option.some_ne_none _ h.symm⟩
+      have atZero : η.belegt 0 = some c := rfl
+      simpa only [zaehle, Nat.zero_add, atZero, decide_true, if_true] using bound c f 0 1 interval
+    · intro allowed d g a n interval
+      cases n with
+      | zero => exact Nat.zero_le _
+      | succ n =>
+        have count := hoechstens_eine_markierung (fun t => decide (η.belegt t = some d))
+          (fun _ => decide_eq_false (fun h => Option.some_ne_none d h.symm)) a (n + 1)
+        apply count.trans
+        by_cases mark : η.belegt a = some d
+        · have ctx : c = d := by
+            cases a with
+            | zero => exact Option.some.inj mark
+            | succ _ => exact (Option.some_ne_none d mark.symm).elim
+          subst d
+          have first := (interval a (Nat.le_refl _) (Nat.lt_add_of_pos_right (Nat.succ_pos n))).1
+          have form := Option.some.inj (first.symm.trans head)
+          subst g
+          simpa only [mark, decide_true, if_true] using allowed
+        · simpa only [decide_eq_false mark, Bool.false_eq_true, if_false] using Nat.zero_le (E.stotterLaenge g)
   exact ⟨ρ, η, ⟨hardware, konform, zul, loaded.symm⟩, ideal, matched, unfair,
     (matched.endlich ideal).mpr idealFinite, idealFinite, bound, rfl, rfl, fun _ => rfl, enabled⟩
 

@@ -16,18 +16,22 @@ def zaehle (markiert : Nat → Bool) (anfang : Nat) : Nat → Nat
   | 0 => 0
   | n + 1 => zaehle markiert anfang n + if markiert (anfang + n) then 1 else 0
 
-/-- The checked length bounds all private steps of a context while the same
-    source unit remains at its head and neither completes nor is reset by a crash.
-    The count uses the concrete context recorded at each occupied tick. -/
-def StotterSchranke (laenge : F → Nat) (η : Lauf E) : Prop :=
-  ∀ c f a n, (∀ t, a ≤ t → t < a + n →
+/-- An interval retains the same head form of a context, with no ideal step
+    of that context and no reset by a crash. -/
+def Stotterintervall (η : Lauf E) (c : Kontext) (f : F) (a n : Nat) : Prop :=
+  ∀ t, a ≤ t → t < a + n →
     E.system.kopf (η.zeit.zustand t) c = some f ∧
     (∀ w spur, η.zeit.spur t ≠ some (.kontext c w, spur)) ∧
-    η.zeit.spur t ≠ some (.absturz, absturzSpur)) →
-    zaehle (fun t => decide (η.belegt t = some c)) a n ≤ laenge f
+    η.zeit.spur t ≠ some (.absturz, absturzSpur)
 
-theorem StotterSchranke.ohne_stottern {laenge : F → Nat} {η : Lauf E}
-    (frei : ∀ t, η.belegt t = none) : StotterSchranke laenge η := by
+/-- The unit's checked length bounds the private steps of each context in
+    every stutter interval. The count uses the context at each occupied tick. -/
+def StotterSchranke (η : Lauf E) : Prop :=
+  ∀ c f a n, Stotterintervall η c f a n →
+    zaehle (fun t => decide (η.belegt t = some c)) a n ≤ E.stotterLaenge f
+
+theorem StotterSchranke.ohne_stottern {η : Lauf E}
+    (frei : ∀ t, η.belegt t = none) : StotterSchranke η := by
   intro c f a n interval
   clear interval
   have count : zaehle (fun t => decide (η.belegt t = some c)) a n = 0 := by
@@ -87,8 +91,8 @@ private theorem endlich_viele (P : Nat → Nat → Prop) (n : Nat)
 /-- On an ideal pause suffix the dispatch map is fixed. There are finitely many
     offered cores, and each dispatched context can occupy only finitely many
     of their ticks, by its own unit bound. -/
-theorem StotterSchranke.endet {laenge : F → Nat} {η : Lauf E}
-    (bound : StotterSchranke laenge η) (valid : η.hw.konform E.katalog η.umgebung)
+theorem StotterSchranke.endet {η : Lauf E}
+    (bound : StotterSchranke η) (valid : η.hw.konform E.katalog η.umgebung)
     (privat : ∀ t c, η.belegt t = some c →
       KannSchreiten η.hw t c (η.zeit.zustand t) ∧ ∃ f, E.system.kopf (η.zeit.zustand t) c = some f)
     {a : Nat} (quiet : ∀ t, a ≤ t → η.zeit.spur t = none) :
@@ -105,7 +109,7 @@ theorem StotterSchranke.endet {laenge : F → Nat} {η : Lauf E}
       rw [still t after, head] at form
       cases form
     | some f =>
-      obtain ⟨q, tail⟩ := markierungen_endlich (fun t => decide (η.belegt t = some c)) a (laenge f)
+      obtain ⟨q, tail⟩ := markierungen_endlich (fun t => decide (η.belegt t = some c)) a (E.stotterLaenge f)
         (fun n => bound c f a n (fun t after _ => by
           rw [still t after, quiet t after]
           exact ⟨head, fun _ _ h => Option.some_ne_none _ h.symm, fun h => Option.some_ne_none _ h.symm⟩))
