@@ -228,6 +228,18 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Fortschritt.KlassenFortschritt, 5322603302426740766),
   (`Gabbro.Core.Fortschritt.SperrFreigabeAussage, 6660170410238272672),
   (`Gabbro.Core.Fortschritt.SperrWarteFairAussage, 2926997766018619209),
-  (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 4021287961560476711)]
+  (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 4021287961560476711),
+  (`Gabbro.Core.Beobachtung.Zufallsquelle, 0),
+  (`Gabbro.Core.Beobachtung.zufallGesetz, 0),
+  (`Gabbro.Core.Beobachtung.Hebebuendel, 0),
+  (`Gabbro.Core.Beobachtung.GabbroZielProb, 0),
+  (`Gabbro.Core.Beobachtung.ProbNichtLeer, 0),
+  (`Gabbro.Core.Beobachtung.hebeAussage, 0),
+  (`Gabbro.Core.Beobachtung.prEreignisAussage, 0),
+  (`Gabbro.Core.Beobachtung.kostenErwartungAussage, 0),
+  (`Gabbro.Core.Beobachtung.fastSicherAbschlussAussage, 0),
+  (`Gabbro.Core.Beobachtung.fastSicherFortschrittAussage, 0),
+  (`Gabbro.Core.Beobachtung.infoTheoretischAussage, 0),
+  (`Gabbro.Core.Beobachtung.reduktionAussage, 0)]
 
 end Gabbro.Core.Waechter

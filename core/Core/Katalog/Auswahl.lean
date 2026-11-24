@@ -34,8 +34,21 @@ def Plattform.endpunkte (p : Plattform) : List Endpunkt :=
 def Plattform.dauerZeilen : Plattform → List Zeile
   | .x86_64 | .aarch64 | .riscv64 => []
 
+theorem Plattform.dauerZeilen_leer (p : Plattform) : p.dauerZeilen = [] := by
+  cases p <;> rfl
+
+/-- Approved random-source rows (M9P): row 0 is the fair coin on every platform.
+    The declared draw law behind the id is fixed by the probability layer
+    (`Beobachtung.Wahrscheinlichkeit.zufallGesetz`), never by the program: a program
+    selects this row by name like every other catalogue row. -/
+def Plattform.zufallZeilen : Plattform → List Zeile
+  | .x86_64 | .aarch64 | .riscv64 => [.zufall 0]
+
+theorem Plattform.zufallZeilen_inhalt (p : Plattform) : p.zufallZeilen = [.zufall 0] := by
+  cases p <;> rfl
+
 def Plattform.zeilen (p : Plattform) : List Zeile :=
-  ZielZeilen ++ .persistence :: (p.endpunkte.map Zeile.endpoint ++ p.dauerZeilen)
+  ZielZeilen ++ .persistence :: (p.endpunkte.map Zeile.endpoint ++ p.dauerZeilen ++ p.zufallZeilen)
 
 structure Katalog where
   plattform : Plattform
@@ -50,14 +63,10 @@ instance (k : Katalog) (r : Zeile) : Decidable (k.enthaelt r) :=
   inferInstanceAs (Decidable (r ∈ k.zeilen))
 
 /-- Exactly the platform's approved rows may be selected, with all required base rows.
-    Random-source rows (M9P) are selected per program: any `.zufall id` row may appear,
-    and the declared draw law behind `id` is fixed by the probability layer
-    (`Beobachtung.Wahrscheinlichkeit`), never here. The reviewed device windows in a
-    full platform profile are disjoint. -/
+    The reviewed device windows in a full platform profile are disjoint. -/
 def KatalogWohlgeformt (k : Katalog) : Prop :=
   k.zeilen.Nodup ∧
-    ZielZeilen ⊆ k.zeilen ∧
-    (∀ r ∈ k.zeilen, r ∈ k.plattform.zeilen ∨ ∃ id, r = .zufall id) ∧
+    ZielZeilen ⊆ k.zeilen ∧ k.zeilen ⊆ k.plattform.zeilen ∧
     k.plattform.ziel.gut ∧ k.plattform.systemAbi.gut k.plattform.ziel ∧
     k.plattform.uart.gut k.plattform.ziel ∧ k.plattform.virtio.gut k.plattform.ziel ∧
     k.plattform.uart.window.getrennt k.plattform.virtio.window
@@ -65,12 +74,14 @@ def KatalogWohlgeformt (k : Katalog) : Prop :=
 theorem Plattform.zeilen_nodup (p : Plattform) : p.zeilen.Nodup := by
   cases p <;>
     simp only [Plattform.zeilen, ZielZeilen, Plattform.endpunkte, Plattform.dauerZeilen,
+      Plattform.zufallZeilen,
       List.append_nil, List.cons_append, List.nil_append,
       List.map_cons, List.map_nil, List.nodup_cons, List.nodup_nil, List.mem_cons, List.not_mem_nil,
-      reduceCtorEq, Zeile.endpoint.injEq, false_or, not_false_eq_true, true_and]
+      reduceCtorEq, Zeile.endpoint.injEq, Zeile.zufall.injEq,
+      false_or, not_false_eq_true, true_and]
 
 theorem Plattform.katalog_wohlgeformt (p : Plattform) : KatalogWohlgeformt p.katalog :=
-  ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => Or.inl h,
+  ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => h,
     ziele_gut p, systemAbi_gut p, geraete_gut p⟩
 
 /-- Look up a maximum in a selected row. Random-source rows carry no duration maximum.

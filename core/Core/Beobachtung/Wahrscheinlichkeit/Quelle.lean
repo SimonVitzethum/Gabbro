@@ -3,7 +3,9 @@
   Subject:   Random sources as catalogue rows with draw laws (M9P foundations, B11(a)(b)).
 
   A random source is a catalogue row (`.zufall id`, see `Core.Katalog.Auswahl`) with a
-  declared draw law, a Mathlib `PMF` over its outcomes. Safety already holds for every
+  declared draw law, a Mathlib `PMF` over its outcomes. Random rows are platform
+  rows (`Plattform.zufallZeilen`): a program selects them by name like every other
+  catalogue row and never writes one. Safety already holds for every
   random outcome - a random number is one more oracle answer, and the goal quantifies
   over all answers. This file adds the QUANTITATIVE side: the law, the finite-event
   probability, and the proved non-degeneracy witness (a fair coin with an event
@@ -29,10 +31,10 @@ namespace Gabbro.Core.Beobachtung
 
 open Katalog
 
-/-- A random source: a catalogue row id with a declared draw law over `anz` outcomes
-    (`anz` is positive, so the coin with `anz = 2` needs no side condition beyond
-    `decide`). Draws are independent by the cylinder weights of `Hebung`, never by
-    an extra premise here. -/
+/-- A random source: a platform catalogue row id with a declared draw law over `anz`
+    outcomes (`anz` is positive, so the coin with `anz = 2` needs no side condition
+    beyond `decide`). Draws are independent by the cylinder weights of `Hebung`,
+    never by an extra premise here. -/
 structure Zufallsquelle where
   id : Nat
   anz : Nat
@@ -47,6 +49,33 @@ theorem muenzSumme :
 
 noncomputable def muenzQuelle : Zufallsquelle :=
   ⟨0, 2, by decide, PMF.ofFintype (fun _ => (2⁻¹ : ENNReal)) muenzSumme⟩
+
+/-- Draw laws of the platform rows: row 0 is the fair coin on every platform. This
+    is the platform profile's law assignment for `Plattform.zufallZeilen`; a program
+    selects the row, the law is fixed here. -/
+noncomputable def zufallGesetz : Plattform → Nat → Option Zufallsquelle
+  | .x86_64, 0 => some muenzQuelle
+  | .aarch64, 0 => some muenzQuelle
+  | .riscv64, 0 => some muenzQuelle
+  | _, _ => none
+
+/-- The platform profile declares the coin law for row 0 on every platform. -/
+theorem zufallGesetz_nationaleMuenze (p : Plattform) :
+    zufallGesetz p 0 = some muenzQuelle := by
+  cases p <;> rfl
+
+/-- Completeness of the platform profile: every `.zufall` row of a platform is
+    backed by exactly one declared source, and it carries the row's id. -/
+theorem plattformZufallGesetz (p : Plattform) (id : Nat)
+    (h : Zeile.zufall id ∈ p.zufallZeilen) :
+    ∃! Q : Zufallsquelle, zufallGesetz p id = some Q ∧ Q.id = id := by
+  rw [Plattform.zufallZeilen_inhalt] at h
+  simp only [List.mem_singleton, Zeile.zufall.injEq] at h
+  subst h
+  refine ⟨muenzQuelle, ⟨zufallGesetz_nationaleMuenze _, rfl⟩, fun Q hQ => ?_⟩
+  have htab := zufallGesetz_nationaleMuenze p
+  have heq : muenzQuelle = Q := Option.some.inj (htab.symm.trans hQ.1)
+  exact heq.symm
 
 /-- Heads: the first outcome of the coin. Typed over the source so no unfolding
     is ever needed at use sites. -/

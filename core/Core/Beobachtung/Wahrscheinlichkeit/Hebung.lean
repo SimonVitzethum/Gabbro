@@ -8,7 +8,7 @@
 
   Design (form-independent, no Ast change):
   - `Band` is the raw randomness: source id × draw index → natural number. The
-    outcome of draw `k` for source `Q` is `band Q.id k % (Q.werte + 2)`.
+    outcome of draw `k` for source `Q` is `band Q.id k % Q.anz`.
   - Causality holds BY TYPING: `Scheduler.waehle t` sees only `Sicht t`, the draws
     strictly below `t`. No foresight is expressible (`scheduler_kausal`,
     `sichtGleich`, both proved).

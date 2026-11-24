@@ -16,7 +16,10 @@
   - `planned.probability.progress`: `fastSicherFortschrittAussage`
   - `planned.probability.informationTheoretic`: `infoTheoretischAussage`
   - `planned.probability.reduction`: `reduktionAussage`
-  - declaration discipline (B11(d), model side): `quelleDeklariertAussage`
+
+  The declaration discipline (B11(d), model side) is proved, not pinned:
+  `Erfuellbar.quelleDeklariert` shows every selected `.zufall` row is backed by
+  exactly one platform-declared source.
 
   The image/compiler distribution lift (B11(e)) is transport work (M11): it reuses
   these statements and is documented in the report, not pinned here.
@@ -24,7 +27,6 @@
 module
 
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
-public import Core.Annahme
 
 @[expose] public section
 
@@ -125,20 +127,5 @@ def reduktionAussage : Prop :=
     (hb : Hebebuendel B S E h) (ann : ProbAnnahmen B hb)
     (spielS spielP : Gegner → Maschine.Lauf E → Prop) (c δ : ENNReal),
     ann.reduktionBehauptet spielS spielP c δ → ReduktionForm B hb spielS spielP c δ
-
-/-- Declaration discipline (B11(d), model side): every `.zufall id` row in an
-    accepted catalogue is backed by exactly one source. Depends on the draw form's
-    acceptance case (M6 lands `planned.probability.draw` with it); until then the
-    registry invariant below is the checker's contract, not a proved fact.
-    Difficulty: mittel (after M6). Sketch: induction over `Akzeptiert` once the
-    draw form's acceptance case exists; uniqueness is the registry invariant the
-    checker maintains per row id. -/
-def quelleDeklariertAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
-    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form),
-    Annahme.Akzeptiert E →
-    ∀ id : Nat, E.katalog.enthaelt (Katalog.Zeile.zufall id) →
-      ∃ B : Zufallsbindung, B.quelle.id = id ∧
-        ∀ B' : Zufallsbindung, B'.quelle.id = id → B'.quelle = B.quelle
 
 end Gabbro.Core.Beobachtung
