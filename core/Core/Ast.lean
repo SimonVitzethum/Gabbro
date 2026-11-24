@@ -8,6 +8,10 @@ public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
+public import Core.Ast.LowLevel.MemObligations
+public import Core.Ast.LowLevel.Proofs.SplitAt
+public import Core.Ast.LowLevel.Proofs.SplitPages
+public import Core.Ast.LowLevel.Proofs.Merge
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
