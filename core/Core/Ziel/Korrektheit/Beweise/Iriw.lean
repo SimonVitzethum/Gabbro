@@ -7,9 +7,9 @@
              on the compiler path.
 
   Feeding facts: `Graph.drf_sc`, `Graph.scSchritt`, `Graph.rb`, `Graph.hb_in_po`,
-  `Graph.hb_von_po`, `Graph.eco_von_rb`, `Konsistent.psc`, `Konsistent.kohaerent`,
+  `Graph.hb_irrefl`, `Graph.atomar`, `Konsistent.psc`, `Konsistent.ohneLB`,
   `transGen_von_trans`, `transGen_mono`, `transGen_kopf`, `azyklisch_von_rang`,
-  and the closed-form graph relations of `Core/Speicher/Trennung.lean`.
+  and the closed-form case-split style of `Core/Speicher/Trennung.lean`.
 -/
 module
 
