@@ -78,8 +78,9 @@ def AussenKontextLokal [DecidableEq L]
           reply.result.isOk = true
 
 /-- The outside rule at the ideal boundaries. An asynchronous effect is checked in the
-    catalogue view of the successful reply, over the history before that reply. Data from
-    an earlier answer may inform the choice, while the catalogue establishes current validity. -/
+    catalogue view of the successful reply, over the history before that reply. The receiving
+    context owns the handles at that same cut. Data from an earlier answer may inform the
+    choice, while the catalogue establishes current validity. -/
 def AussenGueltig [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
   (∀ (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
     (w : SchrittWahl Wahl) (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund),

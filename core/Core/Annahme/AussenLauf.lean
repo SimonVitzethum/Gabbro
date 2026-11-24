@@ -57,6 +57,8 @@ variable (erhalt : ∀ run t s c w spur s',
   I.Schritt E.einrichtung E.system E.katalog run t s (.kontext c w, spur) s' →
   OffeneGriffeEigen s → OffeneGriffeEigen s')
 
+include erhalt
+
 private theorem offene_griffe_schritt {run t s w spur s'}
     (step : I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s')
     (alt : ∀ q ∈ s.fragen, q.cut < t) (offen : OffeneGriffeEigen s) : OffeneGriffeEigen s' := by
