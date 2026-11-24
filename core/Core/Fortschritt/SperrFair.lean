@@ -336,13 +336,19 @@ theorem w_pos1 : (⟨some stuckHalter, [A, B]⟩ : SperrZustand).schlange[1]? = 
 theorem w_besitzer :
     (⟨some stuckHalter, [A, B]⟩ : SperrZustand).besitzer = some stuckHalter := rfl
 
-theorem w_besitzer_ne : stuckHalter ≠ B := by decide
+theorem w_besitzer_ne : stuckHalter ≠ B :=
+  fun h => Nat.succ_ne_self 1 (Kontext.faden.inj h)
+
+theorem w_AB_ne : A ≠ B :=
+  fun h => Nat.succ_ne_self 0 (Kontext.faden.inj h).symm
 
 theorem w_nodup : [A, B].Nodup :=
-  List.nodup_cons.mpr ⟨by decide, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩⟩
+  List.nodup_cons.mpr
+    ⟨fun h => w_AB_ne (List.mem_singleton.mp h),
+      List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩⟩
 
 theorem w_ticketH : SperrSchritt .ticket stuckHalter SperrZustand.frei ⟨none, [stuckHalter]⟩ :=
-  .ticket (by decide) List.not_mem_nil
+  .ticket (fun h => nomatch h) List.not_mem_nil
 
 theorem w_nimmtH : (⟨none, [stuckHalter]⟩ : SperrZustand).Nimmt stuckHalter
     ⟨some stuckHalter, []⟩ :=
