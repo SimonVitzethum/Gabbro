@@ -7,18 +7,8 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Waechter
 
-public theorem skalarEntry : RegistryPacketProof ``SimFamilie.skalar SkalarSimAussage := ⟨skalarSim⟩
+public theorem lokalEntry : RegistryPacketProof ``Wirkungsklasse.lokal LokalSimAussage := ⟨klassenSim .lokal⟩
 
-public theorem kontrollflussEntry :
-    RegistryPacketProof ``SimFamilie.kontrollfluss KontrollflussSimAussage := ⟨kontrollflussSim⟩
-
-public theorem aufrufSchleifeEntry :
-    RegistryPacketProof ``SimFamilie.aufrufSchleife AufrufSchleifeSimAussage := ⟨aufrufSchleifeSim⟩
-
-public theorem aggregatEntry : RegistryPacketProof ``SimFamilie.aggregat AggregatSimAussage := ⟨aggregatSim⟩
-
-public theorem varianteEntry : RegistryPacketProof ``SimFamilie.variante VarianteSimAussage := ⟨varianteSim⟩
-
-public theorem textEntry : RegistryPacketProof ``SimFamilie.text TextSimAussage := ⟨textSim⟩
+public theorem rufEntry : RegistryPacketProof ``Wirkungsklasse.ruf RufSimAussage := ⟨klassenSim .ruf⟩
 
 end Gabbro.Core.Ast.Semantik

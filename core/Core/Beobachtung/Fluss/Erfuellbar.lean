@@ -26,7 +26,7 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) :
     Ast.Semantik.sim_formvoraussetzungen_erfuellbar f
   let vor := (I.start E s).2
   let nach := f.nach eintritt vor
-  let event : SchrittWahl PUnit × SchrittSpur PUnit Int := (.kontext eintritt (), ⟨[], []⟩)
+  let event : SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int := (.kontext eintritt (), ⟨[], []⟩)
   have schritt : Lauffolge E hw 0 (some vor) event (some nach) :=
     .schritt (.kontext normal bereit ⟨f, kopf, transfer⟩ vollzug)
   obtain ⟨rest, anfang⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw (t + 1)) (some nach)
