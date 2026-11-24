@@ -55,8 +55,7 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
         ⟨_, .tagged exported name first tail valid distinct⟩ rest
   | environment (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile) :
       DeclReads before
-        (keyword "environment" :: .word name.val :: keyword "abi" :: keyword abi.name ::
-          assignment :: keyword "catalogue" :: keyword row.name :: semicolon :: rest)
+        (LowLevel.environmentTokens name abi row ++ rest)
         ⟨before, .environment name abi row⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken

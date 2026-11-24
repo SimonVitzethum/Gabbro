@@ -35,7 +35,7 @@ def Quellform.eintrag {cat : Scope → Category} {args : Scope → Type}
     (erfuellbar : joint) : RegistryEntry constructor ⟨.surface, Quellform.statements forms joint constructor⟩ where
   realization := .surface
     (fun scope _ _ _ lexed production => (parse scope).parse lexed production)
-    (fun _ _ _ => rfl)
+    (fun _ _ _ allowed => ⟨rfl, allowed⟩)
     (fun scope platform a s running active atPc => (forms scope).realisiert (atRoot scope) platform a s running active atPc)
   acceptanceRule := fun scope => (forms scope).annahme
   idealRule := fun scope => ⟨atRoot scope, fun a => ⟨((forms scope).befehl a).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
@@ -60,12 +60,13 @@ theorem let_am_ort (scope : Scope) : (letForm scope).RegelAmOrt :=
 
 theorem Quellform.erfuellbar_aus_erreichbar (form : Quellform category Arguments)
     (platform : Plattform) (start : AussenStart) (args : Arguments) (s : Zustand)
+    (allowed : zugelassen platform category (form.produktion.tree args))
     (reachable : (form.einheit platform args).system.IErreichbar (I.start (form.einheit platform args) start).2 s)
     (occurrence : Realisiert form platform args s)
     (safeGuard : ∀ g, (form.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2) :
     form.ErfuellbarAm platform start args :=
-  ⟨Ast.print (category := category) (form.produktion.tree args), s, Ast.parse_print _, rfl,
+  ⟨Ast.print (category := category) (form.produktion.tree args), s, Ast.parse_print _, ⟨rfl, allowed⟩,
     reachable, occurrence, safeGuard⟩
 
 end Gabbro.Core.Ast.Semantik

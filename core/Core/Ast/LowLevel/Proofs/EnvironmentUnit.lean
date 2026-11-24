@@ -34,10 +34,20 @@ theorem environmentInUnit_reads (args : EnvironmentArgs) (tokens : List Token)
   subst head
   exact .step (.environment args.name args.abi args.row) rest
 
+theorem environmentInUnit_printProduction (args : EnvironmentArgs) :
+    environmentInUnit.production args (args.unit.2.printPieces.map PrintedToken.value) := by
+  refine ⟨_, _, List.map_append, LowLevel.environment_printTokens args.name args.abi args.row,
+    args.rest.printReads⟩
+
 def environmentUnitForm : Quellform .unit EnvironmentArgs where
   produktion := environmentInUnit
   befehl := fun args => .waehleUmgebung args.name args.abi args.row
   position := fun _ => 0
+
+theorem environmentUnit_parse : environmentUnitForm.ParseAussage := by
+  intro args text pieces lexed production
+  exact (Category.unit.syntax.parse_iff).mpr
+    ⟨pieces, lexed, environmentInUnit_reads args _ production⟩
 
 theorem environmentUnit_am_ort : environmentUnitForm.RegelAmOrt :=
   fun _ => rfl
@@ -59,6 +69,16 @@ theorem environmentUnit_admission : EnvironmentUnitAdmissionAussage := by
   have present : (args.name, args.abi, args.row) ∈ (programm args.unit).environment :=
     List.mem_cons_self
   exact ⟨allowed _ present, unique⟩
+
+theorem environmentUnit_psci_x86_refused (args : EnvironmentArgs) (row : args.row = .psci)
+    (E : Einheit) : ¬ Elaboriert (category := .unit) .x86_64 args.unit E := by
+  intro meaning
+  have selected := (environmentUnit_admission .x86_64 args E meaning).1
+  rw [row] at selected
+  cases meaning.1
+  have abi := selected.2
+  change none = some args.abi at abi
+  cases abi
 
 /-- The instruction registers the selected row and advances to the ordinary
     continuation at the next declaration. No outside request is emitted. -/
