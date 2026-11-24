@@ -8,6 +8,8 @@ noncomputable section
 
 namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
 
+open Gabbro.Core.Ast.Semantik
+
 /-- The Gödel numbering of the simulation substrate: a command program is a
     first-order tree of constructor tags and field encodings, collapsed to a
     single natural number by the `Encodable` instance. -/
