@@ -80,14 +80,35 @@ inductive MemResult where
   | frames (extent : Strecke)
   | activated
 
-abbrev TranslationCache := Nat → Nat → Nat → Option Seiteneintrag
+/-- One translation a core holds cached: the core, the space and the virtual page it translates, and
+    the table entry it copied. Hardware drops and refills cells on its own; the language owns the
+    invalidation protocol and the reuse of frames. -/
+structure TlbZelle where
+  kern : Nat
+  raum : Nat
+  seite : Nat
+  eintrag : Seiteneintrag
+  deriving DecidableEq, Repr
+
+/-- The translations cached on every core of the spaces of one frame. The list is finite, so "no core
+    caches a page of this range" is decidable; a core may hold several cells for one page. -/
+structure TranslationCache where
+  zellen : List TlbZelle := []
+
+def TranslationCache.Haelt (cache : TranslationCache) (core space page : Nat)
+    (entry : Seiteneintrag) : Prop :=
+  (⟨core, space, page, entry⟩ : TlbZelle) ∈ cache.zellen
+
+/-- A core takes a translation into its cache. -/
+def TranslationCache.fill (cache : TranslationCache) (zelle : TlbZelle) : TranslationCache :=
+  ⟨zelle :: cache.zellen⟩
 
 structure MemFrame where
   pc : Nat := 0
   regions : List (Option MemRegion) := []
   result : Option MemResult := none
   spaces : List Adressraum := []
-  tlb : TranslationCache := fun _ _ _ => none
+  tlb : TranslationCache := {}
   active : Option Nat := none
   marken : List (Identifier × Zuruecknahme) := []
 

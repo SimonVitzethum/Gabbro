@@ -301,7 +301,6 @@ private theorem flushMeaning : FlushMeaningAussage := by
   let next : MemFrame :=
     { frame with
       result := some (.frames (token.frames granule))
-      tlb := frame.tlb.invalidate token.raum token.seite token.seiten
       spaces := frame.spaces.set token.raum flushed
       marken := frame.marken.filter (fun p => p.1.val != name.val && p.2 != token) }
   refine ⟨?_, ?_⟩
@@ -311,16 +310,19 @@ private theorem flushMeaning : FlushMeaningAussage := by
       rw [List.all_eq_true]
       intro i hi
       have hi' := List.mem_range.mp hi
-      rw [hcond.2 i hi']
+      rw [hcond.2.1 i hi']
       rfl
     have hmem : decide (token ∈ space.ausstehend) = true := by
       rw [decide_eq_true]
       exact hcond.1
-    have hif : (decide (token ∈ space.ausstehend) &&
+    have hfrei : (s.lokal c).tlb.frei token.raum token.seite token.seiten = true :=
+      TranslationCache.frei_eq_true.mpr hcond.2.2
+    have hif : ((decide (token ∈ space.ausstehend) &&
         (List.range token.seiten).all
-          (fun i => (space.abbildung (token.seite + i)).isNone)) = true := by
-      simp only [hmem, hall, Bool.true_and]
-    refine ⟨next, flushed, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+          (fun i => (space.abbildung (token.seite + i)).isNone)) &&
+        (s.lokal c).tlb.frei token.raum token.seite token.seiten) = true := by
+      simp only [hmem, hall, hfrei, Bool.and_true]
+    refine ⟨next, flushed, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · simp only [MemInstruction.evaluate, frame, granule, hfind', hspace,
         Option.bind_eq_bind, Option.bind_some, hif, if_true, next, flushed]
       rfl
@@ -344,17 +346,13 @@ private theorem flushMeaning : FlushMeaningAussage := by
       have hneFalse : (token != token) = false := bne_self_eq_false token
       rw [hneFalse] at hne
       cases hne
-    · intro core pg hpg
-      simpa only [next] using
-        (TranslationCache.invalidate_hit frame.tlb token.raum token.seite token.seiten core pg hpg)
-    · intro core sp pg hsp
-      simpa only [next] using
-        (TranslationCache.invalidate_miss frame.tlb token.raum token.seite token.seiten core sp pg hsp)
+    · rfl
   · intro hbad
-    have hifFalse : (decide (token ∈ space.ausstehend) &&
+    have hifFalse : ((decide (token ∈ space.ausstehend) &&
         (List.range token.seiten).all
-          (fun i => (space.abbildung (token.seite + i)).isNone)) = false := by
-      rcases hbad with hnotmem | ⟨pg, hcpg, hisSome⟩
+          (fun i => (space.abbildung (token.seite + i)).isNone)) &&
+        (s.lokal c).tlb.frei token.raum token.seite token.seiten) = false := by
+      rcases hbad with hnotmem | ⟨pg, hcpg, hisSome⟩ | hnotfrei
       · simp only [decide_eq_false hnotmem, Bool.false_and]
       · let i := pg - token.seite
         have hc1 := hcpg.1
@@ -382,6 +380,11 @@ private theorem flushMeaning : FlushMeaningAussage := by
             have hit := List.all_eq_true.mp hall' i (List.mem_range.mpr hi_lt)
             rw [hnone] at hit
             cases hit
+      · have hfreiFalse : (s.lokal c).tlb.frei token.raum token.seite token.seiten = false := by
+          cases hf : (s.lokal c).tlb.frei token.raum token.seite token.seiten with
+          | false => rfl
+          | true => exact (hnotfrei (TranslationCache.frei_eq_true.mp hf)).elim
+        simp only [hfreiFalse, Bool.and_false]
     simp only [MemInstruction.evaluate, frame, hfind', hspace,
       Option.bind_eq_bind, Option.bind_some, hifFalse]
     rw [if_neg Bool.false_ne_true]
