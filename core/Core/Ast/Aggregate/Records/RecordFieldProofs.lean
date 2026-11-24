@@ -56,44 +56,33 @@ theorem RecordFieldInversion : RecordFieldInversionAussage := by
             simp only [List.map_cons, List.cons.injEq] at h
             subst y
             exact congrArg (fun l => x :: l) (ih h.2)
-  refine ExprTail.rec
-    (motive_1 := fun _ _ _ _ _ _ => True)
-    (motive_2 := fun _ _ _ _ _ => True)
-    (motive_3 := fun _ _ inputType base0 input0 _ tree0 rest0 _ =>
-      inputType = recordValueType name labels types →
-      input0 = dot :: .word field.val :: input →
+  have invGen : ∀ (inputType : Ty .value) (base0 : Expr scope inputType),
+      (eqT : inputType = recordValueType name labels types) →
+      ExprTail scope minimum base0 (dot :: .word field.val :: input) tree rest →
       ∃ i : Fin types.length, ∃ checked : RecordFieldAt labels field i.val,
-        ExprTail scope minimum (.recordField base0 field i checked) input tree0 rest0)
-    (by trivial)
-    (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
-    (by trivial) (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
-    (by
-      intro hEq htok
-      exfalso
-      rename_i blocked
-      exact blocked ⟨.projection, .word field.val :: input,
-        by simpa only [Infix.token] using htok.symm, allowed⟩)
-    (by intro hEq htok; cases hEq)
-    (by intro hEq htok; cases hEq)
-    (by intro hEq htok; cases hEq)
-    (by intro hEq htok; cases hEq)
-    (by intro hEq htok; cases hEq)
-    (by intro hEq htok; cases hEq)
-    (by
-      intro hEq htok
-      rename_i nm' labs' tys' input' base' field' index written hle tail ih
-      injection hEq with hnm hlabs hlayout
-      have htys : tys' = types := tupleType_inj hlayout
-      have hlbs : labs' = labels := label_inj hlabs
-      have restEq : .word field.val :: input = .word field'.val :: input' := (List.cons.inj htok).2
-      have fld : field = field' := Subtype.ext (List.cons.inj restEq).1
-      have inputEq : input' = input := (List.cons.inj restEq).2.symm
-      subst nm'
-      subst tys'
-      subst labs'
-      subst field'
-      subst input'
-      exact ⟨index, written, tail⟩) read
+        ExprTail scope minimum (.recordField (eqT ▸ base0) field i checked) input tree rest := by
+    intro inputType base0 eqT r
+    cases r with
+    | stop blocked =>
+        exfalso
+        exact blocked ⟨.projection, .word field.val :: input, rfl, allowed⟩
+    | binary _ _ _ _ => cases eqT
+    | div _ _ _ _ => cases eqT
+    | compare _ _ _ _ _ => cases eqT
+    | logic _ _ _ _ => cases eqT
+    | arrayIndex _ _ _ _ _ _ => cases eqT
+    | tupleField _ _ _ _ => cases eqT
+    | recordField base' field' index written hle tail =>
+        rename_i nm' labs' tys'
+        injection eqT with hnm hlabs hlayout
+        have htys : tys' = types := tupleType_inj hlayout
+        have hlbs : labs' = labels := label_inj hlabs
+        subst nm'
+        subst tys'
+        subst labs'
+        subst field'
+        exact ⟨index, written, tail⟩
+  exact invGen _ base rfl read
 
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   intro scope name labels types minimum input type field base tree rest allowed read
