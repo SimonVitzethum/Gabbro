@@ -92,7 +92,7 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     (fun s a l p ar => VariantArmsRead result s a
       (ar.printPieces.map PrintedToken.value ++ closeBrace :: more) ar more)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
   all_goals try trivial
   · simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
     exact .done
