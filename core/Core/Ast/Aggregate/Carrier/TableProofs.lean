@@ -206,8 +206,9 @@ theorem tableScope : TableScopeAussage := by
   constructor
   · intro other hne
     have hne' : item.name.val ≠ other.val := fun h => hne h.symm
+    have hbeq : (item.name.val == other.val) = false := beq_eq_false_iff_ne.mpr hne'
     simp only [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding,
-      List.find?_cons, beq_eq_false_iff_ne, hne', ↓reduceIte]
+      List.find?_cons, hbeq, ↓reduceIte]
   · intro h
     cases h
 
@@ -303,9 +304,9 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     measure := none
     body := .braces .done
     distinct := by
-      dsimp [paramIndex, paramOption, pname, qname, keywordName]
-      simp only [List.nodup_cons, List.mem_singleton, List.not_mem_nil, List.nodup_nil,
-        not_false_eq_true, and_true]
+      change ([pname.val, qname.val] : List (List Char)).Nodup
+      dsimp [pname, qname, keywordName]
+      decide
     returns := by
       intro h
       cases h
@@ -323,7 +324,7 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
       simp only [List.mem_cons, true_or]
     · refine ⟨paramOption, ?_, rfl⟩
       change paramOption ∈ [paramIndex, paramOption]
-      simp only [List.mem_cons, List.mem_singleton, or_true]
+      simp only [List.mem_cons, List.not_mem_nil, true_or, or_true]
   · exact Ast.parse_print (category := .unit) tree
   · rfl
   · exact .start
