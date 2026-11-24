@@ -325,6 +325,14 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
             (show Vector (Wert element) (count + 1) from values)[offset.wert.toNat]'boundProof⟩ :
             Dynamisch)
         rw [wert]
+        change (if offset.wert < 0 then none else
+          if bound : offset.wert.toNat < count + 1 then
+            some (⟨element,
+              (show Vector (Wert element) (count + 1) from val)[offset.wert.toNat]'bound⟩ :
+              Dynamisch) else none) =
+          some (⟨element,
+            (show Vector (Wert element) (count + 1) from val)[offset.wert.toNat]'boundProof⟩ :
+            Dynamisch)
         rw [if_neg (not_lt_of_ge nonneg)]
         rw [dif_pos boundProof]
         rfl
