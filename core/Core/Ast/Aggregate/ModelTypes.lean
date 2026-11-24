@@ -36,7 +36,7 @@ inductive Ty : Kind → Type where
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | text (capacity : Nat) : Ty .value
-  | carrierSchema (count : Nat) : Ty .value
+  | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -65,7 +65,7 @@ abbrev Scope := List Binding
 /-- The nearest declaration of a written carrier name fixes its index bound. -/
 def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
   match scope.find? (fun binding => binding.name.val == name.val) with
-  | some ⟨_, .carrierSchema count, _, _⟩ => some count
+  | some ⟨_, .carrierSchema count _ _, _, _⟩ => some count
   | _ => none
 
 /-- Finite carriers of equal count share the same checked numerical index type. -/

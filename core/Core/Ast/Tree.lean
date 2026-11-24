@@ -406,6 +406,25 @@ def recordTypes (fields : List RecordMember) : List (Ty .value) :=
 def recordBinding (name : Identifier) (fields : List RecordMember) : Binding :=
   ⟨name, recordSchemaType name.val (recordLabels fields) (recordTypes fields), false, true⟩
 
+def carrierBinding (name : Identifier) (count : Nat) (fields : List RecordMember) : Binding :=
+  ⟨name, .carrierSchema count ((recordLabels fields).map Subtype.val)
+    (tupleType (recordTypes fields)), false, true⟩
+
+/-- The count is available while the declared slot fields themselves are read. -/
+def carrierFieldScope (before : Scope) (name : Identifier) (count : Nat) : Scope :=
+  carrierBinding name count [] :: before
+
+structure TableDeclaration (before : Scope) where
+  exported : Bool
+  name : Identifier
+  count : Nat
+  fields : List RecordMember
+  valid : ∀ field ∈ fields, field.written.valid (carrierFieldScope before name count)
+  distinct : ((recordLabels fields).map Subtype.val).Nodup
+
+def TableDeclaration.binding (table : TableDeclaration before) : Binding :=
+  carrierBinding table.name table.count table.fields
+
 structure VariantMember where
   label : Identifier
   payload : Option WrittenType
@@ -444,6 +463,7 @@ inductive Decl : Scope → Scope → Type where
       (valid : ∀ member ∈ first :: tail, member.valid before)
       (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
       Decl before (variantBinding name (first :: tail) :: before)
+  | table (item : TableDeclaration before) : Decl before (item.binding :: before)
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where

@@ -238,6 +238,10 @@ def functionInstruction (before : Scope) (name : Identifier) (parameters : List 
       | .rufe target args bind => some ⟨target, args, bind⟩
       | _ => none)
 
+def tableInstruction (item : TableDeclaration before) : Befehl :=
+  .definiereTraeger item.count ((recordLabels item.fields).map Subtype.val)
+    (tupleType (recordTypes item.fields))
+
 def decl : Decl before after → Fragment
   | .constant _ _ written _ value _ _ =>
     (expr 0 value).anhaengen (.einzel (.bindeWert 0 written.type true))
@@ -250,6 +254,7 @@ def decl : Decl before after → Fragment
   | .tagged _ name first tail _ _ =>
     let cases := first :: tail
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
+  | .table item => .einzel (tableInstruction item)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer

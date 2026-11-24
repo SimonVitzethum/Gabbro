@@ -13,6 +13,7 @@ public import Core.Ast.Aggregate.TupleFieldProofs
 public import Core.Ast.Aggregate.Types.ArrayProofs
 public import Core.Ast.Aggregate.Types.CarrierIndexProofs
 public import Core.Ast.Aggregate.Types.CarrierIndexOptionProofs
+public import Core.Ast.Carrier.TableProofs
 public import Core.Ast.Aggregate.Types.TupleProofs
 public import Core.Ast.Aggregate.TupleBindProofs
 public import Core.Ast.Aggregate.Records.RecordDeclProofs

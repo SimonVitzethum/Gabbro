@@ -13,6 +13,7 @@ public import Core.Ast.TextValue.Length
 public import Core.Ast.TextValue.Concat
 public import Core.Ast.TextValue.Index
 public import Core.Ast.TextValue.Substring
+public import Core.Ast.Carrier.Table
 
 @[expose] public section
 
@@ -144,6 +145,8 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
   else if constructor = ``Decl.tagged then
     ⟨.surface, Quellform.statements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.table then
+    ⟨.surface, Quellform.statements tableForm TableErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

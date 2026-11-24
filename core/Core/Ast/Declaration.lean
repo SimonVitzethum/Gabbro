@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Block
-public import Core.Ast.Aggregate.RecordGrammar
+public import Core.Ast.Carrier.Grammar
 
 @[expose] public section
 
@@ -52,6 +52,9 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       DeclReads before
         (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
         ⟨_, .tagged exported name first tail valid distinct⟩ rest
+  | table (item : TableDeclaration before) :
+      TableFieldsRead (carrierFieldScope before item.name item.count) input item.fields (closeBrace :: rest) →
+      DeclReads before (item.header.map PrintedToken.value ++ input) ⟨_, .table item⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
@@ -74,6 +77,8 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .tagged exported name first tail _ _ =>
     taggedDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
       commaSeparated ((first :: tail).map VariantMember.printPieces) ++ [printCloseBrace, printSemicolon]
+  | .table item =>
+    item.header ++ item.fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printCloseBrace]
 
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion

@@ -54,6 +54,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Semantik.TextTypeProofPacket, 11138436651470644548),
   (`Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, 12832273597647750788),
   (`Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, 11234188740335598487),
+  (`Gabbro.Core.Ast.Semantik.TableProofPacket, 0),
   (`Gabbro.Core.Sicherheit.RegelSicher, 13353270854043846204),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
@@ -190,7 +191,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
     (`Gabbro.Core.Ast.Decl.function, `Gabbro.Core.Ast.Semantik.functionEntry) ], #[
     (`Gabbro.Core.Ast.Decl.record, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket),
-    (`Gabbro.Core.Ast.Decl.tagged, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket) ]⟩,
+    (`Gabbro.Core.Ast.Decl.tagged, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket),
+    (`Gabbro.Core.Ast.Decl.table, `Gabbro.Core.Ast.Semantik.TableProofPacket) ]⟩,
   ⟨`Gabbro.Core.Ast.BracedBlock, `Gabbro.Core.Ast.Semantik.bracedSchema, #[
     (`Gabbro.Core.Ast.BracedBlock.braces, `Gabbro.Core.Ast.Semantik.bracedEntry) ], #[]⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl, `Gabbro.Core.Ast.Semantik.befehlSchema, #[
@@ -238,7 +240,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.textConcat, `Gabbro.Core.Ast.Semantik.TextConcatProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.textIndex, `Gabbro.Core.Ast.Semantik.TextIndexProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.textLength, `Gabbro.Core.Ast.Semantik.TextLengthProofPacket),
-    (`Gabbro.Core.Ast.Semantik.Befehl.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket),
+    (`Gabbro.Core.Ast.Semantik.Befehl.definiereTraeger, `Gabbro.Core.Ast.Semantik.TableProofPacket) ]⟩]
 
 private meta def openTypeEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket),
