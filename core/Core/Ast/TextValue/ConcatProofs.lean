@@ -124,6 +124,7 @@ private theorem textTailCompose {scope it it2 it3}
 termination_by sizeOf tail
 decreasing_by
   simp_all
+  guard_target =ₛ True
   omega
 
 private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
@@ -165,7 +166,9 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   dsimp
   simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, ByteArray.size_append,
     hleft, hright, left.bound, right.bound]
-  all_goals guard_target =ₛ True
+  constructor
+  · simp
+  · omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
