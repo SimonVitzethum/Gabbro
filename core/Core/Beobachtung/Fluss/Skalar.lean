@@ -19,6 +19,7 @@ private theorem zugriffe_leer {Ort : Type} (h : Spekulationshuelle) :
     cases fenster <;> simp only [Spekulationshuelle.zugriffe, List.take_nil, List.filterMap_nil]
 
 theorem skalarNI : SkalarNIAussage := by
+  classical
   intro p plattform f _ _ h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
     zustand kopf spurGlied abgedeckt
   refine stummer_schritt_deckt ?_ abgedeckt
@@ -47,7 +48,7 @@ theorem skalarNI : SkalarNIAussage := by
             Schrankendaten.leer,
             commitBeob, Befehl.nach, List.drop_length, List.filterMap_nil,
             ausgabeBeob, Flussdaten.ausgabeZuwachs, List.filter_nil, List.map_nil,
-            zeitBeob, zugriffe_leer, List.nil_append, false_eq_true, if_false]
+            zeitBeob, zugriffe_leer, List.nil_append, Bool.false_eq_true, if_false]
         have endeLeer : ∀ d, neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d = none := by
           intro d
           cases hs : vor.status d <;> simp only [neuBeendet, Befehl.nach, hs]
@@ -58,7 +59,7 @@ theorem skalarNI : SkalarNIAussage := by
           cases hd
         have abschlussLeer :
             (if ∃ d, (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d).isSome = true
-             then [.ende (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten)]
+             then [NiedrigesEreignis.ende (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten)]
              else []) =
               ([] : List (NiedrigesEreignis PUnit Int PUnit PUnit)) := by
           rw [if_neg keinEnde]
