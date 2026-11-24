@@ -57,16 +57,26 @@ theorem execution_impl (form : Form) : ImplAussage form := by
       | none => False
       | some t => plans = [plan] ∧ next = t.apply c s) ↔
     (∃ t, op.evaluate s c = some t ∧ plans = [plan] ∧ next = t.apply c s)
-  constructor
-  · intro h
-    rcases h with ⟨t, ht, hp, hn⟩
-    rw [ht]
-    exact ⟨hp, hn⟩
-  · intro h
-    cases hEval : op.evaluate s c with
-    | none => exact False.elim h
-    | some t =>
+  cases hEval : op.evaluate s c with
+  | none =>
+      simp only [hEval]
+      constructor
+      · intro h
+        exact False.elim h
+      · intro h
+        rcases h with ⟨t, ht, hp, hn⟩
+        rw [hEval] at ht
+        cases ht
+  | some t =>
+      simp only [hEval]
+      constructor
+      · intro h
         exact ⟨t, rfl, h.1, h.2⟩
+      · intro h
+        rcases h with ⟨u, hu, hp, hn⟩
+        rw [hEval] at hu
+        cases hu
+        exact ⟨hp, hn⟩
 
 /-- At a live head the evaluation has a result, so the ideal rule has a step;
     the blocking relation of this system is empty. -/
@@ -75,21 +85,22 @@ theorem execution_fortschritt (form : Form) : FortschrittAussage form := by
   cases hEval : op.evaluate s c with
   | none =>
       exfalso
-      have hnone : (unit op).system.kopf s c = none := by
-        change head op s c = none
-        cases hs : s.status c with
-        | laeuft =>
-            rw [head]
-            split
-            next hcond =>
-              have hisSome : (op.evaluate s c).isSome := hcond.2.2
-              rw [hEval] at hisSome
-              cases hisSome
-            next _ => rfl
-        | ruht => rw [head]
-        | beendet e => rw [head]
-      rw [hnone] at hhead
-      cases hhead
+      change head op s c = some op at hhead
+      cases hs : s.status c with
+      | laeuft =>
+          simp only [head, hs] at hhead
+          split at hhead
+          next hcond =>
+            have hisSome : (op.evaluate s c).isSome := hcond.2.2
+            rw [hEval] at hisSome
+            cases hisSome
+          next _ => cases hhead
+      | ruht =>
+          simp only [head, hs] at hhead
+          cases hhead
+      | beendet e =>
+          simp only [head, hs] at hhead
+          cases hhead
   | some transfer =>
       left
       refine ⟨(), [plan], transfer.apply c s, ?_⟩
