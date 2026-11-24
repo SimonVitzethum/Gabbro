@@ -48,9 +48,9 @@ private theorem tuplePattern_consumes : (input : List Token) → (pattern : Tupl
           ((List.suffix_cons comma next).trans (patternName_consumes firstRead)))
 
 private theorem tupleAnnotation_consumes : (input : List Token) → (annotation : Option WrittenType) →
-    (rest : List Token) → TupleAnnotationReads input annotation rest → rest <:+ input
+    (rest : List Token) → TupleAnnotationReads scope input annotation rest → rest <:+ input
   | _, _, _, .absent => List.suffix_cons _ _
-  | _, _, _, @TupleAnnotationReads.written input written rest typeRead =>
+  | _, _, _, @TupleAnnotationReads.written _ input written rest typeRead =>
       ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead)).trans
         (List.suffix_cons colon input)
 
@@ -74,12 +74,15 @@ private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
   cases read
   case tupleBind =>
       have patternRead : TuplePatternReads _ _ _ := ‹_›
-      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads scope _ _ _ := ‹_›
       have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
       rw [← (List.cons.inj htok).2] at patternRead
       refine ⟨⟨_,_,_,_,_,‹_›,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
+  case letOption =>
+      rename_i mutable
+      cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
@@ -91,7 +94,7 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
   cases read
   case tupleBind =>
       have patternRead : TuplePatternReads _ _ _ := ‹_›
-      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads scope _ _ _ := ‹_›
       have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
       rw [← (List.cons.inj htok).2] at patternRead
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
@@ -99,6 +102,9 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
           (tuplePattern_consumes input _ _ patternRead))
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
+  case letOption =>
+      rename_i mutable
+      cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
@@ -130,7 +136,7 @@ theorem tupleBind_derivation : Surface.TupleBindDerivationAussage := by
   · rcases prod with ⟨input, more, rhs, rfl, pRead, aRead, eRead⟩
     exact StmtReads.tupleBind args.checked pRead aRead eRead
   · let pattern : TuplePattern := ⟨none, none, []⟩
-    have checked : pattern.valid none [.bool, .bool] := by
+    have checked : pattern.valid ctx.1 none [.bool, .bool] := by
       refine ⟨?_, ?_, ?_, ?_⟩
       · simpa [pattern, TuplePattern.names]
       · exact List.nodup_nil
@@ -243,7 +249,7 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
 theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   intro platform start
   let pattern : TuplePattern := ⟨none, none, []⟩
-  have checked : pattern.valid none [.bool, .bool] := by
+  have checked : pattern.valid [] none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simpa [pattern, TuplePattern.names]
     · exact List.nodup_nil
