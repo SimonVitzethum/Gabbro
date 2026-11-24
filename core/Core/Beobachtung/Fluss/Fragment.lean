@@ -9,10 +9,10 @@ public import Core.Verfeinerung.Formen.Familie
 namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
-open Ast.Semantik (Fragment Befehl SimFamilie)
+open Ast.Semantik (Fragment Befehl LokalFamilie)
 
-def FamilienNI (familie : SimFamilie) : Prop :=
-  ∀ (p : Fragment) (plattform : Plattform) (f : Befehl), f.simFamilie = familie →
+def FamilienNI (familie : LokalFamilie) : Prop :=
+  ∀ (p : Fragment) (plattform : Plattform) (f : Befehl), f.familie = familie →
     RegelFluss (p.einheit plattform) f → RegelNIPflicht (p.einheit plattform) f
 
 def ProtokollwahlNI (form : SchrittWahl PUnit → Prop) : Prop :=

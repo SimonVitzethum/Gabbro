@@ -262,11 +262,11 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
   | bindeRegion receiver init => exact bindeRegionSicht β pc receiver init regel.1 regel.2
 
 /-- Per instruction family: the rule is sound for every declaration. -/
-def FamilienSicht (familie : SimFamilie) : Prop :=
-  ∀ (β : Beschriftung) (pc : Nat) (f : Befehl), f.simFamilie = familie →
+def FamilienSicht (familie : LokalFamilie) : Prop :=
+  ∀ (β : Beschriftung) (pc : Nat) (f : Befehl), f.familie = familie →
     f.FlussRegel β pc → f.SichtErhaltendBei β pc
 
-theorem familienSicht (familie : SimFamilie) : FamilienSicht familie :=
+theorem familienSicht (familie : LokalFamilie) : FamilienSicht familie :=
   fun _ _ f _ regel => f.sichtErhaltend regel
 
 /-- A fragment is accepted at the labelled flow rule when each instruction's rule holds at each
