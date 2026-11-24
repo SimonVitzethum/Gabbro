@@ -55,42 +55,86 @@ def B8Abschluss (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
             (fun i => (ρ.hw.angebot i).cycles)
             (fun i => Kontextkosten ρ c i (t + 1 - i))
 
-/-- The start obligation: the initial cut of every admitted run satisfies the B8 prefix. -/
-def B8StartPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
-  ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → B8Prefix E ρ 0
+/-- The clock-independent start obligation: the initial cut of every admitted run satisfies
+    the cost and hold prefix. The time part is a separate obligation (`ZeitStartPflicht`):
+    marks are loader data, and their evaluation needs the B19 clock bounds. -/
+def KHStartPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
+  ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ →
+    KostenPrefix E ρ 0 ∧ HaltePrefix E ρ 0
 
-/-- The per-form obligation: a step of form `f` preserves the B8 prefix. The step is identified
-    by the head form and the recorded trace, exactly as in `RegelNIPflicht`; the rule content of
-    `f` enters when the obligation is discharged. -/
-def RegelB8Pflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+/-- The clock-independent per-form obligation: a step of form `f` preserves the cost and hold
+    prefix. Cost counting and hold accounting are machine-determined and need no clock facts;
+    the step is identified by the head form and the recorded trace, exactly as in
+    `RegelNIPflicht`. The time part is `ZeitRegelPflicht`. -/
+def KHRegelPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (f : Form) : Prop :=
   ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → ∀ t c w spur vor nach,
-    B8Prefix E ρ t →
+    KostenPrefix E ρ t → HaltePrefix E ρ t →
     ρ.zeit.zustand t = some vor → E.system.kopf vor c = some f →
     ρ.zeit.spur t = some (.kontext c w, spur) → ρ.zeit.zustand (t + 1) = some nach →
-    B8Prefix E ρ (t + 1)
+    KostenPrefix E ρ (t + 1) ∧ HaltePrefix E ρ (t + 1)
 
-/-- Loader and non-form protocol transitions share one obligation; an idle tick is handled
-    generically by the composition theorem. -/
+/-- Loader and non-form protocol transitions share one clock-independent obligation; an idle
+    tick is handled generically by the composition theorem. -/
 def ProtokollB8Wahl : SchrittWahl Wahl → Prop
   | .kontext _ _ => False
   | .antwort _ | .interrupt _ | .absturz => True
 
-/-- The protocol obligation: an answer, interrupt or crash transition preserves the B8 prefix. -/
-def B8ProtokollPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
+/-- The clock-independent protocol obligation: an answer, interrupt or crash transition
+    preserves the cost and hold prefix. -/
+def KHProtokollPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
   ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → ∀ t w spur vor nach,
-    B8Prefix E ρ t →
+    KostenPrefix E ρ t → HaltePrefix E ρ t →
     ρ.zeit.zustand t = some vor →
     ρ.zeit.spur t = some (w, spur) → ProtokollB8Wahl w →
     ρ.zeit.zustand (t + 1) = some nach →
-    B8Prefix E ρ (t + 1)
+    KostenPrefix E ρ (t + 1) ∧ HaltePrefix E ρ (t + 1)
 
-/-- The B8 obligations of a unit: start, one per source form, and the shared protocol part.
-    Discharged per form as the M6 rules land, exactly as `NIPflichten` is for NI. -/
+/-- The clock-independent B8 obligations of a unit: start, one per source form, and the shared
+    protocol part. Discharged per form as the M6 rules land, exactly as `NIPflichten` is for NI. -/
+structure KHPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop where
+  start : KHStartPflicht E
+  regel : ∀ f, KHRegelPflicht E f
+  protokoll : KHProtokollPflicht E
+
+/-- The time start obligation: the initial cut of every admitted run satisfies the time prefix.
+    Discharged with the loader rules (M6) and the B19 clock bounds. -/
+def ZeitStartPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
+  ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → ZeitPrefix E ρ 0
+
+/-- The per-form time obligation: a step of form `f` preserves the time prefix. Discharged
+    per form with the rule content (new marks, local state), the `zeit...ErweiternAussage`
+    extension lemmas for decided marks, and the B19 clock bounds for running `rumpf` marks. -/
+def ZeitRegelPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (f : Form) : Prop :=
+  ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → ∀ t c w spur vor nach,
+    ZeitPrefix E ρ t →
+    ρ.zeit.zustand t = some vor → E.system.kopf vor c = some f →
+    ρ.zeit.spur t = some (.kontext c w, spur) → ρ.zeit.zustand (t + 1) = some nach →
+    ZeitPrefix E ρ (t + 1)
+
+/-- The protocol time obligation: an answer, interrupt or crash transition preserves the time
+    prefix. Discharged with the B19 clock bounds. -/
+def ZeitProtokollPflicht (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop :=
+  ∀ {h : Umgebung} {ρ : Lauf E}, Laeufe E h ρ → ∀ t w spur vor nach,
+    ZeitPrefix E ρ t →
+    ρ.zeit.zustand t = some vor →
+    ρ.zeit.spur t = some (w, spur) → ProtokollB8Wahl w →
+    ρ.zeit.zustand (t + 1) = some nach →
+    ZeitPrefix E ρ (t + 1)
+
+/-- The time obligations of a unit. The composition over cuts closes with the B19 clock
+    bounds; the extension lemmas for decided phases are pinned as `...Aussage` now. -/
+structure ZeitPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop where
+  start : ZeitStartPflicht E
+  regel : ∀ f, ZeitRegelPflicht E f
+  protokoll : ZeitProtokollPflicht E
+
+/-- The B8 obligations of a unit: the clock-independent cost and hold part, closed by the
+    composition theorem of this step, and the time part, closed with the B19 clock bounds. -/
 structure B8Pflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) : Prop where
-  start : B8StartPflicht E
-  regel : ∀ f, RegelB8Pflicht E f
-  protokoll : B8ProtokollPflicht E
+  kh : KHPflichten E
+  zeit : ZeitPflichten E
 
 /-- A marked tick is dropped from the count when its mark is absent. -/
 private theorem zaehle_still {markiert : Nat → Bool} {anfang k : Nat}
@@ -134,63 +178,63 @@ private theorem kontextkosten_fremd {ρ : Lauf E} {c : Kontext} {a k t : Nat}
   simp only [Kontextkosten]
   rw [zaehle_still still]
 
-/-- An idle tick preserves the whole B8 prefix: the state is unchanged and neither cost
-    counter moves. -/
-private theorem leerlauf_erhaelt {ρ : Lauf E} {t : Nat}
-    (idle : ρ.zeit.spur t = none) (hyp : B8Prefix E ρ t) :
-    B8Prefix E ρ (t + 1) := by
-  obtain ⟨kosten, halte, zeit⟩ := hyp
-  obtain ⟨gleich, _⟩ := ρ.zeit.wartet idle
+/-- An idle tick preserves the cost and hold prefix: the state is unchanged and neither
+    cost counter moves. The time prefix is not preserved here: the hardware clock may advance
+    on an idle tick, so running `rumpf` marks need the B19 clock bounds (`ZeitPflichten`). -/
+private theorem leerlauf_erhaelt_kh {ρ : Lauf E} {t : Nat}
+    (idle : ρ.zeit.spur t = none) (hyp : KostenPrefix E ρ t ∧ HaltePrefix E ρ t) :
+    KostenPrefix E ρ (t + 1) ∧ HaltePrefix E ρ (t + 1) := by
+  obtain ⟨kosten, halte⟩ := hyp
   have fremd : ∀ (c : Kontext) d w spur,
       ρ.zeit.spur t = some (.kontext d w, spur) → d ≠ c := by
     intro c d w spur h
     rw [idle] at h
     cases h
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_⟩
   · unfold KostenPrefix Laufkosten at kosten ⊢
     rw [laufkosten_leerlauf idle]
     exact kosten
   · intro l c a n bound own
     by_cases h : a + n ≤ t
     · exact halte l c a n h own
-    · have last : a + n = t + 1 :=
-        Nat.le_antisymm bound (Nat.succ_le_of_lt (lt_of_not_ge h))
-      cases n with
+    · cases n with
       | zero =>
         intro lim _
         simp only [Kontextkosten, I.zaehle]
         exact Nat.zero_le lim
       | succ k =>
-        have ak : a + k = t := by
-          have h1 : (a + k) + 1 = t + 1 := by
-            rw [Nat.add_assoc]
-            exact last
-          exact Nat.add_right_cancel h1
+        have ak_le : a + k ≤ t := by
+          have b1 : Nat.succ (a + k) ≤ t + 1 := by
+            rw [← Nat.add_succ]
+            exact bound
+          have b2 : Nat.succ (a + k) ≤ Nat.succ t := by
+            rwa [← Nat.succ_eq_add_one] at b1
+          exact Nat.le_of_succ_le_succ b2
+        have ak_ge : t ≤ a + k := by
+          have h1 : ¬ Nat.succ (a + k) ≤ t := by
+            rw [Nat.add_succ]
+            exact h
+          exact Nat.le_of_lt_succ (lt_of_not_ge h1)
+        have ak : a + k = t := Nat.le_antisymm ak_le ak_ge
         have own' : ∀ t', a ≤ t' → t' < a + k →
             ∃ s, ρ.zeit.zustand t' = some s ∧ (s.sperren l).besitzer = some c := by
           intro t' h1 h2
-          exact own t' h1 (Nat.lt_of_le_of_lt h2 (Nat.add_le_add_left (Nat.le_succ k) a))
+          exact own t' h1 (Nat.lt_of_lt_of_le h2 (Nat.add_le_add_left (Nat.le_succ k) a))
         have zb := halte l c a k (le_of_eq ak) own'
         rw [kontextkosten_fremd ak (fremd c)]
         exact zb
-  · intro t' s le_t1 hst c m mem
-    by_cases h : t' ≤ t
-    · exact zeit t' s h hst c m mem
-    · have eq : t' = t + 1 :=
-        Nat.le_antisymm le_t1 (Nat.succ_le_of_lt (lt_of_not_ge h))
-      subst eq
-      rw [gleich] at hst
-      exact zeit t s (Nat.le_refl t) hst c m mem
 
-/-- Every prefix of an admitted run satisfies the B8 obligations, by induction over the cuts.
-    Idle ticks are generic; form steps use the per-form obligation, protocol steps the shared one. -/
-private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf E}
-    (run : Laeufe E h ρ) (t : Nat) : B8Prefix E ρ t := by
+/-- Every prefix of an admitted run satisfies the cost and hold obligations, by induction
+    over the cuts. Idle ticks are generic; form steps use the per-form obligation, protocol
+    steps the shared one. The time prefix needs the B19 clock bounds and is composed in the
+    `ZeitPflichten` step. -/
+private theorem prefix_alle_kh (pflicht : KHPflichten E) {h : Umgebung} {ρ : Lauf E}
+    (run : Laeufe E h ρ) (t : Nat) : KostenPrefix E ρ t ∧ HaltePrefix E ρ t := by
   induction t with
   | zero => exact pflicht.start run
   | succ t ih =>
     cases tick : ρ.zeit.spur t with
-    | none => exact leerlauf_erhaelt tick ih
+    | none => exact leerlauf_erhaelt_kh tick ih
     | some label =>
       rcases label with ⟨w, spur⟩
       cases w with
@@ -206,7 +250,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | antwort _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
+            | antwort _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | interrupt _ =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -219,7 +263,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | interrupt _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
+            | interrupt _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | absturz =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -232,7 +276,7 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
           cases transition with
           | schritt step =>
             cases step with
-            | absturz _ => exact pflicht.protokoll run t _ _ _ _ ih vorEq tick trivial nachEq
+            | absturz _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | kontext c w =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -247,16 +291,18 @@ private theorem prefix_alle (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf 
             cases step with
             | kontext _ _ regel _ =>
               obtain ⟨f, kopf, _⟩ := regel
-              exact pflicht.regel f run t c w spur _ _ ih vorEq kopf tick nachEq
+              exact pflicht.regel f run t c w spur _ _ ih.1 ih.2 vorEq kopf tick nachEq
 
-/-- Every admitted run whose B8 obligations hold meets the hold, cost and time legs of
-    `ImSchranken`: the hold leg from the prefix at the interval end, the other two directly. -/
-theorem b8_aus_pflichten (pflicht : B8Pflichten E) {h : Umgebung} {ρ : Lauf E}
-    (run : Laeufe E h ρ) : B8Abschluss E ρ := by
-  have alle := prefix_alle pflicht run
-  refine ⟨?_, fun t => (alle t).1, fun t s hst c m mem => (alle t).2.2 t s (Nat.le_refl t) hst c m mem⟩
+/-- Every admitted run of a unit meeting its clock-independent obligations meets the hold and
+    cost legs of `ImSchranken`: the hold leg from the prefix at the interval end, the cost leg
+    directly. This is the composition theorem of the B8 step; the time leg closes with the B19
+    clock bounds over `ZeitPflichten`. -/
+theorem b8_kh_aus_pflichten (pflicht : KHPflichten E) {h : Umgebung} {ρ : Lauf E}
+    (run : Laeufe E h ρ) : HalteSchranken E ρ ∧ ∀ t, KostenPrefix E ρ t := by
+  have alle := prefix_alle_kh pflicht run
+  refine ⟨?_, fun t => (alle t).1⟩
   intro l c a n own
-  exact (alle (a + n)).2.1 l c a n (Nat.le_refl _) own
+  exact (alle (a + n)).2 l c a n (Nat.le_refl _) own
 
 /-- The B8 conclusion is exactly the hold, cost and time legs of `ImSchranken`; the remaining
     two legs are the stack (B9) and memory (B21) obligations of the later steps. -/

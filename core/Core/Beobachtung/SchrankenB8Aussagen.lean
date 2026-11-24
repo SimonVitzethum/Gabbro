@@ -114,16 +114,18 @@ def zeitSpaetErweiternAussage : Prop :=
       cut ≤ cut' → clock cut ≤ clock cut' →
       ZeitInSchranken max d (.late geprueft) anfang cut' clock kosten
 
-/-- An idle tick preserves the whole B8 prefix: the state is unchanged, both cost counters
-    stand still, and every mark is already covered at the previous cut. This is the
-    stuttering case of every future per-form induction.
-    Difficulty: mittel. Sketch: state equality from `Zeitlauf.wartet`; cost legs via
-    `kostenSchrittAussage` (idle case) and `halteFremdAussage` (an idle tick is foreign to
-    every context); time leg by forwarding each mark to the unchanged previous state. -/
-def b8LeerlaufAussage : Prop :=
+/-- An idle tick preserves the cost and hold prefix: the state is unchanged and neither
+    cost counter moves. The time prefix is excluded on purpose: the hardware clock may advance
+    on an idle tick, so running `rumpf` marks need the B19 clock bounds. This is the stuttering
+    case of every future per-form induction.
+    Difficulty: mittel. Sketch: cost legs via `kostenSchrittAussage` (idle case) and
+    `halteFremdAussage` (an idle tick is foreign to every context). -/
+def khLeerlaufAussage : Prop :=
   ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) (t : Nat),
-    ρ.zeit.spur t = none → B8Prefix E ρ t → B8Prefix E ρ (t + 1)
+    ρ.zeit.spur t = none →
+      KostenPrefix E ρ t → HaltePrefix E ρ t →
+      KostenPrefix E ρ (t + 1) ∧ HaltePrefix E ρ (t + 1)
 
 end Gabbro.Core.Beobachtung
