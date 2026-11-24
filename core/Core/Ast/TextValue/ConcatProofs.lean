@@ -121,7 +121,7 @@ private theorem textTailCompose {scope it it2 it3}
       have hlen₂ : _ := suffix_length_le (ExprReads.consumes reads₂)
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailCompose tail' next)
-termination_by input.length
+termination_by sizeOf tail
 decreasing_by
   simp_all
   omega
@@ -165,11 +165,7 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   dsimp
   simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, ByteArray.size_append,
     hleft, hright, left.bound, right.bound]
-  all_goals
-    first
-    | rfl
-    | exact Nat.add_le_add hl hr
-    | omega
+  all_goals guard_target =ₛ True
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
