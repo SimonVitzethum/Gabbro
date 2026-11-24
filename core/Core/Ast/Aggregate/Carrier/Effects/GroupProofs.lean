@@ -512,7 +512,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
       Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel,
       Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema,
       Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
-      functionForm, functionInstruction, bt, bg, b, scope, a]
+      functionForm, functionInstruction, bt, bg, b, scope, a, Surface.FunctionArgs.declaration]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
   have hstep2 : E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) :=
