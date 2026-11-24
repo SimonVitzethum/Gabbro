@@ -197,7 +197,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i op left right leftIH rightIH
     simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
-    apply .grouped
+    apply AtomReads.grouped
     apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
     exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
@@ -235,7 +235,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i left right nonzero leftIH rightIH
     simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, PrintedToken.slash, Arith.print_value, List.map_append, List.map_cons,
       List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
-    apply .grouped
+    apply AtomReads.grouped
     apply ExprReads.atom (leftIH (Infix.div.token :: right.printTokens ++ closeParen :: rest))
     exact .div (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) nonzero (.stop noOperatorAtClose)
@@ -243,7 +243,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i op left right leftIH rightIH
     simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
-    apply .grouped
+    apply AtomReads.grouped
     apply ExprReads.atom (leftIH ((Infix.compare op).token :: right.printTokens ++ closeParen :: rest))
     refine .compare op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) ?_ (.stop noOperatorAtClose)
@@ -253,7 +253,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i op left right leftIH rightIH
     simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
-    apply .grouped
+    apply AtomReads.grouped
     apply ExprReads.atom (leftIH ((Infix.logic op).token :: right.printTokens ++ closeParen :: rest))
     exact .logic op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
