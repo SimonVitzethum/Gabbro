@@ -54,8 +54,9 @@ theorem mem_getElem? {q : List Kontext} {c : Kontext} (h : c ∈ q) : ∃ i : Na
   induction q with
   | nil => exact (List.not_mem_nil h).elim
   | cons x xs ih =>
-    rcases List.mem_cons.mp h with rfl | h'
-    · exact ⟨0, rfl⟩
+    rcases List.mem_cons.mp h with heq | h'
+    · subst heq
+      exact ⟨0, rfl⟩
     · obtain ⟨i, hi⟩ := ih h'
       exact ⟨i + 1, by simpa only [List.getElem?_cons_succ] using hi⟩
 
@@ -148,17 +149,20 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
         refine ⟨r' + 1, [Kontextkosten ρ h a (r' + 1 - a)],
           hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl ?_⟩, ?_, ?_, ?_⟩
         · simp only [hred]
-          exact h₀eq
+          exact congrArg Option.some h₀eq
         · calc [Kontextkosten ρ h a (r' + 1 - a)].length = 1 := rfl
             _ ≤ 0 + 1 := by omega
         · intro x hx
-          rcases List.mem_cons.mp hx with rfl | hx'
-          · exact hcost
+          rcases List.mem_cons.mp hx with heq | hx'
+          · subst heq
+            exact hcost
           · exact (List.not_mem_nil hx').elim
-        · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r' + 1 - a)] H
-            (fun x hx => by rcases List.mem_cons.mp hx with rfl | hx'
-              · exact hcost
-              · exact (List.not_mem_nil hx').elim)
+        · have hbnd : ∀ x ∈ [Kontextkosten ρ h a (r' + 1 - a)], x ≤ H + 1 := by
+            intro x hx
+            have heq : x = Kontextkosten ρ h a (r' + 1 - a) := List.mem_singleton.mp hx
+            subst heq
+            exact hcost
+          have hsum := halter_summe_schranke [Kontextkosten ρ h a (r' + 1 - a)] H hbnd
           calc [Kontextkosten ρ h a (r' + 1 - a)].sum
               ≤ [Kontextkosten ρ h a (r' + 1 - a)].length * (H + 1) := hsum
             _ ≤ (0 + 1) * (H + 1) :=
@@ -236,14 +240,13 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                 hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl hnew⟩, ?_, ?_, ?_⟩
               · calc [Kontextkosten ρ h a (r + 1 - a)].length = 1 := rfl
                   _ ≤ i + 1 + 1 := by omega
-              · intro x hx
-                rcases List.mem_cons.mp hx with rfl | hx'
-                · exact hcost
-                · exact (List.not_mem_nil hx').elim
-              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r + 1 - a)] H
-                  (fun x hx => by rcases List.mem_cons.mp hx with rfl | hx'
-                    · exact hcost
-                    · exact (List.not_mem_nil hx').elim)
+              · have hbnd1 : ∀ x ∈ [Kontextkosten ρ h a (r' + 1 - a)], x ≤ H + 1 := by
+                  intro x hx
+                  have heq : x = Kontextkosten ρ h a (r' + 1 - a) := List.mem_singleton.mp hx
+                  subst heq
+                  exact hcost
+                exact hbnd1
+              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r' + 1 - a)] H hbnd1
                 calc [Kontextkosten ρ h a (r + 1 - a)].sum
                     ≤ [Kontextkosten ρ h a (r + 1 - a)].length * (H + 1) := hsum
                   _ ≤ (i + 1 + 1) * (H + 1) :=
@@ -267,8 +270,9 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                     hmono t₁ t₂ s₁ s₂ i₁ i₂ (by omega) ht2 hz1 hz2 hq1 hq2)
               have hbnd : ∀ x ∈ Kontextkosten ρ h a (r + 1 - a) :: e', x ≤ H + 1 := by
                 intro x hx
-                rcases List.mem_cons.mp hx with rfl | hx'
-                · exact hcost
+                rcases List.mem_cons.mp hx with heq | hx'
+                · subst heq
+                  exact hcost
                 · exact hbound' x hx'
               refine ⟨b, Kontextkosten ρ h a (r + 1 - a) :: e',
                 Nat.le_trans (by omega) hb, hreach, ?_, hbnd, ?_⟩
