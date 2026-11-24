@@ -541,7 +541,7 @@ theorem StmtReads.bindDirect_inversion
       injection htail with _ htail
       injection hspelling with hname
       subst input
-      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsProof, rfl⟩
+      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied call argsProof, rfl⟩
       exact hname.symm
   | directCall callRead =>
       cases callRead
