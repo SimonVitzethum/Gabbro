@@ -33,7 +33,7 @@ private theorem fragen_vor_schritt {run t s w spur s'}
   | kontext _ _ _ aus =>
     obtain ⟨rahmen, _, _, v, aktion, _, ziel⟩ := aus
     rw [ziel]
-    exact fragen_vor_aktion (E := E) aktion rahmen alt
+    exact fragen_vor_aktion (E := E) (s' := v) aktion rahmen alt
   | antwort _ arrives =>
     rw [arrives.2.2.2]
     exact fun _ mem => Nat.lt_succ_of_lt (alt _ mem)
