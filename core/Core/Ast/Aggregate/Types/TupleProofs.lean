@@ -49,9 +49,58 @@ theorem tupleType_index : TupleTypeIndexAussage := by
   intro first second tail
   rfl
 
+private theorem tupleTypeTail_closed (tail : WrittenTypes) (rest : List Token) :
+    ∀ more, tail.printTail.map PrintedToken.value ++ closeParen :: rest ≠ keyword "in" :: more := by
+  match tail with
+  | .empty =>
+      intro more same
+      simp only [WrittenTypes.printTail, List.map_nil, List.nil_append] at same
+      cases same
+  | .next _ _ =>
+      intro more same
+      have commaTok : printComma.value = comma := by rfl
+      simp only [WrittenTypes.printTail, List.map_cons, List.map_append, List.map_nil, commaTok] at same
+      cases same
+
+private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid scope → (rest : List Token) →
+    TypeItemsTail scope (tail.printTail.map PrintedToken.value ++ closeParen :: rest) tail rest
+  | .empty, _, rest => by
+      simpa [WrittenTypes.printTail] using (TypeItemsTail.close (rest := rest))
+  | .next head tail, valid, rest => by
+      simp only [WrittenTypes.printTail, List.map_cons, List.map_append, List.map_nil]
+      have commaTok : printComma.value = comma := by rfl
+      rw [commaTok]
+      apply TypeItemsTail.comma
+      · simpa [List.append_assoc] using
+          (WrittenType.printReads head valid.1
+            (rest := tail.printTail.map PrintedToken.value ++ closeParen :: rest)
+            (tupleTypeTail_closed tail rest))
+      · exact tupleType_printTail tail valid.2 rest
+
 theorem tupleType_derivation : TupleTypeDerivationAussage := by
   intro scope first second tail rest valid
-  exact WrittenType.printReads (.tuple first second tail) valid (by intro more same; cases same)
+  let ft := first.printPieces.map PrintedToken.value
+  let st := second.printPieces.map PrintedToken.value
+  let tt := tail.printTail.map PrintedToken.value
+  have openTok : printOpen.value = openParen := by rfl
+  have commaTok : printComma.value = comma := by rfl
+  have closeTok : printClose.value = closeParen := by rfl
+  have printEq : (WrittenType.tuple first second tail).printPieces.map PrintedToken.value =
+      openParen :: (ft ++ [comma] ++ st ++ tt ++ [closeParen]) := by
+    simp only [WrittenType.printPieces, WrittenTypes.printTail, List.map_append, List.map_cons,
+      List.map_nil, ft, st, tt, openTok, commaTok, closeTok, List.singleton_append, List.append_assoc]
+    rfl
+  rw [printEq]
+  simp only [List.cons_append]
+  refine TypeReads.tuple (input := ft ++ [comma] ++ st ++ tt ++ [closeParen] ++ rest)
+    (secondInput := st ++ tt ++ closeParen :: rest)
+    (more := tt ++ closeParen :: rest) ?_ ?_ ?_
+  · simpa [ft] using (WrittenType.printReads first valid.1
+      (rest := comma :: (st ++ tt ++ closeParen :: rest))
+      (by intro more same; cases same))
+  · simpa [st] using (WrittenType.printReads second valid.2.1
+      (rest := tt ++ closeParen :: rest) (tupleTypeTail_closed tail rest))
+  · simpa [tt] using (tupleType_printTail tail valid.2.2 rest)
 
 theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   let first : WrittenType := .bool
