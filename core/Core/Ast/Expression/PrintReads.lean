@@ -21,6 +21,16 @@ private theorem noOperatorAtSliceRange : ¬ Continues minimum (sliceRange :: mor
 theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     AtomReads scope (tree.printTokens ++ rest) tree rest := by
   revert rest
+  have openToken : printOpen.value = openParen := rfl
+  have closeToken : printClose.value = closeParen := rfl
+  have openBracketToken : printOpenBracket.value = openBracket := rfl
+  have closeBracketToken : printCloseBracket.value = closeBracket := rfl
+  have dotToken : printDot.value = dot := rfl
+  have commaToken : printComma.value = comma := rfl
+  have colonToken : printColon.value = colon := rfl
+  have lenofToken : printLenof.value = lenofKeyword := rfl
+  have nameToken (name : Identifier) : name.print.value = .word name.val := rfl
+  have integerToken (value : Nat) : (printInteger value).value = .natural value := rfl
   refine @Expr.rec scope
     (fun _ node => ∀ rest, AtomReads scope (node.printTokens ++ rest) node rest)
     (fun _ items => ∀ close rest, (¬ Continues 0 (close :: rest)) →
@@ -118,7 +128,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     intros
     rename_i items principal fits ih rest
     have read := (ih closeBracket rest noOperatorAtCloseBracket).1
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openBracketToken, closeBracketToken] using
       (AtomReads.arrayValue principal fits read)
   case arrayIndex =>
     intros
@@ -146,25 +156,25 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
   case tupleField =>
     intros
     rename_i base index baseIH rest
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, dotToken, integerToken] using
       (AtomReads.grouped (.atom (baseIH (dot :: .natural index.val :: closeParen :: rest))
         (.tupleField base index (Nat.zero_le _) (.stop noOperatorAtClose))))
   case recordValue =>
     intros
     rename_i ref args fields fits argsIH rest
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, nameToken, openToken, closeToken] using
       (AtomReads.recordValue ref fields fits (argsIH rest).1)
   case recordField =>
     intros
     rename_i base field index written baseIH rest
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, dotToken, nameToken] using
       (AtomReads.grouped (.atom (baseIH (dot :: .word field.val :: closeParen :: rest))
         (.recordField base field index written (Nat.zero_le _) (.stop noOperatorAtClose))))
   case variantValue =>
     intros
     rename_i ref label index written ordinary available payload ih rest
     have valueRead := ih (closeParen :: rest) (fun _ impossible => by cases impossible)
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, nameToken] using
       (AtomReads.grouped (.atom (.variantValue ref label index written ordinary available payload valueRead)
         (.stop noOperatorAtClose)))
   case textLiteral =>
@@ -198,7 +208,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
   case textLength =>
     intros
     rename_i base baseIH rest
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, lenofToken, openToken, closeToken] using
       (AtomReads.textLength (.atom (baseIH (closeParen :: rest)) (.stop noOperatorAtClose)))
   case optionIsSome =>
     intros
@@ -221,7 +231,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     have read := ItemsRead.next headRead tailRead
     constructor
     · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, ExprItems.printPieces, more] using read
-    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, ExprItems.printTail, more] using
+    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, ExprItems.printTail, more, commaToken] using
         (ItemsTail.comma (Or.inl (by intro h; cases h)) read)
   case labeledEmpty =>
     intro rest
@@ -237,8 +247,8 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     have valueRead := ExprReads.atom (valueIH more) (.stop blocked)
     have read := LabeledItemsRead.next label valueRead (tailIH rest).2
     constructor
-    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, LabeledItems.printPieces, more] using read
-    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, LabeledItems.printTail, more] using
+    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, LabeledItems.printPieces, more, nameToken, colonToken] using read
+    · simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, LabeledItems.printTail, more, commaToken, nameToken, colonToken] using
         (LabeledItemsTail.comma label value tail read)
   case payloadNullary =>
     intro parens rest closed
@@ -248,7 +258,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
   case payloadValue =>
     intros
     rename_i value valueIH rest _
-    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, CasePayload.printPieces] using
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, CasePayload.printPieces, openToken, closeToken] using
       (CasePayloadRead.value (.atom (valueIH (closeParen :: rest)) (.stop noOperatorAtClose)))
 
 theorem Expr.printReads (tree : Expr scope type) (blocked : ¬ Continues minimum rest) :
