@@ -159,15 +159,14 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
                   cases fits
               | succ m =>
                   cases fits
-                  simp [Wert.widen]
+                  rfl
       | _ => simp [Fits, wertAls, Wert.widen] at fits
   | _ =>
       cases target with
       | int _ _ => simp [Fits] at fits
       | array _ _ => simp [Fits] at fits
       | _ =>
-          cases fits
-          simp [wertAls, Wert.widen]
+          cases fits <;> simp [wertAls, Wert.widen]
 
 theorem AssignFieldParse : AssignFieldParseAussage := by
   intro ctx args text pieces lex prod
