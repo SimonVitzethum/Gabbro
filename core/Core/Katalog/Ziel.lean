@@ -92,6 +92,11 @@ def Plattform.ziel : Plattform → ZielDaten
       controller := .aia, interruptCount := 2048, nonmaskable := false, machineCheck := false
       coreStart := .sbiHsm, arrival := .translationOff, imageFormats := [.elf, .flash] }
 
+/-- Width of the dedicated port address space where the platform has one. -/
+def Plattform.portAddressBits : Plattform → Option Nat
+  | .x86_64 => some 16
+  | .aarch64 | .riscv64 => none
+
 def ZielDaten.seitengranule (z : ZielDaten) : Nat := 2 ^ z.pageShift
 
 def ZielDaten.gut (z : ZielDaten) : Prop :=

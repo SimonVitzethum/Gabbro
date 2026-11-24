@@ -13,6 +13,12 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ast.LowLevel.schema, 2806201575370540991),
+  (`Gabbro.Core.Ast.LowLevel.AddressTypeAussage, 4561141345996564516),
+  (`Gabbro.Core.Ast.LowLevel.RegionAddressAussage, 14892309147904547527),
+  (`Gabbro.Core.Ast.LowLevel.ViewAussage, 17433345693305683580),
+  (`Gabbro.Core.Ast.LowLevel.EnvironmentAussage, 5902126235403450415),
+  (`Gabbro.Core.Katalog.ZulStart, 4240263083736116198),
   (`Gabbro.Core.Beobachtung.NiedrigeBeob, 8380224728954698503),
   (`Gabbro.Core.Beobachtung.NiedrigAequiv, 5325936300272809159),
   (`Gabbro.Core.Katalog.Plattform.spekulationshuelle, 9646114676836847360),
@@ -162,6 +168,11 @@ private meta def acceptance : AcceptanceSpec := {
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[
+  ⟨`Gabbro.Core.Ast.LowLevel.Tree, `Gabbro.Core.Ast.LowLevel.schema, #[], #[
+    (`Gabbro.Core.Ast.LowLevel.Tree.addressType, `Gabbro.Core.Ast.LowLevel.AddressTypeAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.regionAddress, `Gabbro.Core.Ast.LowLevel.RegionAddressAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.view, `Gabbro.Core.Ast.LowLevel.ViewAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.environment, `Gabbro.Core.Ast.LowLevel.EnvironmentAussage)]⟩,
   ⟨`Gabbro.Core.Ast.Expr, `Gabbro.Core.Ast.Semantik.exprSchema, #[
     (`Gabbro.Core.Ast.Expr.lit, `Gabbro.Core.Ast.Semantik.literalEntry),
     (`Gabbro.Core.Ast.Expr.binary, `Gabbro.Core.Ast.Semantik.binaryEntry),
