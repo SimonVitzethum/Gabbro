@@ -6,6 +6,8 @@ public import Core.Verfeinerung.Formen.Familie
 
 namespace Gabbro.Core.Ast.Semantik
 
+open Maschine
+
 def TextSimAussage : Prop := SimFamilie.text.Pflicht
 
 theorem textSim : TextSimAussage := by
