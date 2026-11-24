@@ -95,7 +95,7 @@ structure TupleBindArgs (scope : Scope) where
   tail : List (Ty .value)
   pattern : TuplePattern
   annotation : Option WrittenType
-  checked : pattern.valid ctx.1 annotation (first :: second :: tail)
+  checked : pattern.valid scope annotation (first :: second :: tail)
   value : Expr scope (tupleType (first :: second :: tail))
 
 def TupleBindArgs.types (a : TupleBindArgs scope) : List (Ty .value) :=
