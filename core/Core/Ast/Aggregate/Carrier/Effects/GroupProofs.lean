@@ -355,7 +355,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
         | _ => none), site.effects = E := by
   induction code with
-  | nil => simp
+  | nil => intro site hmem; simp at hmem
   | cons cmd cmds ih =>
       intro site hmem
       cases hcmd : (match cmd with
@@ -393,9 +393,8 @@ theorem effectGroup_signature : EffectGroupSignatureAussage := by
       | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
       | _ => none), E⟩
   refine ⟨f, ?_, ?_, ?_⟩
-  · simp [functionForm, functionInstruction, Befehl.auswerten, f, E, code]
-    rfl
-  · simp [f, E]
+  · simpa [functionForm, functionInstruction, Befehl.auswerten, f, E, code]
+  · simpa [f, E]
   · intro site hsite
     exact codeRufe_effects code.code E site hsite
 theorem effectGroup_call : EffectGroupCallAussage := by
