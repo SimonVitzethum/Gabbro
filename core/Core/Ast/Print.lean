@@ -146,6 +146,6 @@ theorem Stmt.printReads (tree : Stmt before after) (rest : List Token) :
   cases tree with
   | letValue name ordinary value =>
     simp only [Stmt.printTokens_let, List.append_assoc, List.cons_append, List.nil_append]
-    exact .letValue name ordinary (value.printReads noOperatorAtSemicolon)
+    exact .letBinding name ordinary (value.printReads noOperatorAtSemicolon) .plain
 
 end Gabbro.Core.Ast
