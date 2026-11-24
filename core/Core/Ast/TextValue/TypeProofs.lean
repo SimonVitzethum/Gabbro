@@ -80,7 +80,7 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
       rename_i first second more tail more'
       have h : keyword "string" = openParen := (List.cons.inj htok).1
       cases h
-  | index _ _ | indexOption _ _ =>
+  | index _ _ | indexOption _ _ | address _ | ownedRegion =>
       cases (List.cons.inj htok).1
 
 theorem TextTypeDerivation : TextTypeDerivationAussage := by

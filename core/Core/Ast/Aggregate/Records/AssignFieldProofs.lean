@@ -78,6 +78,7 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
       cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
   | retOption _ initializer =>
       cases initializer <;> cases (List.cons.inj (List.cons.inj htok).2).1
+  | letRegion => cases (List.cons.inj (List.cons.inj htok).2).1
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read

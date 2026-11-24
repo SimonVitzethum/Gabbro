@@ -45,7 +45,8 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
 def MemFrame.partition (frame : MemFrame) (slot : Nat) (region : MemRegion) (point : Nat) : MemFrame :=
   let left := { region with extent := ⟨region.extent.von, point⟩ }
   let right := { region with extent := ⟨point, region.extent.bis⟩ }
-  { frame with result := some (.partition left right),
+  { frame with
+    result := some (.partition left right)
     regions := frame.regions.set slot (some left) ++ [some right] }
 
 def pageRange (base pages index : Nat) : Prop := base ≤ index ∧ index < base + pages
@@ -98,7 +99,8 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
       let joined : MemRegion := ⟨
         ⟨min left.extent.von right.extent.von, max left.extent.bis right.extent.bis⟩,
         left.backing ++ right.backing⟩
-      pure { frame with result := some (.merged joined),
+      pure { frame with
+        result := some (.merged joined)
         regions := (frame.regions.set first (some joined)).set second none }
     else none
   | .newSpace tables => do
@@ -119,7 +121,8 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
         (space.ausstehend.all fun token =>
           range.all fun i => decide (¬ token.contains (base + i))) then
       let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation⟩)
-      pure { frame with result := some .mapped,
+      pure { frame with
+        result := some .mapped
         spaces := frame.spaces.set sp { space with entries := space.entries ++ entries },
         tlb := frame.tlb.invalidate sp base pages }
     else none
@@ -131,7 +134,8 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
           (space.abbildung (base + i)).any fun entry => rights.all (· ∈ entry.rights)) then
       let entries := space.entries.map fun (page, entry) =>
         if pageRange base pages page then (page, { entry with rights }) else (page, entry)
-      pure { frame with result := some .«protected»,
+      pure { frame with
+        result := some .«protected»
         spaces := frame.spaces.set sp { space with entries },
         tlb := frame.tlb.invalidate sp base pages }
     else none
@@ -143,7 +147,8 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
         ((space.abbildung (base + i)).map Seiteneintrag.frame) == some (first.frame + i)) then
       let entries := space.entries.filter fun (page, _) => !decide (pageRange base pages page)
       let token : Zuruecknahme := ⟨sp, base, pages, space.generation + 1, first.frame⟩
-      pure { frame with result := some (.pending token),
+      pure { frame with
+        result := some (.pending token)
         spaces := frame.spaces.set sp
           { space with entries, generation := token.generation, ausstehend := token :: space.ausstehend } }
     else none
@@ -152,7 +157,8 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
     let space ← frame.spaces[token.raum]?
     if token ∈ space.ausstehend &&
         ((List.range token.seiten).all fun i => (space.abbildung (token.seite + i)).isNone) then
-      pure { frame with result := some (.frames (token.frames granule)),
+      pure { frame with
+        result := some (.frames (token.frames granule))
         tlb := frame.tlb.invalidate token.raum token.seite token.seiten,
         spaces := frame.spaces.set token.raum
           { space with ausstehend := space.ausstehend.filter (· != token) },
