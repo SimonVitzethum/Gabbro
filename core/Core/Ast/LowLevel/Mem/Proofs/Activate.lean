@@ -226,13 +226,14 @@ theorem activateJoint : ActivateJointAussage := by
       rfl
   have liveTable : (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 = true := by
     simp only [MemRegion.live, s0, I.start, E, memProgram, lowStart, memBoot, Zustand.start,
-      entryContext, ↓reduceIte, start, List.isEmpty_cons, Bool.not_true, Bool.false_and,
-      List.all_cons, List.all_nil, Bool.true_and]
+      entryContext, ↓reduceIte, start, List.length_cons, List.length_nil, Nat.reduceLT,
+      decide_true, List.isEmpty_cons, Bool.not_true, Bool.false_and,
+      List.all_cons, List.all_nil, Bool.true_and, and_true]
   have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
     unfold heldMemRegion
     change (if (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
         (s0.lokal entryContext).unreserved target.seitengranule extent then
-      some ⟨extent, [⟨0, 0⟩]⟩ else none) = some ⟨extent, [⟨0, 0⟩]⟩
+      some (⟨extent, [⟨0, 0⟩]⟩ : MemRegion) else none) = some ⟨extent, [⟨0, 0⟩]⟩
     rw [if_pos]
     constructor
     · exact liveTable
