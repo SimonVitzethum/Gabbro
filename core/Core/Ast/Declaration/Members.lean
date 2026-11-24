@@ -165,7 +165,7 @@ theorem VariantMemberRead.printReads (member : VariantMember) (valid : member.va
   | some written =>
     have hpOpen : printOpen.value = openParen := rfl
     have hpClose : printClose.value = closeParen := rfl
-    have read := written.printReads valid (rest := closeParen :: rest) (by intro tail same; cases same)
+    have read := written.printReads (valid.2.2 written List.mem_cons_self) (rest := closeParen :: rest) (by intro tail same; cases same)
     simpa only [VariantMember.printPieces, List.map_cons, List.map_append, List.map_nil,
       List.append_assoc, List.cons_append, List.nil_append, nameToken, hpOpen, hpClose] using
       (VariantMemberRead.payload name read)

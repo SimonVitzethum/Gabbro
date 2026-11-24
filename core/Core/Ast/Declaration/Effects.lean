@@ -14,7 +14,7 @@ inductive EffectItemEnd : List Token → Prop where
   | comma : EffectItemEnd (comma :: rest)
   | close : EffectItemEnd (closeBrace :: rest)
 
-private theorem CarrierAccess.token_injective (same : a.print.value = b.print.value) : a = b := by
+private theorem CarrierAccess.token_injective {a b : CarrierAccess} (same : a.print.value = b.print.value) : a = b := by
   cases a <;> cases b <;> first | rfl | cases same
 
 private theorem CarrierEffectReads.prefix (read : CarrierEffectReads input effect rest) :
@@ -60,7 +60,8 @@ private theorem CarrierEffectReads.disjoint_pure
     (read : CarrierEffectReads (keyword "pure" :: input) effect rest) : False := by
   obtain ⟨_, head⟩ := read.prefix
   have same := (List.cons.inj head).1
-  cases effect.access <;> cases same
+  cases effect with
+  | mk access _ _ => cases access <;> cases same
 
 theorem EffectTermReads.deterministic (left : EffectTermReads input a rest)
     (right : EffectTermReads input b more) (leftEnd : EffectItemEnd rest) (rightEnd : EffectItemEnd more) :
@@ -76,18 +77,17 @@ theorem EffectTermReads.deterministic (left : EffectTermReads input a rest)
   | group name ordinary =>
     generalize same : name.val = text at right
     cases right with
-    | carrier read =>
-      cases same
-      exact (read.disjoint_wordEnd leftEnd).elim
+    | carrier read => exact (read.disjoint_wordEnd leftEnd).elim
     | group other _ =>
       cases Subtype.ext same
       exact ⟨rfl, rfl⟩
     | pure => exact (ordinary same).elim
   | pure =>
+    change EffectTermReads (Token.word "pure".toList :: rest) _ _ at right
     generalize same : "pure".toList = text at right
     cases right with
     | carrier read =>
-      cases same
+      rw [← same] at read
       exact read.disjoint_pure.elim
     | group name ordinary => exact (ordinary same.symm).elim
     | pure => exact ⟨rfl, rfl⟩
@@ -108,13 +108,14 @@ theorem EffectTermReads.consumes (read : EffectTermReads input effect rest) : re
 theorem CarrierEffectReads.not_closeBrace (read : CarrierEffectReads (closeBrace :: input) effect rest) : False := by
   obtain ⟨_, head⟩ := read.prefix
   have same := (List.cons.inj head).1
-  cases effect.access <;> cases same
+  cases effect with
+  | mk access _ _ => cases access <;> cases same
 
 theorem EffectTermReads.not_closeBrace (read : EffectTermReads (closeBrace :: input) effect rest) : False := by
   cases read with
   | carrier read => exact read.not_closeBrace
 
-theorem EffectListReads.deterministic
+theorem EffectListReads.deterministic {read : List Token → α → List Token → Prop}
     (itemDet : ∀ {input a b rest more}, read input a rest → read input b more →
       EffectItemEnd rest → EffectItemEnd more → a = b ∧ rest = more)
     (itemClose : ∀ {input a rest}, read (closeBrace :: input) a rest → False)
@@ -148,7 +149,7 @@ theorem EffectListReads.deterministic
       cases same
       exact ⟨rfl, rfl⟩
 
-theorem EffectListReads.consumes
+theorem EffectListReads.consumes {read : List Token → α → List Token → Prop}
     (itemConsumes : ∀ {input item rest}, read input item rest → rest <:+ input)
     (items : EffectListReads read input effects rest) : rest <:+ input := by
   induction items with
@@ -204,7 +205,8 @@ private theorem EffectTermReads.printReads (term : EffectTerm) (rest : List Toke
   | group name => exact .group name valid
   | pure => exact .pure
 
-theorem EffectListReads.printReads (items : List α) (printItem : α → List PrintedToken)
+theorem EffectListReads.printReads {read : List Token → α → List Token → Prop}
+    (items : List α) (printItem : α → List PrintedToken)
     (itemRead : ∀ item ∈ items, ∀ suffix, read ((printItem item).map PrintedToken.value ++ suffix) item suffix) :
     EffectListReads read ((commaSeparated (items.map printItem) ++ [printCloseBrace]).map PrintedToken.value ++ rest)
       items rest := by
