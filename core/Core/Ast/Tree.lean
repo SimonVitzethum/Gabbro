@@ -231,7 +231,7 @@ def functionScope (outer : Scope) (parameters : List Parameter) : Scope :=
 
 def directName (name : Identifier) : Prop :=
   ordinaryLocal name ∧ name.val ∉
-    ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+    ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
 
 structure DirectCall (scope : Scope) where
   name : Identifier

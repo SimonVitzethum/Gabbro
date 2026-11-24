@@ -47,7 +47,8 @@ def tupleBindForm (ctx : Scope × Option (Ty .value)) :
 def RecordDeclBindingAussage : Prop :=
   ∀ scope (args : Surface.RecordDeclArgs) (frame : Rahmen),
     let next := ((recordDeclForm scope).befehl args).auswerten frame
-    next.lokale = some ⟨(recordBinding args.name args.members).type, PUnit.unit⟩ :: frame.lokale ∧
+    let marker : Dynamisch := ⟨(recordBinding args.name args.members).type, PUnit.unit⟩
+    next.lokale = some marker :: frame.lokale ∧ next.globale = some marker :: frame.globale ∧
       next.pc = frame.pc + 1 ∧ next.temp = frame.temp
 
 /-- Construction permutes values only after all actuals have been evaluated. -/

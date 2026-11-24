@@ -7,6 +7,7 @@ public import Core.Ast.Aggregate.TupleBindings
 public import Core.Ast.Aggregate.Records.Declarations
 public import Core.Ast.Aggregate.Records.Construction
 public import Core.Ast.Aggregate.Records.Fields
+public import Core.Ast.Variant.Obligations
 
 @[expose] public section
 
@@ -84,6 +85,8 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordValueForm RecordValueErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.recordField then
     ⟨.surface, Quellform.statements recordFieldForm RecordFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.variantValue then
+    ⟨.surface, Quellform.statements variantValueForm VariantValueErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=
@@ -113,6 +116,8 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements assignFieldForm AssignFieldErfuellbarAmAussage constructor⟩
   else if constructor = ``Stmt.letMutableValue then
     ⟨.surface, Quellform.statements mutableValueForm MutableValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.variantMatch then
+    ⟨.surface, Quellform.statements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=
@@ -122,6 +127,8 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements functionForm functionJoint constructor⟩
   else if constructor = ``Decl.record then
     ⟨.surface, Quellform.statements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.tagged then
+    ⟨.surface, Quellform.statements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

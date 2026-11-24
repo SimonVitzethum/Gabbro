@@ -172,6 +172,12 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements assignFieldForm AssignFieldErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.definiereRecord then
     ⟨.core, Quellform.kernStatements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.baueVariante then
+    ⟨.core, Quellform.kernStatements variantValueForm VariantValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.waehleVariante then
+    ⟨.core, Quellform.kernStatements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.definiereVariante then
+    ⟨.core, Quellform.kernStatements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor
