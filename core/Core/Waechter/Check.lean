@@ -34,12 +34,17 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.Plattform.ziel, 7655265232793873708),
   (`Gabbro.Core.Katalog.regionen, 6935289300322291742),
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
-  (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642)]
+  (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
+  (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641)]
 
 private meta def acceptance : AcceptanceSpec := {}
 private meta def registry : Array RegistryFamily := #[]
 private meta def wildcardRoots : Array Name := #[]
-private meta def catalogueKinds : Array ClosedKinds := #[]
+private meta def catalogueKinds : Array ClosedKinds := #[
+  ⟨`Gabbro.Core.Maschine.Ergebnis, [`Gabbro.Core.Maschine.Ergebnis.ende, `Gabbro.Core.Maschine.Ergebnis.katalog]⟩,
+  ⟨`Gabbro.Core.Katalog.Ereignis, [`Gabbro.Core.Katalog.Ereignis.frage, `Gabbro.Core.Katalog.Ereignis.antwort,
+    `Gabbro.Core.Katalog.Ereignis.interrupt, `Gabbro.Core.Katalog.Ereignis.geraet, `Gabbro.Core.Katalog.Ereignis.dma,
+    `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz]⟩]
 private meta def closing : Option ClosingSpec := none
 
 /-- Runs the package guards after the root's model imports have been elaborated. -/
