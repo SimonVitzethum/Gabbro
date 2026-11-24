@@ -457,10 +457,9 @@ theorem flushNarrowJoint : FlushNarrowJointAussage := by
     exact List.nodup_singleton _
   · simpa only [narrowPrefEq, narrowE, narrowS0] using narrowReach
   · rfl
-  · rfl
+  · simpa only [narrowS4verengt, List.mem_singleton]
   · exact (flush_abschluss_nicht_breiter Plattform.x86_64.katalog.plattform.ziel narrowName narrowS4
       entryContext narrowToken narrowedSpaceN narrowHfind narrowHspace (by rfl) narrowF5eq).2.1
-  · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
 
