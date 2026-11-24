@@ -170,8 +170,8 @@ theorem stummer_schritt_koppelt
     have hpub : oeffentlich (((p.einheit plattform).fluss.lokal d).etikett ⟨0, Nat.zero_lt_one⟩) = true :=
       rfl
     exact lokGleich d ⟨0, Nat.zero_lt_one⟩ hpub
-  have sysKopf : ∀ s, (p.einheit plattform).system.kopf s c = Ast.Semantik.kopf p.code s c :=
-    fun s => rfl
+  have sysKopf : ∀ s d, (p.einheit plattform).system.kopf s d = Ast.Semantik.kopf p.code s d :=
+    fun s d => rfl
   -- head congruence through the coupled state
   have kopf₂ : (p.einheit plattform).system.kopf w₂ c = some f := by
     have h : Ast.Semantik.kopf p.code w₂ c = Ast.Semantik.kopf p.code vor c := by
@@ -181,7 +181,7 @@ theorem stummer_schritt_koppelt
   -- a live head sits at the entry context
   have centry : c = Ast.Semantik.eintritt := by
     by_contra hc
-    have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor).symm.trans kopf
+    have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor c).symm.trans kopf
     have hnone : Ast.Semantik.kopf p.code vor c = none := if_neg hc
     rw [hnone] at h
     cases h
@@ -270,7 +270,7 @@ theorem stummer_schritt_koppelt
               have centry' : c' = Ast.Semantik.eintritt := by
                 by_contra hc
                 have h : Ast.Semantik.kopf p.code w₂ c' = some f₂ :=
-                  (sysKopf w₂).symm.trans kopf₂'
+                  (sysKopf w₂ c').symm.trans kopf₂'
                 have hnone : Ast.Semantik.kopf p.code w₂ c' = none := if_neg hc
                 rw [hnone] at h
                 cases h
