@@ -16,7 +16,16 @@ public import Core.Ideal
 public import Core.Ideal.Linearisierung
 public import Core.Ideal.Replay
 public import Core.Ideal.Absturz
-public import Core.Fortschritt
+public import Core.Fortschritt.Klasse
+public import Core.Fortschritt.Saetze
+public import Core.Fortschritt.Verzoegerung
+public import Core.Fortschritt.SperrHilfen
+public import Core.Fortschritt.SperrSchranke
+public import Core.Fortschritt.Beispiele
+public import Core.Fortschritt.Verhungern
+public import Core.Fortschritt.Sackgasse
+public import Core.Fortschritt.WarteBeispiel
+public import Core.Fortschritt.WarteBundle
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme

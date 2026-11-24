@@ -123,12 +123,12 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Annahme.GeschlossenWartend, 6249161161004728275),
   (`Gabbro.Core.Maschine.PartielleOperation, 17845138986886266319),
   (`Gabbro.Core.Annahme.waechterBedarf, 2466293456166709549),
-  (`Gabbro.Core.Fortschritt.Klasse, 0),
-  (`Gabbro.Core.Fortschritt.DeadlockFrei, 0),
-  (`Gabbro.Core.Fortschritt.StarvationFrei, 0),
-  (`Gabbro.Core.Fortschritt.LockFrei, 0),
-  (`Gabbro.Core.Fortschritt.WaitFrei, 0),
-  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 0)]
+  (`Gabbro.Core.Fortschritt.Klasse, 7205213477869984243),
+  (`Gabbro.Core.Fortschritt.DeadlockFrei, 16943362007587733102),
+  (`Gabbro.Core.Fortschritt.StarvationFrei, 15370919905938327436),
+  (`Gabbro.Core.Fortschritt.LockFrei, 2551997228544415486),
+  (`Gabbro.Core.Fortschritt.WaitFrei, 807206487104895166),
+  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 9056879346766445553)]
 
 private meta def safety : Array Name := #[
   `Gabbro.Core.Sicherheit.RegelSicher, `Gabbro.Core.Sicherheit.RegelAntwortSicher,
