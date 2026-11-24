@@ -28,6 +28,7 @@ structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   stotterLaenge : ι → Nat
   quelltabellen : Quelltabellen (Zustand L Ort Wert Raum Lok Grund)
   schranken : Beobachtung.Schrankendaten L Lok := .leer
+  etiketten : Beobachtung.Etiketten Ort := .leer
 
 variable (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 
