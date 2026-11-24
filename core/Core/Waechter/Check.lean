@@ -6,6 +6,7 @@ meta import Core.Ast.Inventory.Entries.Arrays
 meta import Core.Ast.Inventory.Entries.CarriersAndEffects
 meta import Core.Ast.Inventory.Entries.Option
 meta import Core.Ast.Inventory.Entries.OwnedRegionType
+meta import Core.Ast.Inventory.Entries.PointerType
 meta import Core.Ast.Inventory.Entries.Variants
 meta import Core.Ast.Inventory.Entries.Records
 meta import Core.Ast.Inventory.Entries.Tuples
@@ -227,6 +228,7 @@ private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, some `Gabbro.Core.Ast.Semantik.carrierIndexEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, some `Gabbro.Core.Ast.Semantik.carrierIndexOptionEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.ownedRegion, `Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.ownedRegionTypeEntry⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.ptr, `Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.pointerTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.skalar, `Gabbro.Core.Ast.Semantik.SkalarSimAussage, some `Gabbro.Core.Ast.Semantik.skalarEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.kontrollfluss, `Gabbro.Core.Ast.Semantik.KontrollflussSimAussage, some `Gabbro.Core.Ast.Semantik.kontrollflussEntry⟩,

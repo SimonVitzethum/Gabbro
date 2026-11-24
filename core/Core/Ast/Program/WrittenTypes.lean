@@ -1,118 +1,12 @@
 module
 
-public import Core.Ast.LowLevel.TypeTokens
+public import Core.Ast.Program.WrittenTypeGrammar
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
-
-def intSpelling (signed : Bool) (width : Nat) : List Char :=
-  (if signed then 'i' else 'u') :: (toString width).toList
-
--- Mirror printInteger.lexeme using the decimal digit tail of the width.
-def intTypeName (signed : Bool) (width : Nat) : Identifier :=
-  ⟨intSpelling signed width, (if signed then 'i' else 'u'), (toString width).toList, rfl, by
-    cases signed <;> exact .inl (.inl ⟨by decide, by decide⟩), by
-    intro c member
-    right; change IsDecimalDigit c
-    have member' : c ∈ Nat.toDigits 10 width := by simpa only [Nat.toString_eq_ofList_toDigits, String.toList_ofList] using member
-    have digit : c.isDigit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (Nat.zero_lt_succ _) (Nat.le_refl _) (c := c) member'
-    simpa only [IsDecimalDigit, Char.le_def, Char.isDigit, Bool.and_eq_true, decide_eq_true_eq] using digit⟩
-
-def signedPieces (number : Int) : List PrintedToken :=
-  if number < 0 then [Arith.sub.print, printInteger number.natAbs] else [printInteger number.natAbs]
-
-def printStringType : PrintedToken := printProgramWord 's' ['t', 'r', 'i', 'n', 'g']
-  (by decide) (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro c (rfl | rfl | rfl | rfl | rfl) <;> decide)
-
-def printMax : PrintedToken := printProgramWord 'm' ['a', 'x'] (by decide)
-  (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro c (rfl | rfl) <;> decide)
-
-def printIndex : PrintedToken := printProgramWord 'i' ['n', 'd', 'e', 'x'] (by decide) (by
-  simp only [List.mem_cons, List.not_mem_nil, or_false]
-  rintro c (rfl | rfl | rfl | rfl) <;> decide)
-
-def printInto : PrintedToken := printProgramWord 'i' ['n', 't', 'o'] (by decide) (by
-  simp only [List.mem_cons, List.not_mem_nil, or_false]
-  rintro c (rfl | rfl | rfl) <;> decide)
-
-def printOption : PrintedToken := printProgramWord 'o' ['p', 't', 'i', 'o', 'n'] (by decide) (by
-  simp only [List.mem_cons, List.not_mem_nil, or_false]
-  rintro c (rfl | rfl | rfl | rfl | rfl) <;> decide)
-
-mutual
-
-
-def WrittenType.printPieces : WrittenType → List PrintedToken
-  | .bool => [printBoolType]
-  | .integer signed width none => [(intTypeName signed width).print]
-  | .integer signed width (some (lo, hi)) =>
-    [(intTypeName signed width).print, printIn] ++ signedPieces lo ++ [printClosedRange] ++ signedPieces hi
-  | .array element count => [printOpenBracket] ++ element.printPieces ++
-      [printSemicolon, printInteger count, printCloseBracket]
-  | .tuple first second rest => [printOpen] ++ first.printPieces ++ [printComma] ++
-      second.printPieces ++ rest.printTail ++ [printClose]
-  | .text capacity => [printStringType, printMax, printInteger capacity]
-  | .index carrier _ => [printIndex, printInto, carrier.print]
-  | .indexOption carrier _ => [printOption, printIndex, printInto, carrier.print]
-  | .address space => space.printPieces
-  | .ownedRegion => LowLevel.printOwnedRegion
-
-def WrittenTypes.printTail : WrittenTypes → List PrintedToken
-  | .empty => []
-  | .next head tail => printComma :: head.printPieces ++ tail.printTail
-
-end
-
-inductive SignedReads : List Token → Int → List Token → Prop where
-  | positive : SignedReads (.natural n :: rest) n rest
-  | negative : SignedReads (minus :: .natural n :: rest) (-(n : Int)) rest
-
-mutual
-
-inductive TypeReads (scope : Scope) : List Token → WrittenType → List Token → Prop where
-  | bool : TypeReads scope (keyword "bool" :: rest) .bool rest
-  | integer (valid : (WrittenType.integer signed width none).valid scope)
-      (closed : ∀ more, rest ≠ keyword "in" :: more) :
-      TypeReads scope (.word (intSpelling signed width) :: rest) (.integer signed width none) rest
-  | interval (valid : (WrittenType.integer signed width (some (lo, hi))).valid scope) :
-      SignedReads input lo (closedRange :: more) → SignedReads more hi rest →
-      TypeReads scope (.word (intSpelling signed width) :: keyword "in" :: input)
-        (.integer signed width (some (lo, hi))) rest
-  | array (count : Nat) (bound : Expr [] (.int count count)) :
-      TypeReads scope input element (semicolon :: boundInput) →
-      ExprReads [] 0 boundInput bound (closeBracket :: rest) →
-      TypeReads scope (openBracket :: input) (.array element count) rest
-  | tuple : TypeReads scope input first (comma :: secondInput) → TypeReads scope secondInput second more →
-      TypeItemsTail scope more tail rest → TypeReads scope (openParen :: input) (.tuple first second tail) rest
-  | text : TypeReads scope (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
-  | index (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
-      TypeReads scope (keyword "index" :: keyword "into" :: .word carrier.val :: rest) (.index carrier count) rest
-  | indexOption (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
-      TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest)
-        (.indexOption carrier count) rest
-  | address (space : LowLevel.AddressSpace) :
-      TypeReads scope (keyword "address" :: .punctuation ['<'] ::
-        keyword space.name :: .punctuation ['>'] :: rest) (.address space) rest
-  | ownedRegion : TypeReads scope
-      (keyword "region" :: .punctuation ['<'] :: keyword "normal" :: comma ::
-        keyword "rw" :: .punctuation ['>'] :: rest) .ownedRegion rest
-
-inductive TypeItemsTail (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
-  | close : TypeItemsTail scope (closeParen :: rest) .empty rest
-  | comma : TypeReads scope input head more → TypeItemsTail scope more tail rest →
-      TypeItemsTail scope (comma :: input) (.next head tail) rest
-
-end
-
--- Mirror AtomReads.lit_inversion and exclude the signed arm by token kind.
-theorem SignedReads.deterministic (left : SignedReads input a rest) (right : SignedReads input b more) :
-    a = b ∧ rest = more := by
-  cases left with
-  | positive => cases right with | positive => exact ⟨rfl, rfl⟩
-  | negative => cases right with | negative => exact ⟨rfl, rfl⟩
 
 private theorem intSpelling_not_text : ∀ (s : Bool) (w : Nat), keyword "string" ≠ .word (intSpelling s w) := by
   intro s w same
@@ -220,7 +114,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     (motive_2 := fun input tree rest _ =>
       ∀ input' tree' rest', TypeItemsTail scope input' tree' rest' →
         input = input' → tree = tree' ∧ rest = rest')
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) input b more right rfl
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) input b more right rfl
   · intro rest input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool => injection hEq with hword htail; exact ⟨rfl, htail⟩
@@ -318,6 +212,21 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     | integer => different_integer_head equality
     | interval => different_integer_head equality
     | _ => different_type_head equality
+  · intro space recht referent input rest valid read ih input' out rest' other equality
+    cases other with
+    | ptr otherValid otherRead =>
+      have step1 := (List.cons.inj (List.cons.inj equality).2).2
+      have nameEq := Token.word.inj (List.cons.inj step1).1
+      cases LowLevel.AddressSpace.name_injective (String.toList_injective nameEq)
+      have step2 := (List.cons.inj (List.cons.inj step1).2).2
+      have spellingEq := Token.word.inj (List.cons.inj step2).1
+      cases PtrRecht.spelling_injective spellingEq
+      have step3 := (List.cons.inj (List.cons.inj step2).2).2
+      obtain ⟨rfl, rfl⟩ := ih _ _ _ otherRead step3
+      exact ⟨rfl, rfl⟩
+    | integer => different_integer_head equality
+    | interval => different_integer_head equality
+    | _ => different_type_head equality
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
@@ -341,7 +250,7 @@ theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ inpu
   refine TypeReads.rec
     (motive_1 := fun input _ rest _ => rest <:+ input)
     (motive_2 := fun input _ rest _ => rest <:+ input)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intros; exact List.suffix_cons _ _
   · intros; exact List.suffix_cons _ _
   · intros
@@ -366,6 +275,9 @@ theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ inpu
       (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
   · intro rest space; exact List.suffix_append space.tokens rest
   · intro rest; exact List.suffix_append LowLevel.ownedRegionTokens rest
+  · intro space recht referent input rest valid read ih
+    exact ih.trans (List.suffix_append
+      [keyword "ptr", .punctuation ['<'], keyword space.name, comma, recht.token, .punctuation ['>']] _)
   · intros; exact List.suffix_cons _ _
   · intros
     rename_i headSuffix tailSuffix
@@ -410,7 +322,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
         TypeReads scope (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
     (motive_2 := fun trees => trees.valid scope → ∀ rest,
       TypeItemsTail scope (trees.printTail.map PrintedToken.value ++ closeParen :: rest) trees rest)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid rest closed
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid rest closed
   · intro _ rest _
     have hp : printBoolType.value = keyword "bool" := by rfl
     simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
@@ -462,6 +374,17 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
       (TypeReads.address (rest := rest) space)
   · intro _ rest _
     exact .ownedRegion
+  · intro space recht referent referentPrint valid rest closed
+    have hpPtr : printPtr.value = keyword "ptr" := by rfl
+    have hpLt : Compare.lt.print.value = .punctuation ['<'] := by rfl
+    have hpGt : Compare.gt.print.value = .punctuation ['>'] := by rfl
+    have hpSpace : space.print.value = keyword space.name := by cases space <;> rfl
+    have hpRecht : recht.print.value = recht.token := recht.printTokens
+    have referentRead := referentPrint valid rest closed
+    simpa only [WrittenType.printPieces, hpPtr, hpLt, hpSpace, hpComma, hpRecht, hpGt,
+      List.map_append, List.map_cons, List.map_nil,
+      List.append_assoc, List.cons_append, List.nil_append] using
+      (TypeReads.ptr (space := space) (recht := recht) valid referentRead)
   · intro _ rest
     exact .close
   · intro head tail headPrint tailPrint valid rest

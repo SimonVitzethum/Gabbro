@@ -11,6 +11,7 @@ open Katalog
 /-- A compound type requires every address space named by its components. -/
 def platformType (platform : Plattform) : Ty .value → Bool
   | .address space => (space.width platform).isSome
+  | .ptr space _ referent => (space.width platform).isSome && platformType platform referent
   | .array element _ | .regionView element => platformType platform element
   | .product head tail | .sum head tail => platformType platform head && platformType platform tail
   | .record _ _ shape | .recordSchema _ _ shape | .variant _ _ _ shape
