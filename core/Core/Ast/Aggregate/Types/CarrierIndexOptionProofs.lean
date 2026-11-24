@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Types.CarrierIndexOption
+public import Core.Ast.Semantik.Formbeweise
 
 /-!
 # CarrierIndexOption
@@ -22,3 +23,195 @@ Prove the pinned statements in this file.
 - `CarrierIndexOptionRegelSicherAussage`
 - `CarrierIndexOptionErfuellbarAmAussage`
 -/
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Annahme Katalog Waechter
+open Gabbro.Core.Text
+
+private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) :
+    (carrierTypeForm scope belongs).RegelAmOrt := by
+  intro args
+  let a := args.val
+  change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
+      (functionCode a.result a.measure a.body))).anhaengen
+      (functionCode a.result a.measure a.body)).code[0]? =
+    some (functionInstruction scope a.name a.parameters a.result a.measure.isSome
+      (functionCode a.result a.measure a.body))
+  simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append,
+    List.getElem?_cons_zero]
+
+private theorem carrier_keine_invarianten (scope : Scope) (belongs : WrittenType → Prop)
+    (args : {args : Surface.FunctionArgs scope // ∃ p ∈ args.parameters, belongs p.written}) :
+    ((carrierTypeForm scope belongs).fragment args).klauseln.invariant = [] := by
+  let rec blockInv {res : Option (Ty .value)} {before after : Scope} (t : Block res before after) :
+      (block t).klauseln.invariant = [] :=
+    match t with
+    | .done => rfl
+    | .step first rest => by
+        change (stmt first).klauseln.invariant ++ (block rest).klauseln.invariant = []
+        rw [stmt_keine_invarianten, blockInv rest]
+        rfl
+  have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before),
+      (bracedBlock t).klauseln.invariant = [] := by
+    intro res before t
+    rcases t with ⟨body⟩
+    change (block body).klauseln.invariant ++ [] = []
+    rw [blockInv body]
+    rfl
+  have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s))
+      (body : BracedBlock (writtenResult res) s),
+      (functionCode res measure body).klauseln.invariant = [] := by
+    intro s res measure body
+    cases measure with
+    | none =>
+        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+          Quellklauseln.leer, List.append_nil, List.nil_append]
+        exact bracedInv body
+    | some m =>
+        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+          Quellklauseln.leer, List.append_nil, List.nil_append]
+        rw [expr_keine_invarianten]
+        exact bracedInv body
+  let a := args.val
+  change (decl ((functionForm scope).produktion.tree a).2).klauseln.invariant = []
+  change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
+    (functionCode a.result a.measure a.body))).anhaengen
+    (functionCode a.result a.measure a.body)).klauseln.invariant = []
+  simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
+    List.append_nil, List.nil_append]
+  exact codeInv a.result a.measure a.body
+
+theorem carrierIndexOptionInversion : CarrierIndexOptionInversionAussage := by
+  intro scope input written rest read
+  cases read with
+  | indexOption carrier resolved =>
+      exact ⟨carrier, _, rfl, resolved, rfl⟩
+
+theorem carrierIndexOptionDerivation : CarrierIndexOptionDerivationAussage := by
+  intro scope carrier count rest resolved
+  change TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" ::
+    .word carrier.val :: rest) (.indexOption carrier count) rest
+  exact TypeReads.indexOption carrier resolved
+
+theorem carrierIndexOptionCases : CarrierIndexOptionCasesAussage := by
+  intro count value
+  change Sum (Wert (indexType count)) (Sum PUnit Empty) at value
+  cases value with
+  | inl present => exact Or.inl ⟨present, rfl⟩
+  | inr rest =>
+      cases rest with
+      | inl unit => exact Or.inr rfl
+      | inr empty => cases empty
+
+theorem carrierIndexOptionZero : CarrierIndexOptionZeroAussage := by
+  constructor
+  · exact ⟨Sum.inr (Sum.inl PUnit.unit)⟩
+  · intro value
+    change Sum (Wert (indexType 0)) (Sum PUnit Empty) at value
+    cases value with
+    | inl present =>
+        change Zahl 0 ((0 : Int) - 1) at present
+        have impossible : (0 : Int) ≤ (0 : Int) - 1 := le_trans present.unten present.oben
+        omega
+    | inr rest =>
+        cases rest with
+        | inl unit => rfl
+        | inr empty => cases empty
+
+theorem carrierIndexOptionParse : CarrierIndexOptionParseAussage := by
+  intro scope args text pieces lexed production
+  apply (Category.declaration scope).syntax.parse_iff.mpr
+  exact ⟨pieces, lexed, (Surface.function_entry scope).reads args.val (canonicalTokens pieces) production⟩
+
+theorem carrierIndexOptionElaboriert : CarrierIndexOptionElaboriertAussage := by
+  intro scope platform args
+  rfl
+
+theorem carrierIndexOptionRealisiert : CarrierIndexOptionRealisiertAussage := by
+  intro scope platform args s running active live atPc
+  exact (carrierTypeForm scope indexOptionTypeUse).realisiert (carrier_am_ort scope _) platform
+    args s running active live atPc
+
+theorem carrierIndexOptionAnnahme : CarrierIndexOptionAnnahmeAussage := by
+  intro scope
+  exact Quellform.annahme (carrierTypeForm scope indexOptionTypeUse)
+
+theorem carrierIndexOptionIdeal : CarrierIndexOptionIdealAussage := by
+  intro scope
+  refine ⟨carrier_am_ort scope _, ?_⟩
+  intro args
+  refine ⟨Befehl.bestimmt _, ?_⟩
+  intro c s w plans u
+  rfl
+
+theorem carrierIndexOptionEinheit : CarrierIndexOptionEinheitAussage := by
+  intro scope platform args
+  exact ⟨rfl, ((carrierTypeForm scope indexOptionTypeUse).befehl args).kommutation⟩
+
+theorem carrierIndexOptionImpl : CarrierIndexOptionImplAussage := by
+  intro scope args c s w plans u
+  rfl
+
+theorem carrierIndexOptionErhaltung : CarrierIndexOptionErhaltungAussage := by
+  intro scope
+  apply Quellform.erhaltung
+  intro args
+  exact carrier_keine_invarianten scope indexOptionTypeUse args
+
+theorem carrierIndexOptionSignature : CarrierIndexOptionSignatureAussage := by
+  intro scope args frame h
+  dsimp [CarrierParameterEffect, functionForm, functionInstruction, Befehl.auswerten]
+  refine ⟨?_, rfl, rfl, rfl⟩
+
+theorem carrierIndexOptionRegelSicher : CarrierIndexOptionRegelSicherAussage := by
+  intro scope platform args
+  exact Befehl.sicher ((carrierTypeForm scope indexOptionTypeUse).fragment args) platform
+    (carrier_keine_invarianten scope indexOptionTypeUse args)
+    ((carrierTypeForm scope indexOptionTypeUse).befehl args)
+
+theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage := by
+  intro platform start
+  let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  let scope : Scope := [⟨carrier, .carrierSchema 1, false, false⟩]
+  have resolved : scope.carrierCount carrier = some 1 := by decide
+  let pname : Identifier := keywordName 'p' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have pOrdinary : ordinaryLocal pname := by
+    dsimp [ordinaryLocal, ordinaryAtomWord, pname]
+    decide
+  let param : Parameter scope := ⟨pname, .indexOption carrier 1, resolved, pOrdinary⟩
+  let fname : Identifier := keywordName 'f' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have fOrdinary : directName fname := by
+    change (['f'] ≠ ['t', 'r', 'u', 'e'] ∧ ['f'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+      ['f'] ∉ ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
+    constructor
+    · constructor <;> intro h <;> cases h
+    · decide
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
+    intro t mem
+    cases mem
+  let args : Surface.FunctionArgs scope :=
+    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done, by simp [param], by
+      intro h
+      cases h⟩
+  have belongs : ∃ p ∈ args.parameters, indexOptionTypeUse p.written := by
+    refine ⟨param, ?_, ?_⟩
+    · simp [args, param]
+    · trivial
+  let witness : {args : Surface.FunctionArgs scope // ∃ p ∈ args.parameters, indexOptionTypeUse p.written} :=
+    ⟨args, belongs⟩
+  refine ⟨scope, witness, ?_⟩
+  let form := carrierTypeForm scope indexOptionTypeUse
+  let E := form.einheit platform witness
+  let s := (I.start E start).2
+  refine ⟨Ast.print (category := .declaration scope) (form.produktion.tree witness), s,
+    Ast.parse_print _, rfl, .start, ?_, ?_, ?_⟩
+  · exact form.realisiert (carrier_am_ort scope _) platform witness s rfl rfl rfl rfl
+  · intro g guard
+    cases guard
+  · dsimp [CarrierParameterEffect, functionForm, functionInstruction, Befehl.auswerten]
+    refine ⟨?_, rfl, rfl, rfl⟩
+
+end Gabbro.Core.Ast.Semantik
