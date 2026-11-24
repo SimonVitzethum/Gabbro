@@ -104,20 +104,22 @@ theorem akzeptiert : Akzeptiert einheit := by
       exact ⟨fun _ mem => (List.not_mem_nil mem).elim, fun _ mem => (List.not_mem_nil mem).elim⟩
   · apply aussen_gueltig_aus_kontext
     intro _ _ s c w spur s' h
+    rcases spur with ⟨memory, events⟩
     cases h with
     | kontext _ _ form aus =>
       obtain ⟨i, _, h⟩ := form
       obtain ⟨_, _, _, _, aktion, _, ziel⟩ := aus
       change regel c s w [_] _ at h
+      change FuehrtAus einrichtung _ c s _ _ _ events _ at aktion
       rcases h.2 with ⟨eq, _, rfl⟩ | ⟨eq, rechte, rfl⟩
       · cases (List.cons.inj eq).1
         cases aktion
-        cases ziel
+        rw [ziel]
         exact ⟨fun _ mem => (List.not_mem_nil mem).elim, binden_offen,
           [], (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩
       · cases (List.cons.inj eq).1
         cases aktion
-        cases ziel
+        rw [ziel]
         refine ⟨?_, fragen_offen rechte, [], (List.append_nil _).symm,
           fun _ mem => (List.not_mem_nil mem).elim⟩
         intro ev mem

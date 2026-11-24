@@ -276,8 +276,11 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
       run 0 s (.kontext c (), spur) s' :=
     .kontext rfl hbereit hregel haus
   have hfrage_mem : Ereignis.frage ev ∈ spur.aussen := List.mem_cons_self
-  exact (h run 0 s (.kontext c ()) spur s' hschritt).1 ev hfrage_mem |>.2
+  exact ((h run 0 s (.kontext c ()) spur s' hschritt).1 ev hfrage_mem).2
     ⟨staleFrage.handle, staleFrage.operation.required⟩ List.mem_cons_self
+
+theorem stale_nicht_akzeptiert : ¬ Akzeptiert staleEinheit :=
+  fun akzeptiert => stale_nicht_aussen_gueltig akzeptiert.1.2.2.2
 
 /-- A plan that writes a location. -/
 def unbefugtPlan : SchrittPlan Unit Unit Unit Unit :=
