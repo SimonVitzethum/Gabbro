@@ -8365,8 +8365,11 @@ translation cache and released the frames (implementation rule = ideal rule, stu
 cache could not be filled at all (`tlb` was never populated), so no stale translation was expressible and
 the safety of reuse held only because nothing could go wrong. Now the cache is a finite list of cells
 (core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `map`
-still clears its range on all cores in one step (open item P1b: dropping that clearing, a no-op by
-`tlbGedeckt_erreichbar`); `protect` is STAGED (item P1, closed): it narrows the table, records a pending
+no longer clears its range (item P1b, closed): it maps only pages with neither a table entry nor a pending
+release token, and `tlbGedeckt_erreichbar` proves no cell of such a range exists, so the former clearing
+was the identity on every reachable state — a refinement that drops an atomic invalidation no hardware
+performs, without losing a guarantee. `tlbRechte_mapSpace` covers both map forms by taking the sub-cache
+from either. `protect` is STAGED (item P1, closed): it narrows the table, records a pending
 narrowing token (`MemFrame.verengt`, `Zuruecknahme.nurRechte`) and leaves every cache alone; `flush` of the bound
 token is its completion step. `flush` is the RELEASE step for an unmapped range and refuses while any core caches
 a translation of the token's range; for a narrowing it refuses while any cell of the range is wider than the table.
@@ -8377,6 +8380,9 @@ The invalidation on the other cores is the work of their handlers (`FlushProtoko
 | `FlushMeaningAussage` | `Mem/SpaceObligations.lean` | The release step: enabled exactly when the token is pending, its table entries are cleared AND `tlb.Frei` holds; the cache is untouched; refused otherwise (pinned `FlushAussage`). |
 | `MemFrame.TlbGedeckt`, `tlbGedeckt_evaluate` | `Mem/Proofs/Tlb/Deckung.lean`, `Lauf.lean` | Every cached cell is explained by an active table entry of its space or by a pending token of its space; every memory instruction keeps this, including a fill and any drop by hardware (`TlbGedeckt.verdraengt`). |
 | `tlbGedeckt_erreichbar` | `Mem/Proofs/Tlb/Lauf.lean` | Every state any Mem unit reaches, for every code and every start, satisfies it. |
+| `MemFrame.TlbGedeckt.keine_Zelle`, `TranslationCache.invalidate_eq_self` | `Mem/Proofs/Tlb/Deckung.lean` | A range with no table entry and no pending token has no cached cell under `TlbGedeckt`; clearing it is the identity. |
+| `tlbGedeckt_map_invalidate_erreichbar` | `Mem/Proofs/Tlb/Lauf.lean` | On every reachable state of a Mem unit, the clearing `map` used to perform is the identity (proof of the refinement). |
+| `MapMeaningAussage` (pinned) | `Mem/SpaceObligations.lean` | `map` leaves the cache untouched, adds the entries, and still refuses a pending token. |
 | `nicht_unreserviert` | `Mem/Proofs/Tlb/Reserviert.lean` | A frame a core still caches is never `unreserved`: no region operation can hand it out again. |
 | `flush_verweigert_gecachte_uebersetzung`, `freigabe_ohne_pflicht_unsicher` | `Mem/Proofs/Tlb/Reserviert.lean` | The guard has teeth, and it is necessary: a release that leaves the cell behind breaks the invariant. |
 | `FlushKette.ohne_abdeckung`, `FlushProtokoll` | `Verfeinerung/Abnahme/Flush.lean` | The old protocol admitted a release after a send to nobody; the protocol now also requires the send to name every existing core. |
@@ -8390,4 +8396,4 @@ The invalidation on the other cores is the work of their handlers (`FlushProtoko
 | `uebersetze_gecacht`, `gecachte_rechte_gedeckt` | `Mem/Proofs/Tlb/Stufung.lean` | The MMU grants through a cached entry only a right of that entry; by the invariant it is a table right unless a narrowing of the page is pending. |
 | `MemInstruction.tlbVerdraengen` | `Mem/Meaning.lean` | The drop of every cached translation of one page of one space on one core (hardware eviction or the core's own shootdown handler); always enabled, no table change, no source form. It keeps both cache invariants (`tlbGedeckt_tlbVerdraengen`, `tlbRechte_tlbVerdraengen`) and is what makes a completion step enabled in a run. |
 
-Open items after the staged `protect`: (P1b) `map` still clears its range in one step (H3 drops it; the proof `tlbRechte_mapSpace` takes the sub-cache from either form); (H4) the drop as a step of the core's own handler context after an interrupt entry, with `keineFuellung_speicher` and `handlerLeert` instantiated for the memory machine; (H5) the staged flush unit with implementation ≠ ideal (stutter length > 0) and the proof of `FlushSimAussage`, which then also serves the narrowing completion; (H9) `FlushJointAussage` for the completion of a narrowing (prefix `newSpace, mapSpace, protectSpace, bindToken`, op `flushSpace`), then joined to `JointAussageMem .flushSpace`.
+Open items after the staged `protect`: (H4) the drop as a step of the core's own handler context after an interrupt entry, with `keineFuellung_speicher` and `handlerLeert` instantiated for the memory machine; (H5) the staged flush unit with implementation ≠ ideal (stutter length > 0) and the proof of `FlushSimAussage`, which then also serves the narrowing completion; (H9) `FlushJointAussage` for the completion of a narrowing (prefix `newSpace, mapSpace, protectSpace, bindToken`, op `flushSpace`), then joined to `JointAussageMem .flushSpace`.

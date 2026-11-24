@@ -29,6 +29,7 @@ def MapMeaningAussage : Prop :=
         (∀ token ∈ space.ausstehend, ∀ i < pages, ¬ token.contains (base + i)) →
       ∃ next mapped, (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = some next ∧
         next.spaces[sp]? = some mapped ∧ next.result = some .mapped ∧
+        next.tlb = (s.lokal c).tlb ∧
         (∀ i < pages, mapped.abbildung (base + i) =
           some ⟨region.extent.von / granule + i, rights, space.generation⟩) ∧
         (∀ pg, ¬ pageRange base pages pg → mapped.abbildung pg = space.abbildung pg)) ∧
