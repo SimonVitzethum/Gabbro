@@ -34,7 +34,7 @@ private lemma layout_endian (target : ZielDaten) (t : WrittenType) (shape : Layo
       · cases h
 
 private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext) (slot : Nat)
-    (h : (s.lokal c).borrowed.contains (⟨slot, 0⟩ : Griff) = true) :
+    (h : (⟨slot, 0⟩ : Griff) ∈ (s.lokal c).borrowed) :
     heldRegion s c slot = none := by
   unfold heldRegion
   dsimp
@@ -42,7 +42,7 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
-  unfold elaborate at hop
+  simp [elaborate] at hop
   split at hop
   · injection hop with hop'
     subst op
@@ -51,7 +51,7 @@ theorem addressTypeMeaning : AddressTypeMeaningAussage := by
 
 theorem regionAddressMeaning : RegionAddressMeaningAussage := by
   intro k scope region op s c transfer hop heval
-  unfold elaborate at hop
+  simp [elaborate] at hop
   cases hslot : scope.slot region with
   | none =>
       simp [hslot] at hop
@@ -67,12 +67,12 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
           · simp [Instruction.evaluate, hhr, hlt] at heval
             subst transfer
             exact ⟨slot, handleV, extent, ⟨k.plattform.ziel.physicalBits, extent.von, rfl, hlt⟩,
-              hslot, hhr, rfl, rfl, rfl⟩
+              (by first | exact hslot | rfl), hhr, rfl, rfl, rfl⟩
           · simp [Instruction.evaluate, hhr, hlt] at heval
 
 theorem viewMeaning : ViewMeaningAussage := by
   intro k scope region type op s c transfer hop heval
-  unfold elaborate at hop
+  simp [elaborate] at hop
   cases hslot : scope.slot region with
   | none => simp [hslot] at hop
   | some slot =>
@@ -114,9 +114,9 @@ theorem viewMeaning : ViewMeaningAussage := by
                             cases hhr'
                       · cases hhr'
                 have hb :
-                    (((⟨.view slot handleV ⟨extent.von, extent.von + shape.bytes⟩ shape,
-                        some handleV⟩ : Transfer k).apply c s).lokal c).borrowed.contains
-                        (⟨slot, 0⟩ : Griff) = true := by
+                    (⟨slot, 0⟩ : Griff) ∈
+                      (((⟨.view slot handleV ⟨extent.von, extent.von + shape.bytes⟩ shape,
+                          some handleV⟩ : Transfer k).apply c s).lokal c).borrowed := by
                   simp [Transfer.apply, hhandle]
                 have hlast :
                     heldRegion
@@ -124,21 +124,23 @@ theorem viewMeaning : ViewMeaningAussage := by
                           some handleV⟩ : Transfer k).apply c s) c slot = none :=
                   heldRegion_borrowed_none ((⟨.view slot handleV ⟨extent.von, extent.von + shape.bytes⟩ shape,
                     some handleV⟩ : Transfer k).apply c s) c slot hb
-                exact ⟨slot, handleV, extent, shape, hslot, hhr, hlayout, hendian,
-                  hcond.1, hcond.2, rfl, rfl, hlast⟩
+                exact ⟨slot, handleV, extent, shape, (by first | exact hslot | rfl), hhr,
+                  (by first | exact hlayout | rfl), hendian, hcond.1, hcond.2, rfl, rfl, hlast⟩
               · simp [Instruction.evaluate, hhr, hcond] at heval
 
 theorem environmentMeaning : EnvironmentMeaningAussage := by
   intro k scope name abi row
   constructor
   · rintro ⟨op, hop⟩
-    unfold elaborate at hop
+    simp [elaborate] at hop
     by_cases h : row.zugelassen k abi
     · exact h
     · simp [h] at hop
   · intro h
-    refine ⟨.selectEnvironment name abi row h, ?_⟩
-    unfold elaborate
-    simp [h]
+    have hz : row.zugelassen k abi := by
+      unfold FirmwareZeile.zugelassen
+      exact h
+    refine ⟨.selectEnvironment name abi row hz, ?_⟩
+    simp [elaborate, hz]
 
 end Gabbro.Core.Ast.LowLevel
