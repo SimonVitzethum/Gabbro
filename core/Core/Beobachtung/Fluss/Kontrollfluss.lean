@@ -128,8 +128,5 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                   rw [spurLeer, aussenLeer, kontextLeer]
                   simp only [keinEnde, ↓reduceIte, List.nil_append]
                   rfl
-              | antwort _ _ | interrupt _ _ | absturz _ =>
-                  have gleich := Option.some.inj label
-                  cases gleich
 
 end Gabbro.Core.Beobachtung
