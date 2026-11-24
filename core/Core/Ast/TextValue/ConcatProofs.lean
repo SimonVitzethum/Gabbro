@@ -85,34 +85,34 @@ private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {inpu
     (rightRead : ExprReads scope (Arith.add.precedence + 1) rhs right final)
     (blocked : ¬ Continues 0 final) :
     ExprTail scope 0 first input (Expr.textConcat tree right) final := by
-  match tail with
-  | .stop _ =>
+  cases tail with
+  | stop _ =>
       exact .textConcat tree right (Nat.zero_le _) rightRead (.stop blocked)
-  | .binary op _ reads tail' =>
+  | binary op _ reads tail' =>
       exact .binary op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
-  | .div _ reads nonzero tail' =>
+  | div _ reads nonzero tail' =>
       exact .div (Nat.zero_le _) reads nonzero (textTailLowerConcat tail' right rightRead blocked)
-  | .compare op _ reads follows tail' =>
+  | compare op _ reads follows tail' =>
       exact .compare op (Nat.zero_le _) reads follows
         (textTailLowerConcat tail' right rightRead blocked)
-  | .logic op _ reads tail' =>
+  | logic op _ reads tail' =>
       exact .logic op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
-  | .arrayIndex base lower upper _ reads tail' =>
+  | arrayIndex base lower upper _ reads tail' =>
       exact .arrayIndex base lower upper (Nat.zero_le _) reads
         (textTailLowerConcat tail' right rightRead blocked)
-  | .tupleField base index _ tail' =>
+  | tupleField base index _ tail' =>
       exact .tupleField base index (Nat.zero_le _)
         (textTailLowerConcat tail' right rightRead blocked)
-  | .recordField base field index written _ tail' =>
+  | recordField base field index written _ tail' =>
       exact .recordField base field index written (Nat.zero_le _)
         (textTailLowerConcat tail' right rightRead blocked)
-  | .textConcat left right' _ reads tail' =>
+  | textConcat left right' _ reads tail' =>
       exact .textConcat left right' (Nat.zero_le _) reads
         (textTailLowerConcat tail' right rightRead blocked)
-  | .textIndex base offset _ reads tail' =>
+  | textIndex base offset _ reads tail' =>
       exact .textIndex base offset (Nat.zero_le _) reads
         (textTailLowerConcat tail' right rightRead blocked)
-  | .substring base first' last _ reads₁ reads₂ tail' =>
+  | substring base first' last _ reads₁ reads₂ tail' =>
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailLowerConcat tail' right rightRead blocked)
 
@@ -142,10 +142,11 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   dsimp
+  dsimp [Wert]
   rw [Befehl.auswerten, Rahmen.schreibe]
   simp only [Function.update_self]
   rw [hleft, hright]
-  simp only [wertAls]
+  dsimp [wertAls]
   rw [dif_pos left.bound, dif_pos right.bound]
   simp [TextValue.concat]
   all_goals
@@ -288,8 +289,10 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
         simp [a]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
-      change (((((Befehl.textConcat 0 a a).nach eintritt s₂).lokal eintritt).temp 0).isSome) = true
-      rw [Befehl.nach, htmp]
+      change (((((textConcatForm []).befehl args).nach eintritt s₂).lokal eintritt).temp 0).isSome = true
+      rw [Befehl.nach]
+      dsimp [textConcatForm]
+      rw [htmp]
       rfl
 
 end Gabbro.Core.Ast.Semantik
