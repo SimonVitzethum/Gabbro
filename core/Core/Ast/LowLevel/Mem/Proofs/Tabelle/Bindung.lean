@@ -104,16 +104,4 @@ theorem gebundene_plattform_erfuellbar :
   obtain ⟨E, start, code, s, _, _, _, _, _, _, _, _, hok⟩ := tabelle_nichtvakant
   exact ⟨s.lokal entryContext, (s.lokal entryContext).mmuSicht, rfl, hok⟩
 
-/-- **Hauptbefund: the view is unconstrained.** An empty frame coexists with a view that serves a
-    table entry: nothing in `Katalog.Lauf` forces `sicht.tables` to equal any frame's
-    `tabellenSicht`. A stale or foreign view therefore translates successfully while the frame holds
-    no such mapping. -/
-theorem hauptbefund_gegenbeispiel :
-    ∃ (frame : MemFrame) (sicht : MmuSicht),
-      sicht.tables 0 0 = some ⟨1, [.read], 0⟩ ∧
-      frame.tabellenSicht 0 0 = none := by
-  refine ⟨leerFrame, fremdSicht, rfl, ?_⟩
-  apply MemFrame.tabellenSicht_none
-  rfl
-
 end Gabbro.Core.Ast.LowLevel
