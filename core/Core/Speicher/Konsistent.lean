@@ -19,7 +19,8 @@ variable {E Ort Wert : Type} (G : Graph E Ort Wert)
 /-- **RC11 consistency without load buffering** (Lahav et al., PLDI 2017, Def. 1, fence-free, with
     NO-THIN-AIR strengthened to `po ∪ rf` acyclic as RC11 itself does):
     * `hb_irrefl`, `kohaerent` -- COHERENCE: `hb ; eco?` is irreflexive;
-    * `atomar` -- ATOMICITY: no write sits in `mo` between an update and the write it reads;
+    * `atomar` -- ATOMICITY (no write between): no write sits in `mo` between an update and the write it reads;
+    * `liest_vorher` -- ATOMICITY (source before update): the write an update reads precedes the update in `mo`;
     * `psc` -- SC: `psc` is acyclic;
     * `ohneLB` -- NO-THIN-AIR: `po ∪ rf` is acyclic (no load buffering). -/
 structure Konsistent : Prop where
@@ -29,6 +30,12 @@ structure Konsistent : Prop where
   atomar : ∀ w u w', G.rf w u → G.istRmw u → G.mo w w' → ¬ G.mo w' u
   psc : Azyklisch G.psc
   ohneLB : Azyklisch G.porf
+  /-- **The write an update reads precedes the update in modification order** (RC11 atomicity,
+      Lahav et al., Def. 1, `irreflexiv (rf ; mo)`): with single-event updates there is no `po`
+      edge between the read and the write part that would close the `mo`-then-`rf` cycle through
+      coherence, so `atomar` alone (no write strictly between source and update) still lets two
+      updates read one write. -/
+  liest_vorher : ∀ w u, G.rf w u → G.istRmw u → G.mo w u
 
 /-- One step of the sequentially consistent order `po ∪ rf ∪ mo ∪ rb`. -/
 def scSchritt (a b : E) : Prop := G.po a b ∨ G.rf a b ∨ G.mo a b ∨ G.rb a b
