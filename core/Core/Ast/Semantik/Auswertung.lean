@@ -134,7 +134,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.binary op left right)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
+        simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
+          List.singleton_append, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
@@ -150,11 +151,11 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
-  case _ ref visible ordinary =>
+  case _ ty ref visible ordinary =>
       intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
-      have hb := bound ref
-      have joined : frame.lokale[ref.index]?.join = some ⟨type, env ref⟩ := by
+      have hb := bound (type := ty) ref
+      have joined : frame.lokale[ref.index]?.join = some ⟨ty, env ref⟩ := by
         rw [hb]
         rfl
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.variable ref visible ordinary)).code ++ post)
@@ -275,7 +276,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.div left right nonzero)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
+        simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
+          List.singleton_append, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
@@ -320,7 +322,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.compare op left right)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
+        simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
+          List.singleton_append, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
