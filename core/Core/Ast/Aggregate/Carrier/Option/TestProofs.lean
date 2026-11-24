@@ -150,8 +150,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
   dsimp only
   have hbind : (frame.temp slot).bind (wertAls (indexOptionType count)) = some value := by
     rw [hframe]
-    simp only [Option.bind, wertAls, indexOptionType, dif_pos rfl]
-    simp
+    simp only [Option.bind, wertAls, indexOptionType, dif_pos rfl, dif_pos trivial]
   have hres : ((Befehl.optionIstBesetzt slot count).auswerten frame).temp slot =
       some ⟨.bool, indexOptionPresent value⟩ := by
     rw [Befehl.auswerten, Rahmen.schreibe]
@@ -167,7 +166,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
         · intro _
           exact ⟨payload, rfl⟩
         · intro _
-          simp
+          trivial
       · constructor
         · intro h
           cases h
