@@ -120,6 +120,54 @@ theorem variantValue_payload : VariantValuePayloadAussage := by
     rfl
   · exact vv_case_inject a.payloads a.index payload
 
+open Gabbro.Core.Text
+open Surface
+
+theorem variantValue_inversion : VariantValueInversionAussage := by
+  intro scope input type tree rest caseName ordinary available read
+  generalize spelling : caseName.val = word at read
+  cases read with
+  | trueLit => exact (ordinary.1 spelling).elim
+  | falseLit => exact (ordinary.2.1 spelling).elim
+  | textLength _ => exact (ordinary.2.2.1 spelling).elim
+  | «variable» ref _ _ => exact (available.2 _ ref.binding_mem spelling.symm).elim
+  | recordValue ref _ _ _ =>
+    exact (available.2 _ ref.schema.binding_mem (ref.spelled.trans spelling.symm)).elim
+  | variantValue ref label index written ordinary available payload payloadRead =>
+    exact ⟨⟨_, _, ref, label, index, written, ordinary, available, payload⟩,
+      Subtype.ext spelling.symm, payloadRead, rfl⟩
+
+private theorem casePayloadPrints (payload : CasePayload scope type) :
+    CasePayloadRead scope (payload.printPieces.map PrintedToken.value ++ [closeParen]) payload [closeParen] := by
+  cases payload with
+  | nullary parens =>
+    cases parens
+    · exact .bare (fun _ impossible => by cases impossible)
+    · exact .empty
+  | value expr =>
+    simpa only [CasePayload.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, show printOpen.value = openParen from rfl,
+      show printClose.value = closeParen from rfl] using
+        (CasePayloadRead.value (expr.printReads (rest := [closeParen, closeParen]) noOperatorAtClose))
+
+private theorem variantValuePrints (scope : Scope) (args : VariantValueArgs scope) :
+    (variantValue scope).production args
+      (((Category.expression scope).printPieces ((variantValue scope).tree args)).map PrintedToken.value) := by
+  refine Or.inr ⟨args.payload.printPieces.map PrintedToken.value ++ [closeParen], ?_, casePayloadPrints args.payload⟩
+  simp only [Category.printPieces, variantValue, VariantValueArgs.expression, Expr.typed, Expr.printPieces,
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  rfl
+
+theorem variantValue_derivation : VariantValueDerivationAussage := by
+  rintro scope ⟨witness⟩
+  refine ⟨?_, variantValuePrints scope, Rule.satisfiableOfPrint witness (variantValuePrints scope witness)⟩
+  intro args tokens production
+  rcases production with ⟨input, rfl, payload⟩ | ⟨input, rfl, payload⟩
+  · exact .atom (.variantValue args.ref args.label args.index args.written
+      args.ordinary args.available args.payload payload) (.stop noOperatorAtEnd)
+  · exact .atom (.grouped (.atom (.variantValue args.ref args.label args.index args.written
+      args.ordinary args.available args.payload payload) (.stop noOperatorAtClose))) (.stop noOperatorAtEnd)
+
 theorem variantValue_suffix : Gabbro.Core.Ast.Surface.VariantValueSuffixAussage := by
   intro scope input type payload rest read
   cases read with

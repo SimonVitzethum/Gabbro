@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Semantik.Formbeweise
+import Core.Ast.Aggregate.Records.ConstructionProofs
 
 /-!
 # RecordField
@@ -139,11 +140,47 @@ theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   obtain ⟨fld, i, checked, hval, tail⟩ := recordFieldInvGen allowed _ base rfl field read
   exact ExprTail.consumes tail
 
+open Gabbro.Core.Text
+
+private theorem fieldPrints (a : RecordFieldArgs scope) :
+    (recordField scope).production a
+      (((Category.expression scope).printPieces ((recordField scope).tree a)).map PrintedToken.value) := by
+  refine Or.inr ⟨a.base.printTokens ++ [dot, .word a.field.val, closeParen], ?_, ?_⟩
+  · simp only [Category.printPieces, recordField, RecordFieldArgs.expression, Expr.typed, Expr.printPieces,
+      Expr.printTokens, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+    rfl
+  · apply a.base.printReads
+    rintro ⟨op, rest, same, allowed⟩
+    have eq : (Infix.projection : Infix) = op :=
+      Infix.token_injective (List.cons.inj same).1
+    subst op
+    exact (by decide : ¬ (8 : Nat) ≤ 7) allowed
+
+private theorem fieldReads (a : RecordFieldArgs scope)
+    (base : ExprReads scope 8 input a.base (dot :: .word a.field.val :: rest))
+    (blocked : ¬ Continues 0 rest) : ExprReads scope 0 input a.expression rest := by
+  cases base with
+  | atom atomRead tail =>
+    exact .atom atomRead (tail.follow (Nat.zero_le _)
+      (.recordField a.base a.field a.index a.written (Nat.zero_le _) (.stop blocked)))
+
+public theorem RecordFieldDerivation : RecordFieldDerivationAussage := by
+  rintro scope ⟨witness⟩
+  refine ⟨?_, fieldPrints, Rule.satisfiableOfPrint witness (fieldPrints witness)⟩
+  intro a tokens production
+  rcases production with plain | ⟨inside, rfl, grouped⟩
+  · exact fieldReads a plain noOperatorAtEnd
+  · exact .atom (.grouped (fieldReads a grouped noOperatorAtClose)) (.stop noOperatorAtEnd)
+
 end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog Waechter
+
+public theorem RecordFieldParse : RecordFieldParseAussage := by
+  intro scope args text pieces lexed production
+  exact (Surface.RecordFieldDerivation scope ⟨args⟩).parse lexed production
 
 theorem RecordFieldElaboriert : RecordFieldElaboriertAussage := by
   intro scope platform args
@@ -197,5 +234,29 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
   simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, Option.bind,
     Function.update_self, h, dif_pos]
   rfl
+
+public theorem RecordFieldErfuellbarAm : RecordFieldErfuellbarAmAussage := by
+  intro platform start
+  let value := RecordExample.value
+  let index : Fin value.types.length := ⟨0, Nat.zero_lt_succ _⟩
+  let checked : RecordFieldAt value.labels RecordExample.field index.val :=
+    ⟨List.nodup_singleton _, rfl⟩
+  let args : Surface.RecordFieldArgs RecordExample.scope :=
+    ⟨value.ref.name.val, value.labels, value.types, value.expression, RecordExample.field, index, checked⟩
+  let form := recordFieldForm RecordExample.scope
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  let build := Befehl.baueRecord 0 value.ref.name.val value.labels value.types [0]
+  let s₂ := build.nach eintritt s₁
+  have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨build, rfl, rfl, rfl⟩
+  refine ⟨RecordExample.scope, args, form.erfuellbar_aus_erreichbar platform start args s₂
+    (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second) ?_ ?_⟩
+  · exact RecordFieldRealisiert _ platform args s₂ rfl rfl rfl rfl
+  · intro guard found
+    cases found
 
 end Gabbro.Core.Ast.Semantik

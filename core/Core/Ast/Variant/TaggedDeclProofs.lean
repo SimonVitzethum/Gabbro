@@ -84,6 +84,66 @@ theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage :
   intro scope a frame
   exact ⟨rfl, rfl, rfl, rfl⟩
 
+open Gabbro.Core.Text
+open Surface
+
+private theorem programWordValue (head : Char) (tail : List Char) (h1 h2) :
+    (printProgramWord head tail h1 h2).value = .word (head :: tail) := rfl
+
+theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
+  intro scope input tree rest exported name read
+  generalize tokens : taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input = ts at read
+  cases read with
+  | tagged actual n valid distinct head tail =>
+    have sameExport : actual = exported := by
+      cases actual <;> cases exported <;> simp_all [taggedDeclarationPrefix, keyword]
+    subst actual
+    have same := List.append_cancel_left (by
+      simpa only [List.append_assoc, List.cons_append, List.nil_append] using tokens :
+      taggedDeclarationPrefix exported ++ (_ :: _ :: _ :: input) =
+        taggedDeclarationPrefix exported ++ (.word n.val :: _ :: _ :: _))
+    have sameName := Token.word.inj (List.cons.inj same).1
+    have sameInput := (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).2
+    subst input
+    exact ⟨⟨exported, n, _, _, valid, distinct⟩, _, rfl, Subtype.ext sameName.symm, head, tail, rfl⟩
+  | record other n valid distinct members =>
+    cases other <;> cases exported <;> simp_all [taggedDeclarationPrefix, recordDeclarationPrefix, keyword]
+  | table item _ =>
+    cases visibility : item.exported <;> cases exported <;>
+      simp_all [taggedDeclarationPrefix, TableDeclaration.header, printPub, printTable, programWordValue, keyword]
+  | effectGroup item _ =>
+    cases visibility : item.exported <;> cases exported <;>
+      simp_all [taggedDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, programWordValue, keyword]
+  | _ => cases exported <;> simp_all [taggedDeclarationPrefix, keyword, assignment, colon, openBrace, openParen, semicolon]
+
+private theorem taggedDeclPrints (scope : Scope) (args : TaggedDeclArgs scope) :
+    (taggedDecl scope).production args
+      (((Category.declaration scope).printPieces ((taggedDecl scope).tree args)).map PrintedToken.value) := by
+  obtain ⟨more, head, tail⟩ := variantMembers_printReads args.first args.tail (rest := [semicolon]) args.valid
+  refine ⟨_, more, ?_, head, tail⟩
+  have prefixTokens : (taggedDeclarationHead args.exported).map PrintedToken.value =
+      taggedDeclarationPrefix args.exported := by cases args.exported <;> rfl
+  simp only [Category.printPieces, taggedDecl, Decl.printPieces, List.map_append, List.map_cons,
+    List.map_nil, List.append_assoc, List.cons_append, List.nil_append, prefixTokens]
+  rfl
+
+theorem taggedDecl_derivation : TaggedDeclDerivationAussage := by
+  intro scope
+  refine ⟨?_, taggedDeclPrints scope, ?_⟩
+  · rintro args tokens ⟨input, more, rfl, head, tail⟩
+    exact .tagged args.exported args.name args.valid args.distinct head tail
+  · let name := keywordName 'v' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
+    let label := keywordName 'a' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
+    let member : VariantMember := ⟨label, none⟩
+    have valid (m : VariantMember) (h : m ∈ [member]) : m.valid scope := by
+      cases List.mem_singleton.mp h
+      have notDiscard : member.label.val ≠ ['_'] := by
+        intro equal
+        cases equal
+      exact ⟨(directName_of_singleton (name := label) rfl).1, notDiscard, fun _ h => (List.not_mem_nil h).elim⟩
+    let args : TaggedDeclArgs scope := ⟨false, name, member, [], valid, List.nodup_singleton _⟩
+    exact Rule.satisfiableOfPrint args (taggedDeclPrints scope args)
+
 theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
   intro scope input variants rest read
   exact (List.suffix_cons Gabbro.Core.Ast.semicolon rest).trans read.consumes

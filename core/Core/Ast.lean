@@ -34,6 +34,7 @@ public import Core.Ast.Aggregate.Carrier.Option.ConstructProofs
 public import Core.Ast.Aggregate.Carrier.Option.TestProofs
 public import Core.Ast.Aggregate.Carrier.Option.MatchProofs
 public import Core.Ast.Aggregate.Carrier.Effects.GroupProofs
+public import Core.Ast.Aggregate.Carrier.Effects.InferenceProofs
 public import Core.Ast.Aggregate.Types.TupleProofs
 public import Core.Ast.Aggregate.TupleBindProofs
 public import Core.Ast.Aggregate.Records.RecordDeclProofs

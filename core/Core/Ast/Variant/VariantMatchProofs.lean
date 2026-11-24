@@ -238,6 +238,75 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       (by simpa [entry] using hb)
   exact vm_case_payload_some a.payloads value i rfl hsome
 
+open Gabbro.Core.Text
+open Surface
+
+theorem variantMatch_inversion : VariantMatchInversionAussage := by
+  intro scope result input tree rest starts read
+  generalize tokens : keyword "match" :: input = ts at read
+  cases read with
+  | variantMatch valueRead armsRead =>
+    cases (List.cons.inj tokens).2
+    exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
+  | assignVar _ _ _ _ _ => exact ((starts _).1 (List.cons.inj tokens).2).elim
+  | assignField _ _ _ _ _ _ _ _ => exact ((starts _).2 (List.cons.inj tokens).2).elim
+  | directCall callRead =>
+    rename_i call
+    have ordinary := call.ordinary
+    cases callRead
+    apply ordinary.2 |>.elim
+    rw [← Token.word.inj (List.cons.inj tokens).1]
+    have present : "match" ∈ ["let", "if", "return", "while", "for", "leave", "next"] ++ ["match"] :=
+      List.mem_append_right _ List.mem_cons_self
+    exact List.mem_map.mpr ⟨"match", present, rfl⟩
+  | letOption mutable _ _ _ _ _ _ =>
+    cases mutable <;> cases (List.cons.inj tokens).1
+  | _ => cases (List.cons.inj tokens).1
+
+private theorem variantArmsPrints (arms : VariantArms result scope allowed labels payloads) :
+    VariantArmsRead result scope allowed (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest := by
+  have nameToken (name : Identifier) : name.print.value = .word name.val := rfl
+  have arrowToken : printMatchArrow.value = matchArrow := rfl
+  induction labels generalizing payloads allowed with
+  | nil =>
+    cases arms with
+    | done => exact .done
+    | wildcard _ nonempty _ => exact (nonempty rfl).elim
+  | cons head tail ih =>
+    cases arms with
+    | nullary label ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken] using
+        (VariantArmsRead.nullary (allowed := allowed) head ordinary bodyRead (ih next))
+    | payload label binder ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken,
+        show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
+        (VariantArmsRead.payload (allowed := allowed) head binder ordinary body bodyRead (ih next))
+    | wildcard body nonempty shape =>
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, arrowToken, show discardName.print.value = Token.word ['_'] from rfl] using
+        (VariantArmsRead.wildcard nonempty shape (body.printReads (closeBrace :: rest)))
+
+private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : VariantMatchArgs ctx) :
+    (variantMatch ctx).production args
+      (((Category.statement ctx.1 ctx.2).printPieces ((variantMatch ctx).tree args)).map PrintedToken.value) := by
+  let armsInput := args.arms.printPieces.map PrintedToken.value ++ [closeBrace]
+  let input := args.value.printTokens ++ openBrace :: armsInput
+  refine ⟨input, armsInput, ?_, args.value.printReads noOperatorAtOpenBrace, variantArmsPrints args.arms⟩
+  change ((Stmt.variantMatch args.value args.arms).printPieces.map PrintedToken.value) = _
+  simp only [Stmt.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+    List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
+  rfl
+
+theorem variantMatch_derivation : VariantMatchDerivationAussage := by
+  rintro ctx ⟨witness⟩
+  refine ⟨?_, variantMatchPrints ctx, Rule.satisfiableOfPrint witness (variantMatchPrints ctx witness)⟩
+  rintro args tokens ⟨input, arms, rfl, valueRead, armsRead⟩
+  exact .variantMatch valueRead armsRead
+
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
   exact read.consumes

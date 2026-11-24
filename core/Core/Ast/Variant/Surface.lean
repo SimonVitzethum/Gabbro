@@ -86,10 +86,12 @@ def VariantValueSuffixAussage : Prop :=
     CasePayloadRead scope input payload rest → rest <:+ input
 
 def VariantValueDerivationAussage : Prop :=
-  ∀ scope, (variantValue scope).Entry
+  ∀ scope, Nonempty (VariantValueArgs scope) → (variantValue scope).Entry
 
 def VariantMatchInversionAussage : Prop :=
-  ∀ {scope result input tree rest}, StmtReads result scope (keyword "match" :: input) tree rest →
+  ∀ {scope result input tree rest},
+    (∀ tail, input ≠ assignment :: tail ∧ input ≠ dot :: tail) →
+    StmtReads result scope (keyword "match" :: input) tree rest →
     ∃ (a : VariantMatchArgs (scope, result)) (arms : List Token),
       ExprReads scope 0 input a.value (openBrace :: arms) ∧ VariantArmsRead result scope false arms a.arms rest ∧
       tree = (variantMatch (scope, result)).tree a
@@ -99,6 +101,6 @@ def VariantMatchSuffixAussage : Prop :=
     VariantArmsRead result scope allowed input arms rest → rest <:+ input
 
 def VariantMatchDerivationAussage : Prop :=
-  ∀ ctx, (variantMatch ctx).Entry
+  ∀ ctx, Nonempty (VariantMatchArgs ctx) → (variantMatch ctx).Entry
 
 end Gabbro.Core.Ast.Surface
