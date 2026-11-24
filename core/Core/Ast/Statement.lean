@@ -74,8 +74,8 @@ theorem StmtReads.let_header
     ∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
-  generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
       LetTailReads result scope name ordinary value more tree rest := by
+  generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
   cases read with
   | letBinding name ordinary read tail =>
       injection hs with h1 h2
