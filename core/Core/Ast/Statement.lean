@@ -76,7 +76,7 @@ theorem StmtReads.let_header
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
   cases read with
-  | letBinding name ordinary value more read tail =>
+  | letBinding name ordinary read tail =>
       exact ⟨name, ordinary, _, value, more, rfl, read, tail⟩
 
 -- Mirror AtomReads.lit_inversion.
@@ -125,9 +125,9 @@ theorem StmtReads.ite_inversion
       BlockReads result scope more no rest ∧ tree = ⟨scope, .ite condition yes no⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   cases read with
-  | ite condition yes no conditionRead yesRead noRead =>
+  | ite conditionRead yesRead noRead =>
       left
-      exact ⟨condition, _, yes, _, no, conditionRead, yesRead, noRead, rfl⟩
+      exact ⟨_, _, _, _, _, conditionRead, yesRead, noRead, rfl⟩
   | assignVar ref visible writable fits read =>
       right
       exact ⟨_, rfl⟩
