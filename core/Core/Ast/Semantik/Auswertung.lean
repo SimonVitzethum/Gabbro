@@ -375,10 +375,14 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
             alsBoolean, Option.bind_some, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R, Expr.wert]
-          simp only [hs, if_true]
-          omega
+          by_cases hc : some (Expr.wert (fun {type} => env) left) = some op.skips
+          · simp only [hc, if_true]
+            omega
+          · exact False.elim (hs hc)
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
-          simp only [ht, if_true]
+          by_cases hc : Expr.wert (fun {type} => env) left = op.skips
+          · simp only [hc, if_true]
+          · exact False.elim (ht hc)
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
@@ -391,9 +395,11 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
           simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some,
             if_false, L, R, Expr.wert]
-          simp only [hs, if_false]
-          rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-            Nat.add_zero]
+          by_cases hc : some (Expr.wert (fun {type} => env) left) = some op.skips
+          · exact False.elim (hs hc)
+          · simp only [hc, if_false]
+            rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+              Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
           intro ty ref
           simp only [sw, Befehl.auswerten]
@@ -417,7 +423,9 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           omega
         · rw [tmpR]
           simp only [Expr.wert]
-          simp only [ht, if_false]
+          by_cases hc : Expr.wert (fun {type} => env) left = op.skips
+          · exact False.elim (ht hc)
+          · simp only [hc, if_false]
         · simp only [sw, Befehl.auswerten, lokR, lokL]
         · exact retR
         · intro i hi
