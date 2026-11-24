@@ -142,7 +142,9 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
             ⟨Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
           simp only [wertAls, Wert.widen]
           rw [dif_pos hb]
-      | _ => simp only [Fits, wertAls, Wert.widen] at fits
+      | _ =>
+          simp only [Fits] at fits
+          cases fits
   | array el count =>
       cases target with
       | array el' count' =>
@@ -162,13 +164,19 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
                   cases fits
                   simp only [wertAls]
                   dsimp [Wert.widen, Nat.casesAuxOn, Ty.noConfusion, Nat.Internal.elimOffset]
-      | _ => simp [Fits, wertAls, Wert.widen] at fits
+      | _ =>
+          simp only [Fits] at fits
+          cases fits
   | _ =>
       cases target with
-      | int _ _ => simp [Fits] at fits
-      | array _ _ => simp [Fits] at fits
+      | int _ _ =>
+          simp only [Fits] at fits
+          cases fits
+      | array _ _ =>
+          simp only [Fits] at fits
+          cases fits
       | _ =>
-          cases fits <;> simp [wertAls, Wert.widen]
+          cases fits <;> simp only [wertAls, Wert.widen, dif_pos]
 
 theorem AssignFieldParse : AssignFieldParseAussage := by
   intro ctx args text pieces lex prod
