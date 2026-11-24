@@ -306,15 +306,7 @@ private theorem memAkzeptiertX86 (op : MemInstruction) :
     memKlauseln _ op, memWaechter _ op⟩
   · intro i
     exact memRegelLokal _ i
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
-
+  · exact schrankenLokal_leer rfl rfl rfl
 private def newSpaceName : Identifier :=
   ⟨['t'], ⟨'t', [], rfl, by
     unfold isNameStart isLetter

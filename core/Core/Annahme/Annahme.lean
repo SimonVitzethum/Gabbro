@@ -112,14 +112,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro i η lauf t c w spur vor nach vorEq kf spurEq nachEq step _ _
-      exact nomatch kf
-    · intro η lauf t w spur vor nach vorEq spurEq wahl nachEq step _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
+  · exact schrankenLokal_leer rfl rfl rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

@@ -230,15 +230,7 @@ private theorem jumpAkzeptiert (code : List ExecInstruction) :
           exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
             (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
   · exact execProgramFlussLokal _ code
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
-
+  · exact schrankenLokal_leer rfl rfl rfl
 private theorem jumpJoint : JumpJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
   let decl : ExecStateDecl := ⟨64, .kernel, .off, []⟩

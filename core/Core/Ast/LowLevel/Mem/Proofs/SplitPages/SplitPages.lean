@@ -156,14 +156,7 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       constructor
       · intro x hx; cases hx
       · intro l hl; cases hl
-    · refine ⟨?_, ?_, ?_, ?_⟩
-      · intro η lauf
-        exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-      · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-        exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-      · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-        exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-      · exact tiefenBezug_eq rfl
+    · exact schrankenLokal_leer rfl rfl rfl
   · intro rho lauf
     refine ⟨?_, ?_, ?_⟩
     · intro p hp; cases hp

@@ -134,6 +134,21 @@ theorem speicherZustand_leer (h : E.schranken.speicher = none)
   rw [h] at eq
   nomatch eq
 
+/-- Units with open bounds and the identity local relation meet the checker row
+    unconditionally: every state satisfies the vacuous bounds, so no rule analysis is
+    needed. This is the one-line witness for all leer-bound acceptance proofs. -/
+theorem schrankenLokal_leer (hstapel : E.schranken.stapel = none)
+    (hsp : E.schranken.speicher = none) (hbezug : E.lokalerBezug = Eq) :
+    SchrankenLokal E := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro η lauf
+    exact ⟨stapelZustand_leer hstapel _, speicherZustand_leer hsp _⟩
+  · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    exact ⟨stapelZustand_leer hstapel _, speicherZustand_leer hsp _⟩
+  · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    exact ⟨stapelZustand_leer hstapel _, speicherZustand_leer hsp _⟩
+  · exact tiefenBezug_eq hbezug
+
 /-- The identity local relation respects every depth measure. -/
 theorem tiefenBezug_eq (h : E.lokalerBezug = Eq) : TiefenBezug E := by
   intro l l' rel c

@@ -90,15 +90,7 @@ private theorem memProgramAkzeptiert (code : List MemInstruction) :
           rw [List.append_nil]
         · intro h q hq hcut hans
           exact h q hq hcut hans
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
-  · intro ρ lauf
+  · exact schrankenLokal_leer rfl rfl rfl  · intro ρ lauf
     change (∀ p ∈ ([] : List (MemState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (MemState → Prop)), p (ρ.zeit.zustand t.val)) ∧
       (∀ t : I.Schnitt E ρ, (∀ c, E.system.fertig (ρ.zeit.zustand t.val) c) →

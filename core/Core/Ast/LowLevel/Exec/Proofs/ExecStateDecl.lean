@@ -330,15 +330,7 @@ private theorem execAkzeptiert (k : Katalog) (code : List ExecInstruction)
   · intro i
     exact execRegelLokal k i
   · exact execAussenLokalProgram k code
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
-
+  · exact schrankenLokal_leer rfl rfl rfl
 private def execStateName : Identifier :=
   ⟨['s'], ⟨'s', [], rfl, by
     unfold isNameStart isLetter

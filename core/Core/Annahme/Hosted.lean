@@ -163,15 +163,7 @@ theorem akzeptiert : Akzeptiert einheit := by
         intro ev mem
         cases Ereignis.frage.inj (List.mem_singleton.mp mem)
         exact ⟨ausgewaehlt, rechte⟩
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro η lauf
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
-      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
-    · exact tiefenBezug_eq rfl
-  · intro ρ _
+  · exact schrankenLokal_leer rfl rfl rfl  · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
   · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,
