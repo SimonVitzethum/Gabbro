@@ -58,11 +58,12 @@ theorem tupleValue_inversion : TupleValueInversionAussage := by
       have bad : comma = closeParen := (List.cons.inj same.2).1
       simp [comma, closeParen] at bad
   case tupleValue fRead sRead =>
-      have firstSub : ExprReads scope 0 input _ (comma :: _) := ‹_›
-      have same := ExprReads.deterministic firstRead firstSub
+      rename_i firstType' firstExpr' secondInput' secondType' secondExpr' more' tailTypes' items' secondSub
+      have same := ExprReads.deterministic firstRead fRead
       have listsEq := List.cons.inj same.2
-      rw [← listsEq.2] at fRead
-      refine ⟨⟨_, _, _, _, _, _⟩, _, same.1, fRead, sRead, rfl⟩
+      rw [← listsEq.2] at secondSub
+      refine ⟨⟨firstType', secondType', tailTypes', firstExpr', secondExpr', items'⟩,
+        more', same.1, secondSub, sRead, rfl⟩
   all_goals contradiction
 
 mutual
@@ -105,13 +106,9 @@ private theorem tupleValue_print (scope : Scope) (args : TupleValueArgs scope) :
   let tailTokens := args.tail.printTail.map PrintedToken.value
   refine ⟨firstTokens ++ [comma] ++ secondTokens ++ tailTokens ++ [closeParen],
     secondTokens ++ tailTokens ++ [closeParen], tailTokens ++ [closeParen], ?_, ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+  ·     simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
       firstTokens, secondTokens, tailTokens]
-    constructor
-    · rfl
-    constructor
-    · rfl
-    · rfl
+    rfl
   · simpa [firstTokens] using
       (Expr.printReads (tree := args.first) (minimum := 0)
         (rest := comma :: (secondTokens ++ tailTokens ++ [closeParen])) noOperatorAtComma)
