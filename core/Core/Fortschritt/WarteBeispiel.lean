@@ -23,6 +23,8 @@ open Gabbro.Core.Katalog
 open Gabbro.Core.Annahme
 open Gabbro.Core.Beobachtung
 
+variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
+
 def ticketPlan : SchrittPlan Unit Unit Unit Unit :=
   ⟨.sperre () .ticket, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 
@@ -83,7 +85,7 @@ def e1AusfuehrA :
   rw [ticket_leer]
   exact .nil _
 
-def e1StotterAusfuehr (t : Nat) (c : Zustand Unit Unit Unit Unit Bool Unit)
+def e1StotterAusfuehr (t : Nat) (c : Kontext)
     (s : Zustand Unit Unit Unit Unit Bool Unit) :
     FuehrtSchrittAus (E_1).einrichtung t c s s stutterPlan ⟨[], []⟩ s := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
