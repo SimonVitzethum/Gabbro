@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.Auswertung
 public import Core.Ast.Semantik.Quellform
+import Core.Ast.Semantik.Runtime.ValueCoercion
 
 @[expose] public section
 
@@ -24,25 +25,20 @@ def wertInhalt (type : Ty .value) (value : Wert type) : Int ⊕ Bool ⊕ Option 
     .inr (.inr (some ⟨.text text.bytes.size, ⟨text.bytes, Nat.le_refl _⟩⟩))
   | type, value => .inr (.inr (some ⟨type, value⟩))
 
--- Mirror literal_ausserhalb_verweigert with interval containment in the successful direction.
+private theorem wertInhalt_widen (fits : Fits source target) (value : Wert source) :
+    wertInhalt source value = wertInhalt target (Wert.widen source target fits value) := by
+  cases source <;> cases target
+  case array.array source count target other =>
+    cases count <;> cases other
+    all_goals first | rfl | cases fits <;> rfl
+  all_goals first | rfl | cases fits <;> rfl
+
 theorem wertIn_widen (fits : Fits source target) (value : Wert source) :
     ∃ widened : Wert target, wertIn target ⟨source, value⟩ = some ⟨target, widened⟩ ∧
       wertInhalt source value = wertInhalt target widened := by
-  cases source with
-  | bool =>
-      cases target with
-      | bool =>
-          refine ⟨value, ?_, rfl⟩
-          rfl
-      | int tlo thi => cases fits
-  | int slo shi =>
-      cases target with
-      | bool => cases fits
-      | int tlo thi =>
-          have lower : tlo ≤ value.wert := Int.le_trans fits.1 value.unten
-          have upper : value.wert ≤ thi := Int.le_trans value.oben fits.2
-          refine ⟨⟨value.wert, lower, upper⟩, ?_, rfl⟩
-          simp only [wertIn, dif_pos (show tlo ≤ value.wert ∧ value.wert ≤ thi from ⟨lower, upper⟩)]
+  refine ⟨Wert.widen source target fits value, ?_, wertInhalt_widen fits value⟩
+  rw [wertIn, wertAls_widen source target fits]
+  rfl
 
 -- Mirror Fragment.guard_am_schnitt by exposing the two operand magnitudes at the division head.
 theorem division_guard_exact (frame : Rahmen) (slot : Nat)
@@ -162,38 +158,20 @@ theorem branch_effect (frame : Rahmen) (bit : Bool)
       if_false]
     repeat' constructor <;> trivial
 
--- Mirror Block.printItems_reads by following the scope extension through each statement.
+/-- A sequential block prepends fresh bindings while preserving the entry scope. -/
 theorem block_scope_extends (body : Block result before after) : before <:+ after := by
   refine @Block.rec result
-    (fun b a t => b <:+ a)
-    (fun b a t => b <:+ a)
-    (fun b t => True)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
-  · intro scope type name ordinary value
-    exact List.suffix_cons _ _
-  · intro scope lo hi valueLo valueHi ref visible writable value fits
-    exact List.suffix_refl _
-  · intro expected scope type declared value fits
-    exact List.suffix_refl _
-  · intro scope condition yes no yesIH noIH
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_cons _ _
-  · intros
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_cons _ _
-  · intros
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_refl _
-  · intro scope
-    exact List.suffix_refl _
-  · intro before middle after first rest firstIH restIH
-    exact firstIH.trans restIH
-  · intro before after body bodyIH
-    trivial
+    (fun b a _ => b <:+ a)
+    (fun b a _ => b <:+ a)
+    (fun _ _ => True)
+    (fun _ _ _ _ _ => True)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
+  all_goals
+    intros
+    first
+    | exact List.suffix_refl _
+    | exact List.suffix_cons _ _
+    | trivial
+    | apply List.IsSuffix.trans <;> assumption
 
 end Gabbro.Core.Ast.Semantik
