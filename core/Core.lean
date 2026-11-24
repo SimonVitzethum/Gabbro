@@ -114,6 +114,8 @@ public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
+public import Core.Linken.Modul
+public import Core.Linken.Aussage
 meta import Core.Waechter.Check
 
 #check_core
