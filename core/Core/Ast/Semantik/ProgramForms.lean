@@ -36,7 +36,6 @@ def LaufenderRuf (platform : Plattform) (start : AussenStart) (b : Befehl) : Pro
     Ast.Parse (category := .unit) text unit ∧
     let E := elaborieren platform (category := .unit) unit
     let next := b.nach eintritt s
-    Elaboriert (category := .unit) platform unit E ∧
     E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
       E.system.ISchritt eintritt s () [plan] next ∧ E.system.ImplSchritt eintritt s () [plan] next ∧
       (next.lokal eintritt).stopp = none ∧

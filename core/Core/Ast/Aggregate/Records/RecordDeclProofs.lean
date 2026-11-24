@@ -65,6 +65,8 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
   | effectGroup item _ =>
       cases he : item.exported <;> cases ex <;>
         simp_all [recordDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, ppwVal, keyword]
+  | environment =>
+      cases ex <;> cases (List.cons.inj hh).1
   | _ =>
       cases ex <;> simp_all [recordDeclarationPrefix, keyword, assignment, colon, openBrace,
         openParen, semicolon]

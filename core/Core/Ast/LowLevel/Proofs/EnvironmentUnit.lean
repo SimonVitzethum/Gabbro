@@ -59,7 +59,7 @@ theorem environmentUnit_realisiert : environmentUnitForm.RealisiertAussage :=
     catalogue, including when later declarations are valid. -/
 def EnvironmentUnitAdmissionAussage : Prop :=
   ∀ (p : Plattform) (args : EnvironmentArgs) (E : Einheit),
-    Elaboriert (category := .unit) p args.unit E →
+    ZugelassenElaboriert (category := .unit) p args.unit E →
     args.row.zugelassen E.katalog args.abi ∧
     ((programm args.unit).environment.map (fun e => e.1.val)).Nodup
 
@@ -71,7 +71,7 @@ theorem environmentUnit_admission : EnvironmentUnitAdmissionAussage := by
   exact ⟨allowed _ present, unique⟩
 
 theorem environmentUnit_psci_x86_refused (args : EnvironmentArgs) (row : args.row = .psci)
-    (E : Einheit) : ¬ Elaboriert (category := .unit) .x86_64 args.unit E := by
+    (E : Einheit) : ¬ ZugelassenElaboriert (category := .unit) .x86_64 args.unit E := by
   intro meaning
   have selected := (environmentUnit_admission .x86_64 args E meaning).1
   rw [row] at selected
@@ -102,9 +102,12 @@ def EnvironmentUnitErfuellbarAussage : Prop :=
     Annahme.Akzeptiert E ∧ Hardware E.katalog env ∧ E.ZulStart env start ∧
     E.system.IErreichbar (I.start E start).2 s ∧ Realisiert environmentUnitForm p args s
 
-theorem environmentUnit_elaboriert : environmentUnitForm.ElaboriertAussage := by
-  intro platform args allowed
-  exact elab_korrekt platform (environmentUnitForm.produktion.tree args) allowed
+def EnvironmentUnitElaboriertAussage : Prop :=
+  ∀ platform args, zugelassen platform .unit args.unit →
+    ZugelassenElaboriert (category := .unit) platform args.unit (environmentUnitForm.einheit platform args)
+
+theorem environmentUnit_elaboriert : EnvironmentUnitElaboriertAussage :=
+  fun _ _ allowed => ⟨rfl, allowed⟩
 
 theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
   intro platform args
@@ -129,56 +132,11 @@ theorem environmentUnit_einheit : environmentUnitForm.EinheitAussage := by
 theorem environmentUnit_impl : environmentUnitForm.ImplAussage :=
   fun args c s w plans u => Iff.rfl
 
-theorem functionCode_keine_invarianten {result : Option WrittenType} {scope : Scope}
-    (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
-    (functionCode result measure body).klauseln.invariant = [] := by
-  cases measure with
-  | none =>
-      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
-        bracedBlock_keine_invarianten]
-  | some m =>
-      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
-        expr_keine_invarianten, bracedBlock_keine_invarianten]
-
-theorem decl_keine_invarianten {before after : Scope} (d : Decl before after) :
-    (decl d).klauseln.invariant = [] := by
-  cases d with
-  | constant name ordinary written valid value staticValue fits =>
-      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
-        expr_keine_invarianten]
-  | function name ordinary parameters result valid decreases body distinct returns effects =>
-      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
-        functionCode_keine_invarianten]
-  | record exported name fields valid distinct => rfl
-  | tagged exported name first tail valid distinct => rfl
-  | table item => rfl
-  | effectGroup item => rfl
-  | environment name abi row => rfl
-
-theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBody before after) :
-    (unitBody body).klauseln.invariant = [] := by
-  induction body with
-  | done => rfl
-  | step first rest ih =>
-      simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
-        List.nil_append, decl_keine_invarianten, ih]
-
-theorem environmentUnit_ohneInvarianten (args : EnvironmentArgs) :
-    (environmentUnitForm.fragment args).klauseln.invariant = [] := by
-  change (programm (EnvironmentArgs.unit args)).klauseln.invariant = []
-  simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-    Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
-    unitBody_keine_invarianten]
-
 theorem environmentUnit_erhaltung : environmentUnitForm.ErhaltungsAussage := by
   intro platform args
   let p := environmentUnitForm.fragment args
   let b := environmentUnitForm.befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (environmentUnit_ohneInvarianten args)⟩
+    b.sicher p platform (programm_keine_invarianten args.unit)⟩
 
 end Gabbro.Core.Ast.Semantik

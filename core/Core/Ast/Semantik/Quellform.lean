@@ -55,8 +55,7 @@ def Quellform.ParseAussage : Prop :=
     Ast.Parse text (form.produktion.tree args)
 
 def Quellform.ElaboriertAussage : Prop :=
-  ∀ platform args, zugelassen platform category (form.produktion.tree args) →
-    Elaboriert platform (form.produktion.tree args) (form.einheit platform args)
+  ∀ platform args, Elaboriert platform (form.produktion.tree args) (form.einheit platform args)
 
 def Quellform.RealisiertAussage : Prop :=
   ∀ platform args s, s.status eintritt = .laeuft →

@@ -65,14 +65,8 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
             simpa only [keyword, Token.word.injEq] using habi
           have hrowName : row.name.toList = row'.name.toList := by
             simpa only [keyword, Token.word.injEq] using hrow
-          have habiStr : abi.name = abi'.name := String.toList_injective habiName
-          have hrowStr : row.name = row'.name := String.toList_injective hrowName
-          have habiEq : abi = abi' := by
-            cases abi <;> cases abi' <;>
-              simp only [DienstAbi.name, String.reduceEq] at habiStr ⊢
-          have hrowEq : row = row' := by
-            cases row <;> cases row' <;>
-              simp only [FirmwareZeile.name, String.reduceEq] at hrowStr ⊢
+          have habiEq := DienstAbi.name_injective (String.toList_injective habiName)
+          have hrowEq := FirmwareZeile.name_injective (String.toList_injective hrowName)
           have hnaEq : na = nb := Subtype.ext hna
           subst nb
           cases habiEq
