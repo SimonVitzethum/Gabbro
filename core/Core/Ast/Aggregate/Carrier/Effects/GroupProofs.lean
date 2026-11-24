@@ -143,7 +143,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       by_cases he : head.exported
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           have c1 := List.cons.inj hh'
           have c2 := List.cons.inj c1.2
           have c3 := List.cons.inj c2.2
@@ -157,14 +157,14 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
             exact effectRead
           · rfl
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           cases hh'
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           cases hh'
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           have c1 := List.cons.inj hh'
           have c2 := List.cons.inj c1.2
           have c3 := List.cons.inj c2.2
@@ -180,20 +180,25 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           · rfl
   | constant =>
       by_cases he : head.exported <;>
-        simp only [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, keyword, printConst, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh
+        dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+        simp at hh
   | function =>
       by_cases he : head.exported <;>
-        simp only [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, keyword, printFn, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh
+        dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+        simp at hh
   | record exported name valid distinct memberRead =>
       rename_i fields input'
       by_cases he : head.exported <;> by_cases ex : exported <;>
-        simp only [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, recordDeclarationPrefix, keyword, printTypeDecl, ex, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh
+        dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+        simp at hh
   | tagged exported name valid distinct firstRead tailRead =>
       by_cases he : head.exported <;> by_cases ex : exported <;>
-        simp only [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, taggedDeclarationPrefix, keyword, printTypeDecl, ex, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh
+        dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+        simp at hh
   | table item =>
       by_cases he : head.exported <;> by_cases ex : item.exported <;>
-        simp only [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot, keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, String.reduceToList, String.reduceEq, reduceCtorEq, List.cons.injEq] at hh
+        dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+        simp at hh
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
   refine ⟨?reads, egPrint scope, ?sat⟩
