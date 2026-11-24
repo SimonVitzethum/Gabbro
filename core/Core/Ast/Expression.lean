@@ -236,6 +236,8 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
   · rename_i ref visible ordinary'
+    have htype : type = (Expr.variable ref visible ordinary').typed.1 := rfl
+    cases htype
     exact ⟨ref, visible, ordinary', rfl, rfl, rfl⟩
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
@@ -337,9 +339,9 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     rename_i _ _ input _ _ operand rest start child childDet _ _ _ otherRead
     obtain ⟨_, _, operand', read', sameTree⟩ := otherRead.neg_inversion start
     cases sameTree
-      obtain ⟨same, suffix⟩ := childDet read'
-      cases same
-      exact ⟨rfl, suffix⟩
+    obtain ⟨same, suffix⟩ := childDet read'
+    cases same
+    exact ⟨rfl, suffix⟩
   · intros
     rename_i _ _ input operand rest _ child childDet _ _ _ otherRead
     obtain ⟨operand', primary, read', sameTree⟩ := otherRead.not_inversion
