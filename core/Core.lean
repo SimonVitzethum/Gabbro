@@ -14,7 +14,8 @@ public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
-public import Core.Ideal
+public import Core.Ideal.Eigenschaften
+public import Core.Ideal.Komposition
 public import Core.Ideal.Linearisierung
 public import Core.Ideal.Replay
 public import Core.Ideal.Absturz
@@ -119,6 +120,8 @@ public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
+public import Core.Linken.Modul
+public import Core.Linken.Aussage
 meta import Core.Waechter.Check
 
 #check_core
