@@ -155,6 +155,9 @@ private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDer
           | substring _ _ _ hle _ _ _ =>
               have prec := substringInfixPrecLe7 .index
               omega
+          | optionIsSome _ _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
+              omega
     · rcases grouped with ⟨inside, rfl, first, last, baseRead, firstRead, lastRead⟩
       cases baseRead with
       | atom atomRead highTail =>
@@ -195,6 +198,9 @@ private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDer
               omega
           | substring _ _ _ hle _ _ _ =>
               have prec := substringInfixPrecLe7 .index
+              omega
+          | optionIsSome _ _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
               omega
 
 end Gabbro.Core.Ast.Surface

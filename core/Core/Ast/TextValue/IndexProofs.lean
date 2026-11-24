@@ -111,6 +111,8 @@ theorem textIndexDerivation : Gabbro.Core.Ast.Semantik.TextIndexDerivationAussag
               have prec := textIndexInfixPrecLe7 .index; omega
           | substring _ _ _ allowed _ _ _ =>
               have prec := textIndexInfixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
+              have prec := textIndexInfixPrecLe7 .projection; omega
     · rcases grouped with ⟨inside, rfl, offsetInput, baseRead, offsetRead⟩
       cases baseRead with
       | atom atomRead highTail =>
@@ -146,6 +148,8 @@ theorem textIndexDerivation : Gabbro.Core.Ast.Semantik.TextIndexDerivationAussag
               have prec := textIndexInfixPrecLe7 .index; omega
           | substring _ _ _ allowed _ _ _ =>
               have prec := textIndexInfixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
+              have prec := textIndexInfixPrecLe7 .projection; omega
   · exact textIndexPrint scope
   · let base : Expr scope (.text (sourceUtf8 ['x']).size) := .textLiteral ['x']
     let args : TextIndexArgs scope := ⟨(sourceUtf8 ['x']).size, 0, 0, base, .lit 0⟩

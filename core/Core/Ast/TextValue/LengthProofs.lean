@@ -76,15 +76,15 @@ theorem textLength_inversion : TextLengthInversionAussage := by
   case «variable» ref visible ordinary =>
       have same : ref.binding.name.val = "lenof".toList := by
         simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ordinary.2.2 same).elim
+      exact (ordinary.2.2.1 same).elim
   case recordValue ref fields fits fieldsRead =>
       have same : ref.name.val = "lenof".toList := by
         simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ref.ordinary.2.2 same).elim
+      exact (ref.ordinary.2.2.1 same).elim
   case variantValue ref label index written ordinary available payload payloadRead =>
       have same : label.val = "lenof".toList := by
         simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ordinary.2.2 same).elim
+      exact (ordinary.2.2.1 same).elim
   all_goals cases hh
 
 theorem textLength_bytes : TextLengthBytesAussage := by
