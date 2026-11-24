@@ -254,7 +254,7 @@ private theorem startSingleFunction (frame : Rahmen) (name : Identifier) (entry 
   simp only [Befehl.auswerten, registered, List.map_cons, List.map_nil, List.nodup_singleton,
     not_true_eq_false, ite_false, List.find?_cons, Funktion.rekursiv, List.any_nil, Bool.and_false,
     List.find?_nil, List.flatMap_cons, List.flatMap_nil, List.nil_append, Funktion.finde, beq_self_eq_true,
-    Rahmen.ruf, Rahmen.rufArgumente, outside, stack, List.any_cons]
+    Rahmen.eintrittArgumente, ite_true, Rahmen.ruf, Rahmen.rufArgumente, outside, stack, List.any_cons]
   exact ⟨rfl, rfl, rfl⟩
 
 public theorem AssignFieldProgram : AssignFieldProgramAussage := by
@@ -312,7 +312,7 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
       Fragment.anhaengen, Fragment.einzel, Fragment.leer, List.nil_append, List.cons_append, List.append_nil]
     rfl
   have localStep (b : Befehl) (s : Zustand) :
-      ((b.nach eintritt s).lokal eintritt) = b.auswerten (s.lokal eintritt) := by
+      ((b.nach eintritt s).lokal eintritt) = b.auswerten (s.lokal eintritt) (s.regionLive eintritt) := by
     simp only [Befehl.nach, Function.update_self]
   let LiveAt (s : Zustand) (pc : Nat) :=
     s.status eintritt = .laeuft ∧ (s.lokal eintritt).rueckgabe = none ∧
@@ -333,8 +333,8 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
     rw [localStep]
     exact ⟨result.trans live₂.2.1, (congrArg Option.isNone halt).trans live₂.2.2.1, pc⟩
   have liveAfter {s : Zustand} {pc : Nat} {b : Befehl} (live : LiveAt s pc)
-      (plain : ∀ frame, (b.auswerten frame).rueckgabe = frame.rueckgabe ∧
-        (b.auswerten frame).stopp = frame.stopp ∧ (b.auswerten frame).pc = frame.pc + 1) :
+      (plain : ∀ frame, let next := b.auswerten frame (s.regionLive eintritt)
+        next.rueckgabe = frame.rueckgabe ∧ next.stopp = frame.stopp ∧ next.pc = frame.pc + 1) :
       LiveAt (b.nach eintritt s) (pc + 1) := by
     obtain ⟨result, halt, position⟩ := plain (s.lokal eintritt)
     refine ⟨live.1, ?_⟩

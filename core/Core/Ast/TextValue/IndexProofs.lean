@@ -359,12 +359,12 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
     subst g
     exact hcapPos
   · simp only [form, textIndexForm, args, Befehl.nach, Function.update_self]
-    change (((Befehl.textIndex 0 capacity).auswerten frame₂).temp 0).isSome = true
-    rw [heval]
-    simp only [Rahmen.schreibe, Function.update_self, Option.isSome_some]
-  · simp only [form, textIndexForm, args, Befehl.nach, Function.update_self]
     change ((Befehl.textIndex 0 capacity).auswerten frame₂).stopp = none
     rw [heval]
     exact hstop₂
+  · simp only [form, textIndexForm, args, Befehl.nach, Function.update_self]
+    change (((Befehl.textIndex 0 capacity).auswerten frame₂).temp 0).isSome = true
+    rw [heval]
+    simp only [Rahmen.schreibe, Function.update_self, Option.isSome_some]
 
 end Gabbro.Core.Ast.Semantik
