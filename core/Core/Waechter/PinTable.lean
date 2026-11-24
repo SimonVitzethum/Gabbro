@@ -230,9 +230,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Zufallsquelle, 6044941904378799197),
   (`Gabbro.Core.Beobachtung.zufallGesetz, 13273855164972765550),
   (`Gabbro.Core.Beobachtung.Hebebuendel, 11642631917311286929),
-  (`Gabbro.Core.Beobachtung.ProbKlausel, 0),
-  (`Gabbro.Core.Beobachtung.schluesselNodupB, 0),
-  (`Gabbro.Core.Beobachtung.pruefeProb, 0),
+  (`Gabbro.Core.Beobachtung.ProbKlausel, 10195970765314656916),
+  (`Gabbro.Core.Beobachtung.schluesselNodupB, 6455492529876650300),
+  (`Gabbro.Core.Beobachtung.pruefeProb, 88603168752113864),
   (`Gabbro.Core.Beobachtung.GabbroZielProb, 12699181017111665800),
   (`Gabbro.Core.Beobachtung.ProbNichtLeer, 9619867198724381835),
   (`Gabbro.Core.Beobachtung.hebeAussage, 13801708096570700435),
@@ -242,11 +242,11 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.fastSicherFortschrittAussage, 656090671072692439),
   (`Gabbro.Core.Beobachtung.infoTheoretischAussage, 10191733085417263050),
   (`Gabbro.Core.Beobachtung.reduktionAussage, 18171274980334645748),
-  (`Gabbro.Core.Beobachtung.prEreignisUnentscheidbarAussage, 0),
-  (`Gabbro.Core.Beobachtung.kostenErwartungUnentscheidbarAussage, 0),
-  (`Gabbro.Core.Beobachtung.fastSicherAbschlussUnentscheidbarAussage, 0),
-  (`Gabbro.Core.Beobachtung.fastSicherFortschrittUnentscheidbarAussage, 0),
-  (`Gabbro.Core.Beobachtung.infoTheoretischUnentscheidbarAussage, 0),
-  (`Gabbro.Core.Beobachtung.reduktionUnentscheidbarAussage, 0)]
+  (`Gabbro.Core.Beobachtung.prEreignisUnentscheidbarAussage, 12355630085282189606),
+  (`Gabbro.Core.Beobachtung.kostenErwartungUnentscheidbarAussage, 13983439616059106261),
+  (`Gabbro.Core.Beobachtung.fastSicherAbschlussUnentscheidbarAussage, 5213210525041502284),
+  (`Gabbro.Core.Beobachtung.fastSicherFortschrittUnentscheidbarAussage, 40684611434820117),
+  (`Gabbro.Core.Beobachtung.infoTheoretischUnentscheidbarAussage, 16689545193038773293),
+  (`Gabbro.Core.Beobachtung.reduktionUnentscheidbarAussage, 5339248618883769678)]
 
 end Gabbro.Core.Waechter
