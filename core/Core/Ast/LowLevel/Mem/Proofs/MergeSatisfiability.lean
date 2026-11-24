@@ -10,62 +10,59 @@ namespace Gabbro.Core.Ast.LowLevel
 
 open Katalog Maschine Text
 open Gabbro.Core.Annahme
+open Gabbro.Core.Aussen
 
 private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
-  refine ⟨?_, ?_, ?_⟩
-  · refine ⟨hwf, ?_, ?_⟩
-    · intro i c s u w pl hstep
-      dsimp [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
-      rcases hstep with ⟨frame, heval, hpl, hu⟩
-      have hpl' : pl = plan := (List.cons.inj hpl).1
-      subst pl
-      rw [Annahme.Befugt]
-      constructor
-      · intro x hx
-        simp only [plan] at hx
-        cases hx
-      · intro l hl
-        simp only [plan] at hl
-        cases hl
-    · refine ⟨zulassung_m2 k.plattform, ?_⟩
-      apply aussen_gueltig_aus_kontext (memProgram k code)
-      intro run t s c w spur s' step
-      cases step with
-      | kontext _ _ regel execute =>
-        obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-        cases (List.cons.inj planEq).1
-        dsimp [memProgram] at execute
-        obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal (k := k) execute
-        exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-          (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · intro ρ hρ
-    refine ⟨?_, ?_, ?_⟩
-    · intro p hp
-      dsimp [kanonischeKlauseln] at hp
-      cases hp
-    · intro t p hp
-      dsimp [kanonischeKlauseln] at hp
-      cases hp
-    · intro t hfertig p hp
-      dsimp [kanonischeKlauseln] at hp
-      cases hp
-  · constructor
-    · intro ρ hρ t op args bedarf
-      dsimp [kanonischeVerwendung]
-      exact False.elim bedarf
-    · intro ρ hρ t hclosed
-      rcases hclosed with ⟨C, hex, hall⟩
-      obtain ⟨c, hc⟩ := hex
-      obtain ⟨b, hblock, _⟩ := hall c hc
-      dsimp [memProgram] at hblock
-      cases hblock
+  refine ⟨⟨hwf, ?_, zulassung_m2 k.plattform, ?_⟩, ?_, ?_⟩
+  · intro i c s u w pl hstep
+    dsimp [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
+    rcases hstep with ⟨frame, heval, hpl, hu⟩
+    have hpl' : pl = plan := (List.cons.inj hpl).1
+    subst pl
+    rw [Annahme.Befugt]
+    constructor
+    · intro x hx
+      simp only [plan] at hx
+      cases hx
+    · intro l hl
+      simp only [plan] at hl
+      cases hl
+  · apply aussen_gueltig_aus_kontext (memProgram k code)
+    intro run t s c w spur s' step
+    cases step with
+    | kontext _ _ regel execute =>
+      obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
+      cases (List.cons.inj planEq).1
+      dsimp [memProgram] at execute
+      obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal (k := k) execute
+      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+  · intro ρ _
+    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
+      fun _ _ _ h => (List.not_mem_nil h).elim⟩
+  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_⟩
+    obtain ⟨_, ⟨c, mem⟩, blockiert⟩ := h
+    obtain ⟨_, nein, _⟩ := blockiert c mem
+    exact nein
 
 private def memNameL : Identifier :=
-  ⟨['l'], ⟨'l', [], rfl, by decide, by intro a h; cases h⟩⟩
+  ⟨['l'], ⟨'l', [], rfl, by
+    unfold isNameStart isLetter
+    left
+    left
+    constructor <;> decide, by
+      intro a h
+      cases h⟩⟩
 
 private def memNameR : Identifier :=
-  ⟨['r'], ⟨'r', [], rfl, by decide, by intro a h; cases h⟩⟩
+  ⟨['r'], ⟨'r', [], rfl, by
+    unfold isNameStart isLetter
+    left
+    left
+    constructor <;> decide, by
+      intro a h
+      cases h⟩⟩
 
 private theorem memNameL_ne_R : memNameL.val ≠ memNameR.val := by
   decide
@@ -147,6 +144,25 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     { frame with
       result := some (.merged joined)
       regions := (frame.regions.set 0 (some joined)).set 1 none }
+  have hleft : heldMemRegion k.plattform.ziel s entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
+    dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
+    rfl
+  have hright : heldMemRegion k.plattform.ziel s entryContext 1 = some ⟨extentR, [⟨1, 0⟩]⟩ := by
+    dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
+    rfl
+  have hadj : 0 ≠ 1 ∧ extentL.von < extentL.bis ∧ extentR.von < extentR.bis ∧
+      (extentL.bis = extentR.von ∨ extentR.bis = extentL.von) := by
+    refine ⟨by decide, ?_, ?_, Or.inl rfl⟩
+    · change 0x1000 < 0x2000
+      omega
+    · change 0x2000 < 0x3000
+      omega
+  have heval : op.evaluate k.plattform.ziel s entryContext = some next := by
+    dsimp [op, MemInstruction.evaluate]
+    rw [hleft, hright]
+    simp only [Option.bind_some]
+    rw [if_pos hadj]
+    rfl
   refine ⟨k, scope, tree, op, env, start, text, [], s, next, ?_⟩
   dsimp only
   constructor
@@ -178,9 +194,12 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
         unfold Strecke.getrennt
         change 0x2000 ≤ 0x2000 ∨ 0x3000 ≤ 0x1000
         exact Or.inl (by omega)
-      · exact List.Pairwise.nil
+      · apply List.Pairwise.cons
+        · intro r hr
+          cases hr
+        · exact List.Pairwise.nil
     · intro r hr
-      simp only [List.mem_cons, List.mem_singleton] at hr
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hr
       rcases hr with rfl | rfl
       · apply memRegionOk
         · change 0x1000 < 0x2000 ∧ 0x2000 ≤ 2 ^ (52 : Nat)
@@ -199,10 +218,7 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   constructor
   · change (memNameL.val :: memNameR.val :: []).Nodup
-    apply List.nodup_cons.mpr
-    constructor
-    · exact memNameL_ne_R
-    · exact List.nodup_singleton _
+    exact List.nodup_cons.mpr ⟨by simp only [List.mem_singleton, memNameL_ne_R], List.nodup_nil⟩
   constructor
   · change ([] : List (List Char)).Nodup
     exact List.nodup_nil
@@ -213,62 +229,26 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   · refine ⟨tree, ?_, ?_⟩
     · exact (memDruckAussage_merge tree).2
     · refine ⟨op, ?_, rfl⟩
-      change (scope.slotRegion memNameL).bind (fun left =>
-        (scope.slotRegion memNameR).map (fun right => MemInstruction.mergeRegions left right)) = some op
-      dsimp [scope, MemScope.slotRegion]
+      dsimp [scope, MemScope.slotRegion, Identifier]
       simp only [List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true,
         memNameL_ne_R, beq_iff_eq, if_false]
   constructor
   · exact (memDruckAussage_merge tree).2
   constructor
-  · change (scope.slotRegion memNameL).bind (fun left =>
-      (scope.slotRegion memNameR).map (fun right => MemInstruction.mergeRegions left right)) = some op
-    dsimp [scope, MemScope.slotRegion]
+  · dsimp [scope, MemScope.slotRegion, Identifier]
     simp only [List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true,
       memNameL_ne_R, beq_iff_eq, if_false]
   constructor
   · exact System.IErreichbar.start
   constructor
-  · -- head at start
-    dsimp [E, memUnit, memProgram, memHead, s, I.start]
-    rw [if_pos rfl]
-    -- status laeuft, pc 0, eval some next
-    have hleft : heldMemRegion k.plattform.ziel ((I.start (memProgram k [op]) start).2)
-        entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
-      dsimp [heldMemRegion, memBoot, MemRegion.live, MemFrame.unreserved]
-      simp only [List.getElem?_cons_zero, decide_true, Bool.not_false, List.isEmpty_cons,
-        Bool.not_true, List.all_cons, List.all_nil, and_true]
-    have hright : heldMemRegion k.plattform.ziel ((I.start (memProgram k [op]) start).2)
-        entryContext 1 = some ⟨extentR, [⟨1, 0⟩]⟩ := by
-      dsimp [heldMemRegion, memBoot, MemRegion.live, MemFrame.unreserved]
-      simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, decide_true, Bool.not_false,
-        List.isEmpty_cons, Bool.not_true, List.all_cons, List.all_nil, and_true]
-    rw [hleft, hright]
-    simp only [Option.bind_some]
-    rw [if_pos ⟨by decide, by change 0x1000 < 0x2000; omega, by change 0x2000 < 0x3000; omega,
-      Or.inl (by change 0x2000 = 0x2000; rfl)⟩]
+  · dsimp [E, s, memUnit, memProgram, memHead, I.start]
+    simp only [List.getElem?_cons_zero, Option.bind_some]
+    rw [heval]
     rfl
   constructor
-  · -- evaluate
-    dsimp [E, s]
-    have hleft : heldMemRegion k.plattform.ziel ((I.start (memProgram k [op]) start).2)
-        entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
-      dsimp [heldMemRegion, memBoot, MemRegion.live, MemFrame.unreserved]
-      simp only [List.getElem?_cons_zero, decide_true, Bool.not_false, List.isEmpty_cons,
-        Bool.not_true, List.all_cons, List.all_nil, and_true]
-    have hright : heldMemRegion k.plattform.ziel ((I.start (memProgram k [op]) start).2)
-        entryContext 1 = some ⟨extentR, [⟨1, 0⟩]⟩ := by
-      dsimp [heldMemRegion, memBoot, MemRegion.live, MemFrame.unreserved]
-      simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, decide_true, Bool.not_false,
-        List.isEmpty_cons, Bool.not_true, List.all_cons, List.all_nil, and_true]
-    dsimp [MemInstruction.evaluate]
-    rw [hleft, hright]
-    simp only [Option.bind_some]
-    rw [if_pos ⟨by decide, by change 0x1000 < 0x2000; omega, by change 0x2000 < 0x3000; omega,
-      Or.inl (by change 0x2000 = 0x2000; rfl)⟩]
-    rfl
+  · exact heval
   constructor
-  · exact ⟨op, rfl, ⟨next, rfl, rfl⟩⟩
-  · exact ⟨op, rfl, ⟨next, rfl, rfl⟩⟩
+  · exact ⟨op, rfl, ⟨next, heval, rfl⟩⟩
+  · exact ⟨op, rfl, ⟨next, heval, rfl⟩⟩
 
 end Gabbro.Core.Ast.LowLevel
