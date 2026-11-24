@@ -23,10 +23,14 @@ def MemInstruction.rule (target : ZielDaten) (op : MemInstruction) : Regel MemSt
   ⟨op.step target, op.step target⟩
 
 def memHead (target : ZielDaten) (code : List MemInstruction) (s : MemState) (c : Kontext) :
-    Option MemInstruction := do
-  if s.status c ≠ .laeuft ∨ c ≠ entryContext then none else
-    let op ← code[(s.lokal c).pc]?
-    if (op.evaluate target s c).isSome then some op else none
+    Option MemInstruction :=
+  if c = entryContext then
+    match s.status c with
+    | .laeuft => do
+      let op ← code[(s.lokal c).pc]?
+      if (op.evaluate target s c).isSome then some op else none
+    | .ruht | .beendet _ => none
+  else none
 
 def memBoot (regions : List Strecke) (core : Option Nat) :
     Startdaten UInt8 PUnit MemFrame PUnit :=
