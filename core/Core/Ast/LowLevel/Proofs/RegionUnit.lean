@@ -26,7 +26,7 @@ theorem addressTypeUnit : AddressTypeUnitAussage := by
     exact .address space
   · intro platform _ _ _ _ _ _ _ _ _ space meaning occurs present
     have admitted := (List.all_eq_true.mp meaning.2.2) _ occurs
-    exact (List.all_eq_true.mp admitted) (.address space) present
+    simpa only [platformType] using (List.all_eq_true.mp admitted) (.address space) present
 
 /-- One ordinary binding at the beginning of the entry body. The region slot is
     supplied by the checked platform arrival and visible as the sole parameter. -/
@@ -39,8 +39,9 @@ structure RegionEntryArgs where
 
 def RegionEntryArgs.unit (args : RegionEntryArgs) (init : RegionInitializer) : Ast.Unit :=
   let parameter : Parameter := ⟨args.region, .ownedRegion, True.intro, args.ordinaryRegion⟩
+  let receiver : Local [parameter.binding] .ownedRegion := Local.here
   let body : BracedBlock none [parameter.binding] :=
-    .braces (.step (.letRegion args.binder args.ordinary .here True.intro init) .done)
+    .braces (.step (.letRegion args.binder args.ordinary receiver (by exact True.intro) init) .done)
   ⟨[], .step (.function mainName args.entryName [parameter] none
     (fun _ absent => (List.not_mem_nil absent).elim) none body
     (List.nodup_singleton _) (fun impossible => nomatch impossible)) .done⟩
@@ -70,7 +71,7 @@ theorem regionUnit_realized : RegionUnitRealizedAussage := by
 /-- A successful bind uses the live slot named by the receiver, and returns
     exactly the target-indexed value determined by that checked extent. -/
 def RegionUnitTransferAussage (init : RegionInitializer) : Prop :=
-  ∀ frame receiver live slot extent value,
+  ∀ (frame : Rahmen) (receiver : Nat) (live : Nat → Bool) (slot : Nat) (extent : Strecke) (value : Dynamisch),
     frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) = some slot →
     frame.arrivalRegions[slot]? = some extent →
     live slot = true → frame.borrowsRegion slot = false →
