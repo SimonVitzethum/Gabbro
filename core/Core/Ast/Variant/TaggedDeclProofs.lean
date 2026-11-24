@@ -110,4 +110,24 @@ theorem taggedDecl_parse : Gabbro.Core.Ast.Semantik.TaggedDeclParseAussage := by
   rw [same]
   exact .tagged args.exported args.name args.valid args.distinct firstRead tailRead
 
+theorem taggedDecl_erfuellbarAm : Gabbro.Core.Ast.Semantik.TaggedDeclErfuellbarAmAussage := by
+  intro platform start
+  let name : Gabbro.Core.Ast.Identifier :=
+    Gabbro.Core.Ast.keywordName 'v' [] (by omega) (by simp)
+  let lbl : Gabbro.Core.Ast.Identifier :=
+    Gabbro.Core.Ast.keywordName 'a' [] (by omega) (by simp)
+  let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
+  have valid : ∀ m ∈ member :: [], m.valid := by
+    intro m hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
+    subst m
+    simp [Gabbro.Core.Ast.VariantMember.valid, Gabbro.Core.Ast.ordinaryLocal, lbl]
+  have distinct : ((Gabbro.Core.Ast.variantLabels [member]).map Subtype.val).Nodup := by simp
+  let a : Gabbro.Core.Ast.Surface.TaggedDeclArgs := ⟨false, name, member, [], valid, distinct⟩
+  refine ⟨a, ?_⟩
+  let form := taggedDeclForm []
+  let s := (I.start (form.einheit platform a) start).2
+  exact form.erfuellbar_aus_erreichbar platform start a s .start
+    (form.realisiert (td_amOrt []) platform a s rfl rfl rfl rfl) (by intro g guard; cases guard)
+
 end Gabbro.Core.Ast.Semantik
