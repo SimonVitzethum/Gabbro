@@ -37,8 +37,7 @@ open Gabbro.Core.Text
 private theorem someToken_ne_none : (.word indexSomeName.val : Token) ≠ .word indexNoneName.val := by
   intro h
   have hw : indexSomeName.val = indexNoneName.val := by
-    injection h with hw
-    exact hw
+    injection h
   have hs : ("Some".toList : List Char) = "None".toList := by
     simpa [indexSomeName, indexNoneName] using hw
   have hc : ('S' : Char) = 'N' := (List.cons.inj hs).1
@@ -56,9 +55,8 @@ theorem optionInitializerInversion : OptionInitializerInversionAussage := by
         exact (someToken_ne_none (List.cons.inj htok).1).elim
     | present fits exprRead =>
         rename_i lo hi operandInput operand
-        refine ⟨lo, hi, operand, fits, ?_, ?_, rfl⟩
-        · exact (List.cons.inj htok).2
-        · exact exprRead
+        refine ⟨lo, hi, operand, fits, operandInput, ?_⟩
+        exact ⟨(List.cons.inj htok).2, exprRead, rfl⟩
   · intro scope count input value rest read
     generalize htok : .word indexNoneName.val :: input = toks at read
     cases read with
@@ -77,8 +75,9 @@ theorem optionInitializerPrint : OptionInitializerPrintAussage := by
       have openTok : printOpen.value = openParen := by rfl
       have closeTok : printClose.value = closeParen := by rfl
       apply OptionInitializerReads.present fits
-      simpa only [OptionInitializer.printPieces, List.map_append, List.map_cons, List.map_nil,
-        someTok, openTok, closeTok, List.cons_append, List.append_assoc] using
+      simpa only [OptionInitializer.printPieces, Expr.printTokens, List.map_append, List.map_cons,
+        List.map_nil, someTok, openTok, closeTok, List.cons_append, List.nil_append,
+        List.append_assoc] using
         (Expr.printReads (tree := operand) (minimum := 0) (rest := closeParen :: rest) noOperatorAtClose)
 
 private theorem wertAls_indexPresent {count : Nat} {lo hi : Int}
@@ -89,25 +88,24 @@ private theorem wertAls_indexPresent {count : Nat} {lo hi : Int}
   simp only [indexType, wertAls]
   rw [dif_pos ⟨Int.le_trans fits'.1 value.unten, Int.le_trans value.oben fits'.2⟩]
   dsimp [Wert.widen]
-  cases value
-  congr
 
 theorem optionAbsent : OptionAbsentAussage := by
   intro scope count slot frame
   dsimp
   simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
-    indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType]
+    indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType,
+    indexSomeName, indexNoneName]
 
 theorem optionPresent : OptionPresentAussage := by
   intro scope count lo hi slot operand fits frame value htemp
   dsimp
-  rw [htemp]
-  rw [wertAls_indexPresent fits value]
+  have hw := wertAls_indexPresent fits value
   simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
-    indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType]
+    indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, htemp, hw,
+    indexSomeName, indexNoneName]
 
 private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
-    (optionLetForm ctx).produktion a
+    (optionLetForm ctx).produktion.production a
       (((Category.statement ctx.1 ctx.2).printPieces ((optionLetForm ctx).produktion.tree a)).map
         PrintedToken.value) := by
   dsimp [optionLetForm]
@@ -132,7 +130,7 @@ private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
   · exact optionInitializerPrint ctx.1 a.count a.value [semicolon]
 
 private theorem returnOption_prints (ctx : OptionContext) (a : OptionReturnArgs ctx) :
-    (optionReturnForm ctx).produktion a
+    (optionReturnForm ctx).produktion.production a
       (((Category.statement ctx.1 ctx.2).printPieces ((optionReturnForm ctx).produktion.tree a)).map
         PrintedToken.value) := by
   dsimp [optionReturnForm]
@@ -150,7 +148,7 @@ theorem optionLetDerivation : OptionLetDerivationAussage := by
   · intro tokens prod
     rcases prod with ⟨input, rhs, rfl, typeRead, initRead⟩
     exact StmtReads.letOption a.mutable a.name a.ordinary a.carrier a.resolved typeRead initRead
-  · exact Rule.satisfiableOfPrint a (letOption_prints ctx a)
+  · exact Surface.Rule.satisfiableOfPrint a (letOption_prints ctx a)
 
 theorem optionReturnDerivation : OptionReturnDerivationAussage := by
   intro ctx nonemptyArgs
@@ -159,23 +157,27 @@ theorem optionReturnDerivation : OptionReturnDerivationAussage := by
   · intro tokens prod
     rcases prod with ⟨input, rfl, initRead⟩
     exact StmtReads.retOption a.declared initRead
-  · exact Rule.satisfiableOfPrint a (returnOption_prints ctx a)
+  · exact Surface.Rule.satisfiableOfPrint a (returnOption_prints ctx a)
 
 private theorem letOption_amOrt (ctx : OptionContext) : (optionLetForm ctx).RegelAmOrt := by
   intro a
-  change (((optionCode 0 a.value).anhaengen
-    (.einzel (.bindeWert 0 (indexOptionType a.count) false))).code[
+  change ((((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]) ++
+    [Befehl.bindeWert 0 (indexOptionType a.count) false])[
       (optionOperand 0 a.value).code.length]?) = some (optionInstruction 0 a.value)
-  simp only [optionCode, Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-    Nat.sub_self, List.getElem?_cons_zero]
+  have hlt : (optionOperand 0 a.value).code.length <
+      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by simp
+  rw [List.getElem?_append_left hlt]
+  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
 private theorem returnOption_amOrt (ctx : OptionContext) : (optionReturnForm ctx).RegelAmOrt := by
   intro a
-  change (((optionCode 0 a.value).anhaengen
-    (.einzel (.zurueck 0 (indexOptionType a.count)))).code[
+  change ((((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]) ++
+    [Befehl.zurueck 0 (indexOptionType a.count)])[
       (optionOperand 0 a.value).code.length]?) = some (optionInstruction 0 a.value)
-  simp only [optionCode, Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-    Nat.sub_self, List.getElem?_cons_zero]
+  have hlt : (optionOperand 0 a.value).code.length <
+      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by simp
+  rw [List.getElem?_append_left hlt]
+  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
 private theorem letOption_keineInvarianten (ctx : OptionContext) (a : OptionLetArgs ctx) :
     ((optionLetForm ctx).fragment a).klauseln.invariant = [] := by
@@ -259,7 +261,7 @@ theorem optionConstructorRegelSicher : OptionConstructorRegelSicherAussage := by
 theorem optionLetErfuellbarAm : OptionLetErfuellbarAmAussage := by
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  let scope : Scope := [⟨carrier, .carrierSchema 0, false, false⟩]
+  let scope : Scope := [⟨carrier, .carrierSchema 0 [] .productEnd false, false, false⟩]
   have resolved : scope.carrierCount carrier = some 0 := by decide
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
@@ -281,10 +283,12 @@ theorem optionLetErfuellbarAm : OptionLetErfuellbarAmAussage := by
 theorem optionReturnErfuellbarAm : OptionReturnErfuellbarAmAussage := by
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  let scope : Scope := [⟨carrier, .carrierSchema 1, false, false⟩]
+  let scope : Scope := [⟨carrier, .carrierSchema 1 [] .productEnd false, false, false⟩]
   have resolved : scope.carrierCount carrier = some 1 := by decide
   let ctx : OptionContext := (scope, some (indexOptionType 1))
-  let fits : Fits (.int 0 0) (indexType 1) := by decide
+  have fits : Fits (.int 0 0) (indexType 1) := by
+    change 0 ≤ (0 : Int) ∧ (0 : Int) ≤ (1 : Int) - 1
+    decide
   let a : OptionReturnArgs ctx := ⟨1, rfl, .present (Expr.lit 0) fits⟩
   refine ⟨ctx, a, ?_, ?_⟩
   · exact ⟨0, 0, Expr.lit 0, fits, rfl⟩
