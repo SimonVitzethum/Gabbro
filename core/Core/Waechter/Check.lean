@@ -102,13 +102,13 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.LowLevel.MemTree.unmapSpace, `Gabbro.Core.Ast.LowLevel.unmapEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.flushSpace, `Gabbro.Core.Ast.LowLevel.flushEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.activateEntry)], #[]⟩,
-  ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[
+  ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[], #[
     (`Gabbro.Core.Ast.LowLevel.ExecTree.stateDecl, `Gabbro.Core.Ast.LowLevel.StateDeclAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jump, `Gabbro.Core.Ast.LowLevel.JumpAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jumpLong, `Gabbro.Core.Ast.LowLevel.JumpLongAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.waitInterrupt, `Gabbro.Core.Ast.LowLevel.WaitAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.stopCore, `Gabbro.Core.Ast.LowLevel.StopAussage),
-    (`Gabbro.Core.Ast.LowLevel.ExecTree.entryDecl, `Gabbro.Core.Ast.LowLevel.EntryAussage)], #[
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.entryDecl, `Gabbro.Core.Ast.LowLevel.EntryAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.cpuCaps, `Gabbro.Core.Ast.LowLevel.CpuCapsAbgelehntAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.cpuCycles, `Gabbro.Core.Ast.LowLevel.CpuCyclesAbgelehntAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.suspendSystem, `Gabbro.Core.Ast.LowLevel.SuspendSystemAbgelehntAussage),
