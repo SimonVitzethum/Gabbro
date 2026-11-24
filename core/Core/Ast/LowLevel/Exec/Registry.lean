@@ -11,14 +11,14 @@ open Waechter
 /-- Declaring a state appends it; the first declaration starts the core in
     the arrival state. -/
 def StateDeclMeaningAussage : Prop :=
-  ∀ decl s c frame, (.declareState decl).evaluate s c = some frame →
+  ∀ decl s c frame, (ExecInstruction.declareState decl).evaluate s c = some frame →
     frame.states = (s.lokal c).states ++ [decl] ∧
     frame.result = some (.stateDeclared (s.lokal c).states.length) ∧
     frame.current = match (s.lokal c).states with | [] => some 0 | _ => (s.lokal c).current
 
 /-- A same-state jump keeps the current state and records both slots. -/
 def JumpMeaningAussage : Prop :=
-  ∀ code state s c frame, (.jump code state).evaluate s c = some frame →
+  ∀ code state s c frame, (ExecInstruction.jump code state).evaluate s c = some frame →
     (s.lokal c).current = some state ∧ state < (s.lokal c).states.length ∧
     ¬ (s.lokal c).halted ∧ frame.current = some state ∧
     frame.result = some (.jumped code state)
@@ -27,7 +27,7 @@ def JumpMeaningAussage : Prop :=
     differs, exists, and carries a space exactly when translation is on. -/
 def JumpLongMeaningAussage : Prop :=
   ∀ code dest sp st s c frame,
-    (.jumpLong code dest sp st).evaluate s c = some frame →
+    (ExecInstruction.jumpLong code dest sp st).evaluate s c = some frame →
     ∃ cur decl, (s.lokal c).current = some cur ∧ cur ≠ dest ∧
       (s.lokal c).states[dest]? = some decl ∧ ¬ (s.lokal c).halted ∧
       frame.current = some dest ∧ frame.activeSpace = sp ∧
@@ -50,7 +50,7 @@ def StopMeaningAussage : Prop :=
     stack, and only interrupts carry a priority. -/
 def EntryMeaningAussage : Prop :=
   ∀ name kind stack priority s c frame,
-    (.declareEntry name kind stack priority).evaluate s c = some frame →
+    (ExecInstruction.declareEntry name kind stack priority).evaluate s c = some frame →
     (s.lokal c).entries.all (fun p => p.1.val != name.val) ∧
     (kind.needsOwnStack → stack = .own) ∧
     (kind.needsPriority ↔ priority.isSome) ∧
