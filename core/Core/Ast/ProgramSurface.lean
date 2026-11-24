@@ -404,7 +404,7 @@ theorem program_syntax_erfuellbar  :
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
     constructor <;> intro h <;> cases h
   let first : Decl [] [] :=
-    .constant name ordinary .bool trivial Expr.trueLit (by simp [Expr.static]) trivial
+    .constant name ordinary .bool trivial Expr.trueLit (by change True; trivial) trivial
   let a : ProgramArgs := ⟨[], [], first, .done⟩
   exact Rule.satisfiableOfPrint a (program_print a)
 
@@ -425,12 +425,12 @@ theorem StmtReads.returnVoid_inversion
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
   generalize htok : (returnKeyword :: semicolon :: input) = toks at read
   cases read with
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, semicolon, assignment] at *
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword]
+  | assignVar _ _ _ _ _ => simp_all [returnKeyword, semicolon, assignment]
   | ret _ _ expr =>
       cases expr with
       | atom atomRead _ => cases atomRead
-  | ite _ _ _ => simp_all [returnKeyword, ifKeyword, keyword] at *
+  | ite _ _ _ => simp_all [returnKeyword, ifKeyword, keyword]
   | retVoid declared =>
       simp only [List.cons.injEq] at htok
       obtain ⟨_, htail⟩ := htok
@@ -438,13 +438,13 @@ theorem StmtReads.returnVoid_inversion
       obtain ⟨_, hrfl⟩ := htail
       subst rest
       exact ⟨⟨declared⟩, rfl, rfl⟩
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
+  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword]
   | directCall callRead =>
       cases callRead with
-      | applied _ => simp_all [returnKeyword, semicolon, openParen] at *
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword] at *
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword] at *
+      | applied _ => simp_all [returnKeyword, semicolon, openParen]
+  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword]
+  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword]
+  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword]
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
