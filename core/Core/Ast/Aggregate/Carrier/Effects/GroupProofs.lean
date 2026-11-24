@@ -362,7 +362,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
         | _ => none) with
       | none =>
-          simp only [List.filterMap_cons, hcmd] at hmem
+          simp only [hcmd, List.mem_filterMap] at hmem
           exact ih site (List.mem_filterMap.mpr hmem)
       | some first =>
           cases cmd with
