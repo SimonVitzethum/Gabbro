@@ -179,7 +179,9 @@ private theorem letOption_amOrt (ctx : OptionContext) : (optionLetForm ctx).Rege
     [Befehl.bindeWert 0 (indexOptionType a.count) false])[
       (optionOperand 0 a.value).code.length]?) = some (optionInstruction 0 a.value)
   have hlt : (optionOperand 0 a.value).code.length <
-      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by omega
+      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by
+      rw [List.length_append, List.length_cons, List.length_nil]
+      omega
   rw [List.getElem?_append_left hlt]
   simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
@@ -189,7 +191,9 @@ private theorem returnOption_amOrt (ctx : OptionContext) : (optionReturnForm ctx
     [Befehl.zurueck 0 (indexOptionType a.count)])[
       (optionOperand 0 a.value).code.length]?) = some (optionInstruction 0 a.value)
   have hlt : (optionOperand 0 a.value).code.length <
-      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by omega
+      ((optionOperand 0 a.value).code ++ [optionInstruction 0 a.value]).length := by
+      rw [List.length_append, List.length_cons, List.length_nil]
+      omega
   rw [List.getElem?_append_left hlt]
   simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
