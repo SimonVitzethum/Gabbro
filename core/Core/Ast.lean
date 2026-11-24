@@ -4,6 +4,7 @@ public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap
 public import Core.Ast.LowLevel.Mem.Proofs.UnmapSat
+public import Core.Ast.LowLevel.Mem.Proofs.Activate
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages
