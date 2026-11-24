@@ -423,46 +423,6 @@ private theorem wideBezeichnet : BezeichnetMem Plattform.x86_64.katalog
   refine ⟨wideOp, wideElaborate, ?_⟩
   rfl
 
-/-- **Joint satisfiability of the completion of a narrowing with a wider cached cell.** The prefix
-    creates a space, maps a frame with `[read, write]`, fills a translation of the page into the cache,
-    performs the staged `protect` down to `[read]` and binds the pending token. In the reached state a
-    wider cell is cached, so `flushSpace` is refused. After a `tlbVerdraengen` step drops that cell the
-    same `flushSpace` completes the narrowing with `.protected` and no pending token covers the range.
-    The whole run is reachable through real steps of `memProgram` (`System.IErreichbar.schritt`); no state
-    is built by hand. This is the wider-cache counterpart of `FlushNarrowJointAussage`, whose cache is
-    empty throughout (THEOREM-MAP §219). -/
-def FlushNarrowWideJointAussage : Prop :=
-  ∃ (k : Katalog) (scope : MemScope) (tree : MemTree .flushSpace) (op evict : MemInstruction)
-    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText)
-    (tables virt frames pages core sp page : Nat) (rights narrowed : List Speicherdienst)
-    (name : Identifier) («prefix» : List MemInstruction)
-    (s s' : MemState) (next : MemFrame) (token : Zuruecknahme),
-    let E := memProgram k («prefix» ++ [evict, op])
-    «prefix» = [.newSpace tables, .mapSpace 0 virt frames rights,
-      .tlbFuellen core sp page, .protectSpace 0 virt pages narrowed, .bindToken name] ∧
-    rights = [.read, .write] ∧ narrowed = [.read] ∧
-    evict = .tlbVerdraengen core sp page ∧ op = .flushSpace name ∧
-    Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
-    (scope.regionen.map Subtype.val).Nodup ∧ (scope.raeume.map Subtype.val).Nodup ∧
-    (scope.marken.map Subtype.val).Nodup ∧
-    BezeichnetMem k scope text (memUnit k op) .flushSpace ∧ MemParse text tree ∧
-    elaborateMem scope tree = some op ∧
-    E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s entryContext = some evict ∧
-    (∃ zelle, zelle ∈ (s.lokal entryContext).tlb.zellen ∧ zelle.raum = sp ∧
-      pageRange (virt / k.plattform.ziel.seitengranule) pages zelle.seite ∧
-      ∃ right ∈ zelle.eintrag.rights, right ∉ narrowed) ∧
-    (∃ space, (s.lokal entryContext).spaces[token.raum]? = some space ∧
-      ((s.lokal entryContext).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token ∧
-      ¬ (s.lokal entryContext).tlb.NichtBreiter space token.raum token.seite token.seiten) ∧
-    token.nurRechte = true ∧ token ∈ (s.lokal entryContext).verengt ∧
-    op.evaluate k.plattform.ziel s entryContext = none ∧
-    E.system.IErreichbar (I.start E start).2 s' ∧ E.system.kopf s' entryContext = some op ∧
-    op.evaluate k.plattform.ziel s' entryContext = some next ∧
-    next.result = some .«protected» ∧ token ∉ next.verengt ∧
-    (∀ t ∈ next.verengt, ∀ pg, token.contains pg → ¬ t.contains pg) ∧
-    E.system.ISchritt entryContext s' () [plan] (next.advance entryContext s') ∧
-    E.system.ImplSchritt entryContext s' () [plan] (next.advance entryContext s')
-
 theorem flushNarrowWideJoint : FlushNarrowWideJointAussage := by
   have hnodupRegion : ([] : List (List Char)).Nodup := by
     exact List.nodup_nil

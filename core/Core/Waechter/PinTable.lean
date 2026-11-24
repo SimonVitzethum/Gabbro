@@ -11,7 +11,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, 1870009652214221660),
   (`Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, 2491957057758750700),
   (`Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, 13755835794060346916),
-  (`Gabbro.Core.Ast.LowLevel.schemaMem, 17605287560950465021),
+  (`Gabbro.Core.Ast.LowLevel.schemaMem, 11688906057065927052),
   (`Gabbro.Core.Ast.LowLevel.MemRegelAntwortSicherAussage, 128431846645332296),
   (`Gabbro.Core.Ast.LowLevel.SplitAtAussage, 11149274725936667684),
   (`Gabbro.Core.Ast.LowLevel.SplitPagesAussage, 11565460880262414576),
