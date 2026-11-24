@@ -248,7 +248,6 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     refine .compare op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) ?_ (.stop noOperatorAtClose)
     intro op' tail h
-    intro op' tail h
     have head := (List.cons.inj h).1
     cases op' <;> simp only [Infix.token, Compare.spelling, String.reduceToList] at head <;> cases head
     rename_i op left right leftIH rightIH
