@@ -15,9 +15,10 @@ private theorem fragen_vor_schritt {run t s w spur s'}
     (step : I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s')
     (alt : ∀ q ∈ s.fragen, q.cut < t) : ∀ q ∈ s'.fragen, q.cut < t + 1 := by
   cases step with
-  | kontext _ _ _ aus =>
+  | @kontext s s' u plan spur c w _ _ _ aus =>
     obtain ⟨rahmen, _, _, v, aktion, _, ziel⟩ := aus
     rw [ziel]
+    generalize plan.aktion = a at aktion
     cases aktion with
     | frage q =>
       intro ev mem
