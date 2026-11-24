@@ -18,14 +18,15 @@ inductive Rahmen.Lauf (code : List Befehl) : Rahmen → Rahmen → Prop where
   | start : Lauf code frame frame
   | schritt : Lauf code before middle → Schritt code middle after → Lauf code before after
 
--- Generalise the original expr_ergebnis_typ proof to runtime PC walks and use Logic.skips.
-theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung scope)
-    (frame : Rahmen) (bound : frame.traegt env) (active : frame.rueckgabe = none)
-    (atStart : frame.pc = 0) :
-    ∃ out, Rahmen.Lauf (expr slot tree).code frame out ∧
-      out.pc = (expr slot tree).code.length ∧ out.temp slot = some ⟨type, tree.wert env⟩ ∧
-      out.lokale = frame.lokale ∧ out.rueckgabe = none ∧
-      ∀ i, i < slot → out.temp i = frame.temp i := by
+/-- Evaluate an expression at its actual address in the containing instruction stream. -/
+theorem expr_ergebnis_typ_am (slot : Nat) (tree : Expr scope type)
+    (env : Umgebung scope) (frame : Rahmen) (bound : frame.traegt env)
+    (active : frame.rueckgabe = none) (pre post : List Befehl) (hpc : frame.pc = pre.length) :
+    ∃ out, Rahmen.Lauf (pre ++ (expr slot tree).code ++ post) frame out ∧
+      out.pc = pre.length + (expr slot tree).code.length ∧
+      out.temp slot = some ⟨type, tree.wert env⟩ ∧ out.lokale = frame.lokale ∧
+      out.rueckgabe = none ∧ ∀ i, i < slot → out.temp i = frame.temp i := by
+  revert env frame bound active pre post hpc
   have lookupSeq : ∀ (pre : List Befehl) (b : Befehl) (post : List Befehl),
       (pre ++ b :: post)[pre.length]? = some b := by
     intro pre b post
@@ -45,20 +46,6 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
     induction hbc with
     | start => exact hab
     | schritt _ step ih => exact .schritt ih step
-  suffices H : ∀ (slot : Nat) {type : Ty .value} (tree : Expr scope type)
-      (env : Umgebung scope) (frame : Rahmen) (bound : frame.traegt env)
-      (active : frame.rueckgabe = none) (pre post : List Befehl) (hpc : frame.pc = pre.length),
-      ∃ out, Rahmen.Lauf (pre ++ (expr slot tree).code ++ post) frame out ∧
-        out.pc = pre.length + (expr slot tree).code.length ∧
-        out.temp slot = some ⟨type, tree.wert env⟩ ∧
-        out.lokale = frame.lokale ∧ out.rueckgabe = none ∧
-        ∀ i, i < slot → out.temp i = frame.temp i by
-    · obtain ⟨out, walk, pcEq, tmp, lok, ret, preserve⟩ :=
-        H slot tree env frame bound active [] [] (by simpa only [List.length_nil] using atStart)
-      refine ⟨out, ?_, ?_, tmp, lok, ret, preserve⟩
-      · simpa only [List.nil_append, List.append_nil] using walk
-      · simpa only [List.nil_append, List.append_nil, List.length_nil, Nat.zero_add] using pcEq
-  intro slot type tree
   induction tree generalizing slot
   case lit value =>
       intro env frame bound active pre post hpc
@@ -433,5 +420,15 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         · exact retR
         · intro i hi
           exact (preserveR i hi).trans (preserveL i hi)
+
+theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung scope)
+    (frame : Rahmen) (bound : frame.traegt env) (active : frame.rueckgabe = none)
+    (atStart : frame.pc = 0) :
+    ∃ out, Rahmen.Lauf (expr slot tree).code frame out ∧
+      out.pc = (expr slot tree).code.length ∧ out.temp slot = some ⟨type, tree.wert env⟩ ∧
+      out.lokale = frame.lokale ∧ out.rueckgabe = none ∧
+      ∀ i, i < slot → out.temp i = frame.temp i := by
+  simpa only [List.nil_append, List.append_nil, List.length_nil, Nat.zero_add] using
+    expr_ergebnis_typ_am slot tree env frame bound active [] [] atStart
 
 end Gabbro.Core.Ast.Semantik
