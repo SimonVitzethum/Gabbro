@@ -91,7 +91,7 @@ theorem haeltMit_erreicht {prog : List Befehl} {r₀ r₁ : Rahmen} {a : Nat}
   obtain ⟨r, hr, hout⟩ := hh
   exact ⟨r, erreicht_trans h hr, hout⟩
 
-/-- Befund (kein Satz, zur Entscheidung durch Lead mit Owner): das vollständig
+/- Befund (kein Satz, zur Entscheidung durch Lead mit Owner): das vollständig
     beschränkte Fragment — alle Werte Maschinenwörter (endlicher Wertebereich),
     alle Regionen mit Obergrenze, alle Schranken endlich — hat nur endlich viele
     verschiedene Maschinenzustände. Terminierung ist dort entscheidbar
