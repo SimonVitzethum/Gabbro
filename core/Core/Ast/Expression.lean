@@ -89,12 +89,16 @@ theorem Infix.token_injective {a b : Infix} (same : a.token = b.token) : a = b :
     | div => cases op <;> cases same
     | compare op' => cases op <;> cases op' <;> cases same
     | logic op' => cases op <;> cases op' <;> cases same
+    | index => cases op <;> cases same
+    | projection => cases op <;> cases same
   | div =>
     cases b with
     | arith op => cases op <;> cases same
     | div => rfl
     | compare op' => cases op' <;> cases same
     | logic op' => cases op' <;> cases same
+    | index => cases same
+    | projection => cases same
   | compare op =>
     cases b with
     | arith op' => cases op <;> cases op' <;> cases same
@@ -102,6 +106,8 @@ theorem Infix.token_injective {a b : Infix} (same : a.token = b.token) : a = b :
     | compare op' => exact congrArg Infix.compare (by
         cases op <;> cases op' <;> first | rfl | cases same)
     | logic op' => cases op <;> cases op' <;> cases same
+    | index => cases op <;> cases same
+    | projection => cases op <;> cases same
   | logic op =>
     cases b with
     | arith op' => cases op <;> cases op' <;> cases same
@@ -109,6 +115,24 @@ theorem Infix.token_injective {a b : Infix} (same : a.token = b.token) : a = b :
     | compare op' => cases op <;> cases op' <;> cases same
     | logic op' => exact congrArg Infix.logic (by
         cases op <;> cases op' <;> first | rfl | cases same)
+    | index => cases op <;> cases same
+    | projection => cases op <;> cases same
+  | index =>
+    cases b with
+    | arith op => cases op <;> cases same
+    | div => cases same
+    | compare op' => cases op' <;> cases same
+    | logic op' => cases op' <;> cases same
+    | index => rfl
+    | projection => cases same
+  | projection =>
+    cases b with
+    | arith op => cases op <;> cases same
+    | div => cases same
+    | compare op' => cases op' <;> cases same
+    | logic op' => cases op' <;> cases same
+    | index => cases same
+    | projection => rfl
 
 def Continues (minimum : Nat) (input : List Token) : Prop :=
   ∃ op : Infix, ∃ more, input = op.token :: more ∧ minimum ≤ op.precedence
@@ -126,6 +150,8 @@ theorem noOperatorAtClose : ¬ Continues minimum (closeParen :: more) := by
   | div => cases head
   | compare c => cases c <;> cases head
   | logic l => cases l <;> cases head
+  | index => cases head
+  | projection => cases head
 
 -- Mirror noOperatorAtClose.
 theorem noOperatorAtSemicolon : ¬ Continues minimum (semicolon :: more) := by
@@ -136,6 +162,8 @@ theorem noOperatorAtSemicolon : ¬ Continues minimum (semicolon :: more) := by
   | div => cases head
   | compare c => cases c <;> cases head
   | logic l => cases l <;> cases head
+  | index => cases head
+  | projection => cases head
 
 -- Mirror noOperatorAtClose.
 theorem noOperatorAtOpenBrace : ¬ Continues minimum (openBrace :: more) := by
@@ -146,6 +174,8 @@ theorem noOperatorAtOpenBrace : ¬ Continues minimum (openBrace :: more) := by
   | div => cases head
   | compare c => cases c <;> cases head
   | logic l => cases l <;> cases head
+  | index => cases head
+  | projection => cases head
 
 /-- The operand of a single unary prefix starts at a primary. -/
 def PrimaryStart (tokens : List Token) : Prop :=
@@ -374,12 +404,12 @@ theorem Local.visible_unique (a : Local scope type) (b : Local scope type')
   | here =>
     cases b with
     | here => rfl
-    | there b' => exact (visibleB.1 same).elim
+    | there b' => exact (visibleB.2.1 same).elim
   | there a' ih =>
     cases b with
-    | here => exact (visibleA.1 same.symm).elim
+    | here => exact (visibleA.2.1 same.symm).elim
     | there b' =>
-      have eq := ih b' visibleA.2 visibleB.2 same
+      have eq := ih b' ⟨visibleA.1, visibleA.2.2⟩ ⟨visibleB.1, visibleB.2.2⟩ same
       cases eq
       rfl
 
