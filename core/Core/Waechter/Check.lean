@@ -14,6 +14,8 @@ meta import Core.Ast.Inventory.Entries.WrittenTypeStatements
 meta import Core.Ast.Inventory.Entries.Text
 meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
+meta import Core.Ast.LowLevel.Exec.Registry
+meta import Core.Ast.LowLevel.Exec.Proofs.ExecKern
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
@@ -97,6 +99,13 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.LowLevel.MemTree.unmapSpace, `Gabbro.Core.Ast.LowLevel.unmapEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.flushSpace, `Gabbro.Core.Ast.LowLevel.flushEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.activateEntry)], #[]⟩,
+  ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[], #[
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.stateDecl, `Gabbro.Core.Ast.LowLevel.StateDeclAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.jump, `Gabbro.Core.Ast.LowLevel.JumpAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.jumpLong, `Gabbro.Core.Ast.LowLevel.JumpLongAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.waitInterrupt, `Gabbro.Core.Ast.LowLevel.WaitAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.stopCore, `Gabbro.Core.Ast.LowLevel.StopAussage),
+    (`Gabbro.Core.Ast.LowLevel.ExecTree.entryDecl, `Gabbro.Core.Ast.LowLevel.EntryAussage)]⟩,
   ⟨`Gabbro.Core.Ast.LowLevel.Tree, `Gabbro.Core.Ast.LowLevel.schema, #[
     (`Gabbro.Core.Ast.LowLevel.Tree.addressType, `Gabbro.Core.Ast.LowLevel.addressTypeTreeEntry),
     (`Gabbro.Core.Ast.LowLevel.Tree.regionAddress, `Gabbro.Core.Ast.LowLevel.regionAddressTreeEntry),
