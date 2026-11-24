@@ -39,7 +39,6 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
   unfold heldRegion
   dsimp
   simp [h]
-  cases (s.lokal c).regions[slot]? <;> rfl
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
