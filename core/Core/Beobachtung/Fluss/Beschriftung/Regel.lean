@@ -100,4 +100,25 @@ theorem maskiere_eintrag {l : Nat → Etikett} :
           exact hp
         simpa only [List.getElem?_cons_succ] using maskiere_eintrag (i + 1) xs ys j e.2 hp1
 
+/-- Under the all-public declaration every temporary is public. -/
+theorem alleOeffentlich_temp (pc s : Nat) :
+    oeffentlich (Beschriftung.alleOeffentlich.temp pc s) = true :=
+  oeffentlich_leer
+
+/-- Under the all-public declaration every local is public. -/
+theorem alleOeffentlich_lokal (pc i : Nat) :
+    oeffentlich (Beschriftung.alleOeffentlich.lokal pc i) = true :=
+  oeffentlich_leer
+
+/-- The all-public declaration satisfies the write rule of every writing instruction:
+    every premise is `True = True`. One satisfiability witness for all `SchreibRegel`
+    duties shared by every family. -/
+theorem schreibRegel_alleOeffentlich (pc dst : Nat) (liest : List Komp) :
+    Beschriftung.alleOeffentlich.SchreibRegel pc dst liest := by
+  refine ⟨fun _ _ _ => alleOeffentlich_temp _ _, fun _ _ => alleOeffentlich_lokal _ _,
+    fun _ k _ => ?_⟩
+  cases k with
+  | temp s => exact alleOeffentlich_temp _ s
+  | lokal i => exact alleOeffentlich_lokal _ i
+
 end Gabbro.Core.Ast.Semantik

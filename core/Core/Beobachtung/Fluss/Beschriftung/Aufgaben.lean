@@ -47,4 +47,23 @@ def BlockEndeSichtAussage : Prop :=
     (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc (i + count)) = true) →
     (Befehl.blockEnde count).SichtErhaltendBei β pc
 
+/-- `zurueck`: as `rueckVoid`, but the returned value computed from `quelle` is
+    published. The continuation stack is visible, hence the fall-through labels. -/
+def ZurueckSichtAussage : Prop :=
+  ∀ (β : Beschriftung) (pc quelle : Nat) (zieltyp : Ty .value),
+    oeffentlich (β.temp pc quelle) = true →
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) →
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true) →
+    (Befehl.zurueck quelle zieltyp).SichtErhaltendBei β pc
+
+/-- The `zurueck` premises hold jointly. -/
+theorem zurueckSicht_erfuellbar (quelle : Nat) (zieltyp : Ty .value) :
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
+      (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
+        oeffentlich (β.temp pc s) = true) ∧
+      (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
+        oeffentlich (β.lokal pc i) = true) :=
+  ⟨.alleOeffentlich, 0, alleOeffentlich_temp 0 quelle,
+    fun s _ => alleOeffentlich_temp 0 s, fun i _ => alleOeffentlich_lokal 0 i⟩
+
 end Gabbro.Core.Ast.Semantik
