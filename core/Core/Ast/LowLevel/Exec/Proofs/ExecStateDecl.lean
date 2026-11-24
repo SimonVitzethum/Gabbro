@@ -40,24 +40,19 @@ private theorem execMapIntersperse {α β : Type} (f : α → β) (sep : α) : �
   | x :: y :: ys => by
       simp only [List.intersperse_cons_cons, List.map_cons, execMapIntersperse f sep (y :: ys)]
 
-private theorem execGuardPrintValFun : (fun g : ExecGuard => (guardPrint g).value) = guardKeyword := by
-  funext g
-  exact execGuardVal g
-
 private theorem execGuardsTokensPrint (guards : List ExecGuard) :
     ((guards.map guardPrint).intersperse printComma).map PrintedToken.value =
       guardsTokens guards := by
-  rw [execMapIntersperse]
-  rw [execPrintCommaVal]
-  simp only [List.map_map, execGuardPrintValFun]
   induction guards with
   | nil => rfl
   | cons g gs ih =>
       cases gs with
       | nil =>
-          simp only [guardsTokens, List.map_cons, List.map_nil, List.intersperse_singleton]
+          simp only [List.map_cons, List.map_nil, List.intersperse_singleton, List.intersperse_nil,
+            execGuardVal, guardsTokens]
       | cons h hs =>
-          simp only [guardsTokens, List.map_cons, List.intersperse_cons_cons, ih]
+          simp only [List.map_cons, List.intersperse_cons_cons, execPrintCommaVal, execGuardVal,
+            ih, guardsTokens]
 
 private theorem execStateDeclPrints (name : Identifier) (decl : ExecStateDecl) :
     (ExecTree.stateDecl name decl).production
@@ -234,6 +229,7 @@ private theorem execStateDeclMeaning : StateDeclMeaningAussage := by
     rw [if_pos hwf] at heval
     cases heval
     simp only [ExecFrame.declare, true_and]
+    rfl
   · simp only [ExecInstruction.evaluate] at heval
     dsimp at heval
     rw [if_neg hwf] at heval
