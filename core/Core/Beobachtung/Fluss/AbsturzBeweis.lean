@@ -123,6 +123,7 @@ private theorem wiederanlauf_beobachtungsgleich
   have kerneEq : (s₁.wiederanlauf w t p₁).kerne = (s₂.wiederanlauf w t p₂).kerne := by
     simp only [Zustand.wiederanlauf]
     rw [datEq']
+    rfl
   have statusEq : (s₁.wiederanlauf w t p₁).status = (s₂.wiederanlauf w t p₂).status := by
     rfl
   refine ⟨?_, by rfl, by rfl, kerneEq, statusEq⟩
@@ -133,7 +134,6 @@ private theorem wiederanlauf_beobachtungsgleich
     rw [datEq']
   · intro c
     simp only [Zustand.wiederanlauf, Zustand.start]
-    rw [statusEq]
   · intro x
     simp only [Zustand.wiederanlauf, Zustand.start]
     rw [initEq']
@@ -172,7 +172,7 @@ theorem absturzNI : AbsturzNIAussage := by
         (NiedrigeBeob E ρ₁ predictor t) (NiedrigeBeob E ρ₂ predictor t) := by
       rw [len, List.take_length] at cov
       exact cov
-    have prefix : List.Forall₂ (EreignisAequiv E.fluss.freigabe)
+    have deckung : List.Forall₂ (EreignisAequiv E.fluss.freigabe)
         (NiedrigeBeob E ρ₁ predictor (t + 1))
         ((NiedrigeBeob E ρ₂ predictor (t + 1)).take (NiedrigeBeob E ρ₁ predictor (t + 1)).length) := by
       rw [trace₁, trace₂]
@@ -189,7 +189,7 @@ theorem absturzNI : AbsturzNIAussage := by
     have initEq : E.einrichtung.wiederanlauf.initial (nachAbsturz s₁.persistenz).dauerhaft =
         E.einrichtung.wiederanlauf.initial (nachAbsturz s₂.persistenz).dauerhaft := by
       simp only [E, Ast.Semantik.Fragment.einheit, Ast.Semantik.einrichtung]
-    refine ⟨prefix, ?_, ?_⟩
+    refine ⟨deckung, ?_, ?_⟩
     · intro v w' hv hw
       have eqv : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
       have eqw : w' = n₂ := Option.some.inj (hw.symm.trans hn₂)
