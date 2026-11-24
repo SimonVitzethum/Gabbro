@@ -122,4 +122,36 @@ theorem regionBindUnit : RegionBindUnitAussage :=
   ⟨⟨regionUnit_realized, regionUnit_transfer _, regionAddressUnit_erfuellbar⟩,
     regionUnit_realized, fun _ _ => regionUnit_transfer _, viewUnit_erfuellbar⟩
 
+/-- The written address type occurs in an admitted ordinary signature whose
+    body actually returns the address from the checked region binding. -/
+def AddressTypeUnitErfuellbarAussage : Prop :=
+  ∃ (unit : Ast.Unit) (source : RawText) (E : Einheit),
+    Ast.Parse (category := .unit) source unit ∧
+    Elaboriert (category := .unit) .x86_64 unit E ∧
+    Befehl.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [] ∈
+      (programm unit).code
+
+theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
+  let args := entryArgs
+  let parameter : Parameter := ⟨args.region, .ownedRegion, True.intro, args.ordinaryRegion⟩
+  let receiver : Local [parameter.binding] .ownedRegion := Local.here
+  let addressName : Binding := ⟨args.binder, .address .physical, false, false⟩
+  let address : Local (addressName :: [parameter.binding]) (.address .physical) := Local.here
+  have ordinary : ordinaryLocal args.binder := by
+    change ['v'] ≠ ['t', 'r', 'u', 'e'] ∧ ['v'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro impossible <;> cases impossible
+  let body : BracedBlock (some (.address .physical)) [parameter.binding] :=
+    .braces (.step (.letRegion args.binder args.ordinary receiver True.intro .address)
+      (.step (.ret rfl (.variable address ⟨True.intro, True.intro⟩ ordinary) rfl) .done))
+  let signature : Decl [] [] := .function mainName args.entryName [parameter]
+    (some (.address .physical)) (fun _ member => by
+      have same := List.mem_singleton.mp member
+      cases same
+      exact True.intro) none body (List.nodup_singleton _) (fun _ => rfl)
+  let unit : Ast.Unit := ⟨[], .step signature .done⟩
+  refine ⟨unit, Ast.print (category := .unit) unit, elaborieren .x86_64 unit,
+    Ast.parse_print _, ⟨rfl, ⟨⟨.nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩⟩, ?_⟩
+  · exact rfl
+  · exact List.mem_cons_self
+
 end Gabbro.Core.Ast.Semantik

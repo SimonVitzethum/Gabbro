@@ -156,7 +156,7 @@ theorem deviceTakeBack_erfuellbar : TakeBackErfuellbarAussage := by
   have synchronizedLoan : selectedDevice.Lent synchronize owner returned := loanAtStage invalidatedLoan .synchronized
   exact ⟨_, selectedDevice, owner, ownedRegion, mapped, _, lentState, stop, unmap, invalidate,
     synchronize, returned, _, returnRegion synchronize owner selectedDevice.object ownedRegion,
-    selectedLend, .stop initialLoan rfl, .revoke stoppedLoan rfl, .invalidate unmappedLoan rfl rfl,
-    .synchronize invalidatedLoan rfl rfl, synchronizedLoan, rfl, rfl, rfl, .takeBack _, rfl, rfl, rfl⟩
+    selectedLend, .stop initialLoan rfl, .revoke (session := stopping) stoppedLoan rfl, .invalidate (session := unmapped) unmappedLoan rfl rfl,
+    .synchronize (session := coherent) invalidatedLoan rfl rfl, synchronizedLoan, rfl, rfl, rfl, .takeBack _, rfl, rfl, rfl⟩
 
 end Gabbro.Core.Ast.LowLevel.Device
