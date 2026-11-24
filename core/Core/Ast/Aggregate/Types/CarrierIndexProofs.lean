@@ -33,11 +33,52 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Gabbro.Core.Text
 
+private theorem indexToken_ne_bool : keyword "index" ≠ keyword "bool" := by
+  decide
+
+private theorem indexToken_ne_string : keyword "index" ≠ keyword "string" := by
+  decide
+
+private theorem indexToken_ne_option : keyword "index" ≠ keyword "option" := by
+  decide
+
+private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
+    keyword "index" ≠ .word (intSpelling signed width) := by
+  intro h
+  change .word "index".toList = .word (intSpelling signed width) at h
+  injection h with hl
+  cases signed
+  · exact (by decide : ('i' : Char) ≠ 'u') (List.cons.inj hl).1
+  · have tailEq : (toString width).toList = "ndex".toList := (List.cons.inj hl).2.symm
+    have mem : ('n' : Char) ∈ Nat.toDigits 10 width := by
+      have inTail : ('n' : Char) ∈ (toString width).toList := by
+        rw [tailEq]
+        simp
+      simpa using inTail
+    have digit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (by decide) (by decide) mem
+    have notDigit : ('n' : Char).isDigit = false := by decide
+    rw [notDigit] at digit
+    cases digit
+
 theorem carrierIndexInversion : CarrierIndexInversionAussage := by
   intro scope input written rest read
+  generalize htok : keyword "index" :: input = toks at read
   cases read with
+  | bool => exact (indexToken_ne_bool (List.cons.inj htok).1).elim
+  | integer valid closed =>
+      rename_i signed width more
+      exact (indexToken_ne_intWord signed width (List.cons.inj htok).1).elim
+  | interval valid ls rs =>
+      rename_i signed width input' lo hi more
+      exact (indexToken_ne_intWord signed width (List.cons.inj htok).1).elim
+  | array count bound elemRead boundRead =>
+      cases (List.cons.inj htok).1
+  | tuple firstRead secondRead tailRead =>
+      cases (List.cons.inj htok).1
+  | text => exact (indexToken_ne_string (List.cons.inj htok).1).elim
+  | indexOption carrier resolved => exact (indexToken_ne_option (List.cons.inj htok).1).elim
   | index carrier resolved =>
-      exact ⟨carrier, _, rfl, resolved, rfl⟩
+      exact ⟨carrier, _, (List.cons.inj htok).2, resolved, rfl⟩
 
 theorem carrierIndexDerivation : CarrierIndexDerivationAussage := by
   intro scope carrier count rest resolved
@@ -46,8 +87,9 @@ theorem carrierIndexDerivation : CarrierIndexDerivationAussage := by
   have hInto : printInto.value = keyword "into" := by
     decide
   have hCarrier : (Identifier.print carrier).value = .word carrier.val := rfl
-  simpa only [WrittenType.printPieces, List.map_cons, List.map_nil, List.nil_append,
-    hIndex, hInto, hCarrier] using
+  change TypeReads scope (printIndex.value :: printInto.value :: (Identifier.print carrier).value :: rest)
+    (.index carrier count) rest
+  simpa only [hIndex, hInto, hCarrier] using
     (TypeReads.index (scope := scope) (rest := rest) carrier resolved)
 
 theorem carrierIndexRange : CarrierIndexRangeAussage := by
@@ -184,9 +226,14 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
     · change ordinaryAtomWord fnName.val
       simp [ordinaryAtomWord, fnName, carrierIndex_singleIdent]
     · simp [fnName, carrierIndex_singleIdent]
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
+    intro t mem
+    cases mem
   let argsVal : Surface.FunctionArgs scope :=
-    ⟨fnName, fnOrdinary, [param], none, by intro t mem; cases mem, none, .braces .done,
-      by simp [param], by intro h; cases h⟩
+    ⟨fnName, fnOrdinary, [param], none, validNone, none, .braces .done, by
+      simp [param], by
+      intro h
+      cases h⟩
   let args : {a : Surface.FunctionArgs scope // ∃ p ∈ a.parameters, indexTypeUse p.written} :=
     ⟨argsVal, by
       refine ⟨param, ?_, ?_⟩
