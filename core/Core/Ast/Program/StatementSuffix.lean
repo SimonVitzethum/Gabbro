@@ -8,7 +8,7 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-theorem PatternNameReads.consumes (read : PatternNameReads input name rest) : rest <:+ input := by
+theorem PatternNameReads.consumes (read : PatternNameReads input identifier rest) : rest <:+ input := by
   cases read <;> exact List.suffix_cons _ _
 
 theorem PatternTailReads.consumes (read : PatternTailReads input names rest) : rest <:+ input := by

@@ -60,11 +60,11 @@ theorem OptionInitializerReads.disjointCall
     (read : OptionInitializerReads scope count input value rest)
     (callRead : CallReads scope input call suffix) : False := by
   cases callRead with
-  | applied callee argsRead =>
-    generalize head : Token.word callee.name.val = token at read
+  | applied argsRead =>
+    generalize head : Token.word call.name.val = token at read
     cases read with
-    | absent => exact ordinaryAtomWord.not_option callee.ordinary.1 (.inr (Token.word.inj head))
-    | present _ _ => exact ordinaryAtomWord.not_option callee.ordinary.1 (.inl (Token.word.inj head))
+    | absent => exact ordinaryAtomWord.not_option call.ordinary.1 (.inr (Token.word.inj head))
+    | present _ _ => exact ordinaryAtomWord.not_option call.ordinary.1 (.inl (Token.word.inj head))
 
 theorem OptionInitializerReads.deterministic
     (left : OptionInitializerReads scope count input a rest)
