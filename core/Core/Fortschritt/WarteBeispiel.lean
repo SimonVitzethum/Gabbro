@@ -119,10 +119,16 @@ theorem zwSt_status : ∀ t, (zwSt t).status = zE0.status := by
 
 def zw : Nat → Option (Zustand Unit Unit Unit Unit Bool Unit) := fun t => some (zwSt t)
 
-theorem zwSt_ge (n : Nat) : zwSt (n + 2) = S_d := by
-  cases n with
-  | zero => rfl
-  | succ n => rfl
+theorem zwSt_ge2 : ∀ t, 2 ≤ t → zwSt t = S_d := by
+  intro t h
+  match t with
+  | 0 => exact absurd h (by decide)
+  | 1 => exact absurd h (by decide)
+  | _ + 2 => rfl
+
+theorem zwSt_0 : zwSt 0 = zE0 := rfl
+
+theorem zwSt_1 : zwSt 1 = S_c := rfl
 
 theorem zwSt_ge2 : ∀ t, 2 ≤ t → zwSt t = S_d := by
   intro t h
@@ -185,27 +191,34 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
 def ρ' : Maschine.Lauf E_1 :=
   ⟨s0, hw2, ⟨zw, spurw, taktw⟩⟩
 
+theorem ρ'_0 : ρ'.zeit.zustand 0 = some zE0 := rfl
+
+theorem ρ'_1 : ρ'.zeit.zustand 1 = some S_c := rfl
+
+theorem ρ'_ge (n : Nat) : ρ'.zeit.zustand (n + 2) = some S_d := rfl
+
+theorem e1_besitzer_zE0 : (zE0.sperren ()).besitzer = none := rfl
+
+theorem e1_besitzer_Sc : (S_c.sperren ()).besitzer = none := rfl
+
+theorem e1_besitzer_Sd : (S_d.sperren ()).besitzer = none := rfl
+
 /-- Locks stay free along the witness run. -/
 theorem e1_besitzer_frei : ∀ t s, ρ'.zeit.zustand t = some s → (s.sperren ()).besitzer = none := by
   intro t s hzs
-  cases t with
-  | zero =>
-    have e : s = zE0 := Option.some.inj hzs
-    subst e
-    rw [zE0lock]
-    rfl
-  | succ t =>
-    cases t with
-    | zero =>
-      have e : s = S_c := Option.some.inj hzs
-      subst e
-      rw [qc]
-      rfl
-    | succ t =>
-      have e : s = S_d := Option.some.inj hzs
-      subst e
-      rw [qd]
-      rfl
+  match t with
+  | 0 =>
+    rw [ρ'_0] at hzs
+    obtain rfl := Option.some.inj hzs
+    exact e1_besitzer_zE0
+  | 1 =>
+    rw [ρ'_1] at hzs
+    obtain rfl := Option.some.inj hzs
+    exact e1_besitzer_Sc
+  | _ + 2 =>
+    rw [ρ'_ge _] at hzs
+    obtain rfl := Option.some.inj hzs
+    exact e1_besitzer_Sd
 
 /-- Queue positions in the witness: only the head is ever the waiter. -/
 theorem e1_index_null : ∀ (i : Nat) (q : List Kontext),
@@ -266,20 +279,16 @@ theorem e1_halte : HalteSchranken E_1 ρ' := by
 theorem e1_hbleibt : ∀ t s, 1 ≤ t → ρ'.zeit.zustand t = some s →
     (s.sperren ()).besitzer ≠ some A → A ∈ (s.sperren ()).schlange := by
   intro t s ht hzs _
-  cases t with
-  | zero => exact absurd ht (by omega)
-  | succ t =>
-    cases t with
-    | zero =>
-      have e : s = S_c := (Option.some.inj hzs).symm
-      subst e
-      rw [qc]
-      exact List.mem_cons.mpr (Or.inl rfl)
-    | succ t =>
-      have e : s = S_d := (Option.some.inj hzs).symm
-      subst e
-      rw [qd]
-      exact List.mem_cons.mpr (Or.inl rfl)
+  match t with
+  | 0 => exact absurd ht (by decide)
+  | 1 =>
+    rw [ρ'_1] at hzs
+    obtain rfl := Option.some.inj hzs
+    exact List.mem_cons.mpr (Or.inl rfl)
+  | _ + 2 =>
+    rw [ρ'_ge _] at hzs
+    obtain rfl := Option.some.inj hzs
+    exact List.mem_cons.mpr (Or.inl rfl)
 
 theorem e1_hgibt : ∀ h b s, 1 ≤ b → ρ'.zeit.zustand b = some s →
     (s.sperren ()).besitzer = some h →
@@ -299,18 +308,16 @@ theorem e1_hmono : ∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), 1 ≤ t₁ → t�
   have e1 : ∀ t s, 1 ≤ t → ρ'.zeit.zustand t = some s →
       (s.sperren ()) = ⟨none, [A]⟩ ∨ (s.sperren ()) = ⟨none, [A, B]⟩ := by
     intro t s ht hzs
-    cases t with
-    | zero => exact absurd ht (by omega)
-    | succ t =>
-      cases t with
-      | zero =>
-        have e : s = S_c := (Option.some.inj hzs).symm
-        subst e
-        exact Or.inl qc
-      | succ t =>
-        have e : s = S_d := (Option.some.inj hzs).symm
-        subst e
-        exact Or.inr qd
+    match t with
+    | 0 => exact absurd ht (by decide)
+    | 1 =>
+      rw [ρ'_1] at hzs
+      obtain rfl := Option.some.inj hzs
+      exact Or.inl qc
+    | _ + 2 =>
+      rw [ρ'_ge _] at hzs
+      obtain rfl := Option.some.inj hzs
+      exact Or.inr qd
   rcases e1 t₁ s₁ h1 hz1 with h | h <;> rcases e1 t₂ s₂ (by omega) hz2 with h' | h'
   · rw [h] at hq1
     rw [h] at hq2
