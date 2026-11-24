@@ -75,7 +75,6 @@ theorem StmtReads.let_header
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
-  generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
   cases read with
   | letBinding name ordinary read tail =>
       injection hs with h1 h2
@@ -83,15 +82,19 @@ theorem StmtReads.let_header
       cases hname
       cases hmore
       exact ⟨name, ordinary, _, _, _, rfl, read, tail⟩
-  | assignVar ref visible writable fits read => exfalso
-      rcases hs with ⟨h1, h2, h3⟩
-      cases h2
-  | ret declared fits read => exfalso
-      rcases hs with ⟨h1, h2, h3⟩
-      exact (by decide : letKeyword ≠ returnKeyword) h1
-  | ite conditionRead yesRead noRead => exfalso
-      rcases hs with ⟨h1, h2, h3⟩
-      exact (by decide : letKeyword ≠ ifKeyword) h1
+  | assignVar ref visible writable fits read =>
+      exfalso
+      injection hs with hhead htail
+      cases htail
+  | ret declared fits read =>
+      exfalso
+      injection hs with hhead htail
+      exact (by decide : letKeyword ≠ returnKeyword) hhead
+  | ite conditionRead yesRead noRead =>
+      exfalso
+      injection hs with hhead htail
+      exact (by decide : letKeyword ≠ ifKeyword) hhead
+
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
   cases read
 
