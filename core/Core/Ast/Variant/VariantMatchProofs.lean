@@ -312,7 +312,8 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
     Ast.parse_print _, rfl, .start, ?_, ?_⟩
   · refine form.realisiert (vm_amOrt (scope, none)) platform a s rfl rfl rfl ?_
     dsimp [s]
-    rfl
+    simp [I.start, startdaten, Rahmen.start, form, variantMatchForm, a, valueArgs,
+      Gabbro.Core.Ast.Surface.VariantValueArgs.expression, caseCode, Fragment.leer]
   · intro g guard; cases guard
 
 end Gabbro.Core.Ast.Semantik
