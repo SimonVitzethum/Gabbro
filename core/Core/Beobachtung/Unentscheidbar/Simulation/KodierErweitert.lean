@@ -152,10 +152,10 @@ mutual
     writtenTypeVonCode (writtenTypeZuCode w) = some w
   | .bool => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .integer signed width interval => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .array element count => by
       have ih := writtenTypeCode_ofCode element
       unfold writtenTypeVonCode writtenTypeZuCode
@@ -169,19 +169,19 @@ mutual
         writtenTypesVonCode, writtenTypesZuCode]
   | .text capacity => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .index carrier count => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .indexOption carrier count => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .address space => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .ownedRegion => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .ptr space recht referent => by
       have ih := writtenTypeCode_ofCode referent
       unfold writtenTypeVonCode writtenTypeZuCode
@@ -191,7 +191,7 @@ mutual
     writtenTypesVonCode (writtenTypesZuCode w) = some w
   | .empty => by
       unfold writtenTypesVonCode writtenTypesZuCode
-      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one]
   | .next head tail => by
       have ih1 := writtenTypeCode_ofCode head
       have ih2 := writtenTypesCode_ofCode tail
@@ -204,13 +204,13 @@ instance : Encodable WrittenType :=
   Encodable.ofLeftInjection
     (fun w => Encodable.encode (writtenTypeZuCode w))
     (fun n => (Encodable.decode n).bind writtenTypeVonCode)
-    (by intro w; simp only [Encodable.encodek, writtenTypeCode_ofCode])
+    (by intro w; simp only [Encodable.encodek, writtenTypeCode_ofCode, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one])
 
 instance : Encodable WrittenTypes :=
   Encodable.ofLeftInjection
     (fun w => Encodable.encode (writtenTypesZuCode w))
     (fun n => (Encodable.decode n).bind writtenTypesVonCode)
-    (by intro w; simp only [Encodable.encodek, writtenTypesCode_ofCode])
+    (by intro w; simp only [Encodable.encodek, writtenTypesCode_ofCode, Option.map_some, Option.bind_some, Option.some.injEq, Nat.succ_eq_add_one, Nat.add_one])
 
 /-! ## RegionInitializer -/
 
