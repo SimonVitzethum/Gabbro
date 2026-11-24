@@ -76,7 +76,7 @@ theorem StmtReads.let_header
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
   generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
-  cases exprRead with
+  cases read with
   | letBinding name ordinary read tail =>
       injection hs with h1 h2
       injection h2 with hname hmore
@@ -108,7 +108,7 @@ theorem StmtReads.assign_inversion
       ref.binding.name.val = name ∧ ExprReads scope 0 input value (semicolon :: rest) ∧
       tree = ⟨scope, .assignVar ref visible writable value fits⟩ := by
   generalize hs : name = word at read
-  cases exprRead with
+  cases read with
   | assignVar ref visible writable fits read =>
       exact ⟨_, _, _, _, ref, visible, writable, _, fits, rfl, read, rfl⟩
   | ret declared fits read =>
@@ -127,7 +127,7 @@ theorem StmtReads.ret_inversion
       ExprReads scope 0 input value (semicolon :: rest) ∧ tree = ⟨scope, .ret rfl value fits⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   generalize hs : returnKeyword = tok at read
-  cases exprRead with
+  cases read with
   | ret declared fits read =>
       left
       cases declared
@@ -148,7 +148,7 @@ theorem StmtReads.ite_inversion
       BlockReads result scope more no rest ∧ tree = ⟨scope, .ite condition yes no⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   generalize hs : ifKeyword = tok at read
-  cases exprRead with
+  cases read with
   | ite conditionRead yesRead noRead =>
       left
       exact ⟨_, _, _, _, _, conditionRead, yesRead, noRead, rfl⟩
