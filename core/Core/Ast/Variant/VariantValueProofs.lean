@@ -57,9 +57,10 @@ theorem variantValue_erhaltung : VariantValueErhaltungAussage := by
   let p := (variantValueForm scope).fragment args
   let b := (variantValueForm scope).befehl args
   have inv : p.klauseln.invariant = [] := by
-    change (((caseCode 0 args.payload).anhaengen (Fragment.einzel b)).klauseln.invariant = [])
-    simpa [Fragment.anhaengen, Quellklauseln.anhaengen, Quellklauseln.leer] using
-      vv_caseCode_inv 0 args.payload
+    change ((caseCode 0 args.payload).klauseln.invariant ++
+      (Fragment.einzel b).klauseln.invariant) = []
+    rw [vv_caseCode_inv]
+    rfl
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform inv⟩
 
