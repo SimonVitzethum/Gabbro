@@ -241,7 +241,7 @@ theorem directName_of_singleton (spelling : name.val = [c]) : directName name :=
     cases same
   · intro same
     cases same
-  · rintro (same | same | same | same | same | same | same) <;> cases same
+  · rintro (same | same | same | same | same | same | same | same) <;> cases same
 
 structure DirectCall (scope : Scope) where
   name : Identifier
