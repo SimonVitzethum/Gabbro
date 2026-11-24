@@ -160,10 +160,10 @@ theorem stummer_schritt_koppelt
     (kopplung : Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor t t) :
     Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor (t + 1) (t + 1) := by
   classical
-  obtain ⟨prefix, state, laenge⟩ := kopplung
+  obtain ⟨cov, st, len⟩ := kopplung
   obtain ⟨w₂, zustand₂⟩ := fragment_zustand_some p plattform vergleich.rechts t
   obtain ⟨⟨lokGleich, _, initialGleich, rechteGleich, leihenGleich, antwortGleich⟩,
-    epocheEq, geliefertEq, kerneEq, statusEq⟩ := state vor w₂ zustand zustand₂
+    epocheEq, geliefertEq, kerneEq, statusEq⟩ := st vor w₂ zustand zustand₂
   -- public frame: full local equality
   have lokEqFun : vor.lokal = w₂.lokal := by
     funext d
@@ -299,7 +299,7 @@ theorem stummer_schritt_koppelt
               refine ⟨?_, ?_, ?_⟩
               · -- prefix: both sides append nothing
                 rw [e₁, e₂]
-                exact prefix
+                exact cov
               · -- state: publicly equal post-states, preserved machine fields
                 intro a b ha hb
                 rw [zustandNach₁, zustandNach₂] at ha hb
@@ -337,7 +337,7 @@ theorem stummer_schritt_koppelt
                 · simp only [Befehl.nach, statusEq]
               · -- length: both sides append nothing
                 rw [e₁, e₂]
-                exact laenge
+                exact len
             | antwort h₂' => exact (keineAntwort₂ _ _ label₂).elim
             | interrupt h₂' =>
               obtain ⟨_, _, _, _, _, pending₂, _, _, _, _, _⟩ := h₂'
