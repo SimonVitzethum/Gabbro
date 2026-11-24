@@ -36,8 +36,7 @@ theorem boundedWhile_realisiert (scope : Scope) (result : Option (Ty .value)) : 
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
     ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -65,8 +64,7 @@ theorem boundedWhile_ideal (scope : Scope) (result : Option (Ty .value)) : (boun
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
   · intro args
     constructor
     · exact ((boundedWhileForm scope result).befehl args).bestimmt
@@ -141,8 +139,7 @@ theorem boundedWhile_erfuellbar : boundedWhileJoint := by
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
     ) platform a s₃ rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
@@ -185,8 +182,7 @@ theorem forRange_realisiert (scope : Scope) (result : Option (Ty .value)) : (for
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2, List.getElem?_append_left hlt3]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
     ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -217,8 +213,7 @@ theorem forRange_ideal (scope : Scope) (result : Option (Ty .value)) : (forRange
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2, List.getElem?_append_left hlt3]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
   · intro args
     constructor
     · exact ((forRangeForm scope result).befehl args).bestimmt
@@ -276,7 +271,7 @@ theorem forRange_erfuellbar : forRangeJoint := by
       ⟨.literal 0 1, rfl, rfl, rfl⟩) ⟨.literal 1 3, rfl, rfl, rfl⟩) ⟨setup, rfl, rfl, rfl⟩
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s₃,
     Ast.parse_print (form.produktion.tree a), rfl, reached,
-    (form.realisiert (fun args => by
+    form.realisiert (fun args => by
     change (((((((expr 0 args.lower).anhaengen (expr 1 args.upper)).anhaengen (.einzel (Befehl.forAnfang 0 1 (rangeBinding args.name args.lo args.hi).type ((bracedBlock args.body).code.length + 4) (BracedBlock.rangeUses args.name args.body).1 ((BracedBlock.rangeUses args.name args.body).2 && args.overflow.isNone)))).anhaengen (.einzel (forInstruction (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (Befehl.forNaechster ((bracedBlock args.body).code.length + 1) (rangeBinding args.name args.lo args.hi).type))).anhaengen (.einzel (Befehl.blockEnde 1))).code[(expr 0 args.lower).code.length + (expr 1 args.upper).code.length + 1]? = some (forInstruction (bracedBlock args.body) args.overflow)
     simp only [Fragment.anhaengen, Fragment.einzel]
     have hlt1 : (expr 0 args.lower).code.length + (expr 1 args.upper).code.length + 1 < ((((((expr 0 args.lower).code ++ (expr 1 args.upper).code) ++ [Befehl.forAnfang 0 1 (rangeBinding args.name args.lo args.hi).type ((bracedBlock args.body).code.length + 4) (BracedBlock.rangeUses args.name args.body).1 ((BracedBlock.rangeUses args.name args.body).2 && args.overflow.isNone)]) ++ [forInstruction (bracedBlock args.body) args.overflow]) ++ (bracedBlock args.body).code) ++ [Befehl.forNaechster ((bracedBlock args.body).code.length + 1) (rangeBinding args.name args.lo args.hi).type]).length := by
@@ -291,9 +286,8 @@ theorem forRange_erfuellbar : forRangeJoint := by
     rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2, List.getElem?_append_left hlt3]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
-    ) platform a s₃ rfl rfl rfl rfl) ?_⟩
+    · omega
+    ) platform a s₃ rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
 
@@ -435,7 +429,7 @@ theorem function_realisiert (scope : Scope) : (functionForm scope).RealisiertAus
   intro platform args s running active live atPc
   exact (functionForm scope).realisiert (fun args => by
     change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
-    simp only [Fragment.anhaengen, Fragment.einzel, List.nil_append, List.getElem?_cons_zero]
+    simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
     ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -453,7 +447,7 @@ theorem function_ideal (scope : Scope) : (functionForm scope).IdealAussage := by
   constructor
   · intro args
     change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
-    simp only [Fragment.anhaengen, Fragment.einzel, List.nil_append, List.getElem?_cons_zero]
+    simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
   · intro args
     constructor
     · exact ((functionForm scope).befehl args).bestimmt
@@ -478,23 +472,23 @@ theorem function_erhaltung (scope : Scope) : (functionForm scope).ErhaltungsAuss
     match t with
     | .done => rfl
     | .step first rest => by
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [block, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [stmt_keine_invarianten, blockInv rest]
         rfl
   have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
     intro res before t
     rcases t with ⟨body⟩
-    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact blockInv body
   have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
       (functionCode res measure body).klauseln.invariant = [] := by
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have inv : ((functionForm scope).fragment args).klauseln.invariant = [] := by
@@ -516,23 +510,23 @@ theorem function_sicher (scope : Scope) platform a :
     match t with
     | .done => rfl
     | .step first rest => by
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [block, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [stmt_keine_invarianten, blockInv rest]
         rfl
   have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
     intro res before t
     rcases t with ⟨body⟩
-    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact blockInv body
   have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
       (functionCode res measure body).klauseln.invariant = [] := by
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have inv : ((functionForm scope).fragment a).klauseln.invariant = [] := by
@@ -559,10 +553,10 @@ theorem function_erfuellbar : functionJoint := by
   let s₀ := (I.start E start).2
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s₀,
     Ast.parse_print (form.produktion.tree a), rfl, .start,
-    (form.realisiert (fun args => by
+    form.realisiert (fun args => by
     change ((Fragment.einzel (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
-    simp only [Fragment.anhaengen, Fragment.einzel, List.nil_append, List.getElem?_cons_zero]
-    ) platform a s₀ rfl rfl rfl rfl) ?_⟩
+    simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
+    ) platform a s₀ rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
 
@@ -598,8 +592,7 @@ theorem program_realisiert  : (programForm).RealisiertAussage := by
     rw [List.getElem?_append_left hlt]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
     ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -624,8 +617,7 @@ theorem program_ideal  : (programForm).IdealAussage := by
     rw [List.getElem?_append_left hlt]
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · omega
   · intro args
     constructor
     · exact ((programForm).befehl args).bestimmt
@@ -650,45 +642,45 @@ theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
     match t with
     | .done => rfl
     | .step first rest => by
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [block, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [stmt_keine_invarianten, blockInv rest]
         rfl
   have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
     intro res before t
     rcases t with ⟨body⟩
-    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact blockInv body
   have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
       (functionCode res measure body).klauseln.invariant = [] := by
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have declInv : ∀ {before after : Scope} (d : Decl before after), (decl d).klauseln.invariant = [] := by
     intro before after d
     cases d with
     | constant name ord written valid value static fits =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact expr_keine_invarianten 0 value
     | function name ord parameters res valid measure body distinct returns =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact codeInv res measure body
   have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
     intro before after u
     induction u with
     | done => rfl
     | step first rest ih =>
-        simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [declInv, ih]
         rfl
   have inv : (programForm.fragment args).klauseln.invariant = [] := by
     change (programm args.unit).klauseln.invariant = []
-    simp only [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact unitInv args.unit.2
   exact ⟨((programForm).befehl args).abgleich (programForm.fragment args) platform,
     ((programForm).befehl args).fortschritt (programForm.fragment args),
@@ -704,45 +696,45 @@ theorem program_sicher  platform a :
     match t with
     | .done => rfl
     | .step first rest => by
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [block, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [stmt_keine_invarianten, blockInv rest]
         rfl
   have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
     intro res before t
     rcases t with ⟨body⟩
-    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact blockInv body
   have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
       (functionCode res measure body).klauseln.invariant = [] := by
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have declInv : ∀ {before after : Scope} (d : Decl before after), (decl d).klauseln.invariant = [] := by
     intro before after d
     cases d with
     | constant name ord written valid value static fits =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact expr_keine_invarianten 0 value
     | function name ord parameters res valid measure body distinct returns =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact codeInv res measure body
   have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
     intro before after u
     induction u with
     | done => rfl
     | step first rest ih =>
-        simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
+        simp [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
         rw [declInv, ih]
         rfl
   have inv : (programForm.fragment a).klauseln.invariant = [] := by
     change (programm a.unit).klauseln.invariant = []
-    simp only [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+    simp [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact unitInv a.unit.2
   exact ((programForm).befehl a).sicher (programForm.fragment a) platform inv
 
@@ -767,7 +759,7 @@ theorem program_erfuellbar : programJoint := by
   refine ⟨a, ?_, ?_⟩
   · refine ⟨Ast.print (form.produktion.tree a), s₁,
       Ast.parse_print (form.produktion.tree a), rfl, reached,
-      (form.realisiert (fun args => by
+      form.realisiert (fun args => by
       change (((unitBody args.unit.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)).code[(unitBody args.unit.2).code.length]? = some (.starte mainName)
       simp only [Fragment.anhaengen, Fragment.einzel]
       have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [Befehl.starte mainName]).length := by
@@ -778,7 +770,7 @@ theorem program_erfuellbar : programJoint := by
       · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
       · simp only [List.length_append, List.length_cons, List.length_nil]
         omega
-    ) platform a s₁ rfl rfl rfl rfl) ?_⟩
+    ) platform a s₁ rfl rfl rfl rfl, ?_⟩
     intro g guard
     cases guard
   · refine ⟨a.unit, Ast.print (category := .unit) a.unit, s₁, Ast.parse_print _, ?_, ?_, ?_, ?_, ?_, ?_⟩
