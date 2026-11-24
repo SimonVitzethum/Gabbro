@@ -259,7 +259,9 @@ theorem substringBytes : SubstringBytesAussage := by
   let next : Rahmen := b.auswerten frame
   have hguard : b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ := by
     simp only [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound,
-      Option.bind_some, if_pos]
+      Option.bind_some]
+    rw [dif_pos trivial]
+    rfl
   change b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ ∧
     (waechterBedarf .teilfolge (i, j, text.bytes.size) →
       let out := text.slice i.toNat j.toNat
