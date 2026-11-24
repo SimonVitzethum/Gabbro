@@ -131,7 +131,7 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
           (space.abbildung (base + i)).any fun entry => rights.all (· ∈ entry.rights)) then
       let entries := space.entries.map fun (page, entry) =>
         if pageRange base pages page then (page, { entry with rights }) else (page, entry)
-      pure { frame with result := some .protected,
+      pure { frame with result := some .«protected»,
         spaces := frame.spaces.set sp { space with entries },
         tlb := frame.tlb.invalidate sp base pages }
     else none

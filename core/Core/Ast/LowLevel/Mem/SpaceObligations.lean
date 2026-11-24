@@ -42,10 +42,10 @@ def ProtectMeaningAussage : Prop :=
     (rights ≠ [] ∧ validVirtualRange target virt pages ∧
       (∀ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
         ∀ right ∈ rights, right ∈ entry.rights) →
-      ∃ next protected, (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = some next ∧
-        next.spaces[sp]? = some protected ∧ next.result = some .protected ∧
+      ∃ next narrowed, (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = some next ∧
+        next.spaces[sp]? = some narrowed ∧ next.result = some .«protected» ∧
         (∀ pg entry, pageRange base pages pg → space.abbildung pg = some entry →
-          protected.abbildung pg = some { entry with rights }) ∧
+          narrowed.abbildung pg = some { entry with rights }) ∧
         ∀ core pg, pageRange base pages pg → next.tlb core sp pg = none) ∧
     ((∃ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
       ∃ right ∈ rights, right ∉ entry.rights) →

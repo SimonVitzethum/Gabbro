@@ -28,7 +28,7 @@ def unit (k : Katalog) (rule : Regel State Plan PUnit) : Unit where
   bild := image
   einrichtung := setup
   system := ⟨fun _ => rule,
-    fun s c => if s.status c = .laeuft then some () else none,
+    fun s c => match s.status c with | .laeuft => some () | _ => none,
     fun s c => s.status c ≠ .laeuft, fun _ _ _ => False⟩
   startdaten := fun start => boot (start.assignment 0)
   startmedium := medium
@@ -42,7 +42,7 @@ def unit (k : Katalog) (rule : Regel State Plan PUnit) : Unit where
   quelltabellen := ⟨.leer, fun _ _ _ => False⟩
 
 def Denotation.unit (locals : Ast.Umgebung scope) (d : Denotation k scope) : Unit :=
-  unit k (d.rule locals)
+  Gabbro.Core.Ast.LowLevel.Device.unit k (d.rule locals)
 
 def registerSafetyUnit (binding : Binding k) (access : RegisterAccess) :
     Sicherheit.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=

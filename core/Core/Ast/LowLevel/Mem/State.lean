@@ -75,7 +75,7 @@ inductive MemResult where
   | merged (region : MemRegion)
   | space (id : Nat)
   | mapped
-  | protected
+  | «protected»
   | pending (token : Zuruecknahme)
   | frames (extent : Strecke)
   | activated

@@ -168,7 +168,7 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
     (fun _ _ t => RueckkantenImCode (block t).code)
     (fun _ t => RueckkantenImCode (bracedBlock t).code)
     (fun _ _ _ _ t => RueckkantenImCode (variantArms t).body.code)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before tree
   · intros
     exact .snoc (expr_no_back 0 _) (Nat.zero_le _)
   · intros
@@ -208,6 +208,8 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
     exact .snoc (optionCode_rueckkanten 0 _) (Nat.zero_le _)
   · intros
     exact .snoc (optionCode_rueckkanten 0 _) (Nat.zero_le _)
+  · intros
+    exact .single rfl
   · intros
     exact .nil
   · intro before middle after head rest headOK restOK

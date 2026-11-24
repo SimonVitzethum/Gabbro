@@ -53,7 +53,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   let code := [defTarget, truth, ret, .blockEnde 0, .rueckVoid,
     defMain, discard, bind, .blockEnde 1, .rueckVoid, launch, .ende]
   have compiled : (programm unit).code = code := rfl
-  let f₀ := Rahmen.start []
+  let f₀ := (startdaten [] (start.assignment 0) platform start.regions).lokal eintritt
   let f₁ := defTarget.auswerten f₀
   let f₂ := defMain.auswerten f₁
   let saved : Fortsetzung := ⟨11, f₂.temp, [], f₂.zaehler, f₂.obergrenzen, none, none, none⟩
