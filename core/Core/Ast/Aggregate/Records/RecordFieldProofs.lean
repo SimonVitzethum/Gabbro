@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Records.Fields
+public import Core.Ast.Semantik.Formbeweise
 
 /-!
 # RecordField
@@ -24,8 +25,9 @@ public import Core.Ast.Aggregate.Records.Fields
 namespace Gabbro.Core.Ast.Surface
 
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
-  intro scope name labels types minimum input type field allowed read
-  exact (ExprTail.consumes read).trans (List.suffix_cons.trans List.suffix_cons)
+  intro scope name labels types minimum input type field base tree rest allowed read
+  exact (ExprTail.consumes read).trans
+    ((List.suffix_cons (.word field) input).trans (List.suffix_cons dot (.word field :: input)))
 
 end Gabbro.Core.Ast.Surface
 
@@ -82,6 +84,6 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
   intro scope args frame record h
   change ((Befehl.liesRecordFeld 0 args.name args.labels args.types args.index).auswerten frame).temp 0 =
     some ⟨args.types.get args.index, tupleGet args.types args.index record⟩
-  simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls]
+  simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, recordValueType]
 
 end Gabbro.Core.Ast.Semantik
