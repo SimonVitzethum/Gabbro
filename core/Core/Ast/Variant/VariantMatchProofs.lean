@@ -241,6 +241,17 @@ private theorem vm_read_suffix {result scope allowed labels payloads input arms 
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed input labels payloads arms rest read
   all_goals simp_all [BlockReads.consumes]
+  · intro scope input body more x x1 next rest label caseName blockRead restRead ih
+    exact ih.trans ((BlockReads.consumes blockRead).trans
+      ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
+  · intro type scope input more x x1 next rest label binder ordinary body blockRead restRead ih
+    exact ih.trans ((BlockReads.consumes blockRead).trans
+      ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans
+        ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))))))
+  · intro scope input body rest labels payloads nonempty shape blockRead
+    exact (List.suffix_cons Gabbro.Core.Ast.closeBrace rest).trans
+      ((BlockReads.consumes blockRead).trans
+        ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
 
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
