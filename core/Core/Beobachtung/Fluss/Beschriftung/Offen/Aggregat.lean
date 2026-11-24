@@ -268,7 +268,8 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
       oeffentlich (β.lokal 0 i) = true := by
     intro i _
     simp only [β, oeffentlich_leer]
-  have hsecret : oeffentlich ({0} : Etikett) = false := by decide
+  have hsecret : oeffentlich ({0} : Etikett) = false := by
+    simp only [oeffentlich, decide_false, Finset.singleton_ne_empty]
   have htemp : (fun s => if oeffentlich (β.temp 0 s) = true then r₁.temp s else none) =
       (fun s => if oeffentlich (β.temp 0 s) = true then r₂.temp s else none) := by
     funext s
