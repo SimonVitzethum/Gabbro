@@ -96,6 +96,7 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
   | cons saved stack =>
     rw [afterFrame]
     simp only [Rahmen.rueckkehr, stackEq, Option.bind_some]
+    rfl
 
 -- Mirror the pc equality of expr_ergebnis_typ and split on the actual Boolean input.
 theorem branch_effect (frame : Rahmen) (bit : Bool)
