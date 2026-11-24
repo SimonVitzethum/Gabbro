@@ -236,7 +236,7 @@ theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
   Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) irRf_po h
 
 theorem ir_kein_sc (e : IriwEv) : ¬ (irGraph .ra).sc e := by
-  cases e <;> simp only [Graph.sc, Graph.modus, irGraph, irLab, reduceCtorEq]
+  cases e <;> simp only [Graph.sc, Graph.modus, irGraph, irLab, reduceCtorEq] <;> trivial
 
 theorem ir_konsistent : (irGraph .ra).Konsistent where
   wf := ir_wf .ra
@@ -274,7 +274,7 @@ theorem iriw_ra_erlaubt : IriwRaErlaubtAussage := by
     show irPo irR1X irR1Y
     decide
   have hrb1 : (irGraph .ra).rb irR1Y irWY := by
-    exact ⟨irIY, Or.inr ⟨rfl, rfl⟩, Or.inr ⟨rfl, rfl⟩, by decide⟩
+    exact ⟨irIY, Or.inr (Or.inl ⟨rfl, rfl⟩), Or.inr ⟨rfl, rfl⟩, by decide⟩
   have hf2 : (irGraph .ra).rf irWY irR2Y := by
     show irRf irWY irR2Y
     decide
@@ -282,7 +282,7 @@ theorem iriw_ra_erlaubt : IriwRaErlaubtAussage := by
     show irPo irR2Y irR2X
     decide
   have hrb2 : (irGraph .ra).rb irR2X irWX := by
-    exact ⟨irIX, Or.inl ⟨rfl, rfl⟩, Or.inl ⟨rfl, rfl⟩, by decide⟩
+    exact ⟨irIX, Or.inr (Or.inr (Or.inr ⟨rfl, rfl⟩)), Or.inl ⟨rfl, rfl⟩, by decide⟩
   exact ⟨IriwEv, Bool, Nat, irGraph .ra, ir_konsistent,
     irWX, irWY, irR1X, irR1Y, irR2Y, irR2X, hf1, hp1, hrb1, hf2, hp2, hrb2⟩
 
