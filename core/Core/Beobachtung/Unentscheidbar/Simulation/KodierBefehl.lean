@@ -1,5 +1,7 @@
 module
 
+set_option maxHeartbeats 2000000
+
 public import Core.Beobachtung.Unentscheidbar.Simulation.KodierErweitert
 
 noncomputable section
