@@ -15,14 +15,23 @@ namespace Gabbro.Core.Ast.LowLevel
 
 open Waechter
 
+private theorem kernConj {form : MemForm} (kern : memObligationsKern form) :
+    MemParseAussage form ∧ MemInversionAussage form ∧ MemEindeutigAussage form ∧
+    MemDruckAussage form ∧ MemElaboriertAussage form ∧ MemRealisiertAussage form ∧
+    MemAnnahmeAussage form ∧ MemIdealAussage form ∧ MemEinheitAussage form ∧
+    MemImplAussage form ∧ MemFortschrittAussage form ∧ MemErhaltungAussage form ∧
+    MemRegelSicherAussage form ∧ MemRegelAntwortSicherAussage form ∧
+    MemAussenLokalAussage form ∧ MemKostenAussage form ∧
+    MemSchrankenAussage ∧ MemEtikettenAussage ∧ MemFlussAussage := kern
+
 public def splitAtEntry : RegistryEntry ``MemTree.splitAt (schemaMem ``MemTree.splitAt) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := splitAt_aussage
-  simp only [SplitAtAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .splitAt ∧ SplitAtMeaningAussage ∧
+    MemErfuellbarAussage .splitAt from splitAt_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -31,11 +40,11 @@ public def splitAtEntry : RegistryEntry ``MemTree.splitAt (schemaMem ``MemTree.s
 public def splitPagesEntry : RegistryEntry ``MemTree.splitPages (schemaMem ``MemTree.splitPages) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := splitPages_aussage
-  simp only [SplitPagesAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .splitPages ∧ SplitPagesMeaningAussage ∧
+    MemErfuellbarAussage .splitPages from splitPages_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -44,11 +53,11 @@ public def splitPagesEntry : RegistryEntry ``MemTree.splitPages (schemaMem ``Mem
 public def mergeEntry : RegistryEntry ``MemTree.merge (schemaMem ``MemTree.merge) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := merge_aussage
-  simp only [MergeAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .merge ∧ MergeMeaningAussage ∧
+    MemErfuellbarAussage .merge from merge_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -57,11 +66,11 @@ public def mergeEntry : RegistryEntry ``MemTree.merge (schemaMem ``MemTree.merge
 public def newSpaceEntry : RegistryEntry ``MemTree.newSpace (schemaMem ``MemTree.newSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := newSpace_aussage
-  simp only [NewSpaceAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .newSpace ∧ NewSpaceMeaningAussage ∧
+    MemErfuellbarAussage .newSpace from newSpace_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -70,11 +79,11 @@ public def newSpaceEntry : RegistryEntry ``MemTree.newSpace (schemaMem ``MemTree
 public def mapEntry : RegistryEntry ``MemTree.mapSpace (schemaMem ``MemTree.mapSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := map_aussage
-  simp only [MapAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .mapSpace ∧ MapMeaningAussage ∧
+    MapJointAussage from map_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -83,11 +92,11 @@ public def mapEntry : RegistryEntry ``MemTree.mapSpace (schemaMem ``MemTree.mapS
 public def protectEntry : RegistryEntry ``MemTree.protectSpace (schemaMem ``MemTree.protectSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := protect_aussage
-  simp only [ProtectAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .protectSpace ∧ ProtectMeaningAussage ∧
+    ProtectJointAussage from protect_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -96,11 +105,11 @@ public def protectEntry : RegistryEntry ``MemTree.protectSpace (schemaMem ``MemT
 public def unmapEntry : RegistryEntry ``MemTree.unmapSpace (schemaMem ``MemTree.unmapSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := unmap_aussage
-  simp only [UnmapAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .unmapSpace ∧ UnmapMeaningAussage ∧
+    UnmapJointAussage from unmap_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -109,11 +118,11 @@ public def unmapEntry : RegistryEntry ``MemTree.unmapSpace (schemaMem ``MemTree.
 public def flushEntry : RegistryEntry ``MemTree.flushSpace (schemaMem ``MemTree.flushSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := flush_aussage
-  simp only [FlushAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .flushSpace ∧ FlushMeaningAussage ∧
+    FlushJointAussage from flush_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
@@ -122,11 +131,11 @@ public def flushEntry : RegistryEntry ``MemTree.flushSpace (schemaMem ``MemTree.
 public def activateEntry : RegistryEntry ``MemTree.activateSpace (schemaMem ``MemTree.activateSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  have h := activate_aussage
-  simp only [ActivateAussage, memObligationsKern] at h
-  rcases h with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme, hIdeal,
-    hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher, hAussen,
-    hKosten, hSchranken, hEtiketten, hFluss, hMeaning, hJoint⟩
+  rcases (show memObligationsKern .activateSpace ∧ ActivateMeaningAussage ∧
+    ActivateJointAussage from activate_aussage) with ⟨hkern, hMeaning, hJoint⟩
+  rcases kernConj hkern with ⟨hParse, hInv, hEindeutig, hDruck, hElab, hReal, hAnnahme,
+    hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
+    hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
