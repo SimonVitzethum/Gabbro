@@ -159,7 +159,7 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
                   cases fits
               | succ m =>
                   cases fits
-                  rfl
+                  simp [wertAls, Wert.widen, Nat.add_one]
       | _ => simp [Fits, wertAls, Wert.widen] at fits
   | _ =>
       cases target with
@@ -183,7 +183,7 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     wertAls_widen _ _ _ value
   have hold : wertAls (recordValueType args.name args.labels args.types)
       ⟨recordValueType args.name args.labels args.types, record⟩ = some record := by
-    simp [wertAls]
+    simp [wertAls, recordValueType]
   have hlt : args.ref.index < frame.lokale.length := by
     by_contra h
     have hn : frame.lokale[args.ref.index]? = none := List.getElem?_eq_none (Nat.ge_of_not_lt h)
@@ -191,7 +191,8 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     cases hlocal
   dsimp only
   refine ⟨?_, ?_, ?_, ?_⟩
-  · simp [assignFieldForm, Befehl.auswerten, hlocal, htemp, hold, hwiden,
+  · rw [hlocal]
+    simp [assignFieldForm, Befehl.auswerten, htemp, hold, hwiden,
       List.getElem?_set_self hlt, Option.join, recordValueType, Wert]
   · intro i hi
     simp [assignFieldForm, Befehl.auswerten, List.getElem?_set_ne (Ne.symm hi)]
