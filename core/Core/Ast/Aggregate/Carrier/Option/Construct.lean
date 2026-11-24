@@ -45,7 +45,8 @@ def optionReturnForm (ctx : OptionContext) :
 def OptionInitializerInversionAussage : Prop :=
   (∀ {scope count input value rest},
     OptionInitializerReads scope count (.word indexSomeName.val :: input) value rest →
-    ∃ lo hi (operand : Expr scope (.int lo hi)) fits rhs,
+    ∃ (lo hi : Int) (operand : Expr scope (.int lo hi))
+      (fits : Fits (.int lo hi) (indexType count)) (rhs : List Token),
       input = openParen :: rhs ∧ ExprReads scope 0 rhs operand (closeParen :: rest) ∧
       value = .present operand fits) ∧
   (∀ {scope count input value rest},
@@ -117,12 +118,13 @@ def OptionConstructorRegelSicherAussage : Prop :=
     Sicherheit.RegelSicher ((form.fragment args).sicherheitsEinheit platform) (form.befehl args))
 
 def OptionLetErfuellbarAmAussage : Prop :=
-  ∀ platform start, ∃ ctx (a : OptionLetArgs ctx),
+  ∀ platform start, ∃ (ctx : OptionContext) (a : OptionLetArgs ctx),
     a.count = 0 ∧ a.value = .absent ∧ (optionLetForm ctx).ErfuellbarAm platform start a
 
 def OptionReturnErfuellbarAmAussage : Prop :=
-  ∀ platform start, ∃ ctx (a : OptionReturnArgs ctx),
-    (∃ lo hi (operand : Expr ctx.1 (.int lo hi)) fits, a.value = .present operand fits) ∧
+  ∀ platform start, ∃ (ctx : OptionContext) (a : OptionReturnArgs ctx),
+    (∃ (lo hi : Int) (operand : Expr ctx.1 (.int lo hi))
+        (fits : Fits (.int lo hi) (indexType a.count)), a.value = .present operand fits) ∧
     (optionReturnForm ctx).ErfuellbarAm platform start a
 
 def OptionConstructorProofPacket : Prop :=

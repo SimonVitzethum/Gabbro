@@ -72,12 +72,12 @@ def OptionTestRegelSicherAussage : Prop :=
     Sicherheit.RegelSicher ((form.fragment args).sicherheitsEinheit platform) (form.befehl args)
 
 def OptionTestErfuellbarAmAussage : Prop :=
-  ∀ platform start, ∃ scope (a : OptionTestArgs scope),
+  ∀ platform start, ∃ (scope : Scope) (a : OptionTestArgs scope),
     (optionTestForm scope).ErfuellbarAm platform start a
 
 /-- An enclosing block can initialize a live option before testing it. -/
 def OptionTestInitializedAussage : Prop :=
-  ∀ platform start, ∃ scope (tree : BracedBlock none scope) (text : RawText) (s : Zustand),
+  ∀ platform start, ∃ (scope : Scope) (tree : BracedBlock none scope) (text : RawText) (s : Zustand),
     let E := elaborieren (category := .block scope none) platform tree
     let b := Befehl.optionIstBesetzt 0 0
     let absent : Wert (indexOptionType 0) := .inr (.inl PUnit.unit)

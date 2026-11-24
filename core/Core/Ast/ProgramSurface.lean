@@ -321,7 +321,7 @@ def OptionLetReadAt (result : Option (Ty .value)) (scope : Scope) (mutable : Boo
     (spelling : RawText) (input : List Token) (tree : Statement result scope) (rest : List Token) : Prop :=
   ∃ (name carrier : Identifier) (count : Nat)
     (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
-    (resolved : scope.carrierCount carrier = some count) (value : OptionInitializer scope count) rhs,
+    (resolved : scope.carrierCount carrier = some count) (value : OptionInitializer scope count) (rhs : List Token),
     name.val = spelling ∧ TypeReads scope input (.indexOption carrier count) (assignment :: rhs) ∧
     OptionInitializerReads scope count rhs value (semicolon :: rest) ∧
     tree = ⟨_, .letOption mutable name ordinary carrier resolved value⟩

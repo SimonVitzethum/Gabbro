@@ -101,7 +101,7 @@ def EffectGroupRegelSicherAussage : Prop :=
     Sicherheit.RegelSicher ((form.fragment args).sicherheitsEinheit platform) (form.befehl args)
 
 def EffectGroupErfuellbarAmAussage : Prop :=
-  ∀ platform start, ∃ scope (item : EffectGroupDeclaration scope),
+  ∀ platform start, ∃ (scope : Scope) (item : EffectGroupDeclaration scope),
     item.resolved ≠ [] ∧ (effectGroupForm scope).ErfuellbarAm platform start item
 
 /-- A group term is present in a parsed signature and expands at its reachable registration. -/

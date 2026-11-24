@@ -77,7 +77,7 @@ def TableRegelSicherAussage : Prop :=
 /-- Both carrier-derived types occur after the declaration in the same parsed unit. -/
 def TableErfuellbarAmAussage : Prop :=
   ∀ platform start,
-    ∃ (item : TableDeclaration []) after (rest : UnitBody [item.binding] after)
+    ∃ (item : TableDeclaration []) (after : Scope) (rest : UnitBody [item.binding] after)
       (text : RawText) (s : Zustand),
       let tree : Ast.Unit := ⟨after, .step (.table item) rest⟩
       let E := elaborieren platform tree

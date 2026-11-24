@@ -193,7 +193,7 @@ theorem StmtReads.ret_inversion
     (read : StmtReads (some expected) scope (returnKeyword :: input) tree rest) :
     (∃ (t : Ty .value) (value : Expr scope t) (fits : Fits t expected),
       ExprReads scope 0 input value (semicolon :: rest) ∧ tree = ⟨scope, .ret rfl value fits⟩) ∨
-    (∃ count (declared : some expected = some (indexOptionType count)) (value : OptionInitializer scope count),
+    (∃ (count : Nat) (declared : some expected = some (indexOptionType count)) (value : OptionInitializer scope count),
       OptionInitializerReads scope count input value (semicolon :: rest) ∧
       tree = ⟨scope, .retOption declared value⟩) ∨
     (∃ tail, input = assignment :: tail) := by
@@ -219,8 +219,6 @@ theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace ::
   intro read
   cases read with
   | directCall callRead => cases callRead
-  | letOption mutable name ordinary carrier resolved typeRead valueRead =>
-    cases mutable <;> contradiction
 
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
