@@ -158,7 +158,7 @@ theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   change ((form.fragment args).einheit platform).stotterLaenge b + [stepPlan].length = 1
-  simp
+  simp [Fragment.einheit]
 
 theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   intro platform start
@@ -177,8 +177,8 @@ theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   let written : WrittenType := .text capacity
   let value : Expr [] (.text capacity) := .textLiteral []
   let argsVal : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, written, by simp [WrittenType.valid], .text capacity, value,
-      by simp [Fits, WrittenType.type]⟩
+    ⟨name, ordinary, written, by simp [written, WrittenType.valid], .text capacity, value,
+      by simp [written, Fits, WrittenType.type]⟩
   let args : {a : Surface.MutableLocalArgs [] none // textTypeUse a.written} :=
     ⟨argsVal, by simp [argsVal, written, textTypeUse]⟩
   let form := typeUseForm ([], none) textTypeUse
