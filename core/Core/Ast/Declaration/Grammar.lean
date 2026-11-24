@@ -34,6 +34,7 @@ theorem DeclReads.constant_inversion
   | effectGroup item =>
     cases item with
     | mk exported => cases exported <;> cases same
+  | environment => cases same
 
 -- Mirror BlockReads.braced_inversion and keep every header derivation in token order.
 theorem DeclReads.function_inversion
@@ -70,6 +71,7 @@ theorem DeclReads.function_inversion
   | effectGroup item =>
     cases item with
     | mk exported => cases exported <;> cases same
+  | environment => cases same
 
 theorem ResultReads.deterministic (read : ResultReads before input result rest) :
     ∀ {result' rest'}, ResultReads before input result' rest' → result = result' ∧ rest = rest' := by
@@ -275,6 +277,23 @@ theorem DeclReads.deterministic (left : DeclReads before input a rest)
         cases other with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
       | _ => cases exported <;> deny_declaration same
 
+  | environment name abi row =>
+    generalize same : (LowLevel.environmentTokens name abi row ++ _) = tokens at right
+    cases right with
+    | environment otherName otherAbi otherRow =>
+      simp only [LowLevel.environmentTokens, List.cons_append, List.nil_append, List.cons.injEq,
+        Token.word.injEq, true_and] at same
+      obtain ⟨nameEq, abiEq, rowEq, rfl⟩ := same
+      cases Subtype.ext nameEq
+      cases Katalog.DienstAbi.name_injective (String.toList_injective (Token.word.inj abiEq))
+      cases Katalog.FirmwareZeile.name_injective (String.toList_injective (Token.word.inj rowEq))
+      exact ⟨rfl, rfl⟩
+    | record exported => cases exported <;> deny_declaration same
+    | tagged exported => cases exported <;> deny_declaration same
+    | table item => cases item with | mk exported => cases exported <;> deny_declaration same
+    | effectGroup item => cases item with | mk exported => cases exported <;> deny_declaration same
+    | _ => deny_declaration same
+
 -- Mirror StmtReads.disjoint_closeBrace using the nonempty declaration prefix.
 theorem DeclReads.disjoint_end : ¬ DeclReads before [] tree rest := by
   intro read
@@ -327,6 +346,8 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
   | effectGroup item effects =>
     exact ((List.suffix_cons _ _).trans
       (EffectListReads.consumes CarrierEffectReads.consumes effects)).trans (List.suffix_append _ _)
+
+  | environment name abi row => exact List.suffix_append _ _
 
 theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
     DeclReads before (tree.printPieces.map PrintedToken.value ++ rest) ⟨after, tree⟩ rest := by
@@ -435,5 +456,8 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
       item.written WrittenCarrierEffect.printPieces (fun item _ suffix => CarrierEffectReads.printReads item suffix)
     simpa only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
       List.nil_append, List.append_assoc, hpCloseBrace, hpSemi] using (DeclReads.effectGroup item body)
+  | environment name abi row =>
+    simpa only [Decl.printPieces, LowLevel.environment_printTokens] using
+      (DeclReads.environment (before := before) (rest := rest) name abi row)
 
 end Gabbro.Core.Ast

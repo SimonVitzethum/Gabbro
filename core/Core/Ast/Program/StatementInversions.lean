@@ -15,17 +15,27 @@ def AssignmentStart (input : List Token) : Prop :=
 
 theorem StmtReads.let_header
     (read : StmtReads result scope (letKeyword :: .word spelling :: assignment :: input) tree rest) :
-    ∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
+    (∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
-      LetTailReads result scope name ordinary value more tree rest := by
+      LetTailReads result scope name ordinary value more tree rest) ∨
+    (∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name) (initializer : RegionInitializer),
+      name.val = spelling ∧ LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) ∧
+      tree = ⟨_, .letRegion name ordinary region visible receiverOrdinary initializer⟩) := by
   generalize same : (letKeyword :: Token.word spelling :: assignment :: input) = tokens at read
   cases read with
   | letBinding name ordinary valueRead tail =>
     have pre := (List.cons.inj same).2
     have spellingEq := Token.word.inj (List.cons.inj pre).1
     cases (List.cons.inj (List.cons.inj pre).2).2
-    exact ⟨name, ordinary, _, _, _, spellingEq.symm, valueRead, tail⟩
+    exact .inl ⟨name, ordinary, _, _, _, spellingEq.symm, valueRead, tail⟩
+  | letRegion name ordinary region visible receiverOrdinary fieldRead =>
+    have pre := (List.cons.inj same).2
+    have spellingEq := Token.word.inj (List.cons.inj pre).1
+    cases (List.cons.inj (List.cons.inj pre).2).2
+    exact .inr ⟨name, ordinary, region, visible, receiverOrdinary, _, spellingEq.symm, fieldRead, rfl⟩
   | tupleBind _ patternRead _ _ =>
     cases patternRead
     cases (List.cons.inj (List.cons.inj same).2).1

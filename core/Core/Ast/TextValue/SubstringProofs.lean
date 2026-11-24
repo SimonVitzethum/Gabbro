@@ -439,7 +439,8 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
     · have ht := hgood.1
       have hsame : (b.nach eintritt s₃).lokal eintritt =
           (Befehl.substring 0 cap).auswerten (s₃.lokal eintritt) := by
-        simpa [b, form, substringForm, args, Befehl.nach]
+        simp only [b, form, substringForm, args, Befehl.nach, Function.update_self]
+        rfl
       rw [hsame, ht]
       simpa
 

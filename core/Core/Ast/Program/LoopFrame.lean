@@ -66,13 +66,25 @@ private theorem SchrittForm.passform (frame : Rahmen) (bit : Bool) (exit : Nat)
     exact Function.update_of_ne (Nat.ne_of_lt h) _ _
   | split
 
-private theorem SchrittForm.withLocals {frame out : Rahmen} {locals : List (Option Dynamisch)}
-    (step : Rahmen.SchrittForm key distance { frame with lokale := locals } out) :
+private theorem SchrittForm.withEntryValues {frame entry out : Rahmen} {types : List (Ty .value)}
+    (prepared : frame.eintrittArgumente types = some entry)
+    (step : Rahmen.SchrittForm key distance entry out) :
     Rahmen.SchrittForm key distance frame out := by
-  cases step with
-  | lokal same pc counters => exact .lokal same pc counters
-  | ruf saved stack pc counters => exact .ruf saved stack pc counters
-  | rueck saved stack pc counters => exact .rueck saved stack pc counters
+  have forget {temps : Nat → Option Dynamisch} {locals : List (Option Dynamisch)}
+      (step : Rahmen.SchrittForm key distance { frame with temp := temps, lokale := locals } out) :
+      Rahmen.SchrittForm key distance frame out := by
+    cases step with
+    | lokal same pc counters => exact .lokal same pc counters
+    | ruf saved stack pc counters => exact .ruf saved stack pc counters
+    | rueck saved stack pc counters => exact .rueck saved stack pc counters
+  unfold Rahmen.eintrittArgumente at prepared
+  split at prepared
+  · cases prepared
+    exact forget step
+  · split at prepared
+    · cases prepared
+      exact forget step
+    · cases prepared
 
 private theorem Befehl.schrittForm (b : Befehl) (frame : Rahmen) (key : Nat) :
     Rahmen.SchrittForm key b.rueckweite frame (b.auswerten frame) := by
@@ -118,9 +130,16 @@ private theorem Befehl.schrittForm (b : Befehl) (frame : Rahmen) (key : Nat) :
   case starte name =>
     repeat' first
     | exact SchrittForm.halt frame _
-    | exact SchrittForm.withLocals (frame := frame) (locals := [])
-        (SchrittForm.rufform { frame with lokale := [] } name []
-          ((Funktion.finde frame.funktionen name).bind Funktion.result))
+    | apply SchrittForm.withEntryValues
+      · assumption
+      · exact SchrittForm.rufform _ name _ _
+    | split
+  case bindeRegion =>
+    unfold Rahmen.bindeRegion
+    simp only [Id.run]
+    repeat' first
+    | exact SchrittForm.halt frame _
+    | exact .lokal rfl (Nat.le_succ _) (fun _ => rfl)
     | split
   case textIndex | substring =>
     repeat' first

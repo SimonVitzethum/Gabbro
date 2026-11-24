@@ -36,7 +36,7 @@ theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     have loaded := hardware.lader bild image
     have entry : (h.lade bild).starts 0 = some 0 := lader_start loaded 0
     have byte : (h.lade bild).bytes 0 = some 0 := (loaded.2.1 0 0 rfl).2
-    change laden p.eingang s (h.lade bild) = some _
+    change laden p.eingang platform s (h.lade bild) = some _
     unfold laden
     rw [ite_eq_left ⟨entry, byte⟩]
     rfl

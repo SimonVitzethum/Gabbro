@@ -194,6 +194,9 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
   | table item =>
       by_cases he : head.exported <;> by_cases ex : item.exported <;>
         simp_all [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot, keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex]
+  | environment =>
+      cases head with
+      | mk exported => cases exported <;> cases (List.cons.inj hh).1
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
   refine ⟨?reads, egPrint scope, ?sat⟩

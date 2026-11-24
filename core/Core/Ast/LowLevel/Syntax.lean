@@ -1,0 +1,127 @@
+module
+
+public import Core.Ast.ProgramHeader
+public import Core.Text.Syntax
+public import Core.Katalog.FirmwareNamen
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.LowLevel
+
+open Gabbro.Core.Text Katalog
+
+inductive Form where
+  | addressType
+  | regionAddress
+  | view
+  | environment
+  deriving DecidableEq
+
+/-- Low-level leaves of the reference AST. The category index keeps the type,
+    expression and declaration entry points distinct during their development. -/
+inductive Tree : Form → Type where
+  /-- `address<S>`, with bounds from the named space on the selected target. -/
+  | addressType (space : AddressSpace) : Tree .addressType
+  /-- `r.address()`, the inert physical start of the held region `r`. -/
+  | regionAddress (region : Identifier) : Tree .regionAddress
+  /-- `r.view as T`, which borrows a normal region under the checked layout of `T`. -/
+  | view (region : Identifier) (type : WrittenType) : Tree .view
+  /-- `environment name abi ABI = catalogue ROW;`, with no contract in the source tree. -/
+  | environment (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) : Tree .environment
+
+def printFirmwareRow : FirmwareZeile → PrintedToken
+  | .biosServices => lowWord 'b' "ios_services"
+  | .uefi210 => lowWord 'u' "efi_2_10"
+  | .psci => lowWord 'p' "sci"
+  | .sbi => lowWord 's' "bi"
+
+def printFirmwareAbi : DienstAbi → PrintedToken
+  | .biosInterrupt => lowWord 'b' "ios_int"
+  | .efiX64 => lowWord 'u' "efi_x64"
+  | .efiAapcs => lowWord 'u' "efi_aapcs"
+  | .psciSmc => lowWord 'p' "sci_smc"
+  | .sbiEcall => lowWord 's' "bi_ecall"
+
+def environmentTokens (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) : List Token :=
+  [keyword "environment", .word name.val, keyword "abi", keyword abi.name,
+    assignment, keyword "catalogue", keyword row.name, semicolon]
+
+def Tree.printPieces : Tree form → List PrintedToken
+  | .addressType space => space.printPieces
+  | .regionAddress region => [region.print, printDot, lowWord 'a' "ddress", printOpen, printClose]
+  | .view region type => [region.print, printDot, lowWord 'v' "iew", lowWord 'a' "s"] ++ type.printPieces
+  | .environment name abi row =>
+    [lowWord 'e' "nvironment", name.print, lowWord 'a' "bi", printFirmwareAbi abi,
+      printAssignment, lowWord 'c' "atalogue", printFirmwareRow row, printSemicolon]
+
+/-- Exact productions over canonical tokens. The type in a view uses the
+    existing type grammar rather than a second interpretation of type syntax. -/
+def Tree.production : Tree form → List Token → Prop
+  | .addressType space => fun tokens =>
+      tokens = space.tokens
+  | .regionAddress region => fun tokens =>
+      tokens = [.word region.val, dot, keyword "address", openParen, closeParen]
+  | .view region type => fun tokens =>
+      ∃ input, tokens = [.word region.val, dot, keyword "view", keyword "as"] ++ input ∧
+        TypeReads [] input type []
+  | .environment name abi row => fun tokens =>
+      tokens = environmentTokens name abi row
+
+theorem environment_printTokens (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) :
+    ((Tree.environment name abi row).printPieces.map PrintedToken.value) =
+      environmentTokens name abi row := by
+  cases abi <;> cases row <;> rfl
+
+/-- Both initializers share the receiver and dispatch at the word after the dot. -/
+inductive RegionReads (region : Identifier) : List Token → RegionInitializer → List Token → Prop where
+  | address : RegionReads region
+      (.word region.val :: dot :: keyword "address" :: openParen :: closeParen :: rest) .address rest
+  | view (valid : written.valid []) : TypeReads [] input written rest →
+      RegionReads region (.word region.val :: dot :: keyword "view" :: keyword "as" :: input)
+        (.view written valid) rest
+
+theorem RegionReads.receiver (read : RegionReads name input initializer rest) :
+    ∃ tail, input = .word name.val :: dot :: tail := by
+  cases read <;> exact ⟨_, rfl⟩
+
+theorem RegionReads.consumes (read : RegionReads name input initializer rest) : rest <:+ input := by
+  cases read with
+  | address =>
+    exact (((List.suffix_cons _ _).trans (List.suffix_cons _ _)).trans
+      (List.suffix_cons _ _)).trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))
+  | view _ typeRead =>
+    exact typeRead.consumes.trans (((List.suffix_cons _ _).trans (List.suffix_cons _ _)).trans
+      ((List.suffix_cons _ _).trans (List.suffix_cons _ _)))
+
+theorem RegionReads.deterministic (left : RegionReads name input a rest)
+    (right : RegionReads name input b more) : a = b ∧ rest = more := by
+  cases left with
+  | address =>
+    cases right
+    exact ⟨rfl, rfl⟩
+  | view _ typeRead =>
+    cases right with
+    | view _ other =>
+      obtain ⟨rfl, rfl⟩ := typeRead.deterministic other
+      exact ⟨rfl, rfl⟩
+
+def printRegion (region : Identifier) : RegionInitializer → List PrintedToken
+  | .address => (Tree.regionAddress region).printPieces
+  | .view written _ => (Tree.view region written).printPieces
+
+theorem printRegion_reads (region : Identifier) (initializer : RegionInitializer)
+    (closed : ∀ more, rest ≠ keyword "in" :: more) :
+    RegionReads region ((printRegion region initializer).map PrintedToken.value ++ rest) initializer rest := by
+  cases initializer with
+  | address => exact .address
+  | view written valid =>
+    simp only [printRegion, Tree.printPieces, List.map_append, List.map_cons,
+      List.map_nil, List.cons_append, List.nil_append]
+    exact .view valid (written.printReads valid closed)
+
+def Parse (text : RawText) (tree : Tree form) : Prop :=
+  Text.Parse (tokenGrammar (fun tokens (tree : Tree form) => tree.production tokens)) text tree
+
+def Tree.print (tree : Tree form) : RawText := PrintedToken.render tree.printPieces
+
+end Gabbro.Core.Ast.LowLevel

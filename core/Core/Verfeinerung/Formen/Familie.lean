@@ -23,13 +23,13 @@ def Befehl.simFamilie : Befehl → SimFamilie
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen .. => .skalar
   | .binden .. | .springeWenn .. | .zuweisen .. | .zurueck .. | .springe ..
-  | .blockEnde .. | .bindeWert .. | .starte .. | .ende => .kontrollfluss
+  | .blockEnde .. | .bindeWert .. | .starte .. | .ende | .bindeRegion .. => .kontrollfluss
   | .definiere .. | .rufe .. | .rueckVoid | .pruefeMass .. | .setzePasszahl ..
   | .whileTest .. | .forAnfang .. | .forTest .. | .forNaechster .. | .zurueckSprung .. => .aufrufSchleife
   | .baueArray .. | .liesArray .. | .baueTupel .. | .liesTupelfeld .. | .bindeTupel ..
   | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld .. => .aggregat
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
-  | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. => .variante
+  | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung .. => .variante
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .text
 
 /-- Both the step match and the per-head bound must hold throughout every

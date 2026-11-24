@@ -47,6 +47,16 @@ private theorem textTypeOhneInvarianten (ctx : Scope × Option (Ty .value))
 
 private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by intro same; cases same
 
+private theorem stringToken_ne_address : keyword "string" ≠ keyword "address" := by
+  intro same
+  have first : 's' = 'a' := (List.cons.inj (Token.word.inj same)).1
+  cases first
+
+private theorem stringToken_ne_region : keyword "string" ≠ keyword "region" := by
+  intro same
+  have first : 's' = 'r' := (List.cons.inj (Token.word.inj same)).1
+  cases first
+
 private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "string" ≠ .word (intSpelling signed width) := by
   intro h
@@ -82,6 +92,8 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
       cases h
   | index _ _ | indexOption _ _ =>
       cases (List.cons.inj htok).1
+  | address _ => exact (stringToken_ne_address (List.cons.inj htok).1).elim
+  | ownedRegion => exact (stringToken_ne_region (List.cons.inj htok).1).elim
 
 theorem TextTypeDerivation : TextTypeDerivationAussage := by
   intro scope capacity rest

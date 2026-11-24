@@ -1,6 +1,7 @@
 module
 
 public import Core.Text.Lexeme
+public import Core.Ast.LowLevel.AddressSpace
 public import Core.Ast.TextValue.Bytes
 
 @[expose] public section
@@ -51,6 +52,9 @@ inductive Ty : Kind → Type where
   | text (capacity : Nat) : Ty .value
   | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool) : Ty .value
   | effectGroupSchema (effects : List CarrierEffect) : Ty .value
+  | address (space : LowLevel.AddressSpace) : Ty .value
+  | ownedRegion : Ty .value
+  | regionView (element : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -79,8 +83,13 @@ abbrev Scope := List Binding
 /-- The nearest declaration of a written carrier name fixes its index bound. -/
 def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
   match scope.find? (fun binding => binding.name.val == name.val) with
-  | some ⟨_, .carrierSchema count _ _ _, _, _⟩ => some count
-  | _ => none
+  | some binding =>
+    match binding.type with
+    | .carrierSchema count .. => some count
+    | .int .. | .bool | .array .. | .productEnd | .product .. | .record .. | .recordSchema ..
+    | .sumEnd | .sum .. | .variant .. | .variantSchema .. | .text .. | .effectGroupSchema ..
+    | .address .. | .ownedRegion | .regionView .. => none
+  | none => none
 
 /-- Finite carriers of equal count share the same checked numerical index type. -/
 def indexType (count : Nat) : Ty .value := .int 0 ((count : Int) - 1)
@@ -106,6 +115,7 @@ def Local.nameVisible : Local scope type → Prop
 
 def Ty.valueBinding : Ty .value → Prop
   | .recordSchema .. | .variantSchema .. | .carrierSchema .. | .effectGroupSchema .. => False
+  | .ownedRegion | .regionView _ => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=

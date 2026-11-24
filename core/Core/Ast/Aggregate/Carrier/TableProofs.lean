@@ -137,6 +137,10 @@ theorem tableInversion : TableInversionAussage := by
       · exact (pubTok_ne_effects (List.cons.inj htok).1).elim
       · exact (tableTok_ne_pub (List.cons.inj htok).1).elim
       · exact (tableTok_ne_effects (List.cons.inj ((List.cons.inj htok).2)).1).elim
+  | environment =>
+      cases ex : head.exported <;>
+        simp only [tableHeaderValue, ex, LowLevel.environmentTokens, List.cons_append] at htok <;>
+        cases (List.cons.inj htok).1
 
 private def tableFieldTokenList : List RecordMember → List Token
   | [] => []

@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.Semantik.Runtime.ExpressionCode
+public import Core.Ast.LowLevel.Admission
 
 @[expose] public section
 
@@ -45,7 +46,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .letOption _ name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
-  | .letMutableValue name _ _ => (name.val == index.val, false)
+  | .letMutableValue name _ _ | .letRegion name _ _ _ _ _ => (name.val == index.val, false)
   | .tupleBind pattern _ _ _ =>
     ((pattern.names.filterMap id).any (fun name => name.val == index.val), false)
   | .ite _ yes no =>
@@ -143,6 +144,7 @@ def stmt : Stmt result before after → Fragment
     (optionCode 0 value).anhaengen (.einzel (.bindeWert 0 (indexOptionType count) false))
   | .retOption (count := count) _ value =>
     (optionCode 0 value).anhaengen (.einzel (.zurueck 0 (indexOptionType count)))
+  | .letRegion _ _ region _ _ init => .einzel (.bindeRegion region.index init)
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -195,6 +197,7 @@ def decl : Decl before after → Fragment
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
   | .table item => .einzel (tableInstruction item)
   | .effectGroup item => .einzel (.definiereEffektgruppe item.resolved)
+  | .environment name abi row => .einzel (.waehleUmgebung name abi row)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer
@@ -228,10 +231,16 @@ def fragment : (category : Category) → category.Tree → Fragment
 abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
 
 
-def startdaten (scope : Scope) (kern : Option Nat) : Startdaten Int PUnit Rahmen PUnit :=
-  ⟨fun _ => .start scope, fun c => if c = eintritt then .laeuft else .ruht,
+def startdaten (scope : Scope) (kern : Option Nat) (platform : Plattform := .x86_64)
+    (regions : List Strecke := []) : Startdaten Int PUnit Rahmen PUnit :=
+  let bootFrame (c : Kontext) : Rahmen :=
+    { Rahmen.start scope with
+      platform := platform
+      arrivalRegions := if c = eintritt then regions else [] }
+  ⟨bootFrame,
+    fun c => if c = eintritt then .laeuft else .ruht,
     fun k => ⟨if some k = kern then some eintritt else none, .nutzer, (), fun _ => false,
-      0, false, []⟩, ⟨fun _ => false, fun _ => 0⟩⟩
+      0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
 
 def einrichtung (scope : Scope) : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit :=
   ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False, fun _ _ => True,
@@ -243,9 +252,9 @@ def bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
 def startmedium (_ : AussenStart) (_ : Nat) : UInt8 := 0
 
-def laden (scope : Scope) (start : AussenStart) (image : Ladung) : Option Zustand :=
+def laden (scope : Scope) (platform : Plattform) (start : AussenStart) (image : Ladung) : Option Zustand :=
   if image.starts 0 = some 0 ∧ image.bytes 0 = some 0 then
-    let d := startdaten scope (start.assignment 0)
+    let d := startdaten scope (start.assignment 0) platform start.regions
     some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope).initial
       (.leer (startmedium start)))
   else none
@@ -262,9 +271,9 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   bild := bild
   einrichtung := einrichtung p.eingang
   system := system p.code
-  startdaten := fun start => startdaten p.eingang (start.assignment 0)
+  startdaten := fun start => startdaten p.eingang (start.assignment 0) platform start.regions
   startmedium := startmedium
-  laden := laden p.eingang
+  laden := laden p.eingang platform
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := p.tabellen
@@ -279,6 +288,22 @@ theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category
       (elaborieren left tree).quelltabellen = (elaborieren right tree).quelltabellen :=
   ⟨rfl, rfl⟩
 
+def Fragment.environment (p : Fragment) : List (Identifier × DienstAbi × FirmwareZeile) :=
+  p.code.filterMap fun
+    | .waehleUmgebung name abi row => some (name, abi, row)
+    | _ => none
+
+def Fragment.environmentAllowed (p : Fragment) (k : Katalog) : Prop :=
+  (p.environment.map (fun e => e.1.val)).Nodup ∧
+    ∀ e ∈ p.environment, e.2.2.zugelassen k e.2.1
+
+/-- Whole-unit elaboration checks catalogue availability and name uniqueness.
+    An isolated declaration gets the same admission check as its occurrence in a unit. -/
+def zugelassen (platform : Plattform) : (category : Category) → category.Tree → Prop
+  | category, tree =>
+    let p := fragment category tree
+    p.environmentAllowed platform.katalog ∧ p.code.all (Befehl.platformAllowed platform) = true
+
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=
   E = elaborieren platform tree
@@ -286,18 +311,25 @@ def Elaboriert (platform : Plattform) {category : Category}
 theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree) :
     Elaboriert platform tree (elaborieren platform tree) := rfl
 
-theorem elab_vollstaendig {category : Category} {tree : category.Tree} (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning
+theorem elab_vollstaendig {category : Category} {tree : category.Tree}
+    (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning
 
 theorem Elaboriert.deterministisch {category : Category} {tree : category.Tree}
     (a : Elaboriert platform tree E) (b : Elaboriert platform tree F) : E = F :=
   a.trans b.symm
 
+/-- The source denotes its elaborated unit only under the platform admission rules.
+    Compositional elaboration can also describe intermediate fragments. -/
+def ZugelassenElaboriert (platform : Plattform) {category : Category}
+    (tree : category.Tree) (E : Einheit) : Prop :=
+  Elaboriert platform tree E ∧ zugelassen platform category tree
+
 def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → Einheit → Prop :=
-  Ast.Bezeichnet (@Elaboriert platform category)
+  Ast.Bezeichnet (@ZugelassenElaboriert platform category)
 
 theorem bezeichnet_deterministisch
     (a : Bezeichnet platform category text E) (b : Bezeichnet platform category text F) : E = F :=
-  Ast.bezeichnet_deterministic (elaborates := @Elaboriert platform category)
-    (fun left right => left.trans right.symm) a b
+  Ast.bezeichnet_deterministic (elaborates := @ZugelassenElaboriert platform category)
+    (fun left right => left.1.deterministisch right.1) a b
 
 end Gabbro.Core.Ast.Semantik

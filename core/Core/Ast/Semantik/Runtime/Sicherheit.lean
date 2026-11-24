@@ -88,7 +88,7 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun _ _ t => (block t).klauseln.invariant = [])
     (fun _ t => (bracedBlock t).klauseln.invariant = [])
     (fun _ _ _ _ t => (variantArms t).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   all_goals
     intros
     simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
@@ -102,5 +102,48 @@ theorem bracedBlock_keine_invarianten (tree : BracedBlock result scope) :
   simp only [stmt, expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
     Quellklauseln.leer, List.nil_append, List.append_nil] at both
   exact (List.eq_nil_of_append_eq_nil both).1
+
+private theorem functionCode_keine_invarianten {result : Option WrittenType} {scope : Scope}
+    (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
+    (functionCode result measure body).klauseln.invariant = [] := by
+  cases measure with
+  | none =>
+      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        bracedBlock_keine_invarianten]
+  | some m =>
+      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        expr_keine_invarianten, bracedBlock_keine_invarianten]
+
+private theorem decl_keine_invarianten {before after : Scope} (d : Decl before after) :
+    (decl d).klauseln.invariant = [] := by
+  cases d with
+  | constant name ordinary written valid value staticValue fits =>
+      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        expr_keine_invarianten]
+  | function name ordinary parameters result valid decreases body distinct returns effects =>
+      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        functionCode_keine_invarianten]
+  | record exported name fields valid distinct => rfl
+  | tagged exported name first tail valid distinct => rfl
+  | table item => rfl
+  | effectGroup item => rfl
+  | environment name abi row => rfl
+
+private theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBody before after) :
+    (unitBody body).klauseln.invariant = [] := by
+  induction body with
+  | done => rfl
+  | step first rest ih =>
+      simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
+        List.nil_append, decl_keine_invarianten, ih]
+
+theorem programm_keine_invarianten (tree : Ast.Unit) :
+    (programm tree).klauseln.invariant = [] := by
+  simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+    Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append, unitBody_keine_invarianten]
 
 end Gabbro.Core.Ast.Semantik

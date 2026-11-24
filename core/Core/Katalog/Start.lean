@@ -14,8 +14,8 @@ structure AussenStart where
   inputBytes : Nat → Option UInt8
   outside : AussenSicht
 
-/-- Admissibility at the boundary, before either loader runs. The unit supplies the image
-    declaration and may impose its own interpretation of the boot arguments. -/
+/-- Admissibility at the boundary, before either loader runs. RAM grants must
+    avoid every device window in the platform profile, including unselected device rows. -/
 def ZulStart (k : Katalog) (h : Umgebung) (bild : Bild) (s : AussenStart) : Prop :=
   bild.gueltig k.plattform.ziel ∧
     s.bootCore < h.kernzahl ∧
@@ -23,7 +23,7 @@ def ZulStart (k : Katalog) (h : Umgebung) (bild : Bild) (s : AussenStart) : Prop
     (∀ i c, s.assignment i = some c → i < bild.entries.length ∧ c < h.kernzahl) ∧
     s.regions.Pairwise Strecke.getrennt ∧
     (∀ r ∈ s.regions, r.von < r.bis ∧ r.bis ≤ 2 ^ k.plattform.ziel.physicalBits ∧
-      ∀ e d, k.enthaelt (.endpoint e) → k.plattform.geraet e = some d → d.bus = .mmio →
+      ∀ e d, k.plattform.geraet e = some d → d.bus = .mmio →
         r.getrennt d.window) ∧
     (∀ a byte, s.inputBytes a = some byte → ∃ r ∈ s.regions, r.drin a) ∧
     s.outside = h.politik.sicht 0 []
