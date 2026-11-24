@@ -30,7 +30,12 @@ private theorem memParse_of {form : MemForm} {text : RawText} {tree : MemTree fo
   refine ⟨True.intro, pieces, lex, ?_⟩
   exact memDerivesTerminals (semanticTokens pieces) prod
 
-private theorem rightsToken_inj : Function.Injective rightsToken := by decide
+private theorem rightsToken_inj : Function.Injective rightsToken := by
+  intro a b h
+  cases a <;> cases b <;>
+    simp only [rightsToken, keyword, String.reduceToList, Token.word.injEq, List.cons.injEq,
+      Char.reduceEq, reduceCtorEq] at h ⊢
+  all_goals first | rfl | exact False.elim h.1
 
 private theorem rightsToken_ne_comma (r : Speicherdienst) : rightsToken r ≠ comma := by
   intro h
@@ -53,8 +58,9 @@ private theorem rightsPrints_value : ∀ rs, (rightsPrints rs).map PrintedToken.
       simp only [rightsPrints, rightsTokens, List.map_cons, List.map_nil,
         List.intersperse_singleton, List.intersperse_nil, rightsPrint_value]
   | r :: q :: qs => by
-      simp only [rightsPrints, rightsTokens, List.map_cons, List.intersperse_cons_cons,
-        rightsPrint_value, printComma_value, rightsPrints_value (q :: qs)]
+      simpa only [rightsPrints, rightsTokens, List.map_cons, List.intersperse_cons_cons,
+        rightsPrint_value, printComma_value] using congrArg (fun l => rightsToken r :: comma :: l)
+          (rightsPrints_value (q :: qs))
 
 private def rightsKey : List Speicherdienst → List Token
   | [] => []
@@ -111,7 +117,8 @@ private theorem rightsKey_inj : Function.Injective rightsKey := by
                     rightsToken r' :: comma :: rightsKey (q' :: qs') at h
                   injection h with hhead htail
                   injection htail with _ htail'
-                  have : r = r' := rightsToken_inj hhead
+                  change rightsToken r' = rightsToken r at hhead
+                  have : r' = r := rightsToken_inj hhead
                   subst r'
                   cases ih htail'
                   rfl
@@ -308,14 +315,12 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
           simp only [hs] at hhead
           cases hpc : (s.lokal entryContext).pc with
           | zero =>
-              simp only [List.getElem?_cons_zero] at hhead
               by_cases he : (op.evaluate target s entryContext).isSome
               · simp only [if_pos he] at hhead
                 exact ⟨hs, rfl, hpc, he⟩
               · simp only [if_neg he] at hhead
                 cases hhead
           | succ n =>
-              simp only [List.getElem?_cons_succ, List.getElem?_nil] at hhead
               cases hhead
       | ruht | beendet =>
           simp only [hs] at hhead
@@ -356,39 +361,13 @@ theorem memIdeal (form : MemForm) : MemIdealAussage form := by
   subst frame2
   exact ⟨heq1.trans heq2.symm, hs1.trans hs2.symm⟩
 
-theorem memHead_eval_some {target} {code : List MemInstruction} {s : MemState} {c : Kontext}
-    {op : MemInstruction} (h : memHead target code s c = some op) :
-    ∃ frame, op.evaluate target s c = some frame := by
-  unfold memHead at h
-  by_cases hc : c = entryContext
-  · subst c
-    simp only [↓reduceIte] at h
-    cases hs : s.status entryContext with
-    | laeuft =>
-        simp only [hs] at h
-        cases hget : code[(s.lokal entryContext).pc]? with
-        | none => cases h
-        | some op' =>
-            change (if (op'.evaluate target s entryContext).isSome then some op' else none) = some op at h
-            by_cases he : (op'.evaluate target s entryContext).isSome
-            · simp only [if_pos he] at h
-              injection h with hop
-              subst op
-              obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mpr he
-              exact ⟨frame, hframe⟩
-            · simp only [if_neg he] at h
-              cases h
-    | ruht | beendet =>
-        simp only [hs] at h
-        cases h
-  · simp only [hc, ↓reduceIte] at h
-    cases h
-
 theorem memFortschritt (form : MemForm) : MemFortschrittAussage form := by
-  intro k scope tree op _ s c hhead
+  intro k scope tree op hop s c hhead
   left
-  obtain ⟨frame, heval⟩ := memHead_eval_some hhead
-  exact ⟨(), [plan], frame.advance c s, frame, heval, rfl, rfl⟩
+  have hcond := (memRealisiert form k scope tree op hop s c).mp hhead
+  have heval : (op.evaluate k.plattform.ziel s c).isSome := hcond.2.2.2
+  obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mpr heval
+  exact ⟨(), [plan], frame.advance c s, frame, hframe, rfl, rfl⟩
 
 namespace MemInstruction
 
