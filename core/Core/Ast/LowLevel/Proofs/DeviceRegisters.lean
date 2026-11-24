@@ -188,12 +188,32 @@ theorem registerRegelSicher_falsch :
     { handle := ⟨0, ⟨⟨.virtio, 0⟩, 0⟩, [.read, .write]⟩
       row := Plattform.x86_64.virtio
       selected := by
-        simp only [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
+        simp only [k, Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
           List.map_cons, List.mem_append, List.mem_cons, eq_self, or_true, true_or]
       described := rfl }
   let access : RegisterAccess := .read 0x70
+  let owner : Kontext := .faden 0
+  let startdaten : Startdaten UInt8 PUnit Frame PUnit :=
+    { lokal := fun _ => {}
+      status := fun _ => .ruht
+      kerne := fun _ => ⟨none, .nutzer, (), fun _ => false, 0, false, []⟩
+      rechte := ⟨fun _ => true, fun _ => 0⟩ }
+  let wiederanlauf : Wiederanlauf PUnit UInt8 PUnit Frame PUnit :=
+    { eintritt := owner
+      kern := 0
+      daten := fun _ => startdaten
+      initial := fun _ _ => 0 }
   let einr : Einrichtung PUnit Nat UInt8 PUnit Frame PUnit PUnit :=
-    { LowLevel.setup k with invariant := fun s _ => s.verlauf = [] }
+    { initial := fun _ => 0
+      sperrOrt := fun _ => 0
+      ereignisOrt := fun _ => 0
+      ereignisWert := fun _ => 0
+      bedingung := fun _ _ _ => False
+      invariant := fun s _ => s.verlauf = []
+      persistenzRegion := ⟨0, 0⟩
+      wiederanlauf := wiederanlauf
+      speicherObjekt := fun _ => 0
+      speicherGriff := fun _ _ _ => none }
   let sys : MaschinenSystem PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=
     { regel := fun _ => registerRule binding access
       kopf := fun _ _ => some ()
@@ -204,42 +224,39 @@ theorem registerRegelSicher_falsch :
       bild := LowLevel.image
       einrichtung := einr
       system := sys
-      startdaten := fun start => LowLevel.bootData k start.regions (start.assignment 0)
-      startmedium := LowLevel.medium
-      laden := LowLevel.loaded k
+      startdaten := fun _ => startdaten
+      startmedium := fun _ _ => 0
+      laden := fun _ _ => none
       lokalerBezug := Eq
       stotterLaenge := fun _ => 0
       quelltabellen := ⟨.leer, fun _ _ _ => False⟩ }
   let E : Sicherheit.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=
     ⟨maschine, []⟩
-  let owner : Kontext := .faden 0
   let boot : State :=
     Zustand.start (fun _ => { phases := fun o => if o = binding.object then some .ready else none })
       (fun _ => .laeuft) (fun _ => ⟨some owner, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => true, fun _ => 0⟩ (fun _ => 0) (.leer (fun _ => 0))
-  let ownedRegion : LoanRegion := ⟨⟨0, 0⟩, ⟨0, 4096⟩, true, true⟩
   let vor : State :=
     { boot with buchung := { boot.buchung with
         geraet := fun o => if o = binding.object then some (owner, .frei) else none
         aussengriff := fun c h right => c = owner ∧ h = binding.handle ∧ right ∈ h.rights
         umfang := fun i => if i = 0 then List.range 4096 else []
-        haelt := fun c h _right => c = owner ∧ h = ownedRegion.handle } }
+        haelt := fun _ _ _ => False } }
   let q : Frage := binding.question access
   let plan : Plan := { internal with aktion := .frage q }
   let zwischen : State := setFrame vor owner { (vor.lokal owner) with pending := some q }
   let event : FrageEreignis := vor.stelleFrage 0 owner q
-  let label : Speicher.Etikett Nat UInt8 := ⟨.aussen, 0, .na, 0, 0⟩
+  let label := aussenEtikett einr (.frage event)
   obtain ⟨g', hschritt⟩ := Speicher.Zustand.schritt_ohne_lesen
     Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
-    (.kontext owner) label (by simp)
-  let folge : Speicherfolge (fun _ : Nat => (0 : UInt8)) (.kontext owner)
-      Speicher.Zustand.leer [label] [( .kontext owner, label)] g' :=
+    (SpeicherAkteur.kontext owner) label (fun h => h)
+  let folge : Speicherfolge (fun _ : Nat => (0 : UInt8)) (SpeicherAkteur.kontext owner)
+      Speicher.Zustand.leer [label] [(SpeicherAkteur.kontext owner, label)] g' :=
     .cons (Initialisierung.ohne (Or.inl rfl)) hschritt (.nil _)
-  let spur : SchrittSpur Nat UInt8 := ⟨[(.kontext owner, label)], [.frage event]⟩
+  let spur : SchrittSpur Nat UInt8 := ⟨[(SpeicherAkteur.kontext owner, label)], [.frage event]⟩
   let nach : State := { zwischen.frage event with graph := g' }
-  let sicht0 : AussenSicht :=
-    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
-  let H : Umgebung := Umgebung.referenz k 2 (fun _ _ => sicht0)
+  let sicht0 : AussenSicht := AussenSicht.leer
+  let H : Katalog.Umgebung := Umgebung.referenz k 2 (fun _ _ => sicht0)
   let hw : HwLauf := Umgebung.referenzLauf k 2 (fun _ _ => sicht0)
   let start : AussenStart := ⟨0, fun _ => none, [], fun _ => none, sicht0⟩
   let ρ : Lauf E := ⟨start, hw, Classical.choose (Zeitlauf.existiert (Lauffolge E hw) none)⟩
@@ -264,7 +281,7 @@ theorem registerRegelSicher_falsch :
       simp at inRead
     · refine ⟨[], zwischen.frage event, ?_, ?_, ?_⟩
       · exact FuehrtAus.frage q
-      · simpa [einr, LowLevel.setup, aussenEtikett, label, spur] using folge
+      · simpa [spur, label] using folge
       · rfl
   have hs := hsicher k binding access E ⟨0x70, rfl⟩ rfl rfl H ρ 0 owner () vor zwischen nach
     plan spur (by rfl) impl executed
