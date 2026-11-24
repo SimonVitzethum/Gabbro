@@ -57,8 +57,9 @@ theorem divide (left : Ausdruckswert env slot a) (right : Ausdruckswert env (slo
   intro pre post frame position active typed checked entry
   rcases entry with ⟨first, second⟩
   simp only [TemporaryValue] at first second
+  have admitted : 1 ≤ lo ∨ hi ≤ -1 := nonzero
   simp only [Expr.wert, Befehl.auswerten, Rahmen.zahl, first, second, Option.bind_some, alsGanzzahl,
-    bind, Option.bind, pure, dif_pos nonzero]
+    bind, Option.bind, pure, dif_pos admitted]
 
 theorem compare (op : Compare) (left : Ausdruckswert env slot a) (right : Ausdruckswert env (slot + 1) b) :
     Ausdruckswert env slot (.compare op a b) := by
@@ -105,7 +106,7 @@ theorem textIndex (left : Ausdruckswert env slot (base : Expr scope (.text capac
   let index := (offset.wert env).wert
   have guard : (Befehl.textIndex slot capacity).guard frame =
       some ⟨.index, (if index < 0 then text.bytes.size else index.toNat, text.bytes.size)⟩ := by
-    simp only [Befehl.guard, Rahmen.zahl, first, second, Option.bind_some, text_readback, alsGanzzahl,
+    simp only [Befehl.guard, Rahmen.zahl, first, second, Option.bind_some, text_readback (base.wert env), alsGanzzahl,
       bind, Option.bind, pure, index, text]
   have allowed := guardOfInstruction position active checked guard
   change (if index < 0 then text.bytes.size else index.toNat) < text.bytes.size at allowed
@@ -113,7 +114,7 @@ theorem textIndex (left : Ausdruckswert env slot (base : Expr scope (.text capac
     intro negative
     simp only [if_pos negative, Nat.lt_irrefl] at allowed
   have fits : index.toNat < text.bytes.size := by simpa only [if_neg nonnegative] using allowed
-  have read : text.bytes[index.toNat]? = some (text.bytes[index.toNat]'fits) := getElem?_pos _ _ fits
+  have read : text.bytes[index.toNat]? = some (text.bytes[index.toNat]'fits) := getElem?_pos text.bytes index.toNat fits
   simp only [Expr.wert, Befehl.auswerten, Id.run, Rahmen.zahl, first, second, Option.bind_some, text_readback, alsGanzzahl,
     Expr.wert, ← index, ← text, if_neg nonnegative, read, Option.getD_some]
 
@@ -153,11 +154,13 @@ theorem substring
   have guard : (Befehl.substring slot capacity).guard frame =
       some ⟨.teilfolge, (lower, upper, text.bytes.size)⟩ := by
     simp only [Befehl.guard, Rahmen.zahl, baseValue, firstValue, lastValue, Option.bind_some,
-      text_readback, alsGanzzahl, bind, Option.bind, pure, lower, upper, text]
+      text_readback (base.wert env), alsGanzzahl, bind, Option.bind, pure, lower, upper, text]
   have allowed := guardOfInstruction position active checked guard
   change 0 ≤ lower ∧ lower ≤ upper ∧ upper ≤ (text.bytes.size : Int) at allowed
+  dsimp only [lower, upper, text] at allowed
   simp only [Befehl.auswerten, Id.run, Rahmen.zahl, baseValue, firstValue, lastValue,
-    Option.bind_some, text_readback, alsGanzzahl, Expr.wert, ← lower, ← upper, ← text, if_pos allowed]
+    Option.bind_some, text_readback (base.wert env), alsGanzzahl, Expr.wert, if_pos allowed]
+  rfl
 
 theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead : Ausdruckswert env slot right) :
     Ausdruckswert env slot (.logic op left right) := by
@@ -182,13 +185,15 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
   let bit : Bool := left.wert env
   have branchShape : afterBranch =
       { middle with pc := middle.pc + (if bit = op.skips then rhs.length + 1 else 1) } := by
-    simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean, Option.some.injEq, bit]
+    simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean]
+    change { middle with pc := middle.pc + (if some bit = some op.skips then rhs.length + 1 else 1) } = _
+    rw [Option.some.injEq]
   have midActive := lhsFull.aktiv active
   have branchStep : Rahmen.Schritt full middle afterBranch :=
     ⟨branch, midActive.1, midActive.2, branchLookup, rfl⟩
   have branchSame : afterBranch = { middle with pc := afterBranch.pc, temp := afterBranch.temp } := by
     rw [branchShape]
-  have preserves : ∀ i, afterBranch.temp i = middle.temp i := fun i => congrArg (fun f : Rahmen => f.temp i) branchSame
+  have preserves : ∀ i, afterBranch.temp i = middle.temp i := fun i => congrArg (fun f : Rahmen => f.temp i) branchShape
   by_cases taken : bit = op.skips
   · have atEnd : afterBranch.pc = pre.length + (lhs ++ [branch] ++ rhs).length := by
       simp only [branchShape, if_pos taken, List.length_append, List.length_cons, List.length_nil, lhsFull.position]
@@ -198,8 +203,9 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
     have trace := lhsFull.trans branchTrace (Nat.le_refl _)
     refine ⟨afterBranch, ?_, ?_⟩
     · simpa only [full, lhs, rhs, branch, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using trace
-    · have moved : (left.wert env : Bool) = op.skips := taken
-      simp only [TemporaryValue, Expr.wert, if_pos moved, preserves slot, valueAtSlot]
+    · change TemporaryValue (type := .bool) slot (if bit = op.skips then bit else right.wert env) afterBranch
+      rw [if_pos taken]
+      exact (preserves slot).trans valueAtSlot
   · have afterPC : afterBranch.pc = (pre ++ lhs ++ [branch]).length := by
       simp only [branchShape, if_neg taken, List.length_append, List.length_cons, List.length_nil, lhsFull.position]
     have branchTrace : Ausdrucksabschnitt full _ slot middle afterBranch :=
@@ -217,8 +223,9 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
     refine ⟨out, ?_, ?_⟩
     · simpa only [full, lhs, rhs, branch, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
         prefixTrace.trans rhsFull (Nat.le_refl _)
-    · have skipped : ¬ (left.wert env : Bool) = op.skips := taken
-      simpa only [Expr.wert, if_neg skipped] using result
+    · change TemporaryValue (type := .bool) slot (if bit = op.skips then bit else right.wert env) out
+      rw [if_neg taken]
+      exact result
 
 end ExpressionOperators
 

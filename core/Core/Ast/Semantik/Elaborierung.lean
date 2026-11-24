@@ -210,16 +210,8 @@ def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by
   · exact ⟨by decide, by decide⟩)
 
 theorem mainName_direct : directName mainName := by
-  change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
-    ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-    ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-  refine ⟨⟨?_, ?_⟩, ?_⟩
-  · intro same
-    cases same
-  · intro same
-    cases same
-  · simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
-    rintro (same | same | same | same | same | same | same) <;> cases same
+  unfold directName ordinaryLocal ordinaryAtomWord
+  decide
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)
