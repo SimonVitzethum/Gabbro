@@ -108,9 +108,8 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
       | nil => rfl
       | cons m ms ih => simpa [memberTokenList, RecordMember.printPieces] using ih
     by_cases h : args.exported <;>
-      simp [h, hmem, List.flatMap, recordDecl, Category.printPieces, Decl.printPieces,
-        recordDeclarationHead, recordDeclarationPrefix, keyword,
-        recordDeclarationHead, printPub, printTypeDecl]
+      simp [h, hmem, List.flatMap, Function.comp_def, recordDecl, Category.printPieces, Decl.printPieces,
+        recordDeclarationHead, recordDeclarationPrefix, keyword, printPub, printTypeDecl]
   · exact recordMembers_print_reads args.members args.valid
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by

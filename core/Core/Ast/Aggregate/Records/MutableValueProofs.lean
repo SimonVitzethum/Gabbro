@@ -34,6 +34,8 @@ open Gabbro.Core.Text
 @[simp] private theorem keywordMutVal : keyword "mut" = Token.word ['m', 'u', 't'] := by rfl
 @[simp] private theorem assignmentVal : assignment = Token.punctuation ['='] := by rfl
 @[simp] private theorem semicolonVal : semicolon = Token.punctuation [';'] := by rfl
+@[simp] private theorem keywordNameVal (c : Char) (r : List Char) (p1 p2) :
+    (keywordName c r p1 p2 : Identifier).val = c :: r := by rfl
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
