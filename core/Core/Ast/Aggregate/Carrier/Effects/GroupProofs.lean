@@ -145,25 +145,33 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           obtain ⟨hval, hin⟩ := hh'
-          have hnameval : head.name.val = item.name.val := by
-            simpa [identPrintVal] using hval
-          refine ⟨item, Subtype.ext hnameval.symm, by rw [he, ie], ?_, ?_⟩
+          have hnameval : item.name = head.name := by
+            apply Subtype.ext
+            first
+            | simpa [identPrintVal] using hval
+            | simpa [identPrintVal] using hval.symm
+          refine ⟨item, hnameval, by rw [he, ie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
           · rfl
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          cases hh'
       · by_cases ie : item.exported
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          cases hh'
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           obtain ⟨hval, hin⟩ := hh'
-          have hnameval : head.name.val = item.name.val := by
-            simpa [identPrintVal] using hval
+          have hnameval : item.name = head.name := by
+            apply Subtype.ext
+            first
+            | simpa [identPrintVal] using hval
+            | simpa [identPrintVal] using hval.symm
           have hhe : head.exported = false := by simpa using he
           have hie : item.exported = false := by simpa using ie
-          refine ⟨item, Subtype.ext hnameval.symm, by rw [hhe, hie], ?_, ?_⟩
+          refine ⟨item, hnameval, by rw [hhe, hie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
           · rfl
