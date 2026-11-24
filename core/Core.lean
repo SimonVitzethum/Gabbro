@@ -17,6 +17,7 @@ public import Core.Ideal.Absturz
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Verfeinerung.Lauf
+public import Core.Verfeinerung.Protokoll
 meta import Core.Waechter.Check
 
 #check_core
