@@ -329,21 +329,12 @@ private theorem jumpJoint : JumpJointAussage := by
   have hevalSome : (op.evaluate s entryContext).isSome = true := by
     rw [heval]
     rfl
-  have hevalSomeFaden : (op.evaluate s (Kontext.faden 0)).isSome = true := by
-    change (op.evaluate s entryContext).isSome = true
-    exact hevalSome
-  have hsstatusFaden : s.status (Kontext.faden 0) = .laeuft := by
-    change s.status entryContext = .laeuft
-    exact hsstatus
-  have hspcFaden : (s.lokal (Kontext.faden 0)).pc = 1 := by
-    change (s.lokal entryContext).pc = 1
-    exact hspc
   have hhead : E.system.kopf s entryContext = some op := by
     change execHead (pre ++ [op]) s entryContext = some op
     unfold execHead
-    simp only [↓reduceIte, hsstatusFaden, hspcFaden, List.getElem?_cons_succ,
+    simp only [↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
       List.getElem?_cons_zero, Option.bind_eq_bind, Option.bind_some]
-    rw [if_pos hevalSomeFaden]
+    rw [if_pos hevalSome]
   have hstep : E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
     change ∃ frame, op.evaluate s entryContext = some frame ∧ [plan] = [plan] ∧
