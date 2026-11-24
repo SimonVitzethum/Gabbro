@@ -260,7 +260,7 @@ def speicherverwaltungSchrankenAussage : Prop :=
 def regionSchrankenAussage : Prop :=
   ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
-    (receiver : Nat) (init : LowLevel.RegionInitializer),
+    (receiver : Nat) (init : RegionInitializer),
     RegelSchranken E (Semantik.Befehl.bindeRegion receiver init)
 
 /-- Non-growing control and scalar forms meet the checker row once their step-level
