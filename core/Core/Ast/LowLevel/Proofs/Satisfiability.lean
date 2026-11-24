@@ -56,7 +56,8 @@ private def lowName : Identifier :=
       cases h⟩⟩
 
 private theorem lowName_slot : RegionScope.slot [lowName] lowName = some 0 := by
-  simp only [RegionScope.slot, List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true]
+  change [lowName.val].idxOf? lowName.val = some 0
+  simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
 
 private def lowStart (h : Umgebung) (regions : List Strecke) : AussenStart :=
   ⟨0, (fun i => if i = 0 then some 0 else none), regions, (fun _ => none), h.politik.sicht 0 []⟩
