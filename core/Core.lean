@@ -7,6 +7,7 @@ module
 public import Core.Ziel.Form
 public import Core.Ziel.Sicherheit
 public import Core.Text.Model
+public import Core.Text.Review.Befunde
 public import Core.Ast
 public import Core.Speicher
 public import Core.Speicher.Review.Befunde
@@ -32,6 +33,7 @@ public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
+public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
@@ -95,6 +97,7 @@ public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
+public import Core.Beobachtung.Review.Befunde
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
@@ -111,6 +114,7 @@ public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
+public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
