@@ -75,7 +75,7 @@ def befehlVonCodeA : Code → Option Befehl
     match codeZuNat tag with
     | some 0 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -84,7 +84,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 1 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Arith ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -93,7 +93,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 2 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Identifier ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -102,7 +102,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 3 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -111,7 +111,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 4 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -120,7 +120,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 5 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -129,25 +129,28 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 6 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.negieren f0')
+      | _ => Option.none
     | some 7 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.verneinen f0')
+      | _ => Option.none
     | some 8 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.teilen f0')
+      | _ => Option.none
     | some 9 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Compare ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -156,7 +159,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 10 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (f2)) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -167,7 +170,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 11 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (f2)) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -178,7 +181,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 12 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -187,19 +190,21 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 13 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.springe f0')
+      | _ => Option.none
     | some 14 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.blockEnde f0')
+      | _ => Option.none
     | some 15 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (f2)) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -210,7 +215,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 16 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (Code.pair f5 (Code.pair f6 (f7))))))) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (Code.pair f5 (Code.pair f6 (Code.pair f7 (Code.zero)))))))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Identifier ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -231,7 +236,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 17 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (f2)) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Identifier ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -246,13 +251,14 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 19 =>
       match kids with
-      | f0 => do
+      | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.pruefeMass f0')
+      | _ => Option.none
     | some 20 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -261,7 +267,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 21 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (f2)) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -272,7 +278,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 22 =>
       match kids with
-      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (f5))))) => do
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (Code.pair f5 (Code.zero)))))) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -289,7 +295,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 23 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
@@ -298,7 +304,7 @@ def befehlVonCodeA : Code → Option Befehl
       | _ => Option.none
     | some 24 =>
       match kids with
-      | Code.pair f0 (f1) => do
+      | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           let f1n : ℕ ← codeZuNat f1
