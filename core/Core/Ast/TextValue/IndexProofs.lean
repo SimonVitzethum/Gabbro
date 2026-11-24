@@ -197,7 +197,6 @@ private theorem textWertAls (capacity : Nat) (text : TextValue capacity) :
     wertAls (.text capacity) (Sigma.mk (.text capacity) text) = some text := by
   change (if fits : text.bytes.size ≤ capacity then some (⟨text.bytes, fits⟩ : TextValue capacity) else none) = some text
   rw [dif_pos text.bound]
-  congr
 
 theorem textIndexBytes : TextIndexBytesAussage := by
   intro capacity text index frame htemp hzahl
@@ -288,8 +287,8 @@ theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
-  dsimp only
-  rfl
+  refine ⟨rfl, rfl, ?_⟩
+  simp [Fragment.einheit]
 
 theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   intro platform start
@@ -338,7 +337,7 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
     simp at hg
     subst g
     exact hcapPos
-  · simpa [form, Befehl.nach, frame₂, heval, Rahmen.schreibe]
-  · simpa [form, Befehl.nach, frame₂, heval, Rahmen.schreibe]
+  · simpa [textIndexForm, args, capacity, Befehl.nach, frame₂, heval, Rahmen.schreibe]
+  · simpa [textIndexForm, args, capacity, Befehl.nach, frame₂, heval, Rahmen.schreibe]
 
 end Gabbro.Core.Ast.Semantik
