@@ -20,11 +20,11 @@ theorem subtraction_elaboriert (ctx : Scope) : (subtractionForm ctx).ElaboriertA
 theorem subtraction_realisiert (ctx : Scope) : (subtractionForm ctx).RealisiertAussage := by
   intro platform args s running active atPc
   exact (subtractionForm ctx).realisiert (fun args => by
-    rw [args.2]
     change ((expr 0 args.val.left).code ++ (expr 1 args.val.right).code ++
-      [Befehl.binaer .sub 0])[(expr 0 args.val.left).code.length +
+      [Befehl.binaer args.val.op 0])[(expr 0 args.val.left).code.length +
         (expr 1 args.val.right).code.length]? = some (.binaer .sub 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [args.2]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl) platform args s running active atPc
 
@@ -36,11 +36,11 @@ theorem subtraction_annahme (ctx : Scope) : (subtractionForm ctx).AnnahmeAussage
 theorem subtraction_ideal (ctx : Scope) : (subtractionForm ctx).IdealAussage := by
   refine ⟨?_, fun args => ?_⟩
   · intro args
-    rw [args.2]
     change ((expr 0 args.val.left).code ++ (expr 1 args.val.right).code ++
-      [Befehl.binaer .sub 0])[(expr 0 args.val.left).code.length +
+      [Befehl.binaer args.val.op 0])[(expr 0 args.val.left).code.length +
         (expr 1 args.val.right).code.length]? = some (.binaer .sub 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [args.2]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
   · exact ⟨((subtractionForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
@@ -75,11 +75,11 @@ theorem subtraction_erfuellbar : subtractionJoint := by
     .schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second
   refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₂ reached
     (form.realisiert (fun args => by
-      rw [args.2]
       change ((expr 0 args.val.left).code ++ (expr 1 args.val.right).code ++
-        [Befehl.binaer .sub 0])[(expr 0 args.val.left).code.length +
+        [Befehl.binaer args.val.op 0])[(expr 0 args.val.left).code.length +
           (expr 1 args.val.right).code.length]? = some (.binaer .sub 0)
-      rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+      rw [args.2]
+      rw [List.getElem?_append_right (by rw [List.length_append])]
       rw [List.length_append, Nat.sub_self]
       rfl) platform args s₂ rfl rfl rfl) ?_⟩
   intro g guard
@@ -102,7 +102,7 @@ theorem division_realisiert (ctx : Scope) : (divisionForm ctx).RealisiertAussage
     change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
       [Befehl.teilen 0])[(expr 0 args.left).code.length +
         (expr 1 args.right).code.length]? = some (.teilen 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl) platform args s running active atPc
 
@@ -117,7 +117,7 @@ theorem division_ideal (ctx : Scope) : (divisionForm ctx).IdealAussage := by
     change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
       [Befehl.teilen 0])[(expr 0 args.left).code.length +
         (expr 1 args.right).code.length]? = some (.teilen 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
   · exact ⟨((divisionForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
@@ -145,7 +145,7 @@ theorem division_erfuellbar : divisionJoint := by
     change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
       [Befehl.teilen 0])[(expr 0 args.left).code.length +
         (expr 1 args.right).code.length]? = some (.teilen 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
   by_cases h : unsigned = true
@@ -162,11 +162,18 @@ theorem division_erfuellbar : divisionJoint := by
       (form.realisiert amOrt platform args s₂ rfl rfl rfl) ?_⟩
     · subst unsigned
       change (0 ≤ (1 : Int) ∧ 1 ≤ (2 : Int)) ↔ true = true
-      omega
+      constructor
+      · intro _
+        rfl
+      · intro _
+        constructor <;> omega
     · intro g guard
+      change (Befehl.teilen 0).guard (s₂.lokal eintritt) = some g at guard
+      have htemp0 : (s₂.lokal eintritt).temp 0 = some ⟨.int 1 1, Zahl.literal 1⟩ := rfl
+      have htemp1 : (s₂.lokal eintritt).temp (0 + 1) = some ⟨.int 2 2, Zahl.literal 2⟩ := rfl
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
-        simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, Option.bind_eq_bind,
-          Option.bind_some, Option.pure_def]
+        simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
+          Option.bind_eq_bind, Option.bind_some, Option.pure_def]
       have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.trans guard.symm)
       subst g
       omega
@@ -183,12 +190,19 @@ theorem division_erfuellbar : divisionJoint := by
       (form.realisiert amOrt platform args s₂ rfl rfl rfl) ?_⟩
     · cases unsigned
       · change (0 ≤ (-(1 : Int)) ∧ 1 ≤ (2 : Int)) ↔ false = true
-        omega
+        constructor
+        · intro both
+          omega
+        · intro impossible
+          cases impossible
       · contradiction
     · intro g guard
+      change (Befehl.teilen 0).guard (s₂.lokal eintritt) = some g at guard
+      have htemp0 : (s₂.lokal eintritt).temp 0 = some ⟨.int (-1) (-1), Zahl.literal (-1)⟩ := rfl
+      have htemp1 : (s₂.lokal eintritt).temp (0 + 1) = some ⟨.int 2 2, Zahl.literal 2⟩ := rfl
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
-        simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, Option.bind_eq_bind,
-          Option.bind_some, Option.pure_def]
+        simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
+          Option.bind_eq_bind, Option.bind_some, Option.pure_def]
       have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.trans guard.symm)
       subst g
       omega
@@ -210,7 +224,7 @@ theorem comparison_realisiert (ctx : Scope) : (comparisonForm ctx).RealisiertAus
     change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
       [Befehl.vergleichen args.op 0])[(expr 0 args.left).code.length +
         (expr 1 args.right).code.length]? = some (.vergleichen args.op 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl) platform args s running active atPc
 
@@ -225,7 +239,7 @@ theorem comparison_ideal (ctx : Scope) : (comparisonForm ctx).IdealAussage := by
     change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
       [Befehl.vergleichen args.op 0])[(expr 0 args.left).code.length +
         (expr 1 args.right).code.length]? = some (.vergleichen args.op 0)
-    rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+    rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
   · exact ⟨((comparisonForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
@@ -263,7 +277,7 @@ theorem comparison_erfuellbar : comparisonJoint := by
       change ((expr 0 args.left).code ++ (expr 1 args.right).code ++
         [Befehl.vergleichen args.op 0])[(expr 0 args.left).code.length +
           (expr 1 args.right).code.length]? = some (.vergleichen args.op 0)
-      rw [List.getElem?_append_right (by rw [List.length_append]; exact Nat.le_refl _)]
+      rw [List.getElem?_append_right (by rw [List.length_append])]
       rw [List.length_append, Nat.sub_self]
       rfl) platform args s₂ rfl rfl rfl) ?_⟩
   intro g guard
