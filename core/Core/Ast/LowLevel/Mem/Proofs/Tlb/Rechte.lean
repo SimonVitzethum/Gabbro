@@ -209,7 +209,7 @@ theorem tlbRechte_mapSpace (target : ZielDaten) (sp virt slot : Nat)
             · have outside := List.all_eq_true.mp (List.all_eq_true.mp htokens token tmem)
                 (zelle.seite - virt / target.seitengranule) (List.mem_range.mpr idx)
               rw [back] at outside
-              exact (of_decide_eq_true outside) own.1
+              exact (decide_eq_true_eq.mp outside) own.1
           · rcases inv zelle mem' space found0 with ok | pending
             · refine Or.inl ?_
               subst mapped
