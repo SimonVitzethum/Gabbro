@@ -68,13 +68,13 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
     simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, List.append_assoc, Arith.print_value,
       printOpen, printClose, printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "(" .toList : Token) = openParen by decide),
-      (show (Token.punctuation ")" .toList : Token) = closeParen by decide)]
+      (show (Token.punctuation "(".toList : Token) = openParen by decide),
+      (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
     rfl
   rw [tokens]
   refine Or.inr ⟨_, rfl, ?_⟩
   refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_⟩
-  · exact Expr.printReads args.left (noAddAtPrec6 _)
+  · exact Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen]))
   · exact Expr.printReads args.right noOperatorAtClose
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
@@ -90,8 +90,16 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
         | stop =>
             exact .atom atomRead
               (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtEnd))
-        | textConcat =>
-            omega
+        | binary => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
+        | div => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
+        | compare => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Compare.spelling] at *
+        | logic => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Logic.spelling] at *
+        | arrayIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | tupleField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
+        | recordField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
+        | textConcat => simp_all [Arith.precedence] at *
+        | textIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | substring => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
     · rcases grouped with ⟨inside, rfl, body⟩
       rcases body with ⟨rhs, leftRead, rightRead⟩
       cases leftRead with
@@ -101,8 +109,16 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
             exact .atom (.grouped (.atom atomRead
               (.textConcat args.left args.right (Nat.zero_le _) rightRead
                 (.stop noOperatorAtClose)))) (.stop noOperatorAtEnd)
-        | textConcat =>
-            omega
+        | binary => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
+        | div => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
+        | compare => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Compare.spelling] at *
+        | logic => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Logic.spelling] at *
+        | arrayIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | tupleField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
+        | recordField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
+        | textConcat => simp_all [Arith.precedence] at *
+        | textIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | substring => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
   · let decoded : List Char := []
     let a := (sourceUtf8 decoded).size
     let left : Expr scope (.text a) := .textLiteral decoded
@@ -112,11 +128,8 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   dsimp
-  rw [Befehl.auswerten, Rahmen.schreibe]
-  simp only [Function.update_self]
-  rw [hleft, hright]
-  rw [dif_pos left.bound, dif_pos right.bound]
-  simp [TextValue.concat]
+  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
+    left.bound, right.bound]
   all_goals omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
@@ -129,7 +142,7 @@ private theorem textConcat_amOrt (scope : Scope) : (textConcatForm scope).RegelA
   let p := (expr 0 args.left).anhaengen (expr 1 args.right)
   let b : Befehl := .textConcat 0 args.a args.b
   have hpos : (textConcatForm scope).position args = p.code.length := by
-    dsimp [textConcatForm, p]
+    dsimp [textConcatForm, p, Fragment.anhaengen]
     rw [List.length_append]
   rw [hpos]
   change (p.anhaengen (.einzel b)).code[p.code.length]? = some b
@@ -246,12 +259,13 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
     cases guard
   · constructor
     · rfl
-    · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        simp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    ·       have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
+        simp [s₂, s₁, a, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        simp [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+        simp [s₂, a, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
+      change (((((Befehl.textConcat 0 a a).nach eintritt s₂).lokal eintritt).temp 0).isSome) = true
       rw [Befehl.nach, htmp]
       rfl
 
