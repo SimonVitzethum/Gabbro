@@ -262,8 +262,11 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                   exact (List.not_mem_nil hmem2).elim
                 | cons h₀ rest => exact ⟨h₀, rest, rfl⟩
               obtain ⟨h₀, rest, hqcons⟩ := hqne
+              have hq1 : (s₁.sperren l).schlange = h₀ :: rest := by rw [hsq, hqcons]
+              have hq2 : (s₂.sperren l).schlange = rest := by rw [hs2q]
               have hjr : (s₁.sperren l).schlange[j + 1]? = some c := by
-                rw [hsq, hqcons]
+                rw [hq1, List.getElem?_cons_succ] at ⊢
+                rw [hq2] at hj
                 exact hj
               have hji : j + 1 ≤ i + 1 :=
                 hmono a r s s₁ (i + 1) (j + 1) (Nat.le_refl _) hbr hsa hr1 hidx hjr
