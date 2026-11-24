@@ -104,7 +104,7 @@ def Tree.production : Tree form → List Token → Prop
       tokens = [.word region.val, dot, keyword "address", openParen, closeParen]
   | .view region type => fun tokens =>
       ∃ input, tokens = [.word region.val, dot, keyword "view", keyword "as"] ++ input ∧
-        TypeReads input type []
+        TypeReads [] input type []
   | .environment name abi row => fun tokens =>
       tokens = [keyword "environment", .word name.val, keyword "abi", keyword abi.name,
         assignment, keyword "catalogue", keyword row.name, semicolon]
