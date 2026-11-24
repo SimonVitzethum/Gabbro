@@ -460,25 +460,26 @@ theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
 theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   intro platform start
   let carrier : TableDeclaration [] :=
-    ⟨true, egTableName, 1, [], (by intro f h; cases h), by simp [recordLabels]⟩
+    ⟨true, egTableName, 1, [], (by intro f h; cases h), by exact List.nodup_nil⟩
   let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
   let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
   have hchecked : [written].mapM (WrittenCarrierEffect.resolve [carrier.binding] true) =
       some [eff] := by
-    simp [written, eff, Scope.effectCarrier, carrierBinding, TableDeclaration.binding,
-      carrier, egTableName]
+    simp [List.mapM, WrittenCarrierEffect.resolve, Scope.effectCarrier, written, eff,
+      carrierBinding, TableDeclaration.binding, carrier, egTableName]
   let group : EffectGroupDeclaration [carrier.binding] :=
     ⟨true, egName, [written], [eff], hchecked⟩
   let scope : Scope := [group.binding, carrier.binding]
   have hclause : expandEffects scope [] [.group group.name] = some [eff] := by
     simp [expandEffects, EffectTerm.resolve, Scope.effectGroup,
-      EffectGroupDeclaration.binding, effectGroupBinding, scope, group, eff,
+      EffectGroupDeclaration.binding, effectGroupBinding, scope, group, eff, egName,
       beq_iff_eq]
   let clause : EffectClause scope [] := ⟨[.group group.name], [eff], hclause⟩
   let fnName : Identifier :=
     ⟨['f'], 'f', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  have hdirect : directName fnName := by decide
+  have hdirect : directName fnName := by
+    simp [directName, ordinaryLocal, fnName]
   let body : BracedBlock (writtenResult none) (functionScope scope []) := .braces .done
   let a : Surface.FunctionArgs scope :=
     ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp,
@@ -492,22 +493,18 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let s0 := (I.start E start).2
   let s1 := bt.nach eintritt s0
   let s := bg.nach eintritt s1
-  have hcode : E.system.kopf = kopf (programm tree.2).code := by
-    rfl
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
-    rw [hcode]
-    simp [programm, unitBody, decl, tableInstruction, kopf, s0, bt, I.start,
-      Zustand.start, startdaten, eintritt, Fragment.einheit]
+    simp [E, tree, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
+      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
-    rw [hcode]
-    simp [programm, unitBody, decl, tableInstruction, kopf, s1, s0, bt, bg,
-      I.start, Zustand.start, startdaten, eintritt, Befehl.nach, Befehl.auswerten,
-      EffectGroupDeclaration.binding, effectGroupBinding]
+    simp [E, tree, s1, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
+      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt,
+      Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
-    rw [hcode]
-    simp [programm, unitBody, decl, tableInstruction, kopf, s, s1, s0, bt, bg, b,
-      scope, I.start, Zustand.start, startdaten, eintritt, Befehl.nach, Befehl.auswerten,
-      EffectGroupDeclaration.binding, effectGroupBinding, functionForm, functionInstruction]
+    simp [E, tree, s, s1, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
+      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt,
+      Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
+      functionForm, functionInstruction, bt, bg, b, scope]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
   have hstep2 : E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) :=
@@ -527,7 +524,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
       false, [], some [eff]⟩
     refine ⟨sig, ?_, ?_⟩
     · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
-        a, scope, clause, body, functionCode, bracedBlock]
+        a, scope, clause, body, functionCode, bracedBlock, writtenResult, declaredEffects]
     · simp [sig, group, eff]
 
 end Gabbro.Core.Ast.Semantik
