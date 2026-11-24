@@ -190,8 +190,10 @@ theorem activateJoint : ActivateJointAussage := by
     · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
   have hparse : MemParse text tree := (memDruck .activateSpace tree).2
   have hopElab : elaborateMem scope tree = some op := by
-    simp only [elaborateMem, tree, scope, space, MemScope.slotRaum, List.map_cons, List.map_nil,
-      spaceName_slot, Option.map_some, op]
+    change Option.map MemInstruction.activateSpace ([spaceName.val].idxOf? spaceName.val) =
+      some (MemInstruction.activateSpace 0)
+    rw [spaceName_slot]
+    rfl
   have hbezeichnet : BezeichnetMem k scope text (memUnit k op) .activateSpace := by
     refine ⟨tree, hparse, ?_⟩
     exact ⟨op, hopElab, rfl⟩
@@ -283,7 +285,7 @@ theorem activateJoint : ActivateJointAussage := by
                else none) =
       some { (s.lokal entryContext) with result := some .activated, active := some 0 }
     rw [hsspaces]
-    dsimp
+    simp only [List.getElem?_cons_zero, Option.bind_some]
     rw [if_pos hAktiv]
   obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp heval
   refine ⟨k, scope, tree, op, env, start, text, pre, s, next, ?_, hw, hzul, ?_,
