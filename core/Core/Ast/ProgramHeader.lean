@@ -166,15 +166,11 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
     a = b ∧ rest = more := by
   have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
     intro s w h
-    have hh := congrArg List.head? h
-    have hc : (if s then 'i' else 'u') = 'b' := by
-      simpa only [intSpelling, List.head?_cons, Option.some.injEq, String.toList_ofList, List.head?_cons] using hh
-    cases s <;> cases hc
+    cases s <;> cases h
   have spelling_inj : ∀ {s w s' w'}, intSpelling s w = intSpelling s' w' → s = s' ∧ w = w' := by
     intro s w s' w' h
     have hh := congrArg List.head? h; have ht := congrArg List.tail h
-    have hc : (if s then 'i' else 'u') = (if s' then 'i' else 'u') := by
-      simpa only [intSpelling, List.head?_cons, Option.some.injEq] using hh
+    have hc : (if s then 'i' else 'u') = (if s' then 'i' else 'u') := Option.some.inj hh
     have hs : s = s' := by cases s <;> cases s' <;> first | rfl | cases hc
     cases hs
     have ht' : (toString w).toList = (toString w').toList := by simpa only [intSpelling, List.tail_cons] using ht
@@ -363,7 +359,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
           apply ParamsRead.first
           · exact p.written.printReads p.valid (rest := ([printClose].map PrintedToken.value ++ rest))
-              (by simp only [List.map_cons, List.map_nil, List.singleton_append, hClose, closeParen, keyword, Token.noConfusion])
+              (by intro more h; cases h)
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
@@ -373,7 +369,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
               List.append_assoc] using
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-                (by simp only [hComma, comma, keyword, List.cons.injEq, Token.noConfusion]))
+                (by intro more h; cases h))
           · simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
               hClose] using (ParamsTail.comma ih)
 
@@ -469,14 +465,14 @@ theorem DirectCall.printReads (call : DirectCall scope) :
       call.args rest := by
     induction call.args with
     | nil =>
-        simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.map_cons, List.nil_append,
-          List.singleton_append, hpClose]
+        simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons,
+          List.map_nil, List.map_cons, List.nil_append, List.append_nil, List.singleton_append, hpClose]
         exact ArgsRead.empty
     | cons exp exps ih =>
         cases exps with
         | nil =>
-            simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.map_cons, List.nil_append,
-              List.singleton_append, hpClose]
+            simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons,
+              List.map_nil, List.map_cons, List.nil_append, List.append_nil, List.singleton_append, hpClose]
             apply ArgsRead.first
             · exact exp.2.printReads (minimum := 0) noOperatorAtClose
             · exact ArgsTail.close
@@ -484,12 +480,12 @@ theorem DirectCall.printReads (call : DirectCall scope) :
             rw [comma_cons]
             apply ArgsRead.first
             · simpa only [Expr.printTokens, hComma, hpClose, List.map_append, List.map_cons, List.map_nil,
-                List.singleton_append, List.append_assoc, List.cons_append] using
+                List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using
                 (exp.2.printReads
                   (rest := comma :: ((commaSeparated ((e :: es).map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest))
                   (noComma _))
             · simpa only [hpClose, List.map_append, List.map_cons, List.map_nil, List.singleton_append,
-                List.append_assoc] using (ArgsTail.comma ih)
+                List.append_assoc, List.nil_append] using (ArgsTail.comma ih)
   have hpName : call.name.print.value = Token.word call.name.val := by rfl
   have hpOpen : printOpen.value = openParen := by rfl
   simpa only [DirectCall.printPieces, hpName, hpOpen, hpClose, List.map_append, List.map_cons, List.map_nil,
