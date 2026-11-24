@@ -73,7 +73,11 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
       refine ⟨?spaces, ?narrow⟩
       · intro sp space found
         by_cases hlt : sp < (s.lokal c).spaces.length
-        · have happ := List.getElem?_append_left hlt
+        · have happ : (((s.lokal c).spaces ++
+              [{ tabellen := region.extent, entries := [],
+                generation := 0, ausstehend := [] } : Adressraum])[sp]? =
+              (s.lokal c).spaces[sp]?) :=
+            List.getElem?_append_left hlt
           rw [happ] at found
           exact hspaces sp space found
         · have hlt' := (List.getElem?_eq_some_iff.mp found).1
@@ -83,7 +87,13 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
             omega
           have hge : (s.lokal c).spaces.length ≤ sp := by
             omega
-          have happ := List.getElem?_append_right hge
+          have happ : (((s.lokal c).spaces ++
+              [{ tabellen := region.extent, entries := [],
+                generation := 0, ausstehend := [] } : Adressraum])[sp]? =
+              ([{ tabellen := region.extent, entries := [],
+                generation := 0, ausstehend := [] } : Adressraum])[sp -
+                (s.lokal c).spaces.length]?) :=
+            List.getElem?_append_right hge
           rw [happ] at found
           have hsub : sp - (s.lokal c).spaces.length = 0 := by
             omega
