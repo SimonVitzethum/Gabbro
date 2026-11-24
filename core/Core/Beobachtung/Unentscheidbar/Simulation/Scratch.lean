@@ -47,7 +47,9 @@ def miniVonCode : Code → Option Mini
   | _ => none
 
 theorem miniVonCode_miniZuCode : ∀ m : Mini, miniVonCode (miniZuCode m) = some m
-  | .leaf n => by simp [miniZuCode, miniVonCode, natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .leaf n => by
+      change miniVonCode (Code.pair Code.zero (natZuCode n)) = some (.leaf n)
+      simp [miniVonCode, codeZuNat_natZuCode]
   | .node a b => by
       have ih1 := miniVonCode_miniZuCode a
       have ih2 := miniVonCode_miniZuCode b
