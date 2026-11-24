@@ -45,7 +45,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.I.Bestimmt, 18045759927346415682),
   (`Gabbro.Core.Maschine.I.Fortschritt, 8293601312876751613),
   (`Gabbro.Core.Maschine.I.Sim, 5020273245640587028),
-  (`Gabbro.Core.Maschine.I.Haengt, 3356667890800924967),
+  (`Gabbro.Core.Maschine.I.Haengt, 11926748180342426515),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 3222038947297158479)]
 
 private meta def acceptance : AcceptanceSpec := {

@@ -50,13 +50,14 @@ private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
     (regeln : ∀ f, Gabbro.Core.Ideal.RegelFortschritt E.system f)
     (komponierbar : ∀ f, RegelKomponierbar E.einrichtung E.system f)
+    (eindeutig : ∀ s c, Bereit (E := E) s c → ¬ E.system.fertig s c ∧ ∀ b, ¬ E.system.blockiert s c b)
     (slot : ∀ t, ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some entry ∧ η.hw.gelegenheit t k)
     (dispatch : ∀ t k c, ((η.zeit.zustand t).kerne k).laeuft = some c → c = entry)
     (head : ∀ t, ∃ f, E.system.kopf (η.zeit.zustand t) entry = some f)
     (ticks : ∀ t, ∃ w spur, ρ.zeit.spur t = some (.kontext entry w, spur) ∧
       η.zeit.spur t = some (.kontext entry w, spur)) :
     FortschrittsPflichten (.lockFree (fun _ => True)) ρ η (fun _ c => c = entry) := by
-  refine ⟨fertig, regeln, komponierbar, ?_, ?_, ?_, ?_⟩
+  refine ⟨fertig, regeln, komponierbar, eindeutig, ?_, ?_, ?_, ?_⟩
   · rintro t _ rfl
     exact slot t
   · rintro t _ rfl _
@@ -229,6 +230,7 @@ theorem fortschritt_erfuellbar :
     · intro f t x c w plans u _ _ rule
       obtain ⟨rfl, rfl⟩ := rule
       exact ⟨plan, label.2, update c x, rfl, execute t c x⟩
+    · exact fun _ _ _ => ⟨id, fun _ => id⟩
     · intro t
       rw [idealState t, (protocol t).1, matched.hardware]
       exact ⟨0, dispatch, opportunity t⟩

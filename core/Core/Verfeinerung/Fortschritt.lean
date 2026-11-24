@@ -24,7 +24,7 @@ def BleibtOffen (η : Lauf E) (c : Kontext) (f : F) (a : Nat) : Prop :=
       (η.zeit.zustand t).status c = .laeuft ∧ ¬ Erledigt η c t
 
 def Bereit (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) : Prop :=
-  ¬ E.system.fertig s c ∧ (∀ b, ¬ E.system.blockiert s c b) ∧ ∃ w plans u, E.system.ISchritt c s w plans u
+  ∃ w plans u, E.system.ISchritt c s w plans u
 
 /-- Repeated eligibility is sufficient for lock acquisition. Other forms are
     subject to continuously enabled progress. -/
@@ -44,7 +44,7 @@ inductive FortschrittsKlasse (F : Type) where
 
 def SystemAktiv (forms : F → Prop) (η : Lauf E) (a : Nat) : Prop :=
   ∀ n, a ≤ n → ∃ t c f, n ≤ t ∧ forms f ∧ E.system.kopf (η.zeit.zustand t) c = some f ∧
-    Bereit (E := E) (η.zeit.zustand t) c
+    (η.zeit.zustand t).status c = .laeuft ∧ Bereit (E := E) (η.zeit.zustand t) c
 
 def SystemSchritt (forms : F → Prop) (η : Lauf E) (a : Nat) : Prop :=
   ∃ t, a ≤ t ∧ (η.zeit.spur t = some (.absturz, absturzSpur) ∨
@@ -69,6 +69,7 @@ structure FortschrittsPflichten (klasse : FortschrittsKlasse F)
   fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c
   regeln : ∀ f, Gabbro.Core.Ideal.RegelFortschritt E.system f
   komponierbar : ∀ f, RegelKomponierbar E.einrichtung E.system f
+  eindeutig : ∀ s c, Bereit (E := E) s c → ¬ E.system.fertig s c ∧ ∀ b, ¬ E.system.blockiert s c b
   angebot : ∀ t c, nutzbar t c →
     ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some c ∧ η.hw.gelegenheit t k
   wahl : ∀ t c, nutzbar t c →
@@ -93,14 +94,15 @@ theorem FortschrittsPflichten.vollzug (pf : FortschrittsPflichten klasse ρ η n
     η.zeit.spur t = some (.absturz, absturzSpur) ∨
       ∃ w spur, ρ.zeit.spur t = some (.kontext c w, spur) := by
   obtain ⟨k, dispatch, offer⟩ := pf.angebot t c slot
+  obtain ⟨notDone, notBlocked⟩ := pf.eindeutig _ c bereit
   rcases
     fortschritt_im_lauf valid pf.fertig pf.regeln pf.komponierbar t c live ⟨k, dispatch⟩
     with crash | done | ⟨b, blocked⟩ | step | withheld
   · obtain ⟨_, _, crash⟩ := crash
     cases crash with
     | absturz fault => exact Or.inl (absturz_am_schnitt E η fault.1).1
-  · exact (bereit.1 done).elim
-  · exact (bereit.2.1 b blocked).elim
+  · exact (notDone done).elim
+  · exact (notBlocked b blocked).elim
   · exact Or.inr (pf.wahl t c slot step)
   · exact (withheld.2 k dispatch offer).elim
 
@@ -166,13 +168,14 @@ theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η lokal) (valid : L
 theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E lokal laenge)
     (run : Maschine.Laeufe E h ρ)
     (fortschritt : ∀ η, Laeufe E η → Laufabgleich ρ η lokal → η.umgebung = h →
-      ∃ nutzbar, FortschrittsPflichten klasse ρ η nutzbar) :
+      FairLaeufe E.katalog h ρ.hw → ∃ nutzbar, FortschrittsPflichten klasse ρ η nutzbar) :
     ∃ η, Laeufe E η ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
       (FairLaeufe E.katalog h ρ.hw → (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η) := by
   obtain ⟨η, valid, matched, environment⟩ := laufabgleich pflicht.abgleich run
   have bound := pflicht.abgleich.schranke h ρ η run matched
   have sim := matched.sim valid bound (pflicht.autoritaet h ρ run) pflicht.fortsetzung
-  obtain ⟨_, pf⟩ := fortschritt η valid matched environment
-  exact ⟨η, valid, sim, pflicht.zielFX run, fun fair => matched.fortschritt valid bound pf (environment.symm ▸ fair)⟩
+  refine ⟨η, valid, sim, pflicht.zielFX run, fun fair => ?_⟩
+  obtain ⟨_, pf⟩ := fortschritt η valid matched environment fair
+  exact matched.fortschritt valid bound pf (environment.symm ▸ fair)
 
 end Gabbro.Core.Maschine.I
