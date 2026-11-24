@@ -156,7 +156,8 @@ theorem textLiteralErfuellbarAm : TextLiteralErfuellbarAmAussage := by
     simp [Befehl.guard] at guard
   · dsimp only
     constructor
-    · simp [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    · change (s.lokal eintritt).stopp = none
+      rfl
     · simp [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
 
 end Gabbro.Core.Ast.Semantik
