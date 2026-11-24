@@ -171,8 +171,7 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
     cases s <;> cases hc
   have spelling_inj : ∀ {s w s' w'}, intSpelling s w = intSpelling s' w' → s = s' ∧ w = w' := by
     intro s w s' w' h
-    have hh := congrArg List.head? h
-    have ht := congrArg List.tail h
+    have hh := congrArg List.head? h; have ht := congrArg List.tail h
     have hc : (if s then 'i' else 'u') = (if s' then 'i' else 'u') := by
       simpa only [intSpelling, List.head?_cons] using hh
     have hs : s = s' := by
@@ -241,8 +240,7 @@ theorem TypeReads.consumes (read : TypeReads input a rest) : rest <:+ input := b
   · intro rest; exact List.suffix_cons _ _
   · intro signed width rest valid closed; exact List.suffix_cons _ _
   · intro signed width lo hi input more rest valid loRead hiRead
-    have hiS : rest <:+ more := signed_suffix hiRead
-    have loS : closedRange :: more <:+ input := signed_suffix loRead
+    have hiS : rest <:+ more := signed_suffix hiRead; have loS : closedRange :: more <:+ input := signed_suffix loRead
     have moreS : more <:+ input := (List.suffix_cons closedRange more).trans loS
     exact ((hiS.trans moreS).trans (List.suffix_cons (keyword "in") input)).trans
       (List.suffix_cons (Token.word (intSpelling signed width)) (keyword "in" :: input))
@@ -271,7 +269,8 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
       rw [hnum]; exact SignedReads.positive (n := n) (rest := tail)
   have hpInt : ∀ (s : Bool) (w : Nat), (intTypeName s w).print.value = Token.word (intSpelling s w) := by
     intro s w; rfl
-  have hpIn : printIn.value = keyword "in" := by rfl; have hpRange : printClosedRange.value = closedRange := by rfl
+  have hpIn : printIn.value = keyword "in" := by rfl
+  have hpRange : printClosedRange.value = closedRange := by rfl
   cases tree with
   | bool =>
       have hp : printBoolType.value = keyword "bool" := by rfl
@@ -283,8 +282,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
           simpa only [WrittenType.printPieces, hpInt, List.map_cons, List.map_nil, List.singleton_append] using
             (TypeReads.integer (signed := signed) (width := width) valid closed)
       | some bounds =>
-          have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest)
-          have hiRead := signed_printReads bounds.2 rest
+          have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest); have hiRead := signed_printReads bounds.2 rest
           simpa only [WrittenType.printPieces, hpInt, hpIn, hpRange, List.map_append, List.map_cons, List.map_nil,
             List.singleton_append, List.append_assoc] using
             (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
@@ -356,7 +354,8 @@ theorem ParamsRead.printReads (ps : List Parameter) :
     cases ps with
     | nil => simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons]
     | cons q qs => simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc, List.map_cons]
-  have hClose : printClose.value = closeParen := by rfl; have hComma : printComma.value = comma := by rfl
+  have hClose : printClose.value = closeParen := by rfl
+  have hComma : printComma.value = comma := by rfl
   induction ps with
   | nil =>
       simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
@@ -435,8 +434,7 @@ theorem CallReads.deterministic (left : CallReads scope input a rest) (right : C
     dsimp at hname hargs
     have hn : n = n' := Subtype.ext hname
     subst n'; subst as'; rfl
-  obtain ⟨ia, hia, aArgs⟩ := CallReads.inversion left
-  obtain ⟨ib, hib, bArgs⟩ := CallReads.inversion right
+  obtain ⟨ia, hia, aArgs⟩ := CallReads.inversion left; obtain ⟨ib, hib, bArgs⟩ := CallReads.inversion right
   rw [hia] at hib
   injection hib with hword hin; injection hword with hname; cases hin
   obtain ⟨typedEq, suffixEq⟩ := ArgsRead.deterministic aArgs bArgs
@@ -467,7 +465,8 @@ theorem DirectCall.printReads (call : DirectCall scope) :
     | div => cases h
     | compare c => cases c <;> cases h
     | logic l => cases l <;> cases h
-  have hComma : printComma.value = comma := by rfl; have hpClose : printClose.value = closeParen := by rfl
+  have hComma : printComma.value = comma := by rfl
+  have hpClose : printClose.value = closeParen := by rfl
   have argsRead : ArgsRead scope
       ((commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest)
       call.args rest := by
@@ -492,7 +491,8 @@ theorem DirectCall.printReads (call : DirectCall scope) :
                   (noComma _))
             · simpa only [hpClose, List.map_append, List.map_cons, List.map_nil, List.singleton_append,
                 List.append_assoc] using (ArgsTail.comma ih)
-  have hpName : call.name.print.value = Token.word call.name.val := by rfl; have hpOpen : printOpen.value = openParen := by rfl
+  have hpName : call.name.print.value = Token.word call.name.val := by rfl
+  have hpOpen : printOpen.value = openParen := by rfl
   simpa only [DirectCall.printPieces, hpName, hpOpen, hpClose, List.map_append, List.map_cons, List.map_nil,
     List.singleton_append, List.append_assoc] using (CallReads.applied call argsRead)
 
