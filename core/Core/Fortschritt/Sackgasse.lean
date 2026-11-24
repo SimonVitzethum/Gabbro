@@ -13,6 +13,7 @@
 module
 
 public import Core.Fortschritt.Beispiele
+public import Core.Fortschritt.Verhungern
 
 @[expose] public section
 
