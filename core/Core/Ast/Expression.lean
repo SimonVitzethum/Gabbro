@@ -236,8 +236,12 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
   · rename_i ref visible ordinary'
-    refine ⟨ref, visible, ordinary', rfl, ?_, rfl⟩
-    rfl
+    let ty := (Expr.typed (Expr.variable ref visible ordinary')).1
+    change ∃ (ref' : Local scope ty) (v' : ref'.visible) (o' : ordinaryLocal ref'.binding.name),
+      ref'.binding.name.val = word ∧
+      Expr.typed (Expr.variable ref visible ordinary') = Expr.typed (Expr.variable ref' v' o') ∧
+      suffix = rest
+    exact ⟨ref, visible, ordinary', rfl, rfl, rfl⟩
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
 theorem AtomReads.negative_inversion
@@ -358,11 +362,11 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | logic op allowed => exact (blocked ⟨.logic op, _, rfl, allowed⟩).elim
   · intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
-    generalize h : Infix.token (.arith op) = token at otherRead
+    generalize h : op.token = token at otherRead
     cases otherRead with
     | stop blocked => exact (blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ rightRead tail =>
-      have eq : op = op' := Arith.token_injective (by simpa only [Infix.token] using h)
+      have eq : op = op' := Arith.token_injective h
       cases eq
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
@@ -458,13 +462,13 @@ theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
     ∃ (lo₂ hi₂ : Int) (right : Expr scope (.int lo₂ hi₂)) (more : List Token),
       ExprReads scope (op.precedence + 1) input right more ∧
       ExprTail scope minimum (.binary op left right) more tree rest := by
-  generalize h : Infix.token (.arith op) = token at read
+  generalize h : op.token = token at read
   cases read with
   | stop blocked =>
       exfalso
       exact blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩
   | binary op' _ rightRead tail =>
-      have eq : op = op' := Arith.token_injective (by simpa only [Infix.token] using h)
+      have eq : op = op' := Arith.token_injective h
       cases eq
       exact ⟨_, _, _, _, rightRead, tail⟩
   | div _ rightRead _ tail =>
