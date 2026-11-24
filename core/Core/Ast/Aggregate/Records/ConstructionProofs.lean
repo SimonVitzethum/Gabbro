@@ -59,22 +59,40 @@ theorem RecordValueSuffix : RecordValueSuffixAussage := by
   intro scope input labels types items rest read
   exact read.consumes
 
+private theorem labeledPrintReads (items : LabeledItems scope labels types) (rest : List Token) :
+    LabeledItemsRead scope (items.printPieces.map PrintedToken.value ++ closeParen :: rest) items rest ∧
+    LabeledItemsTail scope (items.printTail.map PrintedToken.value ++ closeParen :: rest) items rest := by
+  induction types generalizing labels with
+  | nil =>
+    cases items
+    exact ⟨.close, .close⟩
+  | cons type types ih =>
+    cases items with
+    | next label value tail =>
+      let more := tail.printTail.map PrintedToken.value ++ closeParen :: rest
+      have blocked : ¬ Continues 0 more := by
+        cases tail with
+        | empty => exact noOperatorAtClose
+        | next _ _ _ => exact noOperatorAtComma
+      have read := LabeledItemsRead.next label (value.printReads blocked) (ih tail).2
+      refine ⟨?_, ?_⟩
+      · simpa only [LabeledItems.printPieces, List.map_append, List.map_cons, List.map_nil,
+          List.cons_append, List.nil_append, List.append_assoc, Expr.printTokens, more,
+          show printColon.value = colon from rfl,
+          show label.print.value = .word label.val from rfl] using read
+      · simpa only [LabeledItems.printTail, LabeledItems.printPieces, List.map_append, List.map_cons,
+          List.map_nil, List.cons_append, List.nil_append, List.append_assoc, Expr.printTokens, more,
+          show printComma.value = comma from rfl, show printColon.value = colon from rfl,
+          show label.print.value = .word label.val from rfl] using
+          (LabeledItemsTail.comma label value tail read)
+
 private theorem recordValuePrints (scope : Scope) (args : RecordValueArgs scope) :
     (recordValue scope).production args
       (((Category.expression scope).printPieces ((recordValue scope).tree args)).map PrintedToken.value) := by
-  refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, ?_⟩
-  · simp only [Category.printPieces, recordValue, RecordValueArgs.expression, Expr.typed, Expr.printPieces,
-      List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
-    rfl
-  · have read : AtomReads scope (.word args.ref.name.val :: openParen ::
-        (args.args.printPieces.map PrintedToken.value ++ [closeParen])) args.expression [] := by
-      simpa only [RecordValueArgs.expression, Expr.printPieces, Expr.printTokens, List.map_append,
-        List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_nil, List.append_assoc,
-        show args.ref.name.print.value = .word args.ref.name.val from rfl,
-        show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
-        args.expression.printAtom []
-    cases read with
-    | recordValue _ _ _ labelsRead => exact labelsRead
+  refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, (labeledPrintReads args.args []).1⟩
+  simp only [Category.printPieces, recordValue, RecordValueArgs.expression, Expr.typed, Expr.printPieces,
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  rfl
 
 theorem RecordValueDerivation : RecordValueDerivationAussage := by
   rintro scope ⟨witness⟩

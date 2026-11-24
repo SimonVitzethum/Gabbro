@@ -261,29 +261,43 @@ theorem variantMatch_inversion : VariantMatchInversionAussage := by
     cases mutable <;> cases (List.cons.inj tokens).1
   | _ => cases (List.cons.inj tokens).1
 
+private theorem variantArmsPrints (arms : VariantArms result scope allowed labels payloads) :
+    VariantArmsRead result scope allowed (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest := by
+  have nameToken (name : Identifier) : name.print.value = .word name.val := rfl
+  have arrowToken : printMatchArrow.value = matchArrow := rfl
+  induction labels generalizing payloads allowed with
+  | nil =>
+    cases arms with
+    | done => exact .done
+    | wildcard _ nonempty _ => exact (nonempty rfl).elim
+  | cons head tail ih =>
+    cases arms with
+    | nullary label ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken] using
+        (VariantArmsRead.nullary (allowed := allowed) label ordinary bodyRead (ih next))
+    | payload label binder ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken,
+        show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
+        (VariantArmsRead.payload (allowed := allowed) label binder ordinary body bodyRead (ih next))
+    | wildcard body nonempty shape =>
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, arrowToken, show printDiscard.value = .word ['_'] from rfl] using
+        (VariantArmsRead.wildcard nonempty shape (body.printReads (closeBrace :: rest)))
+
 private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : VariantMatchArgs ctx) :
     (variantMatch ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((variantMatch ctx).tree args)).map PrintedToken.value) := by
   let armsInput := args.arms.printPieces.map PrintedToken.value ++ [closeBrace]
   let input := args.value.printTokens ++ openBrace :: armsInput
-  have valueRead : ExprReads ctx.1 0 input args.value (openBrace :: armsInput) :=
-    args.value.printReads noOperatorAtOpenBrace
-  have tokens : ((Stmt.variantMatch args.value args.arms).printPieces.map PrintedToken.value) =
-      keyword "match" :: input := by
-    simp only [Stmt.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
-      List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
-    rfl
-  refine ⟨input, armsInput, tokens, valueRead, ?_⟩
-  have parsed : StmtReads ctx.2 ctx.1 (keyword "match" :: input)
-      ⟨ctx.1, Stmt.variantMatch args.value args.arms⟩ [] := by
-    have printed := (Stmt.variantMatch args.value args.arms).printReads []
-    simpa only [Stmt.printTokens, List.append_nil, tokens] using printed
-  generalize tokenEq : keyword "match" :: input = printedTokens at parsed
-  cases parsed with
-  | variantMatch read arms =>
-    cases (List.cons.inj tokenEq).2
-    cases (ExprReads.deterministic read valueRead).2
-    exact arms
+  refine ⟨input, armsInput, ?_, args.value.printReads noOperatorAtOpenBrace, variantArmsPrints args.arms⟩
+  change ((Stmt.variantMatch args.value args.arms).printPieces.map PrintedToken.value) = _
+  simp only [Stmt.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+    List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
+  rfl
 
 theorem variantMatch_derivation : VariantMatchDerivationAussage := by
   rintro ctx ⟨witness⟩
