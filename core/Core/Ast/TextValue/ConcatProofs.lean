@@ -78,88 +78,6 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
       (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
 
-private theorem suffix_length_le {a b : List Token} (h : a <:+ b) : a.length ≤ b.length := by
-  rcases h with ⟨t, ht⟩
-  rw [← ht]
-  simp
-
-private theorem textTailCompose {scope it it2 it3}
-    {first : Expr scope it} {input : List Token} {tree : Expr scope it2} {rest : List Token}
-    {tree2 : Expr scope it3} {final : List Token}
-    (tail : ExprTail scope (Arith.add.precedence + 1) first input tree rest)
-    (next : ExprTail scope 0 tree rest tree2 final) :
-    ExprTail scope 0 first input tree2 final := by
-  cases tail with
-  | stop _ => exact next
-  | binary op _ reads tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .binary op (Nat.zero_le _) reads (textTailCompose tail' next)
-  | div _ reads nonzero tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .div (Nat.zero_le _) reads nonzero (textTailCompose tail' next)
-  | compare op _ reads follows tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .compare op (Nat.zero_le _) reads follows (textTailCompose tail' next)
-  | logic op _ reads tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .logic op (Nat.zero_le _) reads (textTailCompose tail' next)
-  | arrayIndex base lower upper _ reads tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .arrayIndex base lower upper (Nat.zero_le _) reads (textTailCompose tail' next)
-  | tupleField base index _ tail' =>
-      exact .tupleField base index (Nat.zero_le _) (textTailCompose tail' next)
-  | recordField base field index written _ tail' =>
-      exact .recordField base field index written (Nat.zero_le _) (textTailCompose tail' next)
-  | textConcat left right' _ reads tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .textConcat left right' (Nat.zero_le _) reads (textTailCompose tail' next)
-  | textIndex base offset _ reads tail' =>
-      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
-      exact .textIndex base offset (Nat.zero_le _) reads (textTailCompose tail' next)
-  | substring base first' last _ reads₁ reads₂ tail' =>
-      have hlen₁ : _ := suffix_length_le (ExprReads.consumes reads₁)
-      have hlen₂ : _ := suffix_length_le (ExprReads.consumes reads₂)
-      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
-        (textTailCompose tail' next)
-termination_by input.length
-decreasing_by
-  have hEq : List.length input = List.length input✝ + 1 := by
-    have h := congrArg List.length ‹input = _ :: _›
-    simpa using h
-  omega
-
-private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
-    {tree : Expr scope (.text a)} {rhs final : List Token}
-    (tail : ExprTail scope (Arith.add.precedence + 1) first input tree (Arith.add.token :: rhs))
-    (right : Expr scope (.text b))
-    (rightRead : ExprReads scope (Arith.add.precedence + 1) rhs right final)
-    (blocked : ¬ Continues 0 final) :
-    ExprTail scope 0 first input (Expr.textConcat tree right) final :=
-  textTailCompose tail (.textConcat tree right (Nat.zero_le _) rightRead (.stop blocked))
-
-theorem textConcatDerivation : TextConcatDerivationAussage := by
-  intro scope
-  refine ⟨?reads, textConcatPrint scope, ?erfuellbar⟩
-  · intro args tokens production
-    change ExprReads scope 0 tokens (Expr.textConcat args.left args.right) []
-    rcases production with plain | grouped
-    · rcases plain with ⟨rhs, leftRead, rightRead⟩
-      cases leftRead with
-      | atom atomRead tail =>
-          exact .atom atomRead (textTailLowerConcat tail args.right rightRead noOperatorAtEnd)
-    · rcases grouped with ⟨inside, rfl, body⟩
-      rcases body with ⟨rhs, leftRead, rightRead⟩
-      cases leftRead with
-      | atom atomRead tail =>
-          exact .atom (.grouped (.atom atomRead
-            (textTailLowerConcat tail args.right rightRead noOperatorAtClose)))
-            (.stop noOperatorAtEnd)
-  · let decoded : List Char := []
-    let a := (sourceUtf8 decoded).size
-    let left : Expr scope (.text a) := .textLiteral decoded
-    let args : TextConcatArgs scope := ⟨a, a, left, left⟩
-    exact Rule.satisfiableOfPrint args (textConcatPrint scope args)
-
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   have hl : left.bytes.size ≤ a := left.bound
@@ -196,10 +114,6 @@ private theorem textConcat_keine_invarianten (scope : Scope)
     Quellklauseln.leer, List.append_nil]
   rw [expr_keine_invarianten 0 args.left, expr_keine_invarianten 1 args.right]
   rfl
-
-theorem textConcatParse : TextConcatParseAussage := by
-  intro scope args text pieces lexed production
-  exact (textConcatDerivation scope).parse lexed production
 
 theorem textConcatElaboriert : TextConcatElaboriertAussage := by
   intro scope platform args
