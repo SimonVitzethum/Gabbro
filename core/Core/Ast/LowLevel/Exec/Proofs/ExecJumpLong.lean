@@ -52,41 +52,32 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
               subst d'
               have hspEq : sp = sp' := by
                 first
-                | (rw [hsp, hsp']; rfl)
+                | simpa only [hsp, hsp']
                 | (
-                  rw [hsp, hsp']
-                  apply congrArg some
-                  apply Subtype.ext
-                  have h := congrArg (fun l : List Token => l[9]?) hb
-                  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
-                    Option.some.injEq, Token.word.injEq] at h
-                  exact h
+                  simpa only [hsp, hsp'] using congrArg some (Subtype.ext (by
+                    have h := congrArg (fun l : List Token => l[9]?) hb
+                    simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
+                      Option.some.injEq, Token.word.injEq] using h))
                   )
               have hstEq : st = st' := by
                 first
-                | (rw [hst, hst']; rfl)
+                | simpa only [hst, hst']
                 | (
-                  rw [hst, hst']
-                  apply congrArg some
-                  apply Subtype.ext
-                  have h := congrArg (fun l : List Token => l[8]?) hb
-                  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
-                    Option.some.injEq, Token.word.injEq] at h
-                  exact h
+                  simpa only [hst, hst'] using congrArg some (Subtype.ext (by
+                    have h := congrArg (fun l : List Token => l[8]?) hb
+                    simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
+                      Option.some.injEq, Token.word.injEq] using h))
                   )
                 | (
-                  rw [hst, hst']
-                  apply congrArg some
-                  apply Subtype.ext
-                  have h := congrArg (fun l : List Token => l[11]?) hb
-                  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
-                    Option.some.injEq, Token.word.injEq] at h
-                  exact h
+                  simpa only [hst, hst'] using congrArg some (Subtype.ext (by
+                    have h := congrArg (fun l : List Token => l[11]?) hb
+                    simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
+                      Option.some.injEq, Token.word.injEq] using h))
                   )
-              have hfirst : .jumpLong t d sp st = .jumpLong t d sp' st :=
-                congrArg (fun x => .jumpLong t d x st) hspEq
-              have hsecond : .jumpLong t d sp' st = .jumpLong t d sp' st' :=
-                congrArg (fun x => .jumpLong t d sp' x) hstEq
+              have hfirst : ExecTree.jumpLong t d sp st = ExecTree.jumpLong t d sp' st :=
+                congrArg (fun x => ExecTree.jumpLong t d x st) hspEq
+              have hsecond : ExecTree.jumpLong t d sp' st = ExecTree.jumpLong t d sp' st' :=
+                congrArg (fun x => ExecTree.jumpLong t d sp' x) hstEq
               simpa only [hsp, hst, hsp', hst'] using hfirst.trans hsecond
             )
 private def jumpLongSyntax : Gabbro.Core.Text.Syntax (ExecTree .jumpLong) where
@@ -128,19 +119,19 @@ private theorem jumpLongMeaning : JumpLongMeaningAussage := by
   cases hcur : (s.lokal c).current with
   | none =>
       rw [hcur] at heval
-      simp only [Option.bind_none] at heval
+      try simp only [Option.bind_none] at heval
       cases heval
   | some cur =>
       rw [hcur] at heval
-      simp only [Option.bind_some] at heval
+      try simp only [Option.bind_some] at heval
       cases hdst : (s.lokal c).states[dest]? with
       | none =>
           rw [hdst] at heval
-          simp only [Option.bind_none] at heval
+          try simp only [Option.bind_none] at heval
           cases heval
       | some decl =>
           rw [hdst] at heval
-          simp only [Option.bind_some] at heval
+          try simp only [Option.bind_some] at heval
           cases htr : decl.translation with
           | off =>
               cases hsp : sp with
@@ -373,7 +364,7 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     exact ⟨op, hElab, rfl⟩
   have hs0lokal : s0.lokal entryContext = { pc := 0, stapel := [0] } := by
     simp only [s0, I.start, E, execProgram, start, execBoot, Zustand.start, entryContext,
-      ↓reduceIte, List.length_cons, List.length_nil, List.range_one]
+      ↓reduceIte, List.length_cons, List.length_nil, Nat.zero_add, List.range_one]
   have hs0status : s0.status entryContext = .laeuft := by
     simp only [s0, I.start, E, execProgram, start, execBoot, Zustand.start, entryContext,
       ↓reduceIte]
@@ -401,10 +392,10 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     simpa only [s2, ExecFrame.advance] using hs1status
   have hs2current : (s2.lokal entryContext).current = some 0 := by
     simp only [s2, ExecFrame.advance, Function.update_self, frame2, ExecFrame.declare,
-      s1, frame1, hs0lokal, List.nil_append]
+      s1, frame1, hs0lokal, List.nil_append, List.cons_append]
   have hs2states : (s2.lokal entryContext).states = [jlFirstDecl, jlSecondDecl] := by
     simp only [s2, ExecFrame.advance, Function.update_self, frame2, ExecFrame.declare,
-      s1, frame1, hs0lokal, List.nil_append]
+      s1, frame1, hs0lokal, List.nil_append, List.cons_append]
   have hs2stapel : (s2.lokal entryContext).stapel = [0] := by
     simp only [s2, ExecFrame.advance, Function.update_self, frame2, ExecFrame.declare,
       s1, frame1, hs0lokal]
@@ -427,10 +418,11 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
                    result := some (.jumpedLong code dest),
                    current := some dest, activeSpace := sp }
                else none) = some next
+    dsimp [dest, code, sp, st]
     rw [hs2current]
     simp only [Option.bind_some]
     rw [hs2states]
-    try simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.bind_some]
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.bind_some]
     rw [hs2halted, hs2stapel, hs2spaces]
     try dsimp [jlSecondDecl]
     rw [if_pos hcond]
@@ -438,18 +430,18 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
   have hhead0 : E.system.kopf s0 entryContext = some (.declareState jlFirstDecl) := by
     change execHead (pre ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
     unfold execHead
-    simp only [entryContext, ↓reduceIte, hs0status, hs0lokal, List.getElem?_cons_zero]
+    simp only [↓reduceIte, hs0status, hs0lokal, List.getElem?_cons_zero]
     exact if_pos (by rw [heval0]; rfl)
   have hhead1 : E.system.kopf s1 entryContext = some (.declareState jlSecondDecl) := by
     change execHead (pre ++ [op]) s1 entryContext = some (.declareState jlSecondDecl)
     unfold execHead
-    simp only [entryContext, ↓reduceIte, hs1status, hs1pc, List.getElem?_cons_succ,
+    simp only [↓reduceIte, hs1status, hs1pc, List.getElem?_cons_succ,
       List.getElem?_cons_zero]
     exact if_pos (by rw [heval1]; rfl)
   have hhead2 : E.system.kopf s2 entryContext = some op := by
     change execHead (pre ++ [op]) s2 entryContext = some op
     unfold execHead
-    simp only [entryContext, ↓reduceIte, hs2status, hs2pc, List.getElem?_cons_succ,
+    simp only [↓reduceIte, hs2status, hs2pc, List.getElem?_cons_succ,
       List.getElem?_cons_succ, List.getElem?_cons_zero]
     exact if_pos (by rw [heval]; rfl)
   have hstep0 : (ExecInstruction.rule (.declareState jlFirstDecl)).ideal entryContext s0 ()
