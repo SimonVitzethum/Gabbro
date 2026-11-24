@@ -215,7 +215,7 @@ structure WartePraemissen (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl 
       (∃ s₁ s₂, ρ.zeit.zustand r = some s₁ ∧ ρ.zeit.zustand (r + 1) = some s₂ ∧
         (s₁.sperren l).Gibt h (s₂.sperren l)) ∧
       Kontextkosten ρ h b (r + 1 - b) ≤ H + 1
-  hmono : ∀ t₁ t₂ s₁ s₂ i₁ i₂, a ≤ t₁ → t₁ ≤ t₂ → ρ.zeit.zustand t₁ = some s₁ →
+  hmono : ∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), a ≤ t₁ → t₁ ≤ t₂ → ρ.zeit.zustand t₁ = some s₁ →
     ρ.zeit.zustand t₂ = some s₂ → (s₁.sperren l).schlange[i₁]? = some c →
     (s₂.sperren l).schlange[i₂]? = some c → i₂ ≤ i₁
 
@@ -265,7 +265,7 @@ theorem e1_hgibt : ∀ h b s, 1 ≤ b → ρ'.zeit.zustand b = some s →
   rw [hfree] at hown
   cases hown
 
-theorem e1_hmono : ∀ t₁ t₂ s₁ s₂ i₁ i₂, 1 ≤ t₁ → t₁ ≤ t₂ → ρ'.zeit.zustand t₁ = some s₁ →
+theorem e1_hmono : ∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), 1 ≤ t₁ → t₁ ≤ t₂ → ρ'.zeit.zustand t₁ = some s₁ →
     ρ'.zeit.zustand t₂ = some s₂ → (s₁.sperren ()).schlange[i₁]? = some A →
     (s₂.sperren ()).schlange[i₂]? = some A → i₂ ≤ i₁ := by
   intro t₁ t₂ s₁ s₂ i₁ i₂ h1 h2 hz1 hz2 hq1 hq2

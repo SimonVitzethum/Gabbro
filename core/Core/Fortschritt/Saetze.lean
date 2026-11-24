@@ -180,7 +180,6 @@ theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
                 (SchrittWahl.kontext.inj
                   (congrArg Prod.fst (Option.some.inj (event.symm.trans himp_eq)))).1
               rw [← hdd]
-              exact mark
           · exact (hcon t h1 h2 (Or.inl ⟨w, spur, step⟩)).elim
         | antwort _ => simp only [himp_eq, Bool.false_eq_true] at himp
         | interrupt _ => simp only [himp_eq, Bool.false_eq_true] at himp
