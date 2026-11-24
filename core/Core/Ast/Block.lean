@@ -52,9 +52,9 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree rest
   · intros
-    rename_i before after name ordinary expr rest
+    rename_i before ty name ordinary expr rest
     change StmtReads result before ((Stmt.letValue name ordinary expr).printTokens ++ rest)
-      ⟨⟨name, Ty.bool, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
+      ⟨⟨name, ty, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
     rw [Stmt.printTokens_let]
     exact .letBinding name ordinary (expr.printReads noOperatorAtSemicolon) .plain
   · intros
@@ -76,14 +76,15 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces,
         Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
-      refine .ite (condExpr.printReads _ ?_) ?_ ?_
-      · exact noOperatorAtOpenBrace
+      refine .ite (condExpr.printReads noOperatorAtOpenBrace) ?_ ?_
       · exact .braced (yesBody.printItems_reads (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
       · exact .braced (noBody.printItems_reads rest)
   · intro rest
     exact .done
   · intros
     rename_i first next ihFirst ihNext rest
+    change BlockItems result before (first.printTokens ++ next.printItems.map PrintedToken.value ++ closeBrace :: rest)
+      ⟨after, Block.step first next⟩ rest
     exact .step (ihFirst _) (ihNext _)
   · intros
     rename_i body ihBody rest
@@ -95,27 +96,25 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
 theorem Block.printItems_reads (tree : Block result before after) (rest : List Token) :
     BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest := by
   refine (Block.rec
-    (motive_1 := fun before after tree => ∀ rest,
-      StmtReads result before (tree.printTokens ++ rest) ⟨after, tree⟩ rest)
-    (motive_2 := fun before after tree => ∀ rest,
-      BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest)
-    (motive_3 := fun before tree => ∀ rest,
-      BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree) rest
-  · exact Stmt.printReads
-  · exact Stmt.printReads
-  · exact Stmt.printReads
-  · exact Stmt.printReads
-  · intro rest
-    exact .done
+    (motive_1 := fun before input tree rest => True)
+    (motive_2 := fun before input tree rest =>
+      ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
+    (motive_3 := fun before input tree rest => True)
+    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ (by trivial) tree) rest
   · intros
-    rename_i first next ihFirst ihNext rest
-    exact .step (ihFirst _) (ihNext _)
+    rename_i before input middle first more after next rest other
+    cases other with
+    | done => exfalso; exact (StmtReads.disjoint_closeBrace (by assumption)).elim
+    | step stRead blockRead =>
+        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead
+        cases sameFirst
+        cases moreEq
+        obtain ⟨sameNext, restEq⟩ := (by rename_i h; exact h) blockRead
+        cases sameNext
+        exact ⟨rfl, restEq⟩
   · intros
-    rename_i body ihBody rest
-    simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
-    exact .braced (ihBody _)
+    rename_i before input tree rest other
+    exact ⟨rfl, rfl⟩
 
 theorem BracedBlock.printReads (tree : BracedBlock result before) (rest : List Token) :
     BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest := by
