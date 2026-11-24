@@ -137,9 +137,9 @@ private theorem optionIsSomeInvGen {scope count minimum input rest}
   | optionIsSome _ _ _ _ tail =>
       rename_i cnt inp
       cases htok
-      have hcnt : cnt = count := indexOptionType_inj eqT
-      subst cnt
-      exact tail
+      have hc := indexOptionType_inj eqT
+      subst count
+      simpa using tail
 
 theorem optionTestInversion : OptionTestInversionAussage := by
   intro scope count minimum input type ref visible ordinary tree rest prec read
