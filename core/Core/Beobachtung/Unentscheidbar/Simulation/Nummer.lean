@@ -19,11 +19,6 @@ def kodiere : List Befehl → ℕ :=
 def dekodiere : ℕ → Option (List Befehl) :=
   Encodable.decode
 
-example (xs : List Nat) :
-    (do let fs ← some xs; match fs with | [a] => some a | _ => none) =
-      (match xs with | [a] => some a | _ => none) := by
-  simp only [Option.bind_some]
-
 theorem dekodiere_links (p : List Befehl) : dekodiere (kodiere p) = some p :=
   Encodable.encodek p
 
