@@ -93,7 +93,8 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
       (match s.leihen slot with | .eigen => true | .verliehen _ => false))
     0 entryExtent ⟨init.type, value⟩ rfl rfl rfl rfl yields
   have frame : next.lokal eintritt =
-      { s.lokal eintritt with pc := (s.lokal eintritt).pc + 1,
+      { s.lokal eintritt with
+        pc := (s.lokal eintritt).pc + 1
         lokale := some ⟨init.type, value⟩ :: (s.lokal eintritt).lokale } := by
     change Function.update s.lokal eintritt _ eintritt = _
     rw [Function.update_self]

@@ -268,8 +268,11 @@ abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUni
 
 def startdaten (scope : Scope) (kern : Option Nat) (platform : Plattform := .x86_64)
     (regions : List Strecke := []) : Startdaten Int PUnit Rahmen PUnit :=
-  ⟨fun c => { Rahmen.start scope with platform := platform,
-      arrivalRegions := if c = eintritt then regions else [] },
+  let bootFrame (c : Kontext) : Rahmen :=
+    { Rahmen.start scope with
+      platform := platform
+      arrivalRegions := if c = eintritt then regions else [] }
+  ⟨bootFrame,
     fun c => if c = eintritt then .laeuft else .ruht,
     fun k => ⟨if some k = kern then some eintritt else none, .nutzer, (), fun _ => false,
       0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
