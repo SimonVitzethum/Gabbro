@@ -140,7 +140,8 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
           simp only [Fits] at fits
           have hb : lower ≤ value.wert ∧ value.wert ≤ upper :=
             ⟨Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
-          simp [wertAls, hb, Wert.widen] at *
+          simp only [wertAls, Wert.widen]
+          rw [dif_pos hb]
       | _ => simp [Fits, wertAls, Wert.widen] at fits
   | array el count =>
       cases target with
