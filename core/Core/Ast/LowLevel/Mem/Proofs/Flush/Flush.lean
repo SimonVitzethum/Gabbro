@@ -153,7 +153,6 @@ private theorem flushRelease (target : ZielDaten) (s : MemState) (c : Kontext) (
         simp only [hfreiFalse, Bool.and_false]
     simp only [MemInstruction.evaluate, frame, hfind', hspace,
       Option.bind_eq_bind, Option.bind_some, hnr, Bool.false_eq_true, ↓reduceIte, hifFalse]
-    rw [if_neg Bool.false_ne_true]
 
 
 private theorem flushComplete (target : ZielDaten) (s : MemState) (c : Kontext) (name : Identifier)
@@ -218,7 +217,6 @@ private theorem flushComplete (target : ZielDaten) (s : MemState) (c : Kontext) 
         simp only [hbFalse, Bool.and_false]
     simp only [MemInstruction.evaluate, hfind', hspace, Option.bind_eq_bind,
       Option.bind_some, hnr, Bool.false_eq_true, ↓reduceIte, hifFalse]
-    rw [if_neg Bool.false_ne_true]
 
 private theorem flushMeaning : FlushMeaningAussage := by
   intro target s c name token space hfind hspace

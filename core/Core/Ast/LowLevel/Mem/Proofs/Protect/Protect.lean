@@ -295,6 +295,7 @@ private theorem satEval3 :
   rw [if_pos ⟨protRights_ne, satValid, satCovered, satVerengt⟩]
   simp only [satSpaces2, List.set_cons_zero]
   dsimp [s3frame]
+  rfl
 
 theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
