@@ -52,7 +52,7 @@ theorem akzeptiert_aussen [DecidableEq L]
 theorem akzeptiert_fluss [DecidableEq L]
     {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) :
     Beobachtung.FlussLokal E :=
-  h.1.2.2.2
+  h.1.2.2.2.1
 
 /-- The trivial rule: no implementation step, no `I` step. -/
 def trivialesRegel
@@ -91,11 +91,12 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
   exact False.elim h
 
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
-    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, and
-    the holder row holds trivially — no hold bound is declared. -/
+    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, the
+    holder row holds trivially (no hold bound is declared), and no bounds to violate
+    (open by default, so the bounds row holds unconditionally). -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
-  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_⟩,
+  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -111,6 +112,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
+  · exact schrankenLokal_leer rfl rfl rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

@@ -140,7 +140,7 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
               · simp only [Option.pure_def, Option.some.injEq] at step
                 subst next
                 intro zelle hz
-                exact (List.mem_filter.mp hz).1
+                exact hz
               · cases step
   | protectSpace sp virt pages rights =>
       simp only [MemInstruction.evaluate] at step

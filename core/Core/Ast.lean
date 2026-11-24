@@ -15,6 +15,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Stufung
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Erfuellbar
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Fuellung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowJoint
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
@@ -28,6 +29,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.Protect.Protect
 public import Core.Ast.LowLevel.Exec.Proofs.ExecWait
 public import Core.Ast.LowLevel.Exec.Proofs.ExecStateDecl
 public import Core.Ast.LowLevel.Exec.Proofs.ExecEntry
+public import Core.Ast.LowLevel.Exec.Proofs.ExecReserviert
 public import Core.Ast.LowLevel.Exec.Proofs.Entries
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
@@ -46,6 +48,7 @@ public import Core.Ast.LowLevel.Proofs.DeviceDma
 public import Core.Ast.LowLevel.Proofs.DeviceSatisfiability
 public import Core.Ast.LowLevel.Exec.Proofs.ExecJumpLong
 public import Core.Ast.Inventory.All
+public import Core.Ast.Inventory.Offen
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface
 public import Core.Ast.Expression.Proofs

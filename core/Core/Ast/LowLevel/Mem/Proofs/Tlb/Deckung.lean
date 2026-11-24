@@ -74,6 +74,53 @@ theorem MemFrame.TlbGedeckt.set_fern {frame : MemFrame} {zelle : TlbZelle} {sp :
   rw [List.getElem?_set_ne (Ne.symm other)]
   exact found
 
+/-- A cell of a page range can only be covered by a present table entry of its space or by a pending
+    token of that space. If the range has neither, `TlbGedeckt` leaves no cell to clear there. -/
+theorem MemFrame.TlbGedeckt.keine_Zelle {frame : MemFrame} (inv : frame.TlbGedeckt)
+    {sp base pages : Nat} {space : Adressraum} (found : frame.spaces[sp]? = some space)
+    (habb : ∀ i < pages, space.abbildung (base + i) = none)
+    (htok : ∀ token ∈ space.ausstehend, ∀ i < pages, ¬ token.contains (base + i)) :
+    ∀ zelle ∈ frame.tlb.zellen, zelle.imBereich sp base pages = false := by
+  intro zelle mem
+  cases him : zelle.imBereich sp base pages with
+  | false => rfl
+  | true =>
+      have drin : zelle.raum = sp ∧ pageRange base pages zelle.seite := by
+        simpa only [TlbZelle.imBereich, decide_eq_true_eq] using him
+      have idxlt : zelle.seite - base < pages := by
+        unfold pageRange at drin
+        omega
+      have zurueck : base + (zelle.seite - base) = zelle.seite := by
+        unfold pageRange at drin
+        omega
+      obtain ⟨space0, found0, covered0⟩ := inv zelle mem
+      have unique : space0 = space := by
+        rw [drin.1] at found0
+        exact Option.some.inj (found0.symm.trans found)
+      rw [unique] at covered0
+      rcases covered0 with ⟨entry, he, _⟩ | ⟨token, tmem, own⟩
+      · have hnone := habb (zelle.seite - base) idxlt
+        rw [zurueck, he] at hnone
+        cases hnone
+      · have hcont := htok token tmem (zelle.seite - base) idxlt
+        rw [zurueck] at hcont
+        exact (hcont own.1).elim
+
+/-- Clearing a page range that has no cell is the identity. `map` adds entries only to a range with
+    neither a table entry nor a pending token, so on every state `tlbGedeckt_erreichbar` covers, its
+    former clearing of that range changed nothing. -/
+theorem TranslationCache.invalidate_eq_self (cache : TranslationCache) (space base pages : Nat)
+    (h : ∀ zelle ∈ cache.zellen, zelle.imBereich space base pages = false) :
+    cache.invalidate space base pages = cache := by
+  cases cache with
+  | mk zellen =>
+      unfold TranslationCache.invalidate
+      apply congrArg TranslationCache.mk
+      apply List.filter_eq_self.mpr
+      intro zelle hz
+      rw [h zelle hz]
+      rfl
+
 /-! ## Instructions that touch neither the spaces nor the cache -/
 
 private theorem bindMarke_erhaelt {frame next : MemFrame} {name : Identifier} {token : Zuruecknahme}

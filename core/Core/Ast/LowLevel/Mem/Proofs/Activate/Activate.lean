@@ -133,7 +133,7 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, memKlauselnWahr _ code, memWaechterHalten _ code⟩
-  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩
+  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_⟩
   · intro i
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
@@ -157,6 +157,14 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
           exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
             (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
   · exact memProgramFlussLokal _ code
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
 
 theorem activateJoint : ActivateJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog

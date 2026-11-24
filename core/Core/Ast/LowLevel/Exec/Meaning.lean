@@ -43,6 +43,11 @@ def elaborateExec (scope : ExecScope) : ExecTree form → Option ExecInstruction
   | .entryDecl name kind stack priority =>
       (List.idxOf? name.val (scope.entries.map Subtype.val)).map
         (fun _ => .declareEntry name kind stack priority)
+  | .cpuCaps _ => none
+  | .cpuCycles => none
+  | .suspendSystem _ _ _ => none
+  | .suspendCore _ => none
+  | .resumeArrival _ => none
 
 /-- The first declared state is the arrival state: declaring it starts the
     core in that state. Later declarations only extend the table. -/

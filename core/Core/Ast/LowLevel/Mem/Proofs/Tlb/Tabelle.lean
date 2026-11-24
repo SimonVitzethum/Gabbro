@@ -121,13 +121,29 @@ theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
     | some region =>
       simp only [hs, hr, Option.bind_eq_bind, Option.bind_some] at h
       split at h
-      · simp only [Option.pure_def, Option.some.injEq] at h
+      · rename_i cond
+        simp only [Option.pure_def, Option.some.injEq] at h
         subst h
+        have hnone : ∀ i < (region.extent.bis - region.extent.von) / target.seitengranule,
+            space.abbildung (virt / target.seitengranule + i) = none := by
+          intro i hi
+          have hiMem : i ∈ List.range ((region.extent.bis - region.extent.von) / target.seitengranule) :=
+            List.mem_range.mpr hi
+          have hiT := (List.all_eq_true.mp cond.2.2.2.1) i hiMem
+          cases hfind : space.abbildung (virt / target.seitengranule + i) with
+          | none => rfl
+          | some entry =>
+              simp only [hfind, Option.isNone] at hiT
+              cases hiT
+        have htok : ∀ token ∈ space.ausstehend,
+            ∀ i < (region.extent.bis - region.extent.von) / target.seitengranule,
+            ¬ token.contains (virt / target.seitengranule + i) := by
+          intro token htmem i hi
+          have hiT := (List.all_eq_true.mp
+            ((List.all_eq_true.mp cond.2.2.2.2) token htmem)) i (List.mem_range.mpr hi)
+          simpa only [decide_eq_true_eq] using hiT
         intro zelle mem
-        have mem' := List.mem_filter.mp mem
-        have notin := mem'.2
-        simp only [Bool.not_eq_true', TlbZelle.imBereich, decide_eq_false_iff_not] at notin
-        obtain ⟨space0, found0, covered0⟩ := inv zelle mem'.1
+        obtain ⟨space0, found0, covered0⟩ := inv zelle mem
         by_cases same : zelle.raum = sp
         · have unique : space0 = space := by
             rw [same] at found0
@@ -146,11 +162,16 @@ theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
             · intro e he
               obtain ⟨i, hi, rfl⟩ := List.mem_map.mp he
               intro heq
-              apply notin
-              refine ⟨same, ?_⟩
-              have hlt := List.mem_range.mp hi
-              rw [← heq]
-              exact ⟨Nat.le_add_right _ _, Nat.add_lt_add_left hlt _⟩
+              have htrue : zelle.imBereich sp (virt / target.seitengranule)
+                  ((region.extent.bis - region.extent.von) / target.seitengranule) = true := by
+                simp only [TlbZelle.imBereich, decide_eq_true_eq, Bool.and_eq_true]
+                refine ⟨same, ?_⟩
+                unfold pageRange
+                have hlt : i < (region.extent.bis - region.extent.von) / target.seitengranule :=
+                  List.mem_range.mp hi
+                omega
+              rw [MemFrame.TlbGedeckt.keine_Zelle inv hs hnone htok zelle mem] at htrue
+              cases htrue
         · exact ⟨space0, MemFrame.TlbGedeckt.set_fern same found0, covered0⟩
       · cases h
 

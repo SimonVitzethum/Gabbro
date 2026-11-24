@@ -63,6 +63,7 @@ def LiesTupelfeldSichtAussage : Prop :=
     is pushed, hence both the identity and the shifted tail rule. -/
 def BindeTupelSichtAussage : Prop :=
   ∀ (β : Beschriftung) (pc quelle : Nat) (types : List (Ty .value)) (bind : List Bool),
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) →
     oeffentlich (β.temp pc quelle) = true →
     (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
       oeffentlich (β.lokal pc i) = true) →
@@ -123,12 +124,14 @@ theorem baueTupelSicht_erfuellbar (ziel : Nat) (types : List (Ty .value)) :
 /-- The `bindeTupel` premises hold jointly. -/
 theorem bindeTupelSicht_erfuellbar (quelle : Nat) (types : List (Ty .value))
     (bind : List Bool) :
-    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat),
+      (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+      oeffentlich (β.temp pc quelle) = true ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
         oeffentlich (β.lokal pc i) = true) ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) (i + behalteneTupel types bind)) = true →
         oeffentlich (β.lokal pc i) = true) :=
-  ⟨.alleOeffentlich, 0, alleOeffentlich_temp 0 quelle,
+  ⟨.alleOeffentlich, 0, fun s _ => alleOeffentlich_temp 0 s, alleOeffentlich_temp 0 quelle,
     fun i _ => alleOeffentlich_lokal 0 i, fun i _ => alleOeffentlich_lokal 0 i⟩
 
 /-- The `baueRecord` premises hold jointly (shared `SchreibRegel` bundle). -/

@@ -81,6 +81,7 @@ def MeaningAussageExec : ExecForm → Prop
   | .waitInterrupt => WaitMeaningAussage
   | .stopCore => StopMeaningAussage
   | .entryDecl => EntryMeaningAussage
+  | form => ExecErfuellbarAussage form
 
 def JointAussageExec : ExecForm → Prop
   | .jump => JumpJointAussage
@@ -126,7 +127,12 @@ def schemaExec (constructor : Lean.Name) : RegistrySchema constructor :=
     else if constructor == ``ExecTree.jumpLong then .jumpLong
     else if constructor == ``ExecTree.waitInterrupt then .waitInterrupt
     else if constructor == ``ExecTree.stopCore then .stopCore
-    else ExecForm.entryDecl
+    else if constructor == ``ExecTree.entryDecl then .entryDecl
+    else if constructor == ``ExecTree.cpuCaps then .cpuCaps
+    else if constructor == ``ExecTree.cpuCycles then .cpuCycles
+    else if constructor == ``ExecTree.suspendSystem then .suspendSystem
+    else if constructor == ``ExecTree.suspendCore then .suspendCore
+    else ExecForm.resumeArrival
   ⟨.surface, statementsExec constructor form⟩
 
 end Gabbro.Core.Ast.LowLevel
