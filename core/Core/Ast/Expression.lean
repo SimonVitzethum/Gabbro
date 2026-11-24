@@ -46,24 +46,33 @@ def elseKeyword : Token := .word "else".toList
 def returnKeyword : Token := .word "return".toList
 def minus : Token := .punctuation ['-']
 def bang : Token := .punctuation ['!']
+def openBracket : Token := .punctuation ['[']
+def closeBracket : Token := .punctuation [']']
+def dot : Token := .punctuation ['.']
+def comma : Token := .punctuation [',']
 
 inductive Infix where
   | arith (op : Arith)
   | div
   | compare (op : Compare)
   | logic (op : Logic)
+  | index
+  | projection
 
 def Infix.token : Infix → Token
   | .arith op => op.token
   | .div => .punctuation ['/']
   | .compare op => .punctuation op.spelling.toList
   | .logic op => .punctuation op.spelling.toList
+  | .index => openBracket
+  | .projection => dot
 
 def Infix.precedence : Infix → Nat
   | .arith op => op.precedence
   | .div => 6
   | .compare _ => 3
   | .logic .and => 2
+  | .index | .projection => 7
   | .logic .or => 1
 
 def Infix.follows : Infix → List Token → Prop
@@ -101,6 +110,14 @@ def PrimaryStart (tokens : List Token) : Prop :=
 def NegationStart (tokens : List Token) : Prop :=
   PrimaryStart tokens ∧ ∀ n tail, tokens ≠ .natural n :: tail
 
+theorem noOperatorAtComma : ¬ Continues minimum (comma :: more) := by
+  rintro ⟨op, _, same, _⟩
+  cases op <;> first | cases same | rename_i operation; cases operation <;> cases same
+
+theorem noOperatorAtCloseBracket : ¬ Continues minimum (closeBracket :: more) := by
+  rintro ⟨op, _, same, _⟩
+  cases op <;> first | cases same | rename_i operation; cases operation <;> cases same
+
 mutual
 
 /-- An expression consumes an atom and its maximal continuation at the given precedence. -/
@@ -124,6 +141,14 @@ inductive AtomReads (scope : Scope) :
       AtomReads scope (minus :: input) (.neg operand) rest
   | not : PrimaryStart input → AtomReads scope input operand rest →
       AtomReads scope (bang :: input) (.not operand) rest
+  | arrayValue (principal : arrayElement types = some element)
+      (fits : ∀ i : Fin types.length, Fits (types.get i) element) :
+      ItemsRead scope closeBracket input items rest →
+      AtomReads scope (openBracket :: input) (.arrayValue items principal fits) rest
+  | tupleValue : ExprReads scope 0 input first (comma :: secondInput) →
+      ExprReads scope 0 secondInput second more →
+      ItemsTail scope closeParen more items rest →
+      AtomReads scope (openParen :: input) (.tupleValue first second items) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
     refuses a comparison at the head of its continuation. -/
@@ -147,6 +172,28 @@ inductive ExprTail (scope : Scope) :
       ExprReads scope ((Infix.logic op).precedence + 1) input right more →
       ExprTail scope minimum (.logic op left right) more tree rest →
       ExprTail scope minimum left ((Infix.logic op).token :: input) tree rest
+  | arrayIndex (base : Expr scope (.array element count)) (lower : 0 ≤ lo) (upper : hi < count) :
+      minimum ≤ Infix.index.precedence →
+      ExprReads scope 0 input (index : Expr scope (.int lo hi)) (closeBracket :: more) →
+      ExprTail scope minimum (.arrayIndex base index lower upper) more tree rest →
+      ExprTail scope minimum base (openBracket :: input) tree rest
+  | tupleField (base : Expr scope (tupleType (first :: second :: types)))
+      (index : Fin (first :: second :: types).length) :
+      minimum ≤ Infix.projection.precedence →
+      ExprTail scope minimum (.tupleField base index) input tree rest →
+      ExprTail scope minimum base (dot :: .natural index.val :: input) tree rest
+
+/-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
+inductive ItemsRead (scope : Scope) (close : Token) :
+    List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
+  | close : ItemsRead scope close (close :: rest) .empty rest
+  | next : ExprReads scope 0 input head more → ItemsTail scope close more tail rest →
+      ItemsRead scope close input (.next head tail) rest
+
+inductive ItemsTail (scope : Scope) (close : Token) :
+    List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
+  | close : ItemsTail scope close (close :: rest) .empty rest
+  | comma : ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest
 
 end
 

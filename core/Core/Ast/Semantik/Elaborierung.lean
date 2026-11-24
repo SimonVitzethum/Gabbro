@@ -25,6 +25,8 @@ def Fragment.anhaengen (a b : Fragment) : Fragment :=
 
 /-- An expression writes its result to the requested temporary. Its right
     operand starts above its left result, which must survive that operand. -/
+mutual
+
 def expr (slot : Nat) : Expr scope type → Fragment
   | .lit value => .einzel (.literal slot value)
   | .binary op left right =>
@@ -42,6 +44,23 @@ def expr (slot : Nat) : Expr scope type → Fragment
   | .logic op left right =>
     let rhs := expr slot right
     ((expr slot left).anhaengen (.einzel (.springeWenn slot op.skips (rhs.code.length + 1)))).anhaengen rhs
+
+  | .arrayValue (types := types) (element := element) items _ _ =>
+    (itemCode slot items).anhaengen (.einzel (.baueArray slot element types.length))
+  | .arrayIndex (element := element) (count := count) base index _ _ =>
+    ((expr slot base).anhaengen (expr (slot + 1) index)).anhaengen
+      (.einzel (.liesArray slot element count))
+  | .tupleValue (firstType := a) (secondType := b) (types := tail) first second rest =>
+    (((expr slot first).anhaengen (expr (slot + 1) second)).anhaengen
+      (itemCode (slot + 2) rest)).anhaengen (.einzel (.baueTupel slot (a :: b :: tail)))
+  | .tupleField (first := a) (second := b) (types := tail) base index =>
+    (expr slot base).anhaengen (.einzel (.liesTupelfeld slot (a :: b :: tail) index))
+
+def itemCode (slot : Nat) : ExprItems scope types → Fragment
+  | .empty => .leer
+  | .next head tail => (expr slot head).anhaengen (itemCode (slot + 1) tail)
+
+end
 
 def argsCode (slot : Nat) : List (TypedExpr scope) → Fragment
   | [] => .leer

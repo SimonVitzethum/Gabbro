@@ -13,10 +13,12 @@ open Maschine Annahme
 theorem local_binding_type (ref : Local scope type) : ref.binding.type = type := by
   sorry
 
-def wertInhalt (type : Ty .value) (value : Wert type) : Int ⊕ Bool :=
+def wertInhalt (type : Ty .value) (value : Wert type) : Int ⊕ Bool ⊕ Option Dynamisch :=
   match type, value with
   | .int _ _, number => .inl number.wert
-  | .bool, bit => .inr bit
+  | .bool, bit => .inr (.inl bit)
+  | .array _ 0, _ => .inr (.inr none)
+  | type, value => .inr (.inr (some ⟨type, value⟩))
 
 -- Mirror literal_ausserhalb_verweigert with interval containment in the successful direction.
 theorem wertIn_widen (fits : Fits source target) (value : Wert source) :

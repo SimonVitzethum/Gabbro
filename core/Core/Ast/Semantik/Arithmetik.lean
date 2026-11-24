@@ -18,6 +18,38 @@ def Zahl.literal (value : Int) : Zahl value value :=
 def Wert : Ty .value → Type
   | .int lo hi => Zahl lo hi
   | .bool => Bool
+  | .array element count => Vector (Wert element) count
+  | .productEnd => PUnit
+  | .product head tail => Wert head × Wert tail
+
+/-- Widening changes interval evidence and the type of a zero-length array. -/
+def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
+    Wert target := by
+  cases source <;> cases target <;>
+    first
+    | change _ = _ at fits; cases fits; exact value
+    | skip
+  case int.int lo hi lower upper =>
+    exact ⟨value.wert, Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
+  case bool.bool => exact value
+  case array.array source count target other =>
+    cases count <;> cases other <;>
+      first
+      | change _ = _ at fits; cases fits; exact value
+      | exact Vector.empty
+
+def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
+    Wert (tupleType types) → Wert (types.get i)
+  | [], index, _ => Fin.elim0 index
+  | _ :: rest, ⟨0, _⟩, values => values.1
+  | _ :: rest, ⟨n + 1, bound⟩, values => tupleGet rest ⟨n, Nat.lt_of_succ_lt_succ bound⟩ values.2
+
+def indexPosition (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
+  have nonnegative := Int.le_trans lower i.unten
+  have bound : (i.wert.toNat : Int) < (count : Int) := by
+    rw [Int.toNat_of_nonneg nonnegative]
+    exact Int.lt_of_le_of_lt i.oben upper
+  ⟨i.wert.toNat, Int.ofNat_lt.mp bound⟩
 
 /-- Multiplying a bounded integer by a fixed factor stays between the two
     endpoint products, in either order. -/
@@ -82,6 +114,8 @@ def leereUmgebung : Umgebung [] := by
   intro type ref
   cases ref
 
+mutual
+
 /-- Mathematical expression evaluation retains the type index of the source node. -/
 def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .lit value => Zahl.literal value
@@ -97,5 +131,20 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .logic op left right =>
     let a : Bool := left.wert env
     if a = op.skips then a else right.wert env
+  | .arrayValue (types := types) (element := element) items _ fits =>
+    let values := items.wert env
+    Vector.ofFn fun i => Wert.widen (types.get i) element (fits i) (tupleGet types i values)
+  | .arrayIndex base index lower upper =>
+    let values := base.wert env
+    values[(indexPosition (index.wert env) lower upper).val]
+  | .tupleValue first second tail => (first.wert env, second.wert env, tail.wert env)
+  | .tupleField (first := first) (second := second) (types := rest) base i =>
+    tupleGet (first :: second :: rest) i (base.wert env)
+
+def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
+  | .empty => PUnit.unit
+  | .next head tail => (head.wert env, tail.wert env)
+
+end
 
 end Gabbro.Core.Ast

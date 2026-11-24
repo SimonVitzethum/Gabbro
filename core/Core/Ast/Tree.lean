@@ -20,6 +20,25 @@ inductive Ty : Kind → Type where
   /-- Integers with inclusive, architecture-independent bounds. -/
   | int (lo hi : Int) : Ty .value
   | bool : Ty .value
+  | array (element : Ty .value) (count : Nat) : Ty .value
+  | productEnd : Ty .value
+  | product (head tail : Ty .value) : Ty .value
+  deriving DecidableEq
+
+/-- A positional product has a right-associated, explicitly terminated representation. -/
+def tupleType : List (Ty .value) → Ty .value
+  | [] => .productEnd
+  | head :: tail => .product head (tupleType tail)
+
+/-- The principal element type of a homogeneous literal. Integer elements use their interval hull. -/
+def arrayJoin : Ty .value → Ty .value → Option (Ty .value)
+  | .int lo hi, .int lower upper => some (.int (min lo lower) (max hi upper))
+  | a, b => if a = b then some a else none
+
+def arrayElement : List (Ty .value) → Option (Ty .value)
+  | [] => some .productEnd
+  | [type] => some type
+  | head :: next :: tail => (arrayElement (next :: tail)).bind (arrayJoin head)
 
 structure Binding where
   name : Identifier
@@ -93,9 +112,12 @@ def ordinaryLocal (name : Identifier) : Prop :=
 def Fits : Ty .value → Ty .value → Prop
   | .int lo hi, .int lower upper => lower ≤ lo ∧ hi ≤ upper
   | .bool, .bool => True
-  | _, _ => False
+  | .array _ 0, .array _ 0 => True
+  | a, b => a = b
 
-inductive Expr : Scope → Ty .value → Type where
+mutual
+
+inductive Expr (scope : Scope) : Ty .value → Type where
   /-- An unsigned spelling of an unsuffixed integer literal. -/
   | lit (value : Nat) : Expr scope (.int value value)
   /-- Left-associative arithmetic computes the interval of its two operands. -/
@@ -122,10 +144,32 @@ inductive Expr : Scope → Ty .value → Type where
       (right : Expr scope (.int lo₂ hi₂)) : Expr scope .bool
   /-- Inventory key `surface.SExpr.bin`, left-associative Boolean operators. -/
   | logic (op : Logic) (left right : Expr scope .bool) : Expr scope .bool
+  /-- The bracketed literal has one element type and its exact number of elements. -/
+  | arrayValue (items : ExprItems scope types) (principal : arrayElement types = some element)
+      (fits : ∀ i : Fin types.length, Fits (types.get i) element) :
+      Expr scope (.array element types.length)
+  /-- The endpoints of the inferred index interval imply the pinned index guard. -/
+  | arrayIndex (base : Expr scope (.array element count)) (index : Expr scope (.int lo hi))
+      (lower : 0 ≤ lo) (upper : hi < count) : Expr scope element
+  /-- Two or more positional elements elaborate to a generated product. -/
+  | tupleValue (first : Expr scope firstType) (second : Expr scope secondType)
+      (rest : ExprItems scope types) : Expr scope (tupleType (firstType :: secondType :: types))
+  /-- A written numeric projection selects a field of the positional product. -/
+  | tupleField (base : Expr scope (tupleType (first :: second :: types)))
+      (index : Fin (first :: second :: types).length) : Expr scope ((first :: second :: types).get index)
+
+/-- A sequence of expressions with the exact sequence of inferred operand types. -/
+inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
+  | empty : ExprItems scope []
+  | next : Expr scope type → ExprItems scope types → ExprItems scope (type :: types)
+
+end
 
 abbrev TypedExpr (scope : Scope) := (type : Ty .value) × Expr scope type
 
 def Expr.typed (tree : Expr scope type) : TypedExpr scope := ⟨type, tree⟩
+
+mutual
 
 /-- Static evaluation may read only bindings introduced by const declarations. -/
 def Expr.static : Expr scope type → Prop
@@ -133,23 +177,55 @@ def Expr.static : Expr scope type → Prop
   | .binary _ a b | .div a b _ | .compare _ a b => a.static ∧ b.static
   | .logic _ a b => a.static ∧ b.static
   | .neg a | .not a => a.static
+  | .arrayValue items _ _ => items.static
+  | .arrayIndex base index _ _ => base.static ∧ index.static
+  | .tupleValue first second tail => first.static ∧ second.static ∧ tail.static
+  | .tupleField base _ => base.static
   | _ => True
+
+def ExprItems.static : ExprItems scope types → Prop
+  | .empty => True
+  | .next head tail => head.static ∧ tail.static
+
+end
+
+mutual
 
 /-- The scalar type spelling retains the signedness and width selected in the source.
     A missing explicit interval denotes the complete range of that width. -/
 inductive WrittenType where
   | bool
   | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
+  | array (element : WrittenType) (count : Nat)
+  | tuple (first second : WrittenType) (rest : WrittenTypes)
+
+inductive WrittenTypes where
+  | empty
+  | next (head : WrittenType) (tail : WrittenTypes)
+
+end
 
 def WrittenType.storage (signed : Bool) (width : Nat) : Int × Int :=
   if signed then (-(2 ^ (width - 1) : Int), 2 ^ (width - 1) - 1)
   else (0, 2 ^ width - 1)
+
+mutual
 
 def WrittenType.type : WrittenType → Ty .value
   | .bool => .bool
   | .integer signed width range =>
     let (lo, hi) := range.getD (storage signed width)
     .int lo hi
+  | .array element count => .array element.type count
+  | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
+
+def WrittenTypes.types : WrittenTypes → List (Ty .value)
+  | .empty => []
+  | .next head tail => head.type :: tail.types
+
+end
+
+mutual
 
 def WrittenType.valid : WrittenType → Prop
   | .bool => True
@@ -157,6 +233,14 @@ def WrittenType.valid : WrittenType → Prop
     let (minimum, maximum) := storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
+  | .array element _ => element.valid
+  | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
+
+def WrittenTypes.valid : WrittenTypes → Prop
+  | .empty => True
+  | .next head tail => head.valid ∧ tail.valid
+
+end
 
 structure Parameter where
   name : Identifier

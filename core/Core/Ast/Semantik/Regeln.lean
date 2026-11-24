@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.Arithmetik
 public import Core.Maschine.Start
+import Init.Data.Vector.OfFn
 
 @[expose] public section
 
@@ -25,11 +26,11 @@ def Ganzzahl.pack (value : Ganzzahl) : Dynamisch := ⟨.int value.lo value.hi, v
 
 def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
-  | ⟨.bool, _⟩ => none
+  | _ => none
 
 def alsBoolean : Dynamisch → Option Bool
-  | ⟨.int _ _, _⟩ => none
   | ⟨.bool, value⟩ => some value
+  | _ => none
 
 def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
   match type, value with
@@ -38,13 +39,27 @@ def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
       some ⟨.int lo hi, ⟨number.wert, bounds.1, bounds.2⟩⟩
     else none
   | .bool, ⟨.bool, value⟩ => some ⟨.bool, value⟩
-  | .int _ _, ⟨.bool, _⟩ => none
-  | .bool, ⟨.int _ _, _⟩ => none
+  | .array target 0, ⟨.array _ 0, _⟩ => some ⟨.array target 0, Vector.empty⟩
+  | target, ⟨source, value⟩ =>
+    if same : source = target then some ⟨target, same ▸ value⟩ else none
+
+def wertAls (type : Ty .value) (value : Dynamisch) : Option (Wert type) := do
+  let ⟨actual, result⟩ ← wertIn type value
+  if same : actual = type then some (same ▸ result) else none
+
+def liesTupel (temp : Nat → Option Dynamisch) (slot : Nat) :
+    (types : List (Ty .value)) → Option (Wert (tupleType types))
+  | [] => some PUnit.unit
+  | head :: tail => do
+    let value ← (temp slot).bind (wertAls head)
+    let more ← liesTupel temp (slot + 1) tail
+    pure (value, more)
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
+  | _ => none
 
 inductive Abschluss where
   | fertig
@@ -113,7 +128,8 @@ def Rahmen.halt (frame : Rahmen) (reason : Abschluss) : Rahmen :=
 def tyFits : Ty .value → Ty .value → Bool
   | .bool, .bool => true
   | .int lo hi, .int lower upper => decide (lower ≤ lo ∧ hi ≤ upper)
-  | .bool, .int _lo _hi | .int _lo _hi, .bool => false
+  | .array _ 0, .array _ 0 => true
+  | a, b => decide (a = b)
 
 def Funktion.finde (funktionen : List Funktion) (name : Identifier) : Option Funktion :=
   funktionen.find? (fun f => f.name.val == name.val)
@@ -237,6 +253,10 @@ inductive Befehl where
   | zurueckSprung (abstand : Nat)
   | starte (name : Identifier)
   | ende
+  | baueArray (ziel : Nat) (element : Ty .value) (count : Nat)
+  | liesArray (basis : Nat) (element : Ty .value) (count : Nat)
+  | baueTupel (ziel : Nat) (types : List (Ty .value))
+  | liesTupelfeld (basis : Nat) (types : List (Ty .value)) (index : Fin types.length)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -341,6 +361,21 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let result := (Funktion.finde frame.funktionen name).bind Funktion.result
     return ({ frame with lokale := [] }).ruf name [] result
   | .ende, frame => { frame with stopp := some .fertig, rueckgabe := frame.lokale.head?.join }
+  | .baueArray dst element count, frame => frame.schreibe dst (do
+    let values ← Vector.ofFnM (n := count) fun i => (frame.temp (dst + i.val)).bind (wertAls element)
+    pure ⟨.array element count, values⟩)
+  | .liesArray base element count, frame => frame.schreibe base (do
+    let values ← (frame.temp base).bind (wertAls (.array element count))
+    let index ← frame.zahl (base + 1)
+    if index.zahl.wert < 0 then none else
+      if bound : index.zahl.wert.toNat < count then
+        some ⟨element, values[index.zahl.wert.toNat]'bound⟩
+      else none)
+  | .baueTupel dst types, frame => frame.schreibe dst
+    ((liesTupel frame.temp dst types).map fun values => ⟨tupleType types, values⟩)
+  | .liesTupelfeld base types index, frame => frame.schreibe base (do
+    let values ← (frame.temp base).bind (wertAls (tupleType types))
+    pure ⟨types.get index, tupleGet types index values⟩)
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -350,6 +385,9 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
     let a ← frame.zahl left
     let b ← frame.zahl (left + 1)
     pure ⟨.division, (a.zahl.wert.natAbs, b.zahl.wert.natAbs)⟩
+  | .liesArray base _ count, frame => do
+    let i ← frame.zahl (base + 1)
+    pure ⟨.index, (if i.zahl.wert < 0 then count else i.zahl.wert.toNat, count)⟩
   | _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
