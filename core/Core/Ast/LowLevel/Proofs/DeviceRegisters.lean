@@ -25,7 +25,7 @@ theorem register_befugt : RegisterBefugtAussage := by
 /-- The form uses the actual M5 local predicate at its composed issue and reply steps. -/
 def RegisterAussenLokalAussage : Prop :=
   ∀ k (binding : Binding k) access required target
-    (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit)
+    (E : Maschine.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit)
     run t c s middle plan trace next,
     E.katalog = k →
     Rule binding access required target c s plan middle →
@@ -62,7 +62,7 @@ theorem register_aussenLokal : RegisterAussenLokalAussage := by
     reply and checks successful answers at the commit cut. -/
 def RegisterUnitAussenLokalAussage : Prop :=
   ∀ k (binding : Binding k) access required target
-    (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit),
+    (E : Maschine.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit),
     E.katalog = k → (∀ form, E.system.regel form = Rule.machine binding access required target) →
     Annahme.AussenLokal E
 
@@ -172,9 +172,9 @@ theorem register_fallible_resume :
   constructor <;> intro result <;> rfl
 
 
-private theorem register_trace (binding : Binding k) (access : RegisterAccess)
-    (step : Rule binding access required target c s plan middle)
-    (execute : FuehrtSchrittAus setup t c s middle plan trace next) :
+private theorem register_trace (binding : Binding k) (access : RegisterAccess) {stepPlan : Plan}
+    (step : Rule binding access required target c s stepPlan middle)
+    (execute : FuehrtSchrittAus setup t c s middle stepPlan trace next) :
     next.buchung = s.buchung ∧ next.rechte = s.rechte ∧ next.sperren = s.sperren ∧
       (RennenImGraph s.graph → RennenImGraph next.graph) ∧
       (trace = ⟨[], []⟩ ∨
@@ -189,16 +189,16 @@ private theorem register_trace (binding : Binding k) (access : RegisterAccess)
     change Speicherfolge s.initial (.kontext c) s.graph [aussenEtikett setup (.frage event)]
       accesses next.graph at memory
     obtain ⟨rfl, race⟩ := aussen_label_speicher rfl memory
-    refine ⟨?_, ?_, ?_, race, Or.inr ⟨event, rfl⟩⟩ <;> rw [after]
+    refine ⟨?_, ?_, ?_, race, Or.inr ⟨event, rfl⟩⟩ <;> rw [after] <;> rfl
   | consume _ _ _ _ =>
     cases action
     change Speicherfolge s.initial (.kontext c) s.graph [] accesses next.graph at memory
     have unchanged : accesses = [] ∧ next.graph = s.graph := by
-      generalize h : next.graph = graph at memory
+      generalize _h : next.graph = graph at memory ⊢
       cases memory
-      exact ⟨rfl, h⟩
+      exact ⟨rfl, rfl⟩
     obtain ⟨rfl, graph⟩ := unchanged
-    refine ⟨?_, ?_, ?_, fun race => graph.symm ▸ race, Or.inl rfl⟩ <;> rw [after]
+    refine ⟨?_, ?_, ?_, fun race => graph.symm ▸ race, Or.inl rfl⟩ <;> rw [after] <;> rfl
 
 theorem register_regelSicher (kind : RegisterAccess → Prop) : RegisterRegelSicherAussage kind := by
   intro k binding access _ H run t c w vor middle next plan trace _ impl execute
