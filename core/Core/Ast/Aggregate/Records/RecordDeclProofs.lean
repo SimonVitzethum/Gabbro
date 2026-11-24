@@ -45,7 +45,8 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
         exact h.symm
       have hin := (List.cons.inj (List.cons.inj (List.cons.inj htail).2).2).2
       refine ⟨⟨ex, n, _, valid, distinct⟩, rfl, Subtype.ext hnval, ?_, ?_⟩
-      · simpa [hin] using memberRead
+      · cases hin
+        exact memberRead
       · rfl
   | tagged ex' n valid distinct firstRead tailRead =>
       cases ex <;> cases ex' <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix, keyword] at hh
@@ -80,13 +81,10 @@ private theorem recordMembers_print_reads (fields : List RecordMember)
       simp [memberTokenList]
       exact .close
   | cons m ms ih =>
-      change RecordMembersRead
-        (m.name.print.value :: colon :: m.written.printPieces.map PrintedToken.value ++
-          comma :: (memberTokenList ms ++ [closeBrace, semicolon]))
-        (m :: ms) [semicolon]
-      exact RecordMembersRead.next m.name
-        (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
-        (ih (fun x hx => valid x (List.mem_cons_of_mem m hx)))
+      simpa [memberTokenList] using
+        (RecordMembersRead.next m.name
+          (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
+          (ih (fun x hx => valid x (List.mem_cons_of_mem m hx))))
 
 private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
     (recordDecl scope).production args
@@ -95,7 +93,9 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
   · by_cases h : args.exported <;>
       simp [h, memberTokenList, recordDecl, Category.printPieces, Decl.printPieces,
         recordDeclarationHead, recordDeclarationPrefix, keyword, List.flatMap,
-        RecordMember.printPieces, List.map_append]
+        RecordMember.printPieces, List.map_append,
+        printPub, printTypeDecl, printAssignment, printOpenBrace,
+        printCloseBrace, printSemicolon]
   · exact recordMembers_print_reads args.members args.valid
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by

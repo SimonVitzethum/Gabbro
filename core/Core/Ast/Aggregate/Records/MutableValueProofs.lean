@@ -37,9 +37,15 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
         injection hnval0 with h
         exact h.symm
       have hin := (List.cons.inj (List.cons.inj h2.2).2).2
-      refine ⟨⟨n, ordinary, ty, val⟩, Subtype.ext hnval, ?_, ?_⟩
+      refine ⟨⟨n, ordinary, ty, val⟩, hnval, ?_, ?_⟩
       · simpa [hin] using valueRead
       · rfl
+  | directCall callRead =>
+      cases callRead
+      simp [keyword, letKeyword, openParen] at hh
+  | tupleBind checked patternRead annotationRead valueRead =>
+      cases patternRead
+      simp [keyword, letKeyword, openParen] at hh
   | _ =>
       simp [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,
         openParen, openBrace, semicolon] at hh
@@ -53,7 +59,8 @@ private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : M
     (mutableValue ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
   refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
-  · simp [mutableValue]
+  · simp [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens,
+      letName, printMut, printAssignment, printSemicolon]
   · simpa [Expr.printTokens] using
       (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 
