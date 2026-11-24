@@ -97,8 +97,6 @@ public import Core.Beobachtung.Wahrscheinlichkeit.KostenErwartungBeweis
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
-public import Core.Beobachtung.Review.Befunde
-public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.BuendelUnterZulStart
@@ -108,6 +106,9 @@ public import Core.Beobachtung.SchrankenB9B21Pflichten
 public import Core.Beobachtung.Unentscheidbar.Modell
 public import Core.Beobachtung.Unentscheidbar.Reduktion
 public import Core.Beobachtung.Unentscheidbar.Rice
+public import Core.Beobachtung.Unentscheidbar.Simulation.Kodierung
+public import Core.Beobachtung.Unentscheidbar.Simulation.Programm
+public import Core.Beobachtung.Unentscheidbar.Simulation.Substrat
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer

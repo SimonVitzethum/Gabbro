@@ -1,16 +1,17 @@
 /-
   File:      Core/Beobachtung/Wahrscheinlichkeit/Hebung/BuendelUnterZulStart.lean
-  Subject:   The lift bundle exists once an admissible start is added to the premises.
+  Subject:   The sharpened lift statement, proved from an admissible start.
 
-  The pinned statement omits image validity. With `∃ s, E.ZulStart h s` added, a
-  full `Hebebuendel` is constructed: the product measure gives `massErhalt`, and a
-  replay on a completely idle hardware history takes no step at any cut. An idle
-  replay is causal, vacuously follows any scheduler, and consumes no draw answer.
-  This isolates image validity as the missing premise.
+  With `∃ s, E.ZulStart h s` as a premise, a full `Hebebuendel` is constructed:
+  the product measure gives `massErhalt`, and a replay on a completely idle
+  hardware history takes no step at any cut. An idle replay is causal, vacuously
+  follows any scheduler, and consumes no draw answer. `hebe` closes the pinned
+  statement; image validity is the premise the former unsharpened form lacked.
 -/
 module
 
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
+public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Maschine.Start
 
 @[expose] public section
@@ -142,5 +143,11 @@ noncomputable def buendelUnterZulStart (B : Zufallsbindung) (S : Scheduler)
         intro band t a antwort
         rw [praefixLeer t] at antwort
         cases antwort }
+
+/-- The sharpened pinned lift statement is proved: hardware conformity, a
+    selected random row and an admissible start deliver the bundle. -/
+theorem hebe : hebeAussage := by
+  intro L Ort Wert Raum Lok Grund Bedingung Wahl Form _ E B S h hw selected start
+  exact ⟨buendelUnterZulStart B S E h hw start, trivial⟩
 
 end Gabbro.Core.Beobachtung

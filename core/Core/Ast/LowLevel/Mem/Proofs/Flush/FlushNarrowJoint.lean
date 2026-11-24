@@ -410,35 +410,6 @@ private theorem narrowBezeichnet : BezeichnetMem Plattform.x86_64.katalog
   refine ⟨narrowOp, narrowElaborate, ?_⟩
   rfl
 
-/-- **Joint satisfiability of the completion of a narrowing.** Unlike the release of an unmapped range,
-    the prefix here creates a space, maps a frame with rights, performs the staged `protect` that narrows
-    the table and records a pending token (`nurRechte = true`), then binds that token. In the reached state
-    `flushSpace` of the bound token completes the narrowing with `.protected`, and no pending token covers
-    any page of the range any more. The run is a real, reachable run of `memProgram`: no state is built by
-    hand. The translation cache of this run is empty throughout (`map` invalidates its range, `protect`
-    touches no cache and no `tlbFuellen` occurs), so the completion is enabled without an eviction step;
-    a run with a wider cached cell would need a `tlbVerdraengen` step before `flushSpace` (THEOREM-MAP §219). -/
-def FlushNarrowJointAussage : Prop :=
-  ∃ (k : Katalog) (scope : MemScope) (tree : MemTree .flushSpace) (op : MemInstruction)
-    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) («prefix» : List MemInstruction)
-    (s : MemState) (next : MemFrame) (token : Zuruecknahme),
-    let E := memProgram k («prefix» ++ [op])
-    (∃ tables virt frames rights pages narrowed name,
-      «prefix» = [.newSpace tables, .mapSpace 0 virt frames rights,
-        .protectSpace 0 virt pages narrowed, .bindToken name] ∧ op = .flushSpace name) ∧
-    Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
-    (scope.regionen.map Subtype.val).Nodup ∧ (scope.raeume.map Subtype.val).Nodup ∧
-    (scope.marken.map Subtype.val).Nodup ∧
-    BezeichnetMem k scope text (memUnit k op) .flushSpace ∧ MemParse text tree ∧
-    elaborateMem scope tree = some op ∧
-    E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s entryContext = some op ∧
-    op.evaluate k.plattform.ziel s entryContext = some next ∧
-    token.nurRechte = true ∧ token ∈ (s.lokal entryContext).verengt ∧
-    next.result = some .«protected» ∧ token ∉ next.verengt ∧
-    (∀ t ∈ next.verengt, ∀ pg, token.contains pg → ¬ t.contains pg) ∧
-    E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) ∧
-    E.system.ImplSchritt entryContext s () [plan] (next.advance entryContext s)
-
 theorem flushNarrowJoint : FlushNarrowJointAussage := by
   have hprefix : ∃ tables virt frames rights pages narrowed name,
       narrowPref = [.newSpace tables, .mapSpace 0 virt frames rights,
