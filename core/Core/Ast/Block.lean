@@ -76,7 +76,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     | braces noBody =>
       simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces,
         Expr.printTokens, printOpenBrace, printCloseBrace, elseName, Identifier.print,
-        printPunctuation, PrintedToken.unquoted,
+        printPunctuation, PrintedToken.unquoted, keywordName, String.reduceToList,
         List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
       exact .ite (condExpr.printReads noOperatorAtOpenBrace)
