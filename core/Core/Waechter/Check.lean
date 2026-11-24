@@ -22,8 +22,11 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Unit, 8561659821477951161),
   (`Gabbro.Core.Ast.Parse, 7662161646515821401),
   (`Gabbro.Core.Ast.Bezeichnet, 17783779404160999950),
-  (`Gabbro.Core.Ast.Semantik.Elaboriert, 13411289612733860534),
-  (`Gabbro.Core.Ast.Semantik.Bezeichnet, 9204488096733193777),
+  (`Gabbro.Core.Ast.Semantik.Elaboriert, 18403872612026557908),
+  (`Gabbro.Core.Ast.Semantik.Bezeichnet, 8646435194102562683),
+  (`Gabbro.Core.Ast.Semantik.exprSchema, 2608981681669005392),
+  (`Gabbro.Core.Ast.Semantik.stmtSchema, 13390787754488377972),
+  (`Gabbro.Core.Sicherheit.RegelSicher, 5412488538788547367),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
   (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),
@@ -32,9 +35,9 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ziel.Sicherheit, 3609222519026224003),
   (`Gabbro.Core.Ziel.SicherheitNichtLeer, 3680087890639914969),
   (`Gabbro.Core.Ziel.GabbroSicherheitForm, 14131772821008578448),
-  (`Gabbro.Core.Sicherheit.ToctouFrei, 7062112762908273843),
-  (`Gabbro.Core.Sicherheit.Rennfrei, 12689395724571403576),
-  (`Gabbro.Core.Sicherheit.InvariantenErhalten, 6868699884286796549),
+  (`Gabbro.Core.Sicherheit.ToctouFrei, 17480016903371052740),
+  (`Gabbro.Core.Sicherheit.Rennfrei, 6004684599932984556),
+  (`Gabbro.Core.Sicherheit.InvariantenErhalten, 5797154018978927278),
   (`Gabbro.Core.Sicherheit.Speichersicher, 13444848169355027863),
   (`Gabbro.Core.Katalog.Hardware, 15597978166845504711),
   (`Gabbro.Core.Katalog.FairLaeufe, 8964919104053723618),
@@ -77,6 +80,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Annahme.waechterBedarf, 2714256575995301216)]
 
 private meta def safety : Array Name := #[
+  `Gabbro.Core.Sicherheit.RegelSicher,
   `Gabbro.Core.Sicherheit.Speichersicher, `Gabbro.Core.Sicherheit.InvariantenErhalten,
   `Gabbro.Core.Sicherheit.Rennfrei, `Gabbro.Core.Sicherheit.ToctouFrei]
 
@@ -114,8 +118,14 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Maschine.Regel.impl, `Gabbro.Core.Maschine.Einheit.laden],
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
-private meta def registry : Array RegistryFamily := #[]
+private meta def registry : Array RegistryFamily := #[
+  ⟨`Gabbro.Core.Ast.Expr, `Gabbro.Core.Ast.Semantik.exprSchema, #[
+    (`Gabbro.Core.Ast.Expr.lit, `Gabbro.Core.Ast.Semantik.literalEntry),
+    (`Gabbro.Core.Ast.Expr.binary, `Gabbro.Core.Ast.Semantik.binaryEntry)]⟩,
+  ⟨`Gabbro.Core.Ast.Stmt, `Gabbro.Core.Ast.Semantik.stmtSchema, #[
+    (`Gabbro.Core.Ast.Stmt.letValue, `Gabbro.Core.Ast.Semantik.letEntry)]⟩]
 private meta def wildcardRoots : Array Name := #[
+  `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,
   `Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.ImplSchritt,
   `Gabbro.Core.Maschine.I.linearisiert_in_I, `Gabbro.Core.Maschine.I.replay_rahmen]
 private meta def catalogueKinds : Array ClosedKinds := #[

@@ -33,19 +33,26 @@ def RegisterErlaubt (s : Maschine.Zustand L Ort Wert Raum Lok Grund) (c : Nat) (
   Registerzugriff q.operation →
     ∃ owner, owner.nummer = c ∧ s.buchung.geraet q.objekt = some (owner, .frei)
 
-/-- Race freedom is checked in each RC11 graph prefix, including prefixes of epochs
-    later discarded by crashes. The same cut checks authority for device operations. -/
-def Rennfrei (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (_H : Umgebung) (ρ : Lauf E) : Prop :=
-  (∀ (t : Maschine.Schnitt E.maschine ρ) (s : Maschine.Zustand L Ort Wert Raum Lok Grund),
-    ρ.zeit.zustand t.val = some s →
-    ∀ i j, Konflikt s.graph i j → s.graph.graph.hb i j ∨ s.graph.graph.hb j i) ∧
-  ∀ t vor spur nach, Uebergang E ρ t vor spur nach →
+/-- Conflicting real accesses in one memory prefix are ordered. -/
+def RennenImGraph (g : SpeicherGraph Ort Wert) : Prop :=
+  ∀ i j, Konflikt g i j → g.graph.hb i j ∨ g.graph.hb j i
+
+/-- A device access needs exclusive authority at the transition that uses it. -/
+def RegisterImSchritt (hw : HwLauf) (t : Nat)
+    (vor : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert)
+    (nach : Zustand L Ort Wert Raum Lok Grund) : Prop :=
     (∀ e ∈ spur.aussen,
       (∀ q : FrageEreignis, e = .frage q → RegisterErlaubt vor q.context q.question) ∧
       ∀ a, ErfolgreicherCommit e a → RegisterErlaubt vor a.context a.question) ∧
     ∃ neu, NeueWirkungen vor nach spur neu ∧
       ∀ e, Wirkung.aussen e ∈ neu →
-        KannSchreiten ρ.hw t e.kontext vor ∧ RegisterErlaubt vor e.kontext.nummer e.frage
+        KannSchreiten hw t e.kontext vor ∧ RegisterErlaubt vor e.kontext.nummer e.frage
+
+/-- Every RC11 prefix and every device transition is checked, including epochs
+    later discarded by crashes. -/
+def Rennfrei (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (_H : Umgebung) (ρ : Lauf E) : Prop :=
+  (∀ (t : Maschine.Schnitt E.maschine ρ) s, ρ.zeit.zustand t.val = some s → RennenImGraph s.graph) ∧
+  ∀ t vor spur nach, Uebergang E ρ t vor spur nach → RegisterImSchritt ρ.hw t vor spur nach
 
 end Gabbro.Core.Sicherheit

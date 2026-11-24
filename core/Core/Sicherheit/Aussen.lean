@@ -36,10 +36,9 @@ def EigeneGriffe (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (q : Frag
 /-- Each committed operation holds the handles it uses and validates in its own commit view.
     A mediated operation can fail under another admissible policy. An unmediated commit has
     no such atomic failure branch, so its authorisation must survive every admissible view. -/
-def ToctouFrei (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (H : Umgebung) (ρ : Lauf E) : Prop :=
-  (∀ s, ρ.zeit.zustand 0 = some s → s.buchung.wirkungen = []) ∧
-  ∀ t vor spur nach, Uebergang E ρ t vor spur nach →
+def CommitImSchritt (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (H : Umgebung) (ρ : Lauf E) (t : Nat) (vor : Zustand L Ort Wert Raum Lok Grund)
+    (spur : SchrittSpur Ort Wert) (nach : Zustand L Ort Wert Raum Lok Grund) : Prop :=
     (∀ e ∈ spur.aussen, ∀ a, ErfolgreicherCommit e a →
       (∃ c, c.nummer = a.context ∧ EigeneGriffe vor c a.question) ∧
       Aussen.GueltigBeiCommit E.maschine.katalog.plattform (H.politik.sicht t vor.verlauf) a.question ∧
@@ -56,5 +55,11 @@ def ToctouFrei (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
         ∀ H', AussenHistorie E ρ H' vor.verlauf →
           Aussen.GueltigBeiCommit E.maschine.katalog.plattform (H'.politik.sicht t vor.verlauf) e.frage ∧
           CommitBedingungen E.maschine.katalog.plattform (H'.politik.sicht t vor.verlauf) e.frage
+
+/-- Check commits in every implementation transition, including unmediated effects. -/
+def ToctouFrei (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (H : Umgebung) (ρ : Lauf E) : Prop :=
+  (∀ s, ρ.zeit.zustand 0 = some s → s.buchung.wirkungen = []) ∧
+  ∀ t vor spur nach, Uebergang E ρ t vor spur nach → CommitImSchritt E H ρ t vor spur nach
 
 end Gabbro.Core.Sicherheit

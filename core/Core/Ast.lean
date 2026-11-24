@@ -4,7 +4,7 @@ public import Core.Ast.Grammar
 public import Core.Ast.Inventory
 public import Core.Ast.Registry
 public import Core.Ast.Surface
-public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.SemantikRezept
 
 /-!
 # Adding one inventory form
@@ -74,21 +74,8 @@ grouping for the tree.
 
 ## M6 registry completion
 
-The three `Surface.Rule.Entry` proofs cover syntax. The machine elaboration relation,
-source occurrence realization, acceptance rule, ideal rule with units and commutation,
-implementation rule, preservation, and joint satisfiability remain open for M6 for
-each constructor. For each M6 entry, define those propositions over the same typed case
-and its premises. Supply `Elaboriert` and `Realisiert` proofs for a surface form, or the
-checked elaboration or runtime origin for a core-only form. Use the syntax entry to
-supply the raw `Parse` proof for the surface case. Prove the semantic premise bundle
-jointly in `NAME_erfuellbar` and supply all fields of the strict `RegistryEntry`.
-
-In `Core/Waechter/Check.lean` the strict registry configuration takes the actual inductive
-name, its `RegistrySchema` function, and constructor-to-entry constant pairs. Activate a
-family with all its existing constructors covered. After activation each new constructor
-and its complete typed entry land together. The syntax entries here are separate from
-that strict configuration. Unfolding `Ast.Bezeichnet` shows the concrete source rules
-composed with the elaboration relation that M6 supplies.
+The semantic statement and proof recipe is in `Core.Ast.SemantikRezept`. The existing literal,
+binary and binding forms have strict entries for their source productions and semantic rules.
 
 ## Worked syntax diff for the next leaf
 

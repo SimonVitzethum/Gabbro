@@ -53,19 +53,19 @@ def Befehl.guard : Befehl → Nat → Rahmen → Option Bedarf
     some ⟨.ganzzahlBereich, (operation op (frame.temp left) (frame.temp (left + 1)), width)⟩
   | .binden _ _, _, _ => none
 
-def plan : Plan := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => 0⟩
+def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
   { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c)) }
 
 /-- The context-local transition used by the ideal rule. -/
-def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit)
+def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s
 
 /-- The concrete one-step realization uses the same mathematical transfer on
     context-local values. Shared events go through the machine protocol. -/
-def Befehl.impl (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit)
+def Befehl.impl (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s
 
