@@ -125,14 +125,29 @@ theorem irRf_eindeutig (w w' r : IriwEv) : (irRf w r ∧ irRf w' r) → w = w' :
   cases w <;> cases w' <;> cases r <;> decide
 
 abbrev irSchreibt (a : IriwEv) : Prop := (irLab .ra a).art.schreibt
+abbrev irLiest (a : IriwEv) : Prop := (irLab .ra a).art.liest
 abbrev irOrt (a : IriwEv) : Bool := (irLab .ra a).ort
+abbrev irGelesen (a : IriwEv) : Nat := (irLab .ra a).gelesen
+abbrev irGeschrieben (a : IriwEv) : Nat := (irLab .ra a).geschrieben
+
+theorem irRf_schreibt (w r : IriwEv) : irRf w r → irSchreibt w := by
+  cases w <;> cases r <;> decide
+theorem irRf_liest (w r : IriwEv) : irRf w r → irLiest r := by
+  cases w <;> cases r <;> decide
+theorem irRf_ort (w r : IriwEv) : irRf w r → irOrt w = irOrt r := by
+  cases w <;> cases r <;> decide
+theorem irRf_wert (w r : IriwEv) : irRf w r → irGeschrieben w = irGelesen r := by
+  cases w <;> cases r <;> decide
+theorem irMo_schreibt (a b : IriwEv) : irMo a b → irSchreibt a ∧ irSchreibt b := by
+  cases a <;> cases b <;> decide
+theorem irMo_ort (a b : IriwEv) : irMo a b → irOrt a = irOrt b := by
+  cases a <;> cases b <;> decide
 
 theorem irMo_total (a b : IriwEv) (ha : irSchreibt a) (hb : irSchreibt b)
     (ho : irOrt a = irOrt b) (hne : a ≠ b) : irMo a b ∨ irMo b a := by
   cases a <;> cases b <;>
     first
-      | exact Or.inl ⟨rfl, rfl⟩
-      | exact Or.inr ⟨rfl, rfl⟩
+      | decide
       | exact False.elim ha
       | exact False.elim hb
       | exact False.elim (hne rfl)
@@ -155,31 +170,25 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     cases a <;> decide
   rf_schreibt := by
     intro w r h
-    revert h
-    cases w <;> cases r <;> decide
+    cases w <;> cases r <;> exact irRf_schreibt w r h
   rf_liest := by
     intro w r h
-    revert h
-    cases w <;> cases r <;> decide
+    cases w <;> cases r <;> exact irRf_liest w r h
   rf_ort := by
     intro w r h
-    revert h
-    cases w <;> cases r <;> decide
+    cases w <;> cases r <;> exact irRf_ort w r h
   rf_wert := by
     intro w r h
-    revert h
-    cases w <;> cases r <;> decide
+    cases w <;> cases r <;> exact irRf_wert w r h
   rf_eindeutig := by
     intro w w' r h1 h2
     exact irRf_eindeutig w w' r ⟨h1, h2⟩
   mo_schreibt := by
     intro a b h
-    revert h
-    cases a <;> cases b <;> decide
+    cases a <;> cases b <;> exact irMo_schreibt a b h
   mo_ort := by
     intro a b h
-    revert h
-    cases a <;> cases b <;> decide
+    cases a <;> cases b <;> exact irMo_ort a b h
   mo_trans := by
     intro a b c hab hbc
     exact irMo_trans a b c ⟨hab, hbc⟩
