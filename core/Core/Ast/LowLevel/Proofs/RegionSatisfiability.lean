@@ -38,8 +38,8 @@ private def entryArgs : RegionEntryArgs := by
   let region := keywordName 'r' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
   let binder := keywordName 'v' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
   refine ⟨region, ?_, binder, ?_, ?_⟩
-  · exact ⟨fun equality => nomatch (List.cons.inj equality).1,
-      fun equality => nomatch (List.cons.inj equality).1⟩
+  · change ['r'] ≠ ['t', 'r', 'u', 'e'] ∧ ['r'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro equality <;> cases equality
   · intro equality
     exact nomatch (List.cons.inj equality).1
   · simp only [directName, ordinaryLocal, mainName, keywordName, String.reduceToList,
@@ -63,7 +63,7 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
   obtain ⟨image, core, assigned, fits, _, _, _, outside⟩ := boot
   have admitted : E.ZulStart env start :=
     ⟨image, core, assigned, fits, List.pairwise_singleton _ _,
-      entryExtent_valid, fun _ _ impossible => nomatch impossible, outside⟩
+      entryExtent_valid, (fun _ _ impossible => nomatch impossible), outside⟩
   let definition := Befehl.definiere mainName [.ownedRegion] none 0 4 false []
   have instructions :
       p.code = [definition, .bindeRegion 0 init, .blockEnde 1, .rueckVoid, .starte mainName, .ende] := rfl
@@ -71,8 +71,7 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
     change p.environmentAllowed _ ∧ p.code.all (Befehl.platformAllowed .x86_64) = true
     rw [instructions]
     refine ⟨⟨List.nodup_nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩
-    change (true && (Befehl.platformAllowed .x86_64 (.bindeRegion 0 init) && true)) = true
-    rw [allowed]
+    simp only [List.all_cons, List.all_nil, allowed] <;> rfl
   have accepted : Annahme.Akzeptiert E := by
     refine Fragment.akzeptiert_ohne_bedarf p .x86_64 rfl ?_
     intro b occurs frame
@@ -111,7 +110,9 @@ theorem regionAddressUnit_erfuellbar : RegionUnitErfuellbarAussage .address := b
 
 theorem viewUnit_erfuellbar : ∃ written valid, RegionUnitErfuellbarAussage (.view written valid) := by
   let written := WrittenType.integer false 8 none
-  have valid : written.valid := by decide
+  have valid : written.valid := by
+    change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
+    decide
   exact ⟨written, valid, regionUnit_joint (.view written valid) ⟨0, 0, 1, false⟩ rfl rfl⟩
 
 theorem regionBindUnit : RegionBindUnitAussage :=
