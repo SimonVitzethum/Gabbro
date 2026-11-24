@@ -51,15 +51,51 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
       after.pc = frame.pc + 1 ∧ after.rueckgabe = frame.rueckgabe := by
   sorry
 
--- Mirror Quellform.realisiert's instruction lookup, using wertIn_widen to establish a return.
+/-- Return a widened value to the entry context or restore the saved caller.
+    A caller with no result binding discards the value. -/
 theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zustand)
     (temp : (s.lokal eintritt).temp slot = some ⟨source, value⟩) :
     let after := (Befehl.zurueck slot target).nach eintritt s
     ∃ widened : Wert target,
       wertInhalt source value = wertInhalt target widened ∧
-      after.lokal eintritt = (s.lokal eintritt).rueckkehr (some ⟨target, widened⟩) ∧
-      ((s.lokal eintritt).fortsetzungen = [] → ∀ code, kopf code after eintritt = none) := by
-  sorry
+      match (s.lokal eintritt).fortsetzungen with
+      | [] =>
+        (after.lokal eintritt).rueckgabe = some ⟨target, widened⟩ ∧
+          ∀ code, kopf code after eintritt = none
+      | saved :: stack =>
+        after.lokal eintritt = { s.lokal eintritt with
+          pc := saved.pc, temp := saved.temp,
+          lokale := match saved.eingang with
+            | none => saved.lokale
+            | some written => wertIn written ⟨target, widened⟩ :: saved.lokale,
+          zaehler := saved.zaehler, obergrenzen := saved.obergrenzen,
+          funktion := saved.funktion, mass := saved.mass, fortsetzungen := stack } := by
+  dsimp only
+  obtain ⟨widened, valueEq, contents⟩ := wertIn_widen fits value
+  have typed : ((s.lokal eintritt).temp slot).bind (wertIn target) = some ⟨target, widened⟩ := by
+    rw [temp]
+    exact valueEq
+  have afterFrame : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt =
+      (s.lokal eintritt).rueckkehr (some ⟨target, widened⟩) := by
+    simp only [Befehl.nach, Function.update_self, Befehl.auswerten, typed]
+  refine ⟨widened, contents, ?_⟩
+  cases stackEq : (s.lokal eintritt).fortsetzungen with
+  | nil =>
+    have returned : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt |>.rueckgabe =
+        some ⟨target, widened⟩ := by
+      rw [afterFrame]
+      simp only [Rahmen.rueckkehr, stackEq]
+    refine ⟨returned, ?_⟩
+    intro code
+    simp only [kopf, if_pos rfl, returned]
+    change (match s.status eintritt with
+      | .ruht => none
+      | .laeuft => none
+      | .beendet _ => none) = (none : Option Befehl)
+    cases s.status eintritt <;> rfl
+  | cons saved stack =>
+    rw [afterFrame]
+    simp only [Rahmen.rueckkehr, stackEq, Option.bind_some]
 
 -- Mirror the pc equality of expr_ergebnis_typ and split on the actual Boolean input.
 theorem branch_effect (frame : Rahmen) (bit : Bool)
