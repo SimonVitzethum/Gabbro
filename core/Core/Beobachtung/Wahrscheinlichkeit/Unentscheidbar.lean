@@ -25,6 +25,7 @@
 module
 
 import Mathlib.Computability.Halting
+public import Mathlib.Computability.RE
 
 @[expose] public section
 
