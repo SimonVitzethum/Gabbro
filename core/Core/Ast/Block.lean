@@ -85,6 +85,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     exact .done
   · intros
     rename_i first next ihFirst ihNext rest
+    simp only [Block.printItems, List.map_append, List.append_assoc]
     exact .step (ihFirst (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihNext rest)
   · intros
     rename_i body ihBody rest
@@ -105,7 +106,7 @@ theorem Block.printItems_reads (tree : Block result before after) (rest : List T
     rename_i rest
     exact .done
   · intros
-    rename_i before middle first more after next ihBlock rest
+    rename_i _ _ first next _ ihBlock rest
     exact .step (Stmt.printReads first (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihBlock rest)
   · intros
     rename_i body ihBody rest
