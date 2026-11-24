@@ -354,7 +354,7 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
-  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
   subst spur
@@ -370,12 +370,12 @@ theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
-  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
-  simp
+  simp [Fragment.einheit]
 
 theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   intro platform start
@@ -422,13 +422,13 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
       simp [waechterBedarf]
     have hgood := hb.2.1 hw
     refine ⟨?_, ?_⟩
-    · simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.auswerten,
-        Rahmen.schreibe, waechterBedarf, cap]
+    · simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
+        Befehl.auswerten, Rahmen.schreibe, waechterBedarf, cap]
     · have ht := hgood.1
       have hsame : (b.nach eintritt s₃).lokal eintritt =
           (Befehl.substring 0 cap).auswerten (s₃.lokal eintritt) := by
-        simp [b, substringForm, args, Befehl.nach]
-      rw [hsame]
-      simpa [zero, Zahl.literal] using congrArg (fun frame : Rahmen => (frame.temp 0).isSome) ht
+        simp [b, form, substringForm, args, Befehl.nach]
+      rw [hsame, ht]
+      simp
 
 end Gabbro.Core.Ast.Semantik
