@@ -65,6 +65,14 @@ theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
         Quellklauseln.leer, List.nil_append, leftIH, rightIH]
   | _ => rfl
 
+private theorem argsCode_keine_invarianten (slot : Nat) (args : List (TypedExpr scope)) :
+    (argsCode slot args).klauseln.invariant = [] := by
+  induction args generalizing slot with
+  | nil => rfl
+  | cons value rest ih =>
+    simp only [argsCode, Fragment.anhaengen, Quellklauseln.anhaengen,
+      expr_keine_invarianten, ih, List.nil_append]
+
 -- Extend the original stmt_keine_invarianten by mutual recursion over Stmt and Block.
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
@@ -72,7 +80,7 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun b a t => (stmt t).klauseln.invariant = [])
     (fun b a t => (block t).klauseln.invariant = [])
     (fun b t => (bracedBlock t).klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   · intro scope type name ordinary value
     simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
       Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
@@ -85,6 +93,23 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
   · intro scope condition yes no yesIH noIH
     simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
       Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
+  · intros
+    rfl
+  · intros
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · intros
+    simp only [stmt, callCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, argsCode_keine_invarianten]
+  · intros
+    simp only [stmt, callCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, argsCode_keine_invarianten]
+  · intros
+    simp_all only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · intros
+    simp_all only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
   · intro scope
     simp only [block, Fragment.leer, Quellklauseln.leer]
   · intro before middle after first rest firstIH restIH
