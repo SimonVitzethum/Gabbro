@@ -25,6 +25,7 @@ public import Core.Verfeinerung.Erfuellbar
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
+public import Core.Beobachtung.NichtinterferenzErfuellbar
 meta import Core.Waechter.Check
 
 #check_core

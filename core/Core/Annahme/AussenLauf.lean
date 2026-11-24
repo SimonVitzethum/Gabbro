@@ -11,24 +11,29 @@ open Katalog Maschine
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 
+private theorem fragen_vor_aktion {t c s u s' a ls es}
+    (aktion : FuehrtAus E.einrichtung t c s u a ls es s')
+    (rahmen : Zustandsrahmen s u)
+    (alt : ∀ q ∈ s.fragen, q.cut < t) : ∀ q ∈ s'.fragen, q.cut < t + 1 := by
+  cases aktion with
+  | frage q =>
+    intro ev mem
+    change ev ∈ u.fragen ++ [s.stelleFrage t c q] at mem
+    rw [rahmen.fragen, List.mem_append, List.mem_singleton] at mem
+    rcases mem with bisher | rfl
+    · exact Nat.lt_succ_of_lt (alt ev bisher)
+    · exact Nat.lt_succ_self _
+  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
+    exact fun _ mem => Nat.lt_succ_of_lt (alt _ (rahmen.fragen ▸ mem))
+
 private theorem fragen_vor_schritt {run t s w spur s'}
     (step : I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s')
     (alt : ∀ q ∈ s.fragen, q.cut < t) : ∀ q ∈ s'.fragen, q.cut < t + 1 := by
   cases step with
-  | @kontext s s' u plan spur c w _ _ _ aus =>
+  | kontext _ _ _ aus =>
     obtain ⟨rahmen, _, _, v, aktion, _, ziel⟩ := aus
     rw [ziel]
-    generalize plan.aktion = a at aktion
-    cases aktion with
-    | frage q =>
-      intro ev mem
-      change ev ∈ _ ++ [s.stelleFrage t _ q] at mem
-      rw [rahmen.fragen, List.mem_append, List.mem_singleton] at mem
-      rcases mem with bisher | rfl
-      · exact Nat.lt_succ_of_lt (alt ev bisher)
-      · exact Nat.lt_succ_self _
-    | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
-      exact fun _ mem => Nat.lt_succ_of_lt (alt _ (rahmen.fragen ▸ mem))
+    exact fragen_vor_aktion (E := E) aktion rahmen alt
   | antwort _ arrives =>
     rw [arrives.2.2.2]
     exact fun _ mem => Nat.lt_succ_of_lt (alt _ mem)
