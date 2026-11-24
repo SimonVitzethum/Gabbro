@@ -44,8 +44,8 @@ private theorem effectGroupHeaderValue {scope : Scope} (item : EffectGroupDeclar
       (if item.exported then [keyword "pub"] else []) ++
         [keyword "effects", .word item.name.val, openBrace] := by
   cases h : item.exported <;>
-    simp only [EffectGroupDeclaration.header, h, List.map_append, List.map_cons, List.map_nil,
-      printPubVal, printEffectsVal, identifierPrintVal, printOpenBraceVal]
+    simp [EffectGroupDeclaration.header, h, printPubVal, printEffectsVal, identifierPrintVal,
+      printOpenBraceVal]
 
 private theorem tableTok_ne_const : keyword "table" ≠ keyword "const" := by decide
 private theorem pubTok_ne_const : keyword "pub" ≠ keyword "const" := by decide
@@ -81,7 +81,8 @@ private theorem tableHeaderPrefix_eq {scope : Scope} (head item : TableDeclarati
     exact ⟨rfl, hname, hcount, hin⟩
   · exact (tableTok_ne_pub (List.cons.inj h).1).elim
   · exact (tableTok_ne_pub (List.cons.inj h).1.symm).elim
-  · have h1 := (List.cons.inj h).2
+  · have h0 := (List.cons.inj h).2
+    have h1 := (List.cons.inj h0).2
     have hnameTok : Token.word head.name.val = Token.word item.name.val := (List.cons.inj h1).1
     have h2 := (List.cons.inj h1).2
     have h3 := (List.cons.inj h2).2
@@ -149,13 +150,13 @@ private theorem tableFields_print_reads (scope : Scope) (name : Identifier) (cou
   induction fields with
   | nil => exact TableFieldsRead.close
   | cons m ms ih =>
-      simpa only [tableFieldTokenList, List.append_assoc] using
+      simpa only [tableFieldTokenList, List.append_assoc, identifierPrintVal] using
         (TableFieldsRead.next m.name
           (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
           (ih (fun x hx => valid x (by simp [hx]))))
 
 private theorem tablePrints (scope : Scope) (item : TableDeclaration scope) :
-    (tableForm scope).produktion item
+    (tableForm scope).produktion.production item
       (((Category.declaration scope).printPieces ((tableForm scope).produktion.tree item)).map
         PrintedToken.value) := by
   refine ⟨(item.fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printCloseBrace]).map
@@ -181,18 +182,26 @@ theorem tableDerivation : TableDerivationAussage := by
       exact DeclReads.table item fieldRead
     prints := tablePrints scope
     erfuellbar := by
-      intro item
+      let name : Identifier := keywordName 't' [] (by decide) (fun _ m => (List.not_mem_nil m).elim)
+      let item : TableDeclaration scope := {
+        exported := false
+        name := name
+        count := 1
+        fields := []
+        valid := fun f h => (List.not_mem_nil h).elim
+        distinct := by decide
+      }
       exact Surface.Rule.satisfiableOfPrint item (tablePrints scope item)
   }
 
 theorem tableScope : TableScopeAussage := by
   intro scope item
   constructor
-  · simp [Scope.carrierCount, TableDeclaration.binding, carrierBinding]
+  · simp [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding]
   constructor
   · intro other hne
     have hne' : item.name.val ≠ other.val := fun h => hne h.symm
-    simp [Scope.carrierCount, TableDeclaration.binding, carrierBinding, hne']
+    simp [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding, hne']
   · intro h
     cases h
 
@@ -206,7 +215,7 @@ theorem tableParse : TableParseAussage := by
   exact (tableDerivation scope).parse lexed prod
 
 theorem tableElaboriert : TableElaboriertAussage := by
-  intro scope item
+  intro scope platform item
   rfl
 
 private theorem table_amOrt (scope : Scope) : (tableForm scope).RegelAmOrt := by
@@ -214,7 +223,7 @@ private theorem table_amOrt (scope : Scope) : (tableForm scope).RegelAmOrt := by
   rfl
 
 theorem tableRealisiert : TableRealisiertAussage := by
-  intro scope item platform s running active live atPc
+  intro scope platform item s running active live atPc
   exact (tableForm scope).realisiert (table_amOrt scope) platform item s running active live atPc
 
 theorem tableAnnahme : TableAnnahmeAussage := by
@@ -274,8 +283,8 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     constructor
     · dsimp [ordinaryLocal, ordinaryAtomWord, fname]
       decide
-    · dsimp [fname]
-      simp
+    · dsimp [fname, keywordName]
+      decide
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t h
     cases h
@@ -287,7 +296,9 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     valid := validNone
     measure := none
     body := .braces .done
-    distinct := by decide
+    distinct := by
+      dsimp [paramIndex, paramOption, pname, qname, keywordName]
+      simp
     returns := by
       intro h
       cases h
