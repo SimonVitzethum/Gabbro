@@ -59,11 +59,12 @@ theorem MemFrame.TlbGedeckt.nicht_unreserviert {frame : MemFrame} (inv : frame.T
 theorem flush_verweigert_gecachte_uebersetzung (target : ZielDaten) (s : MemState) (c : Kontext)
     (name : Identifier) (token : Zuruecknahme) (space : Adressraum)
     (hfind : ((s.lokal c).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token)
-    (hspace : (s.lokal c).spaces[token.raum]? = some space) {zelle : TlbZelle}
+    (hspace : (s.lokal c).spaces[token.raum]? = some space) (hnr : token.nurRechte = false)
+    {zelle : TlbZelle}
     (mem : zelle ∈ (s.lokal c).tlb.zellen) (inside : zelle.raum = token.raum)
     (page : token.contains zelle.seite) :
     (MemInstruction.flushSpace name).evaluate target s c = none := by
-  refine ((flush_aussage.2.1 target s c name token space hfind hspace).2
+  refine (((flush_aussage.2.1 target s c name token space hfind hspace).1 hnr).2
     (Or.inr (Or.inr ?_)))
   intro frei
   have nofrei := frei zelle mem
