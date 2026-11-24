@@ -29,7 +29,7 @@ inductive Befehl where
   | blockEnde (freigabe : Nat)
   | bindeWert (quelle : Nat) (ziel : Ty .value) (global : Bool)
   | definiere (name : Identifier) (parameter : List (Ty .value)) (result : Option (Ty .value))
-      (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle)
+      (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle) (effects : List CarrierEffect)
   | rufe (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value))
   | rueckVoid
   | pruefeMass (quelle : Nat)
@@ -63,8 +63,9 @@ inductive Befehl where
   | textIndex (basis capacity : Nat)
   | substring (basis capacity : Nat)
   | textLength (basis capacity : Nat)
-  | definiereTraeger (count : Nat) (labels : List (List Char)) (layout : Ty .value)
+  | definiereTraeger (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool)
   | optionIstBesetzt (ziel count : Nat)
+  | definiereEffektgruppe (effects : List CarrierEffect)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -118,8 +119,8 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     { frame with
       pc := frame.pc + 1, lokale := value :: frame.lokale,
       globale := if global then value :: frame.globale else frame.globale }
-  | .definiere name ps result globals skip measure calls, frame =>
-    let f : Funktion := ⟨name, frame.pc + 1, ps, result, globals, measure, calls⟩
+  | .definiere name ps result globals skip measure calls effects, frame =>
+    let f : Funktion := ⟨name, frame.pc + 1, ps, result, globals, measure, calls, effects⟩
     { frame with pc := frame.pc + skip, funktionen := f :: frame.funktionen }
   | .rufe name args bind, frame => frame.ruf name args bind
   | .rueckVoid, frame => frame.rueckkehr none
@@ -189,8 +190,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let locals := (value.map fun product => tupleLocals types product bind).getD []
     { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
   | .definiereRecord name labels types, frame =>
-    let schema : Dynamisch := ⟨recordSchemaType name labels types, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+    frame.installSchema ⟨recordSchemaType name labels types, PUnit.unit⟩
   | .baueRecord dst name labels types sources, frame =>
     frame.schreibe dst ((liesRecord frame.temp types sources).map fun record =>
       ⟨recordValueType name labels types, record⟩)
@@ -205,8 +205,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       pure ⟨type, tupleSet types index value old⟩
     { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
   | .definiereVariante name labels cases, frame =>
-    let schema : Dynamisch := ⟨variantSchemaType name labels cases, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+    frame.installSchema ⟨variantSchemaType name labels cases, PUnit.unit⟩
   | .baueVariante dst name labels cases index, frame => frame.schreibe dst (do
     let value ← variantActual (cases.get index) (frame.temp dst)
     pure ⟨variantValueType name labels cases, variantInject cases index value⟩)
@@ -245,14 +244,15 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     frame.schreibe base ((frame.temp base).bind (wertAls (.text capacity)) |>.map
       fun text => ⟨.int 0 capacity, text.lengthValue⟩)
 
-  | .definiereTraeger count labels layout, frame =>
-    let schema : Dynamisch := ⟨.carrierSchema count labels layout, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+  | .definiereTraeger count labels layout exported, frame =>
+    frame.installSchema ⟨.carrierSchema count labels layout exported, PUnit.unit⟩
 
   | .optionIstBesetzt dst count, frame =>
     frame.schreibe dst (do
       let value ← (frame.temp dst).bind (wertAls (indexOptionType count))
-      pure ⟨.bool, (variantCase (indexOptionPayloads count) value).1 == 0⟩)
+      pure ⟨.bool, indexOptionPresent value⟩)
+  | .definiereEffektgruppe effects, frame =>
+    frame.installSchema ⟨.effectGroupSchema effects, PUnit.unit⟩
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

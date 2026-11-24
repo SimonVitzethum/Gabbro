@@ -14,9 +14,22 @@ def Identifier := { name : RawText // ∃ c rest, name = c :: rest ∧
   isNameStart c ∧ ∀ a ∈ rest, isNamePart a }
 
 def ordinaryAtomWord (word : RawText) : Prop :=
-  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList
+  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList ∧
+    word ≠ "Some".toList ∧ word ≠ "None".toList
 
 def ordinaryLocal (name : Identifier) : Prop := ordinaryAtomWord name.val
+
+inductive CarrierAccess where
+  | read
+  | write
+  deriving DecidableEq
+
+/-- The position from the end of a declaration scope is stable when later declarations extend it. -/
+structure CarrierEffect where
+  declaration : Nat
+  carrier : RawText
+  access : CarrierAccess
+  deriving DecidableEq
 
 /-- Kinds separate value types from other type-level forms as they are introduced. -/
 inductive Kind where
@@ -36,7 +49,8 @@ inductive Ty : Kind → Type where
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | text (capacity : Nat) : Ty .value
-  | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) : Ty .value
+  | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool) : Ty .value
+  | effectGroupSchema (effects : List CarrierEffect) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -65,7 +79,7 @@ abbrev Scope := List Binding
 /-- The nearest declaration of a written carrier name fixes its index bound. -/
 def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
   match scope.find? (fun binding => binding.name.val == name.val) with
-  | some ⟨_, .carrierSchema count _ _, _, _⟩ => some count
+  | some ⟨_, .carrierSchema count _ _ _, _, _⟩ => some count
   | _ => none
 
 /-- Finite carriers of equal count share the same checked numerical index type. -/
@@ -91,7 +105,7 @@ def Local.nameVisible : Local scope type → Prop
   | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.nameVisible
 
 def Ty.valueBinding : Ty .value → Prop
-  | .recordSchema .. | .variantSchema .. | .carrierSchema .. => False
+  | .recordSchema .. | .variantSchema .. | .carrierSchema .. | .effectGroupSchema .. => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=
@@ -137,22 +151,23 @@ def indexOptionType (count : Nat) : Ty .value :=
     (variantLayout [some (indexType count), none])
 
 def indexSomeName : Identifier :=
-  ⟨"Some".toList, 'S', ['o', 'm', 'e'], rfl, by decide, by
+  ⟨"Some".toList, 'S', ['o', 'm', 'e'], rfl, .inl (.inr (.inl (by decide))), by
     intro c member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl <;> decide⟩
+    rcases member with rfl | rfl | rfl <;> exact .inl (.inl (.inl (by decide)))⟩
 
 def indexNoneName : Identifier :=
-  ⟨"None".toList, 'N', ['o', 'n', 'e'], rfl, by decide, by
+  ⟨"None".toList, 'N', ['o', 'n', 'e'], rfl, .inl (.inr (.inl (by decide))), by
     intro c member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl <;> decide⟩
+    rcases member with rfl | rfl | rfl <;> exact .inl (.inl (.inl (by decide)))⟩
 
 def indexIsSomeName : Identifier :=
-  ⟨"is_some".toList, 'i', ['s', '_', 's', 'o', 'm', 'e'], rfl, by decide, by
+  ⟨"is_some".toList, 'i', ['s', '_', 's', 'o', 'm', 'e'], rfl, .inl (.inl (by decide)), by
     intro c member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> decide⟩
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals first | exact .inl (.inl (.inl (by decide))) | exact .inl (.inr rfl)⟩
 
 def indexOptionLabels : List Identifier := [indexSomeName, indexNoneName]
 

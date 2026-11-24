@@ -252,23 +252,25 @@ def functionCode (result : Option WrittenType) (measure : Option (Measure scope)
   (prologue.anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
 
 def functionInstruction (before : Scope) (name : Identifier) (parameters : List (Parameter before))
-    (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment) : Befehl :=
+    (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment)
+    (effects : List CarrierEffect) : Befehl :=
   .definiere name (parameters.map (fun p => p.written.type)) (writtenResult result)
     before.length (body.code.length + 1) hasMeasure
     (body.code.filterMap fun
-      | .rufe target args bind => some ⟨target, args, bind⟩
-      | _ => none)
+      | .rufe target args bind => some ⟨target, args, bind, effects⟩
+      | _ => none) effects
 
 def tableInstruction (item : TableDeclaration before) : Befehl :=
   .definiereTraeger item.count ((recordLabels item.fields).map Subtype.val)
-    (tupleType (recordTypes item.fields))
+    (tupleType (recordTypes item.fields)) item.exported
 
 def decl : Decl before after → Fragment
   | .constant _ _ written _ value _ _ =>
     (expr 0 value).anhaengen (.einzel (.bindeWert 0 written.type true))
-  | .function name _ parameters result _ measure body _ _ =>
+  | .function name _ parameters result _ measure body _ _ effects =>
     let code := functionCode result measure body
-    (Fragment.einzel (functionInstruction before name parameters result measure.isSome code)).anhaengen code
+    (Fragment.einzel (functionInstruction before name parameters result measure.isSome code
+      (declaredEffects effects))).anhaengen code
 
   | .record _ name members _ _ =>
     .einzel (.definiereRecord name.val (recordLabels members) (recordTypes members))
@@ -276,6 +278,7 @@ def decl : Decl before after → Fragment
     let cases := first :: tail
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
   | .table item => .einzel (tableInstruction item)
+  | .effectGroup item => .einzel (.definiereEffektgruppe item.resolved)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer

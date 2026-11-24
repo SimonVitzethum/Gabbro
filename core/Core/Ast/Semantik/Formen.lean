@@ -15,6 +15,7 @@ public import Core.Ast.TextValue.Index
 public import Core.Ast.TextValue.Substring
 public import Core.Ast.Aggregate.Carrier.Table
 public import Core.Ast.Aggregate.Carrier.Option.Test
+public import Core.Ast.Aggregate.Carrier.Effects.Group
 
 @[expose] public section
 
@@ -154,6 +155,8 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
   else if constructor = ``Decl.table then
     ⟨.surface, Quellform.statements tableForm TableErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.effectGroup then
+    ⟨.surface, Quellform.statements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Declaration
+public import Core.Ast.Declaration.Grammar
 
 @[expose] public section
 

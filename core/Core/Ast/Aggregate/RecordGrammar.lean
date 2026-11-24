@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.ProgramHeader
+public import Core.Ast.Declaration.Types
 
 @[expose] public section
 

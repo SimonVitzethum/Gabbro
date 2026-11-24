@@ -21,13 +21,13 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
@@ -35,7 +35,8 @@ def anfangswert : Ty .value → Option Dynamisch
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
   | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
   | .variantSchema name labels payloads layout => some ⟨.variantSchema name labels payloads layout, PUnit.unit⟩
-  | .carrierSchema count labels layout => some ⟨.carrierSchema count labels layout, PUnit.unit⟩
+  | .carrierSchema count labels layout exported => some ⟨.carrierSchema count labels layout exported, PUnit.unit⟩
+  | .effectGroupSchema effects => some ⟨.effectGroupSchema effects, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where
@@ -51,6 +52,7 @@ structure Rufstelle where
   name : Identifier
   args : List (Ty .value)
   bind : Option (Ty .value)
+  effects : List CarrierEffect
 
 structure Funktion where
   name : Identifier
@@ -60,6 +62,7 @@ structure Funktion where
   konstanten : Nat
   misstAbstieg : Bool
   ruft : List Rufstelle
+  effects : List CarrierEffect
 
 structure Fortsetzung where
   pc : Nat
@@ -96,6 +99,9 @@ def Rahmen.start (scope : Scope) : Rahmen :=
 def Rahmen.schreibe (frame : Rahmen) (ziel : Nat) (value : Option Dynamisch) : Rahmen :=
   { frame with pc := frame.pc + 1, temp := Function.update frame.temp ziel value }
 
+def Rahmen.installSchema (frame : Rahmen) (schema : Dynamisch) : Rahmen :=
+  { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+
 def Rahmen.zahl (frame : Rahmen) (slot : Nat) : Option Ganzzahl :=
   (frame.temp slot).bind alsGanzzahl
 
@@ -127,6 +133,7 @@ def Rufstelle.passt (call : Rufstelle) (funktionen : List Funktion) : Bool :=
   | some target =>
     call.args.length == target.parameter.length &&
       (call.args.zip target.parameter).all (fun pair => tyFits pair.1 pair.2) &&
+      target.effects.all (fun effect => decide (effect ∈ call.effects)) &&
       match call.bind, target.result with
       | none, none | none, some _result => true
       | some written, some declared => tyFits declared written

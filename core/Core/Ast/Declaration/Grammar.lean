@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Block
 public import Core.Ast.Aggregate.Carrier.Grammar
+public import Core.Ast.Aggregate.Carrier.Effects.Grammar
 
 @[expose] public section
 
@@ -36,10 +37,11 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       (returns : result.isSome = true → body.returns = true) :
       ParamsRead before input parameters afterParams →
       ResultReads before afterParams result afterResult →
-      MeasureReads (functionScope before parameters) afterResult measure afterMeasure →
+      EffectClauseReads before parameters afterResult effects afterEffects →
+      MeasureReads (functionScope before parameters) afterEffects measure afterMeasure →
       BlockReads (writtenResult result) (functionScope before parameters) afterMeasure body rest →
       DeclReads before (keyword "fn" :: .word name.val :: openParen :: input)
-        ⟨before, .function name ordinary parameters result valid measure body distinct returns⟩ rest
+        ⟨before, .function name ordinary parameters result valid measure body distinct returns effects⟩ rest
   | record (exported : Bool) (name : Identifier) (valid : ∀ member ∈ fields, member.written.valid before)
       (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
       RecordMembersRead before input fields (semicolon :: rest) →
@@ -55,6 +57,9 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
   | table (item : TableDeclaration before) :
       TableFieldsRead (carrierFieldScope before item.name item.count) input item.fields (closeBrace :: rest) →
       DeclReads before (item.header.map PrintedToken.value ++ input) ⟨_, .table item⟩ rest
+  | effectGroup (item : EffectGroupDeclaration before) :
+      EffectListReads CarrierEffectReads input item.written (semicolon :: rest) →
+      DeclReads before (item.header.map PrintedToken.value ++ input) ⟨_, .effectGroup item⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
@@ -68,9 +73,9 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .constant name _ written _ value _ _ =>
     [printConst, name.print, printColon] ++ written.printPieces ++ [printAssignment] ++
       value.printPieces ++ [printSemicolon]
-  | .function name _ parameters result _ measure body _ _ =>
+  | .function name _ parameters result _ measure body _ _ effects =>
     [printFn, name.print, printOpen] ++ commaSeparated (parameters.map Parameter.printPieces) ++
-      [printClose] ++ resultPieces result ++ measurePieces measure ++ body.printPieces
+      [printClose] ++ resultPieces result ++ effectClausePieces effects ++ measurePieces measure ++ body.printPieces
   | .record exported name fields _ _ =>
     recordDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
       fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printSemicolon]
@@ -79,6 +84,9 @@ def Decl.printPieces : Decl before after → List PrintedToken
       commaSeparated ((first :: tail).map VariantMember.printPieces) ++ [printCloseBrace, printSemicolon]
   | .table item =>
     item.header ++ item.fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printCloseBrace]
+  | .effectGroup item =>
+    item.header ++ commaSeparated (item.written.map WrittenCarrierEffect.printPieces) ++
+      [printCloseBrace, printSemicolon]
 
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion
@@ -99,12 +107,14 @@ theorem DeclReads.function_inversion
       (body : BracedBlock (writtenResult result) (functionScope before ps))
       (distinct : (ps.map (fun p => p.name.val)).Nodup)
       (returns : result.isSome = true → body.returns = true)
-      (afterParams afterResult afterMeasure : List Token),
+      (effects : Option (EffectClause before ps))
+      (afterParams afterResult afterEffects afterMeasure : List Token),
       name.val = spelling ∧ ParamsRead before input ps afterParams ∧
       ResultReads before afterParams result afterResult ∧
-      MeasureReads (functionScope before ps) afterResult measure afterMeasure ∧
+      EffectClauseReads before ps afterResult effects afterEffects ∧
+      MeasureReads (functionScope before ps) afterEffects measure afterMeasure ∧
       BlockReads (writtenResult result) (functionScope before ps) afterMeasure body rest ∧
-      tree = ⟨before, .function name ordinary ps result valid measure body distinct returns⟩ := by
+      tree = ⟨before, .function name ordinary ps result valid measure body distinct returns effects⟩ := by
   sorry
 
 -- Mirror StmtReads.deterministic, using the header and body derivations in order.

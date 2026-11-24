@@ -248,11 +248,15 @@ structure FunctionArgs (scope : Scope) where
   body : BracedBlock (writtenResult result) (functionScope scope parameters)
   distinct : (parameters.map (fun p => p.name.val)).Nodup
   returns : result.isSome = true → body.returns = true
+  effects : Option (EffectClause scope parameters) := none
+
+def FunctionArgs.declaration (a : FunctionArgs scope) : Decl scope scope :=
+  .function a.name a.ordinary a.parameters a.result a.valid a.measure a.body a.distinct a.returns a.effects
 
 /-- syntax.fndecl and surface.SItemTief.fnT. -/
 def function (scope : Scope) : Rule (.declaration scope) (FunctionArgs scope) where
-  tree := fun a => ⟨_, .function a.name a.ordinary a.parameters a.result a.valid a.measure a.body a.distinct a.returns⟩
-  production := fun a tokens => DeclReads scope tokens ⟨_, .function a.name a.ordinary a.parameters a.result a.valid a.measure a.body a.distinct a.returns⟩ []
+  tree := fun a => ⟨_, a.declaration⟩
+  production := fun a tokens => DeclReads scope tokens ⟨_, a.declaration⟩ []
 
 -- Mirror Decl.printReads for the canonical derivation.
 theorem function_print {scope : Scope} (a : FunctionArgs scope) :

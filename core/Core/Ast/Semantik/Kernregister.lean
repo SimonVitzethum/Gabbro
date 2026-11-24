@@ -192,6 +192,8 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements tableForm TableErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.optionIstBesetzt then
     ⟨.core, Quellform.kernStatements optionTestForm OptionTestErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.definiereEffektgruppe then
+    ⟨.core, Quellform.kernStatements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor

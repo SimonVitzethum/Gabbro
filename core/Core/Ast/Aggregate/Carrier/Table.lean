@@ -41,7 +41,7 @@ def TableBindingAussage : Prop :=
   ∀ (scope : Scope) (item : TableDeclaration scope) (frame : Rahmen),
     let next := (tableInstruction item).auswerten frame
     let marker : Dynamisch := ⟨.carrierSchema item.count ((recordLabels item.fields).map Subtype.val)
-      (tupleType (recordTypes item.fields)), PUnit.unit⟩
+      (tupleType (recordTypes item.fields)) item.exported, PUnit.unit⟩
     marker.1 = item.binding.type ∧ next.lokale = some marker :: frame.lokale ∧
       next.globale = some marker :: frame.globale ∧ next.pc = frame.pc + 1 ∧ next.temp = frame.temp
 
@@ -83,8 +83,7 @@ def TableErfuellbarAmAussage : Prop :=
       let E := elaborieren platform tree
       item.count > 0 ∧
       (∃ (args : Surface.FunctionArgs [item.binding]) (tail : UnitBody [item.binding] after),
-        rest = .step (.function args.name args.ordinary args.parameters args.result args.valid
-          args.measure args.body args.distinct args.returns) tail ∧
+        rest = .step args.declaration tail ∧
         (∃ p ∈ args.parameters, p.written = .index item.name item.count) ∧
         (∃ p ∈ args.parameters, p.written = .indexOption item.name item.count)) ∧
       Ast.Parse text tree ∧ Elaboriert platform tree E ∧

@@ -22,11 +22,16 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .productEnd => PUnit
   | _, .product head tail => Wert head × Wert tail
   | _, .record _ _ layout => Wert layout
-  | _, .recordSchema .. | _, .variantSchema .. | _, .carrierSchema .. => PUnit
+  | _, .recordSchema .. | _, .variantSchema .. | _, .carrierSchema .. | _, .effectGroupSchema .. => PUnit
   | _, .sumEnd => Empty
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout
   | _, .text capacity => TextValue capacity
+
+def indexOptionPresent (value : Wert (indexOptionType count)) : Bool :=
+  match value with
+  | .inl _ => true
+  | .inr _ => false
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
@@ -192,6 +197,7 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .substring base first last =>
     (base.wert env).slice (first.wert env).wert.toNat (last.wert env).wert.toNat
   | .textLength base => (base.wert env).lengthValue
+  | .optionIsSome ref _ _ => indexOptionPresent (env ref)
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit
