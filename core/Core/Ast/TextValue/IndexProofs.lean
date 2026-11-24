@@ -72,7 +72,7 @@ private theorem textIndexPrint (scope : Scope) (args : TextIndexArgs scope) :
           omega))
   · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
-theorem textIndexDerivation : TextIndexDerivationAussage := by
+theorem textIndexDerivation : Gabbro.Core.Ast.Semantik.TextIndexDerivationAussage := by
   intro scope
   refine ⟨?_, ?_, ?_⟩
   · intro args tokens production
@@ -166,7 +166,10 @@ private theorem textIndex_am_ort (scope : Scope) : (textIndexForm scope).RegelAm
   intro args
   let p := (expr 0 args.base).anhaengen (expr 1 args.offset)
   let b : Befehl := .textIndex 0 args.capacity
-  change (p.anhaengen (.einzel b)).code[p.code.length]? = some b
+  change (p.anhaengen (.einzel b)).code[(expr 0 args.base).code.length + (expr 1 args.offset).code.length]? = some b
+  have hpos : (expr 0 args.base).code.length + (expr 1 args.offset).code.length = p.code.length := by
+    simp [p, Fragment.anhaengen]
+  rw [hpos]
   exact textIndexRootLookup p b
 
 private theorem textIndex_keine_invarianten (scope : Scope) (args : Surface.TextIndexArgs scope) :
@@ -179,11 +182,11 @@ theorem textIndexSuffix : TextIndexSuffixAussage := by
   cases read with
   | stop blocked =>
       exact (blocked ⟨.index, first, rfl, allowed⟩).elim
-  | textIndex _ _ offsetRead tailRead =>
+  | textIndex _ _ _ offsetRead tailRead =>
       have closeSuffix := ExprReads.consumes offsetRead
       have moreSuffix := (List.suffix_cons closeBracket _).trans closeSuffix
       exact (ExprTail.consumes tailRead).trans moreSuffix
-  | substring _ _ _ firstRead lastRead tailRead =>
+  | substring _ _ _ _ firstRead lastRead tailRead =>
       have lastCloseSuffix := ExprReads.consumes lastRead
       have lastMoreSuffix := (List.suffix_cons closeBracket _).trans lastCloseSuffix
       have firstCloseSuffix := ExprReads.consumes firstRead
@@ -194,7 +197,9 @@ private theorem textWertAls (capacity : Nat) (text : TextValue capacity) :
     wertAls (.text capacity) (Sigma.mk (.text capacity) text) = some text := by
   cases text with
   | mk bytes bound =>
-      simp [wertAls, bound]
+      unfold wertAls
+      rw [dif_pos bound]
+      congr
 
 theorem textIndexBytes : TextIndexBytesAussage := by
   intro capacity text index frame htemp hzahl
@@ -204,6 +209,7 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     exact textWertAls capacity text
   refine ⟨?_, ?_, ?_⟩
   · simp [Befehl.guard, htext, hzahl]
+    rfl
   · intro byte nonneg hbyte
     simp [Befehl.auswerten, htext, hzahl, not_lt_of_ge nonneg, hbyte, Rahmen.schreibe]
   · intro hfail
@@ -221,7 +227,7 @@ theorem textIndexBytes : TextIndexBytesAussage := by
 
 theorem textIndexParse : TextIndexParseAussage := by
   intro scope args text pieces lexed production
-  exact (textIndexDerivation scope).parse lexed production
+  exact (Surface.textIndexDerivation scope).parse lexed production
 
 theorem textIndexElaboriert : TextIndexElaboriertAussage := by
   intro scope platform args
@@ -267,8 +273,8 @@ theorem textIndexRegelSicher : TextIndexRegelSicherAussage := by
     (textIndex_keine_invarianten scope args) ((textIndexForm scope).befehl args)
 
 theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
-  intro scope platform args t c s choice stepPlan u spur next head impl execute
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
+  intro scope platform args form t c s choice stepPlan u spur next head impl execute stepExec
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl stepExec
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
@@ -279,8 +285,8 @@ theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
     simp
 
 theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
-  intro scope platform args t c s choice stepPlan u spur next head impl execute
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
+  intro scope platform args form t c s choice stepPlan u spur next head impl execute stepExec
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl stepExec
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
@@ -318,8 +324,9 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
     exact ⟨by simpa using hlt, by simp [byte]⟩
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
-    simp [Befehl.auswerten, htext, hzahl, hbyte]
-  refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_⟩
+    simp [Befehl.auswerten, htext, hzahl, hbyte, Zahl.literal]
+  refine ⟨args, ?_⟩
+  refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
   · rfl
   · exact form.realisiert (textIndex_am_ort []) platform args s₂ rfl rfl rfl rfl
