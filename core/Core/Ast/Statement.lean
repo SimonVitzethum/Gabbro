@@ -83,8 +83,15 @@ theorem StmtReads.let_header
       cases hname
       cases hmore
       exact ⟨name, ordinary, _, _, _, rfl, read, tail⟩
-  | _ => exfalso; simp_all
--- Mirror AtomReads.lit_inversion.
+  | assignVar ref visible writable fits read => exfalso
+      rcases hs with ⟨h1, h2, h3⟩
+      cases h2
+  | ret declared fits read => exfalso
+      rcases hs with ⟨h1, h2, h3⟩
+      exact (by decide : letKeyword ≠ returnKeyword) h1
+  | ite conditionRead yesRead noRead => exfalso
+      rcases hs with ⟨h1, h2, h3⟩
+      exact (by decide : letKeyword ≠ ifKeyword) h1
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
   cases read
 
