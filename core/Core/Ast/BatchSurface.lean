@@ -435,16 +435,20 @@ theorem ifElse_print (args : IfArgs scope result) :
       elseKeyword :: args.no.printPieces.map PrintedToken.value,
     args.yes.printPieces.map PrintedToken.value ++ elseKeyword :: args.no.printPieces.map PrintedToken.value,
     args.no.printPieces.map PrintedToken.value, ?_, ?_, ?_, ?_⟩
-  · simpa only [Expr.printTokens, elseKeyword, String.reduceToList]
-  · apply args.condition.printReads
-    cases args.yes with
-    | braces body =>
-      simp only [BracedBlock.printPieces, printOpenBrace, printPunctuation,
-        PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons,
-        List.map_nil, List.cons_append]
-      exact noOperatorAtOpenBrace
+  · simpa only [Expr.printTokens, elseKeyword, String.reduceToList, List.append_assoc]
+  · have hb : ¬ Continues 0
+        (args.yes.printPieces.map PrintedToken.value ++ elseKeyword ::
+          args.no.printPieces.map PrintedToken.value) := by
+      cases args.yes with
+      | braces body =>
+        simp only [BracedBlock.printPieces, printOpenBrace, printPunctuation,
+          PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons,
+          List.map_nil, List.cons_append]
+        exact noOperatorAtOpenBrace
+    simpa only [List.append_assoc] using
+      (args.condition.printReads hb)
   · exact args.yes.printReads _
-  · exact args.no.printReads []
+  · simpa only [List.append_nil] using args.no.printReads []
 
 -- Mirror BracedBlock.printReads by applying the new production and its child proofs.
 theorem ifElse_reads (scope : Scope) (result : Option (Ty .value)) (args : IfArgs scope result)
