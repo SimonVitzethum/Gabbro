@@ -31,7 +31,10 @@ theorem tupleType_inversion : TupleTypeInversionAussage := by
   intro input type rest read
   cases read
   case tuple =>
-      rename_i input' first' secondInput' second' more' tail' rest' p1 p2 p3
+      rename_i input' first' secondInput' second' more' tail' rest'
+      have p1 : TypeReads input' _ (comma :: _) := ‹_›
+      have p2 : TypeReads secondInput' _ _ := ‹_›
+      have p3 : TypeItemsTail _ _ rest' := ‹_›
       exact ⟨first', second', tail', secondInput', more', p1, p2, p3, rfl⟩
   all_goals contradiction
 
@@ -39,14 +42,18 @@ private theorem typeItemsTail_consumes : (input : List Token) → (tail : Writte
     TypeItemsTail input tail rest → rest <:+ input
   | _, _, _, .close => List.suffix_cons _ _
   | _, _, _, @TypeItemsTail.comma i head more tail rest headRead tailRead =>
-      (typeItemsTail_consumes more tail rest tailRead).trans (TypeReads.consumes headRead)
+      (typeItemsTail_consumes more tail rest tailRead).trans
+        ((TypeReads.consumes headRead).trans (List.suffix_cons comma i))
 
 theorem tupleType_suffix : TupleTypeSuffixAussage := by
   intro input type rest read
   cases read
   case tuple =>
-      rename_i input' first' secondInput' second' more' tail' rest' p1 p2 p3
-      exact (typeItemsTail_consumes more' tail' rest' p3).trans
+      rename_i input' first' secondInput' second' more' tail' rest'
+      have p1 : TypeReads input' _ (comma :: _) := ‹_›
+      have p2 : TypeReads secondInput' _ _ := ‹_›
+      have p3 : TypeItemsTail _ _ rest' := ‹_›
+      exact (typeItemsTail_consumes _ _ rest' p3).trans
         ((TypeReads.consumes p2).trans
           ((List.suffix_cons comma secondInput').trans (TypeReads.consumes p1)))
   all_goals contradiction
@@ -77,9 +84,10 @@ private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (
       have commaTok : printComma.value = comma := by rfl
       rw [commaTok]
       apply TypeItemsTail.comma
-      · exact WrittenType.printReads head valid.1
-          (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
-          (tupleTypeTail_closed tail rest)
+      · simpa only [List.append_assoc] using
+          (WrittenType.printReads head valid.1
+            (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
+            (tupleTypeTail_closed tail rest))
       · exact tupleType_printTail tail valid.2 rest
 
 theorem tupleType_derivation : TupleTypeDerivationAussage := by
@@ -142,8 +150,8 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
       ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits]⟩
-    exact Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
+        .tupleValue .trueLit .falseLit .empty, by rfl⟩
+    exact Surface.Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
   intro ctx args text pieces lexed prod
