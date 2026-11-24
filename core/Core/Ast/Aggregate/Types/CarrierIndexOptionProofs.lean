@@ -51,10 +51,10 @@ private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) 
   intro args
   let a := args.val
   change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
-      (functionCode a.result a.measure a.body))).anhaengen
-      (functionCode a.result a.measure a.body)).code[0]? =
+      (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen
+      (functionCode a.result a.measure a.body) (declaredEffects a.effects)).code[0]? =
     some (functionInstruction scope a.name a.parameters a.result a.measure.isSome
-      (functionCode a.result a.measure a.body))
+      (functionCode a.result a.measure a.body) (declaredEffects a.effects))
   simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append,
     List.getElem?_cons_zero]
 
@@ -93,8 +93,8 @@ private theorem carrier_keine_invarianten (scope : Scope) (belongs : WrittenType
   let a := args.val
   change (decl ((functionForm scope).produktion.tree a).2).klauseln.invariant = []
   change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
-    (functionCode a.result a.measure a.body))).anhaengen
-    (functionCode a.result a.measure a.body)).klauseln.invariant = []
+    (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen
+    (functionCode a.result a.measure a.body) (declaredEffects a.effects)).klauseln.invariant = []
   simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
     List.append_nil, List.nil_append]
   exact codeInv a.result a.measure a.body
@@ -105,9 +105,9 @@ private theorem carrier_signature (scope : Scope) (args : Surface.FunctionArgs s
   dsimp [functionForm, functionInstruction, Befehl.auswerten]
   refine ⟨⟨args.name, frame.pc + 1, args.parameters.map (fun p => p.written.type),
     writtenResult args.result, scope.length, args.measure.isSome,
-    (functionCode args.result args.measure args.body).code.filterMap fun
-      | .rufe target callArgs bind => some ⟨target, callArgs, bind⟩
-      | _ => none⟩, ?_, rfl, rfl⟩
+    (functionCode args.result args.measure args.body).code.filterMap (fun
+      | .rufe target callArgs bind => some ⟨target, callArgs, bind, declaredEffects args.effects⟩
+      | _ => none), declaredEffects args.effects⟩, ?_, rfl, rfl⟩
   rfl
 
 theorem carrierIndexOptionInversion : CarrierIndexOptionInversionAussage := by
@@ -214,7 +214,7 @@ theorem carrierIndexOptionRegelSicher : CarrierIndexOptionRegelSicherAussage := 
 theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage := by
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  let scope : Scope := [⟨carrier, .carrierSchema 1, false, false⟩]
+  let scope : Scope := [⟨carrier, .carrierSchema 1 [] .productEnd false, false, false⟩]
   have resolved : scope.carrierCount carrier = some 1 := by decide
   let pname : Identifier := keywordName 'p' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have pOrdinary : ordinaryLocal pname := by
@@ -238,7 +238,8 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
         · trivial
       , by
       intro h
-      cases h⟩
+      cases h
+      , none⟩
   have belongs : ∃ p ∈ args.parameters, indexOptionTypeUse p.written := by
     refine ⟨param, ?_, ?_⟩
     · change param ∈ ([param] : List (Parameter scope))

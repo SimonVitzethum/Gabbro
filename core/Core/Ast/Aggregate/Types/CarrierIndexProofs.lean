@@ -114,10 +114,10 @@ private theorem carrierIndex_am_ort (scope : Scope) :
   intro args
   change ((Fragment.einzel (functionInstruction scope args.val.name args.val.parameters
     args.val.result args.val.measure.isSome
-    (functionCode args.val.result args.val.measure args.val.body))).anhaengen
-    (functionCode args.val.result args.val.measure args.val.body)).code[0]? =
+    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))).anhaengen
+    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects)).code[0]? =
       some (functionInstruction scope args.val.name args.val.parameters args.val.result
-        args.val.measure.isSome (functionCode args.val.result args.val.measure args.val.body))
+        args.val.measure.isSome (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))
   simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append,
     List.getElem?_cons_zero]
 
@@ -181,8 +181,8 @@ private theorem carrierIndex_keine_invarianten (scope : Scope)
   change (decl ((carrierTypeForm scope indexTypeUse).produktion.tree args).2).klauseln.invariant = []
   change ((Fragment.einzel (functionInstruction scope args.val.name args.val.parameters
     args.val.result args.val.measure.isSome
-    (functionCode args.val.result args.val.measure args.val.body))).anhaengen
-    (functionCode args.val.result args.val.measure args.val.body)).klauseln.invariant = []
+    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))).anhaengen
+    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects)).klauseln.invariant = []
   simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
     Quellklauseln.leer, List.append_nil, List.nil_append]
   exact codeInv args.val.result args.val.measure args.val.body
@@ -215,7 +215,7 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
   let fnName : Identifier :=
     carrierIndex_singleIdent 'f' (by change 97 ≤ 102; omega) (by change 102 ≤ 122; omega)
   let count : Nat := 1
-  let scope : Scope := [⟨carrier, .carrierSchema count, false, false⟩]
+  let scope : Scope := [⟨carrier, .carrierSchema count [] .productEnd false, false, false⟩]
   have resolved : scope.carrierCount carrier = some count := by
     decide
   have paramOrdinary : ordinaryLocal paramName := by
