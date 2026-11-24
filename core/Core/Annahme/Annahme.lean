@@ -177,14 +177,14 @@ def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := { Schrankendaten.leer with halten := fun _ => some 3 }
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
 
 /-- The release-witness state: the holder owns the lock, the waiter is queued. -/
 def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
-  { (Zustand.start (fun _ => ()) (fun _ => .laeuft)
+  { (Zustand.start (L := Unit) (fun _ => ()) (fun _ => .laeuft)
       (fun j => ⟨gebenDispatch j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))) with
-    sperren := fun _ => ⟨some gibtHalter, [gibtWarter]⟩ }
+    sperren := fun _ : Unit => (⟨some gibtHalter, [gibtWarter]⟩ : SperrZustand) }
 
 /-- **Non-vacuity of the holder row with a real releasing holder**: a state where a live,
     dispatched holder owns a bound lock and its own rule offers the release step. -/
