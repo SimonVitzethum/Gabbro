@@ -120,8 +120,8 @@ theorem arrayValue {items : ExprItems scope types} (principal : arrayElement typ
 theorem arrayIndex {count : Nat} {lo hi : Int} (lower : 0 ≤ lo) (upper : hi < (count : Int))
     (base : Ausdruckswert env slot (array : Expr scope (.array element count)))
     (index : Ausdruckswert env (slot + 1) (subscript : Expr scope (.int lo hi))) :
-    Ausdruckswert env slot (.arrayIndex array subscript lower upper) := by
-  refine .zweiOperandenWert base index ((Expr.arrayIndex array subscript lower upper).wert env) ?_
+    Ausdruckswert env slot (Expr.arrayIndex (count := count) array subscript lower upper) := by
+  refine .zweiOperandenWert base index ((ExprExpr.arrayIndex (count := count) array subscript lower upper).wert env) ?_
   intro pre post frame position active typed checked found
   rcases found with ⟨baseValue, indexValue⟩
   simp only [TemporaryValue] at baseValue indexValue
