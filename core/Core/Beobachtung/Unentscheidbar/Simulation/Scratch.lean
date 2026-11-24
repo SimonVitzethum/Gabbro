@@ -10,11 +10,11 @@ open Nat.Partrec
 
 def natZuCode : Nat → Code
   | 0 => Code.zero
-  | n + 1 => Code.succ (natZuCode n)
+  | n + 1 => Code.pair Code.right (natZuCode n)
 
 def codeZuNat : Code → Option Nat
   | Code.zero => some 0
-  | Code.succ c => (codeZuNat c).map Nat.succ
+  | Code.pair Code.right c => (codeZuNat c).map Nat.succ
   | _ => none
 
 theorem codeZuNat_natZuCode (n : Nat) : codeZuNat (natZuCode n) = some n := by
