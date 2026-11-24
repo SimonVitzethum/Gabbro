@@ -95,11 +95,7 @@ private theorem textTailCompose {scope it it2 it3}
       have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .binary op (Nat.zero_le _) reads (textTailCompose tail' next)
   | div _ reads nonzero tail' =>
-      rename_i minimum' input' lo' hi' right' more'
-      have hdecr : more'.length < input.length := by
-        have h := suffix_length_le (ExprReads.consumes reads)
-        simp only [List.length_cons] at h
-        omega
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .div (Nat.zero_le _) reads nonzero (textTailCompose tail' next)
   | compare op _ reads follows tail' =>
       have hlen : _ := suffix_length_le (ExprReads.consumes reads)
@@ -127,7 +123,7 @@ private theorem textTailCompose {scope it it2 it3}
         (textTailCompose tail' next)
 termination_by input.length
 decreasing_by
-  subst_vars
+  subst input
   simp_all
   omega
 
