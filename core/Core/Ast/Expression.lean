@@ -609,3 +609,5 @@ theorem ExprTail.consumes (read : ExprTail scope minimum first input tree rest) 
     exact (tail.trans operand).trans (List.suffix_cons _ _)
 
 end Gabbro.Core.Ast
+
+#check AtomReads.variable_inversion
