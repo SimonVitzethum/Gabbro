@@ -52,6 +52,13 @@ def startZustand (s : AussenStart) : Zustand :=
 
 def hoch : Etikett := {0}
 
+theorem hoch_verborgen : oeffentlich hoch = false := by
+  apply decide_eq_false
+  intro eq
+  have mem : 0 ∈ hoch := Finset.mem_singleton_self _
+  rw [eq] at mem
+  exact Finset.notMem_empty _ mem
+
 def einheit : Modell where
   katalog := Plattform.x86_64.katalog
   bild := Sicherheit.Laufkonstruktion.bild
@@ -63,7 +70,37 @@ def einheit : Modell where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  etiketten := { endpunkt := fun _ => hoch, objekt := fun _ => hoch }
+  etiketten := { endpunkt := fun _ => hoch, objekt := fun _ => hoch, ende := fun _ => hoch }
+  fluss := { lokal := fun _ => .ganz hoch, kontrolle := fun _ => hoch }
+
+private theorem quellzustand_gleich (v u : Zustand) (initial : v.initial = u.initial)
+    (rechte : v.rechte = u.rechte) (leihen : v.leihen = u.leihen)
+    (antwort : ∀ c, AntwortSicht einheit v c = AntwortSicht einheit u c) :
+    QuellzustandGleich einheit v u := by
+  refine ⟨fun _ _ low => ?_, fun c => ?_, fun x => ?_, rechte, leihen, antwort⟩
+  · exact (Bool.false_ne_true (hoch_verborgen.symm.trans low)).elim
+  · have verdeckt (s : Status Unit Unit) : EndeSicht einheit c s = none := by
+      cases s <;> simp only [EndeSicht, sichtbar, einheit, hoch_verborgen, Bool.false_eq_true, ite_false]
+    exact (verdeckt _).trans (verdeckt _).symm
+  · rw [initial]
+
+private theorem fluss_lokal : FlussLokal einheit := by
+  refine ⟨fun s₁ s₂ _ => quellzustand_gleich (I.start einheit s₁).2 (I.start einheit s₂).2
+      rfl rfl rfl (fun _ => rfl),
+    fun _ => ⟨?_, fun low => (Bool.false_ne_true (hoch_verborgen.symm.trans low)).elim⟩⟩
+  intro c v w p u step
+  have ideal : regel c v w [p] u := step.2
+  refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun _ => ?_⟩
+  rcases ideal.2 with ⟨pEq, _, rfl⟩ | ⟨pEq, _, rfl⟩
+  · cases (List.cons.inj pEq).1
+    exact ⟨quellzustand_gleich _ _ rfl rfl rfl (fun _ => rfl), rfl, rfl⟩
+  · cases (List.cons.inj pEq).1
+    refine ⟨quellzustand_gleich _ _ rfl rfl rfl (fun _ => rfl), ?_, rfl⟩
+    have union : hoch ∪ hoch = hoch := by
+      ext n
+      simp only [Finset.mem_union, or_self]
+    change ([], [], sichtbar (hoch ∪ hoch) frage) = ([], [], none)
+    simp only [union, sichtbar, hoch_verborgen, Bool.false_eq_true, ite_false]
 
 theorem ausgewaehlt : einheit.katalog.enthaelt (.endpoint frage.endpoint) := by
   change Plattform.x86_64.katalog.enthaelt (.endpoint .hosted)
@@ -96,7 +133,7 @@ private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s
   · exact ⟨c, rfl, rechte⟩
 
 theorem akzeptiert : Akzeptiert einheit := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, fluss_lokal⟩, ?_, ?_⟩
   · intro i c s u w plan h
     change regel c s w [plan] u at h
     rcases h.2 with ⟨eq, _, _⟩ | ⟨eq, _, _⟩ <;>

@@ -264,6 +264,11 @@ def Fragment.tabellen (p : Fragment) : Quelltabellen Zustand :=
   ⟨p.klauseln, fun s op args => ∃ c b, kopf p.code s c = some b ∧
     b.guard (s.lokal c) = some ⟨op, args⟩⟩
 
+/-- The current source fragment has no classified local-place declarations. Its frame
+    and control are public, and no instruction declares an output or release journal. -/
+def fragmentFlussdaten : Beobachtung.Flussdaten Befehl Rahmen PUnit Int :=
+  { lokal := fun _ => .ganz ∅, kontrolle := fun _ => ∅ }
+
 /-- The current forms each take one concrete step at their linearisation point. State
     matching is equality at those points and the number of private steps is zero. -/
 def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
@@ -277,6 +282,7 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := p.tabellen
+  fluss := fragmentFlussdaten
 
 def elaborieren (platform : Plattform) {category : Category} (tree : category.Tree) : Einheit :=
   (fragment category tree).einheit platform

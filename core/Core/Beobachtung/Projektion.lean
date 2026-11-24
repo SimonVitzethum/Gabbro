@@ -53,7 +53,7 @@ def GleicheNiedrigeUmgebung (h₁ h₂ : Umgebung) : Prop :=
 
 /-- The physical choices include offered cores, interrupts and deliveries at public endpoints. -/
 def angebotProjektion (label : Etiketten Ort) (a : Gelegenheit) :=
-  (a.core, a.interrupt, a.raised, (fun e => sichtbar (label.endpunkt e) (a.delivery e)),
+  (a.core, a.interrupt, a.interrupts, (fun e => sichtbar (label.endpunkt e) (a.delivery e)),
     a.medium, a.crash, a.cycles)
 
 variable [DecidableEq L]
@@ -77,11 +77,12 @@ theorem vergleichslauf {h₁ h₂ : Umgebung} {ρ₁ : Lauf E} {s₂ : AussenSta
   have kerne : h₁.kernzahl = h₂.kernzahl := congrArg (fun p => p.2.2.2.1) umgebung
   have konform : hw₂.konform E.katalog h₂ := by
     refine ⟨rfl, fun t => ?_⟩
-    obtain ⟨core, interrupt, raised, delivery, medium⟩ := run.2.1.2 t
+    obtain ⟨core, interrupt, signals, delivery, medium⟩ := run.2.1.2 t
     refine ⟨fun c offer => kerne ▸ core c offer, fun c offer => kerne ▸ interrupt c offer,
       fun irq offer => ?_, delivery, medium⟩
-    obtain ⟨within, supported⟩ := raised irq offer
-    exact ⟨kerne ▸ within, (hardware.ziel.trans run.1.ziel.symm).symm ▸ supported⟩
+    have ziel : h₁.ziel = h₂.ziel := run.1.ziel.trans hardware.ziel.symm
+    have valid := signals irq offer
+    cases irq <;> simp only [Gelegenheit.interruptGueltig, kerne, ziel] at valid ⊢ <;> exact valid
   obtain ⟨ρ₂, admitted, start, schedule⟩ := lauf_mit_hw E hardware zul konform
   refine ⟨ρ₂, admitted, start, ?_⟩
   unfold GleichePolitik hwPolitikProjektion

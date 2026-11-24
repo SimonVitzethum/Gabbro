@@ -3,6 +3,7 @@ module
 public import Core.Ast.Semantik.Kernregister
 public import Core.Katalog.Erfuellbar
 public import Core.Annahme.AussenLauf
+public import Core.Beobachtung.Fluss.Quellfragment
 
 @[expose] public section
 
@@ -15,7 +16,8 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
     Akzeptiert (p.einheit platform) := by
   let E := p.einheit platform
-  refine ⟨⟨platform.katalog_wohlgeformt, fun b => b.lokal E rfl, Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨platform.katalog_wohlgeformt, fun b => b.lokal E rfl, ⟨Aussen.zulassung_m2 _, ?_⟩,
+    Beobachtung.fragment_fluss_lokal p platform⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
