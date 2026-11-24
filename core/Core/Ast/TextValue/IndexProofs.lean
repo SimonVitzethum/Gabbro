@@ -324,8 +324,8 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
     simp [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal]
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
-    simp [s₂, s₁, s₀, E, form, I.start, Zustand.start, startdaten, Rahmen.start,
-      Befehl.nach, Rahmen.schreibe, Befehl.auswerten]
+    simp [s₂, s₁, s₀, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
+      startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten]
   refine ⟨args, ?_⟩
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
