@@ -88,7 +88,7 @@ theorem fuehrtAus_sperre_inv {t c s u mem ev v} {l a}
       exact Function.update_self
     · intro m hm
       show Function.update (s.sperren) l _ _ = _
-      exact Function.update_of_ne (Ne.symm hm) _ _
+      exact Function.update_of_ne hm _ _
 
 /-- A protocol step leaves every lock alone or moves exactly one lock by one lock rule. -/
 theorem kontextSchritt_sperren {t c s u} {plan : SchrittPlan L Ort Wert Bedingung}
@@ -107,7 +107,8 @@ theorem kontextSchritt_sperren {t c s u} {plan : SchrittPlan L Ort Wert Bedingun
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)
   | .sperre l a =>
-    obtain ⟨next, hss, heq, hne⟩ := fuehrtAus_sperre_inv haus hplan
+    rw [hplan] at haus
+    obtain ⟨next, hss, heq, hne⟩ := fuehrtAus_sperre_inv haus
     by_cases hm : m = l
     · subst hm
       exact Or.inr ⟨a, _, next, hss, heq⟩
