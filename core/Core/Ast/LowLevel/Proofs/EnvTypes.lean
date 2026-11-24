@@ -7,6 +7,9 @@ public import Core.Ast.LowLevel.Proofs.Execution
 public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
+public import Core.Ast.Semantik.Formen
+public import Core.Ast.Semantik.Kernregister
 
 @[expose] public section
 
@@ -60,3 +63,99 @@ theorem environment_aussage : EnvironmentAussage := by
   · exact environmentMeaning
 
 end Gabbro.Core.Ast.LowLevel
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Gabbro.Core.Waechter
+
+/-- The environment declaration is proved; bundle its component obligations into
+    the typed registry entry for its surface form. -/
+def environmentProofs : RegistryEntry ``Decl.environment
+    ⟨.surface, Quellform.statements (Context := PUnit) (fun _ => environmentUnitForm)
+      EnvironmentUnitErfuellbarAussage ``Decl.environment⟩ where
+  realization := .surface (fun _ => environmentUnit_parse) (fun _ _ _ => rfl)
+    (fun _ => environmentUnit_realisiert)
+  acceptanceRule := fun _ => environmentUnit_annahme
+  idealRule := fun _ => environmentUnit_ideal
+  unitsAndCommutation := fun _ => environmentUnit_einheit
+  implementationRule := fun _ => environmentUnit_impl
+  preservation := fun _ => environmentUnit_erhaltung
+  jointlySatisfiable := environmentUnit_erfuellbar
+
+def environmentDeclEntry : RegistryEntry ``Decl.environment (declSchema ``Decl.environment) := by
+  rw [declSchema,
+    if_neg (differentLabels (a := "environment") (b := "constant") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "environment") (b := "function") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "environment") (b := "record") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "environment") (b := "tagged") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "environment") (b := "table") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "environment") (b := "effectGroup") (by intro same; simp only [String.reduceEq] at same)),
+    if_pos rfl]
+  exact environmentProofs
+
+/-- The core instruction inherits the environment declaration's proofs. -/
+def environmentBefehlProofs : RegistryEntry ``Befehl.waehleUmgebung
+    ⟨.core, Quellform.kernStatements (Context := PUnit) (fun _ => environmentUnitForm)
+      EnvironmentUnitErfuellbarAussage ``Befehl.waehleUmgebung⟩ :=
+  Quellform.kernEintrag (constructor := ``Befehl.waehleUmgebung) environmentProofs
+
+theorem waehleUmgebung_nicht_program : ``Befehl.waehleUmgebung ∉ programConstructors := by
+  simp only [programConstructors, List.mem_cons, List.not_mem_nil, not_or,
+    not_false_eq_true, or_false]
+  exact ⟨differentLabels (a := "waehleUmgebung") (b := "bindeWert") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "definiere") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "rufe") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "rueckVoid") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "pruefeMass") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "setzePasszahl") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "whileTest") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "forAnfang") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "forTest") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "forNaechster") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "zurueckSprung") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "starte") (by intro same; simp only [String.reduceEq] at same),
+    differentLabels (a := "waehleUmgebung") (b := "ende") (by intro same; simp only [String.reduceEq] at same)⟩
+
+def environmentBefehlEntry : RegistryEntry ``Befehl.waehleUmgebung
+    (befehlSchema ``Befehl.waehleUmgebung) := by
+  rw [befehlSchema,
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "springeWenn") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "zuweisen") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "zurueck") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "springe") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "blockEnde") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "baueArray") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "liesArray") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "baueTupel") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "liesTupelfeld") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "baueRecord") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "liesRecordFeld") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "bindeTupel") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "setzeRecordFeld") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "definiereRecord") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "baueVariante") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "waehleVariante") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "definiereVariante") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "textLiteral") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "textConcat") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "textIndex") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "textLength") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "substring") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "definiereTraeger") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "optionIstBesetzt") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (differentLabels (a := "waehleUmgebung") (b := "definiereEffektgruppe") (by intro same; simp only [String.reduceEq] at same)),
+    if_neg waehleUmgebung_nicht_program,
+    if_pos rfl]
+  exact environmentBefehlProofs
+
+end Gabbro.Core.Ast.Semantik
