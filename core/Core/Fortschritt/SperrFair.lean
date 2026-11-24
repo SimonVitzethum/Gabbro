@@ -105,7 +105,7 @@ theorem sperr_warte_basis_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a 
           exact (List.not_mem_nil hmem_r).elim
         | cons h₀ rest =>
           have hq0 : (s₁.sperren l).schlange[(0 : Nat)]? = some h₀ := by
-            rw [hsq]
+            simp only [hsq, List.getElem?_cons_zero]
           have h2 : (s₁.sperren l).schlange[(0 : Nat)]? = some c := hi0 ▸ hi_r
           have h₀eq : h₀ = c := Option.some.inj (hq0.symm.trans h2)
           have hred : s₂.sperren l = ⟨some h₀, rest⟩ := hs2q
@@ -234,7 +234,8 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
                     subst hkr
                     have hss : s' = s₂ := Option.some.inj (hzs.symm.trans hr2)
                     subst hss
-                    exact heq' (Option.some.inj (hcon.symm.trans hnew))
+                    rw [hnew]
+                    exact fun hcontra => heq' (Option.some.inj hcontra)
                 have hmem2 : c ∈ (s₂.sperren l).schlange :=
                   bleibt_bis_besitz ⟨s, hsa, hmemq⟩ (fun k h1 _ => hcrash k h1)
                     hnie1 (by omega) hr2
@@ -262,9 +263,9 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
                 have hjfuel : j ≤ fuel := by omega
                 have hnd1 : (s₁.sperren l).schlange.Nodup :=
                   nodup_bleibt (t := r + 1) hnodup (fun k h1 _ => hcrash k h1)
-                    (Nat.le_refl _) (by omega) hr1
+                    hbr (Nat.le_succ _) hr1
                 have hqq : q.Nodup := by
-                  rw [← hsq] at hnd1
+                  rw [hsq] at hnd1
                   exact hnd1
                 have hnd2 : (s₂.sperren l).schlange.Nodup := by
                   rw [hs2q]
