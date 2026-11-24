@@ -112,7 +112,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
-  · refine ⟨fun η _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
+  · refine ⟨fun _ _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
       fun i _ _ _ _ _ _ _ _ _ kf _ _ _ _ => nomatch kf,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ =>
         ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,

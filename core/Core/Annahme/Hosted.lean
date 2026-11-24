@@ -162,7 +162,7 @@ theorem akzeptiert : Akzeptiert einheit := by
         intro ev mem
         cases Ereignis.frage.inj (List.mem_singleton.mp mem)
         exact ⟨ausgewaehlt, rechte⟩
-  · refine ⟨fun η _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
+  · refine ⟨fun _ _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
         ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
