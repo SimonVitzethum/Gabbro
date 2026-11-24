@@ -544,13 +544,19 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
--- Extend the original ExprReads.consumes recursor with List.suffix_cons for each new prefix.
+-- The mutual recursor covers every constructor of all eight readers; each minor
+-- composes the children's suffix proofs with the token prefix it consumes.
 theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : rest <:+ input := by
   refine ExprReads.rec
     (motive_1 := fun _ input _ _ rest _ => rest <:+ input)
     (motive_2 := fun input _ _ rest _ => rest <:+ input)
     (motive_3 := fun _ _ _ input _ _ rest _ => rest <:+ input)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+    (motive_4 := fun _ input _ _ rest _ => rest <:+ input)
+    (motive_5 := fun _ input _ _ rest _ => rest <:+ input)
+    (motive_6 := fun input _ _ _ rest _ => rest <:+ input)
+    (motive_7 := fun input _ _ _ rest _ => rest <:+ input)
+    (motive_8 := fun input _ _ rest _ => rest <:+ input)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intro _ _ _ _ _ _ _ _ _ _ atom tail
     exact tail.trans atom
   · intro _ _
@@ -569,6 +575,15 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
     exact ihChild.trans (List.suffix_cons _ _)
   · intro _ _ _ _ _ ihChild
     exact ihChild.trans (List.suffix_cons _ _)
+  · intro _ _ input _ rest _ _ _ ih
+    exact ih.trans (List.suffix_cons openBracket input)
+  · intro input _ _ secondInput _ _ more _ _ rest _ _ _ ihFirst ihSecond ihItems
+    exact (((ihItems.trans ihSecond).trans ((List.suffix_cons comma secondInput).trans ihFirst)).trans
+      (List.suffix_cons openParen input))
+  · intro _ _ _ _ input _ rest _ _ _ _ ih
+    exact (ih.trans (List.suffix_cons openParen input)).trans (List.suffix_cons _ _)
+  · intro _ _ input rest _ _ _ _ _ _ _ _ ih
+    exact ih.trans (List.suffix_cons _ _)
   · intro _ rest _ _ _
     exact List.suffix_refl rest
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
@@ -579,5 +594,33 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
     exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ _ _ _ _ _ _ _ op _ _ _ operand tail
     exact (tail.trans operand).trans (List.suffix_cons _ _)
+  · intro _ _ _ _ _ input _ _ _ _ _ _ _ _ _ _ _ ihIndex ihTail
+    exact ((ihTail.trans (List.suffix_cons closeBracket _)).trans ihIndex).trans (List.suffix_cons openBracket input)
+  · intro _ _ _ _ _ _ _ _ _ _ _ _ tail
+    exact tail.trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))
+  · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ tail
+    exact tail.trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))
+  · intro _ rest
+    exact List.suffix_cons _ _
+  · intro input _ _ more _ _ _ rest _ _ ihHead ihTail
+    exact ihTail.trans ihHead
+  · intro _ rest
+    exact List.suffix_cons _ _
+  · intro _ input rest _ _ _ _ ih
+    exact ih.trans (List.suffix_cons _ _)
+  · intro rest
+    exact List.suffix_cons _ _
+  · intro input _ _ more _ _ _ rest _ _ _ ihHead ihTail
+    exact ((ihTail.trans ihHead).trans (List.suffix_cons colon input)).trans (List.suffix_cons _ _)
+  · intro rest
+    exact List.suffix_cons _ _
+  · intro _ _ _ input rest _ _ _ _ ih
+    exact ih.trans (List.suffix_cons _ _)
+  · intro _ _
+    exact List.suffix_refl _
+  · intro rest
+    exact (List.suffix_cons closeParen rest).trans (List.suffix_cons openParen (closeParen :: rest))
+  · intro input _ _ rest _ ih
+    exact ((List.suffix_cons closeParen rest).trans ih).trans (List.suffix_cons openParen input)
 
 end Gabbro.Core.Ast
