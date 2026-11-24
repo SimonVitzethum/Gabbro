@@ -6,7 +6,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.ActivateObligations
 
 namespace Gabbro.Core.Ast.LowLevel
 
-open Gabbro.Core.Text Katalog Maschine Waechter Aussen
+open Gabbro.Core.Text Katalog Maschine Waechter Aussen Annahme
 open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
 
 theorem memErhaltung (form : MemForm) : MemErhaltungAussage form := by
@@ -31,7 +31,7 @@ theorem memErhaltung (form : MemForm) : MemErhaltungAussage form := by
 theorem memRegelSicher (form : MemForm) : MemRegelSicherAussage form := by
   intro k scope tree op _
   intro H ρ t c w vor zwischen nach plan spur head impl execute
-  obtain ⟨spurEq, nextEq⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel) impl execute
+  obtain ⟨spurEq, nextEq⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel) (w := w) impl execute
   obtain ⟨frame, _, planEq, _⟩ := impl
   subst zwischen
   cases (List.cons.inj planEq).1
@@ -63,14 +63,28 @@ theorem activateRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussa
   intro k scope tree op _
   constructor
   · intro t c w vor zwischen nach p trace _ impl execute befugt
-    obtain ⟨frame, _, _, rfl⟩ := impl
-    obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel)
+    obtain ⟨_, nextEq⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel)
       (w := w) impl execute
+    obtain ⟨frame, _, _, rfl⟩ := impl
+    subst nach
     exact befugt
   · intro t c s w middle next p trace impl execute
     obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel)
       (w := w) impl execute
     exact ⟨fun _ => List.not_mem_nil, execute.1.verbraucht⟩
+
+theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
+    Annahme.AussenLokal (memUnit k op) := by
+  refine ⟨zulassung_m2 _, ?_⟩
+  apply aussen_gueltig_aus_kontext
+  intro run t s c w spur s' step
+  cases step with
+  | kontext _ _ regel execute =>
+      obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
+      cases (List.cons.inj planEq).1
+      obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal execute
+      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
 
 theorem memAussenLokal (form : MemForm) : MemAussenLokalAussage form := by
   intro k scope tree op _
