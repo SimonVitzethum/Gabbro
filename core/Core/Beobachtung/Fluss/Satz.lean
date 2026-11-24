@@ -25,7 +25,18 @@ def LaderNIPflicht : Prop :=
 def ProtokollNIPflicht : Prop :=
   ∀ {h₁ h₂ ρ₁ ρ₂}, Vergleich E h₁ h₂ ρ₁ ρ₂ → ∀ predictor t w spur,
     ρ₁.zeit.spur t = some (w, spur) → ProtokollWahl w →
-    PraefixAbgedeckt E ρ₁ ρ₂ predictor t → PraefixAbgedeckt E ρ₁ ρ₂ predictor (t + 1)
+    Kopplung E ρ₁ ρ₂ predictor t t → Kopplung E ρ₁ ρ₂ predictor (t + 1) (t + 1)
+
+/-- The coupling starts from every admitted comparison: loader states, source-state
+    equality, machine fields and initial-observation lengths all agree. -/
+def StartNIPflicht : Prop :=
+  ∀ {h₁ h₂ ρ₁ ρ₂}, Vergleich E h₁ h₂ ρ₁ ρ₂ → ∀ predictor, Kopplung E ρ₁ ρ₂ predictor 0 0
+
+/-- An idle left cut keeps the coupling: the right run provably idles along. -/
+def PausenNIPflicht : Prop :=
+  ∀ {h₁ h₂ ρ₁ ρ₂}, Vergleich E h₁ h₂ ρ₁ ρ₂ → ∀ predictor t,
+    ρ₁.zeit.spur t = none →
+    Kopplung E ρ₁ ρ₂ predictor t t → Kopplung E ρ₁ ρ₂ predictor (t + 1) (t + 1)
 
 def Nichtinterferent : Prop :=
   ∀ h₁ h₂ ρ₁ s₂, Hardware E.katalog h₁ → Hardware E.katalog h₂ →
@@ -35,7 +46,7 @@ def Nichtinterferent : Prop :=
       ∀ ρ₂, Laeufe E h₂ ρ₂ → ρ₂.start = s₂ → GleichePolitik E ρ₁ ρ₂ →
         NiedrigAequiv E (NiedrigeBeob E ρ₁) (NiedrigeBeob E ρ₂)
 
-private theorem anfangsbeob (ρ : Lauf E) (h : Umgebung) (lauf : Laeufe E h ρ) (p : Praediktor) :
+theorem anfangsbeob (ρ : Lauf E) (h : Umgebung) (lauf : Laeufe E h ρ) (p : Praediktor) :
     NiedrigeBeob E ρ p 0 =
       [match LaderSicht E h ρ.start with
         | none => .ladefehler
@@ -55,12 +66,13 @@ theorem anfang_aus_lader (pflicht : LaderNIPflicht E) {h₁ h₂ ρ₁ ρ₂}
 /-- Source acceptance supplies the initialization and form rules. The two implementation
     bridges transport those rules to the admitted runs, including separate protocol steps. -/
 theorem ni_akzeptierter_einheit (h : Akzeptiert E)
-    (lader : StartFlussLokal E → LaderNIPflicht E)
+    (start : StartFlussLokal E → StartNIPflicht E)
     (formen : ∀ f, RegelFluss E f → RegelNIPflicht E f)
-    (protokoll : ProtokollNIPflicht E) : Nichtinterferent E := by
+    (protokoll : ProtokollNIPflicht E)
+    (pause : PausenNIPflicht E) : Nichtinterferent E := by
   have fluss := akzeptiert_fluss h
   have pflichten : NIPflichten E :=
-    ⟨anfang_aus_lader E (lader fluss.1), fun f => formen f (fluss.2 f), protokoll⟩
+    ⟨start fluss.1, fun f => formen f (fluss.2 f), protokoll, pause⟩
   intro _ _ _ _ _ hardware lauf umgebung zul start
   exact ni_aus_pflichten pflichten lauf hardware umgebung zul start
 
