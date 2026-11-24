@@ -322,7 +322,7 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
               change (if (op.evaluate target s entryContext).isSome then some op else none) = some op at hhead
               by_cases he : (op.evaluate target s entryContext).isSome
               · rw [if_pos he] at hhead
-                exact ⟨hs, rfl, hpc, he⟩
+                exact ⟨rfl, rfl, rfl, he⟩
               · rw [if_neg he] at hhead
                 cases hhead
           | succ n =>
