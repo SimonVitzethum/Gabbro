@@ -143,6 +143,7 @@ theorem boundedWhile_erfuellbar : boundedWhileJoint := by
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
       omega
+    ) platform a s₃ rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
 
@@ -591,7 +592,7 @@ theorem program_realisiert  : (programForm).RealisiertAussage := by
   exact (programForm).realisiert (fun args => by
     change (((unitBody args.unit.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)).code[(unitBody args.unit.2).code.length]? = some (.starte mainName)
     simp only [Fragment.anhaengen, Fragment.einzel]
-    have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [.starte mainName]).length := by
+    have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [Befehl.starte mainName]).length := by
       simp only [List.length_append, List.length_cons, List.length_nil]
       omega
     rw [List.getElem?_append_left hlt]
@@ -617,7 +618,7 @@ theorem program_ideal  : (programForm).IdealAussage := by
   · intro args
     change (((unitBody args.unit.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)).code[(unitBody args.unit.2).code.length]? = some (.starte mainName)
     simp only [Fragment.anhaengen, Fragment.einzel]
-    have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [.starte mainName]).length := by
+    have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [Befehl.starte mainName]).length := by
       simp only [List.length_append, List.length_cons, List.length_nil]
       omega
     rw [List.getElem?_append_left hlt]
@@ -769,7 +770,7 @@ theorem program_erfuellbar : programJoint := by
       (form.realisiert (fun args => by
       change (((unitBody args.unit.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)).code[(unitBody args.unit.2).code.length]? = some (.starte mainName)
       simp only [Fragment.anhaengen, Fragment.einzel]
-      have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [.starte mainName]).length := by
+      have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [Befehl.starte mainName]).length := by
         simp only [List.length_append, List.length_cons, List.length_nil]
         omega
       rw [List.getElem?_append_left hlt]
