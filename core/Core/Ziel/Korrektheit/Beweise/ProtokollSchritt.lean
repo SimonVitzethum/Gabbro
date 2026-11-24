@@ -96,68 +96,75 @@ theorem fuehrtAus_sperre_inv_e {t c s u mem ev v} {l a}
     exact ⟨_, hss, Function.update_self _ _ _,
       fun m hm => Function.update_of_ne hm _ _⟩
 
-/-- The lock invariant survives one form action: every action but `sperre` keeps the lock field of
-    the frame, and `sperre` moves one lock by a `SperrSchritt`. -/
-theorem fuehrtAus_sperren_gut {t c s u aktion mem ev v}
-    (rahmen : Zustandsrahmen s u) (h : FuehrtAus e t c s u aktion mem ev v)
-    (gut : ProtokollGut s) :
-    ∀ l, SperrGut (v.sperren l) := by
-  intro l
-  match haktion : aktion with
+/-- A form action leaves every lock alone or moves exactly one lock by one lock rule. -/
+theorem kontextSchritt_sperren_e {t c s u} {plan : SchrittPlan L Ort Wert Bedingung}
+    {sperren_ev ev v} {m : L}
+    (hrahmen : Zustandsrahmen s u)
+    (haus : FuehrtAus e t c s u plan.aktion sperren_ev ev v) :
+    v.sperren m = s.sperren m ∨
+      ∃ a d next, SperrSchritt a d (s.sperren m) next ∧ v.sperren m = next := by
+  match hplan : plan.aktion with
   | .intern =>
-    cases h
-    have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
-    rwa [hl]
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
   | .warte _ =>
-    cases h
-    have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
-    rwa [hl]
-  | .sperre ll a =>
-    obtain ⟨next, hss, hvl, hvlne⟩ := fuehrtAus_sperre_inv_e h
-    by_cases hl : l = ll
-    · subst hl
-      rw [hvl]
-      exact sperrSchritt_erhaelt hss (gut.sperren ll)
-    · have h' : v.sperren l = s.sperren l := hvlne l hl
-      rwa [h']
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
+  | .sperre l a =>
+    rw [hplan] at haus
+    obtain ⟨next, hss, heq, hne⟩ := fuehrtAus_sperre_inv_e haus
+    by_cases hm : m = l
+    · subst hm
+      exact Or.inr ⟨a, _, next, hss, heq⟩
+    · exact Or.inl (hne m hm)
   | .frage _ =>
-    cases h
-    have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
-    rwa [hl]
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
   | .verbrauche _ =>
-    cases h
-    have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
-    rwa [hl]
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
   | .rueckkehr =>
-    cases h
-    have hl : v.sperren l = s.sperren l := congrFun rahmen.sperren l
-    rwa [hl]
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
 
 /-- A context step keeps all three invariants. -/
-theorem fuehrtSchrittAus_erhaelt {t c s u plan spur s'}
-    (aus : FuehrtSchrittAus e t c s u plan spur s') (gut : ProtokollGut s) : ProtokollGut s' := by
+theorem fuehrtSchrittAus_erhaelt {t c} {s u s' : Zustand L Ort Wert Raum Lok Grund}
+    {plan spur} (aus : FuehrtSchrittAus e t c s u plan spur s') (gut : ProtokollGut s) :
+    ProtokollGut s' := by
   refine ⟨(aus.viele e).gut gut.speicher.1 gut.speicher.2, aus.verbrauch gut.verbrauch, ?_⟩
   obtain ⟨rahmen, _, _, v, haus, _, state⟩ := aus
   have hsperr : ∀ l, s'.sperren l = v.sperren l := fun l =>
     (congrArg (fun z : Zustand L Ort Wert Raum Lok Grund => z.sperren l) state).trans rfl
   intro l
   rw [hsperr l]
-  exact fuehrtAus_sperren_gut rahmen haus gut l
+  rcases kontextSchritt_sperren_e rahmen haus with hsame | ⟨a, _, next, hss, hnext⟩
+  · rw [hsame]
+    exact gut.sperren l
+  · rw [hnext]
+    exact sperrSchritt_erhaelt hss (gut.sperren l)
 
 /-- An arrival keeps all three invariants. -/
-theorem antwortSchritt_erhaelt {s spur s'} {a : AntwortEreignis}
-    (h : AntwortSchritt e k hw t a s spur s') (gut : ProtokollGut s) : ProtokollGut s' := by
+theorem antwortSchritt_erhaelt {s s' : Zustand L Ort Wert Raum Lok Grund} {spur}
+    {a : AntwortEreignis} (h : AntwortSchritt e k hw t a s spur s') (gut : ProtokollGut s) :
+    ProtokollGut s' := by
   refine ⟨(h.viele e).gut gut.speicher.1 gut.speicher.2, ?_, ?_⟩
   · rw [h.2.2.2]
     exact Zustand.antwort_verbrauch gut.verbrauch a
   · intro l
     have hs : s'.sperren l = s.sperren l :=
       (congrArg (fun z : Zustand L Ort Wert Raum Lok Grund => z.sperren l) h.2.2.2).trans rfl
-    rwa [hs]
+    rw [hs]
+    exact gut.sperren l
 
 /-- An interrupt entry keeps all three invariants. -/
-theorem interruptSchritt_erhaelt {s spur s'} {id : Nat × Nat}
-    (h : UnterbrechungsSchritt e hw t id s spur s') (gut : ProtokollGut s) : ProtokollGut s' := by
+theorem interruptSchritt_erhaelt {s s' : Zustand L Ort Wert Raum Lok Grund} {spur}
+    {id : Nat × Nat} (h : UnterbrechungsSchritt e hw t id s spur s') (gut : ProtokollGut s) :
+    ProtokollGut s' := by
   refine ⟨(h.viele e).gut gut.speicher.1 gut.speicher.2, ?_, ?_⟩
   · obtain ⟨_, _, _, _, _, _, _, _, _, _, state⟩ := h
     rw [state]
@@ -166,11 +173,13 @@ theorem interruptSchritt_erhaelt {s spur s'} {id : Nat × Nat}
     obtain ⟨_, _, _, _, _, _, _, _, _, _, state⟩ := h
     have hs : s'.sperren l = s.sperren l :=
       (congrArg (fun z : Zustand L Ort Wert Raum Lok Grund => z.sperren l) state).trans rfl
-    rwa [hs]
+    rw [hs]
+    exact gut.sperren l
 
 /-- A crash keeps the memory and consumption invariants and wipes every lock. -/
 theorem absturzSchritt_erhaelt {region : Strecke} {w : Wiederanlauf Ort Wert Raum Lok Grund}
-    {s spur s'} (h : AbsturzSchritt region w k hw t s spur s') (gut : ProtokollGut s) :
+    {s s' : Zustand L Ort Wert Raum Lok Grund} {spur}
+    (h : AbsturzSchritt region w k hw t s spur s') (gut : ProtokollGut s) :
     ProtokollGut s' := by
   refine ⟨h.neustart.2.2.2.2.2.2.2, ?_, ?_⟩
   · exact (h.verbrauch gut.verbrauch).1
