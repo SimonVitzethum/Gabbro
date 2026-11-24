@@ -322,4 +322,10 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
     rfl
   · intro g guard; cases guard
 
+theorem variantMatch_inversion : Gabbro.Core.Ast.Surface.VariantMatchInversionAussage := by
+  intro scope result input tree rest read
+  cases read with
+  | variantMatch valueRead armsRead =>
+      exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
+
 end Gabbro.Core.Ast.Semantik
