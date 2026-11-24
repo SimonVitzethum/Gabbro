@@ -46,7 +46,7 @@ private theorem selectedAuthority (phase : GeraetePhase) (mode : RegisterAccess)
   | write _ _ => exact List.mem_cons_of_mem _ List.mem_cons_self
 
 def RegisterIssueErfuellbarAussage (mode : RegisterAccess) : Prop :=
-  ∃ (k : Katalog) (binding : Binding k) c before plan after,
+  ∃ (k : Katalog) (binding : Binding k) (c : Kontext) (before : State) (plan : Plan) (after : State),
     Rule binding mode .ready none c before plan after ∧
     plan.aktion = .frage (binding.question mode)
 
@@ -67,8 +67,8 @@ theorem registerReadElse_erfuellbar :
   ⟨⟨1, 1, Nat.le_refl _⟩, selectedIssue _ rfl⟩
 
 def TransitionErfuellbarAussage : Prop :=
-  ∃ (k : Katalog) (binding : Binding k) offset value (change : RegisterTransition k binding)
-    c before plan after,
+  ∃ (k : Katalog) (binding : Binding k) (offset value : Nat) (change : RegisterTransition k binding)
+    (c : Kontext) (before : State) (plan : Plan) (after : State),
     Rule binding (.write offset value) change.prior (some change.after) c before plan after ∧
     plan.aktion = .frage (binding.question (.write offset value))
 
@@ -93,7 +93,7 @@ private theorem selectedLend :
     rfl, rfl, rfl, rfl, ?_, ?_, rfl, rfl⟩
   · intro address
     simp only [mapped, readyState, ownedRegion, if_pos rfl, List.mem_range, Strecke.drin,
-      Nat.zero_le, true_and]
+      Nat.zero_le, true_and, ite_true]
   · exact ⟨⟨ownedRegion.handle, ownedRegion.extent, true, true⟩, rfl,
       rfl, ⟨Nat.le_refl _, by change 0 < 4096; omega, Nat.le_refl _⟩, fun h => h, fun h => h⟩
   · apply GeraeteUebergang.lend rfl
@@ -101,11 +101,13 @@ private theorem selectedLend :
     omega
 
 theorem deviceLend_erfuellbar :
-    ∃ (k : Katalog) (binding : Binding k) region c before event after, lend binding region c before event after :=
+    ∃ (k : Katalog) (binding : Binding k) (region : LoanRegion) (c : Kontext) (before : LoanState)
+      (event : Ereignis) (after : LoanState), lend binding region c before event after :=
   ⟨_, selectedDevice, ownedRegion, owner, mapped, _, lentState, selectedLend⟩
 
 theorem deviceDma_erfuellbar :
-    ∃ (k : Katalog) (binding : Binding k) region c before lendEvent after dmaEvent transfer,
+    ∃ (k : Katalog) (binding : Binding k) (region : LoanRegion) (c : Kontext) (before : LoanState)
+      (lendEvent : Ereignis) (after : LoanState) (dmaEvent : Ereignis) (transfer : LoanState),
       lend binding region c before lendEvent after ∧ DmaStep binding c after dmaEvent transfer := by
   let access := DmaZugriff.read ownedRegion.loan.token 0 1
   have loaned := device_lend.2 _ _ _ _ _ _ _ selectedLend
@@ -120,12 +122,13 @@ private theorem loanAtStage {state : LoanState} {session : LoanSession}
     (lent : selectedDevice.Lent state owner session) (stage : Revocation) :
     selectedDevice.Lent (setSession state selectedDevice.object { session with revocation := stage })
       owner { session with revocation := stage } := by
-  refine ⟨Function.update_self _ _ _, ?_⟩
-  exact lent.2
+  refine ⟨?_, lent.2⟩
+  simp only [setSession, Function.update_self]
 
 def TakeBackErfuellbarAussage : Prop :=
-  ∃ (k : Katalog) (binding : Binding k) c region before loanEvent lent stopped revoked invalidated
-    synchronized session resultEvent after,
+  ∃ (k : Katalog) (binding : Binding k) (c : Kontext) (region : LoanRegion) (before : LoanState)
+    (loanEvent : Ereignis) (lent stopped revoked invalidated synchronized : LoanState)
+    (session : LoanSession) (resultEvent : Option Ereignis) (after : LoanState),
     lend binding region c before loanEvent lent ∧
     RevokeStep binding c lent (.stopped binding.object) stopped ∧
     RevokeStep binding c stopped (.unmapped binding.object) revoked ∧
@@ -157,4 +160,3 @@ theorem deviceTakeBack_erfuellbar : TakeBackErfuellbarAussage := by
     .synchronize invalidatedLoan rfl rfl, synchronizedLoan, rfl, rfl, rfl, .takeBack _, rfl, rfl, rfl⟩
 
 end Gabbro.Core.Ast.LowLevel.Device
-

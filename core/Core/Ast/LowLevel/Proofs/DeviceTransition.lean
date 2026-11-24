@@ -42,4 +42,3 @@ theorem device_transition : RegisterTransitionAussage := by
       exact Or.inl rfl
 
 end Gabbro.Core.Ast.LowLevel.Device
-

@@ -119,4 +119,3 @@ def Denotation.resume (denotation : Denotation k scope) (result : Result) : Cont
   | _, _ => .failure result
 
 end Gabbro.Core.Ast.LowLevel.Device
-
