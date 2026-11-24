@@ -168,7 +168,7 @@ private theorem textIndex_am_ort (scope : Scope) : (textIndexForm scope).RegelAm
   let b : Befehl := .textIndex 0 args.capacity
   change (p.anhaengen (.einzel b)).code[(expr 0 args.base).code.length + (expr 1 args.offset).code.length]? = some b
   have hpos : (expr 0 args.base).code.length + (expr 1 args.offset).code.length = p.code.length := by
-    simp [p, Fragment.anhaengen]
+    simp only [p, Fragment.anhaengen, List.length_append]
   rw [hpos]
   exact textIndexRootLookup p b
 
@@ -205,13 +205,14 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     rw [htemp]
     exact textWertAls capacity text
   refine ⟨?_, ?_, ?_⟩
-  · simp [Befehl.guard, htext, hzahl]
+  · rw [Befehl.guard]
+    rw [htext, hzahl]
     rfl
   · intro byte nonneg hbyte
-    simp [Befehl.auswerten, htext, hzahl, not_lt_of_ge nonneg, hbyte, Rahmen.schreibe]
+    simp only [Befehl.auswerten, htext, hzahl, not_lt_of_ge nonneg, hbyte, Rahmen.schreibe]
   · intro hfail
     rcases hfail with hneg | hge
-    · simp [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt]
+    ·       simp only [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt]
     · have hnonneg : 0 ≤ index.zahl.wert := by omega
       have hge' : (text.bytes.size : Int) ≤ (index.zahl.wert.toNat : Int) := by
         rw [Int.toNat_of_nonneg hnonneg]
@@ -220,7 +221,7 @@ theorem textIndexBytes : TextIndexBytesAussage := by
       have hout : text.bytes[index.zahl.wert.toNat]? = none := by
         simp only [getElem?_eq_none_iff]
         exact not_lt_of_ge hnat
-      simp [Befehl.auswerten, htext, hzahl, not_lt_of_ge hnonneg, hout, Rahmen.halt]
+      simp only [Befehl.auswerten, htext, hzahl, not_lt_of_ge hnonneg, hout, Rahmen.halt]
 
 theorem textIndexParse : TextIndexParseAussage := by
   intro scope args text pieces lexed production
@@ -277,9 +278,9 @@ theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
   subst stepPlan
   constructor
   · intro answer
-    simp [plan]
+    simp only [plan]
   · intro answer
-    simp
+    exact List.not_mem_nil _
 
 theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
   intro scope platform args form t c s choice stepPlan u spur next head impl execute
@@ -288,7 +289,7 @@ theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
   refine ⟨rfl, rfl, ?_⟩
-  simp [Fragment.einheit]
+  simp only [Fragment.einheit, List.length_cons, List.length_nil, Nat.zero_add]
 
 theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   intro platform start
@@ -318,13 +319,13 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   let byte : UInt8 := text.bytes[0]'(by simpa using hlt)
   have hbyte : text.bytes[(0 : Int).toNat]? = some byte := by
     rw [getElem?_eq_some_iff]
-    exact ⟨by simpa using hlt, by simp [byte]⟩
+    exact ⟨by simpa using hlt, by simp only [byte]⟩
   have hbyte0 : text.bytes[0]? = some byte := by simpa using hbyte
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
-    simp [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal]
+    simp only [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal, lt_irrefl]
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
-    simp [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
+    simp only [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
       startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten]
   refine ⟨args, ?_⟩
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
@@ -334,7 +335,7 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   · intro g hg
     have hguard : (form.befehl args).guard (s₂.lokal eintritt) = some (⟨.index, (0, capacity)⟩ : Bedarf) := by
       dsimp [form, textIndexForm, frame₂]
-      simp [Befehl.guard, htext, hzahl]
+      simp only [Befehl.guard, htext, hzahl, lt_irrefl]
       rfl
     rw [hguard] at hg
     simp at hg
