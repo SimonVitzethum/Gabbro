@@ -123,11 +123,12 @@ private theorem jumpSlotCode_slot : jumpScope.slotCode jumpCodeName = some 0 := 
 
 private theorem jumpCodeState_slot : jumpScope.codeState jumpCodeName = some 0 := by
   simp only [jumpScope, ExecScope.codeState, ExecScope.slotState, List.find?_cons,
-    beq_self_eq_true, if_true, List.map_cons, List.map_nil, jumpState_slot]
+    beq_self_eq_true, if_true, List.map_cons, List.map_nil, Option.bind_some, jumpState_slot]
 
 private theorem jumpElab : elaborateExec jumpScope (ExecTree.jump jumpCodeName) =
     some (ExecInstruction.jump 0 0) := by
   simp only [elaborateExec, jumpSlotCode_slot, jumpCodeState_slot, Option.bind_some]
+  rfl
 
 private theorem imageGueltigX86Jump : image.gueltig (Plattform.x86_64).ziel := by
   refine ⟨List.Mem.head _, ?_, ?_⟩
@@ -281,7 +282,6 @@ private theorem jumpJoint : JumpJointAussage := by
     change (if decl.wellformed then some (ExecFrame.declare (s0.lokal entryContext) decl) else none) =
       some frame0
     rw [if_pos decl_wf]
-    rfl
   let s : ExecState := frame0.advance entryContext s0
   have hhead0 : E.system.kopf s0 entryContext = some (ExecInstruction.declareState decl) := by
     change execHead (pre ++ [op]) s0 entryContext = some (ExecInstruction.declareState decl)
@@ -310,7 +310,7 @@ private theorem jumpJoint : JumpJointAussage := by
       List.nil_append, s0, I.start, E, execProgram, execBoot, jumpStart, Zustand.start,
       entryContext, ↓reduceIte]
   let next : ExecFrame := { (s.lokal entryContext) with result := some (ExecResult.jumped 0 0) }
-  have hcond : 0 == 0 ∧ ¬ (s.lokal entryContext).halted ∧
+  have hcond : true = true ∧ ¬ (s.lokal entryContext).halted ∧
       0 < (s.lokal entryContext).states.length := by
     rw [hshalted, hsstates]
     decide
