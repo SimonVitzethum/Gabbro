@@ -90,9 +90,9 @@ theorem printRegion_reads (region : Identifier) (initializer : RegionInitializer
   cases initializer with
   | address => exact .address
   | view written valid =>
-    have read := written.printReads valid closed
-    simpa only [printRegion, Tree.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.cons_append, List.nil_append] using RegionReads.view valid read
+    simp only [printRegion, Tree.printPieces, List.map_append, List.map_cons,
+      List.map_nil, List.cons_append, List.nil_append]
+    exact .view valid (written.printReads valid closed)
 
 def Parse (text : RawText) (tree : Tree form) : Prop :=
   Text.Parse (tokenGrammar (fun tokens (tree : Tree form) => tree.production tokens)) text tree
