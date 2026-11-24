@@ -28,17 +28,17 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
     ⟨name, ⟨notMutableKeyword, ordinary.1⟩, .bool, trivial, call⟩
   let target : Decl [] [] := .function name ordinary [] (some .bool)
     (by intro t mem; have h : t = WrittenType.bool := List.mem_singleton.mp mem; subst t; trivial)
-    none (.braces (.step (.ret rfl .trueLit trivial) .done)) List.nodup_nil (fun _ => rfl)
+    none (.braces (.step (.ret rfl .trueLit trivial) .done)) List.nodup_nil (fun _ => rfl) none
   let main : Decl [] [] := .function mainName ordinaryMain [] none (by intro _ h; cases h)
     none (.braces (.step (.directCall call)
       (.step (.bindDirect binding.name binding.ordinary binding.written binding.valid binding.call) .done)))
-    List.nodup_nil (by intro h; cases h)
+    List.nodup_nil (by intro h; cases h) none
   let unit : Ast.Unit := ⟨[], .step target (.step main .done)⟩
   let E := elaborieren platform (category := .unit) unit
   let s₀ := (I.start E start).2
-  let defTarget : Befehl := .definiere name [] (some .bool) 0 5 false []
+  let defTarget : Befehl := .definiere name [] (some .bool) 0 5 false [] none
   let defMain : Befehl := .definiere mainName [] none 0 5 false
-    [⟨name, [], none⟩, ⟨name, [], some .bool⟩]
+    [⟨name, [], none⟩, ⟨name, [], some .bool⟩] none
   let launch : Befehl := .starte mainName
   let discard := (directCallForm [] none).befehl call
   let bind := (bindDirectForm [] none).befehl binding

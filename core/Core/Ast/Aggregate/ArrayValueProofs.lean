@@ -64,6 +64,8 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | sum head tail => rfl
   | variant name labels hasPayload layout => rfl
   | variantSchema name labels hasPayload layout => rfl
+  | text capacity => exact Nat.le_refl _
+  | carrierSchema .. | effectGroupSchema .. => rfl
 
 private theorem fitsArrayJoin (head principal : Ty .value) {element : Ty .value}
     (join : arrayJoin head principal = some element) : Fits head element := by

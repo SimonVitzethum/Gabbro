@@ -118,6 +118,14 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
               have prec := infixPrecLe7 .projection; omega
           | recordField _ _ _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
+          | textConcat _ _ allowed _ _ =>
+              have prec := infixPrecLe7 (.arith .add)
+              simp only [Infix.precedence] at prec
+              omega
+          | textIndex _ _ allowed _ _ | substring _ _ _ allowed _ _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
     · rcases grouped with ⟨inside, rfl, indexInput, baseRead, offsetRead⟩
       cases baseRead with
       | atom atomRead highTail =>
@@ -144,6 +152,14 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
           | tupleField _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
           | recordField _ _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
+          | textConcat _ _ allowed _ _ =>
+              have prec := infixPrecLe7 (.arith .add)
+              simp only [Infix.precedence] at prec
+              omega
+          | textIndex _ _ allowed _ _ | substring _ _ _ allowed _ _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
   · exact arrayIndexPrint scope
   · let base : Expr scope (.array (.int 0 0) 1) :=
