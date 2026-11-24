@@ -44,18 +44,20 @@ theorem StringContent.closed_length {left right a b : List Char}
     (same : left ++ '"' :: tail = right ++ '"' :: other) : left.length = right.length := by
   induction lhs generalizing right b other with
   | nil =>
-    cases rhs <;> simp_all only [List.nil_append, List.cons_append, List.cons.injEq,
-      List.length_cons, Char.reduceEq]
+    cases rhs with
+    | nil => rfl
+    | plain different _ _ _ => exact (different (List.cons.inj same).1.symm).elim
+    | escaped _ _ => cases (List.cons.inj same).1
   | plain noQuote noSlash noNewline body ih =>
     cases rhs with
-    | nil => simp_all only [List.nil_append, List.cons_append, List.cons.injEq]
+    | nil => simp_all only [List.nil_append, List.cons_append, List.cons.injEq, false_and]
     | plain _ _ _ rhs =>
       exact congrArg (· + 1) (ih rhs (List.cons.inj same).2)
-    | escaped _ _ => simp_all only [List.cons_append, List.cons.injEq]
+    | escaped _ _ => simp_all only [List.cons_append, List.cons.injEq, false_and]
   | escaped code body ih =>
     cases rhs with
-    | nil => simp_all only [List.nil_append, List.cons_append, List.cons.injEq, Char.reduceEq]
-    | plain _ _ _ _ => simp_all only [List.cons_append, List.cons.injEq, ne_eq, eq_comm]
+    | nil => simp_all only [List.nil_append, List.cons_append, List.cons.injEq, Char.reduceEq, false_and]
+    | plain _ _ _ _ => simp_all only [List.cons_append, List.cons.injEq, ne_eq, eq_comm, false_and]
     | escaped _ rhs =>
       exact congrArg (fun n => n + 1 + 1) (ih rhs (List.cons.inj (List.cons.inj same).2).2)
 
@@ -66,7 +68,7 @@ def PrintedToken.textLiteral (decoded : List Char) : PrintedToken where
   headNotSpace := by
     intro c head
     obtain rfl := Option.some.inj head
-    decide
+    simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true]
   separated := by
     intro rest
     refine ⟨?_, ?_, ?_, ?_⟩
@@ -83,7 +85,7 @@ def PrintedToken.textLiteral (decoded : List Char) : PrintedToken where
       obtain ⟨raw, value, spelling, content, _⟩ := tag
       subst other
       have closed : escapeString decoded ++ '"' :: ' ' :: rest = raw ++ '"' :: suffix := by
-        simpa only [List.append_assoc, List.cons_append, List.nil_append] using (List.cons.inj same).2
+        simpa only [List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] using (List.cons.inj same).2
       have length := (escapeString_reads decoded).closed_length content closed
       simp only [List.length_append, List.length_cons, List.length_nil, length]
       exact Nat.le_refl _

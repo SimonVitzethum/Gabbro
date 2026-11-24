@@ -405,7 +405,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       if bind then payload :: frame.lokale else frame.lokale }
 
   | .textLiteral dst decoded, frame =>
-    frame.schreibe dst (some ⟨.text decoded.utf8Encode.size, TextValue.literal decoded⟩)
+    frame.schreibe dst (some ⟨.text (sourceUtf8 decoded).size, TextValue.literal decoded⟩)
   | .textConcat base a b, frame =>
     frame.schreibe base (do
       let left ← (frame.temp base).bind (wertAls (.text a))

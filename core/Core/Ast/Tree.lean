@@ -114,7 +114,7 @@ inductive Expr (scope : Scope) : Ty .value → Type where
       (ordinary : ordinaryLocal label) (available : availableCase scope label)
       (payload : CasePayload scope (payloads.get index)) :
       Expr scope (variantValueType ref.name.val labels payloads)
-  | textLiteral (decoded : List Char) : Expr scope (.text decoded.utf8Encode.size)
+  | textLiteral (decoded : List Char) : Expr scope (.text (sourceUtf8 decoded).size)
   | textConcat (left : Expr scope (.text a)) (right : Expr scope (.text b)) : Expr scope (.text (a + b))
   | textIndex (base : Expr scope (.text capacity)) (offset : Expr scope (.int lo hi)) :
       Expr scope (.int 0 255)

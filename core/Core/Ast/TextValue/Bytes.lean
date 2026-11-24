@@ -15,8 +15,10 @@ structure TextValue (capacity : Nat) where
   bytes : ByteArray
   bound : bytes.size ≤ capacity
 
-def TextValue.literal (decoded : List Char) : TextValue decoded.utf8Encode.size :=
-  ⟨decoded.utf8Encode, Nat.le_refl _⟩
+def sourceUtf8 (decoded : List Char) : ByteArray := (String.ofList decoded).toByteArray
+
+def TextValue.literal (decoded : List Char) : TextValue (sourceUtf8 decoded).size :=
+  ⟨sourceUtf8 decoded, Nat.le_refl _⟩
 
 def TextValue.widen (value : TextValue source) (fits : source ≤ target) : TextValue target :=
   ⟨value.bytes, Nat.le_trans value.bound fits⟩
