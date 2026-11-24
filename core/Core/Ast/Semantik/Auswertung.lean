@@ -53,7 +53,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simpa only [List.nil_append, List.append_nil] using walk
       · simpa only [List.nil_append, List.append_nil, List.length_nil, Nat.zero_add] using pcEq
   intro slot type tree
-  induction tree generalizing slot with
+  induction tree generalizing slot
   case lit value =>
       intro env frame bound active pre post hpc
       let b : Befehl := .literal slot value
@@ -96,8 +96,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  case variable ref visible ordinary =>
-      intro env frame bound active pre post hpc
+  case _ =>
+      intro ref visible ordinary env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
       have hb := bound ref
       have joined : frame.lokale[ref.index]?.join = some ⟨ref.binding.type, env ref⟩ := by
