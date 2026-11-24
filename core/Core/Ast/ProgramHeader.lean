@@ -430,7 +430,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
                 (by simp [hComma, comma, keyword]))
-          · exact ParamsTail.comma ih
+          · simpa [List.map_append, List.append_assoc, hClose] using (ParamsTail.comma ih)
 
 -- Mirror BlockItems.deterministic and apply ExprReads.deterministic at each argument.
 theorem ArgsRead.deterministic (left : ArgsRead scope input a rest) (right : ArgsRead scope input b more) :
