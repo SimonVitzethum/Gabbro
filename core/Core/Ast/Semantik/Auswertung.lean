@@ -39,6 +39,12 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
     refine ⟨b, alive, ?_, rfl⟩
     rw [hpc]
     exact lookupSeq pre b post
+  have laufTrans : ∀ (code : List Befehl) {a b c : Rahmen},
+      Rahmen.Lauf code a b → Rahmen.Lauf code b c → Rahmen.Lauf code a c := by
+    intro code a b c hab hbc
+    induction hbc with
+    | start => exact hab
+    | schritt prev mid step ih => exact .schritt ih step
   suffices H : ∀ (slot : Nat) {type : Ty .value} (tree : Expr scope type)
       (env : Umgebung scope) (frame : Rahmen) (bound : frame.traegt env)
       (active : frame.rueckgabe = none) (pre post : List Befehl) (hpc : frame.pc = pre.length),
@@ -100,6 +106,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case _ =>
+      rename_i ref visible ordinary
       intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
       have hb := bound ref
@@ -157,6 +164,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
           Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
           List.length_nil, Nat.add_zero, hpcMid, L]
+        omega
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
           alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpMid, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokMid]
@@ -187,6 +195,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
           Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
           List.length_nil, Nat.add_zero, hpcMid, L]
+        omega
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, alsBoolean,
           Option.bind_some, Option.map_some, tmpMid, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokMid]
@@ -212,6 +221,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         rightIH (slot + 1) env mid boundMid retL (pre ++ L) ([b] ++ post) hpcMid
       have hpcMid2 : mid2.pc = (pre ++ L ++ R).length := by
         rw [List.length_append, List.length_append]
+        rw [List.length_append] at pcR
         exact pcR
       have walkL' : Rahmen.Lauf (pre ++ (expr slot (Expr.div left right nonzero)).code ++ post)
           frame mid := by
@@ -225,7 +235,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
-      refine ⟨b.auswerten mid2, .schritt (.schritt walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
+      refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid2]
         rw [List.length_append, List.length_append, List.length_append, List.length_cons,
@@ -256,6 +266,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         rightIH (slot + 1) env mid boundMid retL (pre ++ L) ([b] ++ post) hpcMid
       have hpcMid2 : mid2.pc = (pre ++ L ++ R).length := by
         rw [List.length_append, List.length_append]
+        rw [List.length_append] at pcR
         exact pcR
       have walkL' : Rahmen.Lauf (pre ++ (expr slot (Expr.compare op left right)).code ++ post)
           frame mid := by
@@ -269,7 +280,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
-      refine ⟨b.auswerten mid2, .schritt (.schritt walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
+      refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid2]
         rw [List.length_append, List.length_append, List.length_append, List.length_cons,
@@ -334,7 +345,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         have walkR' : Rahmen.Lauf (pre ++ (expr slot (Expr.logic op left right)).code ++ post)
             (sw.auswerten mid) out := by
           simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using walkR
-        refine ⟨out, .schritt (.schritt walkL' stepSw) walkR', ?_, ?_, ?_, ?_, ?_⟩
+        refine ⟨out, (laufTrans _ (laufTrans _ walkL' stepSw) walkR'), ?_, ?_, ?_, ?_, ?_⟩
         · rw [List.length_append, List.length_append, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero]
           exact pcR
