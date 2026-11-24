@@ -16,7 +16,8 @@ public meta structure BinderFindings where
   errors : Array String
   infos : Array String
 
-private meta def userNamed (n : Name) : Bool := !n.isAnonymous && !n.hasMacroScopes
+private meta def userNamed (n : Name) : Bool :=
+  !n.isAnonymous && !n.hasMacroScopes && !(n.toString.startsWith "_")
 
 /-- Names of data binders the author wrote and the scope never uses. A binder whose type is a proposition is a
     hypothesis and may be unused; an instance binder is resolved by the elaborator. -/
