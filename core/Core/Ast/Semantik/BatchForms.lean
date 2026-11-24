@@ -219,7 +219,7 @@ internal jump over else (Befehl.springe)
 module
 
 public import Core.Ast.Semantik.Quellform
-public import Core.Ast.BatchSurface
+public import Core.Ast.Program.BatchSurface
 
 @[expose] public section
 

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.BatchExpressions
+public import Core.Ast.Expression.Surface
 
 @[expose] public section
 

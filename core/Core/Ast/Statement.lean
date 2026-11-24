@@ -472,4 +472,3 @@ theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
       exact ⟨rfl, rfl⟩
 
 end Gabbro.Core.Ast
-

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.BatchSurface
+public import Core.Ast.Program.BatchSurface
 
 @[expose] public section
 
