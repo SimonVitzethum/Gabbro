@@ -34,7 +34,8 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       (measure : Option (Measure (functionScope before parameters)))
       (body : BracedBlock (writtenResult result) (functionScope before parameters))
       (distinct : (parameters.map (fun p => p.name.val)).Nodup)
-      (returns : result.isSome = true → body.returns = true) :
+      (returns : result.isSome = true → body.returns = true)
+      (effects : Option (EffectClause before parameters)) :
       ParamsRead before input parameters afterParams →
       ResultReads before afterParams result afterResult →
       EffectClauseReads before parameters afterResult effects afterEffects →
