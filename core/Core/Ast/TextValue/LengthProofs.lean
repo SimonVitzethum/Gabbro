@@ -35,25 +35,13 @@ namespace Gabbro.Core.Ast.Surface
 open Gabbro.Core.Text
 open Gabbro.Core.Ast
 
-private theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
+theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
     (textLength scope).production args
       (((Category.expression scope).printPieces ((Expr.textLength args.base).typed)).map
         PrintedToken.value) := by
   refine ⟨args.base.printTokens ++ [closeParen], ?_, ?_⟩
-  · simp [textLength, Category.printPieces, Expr.printTokens, Expr.printPieces,
-      printLenof, printOpen, printClose, lenofKeyword, openParen, closeParen]
+  · rfl
   · exact Expr.printReads args.base noOperatorAtClose
-
-theorem textLength_derivation : TextLengthDerivationAussage := by
-  intro scope
-  refine ⟨?_, textLength_print scope, ?_⟩
-  · intro args tokens production
-    rcases production with ⟨input, rfl, read⟩
-    change ExprReads scope 0 (lenofKeyword :: openParen :: input)
-      ((Surface.textLength scope).tree args).2 []
-    exact .atom (AtomReads.textLength read) (.stop noOperatorAtEnd)
-  · let args : TextLengthArgs [] := ⟨_, .textLiteral []⟩
-    exact Rule.satisfiableOfPrint args (textLength_print [] args)
 
 end Gabbro.Core.Ast.Surface
 
@@ -62,34 +50,29 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Annahme Katalog Waechter
 open Gabbro.Core.Text
 
+theorem textLength_derivation : TextLengthDerivationAussage := by
+  intro scope
+  refine ⟨?_, Surface.textLength_print scope, ?_⟩
+  · intro args tokens production
+    rcases production with ⟨input, rfl, read⟩
+    change ExprReads scope 0 (lenofKeyword :: openParen :: input)
+      ((Surface.textLength scope).tree args).2 []
+    exact .atom (AtomReads.textLength read) (.stop noOperatorAtEnd)
+  · let args : Surface.TextLengthArgs [] := ⟨_, .textLiteral []⟩
+    exact Rule.satisfiableOfPrint args (Surface.textLength_print [] args)
+
 theorem textLength_inversion : TextLengthInversionAussage := by
   intro scope type input rest tree read
-  generalize hh : lenofKeyword :: openParen :: input = hs at read
   cases read with
-  | textLength base baseRead =>
-      refine ⟨_, base, ?_, rfl⟩
-      have h2 := List.cons.inj hh
-      have h3 := List.cons.inj h2.2
-      simpa [h3.2] using baseRead
-  | variable ref visible ordinary =>
-      have same : ref.binding.name.val = "lenof".toList := by
-        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ordinary.2.2 same).elim
-  | recordValue ref fields fits fieldsRead =>
-      have same : ref.name.val = "lenof".toList := by
-        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ref.ordinary.2.2 same).elim
-  | variantValue ref label index written ordinary available payload payloadRead =>
-      have same : label.val = "lenof".toList := by
-        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
-      exact (ordinary.2.2 same).elim
-  | _ => simp [lenofKeyword, trueKeyword, falseKeyword] at hh
+  | textLength baseRead =>
+      rename_i capacity base
+      exact ⟨capacity, base, baseRead, rfl⟩
 
 theorem textLength_bytes : TextLengthBytesAussage := by
   intro capacity text frame h
   cases text with
   | mk bytes bound =>
-      simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, TextValue.lengthValue, bound]
+      simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, bound]
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
   intro args
@@ -99,7 +82,7 @@ private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelA
 
 theorem textLength_parse : TextLengthParseAussage := by
   intro scope args text pieces lexed production
-  exact (Surface.textLength_derivation scope).parse lexed production
+  exact (textLength_derivation scope).parse lexed production
 
 theorem textLength_elaboriert : TextLengthElaboriertAussage := by
   intro scope platform args
@@ -144,9 +127,10 @@ theorem textLength_regelSicher : TextLengthRegelSicherAussage := by
 
 theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := by
   intro scope platform args
+  dsimp
+  intro t c s choice stepPlan u spur next head impl execute
   let form := textLengthForm scope
   let b := form.befehl args
-  intro t c s choice stepPlan u spur next head impl execute
   obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
   subst spur
   obtain ⟨same, _⟩ := impl
@@ -159,9 +143,10 @@ theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := b
 
 theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   intro scope platform args
+  dsimp
+  intro t c s choice stepPlan u spur next head impl execute
   let form := textLengthForm scope
   let b := form.befehl args
-  intro t c s choice stepPlan u spur next head impl execute
   obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
   cases spurEq
   refine ⟨rfl, rfl, ?_⟩
@@ -177,10 +162,11 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   let b0 : Befehl := .textLiteral 0 []
   let s0 := (I.start E start).2
   let s := b0.nach eintritt s0
-  refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨args, Ast.print (category := .expression []) (form.produktion.tree args), s,
+    ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
   · rfl
-  · apply IErreichbar.schritt eintritt () [plan] IErreichbar.start
+  · apply System.IErreichbar.schritt eintritt () [plan] System.IErreichbar.start
     refine ⟨b0, ?_, rfl⟩
     simp [E, form, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
       Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
