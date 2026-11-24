@@ -507,13 +507,13 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
   cases read with
   | directCall callRead =>
       cases callRead
-      rename_i input0 argsRead call
+      rename_i call args argsProof
       injection htok with hhead htail
-          injection hhead with hval
-          injection htail with hargs
-          subst input
-          refine ⟨call, Subtype.ext hval.symm, ?_, rfl⟩
-          exact argsRead
+      injection hhead with hval
+      injection htail with hargs
+      subst input
+      refine ⟨call, Subtype.ext hval.symm, ?_, rfl⟩
+      exact argsProof
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
@@ -540,9 +540,9 @@ theorem StmtReads.bindDirect_inversion
       injection hspelling with hname
       subst input
       cases callRead
-      rename_i input0 argsRead call
-      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsRead, rfl⟩
-          exact hname.symm
+      rename_i call args argsProof
+      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsProof, rfl⟩
+      exact hname.symm
   | directCall callRead =>
       cases callRead
       all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon,
@@ -578,7 +578,7 @@ theorem StmtReads.boundedWhile_inversion
       exact Or.inr ⟨_, htail⟩
   | directCall callRead =>
       cases callRead
-      rename_i input0 argsRead call
+      rename_i call args argsProof
       injection htok with hhead _
           injection hhead with hval
           exact (call.ordinary.2 (by simpa [hval])).elim
@@ -612,7 +612,7 @@ theorem StmtReads.forRange_inversion
       exact hname.symm
   | directCall callRead =>
       cases callRead
-      rename_i input0 argsRead call
+      rename_i call args argsProof
       injection htok with _ htail
           injection htail with hspelling _
           cases hspelling
