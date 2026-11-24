@@ -1,6 +1,6 @@
 module
 
-public import Core.Verfeinerung.Simulation
+public import Core.Verfeinerung.ZielFX
 
 @[expose] public section
 
@@ -53,7 +53,7 @@ theorem sim_erfuellbar :
       SimPflichten E Eq (fun _ => 1) ∧
       ∃ (h : Umgebung) (ρ : Maschine.Lauf E) (η : Lauf E),
         Maschine.Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ Laeufe E η ∧
-        Laufabgleich ρ η Eq ∧ Sim E ρ η ∧
+        Laufabgleich ρ η Eq ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
           before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true := by
@@ -173,7 +173,8 @@ theorem sim_erfuellbar :
   obtain ⟨η, ideal, matched⟩ := laufabgleich abgleich konkret
   have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
-  refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, label, z, z', rfl, rfl, after, rfl, ?_⟩
+  refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, pflicht.zielFX konkret,
+    label, z, z', rfl, rfl, after, rfl, ?_⟩
   change Function.update z.lokal entry (!z.lokal entry) entry = true
   rw [Function.update_self]
   rfl
