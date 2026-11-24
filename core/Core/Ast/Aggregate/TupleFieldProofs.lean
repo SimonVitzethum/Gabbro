@@ -158,7 +158,7 @@ theorem tupleFieldPrintTokens {scope : Scope} {first second : Ty .value} {tailTy
     (Expr.tupleField base index).printTokens =
       openParen :: (base.printTokens ++ [dot, .natural index.val, closeParen]) := by
   simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-    List.singleton_append, List.cons_append, List.append_assoc, printOpen, printClose, printDot, printInteger,
+    List.singleton_append, List.cons_append, List.nil_append, List.append_assoc, printOpen, printClose, printDot, printInteger,
     printPunctuation, PrintedToken.unquoted, openParen, closeParen, dot, String.reduceToList]
 
 theorem tupleFieldPrints (scope : Scope) (args : TupleFieldArgs scope) :
