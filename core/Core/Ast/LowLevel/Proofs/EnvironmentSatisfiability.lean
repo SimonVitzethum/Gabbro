@@ -33,7 +33,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     rw [clauses]
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · constructor
+  · refine ⟨?_, ?_, ?_⟩
     · intro run conforms t op args need
       obtain ⟨c, b, head, operands⟩ := need
       rw [guard b (List.mem_of_getElem? (kopf_code head))] at operands
@@ -42,6 +42,8 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
       obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
       obtain ⟨_, impossible, _⟩ := blocked c member
       exact impossible
+    · intro run conforms t l h _ hne
+      exact (hne rfl).elim
 
 theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
   let name : Identifier := keywordName 'f' ['w'] (by decide) (by

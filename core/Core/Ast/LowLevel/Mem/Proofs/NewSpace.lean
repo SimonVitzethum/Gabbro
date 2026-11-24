@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -17,49 +18,13 @@ private theorem newSpacePrints (tree : MemTree .newSpace) :
       simpa [MemTree.production, MemTree.printPieces, keyword, word, Identifier.print,
         PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
         dot, openParen, closeParen, String.reduceToList]
-private theorem memEindeutig_newSpace : MemEindeutigAussage .newSpace := by
-  intro first second tokens h1 h2
-  cases first with
-  | newSpace t1 =>
-      cases second with
-      | newSpace t2 =>
-          simp only [MemTree.production] at h1 h2
-          have heq : t1.val = t2.val := by
-            have h := congrArg (fun l : List Token => l[4]?) (h1.symm.trans h2)
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at h
-            simpa only [Token.word.injEq] using h
-          exact congrArg MemTree.newSpace (Subtype.ext heq)
-
 private def newSpaceSyntax : Gabbro.Core.Text.Syntax (MemTree .newSpace) where
   reads := fun tokens tree => tree.production tokens
   unique := by
     intro tokens a b ha hb
-    exact memEindeutig_newSpace a b tokens ha hb
+    exact memEindeutigKern .newSpace a b tokens ha hb
   printPieces := MemTree.printPieces
   reads_print := newSpacePrints
-private theorem memParse_newSpace : MemParseAussage .newSpace := by
-  intro text tree
-  change Gabbro.Core.Text.Parse newSpaceSyntax.grammar text tree ↔
-    ∃ pieces, Lexed text pieces ∧ tree.production (canonicalTokens pieces)
-  exact newSpaceSyntax.parse_iff
-private theorem memInversion_newSpace : MemInversionAussage .newSpace := by
-  intro tree tokens prod
-  cases tree with
-  | newSpace tables =>
-      obtain ⟨pieces, lex, aligned⟩ :=
-        PrintedToken.renderLexed 0 (MemTree.printPieces (.newSpace tables))
-      refine ⟨pieces, ?_, ?_⟩
-      · exact lex
-      · have prints := newSpacePrints (.newSpace tables)
-        simp only [MemTree.production] at prod prints
-        rw [← prints] at prod
-        exact aligned.trans prod.symm
-private theorem memDruck_newSpace : MemDruckAussage .newSpace := by
-  intro tree
-  constructor
-  · exact newSpacePrints tree
-  · change Gabbro.Core.Text.Parse newSpaceSyntax.grammar (newSpaceSyntax.print tree) tree
-    exact newSpaceSyntax.parse_print tree
 private theorem memHead_some_iff (target : ZielDaten) (op : MemInstruction)
     (s : MemState) (c : Kontext) :
     memHead target [op] s c = some op ↔
@@ -103,13 +68,6 @@ private theorem memHead_some_iff (target : ZielDaten) (op : MemInstruction)
     simp only [hs, hpci, List.getElem?_cons_zero, ↓reduceIte]
     dsimp
     rw [if_pos hev]
-private theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
-  intro k scope tree op _
-  intro s c
-  change memHead k.plattform.ziel [op] s c = some op ↔
-    s.status c = .laeuft ∧ c = entryContext ∧ (s.lokal c).pc = 0 ∧
-      (op.evaluate k.plattform.ziel s c).isSome = true
-  exact memHead_some_iff _ _ _ _
 private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
     Annahme.RegelLokal (memUnit k op) op := by
   intro c s u w P hideal
@@ -126,42 +84,6 @@ private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
     cases hx
   · intro l hl
     cases hl
-private theorem memAnnahme (form : MemForm) : MemAnnahmeAussage form := by
-  intro k scope tree op _
-  exact memRegelLokal k op
-private theorem memIdeal (form : MemForm) : MemIdealAussage form := by
-  intro k scope tree op _
-  change Ideal.RegelBestimmt (MemInstruction.rule k.plattform.ziel op)
-  intro c s w es es' s1 s2 h1 h2
-  change ∃ frame, op.evaluate k.plattform.ziel s c = some frame ∧ es = [plan] ∧
-    s1 = frame.advance c s at h1
-  change ∃ frame, op.evaluate k.plattform.ziel s c = some frame ∧ es' = [plan] ∧
-    s2 = frame.advance c s at h2
-  rcases h1 with ⟨t1, he1, hes1, hs1⟩
-  rcases h2 with ⟨t2, he2, hes2, hs2⟩
-  constructor
-  · rw [hes1, hes2]
-  · have ht : t1 = t2 := by
-      rw [he1] at he2
-      cases he2
-      rfl
-    rw [hs1, hs2, ht]
-private theorem memFortschritt (form : MemForm) : MemFortschrittAussage form := by
-  intro k scope tree op _
-  intro s c hhead
-  left
-  change memHead k.plattform.ziel [op] s c = some op at hhead
-  cases hEval : op.evaluate k.plattform.ziel s c with
-  | none =>
-      have hnot : ¬ (s.status c = .laeuft ∧ c = entryContext ∧ (s.lokal c).pc = 0 ∧
-          (op.evaluate k.plattform.ziel s c).isSome = true) := by
-        rintro ⟨_, _, _, hisSome⟩
-        rw [hEval] at hisSome
-        cases hisSome
-      exact (hnot ((memHead_some_iff k.plattform.ziel op s c).1 hhead)).elim
-  | some frame =>
-      refine ⟨(), [plan], frame.advance c s, ?_⟩
-      exact ⟨frame, hEval, rfl, rfl⟩
 private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : Kontext}
     {s : MemState} {w : PUnit} {plans : List Plan} {u : MemState}
     (h : op.step target c s w plans u) :
@@ -214,9 +136,6 @@ private theorem memKomponierbar (k : Katalog) (op : MemInstruction) :
   obtain ⟨frame, evaluate, planEq, hu⟩ := memImplTransfer (target := k.plattform.ziel) (op := op) (w := w) ideal
   subst u
   exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, memVollzug frame t c s⟩
-private theorem memErhaltung (form : MemForm) : MemErhaltungAussage form := by
-  intro k scope tree op _
-  exact ⟨memAbgleich k op, memKomponierbar k op⟩
 private theorem memRegelSicher (k : Katalog) (op : MemInstruction) :
     Gabbro.Core.Sicherheit.RegelSicher (memSafetyUnit k op) op := by
   intro H ρ t c w vor zwischen nach stepPlan trace head impl execute
@@ -246,9 +165,6 @@ private theorem memRegelSicher (k : Katalog) (op : MemInstruction) :
       fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
-private theorem memSicher (form : MemForm) : MemRegelSicherAussage form := by
-  intro k scope tree op _
-  exact memRegelSicher k op
 private theorem memAussenLokal (k : Katalog) (op : MemInstruction) :
     Gabbro.Core.Annahme.AussenLokal (memUnit k op) := by
   refine ⟨zulassung_m2 _, ?_⟩
@@ -295,17 +211,6 @@ theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
 theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
     Beobachtung.FlussLokal (memUnit k op) := memProgramFlussLokal k [op]
 
-private theorem memKosten (k : Katalog) (op : MemInstruction) :
-    ∀ t c s w middle next p trace, op.step k.plattform.ziel c s w [p] middle →
-      FuehrtSchrittAus (memUnit k op).einrichtung t c s middle p trace next →
-      trace = ⟨[], []⟩ ∧ (memUnit k op).stotterLaenge op = 0 := by
-  intro t c s w middle next p trace impl execute
-  obtain ⟨_, _, hp, _⟩ := memImplTransfer (target := k.plattform.ziel) (op := op) (w := w) impl
-  cases (List.cons.inj hp).1
-  exact ⟨(memGenauInternal execute).1, rfl⟩
-private theorem memKostenForm (form : MemForm) : MemKostenAussage form := by
-  intro k scope tree op _
-  exact memKosten k op
 private theorem newSpaceMeaning : NewSpaceMeaningAussage := by
   intro target s c slot region hhr
   constructor
@@ -385,7 +290,7 @@ private theorem memKlauseln (k : Katalog) (op : MemInstruction) :
     cases hp
 private theorem memWaechter (k : Katalog) (op : MemInstruction) :
     WaechterHalten (memUnit k op) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ runs t o args bedarf
     dsimp [kanonischeVerwendung, memUnit, memProgram, Quelltabellen.leer] at bedarf
     cases bedarf
@@ -394,6 +299,7 @@ private theorem memWaechter (k : Katalog) (op : MemInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
     exact hblock
+  · intro ρ runs t l h _ hne; exact (hne rfl).elim
 private theorem memAkzeptiertX86 (op : MemInstruction) :
     Annahme.Akzeptiert (memUnit Plattform.x86_64.katalog op) := by
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨memAussenLokal _ op, memFlussLokal _ op⟩⟩,
@@ -485,14 +391,7 @@ private theorem newSpace_erfuellbar : MemErfuellbarAussage .newSpace := by
   exact ⟨True.intro, hardware, admitted, accepted, hnodup,
     List.nodup_nil, List.nodup_nil,
     ⟨tree, hParse, ⟨op, hElab, rfl⟩⟩, hParse, hElab, hreach, hhead, heval, hstep, himpl⟩
-theorem newSpace_aussage : NewSpaceAussage := by
-  refine ⟨?kern, newSpaceMeaning, newSpace_erfuellbar⟩
-  unfold memObligationsKern
-  exact ⟨memParse_newSpace, memInversion_newSpace, memEindeutig_newSpace, memDruck_newSpace,
-    memElaboriert .newSpace, memRealisiert .newSpace, memAnnahme .newSpace, memIdeal .newSpace,
-    memEinheit .newSpace, memImpl .newSpace, memFortschritt .newSpace, memErhaltung .newSpace,
-    memSicher .newSpace, memRegelAntwortSicher .newSpace,
-    (fun k _ _ op _ => memAussenLokal k op), memKostenForm .newSpace,
-    memSchranken, memEtiketten, memFluss⟩
+theorem newSpace_aussage : NewSpaceAussage :=
+  ⟨memObligationsKern_alle .newSpace, newSpaceMeaning, newSpace_erfuellbar⟩
 
 end Gabbro.Core.Ast.LowLevel
