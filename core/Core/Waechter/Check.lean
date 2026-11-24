@@ -40,14 +40,14 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.ImplSchritt, 11039588729123112511),
   (`Gabbro.Core.Maschine.Laeufe, 14862217329025593899),
   (`Gabbro.Core.Maschine.I.Laeufe, 17628005016946070159),
-  (`Gabbro.Core.Annahme.Akzeptiert, 0),
-  (`Gabbro.Core.Annahme.Lokal, 0),
-  (`Gabbro.Core.Annahme.AussenLokal, 0),
-  (`Gabbro.Core.Annahme.KlauselnWahr, 0),
-  (`Gabbro.Core.Annahme.WaechterHalten, 0),
-  (`Gabbro.Core.Annahme.GeschlossenWartend, 0),
-  (`Gabbro.Core.Annahme.PartielleOperation, 0),
-  (`Gabbro.Core.Annahme.waechterBedarf, 0)]
+  (`Gabbro.Core.Annahme.Akzeptiert, 7656796702632048153),
+  (`Gabbro.Core.Annahme.Lokal, 13941319200589123999),
+  (`Gabbro.Core.Annahme.AussenLokal, 5999667796273295615),
+  (`Gabbro.Core.Annahme.KlauselnWahr, 16098598929874850224),
+  (`Gabbro.Core.Annahme.WaechterHalten, 5969727609675182989),
+  (`Gabbro.Core.Annahme.GeschlossenWartend, 2041060277665423756),
+  (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
+  (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
 
 private meta def acceptance : AcceptanceSpec := {
   acceptance := #[
