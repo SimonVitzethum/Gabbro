@@ -33,14 +33,11 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Gabbro.Core.Text
 
-private theorem indexToken_ne_bool : keyword "index" ≠ keyword "bool" := by
-  decide
+private theorem indexToken_ne_bool : keyword "index" ≠ keyword "bool" := by intro same; cases same
 
-private theorem indexToken_ne_string : keyword "index" ≠ keyword "string" := by
-  decide
+private theorem indexToken_ne_string : keyword "index" ≠ keyword "string" := by intro same; cases same
 
-private theorem indexToken_ne_option : keyword "index" ≠ keyword "option" := by
-  decide
+private theorem indexToken_ne_option : keyword "index" ≠ keyword "option" := by intro same; cases same
 
 private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "index" ≠ .word (intSpelling signed width) := by
@@ -48,7 +45,7 @@ private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
   change Token.word "index".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
-  · exact (by decide : ('i' : Char) ≠ 'u') (List.cons.inj hl).1
+  · exact (by intro same; cases same : ('i' : Char) ≠ 'u') (List.cons.inj hl).1
   · have tailEq : (toString width).toList = "ndex".toList := (List.cons.inj hl).2.symm
     have mem : ('n' : Char) ∈ Nat.toDigits 10 width := by
       have inTail : ('n' : Char) ∈ (toString width).toList := by

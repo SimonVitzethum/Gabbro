@@ -34,7 +34,7 @@ theorem assignVar_reads (scope : Scope) (result : Option (Ty .value)) (args : As
 theorem assignVar_erfuellbar  : ∃ (scope : Scope) (result : Option (Ty .value)), (assignVar scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (by intro c h; cases h)
   let scope : Scope := [⟨name, .int 1 1, true, false⟩]
-  let args : AssignArgs scope := ⟨.here, ⟨trivial, trivial⟩, rfl, .lit 1, ⟨by decide, by decide⟩⟩
+  let args : AssignArgs scope := ⟨.here, ⟨trivial, trivial⟩, rfl, .lit 1, ⟨le_rfl, le_rfl⟩⟩
   exact ⟨scope, none, Rule.satisfiableOfPrint args (assignVar_print args)⟩
 
 def returnValue (scope : Scope) (expected : Ty .value) : Rule (.statement scope (some expected)) (ReturnArgs scope expected) where
@@ -59,7 +59,7 @@ theorem returnValue_reads (scope : Scope) (expected : Ty .value) (args : ReturnA
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem returnValue_erfuellbar  : ∃ (scope : Scope) (expected : Ty .value), (returnValue scope expected).Satisfiable := by
-  let args : ReturnArgs [] (.int 1 1) := ⟨.lit 1, ⟨by decide, by decide⟩⟩
+  let args : ReturnArgs [] (.int 1 1) := ⟨.lit 1, ⟨le_rfl, le_rfl⟩⟩
   exact ⟨[], .int 1 1, Rule.satisfiableOfPrint args (returnValue_print args)⟩
 
 def ifElse (scope : Scope) (result : Option (Ty .value)) : Rule (.statement scope result) (IfArgs scope result) where

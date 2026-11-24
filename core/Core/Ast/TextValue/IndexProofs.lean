@@ -56,10 +56,10 @@ private theorem textIndexPrint (scope : Scope) (args : TextIndexArgs scope) :
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, List.append_assoc, printOpen, printClose,
       printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "(".toList : Token) = openParen by decide),
-      (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-      (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
-      (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+      (show (Token.punctuation "(".toList : Token) = openParen by rfl),
+      (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+      (show (Token.punctuation "]".toList : Token) = closeBracket by rfl),
+      (show (Token.punctuation ")".toList : Token) = closeParen by rfl)]
     rfl
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
   · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using

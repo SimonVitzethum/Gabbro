@@ -82,7 +82,7 @@ theorem taggedDecl_impl : TaggedDeclImplAussage := by
 
 theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage := by
   intro scope a frame
-  simp [Befehl.auswerten, Rahmen.installSchema, taggedDeclForm]
+  simp only [Befehl.auswerten, Rahmen.installSchema, taggedDeclForm]
 
 theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
   intro scope input variants rest read
@@ -99,15 +99,15 @@ theorem taggedDecl_parse : Gabbro.Core.Ast.Semantik.TaggedDeclParseAussage := by
 theorem taggedDecl_erfuellbarAm : Gabbro.Core.Ast.Semantik.TaggedDeclErfuellbarAmAussage := by
   intro platform start
   let name : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let lbl : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
   have valid : ∀ m ∈ member :: [], m.valid [] := by
     intro m hm
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst m
-    refine ⟨(directName_of_singleton (name := lbl) rfl).1, by decide, ?_⟩
+    refine ⟨(directName_of_singleton (name := lbl) rfl).1, (by intro same; cases same), ?_⟩
     intro type memberType
     cases memberType
   have distinct : ((Gabbro.Core.Ast.variantLabels [member]).map (fun x => x.val)).Nodup := by

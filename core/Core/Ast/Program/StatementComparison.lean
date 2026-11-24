@@ -77,13 +77,13 @@ theorem directCall (call : DirectCall scope)
     cases eq
     obtain ⟨rfl, suffix⟩ := CallReads.deterministic (.applied call argsRead) otherCall
     exact ⟨rfl, (List.cons.inj suffix).2⟩
-  | ret _ _ _ => exact (callNotReserved call "return" (by decide) eq).elim
-  | retVoid _ => exact (callNotReserved call "return" (by decide) eq).elim
-  | retOption _ _ => exact (callNotReserved call "return" (by decide) eq).elim
-  | ite _ _ _ => exact (callNotReserved call "if" (by decide) eq).elim
-  | whileBounded _ _ _ _ _ _ _ => exact (callNotReserved call "while" (by decide) eq).elim
-  | variantMatch _ _ => exact (callNotReserved call "match" (by decide) eq).elim
-  | tupleBind _ _ _ _ => exact (callNotReserved call "let" (by decide) eq).elim
+  | ret _ _ _ => exact (callNotReserved call "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) eq).elim
+  | retVoid _ => exact (callNotReserved call "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) eq).elim
+  | retOption _ _ => exact (callNotReserved call "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) eq).elim
+  | ite _ _ _ => exact (callNotReserved call "if" (List.Mem.tail _ (List.Mem.head _)) eq).elim
+  | whileBounded _ _ _ _ _ _ _ => exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq).elim
+  | variantMatch _ _ => exact (callNotReserved call "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) eq).elim
+  | tupleBind _ _ _ _ => exact (callNotReserved call "let" (List.Mem.head _) eq).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
@@ -148,7 +148,7 @@ theorem whileBounded (nonnegative : 0 ≤ lo) (overflow : Identifier)
   | directCall callRead =>
     cases callRead
     rename_i call _ _
-    exact (callNotReserved call "while" (by decide) eq.symm).elim
+    exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
@@ -204,7 +204,7 @@ theorem tupleBind (checked : pattern.valid scope annotation (first :: second :: 
   | directCall callRead =>
     cases callRead
     rename_i call _ _
-    exact (callNotReserved call "let" (by decide) eq.symm).elim
+    exact (callNotReserved call "let" (List.Mem.head _) eq.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
@@ -298,7 +298,7 @@ theorem variantMatch
   | directCall callRead =>
     cases callRead
     rename_i call _ _
-    exact (callNotReserved call "match" (by decide) eq.symm).elim
+    exact (callNotReserved call "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) eq.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 

@@ -41,7 +41,7 @@ private theorem someToken_ne_none : (.word indexSomeName.val : Token) ≠ .word 
   have hs : ("Some".toList : List Char) = "None".toList := by
     simpa [indexSomeName, indexNoneName] using hw
   have hc : ('S' : Char) = 'N' := (List.cons.inj hs).1
-  exact (by decide : ('S' : Char) ≠ 'N') hc
+  exact (by intro same; cases same : ('S' : Char) ≠ 'N') hc
 
 private theorem noneToken_ne_some : (.word indexNoneName.val : Token) ≠ .word indexSomeName.val :=
   fun h => someToken_ne_none h.symm

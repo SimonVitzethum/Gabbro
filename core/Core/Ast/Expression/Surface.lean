@@ -264,7 +264,7 @@ theorem division_reads (scope : Scope) (args : DivisionArgs scope)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem division_erfuellbar (scope : Scope) : (division scope).Satisfiable := by
-  let args : DivisionArgs scope := ⟨.lit 1, .lit 2, Or.inl (by decide)⟩
+  let args : DivisionArgs scope := ⟨.lit 1, .lit 2, Or.inl (by omega)⟩
   exact Rule.satisfiableOfPrint args (division_print args)
 
 theorem division_entry (scope : Scope) : (division scope).Entry where

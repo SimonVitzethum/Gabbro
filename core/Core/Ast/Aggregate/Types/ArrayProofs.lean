@@ -61,9 +61,9 @@ theorem arrayTypeDerivation : ArrayTypeDerivationAussage := by
     List.append_assoc, List.singleton_append, List.cons_append, List.nil_append,
     printOpenBracket, printSemicolon, printCloseBracket, printInteger,
     printPunctuation, PrintedToken.unquoted,
-    (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-    (show (Token.punctuation ";".toList : Token) = semicolon by decide),
-    (show (Token.punctuation "]".toList : Token) = closeBracket by decide)] using
+    (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+    (show (Token.punctuation ";".toList : Token) = semicolon by rfl),
+    (show (Token.punctuation "]".toList : Token) = closeBracket by rfl)] using
     (TypeReads.array count (Expr.lit count) elementRead boundRead)
 
 theorem arrayTypeIndex : ArrayTypeIndexAussage := by

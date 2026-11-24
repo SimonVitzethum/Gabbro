@@ -405,7 +405,7 @@ theorem effectGroup_call : EffectGroupCallAussage := by
   simp only [Bool.and_eq_true] at hp
   have hall : (Funktion.requiredEffects functions target).all
       (fun effect => decide (effect ∈ provided)) = true := hp.left.right
-  exact of_decide_eq_true (List.all_eq_true.mp hall effect hrequired)
+  exact decide_eq_true_iff.mp (List.all_eq_true.mp hall effect hrequired)
 theorem effectGroup_binding : EffectGroupBindingAussage := by
   intro scope item frame
   simpa [effectGroupForm, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, Rahmen.installSchema]

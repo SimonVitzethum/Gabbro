@@ -75,7 +75,7 @@ theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
       (Fragment.einzel (Befehl.waehleVariante 0 args.name args.labels args.payloads
         (variantArms args.arms).branches))).anhaengen
         (variantArms args.arms).body).klauseln.invariant = [])
-    simp [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
+    simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
       expr_keine_invarianten, vm_arms_inv]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform inv⟩
@@ -128,7 +128,7 @@ private theorem vm_case_lt (cases : List (Option (Ty .value))) :
   | cons head tail =>
       intro value
       cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
-      | inl payload => simp [variantCase, hsum]
+      | inl payload => simp only [variantCase, hsum]
       | inr rest =>
           simpa [variantCase, hsum, Nat.succ_eq_add_one] using
             Nat.succ_lt_succ (vm_case_lt tail rest)
@@ -165,7 +165,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
         simpa using ih j hj hb'
   · intro type scope labels payloads label binder ordinary body rest ih i hib hb
     cases i with
-    | zero => simp
+    | zero => rfl
     | succ j =>
         have hj : j < (variantArms rest).branches.length := by omega
         have hb' : ((variantArms rest).branches[j]).2 = true := by
@@ -188,10 +188,10 @@ private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
               cases head with
               | none => simp at hsome
               | some t => rfl
-          | succ j => simp [variantCase, hsum] at hidx
+          | succ j => simp only [variantCase, hsum] at hidx
       | inr rest =>
           cases i with
-          | zero => simp [variantCase, hsum] at hidx
+          | zero => simp only [variantCase, hsum] at hidx
           | succ j =>
               have hh : (variantCase tail rest).1 + 1 = j + 1 := by
                 simpa [variantCase, hsum] using hidx
@@ -213,12 +213,12 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
   have hget : branches[i]? = some entry := List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
   have hval : (frame.temp 0).bind
       (wertAls (variantValueType a.name a.labels a.payloads)) = some value := by
-    simp [hv, wertAls, variantValueType]
+    simp only [hv, wertAls, variantValueType]
   have hnext : ((variantMatchForm ctx).befehl a).auswerten frame =
       { frame with
         pc := frame.pc + entry.1
         lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
-    simp [Befehl.auswerten, variantMatchForm, hv, hval, i, payload, branches, entry, hget,
+    simp only [Befehl.auswerten, variantMatchForm, hv, hval, i, payload, branches, entry, hget,
       wertAls, variantValueType]
   refine ⟨entry.1, entry.2, hget, ?_⟩
   dsimp
@@ -245,9 +245,9 @@ theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage :
 theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   intro platform start
   let name : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let lbl : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
   let labels : List Gabbro.Core.Ast.Identifier := Gabbro.Core.Ast.variantLabels [member]
   let payloads : List (Option (Ty .value)) := Gabbro.Core.Ast.variantPayloads [member]
@@ -256,29 +256,29 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   let scope : Scope := [binding]
   let refSchema : Local scope schemaType := .here
   let ref : Gabbro.Core.Ast.VariantRef scope labels payloads :=
-    ⟨name, refSchema, trivial, rfl, by simp [labels, payloads,
+    ⟨name, refSchema, trivial, rfl, by simp only [labels, payloads,
       Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads],
       by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
-  let index : Fin payloads.length := ⟨0, by simp [payloads, Gabbro.Core.Ast.variantPayloads]⟩
+  let index : Fin payloads.length := ⟨0, by simp only [payloads, Gabbro.Core.Ast.variantPayloads]⟩
   have written : labels[index.val]? = some lbl := by
-    simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
+    simp only [member, labels, index, Gabbro.Core.Ast.variantLabels]
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
     exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
-    · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
+    · simp only [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
         Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
         Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
       decide
     · intro b hb
-      simp [scope] at hb
+      simp only [scope] at hb
       subst b
-      simp [binding, name, lbl, Gabbro.Core.Ast.keywordName]
+      simp only [binding, name, lbl, Gabbro.Core.Ast.keywordName]
   let payload : Gabbro.Core.Ast.CasePayload scope (payloads.get index) := .nullary false
   let valueArgs : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
     ⟨labels, payloads, ref, lbl, index, written, ordinary, available, payload⟩
   let arms : Gabbro.Core.Ast.VariantArms none scope false labels payloads :=
-    .nullary lbl (by simp [lbl, Gabbro.Core.Ast.keywordName]) (.braces .done) .done
+    .nullary lbl (by simp only [lbl, Gabbro.Core.Ast.keywordName]) (.braces .done) .done
   let a : Gabbro.Core.Ast.Surface.VariantMatchArgs (scope, none) :=
     ⟨name.val, labels, payloads, valueArgs.expression, arms⟩
   refine ⟨(scope, none), a, ?_⟩

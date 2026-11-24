@@ -145,9 +145,9 @@ theorem variantValue_parse : Gabbro.Core.Ast.Semantik.VariantValueParseAussage :
 theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
   intro platform start
   let name : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let lbl : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
   let labels : List Gabbro.Core.Ast.Identifier := Gabbro.Core.Ast.variantLabels [member]
   let payloads : List (Option (Ty .value)) := Gabbro.Core.Ast.variantPayloads [member]
@@ -156,24 +156,24 @@ theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
   let scope : Scope := [binding]
   let refSchema : Local scope schemaType := .here
   let ref : Gabbro.Core.Ast.VariantRef scope labels payloads :=
-    ⟨name, refSchema, trivial, rfl, by simp [labels, payloads,
+    ⟨name, refSchema, trivial, rfl, by simp only [labels, payloads,
       Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads],
       by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
-  let index : Fin payloads.length := ⟨0, by simp [payloads, Gabbro.Core.Ast.variantPayloads]⟩
+  let index : Fin payloads.length := ⟨0, by simp only [payloads, Gabbro.Core.Ast.variantPayloads]⟩
   have written : labels[index.val]? = some lbl := by
-    simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
+    simp only [member, labels, index, Gabbro.Core.Ast.variantLabels]
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
     exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
-    · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
+    · simp only [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
         Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
         Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
       decide
     · intro b hb
-      simp [scope] at hb
+      simp only [scope] at hb
       subst b
-      simp [binding, name, lbl, Gabbro.Core.Ast.keywordName]
+      simp only [binding, name, lbl, Gabbro.Core.Ast.keywordName]
   let a : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
     ⟨labels, payloads, ref, lbl, index, written, ordinary, available, .nullary false⟩
   refine ⟨scope, a, ?_⟩

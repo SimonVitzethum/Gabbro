@@ -31,11 +31,11 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Annahme Katalog Waechter
 open Gabbro.Core.Text
 
-private theorem optionToken_ne_bool : keyword "option" ≠ keyword "bool" := by decide
+private theorem optionToken_ne_bool : keyword "option" ≠ keyword "bool" := by intro same; cases same
 
-private theorem optionToken_ne_string : keyword "option" ≠ keyword "string" := by decide
+private theorem optionToken_ne_string : keyword "option" ≠ keyword "string" := by intro same; cases same
 
-private theorem optionToken_ne_index : keyword "option" ≠ keyword "index" := by decide
+private theorem optionToken_ne_index : keyword "option" ≠ keyword "index" := by intro same; cases same
 
 private theorem optionToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "option" ≠ .word (intSpelling signed width) := by
@@ -43,8 +43,8 @@ private theorem optionToken_ne_intWord (signed : Bool) (width : Nat) :
   change Token.word "option".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
-  · exact (by decide : ('o' : Char) ≠ 'u') (List.cons.inj hl).1
-  · exact (by decide : ('o' : Char) ≠ 'i') (List.cons.inj hl).1
+  · exact (by intro same; cases same : ('o' : Char) ≠ 'u') (List.cons.inj hl).1
+  · exact (by intro same; cases same : ('o' : Char) ≠ 'i') (List.cons.inj hl).1
 
 private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) :
     (carrierTypeForm scope belongs).RegelAmOrt := by

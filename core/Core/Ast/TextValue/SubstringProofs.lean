@@ -70,11 +70,11 @@ private theorem substringPrintTokens
     List.singleton_append, List.append_assoc, printOpen, printClose, printOpenBracket,
     printCloseBracket, printSliceRange, printPunctuation, PrintedToken.unquoted, openParen,
     closeParen,
-    (show (Token.punctuation "(".toList : Token) = openParen by decide),
-    (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-    (show (Token.punctuation "..".toList : Token) = sliceRange by decide),
-    (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
-    (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+    (show (Token.punctuation "(".toList : Token) = openParen by rfl),
+    (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+    (show (Token.punctuation "..".toList : Token) = sliceRange by rfl),
+    (show (Token.punctuation "]".toList : Token) = closeBracket by rfl),
+    (show (Token.punctuation ")".toList : Token) = closeParen by rfl)]
   rfl
 
 private theorem substringPrint (scope : Scope) (args : SubstringArgs scope) :

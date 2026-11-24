@@ -17,15 +17,15 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Gabbro.Core.Text
 
-private theorem printPubVal : printPub.value = keyword "pub" := by decide
-private theorem printTableVal : printTable.value = keyword "table" := by decide
-private theorem printCountVal : printCount.value = keyword "count" := by decide
-private theorem printSlotVal : printSlot.value = keyword "slot" := by decide
-private theorem printEffectsVal : printEffects.value = keyword "effects" := by decide
-private theorem printOpenBraceVal : printOpenBrace.value = openBrace := by decide
-private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by decide
-private theorem printColonVal : printColon.value = colon := by decide
-private theorem printCommaVal : printComma.value = comma := by decide
+private theorem printPubVal : printPub.value = keyword "pub" := rfl
+private theorem printTableVal : printTable.value = keyword "table" := rfl
+private theorem printCountVal : printCount.value = keyword "count" := rfl
+private theorem printSlotVal : printSlot.value = keyword "slot" := rfl
+private theorem printEffectsVal : printEffects.value = keyword "effects" := rfl
+private theorem printOpenBraceVal : printOpenBrace.value = openBrace := rfl
+private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := rfl
+private theorem printColonVal : printColon.value = colon := rfl
+private theorem printCommaVal : printComma.value = comma := rfl
 private theorem printIntegerVal (n : Nat) : (printInteger n).value = .natural n := by rfl
 private theorem identifierPrintVal (i : Identifier) : (Identifier.print i).value = .word i.val := by rfl
 
@@ -48,17 +48,17 @@ private theorem effectGroupHeaderValue {scope : Scope} (item : EffectGroupDeclar
       Bool.false_eq_true, reduceCtorEq, ↓reduceIte, printPubVal, printEffectsVal,
       identifierPrintVal, printOpenBraceVal]
 
-private theorem tableTok_ne_const : keyword "table" ≠ keyword "const" := by decide
-private theorem pubTok_ne_const : keyword "pub" ≠ keyword "const" := by decide
-private theorem tableTok_ne_fn : keyword "table" ≠ keyword "fn" := by decide
-private theorem pubTok_ne_fn : keyword "pub" ≠ keyword "fn" := by decide
-private theorem tableTok_ne_type : keyword "table" ≠ keyword "type" := by decide
-private theorem pubTok_ne_type : keyword "pub" ≠ keyword "type" := by decide
-private theorem tableTok_ne_tagged : keyword "table" ≠ keyword "tagged" := by decide
-private theorem pubTok_ne_tagged : keyword "pub" ≠ keyword "tagged" := by decide
-private theorem tableTok_ne_effects : keyword "table" ≠ keyword "effects" := by decide
-private theorem pubTok_ne_effects : keyword "pub" ≠ keyword "effects" := by decide
-private theorem tableTok_ne_pub : keyword "table" ≠ keyword "pub" := by decide
+private theorem tableTok_ne_const : keyword "table" ≠ keyword "const" := by intro same; cases same
+private theorem pubTok_ne_const : keyword "pub" ≠ keyword "const" := by intro same; cases same
+private theorem tableTok_ne_fn : keyword "table" ≠ keyword "fn" := by intro same; cases same
+private theorem pubTok_ne_fn : keyword "pub" ≠ keyword "fn" := by intro same; cases same
+private theorem tableTok_ne_type : keyword "table" ≠ keyword "type" := by intro same; cases same
+private theorem pubTok_ne_type : keyword "pub" ≠ keyword "type" := by intro same; cases same
+private theorem tableTok_ne_tagged : keyword "table" ≠ keyword "tagged" := by intro same; cases same
+private theorem pubTok_ne_tagged : keyword "pub" ≠ keyword "tagged" := by intro same; cases same
+private theorem tableTok_ne_effects : keyword "table" ≠ keyword "effects" := by intro same; cases same
+private theorem pubTok_ne_effects : keyword "pub" ≠ keyword "effects" := by intro same; cases same
+private theorem tableTok_ne_pub : keyword "table" ≠ keyword "pub" := by intro same; cases same
 
 private theorem tableHeaderPrefix_eq {scope : Scope} (head item : TableDeclaration scope)
     (input input' : List Token)
@@ -193,7 +193,7 @@ theorem tableDerivation : TableDerivationAussage := by
         count := 1
         fields := []
         valid := fun f h => (List.not_mem_nil h).elim
-        distinct := by decide
+        distinct := List.nodup_nil
       }
       exact Surface.Rule.satisfiableOfPrint item (tablePrints scope item)
   }
@@ -273,7 +273,7 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     count := 1
     fields := []
     valid := fun f h => (List.not_mem_nil h).elim
-    distinct := by decide
+    distinct := List.nodup_nil
   }
   let scope : Scope := [item.binding]
   have resolved : scope.carrierCount carrier = some 1 := by

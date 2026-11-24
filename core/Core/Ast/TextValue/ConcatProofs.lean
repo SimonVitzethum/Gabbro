@@ -68,8 +68,8 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
     simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, List.append_assoc, Arith.print_value,
       printOpen, printClose, printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "(".toList : Token) = openParen by decide),
-      (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+      (show (Token.punctuation "(".toList : Token) = openParen by rfl),
+      (show (Token.punctuation ")".toList : Token) = closeParen by rfl)]
     rfl
   rw [tokens]
   refine Or.inr ⟨_, rfl, ?_⟩

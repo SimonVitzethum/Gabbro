@@ -135,7 +135,7 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
           simp only [ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
             List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
             printComma, printPunctuation, PrintedToken.unquoted,
-            (show (Token.punctuation ",".toList : Token) = comma by decide)]
+            (show (Token.punctuation ",".toList : Token) = comma by rfl)]
           change ItemsRead scope closeBracket
             (head.printPieces.map PrintedToken.value ++
               (comma :: (second.printPieces.map PrintedToken.value ++
@@ -159,8 +159,8 @@ private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, printOpenBracket, printCloseBracket,
       printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-      (show (Token.punctuation "]".toList : Token) = closeBracket by decide)]
+      (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+      (show (Token.punctuation "]".toList : Token) = closeBracket by rfl)]
     rfl
   exact itemsPrintRead args.items
 

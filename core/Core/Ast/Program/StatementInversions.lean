@@ -118,7 +118,7 @@ theorem StmtReads.ret_inversion
     cases callRead
     rename_i call _ _
     have reserved := Token.word.inj (List.cons.inj same).1
-    exact (call.ordinary.2 (List.mem_map.mpr ⟨"return", by decide, reserved⟩)).elim
+    exact (call.ordinary.2 (List.mem_map.mpr ⟨"return", List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)), reserved⟩)).elim
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable
     all_goals cases (List.cons.inj same).1
@@ -143,7 +143,7 @@ theorem StmtReads.ite_inversion
     cases callRead
     rename_i call _ _
     have reserved := Token.word.inj (List.cons.inj same).1
-    exact (call.ordinary.2 (List.mem_map.mpr ⟨"if", by decide, reserved⟩)).elim
+    exact (call.ordinary.2 (List.mem_map.mpr ⟨"if", List.Mem.tail _ (List.Mem.head _), reserved⟩)).elim
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable
     all_goals cases (List.cons.inj same).1

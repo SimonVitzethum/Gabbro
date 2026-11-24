@@ -45,8 +45,7 @@ private theorem textTypeOhneInvarianten (ctx : Scope × Option (Ty .value))
     ((typeUseForm ctx textTypeUse).fragment args).klauseln.invariant = [] := by
   exact stmt_keine_invarianten (((Surface.mutableLocal ctx.1 ctx.2).tree args.val).2)
 
-private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by
-  decide
+private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by intro same; cases same
 
 private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "string" ≠ .word (intSpelling signed width) := by
@@ -54,10 +53,10 @@ private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
   cases signed
   · have hl : "string".toList = intSpelling false width := by
       injection h with hl
-    exact (by decide : ('s' : Char) ≠ 'u') (List.cons.inj hl).1
+    exact (by intro same; cases same : ('s' : Char) ≠ 'u') (List.cons.inj hl).1
   · have hl : "string".toList = intSpelling true width := by
       injection h with hl
-    exact (by decide : ('s' : Char) ≠ 'i') (List.cons.inj hl).1
+    exact (by intro same; cases same : ('s' : Char) ≠ 'i') (List.cons.inj hl).1
 
 theorem TextTypeInversion : TextTypeInversionAussage := by
   intro scope input type rest read

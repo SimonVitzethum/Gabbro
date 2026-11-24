@@ -96,7 +96,7 @@ theorem recordDecl_derivation : RecordDeclDerivationAussage := by
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let args : RecordDeclArgs scope :=
-    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by decide⟩
+    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), List.nodup_nil⟩
   exact Rule.satisfiableOfPrint args (recordDecl_print scope args)
 
 end Gabbro.Core.Ast.Surface
@@ -156,7 +156,7 @@ theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let args : Surface.RecordDeclArgs [] :=
-    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by decide⟩
+    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), List.nodup_nil⟩
   let form := recordDeclForm []
   let E := form.einheit platform args
   let s := (I.start E start).2
