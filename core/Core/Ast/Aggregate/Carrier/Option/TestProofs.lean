@@ -64,7 +64,16 @@ private theorem optionIsSomeCast {scope count optTy} (eqT : optTy = indexOptionT
   subst optTy
   exact ⟨vis, ord⟩
 
-private theorem optionIsSomeInvGen {scope count minimum input tree rest}
+private theorem indexOptionType_inj {a b : Nat} (h : indexOptionType a = indexOptionType b) : a = b := by
+  unfold indexOptionType at h
+  injection h with hname hlabels hhas hlayout
+  simp only [variantLayout, Option.getD] at hlayout
+  injection hlayout with hhead htail
+  unfold indexType at hhead
+  injection hhead with hlo hhi
+  omega
+
+private theorem optionIsSomeInvGen {scope count minimum input {resultType : Ty .value} tree rest}
     {optTy : Ty .value} {refT : Local scope optTy} {vis : refT.visible}
     {ord : ordinaryLocal refT.binding.name}
     (eqT : optTy = indexOptionType count)
@@ -125,7 +134,10 @@ private theorem optionIsSomeInvGen {scope count minimum input tree rest}
         Infix.token_injective (by simpa only [Infix.token] using head)
       cases eq
   | optionIsSome _ _ _ _ tail =>
+      rename_i cnt inp
       cases htok
+      have hcnt : cnt = count := indexOptionType_inj eqT
+      subst cnt
       exact tail
 
 theorem optionTestInversion : OptionTestInversionAussage := by
@@ -138,6 +150,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
   have hbind : (frame.temp slot).bind (wertAls (indexOptionType count)) = some value := by
     rw [hframe]
     simp only [Option.bind, wertAls, indexOptionType, dif_pos rfl]
+    simp
   have hres : ((Befehl.optionIstBesetzt slot count).auswerten frame).temp slot =
       some ⟨.bool, indexOptionPresent value⟩ := by
     rw [Befehl.auswerten, Rahmen.schreibe]
@@ -171,9 +184,10 @@ theorem optionTestCases : OptionTestCasesAussage := by
               cases h
           · constructor
             · intro _
-              simp
+              cases unit
+              rfl
             · intro _
-              simp
+              trivial
       | inr empty => cases empty
 
 theorem optionTestDerivation : OptionTestDerivationAussage := by
