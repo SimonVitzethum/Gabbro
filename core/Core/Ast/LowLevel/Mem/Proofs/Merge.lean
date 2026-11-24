@@ -42,9 +42,10 @@ theorem merge_meaning : MergeMeaningAussage := by
           if_pos adj]
         rfl
       · dsimp [next]
-        rw [List.getElem?_set]
-        simp only [if_pos rfl]
-        split <;> rfl
+        rw [List.getElem?_set_self']
+        cases h : ((s.lokal c).regions.set first (some joined))[second]? with
+        | none => simp only [Option.map_none, Option.join_none]
+        | some _ => simp only [Option.map_some, Option.join_some]
       · intro addr
         change min left.extent.von right.extent.von ≤ addr ∧
             addr < max left.extent.bis right.extent.bis ↔
