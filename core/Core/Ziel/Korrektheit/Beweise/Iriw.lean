@@ -127,9 +127,16 @@ theorem irRf_eindeutig (w w' r : IriwEv) : (irRf w r ∧ irRf w' r) → w = w' :
 abbrev irSchreibt (a : IriwEv) : Prop := (irLab .ra a).art.schreibt
 abbrev irOrt (a : IriwEv) : Bool := (irLab .ra a).ort
 
-theorem irMo_total (a b : IriwEv) :
-    (irSchreibt a ∧ irSchreibt b ∧ irOrt a = irOrt b ∧ a ≠ b) → irMo a b ∨ irMo b a := by
-  cases a <;> cases b <;> decide
+theorem irMo_total (a b : IriwEv) (ha : irSchreibt a) (hb : irSchreibt b)
+    (ho : irOrt a = irOrt b) (hne : a ≠ b) : irMo a b ∨ irMo b a := by
+  cases a <;> cases b <;>
+    first
+      | exact Or.inl ⟨rfl, rfl⟩
+      | exact Or.inr ⟨rfl, rfl⟩
+      | exact False.elim ha
+      | exact False.elim hb
+      | exact False.elim (hne rfl)
+      | (simp only [irOrt, irLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
 
 theorem irRb_closed (w' r w : IriwEv) :
     (irRf w' r ∧ irMo w' w) → (r = irR1Y ∧ w = irWY) ∨ (r = irR2X ∧ w = irWX) := by
@@ -182,7 +189,7 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
-    cases a <;> cases b <;> exact irMo_total a b ⟨ha, hb, ho, hne⟩
+    cases a <;> cases b <;> exact irMo_total a b ha hb ho hne
 
 theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
   intro hu
