@@ -180,7 +180,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
       rw [h, zwSt_ge2 _ (by omega)]
     have hker : (S_d.kerne 1).laeuft = some B := rfl
     have hlive : S_d.status B = Status.laeuft := rfl
-    rw [hsp, hcur, hnxt]
+    simp only [hsp, hcur, hnxt]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash (n + 2))
       ⟨1, hw2_opp1 (by omega), hker, hlive⟩
       ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
