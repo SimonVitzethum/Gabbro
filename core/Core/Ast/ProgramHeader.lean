@@ -377,8 +377,7 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     | close => cases hEq
     | comma pr' =>
         injection hEq with hin
-        cases hin
-        exact prIH _ _ _ pr' rfl
+        exact prIH _ _ _ pr' hin
 
 -- Mirror BlockItems.consumes, including the final close parenthesis.
 theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input := by
@@ -425,6 +424,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
+          simp only [List.nil_append, List.map_append, List.append_assoc]
           apply ParamsRead.first
           · exact p.written.printReads p.valid
               (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
@@ -448,7 +448,9 @@ theorem ArgsRead.deterministic (left : ArgsRead scope input a rest) (right : Arg
         | atom a t => cases a
   · intro inputL typeL exprL restL esL restL2 eProof tailProof tailIH b' more' rightDeriv
     cases rightDeriv with
-    | empty => simp
+    | empty =>
+        cases eProof with
+        | atom atom tail => cases atom
     | first eProof' tailProof' =>
         obtain ⟨same, rfl⟩ := ExprReads.deterministic eProof eProof'
         cases same
@@ -549,7 +551,7 @@ theorem DirectCall.printReads (call : DirectCall scope) :
             apply ArgsRead.first
             · simpa [Expr.printTokens, List.map_append, List.append_assoc] using
                 (exp.2.printReads
-                  (rest := comma :: ((commaSeparated (es.map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest))
+                  (rest := comma :: ((commaSeparated ((e :: es).map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest))
                   (noComma _))
             · exact ArgsTail.comma ih
   have hpName : call.name.print.value = Token.word call.name.val := by rfl
