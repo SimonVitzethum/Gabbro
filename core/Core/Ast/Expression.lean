@@ -115,8 +115,9 @@ theorem Infix.token_ne_delimiter (op : Infix) :
     op.token ≠ comma ∧ op.token ≠ closeBracket := by
   cases op <;> (try (rename_i operation; cases operation)) <;>
     constructor <;> intro same <;>
-      simp [Infix.token, Arith.token, Compare.spelling, Logic.spelling, comma, closeBracket,
-        openBracket, dot] at same
+      simp only [Infix.token, Arith.token, Compare.spelling, Logic.spelling, comma, closeBracket,
+        openBracket, dot, Token.punctuation.injEq, String.reduceToList, List.cons.injEq,
+        Char.reduceEq, false_and, and_false] at same
 
 theorem noOperatorAtComma : ¬ Continues minimum (comma :: more) := by
   rintro ⟨op, _, same, _⟩
