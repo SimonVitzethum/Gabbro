@@ -34,11 +34,11 @@ theorem device_transition : RegisterTransitionAussage := by
     simp only [setFrame, Function.update_self]
   | @consume _ answer _ ready same =>
     simp only [setFrame, Function.update_self]
-    split
-    next written =>
+    cases written : (RegisterAccess.write decl.row.offset decl.data).result answer.reply with
+    | written =>
       right
-      exact ⟨by rw [Function.update_self], answer, ready, same, written⟩
-    next =>
+      exact ⟨by simp only [Binding.object, Function.update_self], answer, ready, same, written⟩
+    | value _ | readOutOfRange _ | refused _ | unexpectedAnswer =>
       exact Or.inl rfl
 
 end Gabbro.Core.Ast.LowLevel.Device
