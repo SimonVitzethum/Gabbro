@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivatePreservation
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -348,7 +349,7 @@ theorem activateJoint : ActivateJointAussage := by
         [plan] = [plan] ∧ next.advance entryContext s = frame.advance entryContext s
       exact ⟨next, hnext, rfl, rfl⟩
 
-theorem activate_aussage : ActivateAussage := by
-  exact ⟨activateObligations, activate_meaning, activateJoint⟩
+theorem activate_aussage : ActivateAussage :=
+  ⟨memObligationsKern_alle .activateSpace, activate_meaning, activateJoint⟩
 
 end Gabbro.Core.Ast.LowLevel
