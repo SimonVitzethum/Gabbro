@@ -156,6 +156,7 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   have hElab : elaborateMem scope tree = some op := by
     dsimp [tree, op, elaborateMem]
     rw [hslotL, hslotR]
+    rfl
   have hadj : 0 ≠ 1 ∧ extentL.von < extentL.bis ∧ extentR.von < extentR.bis ∧
       (extentL.bis = extentR.von ∨ extentR.bis = extentL.von) := by
     refine ⟨by decide, ?_, ?_, Or.inl rfl⟩
