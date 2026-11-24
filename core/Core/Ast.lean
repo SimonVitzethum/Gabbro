@@ -19,6 +19,22 @@ public import Core.Ast.Aggregate.Records.FieldsProofs
 public import Core.Ast.Variant.Proofs
 
 /-!
+# M6 aggregate and tagged-form proof handoff
+
+Each target module lists its pinned propositions by form. Add theorems to the
+assigned target modules. The registry packets remain open until their entries
+are assembled from those theorems.
+
+| Group | Target modules | Propositions |
+| --- | --- | ---: |
+| Array type, value and index | `Aggregate.Types.ArrayProofs`, `Aggregate.ArrayValueProofs`, `Aggregate.ArrayIndexProofs` | 43 |
+| Tuple type, value and binding | `Aggregate.Types.TupleProofs`, `Aggregate.TupleValueProofs`, `Aggregate.TupleBindProofs` | 42 |
+| Record declaration and construction, inferred mutable binding | `Aggregate.Records.DeclarationsProofs`, `Aggregate.Records.ConstructionProofs` | 41 |
+| Record read and update, tuple projection | `Aggregate.Records.FieldsProofs`, `Aggregate.TupleFieldProofs` | 42 |
+| Tagged declaration, construction and match | `Variant.Proofs` | 43 |
+-/
+
+/-!
 # Adding one inventory form
 
 `Tree` defines the reference families. `Ty` is indexed by kind, `Expr` by incoming scope and result

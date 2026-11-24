@@ -44,8 +44,8 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Semantik.VariantValueProofPacket, 0),
   (`Gabbro.Core.Ast.Semantik.VariantMatchProofPacket, 0),
   (`Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket, 0),
-  (`Gabbro.Core.Ast.ArrayTypeProofPacket, 0),
-  (`Gabbro.Core.Ast.TupleTypeProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.TupleTypeProofPacket, 0),
   (`Gabbro.Core.Sicherheit.RegelSicher, 5412488538788547367),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
@@ -223,8 +223,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.definiereVariante, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket) ]⟩]
 
 private meta def openTypeEntries : Array (Name × Name) := #[
-  (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.ArrayTypeProofPacket),
-  (`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.TupleTypeProofPacket)]
+  (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket),
+  (`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.Semantik.TupleTypeProofPacket)]
 
 private meta def wildcardRoots : Array Name := #[
   `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,

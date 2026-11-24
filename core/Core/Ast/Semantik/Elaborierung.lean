@@ -109,7 +109,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
     let (ys, yw) := BracedBlock.rangeUses index yes
     let (ns, nw) := BracedBlock.rangeUses index no
     (ys || ns, yw || nw)
-  | .variantMatch _ arms => arms.rangeUses index
+  | .variantMatch _ arms => VariantArms.rangeUses index arms
   | .whileBounded _ _ _ _ _ body => BracedBlock.rangeUses index body
   | .forRange name _ _ _ _ _ body =>
     let (shadow, writes) := BracedBlock.rangeUses index body
@@ -129,11 +129,11 @@ def VariantArms.rangeUses (index : Identifier) : VariantArms result scope labels
   | .done => (false, false)
   | .nullary _ _ body rest =>
     let a := BracedBlock.rangeUses index body
-    let b := rest.rangeUses index
+    let b := VariantArms.rangeUses index rest
     (a.1 || b.1, a.2 || b.2)
   | .payload _ binder _ body rest =>
     let a := BracedBlock.rangeUses index body
-    let b := rest.rangeUses index
+    let b := VariantArms.rangeUses index rest
     (a.1 || b.1 || binder.val == index.val, a.2 || b.2)
   | .wildcard body _ _ => BracedBlock.rangeUses index body
 end

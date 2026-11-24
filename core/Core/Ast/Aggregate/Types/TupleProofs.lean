@@ -9,5 +9,15 @@ public import Core.Ast.Aggregate.Types
 - `TupleTypeSuffixAussage`
 - `TupleTypeDerivationAussage`
 - `TupleTypeIndexAussage`
+- `TupleTypeSyntaxErfuellbarAussage`
+- `TupleTypeParseAussage`
+- `TupleTypeElaboriertAussage`
+- `TupleTypeRealisiertAussage`
+- `TupleTypeAnnahmeAussage`
+- `TupleTypeIdealAussage`
+- `TupleTypeEinheitAussage`
+- `TupleTypeImplAussage`
+- `TupleTypeErhaltungAussage`
+- `TupleTypeRegelSicherAussage`
 - `TupleTypeErfuellbarAmAussage`
 -/

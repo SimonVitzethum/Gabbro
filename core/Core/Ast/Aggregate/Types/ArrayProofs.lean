@@ -9,5 +9,15 @@ public import Core.Ast.Aggregate.Types
 - `ArrayTypeSuffixAussage`
 - `ArrayTypeDerivationAussage`
 - `ArrayTypeIndexAussage`
+- `ArrayTypeSyntaxErfuellbarAussage`
+- `ArrayTypeParseAussage`
+- `ArrayTypeElaboriertAussage`
+- `ArrayTypeRealisiertAussage`
+- `ArrayTypeAnnahmeAussage`
+- `ArrayTypeIdealAussage`
+- `ArrayTypeEinheitAussage`
+- `ArrayTypeImplAussage`
+- `ArrayTypeErhaltungAussage`
+- `ArrayTypeRegelSicherAussage`
 - `ArrayTypeErfuellbarAmAussage`
 -/
