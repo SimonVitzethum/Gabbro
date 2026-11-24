@@ -112,6 +112,13 @@ theorem MeasureReads.deterministic (read : MeasureReads scope input measure rest
               cases typedEq
               exact ⟨rfl, oeq⟩
 
+local macro "deny_declaration" equality:ident : tactic =>
+  `(tactic|
+    (exfalso
+     first
+     | (cases (List.cons.inj $equality).1; done)
+     | cases (List.cons.inj (List.cons.inj $equality).2).1))
+
 -- Mirror StmtReads.deterministic, using the header and body derivations in order.
 theorem DeclReads.deterministic (left : DeclReads before input a rest)
     (right : DeclReads before input b rest') : a = b ∧ rest = rest' := by
@@ -152,6 +159,121 @@ theorem DeclReads.deterministic (left : DeclReads before input a rest)
       obtain ⟨bodyEq, restEq⟩ := BlockReads.deterministic blockRead blockRead'
       cases bodyEq
       exact ⟨treeEq.symm, restEq⟩
+
+  | record exported name valid distinct fieldsRead =>
+    generalize same : (recordDeclarationPrefix exported ++ [Token.word name.val, assignment, openBrace] ++ _) =
+      tokens at right
+    cases right with
+    | record otherExported otherName otherValid otherDistinct otherFields =>
+      cases exported <;> cases otherExported
+      · have tail := (List.cons.inj same).2
+        have nameEq := Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+        cases nameEq
+        cases (List.cons.inj (List.cons.inj (List.cons.inj tail).2).2).2
+        obtain ⟨rfl, suffix⟩ := fieldsRead.deterministic otherFields
+        exact ⟨rfl, (List.cons.inj suffix).2⟩
+      · deny_declaration same
+      · deny_declaration same
+      · have tail := (List.cons.inj (List.cons.inj same).2).2
+        have nameEq := Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+        cases nameEq
+        cases (List.cons.inj (List.cons.inj (List.cons.inj tail).2).2).2
+        obtain ⟨rfl, suffix⟩ := fieldsRead.deterministic otherFields
+        exact ⟨rfl, (List.cons.inj suffix).2⟩
+    | tagged otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | table item =>
+      cases item with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | effectGroup item =>
+      cases item with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | _ => cases exported <;> deny_declaration same
+  | tagged exported name valid distinct firstRead tailRead =>
+    generalize same : (taggedDeclarationPrefix exported ++ [Token.word name.val, assignment, openBrace] ++ _) =
+      tokens at right
+    cases right with
+    | tagged otherExported otherName _ _ otherFirst otherTail =>
+      cases exported <;> cases otherExported
+      · have tail := (List.cons.inj (List.cons.inj same).2).2
+        cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+        cases (List.cons.inj (List.cons.inj (List.cons.inj tail).2).2).2
+        obtain ⟨rfl, rfl⟩ := firstRead.deterministic otherFirst
+        obtain ⟨rfl, suffix⟩ := tailRead.deterministic otherTail
+        exact ⟨rfl, (List.cons.inj suffix).2⟩
+      · deny_declaration same
+      · deny_declaration same
+      · have tail := (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).2
+        cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+        cases (List.cons.inj (List.cons.inj (List.cons.inj tail).2).2).2
+        obtain ⟨rfl, rfl⟩ := firstRead.deterministic otherFirst
+        obtain ⟨rfl, suffix⟩ := tailRead.deterministic otherTail
+        exact ⟨rfl, (List.cons.inj suffix).2⟩
+    | record otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | table item =>
+      cases item with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | effectGroup item =>
+      cases item with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+    | _ => cases exported <;> deny_declaration same
+  | table item fieldsRead =>
+    generalize same : (item.header.map PrintedToken.value ++ _) = tokens at right
+    cases item with
+    | mk exported name count fields valid distinct =>
+      cases right with
+      | table other otherFields =>
+        cases other with
+        | mk otherExported otherName otherCount otherMembers otherValid otherDistinct =>
+          cases exported <;> cases otherExported
+          · have tail := (List.cons.inj same).2
+            cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+            have countTail := (List.cons.inj (List.cons.inj tail).2).2
+            cases Token.natural.inj (List.cons.inj countTail).1
+            have fieldsTail := (List.cons.inj (List.cons.inj countTail).2).2
+            cases (List.cons.inj (List.cons.inj fieldsTail).2).2
+            obtain ⟨rfl, suffix⟩ := fieldsRead.deterministic otherFields
+            exact ⟨rfl, (List.cons.inj suffix).2⟩
+          · deny_declaration same
+          · deny_declaration same
+          · have tail := (List.cons.inj (List.cons.inj same).2).2
+            cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+            have countTail := (List.cons.inj (List.cons.inj tail).2).2
+            cases Token.natural.inj (List.cons.inj countTail).1
+            have fieldsTail := (List.cons.inj (List.cons.inj countTail).2).2
+            cases (List.cons.inj (List.cons.inj fieldsTail).2).2
+            obtain ⟨rfl, suffix⟩ := fieldsRead.deterministic otherFields
+            exact ⟨rfl, (List.cons.inj suffix).2⟩
+      | record otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | tagged otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | effectGroup other =>
+        cases other with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | _ => cases exported <;> deny_declaration same
+  | effectGroup item itemsRead =>
+    generalize same : (item.header.map PrintedToken.value ++ _) = tokens at right
+    cases item with
+    | mk exported name written resolved checked =>
+      cases right with
+      | effectGroup other otherRead =>
+        cases other with
+        | mk otherExported otherName otherWritten otherResolved otherChecked =>
+          cases exported <;> cases otherExported
+          · have tail := (List.cons.inj same).2
+            cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+            cases (List.cons.inj (List.cons.inj tail).2).2
+            obtain ⟨rfl, suffix⟩ := EffectListReads.deterministic (read := CarrierEffectReads)
+              CarrierEffectReads.deterministic CarrierEffectReads.not_closeBrace itemsRead otherRead
+            cases Option.some.inj (checked.symm.trans otherChecked)
+            exact ⟨rfl, (List.cons.inj suffix).2⟩
+          · deny_declaration same
+          · deny_declaration same
+          · have tail := (List.cons.inj (List.cons.inj same).2).2
+            cases Subtype.ext (Token.word.inj (List.cons.inj tail).1)
+            cases (List.cons.inj (List.cons.inj tail).2).2
+            obtain ⟨rfl, suffix⟩ := EffectListReads.deterministic (read := CarrierEffectReads)
+              CarrierEffectReads.deterministic CarrierEffectReads.not_closeBrace itemsRead otherRead
+            cases Option.some.inj (checked.symm.trans otherChecked)
+            exact ⟨rfl, (List.cons.inj suffix).2⟩
+      | record otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | tagged otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | table other =>
+        cases other with | mk otherExported => cases exported <;> cases otherExported <;> deny_declaration same
+      | _ => cases exported <;> deny_declaration same
 
 -- Mirror StmtReads.disjoint_closeBrace using the nonempty declaration prefix.
 theorem DeclReads.disjoint_end : ¬ DeclReads before [] tree rest := by
