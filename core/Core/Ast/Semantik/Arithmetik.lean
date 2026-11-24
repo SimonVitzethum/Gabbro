@@ -41,6 +41,7 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .variant _ _ _ layout => Wert layout
   | _, .text capacity => TextValue capacity
   | _, .address _space => AddressValue
+  | _, .ptr _space _recht _referent => AddressValue
   | _, .ownedRegion => Nat
   | _, .regionView _element => RegionViewValue
 

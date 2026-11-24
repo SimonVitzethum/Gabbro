@@ -191,6 +191,9 @@ inductive WrittenType where
   | indexOption (carrier : Identifier) (count : Nat)
   | address (space : LowLevel.AddressSpace)
   | ownedRegion
+  /-- `ptr<space, recht> referent`: a checked capability. Execute rights and
+      owner marks are refused at the surface (no `x`, no `own`). -/
+  | ptr (space : LowLevel.AddressSpace) (recht : PtrRecht) (referent : WrittenType)
 
 inductive WrittenTypes where
   | empty
@@ -216,6 +219,7 @@ def WrittenType.type : WrittenType → Ty .value
   | .indexOption _ count => indexOptionType count
   | .address space => .address space
   | .ownedRegion => .ownedRegion
+  | .ptr space recht referent => .ptr space recht referent.type
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -236,6 +240,7 @@ def WrittenType.valid (scope : Scope) : WrittenType → Prop
   | .text _capacity => True
   | .index carrier count | .indexOption carrier count => scope.carrierCount carrier = some count
   | .address _ | .ownedRegion => True
+  | .ptr _ _ referent => referent.valid scope
 
 def WrittenTypes.valid (scope : Scope) : WrittenTypes → Prop
   | .empty => True

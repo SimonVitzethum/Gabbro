@@ -68,20 +68,25 @@ def halteAnfangAussage : Prop :=
     (ρ : Lauf E),
     HaltePrefix E ρ 0
 
-/-- A tick that carries no context step of `c` preserves the hold prefix for `c`: every
+/-- A tick that carries no context step of `c` preserves the hold leg for `c`: every
     interval ending at the new cut either already ended before, or its last tick contributes
     nothing, so the counted cost is unchanged and ownership restricts to the shorter interval.
     This covers idle ticks, answers, interrupts, crashes and steps of other contexts in one
     lemma; the same-context hold step is the checker-dependent remainder.
-    Difficulty: mittel. Sketch: case split on `a + n ≤ t` (induction hypothesis) versus
-    `a + n = t + 1` (last tick contributes nothing: `I.zaehle` step equation; `n = 0` is
-    trivial); ownership restricts to the subinterval. -/
+    Difficulty: mittel. Sketch: case split on `a + n ≤ t` (induction hypothesis versus the
+    hold prefix at `t`) and `a + n = t + 1` (last tick contributes nothing: `I.zaehle` step
+    equation with `kontextkosten_fremd`; `n = 0` is trivial); ownership restricts to the
+    subinterval. -/
 def halteFremdAussage : Prop :=
   ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) (c : Kontext) (t : Nat),
     (∀ d w spur, ρ.zeit.spur t = some (.kontext d w, spur) → d ≠ c) →
-      HaltePrefix E ρ t → HaltePrefix E ρ (t + 1)
+      HaltePrefix E ρ t →
+      ∀ (l : L) (a n : Nat), a + n ≤ t + 1 →
+        (∀ t', a ≤ t' → t' < a + n →
+          ∃ s, ρ.zeit.zustand t' = some s ∧ (s.sperren l).besitzer = some c) →
+        UnterGrenze (E.schranken.halten l) (Kontextkosten ρ c a n)
 
 /-- A freshly opened `rumpf` mark always meets its bound: no clock has advanced yet.
     Difficulty: leicht-mittel. Sketch: substitute the equality of start and cut; the clock
@@ -119,7 +124,7 @@ def zeitSpaetErweiternAussage : Prop :=
     on an idle tick, so running `rumpf` marks need the B19 clock bounds. This is the stuttering
     case of every future per-form induction.
     Difficulty: mittel. Sketch: cost legs via `kostenSchrittAussage` (idle case) and
-    `halteFremdAussage` (an idle tick is foreign to every context). -/
+    `halteFremdAussage` (an idle tick is foreign to every context, applied per context). -/
 def khLeerlaufAussage : Prop :=
   ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)

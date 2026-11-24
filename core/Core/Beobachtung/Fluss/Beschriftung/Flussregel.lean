@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beschriftung.Sprung
+public import Core.Beobachtung.Fluss.Beschriftung.AufgabenBeweise
 
 @[expose] public section
 
@@ -29,6 +30,23 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
     ∀ q, q = pc + 1 ∨ q = pc + abstand →
       (∀ s, oeffentlich (β.temp q s) = true → oeffentlich (β.temp pc s) = true) ∧
       (∀ i, oeffentlich (β.lokal q i) = true → oeffentlich (β.lokal pc i) = true)
+  | .zuweisen quelle index _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, i ≠ index → oeffentlich (β.lokal (pc + 1) i) = true →
+      oeffentlich (β.lokal pc i) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) index) = true → oeffentlich (β.temp pc quelle) = true)
+  | .binden _ quelle =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) 0) = true → oeffentlich (β.temp pc quelle) = true)
+  | .bindeWert quelle _ global =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) 0) = true → oeffentlich (β.temp pc quelle) = true) ∧
+    (global = true → oeffentlich (β.temp pc quelle) = true)
+  | .blockEnde count =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc (i + count)) = true)
   | _ => β = Beschriftung.alleOeffentlich
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
@@ -55,6 +73,12 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
     exact Befehl.sichtErhaltend_schreibform (schreibform_vergleichen op left) regel
   | springe abstand => exact springeSicht β pc abstand regel.1 regel.2
   | springeWenn quelle bei abstand => exact springeWennSicht β pc quelle abstand bei regel.1 regel.2
+  | zuweisen quelle index zieltyp =>
+    exact zuweisenSicht β pc quelle index zieltyp regel.1 regel.2.1 regel.2.2
+  | binden name quelle => exact bindenSicht β pc name quelle regel.1 regel.2.1 regel.2.2
+  | bindeWert quelle ziel global =>
+    exact bindeWertSicht β pc quelle ziel global regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
+  | blockEnde count => exact blockEndeSicht β pc count regel.1 regel.2
   | _ =>
     have gleich : β = Beschriftung.alleOeffentlich := regel
     rw [gleich]
