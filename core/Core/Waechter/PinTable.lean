@@ -260,6 +260,20 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Fortschritt.KlassenFortschritt, 9168956429155490716),
   (`Gabbro.Core.Fortschritt.SperrFreigabeAussage, 14732579029587989720),
   (`Gabbro.Core.Fortschritt.SperrWarteFairAussage, 10979764594692453417),
-  (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 7126751433696983475)]
+  (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 7126751433696983475),
+  (`Gabbro.Core.Ast.LowLevel.CpuCapsAbgelehntAussage, 15393606894895255199),
+  (`Gabbro.Core.Ast.LowLevel.CpuCyclesAbgelehntAussage, 1785992644945963950),
+  (`Gabbro.Core.Ast.LowLevel.SuspendSystemAbgelehntAussage, 4714717882467817000),
+  (`Gabbro.Core.Ast.LowLevel.SuspendCoreAbgelehntAussage, 4802694664007394846),
+  (`Gabbro.Core.Ast.LowLevel.ResumeArrivalAbgelehntAussage, 16681839017698160987),
+  (`Gabbro.Core.Beobachtung.ProbKlausel, 10195970765314656916),
+  (`Gabbro.Core.Beobachtung.schluesselNodupB, 6455492529876650300),
+  (`Gabbro.Core.Beobachtung.pruefeProb, 88603168752113864),
+  (`Gabbro.Core.Beobachtung.prEreignisUnentscheidbarAussage, 12355630085282189606),
+  (`Gabbro.Core.Beobachtung.kostenErwartungUnentscheidbarAussage, 13983439616059106261),
+  (`Gabbro.Core.Beobachtung.fastSicherAbschlussUnentscheidbarAussage, 5213210525041502284),
+  (`Gabbro.Core.Beobachtung.fastSicherFortschrittUnentscheidbarAussage, 40684611434820117),
+  (`Gabbro.Core.Beobachtung.infoTheoretischUnentscheidbarAussage, 16689545193038773293),
+  (`Gabbro.Core.Beobachtung.reduktionUnentscheidbarAussage, 5339248618883769678)]
 
 end Gabbro.Core.Waechter
