@@ -69,10 +69,12 @@ theorem FlushKette.ohne_abdeckung :
   refine ⟨spur, ⟨?_, ?_, ?_, ?_, ?_⟩, 0, fun all => ?_⟩
   · intro id phase t u ht hu
     rcases inv t id phase ht with ⟨h1, _, h2⟩ | ⟨h1, _, h2⟩ <;>
-      rcases inv u id phase hu with ⟨h3, _, h4⟩ | ⟨h3, _, h4⟩ <;> simp_all
+      rcases inv u id phase hu with ⟨h3, _, h4⟩ | ⟨h3, _, h4⟩ <;>
+        first | omega | exact absurd (h2.symm.trans h4) (by intro h; cases h)
   · intro id xs ys t u ht hu
     rcases inv t id _ ht with ⟨h1, _, h2⟩ | ⟨h1, _, h2⟩ <;>
-      rcases inv u id _ hu with ⟨h3, _, h4⟩ | ⟨h3, _, h4⟩ <;> simp_all
+      rcases inv u id _ hu with ⟨h3, _, h4⟩ | ⟨h3, _, h4⟩ <;>
+        first | omega | (cases h2; done) | (cases h4; done)
   · intro id k t ht
     rcases inv t id _ ht with ⟨_, _, h⟩ | ⟨_, _, h⟩ <;> cases h
   · intro id k t ht
@@ -82,8 +84,8 @@ theorem FlushKette.ohne_abdeckung :
     · cases h2
     · subst h1
       subst h0
-      exact ⟨0, [], by omega, by simp [spur], fun _ _ _ h => h, fun k hk => by cases hk⟩
-  · have := all [] 0 (by simp [spur])
+      exact ⟨0, [], by omega, rfl, fun _ _ _ h => h, fun k hk => by cases hk⟩
+  · have := all [] 0 rfl
     cases this
 
 /-- **Release leaves no stale translation.** Under the protocol, every core that exists has run its handler

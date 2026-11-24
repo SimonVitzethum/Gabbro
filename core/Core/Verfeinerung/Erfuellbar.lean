@@ -225,7 +225,7 @@ theorem fortschritt_erfuellbar :
     rw [Function.update_self]
     rfl
   · intro laenge
-    let sy' : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit :=
+    let sy' : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
       { sy with regel := fun _ => ⟨impl, fun _ x _ plans u => plans = [plan] ∧ u = x⟩ }
     let E' := { E₀ with
       system := sy'
