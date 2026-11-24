@@ -8,6 +8,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Freigabe
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Tabelle
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Lauf
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Reserviert
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Sicht
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Erfuellbar
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Fuellung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
