@@ -98,7 +98,7 @@ theorem prEreignis_erfuellbar :
       0 < pNum ∧ pNum < pDen ∧
       ZylinderGewicht muenzQuelle (natZylinder muenzQuelle pfad) =
         Wahrscheinlichkeit muenzQuelle muenzEreignis := by
-  exact ⟨[(0, 0)], 1, 2, by decide, by decide, by decide, muenzZylinder_gleich⟩
+  exact ⟨[(0, 0)], 1, 2, rfl, by decide, by decide, muenzZylinder_gleich⟩
 
 /-- Satisfiability of the cost obligation's checker side: the checker accepts a
     geometric certificate with exit rate strictly inside `(0, 1)` (the coin's
