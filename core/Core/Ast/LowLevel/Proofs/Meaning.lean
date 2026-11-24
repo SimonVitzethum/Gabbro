@@ -48,8 +48,11 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
   rw [decide_eq_true h]
   rw [Bool.not_true]
   rw [Bool.and_false]
-  rw [if_neg (by intro h; cases h)]
-  cases (s.lokal c).regions[slot]? <;> rfl
+  cases (s.lokal c).regions[slot]? with
+  | none => rfl
+  | some extent =>
+      rw [if_neg (by intro h'; cases h')]
+      rfl
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
@@ -75,14 +78,14 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
       | none =>
           simp only [Instruction.evaluate] at heval
           rw [hhr] at heval
-          rw [Option.bind_none] at heval
+          dsimp at heval
           cases heval
       | some pair =>
           rcases pair with ⟨handleV, extent⟩
           by_cases hlt : extent.von < 2 ^ k.plattform.ziel.physicalBits
           · simp only [Instruction.evaluate] at heval
             rw [hhr] at heval
-            rw [Option.bind_some] at heval
+            dsimp at heval
             rw [dif_pos hlt] at heval
             injection heval with hval
             subst transfer
@@ -90,7 +93,7 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
               (by first | exact hslot | rfl), hhr, rfl, rfl, rfl⟩
           · simp only [Instruction.evaluate] at heval
             rw [hhr] at heval
-            rw [Option.bind_some] at heval
+            dsimp at heval
             rw [dif_neg hlt] at heval
             cases heval
 
@@ -114,14 +117,14 @@ theorem viewMeaning : ViewMeaningAussage := by
           | none =>
               simp only [Instruction.evaluate] at heval
               rw [hhr] at heval
-              rw [Option.bind_none] at heval
+              dsimp at heval
               cases heval
           | some pair =>
               rcases pair with ⟨handleV, extent⟩
               by_cases hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
               · simp only [Instruction.evaluate] at heval
                 rw [hhr] at heval
-                rw [Option.bind_some] at heval
+                dsimp at heval
                 rw [if_pos hcond] at heval
                 injection heval with hval
                 subst transfer
@@ -167,7 +170,7 @@ theorem viewMeaning : ViewMeaningAussage := by
                   (by first | exact hlayout | rfl), hendian, hcond.1, hcond.2, rfl, rfl, hlast⟩
               · simp only [Instruction.evaluate] at heval
                 rw [hhr] at heval
-                rw [Option.bind_some] at heval
+                dsimp at heval
                 rw [if_neg hcond] at heval
                 cases heval
 
