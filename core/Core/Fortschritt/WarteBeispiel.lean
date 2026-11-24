@@ -123,6 +123,13 @@ theorem zwSt_ge (n : Nat) : zwSt (n + 2) = S_d := by
   | zero => rfl
   | succ n => rfl
 
+theorem zwSt_ge2 : ∀ t, 2 ≤ t → zwSt t = S_d := by
+  intro t h
+  match t with
+  | 0 => exact absurd h (by decide)
+  | 1 => exact absurd h (by decide)
+  | _ + 2 => rfl
+
 def ticketA : SchrittWahl Unit × SchrittSpur Unit Unit :=
   (.kontext A (), ⟨[], []⟩)
 
