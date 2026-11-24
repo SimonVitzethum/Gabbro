@@ -40,21 +40,24 @@ private theorem execMapIntersperse {α β : Type} (f : α → β) (sep : α) : �
   | x :: y :: ys => by
       simp only [List.intersperse_cons_cons, List.map_cons, execMapIntersperse f sep (y :: ys)]
 
+private theorem execGuardPrintValFun : (fun g : ExecGuard => (guardPrint g).value) = guardKeyword := by
+  funext g
+  exact execGuardVal g
+
 private theorem execGuardsTokensPrint (guards : List ExecGuard) :
     ((guards.map guardPrint).intersperse printComma).map PrintedToken.value =
       guardsTokens guards := by
   rw [execMapIntersperse]
   rw [execPrintCommaVal]
-  simp only [List.map_map]
+  simp only [List.map_map, execGuardPrintValFun]
   induction guards with
   | nil => rfl
   | cons g gs ih =>
       cases gs with
       | nil =>
-          simp only [guardsTokens, List.map_cons, List.map_nil, List.intersperse_singleton,
-            execGuardVal]
+          simp only [guardsTokens, List.map_cons, List.map_nil, List.intersperse_singleton]
       | cons h hs =>
-          simp only [guardsTokens, List.map_cons, List.intersperse_cons_cons, execGuardVal, ih]
+          simp only [guardsTokens, List.map_cons, List.intersperse_cons_cons, ih]
 
 private theorem execStateDeclPrints (name : Identifier) (decl : ExecStateDecl) :
     (ExecTree.stateDecl name decl).production
@@ -177,6 +180,10 @@ private theorem execEindeutig_stateDecl : ExecEindeutigAussage .stateDecl := by
           | mk w1 p1 t1 g1 =>
               cases decl2 with
               | mk w2 p2 t2 g2 =>
+                  change w1 = w2 at hwv
+                  change p1 = p2 at hpv
+                  change t1 = t2 at htv
+                  change g1 = g2 at hgv
                   subst w2
                   subst p2
                   subst t2
@@ -226,7 +233,7 @@ private theorem execStateDeclMeaning : StateDeclMeaningAussage := by
     dsimp at heval
     rw [if_pos hwf] at heval
     cases heval
-    simp only [ExecFrame.declare]
+    simp only [ExecFrame.declare, true_and]
   · simp only [ExecInstruction.evaluate] at heval
     dsimp at heval
     rw [if_neg hwf] at heval
@@ -352,7 +359,7 @@ private theorem execStateDeclErfuellbar : ExecErfuellbarAussage .stateDecl := by
   have admitted : E.ZulStart env start := by
     apply execZulStart (k := k) (h := env) (regions := [])
     · exact hardware
-    · simpa [k] using imageGueltigX86
+    · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.nil
     · intro r hr
       cases hr
@@ -367,7 +374,6 @@ private theorem execStateDeclErfuellbar : ExecErfuellbarAussage .stateDecl := by
     simp only [op, ExecInstruction.evaluate]
     dsimp
     rw [if_pos hdeclWF]
-    rfl
   have hstatus : s.status entryContext = .laeuft := by rfl
   have hpc : (s.lokal entryContext).pc = 0 := by rfl
   have hhead : E.system.kopf s entryContext = some op := by
