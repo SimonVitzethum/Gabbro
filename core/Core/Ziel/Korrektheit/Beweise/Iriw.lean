@@ -124,31 +124,33 @@ theorem irEco_trans (a b c : IriwEv) : (irEco a b ∧ irEco b c) → irEco a c :
 theorem irRf_eindeutig (w w' r : IriwEv) : (irRf w r ∧ irRf w' r) → w = w' := by
   cases w <;> cases w' <;> cases r <;> decide
 
-abbrev irSchreibt (a : IriwEv) : Prop := (irLab .ra a).art.schreibt
-abbrev irLiest (a : IriwEv) : Prop := (irLab .ra a).art.liest
-abbrev irOrt (a : IriwEv) : Bool := (irLab .ra a).ort
-abbrev irGelesen (a : IriwEv) : Nat := (irLab .ra a).gelesen
-abbrev irGeschrieben (a : IriwEv) : Nat := (irLab .ra a).geschrieben
+abbrev irSchreibt (m : Modus) (a : IriwEv) : Prop := (irLab m a).art.schreibt
+abbrev irLiest (m : Modus) (a : IriwEv) : Prop := (irLab m a).art.liest
+abbrev irOrt (m : Modus) (a : IriwEv) : Bool := (irLab m a).ort
+abbrev irGelesen (m : Modus) (a : IriwEv) : Nat := (irLab m a).gelesen
+abbrev irGeschrieben (m : Modus) (a : IriwEv) : Nat := (irLab m a).geschrieben
 
-theorem irRf_schreibt (w r : IriwEv) (h : irRf w r) : irSchreibt w := by
+theorem irRf_schreibt (m : Modus) (w r : IriwEv) (h : irRf w r) : irSchreibt m w := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
-theorem irRf_liest (w r : IriwEv) (h : irRf w r) : irLiest r := by
+theorem irRf_liest (m : Modus) (w r : IriwEv) (h : irRf w r) : irLiest m r := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
-theorem irRf_ort (w r : IriwEv) (h : irRf w r) : irOrt w = irOrt r := by
+theorem irRf_ort (m : Modus) (w r : IriwEv) (h : irRf w r) : irOrt m w = irOrt m r := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
-theorem irRf_wert (w r : IriwEv) (h : irRf w r) : irGeschrieben w = irGelesen r := by
+theorem irRf_wert (m : Modus) (w r : IriwEv) (h : irRf w r) : irGeschrieben m w = irGelesen m r := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
-theorem irMo_schreibt (a b : IriwEv) (h : irMo a b) : irSchreibt a ∧ irSchreibt b := by
+theorem irMo_schreibt (m : Modus) (a b : IriwEv) (h : irMo a b) : irSchreibt m a ∧ irSchreibt m b := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> exact ⟨trivial, trivial⟩
-theorem irMo_ort (a b : IriwEv) (h : irMo a b) : irOrt a = irOrt b := by
+theorem irMo_ort (m : Modus) (a b : IriwEv) (h : irMo a b) : irOrt m a = irOrt m b := by
   rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
 
-theorem irMo_total (a b : IriwEv) (ha : irSchreibt a) (hb : irSchreibt b)
-    (ho : irOrt a = irOrt b) (hne : a ≠ b) : irMo a b ∨ irMo b a := by
+theorem irMo_total (m : Modus) (a b : IriwEv) (ha : irSchreibt m a) (hb : irSchreibt m b)
+    (ho : irOrt m a = irOrt m b) (hne : a ≠ b) : irMo a b ∨ irMo b a := by
   cases a <;> cases b <;>
     first
       | exact Or.inl (Or.inl ⟨rfl, rfl⟩)
       | exact Or.inr (Or.inl ⟨rfl, rfl⟩)
+      | exact Or.inl (Or.inr ⟨rfl, rfl⟩)
+      | exact Or.inr (Or.inr ⟨rfl, rfl⟩)
       | exact False.elim ha
       | exact False.elim hb
       | exact False.elim (hne rfl)
@@ -171,25 +173,25 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     cases a <;> decide
   rf_schreibt := by
     intro w r h
-    cases w <;> cases r <;> exact irRf_schreibt w r h
+    exact irRf_schreibt m w r h
   rf_liest := by
     intro w r h
-    cases w <;> cases r <;> exact irRf_liest w r h
+    exact irRf_liest m w r h
   rf_ort := by
     intro w r h
-    cases w <;> cases r <;> exact irRf_ort w r h
+    exact irRf_ort m w r h
   rf_wert := by
     intro w r h
-    cases w <;> cases r <;> exact irRf_wert w r h
+    exact irRf_wert m w r h
   rf_eindeutig := by
     intro w w' r h1 h2
     exact irRf_eindeutig w w' r ⟨h1, h2⟩
   mo_schreibt := by
     intro a b h
-    cases a <;> cases b <;> exact irMo_schreibt a b h
+    exact irMo_schreibt m a b h
   mo_ort := by
     intro a b h
-    cases a <;> cases b <;> exact irMo_ort a b h
+    exact irMo_ort m a b h
   mo_trans := by
     intro a b c hab hbc
     exact irMo_trans a b c ⟨hab, hbc⟩
@@ -199,7 +201,7 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
-    cases a <;> cases b <;> exact irMo_total a b ha hb ho hne
+    exact irMo_total m a b ha hb ho hne
 
 theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
   intro hu
