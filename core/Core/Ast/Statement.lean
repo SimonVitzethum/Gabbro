@@ -113,7 +113,7 @@ theorem StmtReads.assign_inversion
       exact ⟨_, _, _, _, ref, visible, writable, _, fits, rfl, read, rfl⟩
   | ret declared fits read =>
       exfalso
-      cases exprRead with
+      cases read with
       | atom a t => exact AtomReads.not_assignment a
   | ite conditionRead yesRead noRead =>
       exfalso
@@ -195,7 +195,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     cases same
     exact LetTailReads.deterministic letTail tail'
   · intros
-    rename_i s ref visible writable fits exprRead tree rest other
+    rename_i s inputS ref visible writable fits exprRead tree rest other
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
     cases treeEq
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local s t) = ⟨_, ref'⟩ :=
@@ -212,9 +212,9 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       obtain ⟨same, suffix⟩ := ExprReads.deterministic exprRead read'
       cases same
       exact ⟨rfl, (List.cons.inj suffix).2⟩
-    · exfalso
+      exfalso
       cases inputEq
-      cases exprRead with
+      cases condRead with
       | atom a t => exact AtomReads.not_assignment a
   · intros
     rename_i condition yes no condRead yesRead noRead ihYes ihNo tree rest other
