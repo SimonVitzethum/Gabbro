@@ -27,7 +27,6 @@ theorem returnVoid_print {scope : Scope} {result : Option (Ty .value)} (a : Retu
 theorem returnVoid_reads {scope : Scope} {result : Option (Ty .value)} {a : ReturnVoidArgs scope result} {tokens : List Token}
     (read : (returnVoid scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((returnVoid scope result).tree a) := by
-  change StmtReads result scope tokens ((returnVoid scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -57,17 +56,13 @@ def mutableLocal (scope : Scope) (result : Option (Ty .value)) : Rule (.statemen
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem mutableLocal_print {scope : Scope} {result : Option (Ty .value)} (a : MutableLocalArgs scope result) :
     (mutableLocal scope result).production a (((Category.statement scope result).printPieces ((mutableLocal scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((mutableLocal scope result).tree a)).map PrintedToken.value)
-    ((mutableLocal scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((mutableLocal scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : MutableLocalArgs scope result} {tokens : List Token}
     (read : (mutableLocal scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((mutableLocal scope result).tree a) := by
-  change StmtReads result scope tokens ((mutableLocal scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -94,17 +89,13 @@ def directCall (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem directCall_print {scope : Scope} {result : Option (Ty .value)} (a : DirectCallArgs scope result) :
     (directCall scope result).production a (((Category.statement scope result).printPieces ((directCall scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((directCall scope result).tree a)).map PrintedToken.value)
-    ((directCall scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((directCall scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : DirectCallArgs scope result} {tokens : List Token}
     (read : (directCall scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((directCall scope result).tree a) := by
-  change StmtReads result scope tokens ((directCall scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -139,17 +130,13 @@ def bindDirect (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem bindDirect_print {scope : Scope} {result : Option (Ty .value)} (a : BindDirectArgs scope result) :
     (bindDirect scope result).production a (((Category.statement scope result).printPieces ((bindDirect scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((bindDirect scope result).tree a)).map PrintedToken.value)
-    ((bindDirect scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((bindDirect scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem bindDirect_reads {scope : Scope} {result : Option (Ty .value)} {a : BindDirectArgs scope result} {tokens : List Token}
     (read : (bindDirect scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((bindDirect scope result).tree a) := by
-  change StmtReads result scope tokens ((bindDirect scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -197,17 +184,13 @@ def boundedWhile (scope : Scope) (result : Option (Ty .value)) : Rule (.statemen
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem boundedWhile_print {scope : Scope} {result : Option (Ty .value)} (a : BoundedWhileArgs scope result) :
     (boundedWhile scope result).production a (((Category.statement scope result).printPieces ((boundedWhile scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((boundedWhile scope result).tree a)).map PrintedToken.value)
-    ((boundedWhile scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((boundedWhile scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem boundedWhile_reads {scope : Scope} {result : Option (Ty .value)} {a : BoundedWhileArgs scope result} {tokens : List Token}
     (read : (boundedWhile scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((boundedWhile scope result).tree a) := by
-  change StmtReads result scope tokens ((boundedWhile scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -243,17 +226,13 @@ def forRange (scope : Scope) (result : Option (Ty .value)) : Rule (.statement sc
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem forRange_print {scope : Scope} {result : Option (Ty .value)} (a : ForRangeArgs scope result) :
     (forRange scope result).production a (((Category.statement scope result).printPieces ((forRange scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((forRange scope result).tree a)).map PrintedToken.value)
-    ((forRange scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((forRange scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem forRange_reads {scope : Scope} {result : Option (Ty .value)} {a : ForRangeArgs scope result} {tokens : List Token}
     (read : (forRange scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((forRange scope result).tree a) := by
-  change StmtReads result scope tokens ((forRange scope result).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -289,17 +268,13 @@ def constant (scope : Scope) : Rule (.declaration scope) (ConstantArgs scope) wh
 -- Mirror Decl.printReads for the canonical derivation.
 theorem constant_print {scope : Scope} (a : ConstantArgs scope) :
     (constant scope).production a (((Category.declaration scope).printPieces ((constant scope).tree a)).map PrintedToken.value) := by
-  change DeclReads scope
-    (((Category.declaration scope).printPieces ((constant scope).tree a)).map PrintedToken.value)
-    ((constant scope).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.declaration scope) ((constant scope).tree a))
+  change (Category.declaration scope).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem constant_reads {scope : Scope} {a : ConstantArgs scope} {tokens : List Token}
     (read : (constant scope).production a tokens) :
     (Category.declaration scope).reads tokens ((constant scope).tree a) := by
-  change DeclReads scope tokens ((constant scope).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -335,17 +310,13 @@ def function (scope : Scope) : Rule (.declaration scope) (FunctionArgs scope) wh
 -- Mirror Decl.printReads for the canonical derivation.
 theorem function_print {scope : Scope} (a : FunctionArgs scope) :
     (function scope).production a (((Category.declaration scope).printPieces ((function scope).tree a)).map PrintedToken.value) := by
-  change DeclReads scope
-    (((Category.declaration scope).printPieces ((function scope).tree a)).map PrintedToken.value)
-    ((function scope).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.declaration scope) ((function scope).tree a))
+  change (Category.declaration scope).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List Token}
     (read : (function scope).production a tokens) :
     (Category.declaration scope).reads tokens ((function scope).tree a) := by
-  change DeclReads scope tokens ((function scope).tree a) []
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -382,15 +353,13 @@ def program  : Rule (.unit) (ProgramArgs) where
 -- Mirror UnitBody.printReads for the canonical derivation.
 theorem program_print (a : ProgramArgs) :
     (program).production a (((Category.unit).printPieces ((program).tree a)).map PrintedToken.value) := by
-  change UnitReads []
-    (((Category.unit).printPieces ((program).tree a)).map PrintedToken.value) ((program).tree a)
-  simpa [Category.reads] using (Category.reads_print (Category.unit) ((program).tree a))
+  change (Category.unit).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem program_reads {a : ProgramArgs} {tokens : List Token}
     (read : (program).production a tokens) :
     (Category.unit).reads tokens ((program).tree a) := by
-  change UnitReads [] tokens ((program).tree a)
   exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
@@ -425,42 +394,23 @@ theorem StmtReads.returnVoid_inversion
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
   generalize htok : (returnKeyword :: semicolon :: input) = toks at read
   cases read with
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName] | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | ret _ _ expr =>
       cases expr with
-      | atom atomRead _ => cases atomRead <;> simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
+      | atom atomRead _ => cases atomRead <;> simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | retVoid declared =>
       injection htok with _ htail
       injection htail with _ hrfl
       subst rest
       exact ⟨⟨declared⟩, rfl, rfl⟩
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
+  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | directCall callRead =>
       cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, elseKeyword, keyword, assignment, semicolon, colon,
-        openParen, closeParen, openBrace, closeBrace, minus, bang, openRange, arrow, comma,
-        trueKeyword, falseKeyword, directName]
+      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
@@ -483,8 +433,7 @@ theorem StmtReads.mutableLocal_inversion
       exact hname.symm
   | directCall callRead =>
       cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon,
-        colon, openParen, directName]
+      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
@@ -542,8 +491,7 @@ theorem StmtReads.bindDirect_inversion
       exact hname.symm
   | directCall callRead =>
       cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon,
-        colon, openParen, directName]
+      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
