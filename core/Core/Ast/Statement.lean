@@ -188,16 +188,14 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
   · intros
     rename_i name ordinary exprRead letTail tree rest other
-    trace_state
     obtain ⟨name', ordinary', _, value', more', sameName, read', tail'⟩ := other.let_header
-    have eqName : name' = name := Subtype.ext sameName
-    subst name'
+    have nameEq : name' = name := Subtype.ext sameName
+    cases nameEq
     obtain ⟨same, rfl⟩ := ExprReads.deterministic exprRead read'
     cases same
     exact ⟨rfl, LetTailReads.deterministic letTail tail'⟩
   · intros
     rename_i ref visible writable fits exprRead tree rest other
-    trace_state
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
     cases treeEq
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
@@ -208,7 +206,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     exact ⟨rfl, (List.cons.inj suffix).2⟩
   · intros
     rename_i declared fits exprRead tree rest other
-    trace_state
+    cases declared
     rcases other.ret_inversion with ⟨t, value', fits', read', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
       obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
@@ -220,15 +218,14 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       | atom a t => exact AtomReads.not_assignment a
   · intros
     rename_i condition yes no condRead yesRead noRead ihYes ihNo tree rest other
-    trace_state
     rcases other.ite_inversion with ⟨cond', first', yes', more', no', condRead', yesRead', noRead', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
       obtain ⟨same, firstEq⟩ := ExprReads.deterministic condRead condRead'
       cases same
-      subst firstEq
+      cases firstEq
       obtain ⟨sameYes, moreEq⟩ := ihYes yesRead'
       cases sameYes
-      subst moreEq
+      cases moreEq
       obtain ⟨sameNo, restEq⟩ := ihNo noRead'
       cases sameNo
       exact ⟨rfl, restEq⟩
