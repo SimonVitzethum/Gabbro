@@ -229,7 +229,8 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
     intro t mem
     cases mem
   let args : Surface.FunctionArgs scope :=
-    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done, by decide, by
+    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done,
+      by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.nodup_nil, List.not_mem_nil], by
       intro h
       cases h⟩
   have belongs : ∃ p ∈ args.parameters, indexOptionTypeUse p.written := by
