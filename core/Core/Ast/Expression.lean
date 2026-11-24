@@ -233,8 +233,17 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
   revert type
-  all_goals trace_state
-  all_goals exact ⟨by contradiction⟩
+  cases read
+  · intro type
+    exact (ordinary.1 rfl).elim
+  · intro type
+    exact (ordinary.2 rfl).elim
+  · intro type
+    rename_i ty ref vis ord
+    subst type
+    exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
+
+    exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
 
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
