@@ -19,6 +19,7 @@ def printArrow : PrintedToken := printPunctuation "->" (by
 def printClosedRange : PrintedToken := printPunctuation ".." (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c head
+  simp only [String.reduceToList, List.head?_cons] at head
   obtain rfl := Option.some.inj head
   apply punctuationHead
   simp only [List.mem_cons, Char.reduceEq, true_or, false_or])
