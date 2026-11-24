@@ -195,11 +195,9 @@ theorem textIndexSuffix : TextIndexSuffixAussage := by
 
 private theorem textWertAls (capacity : Nat) (text : TextValue capacity) :
     wertAls (.text capacity) (Sigma.mk (.text capacity) text) = some text := by
-  cases text with
-  | mk bytes bound =>
-      unfold wertAls
-      rw [dif_pos bound]
-      congr
+  change (if fits : text.bytes.size ≤ capacity then some (⟨text.bytes, fits⟩ : TextValue capacity) else none) = some text
+  rw [dif_pos text.bound]
+  congr
 
 theorem textIndexBytes : TextIndexBytesAussage := by
   intro capacity text index frame htemp hzahl
@@ -273,8 +271,8 @@ theorem textIndexRegelSicher : TextIndexRegelSicherAussage := by
     (textIndex_keine_invarianten scope args) ((textIndexForm scope).befehl args)
 
 theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
-  intro scope platform args form t c s choice stepPlan u spur next head impl execute stepExec
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl stepExec
+  intro scope platform args form t c s choice stepPlan u spur next head impl execute
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
@@ -285,8 +283,8 @@ theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
     simp
 
 theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
-  intro scope platform args form t c s choice stepPlan u spur next head impl execute stepExec
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl stepExec
+  intro scope platform args form t c s choice stepPlan u spur next head impl execute
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
@@ -322,21 +320,25 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have hbyte : text.bytes[(0 : Int).toNat]? = some byte := by
     rw [getElem?_eq_some_iff]
     exact ⟨by simpa using hlt, by simp [byte]⟩
+  have hbyte0 : text.bytes[0]? = some byte := by simpa using hbyte
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
-    simp [Befehl.auswerten, htext, hzahl, hbyte, Zahl.literal]
+    simp [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal]
   refine ⟨args, ?_⟩
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
   · rfl
   · exact form.realisiert (textIndex_am_ort []) platform args s₂ rfl rfl rfl rfl
   · intro g hg
-    simp [Befehl.guard, htext, hzahl] at hg
+    have hguard : (form.befehl args).guard (s₂.lokal eintritt) = some (⟨.index, (0, capacity)⟩ : Bedarf) := by
+      dsimp [form, textIndexForm, frame₂]
+      simp [Befehl.guard, htext, hzahl]
+      rfl
+    rw [hguard] at hg
+    simp at hg
     subst g
     exact hcapPos
-  · change ((Befehl.textIndex 0 capacity).auswerten frame₂).stopp = none ∧
-      (((Befehl.textIndex 0 capacity).auswerten frame₂).temp 0).isSome = true
-    rw [heval]
-    constructor <;> rw [Rahmen.schreibe] <;> rfl
+  · simpa [form, Befehl.nach, frame₂, heval, Rahmen.schreibe]
+  · simpa [form, Befehl.nach, frame₂, heval, Rahmen.schreibe]
 
 end Gabbro.Core.Ast.Semantik
