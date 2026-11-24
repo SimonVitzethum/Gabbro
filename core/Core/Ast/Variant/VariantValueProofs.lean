@@ -157,17 +157,18 @@ theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
       by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
   let index : Fin payloads.length := ⟨0, by simp [payloads, Gabbro.Core.Ast.variantPayloads]⟩
   have written : labels[index.val]? = some lbl := by
-    simp [labels, index, Gabbro.Core.Ast.variantLabels]
+    simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
     simp [Gabbro.Core.Ast.ordinaryLocal, lbl, Gabbro.Core.Ast.keywordName]
   have available : availableCase scope lbl := by
     constructor
-    · simp [scope, binding, schemaType, variantSchemaType, labels, lbl, payloads,
-        Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
+    · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
+        Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
+        Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
     · intro b hb
       simp [scope] at hb
       subst b
-      simp [name, lbl, Gabbro.Core.Ast.keywordName]
+      simp [binding, name, lbl, Gabbro.Core.Ast.keywordName]
   let a : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
     ⟨labels, payloads, ref, lbl, index, written, ordinary, available, .nullary false⟩
   refine ⟨scope, a, ?_⟩
