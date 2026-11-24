@@ -165,6 +165,7 @@ theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
     · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
         Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
         Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
+      decide
     · intro b hb
       simp [scope] at hb
       subst b
