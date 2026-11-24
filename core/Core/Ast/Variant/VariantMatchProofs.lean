@@ -145,15 +145,13 @@ theorem variantMatch_exhaustive : VariantMatchExhaustiveAussage := by
 private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
     (arms : VariantArms result scope allowed labels payloads) :
-    ∀ (i : Nat) (hi : i < payloads.length),
-      i < (variantArms arms).branches.length →
+    ∀ (i : Nat) (hib : i < (variantArms arms).branches.length),
       ((variantArms arms).branches[i]).2 = true →
-      (payloads.get ⟨i, hi⟩).isSome = true := by
+      (payloads[i]?).join.isSome = true := by
   refine @Gabbro.Core.Ast.VariantArms.rec result
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
-    (fun _ _ _ p ar => ∀ (i : Nat) (hi : i < p.length),
-      i < (variantArms ar).branches.length →
-      ((variantArms ar).branches[i]).2 = true → (p.get ⟨i, hi⟩).isSome = true)
+    (fun _ _ _ p ar => ∀ (i : Nat) (hib : i < (variantArms ar).branches.length),
+      ((variantArms ar).branches[i]).2 = true → (p[i]?).join.isSome = true)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
@@ -161,7 +159,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
 private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
     ∀ (value : Wert (variantLayout cases)) (i : Nat),
       (variantCase cases value).1 = i →
-      (cases.get? i).join.isSome = true →
+      (cases[i]?).join.isSome = true →
       (variantCase cases value).2.isSome = true := by
   cases cases with
   | nil => intro value; exact Empty.elim value
@@ -170,15 +168,19 @@ private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
       cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
       | inl payload =>
           cases i with
-          | zero => cases head <;> simp [variantCase, variantPayload, hsum, hsome] at *
+          | zero =>
+              cases head with
+              | none => simp at hsome
+              | some t => rfl
           | succ j => simp [variantCase, hsum] at hidx
       | inr rest =>
           cases i with
           | zero => simp [variantCase, hsum] at hidx
           | succ j =>
-              have hidx' : (variantCase tail rest).1 = j := by
-                simpa [variantCase, hsum, Nat.succ_eq_add_one] using Nat.succ.inj hidx
-              have hsome' : (tail.get? j).join.isSome = true := by simpa using hsome
+              have hh : (variantCase tail rest).1 + 1 = j + 1 := by
+                simpa [variantCase, hsum] using hidx
+              have hidx' : (variantCase tail rest).1 = j := Nat.add_right_cancel hh
+              have hsome' : (tail[j]?).join.isSome = true := by simpa using hsome
               exact vm_case_payload_some tail rest j hidx' hsome'
 
 theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
@@ -192,21 +194,23 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
     simpa [i] using vm_case_lt a.payloads value
   have hibr : i < branches.length := by omega
   let entry := branches[i]
-  refine ⟨entry.1, entry.2, ?_, ?_⟩
-  · exact List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
-  · dsimp
-    constructor
-    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
-    constructor
-    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
-    constructor
-    · intro hb
-      have hsome_idx : (a.payloads.get ⟨i, hi⟩).isSome = true := by
-        exact vm_arms_bind ctx.2 ctx.1 false a.labels a.payloads a.arms i hi hibr
-          (by simpa [entry] using hb)
-      have hsome_get : (a.payloads.get? i).join.isSome = true := by
-        simpa using hsome_idx
-      exact vm_case_payload_some a.payloads value i rfl hsome_get
-    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
+  have hget : branches[i]? = some entry := List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
+  have hval : (frame.temp 0).bind
+      (wertAls (variantValueType a.name a.labels a.payloads)) = some value := by
+    simp [hv, wertAls]
+  have hnext : ((variantMatchForm ctx).befehl a).auswerten frame =
+      { frame with
+        pc := frame.pc + entry.1
+        lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
+    simp [Befehl.auswerten, variantMatchForm, hval, i, payload, branches, entry, hget, wertAls]
+  refine ⟨entry.1, entry.2, hget, ?_⟩
+  dsimp
+  rw [hnext]
+  refine ⟨rfl, rfl, ?_, rfl⟩
+  intro hb
+  have hsome : (a.payloads[i]?).join.isSome = true := by
+    exact vm_arms_bind ctx.2 ctx.1 false a.labels a.payloads a.arms i hibr
+      (by simpa [entry] using hb)
+  exact vm_case_payload_some a.payloads value i rfl hsome
 
 end Gabbro.Core.Ast.Semantik

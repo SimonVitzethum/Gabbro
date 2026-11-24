@@ -111,7 +111,13 @@ private theorem vv_case_inject (cases : List (Option (Ty .value))) (index : Fin 
 theorem variantValue_payload : VariantValuePayloadAussage := by
   intro scope a frame payload h
   constructor
-  · simp [Befehl.auswerten, variantValueForm, Rahmen.schreibe, h]
+  · change ((variantActual (a.payloads.get a.index) (frame.temp 0)).bind
+      (fun value => some ⟨variantValueType a.ref.name.val a.labels a.payloads,
+        variantInject a.payloads a.index value⟩)) =
+      some ⟨variantValueType a.ref.name.val a.labels a.payloads,
+        variantInject a.payloads a.index payload⟩
+    rw [h]
+    rfl
   · exact vv_case_inject a.payloads a.index payload
 
 end Gabbro.Core.Ast.Semantik
