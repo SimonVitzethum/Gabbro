@@ -214,13 +214,14 @@ def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
   | _ => false
 
 def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
-  let hasView := List.any (fun v : Option Dynamisch => v.any (Dynamisch.borrowsRegion slot))
+  let hasView := fun (values : List (Option Dynamisch)) =>
+    values.any (fun v => v.any (Dynamisch.borrowsRegion slot))
   hasView frame.lokale || frame.fortsetzungen.any (fun continuation => hasView continuation.lokale)
 
 def Rahmen.bindeRegion (frame : Rahmen) (receiver : Nat) (init : RegionInitializer)
     (live : Nat → Bool) : Rahmen := Id.run do
   let refused := frame.halt .ungueltigerBereich
-  let some slot := frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) | return refused
+  let some (slot : Nat) := frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) | return refused
   let some extent := frame.arrivalRegions[slot]? | return refused
   if !live slot || frame.borrowsRegion slot then return refused
   let some value := LowLevel.RegionInitializer.value frame.platform.ziel slot extent init | return refused
