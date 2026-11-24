@@ -43,7 +43,8 @@ private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_⟩
+  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,
+      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
     obtain ⟨_, ⟨c, mem⟩, blockiert⟩ := h
     obtain ⟨_, nein, _⟩ := blockiert c mem
     exact nein

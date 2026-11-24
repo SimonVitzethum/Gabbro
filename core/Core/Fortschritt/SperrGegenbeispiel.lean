@@ -10,9 +10,11 @@
   (`eh_halten`) — and no release step ever occurs. Hence no `hgibt`-shaped conclusion follows
   from `HalteSchranken` plus hardware fairness alone (`halte_gibt_nicht_ab`).
 
-  The missing model rule is a checker-side release obligation for lock holders (B13 remainder):
-  an accepted unit must keep a holder live, dispatched and release-enabled until it hands the
-  lock off. It is pinned as `SperrFreigabeAussage` in `SperrFair`.
+  The checker-side release obligation for lock holders (B13 remainder) now lives in
+  `WaechterHalten` as `SperrHalterHalten`: an accepted unit keeps a holder live, dispatched
+  and geben-offering until it hands the lock off. It is discharged as `SperrFreigabeAussage`
+  in `SperrFair`. This counterexample stays as the negative leg: bounds plus fairness alone
+  do not imply release.
 -/
 module
 
