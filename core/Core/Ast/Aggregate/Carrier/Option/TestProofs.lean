@@ -73,7 +73,8 @@ private theorem indexOptionType_inj {a b : Nat} (h : indexOptionType a = indexOp
   injection hhead with hlo hhi
   omega
 
-private theorem optionIsSomeInvGen {scope count minimum input {resultType : Ty .value} tree rest}
+private theorem optionIsSomeInvGen {scope count minimum input rest}
+    {resultType : Ty .value} {tree : Expr scope resultType}
     {optTy : Ty .value} {refT : Local scope optTy} {vis : refT.visible}
     {ord : ordinaryLocal refT.binding.name}
     (eqT : optTy = indexOptionType count)
