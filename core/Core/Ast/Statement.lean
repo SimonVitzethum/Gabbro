@@ -170,15 +170,6 @@ theorem BlockReads.braced_inversion
   cases read
   rename_i after body read
   exact ⟨after, body, rfl, read⟩
-theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
-    (right : BlockReads result scope input b rest') : a = b ∧ rest = rest' := by
-  cases left with
-  | braced inner =>
-    cases right with
-    | braced inner' =>
-      obtain ⟨same, rfl⟩ := inner.deterministic inner'
-      cases same
-      exact ⟨rfl, rfl⟩
 
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
@@ -358,3 +349,12 @@ theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : r
   | braced body => exact body.consumes.trans (List.suffix_cons openBrace _)
 
 end Gabbro.Core.Ast
+theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
+    (right : BlockReads result scope input b rest') : a = b ∧ rest = rest' := by
+  cases left with
+  | braced inner =>
+    cases right with
+    | braced inner' =>
+      obtain ⟨same, rfl⟩ := inner.deterministic inner'
+      cases same
+      exact ⟨rfl, rfl⟩
