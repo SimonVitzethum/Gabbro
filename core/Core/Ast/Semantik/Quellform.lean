@@ -41,10 +41,11 @@ def Realisiert (platform : Plattform) (args : Arguments) (s : Zustand) : Prop :=
 
 theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     (args : Arguments) (s : Zustand) (running : s.status eintritt = .laeuft)
+    (active : (s.lokal eintritt).rueckgabe = none)
     (atPc : (s.lokal eintritt).pc = form.position args) :
     Realisiert form platform args s := by
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, atPc, position args]
+    simp only [kopf, ite_true, running, active, atPc, position args]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 /-- Elaboration-independent part of the schema supplies the real raw grammar proof. -/
@@ -57,6 +58,7 @@ def Quellform.ElaboriertAussage : Prop :=
 
 def Quellform.RealisiertAussage : Prop :=
   ∀ platform args s, s.status eintritt = .laeuft →
+    (s.lokal eintritt).rueckgabe = none →
     (s.lokal eintritt).pc = form.position args → Realisiert form platform args s
 
 def Quellform.AnnahmeAussage : Prop :=
@@ -104,8 +106,8 @@ def Quellform.ErfuellbarAm (platform : Plattform) (start : AussenStart) (args : 
     ∀ (g : Bedarf), (form.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2
 
-def Quellform.statements {cat : Scope → Category} {args : Scope → Type}
-    (forms : (scope : Scope) → Quellform (cat scope) (args scope))
+def Quellform.statements {Context : Type} {cat : Context → Category} {args : Context → Type}
+    (forms : (scope : Context) → Quellform (cat scope) (args scope))
     (joint : Prop) (constructor : Name) : RegistryStatements constructor .surface where
   realization := .surface (∀ scope, (forms scope).ParseAussage)
     (∀ scope, (forms scope).ElaboriertAussage) (∀ scope, (forms scope).RealisiertAussage)

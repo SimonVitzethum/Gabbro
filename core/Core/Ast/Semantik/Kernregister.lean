@@ -1,6 +1,8 @@
 module
 
 public import Core.Ast.Semantik.Beispiele
+public import Core.Ast.Semantik.BatchRegistry
+public import Core.Ast.Semantik.LocalEffects
 
 @[expose] public section
 
@@ -27,14 +29,19 @@ theorem aus_elaborierung : AusElaborierung := by
     | ruht =>
       rw [status] at head
       cases head
-    | laeuft => rwa [status] at head
+    | laeuft =>
+      cases returned : (s.lokal c).rueckgabe with
+      | none => simpa only [status, returned] using head
+      | some _ =>
+        simp only [status, returned] at head
+        cases head
     | beendet _ =>
       rw [status] at head
       cases head
   · cases head
 
-def Quellform.kernStatements {cat : Scope → Category} {args : Scope → Type}
-    (forms : (scope : Scope) → Quellform (cat scope) (args scope))
+def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args : Context → Type}
+    (forms : (scope : Context) → Quellform (cat scope) (args scope))
     (joint : Prop) (constructor : Name) : RegistryStatements constructor .core :=
   let shared := Quellform.statements forms joint constructor
   ⟨.core (AusElaborierung ∧ ∀ scope, (forms scope).RegelAmOrt),
@@ -48,10 +55,34 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements binaryForm BinaryErfuellbar constructor⟩
   else if constructor = ``Befehl.binden then
     ⟨.core, Quellform.kernStatements letForm LetErfuellbar constructor⟩
+  else if constructor = ``Befehl.wahrheitswert then
+    ⟨.core, Quellform.kernStatements trueLitForm trueLitJoint constructor⟩
+  else if constructor = ``Befehl.lesen then
+    ⟨.core, Quellform.kernStatements variableForm variableJoint constructor⟩
+  else if constructor = ``Befehl.negativ then
+    ⟨.core, Quellform.kernStatements negativeLitForm negativeLitJoint constructor⟩
+  else if constructor = ``Befehl.negieren then
+    ⟨.core, Quellform.kernStatements negForm negJoint constructor⟩
+  else if constructor = ``Befehl.verneinen then
+    ⟨.core, Quellform.kernStatements notValueForm notValueJoint constructor⟩
+  else if constructor = ``Befehl.teilen then
+    ⟨.core, Quellform.kernStatements divisionForm divisionJoint constructor⟩
+  else if constructor = ``Befehl.vergleichen then
+    ⟨.core, Quellform.kernStatements comparisonForm comparisonJoint constructor⟩
+  else if constructor = ``Befehl.springeWenn then
+    ⟨.core, Quellform.kernStatements logicForm logicJoint constructor⟩
+  else if constructor = ``Befehl.zuweisen then
+    ⟨.core, Quellform.kernStatements assignVarForm assignVarJoint constructor⟩
+  else if constructor = ``Befehl.zurueck then
+    ⟨.core, Quellform.kernStatements returnValueForm returnValueJoint constructor⟩
+  else if constructor = ``Befehl.springe then
+    ⟨.core, Quellform.kernStatements thenJumpForm thenJumpJoint constructor⟩
+  else if constructor = ``Befehl.blockEnde then
+    ⟨.core, Quellform.kernStatements bracedForm bracedJoint constructor⟩
   else nichtSpezifiziert constructor
 
-def Quellform.kernEintrag {cat : Scope → Category} {args : Scope → Type}
-    {forms : (scope : Scope) → Quellform (cat scope) (args scope)} {joint : Prop}
+def Quellform.kernEintrag {Context : Type} {cat : Context → Category} {args : Context → Type}
+    {forms : (scope : Context) → Quellform (cat scope) (args scope)} {joint : Prop}
     {sourceName constructor : Name}
     (source : RegistryEntry sourceName ⟨.surface, Quellform.statements forms joint sourceName⟩) :
     RegistryEntry constructor ⟨.core, Quellform.kernStatements forms joint constructor⟩ where
@@ -92,5 +123,167 @@ def kernLetEntry : RegistryEntry ``Befehl.binden (befehlSchema ``Befehl.binden) 
   have source := letEntry
   rw [stmtSchema, ite_eq_left rfl] at source
   exact Quellform.kernEintrag source
+
+def kern_wahrheitswert : RegistryEntry ``Befehl.wahrheitswert (befehlSchema ``Befehl.wahrheitswert) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "wahrheitswert") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "wahrheitswert") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "wahrheitswert") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag trueLitProofs
+
+def kern_lesen : RegistryEntry ``Befehl.lesen (befehlSchema ``Befehl.lesen) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "lesen") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "lesen") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "lesen") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "lesen") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag variableProofs
+
+def kern_negativ : RegistryEntry ``Befehl.negativ (befehlSchema ``Befehl.negativ) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "negativ") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negativ") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negativ") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negativ") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negativ") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag negativeLitProofs
+
+def kern_negieren : RegistryEntry ``Befehl.negieren (befehlSchema ``Befehl.negieren) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "negieren") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negieren") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negieren") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negieren") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negieren") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "negieren") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag negProofs
+
+def kern_verneinen : RegistryEntry ``Befehl.verneinen (befehlSchema ``Befehl.verneinen) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "verneinen") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "verneinen") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag notValueProofs
+
+def kern_teilen : RegistryEntry ``Befehl.teilen (befehlSchema ``Befehl.teilen) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "teilen") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "teilen") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag divisionProofs
+
+def kern_vergleichen : RegistryEntry ``Befehl.vergleichen (befehlSchema ``Befehl.vergleichen) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "vergleichen") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag comparisonProofs
+
+def kern_springeWenn : RegistryEntry ``Befehl.springeWenn (befehlSchema ``Befehl.springeWenn) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springeWenn") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag logicProofs
+
+def kern_zuweisen : RegistryEntry ``Befehl.zuweisen (befehlSchema ``Befehl.zuweisen) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zuweisen") (b := "springeWenn") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag assignVarProofs
+
+def kern_zurueck : RegistryEntry ``Befehl.zurueck (befehlSchema ``Befehl.zurueck) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "zurueck") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "springeWenn") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "zurueck") (b := "zuweisen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag returnValueProofs
+
+def kern_springe : RegistryEntry ``Befehl.springe (befehlSchema ``Befehl.springe) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "springe") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "springeWenn") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "zuweisen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "springe") (b := "zurueck") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag thenJumpProofs
+
+def kern_blockEnde : RegistryEntry ``Befehl.blockEnde (befehlSchema ``Befehl.blockEnde) := by
+  rw [befehlSchema,
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "literal") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "binaer") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "binden") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "wahrheitswert") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "lesen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "negativ") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "negieren") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "verneinen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "teilen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "vergleichen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "springeWenn") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "zuweisen") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "zurueck") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_right (differentLabels (a := "blockEnde") (b := "springe") (by intro same; simp only [String.reduceEq] at same)),
+    ite_eq_left rfl]
+  exact Quellform.kernEintrag bracedProofs
 
 end Gabbro.Core.Ast.Semantik

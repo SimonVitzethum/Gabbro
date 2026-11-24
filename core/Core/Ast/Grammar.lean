@@ -14,26 +14,26 @@ open Gabbro.Core.Text
     A source unit begins with an empty scope. -/
 inductive Category where
   | expression (scope : Scope)
-  | statement (scope : Scope)
-  | block (scope : Scope)
+  | statement (scope : Scope) (result : Option (Ty .value) := none)
+  | block (scope : Scope) (result : Option (Ty .value) := none)
   | unit
 
 def Category.Tree : Category → Type
   | .expression scope => TypedExpr scope
-  | .statement scope => Statement scope
-  | .block scope => Statements scope
+  | .statement scope result => Statement result scope
+  | .block scope result => BracedBlock result scope
   | .unit => Ast.Unit
 
 def Category.reads : (category : Category) → List Token → category.Tree → Prop
   | .expression scope => fun tokens tree => ExprReads scope 0 tokens tree.2 []
-  | .statement scope => fun tokens tree => StmtReads scope tokens tree []
-  | .block scope => fun tokens tree => BlockReads scope tokens tree []
+  | .statement scope result => fun tokens tree => StmtReads result scope tokens tree []
+  | .block scope result => fun tokens tree => BlockReads result scope tokens tree []
   | .unit => fun tokens tree => UnitReads [] tokens tree
 
 def Category.printPieces : (category : Category) → category.Tree → List PrintedToken
   | .expression _ => fun tree => tree.2.printPieces
-  | .statement _ => fun tree => tree.2.printPieces
-  | .block _ => fun tree => tree.2.printPieces
+  | .statement _ _ => fun tree => tree.2.printPieces
+  | .block _ _ => fun tree => tree.printPieces
   | .unit => fun tree => tree.2.printPieces
 
 theorem Category.unique (category : Category) {tokens : List Token} {a b : category.Tree}
@@ -54,7 +54,7 @@ theorem Category.reads_print (category : Category) (tree : category.Tree) :
     rcases tree with ⟨after, tree⟩
     simpa only [Category.printPieces, Category.reads, Stmt.printTokens, List.append_nil] using
       (Stmt.printReads tree [])
-  | block => exact Block.printReads tree.2
+  | block => simpa only [Category.reads, Category.printPieces, List.append_nil] using tree.printReads []
   | unit => exact UnitBody.printReads tree.2
 
 def Category.syntax (category : Category) : Syntax category.Tree where

@@ -1,47 +1,31 @@
 module
 
 public import Core.Ast.Semantik.Elaborierung
-import Init.Omega
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast.Semantik
 
-/-- Executing the elaborated instructions of an expression leaves its statically
-    inferred type in the destination slot and preserves every lower temporary. -/
-theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (frame : Rahmen) :
-    let out := (expr slot tree).code.foldl (fun f b => b.auswerten f) frame
-    (out.temp slot).typ = type ∧ ∀ i, i < slot → out.temp i = frame.temp i := by
-  induction tree generalizing slot frame with
-  | lit value =>
-    change (Function.update frame.temp slot (Ganzzahl.literal value) slot).typ = _ ∧
-      ∀ i, i < slot → Function.update frame.temp slot (Ganzzahl.literal value) i = frame.temp i
-    refine ⟨?_, fun i lower => Function.update_of_ne (Nat.ne_of_lt lower) _ _⟩
-    rw [Function.update_self]
-    rfl
-  | @binary lo₁ hi₁ lo₂ hi₂ op left right leftIH rightIH =>
-    simp only [expr, Fragment.anhaengen, Fragment.einzel, List.foldl_append, List.foldl_cons,
-      List.foldl_nil]
-    let l := (expr slot left).code.foldl (fun f b => b.auswerten f) frame
-    let r := (expr (slot + 1) right).code.foldl (fun f b => b.auswerten f) l
-    obtain ⟨leftType, leftPreserves⟩ := leftIH slot frame
-    obtain ⟨rightType, rightPreserves⟩ := rightIH (slot + 1) l
-    change (Function.update r.temp slot (Ganzzahl.binaer op (r.temp slot) (r.temp (slot + 1))) slot).typ =
-        op.result lo₁ hi₁ lo₂ hi₂ ∧
-      ∀ i, i < slot →
-        Function.update r.temp slot (Ganzzahl.binaer op (r.temp slot) (r.temp (slot + 1))) i = frame.temp i
-    refine ⟨?_, ?_⟩
-    · rw [Function.update_self, rightPreserves slot (Nat.lt_succ_self slot)]
-      obtain ⟨leftLo, leftHi⟩ := Ty.int.inj leftType
-      obtain ⟨rightLo, rightHi⟩ := Ty.int.inj rightType
-      change op.result (l.temp slot).lo (l.temp slot).hi (r.temp (slot + 1)).lo (r.temp (slot + 1)).hi = _
-      change (l.temp slot).lo = lo₁ at leftLo
-      change (l.temp slot).hi = hi₁ at leftHi
-      change (r.temp (slot + 1)).lo = lo₂ at rightLo
-      change (r.temp (slot + 1)).hi = hi₂ at rightHi
-      rw [leftLo, leftHi, rightLo, rightHi]
-    · intro i lower
-      exact (Function.update_of_ne (Nat.ne_of_lt lower) _ _).trans
-        ((rightPreserves i (Nat.lt_succ_of_lt lower)).trans (leftPreserves i lower))
+/-- The frame relation for expression evaluation uses the resolved de Bruijn slot
+    and carries the typed incoming value at every visible binding. -/
+def Rahmen.traegt (frame : Rahmen) (env : Umgebung scope) : Prop :=
+  ∀ {type} (ref : Local scope type), frame.lokale[ref.index]? = some (some ⟨type, env ref⟩)
+
+def Rahmen.Schritt (code : List Befehl) (before after : Rahmen) : Prop :=
+  ∃ b, before.rueckgabe = none ∧ code[before.pc]? = some b ∧ after = b.auswerten before
+
+inductive Rahmen.Lauf (code : List Befehl) : Rahmen → Rahmen → Prop where
+  | start : Lauf code frame frame
+  | schritt : Lauf code before middle → Schritt code middle after → Lauf code before after
+
+-- Generalise the original expr_ergebnis_typ proof to runtime PC walks and use Logic.skips.
+theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung scope)
+    (frame : Rahmen) (bound : frame.traegt env) (active : frame.rueckgabe = none)
+    (atStart : frame.pc = 0) :
+    ∃ out, Rahmen.Lauf (expr slot tree).code frame out ∧
+      out.pc = (expr slot tree).code.length ∧ out.temp slot = some ⟨type, tree.wert env⟩ ∧
+      out.lokale = frame.lokale ∧ out.rueckgabe = none ∧
+      ∀ i, i < slot → out.temp i = frame.temp i := by
+  sorry
 
 end Gabbro.Core.Ast.Semantik

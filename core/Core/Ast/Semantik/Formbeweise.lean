@@ -36,7 +36,7 @@ def Quellform.eintrag {cat : Scope → Category} {args : Scope → Type}
   realization := .surface
     (fun scope _ _ _ lexed production => (parse scope).parse lexed production)
     (fun _ _ _ => rfl)
-    (fun scope platform a s running atPc => (forms scope).realisiert (atRoot scope) platform a s running atPc)
+    (fun scope platform a s running active atPc => (forms scope).realisiert (atRoot scope) platform a s running active atPc)
   acceptanceRule := fun scope => (forms scope).annahme
   idealRule := fun scope => ⟨atRoot scope, fun a => ⟨((forms scope).befehl a).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
   unitsAndCommutation := fun scope _ a => ⟨rfl, ((forms scope).befehl a).kommutation⟩

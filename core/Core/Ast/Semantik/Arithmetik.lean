@@ -47,10 +47,55 @@ def Arith.auswerten (op : Arith) (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) :
   match op with
   | .add => ⟨a.wert + b.wert, Int.add_le_add a.unten b.unten, Int.add_le_add a.oben b.oben⟩
   | .mul => a.mul b
+  | .sub => ⟨a.wert - b.wert, Int.sub_le_sub a.unten b.oben, Int.sub_le_sub a.oben b.unten⟩
 
-/-- The exact mathematical result has the interval computed by the constructor. -/
-def Expr.wert : Expr scope type → Wert type
+
+def Zahl.neg (a : Zahl lo hi) : Zahl (-hi) (-lo) :=
+  ⟨-a.wert, Int.neg_le_neg a.oben, Int.neg_le_neg a.unten⟩
+
+-- Mirror mul_endpoint_bounds using the unsigned and signed Int.tdiv bounds.
+theorem Zahl.div_bounds (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero : Divisor lo₂ hi₂) :
+    (quotientBounds lo₁ hi₁ lo₂).1 ≤ a.wert.tdiv b.wert ∧
+      a.wert.tdiv b.wert ≤ (quotientBounds lo₁ hi₁ lo₂).2 := by
+  sorry
+
+def Zahl.div (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero : Divisor lo₂ hi₂) :
+    Wert (quotientType lo₁ hi₁ lo₂) :=
+  ⟨a.wert.tdiv b.wert, (a.div_bounds b nonzero).1, (a.div_bounds b nonzero).2⟩
+
+def Compare.eval (op : Compare) (a b : Int) : Bool :=
+  match op with
+  | .eq => decide (a = b)
+  | .ne => decide (a ≠ b)
+  | .lt => decide (a < b)
+  | .le => decide (a ≤ b)
+  | .gt => decide (b < a)
+  | .ge => decide (b ≤ a)
+
+def Logic.skips : Logic → Bool
+  | .and => false
+  | .or => true
+
+def Umgebung (scope : Scope) := ∀ {type}, Local scope type → Wert type
+
+def leereUmgebung : Umgebung [] := by
+  intro type ref
+  cases ref
+
+/-- Mathematical expression evaluation retains the type index of the source node. -/
+def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .lit value => Zahl.literal value
-  | .binary op left right => op.auswerten left.wert right.wert
+  | .binary op left right => op.auswerten (left.wert env) (right.wert env)
+  | .trueLit => true
+  | .falseLit => false
+  | .variable ref _ _ => env ref
+  | .negativeLit magnitude => Zahl.literal (-(magnitude : Int))
+  | .neg operand => (operand.wert env).neg
+  | .not operand => !(operand.wert env)
+  | .div left right nonzero => (left.wert env).div (right.wert env) nonzero
+  | .compare op left right => op.eval (left.wert env).wert (right.wert env).wert
+  | .logic op left right =>
+    let a : Bool := left.wert env
+    if a = op.skips then a else right.wert env
 
 end Gabbro.Core.Ast

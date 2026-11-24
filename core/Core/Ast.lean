@@ -3,7 +3,7 @@ module
 public import Core.Ast.Grammar
 public import Core.Ast.Inventory
 public import Core.Ast.Registry
-public import Core.Ast.Surface
+public import Core.Ast.BatchSurface
 public import Core.Ast.SemantikRezept
 
 /-!

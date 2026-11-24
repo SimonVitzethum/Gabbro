@@ -11,13 +11,26 @@ open Gabbro.Core.Text
 def Arith.token : Arith → Token
   | .add => .punctuation ['+']
   | .mul => .punctuation ['*']
+  | .sub => .punctuation ['-']
 
 def Arith.precedence : Arith → Nat
-  | .add => 1
-  | .mul => 2
+  | .add | .sub => 5
+  | .mul => 6
 
 theorem Arith.token_injective {a b : Arith} (same : a.token = b.token) : a = b := by
   cases a <;> cases b <;> first | rfl | cases same
+
+def Compare.spelling : Compare → String
+  | .eq => "=="
+  | .ne => "!="
+  | .lt => "<"
+  | .le => "<="
+  | .gt => ">"
+  | .ge => ">="
+
+def Logic.spelling : Logic → String
+  | .and => "&&"
+  | .or => "||"
 
 def openParen : Token := .punctuation ['(']
 def closeParen : Token := .punctuation [')']
@@ -25,24 +38,68 @@ def semicolon : Token := .punctuation [';']
 def openBrace : Token := .punctuation ['{']
 def closeBrace : Token := .punctuation ['}']
 def assignment : Token := .punctuation ['=']
-def letKeyword : Token := .word ['l', 'e', 't']
+def letKeyword : Token := .word "let".toList
+def trueKeyword : Token := .word "true".toList
+def falseKeyword : Token := .word "false".toList
+def ifKeyword : Token := .word "if".toList
+def elseKeyword : Token := .word "else".toList
+def returnKeyword : Token := .word "return".toList
+def minus : Token := .punctuation ['-']
+def bang : Token := .punctuation ['!']
+
+inductive Infix where
+  | arith (op : Arith)
+  | div
+  | compare (op : Compare)
+  | logic (op : Logic)
+
+def Infix.token : Infix → Token
+  | .arith op => op.token
+  | .div => .punctuation ['/']
+  | .compare op => .punctuation op.spelling.toList
+  | .logic op => .punctuation op.spelling.toList
+
+def Infix.precedence : Infix → Nat
+  | .arith op => op.precedence
+  | .div => 6
+  | .compare _ => 3
+  | .logic .and => 2
+  | .logic .or => 1
+
+def Infix.follows : Infix → List Token → Prop
+  | .compare _, rest => ∀ op tail, rest ≠ Infix.token (.compare op) :: tail
+  | _, _ => True
+
+-- Mirror Arith.token_injective across the four operator families.
+theorem Infix.token_injective {a b : Infix} (same : a.token = b.token) : a = b := by
+  sorry
 
 def Continues (minimum : Nat) (input : List Token) : Prop :=
-  ∃ op : Arith, ∃ more, input = op.token :: more ∧ minimum ≤ op.precedence
+  ∃ op : Infix, ∃ more, input = op.token :: more ∧ minimum ≤ op.precedence
 
 theorem noOperatorAtEnd : ¬ Continues minimum [] := by
   rintro ⟨op, more, equality, _⟩
   cases equality
 
+-- Mirror the arithmetic case of noOperatorAtClose for the new token families.
 theorem noOperatorAtClose : ¬ Continues minimum (closeParen :: more) := by
-  rintro ⟨op, _, equality, _⟩
-  have head := (List.cons.inj equality).1
-  cases op <;> cases head
+  sorry
 
+-- Mirror noOperatorAtClose.
 theorem noOperatorAtSemicolon : ¬ Continues minimum (semicolon :: more) := by
-  rintro ⟨op, _, equality, _⟩
-  have head := (List.cons.inj equality).1
-  cases op <;> cases head
+  sorry
+
+-- Mirror noOperatorAtClose.
+theorem noOperatorAtOpenBrace : ¬ Continues minimum (openBrace :: more) := by
+  sorry
+
+/-- The operand of a single unary prefix starts at a primary. -/
+def PrimaryStart (tokens : List Token) : Prop :=
+  ∀ tail, tokens ≠ minus :: tail ∧ tokens ≠ bang :: tail
+
+/-- Minus followed by a numeral belongs to the negative-literal production. -/
+def NegationStart (tokens : List Token) : Prop :=
+  PrimaryStart tokens ∧ ∀ n tail, tokens ≠ .natural n :: tail
 
 mutual
 
@@ -52,15 +109,24 @@ inductive ExprReads (scope : Scope) :
   | atom : AtomReads scope input first more → ExprTail scope minimum first more tree rest →
       ExprReads scope minimum input tree rest
 
-/-- Atom rules own their leading token. Parentheses group an expression without adding an AST node. -/
+/-- Parentheses group an expression without adding an AST node. -/
 inductive AtomReads (scope : Scope) :
     List Token → {type : Ty .value} → Expr scope type → List Token → Prop where
   | lit : AtomReads scope (.natural value :: rest) (.lit value) rest
   | grouped : ExprReads scope 0 input tree (closeParen :: rest) →
       AtomReads scope (openParen :: input) tree rest
+  | trueLit : AtomReads scope (trueKeyword :: rest) .trueLit rest
+  | falseLit : AtomReads scope (falseKeyword :: rest) .falseLit rest
+  | variable (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name) :
+      AtomReads scope (.word ref.binding.name.val :: rest) (.variable ref visible ordinary) rest
+  | negativeLit : AtomReads scope (minus :: .natural value :: rest) (.negativeLit value) rest
+  | neg : NegationStart input → AtomReads scope input operand rest →
+      AtomReads scope (minus :: input) (.neg operand) rest
+  | not : PrimaryStart input → AtomReads scope input operand rest →
+      AtomReads scope (bang :: input) (.not operand) rest
 
-/-- Higher-precedence operators stay in the right operand. A same-precedence operator
-    belongs to the outer continuation, giving left associativity. -/
+/-- The right operand takes higher-precedence operators. A comparison also
+    refuses a comparison at the head of its continuation. -/
 inductive ExprTail (scope : Scope) :
     Nat → {inputType : Ty .value} → Expr scope inputType → List Token →
       {resultType : Ty .value} → Expr scope resultType → List Token → Prop where
@@ -69,6 +135,18 @@ inductive ExprTail (scope : Scope) :
       ExprReads scope (op.precedence + 1) input right more →
       ExprTail scope minimum (.binary op left right) more tree rest →
       ExprTail scope minimum left (op.token :: input) tree rest
+  | div : minimum ≤ Infix.div.precedence →
+      ExprReads scope (Infix.div.precedence + 1) input (right : Expr scope (.int lo hi)) more →
+      (nonzero : Divisor lo hi) → ExprTail scope minimum (.div left right nonzero) more tree rest →
+      ExprTail scope minimum left (Infix.div.token :: input) tree rest
+  | compare (op : Compare) : minimum ≤ (Infix.compare op).precedence →
+      ExprReads scope ((Infix.compare op).precedence + 1) input right more →
+      (Infix.compare op).follows more → ExprTail scope minimum (.compare op left right) more tree rest →
+      ExprTail scope minimum left ((Infix.compare op).token :: input) tree rest
+  | logic (op : Logic) : minimum ≤ (Infix.logic op).precedence →
+      ExprReads scope ((Infix.logic op).precedence + 1) input right more →
+      ExprTail scope minimum (.logic op left right) more tree rest →
+      ExprTail scope minimum left ((Infix.logic op).token :: input) tree rest
 
 end
 
@@ -79,64 +157,97 @@ theorem AtomReads.lit_inversion
   cases read
   exact ⟨rfl, rfl⟩
 
-/-- One precedence proof for all registered infix operators. Adding an operator
-    only extends the token and precedence tables and the token injectivity proof. -/
+-- Mirror AtomReads.lit_inversion and eliminate the ordinaryLocal exclusion.
+theorem AtomReads.true_inversion (read : AtomReads scope (trueKeyword :: rest) tree suffix) :
+    tree.typed = (Expr.trueLit (scope := scope)).typed ∧ suffix = rest := by
+  sorry
+
+-- Mirror AtomReads.true_inversion.
+theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest) tree suffix) :
+    tree.typed = (Expr.falseLit (scope := scope)).typed ∧ suffix = rest := by
+  sorry
+
+-- Mirror AtomReads.lit_inversion, leaving the lookup evidence existential.
+theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
+    (read : AtomReads scope (.word word :: rest) tree suffix) :
+    ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
+      ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
+  sorry
+
+-- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
+theorem AtomReads.negative_inversion
+    (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
+    tree.typed = (Expr.negativeLit (scope := scope) value).typed ∧ suffix = rest := by
+  sorry
+
+-- Mirror AtomReads.lit_inversion, retaining the operand derivation.
+theorem AtomReads.neg_inversion (start : NegationStart input)
+    (read : AtomReads scope (minus :: input) tree rest) :
+    ∃ (lo hi : Int) (operand : Expr scope (.int lo hi)),
+      AtomReads scope input operand rest ∧ tree.typed = (Expr.neg operand).typed := by
+  sorry
+
+-- Mirror AtomReads.neg_inversion and keep the Boolean type.
+theorem AtomReads.not_inversion (read : AtomReads scope (bang :: input) tree rest) :
+    ∃ operand : Expr scope .bool, PrimaryStart input ∧
+      AtomReads scope input operand rest ∧ tree.typed = (Expr.not operand).typed := by
+  sorry
+
+-- Mirror Arith.token_injective by inducting on the two typed indices.
+theorem Local.visible_unique (a : Local scope type) (b : Local scope type')
+    (visibleA : a.visible) (visibleB : b.visible) (same : a.binding.name.val = b.binding.name.val) :
+    (⟨type, a⟩ : (t : Ty .value) × Local scope t) = ⟨type', b⟩ := by
+  sorry
+
+-- Extend the original mutual ExprReads.deterministic recursor with the new atom and tail branches.
 theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     (right : ExprReads scope minimum input b rest') : a.typed = b.typed ∧ rest = rest' := by
-  revert b rest'
-  refine ExprReads.rec
-    (motive_1 := fun min input _ a rest _ =>
-      ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprReads scope min input b rest' → a.typed = b.typed ∧ rest = rest')
-    (motive_2 := fun input _ a rest _ =>
-      ∀ {otherType} {b : Expr scope otherType} {rest'}, AtomReads scope input b rest' → a.typed = b.typed ∧ rest = rest')
-    (motive_3 := fun min _ first input _ a rest _ =>
-      ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
-    ?_ ?_ ?_ ?_ ?_ left
-  · intro _ _ _ _ _ _ _ _ _ _ atomDet tailDet _ _ _ other
-    cases other with
-    | atom atom tail =>
-      obtain ⟨same, rfl⟩ := atomDet atom
-      cases same
-      exact tailDet tail
-  · intro _ _ _ _ _ other
-    obtain ⟨same, suffix⟩ := other.lit_inversion
-    exact ⟨same.symm, suffix.symm⟩
-  · intro _ _ _ _ _ insideDet _ _ _ other
-    cases other with
-    | grouped inside =>
-      obtain ⟨same, suffix⟩ := insideDet inside
-      exact ⟨same, (List.cons.inj suffix).2⟩
-  · intro _ _ _ _ blocked _ _ _ other
-    cases other with
-    | stop => exact ⟨rfl, rfl⟩
-    | binary op allowed => exact (blocked ⟨op, _, rfl, allowed⟩).elim
-  · intro _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ operandDet tailDet _ _ _ other
-    generalize h : op.token = token at other
-    cases other with
-    | stop blocked => exact (blocked ⟨op, input, congrArg (· :: input) h.symm, allowed⟩).elim
-    | binary op' _ operand tail =>
-      have same := Arith.token_injective h
-      subst op'
-      obtain ⟨same, rfl⟩ := operandDet operand
-      cases same
-      exact tailDet tail
+  sorry
 
-/-- The suffix index delimits an exact source slice, including for grouped and infix children. -/
+-- Extend the original ExprReads.consumes recursor with List.suffix_cons for each new prefix.
 theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : rest <:+ input := by
-  refine ExprReads.rec
-    (motive_1 := fun _ input _ _ rest _ => rest <:+ input)
-    (motive_2 := fun input _ _ rest _ => rest <:+ input)
-    (motive_3 := fun _ _ _ input _ _ rest _ => rest <:+ input)
-    ?_ ?_ ?_ ?_ ?_ read
-  · intro _ _ _ _ _ _ _ _ _ _ atom tail
-    exact tail.trans atom
-  · intro _ _
-    exact List.suffix_cons _ _
-  · intro input _ _ rest _ child
-    exact ((List.suffix_cons closeParen rest).trans child).trans (List.suffix_cons openParen input)
-  · intro _ rest _ _ _
-    exact List.suffix_refl rest
-  · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons op.token input)
+  sorry
+
+-- Mirror AtomReads.lit_inversion at the shared arithmetic tail constructor.
+theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
+    (read : ExprTail scope minimum (left : Expr scope (.int lo₁ hi₁)) (op.token :: input) tree rest) :
+    ∃ (lo₂ hi₂ : Int) (right : Expr scope (.int lo₂ hi₂)) (more : List Token),
+      ExprReads scope (op.precedence + 1) input right more ∧
+      ExprTail scope minimum (.binary op left right) more tree rest := by
+  sorry
+
+-- Mirror ExprTail.arith_inversion and recover the divisor-range evidence.
+theorem ExprTail.div_inversion (allowed : minimum ≤ Infix.div.precedence)
+    (read : ExprTail scope minimum (left : Expr scope (.int lo₁ hi₁)) (Infix.div.token :: input) tree rest) :
+    ∃ (lo₂ hi₂ : Int) (right : Expr scope (.int lo₂ hi₂)) (more : List Token) (nonzero : Divisor lo₂ hi₂),
+      ExprReads scope (Infix.div.precedence + 1) input right more ∧
+      ExprTail scope minimum (.div left right nonzero) more tree rest := by
+  sorry
+
+-- Mirror ExprTail.arith_inversion and recover the guard against an ungrouped comparison.
+theorem ExprTail.compare_inversion (allowed : minimum ≤ (Infix.compare op).precedence)
+    (read : ExprTail scope minimum (left : Expr scope (.int lo₁ hi₁))
+      ((Infix.compare op).token :: input) tree rest) :
+    ∃ (lo₂ hi₂ : Int) (right : Expr scope (.int lo₂ hi₂)) (more : List Token),
+      ExprReads scope ((Infix.compare op).precedence + 1) input right more ∧
+      (Infix.compare op).follows more ∧ ExprTail scope minimum (.compare op left right) more tree rest := by
+  sorry
+
+-- Mirror ExprTail.arith_inversion keeping both operands at Boolean type.
+theorem ExprTail.logic_inversion (allowed : minimum ≤ (Infix.logic op).precedence)
+    (read : ExprTail scope minimum (left : Expr scope .bool)
+      ((Infix.logic op).token :: input) tree rest) :
+    ∃ (right : Expr scope .bool) (more : List Token),
+      ExprReads scope ((Infix.logic op).precedence + 1) input right more ∧
+      ExprTail scope minimum (.logic op left right) more tree rest := by
+  sorry
+
+-- Mirror ExprReads.consumes with the atom motive of the mutual recursor.
+theorem AtomReads.consumes (read : AtomReads scope input tree rest) : rest <:+ input := by
+  sorry
+
+-- Mirror ExprReads.consumes with the tail motive of the mutual recursor.
+theorem ExprTail.consumes (read : ExprTail scope minimum first input tree rest) : rest <:+ input := by
+  sorry
 
 end Gabbro.Core.Ast

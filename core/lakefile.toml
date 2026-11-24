@@ -15,7 +15,7 @@ name = "Core"
 # The package audit runs after the model imports are built and can use all 12 workers.
 roots = []
 globs = ["Core"]
-weakLeanArgs = ["-j12"]
+weakLeanArgs = ["-j12", "-DmaxErrors=0"]
 [[lean_lib]]
 name = "CoreModules"
 roots = []

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Quellform
+public import Core.Ast.Semantik.BatchForms
 
 @[expose] public section
 
@@ -39,14 +39,49 @@ def LetErfuellbar : Prop :=
 def nichtSpezifiziert (constructor : Name) : RegistrySchema constructor :=
   ⟨.core, ⟨.core False, False, False, False, False, False, False⟩⟩
 
+theorem differentLabels {a b : String} {left right : Name} (different : a ≠ b) :
+    Name.str left a ≠ Name.str right b :=
+  fun same => different (Name.str.inj same).2
+
 def exprSchema (constructor : Name) : RegistrySchema constructor :=
-  if constructor = ``Expr.lit then ⟨.surface, Quellform.statements literalForm LiteralErfuellbar constructor⟩
+  if constructor = ``Expr.lit then
+    ⟨.surface, Quellform.statements literalForm LiteralErfuellbar constructor⟩
   else if constructor = ``Expr.binary then
     ⟨.surface, Quellform.statements binaryForm BinaryErfuellbar constructor⟩
+  else if constructor = ``Expr.trueLit then
+    ⟨.surface, Quellform.statements trueLitForm trueLitJoint constructor⟩
+  else if constructor = ``Expr.falseLit then
+    ⟨.surface, Quellform.statements falseLitForm falseLitJoint constructor⟩
+  else if constructor = ``Expr.variable then
+    ⟨.surface, Quellform.statements variableForm variableJoint constructor⟩
+  else if constructor = ``Expr.negativeLit then
+    ⟨.surface, Quellform.statements negativeLitForm negativeLitJoint constructor⟩
+  else if constructor = ``Expr.neg then
+    ⟨.surface, Quellform.statements negForm negJoint constructor⟩
+  else if constructor = ``Expr.not then
+    ⟨.surface, Quellform.statements notValueForm notValueJoint constructor⟩
+  else if constructor = ``Expr.div then
+    ⟨.surface, Quellform.statements divisionForm divisionJoint constructor⟩
+  else if constructor = ``Expr.compare then
+    ⟨.surface, Quellform.statements comparisonForm comparisonJoint constructor⟩
+  else if constructor = ``Expr.logic then
+    ⟨.surface, Quellform.statements logicForm logicJoint constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=
-  if constructor = ``Stmt.letValue then ⟨.surface, Quellform.statements letForm LetErfuellbar constructor⟩
+  if constructor = ``Stmt.letValue then
+    ⟨.surface, Quellform.statements letForm LetErfuellbar constructor⟩
+  else if constructor = ``Stmt.assignVar then
+    ⟨.surface, Quellform.statements assignVarForm assignVarJoint constructor⟩
+  else if constructor = ``Stmt.ret then
+    ⟨.surface, Quellform.statements returnValueForm returnValueJoint constructor⟩
+  else if constructor = ``Stmt.ite then
+    ⟨.surface, Quellform.statements ifElseForm ifElseJoint constructor⟩
+  else nichtSpezifiziert constructor
+
+def bracedSchema (constructor : Name) : RegistrySchema constructor :=
+  if constructor = ``BracedBlock.braces then
+    ⟨.surface, Quellform.statements bracedForm bracedJoint constructor⟩
   else nichtSpezifiziert constructor
 
 end Gabbro.Core.Ast.Semantik

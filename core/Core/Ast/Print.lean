@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Statement
+public import Core.Ast.Expression
 public import Core.Text.Printing
 import Init.Data.Nat.ToString
 import Init.Omega
@@ -38,9 +38,11 @@ theorem tokenHead (same : [c].head? = some first) (normal : UnquotedStart c) :
     UnquotedStart first :=
   (Option.some.inj same) ▸ normal
 
-theorem punctuationHead (member : c ∈ ['+', '*', '(', ')', '=', ';', '{', '}']) : UnquotedStart c := by
+theorem punctuationHead
+    (member : c ∈ ['+', '*', '(', ')', '=', ';', '{', '}', '-', '!', '<', '>', '&', '|']) :
+    UnquotedStart c := by
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     refine ⟨?_, ?_, ?_, ?_⟩ <;>
     first
     | (simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true])
@@ -52,6 +54,10 @@ def Arith.print : Arith → PrintedToken
   | .mul => printPunctuation "*" (by
       simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
       (fun _ same => tokenHead same (punctuationHead (List.mem_cons_of_mem _ List.mem_cons_self)))
+  | .sub => printPunctuation "-" (by
+      simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+      (fun _ same => tokenHead (c := '-') same (punctuationHead (by
+        simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
 theorem Arith.print_value (op : Arith) : op.print.value = op.token := by
   cases op <;> rfl
@@ -86,19 +92,87 @@ def printCloseBrace : PrintedToken := printPunctuation "}" (by
   (fun _ same => tokenHead (c := '}') same (punctuationHead (by
     simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
-def letName : Identifier := ⟨['l', 'e', 't'], 'l', ['e', 't'], rfl, by
-  exact Or.inl (Or.inl ⟨by change 97 ≤ 108; omega, by change 108 ≤ 122; omega⟩), by
-  intro c member
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl
-  · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 101; omega, by change 101 ≤ 122; omega⟩))
-  · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 116; omega, by change 116 ≤ 122; omega⟩))⟩
+def printBang : PrintedToken := printPunctuation "!" (by
+    simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '!') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+def Compare.print (op : Compare) : PrintedToken := printPunctuation op.spelling
+  (by cases op <;> simp only [Compare.spelling, punctuation, List.mem_cons,
+    String.reduceEq, true_or, false_or]) (by
+    intro c head
+    apply punctuationHead
+    cases op <;> simp only [Compare.spelling, String.reduceToList, List.head?_cons] at head <;>
+      obtain rfl := Option.some.inj head <;>
+      simp only [List.mem_cons, Char.reduceEq, true_or, false_or])
+
+def Logic.print (op : Logic) : PrintedToken := printPunctuation op.spelling
+  (by cases op <;> simp only [Logic.spelling, punctuation, List.mem_cons,
+    String.reduceEq, true_or, false_or]) (by
+    intro c head
+    apply punctuationHead
+    cases op <;> simp only [Logic.spelling, String.reduceToList, List.head?_cons] at head <;>
+      obtain rfl := Option.some.inj head <;>
+      simp only [List.mem_cons, Char.reduceEq, true_or, false_or])
+
+def keywordName (c : Char) (rest : List Char) (lower : 'a' ≤ c ∧ c ≤ 'z')
+    (lowers : ∀ a ∈ rest, 'a' ≤ a ∧ a ≤ 'z') : Identifier :=
+  ⟨c :: rest, c, rest, rfl, .inl (.inl lower),
+    fun a member => .inl (.inl (.inl (lowers a member)))⟩
+
+def letName : Identifier := keywordName 'l' ['e', 't']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> decide)
+
+def trueName : Identifier := keywordName 't' ['r', 'u', 'e']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> decide)
+
+def falseName : Identifier := keywordName 'f' ['a', 'l', 's', 'e']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl <;> decide)
+
+def ifName : Identifier := keywordName 'i' ['f']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl <;> decide)
+
+def elseName : Identifier := keywordName 'e' ['l', 's', 'e']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> decide)
+
+def returnName : Identifier := keywordName 'r' ['e', 't', 'u', 'r', 'n']
+  (by decide) (by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl <;> decide)
 
 /-- Parenthesise each binary node. This gives a canonical, precedence-independent
     rendering of a tree, while the grammar also admits ordinary infix spelling. -/
 def Expr.printPieces : Expr scope type → List PrintedToken
   | .lit value => [printInteger value]
   | .binary op left right =>
+    [printOpen] ++ left.printPieces ++ [op.print] ++ right.printPieces ++ [printClose]
+  | .trueLit => [trueName.print]
+  | .falseLit => [falseName.print]
+  | .variable ref _ _ => [ref.binding.name.print]
+  | .negativeLit magnitude => [Arith.sub.print, printInteger magnitude]
+  | .neg operand => [Arith.sub.print, printOpen] ++ operand.printPieces ++ [printClose]
+  | .not operand => [printBang, printOpen] ++ operand.printPieces ++ [printClose]
+  | .div left right _ =>
+    [printOpen] ++ left.printPieces ++ [PrintedToken.slash] ++ right.printPieces ++ [printClose]
+  | .compare op left right =>
+    [printOpen] ++ left.printPieces ++ [op.print] ++ right.printPieces ++ [printClose]
+  | .logic op left right =>
     [printOpen] ++ left.printPieces ++ [op.print] ++ right.printPieces ++ [printClose]
 
 def Expr.printTokens (tree : Expr scope type) : List Token :=
@@ -112,41 +186,13 @@ theorem Expr.printTokens_binary (op : Arith) (left : Expr scope (.int lo₁ hi�
     Arith.print_value]
   rfl
 
+-- Extend the original Expr.printAtom using the leaf or grouped productions.
 theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     AtomReads scope (tree.printTokens ++ rest) tree rest := by
-  induction tree generalizing rest with
-  | lit value => exact .lit
-  | binary op left right leftIH rightIH =>
-    simp only [Expr.printTokens_binary, List.append_assoc, List.singleton_append]
-    apply AtomReads.grouped
-    apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
-    exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
-      (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
+  sorry
 
 theorem Expr.printReads (tree : Expr scope type) (blocked : ¬ Continues minimum rest) :
     ExprReads scope minimum (tree.printTokens ++ rest) tree rest :=
   .atom (tree.printAtom rest) (.stop blocked)
-
-def Stmt.printPieces : Stmt before after → List PrintedToken
-  | .letValue name _ value =>
-    [letName.print, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
-
-def Stmt.printTokens (tree : Stmt before after) : List Token :=
-  tree.printPieces.map PrintedToken.value
-
-theorem Stmt.printTokens_let (name : Identifier) (ordinary : name.val ≠ "mut".toList)
-    (value : Expr scope type) :
-    (Stmt.letValue name ordinary value).printTokens =
-      [letKeyword, .word name.val, assignment] ++ value.printTokens ++ [semicolon] := by
-  simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append,
-    List.map_cons, List.map_nil]
-  rfl
-
-theorem Stmt.printReads (tree : Stmt before after) (rest : List Token) :
-    StmtReads before (tree.printTokens ++ rest) ⟨after, tree⟩ rest := by
-  cases tree with
-  | letValue name ordinary value =>
-    simp only [Stmt.printTokens_let, List.append_assoc, List.cons_append, List.nil_append]
-    exact .letBinding name ordinary (value.printReads noOperatorAtSemicolon) .plain
 
 end Gabbro.Core.Ast

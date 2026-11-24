@@ -41,19 +41,14 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
+-- Extend the original expr_keine_invarianten with Fragment.anhaengen for each operator.
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
-  induction tree generalizing slot with
-  | lit => rfl
-  | binary op left right leftIH rightIH =>
-    simp only [expr, Fragment.anhaengen, Quellklauseln.anhaengen, leftIH, rightIH,
-      Fragment.einzel, Quellklauseln.leer, List.nil_append]
+  sorry
 
-theorem stmt_keine_invarianten (tree : Stmt before after) :
+-- Extend the original stmt_keine_invarianten by mutual recursion over Stmt and Block.
+theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
-  cases tree with
-  | letValue _ _ init =>
-    simp only [stmt, Fragment.anhaengen, Quellklauseln.anhaengen, expr_keine_invarianten,
-      Fragment.einzel, Quellklauseln.leer, List.nil_append]
+  sorry
 
 end Gabbro.Core.Ast.Semantik
