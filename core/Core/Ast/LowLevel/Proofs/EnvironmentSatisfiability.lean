@@ -85,7 +85,8 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
     intro e present
     obtain rfl := List.mem_singleton.mp present
     refine ⟨?_, rfl⟩
-    simp [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte, FirmwareZeile.endpunkt]
+    simp only [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
+      FirmwareZeile.endpunkt, List.map_cons, List.mem_append, List.mem_cons, or_true, true_or]
   have accepted : Akzeptiert E := by
     apply Fragment.akzeptiert_ohne_bedarf _ _ rfl
     intro b present frame
