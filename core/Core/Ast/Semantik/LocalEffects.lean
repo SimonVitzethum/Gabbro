@@ -30,8 +30,8 @@ private theorem wertInhalt_widen (fits : Fits source target) (value : Wert sourc
   cases source
   case array source count =>
     cases count <;> cases target
-    case zero.array target other => cases other
-    case succ.array n target other => cases other
+    case zero.array target other => cases other <;> first | rfl | cases fits <;> rfl
+    case succ.array n target other => cases other <;> first | rfl | cases fits <;> rfl
     all_goals first | rfl | cases fits <;> rfl
   all_goals
     cases target <;> first | rfl | cases fits <;> rfl
