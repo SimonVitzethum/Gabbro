@@ -363,6 +363,41 @@ theorem w_uebergabe1 : SperrZustand.abgeben ⟨some stuckHalter, [A, B]⟩ = ⟨
 
 theorem w_uebergabe2 : SperrZustand.abgeben ⟨some A, [B]⟩ = ⟨some B, []⟩ := rfl
 
+/-- A handover with a later release refutes the unscoped persistence premise — the old
+    `WartePraemissen.hbleibt` cannot hold on any run that hands the lock over and lets the
+    waiter release it. -/
+theorem bleibt_bricht_nach_abgabe {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a : Nat}
+    (hbleibt : ∀ t s, a ≤ t → ρ.zeit.zustand t = some s →
+      (s.sperren l).besitzer ≠ some c → c ∈ (s.sperren l).schlange)
+    {b s_b : Nat} {_s : Zustand L Ort Wert Raum Lok Grund}
+    (hab : a ≤ b) (_hzb : ρ.zeit.zustand b = some _s)
+    (_hown : (_s.sperren l).besitzer = some c)
+    {t : Nat} {s : Zustand L Ort Wert Raum Lok Grund}
+    (hlt : b ≤ t) (hzt : ρ.zeit.zustand t = some s)
+    (hfr : (s.sperren l).besitzer ≠ some c) (hweg : c ∉ (s.sperren l).schlange) :
+    False :=
+  hweg (hbleibt t s (hab.trans hlt) hzt hfr)
+
+/-- A crash refutes the unscoped persistence premise — the restart wipes the queue while the
+    waiter is not the owner. -/
+theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a k : Nat}
+    (hbleibt : ∀ t s, a ≤ t → ρ.zeit.zustand t = some s →
+      (s.sperren l).besitzer ≠ some c → c ∈ (s.sperren l).schlange)
+    {sk s' : Zustand L Ort Wert Raum Lok Grund}
+    (hle : a ≤ k)
+    (hz1 : ρ.zeit.zustand (k + 1) = some s')
+    (hcrash : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
+      E.katalog ρ.hw k sk absturzSpur s') :
+    False := by
+  have hq := hbleibt (k + 1) s' (Nat.le_succ_of_le hle) hz1 ?_
+  · have hempty := (absturz_leert_schlange (l := l) hcrash).1
+    rw [hempty] at hq
+    exact (List.not_mem_nil hq).elim
+  · have hfree := (absturz_leert_schlange (l := l) hcrash).2
+    rw [hfree]
+    intro hcontra
+    nomatch hcontra
+
 /-- MISSING CHECKER RULE (B13 remainder), pinned for Hy4: an accepted unit hands every held
     lock off within the declared hold bound plus the release step, on crash-free fair runs.
     `SperrGegenbeispiel.halte_gibt_nicht_ab` proves `HalteSchranken` plus hardware fairness do

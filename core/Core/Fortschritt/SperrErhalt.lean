@@ -489,36 +489,4 @@ theorem mono_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t t₁ t
           (Or.inr ⟨a', d', _, next, hss', rfl, hown'⟩)
         omega
 
-/-- A handover with a later release refutes the unscoped persistence premise. -/
-theorem bleibt_bricht_nach_abgabe {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a : Nat}
-    (hbleibt : ∀ t s, a ≤ t → ρ.zeit.zustand t = some s →
-      (s.sperren l).besitzer ≠ some c → c ∈ (s.sperren l).schlange)
-    {b s_b : Nat} {_s : Zustand L Ort Wert Raum Lok Grund}
-    (hab : a ≤ b) (_hzb : ρ.zeit.zustand b = some _s)
-    (_hown : (_s.sperren l).besitzer = some c)
-    {t : Nat} {s : Zustand L Ort Wert Raum Lok Grund}
-    (hlt : b ≤ t) (hzt : ρ.zeit.zustand t = some s)
-    (hfr : (s.sperren l).besitzer ≠ some c) (hweg : c ∉ (s.sperren l).schlange) :
-    False :=
-  hweg (hbleibt t s (hab.trans hlt) hzt hfr)
-
-/-- A crash refutes the unscoped persistence premise. -/
-theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a k : Nat}
-    (hbleibt : ∀ t s, a ≤ t → ρ.zeit.zustand t = some s →
-      (s.sperren l).besitzer ≠ some c → c ∈ (s.sperren l).schlange)
-    {sk s' : Zustand L Ort Wert Raum Lok Grund}
-    (hle : a ≤ k)
-    (hz1 : ρ.zeit.zustand (k + 1) = some s')
-    (hcrash : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
-      E.katalog ρ.hw k sk absturzSpur s') :
-    False := by
-  have hq := hbleibt (k + 1) s' (Nat.le_succ_of_le hle) hz1 ?_
-  · have hempty := (absturz_leert_schlange (l := l) hcrash).1
-    rw [hempty] at hq
-    exact (List.not_mem_nil hq).elim
-  · have hfree := (absturz_leert_schlange (l := l) hcrash).2
-    rw [hfree]
-    intro hcontra
-    nomatch hcontra
-
 end Gabbro.Core.Fortschritt
