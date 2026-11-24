@@ -59,7 +59,7 @@ theorem substrat_rice (s : SimulationsSubstrat) (Q : List Befehl → Prop)
         have h2 : some (s.programm c) = some p := by
           rw [← s.dekodiere_links (s.programm c)]
           exact hp
-        have hpeq : p = s.programm c := (Option.some_injective h2).symm
+        have hpeq : p = s.programm c := (Option.some_inj.mp h2).symm
         subst hpeq
         exact hQ⟩
   intro hQ

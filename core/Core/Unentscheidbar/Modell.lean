@@ -90,7 +90,7 @@ theorem kodiere_injektiv (s : SimulationsSubstrat) :
   have h2 := s.dekodiere_links p₂
   rw [h] at h1
   have h3 : some p₁ = some p₂ := h1.symm.trans h2
-  exact Option.some_injective h3
+  exact Option.some_inj.mp h3
 
 theorem erreicht_refl (prog : List Befehl) (r : Rahmen) : Erreicht prog r r :=
   ⟨0, rfl⟩
