@@ -89,6 +89,7 @@ public import Core.Beobachtung.SchrankenB9B21Pflichten
 public import Core.Beobachtung.Unentscheidbar.Modell
 public import Core.Beobachtung.Unentscheidbar.Reduktion
 public import Core.Beobachtung.Unentscheidbar.Rice
+public import Core.Beobachtung.SchrankenBeweise.Leicht
 meta import Core.Waechter.Check
 
 #check_core
