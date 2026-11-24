@@ -16,11 +16,16 @@ def word (head : Char) (tail : List Char) (first : isNameStart head)
     (others : ∀ c ∈ tail, isNamePart c) : PrintedToken :=
   Identifier.print ⟨head :: tail, head, tail, rfl, first, others⟩
 
-macro "lowWord" head:char tail:str : term =>
-  `(word $head ($tail).toList
-    (.inl (.inl (by
-      simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
-    (by
+/-- An ordinary reducible function over a closed head and tail. Every call site passes
+    literal characters, so the spelling proofs are supplied by the default tactics and
+    callers keep writing `lowWord 'p' "hysical"`. This replaces the former term-form
+    macro: the spelling is a function application, not a piece of syntax. -/
+abbrev lowWord (head : Char) (tail : String)
+    (first : isNameStart head := by
+      apply Or.inl
+      apply Or.inl
+      simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)
+    (others : ∀ c ∈ tail.toList, isNamePart c := by
       simp only [String.reduceToList, List.forall_mem_cons, List.forall_mem_nil, and_true]
       repeat' apply And.intro
       all_goals first
@@ -29,7 +34,8 @@ macro "lowWord" head:char tail:str : term =>
       | apply Or.inl; apply Or.inl; apply Or.inl
         simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide
       | apply Or.inr
-        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide))
+        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide) : PrintedToken :=
+  word head tail.toList first others
 
 def AddressSpace.print : AddressSpace → PrintedToken
   | .physical => lowWord 'p' "hysical"
