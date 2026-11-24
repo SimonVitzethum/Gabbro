@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Exec.State
+public import Core.Ast.LowLevel.Exec.Syntax
 
 @[expose] public section
 
@@ -40,7 +41,8 @@ def elaborateExec (scope : ExecScope) : ExecTree form → Option ExecInstruction
   | .waitInterrupt => some .waitInterrupt
   | .stopCore => some .stopCore
   | .entryDecl name kind stack priority =>
-      (scope.entries.idxOf? name.val).map (fun _ => .declareEntry name kind stack priority)
+      (List.idxOf? name.val (scope.entries.map Subtype.val)).map
+        (fun _ => .declareEntry name kind stack priority)
 
 /-- The first declared state is the arrival state: declaring it starts the
     core in that state. Later declarations only extend the table. -/
@@ -70,7 +72,9 @@ def ExecInstruction.evaluate (op : ExecInstruction) (s : ExecState) (c : Kontext
             | .on, some sp => sp < frame.spaces.length
             | .off, none => True
             | _, _ => False) then
-        pure { frame with result := some (.jumpedLong target dest), current := some dest,
+        pure { frame with
+          result := some (.jumpedLong target dest)
+          current := some dest
           activeSpace := space }
       else none
   | .waitInterrupt =>
