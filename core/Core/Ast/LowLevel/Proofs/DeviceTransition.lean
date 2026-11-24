@@ -24,8 +24,9 @@ def RegisterTransitionAussage : Prop :=
 
 theorem device_transition : RegisterTransitionAussage := by
   refine ⟨register_befugt, register_aussenLokal, register_commit, register_safety, ?_⟩
-  intro k decl c before plan next step
-  dsimp only at step ⊢
+  intro k decl c before plan next
+  dsimp only
+  intro step
   refine ⟨decl.changes.rule, ?_⟩
   cases step with
   | issue _ _ =>
