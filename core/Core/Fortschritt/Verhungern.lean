@@ -135,7 +135,10 @@ def taktABρ (t : Nat) : Takt
       ⟨0, hw2_opp0 h, by rw [zABρ_kerne]; exact zAB0_dispatch0,
         by rw [zABρ_status]; exact zAB0_live _⟩
       ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZABρ t))))
-  · have h1 : t % 2 = 1 := by omega
+  · have h1 : t % 2 = 1 := by
+      rcases Nat.mod_two_eq_zero_or_one t with h0 | h1
+      · exact (h h0).elim
+      · exact h1
     have hz : ZABρ (t + 1) = toggleUpdate B (ZABρ t) := by
       have : ctxAB t = B := by simp only [ctxAB, if_neg h]
       simp only [ZABρ, this]
@@ -232,7 +235,10 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
             | succ m =>
               rw [zAB0_dispatchN m] at hk
               cases hk
-        have h1 : t % 2 = 1 := by omega
+        have h1 : t % 2 = 1 := by
+          rcases Nat.mod_two_eq_zero_or_one t with h0 | h1
+          · exact (h h0).elim
+          · exact h1
         rw [hk0]
         exact hw2_opp0_neg h1
     | succ n =>
@@ -258,7 +264,10 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
                 cases hk
           rw [hk1]
           exact hw2_opp1_neg h
-        · have h1 : t % 2 = 1 := by omega
+        · have h1 : t % 2 = 1 := by
+            rcases Nat.mod_two_eq_zero_or_one t with h0 | h1
+            · exact (h h0).elim
+            · exact h1
           exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
             I.Schritt.kontext (hw2_crash t)
               ⟨1, hw2_opp1 h1, by rw [ηAB_zustand, zAB_kerne]; exact zAB0_dispatch1, hlive⟩
@@ -271,7 +280,13 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
     match hm : a % 2 with
     | 0 => exact ⟨a, Nat.le_refl _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq hm⟩⟩
     | _ + 1 =>
-      have h1 : (a + 1) % 2 = 0 := by omega
+      have ha1 : a % 2 = 1 := by
+        rcases Nat.mod_two_eq_zero_or_one a with ha0 | ha1
+        · rw [ha0] at hm
+          cases hm
+        · exact ha1
+      have h1 : (a + 1) % 2 = 0 := by
+        rw [← Nat.mod_add_mod a 2 1, ha1]
       exact ⟨a + 1, Nat.le_succ _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq h1⟩⟩
 
 /-- … but `waitFree` fails for `B`: unboundedly many own steps, never discharged. -/

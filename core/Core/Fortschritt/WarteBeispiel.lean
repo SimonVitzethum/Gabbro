@@ -101,7 +101,7 @@ def e1AusfuehrB :
       ((E_1).einrichtung.sperrOrt ()) (S_c.initial ((E_1).einrichtung.sperrOrt ())),
     S_d,
     .sperre (.ticket (fun h => by cases h)
-      (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h))) (fun w => (w rfl).elim),
+      (fun h => by cases List.mem_singleton.mp h)) (fun w => (w rfl).elim),
     by exact .nil _, rfl⟩
 
 def zwSt : Nat → Zustand Unit Unit Unit Unit Bool Unit
@@ -156,11 +156,18 @@ theorem spurw0 : spurw 0 = some ticketA := rfl
 theorem spurw1 : spurw 1 = some ticketB := rfl
 
 theorem spurw_ge2 (n : Nat) (h : (n + 2) % 2 = 0) : spurw (n + 2) = some ticketA := by
-  have hn : n % 2 = 0 := by omega
+  have hn : n % 2 = 0 := by
+    have hmod : (n + 2) % 2 = n % 2 := Nat.add_mul_mod_self_left n 2 1
+    rw [hmod] at h
+    exact h
   simp only [spurw, if_pos hn]
 
 theorem spurw_ge2' (n : Nat) (h : (n + 2) % 2 = 1) : spurw (n + 2) = some ticketB := by
-  have hn : ¬ n % 2 = 0 := by omega
+  have hn : ¬ n % 2 = 0 := by
+    intro hn0
+    have hmod : (n + 2) % 2 = n % 2 := Nat.add_mul_mod_self_left n 2 1
+    rw [hmod, hn0] at h
+    cases h
   simp only [spurw, if_neg hn]
 
 def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t (zw t) (spurw t) (zw (t + 1))
@@ -173,7 +180,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
     .schritt spurw1 (.schritt (ImplSchritt.kontext (hw2_crash 1)
       ⟨1, hw2_opp1 rfl, rfl, rfl⟩
       ⟨(), rfl, Or.inl ⟨_, .ticket (fun h => by cases h)
-        (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h)), rfl, rfl⟩⟩
+        (fun h => by cases List.mem_singleton.mp h), rfl, rfl⟩⟩
       e1AusfuehrB))
   | n + 2 => by
     by_cases hpar : (n + 2) % 2 = 0
@@ -181,10 +188,10 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
       have hsp : spurw (n + 2) = some ticketA := spurw_ge2 n hpar
       have hcur : zw (n + 2) = some S_d := by
         have h : zw (n + 2) = some (zwSt (n + 2)) := rfl
-        rw [h, zwSt_ge2 _ (by omega)]
+        rw [h, zwSt_ge2 _ (Nat.le_add_left 2 n)]
       have hnxt : zw ((n + 2) + 1) = some S_d := by
         have h : zw ((n + 2) + 1) = some (zwSt ((n + 2) + 1)) := rfl
-        rw [h, zwSt_ge2 _ (by omega)]
+        rw [h, zwSt_ge2 _ (Nat.le_trans (Nat.le_add_left 2 n) (Nat.le_succ _))]
       have hker : (S_d.kerne 0).laeuft = some A := rfl
       have hlive : S_d.status A = Status.laeuft := rfl
       rw [hsp, hcur, hnxt]
@@ -193,14 +200,17 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
         ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
         (e1StotterAusfuehr (n + 2) A S_d)))
     · -- Odd tick: B stutters on core 1; the state stays put.
-      have h1 : (n + 2) % 2 = 1 := by omega
+      have h1 : (n + 2) % 2 = 1 := by
+        rcases Nat.mod_two_eq_zero_or_one (n + 2) with h0 | h1
+        · exact (hpar h0).elim
+        · exact h1
       have hsp : spurw (n + 2) = some ticketB := spurw_ge2' n h1
       have hcur : zw (n + 2) = some S_d := by
         have h : zw (n + 2) = some (zwSt (n + 2)) := rfl
-        rw [h, zwSt_ge2 _ (by omega)]
+        rw [h, zwSt_ge2 _ (Nat.le_add_left 2 n)]
       have hnxt : zw ((n + 2) + 1) = some S_d := by
         have h : zw ((n + 2) + 1) = some (zwSt ((n + 2) + 1)) := rfl
-        rw [h, zwSt_ge2 _ (by omega)]
+        rw [h, zwSt_ge2 _ (Nat.le_trans (Nat.le_add_left 2 n) (Nat.le_succ _))]
       have hker : (S_d.kerne 1).laeuft = some B := rfl
       have hlive : S_d.status B = Status.laeuft := rfl
       rw [hsp, hcur, hnxt]
