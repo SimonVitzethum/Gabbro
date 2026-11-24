@@ -72,9 +72,13 @@ theorem geraet_erfuellbar :
     ∃ (d : GeraeteDaten) (z : ZielDaten) (darlehen : Leihe) (zugriff : DmaZugriff),
       GeraeteUebergang d z .ready (.lend darlehen) (.lending darlehen) ∧
         dma d (.lending darlehen) darlehen zugriff := by
-  refine ⟨Plattform.virtio .x86_64, Plattform.x86_64.ziel, ⟨7, ⟨0, 4096⟩, true, true⟩,
-    DmaZugriff.read 7 0 1, .lend rfl ?_, ⟨rfl, rfl, by omega, by omega⟩⟩
-  simp only [Strecke.seiten, ZielDaten.seitengranule, Plattform.ziel, Nat.reducePow]
-  exact ⟨by omega, by omega, Nat.zero_mod _, Nat.mod_self _⟩
+  have seitenOk : (⟨0, 4096⟩ : Strecke).seiten (Plattform.x86_64.ziel) := by
+    simp only [Strecke.seiten, ZielDaten.seitengranule, Plattform.ziel, Nat.reducePow]
+    exact ⟨by omega, by omega, trivial, trivial⟩
+  have erlaubtOk : (⟨7, ⟨0, 4096⟩, true, true⟩ : Leihe).erlaubt
+      (DmaZugriff.read 7 0 1) := by
+    refine ⟨rfl, rfl, by omega, by omega⟩
+  exact ⟨Plattform.virtio .x86_64, Plattform.x86_64.ziel, ⟨7, ⟨0, 4096⟩, true, true⟩,
+    DmaZugriff.read 7 0 1, .lend rfl seitenOk, ⟨rfl, rfl, erlaubtOk⟩⟩
 
 end Gabbro.Core.Aussen

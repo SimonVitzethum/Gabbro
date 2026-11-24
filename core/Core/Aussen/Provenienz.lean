@@ -76,20 +76,21 @@ theorem propagierung_monoton {P P' : Provenienz} (step : PropSchritt P P')
   | antwort a => exact h
 
 /-- A derivation tree: how a value was built from outside answers. -/
-inductive Abgeleitet (A : Type) : Wert A → Antwort → Prop
-  | direkt (a : Antwort) (x : A) : Abgeleitet (ausAntwort a x) a
+inductive Abgeleitet : {A : Type} → Wert A → Antwort → Prop
+  | direkt {A : Type} (a : Antwort) (x : A) : Abgeleitet (ausAntwort a x) a
   | griff (a : Antwort) (h : Handle) : Abgeleitet (griffAus a h) a
-  | links {B C : Type} {u : Wert B} {v : Wert C} {x : A}
+  | links {A B C : Type} {u : Wert B} {v : Wert C} {x : A} {a : Antwort}
       (h : Abgeleitet u a) : Abgeleitet (kombiniere u v x) a
-  | rechts {B C : Type} {u : Wert B} {v : Wert C} {x : A}
+  | rechts {A B C : Type} {u : Wert B} {v : Wert C} {x : A} {a : Antwort}
       (h : Abgeleitet v a) : Abgeleitet (kombiniere u v x) a
-  | bedingung {c : Wert Bool} {t e : Wert A} {x : A}
+  | bedingung {A : Type} {c : Wert Bool} {t e : Wert A} {x : A} {a : Antwort}
       (h : Abgeleitet c a) : Abgeleitet (verzweige c t e x) a
-  | zweigLinks {c : Wert Bool} {t e : Wert A} {x : A}
+  | zweigLinks {A : Type} {c : Wert Bool} {t e : Wert A} {x : A} {a : Antwort}
       (h : Abgeleitet t a) : Abgeleitet (verzweige c t e x) a
-  | zweigRechts {c : Wert Bool} {t e : Wert A} {x : A}
+  | zweigRechts {A : Type} {c : Wert Bool} {t e : Wert A} {x : A} {a : Antwort}
       (h : Abgeleitet e a) : Abgeleitet (verzweige c t e x) a
-  | alias {u : Wert A} (h : Abgeleitet u a) : Abgeleitet (aliasWeiter u) a
+  | alias {A : Type} {u : Wert A} {a : Antwort}
+      (h : Abgeleitet u a) : Abgeleitet (aliasWeiter u) a
 
 /-- **Every value derived from an outside answer carries its provenance**: the answer's
     object and generation are in the value's label. -/

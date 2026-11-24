@@ -63,16 +63,19 @@ theorem fruehere_antwort_ungueltig (p : Plattform) (s₁ : AussenSicht) (q : Fra
     (ninstabil : ¬ ReihenStabil p t.handle.origin.object) :
     ∃ s₂ : AussenSicht, (∀ o, (s₂.objects o).alive = false) ∧
       ¬ GueltigBeiCommit p s₂ q := by
-  refine ⟨{ s₁ with objects := fun _ => ⟨0, false, false, [], fun _ => 0⟩ },
-    fun _ => rfl, ?_⟩
-  intro hval
-  cases hval with
-  | frisch alle =>
-    have htrue := (List.all_eq_true.mp alle) t mem
-    have hfalse := tot_gueltig_falsch _ q.endpoint t (fun _ => rfl)
-    rw [hfalse] at htrue
-    exact Bool.false_ne_true htrue
-  | stabil fest => exact ninstabil (fest t mem)
+  refine ⟨{ s₁ with objects := fun _ => ⟨0, false, false, [], fun _ => 0⟩ }, ?_, ?_⟩
+  · intro o
+    rfl
+  · intro hval
+    cases hval with
+    | frisch alle =>
+      have htrue := (List.all_eq_true.mp alle) t mem
+      have hfalse := tot_gueltig_falsch
+        ({ s₁ with objects := fun _ => ⟨0, false, false, [], fun _ => 0⟩ } : AussenSicht)
+        q.endpoint t (fun _ => rfl)
+      rw [hfalse] at htrue
+      exact Bool.false_ne_true htrue
+    | stabil fest => exact ninstabil (fest t mem)
 
 /-- **An atomically revalidated operation is valid at commit even when its choice depended
     on an earlier answer**: the commit snapshot establishes every touched identity, right,
@@ -85,24 +88,29 @@ theorem revalidiert_gueltig (p : Plattform) (s : AussenSicht) (q : Frage) (a : A
   subst entschieden
   cases hv : a.result with
   | ok v => exact .frisch (List.all_eq_true.mpr (atomar_aktuell antwort hv).2.2)
-  | error e => exact Bool.false_ne_true erfolg
+  | error e =>
+    rw [hv] at erfolg
+    simp only [Except.isOk] at erfolg
+    exact Bool.false_ne_true erfolg
 
-/-- Satisfiability: a hosted read is valid at commit, and some outside kills it. -/
+/-- Satisfiability: a hosted read is valid at commit. -/
 theorem gueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :
     ∃ s q a, GueltigBeiCommit p s q ∧ atomar p s q = .antwort a ∧
       a.result.isOk = true := by
   obtain ⟨s, q, a, _, _, reply, result⟩ := hosted_lesen_erfuellbar p bytes
-  have ok : a.result.isOk = true := by rw [result]
+  have ok : a.result.isOk = true := by simp only [result, Except.isOk]
   exact ⟨s, q, a,
     .frisch (List.all_eq_true.mpr (atomar_aktuell reply result).2.2), reply, ok⟩
 
-/-- Satisfiability of the negative bundle: a hosted question with no row stability. -/
+/-- Satisfiability of the negative bundle: an earlier hosted answer succeeds, and a
+    changed outside with no row stability kills the same question. -/
 theorem ungueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :
-    ∃ s₁ q s₂, (∀ o, (s₂.objects o).alive = false) ∧
-      ¬ GueltigBeiCommit p s₂ q := by
-  obtain ⟨s, q, a, _, _, _, _⟩ := hosted_lesen_erfuellbar p bytes
+    ∃ s₁ q a s₂, atomar p s₁ q = .antwort a ∧ a.result.isOk = true ∧
+      (∀ o, (s₂.objects o).alive = false) ∧ ¬ GueltigBeiCommit p s₂ q := by
+  obtain ⟨s, q, a, _, _, reply, result⟩ := hosted_lesen_erfuellbar p bytes
+  have ok : a.result.isOk = true := by simp only [result, Except.isOk]
   obtain ⟨s₂, tot, nval⟩ := fruehere_antwort_ungueltig p s q
     ⟨q.handle, q.operation.required⟩ List.mem_cons_self (reihe_instabil p _)
-  exact ⟨s, q, s₂, tot, nval⟩
+  exact ⟨s, q, a, s₂, reply, ok, tot, nval⟩
 
 end Gabbro.Core.Aussen
