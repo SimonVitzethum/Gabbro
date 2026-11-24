@@ -75,12 +75,14 @@ theorem StmtReads.let_header
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
-  generalize hs : spelling = word at read
+  generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
   cases read with
   | letBinding name ordinary read tail =>
-      exact ⟨name, ordinary, _, _, _, hs.symm, read, tail⟩
-  | _ => exfalso; simp_all
-
+      injection hs with h1 h2
+      injection h2 with hname hmore
+      subst hname
+      exact ⟨name, ordinary, _, _, _, rfl, read, tail⟩
+  | _ => exfalso; cases hs
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
   cases read
