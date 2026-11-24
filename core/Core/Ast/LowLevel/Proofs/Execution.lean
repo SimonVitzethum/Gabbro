@@ -65,7 +65,6 @@ theorem execution_impl (form : Form) : ImplAussage form := by
         exact False.elim h
       · intro h
         rcases h with ⟨t, ht, hp, hn⟩
-        rw [hEval] at ht
         cases ht
   | some t =>
       simp only [hEval]
@@ -74,7 +73,6 @@ theorem execution_impl (form : Form) : ImplAussage form := by
         exact ⟨t, rfl, h.1, h.2⟩
       · intro h
         rcases h with ⟨u, hu, hp, hn⟩
-        rw [hEval] at hu
         cases hu
         exact ⟨hp, hn⟩
 
