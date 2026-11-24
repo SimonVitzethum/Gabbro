@@ -50,11 +50,11 @@ def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .index, (i, n) => i < n
   | .shift, (s, w) => s < w
   | .konvertierung, (v, w) => v < 2 ^ w
-  | .entpacken, tag => tag = 1
+  | .entpacken, tag => tag = Nat.succ Nat.zero
 
 /-- **A unit's partial-operation uses**: at each `I` cut, the partial operations the unit
     performs with their operand values. The M6 constructors supply it per program. -/
-class GuardVerwendung (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type)
+class GuardVerwendung [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Type where
   bedarf : (ρ : I.Lauf E) → I.Schnitt E ρ → (op : PartielleOperation) → Operanden op → Prop
 
@@ -83,8 +83,8 @@ def GeschlossenWartend (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     cut — maximal cuts included — contains an internal deadlock or a closed waiting set.**
     Nobody writes the guards; the checker proves them. This is what makes "correct logic
     produces an error" impossible. -/
-def WaechterHalten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [G : GuardVerwendung L Ort Wert Raum Lok Grund Bedingung Wahl ι E] : Prop :=
+def WaechterHalten [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    [G : GuardVerwendung E] : Prop :=
   (∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ (t : I.Schnitt E ρ) (op : PartielleOperation)
     (args : Operanden op), G.bedarf ρ t op args → waechterBedarf op args) ∧
   ∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,

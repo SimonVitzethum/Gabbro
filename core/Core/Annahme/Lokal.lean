@@ -30,13 +30,13 @@ variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 /-- **Obligation of a form: its decidable local rules hold** — the typing, authority and
     ownership rules of the form. Fixed here as the interface; the M6 constructors discharge it
     per form when their syntax enters. -/
-class RegelLokal (S Ev Wahl : Type) (r : Regel S Ev Wahl) : Prop where
+class RegelLokal {S Ev Wahl : Type} (r : Regel S Ev Wahl) : Prop where
 
 /-- **Obligation of a form: every outside effect it performs is valid at commit** — each
     identity, right, generation and precondition holds at the commit snapshot, established in
     the same catalogue event through its own handle or by a pinned row stability. The M6
     constructors discharge it per form; the refusal theorems below fix what it means. -/
-class RegelAussen (S Ev Wahl : Type) (r : Regel S Ev Wahl) : Prop where
+class RegelAussen {S Ev Wahl : Type} (r : Regel S Ev Wahl) : Prop where
 
 /-- **The outside rule of §4 inside `Lokal`**: the selected platform admits only interfaces
     where every query goes through an owned handle with a failure channel (`ZulassungsRegel`),
@@ -90,6 +90,6 @@ theorem fruehere_ableitung_verweigert (p : Plattform) (s : AussenSicht) (q : Fra
     ¬ Aussen.GueltigBeiCommit p s q := by
   have _traegt := Aussen.abgeleitet_traegt u a₀ abgel
   have _gleich := eq
-  exact fruehere_provenienz_verweigert p s q t mem a₀ issued alt ninstabil
+  exact fruehere_provenienz_verweigert p s q t mem a₀.origin issued alt ninstabil
 
 end Gabbro.Core.Annahme

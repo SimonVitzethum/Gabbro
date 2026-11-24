@@ -26,16 +26,15 @@ variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 /-- **`Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`** (§3.2): the perfect
     checker. It may use only the syntax, `I` and the catalogue — never the implementation
     machine, images, runs or an error notion. `I` never mentions `Akzeptiert`. -/
-def Akzeptiert (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [KlauselTabelle L Ort Wert Raum Lok Grund Bedingung Wahl ι E]
-    [GuardVerwendung L Ort Wert Raum Lok Grund Bedingung Wahl ι E] : Prop :=
+def Akzeptiert [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    [KlauselTabelle E] [GuardVerwendung E] : Prop :=
   Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E
 
 /-- Acceptance implies a well-formed catalogue selection — the `Akzeptiert`-conjunct of
     `NichtLeer` (§2.1), from `Lokal`. -/
-theorem akzeptiert_katalog (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [KlauselTabelle L Ort Wert Raum Lok Grund Bedingung Wahl ι E]
-    [GuardVerwendung L Ort Wert Raum Lok Grund Bedingung Wahl ι E]
+theorem akzeptiert_katalog [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    [KlauselTabelle E] [GuardVerwendung E]
     (h : Akzeptiert E) : KatalogWohlgeformt E.katalog :=
   h.1.1
 
@@ -43,9 +42,9 @@ theorem akzeptiert_katalog (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl
 def trivialesRegel : Regel Unit Unit Unit :=
   ⟨fun _ _ _ _ => False, fun _ _ _ _ _ => False⟩
 
-instance trivialeRegelLokal : RegelLokal Unit Unit Unit trivialesRegel := ⟨⟩
+instance trivialeRegelLokal : RegelLokal trivialesRegel := ⟨⟩
 
-instance trivialeRegelAussen : RegelAussen Unit Unit Unit trivialesRegel := ⟨⟩
+instance trivialeRegelAussen : RegelAussen trivialesRegel := ⟨⟩
 
 /-- The trivial system: one form with no steps, no head anywhere, nothing finished, never
     blocked. -/
@@ -64,25 +63,24 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
     ⟨fun _ => true, fun _ => 0⟩⟩
   laden := fun _ _ => none
 
-instance trivialeKlauseln :
-    KlauselTabelle Unit Unit Unit Unit Unit Unit Unit Unit Unit trivialeEinheit where
+instance trivialeKlauseln : KlauselTabelle trivialeEinheit where
   voraus := fun _ => True
   sicher := fun _ => True
   invariant := fun _ => True
 
-instance trivialeVerwendung :
-    GuardVerwendung Unit Unit Unit Unit Unit Unit Unit Unit Unit trivialeEinheit where
+instance trivialeVerwendung : GuardVerwendung trivialeEinheit where
   bedarf := fun _ _ _ _ => False
 
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
     conjuncts hold jointly — no uses to guard, nothing written to violate, never blocked. -/
-theorem akzeptiert_erfuellbar : ∃ E, Akzeptiert E := by
+theorem akzeptiert_erfuellbar
+    : ∃ E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, Akzeptiert E := by
   refine ⟨trivialeEinheit, ?_, ?_, ?_⟩
   · refine ⟨Plattform.katalog_wohlgeformt .x86_64, fun i => ?_, Aussen.zulassung_m2 .x86_64,
       fun i => ?_⟩
-    · show RegelLokal Unit Unit Unit trivialesRegel
+    · show RegelLokal trivialesRegel
       exact inferInstance
-    · show RegelAussen Unit Unit Unit trivialesRegel
+    · show RegelAussen trivialesRegel
       exact inferInstance
   · intro ρ _
     exact ⟨trivial, fun _ => trivial, fun _ _ => trivial⟩
@@ -95,9 +93,9 @@ theorem akzeptiert_erfuellbar : ∃ E, Akzeptiert E := by
     exact False.elim hb
 
 /-- **A system with a closed waiting set at an `I` cut is not accepted.** -/
-theorem geschlossen_nicht_akzeptiert (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [KlauselTabelle L Ort Wert Raum Lok Grund Bedingung Wahl ι E]
-    [GuardVerwendung L Ort Wert Raum Lok Grund Bedingung Wahl ι E]
+theorem geschlossen_nicht_akzeptiert [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    [KlauselTabelle E] [GuardVerwendung E]
     (ρ : I.Lauf E) (hρ : I.Laeufe E ρ) (t : I.Schnitt E ρ)
     (C : Kontext → Prop) (h : GeschlossenWartend E (ρ.zeit.zustand t.val) C) :
     ¬ Akzeptiert E := by

@@ -22,16 +22,15 @@ variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 /-- **The written clauses of a unit**: requires on `I` starts, ensures on finished `I` cuts,
     invariants on every `I` cut. Predicates over `I` states, never over definedness of `I` or
     anything about the implementation. -/
-class KlauselTabelle (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type)
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Type where
+class KlauselTabelle (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Type where
   voraus : Zustand L Ort Wert Raum Lok Grund → Prop
   sicher : Zustand L Ort Wert Raum Lok Grund → Prop
   invariant : Zustand L Ort Wert Raum Lok Grund → Prop
 
 /-- **`KlauselnWahr E`: every written clause holds on every `I` run** — requires at the ideal
     start, the invariant at every cut, ensures at every finished cut. -/
-def KlauselnWahr (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [K : KlauselTabelle L Ort Wert Raum Lok Grund Bedingung Wahl ι E] : Prop :=
+def KlauselnWahr [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    [K : KlauselTabelle E] : Prop :=
   ∀ ρ : I.Lauf E, I.Laeufe E ρ →
     K.voraus (I.start E ρ.start).2 ∧
     (∀ t : I.Schnitt E ρ, K.invariant (ρ.zeit.zustand t.val)) ∧
