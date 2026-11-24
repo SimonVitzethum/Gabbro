@@ -112,8 +112,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     intros
     rename_i callRead _ _ other
     cases callRead
-    rename_i call _ argsRead
-    exact StatementComparison.directCall call argsRead other
+    exact StatementComparison.directCall _ (by assumption) other
   case bindDirect =>
     intros
     rename_i name ordinary written valid typeRead callRead _ _ other
@@ -175,15 +174,20 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       obtain ⟨rfl, rfl⟩ := bodyDet otherBody
       obtain ⟨rfl, rfl⟩ := tailDet otherTail
       exact ⟨rfl, rfl⟩
-    | _ => deny_statement eq
+    | wildcard _ _ _ => cases (List.cons.inj (List.cons.inj eq).2).1
   case armsWildcard =>
     intros
-    rename_i bodyRead bodyDet _ _ other
+    rename_i input _ _ _ _ _ _ bodyRead bodyDet _ _ other
+    generalize eq : (Token.word ['_'] :: matchArrow :: input) = tokens at other
     cases other with
     | wildcard _ _ otherBody =>
+      cases (List.cons.inj (List.cons.inj eq).2).2
       obtain ⟨rfl, suffix⟩ := bodyDet otherBody
       exact ⟨rfl, (List.cons.inj suffix).2⟩
-    | nullary _ caseName _ _ => exact (caseName rfl).elim
+    | nullary _ caseName _ _ =>
+      exact (caseName (Token.word.inj (List.cons.inj eq).1).symm).elim
+    | payload _ _ _ _ _ _ => cases (List.cons.inj (List.cons.inj eq).2).1
+    | done => cases (List.cons.inj eq).1
 
 theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     (right : BlockItems result scope input b rest') : a = b ∧ rest = rest' := by
