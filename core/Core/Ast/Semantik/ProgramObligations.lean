@@ -326,8 +326,7 @@ theorem bindDirect_realisiert (scope : Scope) (result : Option (Ty .value)) : (b
   let form := bindDirectForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code
-      [(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
+    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code[(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
@@ -346,8 +345,7 @@ theorem bindDirect_annahme (scope : Scope) (result : Option (Ty .value)) : (bind
 theorem bindDirect_ideal (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).IdealAussage := by
   constructor
   · intro args
-    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code
-      [(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
+    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code[(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
