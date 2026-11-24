@@ -114,9 +114,12 @@ theorem textIndex (left : Ausdruckswert env slot (base : Expr scope (.text capac
     intro negative
     simp only [if_pos negative, Nat.lt_irrefl] at allowed
   have fits : index.toNat < text.bytes.size := by simpa only [if_neg nonnegative] using allowed
-  have read : text.bytes[index.toNat]? = some (text.bytes[index.toNat]'fits) := getElem?_pos text.bytes index.toNat fits
-  simp only [Expr.wert, Befehl.auswerten, Id.run, Rahmen.zahl, first, second, Option.bind_some, text_readback, alsGanzzahl,
-    Expr.wert, ← index, ← text, if_neg nonnegative, read, Option.getD_some]
+  have read : text.bytes[index.toNat]? = some (text.bytes[index.toNat]'fits) :=
+    getElem?_pos text.bytes index.toNat fits
+  dsimp only [index, text] at nonnegative read
+  simp only [Befehl.auswerten, Id.run, Rahmen.zahl, first, second, Option.bind_some, text_readback (base.wert env),
+    alsGanzzahl, Expr.wert, if_neg nonnegative, read, Option.getD_some]
+  rfl
 
 theorem optionIsSome (ref : Local scope (indexOptionType count)) (visible : ref.visible)
     (ordinary : ordinaryLocal ref.binding.name) : Ausdruckswert env slot (.optionIsSome ref visible ordinary) := by
@@ -181,19 +184,25 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
     simpa only [full, List.append_assoc] using
       (codeLookup_instruction (pre := pre ++ lhs) (post := rhs ++ post) (instruction := branch) atBranch)
   let afterBranch := branch.auswerten middle
-  have valueAtSlot : middle.temp slot = some ⟨.bool, left.wert env⟩ := value
   let bit : Bool := left.wert env
+  have valueAtSlot : middle.temp slot = some ⟨.bool, bit⟩ := value
   have branchShape : afterBranch =
       { middle with pc := middle.pc + (if bit = op.skips then rhs.length + 1 else 1) } := by
-    simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean]
-    change { middle with pc := middle.pc + (if some bit = some op.skips then rhs.length + 1 else 1) } = _
-    rw [Option.some.injEq]
+    by_cases same : bit = op.skips
+    · have matchBit : some bit = some op.skips := congrArg some same
+      simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean,
+        if_pos matchBit, if_pos same]
+    · have matchBit : some bit ≠ some op.skips := fun eq => same (Option.some.inj eq)
+      simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean,
+        if_neg matchBit, if_neg same]
   have midActive := lhsFull.aktiv active
   have branchStep : Rahmen.Schritt full middle afterBranch :=
     ⟨branch, midActive.1, midActive.2, branchLookup, rfl⟩
   have branchSame : afterBranch = { middle with pc := afterBranch.pc, temp := afterBranch.temp } := by
     rw [branchShape]
-  have preserves : ∀ i, afterBranch.temp i = middle.temp i := fun i => congrArg (fun f : Rahmen => f.temp i) branchShape
+  have preserves : ∀ i, afterBranch.temp i = middle.temp i := by
+    intro i
+    rw [branchShape]
   by_cases taken : bit = op.skips
   · have atEnd : afterBranch.pc = pre.length + (lhs ++ [branch] ++ rhs).length := by
       simp only [branchShape, if_pos taken, List.length_append, List.length_cons, List.length_nil, lhsFull.position]

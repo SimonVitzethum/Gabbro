@@ -47,7 +47,6 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
     | text target =>
       have length : value.bytes.size ≤ target := Nat.le_trans value.bound fits
       simp only [wertAls, dif_pos length, Wert.widen, TextValue.widen]
-      rfl
     | _ =>
       simp only [Fits] at fits
       cases fits
@@ -70,7 +69,7 @@ theorem wertAls_selbst {type : Ty .value} (value : Wert type) :
     wertAls type ⟨type, value⟩ = some value := by
   cases type with
   | int lo hi =>
-    have bounds := ⟨value.unten, value.oben⟩
+    have bounds : lo ≤ value.wert ∧ value.wert ≤ hi := ⟨value.unten, value.oben⟩
     simp only [wertAls, dif_pos bounds]
     cases value
     rfl
@@ -87,7 +86,7 @@ theorem wertAls_selbst {type : Ty .value} (value : Wert type) :
         omega
       cases empty
       rfl
-    | succ n => simp only [wertAls, dif_pos rfl]
-  | _ => simp only [wertAls, dif_pos rfl]
+    | succ n => simp only [wertAls, dif_pos rfl, dif_pos trivial] <;> rfl
+  | _ => simp only [wertAls, dif_pos rfl, dif_pos trivial] <;> rfl
 
 end Gabbro.Core.Ast.Semantik
