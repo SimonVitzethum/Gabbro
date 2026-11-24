@@ -483,7 +483,8 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
               rw [zAB0_dispatchN m] at hk
               cases hk
         have h1 : t % 2 = 1 := by omega
-        exact hw2_opp0_neg h1 (hk0 ▸ hk)
+        rw [hk0]
+        exact hw2_opp0_neg h1
     | succ n =>
       cases n with
       | zero =>
@@ -505,7 +506,8 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
               | succ m =>
                 rw [ηAB_zustand, zAB_kerne, zAB0_dispatchN m] at hk
                 cases hk
-          exact hw2_opp1_neg h (hk1 ▸ hk)
+          rw [hk1]
+          exact hw2_opp1_neg h
         · have h1 : t % 2 = 1 := by omega
           exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
             I.Schritt.kontext (hw2_crash t)
