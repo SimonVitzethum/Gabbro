@@ -215,7 +215,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
     rfl
   · have hslot : scope.slot name = some 0 := by
       simpa [scope, name] using lowName_slot
-    simp [elaborate, hslot, op]
+    simp [elaborate, hslot, op, tree]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
@@ -265,7 +265,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     exact TypeReads.integer (by simp [WrittenType.valid, WrittenType.storage]) (by simp)
   · have hslot : scope.slot name = some 0 := by
       simpa [scope, name] using lowName_slot
-    simp [elaborate, hslot, written, op, shape, layout, WrittenType.storage]
+    simp [elaborate, hslot, written, op, shape, layout, WrittenType.storage, tree]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
