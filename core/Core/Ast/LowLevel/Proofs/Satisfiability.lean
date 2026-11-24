@@ -19,14 +19,19 @@ namespace Gabbro.Core.Ast.LowLevel
 
 open Text Katalog Maschine
 
+private theorem derivesSymbols {form : Form} (ts : List LocatedToken) :
+    DerivesSymbols (tokenGrammar (fun tokens (t : Tree form) => t.production tokens))
+      (ts.map Symbol.terminal) ts := by
+  induction ts with
+  | nil => exact DerivesSymbols.nil
+  | cons t ts ih => exact DerivesSymbols.terminal ih
+
 private theorem derivesTerminals {form : Form} {tree : Tree form} (ts : List LocatedToken)
     (prod : tree.production (ts.map LocatedToken.value)) :
     Derives (tokenGrammar (fun tokens (t : Tree form) => t.production tokens)) tree ts := by
   refine Derives.production (symbols := ts.map Symbol.terminal) ?_ ?_
   · exact ⟨ts, rfl, prod⟩
-  · induction ts with
-    | nil => exact DerivesSymbols.nil
-    | cons t ts ih => exact DerivesSymbols.terminal ih
+  · exact derivesSymbols ts
 
 private theorem lowParse_of {form : Form} {text : RawText} {tree : Tree form}
     {pieces : List Piece} (lex : Lexed text pieces)
@@ -205,7 +210,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
   · apply tree_parse_print tree
     dsimp [tree]
     rfl
-  · simp [elaborate, scope, RegionScope.slot, tree, op, name]
+  · simp [elaborate, scope, RegionScope.slot, tree, op, name, lowName]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
@@ -253,7 +258,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
   · apply tree_parse_print tree
     refine ⟨written.printPieces.map PrintedToken.value, rfl, ?_⟩
     exact TypeReads.integer (by simp [WrittenType.valid, WrittenType.storage]) (by simp)
-  · simp [elaborate, scope, RegionScope.slot, tree, written, op, shape, layout, WrittenType.storage, name]
+  · simp [elaborate, scope, RegionScope.slot, tree, written, op, shape, layout, WrittenType.storage, name, lowName]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
@@ -273,8 +278,8 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let scope : RegionScope := []
   let tree : Tree .environment := .environment name abi row
   let allowed : row.zugelassen k abi := by
-    simp [row, abi, k, Plattform.katalog, FirmwareZeile.zugelassen, Plattform.firmwareAbi,
-      Katalog.enthaelt, Plattform.zeilen, Plattform.endpunkte]
+    simp [row, abi, k, Plattform.katalog, FirmwareZeile.zugelassen, FirmwareZeile.endpunkt,
+      Plattform.firmwareAbi, Katalog.enthaelt, Plattform.zeilen, Plattform.endpunkte, ZielZeilen]
   let op : Instruction k := .selectEnvironment name abi row allowed
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Umgebung := Umgebung.referenz k 1 sicht
@@ -296,7 +301,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   · apply tree_parse_print tree
     dsimp [tree, abi, row]
     rfl
-  · simp [elaborate, k, Plattform.katalog, scope, tree, op, allowed, row, abi]
+  · simp [elaborate, k, scope, tree, op, allowed, row, abi]
   · simp [op, transfer, Instruction.evaluate]
 
 end Gabbro.Core.Ast.LowLevel
