@@ -146,12 +146,12 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
       ⟨['x'], 'x', [], rfl, Or.inl (Or.inl (by decide)),
         fun _ member => (List.not_mem_nil member).elim⟩
     have ordinary : ordinaryLocal name := by
-      simp [name, ordinaryLocal]
+      simpa [name, ordinaryLocal]
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
-      ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type, WrittenTypes.types, tupleType]⟩
-    exact Surface.Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
+      ⟨name, ordinary, w, by simpa [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
+        .tupleValue .trueLit .falseLit .empty, by simpa [w, Fits, WrittenType.type, WrittenTypes.types, tupleType]⟩
+    exact Surface.Rule.satisfiableOfPrint ⟨a, by simpa [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
   intro ctx args text pieces lexed prod
@@ -206,14 +206,14 @@ theorem tupleType_erfuellbar : TupleTypeErfuellbarAmAussage := by
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl (by decide)),
       fun _ member => (List.not_mem_nil member).elim⟩
   have ordinary : ordinaryLocal name := by
-    simp [name, ordinaryLocal]
+    simpa [name, ordinaryLocal]
   let w : WrittenType := .tuple .bool .bool .empty
   let a : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
+    ⟨name, ordinary, w, by simpa [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
       .tupleValue .trueLit .falseLit .empty,
       by simpa [w, Fits, WrittenType.type, WrittenTypes.types, tupleType]⟩
   let args : {a : Surface.MutableLocalArgs [] none // tupleTypeUse a.written} :=
-    ⟨a, by simp [a, w, tupleTypeUse]⟩
+    ⟨a, by simpa [a, w, tupleTypeUse]⟩
   let form := typeUseForm ([], none) tupleTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
