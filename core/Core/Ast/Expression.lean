@@ -235,12 +235,8 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   cases read
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
-  · rename_i _ ty rest ref vis ord _ _ _ otherRead
-    have hty : ty = type := rfl
-    cases hty
-    refine ⟨ref, vis, ord, rfl, ?_, rfl⟩
-    rfl
-
+  · trace_state
+    exact ⟨by contradiction⟩
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
