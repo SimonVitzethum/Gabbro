@@ -252,16 +252,18 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
-                  simpa only [afterResult, ← List.append_assoc] using
-                    (WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
-                      intro more h
-                      cases measure with
-                      | none =>
-                          simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                            printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                      | some m0 =>
-                          simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                            printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)))
+                  have hwt := WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
+                    intro more h
+                    cases measure with
+                    | none =>
+                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                    | some m0 =>
+                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)
+                  rw [← List.append_assoc] at hwt
+                  rw [← List.append_assoc] at hwt
+                  exact hwt)
             (by
               cases measure with
               | none =>
@@ -271,11 +273,13 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                     printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some m =>
                   refine MeasureReads.present m ?_
-                  exact Expr.printReads (rest := afterMeasure) m.expression (by
+                  have hexpr := Expr.printReads (rest := afterMeasure) m.expression (by
                     simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace,
                       printPunctuation, PrintedToken.unquoted, openBrace] using
                       (noOperatorAtOpenBrace (minimum := 0)
-                        (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
+                        (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest)))
+                  rw [← List.append_assoc] at hexpr
+                  exact hexpr)
             ((BracedBlock.braces items).printReads rest)
         simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
           afterParams, afterResult, afterMeasure, List.map_append, List.map_cons, List.map_nil,
