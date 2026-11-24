@@ -61,7 +61,7 @@ theorem assignVar_erfuellbar : assignVarJoint := by
     ⟨['x'], 'x', [], rfl,
       Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  let scope : Scope := [⟨name, .int 0 1, true⟩]
+  let scope : Scope := [⟨name, .int 0 1, true, false⟩]
   let ref : Local scope (.int 0 1) := .here
   let args : Surface.AssignArgs scope := ⟨ref, trivial, rfl, .lit 0, ⟨by omega, by omega⟩⟩
   let form := assignVarForm (scope, none)
@@ -75,7 +75,7 @@ theorem assignVar_erfuellbar : assignVarJoint := by
       change ((expr 0 args.value).code ++ [Befehl.zuweisen 0 args.ref.index args.ref.binding.type])[
         (expr 0 args.value).code.length]? = some (.zuweisen 0 args.ref.index args.ref.binding.type)
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-      rfl) platform args s₁ rfl rfl rfl) ?_⟩
+      rfl) platform args s₁ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -143,7 +143,7 @@ theorem returnValue_erfuellbar : returnValueJoint := by
       change ((expr 0 args.value).code ++ [Befehl.zurueck 0 expected])[
         (expr 0 args.value).code.length]? = some (.zurueck 0 expected)
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-      rfl) platform args s₁ rfl rfl rfl) ?_⟩
+      rfl) platform args s₁ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -254,7 +254,7 @@ theorem ifElse_erfuellbar : ifElseJoint := by
         exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
           (bracedBlock args.no).code
           (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
-          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl) ?_⟩
+          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl rfl) ?_⟩
     intro g guard
     cases guard
   · let args : Surface.IfArgs [] none := ⟨.trueLit, .braces .done, .braces .done⟩
@@ -283,7 +283,7 @@ theorem ifElse_erfuellbar : ifElseJoint := by
         exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
           (bracedBlock args.no).code
           (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
-          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl) ?_⟩
+          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl rfl) ?_⟩
     intro g guard
     cases guard
 
@@ -335,34 +335,7 @@ theorem braced_erhaltung (ctx : StatementContext) : (bracedForm ctx).ErhaltungsA
   refine Quellform.erhaltung (bracedForm ctx) ?_
   intro args
   change (bracedBlock (.braces args.2)).klauseln.invariant = []
-  have blockEmpty : (block args.2).klauseln.invariant = [] := by
-    refine @Block.rec ctx.2
-      (fun b a t => (stmt t).klauseln.invariant = [])
-      (fun b a t => (block t).klauseln.invariant = [])
-      (fun b t => (bracedBlock t).klauseln.invariant = [])
-      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ctx.1 args.1 args.2
-    · intro scope type name ordinary value
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-    · intro scope lo hi valueLo valueHi ref visible writable value fits
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-    · intro expected scope type declared value fits
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-    · intro scope condition yes no yesIH noIH
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
-    · intro scope
-      simp only [block, Fragment.leer, Maschine.Quellklauseln.leer]
-    · intro before middle after first rest firstIH restIH
-      simp only [block, Fragment.anhaengen, Maschine.Quellklauseln.anhaengen,
-        firstIH, restIH, List.nil_append]
-    · intro before after body bodyIH
-      simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-        Maschine.Quellklauseln.leer, List.nil_append, bodyIH]
-  simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
-    Maschine.Quellklauseln.leer, List.nil_append, blockEmpty]
+  exact bracedBlock_keine_invarianten (.braces args.2)
 
 -- Mirror let_erfuellbar using the actual source head and its pre-state.
 theorem braced_erfuellbar : bracedJoint := by
@@ -375,7 +348,7 @@ theorem braced_erfuellbar : bracedJoint := by
       change ((block args.2).code ++ [Befehl.blockEnde (args.1.length - ([], none).1.length)])[
         (block args.2).code.length]? = some (.blockEnde (args.1.length - ([], none).1.length))
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-      rfl) platform args s rfl rfl rfl) ?_⟩
+      rfl) platform args s rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -487,7 +460,7 @@ theorem thenJump_erfuellbar : thenJumpJoint := by
       exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
         (bracedBlock args.no).code
         (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
-        (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₃ rfl rfl rfl) ?_⟩
+        (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 

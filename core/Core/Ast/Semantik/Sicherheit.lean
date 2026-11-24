@@ -119,4 +119,11 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
       Quellklauseln.leer, List.nil_append, bodyIH]
 
+theorem bracedBlock_keine_invarianten (tree : BracedBlock result scope) :
+    (bracedBlock tree).klauseln.invariant = [] := by
+  have both := stmt_keine_invarianten (Stmt.ite .trueLit tree tree)
+  simp only [stmt, expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+    Quellklauseln.leer, List.nil_append, List.append_nil] at both
+  exact (List.eq_nil_of_append_eq_nil both).1
+
 end Gabbro.Core.Ast.Semantik

@@ -81,7 +81,7 @@ theorem subtraction_erfuellbar : subtractionJoint := by
       rw [args.2]
       rw [List.getElem?_append_right (by rw [List.length_append])]
       rw [List.length_append, Nat.sub_self]
-      rfl) platform args s₂ rfl rfl rfl) ?_⟩
+      rfl) platform args s₂ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -159,7 +159,7 @@ theorem division_erfuellbar : divisionJoint := by
     have reached : E.system.IErreichbar s₀ s₂ :=
       .schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second
     refine ⟨args, ?_, form.erfuellbar_aus_erreichbar platform start args s₂ reached
-      (form.realisiert amOrt platform args s₂ rfl rfl rfl) ?_⟩
+      (form.realisiert amOrt platform args s₂ rfl rfl rfl rfl) ?_⟩
     · subst unsigned
       change (0 ≤ (1 : Int) ∧ 1 ≤ (2 : Int)) ↔ true = true
       constructor
@@ -189,7 +189,7 @@ theorem division_erfuellbar : divisionJoint := by
     have reached : E.system.IErreichbar s₀ s₂ :=
       .schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second
     refine ⟨args, ?_, form.erfuellbar_aus_erreichbar platform start args s₂ reached
-      (form.realisiert amOrt platform args s₂ rfl rfl rfl) ?_⟩
+      (form.realisiert amOrt platform args s₂ rfl rfl rfl rfl) ?_⟩
     · cases unsigned
       · change (0 ≤ (-(1 : Int)) ∧ 1 ≤ (2 : Int)) ↔ false = true
         constructor
@@ -283,7 +283,7 @@ theorem comparison_erfuellbar : comparisonJoint := by
           (expr 1 args.right).code.length]? = some (.vergleichen args.op 0)
       rw [List.getElem?_append_right (by rw [List.length_append])]
       rw [List.length_append, Nat.sub_self]
-      rfl) platform args s₂ rfl rfl rfl) ?_⟩
+      rfl) platform args s₂ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -368,7 +368,7 @@ theorem logic_erfuellbar : logicJoint := by
       ⟨.wahrheitswert 0 false, rfl, rfl, rfl⟩
     have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
     refine ⟨args, rfl, rfl, form.erfuellbar_aus_erreichbar platform start args s₁ reached
-      (form.realisiert amOrt platform args s₁ rfl rfl rfl) ?_⟩
+      (form.realisiert amOrt platform args s₁ rfl rfl rfl rfl) ?_⟩
     intro g guard
     cases guard
   · let args : Surface.LogicArgs [] := ⟨op, .trueLit, .trueLit⟩
@@ -379,7 +379,7 @@ theorem logic_erfuellbar : logicJoint := by
       ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
     have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
     refine ⟨args, rfl, rfl, form.erfuellbar_aus_erreichbar platform start args s₁ reached
-      (form.realisiert amOrt platform args s₁ rfl rfl rfl) ?_⟩
+      (form.realisiert amOrt platform args s₁ rfl rfl rfl rfl) ?_⟩
     intro g guard
     cases guard
 

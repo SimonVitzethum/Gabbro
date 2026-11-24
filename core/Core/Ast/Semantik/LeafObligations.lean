@@ -51,7 +51,7 @@ theorem trueLit_erfuellbar : trueLitJoint := by
   let form := trueLitForm []
   let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
   refine form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
-    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_
+    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl rfl) ?_
   intro g guard
   cases guard
 
@@ -100,7 +100,7 @@ theorem falseLit_erfuellbar : falseLitJoint := by
   let form := falseLitForm []
   let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
   refine form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
-    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_
+    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl rfl) ?_
   intro g guard
   cases guard
 
@@ -164,7 +164,7 @@ theorem variable_erfuellbar : variableJoint := by
   let form := variableForm scope
   let s := (Maschine.I.start (form.einheit platform args) start).2
   refine ⟨scope, args, form.erfuellbar_aus_erreichbar platform start args s .start
-    (form.realisiert (fun _ => rfl) platform args s rfl rfl rfl) ?_⟩
+    (form.realisiert (fun _ => rfl) platform args s rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -213,7 +213,7 @@ theorem negativeLit_erfuellbar : negativeLitJoint := by
   let form := negativeLitForm []
   let s := (Maschine.I.start (form.einheit platform 1) start).2
   refine ⟨1, by omega, form.erfuellbar_aus_erreichbar platform start 1 s .start
-    (form.realisiert (fun _ => rfl) platform 1 s rfl rfl rfl) ?_⟩
+    (form.realisiert (fun _ => rfl) platform 1 s rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -280,7 +280,7 @@ theorem neg_erfuellbar : negJoint := by
       change ((expr 0 args.operand).code ++ [Befehl.negieren 0])[(expr 0 args.operand).code.length]? =
         some (.negieren 0)
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-      rfl) platform args s₁ rfl rfl rfl) ?_⟩
+      rfl) platform args s₁ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -347,7 +347,7 @@ theorem notValue_erfuellbar : notValueJoint := by
       change ((expr 0 args).code ++ [Befehl.verneinen 0])[(expr 0 args).code.length]? =
         some (.verneinen 0)
       rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-      rfl) platform args s₁ rfl rfl rfl) ?_⟩
+      rfl) platform args s₁ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
