@@ -60,15 +60,6 @@ def RueckVoidSichtAussage : Prop :=
     (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true) →
     Befehl.rueckVoid.SichtErhaltendBei β pc
 
-/-- `zurueck`: as `rueckVoid`, but the returned value computed from `quelle` is
-    published. -/
-def ZurueckSichtAussage : Prop :=
-  ∀ (β : Beschriftung) (pc quelle : Nat) (zieltyp : Ty .value),
-    oeffentlich (β.temp pc quelle) = true →
-    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) →
-    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true) →
-    (Befehl.zurueck quelle zieltyp).SichtErhaltendBei β pc
-
 /-- `pruefeMass`: the tested temporary must be public, since both the halt reasons
     and the always-visible measure are derived from it. -/
 def PruefeMassSichtAussage : Prop :=
@@ -165,16 +156,6 @@ theorem rueckVoidSicht_erfuellbar :
         oeffentlich (β.lokal pc i) = true) :=
   ⟨.alleOeffentlich, 0, fun s _ => alleOeffentlich_temp 0 s,
     fun i _ => alleOeffentlich_lokal 0 i⟩
-
-/-- The `zurueck` premises hold jointly. -/
-theorem zurueckSicht_erfuellbar (quelle : Nat) (zieltyp : Ty .value) :
-    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
-      (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
-        oeffentlich (β.temp pc s) = true) ∧
-      (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
-        oeffentlich (β.lokal pc i) = true) :=
-  ⟨.alleOeffentlich, 0, alleOeffentlich_temp 0 quelle,
-    fun s _ => alleOeffentlich_temp 0 s, fun i _ => alleOeffentlich_lokal 0 i⟩
 
 /-- The `pruefeMass` premises hold jointly. -/
 theorem pruefeMassSicht_erfuellbar (quelle : Nat) :
