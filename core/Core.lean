@@ -13,6 +13,7 @@ public import Core.Maschine.Start
 public import Core.Ideal
 public import Core.Ideal.Linearisierung
 public import Core.Ideal.Replay
+public import Core.Ideal.Absturz
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme

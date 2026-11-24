@@ -47,6 +47,10 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   verbraucht : Kontext → Nat
   geliefert : List (Nat × Nat)
   leihen : Nat → Leihe Objekt
+  initial : Ort → Wert
+  persistenz : PersistZustand
+  epoche : Nat
+  verworfen : Kontext → Nat
 
 namespace Zustand
 
@@ -59,7 +63,7 @@ def angekommen (z : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
 
 /-- **Arrival and consumption**: a context consumes only answers that arrived. -/
 def Verbrauch (z : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ∀ c, z.verbraucht c ≤ (z.angekommen c).length
+  ∀ c, z.verworfen c + z.verbraucht c ≤ (z.angekommen c).length
 
 /-- Every arrived answer is one the catalogue allows at its commit snapshot. -/
 def Zulaessig (z : Zustand L Ort Wert Raum Lok Grund) (k : Katalog.Katalog)
@@ -73,27 +77,32 @@ def SpeicherGut (z : Zustand L Ort Wert Raum Lok Grund) : Prop :=
 /-- **A start state**: the given local states and cores, every lock free, the given authority, no
     memory event, no question, no answer, every region owned. -/
 def start (lok : Kontext → Lok) (st : Kontext → Status Wert Grund) (kerne : Kern → KernZustand Raum)
-    (r : Rechte) : Zustand L Ort Wert Raum Lok Grund where
+    (r : Rechte) (initial : Ort → Wert) (medium : PersistZustand) : Zustand L Ort Wert Raum Lok Grund where
   lokal := lok
   status := st
   kerne := kerne
-  sperren := fun _ => SperrZustand.frei
+  sperren := fun _lock => SperrZustand.frei
   rechte := r
   graph := Speicher.Zustand.leer
   fragen := []
   antworten := []
   verlauf := []
-  verbraucht := fun _ => 0
+  verbraucht := fun _context => 0
   geliefert := []
-  leihen := fun _ => .eigen
+  leihen := fun _region => .eigen
+  initial := initial
+  persistenz := medium
+  epoche := 0
+  verworfen := fun _context => 0
 
 /-- **Satisfiability of the start's invariants**: a start state has a consistent complete memory,
     consumes nothing that did not arrive and holds only allowed answers. -/
 theorem start_gut (lok : Kontext → Lok) (st : Kontext → Status Wert Grund)
-    (kerne : Kern → KernZustand Raum) (r : Rechte) (k : Katalog.Katalog) (sicht : Nat → AussenSicht) :
-    (start (L := L) (Ort := Ort) lok st kerne r).SpeicherGut ∧
-      (start (L := L) (Ort := Ort) lok st kerne r).Verbrauch ∧
-      (start (L := L) (Ort := Ort) lok st kerne r).Zulaessig k sicht :=
+    (kerne : Kern → KernZustand Raum) (r : Rechte) (initial : Ort → Wert) (medium : PersistZustand)
+    (k : Katalog.Katalog) (sicht : Nat → AussenSicht) :
+    (start (L := L) (Ort := Ort) lok st kerne r initial medium).SpeicherGut ∧
+      (start (L := L) (Ort := Ort) lok st kerne r initial medium).Verbrauch ∧
+      (start (L := L) (Ort := Ort) lok st kerne r initial medium).Zulaessig k sicht :=
   ⟨⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩,
     fun _ => Nat.zero_le _, fun _ h => absurd h List.not_mem_nil⟩
 

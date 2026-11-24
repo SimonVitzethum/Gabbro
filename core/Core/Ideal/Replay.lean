@@ -1,6 +1,6 @@
 module
 
-public import Core.Maschine.Aussen
+public import Core.Maschine.Absturz
 
 @[expose] public section
 
@@ -52,18 +52,20 @@ structure AussenBezug (impl ideal : Zustand L Ort Wert Raum Lok Grund) : Prop wh
   antworten : impl.antworten = ideal.antworten
   verbraucht : impl.verbraucht = ideal.verbraucht
   verlauf : impl.verlauf = ideal.verlauf
+  epoche : impl.epoche = ideal.epoche
+  verworfen : impl.verworfen = ideal.verworfen
 
 theorem aussen_refl (s : Zustand L Ort Wert Raum Lok Grund) : AussenBezug s s :=
-  ⟨rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem aussen_ankunft {s i : Zustand L Ort Wert Raum Lok Grund} (h : AussenBezug s i)
     (a : Katalog.AntwortEreignis) : AussenBezug (s.antwort a) (i.antwort a) :=
   ⟨h.fragen, congrArg (· ++ [a]) h.antworten, h.verbraucht,
-    congrArg (· ++ [(a.cut, Katalog.AussenEreignis.antwort a.question a.reply)]) h.verlauf⟩
+    congrArg (· ++ [(a.cut, Katalog.AussenEreignis.antwort a.question a.reply)]) h.verlauf, h.epoche, h.verworfen⟩
 
 theorem aussen_verbrauch {s i : Zustand L Ort Wert Raum Lok Grund} (h : AussenBezug s i)
     (c : Kontext) : AussenBezug (s.verbrauche c) (i.verbrauche c) :=
   ⟨h.fragen, h.antworten, congrArg (fun p : Kontext → Nat => Function.update p c (p c + 1)) h.verbraucht,
-    h.verlauf⟩
+    h.verlauf, h.epoche, h.verworfen⟩
 
 end Gabbro.Core.Maschine.I
