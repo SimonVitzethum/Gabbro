@@ -12,12 +12,19 @@ open Ast.Semantik (Fragment Befehl)
 def KontrollflussNIAussage : Prop :=
   FamilienNI .kontrollfluss
 
+private abbrev FragmentBeob := List (NiedrigesEreignis PUnit Int PUnit Befehl)
+
 private theorem spekulationszugriffe_leer {Ort : Type} (h : Spekulationshuelle) :
     h.zugriffe ([] : List (Option Ort)) = [] := by
   rw [Spekulationshuelle.zugriffe]
   cases hfen : h.fenster with
   | none => rfl
   | some n => cases n <;> rfl
+
+private theorem speicherfolge_ohne_labels {Ort Wert : Type} {anfang f g es g'}
+    (h : @Speicherfolge Ort Wert anfang f g [] es g') : es = [] := by
+  cases h
+  rfl
 
 private theorem fragment_impl_nach {p : Fragment} (plattform : Plattform)
     {c : Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit} {i : Befehl}
@@ -40,9 +47,7 @@ private theorem fragment_aus_leer {p : Fragment} (plattform : Plattform)
   obtain ⟨sperrenLeer, aussenLeer, vEq⟩ := bestimmt
   rw [sperrenLeer, aussenLeer] at speicherfolge
   simp only [Ast.Semantik.plan, schreibEreignisse, List.nil_append, List.append_nil] at speicherfolge
-  have speicherLeer : spur.speicher = [] := by
-    cases speicherfolge with
-    | nil => rfl
+  have speicherLeer : spur.speicher = [] := speicherfolge_ohne_labels speicherfolge
   rw [vEq] at nextEq
   exact ⟨speicherLeer, aussenLeer, nextEq⟩
 
@@ -93,17 +98,18 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                     rw [spekLeer]
                     exact spekulationszugriffe_leer _
                   have commitLeer :
-                      commitBeob (p.einheit plattform).katalog.plattform vor next = [] := by
+                      commitBeob (p.einheit plattform).katalog.plattform vor next = ([] : FragmentBeob) := by
                     rw [commitBeob, nextBuchung, List.drop_length]
                     rfl
                   have ausgabeLeer :
-                      ausgabeBeob (p.einheit plattform) c (vor.lokal c) (next.lokal c) = [] := by
+                      ausgabeBeob (p.einheit plattform) c (vor.lokal c) (next.lokal c) = ([] : FragmentBeob) := by
                     rw [ausgabeBeob, Flussdaten.ausgabeZuwachs]
                     rfl
-                  have zeitLeer : zeitBeob ρ₁ c (vor.lokal c) (next.lokal c) = [] := by
+                  have zeitLeer :
+                      zeitBeob ρ₁ c (vor.lokal c) (next.lokal c) = ([] : FragmentBeob) := by
                     rw [zeitBeob]
                     rfl
-                  have kontextLeer : kontextBeob ρ₁ predictor t c vor next spur = [] := by
+                  have kontextLeer : kontextBeob ρ₁ predictor t c vor next spur = ([] : FragmentBeob) := by
                     rw [kontextBeob]
                     rw [kopf]
                     simp only [zugriffeLeer, List.map_nil, konstantFalsch, ↓reduceIte,
