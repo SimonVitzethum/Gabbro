@@ -82,7 +82,7 @@ theorem taggedDecl_impl : TaggedDeclImplAussage := by
 
 theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage := by
   intro scope a frame
-  simp only [Befehl.auswerten, Rahmen.installSchema, taggedDeclForm]
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
   intro scope input variants rest read
