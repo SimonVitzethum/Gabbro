@@ -316,8 +316,8 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
       · change 0x1000 + 1 ≤ 0x2000
         omega
     change op.evaluate s entryContext = some transfer
-    simp only [op, Instruction.evaluate, hhr, transfer, Option.bind, Option.bind_some]
-    rw [if_pos hcond]
+    simp only [op, Instruction.evaluate, hhr, hcond, transfer, Bind.bind, Option.bind,
+      Option.bind_some, ↓reduceIte]
     rfl
 
 theorem environment_erfuellbar : ErfuellbarAussage .environment := by
