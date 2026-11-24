@@ -130,6 +130,6 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
     (by simpa only [List.nil_append, List.append_nil] using checked)
   exact ⟨out, by simpa only [List.nil_append, List.append_nil] using trace.walk,
     by simpa only [List.length_nil, Nat.zero_add] using trace.position, value,
-    congrArg Rahmen.lokale trace.frame, (trace.aktiv ⟨running, active⟩).2, trace.lower⟩
+    (by rw [trace.frame]), (trace.aktiv ⟨running, active⟩).2, trace.lower⟩
 
 end Gabbro.Core.Ast.Semantik
