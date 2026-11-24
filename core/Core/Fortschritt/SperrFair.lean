@@ -234,7 +234,7 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
                     subst hkr
                     have hss : s' = s₂ := Option.some.inj (hzs.symm.trans hr2)
                     subst hss
-                    exact hcon
+                    exact heq' (Option.some.inj (hnew.symm.trans hcon))
                 have hmem2 : c ∈ (s₂.sperren l).schlange :=
                   bleibt_bis_besitz ⟨s, hsa, hmemq⟩ (fun k h1 _ => hcrash k h1)
                     hnie1 (by omega) hr2
