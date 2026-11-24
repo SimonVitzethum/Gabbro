@@ -1,6 +1,6 @@
 module
 
-public import Core.Verfeinerung.Fortschritt
+public import Core.Verfeinerung.LetztesAngebot
 
 @[expose] public section
 
@@ -84,7 +84,15 @@ theorem fortschritt_erfuellbar :
         (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse (.lockFree (fun _ => True)) η ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
-          before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true := by
+          before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true ∧
+          ∃ (ρ' : Maschine.Lauf E) (η' : Lauf E),
+            Maschine.Laeufe E h ρ' ∧ Laeufe E η' ∧ Laufabgleich ρ' η' (fun _ _ => True) ∧
+            ¬ FairLaeufe E.katalog h ρ'.hw ∧ ρ'.zeit.Endlich ∧ η'.zeit.Endlich ∧
+            StotterSchranke (fun _ => 1) η' ∧
+            ρ'.zeit.spur 0 = some (.kontext (.faden 0) (), ⟨[], []⟩) ∧
+            η'.belegt 0 = some (.faden 0) ∧ (∀ t, η'.zeit.spur t = none) ∧
+            (∃ w spur next, Schritt E.einrichtung E.system E.katalog η'.hw 0 (η'.zeit.zustand 0)
+              (.kontext (.faden 0) w, spur) next) := by
   let k := Plattform.x86_64.katalog
   let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
   let entry := Kontext.faden 0
@@ -233,8 +241,18 @@ theorem fortschritt_erfuellbar :
     · exact fun _ => ⟨(), rfl⟩
     · exact fun t => ⟨(), label.2, rfl, idealEvent t⟩
   have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched) progress (env.symm ▸ fair)
+  have lastReady : KannSchreiten (letztesAngebot hw) 0 entry z :=
+    ⟨0, opportunity 0, dispatch, live⟩
+  have privateStep : ImplSchritt e sy k (letztesAngebot hw) 0 z label z' :=
+    .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
+  have idealStep : Schritt e sy k (letztesAngebot hw) 0 z label z' :=
+    .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
+  have lastRun := lauf_mit_letztem_privattakt (E := E₀) (lokal := fun _ _ => True) (z := z) (z' := z')
+    fair.hardware admissible fair.konform rfl ⟨ProtokollBezug.refl z, trivial⟩
+    ⟨(show ProtokollBezug z' z from rfl), trivial⟩ privateStep rfl
+    lastReady (f := ()) rfl ⟨(), label.2, z', idealStep⟩
   refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, pflicht.zielFX konkret,
-    ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_⟩
+    ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_, lastRun⟩
   change Function.update z.lokal entry (!z.lokal entry) entry = true
   rw [Function.update_self]
   rfl
