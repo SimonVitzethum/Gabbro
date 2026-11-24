@@ -56,12 +56,12 @@ theorem BewachterAusdruck.zweiOperandenWert
       (fun _ => True) (TemporaryValue slot value) :=
   .anhaengen (.zweiOperanden left right) (.wert value eval) (Nat.le_refl _) (fun _ _ _ found _ => found)
 
-theorem codeLookup_instruction (position : frame.pc = pre.length) :
+theorem codeLookup_instruction {frame : Rahmen} {pre post : List Befehl} {instruction : Befehl} (position : frame.pc = pre.length) :
     (pre ++ [instruction] ++ post)[frame.pc]? = some instruction := by
   rw [position, List.append_assoc, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
   rfl
 
-theorem guardOfInstruction (position : frame.pc = pre.length) (active : frame.Aktiv)
+theorem guardOfInstruction {frame : Rahmen} {pre post : List Befehl} {instruction : Befehl} {demand : Bedarf} (position : frame.pc = pre.length) (active : frame.Aktiv)
     (checked : frame.WaechterHalten (pre ++ [instruction] ++ post))
     (guard : instruction.guard frame = some demand) :
     Annahme.waechterBedarf demand.1 demand.2 :=
