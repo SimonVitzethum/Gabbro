@@ -160,7 +160,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     case interval valid' loRead' hiRead' =>
         injection hEq with hword htail; injection hword with hspell
         exact (not_bool _ _ hspell.symm).elim
-    all_goals cases hEq
+    all_goals have head := (List.cons.inj hEq).1; cases head
   · intro signed width rest valid closed input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -179,7 +179,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals cases hEq
+    all_goals have head := (List.cons.inj hEq).1; cases head
   · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -202,7 +202,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals cases hEq
+    all_goals have head := (List.cons.inj hEq).1; cases head
   · intro _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
     cases other with
     | array otherCount otherBound otherElement otherBoundRead =>
@@ -215,7 +215,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         omega
       cases counts
       exact ⟨rfl, (List.cons.inj more).2⟩
-    | _ => cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro _ _ _ _ _ _ _ firstRead secondRead tailRead firstDet secondDet tailDet input' out rest' other equality
     cases other with
     | tuple otherFirst otherSecond otherTail =>
@@ -224,7 +224,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       obtain ⟨rfl, rfl⟩ := secondDet _ _ _ otherSecond rfl
       obtain ⟨rfl, rfl⟩ := tailDet _ _ _ otherTail rfl
       exact ⟨rfl, rfl⟩
-    | _ => cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro capacity rest input' out rest' other equality
     cases other with
     | text =>
@@ -233,7 +233,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact ⟨rfl, rfl⟩
     | integer => exact (not_text _ _ (List.cons.inj equality).1).elim
     | interval => exact (not_text _ _ (List.cons.inj equality).1).elim
-    | _ => cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro count rest carrier resolved input' out rest' other equality
     cases other with
     | index otherCarrier otherResolved =>
@@ -246,7 +246,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
     | interval =>
       exact (not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
-    | _ => cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro count rest carrier resolved input' out rest' other equality
     cases other with
     | indexOption otherCarrier otherResolved =>
@@ -257,7 +257,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact ⟨rfl, rfl⟩
     | integer => exact (not_option _ _ (List.cons.inj equality).1).elim
     | interval => exact (not_option _ _ (List.cons.inj equality).1).elim
-    | _ => cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
@@ -335,6 +335,13 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     intro s w; rfl
   have hpIn : printIn.value = keyword "in" := by rfl
   have hpRange : printClosedRange.value = closedRange := by rfl
+  have hpOpen : printOpen.value = openParen := rfl
+  have hpClose : printClose.value = closeParen := rfl
+  have hpOpenBracket : printOpenBracket.value = openBracket := rfl
+  have hpCloseBracket : printCloseBracket.value = closeBracket := rfl
+  have hpSemicolon : printSemicolon.value = semicolon := rfl
+  have hpComma : printComma.value = comma := rfl
+  have hpNat (value : Nat) : (printInteger value).value = .natural value := rfl
   refine WrittenType.rec
     (motive_1 := fun tree => tree.valid scope →
       ∀ rest, (∀ more, rest ≠ keyword "in" :: more) →
@@ -365,18 +372,18 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     have elementRead := elementPrint valid (semicolon :: .natural count :: closeBracket :: rest)
       (by intro more impossible; cases impossible)
     simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.append_assoc, List.cons_append, List.nil_append] using
+      List.append_assoc, List.cons_append, List.nil_append, hpOpenBracket, hpCloseBracket, hpSemicolon, hpNat] using
       (TypeReads.array count (Expr.lit count) elementRead boundRead)
   · intro first second tail firstPrint secondPrint tailPrint valid rest _
     have tailRead := tailPrint valid.2.2 rest
-    have secondRead := secondPrint valid.2.1 (tail.printTail.map PrintedToken.value ++ closeParen :: rest)
+    let afterSecond := tail.printTail.map PrintedToken.value ++ (closeParen :: rest)
+    let secondInput := second.printPieces.map PrintedToken.value ++ afterSecond
+    have secondRead := secondPrint valid.2.1 afterSecond
       (by cases tail <;> intro more h <;> cases h)
-    have firstRead := firstPrint valid.1
-      (comma :: second.printPieces.map PrintedToken.value ++
-        tail.printTail.map PrintedToken.value ++ closeParen :: rest)
+    have firstRead := firstPrint valid.1 (comma :: secondInput)
       (by intro more impossible; cases impossible)
     simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.append_assoc, List.cons_append, List.nil_append] using
+      List.append_assoc, List.cons_append, List.nil_append, hpOpen, hpClose, hpComma, afterSecond, secondInput] using
       (TypeReads.tuple firstRead secondRead tailRead)
   · intro capacity _ rest _
     exact .text
@@ -392,6 +399,6 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
       (tail.printTail.map PrintedToken.value ++ closeParen :: rest)
       (by cases tail <;> intro more h <;> cases h)
     simpa only [WrittenTypes.printTail, List.map_append, List.map_cons, List.map_nil,
-      List.append_assoc, List.cons_append] using (TypeItemsTail.comma headRead tailRead)
+      List.append_assoc, List.cons_append, hpComma] using (TypeItemsTail.comma headRead tailRead)
 
 end Gabbro.Core.Ast
