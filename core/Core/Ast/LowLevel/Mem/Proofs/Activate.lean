@@ -1,0 +1,315 @@
+module
+
+public import Core.Ast.LowLevel.Mem.Proofs.ActivatePreservation
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.LowLevel
+
+open Gabbro.Core.Text Katalog Maschine Waechter Aussen
+
+private def lowName : Identifier :=
+  ⟨['r'], ⟨'r', [], rfl, by
+    unfold isNameStart isLetter
+    left
+    left
+    constructor <;> decide, by
+      intro a h
+      cases h⟩⟩
+
+private theorem lowName_slot : RegionScope.slot [lowName] lowName = some 0 := by
+  change [lowName.val].idxOf? lowName.val = some 0
+  simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
+
+private def spaceName : Identifier :=
+  ⟨['s'], ⟨'s', [], rfl, by
+    unfold isNameStart isLetter
+    left
+    left
+    constructor <;> decide, by
+      intro a h
+      cases h⟩⟩
+
+private theorem spaceName_slot : [spaceName.val].idxOf? spaceName.val = some 0 := by
+  simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
+
+private def lowStart (h : Katalog.Umgebung) (regions : List Strecke) : AussenStart :=
+  ⟨0, (fun i => if i = 0 then some 0 else none), regions, (fun _ => none), h.politik.sicht 0 []⟩
+
+private theorem imageGueltigX86 : image.gueltig (Plattform.x86_64).ziel := by
+  refine ⟨List.Mem.head _, ?_, ?_⟩
+  · intro a byte present
+    change (if a = 0 then some 0 else none) = some byte at present
+    split at present
+    · rename_i atZero
+      subst a
+      exact Nat.pow_pos (Nat.zero_lt_succ _)
+    · cases present
+  · intro a mem
+    have h : a = 0 := List.mem_singleton.mp mem
+    subst a
+    exact ⟨0, rfl⟩
+
+private theorem lowZulStart {k : Katalog} {h : Katalog.Umgebung} {regions : List Strecke}
+    (hw : Hardware k h) (img : image.gueltig k.plattform.ziel)
+    (pairwise : regions.Pairwise Strecke.getrennt)
+    (ok : ∀ r ∈ regions, r.von < r.bis ∧ r.bis ≤ 2 ^ k.plattform.ziel.physicalBits ∧
+      ∀ e d, k.plattform.geraet e = some d → d.bus = .mmio → r.getrennt d.window) :
+    Katalog.ZulStart k h image (lowStart h regions) := by
+  refine ⟨img, hw.kerne, ?_, ?_, pairwise, ok, ?_, rfl⟩
+  · intro i hi
+    refine ⟨0, ?_⟩
+    change (if i = 0 then some 0 else none) = some 0
+    change i < 1 at hi
+    have : i = 0 := by omega
+    subst i
+    rfl
+  · intro i c hc
+    change (if i = 0 then some 0 else none) = some c at hc
+    split at hc
+    · rename_i hi
+      subst i
+      cases hc
+      constructor
+      · change 0 < 1
+        omega
+      · simpa using hw.kerne
+    · cases hc
+  · intro a byte hb
+    change (none : Option UInt8) = some byte at hb
+    cases hb
+
+private theorem x86RegionsOk (extent : Strecke)
+    (hbounds : extent.von < extent.bis ∧ extent.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits)
+    (hsep : extent.getrennt (Plattform.x86_64.virtio.window)) :
+    ∀ r ∈ [extent], r.von < r.bis ∧ r.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits ∧
+      ∀ e d, Plattform.x86_64.geraet e = some d → d.bus = .mmio → r.getrennt d.window := by
+  intro r hr
+  have : r = extent := List.mem_singleton.mp hr
+  subst r
+  refine ⟨hbounds.1, hbounds.2, ?_⟩
+  intro e d hdev hmmio
+  cases e with
+  | uart =>
+      change some Plattform.x86_64.uart = some d at hdev
+      cases hdev
+      change GeratBus.ioPorts = GeratBus.mmio at hmmio
+      cases hmmio
+  | virtio =>
+      change some Plattform.x86_64.virtio = some d at hdev
+      cases hdev
+      exact hsep
+  | bios | uefi | psci | sbi | hosted | cProcess =>
+      change none = some d at hdev
+      cases hdev
+
+private theorem memKlauselnWahr (k : Katalog) (code : List MemInstruction) :
+    KlauselnWahr (memProgram k code) := by
+  intro ρ lauf
+  refine ⟨?_, ?_, ?_⟩
+  · intro p hp
+    cases hp
+  · intro t p hp
+    cases hp
+  · intro t done p hp
+    cases hp
+
+private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
+    WaechterHalten (memProgram k code) := by
+  constructor
+  · intro ρ lauf t op args bedarf
+    simp only [kanonischeVerwendung, memProgram] at bedarf
+  · intro ρ lauf t h
+    rcases h with ⟨C, nonempty, blocked⟩
+    obtain ⟨c, hc⟩ := nonempty
+    obtain ⟨b, hb, _, _⟩ := blocked c hc
+    exact hb
+
+private theorem memAkzeptiert (k : Katalog) (code : List MemInstruction) :
+    Akzeptiert (memProgram k code) := by
+  refine ⟨?_, memKlauselnWahr k code, memWaechterHalten k code⟩
+  refine ⟨by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
+  · intro i
+    -- every instruction has an empty footprint at its ideal step
+    intro c s u w p hideal
+    rcases hideal with ⟨frame, heval, hp, hu⟩
+    have hp' : p = plan := by simpa using hp
+    subst p
+    unfold Annahme.Befugt
+    constructor
+    · intro x hx
+      cases hx
+    · intro l hl
+      cases hl
+  · exact ⟨zulassung_m2 _, by
+      apply aussen_gueltig_aus_kontext
+      intro run t s c w spur s' step
+      cases step with
+      | kontext _ _ regel execute =>
+          obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
+          cases (List.cons.inj planEq).1
+          obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal execute
+          exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+            (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
+
+theorem activateJoint : ActivateJointAussage := by
+  let k : Katalog := Plattform.x86_64.katalog
+  let target := k.plattform.ziel
+  let extent : Strecke := ⟨0x1000, 0x2000⟩
+  let tablesName : Identifier := lowName
+  let space : Identifier := spaceName
+  let scope : MemScope := ⟨[tablesName], [space], []⟩
+  let op : MemInstruction := .activateSpace 0
+  let prefix : List MemInstruction := [.newSpace 0]
+  let tree : MemTree .activateSpace := .activateSpace space
+  let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
+  let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
+  let start := lowStart env [extent]
+  let text : RawText := tree.print
+  let E := memProgram k (prefix ++ [op])
+  let s0 := (I.start E start).2
+  have hw : Hardware k env := Katalog.Umgebung.referenz_hardware k 1 sicht
+    (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+  have hbounds : extent.von < extent.bis ∧ extent.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits := by
+    constructor
+    · change 0x1000 < 0x2000
+      omega
+    · change 0x2000 ≤ 2 ^ (52 : Nat)
+      omega
+  have hsep : extent.getrennt (Plattform.x86_64.virtio.window) := by
+    unfold Strecke.getrennt
+    change 0x2000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x1000
+    exact Or.inl (by omega)
+  have hzul : E.ZulStart env start := by
+    change Katalog.ZulStart k env image (lowStart env [extent])
+    apply lowZulStart (k := k) (h := env) (regions := [extent])
+    · exact hw
+    · simpa [k, Plattform.katalog] using imageGueltigX86
+    · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
+    · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
+  have hparse : MemParse text tree := by
+    exact memParsePrint tree
+  have hopElab : elaborateMem scope tree = some op := by
+    simp only [elaborateMem, tree, scope, MemScope.slotRaum, List.map_cons, List.map_nil,
+      spaceName_slot, Option.map_some, op]
+  have hbezeichnet : BezeichnetMem k scope text (memUnit k op) .activateSpace := by
+    refine ⟨tree, hparse, ?_⟩
+    exact ⟨op, hopElab, rfl⟩
+  have hnodupR : (scope.regionen.map Subtype.val).Nodup := by
+    change [tablesName.val].Nodup
+    exact List.nodup_singleton _
+  have hnodupS : (scope.raeume.map Subtype.val).Nodup := by
+    change [space.val].Nodup
+    exact List.nodup_singleton _
+  have hnodupM : (scope.marken.map Subtype.val).Nodup := by
+    change ([] : List (List Char)).Nodup
+    exact List.nodup_nil
+  have hs0status : s0.status entryContext = .laeuft := by
+    simp only [s0, I.start, E, memProgram, lowStart, memBoot, Zustand.start, entryContext,
+      ↓reduceIte]
+  have hs0pc : (s0.lokal entryContext).pc = 0 := by
+    rfl
+  have hseiten : extent.seiten target := by
+    change 0x1000 % 4096 = 0 ∧ 0x1000 < 0x2000
+    decide
+  have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
+    decide
+  have heval0 : ((MemInstruction.newSpace 0).evaluate target s0 entryContext).isSome := by
+    rw [Option.isSome_iff_exists]
+    refine ⟨{ (s0.lokal entryContext) with
+        result := some (.space (s0.lokal entryContext).spaces.length),
+        spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] }, ?_⟩
+    unfold MemInstruction.evaluate
+    rw [heldTable]
+    dsimp
+    rw [if_pos hseiten]
+  obtain ⟨frame0, hframe0⟩ := Option.isSome_iff_exists.mp heval0
+  let s := frame0.advance entryContext s0
+  have hhead0 : E.system.kopf s0 entryContext = some (.newSpace 0) := by
+    change memHead target (prefix ++ [op]) s0 entryContext = some (.newSpace 0)
+    unfold memHead
+    simp only [entryContext, ↓reduceIte, hs0status, hs0pc, List.getElem?_cons_zero]
+    exact if_pos heval0
+  have hstep0 : ((MemInstruction.rule target (.newSpace 0)).ideal entryContext s0 ()
+      [plan] s) := by
+    change ∃ frame, (MemInstruction.newSpace 0).evaluate target s0 entryContext = some frame ∧
+      [plan] = [plan] ∧ s = frame.advance entryContext s0
+    exact ⟨frame0, hframe0, rfl, rfl⟩
+  have hreach : E.system.IErreichbar s0 s := by
+    exact System.IErreichbar.schritt entryContext () [plan] System.IErreichbar.start
+      ⟨.newSpace 0, hhead0, hstep0⟩
+  have hsstatus : s.status entryContext = .laeuft := by
+    simpa [s, MemFrame.advance] using hs0status
+  have hspc : (s.lokal entryContext).pc = 1 := by
+    simp only [s, MemFrame.advance, Function.update_self, hs0pc]
+  have hsregions : (s.lokal entryContext).regions = [some ⟨extent, [⟨0, 0⟩]⟩] := by
+    rfl
+  have hsspaces : (s.lokal entryContext).spaces =
+      [⟨extent, [], 0, []⟩] := by
+    -- the newSpace instruction appended one space to the empty initial list
+    have h := hframe0
+    unfold MemInstruction.evaluate at h
+    rw [heldTable] at h
+    dsimp at h
+    rw [if_pos hseiten] at h
+    injection h with h
+    have hframe : frame0 = { (s0.lokal entryContext) with
+        result := some (.space (s0.lokal entryContext).spaces.length),
+        spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] } := h.symm
+    rw [show (s.lokal entryContext) = { frame0 with pc := (s0.lokal entryContext).pc + 1 } by
+      simp only [s, MemFrame.advance, Function.update_self], hframe]
+    rfl
+  have hAktiv : (⟨extent, [], 0, []⟩ : Adressraum).Aktivierbar target s entryContext := by
+    unfold Adressraum.Aktivierbar Adressraum.Wohlgeformt
+    refine ⟨⟨hseiten, List.nodup_nil, ?_⟩, ?_, ?_⟩
+    · intro entry hmem
+      cases hmem
+    · simp only [MemFrame.covered, hsregions]
+      decide
+    · intro entry hmem
+      cases hmem
+  have heval : (op.evaluate target s entryContext).isSome := by
+    change ((MemInstruction.activateSpace 0).evaluate target s entryContext).isSome
+    rw [Option.isSome_iff_exists]
+    refine ⟨{ (s.lokal entryContext) with result := some .activated, active := some 0 }, ?_⟩
+    unfold MemInstruction.evaluate
+    rw [hsspaces]
+    dsimp
+    rw [if_pos hAktiv]
+  obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp heval
+  refine ⟨k, scope, tree, op, env, start, text, prefix, s, next, ?_, hw, hzul, ?_,
+    hnodupR, hnodupS, hnodupM, hbezeichnet, hparse, hopElab, hreach, ?_, hnext, ?_, ?_⟩
+  · exact ⟨tablesName, rfl, rfl⟩
+  · exact memAkzeptiert k (prefix ++ [op])
+  · change memHead target (prefix ++ [op]) s entryContext = some op
+    unfold memHead
+    simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
+      List.getElem?_cons_zero]
+    exact if_pos heval
+  · change ∃ i, memHead target (prefix ++ [op]) s entryContext = some i ∧
+      (MemInstruction.rule target i).ideal entryContext s () [plan] (next.advance entryContext s)
+    refine ⟨op, ?_, ?_⟩
+    · change memHead target (prefix ++ [op]) s entryContext = some op
+      unfold memHead
+      simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
+        List.getElem?_cons_zero]
+      exact if_pos heval
+    · change ∃ frame, op.evaluate target s entryContext = some frame ∧
+        [plan] = [plan] ∧ next.advance entryContext s = frame.advance entryContext s
+      exact ⟨next, hnext, rfl, rfl⟩
+  · change ∃ i, memHead target (prefix ++ [op]) s entryContext = some i ∧
+      (MemInstruction.rule target i).impl entryContext s () [plan] (next.advance entryContext s)
+    refine ⟨op, ?_, ?_⟩
+    · change memHead target (prefix ++ [op]) s entryContext = some op
+      unfold memHead
+      simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
+        List.getElem?_cons_zero]
+      exact if_pos heval
+    · change ∃ frame, op.evaluate target s entryContext = some frame ∧
+        [plan] = [plan] ∧ next.advance entryContext s = frame.advance entryContext s
+      exact ⟨next, hnext, rfl, rfl⟩
+
+theorem activate_aussage : ActivateAussage := by
+  exact ⟨activateObligations, activate_meaning, activateJoint⟩
+
+end Gabbro.Core.Ast.LowLevel

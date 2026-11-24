@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.Activate
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution
