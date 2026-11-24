@@ -48,17 +48,23 @@ inductive Tree : Form → Type where
 
 /-- Build the ordinary word token for a closed vocabulary whose spelling is
     checked against the same character grammar as a user-written identifier. -/
-def namePartDecidable (c : Char) : Decidable (isNamePart c) := by
-  unfold isNamePart isNameStart isLetter
-  infer_instance
-
 def word (head : Char) (tail : List Char) (first : isNameStart head)
-    (others : tail.all (fun c => @decide (isNamePart c) (namePartDecidable c)) = true) : PrintedToken :=
-  Identifier.print ⟨head :: tail, head, tail, rfl, first, fun c member =>
-    @of_decide_eq_true _ (namePartDecidable c) ((List.all_eq_true.mp others) c member)⟩
+    (others : ∀ c ∈ tail, isNamePart c) : PrintedToken :=
+  Identifier.print ⟨head :: tail, head, tail, rfl, first, others⟩
 
 macro "lowWord" head:char tail:str : term =>
-  `(word $head ($tail).toList (by unfold isNameStart isLetter; decide) (by decide))
+  `(word $head ($tail).toList
+    (.inl (.inl (by
+      simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
+    (by
+      simp only [String.reduceToList, List.forall_mem_cons, List.forall_mem_nil, and_true]
+      repeat' first
+      | exact Or.inl (Or.inr rfl)
+      | exact Or.inl (Or.inl (Or.inl (by
+          simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
+      | exact Or.inr (by
+          simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)
+      | apply And.intro))
 
 def AddressSpace.print : AddressSpace → PrintedToken
   | .physical => lowWord 'p' "hysical"
