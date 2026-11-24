@@ -82,6 +82,10 @@ def s0 : AussenStart := ⟨0, fun _ => some 0, [], fun _ => none, sicht0 0 []⟩
 
 def z1 : Zustand Unit Unit Unit Unit Bool Unit := (I.start (E_w dispatch1) s0).2
 
+theorem z1_dispatch0 : (z1.kerne 0).laeuft = some A := rfl
+
+theorem z1_live : ∀ c, z1.status c = .laeuft := fun _ => rfl
+
 def Z1 : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => z1
   | t + 1 => toggleUpdate A (Z1 t)
@@ -128,13 +132,13 @@ def posTakt (t : Nat) : Takt
     (fun t _ => ¬ AbsturzAngeboten (E_w dispatch1).katalog hw1 t)
     t (Z1 t) (some posLabel) (Z1 (t + 1)) :=
   .schritt rfl (I.Schritt.kontext (hw1_crash t)
-    ⟨0, hw1_opp0 t, by rw [z1_kerne], by rw [z1_status]⟩
+    ⟨0, hw1_opp0 t, by rw [z1_kerne]; exact z1_dispatch0, by rw [z1_status]; exact z1_live _⟩
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t)))
 
 def posTaktK (t : Nat) : Takt
     (Lauffolge (E_w dispatch1) hw1) t (some (Z1 t)) (some posLabel) (some (Z1 (t + 1))) :=
   .schritt rfl (.schritt (ImplSchritt.kontext (hw1_crash t)
-    ⟨0, hw1_opp0 t, by rw [z1_kerne], by rw [z1_status]⟩
+    ⟨0, hw1_opp0 t, by rw [z1_kerne]; exact z1_dispatch0, by rw [z1_status]; exact z1_live _⟩
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))))
 
 def ρ1 : Maschine.Lauf (E_w dispatch1) :=
@@ -194,7 +198,7 @@ theorem pos_lockfrei : LockFrei (E := E_w dispatch1) (fun _ => True) η1 := by
       subst hcA
       exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
         I.Schritt.kontext (hw1_crash t)
-          ⟨0, hw1_opp0 t, by rw [η1_zustand, z1_kerne], hlive⟩
+          ⟨0, hw1_opp0 t, by rw [η1_zustand, z1_kerne]; exact z1_dispatch0, hlive⟩
           ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))⟩)))
     | succ n =>
       have hnone : dispatch1 (n + 1) = none := rfl
@@ -287,6 +291,8 @@ theorem zAB0_dispatch0 : (zAB0.kerne 0).laeuft = some A := rfl
 
 theorem zAB0_dispatch1 : (zAB0.kerne 1).laeuft = some B := rfl
 
+theorem zAB0_live : ∀ c, zAB0.status c = .laeuft := fun _ => rfl
+
 theorem zAB0_dispatchN (m : Nat) : (zAB0.kerne (m + 2)).laeuft = none := rfl
 
 def spurAB (t : Nat) : Option (SchrittWahl Unit × SchrittSpur Unit Unit) :=
@@ -325,7 +331,7 @@ def taktAB (t : Nat) : Takt
   · rw [spurAB_eq h]
     exact .schritt rfl (I.Schritt.kontext (hw2_crash t)
       ⟨0, hw2_opp0 h, by rw [zAB_kerne]; exact zAB0_dispatch0,
-        by rw [zAB_status]⟩
+        by rw [zAB_status]; exact zAB0_live _⟩
       ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZAB t)))
   · rw [spurAB_ne h]
     exact .wartet rfl rfl (fun ho => Bool.false_ne_true ((hw2_crash t).symm.trans ho.2))
@@ -337,13 +343,13 @@ def taktABρ (t : Nat) : Takt
   · rw [spurABρ_eq h]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
       ⟨0, hw2_opp0 h, by rw [zAB_kerne]; exact zAB0_dispatch0,
-        by rw [zAB_status]⟩
+        by rw [zAB_status]; exact zAB0_live _⟩
       ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZAB t))))
   · have h1 : t % 2 = 1 := by omega
     rw [spurABρ_ne h]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
       ⟨1, hw2_opp1 h1, by rw [zAB_kerne]; exact zAB0_dispatch1,
-        by rw [zAB_status]⟩
+        by rw [zAB_status]; exact zAB0_live _⟩
       ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t B (ZAB t))))
 
 def ηAB : I.Lauf (E_w dispatch2) :=
@@ -380,7 +386,7 @@ theorem bereit_B (t : Nat) (_ : 0 ≤ t) : I.Bereit (E := E_w dispatch2) (ZAB t)
 
 /-- `B` hangs on the fair schedule: dispatched, open, enabled, never discharged. -/
 theorem hang_B : I.Haengt (E_w dispatch2) ρAB ηAB B := by
-  refine ⟨fair2, 0, (), ⟨⟨1, rfl⟩, fun t _ => ⟨rfl, by rw [ηAB_zustand, zAB_status], ?_⟩⟩, Or.inl ?_⟩
+  refine ⟨fair2, 0, (), ⟨⟨1, rfl⟩, fun t _ => ⟨rfl, by rw [ηAB_zustand, zAB_status]; exact zAB0_live _, ?_⟩⟩, Or.inl ?_⟩
   · intro herl
     exact nie_erledigt_B t herl
   · intro t _
@@ -473,7 +479,7 @@ theorem ab_waitfrei_neg : ¬ WaitFrei (E := E_w dispatch2) ρAB ηAB := by
   have h1 : (E_w dispatch2).stotterLaenge () = 1 := rfl
   have hcc : Kontextkosten ρAB B 0 4 = 2 := rfl
   obtain ⟨t, _, _, herl⟩ := hwf B () 0 rfl rfl ⟨1, rfl⟩
-    (fun t _ => rfl) (fun t _ => by rw [ηAB_zustand, zAB_status]) (fun t _ => bereit_B t (Nat.zero_le t)) 4
+    (fun t _ => rfl) (fun t _ => by rw [ηAB_zustand, zAB_status]; exact zAB0_live _) (fun t _ => bereit_B t (Nat.zero_le t)) 4
     (by rw [h1, hcc]; omega)
   exact (nie_erledigt_B t herl).elim
 
