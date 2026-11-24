@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Spur
+public import Core.Beobachtung.Review.Spur
 public import Core.Beobachtung.Fluss.Quellregel
 
 @[expose] public section

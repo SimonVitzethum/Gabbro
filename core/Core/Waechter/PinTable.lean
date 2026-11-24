@@ -102,7 +102,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.zeitRumpfNeuAussage, 2811088079340739814),
   (`Gabbro.Core.Beobachtung.zeitRechtzeitigErweiternAussage, 297006329917228257),
   (`Gabbro.Core.Beobachtung.zeitSpaetErweiternAussage, 6353056367267666316),
-  (`Gabbro.Core.Beobachtung.GabbroZielProb, 12699181017111665800),
+  (`Gabbro.Core.Beobachtung.GabbroZielProb, 14595520056900257225),
   (`Gabbro.Core.Beobachtung.Hebebuendel, 11642631917311286929),
   (`Gabbro.Core.Beobachtung.ProbNichtLeer, 9619867198724381835),
   (`Gabbro.Core.Beobachtung.Zufallsquelle, 6044941904378799197),
@@ -110,7 +110,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.fastSicherFortschrittAussage, 656090671072692439),
   (`Gabbro.Core.Beobachtung.hebeAussage, 13801708096570700435),
   (`Gabbro.Core.Beobachtung.infoTheoretischAussage, 10191733085417263050),
-  (`Gabbro.Core.Beobachtung.kostenErwartungAussage, 5523938973615013938),
+  (`Gabbro.Core.Beobachtung.kostenErwartungAussage, 16029569224365557587),
   (`Gabbro.Core.Beobachtung.prEreignisAussage, 16988291870418117393),
   (`Gabbro.Core.Beobachtung.reduktionAussage, 18171274980334645748),
   (`Gabbro.Core.Beobachtung.zufallGesetz, 13273855164972765550),
@@ -270,6 +270,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.LowLevel.Device.TakeBackErfuellbarAussage, 10616024588335787325),
   (`Gabbro.Core.Ast.LowLevel.Device.TransitionErfuellbarAussage, 15316100297566631120),
   (`Gabbro.Core.Ast.LowLevel.FlushNarrowJointAussage, 2360522067266695793),
+  (`Gabbro.Core.Ast.LowLevel.FlushNarrowWideJointAussage, 13237997050584933894),
   (`Gabbro.Core.Ast.Semantik.BaueArraySichtAussage, 11256319820550370324),
   (`Gabbro.Core.Ast.Semantik.BaueRecordSichtAussage, 14128368628368643236),
   (`Gabbro.Core.Ast.Semantik.BaueTupelSichtAussage, 17368313068749549884),
@@ -318,6 +319,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.StartNIPflicht, 2755602453748465507),
   (`Gabbro.Core.Beobachtung.PausenNIPflicht, 408940611882611720),
   (`Gabbro.Core.Beobachtung.Kopplung, 14183664939532648386),
-  (`Gabbro.Core.Beobachtung.PauseNIAussage, 12687164116333805720)]
+  (`Gabbro.Core.Beobachtung.PauseNIAussage, 12687164116333805720),
+  (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 7571697784290166693),
+  (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 9968801672193308971),
+  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 10491544744868465494)]
 
 end Gabbro.Core.Waechter

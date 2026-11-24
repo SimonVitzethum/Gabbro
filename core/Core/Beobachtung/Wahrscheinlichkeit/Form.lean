@@ -150,9 +150,10 @@ def ereignisPflicht (B : Zufallsbindung)
 
 /-- `planned.probability.cost` as a checker obligation: the computable verdict on
     the geometric certificate, plus the loop's survival family (monotone,
-    geometric decay, cost linear in the exit index). The checker's loop summary
-    (per-iteration cost at most `c`, exit rate at least `q`) yields the decay by
-    induction; the pinned premise is the decay itself. -/
+    geometric decay, cost linear in the FIRST exit index). The checker's loop
+    summary (per-iteration cost at most `c`, exit rate at least `q`) yields the
+    decay by induction; the pinned premise is the decay itself. The cost must be
+    bound at the first exit: with only some exit index the obligation is false. -/
 def kostenPflicht (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
@@ -163,8 +164,9 @@ def kostenPflicht (B : Zufallsbindung)
     ∀ ueberlebt : Nat → Set Band, (∀ n, MeasurableSet (ueberlebt n)) →
     (∀ n, ueberlebt (n + 1) ⊆ ueberlebt n) →
     (∀ n, hb.mu (ueberlebt n) ≤ (1 - (qNum : ENNReal) / (qDen : ENNReal)) ^ n) →
-    (∀ band, ∃ n, band ∉ ueberlebt n ∧ (kosten (hb.replay band) : ENNReal)
-      ≤ (n : ENNReal) * ((cNum : ENNReal) / (cDen : ENNReal))) →
+    (∀ band n, band ∉ ueberlebt n → (∀ m < n, band ∈ ueberlebt m) →
+      (kosten (hb.replay band) : ENNReal) ≤
+        (n : ENNReal) * ((cNum : ENNReal) / (cDen : ENNReal))) →
     KostenForm B hb kosten ((bNum : ENNReal) / (bDen : ENNReal))
 
 /-- `planned.probability.termination` as a checker obligation: the computable
