@@ -123,7 +123,7 @@ private theorem textTailCompose {scope it it2 it3}
         (textTailCompose tail' next)
 termination_by input.length
 decreasing_by
-  simp_all only [List.length_cons]
+  simp_all
   omega
 
 private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
