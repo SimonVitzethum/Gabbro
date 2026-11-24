@@ -198,7 +198,7 @@ theorem registerRegelSicher_falsch :
       status := fun _ => .ruht
       kerne := fun _ => ⟨none, .nutzer, (), fun _ => false, 0, false, []⟩
       rechte := ⟨fun _ => true, fun _ => 0⟩ }
-  let wiederanlauf : Wiederanlauf PUnit UInt8 PUnit Frame PUnit :=
+  let wiederanlauf : Wiederanlauf Nat UInt8 PUnit Frame PUnit :=
     { eintritt := owner
       kern := 0
       daten := fun _ => startdaten
@@ -259,7 +259,8 @@ theorem registerRegelSicher_falsch :
   let H : Katalog.Umgebung := Umgebung.referenz k 2 (fun _ _ => sicht0)
   let hw : HwLauf := Umgebung.referenzLauf k 2 (fun _ _ => sicht0)
   let start : AussenStart := ⟨0, fun _ => none, [], fun _ => none, sicht0⟩
-  let ρ : Lauf E := ⟨start, hw, Classical.choose (Zeitlauf.existiert (Lauffolge E hw) none)⟩
+  let ρ : Sicherheit.Lauf E :=
+    ⟨start, hw, Classical.choose (Zeitlauf.existiert (Lauffolge E.maschine hw) none)⟩
   have owns : Befugt binding .ready access vor owner := by
     refine ⟨rfl, rfl, ?_, rfl⟩
     intro z inAccess
