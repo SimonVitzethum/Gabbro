@@ -247,7 +247,7 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
                 rcases hmem' with hcontra | hr
                 · exact (heq' hcontra).elim
                 · exact hr
-          rw [hs2q] at hgoal ⊢
+          rw [hs2q]
           exact hgoal
 
 /-- A duplicate-free queue stays duplicate-free over crash-free steps. -/
