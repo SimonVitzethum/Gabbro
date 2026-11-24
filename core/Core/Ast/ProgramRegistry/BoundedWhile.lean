@@ -92,7 +92,7 @@ theorem boundedWhile_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((boundedWhileForm scope result).befehl args).abgleich ((boundedWhileForm scope result).fragment args) platform,
     ((boundedWhileForm scope result).befehl args).fortschritt ((boundedWhileForm scope result).fragment args),
     ((boundedWhileForm scope result).befehl args).komponierbar ((boundedWhileForm scope result).fragment args) platform,
-    ((boundedWhileForm scope result).befehl args).sicher ((boundedWhileForm scope result).fragment args) platform inv⟩
+    ((boundedWhileForm scope result).befehl args).sicherheitsPflichten ((boundedWhileForm scope result).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem boundedWhile_sicher (scope : Scope) (result : Option (Ty .value)) platform a :

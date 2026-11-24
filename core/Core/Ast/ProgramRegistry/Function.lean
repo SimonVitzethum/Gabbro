@@ -96,7 +96,7 @@ theorem function_erhaltung (scope : Scope) : (functionForm scope).ErhaltungsAuss
   exact ⟨((functionForm scope).befehl args).abgleich ((functionForm scope).fragment args) platform,
     ((functionForm scope).befehl args).fortschritt ((functionForm scope).fragment args),
     ((functionForm scope).befehl args).komponierbar ((functionForm scope).fragment args) platform,
-    ((functionForm scope).befehl args).sicher ((functionForm scope).fragment args) platform inv⟩
+    ((functionForm scope).befehl args).sicherheitsPflichten ((functionForm scope).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem function_sicher (scope : Scope) platform a :

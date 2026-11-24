@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Variant.Grammar
+public import Core.Ast.LowLevel.Syntax
 
 @[expose] public section
 
@@ -130,6 +131,13 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
   | retOption (declared : result = some (indexOptionType count)) :
       OptionInitializerReads scope count input value (semicolon :: rest) →
       StmtReads result scope (returnKeyword :: input) ⟨_, .retOption declared value⟩ rest
+
+  | letRegion (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name) :
+      LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: .word name.val :: assignment :: input)
+        ⟨_, .letRegion name ordinary region visible receiverOrdinary initializer⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :

@@ -12,18 +12,7 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Katalog Waechter
 open Lean (Name)
 
-/-- Every executing instruction of an elaborated unit came from its reference
-    tree at the acting context's indicated instruction position. -/
-def AusElaborierung : Prop :=
-  ∀ (platform : Plattform) (category : Category) (tree : category.Tree) (E : Einheit),
-    Elaboriert platform tree E → ∀ s c b, E.system.kopf s c = some b →
-      (fragment category tree).code[(s.lokal c).pc]? = some b
-
-theorem aus_elaborierung : AusElaborierung := by
-  intro platform category tree E meaning s c b head
-  have same := elab_vollstaendig meaning
-  subst E
-  change kopf (fragment category tree).code s c = some b at head
+theorem kopf_code (head : kopf code s c = some b) : code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
   split at head
   · cases status : s.status c with
@@ -45,6 +34,19 @@ theorem aus_elaborierung : AusElaborierung := by
       cases head
   · cases head
 
+/-- Every executing instruction of an elaborated unit came from its reference
+    tree at the acting context's indicated instruction position. -/
+def AusElaborierung : Prop :=
+  ∀ (platform : Plattform) (category : Category) (tree : category.Tree) (E : Einheit),
+    Elaboriert platform tree E → ∀ s c b, E.system.kopf s c = some b →
+      (fragment category tree).code[(s.lokal c).pc]? = some b
+
+theorem aus_elaborierung : AusElaborierung := by
+  intro platform category tree E meaning s c b head
+  have same := elab_vollstaendig meaning
+  subst E
+  exact kopf_code head
+
 def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args : Context → Type}
     (forms : (scope : Context) → Quellform (cat scope) (args scope))
     (joint : Prop) (constructor : Name) : RegistryStatements constructor .core :=
@@ -52,6 +54,13 @@ def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args
   ⟨.core (AusElaborierung ∧ ∀ scope, (forms scope).RegelAmOrt),
     shared.acceptanceRule, shared.idealRule, shared.unitsAndCommutation,
     shared.implementationRule, shared.preservation, shared.jointlySatisfiable⟩
+
+/-- The instruction's proof applies in the enclosing fragment, at any occurrence of
+    this constructor in the current fragment language without invariant declarations. -/
+def ProgramKernSicherheitsAussage (constructor : Name) : Prop :=
+  ∀ (p : Fragment) platform b, b.programConstructor = some constructor →
+    p.klauseln.invariant = [] →
+    Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
 
 def programKernStatements (constructor : Name) : RegistryStatements constructor .core where
   realization := .core AusElaborierung
@@ -67,7 +76,7 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
     p.klauseln.invariant = [] →
     I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
       I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
-      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+      Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
   jointlySatisfiable := ∀ platform start, ProgramInstructionPremises constructor platform start
 
 -- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
@@ -83,8 +92,13 @@ def programKernProofs (constructor : Name) (registered : constructor ∈ program
   unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
   implementationRule := fun _ _ _ _ _ _ _ => Iff.rfl
   preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
-    b.komponierbar p platform, Befehl.sicher p platform inv b⟩
+    b.komponierbar p platform, Befehl.sicherheitsPflichten p platform inv b⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered
+
+theorem programKern_sicherheit (constructor : Name)
+    (entry : RegistryEntry constructor ⟨.core, programKernStatements constructor⟩) :
+    ProgramKernSicherheitsAussage constructor :=
+  fun p platform b form invariant => (entry.preservation p platform b form invariant).2.2.2
 
 def befehlSchema (constructor : Name) : RegistrySchema constructor :=
   if constructor = ``Befehl.literal then
@@ -159,6 +173,9 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
+  else if constructor = ``Befehl.waehleUmgebung then
+    ⟨.core, Quellform.kernStatements (Context := PUnit) (fun _ => environmentUnitForm)
+      EnvironmentUnitErfuellbarAussage constructor⟩
   else nichtSpezifiziert constructor
 
 -- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.

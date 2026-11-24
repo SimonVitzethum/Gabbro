@@ -189,6 +189,8 @@ inductive WrittenType where
   | text (capacity : Nat)
   | index (carrier : Identifier) (count : Nat)
   | indexOption (carrier : Identifier) (count : Nat)
+  | address (space : LowLevel.AddressSpace)
+  | ownedRegion
 
 inductive WrittenTypes where
   | empty
@@ -212,6 +214,8 @@ def WrittenType.type : WrittenType → Ty .value
   | .text capacity => .text capacity
   | .index _ count => indexType count
   | .indexOption _ count => indexOptionType count
+  | .address space => .address space
+  | .ownedRegion => .ownedRegion
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -227,16 +231,27 @@ def WrittenType.valid (scope : Scope) : WrittenType → Prop
     let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
-  | .array element _ => element.valid scope
+  | .array element _count => element.valid scope
   | .tuple first second rest => first.valid scope ∧ second.valid scope ∧ rest.valid scope
-  | .text _ => True
+  | .text _capacity => True
   | .index carrier count | .indexOption carrier count => scope.carrierCount carrier = some count
+  | .address _ | .ownedRegion => True
 
 def WrittenTypes.valid (scope : Scope) : WrittenTypes → Prop
   | .empty => True
   | .next head tail => head.valid scope ∧ tail.valid scope
 
 end
+
+/-- Region work occurs at the binding instruction. The ordinary expression
+    grammar cannot duplicate an owned region or a typed view. -/
+inductive RegionInitializer where
+  | address
+  | view (written : WrittenType) (valid : written.valid [])
+
+def RegionInitializer.type : RegionInitializer → Ty .value
+  | .address => .address .physical
+  | .view written _ => .regionView written.type
 
 structure Parameter (scope : Scope) where
   name : Identifier
@@ -369,6 +384,13 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       Stmt result scope (⟨name, indexOptionType count, mutable, false⟩ :: scope)
   | retOption (declared : result = some (indexOptionType count))
       (value : OptionInitializer scope count) : Stmt result scope scope
+
+  /-- Bind an inert address or a typed, non-copyable view. -/
+  | letRegion (name : Identifier) (ordinary : name.val ≠ "mut".toList)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (initializer : RegionInitializer) :
+      Stmt result scope (⟨name, initializer.type, false, false⟩ :: scope)
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where

@@ -62,11 +62,11 @@ theorem variantValue_erhaltung : VariantValueErhaltungAussage := by
     rw [vv_caseCode_inv]
     rfl
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform inv⟩
+    b.sicherheitsPflichten p platform inv⟩
 
 theorem variantValue_regelSicher : VariantValueRegelSicherAussage := by
   intro scope platform args
-  exact (variantValue_erhaltung scope platform args).2.2.2
+  exact (variantValue_erhaltung scope platform args).2.2.2.1
 
 theorem variantValue_elaboriert : VariantValueElaboriertAussage := by
   intro scope platform args

@@ -60,7 +60,7 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     (fun _ _ blk => (block blk).klauseln.invariant = [])
     (fun _ br => (bracedBlock br).klauseln.invariant = [])
     (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
     Fragment.anhaengen, Fragment.einzel, Fragment.leer,
@@ -80,11 +80,11 @@ theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
       expr_keine_invarianten, vm_arms_inv, List.nil_append]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform inv⟩
+    b.sicherheitsPflichten p platform inv⟩
 
 theorem variantMatch_regelSicher : VariantMatchRegelSicherAussage := by
   intro ctx platform args
-  exact (variantMatch_erhaltung ctx platform args).2.2.2
+  exact (variantMatch_erhaltung ctx platform args).2.2.2.1
 
 theorem variantMatch_elaboriert : VariantMatchElaboriertAussage := by
   intro ctx platform args
@@ -119,7 +119,7 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
   refine @Gabbro.Core.Ast.VariantArms.rec result
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => (variantArms ar).branches.length = p.length)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
 
@@ -154,7 +154,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => ∀ (i : Nat) (hib : i < (variantArms ar).branches.length),
       ((variantArms ar).branches[i]).2 = true → (p[i]?).join.isSome = true)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
   · intro scope labels payloads label caseName body rest ih i hib hb

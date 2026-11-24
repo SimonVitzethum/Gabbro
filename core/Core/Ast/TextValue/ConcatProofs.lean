@@ -254,6 +254,7 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
       dsimp [textConcatForm, args]
       rw [Befehl.nach]
       simp only [Function.update_self]
+      change (((Befehl.textConcat 0 a a).auswerten (s₂.lokal eintritt)).temp 0).isSome = true
       rw [htmp]
       rfl
 

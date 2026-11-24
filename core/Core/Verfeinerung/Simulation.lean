@@ -83,8 +83,8 @@ theorem Laufabgleich.sim (matched : Laufabgleich ρ η) (valid : Laeufe E η)
 
 theorem sim_im_lauf (pflicht : SimPflichten E) (run : Maschine.Laeufe E h ρ) :
     ∃ η : Lauf E, Laeufe E η ∧ Sim E ρ η := by
-  obtain ⟨η, valid, matched, _⟩ := laufabgleich pflicht.abgleich run
-  exact ⟨η, valid, matched.sim valid (pflicht.abgleich.schranke h ρ η run matched)
+  obtain ⟨η, valid, matched, checked, _⟩ := laufabgleich pflicht.abgleich run
+  exact ⟨η, valid, matched.sim valid (pflicht.abgleich.schranke h ρ η run matched checked)
     (pflicht.autoritaet h ρ run) pflicht.fortsetzung⟩
 
 end Gabbro.Core.Maschine.I

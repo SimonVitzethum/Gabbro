@@ -194,6 +194,9 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
   | table item =>
       by_cases he : head.exported <;> by_cases ex : item.exported <;>
         simp_all [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot, keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex]
+  | environment =>
+      cases head with
+      | mk exported => cases exported <;> cases (List.cons.inj hh).1
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
   refine ⟨?reads, egPrint scope, ?sat⟩
@@ -233,10 +236,10 @@ theorem effectGroup_erhaltung : EffectGroupErhaltungAussage := by
   let p := (effectGroupForm scope).fragment args
   let b := (effectGroupForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform (by rfl)⟩
 theorem effectGroup_regelSicher : EffectGroupRegelSicherAussage := by
   intro scope platform args
-  exact (effectGroup_erhaltung scope platform args).2.2.2
+  exact (effectGroup_erhaltung scope platform args).2.2.2.1
 private theorem mapM_option_length {α β : Type} (f : α → Option β) :
     ∀ (xs : List α) (ys : List β), xs.mapM f = some ys → xs.length = ys.length := by
   intro xs

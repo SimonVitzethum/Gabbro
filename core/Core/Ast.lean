@@ -1,10 +1,26 @@
 module
 
 public import Core.Ast.Grammar
+public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+public import Core.Ast.LowLevel.Proofs.Syntax
+public import Core.Ast.LowLevel.Proofs.Elaboration
+public import Core.Ast.LowLevel.Proofs.Execution
+public import Core.Ast.LowLevel.Proofs.Preservation
+public import Core.Ast.LowLevel.Proofs.Meaning
+public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
+public import Core.Ast.LowLevel.Proofs.RegionUnit
+public import Core.Ast.LowLevel.Proofs.RegionSatisfiability
+public import Core.Ast.LowLevel.Proofs.DeviceRegisters
+public import Core.Ast.LowLevel.Proofs.DeviceTransition
+public import Core.Ast.LowLevel.Proofs.DeviceLend
+public import Core.Ast.LowLevel.Proofs.DeviceDma
+public import Core.Ast.LowLevel.Proofs.DeviceSatisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface
-public import Core.Ast.ExpressionBeweise
+public import Core.Ast.Expression.Proofs
 public import Core.Ast.Semantik.Recipe
 public import Core.Ast.Program.Progress
 public import Core.Ast.Aggregate.ArrayValueProofs

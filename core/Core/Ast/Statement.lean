@@ -10,6 +10,29 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
+private theorem regionInitializer_disjoint
+    (region : Local scope .ownedRegion) (visible : region.nameVisible)
+    (ordinary : ordinaryLocal region.binding.name)
+    (field : LowLevel.RegionReads region.binding.name input init suffix)
+    (expr : ExprReads scope 0 input value more) : False := by
+  obtain ⟨tail, rfl⟩ := field.receiver
+  cases expr with
+  | atom head _ =>
+    generalize same : Token.word region.binding.name.val :: dot :: tail = tokens at head
+    cases head with
+    | «variable» ref refVisible _ =>
+      have eq := Local.nameVisible_unique region ref visible refVisible.2 (Token.word.inj (List.cons.inj same).1)
+      exact Eq.mp (congrArg Ty.valueBinding (congrArg Sigma.fst eq).symm) refVisible.1
+    | variantValue _ _ _ _ _ available _ =>
+      exact available.2 _ region.binding_mem (Token.word.inj (List.cons.inj same).1)
+    | trueLit => exact ordinary.1 (Token.word.inj (List.cons.inj same).1)
+    | falseLit => exact ordinary.2.1 (Token.word.inj (List.cons.inj same).1)
+    | recordValue =>
+      cases (List.cons.inj (List.cons.inj same).2).1
+    | textLength =>
+      cases (List.cons.inj (List.cons.inj same).2).1
+    | _ => cases (List.cons.inj same).1
+
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     (right : StmtReads result scope input b rest') : a = b ∧ rest = rest' := by
@@ -25,17 +48,18 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       ∀ {other suffix}, VariantArmsRead result scope allowed input (labels := labels) (payloads := payloads)
         other suffix → tree = other ∧ rest = suffix)
     ?letBinding ?assignVar ?ret ?ite ?retVoid ?letMutable ?directCall ?bindDirect
-    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption
+    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion
     ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard left
   case letBinding =>
     intros
     rename_i name ordinary exprRead letTail tree rest other
-    obtain ⟨name', ordinary', _, value', more', sameName, read', tail'⟩ := other.let_header
-    have nameEq : name' = name := Subtype.ext sameName
-    cases nameEq
-    obtain ⟨same, rfl⟩ := ExprReads.deterministic exprRead read'
-    cases same
-    exact LetTailReads.deterministic letTail tail'
+    rcases other.let_header with ⟨name', _, _, _, _, sameName, read', tail'⟩ |
+      ⟨_, _, region, visible, receiverOrdinary, _, _, field, _⟩
+    · cases Subtype.ext sameName
+      obtain ⟨same, rfl⟩ := ExprReads.deterministic exprRead read'
+      cases same
+      exact LetTailReads.deterministic letTail tail'
+    · exact (regionInitializer_disjoint region visible receiverOrdinary field exprRead).elim
   case assignVar =>
     intros
     rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead tree rest other
@@ -73,6 +97,21 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       cases sameNo
       exact ⟨rfl, restEq⟩
     · exact (condRead.not_assignmentStart assigning).elim
+  case letRegion =>
+    intros
+    rename_i name ordinary region visible receiverOrdinary field otherTree otherRest other
+    rcases other.let_header with ⟨_, _, _, _, _, _, expr, _⟩ |
+      ⟨otherName, _, otherRegion, otherVisible, _, _, nameEq, otherField, treeEq⟩
+    · exact (regionInitializer_disjoint region visible receiverOrdinary field expr).elim
+    · cases treeEq
+      cases Subtype.ext nameEq
+      obtain ⟨tail, inputEq⟩ := field.receiver
+      obtain ⟨otherTail, otherInputEq⟩ := otherField.receiver
+      have receiverEq := Token.word.inj (List.cons.inj (inputEq.symm.trans otherInputEq)).1
+      have refEq := Local.nameVisible_unique region otherRegion visible otherVisible receiverEq
+      cases refEq
+      obtain ⟨rfl, suffixEq⟩ := field.deterministic otherField
+      exact ⟨rfl, (List.cons.inj suffixEq).2⟩
   case done =>
     intros
     rename_i b rest' other
@@ -201,7 +240,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     (motive_3 := fun _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ _ _ => True)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) right
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) right
   all_goals try (intros; trivial)
   · intros
     rename_i other

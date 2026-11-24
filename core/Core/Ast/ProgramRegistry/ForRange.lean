@@ -97,7 +97,7 @@ theorem forRange_erhaltung (scope : Scope) (result : Option (Ty .value)) : (forR
   exact ⟨((forRangeForm scope result).befehl args).abgleich ((forRangeForm scope result).fragment args) platform,
     ((forRangeForm scope result).befehl args).fortschritt ((forRangeForm scope result).fragment args),
     ((forRangeForm scope result).befehl args).komponierbar ((forRangeForm scope result).fragment args) platform,
-    ((forRangeForm scope result).befehl args).sicher ((forRangeForm scope result).fragment args) platform inv⟩
+    ((forRangeForm scope result).befehl args).sicherheitsPflichten ((forRangeForm scope result).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem forRange_sicher (scope : Scope) (result : Option (Ty .value)) platform a :

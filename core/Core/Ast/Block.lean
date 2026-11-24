@@ -20,6 +20,9 @@ def OptionInitializer.printPieces : OptionInitializer scope count → List Print
 mutual
 
 def Stmt.printPieces : Stmt result before after → List PrintedToken
+  | .letRegion name _ region _ _ initializer =>
+    [letName.print, name.print, printAssignment] ++
+      LowLevel.printRegion region.binding.name initializer ++ [printSemicolon]
   | .letValue name _ value =>
     [letName.print, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
   | .assignVar ref _ _ value _ =>
@@ -152,7 +155,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       VariantArmsRead result scope allowed
         (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest)
     ?letValue ?assignVar ?ret ?ite ?retVoid ?letMutable ?directCall ?bindDirect
-    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption
+    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion
     ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard tree rest
   case letValue =>
     intros
@@ -342,6 +345,13 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hpReturn, hpSemi] using
       (StmtReads.retOption declared (value.printReads (semicolon :: rest)))
+  case letRegion =>
+    intro _ name ordinary region visible receiverOrdinary initializer rest
+    have reads := LowLevel.printRegion_reads region.binding.name initializer
+      (rest := semicolon :: rest) (by intro _ same; cases same)
+    simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons,
+      List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hpLet, hpName, hpAssign, hpSemi] using
+      (StmtReads.letRegion (result := result) name ordinary region visible receiverOrdinary reads)
   case armsDone =>
     intros
     exact .done

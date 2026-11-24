@@ -328,7 +328,7 @@ theorem program_eintritt (frame : Rahmen) (entry : Identifier) (target : Funktio
     simpa [hp]
   have hstep : (Befehl.starte entry |>.auswerten frame) =
       ({ frame with lokale := [] } : Rahmen).ruf entry [] target.result := by
-    simpa [Befehl.auswerten, unique, noRec, noBad, lookup, parameters]
+    simpa [Befehl.auswerten, unique, noRec, noBad, lookup, parameters, Rahmen.eintrittArgumente]
   rw [hstep]
   have typecheck : (⟨entry, [], target.result, none⟩ : Rufstelle).passt frame.funktionen = true := by
     cases hr : target.result with

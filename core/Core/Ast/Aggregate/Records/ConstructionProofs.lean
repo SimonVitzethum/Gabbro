@@ -134,7 +134,7 @@ theorem recordValue_erhaltung : RecordValueErhaltungAussage := by
 theorem recordValue_regelSicher : RecordValueRegelSicherAussage := by
   intro scope platform args
   exact (Quellform.erhaltung (recordValueForm scope) (fun a =>
-    expr_keine_invarianten 0 ((Surface.recordValue scope).tree a).2) platform args).2.2.2
+    expr_keine_invarianten 0 ((Surface.recordValue scope).tree a).2) platform args).2.2.2.1
 
 private theorem recordValue_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
   intro args

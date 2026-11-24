@@ -48,11 +48,11 @@ theorem taggedDecl_erhaltung : TaggedDeclErhaltungAussage := by
   let p := (taggedDeclForm scope).fragment args
   let b := (taggedDeclForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform (by rfl)⟩
 
 theorem taggedDecl_regelSicher : TaggedDeclRegelSicherAussage := by
   intro scope platform args
-  exact (taggedDecl_erhaltung scope platform args).2.2.2
+  exact (taggedDecl_erhaltung scope platform args).2.2.2.1
 
 theorem taggedDecl_elaboriert : TaggedDeclElaboriertAussage := by
   intro scope platform args
@@ -114,6 +114,8 @@ theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
   | effectGroup item _ =>
     cases visibility : item.exported <;> cases exported <;>
       simp_all [taggedDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, programWordValue, keyword]
+  | environment =>
+    cases exported <;> cases (List.cons.inj tokens).1
   | _ => cases exported <;> simp_all [taggedDeclarationPrefix, keyword, assignment, colon, openBrace, openParen, semicolon]
 
 private theorem taggedDeclPrints (scope : Scope) (args : TaggedDeclArgs scope) :

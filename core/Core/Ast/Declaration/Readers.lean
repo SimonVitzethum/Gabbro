@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Block
+public import Core.Ast.LowLevel.Syntax
 public import Core.Ast.Aggregate.Carrier.Grammar
 public import Core.Ast.Aggregate.Carrier.Effects.Grammar
 
@@ -62,6 +63,10 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       EffectListReads CarrierEffectReads input item.written (semicolon :: rest) →
       DeclReads before (item.header.map PrintedToken.value ++ input) ⟨_, .effectGroup item⟩ rest
 
+  | environment (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile) :
+      DeclReads before (LowLevel.environmentTokens name abi row ++ rest)
+        ⟨before, .environment name abi row⟩ rest
+
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
   | some written => printArrow :: written.printPieces
@@ -88,5 +93,6 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .effectGroup item =>
     item.header ++ commaSeparated (item.written.map WrittenCarrierEffect.printPieces) ++
       [printCloseBrace, printSemicolon]
+  | .environment name abi row => (LowLevel.Tree.environment name abi row).printPieces
 
 end Gabbro.Core.Ast

@@ -19,11 +19,12 @@ theorem rennen_bei_leeren_ereignissen {g : SpeicherGraph Ort Wert} (leer : g.ev 
 
 /-- Catalogue events extend the prefix with one non-memory label. They never materialise
     an initial write and introduce no conflicting access. -/
-theorem katalog_speicher {initial : Ort → Wert} {vor nach : SpeicherGraph Ort Wert}
+theorem aussen_label_speicher {initial : Ort → Wert} {vor nach : SpeicherGraph Ort Wert}
     {label : Etikett Ort Wert} {spur : SpeicherSpur Ort Wert}
+    {actor : SpeicherAkteur Ort}
     (istAussen : label.art = .aussen)
-    (folge : Speicherfolge initial .aussen vor [label] spur nach) :
-    spur = [(.aussen, label)] ∧ (RennenImGraph vor → RennenImGraph nach) := by
+    (folge : Speicherfolge initial actor vor [label] spur nach) :
+    spur = [(actor, label)] ∧ (RennenImGraph vor → RennenImGraph nach) := by
   cases folge with
   | cons init anhang rest =>
     cases rest
@@ -66,6 +67,13 @@ theorem katalog_speicher {initial : Ort → Wert} {vor nach : SpeicherGraph Ort 
       rcases rennen a b altKonflikt with order | order
       · exact Or.inl (eqA ▸ eqB ▸ erweitert.einbettung.hb order)
       · exact Or.inr (eqA ▸ eqB ▸ erweitert.einbettung.hb order)
+
+theorem katalog_speicher {initial : Ort → Wert} {vor nach : SpeicherGraph Ort Wert}
+    {label : Etikett Ort Wert} {spur : SpeicherSpur Ort Wert}
+    (istAussen : label.art = .aussen)
+    (folge : Speicherfolge initial .aussen vor [label] spur nach) :
+    spur = [(.aussen, label)] ∧ (RennenImGraph vor → RennenImGraph nach) :=
+  aussen_label_speicher istAussen folge
 
 theorem wirkungsloser_schritt {vor nach : Zustand L Ort Wert Raum Lok Grund}
     {spur : SchrittSpur Ort Wert} {hw t}

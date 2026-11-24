@@ -65,6 +65,8 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
   | effectGroup item _ =>
       cases he : item.exported <;> cases ex <;>
         simp_all [recordDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, ppwVal, keyword]
+  | environment =>
+      cases ex <;> cases (List.cons.inj hh).1
   | _ =>
       cases ex <;> simp_all [recordDeclarationPrefix, keyword, assignment, colon, openBrace,
         openParen, semicolon]
@@ -144,11 +146,11 @@ theorem recordDecl_erhaltung : RecordDeclErhaltungAussage := by
   let p := (recordDeclForm scope).fragment args
   let b := (recordDeclForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform (by rfl)⟩
 
 theorem recordDecl_regelSicher : RecordDeclRegelSicherAussage := by
   intro scope platform args
-  exact (recordDecl_erhaltung scope platform args).2.2.2
+  exact (recordDecl_erhaltung scope platform args).2.2.2.1
 
 theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
   intro platform start
