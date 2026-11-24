@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.ProgramHeader
+public import Core.Text.Syntax
 public import Core.Katalog.FirmwareNamen
 
 @[expose] public section
@@ -47,13 +48,17 @@ inductive Tree : Form → Type where
 
 /-- Build the ordinary word token for a closed vocabulary whose spelling is
     checked against the same character grammar as a user-written identifier. -/
+def namePartDecidable (c : Char) : Decidable (isNamePart c) := by
+  unfold isNamePart isNameStart isLetter
+  infer_instance
+
 def word (head : Char) (tail : List Char) (first : isNameStart head)
-    (others : tail.all (fun c => decide (isNamePart c)) = true) : PrintedToken :=
+    (others : tail.all (fun c => @decide (isNamePart c) (namePartDecidable c)) = true) : PrintedToken :=
   Identifier.print ⟨head :: tail, head, tail, rfl, first, fun c member =>
-    of_decide_eq_true ((List.all_eq_true.mp others) c member)⟩
+    @of_decide_eq_true _ (namePartDecidable c) ((List.all_eq_true.mp others) c member)⟩
 
 macro "lowWord" head:char tail:str : term =>
-  `(word $head ($tail).toList (by decide) (by decide))
+  `(word $head ($tail).toList (by unfold isNameStart isLetter; decide) (by decide))
 
 def AddressSpace.print : AddressSpace → PrintedToken
   | .physical => lowWord 'p' "hysical"

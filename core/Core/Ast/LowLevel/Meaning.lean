@@ -55,7 +55,7 @@ def layout (target : ZielDaten) : WrittenType → Option Layout
 abbrev RegionScope := List Identifier
 
 def RegionScope.slot (scope : RegionScope) (name : Identifier) : Option Nat :=
-  (scope.map Subtype.val).idxOf? name.val
+  List.idxOf? name.val (scope.map Subtype.val)
 
 inductive Instruction (k : Katalog) where
   | denoteAddress (space : AddressSpace) (width : Nat) (valid : space.width k.plattform.ziel = some width)
