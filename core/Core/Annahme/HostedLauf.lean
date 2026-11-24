@@ -210,6 +210,7 @@ theorem akzeptiert_ideal_mit_antwort :
       AussengriffeEigen (η.zeit.zustand 1) c q.question ∧
       ¬ Aussen.GueltigBeiCommit E.katalog.plattform (η.hw.politik.sicht 1 (η.zeit.zustand 1).verlauf) q.question ∧
       η.zeit.spur 2 = some (.antwort a, resp) ∧ resp.aussen = [.antwort a] ∧ a.zu q ∧ a.reply.result.isOk = true ∧
+      (∃ d, d.nummer = a.context ∧ AussengriffeEigen (η.zeit.zustand 2) d a.question) ∧
       Aussen.GueltigBeiCommit E.katalog.plattform (η.hw.politik.sicht 2 (η.zeit.zustand 2).verlauf) a.question := by
   obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar s []
@@ -230,8 +231,8 @@ theorem akzeptiert_ideal_mit_antwort :
   have lauf : I.Laeufe einheit η := ⟨erlaubt bytes, konform bytes, zul, rfl,
     zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩
   exact ⟨einheit, η, gestellt s, angekommen s bytes, kontext, frageSpur s, antwortSpur s bytes,
-    akzeptiert, lauf, rfl, rfl, eigene_frage _, issue_ungueltig _ _, rfl, rfl,
-    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, (akzeptiert_antwort_commit akzeptiert η lauf reply rfl).2⟩
+    akzeptiert, lauf, rfl, rfl, eigene_frage _, issue_ungueltig [] bytes, rfl, rfl,
+    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, akzeptiert_antwort_commit akzeptiert η lauf reply rfl⟩
 
 /-- A concrete run shares the same issuing and answer steps as the ideal run. Its finite
     prefix is followed by genuine idle ticks. -/
