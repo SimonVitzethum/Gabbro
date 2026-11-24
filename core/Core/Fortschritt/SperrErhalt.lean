@@ -71,7 +71,9 @@ theorem gibt_wechselt {s s' : SperrZustand} {h : Kontext} (hg : s.Gibt h s') : s
       have hbes := congrArg SperrZustand.besitzer heq
       nomatch hbes
     | cons h₀ rest =>
-      have hlen := congrArg List.length (congrArg SperrZustand.schlange heq)
+      have hq := congrArg SperrZustand.schlange heq
+      have hlen : (h₀ :: rest).length = rest.length := congrArg List.length hq
+      simp only [List.length_cons] at hlen
       omega
 
 /-- Inversion for the lock part of a `sperre` protocol step. -/
@@ -81,11 +83,16 @@ theorem fuehrtAus_sperre_inv {t c s u mem ev v} {l a}
       ∀ m, m ≠ l → v.sperren m = s.sperren m := by
   cases h with
   | sperre h' _ =>
-    exact ⟨_, h', Function.update_self,
-      fun m hm => Function.update_of_ne (Ne.symm hm) _ _⟩
+    refine ⟨_, h', ?_, ?_⟩
+    · show Function.update (s.sperren) l _ _ = _
+      exact Function.update_self
+    · intro m hm
+      show Function.update (s.sperren) l _ _ = _
+      exact Function.update_of_ne (Ne.symm hm) _ _
 
 /-- A protocol step leaves every lock alone or moves exactly one lock by one lock rule. -/
-theorem kontextSchritt_sperren {t c s u plan sperren_ev ev v} {m : L}
+theorem kontextSchritt_sperren {t c s u} {plan : SchrittPlan L Ort Wert Bedingung}
+    {sperren_ev ev v} {m : L}
     (hrahmen : Zustandsrahmen s u)
     (haus : FuehrtAus E.einrichtung t c s u plan.aktion sperren_ev ev v) :
     v.sperren m = s.sperren m ∨
@@ -152,16 +159,16 @@ theorem lauf_schritt_sperren {ρ : Maschine.Lauf E} {l : L} {k : Nat}
     | schritt himp =>
       cases himp with
       | kontext _ _ _ aus =>
-        obtain ⟨hrahmen, _, _, _, haus, _, heq⟩ := aus
+        obtain ⟨hrahmen, _, _, v, haus, _, heq⟩ := aus
         have hvv : s.sperren l =
             v.sperren l := (congrArg
             (fun z : Zustand L Ort Wert Raum Lok Grund => z.sperren l) heq).trans rfl
         rcases kontextSchritt_sperren hrahmen haus with huv | ⟨a', d', next, hss, hvn⟩
         · exact Or.inl (hvv.trans huv)
         · exact Or.inr ⟨a', d', next, hss, hvv.trans hvn⟩
-      | antwort h =>
+      | antwort _ h =>
         exact Or.inl (antwortSchritt_sperren h)
-      | interrupt h =>
+      | interrupt _ h =>
         exact Or.inl (interruptSchritt_sperren h)
       | absturz h =>
         exact (hfrei (by rw [label, h.genau.1])).elim
