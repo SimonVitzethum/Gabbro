@@ -157,7 +157,8 @@ theorem interruptNI : InterruptNIAussage := by
                 nρ = { Zustandseintritt vρ k id c nmi with graph := nρ.graph } →
                 schrittBeob ρ predictor t = [.katalog (.interrupt k irq .handler)] := by
             intro ρ spurρ vρ nρ tickρ atV atN aussenρ appendρ ruhtρ nextρ
-            have speicherLeer : spurρ.speicher.filterMap (speicherBeob E.etiketten) = [] := by
+            have speicherLeer : spurρ.speicher.filterMap (speicherBeob E.etiketten) =
+                ([] : List (NiedrigesEreignis PUnit Int PUnit Ast.Semantik.Befehl)) := by
               have sp : spurρ.speicher = [(.aussen, label)] := by
                 cases appendρ with
                 | cons vor hsAppend nach =>
