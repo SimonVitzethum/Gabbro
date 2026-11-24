@@ -119,7 +119,5 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
   · simp only [List.length_append, List.length_reverse]
     rw [hlen]
     rw [tupleLocals_length args.types value args.pattern.names args.checked.1]
-  · trivial
-  · trivial
 
 end Gabbro.Core.Ast.Semantik
