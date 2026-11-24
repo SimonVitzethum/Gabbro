@@ -57,6 +57,7 @@ private theorem openParen_ne_word (name : List Char) : openParen ≠ Token.word 
   intro h
   unfold openParen at h
   cases h
+  cases h
 
 private theorem letKeyword_ne_word (name : List Char) : letKeyword ≠ Token.word name := by
   intro h
@@ -75,6 +76,10 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
         ((tupleAnnotation_consumes _ _ _ annotationRead).trans
           (tuplePattern_consumes input _ _ patternRead))
+  case variantMatch =>
+      have h : openParen = keyword "match" := (List.cons.inj (List.cons.inj htok).2).1
+      unfold keyword at h
+      exact (openParen_ne_word _ h).elim
   all_goals
     first
     | simp_all
