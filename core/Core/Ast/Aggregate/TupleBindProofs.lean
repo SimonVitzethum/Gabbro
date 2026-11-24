@@ -56,8 +56,7 @@ private theorem tupleAnnotation_consumes : (input : List Token) → (annotation 
 private theorem openParen_ne_word (name : List Char) : openParen ≠ Token.word name := by
   intro h
   unfold openParen at h
-  cases h
-  cases h
+  nomatch h
 
 private theorem letKeyword_ne_word (name : List Char) : letKeyword ≠ Token.word name := by
   intro h
