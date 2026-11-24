@@ -96,7 +96,7 @@ theorem StmtReads.assign_inversion
   generalize hs : name = word at read
   cases read with
   | assignVar ref visible writable fits read =>
-      exact ⟨_, _, _, _, ref, visible, writable, _, fits, hs.symm, read, rfl⟩
+      exact ⟨_, _, _, _, ref, visible, writable, _, fits, rfl, read, rfl⟩
   | ret declared fits read =>
       exfalso
       cases read with
@@ -116,14 +116,15 @@ theorem StmtReads.ret_inversion
   cases read with
   | ret declared fits read =>
       left
-      subst declared
+      cases declared
       exact ⟨_, _, fits, read, rfl⟩
+  | letBinding name ordinary read tail => exfalso; cases hs
   | assignVar ref visible writable fits read =>
       right
       exact ⟨_, rfl⟩
   | ite conditionRead yesRead noRead =>
       exfalso
-      simp_all
+      cases hs
 
 -- Mirror StmtReads.ret_inversion and retain both block derivations.
 theorem StmtReads.ite_inversion
@@ -136,13 +137,14 @@ theorem StmtReads.ite_inversion
   cases read with
   | ite conditionRead yesRead noRead =>
       left
+  | letBinding name ordinary read tail => exfalso; cases hs
       exact ⟨_, _, _, _, _, conditionRead, yesRead, noRead, rfl⟩
   | assignVar ref visible writable fits read =>
       right
       exact ⟨_, rfl⟩
   | ret declared fits read =>
       exfalso
-      simp_all
+      cases hs
 
 -- Mirror the original BlockReads.deterministic inversion on braced.
 theorem BlockReads.braced_inversion
@@ -150,7 +152,8 @@ theorem BlockReads.braced_inversion
     ∃ (after : Scope) (body : Block result scope after),
       tree = .braces body ∧ BlockItems result scope input ⟨after, body⟩ rest := by
   cases read
-  exact ⟨_, _, rfl, rfl⟩
+  rename_i after body read
+  exact ⟨after, body, rfl, read⟩
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
   cases read
@@ -160,11 +163,11 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     (right : StmtReads result scope input b rest') : a = b ∧ rest = rest' := by
   revert b rest'
   refine StmtReads.rec
-    (motive_1 := fun scope input tree rest =>
+    (motive_1 := fun scope input tree rest _ =>
       ∀ {b rest'}, StmtReads result scope input b rest' → tree = b ∧ rest = rest')
-    (motive_2 := fun before input tree rest =>
+    (motive_2 := fun before input tree rest _ =>
       ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
-    (motive_3 := fun before input tree rest =>
+    (motive_3 := fun before input tree rest _ =>
       ∀ {b rest'}, BlockReads result before input b rest' → tree = b ∧ rest = rest')
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
   · intros
