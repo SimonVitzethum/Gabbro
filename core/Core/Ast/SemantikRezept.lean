@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Beispiele
+public import Core.Ast.Semantik.Kernregister
 
 /-!
 # Adding the meaning of a source constructor
@@ -40,9 +40,66 @@ preservation := ∀ scope, (forms scope).ErhaltungsAussage
 jointlySatisfiable := joint
 ```
 
-The definitions in `Quellform.lean` are the statement templates. A form with distinct
-concrete and ideal transfers still supplies one typed `RegistryStatements` record.
-Use the following statements with its concrete `E` and instruction `b`.
+The statement templates below are the definitions in `Quellform.lean`.
+
+```lean
+def Quellform.ParseAussage : Prop :=
+  ∀ args text pieces, Lexed text pieces → form.produktion.production args (canonicalTokens pieces) →
+    Ast.Parse text (form.produktion.tree args)
+
+def Quellform.ElaboriertAussage : Prop :=
+  ∀ platform args, Elaboriert platform (form.produktion.tree args) (form.einheit platform args)
+
+def Quellform.RealisiertAussage : Prop :=
+  ∀ platform args s, s.status eintritt = .laeuft →
+    (s.lokal eintritt).pc = form.position args → Realisiert form platform args s
+
+def Quellform.AnnahmeAussage : Prop :=
+  ∀ platform args,
+    let E := form.einheit platform args
+    let b := form.befehl args
+    RegelLokal E b ∧
+    (∀ s c (g : Bedarf), E.system.kopf s c = some b →
+      b.guard platform.ziel.wbits (s.lokal c) = some g → E.quelltabellen.guard s g.1 g.2) ∧
+    ∀ t c s w stepPlan u spur next, (E.system.regel b).ideal c s w [stepPlan] u →
+      FuehrtSchrittAus E.einrichtung t c s u stepPlan spur next →
+      ∀ ev : FrageEreignis, Ereignis.frage ev ∉ spur.aussen
+
+def Quellform.IdealAussage : Prop :=
+  form.RegelAmOrt ∧ ∀ args, Ideal.RegelBestimmt (form.befehl args).regel ∧
+    ∀ c s w plans u, (form.befehl args).ideal c s w plans u ↔
+      plans = [plan] ∧ u = (form.befehl args).nach c s
+
+def Quellform.EinheitAussage : Prop :=
+  ∀ platform args,
+    let b := form.befehl args
+    (form.einheit platform args).stotterLaenge b = 0 ∧
+    ∀ andere, Kommutation b.vor b.danach andere
+
+def Quellform.ImplAussage : Prop :=
+  ∀ args c s w plans u, (form.befehl args).impl c s w plans u ↔
+    plans = [plan] ∧ u = (form.befehl args).nach c s
+
+def Quellform.ErhaltungsAussage : Prop :=
+  ∀ platform args,
+    let p := form.fragment args
+    let E := p.einheit platform
+    let b := form.befehl args
+    I.RegelAbgleich E b ∧ Ideal.RegelFortschritt E.system b ∧
+      I.RegelKomponierbar E.einrichtung E.system b ∧
+      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+
+def Quellform.ErfuellbarAm (platform : Plattform) (start : AussenStart) (args : Arguments) : Prop :=
+  let E := form.einheit platform args
+  ∃ (text : RawText) (s : Zustand),
+    Ast.Parse text (form.produktion.tree args) ∧ Elaboriert platform (form.produktion.tree args) E ∧
+    E.system.IErreichbar (I.start E start).2 s ∧ Realisiert form platform args s ∧
+    ∀ (g : Bedarf), (form.befehl args).guard platform.ziel.wbits (s.lokal eintritt) = some g →
+      waechterBedarf g.1 g.2
+```
+
+A form with distinct concrete and ideal transfers still supplies one typed
+`RegistryStatements` record. Use these statements with its concrete `E` and instruction `b`.
 
 ```lean
 RegelLokal E b
@@ -58,6 +115,7 @@ Use the actual rule equations for the ideal and implementation fields, including
 the plan and successor. The designer fixes these equations, the exact guard operands,
 the bound, and the joint premise before handing off proofs. For core-only syntax,
 replace the surface triple by checked origin from elaboration or from a runtime rule.
+The three internal instructions use `AusElaborierung` and `RegelAmOrt` in `Kernregister.lean`.
 Use `ErfuellbarAm` for the current forms. Its source parses and elaborates, the occurrence
 is reachable from canonical initialization, both form rules execute there, and its
 guard operands meet `waechterBedarf`. Use one theorem for all operators of a constructor
@@ -84,7 +142,8 @@ environment steps.
    zero reads, discharge `Befugt` by eliminating membership in each empty list.
    For an access, exhibit its matching live handle, extent and rights at the pre-state.
    Introduce the head context and recorded operands to prove the table includes its
-   guard use. Compare the plan and successor equalities to prove determinism.
+   guard use. Invert the composed ideal transition to account for its outside events.
+   Compare the plan and successor equalities to prove determinism.
 3. Supply the one-step unit and its mover proofs. For multiple steps, show the
    before and after steps move in their required direction past other contexts, and
    bound the concrete private steps consumed before the next ideal step.
