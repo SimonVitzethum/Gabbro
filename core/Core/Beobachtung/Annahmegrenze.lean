@@ -1,6 +1,7 @@
 module
 
 public import Core.Annahme.Annahme
+public import Core.Verfeinerung.Simulation
 
 @[expose] public section
 
@@ -43,5 +44,26 @@ theorem akzeptiert_ideal_ohne_frage (akzeptiert : Akzeptiert E) {hw t vor w spur
   | absturz crash =>
     rw [crash.2.1] at mem
     exact frage_absurd_mem mem (by intro h; cases h)
+
+/-- In a matched implementation run the absence of issued questions also follows.
+    A private step has no outside effects, and a matched step preserves its whole event list. -/
+theorem akzeptiert_sim_ohne_frage (akzeptiert : Akzeptiert E) {ρ : Lauf E} {η : I.Lauf E}
+    (sim : I.Sim E ρ η) {t w spur} (aufgezeichnet : ρ.zeit.spur t = some (w, spur))
+    (ev : FrageEreignis) : Ereignis.frage ev ∉ spur.aussen := by
+  obtain ⟨_, abgleich, _⟩ := sim
+  have abgebildet := abgleich.spur t
+  rw [aufgezeichnet] at abgebildet
+  generalize idealMark : η.zeit.spur t = ideal at abgebildet
+  cases abgebildet with
+  | privat _ _ => exact List.not_mem_nil
+  | schritt _ =>
+    intro mem
+    have tick := η.zeit.takt t
+    rw [idealMark] at tick
+    cases tick with
+    | wartet label _ _ => cases label
+    | schritt label step =>
+      cases label
+      exact akzeptiert_ideal_ohne_frage akzeptiert step ev mem
 
 end Gabbro.Core.Beobachtung

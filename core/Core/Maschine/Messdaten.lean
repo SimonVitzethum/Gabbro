@@ -1,5 +1,6 @@
 module
 public import Core.Katalog.Lauf
+public import Core.Katalog.Spekulation
 public import Core.Maschine.Kontext
 public import Mathlib.Data.Finset.Empty
 public import Mathlib.Data.Finset.Lattice.Basic
@@ -28,6 +29,7 @@ structure Zeitmarke where
   block : Nat
   anfang : Nat
   phase : Zeitphase
+  deriving DecidableEq
 
 /-- Elaborated declarations and layout interpretation. A missing optional resource bound is open.
     The form implementing a timed block exposes its live activations in the local state. -/
@@ -53,6 +55,7 @@ abbrev Etikett := Finset Nat
 structure Etiketten (Ort : Type) where
   ort : Ort → Etikett := fun _ => ∅
   bootByte : Nat → Etikett := fun _ => ∅
+  persist : Nat → Etikett := fun _ => ∅
   objekt : Objekt → Etikett := fun _ => ∅
   endpunkt : Endpunkt → Etikett := fun _ => ∅
   ausgabe : Nat → Etikett := fun _ => ∅
@@ -70,5 +73,27 @@ def oeffentlich (label : Etikett) : Bool :=
 
 def sichtbar (label : Etikett) (datum : A) : Option A :=
   if oeffentlich label then some datum else none
+
+
+/-- A release declaration exposes the indicated projection of its payload. Two releases at
+    the same site may vary only within a fibre of the declared projection. -/
+structure Freigabe (Wert : Type) where
+  quelle : Etikett
+  kanal : Nat
+  projektion : Wert → Wert
+
+inductive Ausgabe (Wert : Type) where
+  | wert (kanal : Nat) (wert : Wert)
+  | freigabe (stelle : Nat) (wert : Wert)
+
+/-- Form-owned observation data. Journals in local state are append-only within an activation.
+    A speculative execution includes all instruction slots up to its first fence or resolution. -/
+structure Flussdaten (Form Lok Ort Wert : Type) where
+  konstantzeit : Form → Bool := fun _ => false
+  ausgaben : Lok → List (Ausgabe Wert) := fun _ => []
+  freigabe : Nat → Option (Freigabe Wert) := fun _ => none
+  spekulativ : Form → Lok → Praediktor → List (Option Ort) := fun _ _ _ => []
+
+def Flussdaten.leer : Flussdaten Form Lok Ort Wert := {}
 
 end Gabbro.Core.Beobachtung
