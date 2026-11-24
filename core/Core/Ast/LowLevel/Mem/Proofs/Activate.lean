@@ -241,6 +241,7 @@ theorem activateJoint : ActivateJointAussage := by
     have hcond : ((⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
         (s0.lokal entryContext).unreserved target.seitengranule extent) = true := by
       rw [liveTable, hcondUnres]
+      rfl
     rw [if_pos hcond]
   let frame0 : MemFrame :=
     { (s0.lokal entryContext) with
