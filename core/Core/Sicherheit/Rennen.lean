@@ -24,8 +24,8 @@ def Konflikt (g : SpeicherGraph Ort Wert) (i j : Fin g.ev.length) : Prop :=
     (g.graph.na i ∨ g.graph.na j)
 
 def Registerzugriff : AussenOperation → Prop
-  | .registerRead _ | .registerWrite _ _ | .waitRegister _ _ => True
-  | .read | .write _ | .resolve _ | .firmware _ _ | .exchange _ => False
+  | .registerRead _offset | .registerWrite _offset _value | .waitRegister _offset _expected => True
+  | .read | .write _bytes | .resolve _name | .firmware _service _bytes | .exchange _message => False
 
 /-- A device object has one owner in the authority state. Access requires its unloaned
     authority at the transition, including when the register access is a synchronous reply. -/

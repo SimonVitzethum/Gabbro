@@ -13,6 +13,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Maschine.Buchung
+public import Core.Sicherheit.Rennen
 
 @[expose] public section
 
@@ -32,7 +33,7 @@ def Zustand.griff (s : Zustand) (c : Kontext) : Zelle → Option Griff
 /-- **The context may access the cell with the right**: its handle is valid, the object is owned (not
     lent out), the cell lies inside the allocation, and the ledger gives the context the right. This is
     `Annahme.BefugtOrt` of the unit that reads memory through `Zustand.griff` and `Zelle.objekt`
-    (`befugt_iff_befugtOrt`). -/
+    (`Schrittform.befugt_ort`). -/
 def Zustand.befugt (s : Zustand) (c : Kontext) (z : Zelle) (recht : Speicherrecht) : Prop :=
   ∃ (g : Griff) (offset : Nat),
     s.griff c z = some g ∧ g.objekt = z.objekt ∧ s.rechte.Gueltig g ∧ (s.leihen g.objekt).Zugriff ∧
@@ -58,5 +59,10 @@ noncomputable def Zustand.zugriffsereignis (s : Zustand) (z : Zelle) : Nat :=
 /-- **The context holds every handle and right its question names.** This is `AussengriffeEigen`. -/
 def Zustand.aussenBefugt (s : Zustand) (c : Kontext) (q : Frage) : Prop :=
   ∀ z ∈ q.zugriffe, s.buchung.aussengriff c z.handle z.right
+
+/-- **The context may ask the question**: it holds the handles and rights the question names and, for a
+    register access, the exclusive authority of the device (`RegisterErlaubt`). -/
+def Zustand.fragenBefugt (s : Zustand) (c : Kontext) (q : Frage) : Prop :=
+  s.aussenBefugt c q ∧ Gabbro.Core.Sicherheit.RegisterErlaubt s c.nummer q
 
 end Gabbro.Core.Ast.Semantik

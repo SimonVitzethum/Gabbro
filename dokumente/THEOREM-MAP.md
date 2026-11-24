@@ -8424,4 +8424,4 @@ the guard of a memory class violates locality.
 | `klassenLokal` | `Klasse/Pflichten.lean` | Every ideal step of every class covers its footprint by authority (read right for a load, write right for a store, both for an update). |
 | `klassenFortschritt` | `Klasse/Pflichten.lean` | The class rule is total: an access without authority is refused, it does not wait. |
 | `klassenNichtTrivial`, `ungeschuetzt_nicht_lokal` | `Klasse/Pflichten.lean` | The duties are informative: a unit embeds a form of every class, and the unguarded rule of a form of a memory class violates locality at a state that grants no region. |
-| `KlassenAussagen` | `Klasse/Pflichten.lean` | The pinned statement of all six duties for every class; open parts: `KlassenNIAussage`, `KlassenSchrankenAussage`, `KlassenSicherheitAussage` for every class. |
+| `KlassenAussagen` | `Klasse/Pflichten.lean`, `Klasse/Sicherheit.lean` | The pinned statement of all six duties for every class; open parts: `KlassenNIAussage` (not for the reading classes), `KlassenSchrankenAussage`, and the four class-determined safety legs of `KlassenSicherheitAussage` (booking not for the lock class). |

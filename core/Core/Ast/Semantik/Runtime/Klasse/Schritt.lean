@@ -102,9 +102,9 @@ def Wirkungsklasse.liest : Wirkungsklasse → Bool
 def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
   k.liest = true ∨ v = 0
 
-/-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `aussenBefugt`): the right
+/-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `Zustand.fragenBefugt`): the right
     on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
-    the question for a question. The frame-only classes and the lock actions need none: a lock action that
+    the question and the device authority of a register access for a question. The frame-only classes and the lock actions need none: a lock action that
     the protocol does not allow does not execute, it waits or never runs. -/
 def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
   | .lokal, _o, _s, _c => True
@@ -113,7 +113,7 @@ def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext �
   | .schreiben _m, o, s, c => s.befugt c o.ort .schreiben
   | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
   | .sperre _a, _o, _s, _c => True
-  | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.aussenBefugt c q
+  | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.fragenBefugt c q
 
 /-- **A step form**: a class, the operand its frame supplies and the frame transfer it applies. Everything
     else about the step is the class's. -/

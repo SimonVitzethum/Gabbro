@@ -3,16 +3,19 @@
   Subject:   THE DUTIES OF A FORM, PROVED ONCE PER EFFECT CLASS (MK-03). A form of class `k` owes the machine
              six duties: simulation (with the authority of every planned access), locality (the step covers
              its memory footprint by authority), progress (the form always has its `I` step), information
-             flow (the label rule of its operands and plan), bounds (stack and memory) and safety (the four
-             legs of the access). Each duty is stated for EVERY unit that embeds a form of the class
+             flow (the label rule of its operands and plan), bounds (stack and memory) and safety (the legs
+             of `Klasse/Sicherheit`). Each duty is stated for EVERY unit that embeds a form of the class
              (`Schrittform.Eingebettet`: the unit's rule for the form is the class rule, and the unit reads
              memory through `Zustand.griff` and `Zelle.objekt`), with no free function parameter: the form is a
              bundled `Schrittform` whose plan, guard and refusal the class builds, so the duty is proved from
              the class definition, not assumed of an arbitrary decoder.
              PROVED here, for every class: simulation with the authority of the plan (`klassenSim`), locality
-             (`klassenLokal`), progress (`klassenFortschritt`), determinacy up to the value a read returns
-             (`klassenBestimmt`). OPEN for the provers, one pinned statement `KlassenAussagen` that holds
-             every class: information flow, bounds, safety, and the non-triviality of each duty.
+             (`klassenLokal`), progress (`klassenFortschritt`) and the non-triviality of the duties
+             (`klassenNichtTrivial`). OPEN for the provers, all pinned under the one statement
+             `KlassenAussagen`: information flow (`KlassenNIAussage`), bounds (`KlassenSchrankenAussage`) and
+             the four class-determined safety legs (`KlassenSicherheitAussage`, `Klasse/Sicherheit`). What the
+             statements do NOT claim, and why, is in their docstrings: reading classes for information flow,
+             lock actions for the booking leg, the invariant and race legs for the memory classes.
              The duties are informative because the classes carry real plans: a step that reads or writes
              covers its cell by authority only through the guard of its class, and a form without the guard
              violates locality (`KlassenNichtTrivialAussage`). Over the frame-only classes the same duties
@@ -27,6 +30,8 @@ public import Core.Annahme.Schranken
 public import Core.Beobachtung.Fluss.Quellregel
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Ideal.Eigenschaften
+public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
+public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Sicherheit.Regel
 public import Core.Verfeinerung.Formpflichten
 
@@ -35,30 +40,6 @@ public import Core.Verfeinerung.Formpflichten
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog
-
-/-- The units that carry step forms: the interpretation of memory is the elaborated one. -/
-abbrev Klasseneinheit (ι : Type) := Maschine.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι
-
-/-- **A unit embeds a form**: the unit's rule for its form `f` is the rule of the step form `F`, and the
-    unit reads memory through the handles and objects of the elaborated model. -/
-structure Schrittform.Eingebettet {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform) : Prop where
-  regel : E.system.regel f = F.regel
-  griff : E.einrichtung.speicherGriff = Zustand.griff
-  objekt : E.einrichtung.speicherObjekt = Zelle.objekt
-
-/-- **The transfer of a form respects the declared stack bound of its unit**: a frame within the bound stays
-    within it. A class that does not push a continuation (every class but `ruf`) has this from its stack
-    effect; a class that pushes one refuses at the bound, as `Rahmen.ruf` does. -/
-def Schrittform.Stapelschranke {ι : Type} (E : Klasseneinheit ι) (F : Schrittform) : Prop :=
-  ∀ (r : Rahmen) (live : Nat → Bool) (v : Int) (n : Nat), E.schranken.stapel = some n →
-    r.fortsetzungen.length ≤ n → (F.uebertrag r live v).fortsetzungen.length ≤ n
-
-/-- **The operands of a form are visible to the observer**: from source states that agree on the public
-    part, the form names the same operands (the same cell, value, lock and question). This is the label
-    rule of an access: an address that depends on a secret is a leak through the memory trace. -/
-def Schrittform.Operandensicht {ι : Type} (E : Klasseneinheit ι) (F : Schrittform) : Prop :=
-  ∀ (c : Kontext) (v₁ v₂ : Zustand), Beobachtung.QuellzustandGleich E v₁ v₂ →
-    F.operand (v₁.lokal c) = F.operand (v₂.lokal c)
 
 /-! ### The six duties, per class -/
 
@@ -87,18 +68,21 @@ def KlassenFortschrittAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
     Ideal.RegelFortschritt E.system f
 
-/-- **Information flow, once per class.** In a unit that labels the form by the checker's flow rule, whose
-    operands the observer sees equal from public-equal states, the form preserves the coupling of two runs
-    (`RegelNIPflicht`). The value a read returns is a label of the cell it reads: the read value joins the
-    label of the cell, a write checks that the value's label flows into the cell's label, an atomic update
-    does both, a lock action and a question are visible events whose operands are public. Open: the
-    label rule of the plan events (MK-13). Difficulty: schwer. Sketch: the plan of the step is
-    `Wirkungsklasse.plan` of operands that `Operandensicht` makes equal, so the observed trace entries agree;
-    the successor frame is `uebertrag` of frames that agree publicly, and the read value is related by the
-    cell's label through the coupled graph step. -/
+/-- **Information flow, once per class that does not read.** In a unit that labels the form by the checker's
+    flow rule (`RegelFluss`), whose operands the observer sees equal from public-equal states, the form
+    preserves the coupling of two runs (`RegelNIPflicht`). The plan of the step is `Wirkungsklasse.plan` of
+    operands that `Operandensicht` makes equal, so the observed trace entries agree, and the successor frame
+    is `uebertrag` of frames that agree publicly. The classes that READ (`lesen`, `rmw`) are not claimed here:
+    `RegelFluss` quantifies the semantic choice of the form independently on the two sides, and a read puts
+    its value into the frame, so the premise cannot hold for a read whose target is public; the read value
+    has to be tied to the label of the cell and coupled at the graph level (the coupled runs read the same
+    value from a public cell). That is the label rule of the memory events (MK-13). Open. Difficulty: schwer.
+    Sketch for the silent classes: the step is silent (`lokal`, `ruf`) or a visible event with public operands
+    (`schreiben`, `sperre`, `frage`); use `stummer_schritt_koppelt` for the silent ones and the coupled
+    graph step for the write. -/
 def KlassenNIAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
-    Beobachtung.RegelFluss E f → F.Operandensicht E → Beobachtung.RegelNIPflicht E f
+    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E → Beobachtung.RegelNIPflicht E f
 
 /-- **Bounds, once per class.** A form whose transfer respects the declared stack bound, in a unit whose
     depth measure counts the continuation stack, preserves the stack and memory bounds of every ideal run
@@ -113,22 +97,6 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
     F.Stapelschranke E → (∀ r : Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length) →
       RegelSchranken E f
-
-/-- **Safety, once per class.** In an ACCEPTED safety unit whose machine embeds the form, an implementation
-    step of the form keeps the four legs (booked and authorised accesses, invariants, race freedom, TOCTOU
-    freedom) and the authority of pending questions (`Sicherheit.RegelPflichten`). The class books the
-    concrete address of every access in the ledger at the event number of the access (`Schrittform.buchungNach`,
-    `Zustand.zugriffsereignis`: the number depends on the lazily materialised initial write,
-    `Initialisierung`), so `ZugriffGebucht` is a statement about the class rule. Open (MK-04, MK-05).
-    Difficulty: schwer. Sketch: the booking leg is the position of the access in the memory record of
-    `Speicherfolge` (case split on `Initialisierung`); the release leg is trivial (no class here releases);
-    invariants and race freedom come from acceptance: `Lokal` must carry the lock sections that order the
-    non-atomic accesses (`RennfreiAusLokalAussage`, MK-04) — until it does, the leg `rennen` is not provable
-    for the non-atomic modes of `lesen`, `schreiben` and `rmw`. -/
-def KlassenSicherheitAussage (k : Wirkungsklasse) : Prop :=
-  ∀ (ι : Type) (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι) (f : ι)
-    (F : Schrittform), F.klasse = k → F.Eingebettet E.maschine f → Akzeptiert E.maschine →
-      Sicherheit.RegelPflichten E f
 
 /-- The class has a MEMORY authority guard: a step needs the right on the ledger for the cell it plans and is
     refused without it. The guard of a question (`aussenBefugt`) is a duty of the question rows of `Lokal`
