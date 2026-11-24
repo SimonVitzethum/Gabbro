@@ -18,7 +18,7 @@ theorem cpuCapsAbgelehnt : CpuCapsAbgelehntAussage := by
   · intro scope feature
     rfl
   · intro tokens feature
-    simp only [ExecTree.production]
+    simp only [ExecTree.production, not_false_eq_true]
 
 @[expose] public def CpuCyclesAbgelehntAussage : Prop :=
   (∀ scope, elaborateExec scope (ExecTree.cpuCycles : ExecTree .cpuCycles) = none) ∧
@@ -29,7 +29,7 @@ theorem cpuCyclesAbgelehnt : CpuCyclesAbgelehntAussage := by
   · intro scope
     rfl
   · intro tokens
-    simp only [ExecTree.production]
+    simp only [ExecTree.production, not_false_eq_true]
 
 @[expose] public def SuspendSystemAbgelehntAussage : Prop :=
   (∀ scope resume arguments failure,
@@ -42,7 +42,7 @@ theorem suspendSystemAbgelehnt : SuspendSystemAbgelehntAussage := by
   · intro scope resume arguments failure
     rfl
   · intro tokens resume arguments failure
-    simp only [ExecTree.production]
+    simp only [ExecTree.production, not_false_eq_true]
 
 @[expose] public def SuspendCoreAbgelehntAussage : Prop :=
   (∀ scope resume, elaborateExec scope (ExecTree.suspendCore resume) = none) ∧
@@ -53,7 +53,7 @@ theorem suspendCoreAbgelehnt : SuspendCoreAbgelehntAussage := by
   · intro scope resume
     rfl
   · intro tokens resume
-    simp only [ExecTree.production]
+    simp only [ExecTree.production, not_false_eq_true]
 
 @[expose] public def ResumeArrivalAbgelehntAussage : Prop :=
   (∀ scope state, elaborateExec scope (ExecTree.resumeArrival state) = none) ∧
@@ -64,6 +64,6 @@ theorem resumeArrivalAbgelehnt : ResumeArrivalAbgelehntAussage := by
   · intro scope state
     rfl
   · intro tokens state
-    simp only [ExecTree.production]
+    simp only [ExecTree.production, not_false_eq_true]
 
 end Gabbro.Core.Ast.LowLevel
