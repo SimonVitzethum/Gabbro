@@ -199,7 +199,7 @@ private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : Tup
   let input := (args.pattern.printPieces.map PrintedToken.value) ++ more
   refine ⟨input, more, rhs, ?_, ?_, ?_, ?_⟩
   · rfl
-  · exact tuplePattern_printReads args.pattern more (fun id h => args.checked.2.2.1 id h)
+  · exact tuplePattern_printReads args.pattern more (fun id h => (args.checked.2.2.1 id h).1)
   · exact tupleAnnotation_printReads args.annotation (valToks ++ [semicolon]) (fun w h => (args.checked.2.2.2 w h).1)
   · exact Expr.printReads (tree := args.value) (minimum := 0) (rest := [semicolon]) noOperatorAtSemicolon
 
