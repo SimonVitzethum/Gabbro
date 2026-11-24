@@ -275,3 +275,17 @@ theorem waitfrei_schliesst_schwaches_haengen_aus {ρ : Maschine.Lauf E} {η : I.
     (fun t h => (opened.2 t h).1) (fun t h => (opened.2 t h).2.1) enabled
     (U - a) hcount
   exact (opened.2 t h1).2.2 herl
+
+/-- Counting lemma: an everywhere-true marker fills the window. -/
+theorem zaehle_all_true (m : Nat → Bool) (a n : Nat) (hall : ∀ t, m (a + t) = true) :
+    I.zaehle m a n = n := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    have hif : (if m (a + n) then 1 else 0) = 1 := if_pos (hall n)
+    simp only [I.zaehle, hif]
+    rw [ih]
+
+end Gabbro.Core.Fortschritt
+
+end Gabbro.Core.Fortschritt

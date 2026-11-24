@@ -11,5 +11,6 @@ public import Core.Fortschritt.Saetze
 public import Core.Fortschritt.Verzoegerung
 public import Core.Fortschritt.SperrSchranke
 public import Core.Fortschritt.Beispiele
+public import Core.Fortschritt.Verhungern
 public import Core.Fortschritt.Sackgasse
 public import Core.Fortschritt.WarteBeispiel
