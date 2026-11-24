@@ -240,17 +240,31 @@ def decl : Decl before after → Fragment
   | .tagged _ name first tail _ _ =>
     let cases := first :: tail
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
-  | .environment name abi row => .einzel (.waehleUmgebung name abi row)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer
   | .step first rest => (decl first).anhaengen (unitBody rest)
 
-/-- Entry name for the ordinary Stage 0 profile. -/
+-- Mirror returnName for the ordinary Stage-0 profile entry.
 def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by
   intro c member
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl <;> decide)
+  rcases member with rfl | rfl | rfl
+  · exact ⟨by decide, by decide⟩
+  · exact ⟨by decide, by decide⟩
+  · exact ⟨by decide, by decide⟩)
+
+theorem mainName_direct : directName mainName := by
+  change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
+    ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+    ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · intro same
+    cases same
+  · intro same
+    cases same
+  · simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
+    rintro (same | same | same | same | same | same | same) <;> cases same
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)
@@ -316,36 +330,18 @@ theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category
       (elaborieren left tree).quelltabellen = (elaborieren right tree).quelltabellen :=
   ⟨rfl, rfl⟩
 
-def Fragment.environment (p : Fragment) : List (Identifier × DienstAbi × FirmwareZeile) :=
-  p.code.filterMap fun
-    | .waehleUmgebung name abi row => some (name, abi, row)
-    | _ => none
-
-def Fragment.environmentAllowed (p : Fragment) (k : Katalog) : Prop :=
-  (p.environment.map (fun e => e.1.val)).Nodup ∧
-    ∀ e ∈ p.environment, e.2.2.zugelassen k e.2.1
-
-/-- Whole-unit elaboration checks catalogue availability and name uniqueness.
-    An isolated declaration gets the same admission check as its occurrence in a unit. -/
-def zugelassen (platform : Plattform) : (category : Category) → category.Tree → Prop
-  | .unit, tree => (programm tree).environmentAllowed platform.katalog
-  | .declaration _, tree => (decl tree.2).environmentAllowed platform.katalog
-  | .expression _, _ | .statement .., _ | .block .., _ => True
-
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=
-  E = elaborieren platform tree ∧ zugelassen platform category tree
+  E = elaborieren platform tree
 
-theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree)
-    (allowed : zugelassen platform category tree) :
-    Elaboriert platform tree (elaborieren platform tree) := ⟨rfl, allowed⟩
+theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree) :
+    Elaboriert platform tree (elaborieren platform tree) := rfl
 
-theorem elab_vollstaendig {category : Category} {tree : category.Tree}
-    (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning.1
+theorem elab_vollstaendig {category : Category} {tree : category.Tree} (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning
 
 theorem Elaboriert.deterministisch {category : Category} {tree : category.Tree}
     (a : Elaboriert platform tree E) (b : Elaboriert platform tree F) : E = F :=
-  a.1.trans b.1.symm
+  a.trans b.symm
 
 def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → Einheit → Prop :=
   Ast.Bezeichnet (@Elaboriert platform category)
@@ -353,6 +349,6 @@ def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → E
 theorem bezeichnet_deterministisch
     (a : Bezeichnet platform category text E) (b : Bezeichnet platform category text F) : E = F :=
   Ast.bezeichnet_deterministic (elaborates := @Elaboriert platform category)
-    (fun left right => left.deterministisch right) a b
+    (fun left right => left.trans right.symm) a b
 
 end Gabbro.Core.Ast.Semantik

@@ -11,6 +11,7 @@ public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
+public import Core.Ast.ExpressionBeweise
 public import Core.Ast.SemantikRezept
 public import Core.Ast.ProgramProgress
 public import Core.Ast.Aggregate.ArrayValueProofs

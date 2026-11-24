@@ -5,6 +5,23 @@ Fehler macht … auch Review-Leistung bewerten"). One row per finished task. The
 which kind of task next (AGENTS.md "Team"). Numbers are counts from the lead's check, not impressions; a judgment
 is marked as one.*
 
+## 0. Capabilities at a glance (current state, updated by the lead)
+
+What each model can be given, from the measured record below and the `core/` rebuild (2026-11-24). "yes" = done
+well in a measured task; "partly" = done with defects the lead had to catch; "no" = failed or not allowed;
+"open" = not measured yet. A green proof under the strict `core/` guards (hash pins, no large `decide`, no `sorry`)
+is valid whoever wrote it, so proving is judged by the build; stating, designing and reviewing are judged by the
+lead's reading.
+
+| Model | Access | Proving fixed statements | Hard proofs (termination, run construction) | Stating theorems / designing | Reviewing statements | Planning | Notes |
+|---|---|---|---|---|---|---|---|
+| GPT Sol 6.2 | codex `gpt-6.2-sol`, high | yes | yes | yes (M4, M5 repair, M6 specs; misses: target-width integers, single-frame `return_effect`, existential `lokal`/`laenge`) | yes (rounds 1–10, 12: an A finding with counterexample almost every round) | yes | the designer and the fallback; at most five |
+| Muse Spark 1.3 | `opencode-go/muse-spark-1.3-contributor` | yes | open | partly (M10 good; M5 had empty obligation classes and free instances) | yes (round 11 PASS with useful B findings) | open | read its statements for vacuity; at most five |
+| Hy4 flash | `opencode-go/hy4-flash-free` (free) | yes (hundreds of obligations, ~0 statement changes; one justified statement fix it should have reported instead) | partly (4 of the 7 hardest batch-2 proofs; Sol 5 of 7; both failed loop termination) | yes for simple forms when given recipe and SYNTAX.md (test: `!`, `<`, `return` — correct types, non-chaining `<`, non-vacuity note per obligation, green); unguided it guesses (spelled `/` as `%`) | partly (finds false statements with a concrete counterexample, e.g. `DruckAussage .view`) | partly yes (M6F async plan: concrete files and lines, sound design, ten risks with examples; one stale risk) | preferred prover, many in parallel; needs many server builds (5–170 per task); ran `pkill -f` and wrote to `/tmp` once |
+| Mercury 3 | `opencode` `inception/mercury-3` | yes (M2 test, 49 of batch 2) | no (left the hard ones) | not allowed (owner) | not allowed | not allowed | occasional tool-call failure produces a garbage report: judge by commits and build only |
+| Claude Sonnet 5.5 | `claudeAgent` | open in `core/` | open | open | yes (wave 1: best review) | open | owner: at most ONE Claude agent, Sonnet only |
+| Claude Opus 5.5 | — | — | — | — | — | — | owner: no Opus agents since 2026-11-24 (lead session only) |
+
 ## 1. How a task is scored
 
 Since 2026-11-14 agents check the modules they changed on a build-server slot before they report; the lead merges

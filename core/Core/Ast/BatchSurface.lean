@@ -70,16 +70,18 @@ def trueLit (scope : Scope) : Rule (.expression scope) PUnit where
 -- Mirror literal_print for the declared spelling.
 theorem trueLit_print (scope : Scope) (args : PUnit) :
     (trueLit scope).production args (((Category.expression scope).printPieces ((trueLit scope).tree args)).map PrintedToken.value) := by
-  sorry
+  rfl
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem trueLit_reads (scope : Scope) (args : PUnit)
     (read : (trueLit scope).production args tokens) : (Category.expression scope).reads tokens ((trueLit scope).tree args) := by
-  sorry
+  change tokens = [trueKeyword] at read
+  subst tokens
+  exact .atom .trueLit (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem trueLit_erfuellbar (scope : Scope) : (trueLit scope).Satisfiable := by
-  sorry
+  exact Rule.satisfiableOfPrint PUnit.unit (trueLit_print scope PUnit.unit)
 
 theorem trueLit_entry (scope : Scope) : (trueLit scope).Entry where
   reads := fun a _ => trueLit_reads scope a
@@ -93,16 +95,18 @@ def falseLit (scope : Scope) : Rule (.expression scope) PUnit where
 -- Mirror literal_print for the declared spelling.
 theorem falseLit_print (scope : Scope) (args : PUnit) :
     (falseLit scope).production args (((Category.expression scope).printPieces ((falseLit scope).tree args)).map PrintedToken.value) := by
-  sorry
+  rfl
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem falseLit_reads (scope : Scope) (args : PUnit)
     (read : (falseLit scope).production args tokens) : (Category.expression scope).reads tokens ((falseLit scope).tree args) := by
-  sorry
+  change tokens = [falseKeyword] at read
+  subst tokens
+  exact .atom .falseLit (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem falseLit_erfuellbar (scope : Scope) : (falseLit scope).Satisfiable := by
-  sorry
+  exact Rule.satisfiableOfPrint PUnit.unit (falseLit_print scope PUnit.unit)
 
 theorem falseLit_entry (scope : Scope) : (falseLit scope).Entry where
   reads := fun a _ => falseLit_reads scope a
@@ -116,16 +120,24 @@ def localValue (scope : Scope) : Rule (.expression scope) (VariableArgs scope) w
 -- Mirror literal_print for the declared spelling.
 theorem variable_print (args : VariableArgs scope) :
     (localValue scope).production args (((Category.expression scope).printPieces ((localValue scope).tree args)).map PrintedToken.value) := by
-  sorry
+  rfl
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem variable_reads (scope : Scope) (args : VariableArgs scope)
     (read : (localValue scope).production args tokens) : (Category.expression scope).reads tokens ((localValue scope).tree args) := by
-  sorry
+  change tokens = [.word args.ref.binding.name.val] at read
+  subst tokens
+  exact .atom (.variable args.ref args.visible args.ordinary) (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem variable_erfuellbar  : ∃ scope, (localValue scope).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (by intro c h; cases h)
+  let scope : Scope := [⟨name, .bool, false⟩]
+  let ordinary : ordinaryLocal name := by
+    change ['x'] ≠ "true".toList ∧ ['x'] ≠ "false".toList
+    simp
+  let args : VariableArgs scope := ⟨.here, trivial, ordinary⟩
+  exact ⟨scope, Rule.satisfiableOfPrint args (variable_print args)⟩
 
 def negativeLit (scope : Scope) : Rule (.expression scope) Nat where
   tree := fun n => (Expr.negativeLit (scope := scope) n).typed
@@ -134,16 +146,18 @@ def negativeLit (scope : Scope) : Rule (.expression scope) Nat where
 -- Mirror literal_print for the declared spelling.
 theorem negativeLit_print (scope : Scope) (args : Nat) :
     (negativeLit scope).production args (((Category.expression scope).printPieces ((negativeLit scope).tree args)).map PrintedToken.value) := by
-  sorry
+  rfl
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem negativeLit_reads (scope : Scope) (args : Nat)
     (read : (negativeLit scope).production args tokens) : (Category.expression scope).reads tokens ((negativeLit scope).tree args) := by
-  sorry
+  change tokens = [minus, .natural args] at read
+  subst tokens
+  exact .atom .negativeLit (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem negativeLit_erfuellbar (scope : Scope) : (negativeLit scope).Satisfiable := by
-  sorry
+  exact Rule.satisfiableOfPrint 0 (negativeLit_print scope 0)
 
 theorem negativeLit_entry (scope : Scope) : (negativeLit scope).Entry where
   reads := fun a _ => negativeLit_reads scope a
@@ -158,16 +172,30 @@ def neg (scope : Scope) : Rule (.expression scope) (NegArgs scope) where
 -- Mirror literal_print for the declared spelling.
 theorem neg_print (args : NegArgs scope) :
     (neg scope).production args (((Category.expression scope).printPieces ((neg scope).tree args)).map PrintedToken.value) := by
-  sorry
+  change (neg scope).production args (Expr.neg args.operand).printTokens
+  unfold neg
+  refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
+  · simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation,
+      PrintedToken.unquoted, Arith.print_value, String.reduceToList, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    rfl
+  · refine ⟨?_, ?_⟩
+    · intro tail
+      constructor <;> intro h <;> cases h
+    · intro n tail h
+      cases h
+  · exact .grouped (args.operand.printReads (rest := [closeParen]) noOperatorAtClose)
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem neg_reads (scope : Scope) (args : NegArgs scope)
     (read : (neg scope).production args tokens) : (Category.expression scope).reads tokens ((neg scope).tree args) := by
-  sorry
+  obtain ⟨input, rfl, start, atomRead⟩ := read
+  exact .atom (.neg start atomRead) (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem neg_erfuellbar (scope : Scope) : (neg scope).Satisfiable := by
-  sorry
+  let args : NegArgs scope := ⟨.lit 1⟩
+  exact Rule.satisfiableOfPrint args (neg_print args)
 
 theorem neg_entry (scope : Scope) : (neg scope).Entry where
   reads := fun a _ => neg_reads scope a
@@ -182,16 +210,27 @@ def notValue (scope : Scope) : Rule (.expression scope) (Expr scope .bool) where
 -- Mirror literal_print for the declared spelling.
 theorem notValue_print (args : Expr scope .bool) :
     (notValue scope).production args (((Category.expression scope).printPieces ((notValue scope).tree args)).map PrintedToken.value) := by
-  sorry
+  change (notValue scope).production args (Expr.not args).printTokens
+  unfold notValue
+  refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
+  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose,
+      printPunctuation, PrintedToken.unquoted, String.reduceToList, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    rfl
+  · intro tail
+    constructor <;> intro h <;> cases h
+  · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem notValue_reads (scope : Scope) (args : Expr scope .bool)
     (read : (notValue scope).production args tokens) : (Category.expression scope).reads tokens ((notValue scope).tree args) := by
-  sorry
+  obtain ⟨input, rfl, primary, atomRead⟩ := read
+  exact .atom (.not primary atomRead) (.stop noOperatorAtEnd)
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem notValue_erfuellbar (scope : Scope) : (notValue scope).Satisfiable := by
-  sorry
+  let args : Expr scope .bool := .trueLit
+  exact Rule.satisfiableOfPrint args (notValue_print args)
 
 theorem notValue_entry (scope : Scope) : (notValue scope).Entry where
   reads := fun a _ => notValue_reads scope a
@@ -205,16 +244,30 @@ def division (scope : Scope) : Rule (.expression scope) (DivisionArgs scope) whe
 -- Mirror binary_print for the declared spelling.
 theorem division_print (args : DivisionArgs scope) :
     (division scope).production args (((Category.expression scope).printPieces ((division scope).tree args)).map PrintedToken.value) := by
-  sorry
+  change (division scope).production args (Expr.div args.left args.right args.nonzero).printTokens
+  unfold division infixProduction infixStep
+  simp only [Expr.printTokens, Expr.printPieces, PrintedToken.slash, List.map_append, List.map_cons,
+    List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  refine Or.inr ⟨_, rfl, ?_⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, by trivial⟩
+  · exact args.left.printAtom (Infix.div.token :: args.right.printTokens ++ [closeParen])
+  · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
 -- Mirror BinaryArgs.readStep_sound by applying the new production and its child proofs.
 theorem division_reads (scope : Scope) (args : DivisionArgs scope)
     (read : (division scope).production args tokens) : (Category.expression scope).reads tokens ((division scope).tree args) := by
-  sorry
+  unfold division infixProduction at read
+  rcases read with plain | ⟨inner, rfl, grouped⟩
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
+    exact .atom atomRead (.div (Nat.zero_le _) exprRead args.nonzero (.stop noOperatorAtEnd))
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
+    exact .grouped (.atom atomRead (.div (Nat.zero_le _) exprRead args.nonzero (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem division_erfuellbar (scope : Scope) : (division scope).Satisfiable := by
-  sorry
+  let args : DivisionArgs scope := ⟨.lit 1, .lit 2, Or.inl (by decide)⟩
+  exact Rule.satisfiableOfPrint args (division_print args)
 
 theorem division_entry (scope : Scope) : (division scope).Entry where
   reads := fun a _ => division_reads scope a
@@ -228,16 +281,36 @@ def comparison (scope : Scope) : Rule (.expression scope) (CompareArgs scope) wh
 -- Mirror binary_print for the declared spelling.
 theorem comparison_print (args : CompareArgs scope) :
     (comparison scope).production args (((Category.expression scope).printPieces ((comparison scope).tree args)).map PrintedToken.value) := by
-  sorry
+  change (comparison scope).production args (Expr.compare args.op args.left args.right).printTokens
+  unfold comparison infixProduction infixStep
+  simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Compare.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  refine Or.inr ⟨_, rfl, ?_⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, ?_⟩
+  · exact args.left.printAtom ((Infix.compare args.op).token :: args.right.printTokens ++ [closeParen])
+  · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
+  · intro op tail h
+    have head := (List.cons.inj h).1
+    cases op <;> simp only [Infix.token, Compare.spelling, String.reduceToList] at head <;> cases head
 
 -- Mirror BinaryArgs.readStep_sound by applying the new production and its child proofs.
 theorem comparison_reads (scope : Scope) (args : CompareArgs scope)
     (read : (comparison scope).production args tokens) : (Category.expression scope).reads tokens ((comparison scope).tree args) := by
-  sorry
+  unfold comparison infixProduction at read
+  rcases read with plain | ⟨inner, rfl, grouped⟩
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
+    exact .atom atomRead (.compare args.op (Nat.zero_le _) exprRead follows (.stop noOperatorAtEnd))
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
+    exact .grouped (.atom atomRead (.compare args.op (Nat.zero_le _) exprRead follows (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (comparison scope).production a (canonicalTokens pieces) := by
-  sorry
+  intro op
+  let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
+  let toks := (Category.expression scope).printPieces ((comparison scope).tree args)
+  obtain ⟨pieces, lexical, alignment⟩ := PrintedToken.renderLexed 0 toks
+  refine ⟨args, PrintedToken.render toks, pieces, rfl, lexical, ?_⟩
+  exact alignment.symm ▸ comparison_print args
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -253,16 +326,33 @@ def logic (scope : Scope) : Rule (.expression scope) (LogicArgs scope) where
 -- Mirror binary_print for the declared spelling.
 theorem logic_print (args : LogicArgs scope) :
     (logic scope).production args (((Category.expression scope).printPieces ((logic scope).tree args)).map PrintedToken.value) := by
-  sorry
+  change (logic scope).production args (Expr.logic args.op args.left args.right).printTokens
+  unfold logic infixProduction infixStep
+  simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Logic.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  refine Or.inr ⟨_, rfl, ?_⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, by trivial⟩
+  · exact args.left.printAtom ((Infix.logic args.op).token :: args.right.printTokens ++ [closeParen])
+  · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
 -- Mirror BinaryArgs.readStep_sound by applying the new production and its child proofs.
 theorem logic_reads (scope : Scope) (args : LogicArgs scope)
     (read : (logic scope).production args tokens) : (Category.expression scope).reads tokens ((logic scope).tree args) := by
-  sorry
+  unfold logic infixProduction at read
+  rcases read with plain | ⟨inner, rfl, grouped⟩
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
+    exact .atom atomRead (.logic args.op (Nat.zero_le _) exprRead (.stop noOperatorAtEnd))
+  · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
+    exact .grouped (.atom atomRead (.logic args.op (Nat.zero_le _) exprRead (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (logic scope).production a (canonicalTokens pieces) := by
-  sorry
+  intro op
+  let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
+  let toks := (Category.expression scope).printPieces ((logic scope).tree args)
+  obtain ⟨pieces, lexical, alignment⟩ := PrintedToken.renderLexed 0 toks
+  refine ⟨args, PrintedToken.render toks, pieces, rfl, lexical, ?_⟩
+  exact alignment.symm ▸ logic_print args
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
@@ -280,16 +370,25 @@ def assignVar (scope : Scope) (result : Option (Ty .value)) : Rule (.statement s
 -- Mirror letValue_print for the declared spelling.
 theorem assignVar_print (args : AssignArgs scope) :
     (assignVar scope result).production args (((Category.statement scope result).printPieces ((assignVar scope result).tree args)).map PrintedToken.value) := by
-  sorry
+  unfold assignVar
+  simp only [Category.printPieces, Stmt.printTokens, Stmt.printPieces, Expr.printTokens,
+    printAssignment, printSemicolon, Identifier.print, printPunctuation,
+    PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
+    List.cons_append, List.nil_append]
+  exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
 theorem assignVar_reads (scope : Scope) (result : Option (Ty .value)) (args : AssignArgs scope)
     (read : (assignVar scope result).production args tokens) : (Category.statement scope result).reads tokens ((assignVar scope result).tree args) := by
-  sorry
+  obtain ⟨input, rfl, read⟩ := read
+  exact .assignVar args.ref args.visible args.writable args.fits read
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem assignVar_erfuellbar  : ∃ (scope : Scope) (result : Option (Ty .value)), (assignVar scope result).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (by intro c h; cases h)
+  let scope : Scope := [⟨name, .int 1 1, true⟩]
+  let args : AssignArgs scope := ⟨.here, trivial, rfl, .lit 1, ⟨by decide, by decide⟩⟩
+  exact ⟨scope, none, Rule.satisfiableOfPrint args (assignVar_print args)⟩
 
 def returnValue (scope : Scope) (expected : Ty .value) : Rule (.statement scope (some expected)) (ReturnArgs scope expected) where
   tree := fun a => ⟨scope, .ret rfl a.value a.fits⟩
@@ -299,16 +398,22 @@ def returnValue (scope : Scope) (expected : Ty .value) : Rule (.statement scope 
 -- Mirror letValue_print for the declared spelling.
 theorem returnValue_print (args : ReturnArgs scope expected) :
     (returnValue scope expected).production args (((Category.statement scope (some expected)).printPieces ((returnValue scope expected).tree args)).map PrintedToken.value) := by
-  sorry
+  change (returnValue scope expected).production args (Stmt.ret rfl args.value args.fits).printTokens
+  unfold returnValue
+  simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append, List.map_cons,
+    List.map_nil, List.cons_append, List.nil_append]
+  exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
 theorem returnValue_reads (scope : Scope) (expected : Ty .value) (args : ReturnArgs scope expected)
     (read : (returnValue scope expected).production args tokens) : (Category.statement scope (some expected)).reads tokens ((returnValue scope expected).tree args) := by
-  sorry
+  obtain ⟨input, rfl, read⟩ := read
+  exact .ret rfl args.fits read
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem returnValue_erfuellbar  : ∃ (scope : Scope) (expected : Ty .value), (returnValue scope expected).Satisfiable := by
-  sorry
+  let args : ReturnArgs [] (.int 1 1) := ⟨.lit 1, ⟨by decide, by decide⟩⟩
+  exact ⟨[], .int 1 1, Rule.satisfiableOfPrint args (returnValue_print args)⟩
 
 def ifElse (scope : Scope) (result : Option (Ty .value)) : Rule (.statement scope result) (IfArgs scope result) where
   tree := fun a => ⟨scope, .ite a.condition a.yes a.no⟩
@@ -319,16 +424,42 @@ def ifElse (scope : Scope) (result : Option (Ty .value)) : Rule (.statement scop
 -- Mirror Block.printItems_reads for the declared spelling.
 theorem ifElse_print (args : IfArgs scope result) :
     (ifElse scope result).production args (((Category.statement scope result).printPieces ((ifElse scope result).tree args)).map PrintedToken.value) := by
-  sorry
+  change (ifElse scope result).production args (Stmt.ite args.condition args.yes args.no).printTokens
+  unfold ifElse
+  simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces, Expr.printTokens,
+    printOpenBrace, printCloseBrace, ifName, elseName, Identifier.print, printPunctuation,
+    PrintedToken.unquoted, keywordName, ifKeyword, elseKeyword, String.reduceToList,
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
+    List.append_assoc]
+  refine ⟨args.condition.printTokens ++ args.yes.printPieces.map PrintedToken.value ++
+      elseKeyword :: args.no.printPieces.map PrintedToken.value,
+    args.yes.printPieces.map PrintedToken.value ++ elseKeyword :: args.no.printPieces.map PrintedToken.value,
+    args.no.printPieces.map PrintedToken.value, ?_, ?_, ?_, ?_⟩
+  · simpa only [Expr.printTokens, elseKeyword, String.reduceToList, List.append_assoc]
+  · have hb : ¬ Continues 0
+        (args.yes.printPieces.map PrintedToken.value ++ elseKeyword ::
+          args.no.printPieces.map PrintedToken.value) := by
+      cases args.yes with
+      | braces body =>
+        simp only [BracedBlock.printPieces, printOpenBrace, printPunctuation,
+          PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons,
+          List.map_nil, List.cons_append]
+        exact noOperatorAtOpenBrace
+    simpa only [List.append_assoc] using
+      (args.condition.printReads hb)
+  · exact args.yes.printReads _
+  · simpa only [List.append_nil] using args.no.printReads []
 
 -- Mirror BracedBlock.printReads by applying the new production and its child proofs.
 theorem ifElse_reads (scope : Scope) (result : Option (Ty .value)) (args : IfArgs scope result)
     (read : (ifElse scope result).production args tokens) : (Category.statement scope result).reads tokens ((ifElse scope result).tree args) := by
-  sorry
+  obtain ⟨input, first, more, rfl, condRead, yesRead, noRead⟩ := read
+  exact .ite condRead yesRead noRead
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem ifElse_erfuellbar (scope : Scope) (result : Option (Ty .value)) : (ifElse scope result).Satisfiable := by
-  sorry
+  let args : IfArgs scope result := ⟨.trueLit, .braces .done, .braces .done⟩
+  exact Rule.satisfiableOfPrint args (ifElse_print args)
 
 theorem ifElse_entry (scope : Scope) (result : Option (Ty .value)) : (ifElse scope result).Entry where
   reads := fun a _ => ifElse_reads scope result a
@@ -342,16 +473,25 @@ def braced (scope : Scope) (result : Option (Ty .value)) : Rule (.block scope re
 -- Mirror Block.printItems_reads for the declared spelling.
 theorem braced_print (args : Statements result scope) :
     (braced scope result).production args (((Category.block scope result).printPieces ((braced scope result).tree args)).map PrintedToken.value) := by
-  sorry
+  change (braced scope result).production args
+    ((BracedBlock.braces args.2).printPieces.map PrintedToken.value)
+  unfold braced
+  simp only [BracedBlock.printPieces, printOpenBrace, printCloseBrace, printPunctuation,
+    PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
+    List.cons_append, List.nil_append]
+  exact ⟨args.2.printItems.map PrintedToken.value ++ [closeBrace], rfl,
+    Block.printItems_reads args.2 []⟩
 
 -- Mirror BracedBlock.printReads by applying the new production and its child proofs.
 theorem braced_reads (scope : Scope) (result : Option (Ty .value)) (args : Statements result scope)
     (read : (braced scope result).production args tokens) : (Category.block scope result).reads tokens ((braced scope result).tree args) := by
-  sorry
+  obtain ⟨input, rfl, read⟩ := read
+  exact .braced read
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem braced_erfuellbar (scope : Scope) (result : Option (Ty .value)) : (braced scope result).Satisfiable := by
-  sorry
+  let args : Statements result scope := ⟨scope, .done⟩
+  exact Rule.satisfiableOfPrint args (braced_print args)
 
 theorem braced_entry (scope : Scope) (result : Option (Ty .value)) : (braced scope result).Entry where
   reads := fun a _ => braced_reads scope result a
@@ -369,17 +509,18 @@ def subtraction (scope : Scope) : Rule (.expression scope) (SubtractArgs scope) 
 theorem subtraction_print (args : SubtractArgs scope) :
     (subtraction scope).production args
       (((Category.expression scope).printPieces ((subtraction scope).tree args)).map PrintedToken.value) := by
-  sorry
+  exact binary_print args.val
 
 -- Mirror BinaryArgs.readStep_sound with Arith.sub.
 theorem subtraction_reads (scope : Scope) (args : SubtractArgs scope)
     (read : (subtraction scope).production args tokens) :
     (Category.expression scope).reads tokens ((subtraction scope).tree args) := by
-  sorry
+  exact (binary_entry scope).reads args.val tokens read
 
 -- Mirror binary_erfuellbar using the token sequence 5 - 2.
 theorem subtraction_erfuellbar (scope : Scope) : (subtraction scope).Satisfiable := by
-  sorry
+  let args : BinaryArgs scope := ⟨.sub, .lit 5, .lit 2⟩
+  exact Rule.satisfiableOfPrint ⟨args, rfl⟩ (binary_print args)
 
 theorem subtraction_entry (scope : Scope) : (subtraction scope).Entry where
   reads := fun a _ => subtraction_reads scope a

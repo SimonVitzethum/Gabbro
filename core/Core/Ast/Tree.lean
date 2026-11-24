@@ -234,6 +234,16 @@ def directName (name : Identifier) : Prop :=
   ordinaryLocal name ∧ name.val ∉
     ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
 
+theorem directName_of_singleton (spelling : name.val = [c]) : directName name := by
+  simp only [directName, ordinaryLocal, spelling, List.map_cons, List.map_nil,
+    List.mem_cons, List.not_mem_nil, or_false]
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · intro same
+    cases same
+  · intro same
+    cases same
+  · rintro (same | same | same | same | same | same | same | same) <;> cases same
+
 structure DirectCall (scope : Scope) where
   name : Identifier
   ordinary : directName name

@@ -3,7 +3,7 @@ module
 public import Core.Ast.Semantik.Beispiele
 public import Core.Ast.Semantik.BatchRegistry
 public import Core.Ast.Semantik.LocalEffects
-public import Core.Ast.Semantik.ProgramRegistry
+public import Core.Ast.Program.KernelPremises
 
 @[expose] public section
 
@@ -55,37 +55,6 @@ def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args
     shared.acceptanceRule, shared.idealRule, shared.unitsAndCommutation,
     shared.implementationRule, shared.preservation, shared.jointlySatisfiable⟩
 
-def Befehl.programConstructor : Befehl → Option Name
-  | .bindeWert .. => some ``Befehl.bindeWert
-  | .definiere .. => some ``Befehl.definiere
-  | .rufe .. => some ``Befehl.rufe
-  | .rueckVoid .. => some ``Befehl.rueckVoid
-  | .pruefeMass .. => some ``Befehl.pruefeMass
-  | .setzePasszahl .. => some ``Befehl.setzePasszahl
-  | .whileTest .. => some ``Befehl.whileTest
-  | .forAnfang .. => some ``Befehl.forAnfang
-  | .forTest .. => some ``Befehl.forTest
-  | .forNaechster .. => some ``Befehl.forNaechster
-  | .zurueckSprung .. => some ``Befehl.zurueckSprung
-  | .starte .. => some ``Befehl.starte
-  | .ende .. => some ``Befehl.ende
-  | _ => none
-
-def programConstructors : List Name :=
-  [``Befehl.bindeWert,
-    ``Befehl.definiere,
-    ``Befehl.rufe,
-    ``Befehl.rueckVoid,
-    ``Befehl.pruefeMass,
-    ``Befehl.setzePasszahl,
-    ``Befehl.whileTest,
-    ``Befehl.forAnfang,
-    ``Befehl.forTest,
-    ``Befehl.forNaechster,
-    ``Befehl.zurueckSprung,
-    ``Befehl.starte,
-    ``Befehl.ende]
-
 def programKernStatements (constructor : Name) : RegistryStatements constructor .core where
   realization := .core AusElaborierung
   acceptanceRule := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
@@ -101,18 +70,12 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
     I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
       I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
       Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
-  jointlySatisfiable := ∀ platform start,
-    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
-      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
-      let E := elaborieren platform tree
-      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+  jointlySatisfiable := ∀ platform start, ProgramInstructionPremises constructor platform start
 
 -- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
 theorem programKern_erfuellbar (constructor : Name) (registered : constructor ∈ programConstructors) :
     (programKernStatements constructor).jointlySatisfiable := by
-  sorry
+  exact programInstruction_erfuellbar constructor registered
 
 def programKernProofs (constructor : Name) (registered : constructor ∈ programConstructors) :
     RegistryEntry constructor ⟨.core, programKernStatements constructor⟩ where
@@ -190,7 +153,26 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
 -- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.
 theorem befehlSchema_program (constructor : Name) (registered : constructor ∈ programConstructors) :
     befehlSchema constructor = ⟨.core, programKernStatements constructor⟩ := by
-  sorry
+  have hne (name : Name) (notReg : name ∉ programConstructors) : constructor ≠ name := by
+    intro same
+    exact notReg (by simpa [same] using registered)
+  rw [befehlSchema,
+    ite_eq_right (hne ``Befehl.literal (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.binaer (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.binden (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.wahrheitswert (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.lesen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.negativ (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.negieren (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.verneinen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.teilen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.vergleichen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.springeWenn (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.zuweisen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.zurueck (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.springe (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.blockEnde (by simpa [programConstructors])),
+    if_pos registered]
 
 def kern_bindeWert : RegistryEntry ``Befehl.bindeWert (befehlSchema ``Befehl.bindeWert) := by
   have registered : ``Befehl.bindeWert ∈ programConstructors := List.Mem.head _

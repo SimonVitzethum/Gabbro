@@ -36,7 +36,7 @@ def einheit (z : Zustand) (form : Formular) (invarianten : List (Invariante Unit
   ⟨⟨katalog, bild, einrichtung,
       ⟨fun _ => ⟨fun c s _ plans u => form c s plans u, fun _ _ _ _ _ => False⟩, fun _ _ => some (),
         fun _ _ => False, fun _ _ _ => False⟩,
-      fun _ => daten, fun _ _ => 0, fun _ _ => some z, Eq, (fun _ => 0), .leer⟩, invarianten⟩
+      fun _ => daten, fun _ _ => 0, fun _ _ => some z, Eq, (fun _ => 0), .leer, .leer, .leer, .leer⟩, invarianten⟩
 
 def umgebung (sicht : Sicht) := Umgebung.referenz katalog 2 sicht
 def hardware (sicht : Sicht) := Umgebung.referenzLauf katalog 2 sicht
