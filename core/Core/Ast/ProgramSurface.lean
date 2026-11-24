@@ -178,8 +178,7 @@ theorem boundedWhile_reads {scope : Scope} {result : Option (Ty .value)} {a : Bo
 theorem boundedWhile_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (boundedWhile scope result).Satisfiable := by
   let overflow : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  let a : BoundedWhileArgs scope result :=
-    ⟨Expr.trueLit, 0, 0, Expr.lit 0, trivial, by omega, overflow, .braces .done⟩
+  let a : BoundedWhileArgs scope result := ⟨Expr.trueLit, 0, 0, Expr.lit 0, trivial, by omega, overflow, .braces .done⟩
   exact Rule.satisfiableOfPrint a (boundedWhile_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
@@ -220,8 +219,7 @@ theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value))
     (forRange scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : ordinaryLocal name := by simp [ordinaryLocal, name, keywordName]
-  let a : ForRangeArgs scope result :=
-    ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
+  let a : ForRangeArgs scope result := ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
   exact Rule.satisfiableOfPrint a (forRange_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
@@ -298,8 +296,7 @@ theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : directName name := by simp [directName, ordinaryLocal, name, keywordName]
-  let a : FunctionArgs scope :=
-    ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
+  let a : FunctionArgs scope := ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
   exact Rule.satisfiableOfPrint a (function_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
@@ -336,7 +333,7 @@ theorem program_syntax_erfuellbar  :
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : directName name := by simp [directName, ordinaryLocal, name, keywordName]
   let first : Decl [] [] :=
-    .function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
+.function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
   let a : ProgramArgs := ⟨[], [], first, .done⟩
   exact Rule.satisfiableOfPrint a (program_print a)
 
@@ -453,8 +450,7 @@ theorem StmtReads.boundedWhile_inversion
   | whileBounded nonnegative overflow bound staticBound condRead boundRead blockRead =>
       injection htok with _ hinput
       subst input
-      refine Or.inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩,
-        _, _, condRead, boundRead, blockRead, rfl⟩
+      refine Or.inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩, _, _, condRead, boundRead, blockRead, rfl⟩
   | assignVar _ _ _ _ _ =>
       injection htok with _ htail
       exact Or.inr ⟨_, htail⟩
