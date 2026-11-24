@@ -369,22 +369,25 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L) sw (R ++ post) :
             ((pre ++ L) ++ sw :: (R ++ post))[(pre ++ L).length]? = some sw)
       by_cases htake : (left.wert env) = op.skips
-      · refine ⟨sw.auswerten mid, .schritt walkL' stepSw, ?_, ?_, ?_, ?_, ?_⟩
+      · have hs : some (left.wert env) = some op.skips := congrArg some htake
+        refine ⟨sw.auswerten mid, .schritt walkL' stepSw, ?_, ?_, ?_, ?_, ?_⟩
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
-            alsBoolean, Option.bind_some, htake, if_pos rfl, if_true, List.length_append, List.length_cons,
+            alsBoolean, Option.bind_some, if_pos hs, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R]
           omega
-        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
-          rw [if_true]
+        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, if_pos htake,
+            Expr.wert]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
           simp only [sw, Befehl.auswerten]
           exact preserveL i hi
-      · have hs : some (left.wert env) = some op.skips := congrArg some htake
+      · have hs : some (left.wert env) ≠ some op.skips := by
+          intro same
+          exact htake (Option.some.inj same)
         have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
           simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some,
-            if_pos hs, if_true]
+            if_neg hs, if_false]
           rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
             Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
@@ -405,8 +408,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
             simp only [expr, Fragment.anhaengen, Fragment.einzel, List.length_append,
               List.length_cons, List.length_nil, Nat.add_zero, L, R]
           rw [hlen]
-          rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-            Nat.add_zero] at pcR
+          simp only [L, R, List.length_append, List.length_cons, List.length_nil,
+            Nat.add_zero] at pcR ⊢
           omega
         · rw [tmpR]
           simp only [Expr.wert, htake, if_false]
