@@ -12,11 +12,10 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
 
-abbrev LokalerBezug (Lok : Type) := (Kontext → Lok) → (Kontext → Lok) → Prop
-
 /-- The machine protocol and the forms account for their respective parts of the state. -/
-abbrev Zustandsbezug (lokal : LokalerBezug Lok) (s i : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ProtokollBezug s i ∧ lokal s.lokal i.lokal
+abbrev Zustandsbezug (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (s i : Zustand L Ort Wert Raum Lok Grund) : Prop :=
+  ProtokollBezug s i ∧ E.lokalerBezug s.lokal i.lokal
 
 /-- Private steps preserve the entire M4 trace. A matched step preserves the
     concrete choice and trace verbatim. -/
@@ -31,22 +30,21 @@ variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
 /-- M4 obligations at the head of one context. A form either supplies its ideal
     step on the same tick or proves that this transition only advances private work. -/
-def RegelAbgleich (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
-    (lokal : LokalerBezug Lok) (f : F) : Prop :=
-  ∀ hw t c w s u s' i plan spur, Zustandsbezug lokal s i →
+def RegelAbgleich (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (f : F) : Prop :=
+  ∀ hw t c w s u s' i plan spur, Zustandsbezug E s i →
     (hw.angebot t).crash = false → KannSchreiten hw t c s →
     E.system.kopf s c = some f → (E.system.regel f).impl c s w [plan] u →
     FuehrtSchrittAus E.einrichtung t c s u plan spur s' →
     (∃ i', Schritt E.einrichtung E.system E.katalog hw t i (.kontext c w, spur) i' ∧
-      Zustandsbezug lokal s' i') ∨
-    (spur = ⟨[], []⟩ ∧ Zustandsbezug lokal s' i ∧ ∃ g, E.system.kopf i c = some g)
+      Zustandsbezug E s' i') ∨
+    (spur = ⟨[], []⟩ ∧ Zustandsbezug E s' i ∧ ∃ g, E.system.kopf i c = some g)
 
 /-- One ideal run replays the concrete choices, with related states at every
     tick and silent private work charged to its actual source context and unit. -/
-structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) (lokal : LokalerBezug Lok) : Prop where
+structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) : Prop where
   hardware : η.hw = ρ.hw
   start : η.start = ρ.start
-  zustand : ∀ t, ∃ s, ρ.zeit.zustand t = some s ∧ Zustandsbezug lokal s (η.zeit.zustand t)
+  zustand : ∀ t, ∃ s, ρ.zeit.zustand t = some s ∧ Zustandsbezug E s (η.zeit.zustand t)
   spur : ∀ t, SpurAbgleich (ρ.zeit.spur t) (η.zeit.spur t)
   frei : ∀ t, η.belegt t = none ↔ ρ.zeit.spur t = none ∨ η.zeit.spur t ≠ none
   belegt : ∀ t c, η.belegt t = some c →
@@ -54,23 +52,20 @@ structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) (lokal : LokalerBezu
 
 /-- Obligations for the M4 clock and trace match. If the concrete machine takes
     no step at an opportunity, the matched ideal state has no transition there. -/
-structure AbgleichPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
-    (lokal : LokalerBezug Lok) (laenge : F → Nat) : Prop where
-  lokal_refl : ∀ l, lokal l l
+structure AbgleichPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop where
+  lokal_refl : ∀ l, E.lokalerBezug l l
   laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
-    ∃ z, E.laden s (h.lade E.bild) = some z ∧ Zustandsbezug lokal z (start E s).2
-  regel : ∀ f, RegelAbgleich E lokal f
-  pause : ∀ hw t s i, Zustandsbezug lokal s i → KeinSchritt (Lauffolge E hw) t (some s) →
+    ∃ z, E.laden s (h.lade E.bild) = some z ∧ Zustandsbezug E z (start E s).2
+  regel : ∀ f, RegelAbgleich E f
+  pause : ∀ hw t s i, Zustandsbezug E s i → KeinSchritt (Lauffolge E hw) t (some s) →
     KeinSchritt (Schritt E.einrichtung E.system E.katalog hw) t i
-  schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η lokal → StotterSchranke laenge η
+  schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → StotterSchranke η
 
-variable {lokal : LokalerBezug Lok} {laenge : F → Nat}
-
-theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E lokal laenge)
-    {hw t s s' i spur} (bezug : Zustandsbezug lokal s i)
+theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E)
+    {hw t s s' i spur} (bezug : Zustandsbezug E s i)
     (konkret : ImplSchritt E.einrichtung E.system E.katalog hw t s spur s') :
     ∃ r : Zustand L Ort Wert Raum Lok Grund × Option (SchrittWahl Wahl × SchrittSpur Ort Wert),
-      Zustandsbezug lokal s' r.1 ∧
+      Zustandsbezug E s' r.1 ∧
       Takt (Schritt E.einrichtung E.system E.katalog hw) (fun n _ => ¬ AbsturzAngeboten E.katalog hw n)
         t i r.2 r.1 ∧ SpurAbgleich (some spur) r.2 ∧
       (r.2 = none → ∃ c w f, spur = (.kontext c w, ⟨[], []⟩) ∧
@@ -116,12 +111,12 @@ theorem SpurAbgleich.gedeckt {konkret : Option (SchrittWahl Wahl × SchrittSpur 
 
 /-- Lift the local M4 obligations to one maximal ideal run over the given
     concrete run, with the canonical start and matching finite/infinite status. -/
-theorem laufabgleich (pflicht : AbgleichPflichten E lokal laenge)
+theorem laufabgleich (pflicht : AbgleichPflichten E)
     {h : Umgebung} {ρ : Maschine.Lauf E} (run : Maschine.Laeufe E h ρ) :
-    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η lokal ∧ η.umgebung = h := by
+    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η ∧ η.umgebung = h := by
   classical
   let bezug := fun (z : Option (Zustand L Ort Wert Raum Lok Grund)) i =>
-    ∃ s, z = some s ∧ Zustandsbezug lokal s i
+    ∃ s, z = some s ∧ Zustandsbezug E s i
   let lokalTakt := fun t i (label : Option (SchrittWahl Wahl × SchrittSpur Ort Wert))
       (_ : Zustand L Ort Wert Raum Lok Grund) =>
     SpurAbgleich (ρ.zeit.spur t) label ∧
@@ -190,7 +185,7 @@ theorem laufabgleich (pflicht : AbgleichPflichten E lokal laenge)
     · rw [show belegt t = none from dif_neg priv] at marked
       cases marked
   let η : Lauf E := ⟨ρ.start, h, ρ.hw, ideal, belegt⟩
-  have matched : Laufabgleich ρ η lokal :=
+  have matched : Laufabgleich ρ η :=
     ⟨rfl, rfl, related, fun t => (ticks t).2.1, frei, fun t c h => (occupied t c h).2⟩
   have maximal : ideal.Maximal (fun t => belegt t = none) := by
     refine ⟨fun t idle vacant => ?_, fun ⟨k, tail⟩ => ?_⟩

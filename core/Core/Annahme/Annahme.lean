@@ -67,6 +67,8 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
         ⟨fun _ => true, fun _ => 0⟩⟩,
       fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := trivialesSystem
+  lokalerBezug := Eq
+  stotterLaenge := fun _ => 0
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
@@ -160,6 +162,8 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
         ⟨fun _ => true, fun _ => 0⟩⟩,
       fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := kreuzSystem
+  lokalerBezug := Eq
+  stotterLaenge := fun _ => 0
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
@@ -239,6 +243,8 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
         ⟨fun _ => true, fun _ => 0⟩⟩,
       fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := staleSystem
+  lokalerBezug := Eq
+  stotterLaenge := fun _ => 0
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
