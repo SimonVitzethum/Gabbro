@@ -363,7 +363,14 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | _ => none) with
       | none =>
           simp only [hcmd, List.mem_filterMap] at hmem
-          exact ih site (List.mem_filterMap.mpr hmem)
+          obtain ⟨a, ha, hfa⟩ := hmem
+          cases ha with
+          | head =>
+              cases cmd with
+              | rufe target args bind => simp at hcmd
+              | _ => simp at hfa
+          | tail _ ha =>
+              exact ih site (List.mem_filterMap.mpr ⟨a, ha, hfa⟩)
       | some first =>
           cases cmd with
           | rufe target args bind =>
