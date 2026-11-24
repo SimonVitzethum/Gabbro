@@ -106,32 +106,79 @@ theorem SignedReads.deterministic (left : SignedReads input a rest) (right : Sig
   | positive => cases right with | positive => exact ⟨rfl, rfl⟩
   | negative => cases right with | negative => exact ⟨rfl, rfl⟩
 
+private theorem intSpelling_not_text : ∀ (s : Bool) (w : Nat), keyword "string" ≠ .word (intSpelling s w) := by
+  intro s w same
+  cases s <;> cases same
+private theorem intSpelling_not_option : ∀ (s : Bool) (w : Nat), keyword "option" ≠ .word (intSpelling s w) := by
+  intro s w same
+  cases s <;> cases same
+private theorem intSpelling_not_index : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "index".toList := by
+  intro s w h
+  cases s with
+  | false => cases h
+  | true =>
+    have tail : (toString w).toList = ['n', 'd', 'e', 'x'] := (List.cons.inj h).2
+    have digits : (toString w).toList = Nat.toDigits 10 w := by
+      rw [Nat.toString_eq_ofList_toDigits, String.toList_ofList]
+    have member : 'n' ∈ Nat.toDigits 10 w := by
+      rw [← digits, tail]
+      exact List.mem_cons_self
+    have digit := Nat.isDigit_of_mem_toDigits (b := 10) (by decide) (by decide) member
+    contradiction
+
+private theorem textType_det
+    (other : TypeReads scope input out rest')
+    (equality : keyword "string" :: keyword "max" :: .natural capacity :: rest = input) :
+    WrittenType.text capacity = out ∧ rest = rest' := by
+  cases other with
+  | text =>
+    simp only [List.cons.injEq, Token.natural.injEq, true_and] at equality
+    obtain ⟨rfl, rfl⟩ := equality
+    exact ⟨rfl, rfl⟩
+  | integer => exact (intSpelling_not_text _ _ (List.cons.inj equality).1).elim
+  | interval => exact (intSpelling_not_text _ _ (List.cons.inj equality).1).elim
+  | _ => have head := (List.cons.inj equality).1; cases head
+
+private theorem carrierIndex_det
+    (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
+    (other : TypeReads scope input out rest')
+    (equality : keyword "index" :: keyword "into" :: .word carrier.val :: rest = input) :
+    WrittenType.index carrier count = out ∧ rest = rest' := by
+  cases other with
+  | index otherCarrier otherResolved =>
+    simp only [List.cons.injEq, Token.word.injEq, true_and] at equality
+    obtain ⟨spelling, rfl⟩ := equality
+    cases Subtype.ext spelling
+    cases Option.some.inj (resolved.symm.trans otherResolved)
+    exact ⟨rfl, rfl⟩
+  | integer =>
+    exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
+  | interval =>
+    exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
+  | _ => have head := (List.cons.inj equality).1; cases head
+
+private theorem carrierOption_det
+    (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
+    (other : TypeReads scope input out rest')
+    (equality : keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest = input) :
+    WrittenType.indexOption carrier count = out ∧ rest = rest' := by
+  cases other with
+  | indexOption otherCarrier otherResolved =>
+    simp only [List.cons.injEq, Token.word.injEq, true_and] at equality
+    obtain ⟨spelling, rfl⟩ := equality
+    cases Subtype.ext spelling
+    cases Option.some.inj (resolved.symm.trans otherResolved)
+    exact ⟨rfl, rfl⟩
+  | integer => exact (intSpelling_not_option _ _ (List.cons.inj equality).1).elim
+  | interval => exact (intSpelling_not_option _ _ (List.cons.inj equality).1).elim
+  | _ => have head := (List.cons.inj equality).1; cases head
+
 -- Mirror ExprReads.deterministic, dispatch on the width spelling and then on in.
-set_option maxHeartbeats 180000 in
 theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : TypeReads scope input b more) :
     a = b ∧ rest = more := by
   have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
     intro s w h
     cases s <;> cases h
-  have not_text : ∀ (s : Bool) (w : Nat), keyword "string" ≠ .word (intSpelling s w) := by
-    intro s w same
-    cases s <;> cases same
-  have not_option : ∀ (s : Bool) (w : Nat), keyword "option" ≠ .word (intSpelling s w) := by
-    intro s w same
-    cases s <;> cases same
-  have not_index : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "index".toList := by
-    intro s w h
-    cases s with
-    | false => cases h
-    | true =>
-      have tail : (toString w).toList = ['n', 'd', 'e', 'x'] := (List.cons.inj h).2
-      have digits : (toString w).toList = Nat.toDigits 10 w := by
-        rw [Nat.toString_eq_ofList_toDigits, String.toList_ofList]
-      have member : 'n' ∈ Nat.toDigits 10 w := by
-        rw [← digits, tail]
-        exact List.mem_cons_self
-      have digit := Nat.isDigit_of_mem_toDigits (b := 10) (by decide) (by decide) member
-      contradiction
   have spelling_inj : ∀ {s w s' w'}, intSpelling s w = intSpelling s' w' → s = s' ∧ w = w' := by
     intro s w s' w' h
     have hh := congrArg List.head? h; have ht := congrArg List.tail h
@@ -175,11 +222,11 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         injection hEq with hword htail; injection hword with hspell
         exact (closed _ htail).elim
     case index =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+      exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
     case text =>
-      exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
+      exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
-      exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
+      exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
     all_goals have head := (List.cons.inj hEq).1; cases head
   · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
     cases rightDeriv
@@ -198,11 +245,11 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         obtain ⟨hhi, hrest⟩ := SignedReads.deterministic hiRead hiRead'
         cases hlo; cases hhi; exact ⟨rfl, hrest⟩
     case index =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+      exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
     case text =>
-      exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
+      exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
-      exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
+      exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
     all_goals have head := (List.cons.inj hEq).1; cases head
   · intro _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
     cases other with
@@ -226,39 +273,12 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       obtain ⟨rfl, rfl⟩ := tailDet _ _ _ otherTail rfl
       exact ⟨rfl, rfl⟩
     | _ => have head := (List.cons.inj equality).1; cases head
-  · intro capacity rest input' out rest' other equality
-    cases other with
-    | text =>
-      simp only [List.cons.injEq, Token.natural.injEq, true_and] at equality
-      obtain ⟨rfl, rfl⟩ := equality
-      exact ⟨rfl, rfl⟩
-    | integer => exact (not_text _ _ (List.cons.inj equality).1).elim
-    | interval => exact (not_text _ _ (List.cons.inj equality).1).elim
-    | _ => have head := (List.cons.inj equality).1; cases head
-  · intro count rest carrier resolved input' out rest' other equality
-    cases other with
-    | index otherCarrier otherResolved =>
-      simp only [List.cons.injEq, Token.word.injEq, true_and] at equality
-      obtain ⟨spelling, rfl⟩ := equality
-      cases Subtype.ext spelling
-      cases Option.some.inj (resolved.symm.trans otherResolved)
-      exact ⟨rfl, rfl⟩
-    | integer =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
-    | interval =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
-    | _ => have head := (List.cons.inj equality).1; cases head
-  · intro count rest carrier resolved input' out rest' other equality
-    cases other with
-    | indexOption otherCarrier otherResolved =>
-      simp only [List.cons.injEq, Token.word.injEq, true_and] at equality
-      obtain ⟨spelling, rfl⟩ := equality
-      cases Subtype.ext spelling
-      cases Option.some.inj (resolved.symm.trans otherResolved)
-      exact ⟨rfl, rfl⟩
-    | integer => exact (not_option _ _ (List.cons.inj equality).1).elim
-    | interval => exact (not_option _ _ (List.cons.inj equality).1).elim
-    | _ => have head := (List.cons.inj equality).1; cases head
+  · intros
+    exact textType_det (by assumption) (by assumption)
+  · intros
+    exact carrierIndex_det _ (by assumption) (by assumption) (by assumption)
+  · intros
+    exact carrierOption_det _ (by assumption) (by assumption) (by assumption)
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
