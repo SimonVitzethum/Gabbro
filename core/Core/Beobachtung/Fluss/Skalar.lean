@@ -64,7 +64,7 @@ theorem skalarNI : SkalarNIAussage := by
               ([] : List (NiedrigesEreignis PUnit Int PUnit PUnit)) := by
           rw [if_neg keinEnde]
         simp only [schrittBeob, spurGlied, zustand, zustandNach,
-          List.filterMap_nil, List.flatMap_nil, List.nil_append,
-          kontextLeer, abschlussLeer]
+          List.filterMap_nil, List.flatMap_nil, List.nil_append, kontextLeer]
+        exact abschlussLeer
 
 end Gabbro.Core.Beobachtung
