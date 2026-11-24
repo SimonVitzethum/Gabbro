@@ -34,7 +34,7 @@ theorem skalarNI : SkalarNIAussage := by
       cases step with
       | kontext _ _ regel aus =>
         obtain ⟨f', kopf', implRegel⟩ := regel
-        have ff : f' = f := Option.some.inj (kopf'.trans kopf.symm)
+        have ff : f' = f := Option.some.inj (kopf'.symm.trans kopf)
         subst f'
         obtain ⟨spurEq, nachGlied⟩ := Befehl.vollzug_genau f implRegel aus
         subst spur
@@ -43,21 +43,24 @@ theorem skalarNI : SkalarNIAussage := by
         have kontextLeer :
             kontextBeob ρ₁ predictor t c vor (f.nach c vor) ⟨[], []⟩ = [] := by
           rw [kontextBeob, kopf]
-          simp only [Fragment.einheit, fragmentFlussdaten, Schrankendaten.leer,
+          simp only [Fragment.einheit, Ast.Semantik.fragmentFlussdaten,
+            Schrankendaten.leer,
             commitBeob, Befehl.nach, List.drop_length, List.filterMap_nil,
             ausgabeBeob, Flussdaten.ausgabeZuwachs, List.filter_nil, List.map_nil,
-            zeitBeob, zugriffe_leer, List.nil_append, if_false]
-        have endeLeer : ∀ d, neuBeendet vor (f.nach c vor) E.etiketten d = none := by
+            zeitBeob, zugriffe_leer, List.nil_append, false_eq_true, if_false]
+        have endeLeer : ∀ d, neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d = none := by
           intro d
           cases hs : vor.status d <;> simp only [neuBeendet, Befehl.nach, hs]
         have keinEnde :
-            ¬ ∃ d, (neuBeendet vor (f.nach c vor) E.etiketten d).isSome = true := by
+            ¬ ∃ d, (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d).isSome = true := by
           rintro ⟨d, hd⟩
           rw [endeLeer d] at hd
           cases hd
         have abschlussLeer :
-            (if ∃ d, (neuBeendet vor (f.nach c vor) E.etiketten d).isSome = true
-             then [.ende (neuBeendet vor (f.nach c vor) E.etiketten)] else []) = [] := by
+            (if ∃ d, (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d).isSome = true
+             then [.ende (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten)]
+             else []) =
+              ([] : List (NiedrigesEreignis PUnit Int PUnit PUnit)) := by
           rw [if_neg keinEnde]
         simp only [schrittBeob, spurGlied, zustand, zustandNach,
           List.filterMap_nil, List.flatMap_nil, List.nil_append,
