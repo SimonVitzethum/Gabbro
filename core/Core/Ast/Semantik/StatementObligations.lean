@@ -334,7 +334,7 @@ theorem braced_impl (ctx : StatementContext) : (bracedForm ctx).ImplAussage := b
 theorem braced_erhaltung (ctx : StatementContext) : (bracedForm ctx).ErhaltungsAussage := by
   refine Quellform.erhaltung (bracedForm ctx) ?_
   intro args
-  change (bracedBlock args.2).klauseln.invariant = []
+  change (bracedBlock (.braces args.2)).klauseln.invariant = []
   have blockEmpty : (block args.2).klauseln.invariant = [] := by
     refine @Block.rec ctx.2
       (fun b a t => (stmt t).klauseln.invariant = [])
