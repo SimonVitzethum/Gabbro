@@ -93,7 +93,19 @@ theorem setzePasszahlSicht : SetzePasszahlSichtAussage := by
     have hZaehler : r₁.zaehler = r₂.zaehler := by
       simpa only [Rahmen.sicht] using
         congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
-    simp only [Befehl.auswerten, hZc, hZ₂, sicht_setzePasszahl_some, h, pcEq, hTe,
+    have e₁ : (Befehl.setzePasszahl quelle stelle).auswerten r₁ live =
+        ({ r₁ with
+          pc := r₁.pc + 1
+          zaehler := Function.update r₁.zaehler (r₁.pc + stelle)
+            (some value.zahl.wert.toNat) }) := by
+      simp only [Befehl.auswerten, hZc]
+    have e₂ : (Befehl.setzePasszahl quelle stelle).auswerten r₂ live =
+        ({ r₂ with
+          pc := r₂.pc + 1
+          zaehler := Function.update r₂.zaehler (r₂.pc + stelle)
+            (some value.zahl.wert.toNat) }) := by
+      simp only [Befehl.auswerten, hZ₂]
+    rw [e₁, e₂, sicht_setzePasszahl_some, sicht_setzePasszahl_some, h, pcEq, hTe,
       hLe, hZaehler]
 
 end Gabbro.Core.Ast.Semantik
