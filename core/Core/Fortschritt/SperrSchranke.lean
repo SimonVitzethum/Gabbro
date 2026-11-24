@@ -320,6 +320,7 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
         | nil =>
           rw [hq] at hidx
           simp only [List.getElem?_nil] at hidx
+          cases hidx
         | cons h₀ rest =>
           refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨h₀, rest, hown, hq, ?_⟩⟩, ?_, ?_, ?_⟩
           · cases hs : s.sperren l with
