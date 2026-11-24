@@ -232,24 +232,15 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
     (read : AtomReads scope (.word word :: rest) tree suffix) :
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
-  cases tree
-  · cases read
-  · cases read
-  · cases read
-    exact (ordinary.1 rfl).elim
-  · cases read
-    exact (ordinary.2 rfl).elim
-  · rename_i ref vis ord
-    have h : type = ref.binding.type := rfl
-    cases h
-    cases read
+  cases read
+  case trueLit => exact (ordinary.1 rfl).elim
+  case falseLit => exact (ordinary.2 rfl).elim
+  case _ =>
+    rename_i a ref vis ord
+    have htyp : Expr.typed (Expr.variable ref vis ord) = Expr.typed (Expr.variable ref vis ord) := rfl
+    have hfst := congrArg Sigma.fst htyp
+    cases hfst
     exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
-  · cases read
-  · cases read
-  · cases read
-  · cases read
-  · cases read
-  · cases read
 
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
