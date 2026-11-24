@@ -43,7 +43,7 @@ theorem textConcatSicht (β : Beschriftung) (pc basis a b : Nat)
 theorem schreibform_textLength (basis capacity : Nat) :
     (Befehl.textLength basis capacity).Schreibform basis [.temp basis] :=
   ⟨fun r => (r.temp basis).bind (wertAls (.text capacity)) |>.map
-      fun text => ⟨.text capacity, text.lengthValue⟩,
+      fun text => ⟨.int 0 capacity, text.lengthValue⟩,
     fun _ _ => rfl,
     fun r₁ r₂ h => by
       have h0 : r₁.temp basis = r₂.temp basis :=

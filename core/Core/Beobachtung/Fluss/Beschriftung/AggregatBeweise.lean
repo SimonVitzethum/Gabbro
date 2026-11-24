@@ -23,7 +23,7 @@ theorem schreibform_liesArray (basis : Nat) (element : Ty .value) (count : Nat) 
         else none,
     fun _ _ => rfl,
     fun r₁ r₂ h => by
-      have h0 : r₁.temp basis = r₂.temp basis := h (.temp basis) (List.mem_cons_self _)
+      have h0 : r₁.temp basis = r₂.temp basis := h (.temp basis) (List.mem_cons_self ..)
       have h1 : r₁.temp (basis + 1) = r₂.temp (basis + 1) :=
         h (.temp (basis + 1)) (List.mem_cons_of_mem _ (List.mem_singleton_self _))
       simp only [Rahmen.zahl, h0, h1]⟩
