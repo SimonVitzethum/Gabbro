@@ -170,4 +170,55 @@ theorem VariantMemberRead.printReads (member : VariantMember) (valid : member.va
       List.append_assoc, List.cons_append, List.nil_append, nameToken, hpOpen, hpClose] using
       (VariantMemberRead.payload name read)
 
+/-- The first member is bare, and all subsequent members carry a leading comma. -/
+def printedVariantTail (members : List VariantMember) (rest : List Token) : List Token :=
+  match members with
+  | [] => closeBrace :: rest
+  | _ :: _ => comma :: (commaSeparated (members.map VariantMember.printPieces)).map PrintedToken.value ++
+      closeBrace :: rest
+
+private theorem printedVariantTail_cons (member : VariantMember) (tail : List VariantMember) :
+    printedVariantTail (member :: tail) rest =
+      comma :: (member.printPieces.map PrintedToken.value ++ printedVariantTail tail rest) := by
+  have hpComma : printComma.value = comma := rfl
+  cases tail with
+  | nil =>
+    simp only [printedVariantTail, List.map_cons, List.map_nil, commaSeparated,
+      List.intersperse_singleton, List.flatten_cons, List.flatten_nil, List.append_nil]
+  | cons next tail =>
+    simp only [printedVariantTail, List.map_cons, commaSeparated_cons_cons, List.map_append,
+      List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hpComma]
+
+private theorem printedVariantTail_closed (members : List VariantMember) :
+    ∀ suffix, printedVariantTail members rest ≠ openParen :: suffix := by
+  intro suffix same
+  cases members <;> cases same
+
+theorem VariantMembersTailRead.printReads (members : List VariantMember)
+    (valid : ∀ member ∈ members, member.valid scope) :
+    VariantMembersTailRead scope (printedVariantTail members rest) members rest := by
+  induction members with
+  | nil => exact .done
+  | cons head tail ih =>
+    rw [printedVariantTail_cons]
+    exact .next
+      (VariantMemberRead.printReads head (valid head List.mem_cons_self) (printedVariantTail_closed tail))
+      (ih (fun member h => valid member (List.mem_cons_of_mem _ h)))
+
+theorem variantMembers_printReads (first : VariantMember) (remaining : List VariantMember)
+    (valid : ∀ member ∈ first :: remaining, member.valid scope) :
+    ∃ more,
+      VariantMemberRead scope
+        ((commaSeparated ((first :: remaining).map VariantMember.printPieces)).map PrintedToken.value ++
+          closeBrace :: rest) first more ∧
+      VariantMembersTailRead scope more remaining rest := by
+  have headRead := VariantMemberRead.printReads first (valid first List.mem_cons_self) (rest := printedVariantTail remaining rest)
+    (printedVariantTail_closed remaining)
+  have tailRead := VariantMembersTailRead.printReads remaining (rest := rest)
+    (fun member h => valid member (List.mem_cons_of_mem _ h))
+  refine ⟨_, ?_, tailRead⟩
+  have normalized := List.cons.inj (show comma :: ((commaSeparated ((first :: remaining).map VariantMember.printPieces)).map PrintedToken.value ++ closeBrace :: rest) = _ from printedVariantTail_cons first remaining)
+  rw [← normalized.2] at headRead
+  exact headRead
+
 end Gabbro.Core.Ast

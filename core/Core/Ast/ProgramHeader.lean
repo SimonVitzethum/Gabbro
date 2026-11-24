@@ -36,6 +36,10 @@ end
 def commaSeparated (pieces : List (List PrintedToken)) : List PrintedToken :=
   (pieces.intersperse [printComma]).flatten
 
+theorem commaSeparated_cons_cons (head next : List PrintedToken) (tail : List (List PrintedToken)) :
+    commaSeparated (head :: next :: tail) = head ++ [printComma] ++ commaSeparated (next :: tail) := by
+  simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc]
+
 def DirectCall.printPieces (call : DirectCall scope) : List PrintedToken :=
   [call.name.print, printOpen] ++ commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]
 
