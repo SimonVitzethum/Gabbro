@@ -63,6 +63,8 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
   all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
     Fragment.anhaengen, Fragment.einzel, Fragment.leer,
     Quellklauseln.anhaengen, Quellklauseln.leer]
+  · intro before middle after a a_1 ih
+    exact stmt_keine_invarianten a
 
 theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
   intro ctx platform args
