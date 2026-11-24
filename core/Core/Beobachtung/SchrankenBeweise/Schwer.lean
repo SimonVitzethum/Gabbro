@@ -151,7 +151,7 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
     intro n hn
     obtain rfl := Option.some.inj hn
     rw [leer, Set.encard_empty]
-    exact Nat.zero_le _
+    exact bot_le
   have res := pflicht lauf 0 entry () ⟨[], []⟩ z (zustand 1)
     rfl rfl rfl rfl (step 0) stapelVor speicherVor
   have subset : ({(0, 0), (1, 0)} : Set (Nat × Nat)) ⊆ LebendeZellen (zustand 1) := by
@@ -169,7 +169,8 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
   have zwei : 2 ≤ (LebendeZellen (zustand 1)).encard := by
     rw [← enc]
     exact Set.encard_le_encard subset
-  exact (not_le_of_gt (by decide : 1 < 2)) (zwei.trans (res.2 1 rfl))
+  have zuwenig : (2 : ℕ∞) ≤ (1 : ℕ∞) := zwei.trans (res.2 1 rfl)
+  exact (by decide : ¬ (2 : Nat) ≤ 1) (ENat.natCast_le_natCast.mp zuwenig)
 
 /-- The pinned memory-management duty places its depth premise under the finite-memory
     hypothesis. With an open ceiling the premise is vacuous, while a finite stack bound
