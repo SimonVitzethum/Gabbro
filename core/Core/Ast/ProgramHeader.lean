@@ -271,8 +271,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
       rw [hnum]; exact SignedReads.positive (n := n) (rest := tail)
   have hpInt : ∀ (s : Bool) (w : Nat), (intTypeName s w).print.value = Token.word (intSpelling s w) := by
     intro s w; rfl
-  have hpIn : printIn.value = keyword "in" := by rfl
-  have hpRange : printClosedRange.value = closedRange := by rfl
+  have hpIn : printIn.value = keyword "in" := by rfl; have hpRange : printClosedRange.value = closedRange := by rfl
   cases tree with
   | bool =>
       have hp : printBoolType.value = keyword "bool" := by rfl
@@ -357,8 +356,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
     cases ps with
     | nil => simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons]
     | cons q qs => simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc, List.map_cons]
-  have hClose : printClose.value = closeParen := by rfl
-  have hComma : printComma.value = comma := by rfl
+  have hClose : printClose.value = closeParen := by rfl; have hComma : printComma.value = comma := by rfl
   induction ps with
   | nil =>
       simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
@@ -469,8 +467,7 @@ theorem DirectCall.printReads (call : DirectCall scope) :
     | div => cases h
     | compare c => cases c <;> cases h
     | logic l => cases l <;> cases h
-  have hComma : printComma.value = comma := by rfl
-  have hpClose : printClose.value = closeParen := by rfl
+  have hComma : printComma.value = comma := by rfl; have hpClose : printClose.value = closeParen := by rfl
   have argsRead : ArgsRead scope
       ((commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest)
       call.args rest := by
@@ -495,8 +492,7 @@ theorem DirectCall.printReads (call : DirectCall scope) :
                   (noComma _))
             · simpa only [hpClose, List.map_append, List.map_cons, List.map_nil, List.singleton_append,
                 List.append_assoc] using (ArgsTail.comma ih)
-  have hpName : call.name.print.value = Token.word call.name.val := by rfl
-  have hpOpen : printOpen.value = openParen := by rfl
+  have hpName : call.name.print.value = Token.word call.name.val := by rfl; have hpOpen : printOpen.value = openParen := by rfl
   simpa only [DirectCall.printPieces, hpName, hpOpen, hpClose, List.map_append, List.map_cons, List.map_nil,
     List.singleton_append, List.append_assoc] using (CallReads.applied call argsRead)
 
