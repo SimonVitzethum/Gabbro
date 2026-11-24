@@ -245,10 +245,10 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   intro more h
                   cases measure with
                   | none =>
-                      simp only [List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                      simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                   | some m0 =>
-                      simp only [List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                      simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
@@ -256,10 +256,10 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                     intro more h
                     cases measure with
                     | none =>
-                        simp only [List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                        simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                     | some m0 =>
-                        simp only [List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                        simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)
                   rw [← List.append_assoc] at hwt
                   rw [← List.append_assoc] at hwt
@@ -269,7 +269,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
               | none =>
                   refine MeasureReads.absent ?_
                   intro more h
-                  simp only [List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                  simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                     printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some m =>
                   refine MeasureReads.present m ?_
