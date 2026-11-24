@@ -48,7 +48,7 @@ def layout (target : ZielDaten) : WrittenType → Option Layout
     if width ∈ ([8, 16, 32, 64] : List Nat) ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum then
       some ⟨written, width / 8, width / 8, .ofTarget target⟩
     else none
-  | .bool | .array .. | .tuple .. => none
+  | _ => none
 
 /-- A source scope associates names with arrival-region slots. A slot identifies
     an object in the boundary contract, independently of the object's address. -/
