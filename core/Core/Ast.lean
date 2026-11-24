@@ -14,6 +14,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPages
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPagesSatisfiability
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.Merge
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.Protect
+public import Core.Ast.LowLevel.Exec.Proofs.ExecWait
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution
