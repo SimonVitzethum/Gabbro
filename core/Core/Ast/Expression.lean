@@ -144,10 +144,12 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
     (motive_4 := fun close input _ items rest _ =>
       ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
-        ItemsRead scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
+        (close = closeParen ∨ close = closeBracket) →
+      ItemsRead scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
     (motive_5 := fun close input _ items rest _ =>
       ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
-        ItemsTail scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
+        (close = closeParen ∨ close = closeBracket) →
+      ItemsTail scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
     (motive_6 := fun input _ _ items rest _ =>
       ∀ {labels types} {b : LabeledItems scope labels types} {rest'},
         LabeledItemsRead scope input b rest' → ((⟨_, _, items⟩ : Σ ls ts, LabeledItems scope ls ts) = ⟨_, _, b⟩) ∧ rest = rest')
@@ -184,6 +186,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | grouped inside =>
       obtain ⟨same, suffix⟩ := insideDet inside
       exact ⟨same, (List.cons.inj suffix).2⟩
+    | tupleValue firstRead _ _ =>
+      exact (by obtain ⟨_, suffix⟩ := insideDet firstRead; cases suffix)
   case trueLit =>
     intros
     rename_i _ _ rest _ _ _ otherRead
@@ -197,7 +201,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
   case «variable» =>
     intros
     rename_i _ _ _ rest ref vis ord _ _ _ otherRead
-    obtain ⟨ref', vis', ord', nameEq, sameTree, suffix⟩ := otherRead.variable_inversion ord ⟨_, ref, vis, rfl⟩
+    obtain ⟨_, ref', vis', ord', nameEq, sameTree, suffix⟩ := otherRead.variable_inversion ord ⟨_, ref, vis, rfl⟩
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
       Local.visible_unique ref ref' vis vis' nameEq.symm
     cases eqRef
@@ -233,7 +237,15 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | div allowed => exact (blocked ⟨.div, _, rfl, allowed⟩).elim
     | compare op allowed => exact (blocked ⟨.compare op, _, rfl, allowed⟩).elim
     | logic op allowed => exact (blocked ⟨.logic op, _, rfl, allowed⟩).elim
+    | arrayIndex _ _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | tupleField _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+    | recordField _ _ _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+    | textConcat _ _ allowed => exact (blocked ⟨.arith .add, _, rfl, allowed⟩).elim
+    | textIndex _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | substring _ _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | optionIsSome _ _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
   case binary =>
+
     intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
     generalize h : op.token = token at otherRead
@@ -297,6 +309,184 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
+  case arrayValue =>
+    intros
+    rename_i principal fits itemsRead itemsDet _ _ _ otherRead
+    cases otherRead with
+    | arrayValue otherPrincipal otherFits otherItems =>
+      obtain ⟨rfl, rfl⟩ := itemsDet (Or.inr rfl) otherItems
+      cases principal.symm.trans otherPrincipal
+      exact ⟨rfl, rfl⟩
+  case tupleValue =>
+    intros
+    rename_i firstRead secondRead tailRead firstDet secondDet itemsDet _ _ _ otherRead
+    cases otherRead with
+    | grouped inside =>
+      exact (by
+        obtain ⟨_, delim⟩ := firstDet inside
+        cases delim)
+    | tupleValue otherFirst otherSecond otherItems =>
+      obtain ⟨rfl, hfirst⟩ := firstDet otherFirst
+      cases (List.cons.inj hfirst).2
+      obtain ⟨rfl, rfl⟩ := secondDet otherSecond
+      obtain ⟨rfl, rfl⟩ := itemsDet (Or.inl rfl) otherItems
+      exact ⟨rfl, rfl⟩
+  case textLiteral =>
+    intros
+    rename_i _ _ _ otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case textLength =>
+    intros
+    rename_i innerRead innerDet _ _ _ otherRead
+    generalize h : lenofKeyword = token at otherRead
+    cases otherRead with
+    | textLength inner =>
+      obtain ⟨rfl, suffix⟩ := innerDet inner
+      exact ⟨rfl, (List.cons.inj suffix).2⟩
+    | «variable» ref visible ordinary =>
+      exact (ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | recordValue ref _ _ _ =>
+      exact (ref.ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | variantValue _ _ _ _ ordinary _ _ _ =>
+      exact (ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | _ => cases h
+  case arrayIndex =>
+    intros
+    rename_i minimum input _ _ _ base lower upper allowed indexRead tailRead indexDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, input, rfl, allowed⟩).elim
+    | arrayIndex _ _ _ _ otherIndex otherTail =>
+      obtain ⟨rfl, suffix⟩ := indexDet otherIndex
+      cases (List.cons.inj suffix).2
+      exact tailDet otherTail
+  case textConcat =>
+    intros
+    rename_i input more _ _ minimum _ _ _ first second allowed rightRead tailRead rightDet tailDet _ _ _ otherRead
+    generalize h : Arith.add.token = token at otherRead
+    cases otherRead with
+    | stop blocked =>
+      exact (blocked ⟨.arith .add, _, congrArg (· :: input) h.symm, allowed⟩).elim
+    | textConcat _ _ _ otherRight otherTail =>
+      obtain ⟨rfl, rfl⟩ := rightDet otherRight
+      exact tailDet otherTail
+    | _ => cases h
+  case textIndex =>
+    intros
+    rename_i allowed indexRead tailRead indexDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | textIndex _ _ _ otherIndex otherTail =>
+      obtain ⟨rfl, suffix⟩ := indexDet otherIndex
+      cases (List.cons.inj suffix).2
+      exact tailDet otherTail
+    | substring _ _ _ _ otherFirst _ _ =>
+      exact (by obtain ⟨_, suffix⟩ := indexDet otherFirst; cases suffix)
+  case substring =>
+    intros
+    rename_i allowed firstRead lastRead tailRead firstDet lastDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | textIndex _ _ _ otherIndex _ =>
+      exact (by obtain ⟨_, suffix⟩ := firstDet otherIndex; cases suffix)
+    | substring _ _ _ _ otherFirst otherLast otherTail =>
+      obtain ⟨rfl, firstSuffix⟩ := firstDet otherFirst
+      cases (List.cons.inj firstSuffix).2
+      obtain ⟨rfl, lastSuffix⟩ := lastDet otherLast
+      cases (List.cons.inj lastSuffix).2
+      exact tailDet otherTail
+  case optionIsSome =>
+    intros
+    rename_i allowed tailRead tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+    | optionIsSome _ _ _ _ otherTail => exact tailDet otherTail
+  case itemsClose =>
+    intros
+    rename_i delimiter _ _ _ otherRead
+    rcases delimiter with rfl | rfl
+    all_goals
+      cases otherRead with
+      | close => exact ⟨rfl, rfl⟩
+      | next exprRead _ =>
+        cases exprRead with
+        | atom atomRead _ => cases atomRead
+  case itemsNext =>
+    intros
+    rename_i exprRead tailRead exprDet tailDet delimiter _ _ _ otherRead
+    cases otherRead with
+    | close =>
+      rcases delimiter with rfl | rfl
+      all_goals
+        cases exprRead with
+        | atom atomRead _ => cases atomRead
+    | next otherExpr otherTail =>
+      obtain ⟨rfl, rfl⟩ := exprDet otherExpr
+      obtain ⟨rfl, rfl⟩ := tailDet delimiter otherTail
+      exact ⟨rfl, rfl⟩
+  case itemsTailClose =>
+    intros
+    rename_i delimiter _ _ _ otherRead
+    rcases delimiter with rfl | rfl <;> cases otherRead <;> exact ⟨rfl, rfl⟩
+  case itemsTailComma =>
+    intros
+    rename_i itemsDet delimiter _ _ _ otherRead
+    rcases delimiter with rfl | rfl
+    all_goals
+      cases otherRead with
+      | comma _ otherItems =>
+        obtain ⟨rfl, rfl⟩ := itemsDet (by first | exact Or.inl rfl | exact Or.inr rfl) otherItems
+        exact ⟨rfl, rfl⟩
+  case labeledClose =>
+    intros
+    rename_i otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case labeledNext =>
+    intros
+    rename_i name exprRead tailRead exprDet tailDet _ _ _ _ otherRead
+    cases otherRead with
+    | next otherName otherExpr otherTail =>
+      obtain ⟨rfl, rfl⟩ := exprDet otherExpr
+      obtain ⟨rfl, rfl⟩ := tailDet otherTail
+      congr 2
+  case labeledTailClose =>
+    intros
+    rename_i otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case labeledTailComma =>
+    intros
+    rename_i itemsDet _ _ _ _ otherRead
+    cases otherRead with
+    | comma _ _ _ otherItems => exact itemsDet otherItems
+  case payloadBare =>
+    intros
+    rename_i closed _ _ _ otherRead
+    cases otherRead with
+    | bare => exact ⟨rfl, rfl⟩
+    | empty => exact (closed _ rfl).elim
+    | value _ => exact (closed _ rfl).elim
+  case payloadEmpty =>
+    intros
+    rename_i otherRead
+    cases otherRead with
+    | bare closed => exact (closed _ rfl).elim
+    | empty => exact ⟨rfl, rfl⟩
+    | value valueRead =>
+      cases valueRead with
+      | atom atomRead _ => cases atomRead
+  case payloadValue =>
+    intros
+    rename_i valueRead valueDet _ _ _ otherRead
+    cases otherRead with
+    | bare closed => exact (closed _ rfl).elim
+    | empty =>
+      cases valueRead with
+      | atom atomRead _ => cases atomRead
+    | value otherValue =>
+      obtain ⟨rfl, suffix⟩ := valueDet otherValue
+      exact ⟨rfl, (List.cons.inj suffix).2⟩
   all_goals intros
 
 end Gabbro.Core.Ast
