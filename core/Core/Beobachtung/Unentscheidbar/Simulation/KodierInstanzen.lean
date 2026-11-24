@@ -16,7 +16,7 @@ open Gabbro.Core.Text
 /-! ## Char and the finite enumerations
 
 Every instance below is an explicit left injection into an already-encodable
-type. No derive handler, macro or syntax is used. -/
+type. Every inverse is proved explicitly. -/
 
 instance : Encodable Char :=
   Encodable.ofLeftInjection Char.toNat (fun n => some (Char.ofNat n)) (by
