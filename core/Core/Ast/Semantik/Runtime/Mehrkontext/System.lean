@@ -26,7 +26,8 @@ theorem system_bestimmt (code : List Befehl) : Ideal.IBestimmt (system code) :=
     context with one has its `I` step. -/
 theorem system_fortschritt (code : List Befehl) : Ideal.IFortschritt (system code) :=
   Ideal.fortschritt_aus_regeln (system code) (fun _ _ finished => finished)
-    (fun b s c _ => Or.inl ⟨(), [plan], b.nach c s, rfl, rfl⟩)
+    (fun b s c _ =>
+      Or.inl ⟨(), [plan], b.nach c s, (b.ideal_privat c s () [plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩)
 
 /-- A fragment with two bodies: the entry context writes the literal `1` to the temporary `0`, the
     handler `0 0 0` writes the literal `2` to the same temporary of its own frame. -/

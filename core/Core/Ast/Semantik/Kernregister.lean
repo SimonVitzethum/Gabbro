@@ -71,9 +71,9 @@ def programKernProofs (constructor : Name) (registered : constructor ∈ program
     RegistryEntry constructor ⟨.core, programKernStatements constructor⟩ where
   realization := .core aus_elaborierung
   acceptanceRule := fun p platform b _ => b.lokal (p.einheit platform) rfl
-  idealRule := fun b _ => ⟨b.bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  idealRule := fun b _ => ⟨b.bestimmt, fun c s w plans u => b.ideal_privat c s w plans u⟩
   unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
-  implementationRule := fun _ _ _ _ _ _ _ => Iff.rfl
+  implementationRule := fun b _ c s w plans u => b.impl_privat c s w plans u
   preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
     b.komponierbar p platform, Befehl.sicherheitsPflichten p platform inv b⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered

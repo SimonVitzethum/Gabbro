@@ -92,9 +92,8 @@ theorem fragment_kontext_schritt_still
         | kontext _ _ regel aus =>
           unfold System.ImplSchritt at regel
           rcases regel with ⟨b, kopfB, implB⟩
-          change (Befehl.regel b).impl c s0 w _ _ at implB
-          simp only [Befehl.regel, Befehl.impl] at implB
-          rcases implB with ⟨planEq, frameEq⟩
+          change Befehl.impl b c s0 w _ _ at implB
+          rcases (b.impl_privat c s0 w _ _).1 implB with ⟨planEq, frameEq⟩
           injection planEq with hplan
           subst hplan
           subst frameEq
@@ -197,7 +196,8 @@ theorem stummer_schritt_koppelt
         obtain ⟨_, nachGlied₁⟩ := Befehl.vollzug_genau (w := w) f impl₁rule aus₁
         have zustandNach₁ : ρ₁.zeit.zustand (t + 1) = some (f.nach c vor) := by
           rw [nachEq₁, nachGlied₁]
-        have planEq₁ : _ := (List.cons.inj impl₁rule.1).1
+        have transfer₁ := (f.impl_privat c vor w _ _).1 impl₁rule
+        have planEq₁ : _ := (List.cons.inj transfer₁.1).1
         obtain ⟨_, auth₁, _, _, _, _, _⟩ := aus₁
         have auth₂ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := planEq₁ ▸ auth₁
         -- same-index offers
@@ -230,7 +230,7 @@ theorem stummer_schritt_koppelt
             Ast.Semantik.plan ⟨[], []⟩ (f.nach c w₂) :=
           ⟨rahmen₂, auth₂, [], _, .intern, speicher₂, rfl⟩
         have regel₂ : (p.einheit plattform).system.ImplSchritt c w₂ w [Ast.Semantik.plan] (f.nach c w₂) :=
-          ⟨f, kopf₂, ⟨rfl, rfl⟩⟩
+          ⟨f, kopf₂, (f.impl_privat c w₂ w [Ast.Semantik.plan] (f.nach c w₂)).2 ⟨rfl, rfl⟩⟩
         have step₂ : ImplSchritt (p.einheit plattform).einrichtung (p.einheit plattform).system
             (p.einheit plattform).katalog ρ₂.hw t w₂
             (.kontext c w, ⟨[], []⟩) (f.nach c w₂) :=

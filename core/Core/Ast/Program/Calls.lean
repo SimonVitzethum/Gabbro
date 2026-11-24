@@ -104,7 +104,8 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   have extend {s : Zustand} {b : Befehl} (reach : E.system.IErreichbar s₀ s)
       (head : E.system.kopf s eintritt = some b) :
       E.system.IErreichbar s₀ (b.nach eintritt s) :=
-    .schritt eintritt () [plan] reach ⟨b, head, rfl, rfl⟩
+    .schritt eintritt () [plan] reach
+      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
   have r₁ : E.system.IErreichbar s₀ s₁ := extend .start headTarget
   have r₂ : E.system.IErreichbar s₀ s₂ := extend r₁ headMain
   have r₃ : E.system.IErreichbar s₀ s₃ := extend r₂ headLaunch
@@ -116,7 +117,8 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
       (pushes : ((b.nach eintritt s).lokal eintritt).fortsetzungen.length =
         (s.lokal eintritt).fortsetzungen.length + 1) : LaufenderRuf platform start b :=
     ⟨unit, Ast.print (category := .unit) unit, s, Ast.parse_print _, reach, head,
-      ⟨b, head, rfl, rfl⟩, ⟨b, head, rfl, rfl⟩, live, pushes⟩
+      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
+      ⟨b, head, (b.impl_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩, live, pushes⟩
   have boundFrame : (bind.nach eintritt s₆).lokal eintritt = bind.auswerten f₆ := nextFrame local₆ rfl
   have discardLive : (s₄.lokal eintritt).stopp = none := by rw [local₄]; rfl
   have discardPushes : (s₄.lokal eintritt).fortsetzungen.length =

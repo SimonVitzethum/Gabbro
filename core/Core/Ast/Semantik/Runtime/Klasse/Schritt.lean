@@ -1,0 +1,194 @@
+/-
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/Schritt.lean
+  Subject:   THE STEP OF A CLASS (MK-03). What a form of an effect class contributes to the machine is fixed
+             by its class and by two frame-level facts it supplies:
+             * the OPERAND: the cell, the value, the lock or the question its step names, read from the acting
+               frame (`Schrittform.operand`) — so the plan of a step depends on the frame, not on a constant;
+             * the TRANSFER: the update of the acting frame, given the value the memory model returned for a
+               read (`Schrittform.uebertrag`).
+             The class builds everything else: the plan (`Wirkungsklasse.plan`: the memory events, the lock
+             action, the question), the authority the step needs (`Wirkungsklasse.befugt`), the refusal when
+             that authority is missing (the frame halts and no access happens), and the one relation that is
+             both the ideal and the implementation step (`Schrittform.ideal`): every class here has ONE
+             linearisation point. The value of a read is the only thing the form does not decide; it is a
+             free choice of the relation, and the memory model of the machine accepts or rejects it.
+             `Befehl.form` gives each instruction its form; the instructions of the classes `lokal` and `ruf`
+             have the operand `Operand.keiner` and the transfer `Befehl.auswerten`.
+-/
+module
+
+public import Core.Ast.Semantik.Runtime.Klasse.Klasse
+public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Katalog
+open Gabbro.Core.Speicher (Etikett Modus)
+open Gabbro.Core.Sicherheit (Speicherrecht)
+
+/-- **The plan of a private step**: no memory access, no lock, no question, no waiting. It is the plan of
+    every step of the classes `lokal` and `ruf`, and of a refused access. -/
+def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+
+/-- A region is live while its object lives in its arrival generation and is not lent out. The
+    acting context's own authority is its frame: only a frame that holds the owned-region value and
+    lists the arrival extent can bind it, and a start gives the arrival regions to one context. -/
+def Zustand.regionLive (s : Zustand) (slot : Nat) : Bool :=
+  s.rechte.lebt slot && s.rechte.gen slot == 0 &&
+    (match s.leihen slot with | .eigen => true | .verliehen _device => false)
+
+/-- **What a step names, read from its frame**: the cell of an access, the value it writes, the lock of a
+    lock action, the question it asks. A class reads the fields it needs and ignores the others. -/
+structure Operand where
+  ort : Zelle
+  wert : Int
+  sperre : Nat
+  frage : Option Frage
+
+/-- The operand of a step that names nothing (the frame-only classes). -/
+def Operand.keiner : Operand := ⟨.aussen, 0, 0, none⟩
+
+/-- The plan of a step that asks the question the operand names; an operand without a question has the
+    private plan (the step is refused). -/
+def Operand.fragePlan (o : Operand) : Plan :=
+  match o.frage with
+  | some q => ⟨.frage q, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+  | none => Semantik.plan
+
+/-- **The plan of one step of class `k`** at the operand `o`, where `v` is the value the memory model
+    returned for a read. A read records its label with the value read; a write names its cell in the
+    footprint with the value and the mode; an update is ONE event that reads `v` and writes the operand's
+    value; a lock action and a question name their lock and question; a private step and a refused access
+    have the private plan. -/
+def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
+  | .lokal, _o, _v => Semantik.plan
+  | .ruf, _o, _v => Semantik.plan
+  | .lesen m, o, v =>
+    ⟨.intern, [⟨.lesen, o.ort, m, v, v⟩], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+  | .schreiben m, o, _v =>
+    ⟨.intern, [], [o.ort], fun x => decide (x = o.ort), fun _ort => m, fun _ort => o.wert⟩
+  | .rmw m, o, v =>
+    ⟨.intern, [⟨.rmw, o.ort, m, v, o.wert⟩], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+  | .sperre a, o, _v =>
+    ⟨.sperre o.sperre a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+  | .frage, o, _v => o.fragePlan
+
+/-- **The shape of the plans of a class**: the only plans a step of the class may have. The footprint of the
+    step on the shared state is read off the class alone: nothing for a private step, one read label for a
+    load, one written cell for a store, one update label for an atomic update, one lock action, one
+    question. -/
+def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
+  | .lokal, p => p = Semantik.plan
+  | .ruf, p => p = Semantik.plan
+  | .lesen m, p =>
+    p.aktion = .intern ∧ p.fuss = [] ∧ ∃ (z : Zelle) (v : Int), p.lesen = [⟨.lesen, z, m, v, v⟩]
+  | .schreiben m, p =>
+    p.aktion = .intern ∧ p.lesen = [] ∧
+      ∃ z : Zelle, p.fuss = [z] ∧ p.schreibt z = true ∧ p.modus z = m
+  | .rmw m, p =>
+    p.aktion = .intern ∧ p.fuss = [] ∧ ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩]
+  | .sperre a, p => (∃ l : Nat, p.aktion = .sperre l a) ∧ p.lesen = [] ∧ p.fuss = []
+  | .frage, p => (∃ q : Frage, p.aktion = .frage q) ∧ p.lesen = [] ∧ p.fuss = []
+
+/-- Does a step of the class read a value from the memory model? Only a load and an atomic update do. -/
+def Wirkungsklasse.liest : Wirkungsklasse → Bool
+  | .lesen .. | .rmw .. => true
+  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage => false
+
+/-- The value a step of the class may take from the memory model: any value for a class that reads, and
+    the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
+def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
+  k.liest = true ∨ v = 0
+
+/-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `aussenBefugt`): the right
+    on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
+    the question for a question. The frame-only classes and the lock actions need none: a lock action that
+    the protocol does not allow does not execute, it waits or never runs. -/
+def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
+  | .lokal, _o, _s, _c => True
+  | .ruf, _o, _s, _c => True
+  | .lesen _m, o, s, c => s.befugt c o.ort .lesen
+  | .schreiben _m, o, s, c => s.befugt c o.ort .schreiben
+  | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
+  | .sperre _a, _o, _s, _c => True
+  | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.aussenBefugt c q
+
+/-- **A step form**: a class, the operand its frame supplies and the frame transfer it applies. Everything
+    else about the step is the class's. -/
+structure Schrittform where
+  klasse : Wirkungsklasse
+  operand : Rahmen → Operand
+  uebertrag : Rahmen → (Nat → Bool) → Int → Rahmen
+
+/-- The plan of the step of the form at a frame, for the value `v` the memory returned. -/
+def Schrittform.plan (F : Schrittform) (r : Rahmen) (v : Int) : Plan :=
+  F.klasse.plan (F.operand r) v
+
+/-- The state after the form's step: only the acting context's frame changes; the machine owns every
+    shared field. -/
+def Schrittform.nach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
+  { s with lokal := Function.update s.lokal c (F.uebertrag (s.lokal c) s.regionLive v) }
+
+/-- **The ledger after the step**: the concrete address of a load, store or update is booked at the event
+    number of the access (`Zustand.zugriffsereignis`), so that the safety legs find the operand of every
+    access the machine records (`ZugriffGebucht`). The other classes book nothing. -/
+noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Zustand) :
+    Gabbro.Core.Sicherheit.Buchung Zelle :=
+  match F.klasse with
+  | .lesen .. | .schreiben .. | .rmw .. =>
+    { s.buchung with
+      adresse := fun e =>
+        if e = s.zugriffsereignis (F.operand (s.lokal c)).ort then s.adresse c (F.operand (s.lokal c)).ort
+        else s.buchung.adresse e }
+  | .lokal | .ruf | .sperre .. | .frage => s.buchung
+
+/-- The state after the step of an access class: the frame transfer and the booked ledger. -/
+noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
+  { F.nach c s v with buchung := F.buchungNach c s }
+
+/-- The state after a refused access: the acting frame halts, nothing else changes. -/
+def Schrittform.verweigert (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
+  { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerBereich) }
+
+/-- **The step of an access class**: with the authority, the planned step with the chosen value; without
+    it, the private plan and the refusal. -/
+def Schrittform.zugriffsschritt (F : Schrittform) (c : Kontext) (s : Zustand) (plans : List Plan)
+    (u : Zustand) : Prop :=
+  (¬ F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [Semantik.plan] ∧ u = F.verweigert c s) ∨
+  (F.klasse.befugt (F.operand (s.lokal c)) s c ∧
+    ∃ v : Int, F.klasse.Lesewert v ∧ plans = [F.plan (s.lokal c) v] ∧ u = F.zugriffNach c s v)
+
+/-- **The ideal step of a form, from its class.** A private class has one private plan and its frame
+    transfer; an access class has the step above. -/
+def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
+    (plans : List Plan) (u : Zustand) : Prop :=
+  match F.klasse with
+  | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
+
+/-- **The implementation step of a form.** Every class of this package has ONE linearisation point: the
+    implementation step is the ideal step, so a step of the implementation machine is a step of `I`. A class
+    that needs private implementation steps (a store with a trailing fence, a multi-phase operation) is
+    appended with its own implementation relation by the package that introduces it (MK-10). -/
+def Schrittform.impl (F : Schrittform) (c : Kontext) (s : Zustand) (w : PUnit.{1})
+    (plans : List Plan) (u : Zustand) : Prop :=
+  F.ideal c s w plans u
+
+/-- The rule of a form: its implementation step and its `I` step. -/
+def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
+
+/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
+def Befehl.operand (_ : Befehl) (_ : Rahmen) : Operand := Operand.keiner
+
+/-- The frame transfer of an instruction, given the value the memory returned: for every instruction
+    of the current set, its evaluation at the instruction boundary. -/
+def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (_ : Int) : Rahmen :=
+  b.auswerten r live
+
+/-- **The step form of an instruction**: its class, operand and transfer. -/
+def Befehl.form (b : Befehl) : Schrittform := ⟨b.klasse, b.operand, b.uebertrag⟩
+
+end Gabbro.Core.Ast.Semantik

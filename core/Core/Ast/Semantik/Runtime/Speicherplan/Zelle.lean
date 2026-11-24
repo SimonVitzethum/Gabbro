@@ -25,8 +25,8 @@ inductive Zelle where
 /-- The object number of a location for the authority check: the region slot of a region cell; a lock
     word and the event location belong to no region. -/
 def Zelle.objekt : Zelle → Nat
-  | .region slot _ => slot
-  | .sperre _ => 0
+  | .region slot _offset => slot
+  | .sperre _lock => 0
   | .aussen => 0
 
 /-- **The memory plan of a unit**: the number of its locks, the number of its address spaces and the

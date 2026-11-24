@@ -56,7 +56,8 @@ private theorem at_source {category : Category} {tree : category.Tree}
     (head : (elaborieren platform tree).system.kopf s eintritt = some b) :
     ProgramInstructionPremises constructor platform start :=
   ⟨category, tree, Ast.print tree, s, b, tag, Ast.parse_print tree, reach, head,
-    ⟨b, head, rfl, rfl⟩, ⟨b, head, rfl, rfl⟩⟩
+    ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
+      ⟨b, head, (b.impl_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩⟩
 
 private theorem Quellform.program_occurrence {category : Category} {args : Type}
     (form : Quellform category args) {platform : Plattform} {start : AussenStart}
@@ -71,7 +72,8 @@ private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustan
     (reach : (p.einheit platform).system.IErreichbar start s)
     (head : (p.einheit platform).system.kopf s eintritt = some b) :
     (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
-  .schritt eintritt () [plan] reach ⟨b, head, rfl, rfl⟩
+  .schritt eintritt () [plan] reach
+      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
 
 private theorem while_occurrences :
     (∀ platform start, ProgramInstructionPremises ``Befehl.setzePasszahl platform start) ∧

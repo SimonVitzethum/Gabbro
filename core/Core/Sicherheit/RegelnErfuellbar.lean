@@ -45,7 +45,9 @@ private theorem arithmetik_schritt
     (kopf : (p.einheit platform).system.kopf s eintritt = some b) :
     Lauffolge (p.einheit platform) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
       (some (b.nach eintritt s)) :=
-  .schritt (.kontext normal bereit ⟨b, kopf, rfl, rfl⟩ (b.vollzug _ t eintritt s))
+  .schritt (.kontext normal bereit
+    ⟨b, kopf, (b.impl_privat eintritt s () [Ast.Semantik.plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+    (b.vollzug _ t eintritt s))
 
 /-- The rule and boundary obligations hold jointly for a loaded unit that actually
     executes literals, both binary operators and a local binding. -/

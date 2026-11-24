@@ -47,7 +47,8 @@ theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     Realisiert form platform args s := by
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc, position args]
-  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
+  exact ⟨atPc, head, ⟨_, head, ((form.befehl args).ideal_privat eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩,
+    ⟨_, head, ((form.befehl args).impl_privat eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩⟩
 
 /-- Elaboration-independent part of the schema supplies the real raw grammar proof. -/
 def Quellform.ParseAussage : Prop :=

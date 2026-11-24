@@ -57,6 +57,8 @@ theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) :
     change (if some 0 = s.assignment 0 then some eintritt else none) = some eintritt
     rw [assigned, ite_eq_left rfl]
   exact ⟨Hosted.umgebung [], s, Hosted.hardware [], hardware, zul, Hosted.konform [],
-    ⟨I.ProtokollBezug.refl _, rfl⟩, rfl, ready, rfl, ⟨rfl, rfl⟩, b.vollzug _ _ _ _⟩
+    ⟨I.ProtokollBezug.refl _, rfl⟩, rfl, ready, rfl,
+    (b.impl_privat eintritt (I.start E s).2 () [plan] (b.nach eintritt (I.start E s).2)).2 ⟨rfl, rfl⟩,
+    b.vollzug _ _ _ _⟩
 
 end Gabbro.Core.Ast.Semantik

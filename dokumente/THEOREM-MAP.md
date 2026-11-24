@@ -8397,3 +8397,31 @@ The invalidation on the other cores is the work of their handlers (`FlushProtoko
 | `MemInstruction.tlbVerdraengen` | `Mem/Meaning.lean` | The drop of every cached translation of one page of one space on one core (hardware eviction or the core's own shootdown handler); always enabled, no table change, no source form. It keeps both cache invariants (`tlbGedeckt_tlbVerdraengen`, `tlbRechte_tlbVerdraengen`) and is what makes a completion step enabled in a run. |
 
 Open items after the staged `protect`: (H4) the drop as a step of the core's own handler context after an interrupt entry, with `keineFuellung_speicher` and `handlerLeert` instantiated for the memory machine; (H5) the staged flush unit with implementation ≠ ideal (stutter length > 0) and the proof of `FlushSimAussage`, which then also serves the narrowing completion; (H9) `FlushJointAussage` for the completion of a narrowing (prefix `newSpace, mapSpace, protectSpace, bindToken`, op `flushSpace`), then joined to `JointAussageMem .flushSpace`.
+
+## 220. Effect classes: plans that depend on the frame, duties once per class (MK-03, 2026-11-24)
+
+Every duty family of the instruction set (implementation, unit, preservation, rule and assumption,
+progress, cost and trace, local type use) was vacuous: the shared template made implementation and ideal
+step the same relation with an empty trace, stutter zero and no invariant, so it held for every instruction
+and could not tell a right class from a wrong one. Now an instruction has a class (`Wirkungsklasse`:
+`lokal`, `ruf`, `lesen m`, `schreiben m`, `rmw m`, `sperre a`, `frage`) and a step form (`Befehl.form`: the
+class, the operand its frame supplies, the frame transfer). The class builds the rest: the plan
+(`Wirkungsklasse.plan`, which depends on the frame through the operand and on the value a read returns), the
+authority the step needs (`Wirkungsklasse.befugt`), the refusal without it (the frame halts, no access) and
+the booking of the concrete address in the ledger at the event number of the access. The ideal and the
+implementation step of an instruction are those of its form (`Befehl.ideal`, `Befehl.impl`); the constant
+`plan` is only the plan of a private step. The duties are proved once per class and are informative: dropping
+the guard of a memory class violates locality.
+
+| Statement or theorem | File | What it says |
+|---|---|---|
+| `Wirkungsklasse`, `Befehl.klasse` | `Ast/Semantik/Runtime/Klasse/Klasse.lean` | Seven classes; every instruction has exactly one (no wildcard); new classes are appended. |
+| `Wirkungsklasse.plan`, `Wirkungsklasse.Erlaubt`, `Operand` | `Klasse/Schritt.lean` | The plan of a class step from its operand: one read label, one written cell, one update label, one lock action or one question; the shape each class allows. |
+| `Schrittform.ideal`, `Schrittform.impl`, `Schrittform.regel`, `Befehl.form`, `Befehl.plan` | `Klasse/Schritt.lean`, `Runtime/Regeln.lean` | The one linearisation point of a class form; the instruction's rule is its form's rule. The read value is the one free choice, the memory model accepts or rejects it. |
+| `Schrittform.buchungNach`, `Zustand.zugriffsereignis`, `Zustand.adresse` | `Klasse/Schritt.lean`, `Klasse/Zugriff.lean` | The class books the concrete address of every access at the event number the machine gives it (one lazily materialised initial write precedes the first access to a cell). |
+| `Befehl.klasse_privat`, `Befehl.ideal_privat`, `Befehl.impl_privat`, `Befehl.plan_privat` | `Runtime/Regeln.lean` | Every instruction of the current set is frame-only; its step is the private plan and its transfer. The first instruction of an access class makes `klasse_privat` false and forces every generic proof that uses it to split on the class. |
+| `klassenSim` | `Klasse/Pflichten.lean` | Simulation for every class, with the authority of every recorded plan; a form of any class in a unit that gives it one linearisation point. |
+| `klassenLokal` | `Klasse/Pflichten.lean` | Every ideal step of every class covers its footprint by authority (read right for a load, write right for a store, both for an update). |
+| `klassenFortschritt` | `Klasse/Pflichten.lean` | The class rule is total: an access without authority is refused, it does not wait. |
+| `klassenNichtTrivial`, `ungeschuetzt_nicht_lokal` | `Klasse/Pflichten.lean` | The duties are informative: a unit embeds a form of every class, and the unguarded rule of a form of a memory class violates locality at a state that grants no region. |
+| `KlassenAussagen` | `Klasse/Pflichten.lean` | The pinned statement of all six duties for every class; open parts: `KlassenNIAussage`, `KlassenSchrankenAussage`, `KlassenSicherheitAussage` for every class. |

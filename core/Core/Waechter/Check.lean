@@ -15,7 +15,7 @@ meta import Core.Ast.Inventory.Entries.Text
 meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
-meta import Core.Verfeinerung.Formen.Registry
+meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
@@ -248,12 +248,17 @@ private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, some `Gabbro.Core.Ast.Semantik.carrierIndexOptionEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.ownedRegion, `Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.ownedRegionTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.ptr, `Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.pointerTypeEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lokal, `Gabbro.Core.Ast.Semantik.LokalSimAussage, some `Gabbro.Core.Ast.Semantik.lokalEntry⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Wirkungsklasse.ruf, `Gabbro.Core.Ast.Semantik.RufSimAussage, some `Gabbro.Core.Ast.Semantik.rufEntry⟩]
+  ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩]
 
 private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lokal, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.ruf, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lesen, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.schreiben, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.rmw, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sperre, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.frage, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
 ]
 
 private meta def flowEntries : Array RegistryPacket := #[

@@ -8,9 +8,10 @@
   and has a jointly satisfiable premise bundle with a real occurrence. The defects are vacuous
   obligations of the generic `Quellform.statements` template, repeated per form:
 
-  * `ImplAussage` only restates the definition of `Befehl.impl`, which is textually identical to
-    `Befehl.ideal`. It is `Iff.rfl` for EVERY form and cannot tell a correct command from a wrong
-    one. `falschesLiteralForm` below is a form whose command is provably not the literal command,
+  * `ImplAussage` only restates the implementation step of the class: for every instruction of the frame-only
+    classes `lokal` and `ruf` (all of the current set, `Befehl.klasse_privat`) `Befehl.impl` is the ideal step
+    of its class (`Befehl.impl_privat`). It holds for EVERY form and cannot tell a correct command from a
+    wrong one. `falschesLiteralForm` below is a form whose command is provably not the literal command,
     yet it satisfies the obligation. This is the "only talks about ideal = impl" case.
   * `IdealAussage` has three conjuncts; the rule-determinacy one holds for every `Befehl` and the
     equation one is `Iff.rfl`. Only `RegelAmOrt` is substantive, and that is pinned separately as
@@ -45,7 +46,7 @@ open Gabbro.Core.Text (PrintedToken)
 theorem implAussage_allQuellformen {category : Gabbro.Core.Ast.Category} {Arguments : Type}
     (form : Quellform category Arguments) : form.ImplAussage := by
   intro args c s w plans u
-  rfl
+  exact (form.befehl args).impl_privat c s w plans u
 
 /-- Two of the three `IdealAussage` conjuncts are generic (`Befehl.bestimmt`, `Iff.rfl`); given
     `RegelAmOrt` the statement therefore holds for every form. -/
@@ -53,7 +54,7 @@ theorem idealAussage_allQuellformenAmOrt {category : Gabbro.Core.Ast.Category} {
     (form : Quellform category Arguments) (amOrt : form.RegelAmOrt) : form.IdealAussage := by
   refine ⟨amOrt, ?_⟩
   intro args
-  exact ⟨Befehl.bestimmt _, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨Befehl.bestimmt _, fun c s w plans u => Befehl.ideal_privat _ c s w plans u⟩
 
 /-- `stotterLaenge` is constantly zero and both mover relations are constantly false, so the unit
     and commutation duty is discharged for every form with empty before/after relations. -/
@@ -90,11 +91,12 @@ theorem textKostenUndSpur_allQuellformen {category : Gabbro.Core.Ast.Category} {
     (form : Quellform category Arguments) (platform : Plattform) (args : Arguments) :
     TextInstructionCost (form.fragment args) platform (form.befehl args) := by
   intro t c s choice stepPlan u spur next head step execute
+  have transfer := ((form.befehl args).impl_privat c s choice [stepPlan] u).1 step
   have planEq : stepPlan = plan := by
-    have h : [stepPlan] = [plan] := step.1
+    have h : [stepPlan] = [plan] := transfer.1
     exact (List.cons.inj h).1
   subst stepPlan
-  have uEq : u = (form.befehl args).nach c s := step.2
+  have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
   obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute
   subst spur
@@ -107,11 +109,12 @@ theorem antwortSicher_allQuellformen {category : Gabbro.Core.Ast.Category} {Argu
     Gabbro.Core.Ast.Semantik.RegelAntwortSicher
       (form.fragment args) platform (form.befehl args) := by
   intro t c s choice stepPlan u spur next head step execute
+  have transfer := ((form.befehl args).impl_privat c s choice [stepPlan] u).1 step
   have planEq : stepPlan = plan := by
-    have h : [stepPlan] = [plan] := step.1
+    have h : [stepPlan] = [plan] := transfer.1
     exact (List.cons.inj h).1
   subst stepPlan
-  have uEq : u = (form.befehl args).nach c s := step.2
+  have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
   obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute
   subst spur

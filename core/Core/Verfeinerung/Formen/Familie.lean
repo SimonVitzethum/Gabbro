@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Pflichten
-public import Core.Ast.Semantik.Runtime.Klasse.Klasse
+public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Verfeinerung.Formpflichten
 
 @[expose] public section
@@ -36,25 +36,17 @@ def Befehl.familie : Befehl → LokalFamilie
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung .. => .variante
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .text
 
-/-- **Simulation, once per class.** An instruction of the class has one linearisation point: its ideal and
-    its implementation step are one relation, and it takes no private step. Both must hold throughout every
-    fragment using an instruction of the class. -/
-def KlassenSim (k : Wirkungsklasse) : Prop :=
-  ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.klasse = k →
-    I.RegelSimulation (p.einheit platform) b
+/-- **Every instruction is a form of its class, embedded in the unit of every fragment**: the unit
+    reads its rule from the instruction's step form and memory through the elaborated model. The class
+    theorems (`klassenSim`, `klassenLokal`, `klassenFortschritt`) therefore apply to it without a premise. -/
+theorem Befehl.eingebettet (p : Fragment) (platform : Plattform) (b : Befehl) :
+    b.form.Eingebettet (p.einheit platform) b :=
+  ⟨rfl, rfl, rfl⟩
 
-/-- The simulation duty of the class `lokal`. -/
-def LokalSimAussage : Prop := KlassenSim .lokal
-
-/-- The simulation duty of the class `ruf`. -/
-def RufSimAussage : Prop := KlassenSim .ruf
-
-/-- Both frame-only classes satisfy it, by the same argument: the rule of the instruction is its own
-    ideal rule. -/
-theorem klassenSim (k : Wirkungsklasse) : KlassenSim k := by
-  intro p platform b _
-  exact ⟨I.RegelSimSchritt.aus_gleicher_regel rfl (fun _ _ _ _ _ step => step),
-    I.RegelStotterSchranke.null rfl⟩
+/-- **Simulation of an instruction, from its class.** -/
+theorem Befehl.simulation (p : Fragment) (platform : Plattform) (b : Befehl) :
+    I.RegelSimulation (p.einheit platform) b :=
+  (klassenSim b.klasse Befehl (p.einheit platform) b b.form rfl (b.eingebettet p platform) rfl rfl).1
 
 /-- **The class contract of the frame-only classes.** Every instruction, whatever its group, has these
     machine obligations from its class alone: locality, determinacy, progress, composability, state
@@ -66,6 +58,6 @@ theorem Befehl.klassenvertrag (p : Fragment) (platform : Plattform) (b : Befehl)
       I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
       I.RegelAbgleich (p.einheit platform) b ∧ I.RegelSimulation (p.einheit platform) b :=
   ⟨b.lokal (p.einheit platform) rfl, b.bestimmt, b.fortschritt p, b.komponierbar p platform,
-    b.abgleich p platform, klassenSim b.klasse p platform b rfl⟩
+    b.abgleich p platform, b.simulation p platform⟩
 
 end Gabbro.Core.Ast.Semantik

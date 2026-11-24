@@ -23,11 +23,16 @@ half of the registry. The syntax proof supplies the corresponding `Surface.Rule.
    and interval containment. A concrete storage width needs a representation proof
    that the source interval fits. Both the ideal system and source guard table are
    independent of the selected platform.
-2. Specify the concrete and ideal transitions separately. For an existing kind of local
-   instruction, supply its `Befehl.auswerten` and `Befehl.guard` arms. The plan and successor
-   are then given by `Befehl.ideal` and `Befehl.impl`. For a form with a different effect,
-   specify its plan, precondition and successor in each relation. Use the shared machine
-   protocol to commit memory, synchronization and outside events.
+2. Specify the concrete and ideal transitions separately. Every instruction has an effect
+   class (`Befehl.klasse`, `Wirkungsklasse`): the class builds the plan, the authority guard
+   and the refusal, and its duties are proved once for all its instructions
+   (`Klasse/Pflichten`). For an instruction of the frame-only classes `lokal` and `ruf`,
+   supply its `Befehl.auswerten` and `Befehl.guard` arms. The plan and successor are then
+   given by `Befehl.ideal` and `Befehl.impl`. For an instruction of an access class
+   (`lesen`, `schreiben`, `rmw`, `sperre`, `frage`), supply its class, the operand its frame
+   names (`Befehl.operand`: cell, value, lock, question) and its frame transfer
+   (`Befehl.uebertrag`), and split every generic proof that uses `Befehl.klasse_privat`.
+   Use the shared machine protocol to commit memory, synchronization and outside events.
 3. Name the linearisation point, before and after relations, local state relation and bound
    on private steps. For one atomic local step the before and after relations are empty,
    the state relation is equality and the bound is zero. Supply the occurrence's

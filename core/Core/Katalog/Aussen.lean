@@ -100,13 +100,13 @@ inductive AussenOperation where
 
 def AussenOperation.required : AussenOperation → Recht
   | .read => .read
-  | .write _ => .write
-  | .resolve _ => .resolve
-  | .firmware _ _ => .invoke
-  | .exchange _ => .invoke
-  | .registerRead _ => .read
-  | .registerWrite _ _ => .write
-  | .waitRegister _ _ => .read
+  | .write _bytes => .write
+  | .resolve _name => .resolve
+  | .firmware _service _bytes => .invoke
+  | .exchange _message => .invoke
+  | .registerRead _offset => .read
+  | .registerWrite _offset _value => .write
+  | .waitRegister _offset _expected => .read
 
 structure Frage where
   endpoint : Endpunkt

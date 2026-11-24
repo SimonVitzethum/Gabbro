@@ -27,8 +27,8 @@ theorem antwort_kontext_intern {p : Fragment} (plattform : Plattform)
     (regel : (p.einheit plattform).system.ImplSchritt c s w [plan] u) :
     plan = Gabbro.Core.Ast.Semantik.plan := by
   obtain ⟨i, _, impl⟩ := regel
-  change _ ∧ _ at impl
-  have pl := impl.1
+  have impl' := (i.impl_privat c s w [plan] u).1 impl
+  have pl := impl'.1
   have head := congrArg List.head? pl
   simpa using head
 
@@ -54,8 +54,8 @@ theorem antwort_schritt_fragen {p : Fragment} (plattform : Plattform)
   cases step with
   | kontext _ _ regel aus =>
       obtain ⟨i, _, impl⟩ := regel
-      change _ ∧ _ at impl
-      have pl := impl.1
+      have impl' := (i.impl_privat _ _ () _ _).1 impl
+      have pl := impl'.1
       have planEq := Option.some.inj (congrArg List.head? pl)
       rw [planEq] at aus
       obtain ⟨frame, _, _, _, aktion, _, s'Eq⟩ := aus

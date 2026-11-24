@@ -6,11 +6,17 @@
   The refinement theorem is stated for every accepted source unit, not for a free frame: its premises are the
   acceptance of `einheitVon P t` and a run of it, and its conclusion the existence of one ideal run that matches.
   For the current instruction set it is a theorem (`verfeinerung_akzeptiert`, from `sim_elaborierter_lauf` and
-  `klassenSim`); the finding that goes with it is in the docstring of `RegelSimDiskriminiertAussage`: every form
-  duty of the current set is proved by the shared template `Befehl.impl ≡ Befehl.ideal` with stutter bound zero, so
-  the theorem is TRUE BUT NOT YET INFORMATIVE about memory, locks, questions or threads — those instructions do not
-  exist in `Befehl` yet (MK-03, MK-04, MK-05). The refutability statement below is the guard against pinning a
-  duty that no unit can violate.
+  the class theorem `klassenSim`); the finding that goes with it is in the docstring of
+  `RegelSimDiskriminiertAussage`: every instruction of the current set is frame-only (`Befehl.klasse_privat`),
+  its rule is the template `impl ≡ ideal` of the classes `lokal` and `ruf`, so the theorem is TRUE BUT NOT YET
+  INFORMATIVE about memory, locks, questions or threads: no instruction of those classes exists in `Befehl` yet.
+  The classes themselves exist (MK-03): they carry real plans that depend on the frame (`Wirkungsklasse.plan`),
+  an authority guard with refusal, and a booked ledger entry, their duties are stated once per class
+  (`KlassenAussagen`) and are informative (`klassenNichtTrivial`: dropping the guard breaks locality). The first
+  instruction of a class (MK-04, MK-05, MK-06) is a constructor of `Befehl`, a class assignment and its frame
+  operand and transfer; `Befehl.klasse_privat` then becomes false and every generic proof that uses it must
+  split on the class. The refutability statement below is the guard against pinning a duty that no unit can
+  violate.
 
   The three family statements `FlushSimAussage`, `LockFreeSimAussage` and `StotterMassAussage` of
   `Verfeinerung/Abnahme` take free function parameters (decoder, abstract specification, mass) with no binding to
@@ -45,8 +51,7 @@ def VerfeinerungAkzeptiertAussage : Prop :=
 
 theorem verfeinerung_akzeptiert : VerfeinerungAkzeptiertAussage := by
   intro P t akzeptiert H ρ lauf
-  exact Ast.Semantik.sim_elaborierter_lauf (Ast.Semantik.klassenSim Ast.Semantik.Wirkungsklasse.lokal)
-    (Ast.Semantik.klassenSim Ast.Semantik.Wirkungsklasse.ruf)
+  exact Ast.Semantik.sim_elaborierter_lauf
     (Ast.Semantik.elab_korrekt P (category := Ast.Category.unit) t) akzeptiert lauf
 
 /-- TODAY'S GUARANTEE ON EVERY CUT OF EVERY RUN of an accepted elaborated unit: at every cut the loaded state
@@ -63,9 +68,7 @@ theorem zielFX_akzeptiert : ZielFXAkzeptiertAussage := by
   intro P t _ H ρ lauf k
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
     (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
-      (Ast.Semantik.sim_formen (Ast.Semantik.klassenSim Ast.Semantik.Wirkungsklasse.lokal)
-        (Ast.Semantik.klassenSim Ast.Semantik.Wirkungsklasse.ruf)
-        (Ast.Semantik.fragment Ast.Category.unit t) P)
+      (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   exact pflicht.zielFX lauf k
 
 /-- PROGRESS FOR EVERY ACCEPTED ELABORATED UNIT on a hardware-fair history: the matched ideal run exists, no

@@ -8,14 +8,10 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog
 
-/-- The current runtime instruction set obtains its simulation obligations from the two class
-    packets: every instruction is in one class. -/
-theorem sim_formen (lokal : LokalSimAussage) (ruf : RufSimAussage) (p : Fragment)
-    (platform : Plattform) : ∀ b, I.RegelSimulation (p.einheit platform) b := by
-  intro b
-  cases klasse : b.klasse with
-  | lokal => exact lokal p platform b klasse
-  | ruf => exact ruf p platform b klasse
+/-- Every instruction obtains its simulation obligation from the theorem of its class. -/
+theorem sim_formen (p : Fragment) (platform : Plattform) :
+    ∀ b, I.RegelSimulation (p.einheit platform) b :=
+  fun b => b.simulation p platform
 
 theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     I.SimBasisPflichten (p.einheit platform) := by
@@ -31,12 +27,12 @@ theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     rfl
   · exact fun _ _ _ _ _ _ rule => rule
   · intro b c s w stepPlan u rule
-    have same : [stepPlan] = [plan] := rule.1
+    have same : [stepPlan] = [plan] := ((b.impl_privat c s w [stepPlan] u).1 rule).1
     cases (List.cons.inj same).1
     exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
 
 /-- Connect the form packets to the ordinary elaboration and run interfaces. -/
-theorem sim_elaborierter_lauf (lokal : LokalSimAussage) (ruf : RufSimAussage)
+theorem sim_elaborierter_lauf
     {platform : Plattform} {category : Category} {tree : category.Tree} {E : Einheit}
     (elaboriert : Elaboriert platform tree E) (akzeptiert : Akzeptiert E)
     {h : Katalog.Umgebung} {ρ : Maschine.Lauf E} (lauf : Maschine.Laeufe E h ρ) :
@@ -44,6 +40,6 @@ theorem sim_elaborierter_lauf (lokal : LokalSimAussage) (ruf : RufSimAussage)
   have same := elab_vollstaendig elaboriert
   subst E
   exact I.sim_akzeptierter_lauf akzeptiert (fun _ => (fragment category tree).simBasis platform)
-    (fun _ => sim_formen lokal ruf _ platform) lauf
+    (fun _ => sim_formen _ platform) lauf
 
 end Gabbro.Core.Ast.Semantik

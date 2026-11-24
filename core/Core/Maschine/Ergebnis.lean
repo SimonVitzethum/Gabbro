@@ -100,7 +100,7 @@ variable {Objekt : Type}
 /-- The program may access the region itself: only when it owns it. -/
 def Zugriff : Leihe Objekt → Prop
   | eigen => True
-  | verliehen _ => False
+  | verliehen _an => False
 
 /-- Lending: only an owned region is lent. -/
 inductive Verleihen : Leihe Objekt → Objekt → Leihe Objekt → Prop

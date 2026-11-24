@@ -293,7 +293,8 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
   have advance {s : Zustand} {b : Befehl} (reached : E.system.IErreichbar (I.start E start).2 s)
       (head : E.system.kopf s eintritt = some b) :
       E.system.IErreichbar (I.start E start).2 (b.nach eintritt s) :=
-    .schritt eintritt () [plan] reached ⟨b, head, rfl, rfl⟩
+    .schritt eintritt () [plan] reached
+      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
   let defineSchema := Befehl.definiereRecord name.val value.labels value.types
   let defineMain := functionInstruction RecordExample.scope mainName [] none false
     (functionCode none none body) none

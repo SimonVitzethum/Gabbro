@@ -251,14 +251,6 @@ def startdaten (scope : Scope) (eintritte : Kontext → Option Nat) (kern : Opti
     fun k => ⟨if some k = kern then some eintritt else none, .nutzer, 0, fun _ => false,
       0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
 
-/-- **The handle a context holds for a location.** A context holds the handle of the region slot it
-    lists among its arrival regions, issued in generation `0`; lock words and the event location are no
-    region and are never reached through a handle. -/
-def Zustand.griff (s : Zustand) (c : Kontext) : Zelle → Option Griff
-  | .region slot _ => if slot < (s.lokal c).arrivalRegions.length then some ⟨slot, 0⟩ else none
-  | .sperre _ => none
-  | .aussen => none
-
 /-- **The unit's interpretation of memory** from its memory plan: the declared initial cells, the
     lock words, the one event location, the region slot as the object of a cell, and the handle a
     context holds. -/

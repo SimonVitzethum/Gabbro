@@ -17,42 +17,46 @@ theorem Befehl.lokal (E : Einheit) (b : Befehl) (rule : E.system.regel b = b.reg
     RegelLokal E b := by
   intro c s u w p step
   rw [rule] at step
-  have same : [p] = [plan] := step.1
+  have same : [p] = [Semantik.plan] := ((b.ideal_privat c s w [p] u).1 step).1
   cases (List.cons.inj same).1
   exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
 
 theorem Befehl.bestimmt (b : Befehl) : RegelBestimmt b.regel :=
-  fun _ _ _ _ _ _ _ left right => ⟨left.1.trans right.1.symm, left.2.trans right.2.symm⟩
+  fun c s w es es' s1 s2 left right =>
+    let l := (b.ideal_privat c s w es s1).1 left
+    let r := (b.ideal_privat c s w es' s2).1 right
+    ⟨l.1.trans r.1.symm, l.2.trans r.2.symm⟩
 
 theorem Befehl.fortschritt (p : Fragment) (b : Befehl) :
     RegelFortschritt (system p.code) b :=
-  fun s c _ => Or.inl ⟨(), [plan], b.nach c s, rfl, rfl⟩
+  fun s c _ => Or.inl ⟨(), [Semantik.plan], b.nach c s, (b.ideal_privat c s () [Semantik.plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩
 
 theorem Befehl.vollzug (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     (b : Befehl) (t : Nat) (c : Kontext) (s : Zustand) :
-    FuehrtSchrittAus e t c s (b.nach c s) plan ⟨[], []⟩ (b.nach c s) :=
+    FuehrtSchrittAus e t c s (b.nach c s) Semantik.plan ⟨[], []⟩ (b.nach c s) :=
   ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ empty => (List.not_mem_nil empty).elim, [], _, .intern, .nil _, rfl⟩
 
 theorem Befehl.komponierbar (p : Fragment) (platform : Plattform) (b : Befehl) :
     I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b := by
   intro t s c w plans u _ _ step
-  obtain ⟨same, after⟩ : plans = [plan] ∧ u = b.nach c s := step
+  obtain ⟨same, after⟩ : plans = [Semantik.plan] ∧ u = b.nach c s := (b.ideal_privat c s w plans u).1 step
   subst u
-  exact ⟨plan, ⟨[], []⟩, b.nach c s, same, b.vollzug _ t c s⟩
+  exact ⟨Semantik.plan, ⟨[], []⟩, b.nach c s, same, b.vollzug _ t c s⟩
 
 theorem Befehl.vollzug_genau (b : Befehl) {e t c s u w p spur s'}
     (rule : b.impl c s w [p] u) (execute : FuehrtSchrittAus e t c s u p spur s') :
     spur = ⟨[], []⟩ ∧ s' = b.nach c s := by
-  have same : [p] = [plan] := rule.1
-  have after : u = b.nach c s := rule.2
+  have transfer := (b.impl_privat c s w [p] u).1 rule
+  have same : [p] = [Semantik.plan] := transfer.1
+  have after : u = b.nach c s := transfer.2
   subst u
   cases (List.cons.inj same).1
   obtain ⟨_, _, _, _, action, memory, next⟩ := execute
   cases spur with
   | mk events outside =>
     cases action
-    simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+    simp only [Semantik.plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
     have unchanged : ∀ {recorded graph},
         Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
           recorded = [] ∧ graph = s.graph := by
