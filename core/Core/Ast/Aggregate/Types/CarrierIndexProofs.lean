@@ -233,7 +233,7 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
     cases mem
   let argsVal : Surface.FunctionArgs scope :=
     ⟨fnName, fnOrdinary, [param], none, validNone, none, .braces .done, by
-      change (paramName :: []).Nodup
+      change (paramName.val :: []).Nodup
       simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true], by
       intro h
       cases h⟩
