@@ -22,12 +22,14 @@ private theorem zustandsbezug_eq {s i : Zustand L Ort Wert Raum Lok Grund}
 /-- At a unit boundary with identical machine states, matching forward and
     backward form rules discharge the M4 obligations with no private steps. -/
 theorem abgleich_aus_gleichen_regeln
+    {laenge : F → Nat}
     (laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
       E.laden s (h.lade E.bild) = some (start E s).2)
     (regeln : ∀ f c s w plans u, (E.system.regel f).impl c s w plans u ↔
-      (E.system.regel f).ideal c s w plans u) :
-    AbgleichPflichten E Eq (fun _ _ => 0) := by
-  refine ⟨fun _ => rfl, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, rfl⟩, ?_, ?_⟩
+      (E.system.regel f).ideal c s w plans u)
+    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η Eq → StotterSchranke laenge η) :
+    AbgleichPflichten E Eq laenge := by
+  refine ⟨fun _ => rfl, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, rfl⟩, ?_, ?_, schranke⟩
   · intro f hw t c w s u s' i plan spur rel normal bereit kopf impl execute
     have same := zustandsbezug_eq rel
     subst i
@@ -48,10 +50,10 @@ theorem abgleich_aus_gleichen_regeln
     per-form simulation, and maximality obligations hold jointly. -/
 theorem abgleich_erfuellbar :
     ∃ E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
-      AbgleichPflichten E Eq (fun _ _ => 0) ∧
+      AbgleichPflichten E Eq (fun _ => 1) ∧
       ∃ (h : Umgebung) (ρ : Maschine.Lauf E) (η : Lauf E),
         Maschine.Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ Laeufe E η ∧
-        Laufabgleich ρ η Eq (fun _ _ => 0) ∧
+        Laufabgleich ρ η Eq ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
           before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true := by
@@ -76,8 +78,41 @@ theorem abgleich_erfuellbar :
       fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))⟩
-  have abgleich : AbgleichPflichten E₀ Eq (fun _ _ => 0) := by
-    exact abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
+  have abgleich : AbgleichPflichten E₀ Eq (fun _ => 1) := by
+    refine abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl) ?_
+    intro _ ρ η _ matched
+    apply StotterSchranke.ohne_stottern
+    intro t
+    cases occupied : η.belegt t with
+    | none => rfl
+    | some c =>
+      obtain ⟨w, _, label, _⟩ := matched.belegt t c occupied
+      have idle : η.zeit.spur t = none := by
+        by_contra h
+        rw [(matched.frei t).mpr (Or.inr h)] at occupied
+        cases occupied
+      obtain ⟨before, load, rel⟩ := matched.zustand t
+      obtain ⟨after, loadedAfter, relAfter⟩ := matched.zustand (t + 1)
+      have same := (zustandsbezug_eq relAfter).trans ((η.zeit.wartet idle).1.trans (zustandsbezug_eq rel).symm)
+      have tick := ρ.zeit.takt t
+      rw [load, loadedAfter, label, same] at tick
+      cases tick with
+      | wartet empty _ _ => cases empty
+      | schritt chosen step =>
+        cases Option.some.inj chosen
+        cases step with
+        | schritt step =>
+          cases step with
+          | kontext _ _ form exec =>
+            obtain ⟨_, _, planEq, rfl⟩ := form
+            cases (List.cons.inj planEq).1
+            obtain ⟨_, _, _, _, action, _, state⟩ := exec
+            cases action
+            have impossible := congrArg (fun z : Zustand Unit Unit Unit Unit Bool Unit => z.lokal c) state
+            change before.lokal c = Function.update before.lokal c (!before.lokal c) c at impossible
+            rw [Function.update_self] at impossible
+            have toggles (b : Bool) : b ≠ !b := by intro eq; cases b <;> cases eq
+            exact (toggles _ impossible).elim
   let sicht : Nat → AussenVerlauf → AussenSicht :=
     fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let hw := Umgebung.referenzLauf k 1 sicht

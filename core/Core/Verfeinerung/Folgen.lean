@@ -13,11 +13,11 @@ open Gabbro.Core.Katalog
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F Obs : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 variable {ρ : Maschine.Lauf E} {η : Lauf E}
-variable {lokal : LokalerBezug Lok} {mass : PrivatMass L Ort Wert Raum Lok Grund}
+variable {lokal : LokalerBezug Lok} {laenge : F → Nat}
 
 /-- Every concrete cut of a run covered by the M4 obligations has its graph
     and answer-consumption invariants. -/
-theorem AbgleichPflichten.sicherheit_am_schnitt (pflicht : AbgleichPflichten E lokal mass)
+theorem AbgleichPflichten.sicherheit_am_schnitt (pflicht : AbgleichPflichten E lokal laenge)
     {h : Umgebung} (run : Maschine.Laeufe E h ρ) (k : Maschine.Schnitt E ρ) :
     ∃ z, ρ.zeit.zustand k.val = some z ∧ z.SpeicherGut ∧ z.Verbrauch := by
   obtain ⟨z, loaded, related⟩ := pflicht.laden h ρ.start run.1 run.2.2.1
@@ -25,21 +25,34 @@ theorem AbgleichPflichten.sicherheit_am_schnitt (pflicht : AbgleichPflichten E l
 
 /-- At the image of each concrete cut, the ideal state is the state at that
     hardware tick, even if the most recent ideal transition was earlier. -/
-theorem Laufabgleich.schnitt (h : Laufabgleich ρ η lokal mass) (k : Maschine.Schnitt E ρ) :
+theorem Laufabgleich.schnitt (h : Laufabgleich ρ η lokal) (k : Maschine.Schnitt E ρ) :
     ∃ s, ρ.zeit.zustand k.val = some s ∧
       Zustandsbezug lokal s (η.zeit.zustand (Zeitlauf.schnittBild ρ.zeit η.zeit k).val) := by
   obtain ⟨s, load, rel⟩ := h.zustand k.val
   exact ⟨s, load, (η.zeit.letzterSchnitt_zustand k.val).symm ▸ rel⟩
 
-theorem Laufabgleich.schnitt_deckt (h : Laufabgleich ρ η lokal mass) :
+theorem Laufabgleich.schnitt_deckt (h : Laufabgleich ρ η lokal) :
     Function.Surjective (Zeitlauf.schnittBild ρ.zeit η.zeit) :=
   Zeitlauf.schnittBild_deckt ρ.zeit η.zeit fun t pause => (h.spur t).gedeckt pause
 
-theorem Laufabgleich.anfang (h : Laufabgleich ρ η lokal mass) (run : Laeufe E η) :
+theorem Laufabgleich.endlich (h : Laufabgleich ρ η lokal) (run : Laeufe E η) :
+    ρ.zeit.Endlich ↔ η.zeit.Endlich := by
+  constructor
+  · rintro ⟨k, tail⟩
+    exact Zeitlauf.endlich_ab (ρ := η.zeit) k.val fun t after => (h.spur t).gedeckt (tail t after)
+  · intro ends
+    obtain ⟨q, vacant⟩ := run.2.2.2.2.1.2 ends
+    obtain ⟨k, idle⟩ := ends
+    refine Zeitlauf.endlich_ab (ρ := ρ.zeit) (max k.val q) fun t after => ?_
+    rcases (h.frei t).mp (vacant t ((Nat.le_max_right _ _).trans after)) with empty | used
+    · exact empty
+    · exact (used (idle t ((Nat.le_max_left _ _).trans after))).elim
+
+theorem Laufabgleich.anfang (h : Laufabgleich ρ η lokal) (run : Laeufe E η) :
     ZustandAm E η (Zeitlauf.schnittBild ρ.zeit η.zeit ⟨0, Or.inl rfl⟩) = I.start E ρ.start :=
   (I.anfang E η run).trans (congrArg (I.start E) h.start)
 
-theorem Laufabgleich.aussen_am_schnitt (h : Laufabgleich ρ η lokal mass) (k : Maschine.Schnitt E ρ) :
+theorem Laufabgleich.aussen_am_schnitt (h : Laufabgleich ρ η lokal) (k : Maschine.Schnitt E ρ) :
     ∃ s, ρ.zeit.zustand k.val = some s ∧
       AussenBezug s (η.zeit.zustand (Zeitlauf.schnittBild ρ.zeit η.zeit k).val) := by
   obtain ⟨s, load, related⟩ := h.schnitt k
@@ -47,25 +60,25 @@ theorem Laufabgleich.aussen_am_schnitt (h : Laufabgleich ρ η lokal mass) (k : 
 
 /-- The concrete run records the reads-from and coherence choices as well as
     program order. The matched ideal run uses the same resolution at every tick. -/
-theorem Laufabgleich.speicherwahl (h : Laufabgleich ρ η lokal mass) (t : Nat) :
+theorem Laufabgleich.speicherwahl (h : Laufabgleich ρ η lokal) (t : Nat) :
     ∃ s, ρ.zeit.zustand t = some s ∧ SpeicherWahlGleich s.graph (η.zeit.zustand t).graph := by
   obtain ⟨s, loaded, related⟩ := h.zustand t
   have eq := congrArg Zustand.graph related.1
   rw [← eq]
   exact ⟨s, loaded, rfl, rfl, rfl⟩
 
-theorem SpurAbgleich.beobachtung {v n : Nat} {c i : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
-    (h : SpurAbgleich v n c i)
+theorem SpurAbgleich.beobachtung {c i : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    (h : SpurAbgleich c i)
     (sicht : SchrittSpur Ort Wert → List Obs) (privat : sicht ⟨[], []⟩ = []) :
     c.elim [] (sicht ∘ Prod.snd) = i.elim [] (sicht ∘ Prod.snd) := by
   cases h with
   | pause => rfl
-  | privat _ _ _ => exact privat
+  | privat _ _ => exact privat
   | schritt _ => rfl
 
 /-- Equality of the entire ordered observed prefix. In particular either
     projection of the M4 step trace, or a projection keeping both, may be used. -/
-theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η lokal mass)
+theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η lokal)
     (sicht : SchrittSpur Ort Wert → List Obs) (privat : sicht ⟨[], []⟩ = []) (k : Maschine.Schnitt E ρ) :
     Zeitlauf.praefix (fun t => (ρ.zeit.spur t).elim [] (sicht ∘ Prod.snd)) k.val =
       Zeitlauf.praefix (fun t => (η.zeit.spur t).elim [] (sicht ∘ Prod.snd))
@@ -78,7 +91,7 @@ theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η lokal mass)
 
 /-- The crash cut is matched at the same tick, with the same persistence event,
     and the recovery continuations start in one and the same state. -/
-theorem Laufabgleich.absturz (h : Laufabgleich ρ η lokal mass) {t : Nat}
+theorem Laufabgleich.absturz (h : Laufabgleich ρ η lokal) {t : Nat}
     (offer : AbsturzAngeboten E.katalog ρ.hw t) :
     ρ.zeit.spur t = some (.absturz, absturzSpur) ∧ η.zeit.spur t = some (.absturz, absturzSpur) ∧
       ρ.zeit.zustand (t + 1) = some (η.zeit.zustand (t + 1)) := by
@@ -88,7 +101,7 @@ theorem Laufabgleich.absturz (h : Laufabgleich ρ η lokal mass) {t : Nat}
   exact absturz_im_lauf h.hardware.symm offer load rel.1.aussen
     (congrArg (fun z => nachAbsturz z.persistenz) shared)
 
-theorem Laufabgleich.absturzschnitt (h : Laufabgleich ρ η lokal mass) {t : Nat}
+theorem Laufabgleich.absturzschnitt (h : Laufabgleich ρ η lokal) {t : Nat}
     (offer : AbsturzAngeboten E.katalog ρ.hw t) :
     ∃ (k : Maschine.Schnitt E ρ) (j : Schnitt E η),
       k.val = t + 1 ∧ j.val = t + 1 ∧ Zeitlauf.schnittBild ρ.zeit η.zeit k = j := by
@@ -98,7 +111,7 @@ theorem Laufabgleich.absturzschnitt (h : Laufabgleich ρ η lokal mass) {t : Nat
 
 /-- A persistent live dispatch on a fair physical core reaches an ideal
     progress alternative other than a withheld opportunity. -/
-theorem Laufabgleich.fortschritt_am_angebot (h : Laufabgleich ρ η lokal mass) (run : Laeufe E η)
+theorem Laufabgleich.fortschritt_am_angebot (h : Laufabgleich ρ η lokal) (run : Laeufe E η)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw)
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
     (regeln : ∀ i, Gabbro.Core.Ideal.RegelFortschritt E.system i)
