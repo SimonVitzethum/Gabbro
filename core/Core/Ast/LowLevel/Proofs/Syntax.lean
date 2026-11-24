@@ -159,7 +159,7 @@ theorem eindeutigAussage (form : Form) : EindeutigAussage form := by
   exact productionUnique readsA readsB
 
 theorem druckAussage_addressType : DruckAussage .addressType := by
-  intro tree
+  intro tree printable
   cases tree with
   | addressType space =>
       exact ⟨addressTypePrints space, parseOfPrint _ (addressTypePrints space)⟩

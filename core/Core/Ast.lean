@@ -8,6 +8,13 @@ public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
 public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
+public import Core.Ast.LowLevel.Proofs.RegionUnit
+public import Core.Ast.LowLevel.Proofs.RegionSatisfiability
+public import Core.Ast.LowLevel.Proofs.DeviceRegisters
+public import Core.Ast.LowLevel.Proofs.DeviceTransition
+public import Core.Ast.LowLevel.Proofs.DeviceLend
+public import Core.Ast.LowLevel.Proofs.DeviceDma
+public import Core.Ast.LowLevel.Proofs.DeviceSatisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface

@@ -3,6 +3,7 @@ module
 public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
 public import Core.Katalog.FirmwareNamen
+public import Core.Ast.LowLevel.Meaning
 
 @[expose] public section
 
@@ -23,12 +24,14 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
@@ -90,6 +93,8 @@ structure Rahmen where
   fortsetzungen : List Fortsetzung := []
   funktion : Option Identifier := none
   mass : Option Nat := none
+  arrivalRegions : List Katalog.Strecke := []
+  platform : Katalog.Plattform := .x86_64
   environment : List (Identifier × Katalog.DienstAbi × Katalog.FirmwareZeile) := []
 
 /-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
@@ -235,4 +240,37 @@ abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
 abbrev Regel := Maschine.Regel Zustand Plan PUnit
 
 
+/-- Entry slots are the positions of the platform's owned RAM grants.
+    Ordinary calls cannot supply regions through copyable expressions. -/
+def Rahmen.eintrittArgumente (frame : Rahmen) (types : List (Ty .value)) : Option Rahmen :=
+  if types = [] then some { frame with lokale := [] }
+  else if types.all (· == .ownedRegion) && types.length ≤ frame.arrivalRegions.length then
+    some { frame with lokale := [], temp := fun slot =>
+      if slot < types.length then some ⟨.ownedRegion, slot⟩ else none }
+  else none
+
+def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
+  | ⟨.regionView _, view⟩ => view.slot == slot
+  | _ => false
+
+def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
+  let hasView := fun (values : List (Option Dynamisch)) =>
+    values.any (fun v => v.any (Dynamisch.borrowsRegion slot))
+  hasView frame.lokale || frame.fortsetzungen.any (fun continuation => hasView continuation.lokale)
+
+def Rahmen.bindeRegion (frame : Rahmen) (receiver : Nat) (init : RegionInitializer)
+    (live : Nat → Bool) : Rahmen := Id.run do
+  let refused := frame.halt .ungueltigerBereich
+  let some (slot : Nat) := frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) | return refused
+  let some extent := frame.arrivalRegions[slot]? | return refused
+  if !live slot || frame.borrowsRegion slot then return refused
+  let some value := LowLevel.RegionInitializer.value frame.platform.ziel slot extent init | return refused
+  return { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale }
+
+abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
+abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
+abbrev Regel := Maschine.Regel Zustand Plan PUnit
+
+/-- One linearisation point per expression node or binding. A binary instruction
+    consumes the slots left by its children. A binding takes its initializer's slot. -/
 end Gabbro.Core.Ast.Semantik

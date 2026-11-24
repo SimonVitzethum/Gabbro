@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Program.HeaderTokens
+public import Core.Ast.LowLevel.TypeTokens
 
 @[expose] public section
 
@@ -57,6 +57,8 @@ def WrittenType.printPieces : WrittenType → List PrintedToken
   | .text capacity => [printStringType, printMax, printInteger capacity]
   | .index carrier _ => [printIndex, printInto, carrier.print]
   | .indexOption carrier _ => [printOption, printIndex, printInto, carrier.print]
+  | .address space => space.printPieces
+  | .ownedRegion => LowLevel.printOwnedRegion
 
 def WrittenTypes.printTail : WrittenTypes → List PrintedToken
   | .empty => []
@@ -91,6 +93,9 @@ inductive TypeReads (scope : Scope) : List Token → WrittenType → List Token 
   | indexOption (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
       TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest)
         (.indexOption carrier count) rest
+  | address (space : LowLevel.AddressSpace) :
+      TypeReads scope (space.tokens ++ rest) (.address space) rest
+  | ownedRegion : TypeReads scope (LowLevel.ownedRegionTokens ++ rest) .ownedRegion rest
 
 inductive TypeItemsTail (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
   | close : TypeItemsTail scope (closeParen :: rest) .empty rest
@@ -198,7 +203,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     (motive_2 := fun input tree rest _ =>
       ∀ input' tree' rest', TypeItemsTail scope input' tree' rest' →
         input = input' → tree = tree' ∧ rest = rest')
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) input b more right rfl
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) input b more right rfl
   · intro rest input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool => injection hEq with hword htail; exact ⟨rfl, htail⟩
@@ -208,7 +213,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     case interval valid' loRead' hiRead' =>
         injection hEq with hword htail; injection hword with hspell
         exact (not_bool _ _ hspell.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; cases head
+    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
   · intro signed width rest valid closed input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -227,7 +232,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; cases head
+    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
   · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -250,7 +255,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; cases head
+    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
   · intro _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
     cases other with
     | array otherCount otherBound otherElement otherBoundRead =>
@@ -279,6 +284,20 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     exact carrierIndex_det _ (by assumption) (by assumption) (by assumption)
   · intros
     exact carrierOption_det _ (by assumption) (by assumption) (by assumption)
+  · intro rest space input' out rest' other equality
+    cases other with
+    | address otherSpace =>
+      cases space <;> cases otherSpace <;>
+        first | exact ⟨rfl, List.append_cancel_left equality⟩ | cases equality
+    | integer => rename_i signed _ _ _; cases signed <;> cases equality
+    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
+  · intro rest input' out rest' other equality
+    cases other with
+    | ownedRegion => exact ⟨rfl, List.append_cancel_left equality⟩
+    | integer => rename_i signed _ _ _; cases signed <;> cases equality
+    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases equality
+    | _ => have head := (List.cons.inj equality).1; cases head
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
@@ -302,7 +321,7 @@ theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ inpu
   refine TypeReads.rec
     (motive_1 := fun input _ rest _ => rest <:+ input)
     (motive_2 := fun input _ rest _ => rest <:+ input)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intros; exact List.suffix_cons _ _
   · intros; exact List.suffix_cons _ _
   · intros
@@ -325,6 +344,8 @@ theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ inpu
   · intros
     exact (((List.suffix_cons _ _).trans (List.suffix_cons _ _)).trans
       (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  · intros; exact List.suffix_append _ _
+  · intros; exact List.suffix_append _ _
   · intros; exact List.suffix_cons _ _
   · intros
     rename_i headSuffix tailSuffix
@@ -369,7 +390,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
         TypeReads scope (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
     (motive_2 := fun trees => trees.valid scope → ∀ rest,
       TypeItemsTail scope (trees.printTail.map PrintedToken.value ++ closeParen :: rest) trees rest)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid rest closed
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid rest closed
   · intro _ rest _
     have hp : printBoolType.value = keyword "bool" := by rfl
     simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
@@ -415,6 +436,11 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     exact .index carrier valid
   · intro carrier count valid rest _
     exact .indexOption carrier valid
+  · intro space _ rest _
+    simpa only [WrittenType.printPieces, LowLevel.AddressSpace.printTokens] using
+      (TypeReads.address (rest := rest) space)
+  · intro _ rest _
+    exact .ownedRegion
   · intro _ rest
     exact .close
   · intro head tail headPrint tailPrint valid rest

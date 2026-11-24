@@ -76,7 +76,7 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun _ _ t => (block t).klauseln.invariant = [])
     (fun _ t => (bracedBlock t).klauseln.invariant = [])
     (fun _ _ _ _ t => (variantArms t).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   all_goals
     intros
     simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,

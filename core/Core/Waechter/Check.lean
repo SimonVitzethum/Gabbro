@@ -13,6 +13,18 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage, 3525134736315824921),
+  (`Gabbro.Core.Ast.Semantik.AddressTypeUnitErfuellbarAussage, 3245356768079883295),
+  (`Gabbro.Core.Ast.Semantik.RegionAddressUnitAussage, 10499648118045920537),
+  (`Gabbro.Core.Ast.Semantik.ViewUnitAussage, 14449785275102840490),
+  (`Gabbro.Core.Ast.Semantik.RegionBindUnitAussage, 5229462174105162127),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadAussage, 854024946337055167),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterWriteAussage, 15587504982948919072),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadElseAussage, 4151308446977920525),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterTransitionAussage, 15164958506020940950),
+  (`Gabbro.Core.Ast.LowLevel.Device.LendAussage, 5411258669457648864),
+  (`Gabbro.Core.Ast.LowLevel.Device.TakeBackAussage, 11925056374736953551),
+  (`Gabbro.Core.Ast.LowLevel.Device.DmaAussage, 13067714030895001407),
   (`Gabbro.Core.Ast.Semantik.EnvironmentUnitAussage, 3132366043312042834),
   (`Gabbro.Core.Ast.LowLevel.schema, 18376858518414615252),
   (`Gabbro.Core.Ast.LowLevel.AddressTypeAussage, 2913155395759446167),
@@ -214,7 +226,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.letMutableValue, `Gabbro.Core.Ast.Semantik.MutableValueProofPacket),
     (`Gabbro.Core.Ast.Stmt.variantMatch, `Gabbro.Core.Ast.Semantik.VariantMatchProofPacket),
     (`Gabbro.Core.Ast.Stmt.letOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket),
-    (`Gabbro.Core.Ast.Stmt.retOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket) ]⟩,
+    (`Gabbro.Core.Ast.Stmt.retOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket),
+    (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
     (`Gabbro.Core.Ast.Decl.function, `Gabbro.Core.Ast.Semantik.functionEntry) ], #[
@@ -274,7 +287,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.definiereTraeger, `Gabbro.Core.Ast.Semantik.TableProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.optionIstBesetzt, `Gabbro.Core.Ast.Semantik.OptionTestProofPacket),
     (`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket),
-    (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.EnvironmentUnitAussage) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.EnvironmentUnitAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩]
 
 private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket),
@@ -282,7 +296,8 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket),
   (`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket),
   (`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket),
-  (`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket)]
+  (`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket),
+  (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage)]
 
 private meta def wildcardRoots : Array Name := #[
   `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,

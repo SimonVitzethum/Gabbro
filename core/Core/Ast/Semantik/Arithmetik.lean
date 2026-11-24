@@ -15,6 +15,19 @@ structure Zahl (lo hi : Int) where
 def Zahl.literal (value : Int) : Zahl value value :=
   ⟨value, Int.le_refl _, Int.le_refl _⟩
 
+/-- An inert number with the bound of the address space at its origin. -/
+structure AddressValue where
+  width : Nat
+  number : Nat
+  fits : number < 2 ^ width
+
+/-- A typed view retains the exact subextent and byte order of its layout. -/
+structure RegionViewValue where
+  slot : Nat
+  start : Nat
+  length : Nat
+  bigEndian : Bool
+
 def Wert : {kind : Kind} → Ty kind → Type
   | _, .int lo hi => Zahl lo hi
   | _, .bool => Bool
@@ -27,6 +40,9 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout
   | _, .text capacity => TextValue capacity
+  | _, .address _ => AddressValue
+  | _, .ownedRegion => Nat
+  | _, .regionView _ => RegionViewValue
 
 def indexOptionPresent (value : Wert (indexOptionType count)) : Bool :=
   match value with

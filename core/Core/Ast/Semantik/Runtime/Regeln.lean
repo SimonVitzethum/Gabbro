@@ -68,9 +68,11 @@ inductive Befehl where
   | optionIstBesetzt (ziel count : Nat)
   | definiereEffektgruppe (effects : List CarrierEffect)
   | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
+  | bindeRegion (receiver : Nat) (init : RegionInitializer)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
-def Befehl.auswerten : Befehl → Rahmen → Rahmen
+def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _slot => false) : Rahmen :=
+  match b, frame with
   | .literal dst val, frame =>
     frame.schreibe dst (some ⟨.int val val, Zahl.literal val⟩)
   | .binaer op left, frame =>
@@ -169,8 +171,9 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     if let some bad := (frame.funktionen.flatMap Funktion.ruft).find? (fun call =>
         !(call.passt frame.funktionen)) then
       return frame.halt (.ungueltigerRuf bad.name)
-    let result := (Funktion.finde frame.funktionen name).bind Funktion.result
-    return ({ frame with lokale := [] }).ruf name [] result
+    let some target := Funktion.finde frame.funktionen name | return frame.halt (.ungueltigerRuf name)
+    let some entry := frame.eintrittArgumente target.parameter | return frame.halt (.ungueltigerRuf name)
+    return entry.ruf name target.parameter target.result
   | .ende, frame => { frame with stopp := some .fertig, rueckgabe := frame.lokale.head?.join }
   | .baueArray dst element count, frame => frame.schreibe dst (do
     let values ← Vector.ofFnM (n := count) fun i => (frame.temp (dst + i.val)).bind (wertAls element)
@@ -259,6 +262,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     { frame with
       pc := frame.pc + 1
       environment := (name, abi, row) :: frame.environment }
+  | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -285,7 +289,9 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
-  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c)) }
+  let live := fun slot => c == Kontext.faden 0 && s.rechte.lebt slot &&
+    s.rechte.gen slot == 0 && (match s.leihen slot with | .eigen => true | .verliehen _device => false)
+  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) live) }
 
 /-- The context-local transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
