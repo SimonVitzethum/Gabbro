@@ -35,12 +35,12 @@ namespace Gabbro.Core.Ast.Surface
 
 private theorem infixPrecLe7 (op : Infix) : op.precedence ≤ 7 := by
   cases op with
-  | arith a => cases a <;> simp only [Infix.precedence, Arith.precedence]
-  | div => simp only [Infix.precedence]
-  | compare c => simp only [Infix.precedence]
-  | logic l => cases l <;> simp only [Infix.precedence]
-  | index => simp only [Infix.precedence]
-  | projection => simp only [Infix.precedence]
+  | arith a => cases a <;> simp only [Infix.precedence, Arith.precedence] <;> omega
+  | div => simp only [Infix.precedence] <;> omega
+  | compare c => simp only [Infix.precedence] <;> omega
+  | logic l => cases l <;> simp only [Infix.precedence] <;> omega
+  | index => simp only [Infix.precedence] <;> omega
+  | projection => simp only [Infix.precedence] <;> omega
 
 theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   intro scope element count minimum input type base tree rest allowed read
@@ -277,8 +277,19 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       have boundProof : offset.wert.toNat < Nat.succ count :=
         (indexPosition offset lower upper).isLt
       constructor
-      · simp only [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl, Option.bind,
-          if_neg (not_lt_of_ge nonneg), posval, Option.some.injEq]
+      · change (do
+            let i ← frame.zahl (slot + 1)
+            pure ⟨PartielleOperation.index,
+              (if i.zahl.wert < 0 then count + 1 else i.zahl.wert.toNat, count + 1)⟩) =
+          some ⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩
+        rw [show frame.zahl (slot + 1) = some ⟨lo, hi, offset⟩ by
+          change (frame.temp (slot + 1)).bind alsGanzzahl = some ⟨lo, hi, offset⟩
+          rw [hoff]
+          rfl]
+        change some ⟨PartielleOperation.index,
+            (if offset.wert < 0 then count + 1 else offset.wert.toNat, count + 1)⟩ =
+          some ⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩
+        rw [if_neg (not_lt_of_ge nonneg), posval]
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
@@ -295,9 +306,9 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           rw [harr]
           rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
-        simp only [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, val, Rahmen.zahl,
-          alsGanzzahl, Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof,
-          dif_pos leCount, indexPosition, Option.some.injEq]
+        simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, harr', hoff, wert, val,
+          Rahmen.zahl, alsGanzzahl, Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof,
+          dif_pos leCount, indexPosition, Option.some.injEq, id_eq]
         rfl
 
 end Gabbro.Core.Ast.Semantik
