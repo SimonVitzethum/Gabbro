@@ -33,13 +33,13 @@ open Gabbro.Core.Text
 namespace Gabbro.Core.Ast
 
 theorem arrayTypeInversion : ArrayTypeInversionAussage := by
-  intro input type rest read
+  intro scope input type rest read
   cases read with
   | array count bound elementRead boundRead =>
       exact ⟨_, _, bound, _, elementRead, boundRead, rfl⟩
 
 theorem arrayTypeSuffix : ArrayTypeSuffixAussage := by
-  intro input type rest read
+  intro scope input type rest read
   obtain ⟨element, count, bound, boundInput, elementRead, boundRead, _⟩ :=
     arrayTypeInversion read
   have closeSuffix : closeBracket :: rest <:+ boundInput := ExprReads.consumes boundRead
@@ -49,7 +49,7 @@ theorem arrayTypeSuffix : ArrayTypeSuffixAussage := by
   exact restSuffix.trans boundSuffix
 
 theorem arrayTypeDerivation : ArrayTypeDerivationAussage := by
-  intro element count rest valid
+  intro scope element count rest valid
   have closed : ∀ more, semicolon :: (.natural count :: closeBracket :: rest) ≠ keyword "in" :: more := by
     intro more same
     cases same
@@ -76,10 +76,10 @@ theorem arrayTypeSyntaxErfuellbar : ArrayTypeSyntaxErfuellbarAussage := by
   let words := (WrittenType.array element count).printPieces
   obtain ⟨pieces, lexed, aligned⟩ := PrintedToken.renderLexed 0 words
   refine ⟨element, count, PrintedToken.render words, pieces, ?_, lexed, ?_⟩
-  · change element.valid
+  · change element.valid []
     trivial
   · rw [aligned]
-    simpa using (arrayTypeDerivation element count ([] : List Token) (by change element.valid; trivial))
+    simpa using (arrayTypeDerivation [] element count ([] : List Token) (by change element.valid []; trivial))
 
 end Gabbro.Core.Ast
 
@@ -168,7 +168,7 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
           change Fits .bool .bool
           trivial)
   let argsVal : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, written, by change written.valid; trivial, written.type, value, by rfl⟩
+    ⟨name, ordinary, written, by change written.valid []; trivial, written.type, value, by rfl⟩
   let args : {a : Surface.MutableLocalArgs [] none // arrayTypeUse a.written} :=
     ⟨argsVal, by change arrayTypeUse (WrittenType.array .bool 1); simp only [arrayTypeUse]⟩
   let form := typeUseForm ([], none) arrayTypeUse

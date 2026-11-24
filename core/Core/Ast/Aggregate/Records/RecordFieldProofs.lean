@@ -123,6 +123,9 @@ theorem recordFieldInvGen {scope name labels types minimum input type}
         subst labs'
         subst input'
         exact ⟨field', index, written, wf, tail⟩
+    | textConcat _ _ _ _ _ => cases (List.cons.inj htok).1
+    | textIndex _ _ _ _ _ | substring _ _ _ _ _ _ _ => cases (List.cons.inj htok).1
+    | optionIsSome _ _ _ _ _ => cases eqT
 
 theorem RecordFieldInversion : RecordFieldInversionAussage := by
   intro scope name labels types minimum input type base tree rest field allowed read
