@@ -53,7 +53,7 @@ inductive AtomReads (scope : Scope) : List Token → {type : Ty .value} → Expr
   | not : PrimaryStart input → AtomReads scope input operand rest → AtomReads scope (bangP :: input) (.not operand) rest
 inductive ExprTail (scope : Scope) : Nat → {inputType : Ty .value} → Expr scope inputType → List Token → {resultType : Ty .value} → Expr scope resultType → List Token → Prop where
   | stop : ¬ Continues minimum rest → ExprTail scope minimum left rest left rest
-  | binary (op : Arith) : minimum ≤ op.precedence → ExprReads scope (op.precedence + 1) input right more → ExprTail scope minimum (.binary op left right) more tree rest → ExprTail scope minimum left (op.token :: input) tree rest
+  | binary (op : Arith) : minimum ≤ op.precedence → ExprReads scope (op.precedence + 1) input right more → ExprTail scope minimum (.binary op left right) more tree rest → ExprTail scope minimum left (Arith.token op :: input) tree rest
   | div : minimum ≤ Infix.div.precedence → ExprReads scope (Infix.div.precedence + 1) input (right : Expr scope (.int lo hi)) more → (nonzero : Divisor lo hi) → ExprTail scope minimum (.div left right nonzero) more tree rest → ExprTail scope minimum left (Infix.div.token :: input) tree rest
   | compare (op : Compare) : minimum ≤ (Infix.compare op).precedence → ExprReads scope ((Infix.compare op).precedence + 1) input right more → (Infix.compare op).follows more → ExprTail scope minimum (.compare op left right) more tree rest → ExprTail scope minimum left ((Infix.compare op).token :: input) tree rest
   | logic (op : Logic) : minimum ≤ (Infix.logic op).precedence → ExprReads scope ((Infix.logic op).precedence + 1) input right more → ExprTail scope minimum (.logic op left right) more tree rest → ExprTail scope minimum left ((Infix.logic op).token :: input) tree rest
@@ -65,12 +65,12 @@ theorem probe_det (left : ExprReads scope minimum input a rest) : True := by
     (motive_2 := fun input _ a rest _ => True)
     (motive_3 := fun min _ first input _ a rest _ => True)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
-  all_goals trace_state; trivial
+  all_goals trace_state; intros; trivial
 
 theorem probe_atom_inv (read : AtomReads scope (trueKeywordP :: rest) tree suffix) : True := by
-  cases read <;> trace_state <;> trivial
+  cases read <;> trace_state <;> intros <;> trivial
 
-theorem probe_tail_inv (read : ExprTail scope minimum (left : Expr scope (.int lo₁ hi₁)) (op.token :: input) tree rest) : True := by
-  cases read <;> trace_state <;> trivial
+theorem probe_tail_inv (read : ExprTail scope minimum (left : Expr scope (.int lo₁ hi₁)) (Arith.token op :: input) tree rest) : True := by
+  cases read <;> trace_state <;> intros <;> trivial
 
 end Gabbro.Core.Ast
