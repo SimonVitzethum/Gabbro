@@ -113,7 +113,7 @@ theorem optionPresent : OptionPresentAussage := by
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, htemp, hw,
     indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get,
     List.getElem?_cons_zero, List.cons_append, List.nil_append, List.append_nil,
-    Function.update_self, Option.bind_some, id_eq]
+    Function.update_self, Option.bind, Option.isSome, Option.bind_some, id_eq]
 
 private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     (optionLetForm ctx).produktion.production a
