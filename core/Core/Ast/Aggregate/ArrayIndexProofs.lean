@@ -69,13 +69,14 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
     [closeBracket, closeParen], ?_, ?_⟩
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.singleton_append, List.append_assoc,
+      List.map_nil, List.singleton_append, List.append_assoc, printOpen, printClose,
+      printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted,
       (show (Token.punctuation "(".toList : Token) = openParen by decide),
       (show (Token.punctuation "[".toList : Token) = openBracket by decide),
       (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
       (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · simpa only [List.singleton_append, List.cons_append, List.append_assoc] using
+  · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
       (Expr.printReads (minimum := 8)
         (rest := openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
         args.base (by
@@ -285,8 +286,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           exact values
         have wert : wertAls (.array element (count + 1))
             (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
-          dsimp [wertAls]
-          rw [dif_pos rfl]
+          unfold wertAls
+          repeat' split <;> simp
         simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 

@@ -114,9 +114,9 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
     (items : ExprItems scope types) :
     ItemsRead scope closeBracket
       (items.printPieces.map PrintedToken.value ++ [closeBracket]) items [] := by
-  induction items with
+  cases items with
   | empty => exact .close
-  | next head tail ih =>
+  | next head tail =>
       simp only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_cons,
         List.map_nil, List.singleton_append]
       cases tail with
@@ -125,7 +125,8 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
           exact .next (Expr.printReads head noOperatorAtCloseBracket) .close
       | next second rest =>
           simp only [ExprItems.printTail, List.map_cons, List.map_append]
-          exact .next (Expr.printReads head noOperatorAtComma) (.comma (Or.inr rfl) ih)
+          exact .next (Expr.printReads head noOperatorAtComma)
+            (.comma (Or.inr rfl) (itemsPrintRead tail))
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
@@ -134,7 +135,8 @@ private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
       openBracket :: input ∧ ItemsRead scope closeBracket input args.items []
   refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket], ?_, ?_⟩
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.singleton_append,
+      List.map_nil, List.singleton_append, printOpenBracket, printCloseBracket,
+      printPunctuation, PrintedToken.unquoted,
       (show (Token.punctuation "[".toList : Token) = openBracket by decide),
       (show (Token.punctuation "]".toList : Token) = closeBracket by decide)]
   exact itemsPrintRead args.items
