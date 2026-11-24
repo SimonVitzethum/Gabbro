@@ -11,7 +11,7 @@ private theorem jumpLongNotHalted {b : Bool} (h : !b = true) : ¬ b := by
       intro hb
       cases hb
   | true =>
-      simp only [Bool.not_true, Bool.false_eq_true] at h
+      cases h
 private theorem jumpLongPrints (tree : ExecTree .jumpLong) :
     tree.production (tree.printPieces.map PrintedToken.value) := by
   cases tree with
@@ -32,7 +32,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
             simp [ExecTree.production] at ha hb
             rw [ha] at hb
             have hlen := congrArg List.length hb
-            simp only at hlen
+            simp only [List.length_cons, List.length_nil] at hlen
             first
             | (exfalso; omega)
             | (
@@ -116,21 +116,14 @@ private theorem jumpLongDruck : ExecDruckAussage .jumpLong := by
     jumpLongSyntax.parse_print tree
 private theorem jumpLongMeaning : JumpLongMeaningAussage := by
   intro code dest sp st s c frame heval
-  let f := s.lokal c
-  change (do let cur ← f.current
-             let dst ← f.states[dest]?
-             if cur != dest && !f.halted && stackOk f.stapel st &&
-                 spaceOk dst.translation f.spaces sp then
-               pure { f with result := some (.jumpedLong code dest),
-                 current := some dest, activeSpace := sp }
-             else none) = some frame at heval
-  cases hcur : f.current with
+  simp only [ExecInstruction.evaluate] at heval
+  cases hcur : (s.lokal c).current with
   | none =>
       simp only [hcur, Option.bind_none] at heval
       cases heval
   | some cur =>
       simp only [hcur, Option.bind_some] at heval
-      cases hdst : f.states[dest]? with
+      cases hdst : (s.lokal c).states[dest]? with
       | none =>
           simp only [hdst, Option.bind_none] at heval
           cases heval
@@ -297,14 +290,14 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
   let st : Option Nat := some 0
   let op : ExecInstruction := .jumpLong code dest sp st
   let tree : ExecTree .jumpLong := .jumpLong jlFirst jlSecond none (some jlStack)
-  let prefix : List ExecInstruction := [.declareState jlFirstDecl, .declareState jlSecondDecl]
+  let pre : List ExecInstruction := [.declareState jlFirstDecl, .declareState jlSecondDecl]
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start : AussenStart :=
     ⟨0, (fun i => if i = 0 then some 0 else none), [extent], (fun _ => none),
       env.politik.sicht 0 []⟩
   let text : RawText := tree.print
-  let E : ExecUnit := execProgram k (prefix ++ [op])
+  let E : ExecUnit := execProgram k (pre ++ [op])
   let s0 := (I.start E start).2
   let frame1 : ExecFrame := (s0.lokal entryContext).declare jlFirstDecl
   let s1 := frame1.advance entryContext s0
@@ -332,8 +325,8 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
       · cases mmio
       · exact Or.inl (by change 4096 ≤ 0x10000000; omega)
   have accepted : Annahme.Akzeptiert E := by
-    change Annahme.Akzeptiert (execProgram k (prefix ++ [op]))
-    simpa [k] using jlAkzeptiert (prefix ++ [op])
+    change Annahme.Akzeptiert (execProgram k (pre ++ [op]))
+    simpa [k] using jlAkzeptiert (pre ++ [op])
   have hnode : (scope.states.map Subtype.val).Nodup := by
     dsimp [scope]
     simp only [List.map_cons, List.map_nil]
@@ -435,18 +428,18 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     rw [if_pos hcond]
     dsimp [next]
   have hhead0 : E.system.kopf s0 entryContext = some (.declareState jlFirstDecl) := by
-    change execHead (prefix ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
+    change execHead (pre ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
     unfold execHead
     simp only [entryContext, ↓reduceIte, hs0status, hs0lokal, List.getElem?_cons_zero]
     exact if_pos (by rw [heval0]; rfl)
   have hhead1 : E.system.kopf s1 entryContext = some (.declareState jlSecondDecl) := by
-    change execHead (prefix ++ [op]) s1 entryContext = some (.declareState jlSecondDecl)
+    change execHead (pre ++ [op]) s1 entryContext = some (.declareState jlSecondDecl)
     unfold execHead
     simp only [entryContext, ↓reduceIte, hs1status, hs1pc, List.getElem?_cons_succ,
       List.getElem?_cons_zero]
     exact if_pos (by rw [heval1]; rfl)
   have hhead2 : E.system.kopf s2 entryContext = some op := by
-    change execHead (prefix ++ [op]) s2 entryContext = some op
+    change execHead (pre ++ [op]) s2 entryContext = some op
     unfold execHead
     simp only [entryContext, ↓reduceIte, hs2status, hs2pc, List.getElem?_cons_succ,
       List.getElem?_cons_succ, List.getElem?_cons_zero]
@@ -467,7 +460,7 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     exact ⟨op, hhead2, ⟨next, heval, rfl, rfl⟩⟩
   have hstepImpl : E.system.ImplSchritt entryContext s2 () [plan] (next.advance entryContext s2) := by
     exact ⟨op, hhead2, ⟨next, heval, rfl, rfl⟩⟩
-  refine ⟨k, scope, tree, op, env, start, text, prefix, s2, next, ?_⟩
+  refine ⟨k, scope, tree, op, env, start, text, pre, s2, next, ?_⟩
   exact ⟨⟨jlFirstDecl, jlSecondDecl, code, dest, sp, st, rfl, rfl⟩,
     hardware, hzul, accepted, hnode, hnosp, hnost, hnoen, hbezeichnet, hparse, hElab,
     hreach2, hhead2, heval, hstepIdeal, hstepImpl⟩
