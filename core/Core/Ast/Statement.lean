@@ -290,6 +290,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
 theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : rest <:+ input := by
     (motive_1 := fun scope input tree rest _ => rest <:+ input)
     (motive_2 := fun before input tree rest _ => rest <:+ input)
+  refine StmtReads.rec
     (motive_3 := fun before input tree rest _ => rest <:+ input)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intros
