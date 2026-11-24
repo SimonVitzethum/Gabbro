@@ -53,13 +53,13 @@ mutual
     | n + 1 =>
       let p := n.unpair
       let payload := p.2
-      have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
-      have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-      have hb1 : payload.unpair.2.unpair.1 < n + 1 :=
-        lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
-      have hb2 : payload.unpair.2.unpair.2 < n + 1 :=
-        lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
+      have hp : payload ≤ n := Nat.unpair_right_le n
+      have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
+      have hb1 : payload.unpair.2.unpair.1 ≤ n :=
+        le_trans (Nat.unpair_left_le payload.unpair.2) hb
+      have hb2 : payload.unpair.2.unpair.2 ≤ n :=
+        le_trans (Nat.unpair_right_le payload.unpair.2) hb
       match p.1 with
       | 0 => some .bool
       | 1 => do
@@ -103,9 +103,9 @@ mutual
     | n + 1 =>
       let p := n.unpair
       let payload := p.2
-      have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
-      have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+      have hp : payload ≤ n := Nat.unpair_right_le n
+      have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
       match p.1 with
       | 0 => some .empty
       | 1 => do

@@ -219,17 +219,17 @@ def tyOfCode : Nat → Option (Ty .value)
   | n + 1 =>
     let p := n.unpair
     let payload := p.2
-    have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
-    have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-    have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-    have hb1 : payload.unpair.2.unpair.1 < n + 1 :=
-      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
-    have hb2 : payload.unpair.2.unpair.2 < n + 1 :=
-      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
-    have hb21 : payload.unpair.2.unpair.2.unpair.1 < n + 1 :=
-      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
-    have hb22 : payload.unpair.2.unpair.2.unpair.2 < n + 1 :=
-      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
+    have hp : payload ≤ n := Nat.unpair_right_le n
+    have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
+    have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
+    have hb1 : payload.unpair.2.unpair.1 ≤ n :=
+      le_trans (Nat.unpair_left_le payload.unpair.2) hb
+    have hb2 : payload.unpair.2.unpair.2 ≤ n :=
+      le_trans (Nat.unpair_right_le payload.unpair.2) hb
+    have hb21 : payload.unpair.2.unpair.2.unpair.1 ≤ n :=
+      le_trans (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
+    have hb22 : payload.unpair.2.unpair.2.unpair.2 ≤ n :=
+      le_trans (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
     match p.1 with
     | 0 => do
         let lo : Int ← Encodable.decode payload.unpair.1
@@ -297,13 +297,48 @@ def tyOfCode : Nat → Option (Ty .value)
         let referent ← tyOfCode payload.unpair.2.unpair.2
         some (.ptr space recht referent)
     | _ => none
-termination_by n => n
-decreasing_by
-  simp only [p, payload] at *
-  omega
 
-lemma tyCode_ofCode (t : Ty .value) : tyOfCode (tyCode t) = some t := by
-  induction t <;> simp [tyCode, tyOfCode, *]
+theorem tyCode_ofCode : ∀ t : Ty .value, tyOfCode (tyCode t) = some t
+  | .int lo hi => by simp [tyCode, tyOfCode]
+  | .bool => by simp [tyCode, tyOfCode]
+  | .array el cnt => by
+      have ih := tyCode_ofCode el
+      simp [tyCode, tyOfCode, ih]
+  | .productEnd => by simp [tyCode, tyOfCode]
+  | .product h t => by
+      have ih1 := tyCode_ofCode h
+      have ih2 := tyCode_ofCode t
+      simp [tyCode, tyOfCode, ih1, ih2]
+  | .record nm ls lay => by
+      have ih := tyCode_ofCode lay
+      simp [tyCode, tyOfCode, ih]
+  | .recordSchema nm ls lay => by
+      have ih := tyCode_ofCode lay
+      simp [tyCode, tyOfCode, ih]
+  | .sumEnd => by simp [tyCode, tyOfCode]
+  | .sum h t => by
+      have ih1 := tyCode_ofCode h
+      have ih2 := tyCode_ofCode t
+      simp [tyCode, tyOfCode, ih1, ih2]
+  | .variant nm ls hp lay => by
+      have ih := tyCode_ofCode lay
+      simp [tyCode, tyOfCode, ih]
+  | .variantSchema nm ls hp lay => by
+      have ih := tyCode_ofCode lay
+      simp [tyCode, tyOfCode, ih]
+  | .text cap => by simp [tyCode, tyOfCode]
+  | .carrierSchema cnt ls lay ex => by
+      have ih := tyCode_ofCode lay
+      simp [tyCode, tyOfCode, ih]
+  | .effectGroupSchema eff => by simp [tyCode, tyOfCode]
+  | .address space => by simp [tyCode, tyOfCode]
+  | .ownedRegion => by simp [tyCode, tyOfCode]
+  | .regionView el => by
+      have ih := tyCode_ofCode el
+      simp [tyCode, tyOfCode, ih]
+  | .ptr space recht referent => by
+      have ih := tyCode_ofCode referent
+      simp [tyCode, tyOfCode, ih]
 
 instance instEncodableTy (k : Kind) : Encodable (Ty k) := by
   cases k
