@@ -115,7 +115,7 @@ private theorem carrierIndex_am_ort (scope : Scope) :
   change ((Fragment.einzel (functionInstruction scope args.val.name args.val.parameters
     args.val.result args.val.measure.isSome
     (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))).anhaengen
-    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects)).code[0]? =
+    (functionCode args.val.result args.val.measure args.val.body)).code[0]? =
       some (functionInstruction scope args.val.name args.val.parameters args.val.result
         args.val.measure.isSome (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))
   simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append,
@@ -182,7 +182,7 @@ private theorem carrierIndex_keine_invarianten (scope : Scope)
   change ((Fragment.einzel (functionInstruction scope args.val.name args.val.parameters
     args.val.result args.val.measure.isSome
     (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects))).anhaengen
-    (functionCode args.val.result args.val.measure args.val.body) (declaredEffects args.val.effects)).klauseln.invariant = []
+    (functionCode args.val.result args.val.measure args.val.body)).klauseln.invariant = []
   simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
     Quellklauseln.leer, List.append_nil, List.nil_append]
   exact codeInv args.val.result args.val.measure args.val.body

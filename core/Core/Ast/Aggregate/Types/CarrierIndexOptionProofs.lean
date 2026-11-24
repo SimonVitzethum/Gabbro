@@ -52,7 +52,7 @@ private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) 
   let a := args.val
   change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
       (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen
-      (functionCode a.result a.measure a.body) (declaredEffects a.effects)).code[0]? =
+      (functionCode a.result a.measure a.body)).code[0]? =
     some (functionInstruction scope a.name a.parameters a.result a.measure.isSome
       (functionCode a.result a.measure a.body) (declaredEffects a.effects))
   simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append,
@@ -94,7 +94,7 @@ private theorem carrier_keine_invarianten (scope : Scope) (belongs : WrittenType
   change (decl ((functionForm scope).produktion.tree a).2).klauseln.invariant = []
   change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome
     (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen
-    (functionCode a.result a.measure a.body) (declaredEffects a.effects)).klauseln.invariant = []
+    (functionCode a.result a.measure a.body)).klauseln.invariant = []
   simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
     List.append_nil, List.nil_append]
   exact codeInv a.result a.measure a.body
@@ -228,18 +228,20 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem
-  let args : Surface.FunctionArgs scope :=
-    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done,
-      by
-        simp only [List.map_cons, List.map_nil, List.nodup_cons, List.nodup_nil, List.not_mem_nil]
-        constructor
-        · intro h
-          cases h
-        · trivial
-      , by
-      intro h
-      cases h
-      , none⟩
+  let args : Surface.FunctionArgs scope := {
+    name := fname
+    ordinary := fOrdinary
+    parameters := [param]
+    result := none
+    valid := validNone
+    measure := none
+    body := .braces .done
+    distinct := by
+      change (pname.val :: []).Nodup
+      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true, not_false_eq_true]
+    returns := by intro h; cases h
+    effects := none
+  }
   have belongs : ∃ p ∈ args.parameters, indexOptionTypeUse p.written := by
     refine ⟨param, ?_, ?_⟩
     · change param ∈ ([param] : List (Parameter scope))
