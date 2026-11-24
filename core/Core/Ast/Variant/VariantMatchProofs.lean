@@ -276,16 +276,16 @@ private theorem variantArmsPrints (arms : VariantArms result scope allowed label
       have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
       simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
         List.nil_append, List.append_assoc, nameToken, arrowToken] using
-        (VariantArmsRead.nullary (allowed := allowed) label ordinary bodyRead (ih next))
+        (VariantArmsRead.nullary (allowed := allowed) head ordinary bodyRead (ih next))
     | payload label binder ordinary body next =>
       have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
       simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
         List.nil_append, List.append_assoc, nameToken, arrowToken,
         show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
-        (VariantArmsRead.payload (allowed := allowed) label binder ordinary body bodyRead (ih next))
+        (VariantArmsRead.payload (allowed := allowed) head binder ordinary body bodyRead (ih next))
     | wildcard body nonempty shape =>
       simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
-        List.nil_append, arrowToken, show printDiscard.value = .word ['_'] from rfl] using
+        List.nil_append, arrowToken, show discardName.print.value = Token.word ['_'] from rfl] using
         (VariantArmsRead.wildcard nonempty shape (body.printReads (closeBrace :: rest)))
 
 private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : VariantMatchArgs ctx) :

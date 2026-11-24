@@ -91,7 +91,7 @@ private theorem recordValuePrints (scope : Scope) (args : RecordValueArgs scope)
       (((Category.expression scope).printPieces ((recordValue scope).tree args)).map PrintedToken.value) := by
   refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, (labeledPrintReads args.args []).1⟩
   simp only [Category.printPieces, recordValue, RecordValueArgs.expression, Expr.typed, Expr.printPieces,
-    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   rfl
 
 theorem RecordValueDerivation : RecordValueDerivationAussage := by
@@ -165,7 +165,7 @@ theorem recordValue_slots : RecordValueSlotsAussage := by
     (List.ofFn fun i => (args.fields.slot i).val)).map fun record =>
       ⟨recordValueType args.ref.name.val args.labels args.types, record⟩)).temp 0 = _
   rw [read]
-  simp only [Rahmen.schreibe, Function.update_self, Option.map_some]
+  simp only [Rahmen.schreibe, Function.update_self]
   rfl
 
 open Gabbro.Core.Text

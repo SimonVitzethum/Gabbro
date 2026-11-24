@@ -26,17 +26,19 @@ private theorem hull_sound (functions : List Funktion) (effect : CarrierEffect) 
     | nil => exact (List.not_mem_nil found).elim
     | cons name rest =>
       by_cases visitedName : visited.contains name.val = true
-      · simp only [Funktion.effectHull, visitedName, if_true] at found
+      · simp only [Funktion.effectHull, visitedName, ite_true] at found
         obtain ⟨n, present, path⟩ := ih _ _ found
         exact ⟨n, List.mem_cons_of_mem _ present, path⟩
-      · simp only [Funktion.effectHull, visitedName, Bool.false_eq_true, if_false] at found
+      · simp only [Funktion.effectHull, visitedName, Bool.false_eq_true, ite_false] at found
         cases lookup : Funktion.finde functions name with
         | none =>
           rw [lookup] at found
+          dsimp only at found
           obtain ⟨n, present, path⟩ := ih _ _ found
           exact ⟨n, List.mem_cons_of_mem _ present, path⟩
         | some source =>
           rw [lookup] at found
+          dsimp only at found
           cases declared : source.effects with
           | some effects =>
             rw [declared] at found
@@ -119,7 +121,7 @@ private theorem hull_closed (functions : List Funktion) (effect : CarrierEffect)
       simp only [List.length_cons] at budget
       by_cases old : name.val ∈ visited
       · have contained : visited.contains name.val = true := List.contains_iff_mem.mpr old
-        simp only [Funktion.effectHull, contained, if_true] at absent
+        simp only [Funktion.effectHull, contained, ite_true] at absent
         have carry (n : Identifier) (h : n ∈ name :: rest) : n.val ∈ visited ∨ n ∈ rest := by
           rcases List.mem_cons.mp h with rfl | later
           · exact Or.inl old
@@ -129,7 +131,7 @@ private theorem hull_closed (functions : List Funktion) (effect : CarrierEffect)
           (closed_transfer closed (fun _ h => h) carry (fun _ _ _ h no => (no h).elim)) absent
         exact ⟨seen, done, fun n h => included n (h.elim Or.inl (carry n))⟩
       · have contained : visited.contains name.val ≠ true := fun h => old (List.contains_iff_mem.mp h)
-        simp only [Funktion.effectHull, contained, Bool.false_eq_true, if_false] at absent
+        simp only [Funktion.effectHull, contained, Bool.false_eq_true, ite_false] at absent
         let seen := name.val :: visited
         have carry {queue : List Identifier} (keep : rest ⊆ queue) (n : Identifier)
             (h : n ∈ name :: rest) : n.val ∈ seen ∨ n ∈ queue := by
@@ -157,12 +159,14 @@ private theorem hull_closed (functions : List Funktion) (effect : CarrierEffect)
         cases lookup : Funktion.finde functions name with
         | none =>
           rw [lookup] at absent
+          dsimp only at absent
           have smaller : rest.length + callCount unused ≤ fuel := by omega
           apply restore (fun {_} h => h)
           exact ih seen rest unused (fun f h notSeen => fresh f h (fun hv => notSeen (List.mem_cons_of_mem _ hv)))
             smaller (extend (fun {_} h => h) fun f found => by rw [lookup] at found; cases found) absent
         | some f =>
           rw [lookup] at absent
+          dsimp only at absent
           have inUnused := fresh f (List.mem_of_find?_eq_some lookup) (by rwa [foundName lookup])
           obtain ⟨before, after, splitUnused⟩ := List.append_of_mem inUnused
           let remaining := before ++ after
