@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.MergeObligations
 
 @[expose] public section
 
