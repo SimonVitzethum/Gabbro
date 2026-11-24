@@ -59,10 +59,19 @@ private theorem egWrittenPrintReads (effect : WrittenCarrierEffect) (rest : List
     CarrierEffectReads ((WrittenCarrierEffect.printPieces effect).map PrintedToken.value ++ rest)
       effect rest := by
   rcases effect with ⟨access, carrier, slots⟩
-  cases access <;> cases slots <;>
-    simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
+  cases access <;> cases slots
+  · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
       printDot, printSlots, identPrintVal, List.map_append, List.append_assoc] using
       (CarrierEffectReads.bare CarrierAccess.read carrier (rest := rest))
+  · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
+      printDot, printSlots, identPrintVal, List.map_append, List.append_assoc] using
+      (CarrierEffectReads.slots CarrierAccess.read carrier (rest := rest))
+  · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
+      printDot, printSlots, identPrintVal, List.map_append, List.append_assoc] using
+      (CarrierEffectReads.bare CarrierAccess.write carrier (rest := rest))
+  · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
+      printDot, printSlots, identPrintVal, List.map_append, List.append_assoc] using
+      (CarrierEffectReads.slots CarrierAccess.write carrier (rest := rest))
 
 private theorem egEffectListPrintReads : ∀ (written : List WrittenCarrierEffect),
     EffectListReads CarrierEffectReads
@@ -84,7 +93,8 @@ private theorem egEffectListPrintReads : ∀ (written : List WrittenCarrierEffec
           simp only [List.map_cons, commaSeparated, List.intersperse_cons_cons,
             List.flatten_append, List.flatten_cons, List.map_append, List.append_assoc,
             List.singleton_append, List.nil_append]
-          refine EffectListReads.next ?_ ?_
+          refine EffectListReads.next (read := CarrierEffectReads) (head := effect)
+            (next := effect2) (tail := rest) ?_ ?_
           · simpa [List.append_assoc] using egWrittenPrintReads effect (comma ::
               ((commaSeparated ((effect2 :: rest).map WrittenCarrierEffect.printPieces) ++
                 [printCloseBrace, printSemicolon]).map PrintedToken.value))
@@ -110,62 +120,60 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
   cases read with
   | effectGroup item effectRead =>
       rename_i input'
-      have hnameval : head.name.val = item.name.val := by
-        by_cases he : head.exported
-        · by_cases ie : item.exported
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-            obtain ⟨hval, hin⟩ := hh
+      by_cases he : head.exported
+      · by_cases ie : item.exported
+        · have hh' := hh
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects,
+            identPrintVal, printOpenBraceVal] at hh'
+          obtain ⟨hval, hin⟩ := hh'
+          have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-        · by_cases ie : item.exported
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-            obtain ⟨hval, hin⟩ := hh
+          refine ⟨item, Subtype.ext hnameval.symm, by rw [he, ie], ?_, ?_⟩
+          · rw [← hin]
+            exact effectRead
+          · rfl
+        · have hh' := hh
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects,
+            identPrintVal, printOpenBraceVal] at hh'
+      · by_cases ie : item.exported
+        · have hh' := hh
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects,
+            identPrintVal, printOpenBraceVal] at hh'
+        · have hh' := hh
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects,
+            identPrintVal, printOpenBraceVal] at hh'
+          obtain ⟨hval, hin⟩ := hh'
+          have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
-      have hexp : item.exported = head.exported := by
-        cases head.exported <;> cases item.exported <;> simp_all
-      have hinput : input' = input := by
-        by_cases he : head.exported
-        · by_cases ie : item.exported
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-            exact hh.2.symm
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-        · by_cases ie : item.exported
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-          · simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal,
-              printOpenBraceVal] at hh
-            exact hh.2.symm
-      refine ⟨item, Subtype.ext hnameval.symm, hexp, ?_, ?_⟩
-      · rw [← hinput]
-        exact effectRead
-      · rfl
+          have hhe : head.exported = false := by cases head.exported <;> simp_all
+          have hie : item.exported = false := by cases item.exported <;> simp_all
+          refine ⟨item, Subtype.ext hnameval.symm, by rw [hhe, hie], ?_, ?_⟩
+          · rw [← hin]
+            exact effectRead
+          · rfl
   | constant =>
-      by_cases he : head.exported <;> by_cases ie : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal, printOpenBraceVal,
-          keyword, printConst] at hh
+      by_cases he : head.exported <;>
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, identPrintVal,
+          printOpenBraceVal, keyword, printConst] at hh
   | function =>
-      by_cases he : head.exported <;> by_cases ie : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal, printOpenBraceVal,
-          keyword, printFn] at hh
-  | record =>
-      by_cases he : head.exported <;> by_cases ie : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal, printOpenBraceVal,
-          recordDeclarationPrefix, keyword, printTypeDecl] at hh
-  | tagged =>
-      by_cases he : head.exported <;> by_cases ie : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal, printOpenBraceVal,
-          taggedDeclarationPrefix, keyword, printTypeDecl] at hh
-  | table =>
-      by_cases he : head.exported <;> by_cases ie : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, ie, ppwVal, identPrintVal, printOpenBraceVal,
-          TableDeclaration.header, keyword] at hh
+      by_cases he : head.exported <;>
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, identPrintVal,
+          printOpenBraceVal, keyword, printFn] at hh
+  | record exported name fields valid distinct memberRead =>
+      rename_i input'
+      by_cases he : head.exported <;> by_cases ex : exported <;>
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, identPrintVal,
+          printOpenBraceVal, recordDeclarationPrefix, keyword, printTypeDecl, ex] at hh
+  | tagged exported name valid distinct first more =>
+      rename_i input'
+      by_cases he : head.exported <;> by_cases ex : exported <;>
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, identPrintVal,
+          printOpenBraceVal, taggedDeclarationPrefix, keyword, printTypeDecl, ex] at hh
+  | table item =>
+      rename_i input'
+      by_cases he : head.exported <;> by_cases ex : item.exported <;>
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, identPrintVal,
+          printOpenBraceVal, TableDeclaration.header, keyword, ex] at hh
 
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
