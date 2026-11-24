@@ -99,7 +99,7 @@ inductive Rule (binding : Binding k) (access : RegisterAccess) (required : Gerae
   | consume (owned : Befugt binding required access s c) {answer}
       (pending : (s.lokal c).pending = some (binding.question access))
       (ready : s.naechsteAntwort c = some answer)
-      (matches : answer.question = binding.question access) :
+      (sameQuestion : answer.question = binding.question access) :
       Rule binding access required target c s { internal with aktion := .verbrauche answer }
         (setFrame s c { s.lokal c with
           pending := none
