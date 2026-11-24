@@ -78,7 +78,7 @@ private theorem readTuple {frame : Rahmen} {values : Wert (tupleType types)}
     have next := ih restPlaced
     simp only [liesTupel, first, Option.bind_some, wertAls_selbst head, next, bind, Option.bind, pure]
 
-private theorem readRecord (frame : Rahmen) (types : List (Ty .value)) (slots : Fin types.length → Nat)
+theorem readRecord (frame : Rahmen) (types : List (Ty .value)) (slots : Fin types.length → Nat)
     (values : (i : Fin types.length) → Wert (types.get i))
     (placed : ∀ i, (frame.temp (slots i)).bind (wertAls (types.get i)) = some (values i)) :
     liesRecord frame.temp types (List.ofFn slots) = some (tupleOfFn types values) := by

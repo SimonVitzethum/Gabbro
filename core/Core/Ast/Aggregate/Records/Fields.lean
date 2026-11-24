@@ -39,7 +39,7 @@ def RecordFieldRegelSicherAussage : Prop :=
     Sicherheit.RegelSicher ((form.fragment args).sicherheitsEinheit platform) (form.befehl args)
 
 def RecordFieldErfuellbarAmAussage : Prop :=
-  ∀ platform start, ∃ args, (recordFieldForm []).ErfuellbarAm platform start args
+  ∀ platform start, ∃ scope, ∃ args, (recordFieldForm scope).ErfuellbarAm platform start args
 
 def RecordFieldProofPacket : Prop :=
   Surface.RecordFieldInversionAussage ∧

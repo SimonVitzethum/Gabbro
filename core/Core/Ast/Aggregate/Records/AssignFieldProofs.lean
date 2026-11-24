@@ -83,6 +83,25 @@ theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   obtain ⟨a, hname, hfield, valueRead, htree⟩ := AssignFieldInversion read
   exact (List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)
 
+open Gabbro.Core.Text
+
+private theorem assignFieldPrints (ctx : Scope × Option (Ty .value)) (args : AssignFieldArgs ctx.1) :
+    (assignField ctx).production args
+      (((Category.statement ctx.1 ctx.2).printPieces ((assignField ctx).tree args)).map PrintedToken.value) := by
+  refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
+  · change (Category.printPieces (.statement ctx.1 ctx.2) ((assignField ctx).tree args)).map
+      PrintedToken.value = _
+    simp only [Category.printPieces, assignField, Stmt.printPieces, Expr.printTokens,
+      List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+    rfl
+  · exact args.value.printReads noOperatorAtSemicolon
+
+theorem AssignFieldDerivation : AssignFieldDerivationAussage := by
+  rintro ctx ⟨example⟩
+  refine ⟨?_, assignFieldPrints ctx, Rule.satisfiableOfPrint example (assignFieldPrints ctx example)⟩
+  rintro args tokens ⟨input, rfl, valueRead⟩
+  exact .assignField args.ref args.visible args.writable args.field args.index args.written args.fits valueRead
+
 end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
@@ -171,5 +190,60 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     exact List.getElem?_set_ne (Ne.symm hi)
   · simp only [assignFieldForm, Befehl.auswerten]
   · simp only [assignFieldForm, Befehl.auswerten]
+
+theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
+  intro platform start
+  let field : Identifier := ⟨['x'], 'x', [], rfl,
+    by unfold Text.isNameStart Text.isLetter; exact Or.inl (Or.inl ⟨by decide, by decide⟩),
+    by intro a ha; cases ha⟩
+  let name : List Char := ['R']
+  let labels : List Identifier := [field]
+  let types : List (Ty .value) := [.int 1 2]
+  let recTy : Ty .value := recordValueType name labels types
+  let binding : Binding := ⟨field, recTy, true, false⟩
+  let scope : Scope := [binding]
+  let ref : Local scope recTy := .here
+  let index : Fin types.length := ⟨0, by decide⟩
+  let written : RecordFieldAt labels field index.val := by
+    change (labels.map Subtype.val).Nodup ∧ labels[0]? = some field
+    constructor
+    · change List.Pairwise (fun a b : Text.RawText => a ≠ b) [field.val]
+      constructor
+      · intro b hb
+        cases hb
+      · constructor
+    · change [field][0]? = some field
+      rfl
+  let source : Ty .value := .int 1 1
+  let value : Expr scope source := .lit 1
+  let fits : Fits source (types.get index) := by
+    change (1 : Int) ≤ 1 ∧ (1 : Int) ≤ 2
+    exact ⟨by decide, by decide⟩
+  let visible : ref.visible := by
+    change recTy.valueBinding ∧ ref.nameVisible
+    constructor
+    · change True
+      trivial
+    · dsimp [ref, Local.nameVisible]
+      trivial
+  let writable : ref.binding.mutable = true := rfl
+  let args : Surface.AssignFieldArgs scope :=
+    ⟨name, labels, types, ref, visible, writable, field, index, written, source, value, fits⟩
+  let ctx : Scope × Option (Ty .value) := (scope, none)
+  let form := assignFieldForm ctx
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.literal 0 1).nach eintritt s₀
+  have h₁ : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start h₁
+  refine ⟨ctx, args, form.erfuellbar_aus_erreichbar platform start args s₁ reached ?_ ?_⟩
+  · exact form.realisiert (fun args => by
+      change (((expr 0 args.value).code ++ [Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index])[(expr 0 args.value).code.length]? =
+        some (.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index))
+      simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    ) platform args s₁ rfl rfl rfl rfl
+  · intro g guard
+    change none = some g at guard
+    cases guard
 
 end Gabbro.Core.Ast.Semantik

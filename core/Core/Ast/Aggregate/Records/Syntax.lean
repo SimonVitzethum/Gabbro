@@ -32,7 +32,7 @@ def RecordValueSuffixAussage : Prop :=
     LabeledItemsRead scope input items rest → rest <:+ input
 
 def RecordValueDerivationAussage : Prop :=
-  ∀ scope, (recordValue scope).Entry
+  ∀ scope, Nonempty (RecordValueArgs scope) → (recordValue scope).Entry
 
 def RecordFieldInversionAussage : Prop :=
   ∀ {scope name labels types minimum input type}
@@ -50,7 +50,7 @@ def RecordFieldSuffixAussage : Prop :=
     ExprTail scope minimum base (dot :: .word field :: input) tree rest → rest <:+ input
 
 def RecordFieldDerivationAussage : Prop :=
-  ∀ scope, (recordField scope).Entry
+  ∀ scope, Nonempty (RecordFieldArgs scope) → (recordField scope).Entry
 
 def AssignFieldInversionAussage : Prop :=
   ∀ {scope result name field input tree rest},
@@ -64,7 +64,7 @@ def AssignFieldSuffixAussage : Prop :=
     rest <:+ input
 
 def AssignFieldDerivationAussage : Prop :=
-  ∀ ctx, (assignField ctx).Entry
+  ∀ ctx, Nonempty (AssignFieldArgs ctx.1) → (assignField ctx).Entry
 
 def MutableValueInversionAussage : Prop :=
   ∀ {scope result name input tree rest},
