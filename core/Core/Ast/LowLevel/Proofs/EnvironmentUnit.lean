@@ -144,7 +144,7 @@ theorem block_keine_invarianten {result : Option (Ty .value)} {before after : Sc
   | .step first rest =>
       simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
         stmt_keine_invarianten, List.nil_append, block_keine_invarianten rest]
-termination_by body
+termination_by sizeOf body
 
 theorem bracedBlock_keine_invarianten {result : Option (Ty .value)} {before : Scope}
     (body : BracedBlock result before) : (bracedBlock body).klauseln.invariant = [] := by
