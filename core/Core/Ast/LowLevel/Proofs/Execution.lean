@@ -53,8 +53,20 @@ theorem execution_einheit (form : Form) : EinheitAussage form := by
     both then fix the same plan and successor. -/
 theorem execution_impl (form : Form) : ImplAussage form := by
   intro k scope tree op hElab c s w plans next
-  cases hEval : op.evaluate s c <;>
-    simp [Instruction.rule, Instruction.impl, Instruction.ideal, hEval]
+  change (match op.evaluate s c with
+      | none => False
+      | some t => plans = [plan] ∧ next = t.apply c s) ↔
+    (∃ t, op.evaluate s c = some t ∧ plans = [plan] ∧ next = t.apply c s)
+  constructor
+  · intro h
+    rcases h with ⟨t, ht, hp, hn⟩
+    rw [ht]
+    exact ⟨hp, hn⟩
+  · intro h
+    cases hEval : op.evaluate s c with
+    | none => exact False.elim h
+    | some t =>
+        exact ⟨t, rfl, h.1, h.2⟩
 
 /-- At a live head the evaluation has a result, so the ideal rule has a step;
     the blocking relation of this system is empty. -/
@@ -65,8 +77,17 @@ theorem execution_fortschritt (form : Form) : FortschrittAussage form := by
       exfalso
       have hnone : (unit op).system.kopf s c = none := by
         change head op s c = none
-        rw [head]
-        cases hs : s.status c <;> simp [hs, hEval]
+        cases hs : s.status c with
+        | laeuft =>
+            rw [head]
+            split
+            next hcond =>
+              have hisSome : (op.evaluate s c).isSome := hcond.2.2
+              rw [hEval] at hisSome
+              cases hisSome
+            next _ => rfl
+        | ruht => rw [head]
+        | beendet e => rw [head]
       rw [hnone] at hhead
       cases hhead
   | some transfer =>
