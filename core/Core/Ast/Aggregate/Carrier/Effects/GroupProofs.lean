@@ -288,7 +288,7 @@ theorem effectGroup_expansion : EffectGroupExpansionAussage := by
   let f := EffectTerm.resolve scope bound
   rcases hm : terms.mapM f with _ | parts
   · rw [expandEffects] at h
-    rw [show (terms.mapM f).map List.flatten = none by simp [hm]] at h
+    rw [show (terms.mapM f).map List.flatten = none by simp only [hm, Option.map_none]] at h
     cases h
   · refine ⟨parts, ?_, ?_, ?_⟩
     · exact (mapM_option_length f terms parts hm).symm
@@ -304,15 +304,14 @@ theorem effectGroup_expansion : EffectGroupExpansionAussage := by
       rw [← ht, ← hp]
       exact mapM_option_getElem f terms parts i hi hi' hm
     · rw [expandEffects] at h
-      have hmapped : (terms.mapM f).map List.flatten = some parts.flatten := by simp [hm]
+      have hmapped : (terms.mapM f).map List.flatten = some parts.flatten := by simp only [hm, Option.map_some]
       rw [hmapped] at h
       cases h
       rfl
 theorem effectGroup_scope : EffectGroupScopeAussage := by
   intro scope item
   constructor
-  · simp [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding,
-      beq_iff_eq]
+  · simpa [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding, beq_iff_eq]
   constructor
   · simp [EffectGroupDeclaration.binding, effectGroupBinding, Ty.valueBinding]
   · intro name hne
@@ -363,7 +362,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
         | _ => none) with
       | none =>
-          simp [hcmd] at hmem
+          simp only [List.filterMap_cons, hcmd] at hmem
           exact ih site (List.mem_filterMap.mpr hmem)
       | some first =>
           cases cmd with
