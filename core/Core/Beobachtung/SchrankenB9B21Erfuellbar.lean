@@ -52,6 +52,7 @@ private theorem hosted_pflichten (boot : AussenStart → Zustand)
       obtain ⟨_, _, _, _, aktion, _, ziel⟩ := aus
       change Annahme.Hosted.regel c vor w [_] _ at form
       change FuehrtAus einrichtung t c vor _ _ _ _ _ at aktion
+      generalize spur.aussen = aussen at aktion
       rcases form.2 with ⟨eq, _, rfl⟩ | ⟨eq, _, rfl⟩ <;>
         cases (List.cons.inj eq).1 <;> cases aktion <;> rw [ziel] <;> exact speicher
   · intro h ρ lauf t w spur vor nach vorEq label wahl nachEq step stapel speicher
@@ -62,14 +63,14 @@ private theorem hosted_pflichten (boot : AussenStart → Zustand)
       rw [step.2.2.2]
       exact speicher
     | interrupt _ step =>
-      obtain ⟨_, _, _, _, _, _, _, _, _, eq⟩ := step
+      obtain ⟨_, _, _, _, _, _, _, _, _, _, eq⟩ := step
       rw [eq]
       exact speicher
     | absturz step =>
       rw [step.genau.2]
       apply speicher_beschraenkt boot
       rw [zellen_leer (fun _ => rfl), Set.encard_empty]
-      exact zero_le _
+      exact zero_le
 
 private def eineZelle (s : AussenStart) : Zustand :=
   let z := startZustand s
@@ -81,7 +82,7 @@ private theorem eineZelle_encard (s : AussenStart) : (LebendeZellen (eineZelle s
     change (true = true ∧ j < (if i = 0 then [()] else []).length) ↔ (i, j) ∈ ({(0, 0)} : Set (Nat × Nat))
     by_cases hi : i = 0
     · subst i
-      simp only [↓reduceIte, List.length_cons, List.length_nil, true_and,
+      simp only [↓reduceIte, List.length_cons, List.length_nil, Nat.zero_add, true_and,
         Nat.lt_one_iff, Set.mem_singleton_iff, Prod.mk.injEq]
     · simp only [hi, if_false, List.length_nil, Nat.not_lt_zero, Set.mem_singleton_iff, Prod.mk.injEq, false_and, and_false]
   rw [singleton, Set.encard_singleton]
@@ -96,11 +97,16 @@ theorem b9_b21_start_erfuellbar :
   obtain ⟨start, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨ρ, lauf, startEq⟩ := lauf_ab_start (mitGrenzen eineZelle) (erlaubt []) zul
   have pflichten := hosted_pflichten eineZelle (fun s => (eineZelle_encard s).le)
-  have cut : ρ.zeit.zustand 0 = some (eineZelle start) := lauf.2.2.2.trans (congrArg _ startEq)
+  have cut : ρ.zeit.zustand 0 = some (eineZelle start) := lauf.2.2.2.trans (congrArg (fun s => some (eineZelle s)) startEq)
   refine ⟨_, _, ρ, _, pflichten, lauf, cut, pflichten.start lauf, rfl, rfl, ?_, eineZelle_encard start⟩
   change (if (start.outside.channels .hosted 0).isSome then 1 else 0) = 1
   rw [zul.2.2.2.2.2.2.2]
   rfl
+
+private theorem folge_mit_grenzen {hw t vor label nach} :
+    Lauffolge einheit hw t vor label nach ↔ Lauffolge (mitGrenzen startZustand) hw t vor label nach := by
+  constructor <;> intro h <;> cases h with
+  | schritt step => exact .schritt step
 
 private def lauf_mit_grenzen (ρ : Lauf einheit) : Lauf (mitGrenzen startZustand) where
   start := ρ.start
@@ -108,12 +114,8 @@ private def lauf_mit_grenzen (ρ : Lauf einheit) : Lauf (mitGrenzen startZustand
   zeit := ⟨ρ.zeit.zustand, ρ.zeit.spur, fun t => by
     cases ρ.zeit.takt t with
     | wartet label gleich ruhe =>
-      refine .wartet label gleich (fun label neu step => ruhe label neu ?_)
-      cases step with
-      | schritt step => exact .schritt step
-    | schritt label step =>
-      cases step with
-      | schritt step => exact .schritt label (.schritt step)⟩
+      exact .wartet label gleich (fun label neu step => ruhe label neu (folge_mit_grenzen.mpr step))
+    | schritt label step => exact .schritt label (folge_mit_grenzen.mp step)⟩
 
 /-- The form and protocol premises hold at occupied cuts on the same finitely bounded run. -/
 theorem b9_b21_schritte_erfuellbar :
@@ -135,7 +137,7 @@ theorem b9_b21_schritte_erfuellbar :
     ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2⟩
   have pflichten := hosted_pflichten startZustand (fun s => by
     rw [zellen_leer (s := startZustand s) (fun _ => rfl), Set.encard_empty]
-    exact zero_le _)
+    exact zero_le)
   have step {t vor w spur nach} (vorEq : ρ.zeit.zustand t = some vor)
       (label : ρ.zeit.spur t = some (w, spur)) (nachEq : ρ.zeit.zustand (t + 1) = some nach) :
       ImplSchritt (mitGrenzen startZustand).einrichtung (mitGrenzen startZustand).system
@@ -156,11 +158,13 @@ theorem b9_b21_schritte_erfuellbar :
 
 /-- An absent memory ceiling permits an actual live cell even when an explicit zero would fail. -/
 theorem b21_offen_erfuellbar :
-    ∃ (E : Modell) (s : Zustand), E.schranken.speicher = none ∧ SpeicherZustand E s ∧
-      (LebendeZellen s).encard = 1 ∧ ¬ SpeicherZustand (mitGrenzen eineZelle (some 0)) s := by
+    ∃ (offen geschlossen : Modell) (s : Zustand),
+      offen.schranken.speicher = none ∧ geschlossen.schranken.speicher = some 0 ∧
+      (LebendeZellen s).encard = 1 ∧ SpeicherZustand offen s ∧ ¬ SpeicherZustand geschlossen s := by
   obtain ⟨start, _⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   have live := eineZelle_encard start
-  refine ⟨mitGrenzen eineZelle none, eineZelle start, rfl, (fun _ eq => nomatch eq), live, ?_⟩
+  refine ⟨mitGrenzen eineZelle none, mitGrenzen eineZelle (some 0), eineZelle start,
+    rfl, rfl, live, (fun _ eq => nomatch eq), ?_⟩
   intro closed
   have bound := closed 0 rfl
   rw [live] at bound
