@@ -143,7 +143,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       by_cases he : head.exported
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
@@ -152,12 +152,12 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
             exact effectRead
           · rfl
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
