@@ -271,14 +271,14 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
     | done => exact ⟨rfl, rfl⟩
   · intros
-    rename_i _ _ midR moreR ihBlock b rest' other
+    rename_i _ stRead midR moreR ihBlock b rest' other
     cases other with
     | done =>
         exfalso
         apply StmtReads.disjoint_closeBrace
         assumption
     | step stRead' blockRead' =>
-        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
+        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic stRead stRead'
         injection sameFirst with hMiddle hFirst
         cases hMiddle
         cases hFirst
