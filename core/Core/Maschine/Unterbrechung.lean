@@ -10,11 +10,11 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund : Type}
 
-/-- The raised interrupt is identified by its hardware cut and its position in that cut's offers.
-    It remains pending across masks and cuts until the composition records its delivery. -/
+/-- A delivery must name a pending interrupt from this hardware history. -/
 def UnterbrechungAusstehend (s : Zustand L Ort Wert Raum Lok Grund) (run : HwLauf)
     (t kern : Nat) (id : Nat × Nat) (irq : Unterbrechung) : Prop :=
-  s.epoche ≤ id.1 ∧ id.1 ≤ t ∧ (run.angebot id.1).raised[id.2]? = some (kern, irq) ∧ id ∉ s.geliefert
+  s.epoche ≤ id.1 ∧ id.1 ≤ t ∧ (run.angebot id.1).interrupts[id.2]? = some (.erhoben kern irq) ∧
+    id ∉ s.geliefert ∧ (run.angebot t).interruptAuswahl = some (kern, id, irq)
 
 /-- Enter a normal handler or an NMI handler. The same mask translation supplies the pinned
     catalogue row, including the suppression of normal interrupts while an NMI is active. -/

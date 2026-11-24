@@ -16,6 +16,7 @@ public import Core.Maschine.Start
 public import Core.Aussen.Bindung
 public import Core.Aussen.Zulassung
 public import Core.Aussen.Provenienz
+public import Core.Beobachtung.Fluss.Quellregel
 
 @[expose] public section
 
@@ -111,10 +112,10 @@ def AussenLokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung
     Prop :=
   Aussen.ZulassungsRegel E.katalog.plattform ∧ AussenGueltig E
 
-/-- **`Lokal E`: the decidable local rules** — the catalogue selection is well-formed, every
-    form meets its authority obligation, and the outside rule holds. -/
+/-- **`Lokal E`: the local rules** — catalogue, authority, outside validity and labelled
+    flow at source initialisation and at each form. -/
 def Lokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
-  KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E
+  KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧ Beobachtung.FlussLokal E
 
 /-- Satisfiability with both rights: a read and a write can use the same owned location. -/
 theorem befugt_erfuellbar (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)

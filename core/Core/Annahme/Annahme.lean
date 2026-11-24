@@ -45,6 +45,15 @@ theorem akzeptiert_katalog [DecidableEq L]
     (h : Akzeptiert E) : KatalogWohlgeformt E.katalog :=
   h.1.1
 
+theorem akzeptiert_aussen [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) : AussenGueltig E :=
+  h.1.2.2.1.2
+
+theorem akzeptiert_fluss [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) :
+    Beobachtung.FlussLokal E :=
+  h.1.2.2.2
+
 /-- The trivial rule: no implementation step, no `I` step. -/
 def trivialesRegel
     : Regel (Zustand Unit Unit Unit Unit Unit Unit) (SchrittPlan Unit Unit Unit Unit) Unit :=
@@ -85,7 +94,7 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
     conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked. -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
-  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩⟩,
+  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -95,6 +104,12 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     | kontext _ _ regel _ =>
       obtain ⟨i, hi, _⟩ := regel
       exact nomatch hi
+  · refine ⟨fun _ _ _ => ⟨fun _ _ _ => rfl, fun _ => rfl, fun _ => rfl, rfl, rfl, fun _ => rfl⟩, fun _ => ?_⟩
+    constructor
+    · intro _ _ _ _ _ h
+      cases h.1
+    · intro _ _ _ _ _ _ _ _ _ _ _ h
+      cases h.1
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
@@ -280,7 +295,7 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
     ⟨staleFrage.handle, staleFrage.operation.required⟩ List.mem_cons_self
 
 theorem stale_nicht_akzeptiert : ¬ Akzeptiert staleEinheit :=
-  fun akzeptiert => stale_nicht_aussen_gueltig akzeptiert.1.2.2.2
+  fun akzeptiert => stale_nicht_aussen_gueltig (akzeptiert_aussen akzeptiert)
 
 /-- A plan that writes a location. -/
 def unbefugtPlan : SchrittPlan Unit Unit Unit Unit :=

@@ -16,6 +16,8 @@ proof modules.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 open Maschine
 
 /-! The three statements hold for every form. Elaboration is the defining
@@ -83,5 +85,7 @@ theorem view_annahme : AnnahmeAussage .view := annahme_form .view
 theorem environment_elaboriert : ElaboriertAussage .environment := elaboriert_form .environment
 theorem environment_realisiert : RealisiertAussage .environment := realisiert_form .environment
 theorem environment_annahme : AnnahmeAussage .environment := annahme_form .environment
+
+end
 
 end Gabbro.Core.Ast.LowLevel
