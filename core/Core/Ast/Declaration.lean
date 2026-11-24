@@ -191,23 +191,20 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
     | present m exprRead => exact exprRead.consumes.trans (List.suffix_cons _ _)
   cases read with
   | constant _ _ _ _ _ _ _ typeRead exprRead =>
-      calc
-        rest <:+ semicolon :: rest := List.suffix_cons _ _
-        _ <:+ _ := exprRead.consumes
-        _ <:+ _ := List.suffix_cons _ _
-        _ <:+ _ := typeRead.consumes
-        _ <:+ _ := List.suffix_cons _ _
-        _ <:+ _ := List.suffix_cons _ _
-        _ <:+ _ := List.suffix_cons _ _
+      have h1 : rest <:+ _ := (List.suffix_cons semicolon rest).trans exprRead.consumes
+      have h2 : rest <:+ _ := h1.trans (List.suffix_cons _ _)
+      have h3 : rest <:+ _ := h2.trans typeRead.consumes
+      have h4 : rest <:+ _ := h3.trans (List.suffix_cons _ _)
+      have h5 : rest <:+ _ := h4.trans (List.suffix_cons _ _)
+      exact h5.trans (List.suffix_cons _ _)
   | function _ _ _ _ _ _ _ _ _ paramsRead resultRead measureRead blockRead =>
-      calc
-        rest <:+ _ := blockRead.consumes
-        _ <:+ _ := measureConsumes (functionScope before parameters) measureRead
-        _ <:+ _ := resultConsumes resultRead
-        _ <:+ _ := paramsRead.consumes
-        _ <:+ _ := List.suffix_cons _ _
-        _ <:+ _ := List.suffix_cons _ _
-        _ <:+ _ := List.suffix_cons _ _
+      have h1 : rest <:+ _ := blockRead.consumes
+      have h2 : rest <:+ _ := h1.trans (measureConsumes (functionScope before parameters) measureRead)
+      have h3 : rest <:+ _ := h2.trans (resultConsumes resultRead)
+      have h4 : rest <:+ _ := h3.trans paramsRead.consumes
+      have h5 : rest <:+ _ := h4.trans (List.suffix_cons _ _)
+      have h6 : rest <:+ _ := h5.trans (List.suffix_cons _ _)
+      exact h6.trans (List.suffix_cons _ _)
 
 -- Mirror BracedBlock.printReads using ParamsRead.printReads for the function header.
 theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
@@ -234,8 +231,8 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
             (BracedBlock.braces items).printPieces.map PrintedToken.value ++ rest
         let afterMeasure := (BracedBlock.braces items).printPieces.map PrintedToken.value ++ rest
         have proof : DeclReads before
-            (commaSeparated (parameters.map Parameter.printPieces)).map PrintedToken.value ++
-              printClose.value :: afterParams
+            ((commaSeparated (parameters.map Parameter.printPieces)).map PrintedToken.value ++
+              printClose.value :: afterParams)
             ⟨before, .function name ordinary parameters result valid measure (BracedBlock.braces items) distinct returns⟩ rest :=
           .function (afterParams := afterParams) (afterResult := afterResult) (afterMeasure := afterMeasure)
             name ordinary result valid parameters measure (BracedBlock.braces items) distinct returns
