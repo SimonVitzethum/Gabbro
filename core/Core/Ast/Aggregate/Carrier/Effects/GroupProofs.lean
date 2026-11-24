@@ -203,7 +203,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
   | table item =>
       by_cases he : head.exported <;> by_cases ex : item.exported <;>
         simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, TableDeclaration.header, keyword, ex] at hh
+          printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot,
+          keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex] at hh
 
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
@@ -211,7 +212,7 @@ theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   · intro item tokens production
     rcases production with ⟨input, rfl, effectRead⟩
     exact DeclReads.effectGroup item effectRead
-  · exact Rule.satisfiableOfPrint egName (egPrint scope
+  · exact Surface.Rule.satisfiableOfPrint egName (egPrint scope
       ⟨false, egName, [], [], rfl⟩)
 
 private theorem eg_amOrt (scope : Scope) : (effectGroupForm scope).RegelAmOrt := by
@@ -375,9 +376,13 @@ theorem effectGroup_capture : EffectGroupCaptureAussage := by
   · rcases hcap with hb | ⟨effect, heffect, hb⟩
     · exfalso
       exact hcond (Or.inr hb)
-    · have hany : effects.any (fun effect => bound.contains effect.carrier) = true :=
+    · have hnA : name.val ≠ "pure".toList := fun h => hcond (Or.inl h)
+      have hnB : name.val ∉ bound := by
+        intro hmem
+        exact hcond (Or.inr (by simpa using hmem))
+      have hany : effects.any (fun effect => bound.contains effect.carrier) = true :=
         List.any_eq_true.mpr ⟨effect, heffect, hb⟩
-      simp [hcond, hany]
+      simp [hnA, hnB, hany]
 
 private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierEffect)) :
     ∀ site ∈ code.filterMap (fun
@@ -392,7 +397,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | _ => none) with
       | none =>
           simp [hcmd] at hmem
-          exact ih site (by simpa using hmem)
+          exact ih site (List.mem_filterMap.mpr hmem)
       | some first =>
           cases cmd with
           | rufe target args bind =>
@@ -428,7 +433,7 @@ theorem effectGroup_call : EffectGroupCallAussage := by
   simp only [Rufstelle.passt, hfind, heff] at hp
   simp only [Bool.and_eq_true] at hp
   have hall : (Funktion.requiredEffects functions target).all
-      (fun effect => decide (effect ∈ provided)) = true := hp.2.2.1
+      (fun effect => decide (effect ∈ provided)) = true := hp.1.2.2
   exact of_decide_eq_true (List.all_eq_true.mp hall effect hrequired)
 
 theorem effectGroup_binding : EffectGroupBindingAussage := by
