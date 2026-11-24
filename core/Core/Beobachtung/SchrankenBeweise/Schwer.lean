@@ -45,7 +45,7 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
   let k := Plattform.x86_64.katalog
   let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
   let entry := Semantik.eintritt
-  let b : Semantik.Befehl := .rufe mainName [] none
+  let b : Semantik.Befehl := .rufe Semantik.mainName [] none
   let daten : Startdaten Int PUnit Semantik.Rahmen PUnit :=
     ⟨fun _ => Semantik.Rahmen.start [],
       fun c => if c = entry then .laeuft else .ruht,
@@ -53,7 +53,7 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
       ⟨fun _ => false, fun _ => 0⟩⟩
   let e : Einrichtung PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit :=
     ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False,
-      fun _ _ => True, ⟨0, 0⟩, ⟨entry, 0, fun _ => daten, fun _ _ => ()⟩,
+      fun _ _ => True, ⟨0, 0⟩, ⟨entry, 0, fun _ => daten, fun _ _ => 0⟩,
       fun _ => 0, fun _ _ _ => none⟩
   let plan : Semantik.Plan := Semantik.plan
   let update (_c : Kontext) (s : Semantik.Zustand) : Semantik.Zustand :=
@@ -140,7 +140,7 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
         ((u.lokal c).stopp.isSome → (u.lokal c).fortsetzungen = (s.lokal c).fortsetzungen) := by
     intro c s u w plans ideal n hn
     cases hn
-  have pflicht : RegelSchranken E b := getragen E (fun r => rfl) mainName [] none okPrem
+  have pflicht : RegelSchranken E b := getragen E (fun r => rfl) Semantik.mainName [] none okPrem
   have leer : LebendeZellen z = ∅ := by
     apply Set.eq_empty_iff_forall_notMem.mpr
     intro zz mem
@@ -151,8 +151,8 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
     intro n hn
     obtain rfl := Option.some.inj hn
     rw [leer, Set.encard_empty]
-    exact zero_le _
-  have res := pflicht lauf 0 entry () (.kontext entry (), ⟨[], []⟩) z (zustand 1)
+    exact Nat.zero_le _
+  have res := pflicht lauf 0 entry () ⟨[], []⟩ z (zustand 1)
     rfl rfl rfl rfl (step 0) stapelVor speicherVor
   have subset : ({(0, 0), (1, 0)} : Set (Nat × Nat)) ⊆ LebendeZellen (zustand 1) := by
     intro zz hz
@@ -180,25 +180,25 @@ theorem nicht_speicherverwaltungSchranken : ¬ speicherverwaltungSchrankenAussag
   let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
   let entry := Kontext.faden 0
   let op : LowLevel.MemInstruction := .splitRegion 0 0
-  let daten : Startdaten Unit Unit Bool Unit :=
+  let daten : Startdaten _root_.Unit _root_.Unit Bool _root_.Unit :=
     ⟨fun _ => false,
       fun c => if c = entry then .laeuft else .ruht,
       fun core => ⟨if core = 0 then some entry else none, .nutzer, (), fun _ => false, 0, false, []⟩,
       ⟨fun _ => false, fun _ => 0⟩⟩
-  let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
+  let e : Einrichtung _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit _root_.Unit :=
     ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
       fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten, fun _ _ => ()⟩,
       fun _ => 0, fun _ _ _ => none⟩
-  let plan : SchrittPlan Unit Unit Unit Unit :=
+  let plan : SchrittPlan _root_.Unit _root_.Unit _root_.Unit _root_.Unit :=
     ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
-  let update (_c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
+  let update (_c : Kontext) (s : Zustand _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit) :=
     { s with lokal := fun _ => true }
-  let regel : Regel (Zustand Unit Unit Unit Unit Bool Unit) (SchrittPlan Unit Unit Unit Unit) Unit :=
+  let regel : Regel (Zustand _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit) (SchrittPlan _root_.Unit _root_.Unit _root_.Unit _root_.Unit) _root_.Unit :=
     ⟨fun c s _ plans u => plans = [plan] ∧ u = update c s,
       fun c s _ plans u => plans = [plan] ∧ u = update c s⟩
-  let sy : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit LowLevel.MemInstruction :=
+  let sy : MaschinenSystem _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit _root_.Unit _root_.Unit LowLevel.MemInstruction :=
     ⟨fun _ => regel, fun _ _ => some op, fun _ _ => False, fun _ _ _ => False⟩
-  let E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit LowLevel.MemInstruction :=
+  let E : Einheit _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit _root_.Unit _root_.Unit LowLevel.MemInstruction :=
     { katalog := k
       bild := bild
       einrichtung := e
@@ -233,7 +233,7 @@ theorem nicht_speicherverwaltungSchranken : ¬ speicherverwaltungSchrankenAussag
     Umgebung.referenz_fair k 1 sicht Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ _)
   obtain ⟨start, admissible⟩ := zulStart_erfuellbar fair.hardware image
   let z := (I.start E start).2
-  let zustand (t : Nat) : Zustand Unit Unit Unit Unit Bool Unit := Nat.rec z (fun _ => update entry) t
+  let zustand (t : Nat) : Zustand _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit := Nat.rec z (fun _ => update entry) t
   have protocol (t : Nat) : (zustand t).kerne = z.kerne ∧ (zustand t).status = z.status := by
     induction t with
     | zero => exact ⟨rfl, rfl⟩
@@ -242,10 +242,10 @@ theorem nicht_speicherverwaltungSchranken : ¬ speicherverwaltungSchrankenAussag
     change (if (0 : Nat) = 0 then some entry else none) = some entry
     simp only [if_true]
   have live : z.status entry = .laeuft := by
-    change (if entry = entry then .laeuft else .ruht : Status Unit Unit) = .laeuft
+    change (if entry = entry then .laeuft else .ruht : Status _root_.Unit _root_.Unit) = .laeuft
     simp only [if_true]
   have opportunity (t : Nat) : hw.gelegenheit t 0 := congrArg some (Nat.mod_one t)
-  have execute (t : Nat) (x : Zustand Unit Unit Unit Unit Bool Unit) :
+  have execute (t : Nat) (x : Zustand _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit) :
       FuehrtSchrittAus e t entry x (update entry x) plan ⟨[], []⟩ (update entry x) := by
     refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, ?_,
       [], update entry x, .intern, .nil _, rfl⟩
@@ -266,8 +266,8 @@ theorem nicht_speicherverwaltungSchranken : ¬ speicherverwaltungSchrankenAussag
   have lauf : I.Laeufe E η :=
     ⟨fair.hardware, fair.konform, admissible, rfl,
       zeit0.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩
-  have okPrem : ∀ (c : Kontext) (s u : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
-      (plans : List (SchrittPlan Unit Unit Unit Unit)),
+  have okPrem : ∀ (c : Kontext) (s u : Zustand _root_.Unit _root_.Unit _root_.Unit _root_.Unit Bool _root_.Unit) (w : _root_.Unit)
+      (plans : List (SchrittPlan _root_.Unit _root_.Unit _root_.Unit _root_.Unit)),
       (E.system.regel op).ideal c s w plans u → ∀ n, E.schranken.speicher = some n →
         ((LebendeZellen u).encard ≤ n ∨ LebendeZellen u ⊆ LebendeZellen s) ∧
         ∀ d, E.schranken.stapelTiefe (u.lokal d) ≤ E.schranken.stapelTiefe (s.lokal d) := by
@@ -282,7 +282,7 @@ theorem nicht_speicherverwaltungSchranken : ¬ speicherverwaltungSchrankenAussag
   have speicherVor : SpeicherZustand E z := by
     intro n hn
     cases hn
-  have res := pflicht lauf 0 entry () (.kontext entry (), ⟨[], []⟩) z (zustand 1)
+  have res := pflicht lauf 0 entry () ⟨[], []⟩ z (zustand 1)
     rfl rfl rfl rfl (step 0) stapelVor speicherVor
   have bad : (1 : Nat) ≤ 0 := by
     exact res.1 entry 0 rfl
