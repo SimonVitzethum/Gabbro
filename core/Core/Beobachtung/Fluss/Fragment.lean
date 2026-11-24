@@ -167,8 +167,8 @@ theorem stummer_schritt_koppelt
   -- public frame: full local equality
   have lokEqFun : vor.lokal = w₂.lokal := by
     funext d
-    have hpub : oeffentlich (((p.einheit plattform).fluss.lokal d).etikett ⟨0, Nat.zero_lt_one⟩) = true := by
-      decide
+    have hpub : oeffentlich (((p.einheit plattform).fluss.lokal d).etikett ⟨0, Nat.zero_lt_one⟩) = true :=
+      rfl
     exact lokGleich d ⟨0, Nat.zero_lt_one⟩ hpub
   have sysKopf : ∀ s, (p.einheit plattform).system.kopf s c = Ast.Semantik.kopf p.code s c :=
     fun s => rfl
@@ -198,7 +198,7 @@ theorem stummer_schritt_koppelt
       cases impl with
       | kontext keinAbsturz₁ bereit₁ regel₁ aus₁ =>
         obtain ⟨f₁, kopf₁, impl₁rule⟩ := regel₁
-        have ff : f₁ = f := Option.some.inj (kopf₁.symm.trans kopf)
+        have ff : f = f₁ := Option.some.inj (kopf.symm.trans kopf₁)
         subst ff
         obtain ⟨_, nachGlied₁⟩ := Befehl.vollzug_genau (w := w) f impl₁rule aus₁
         have zustandNach₁ : ρ₁.zeit.zustand (t + 1) = some (f.nach c vor) := by
@@ -265,7 +265,7 @@ theorem stummer_schritt_koppelt
             cases impl₂' with
             | @kontext _ _ _ _ _ c' _ _ _ regel₂' aus₂' =>
               obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
-              have ff₂ : f₂ = f := Option.some.inj (kopf₂'.symm.trans kopf₂)
+              have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
               subst ff₂
               have centry' : c' = Ast.Semantik.eintritt := by
                 by_contra hc
