@@ -222,11 +222,11 @@ theorem bindeTupelSicht_mitTemp :
     cases hlen with
     | inl h0 =>
         have hnil : vs₁ = [] := by
-          cases vs₁ with
-          | nil => rfl
+          cases hcase : vs₁ with
+          | nil => exact hcase
           | cons v vs' =>
-              have impossible : (v :: vs').length = 0 := h0
-              cases impossible
+              rw [hcase] at h0
+              cases h0
         rw [hnil]
         change maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
           maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale
@@ -238,8 +238,8 @@ theorem bindeTupelSicht_mitTemp :
           have hz : vs₁.length + j = j + behalteneTupel types bind := by
             rw [hn]
             omega
-          rw [hz]
-          exact hL2 j
+          rw [hz] at hj
+          exact hL2 j hj
         · exact lokEq
         · simp only [List.length_reverse]
   rw [sicht_bindeTupel, sicht_bindeTupel, h, pcEq, hTe, hLe]
@@ -253,8 +253,8 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
     { temp := fun q s => if q = 0 then (if s = 6 then {0} else ∅) else ∅
       lokal := fun _ _ => ∅ }
   let w : Dynamisch := ⟨.bool, true⟩
-  let r₁ : Rahmen := { Rahmen.start [] with temp := fun s =>
-    if s = 6 then some w else none }
+  let r₁ : Rahmen := { Rahmen.start [] with
+    temp := fun s => if s = 6 then Option.some w else none }
   let r₂ : Rahmen := Rahmen.start []
   have h56 : (5 : Nat) ≠ 6 := by omega
   have h10 : (1 : Nat) ≠ 0 := by omega
@@ -290,7 +290,7 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
   have eqt : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).temp 6 =
       ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).temp 6 := by
     simpa only [Rahmen.sicht, β, h10, if_false, oeffentlich_leer, if_true] using eqv
-  change some w = none at eqt
+  change Option.some w = none at eqt
   cases eqt
 
 /-- The view after `setzeRecordFeld`: one local is overwritten from a public source. -/
@@ -337,11 +337,11 @@ theorem setzeRecordFeldSicht : SetzeRecordFeldSichtAussage := by
     change (do
       let old ← r₁.lokale[indexLocal]?.join.bind (wertAls (recordValueType name labels types))
       let value ← (r₁.temp source).bind (wertAls (types.get index))
-      pure ⟨recordValueType name labels types, tupleSet types index value old⟩) =
+      pure (⟨recordValueType name labels types, tupleSet types index value old⟩ : Dynamisch)) =
       (do
       let old ← r₂.lokale[indexLocal]?.join.bind (wertAls (recordValueType name labels types))
       let value ← (r₂.temp source).bind (wertAls (types.get index))
-      pure ⟨recordValueType name labels types, tupleSet types index value old⟩)
+      pure (⟨recordValueType name labels types, tupleSet types index value old⟩ : Dynamisch))
     rw [hJoin, hTemp]
   have hLe := maskiere_set (l₀ := β.lokal r₁.pc) (l₁ := β.lokal (r₁.pc + 1))
     (index := indexLocal) (xs := r₁.lokale) (ys := r₂.lokale)
