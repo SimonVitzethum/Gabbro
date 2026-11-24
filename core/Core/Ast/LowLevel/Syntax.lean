@@ -58,13 +58,14 @@ macro "lowWord" head:char tail:str : term =>
       simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
     (by
       simp only [String.reduceToList, List.forall_mem_cons, List.forall_mem_nil, and_true]
-      repeat' first
+      repeat' apply And.intro
+      all_goals first
+      | intro c absent; exact (List.not_mem_nil absent).elim
       | exact Or.inl (Or.inr rfl)
-      | exact Or.inl (Or.inl (Or.inl (by
-          simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)))
-      | exact Or.inr (by
-          simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide)
-      | apply And.intro))
+      | apply Or.inl; apply Or.inl; apply Or.inl
+        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide
+      | apply Or.inr
+        simp only [Char.le_def, UInt32.le_iff_toNat_le, UInt32.reduceToNat] <;> decide))
 
 def AddressSpace.print : AddressSpace → PrintedToken
   | .physical => lowWord 'p' "hysical"
