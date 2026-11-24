@@ -94,19 +94,28 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
   all_goals try simp
-  · intro s a
-    simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
-    exact .done
-  · intro s l p a label caseName body rest ih3 ih4
-    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
-      (.nullary label caseName
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
-  · intro ty s l p a label binder ord body rest ih3 ih4
-    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
-      (.payload label binder ord body
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
-  · intro s l p body nonempty shape ih3
-    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
+  · constructor <;>
+      simp only [VariantArms.printPieces, List.map_nil, List.nil_append] <;>
+      exact .done
+  · constructor
+    · intro label caseName body rest ih4
+      simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+        (.nullary label caseName
+          (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+    · intro label caseName body rest ih4
+      simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+        (.nullary label caseName
+          (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+  · constructor
+    · intro label binder ord body rest ih4
+      simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+        (.payload label binder ord body
+          (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+    · intro label binder ord body rest ih4
+      simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+        (.payload label binder ord body
+          (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+  · simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
       (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more)))
 
 private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
