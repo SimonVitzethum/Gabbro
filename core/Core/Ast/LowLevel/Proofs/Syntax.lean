@@ -37,6 +37,9 @@ theorem druckAussage_view : DruckAussage .view := by
       | nil => exact .nil
       | cons _ _ ih => exact .terminal ih
     refine ⟨production, True.intro, pieces, lexed, .production ?_ (symbols (semanticTokens pieces))⟩
-    exact ⟨semanticTokens pieces, rfl, aligned.symm ▸ production⟩
+    refine ⟨semanticTokens pieces, rfl, ?_⟩
+    change (Tree.view region type).production (canonicalTokens pieces)
+    rw [aligned]
+    exact production
 
 end Gabbro.Core.Ast.LowLevel
