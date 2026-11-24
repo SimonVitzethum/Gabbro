@@ -23,8 +23,7 @@ theorem device_lend : LendAussage := by
   intro k binding region c before event after step
   obtain ⟨held, _, _, _, _, _, _, rfl, rfl⟩ := step
   refine ⟨.leihen _, .eigen _, ?_, ?_, rfl⟩
-  · simp only [Binding.Lent, setLoan, setFrame, Function.update_self]
-    exact ⟨rfl, rfl, rfl, rfl, held.1⟩
+  · simpa only [Binding.Lent, setLoan, setFrame, Function.update_self, eq_self, true_and] using held.1
   · simp only [setLoan, Function.update_self]
     exact id
 

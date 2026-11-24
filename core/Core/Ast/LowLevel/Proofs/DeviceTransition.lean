@@ -22,4 +22,23 @@ def RegisterTransitionAussage : Prop :=
         ∃ answer, before.naechsteAntwort c = some answer ∧
           answer.question = binding.question access ∧ access.result answer.reply = .written))
 
+theorem device_transition : RegisterTransitionAussage := by
+  refine ⟨register_befugt, register_aussenLokal, register_commit, register_safety, ?_⟩
+  intro k decl c before plan next step
+  dsimp only at step ⊢
+  refine ⟨decl.changes.rule, ?_⟩
+  cases step with
+  | issue _ _ =>
+    left
+    simp only [setFrame, Function.update_self]
+  | @consume _ answer _ ready same =>
+    simp only [setFrame, Function.update_self]
+    split
+    next written =>
+      right
+      exact ⟨by rw [Function.update_self], answer, ready, same, written⟩
+    next =>
+      exact Or.inl rfl
+
 end Gabbro.Core.Ast.LowLevel.Device
+
