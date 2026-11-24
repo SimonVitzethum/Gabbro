@@ -130,10 +130,13 @@ private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
   refine ⟨a.val.value.printTokens ++
       (openBrace :: a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace]),
     a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace], ?_, ?_, ?_⟩
-  · simp only [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
+  · have hm : "match".toList = ['m', 'a', 't', 'c', 'h'] := by decide
+    have ho : "{".toList = ['{'] := by decide
+    have hc : "}".toList = ['}'] := by decide
+    simp only [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
       Expr.printTokens, printOpenBrace, printCloseBrace, printPunctuation,
       PrintedToken.unquoted, openBrace, closeBrace, List.map_cons, List.map_append,
-      List.map_nil, List.cons_append, List.nil_append, String.toList_ofList, String.reduceEq]
+      List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hm, ho, hc]
   · exact Expr.printReads a.val.value noOperatorAtOpenBrace
   · exact om_arms_printReads a.val.arms []
 
