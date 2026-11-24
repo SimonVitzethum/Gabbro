@@ -34,7 +34,7 @@ theorem stall_lockfrei_neg : ¬ LockFrei (E := E_w dispatch2) (fun _ => True) η
   intro h
   have hactive : I.SystemAktiv (fun _ => True) ηstall 0 := by
     intro n _
-    exact ⟨n, Nat.le_refl _, A, (), trivial, rfl, rfl,
+    exact ⟨n, A, (), Nat.le_refl _, trivial, rfl, rfl,
       ⟨(), [togglePlan], toggleUpdate A zAB0, (), rfl, rfl, rfl⟩⟩
   obtain ⟨t, _, hor⟩ := h.2 0 hactive
   have hnone : ηstall.zeit.spur t = none := rfl
@@ -72,8 +72,9 @@ def deadEinrichtung : Einrichtung Bool Unit Unit Unit Bool Unit Unit :=
 def deadStart : Zustand Bool Unit Unit Unit Bool Unit :=
   { (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch1 j, .nutzer, (), fun _ => false, 0, false, []⟩)
-      ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))) with
-    sperren := fun l : Bool => if l then ⟨some B, []⟩ else ⟨some A, []⟩ }
+      ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0)) :
+      Zustand Bool Unit Unit Unit Bool Unit) with
+    sperren := fun l => if l then ⟨some B, []⟩ else ⟨some A, []⟩ }
 
 def E_dead : Einheit Bool Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, deadEinrichtung, deadSystem,

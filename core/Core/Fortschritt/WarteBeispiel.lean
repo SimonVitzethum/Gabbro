@@ -51,7 +51,7 @@ def zE0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_1 s0).2
 
 def e1Upd (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :
     Zustand Unit Unit Unit Unit Bool Unit :=
-  { toggleUpdate c s with sperren := fun _ => (s.sperren ()).anstellen c }
+  { toggleUpdate c s with sperren := Function.update s.sperren () ((s.sperren ()).anstellen c) }
 
 def S_c : Zustand Unit Unit Unit Unit Bool Unit := e1Upd A zE0
 
