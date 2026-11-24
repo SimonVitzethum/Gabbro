@@ -20,11 +20,8 @@ def returnVoid (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem returnVoid_print {scope : Scope} {result : Option (Ty .value)} (a : ReturnVoidArgs scope result) :
     (returnVoid scope result).production a (((Category.statement scope result).printPieces ((returnVoid scope result).tree a)).map PrintedToken.value) := by
-  change StmtReads result scope
-    (((Category.statement scope result).printPieces ((returnVoid scope result).tree a)).map PrintedToken.value)
-    ((returnVoid scope result).tree a) []
-  simpa [Category.reads] using
-    (Category.reads_print (Category.statement scope result) ((returnVoid scope result).tree a))
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem returnVoid_reads {scope : Scope} {result : Option (Ty .value)} {a : ReturnVoidArgs scope result} {tokens : List Token}
