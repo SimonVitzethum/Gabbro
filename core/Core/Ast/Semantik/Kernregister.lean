@@ -161,7 +161,26 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
 -- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.
 theorem befehlSchema_program (constructor : Name) (registered : constructor ∈ programConstructors) :
     befehlSchema constructor = ⟨.core, programKernStatements constructor⟩ := by
-  sorry
+  have hne (name : Name) (notReg : name ∉ programConstructors) : constructor ≠ name := by
+    intro same
+    exact notReg (by simpa [same] using registered)
+  rw [befehlSchema,
+    ite_eq_right (hne ``Befehl.literal (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.binaer (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.binden (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.wahrheitswert (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.lesen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.negativ (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.negieren (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.verneinen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.teilen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.vergleichen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.springeWenn (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.zuweisen (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.zurueck (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.springe (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.blockEnde (by simpa [programConstructors])),
+    if_pos registered]
 
 def kern_bindeWert : RegistryEntry ``Befehl.bindeWert (befehlSchema ``Befehl.bindeWert) := by
   have registered : ``Befehl.bindeWert ∈ programConstructors := List.Mem.head _
