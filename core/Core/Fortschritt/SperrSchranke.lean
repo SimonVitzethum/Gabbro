@@ -140,14 +140,15 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
         rw [hsq] at hmem_r
         exact (List.not_mem_nil hmem_r).elim
       | cons h₀ rest =>
-        have hq0 : (s₁.sperren l).schlange[(0 : Nat)]? = some h₀ := by rw [hsq]
+        have hq0 : (s₁.sperren l).schlange[(0 : Nat)]? = some h₀ := by
+          simp only [hsq, List.getElem?_cons_zero]
         have h2 : (s₁.sperren l).schlange[(0 : Nat)]? = some c := hi0 ▸ hi_r
         have h₀eq : h₀ = c := Option.some.inj (hq0.symm.trans h2)
         subst h₀eq
         have hred : s₂.sperren l = ⟨some c, rest⟩ := hs2q
-        refine ⟨r' + 1, [Kontextkosten ρ h a (r' + 1 - a)],
-          hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl ?_⟩, ?_, ?_, ?_⟩
-        · rw [hred]
+          refine ⟨r' + 1, [Kontextkosten ρ h a (r' + 1 - a)],
+            hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl ?_⟩, ?_, ?_, ?_⟩
+          · simp only [hred]
         · calc [Kontextkosten ρ h a (r' + 1 - a)].length = 1 := rfl
             _ ≤ 0 + 1 := by omega
         · intro x hx
@@ -288,7 +289,7 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
               exact (List.not_mem_nil hmem_r).elim
             | cons h₀ rest =>
               -- No owner after the release, yet the queue is nonempty — the new head owns it.
-              have hcontra : (s₂.sperren l).besitzer = some h₀ := by rw [hs2q]
+              have hcontra : (s₂.sperren l).besitzer = some h₀ := by simp only [hs2q]
               rw [hcontra] at hnew
               cases hnew
       | none =>
