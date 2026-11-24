@@ -35,9 +35,8 @@ private theorem tableHeaderValue {scope : Scope} (item : TableDeclaration scope)
         [keyword "table", .word item.name.val, keyword "count", .natural item.count,
           openBrace, keyword "slot", openBrace] := by
   cases h : item.exported <;>
-    simp only [TableDeclaration.header, h, List.map_append, List.map_cons, List.map_nil,
-      printPubVal, printTableVal, identifierPrintVal, printCountVal, printIntegerVal,
-      printOpenBraceVal, printSlotVal]
+    simp [TableDeclaration.header, h, printPubVal, printTableVal, identifierPrintVal,
+      printCountVal, printIntegerVal, printOpenBraceVal, printSlotVal]
 
 private theorem effectGroupHeaderValue {scope : Scope} (item : EffectGroupDeclaration scope) :
     item.header.map PrintedToken.value =
@@ -150,7 +149,7 @@ private theorem tableFields_print_reads (scope : Scope) (name : Identifier) (cou
   induction fields with
   | nil => exact TableFieldsRead.close
   | cons m ms ih =>
-      simpa only [tableFieldTokenList, List.append_assoc, identifierPrintVal] using
+      simpa [tableFieldTokenList, List.append_assoc, identifierPrintVal] using
         (TableFieldsRead.next m.name
           (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
           (ih (fun x hx => valid x (by simp [hx]))))
@@ -161,16 +160,16 @@ private theorem tablePrints (scope : Scope) (item : TableDeclaration scope) :
         PrintedToken.value) := by
   refine ⟨(item.fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printCloseBrace]).map
     PrintedToken.value, ?_, ?_⟩
-  · simp only [Category.printPieces, Decl.printPieces, List.map_append]
+  · simp [Category.printPieces, Decl.printPieces, tableForm, List.map_append]
   · have hmap : (item.fields.flatMap RecordMember.printPieces).map PrintedToken.value =
         tableFieldTokenList item.fields := by
       induction item.fields with
       | nil => rfl
       | cons m ms ih =>
-          simp only [List.flatMap_cons, List.map_append, List.map_cons, List.map_nil,
+          simp [List.flatMap_cons, List.map_append, List.cons_append, List.nil_append,
             RecordMember.printPieces, tableFieldTokenList, printColonVal, printCommaVal, ih]
-    rw [hmap]
-    simpa only [List.map_append, List.map_cons, List.map_nil, printCloseBraceVal] using
+    rw [List.map_append, hmap]
+    simpa [List.map_append, List.map_cons, List.map_nil, printCloseBraceVal] using
       (tableFields_print_reads scope item.name item.count item.fields item.valid)
 
 theorem tableDerivation : TableDerivationAussage := by
@@ -311,8 +310,10 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
   dsimp only
   refine ⟨by decide, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · refine ⟨argsVal, .done, rfl, ?_, ?_⟩
-    · exact ⟨paramIndex, by simp, rfl⟩
-    · exact ⟨paramOption, by simp, rfl⟩
+    · refine ⟨paramIndex, ?_, rfl⟩
+      simp [argsVal]
+    · refine ⟨paramOption, ?_, rfl⟩
+      simp [argsVal]
   · exact Ast.parse_print (category := .unit) tree
   · rfl
   · exact .start
