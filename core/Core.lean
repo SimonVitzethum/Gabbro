@@ -93,6 +93,7 @@ public import Core.Beobachtung.Unentscheidbar.Rice
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Gegenbeispiel
+public import Core.Beobachtung.SchrankenBeweise.Schwer
 meta import Core.Waechter.Check
 
 #check_core
