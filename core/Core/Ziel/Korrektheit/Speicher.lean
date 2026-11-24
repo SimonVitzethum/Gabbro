@@ -59,8 +59,9 @@ def KohaerenzKatalogAussage : Prop :=
   ∧ (∀ r₁ r₂ w₁ w₂ : E, G.po r₁ r₂ → G.rf w₂ r₁ → G.rf w₁ r₂ → ¬ G.mo w₁ w₂)
 
 /-- ATOMICITY OF READ-MODIFY-WRITE over every consistent graph: two distinct updates never read the same write.
-Feeds: the `atomar` field of `Konsistent`, `liest_mo_max`, `mo_total`. Proof sketch: the two updates are `mo`
-ordered; the later one reads a write that the earlier one precedes, contradicting `atomar`. -/
+Feeds: the `liest_vorher` and `atomar` fields of `Konsistent`, `mo_total`. Proof sketch: both updates are
+`mo`-after the write they read; `mo` orders the updates; the later one reads a write that the earlier one
+precedes, contradicting `atomar`. -/
 def RmwNichtDoppeltAussage : Prop :=
   ∀ (E Ort Wert : Type) (G : Speicher.Graph E Ort Wert), G.Konsistent →
     ∀ w u₁ u₂ : E, G.rf w u₁ → G.rf w u₂ → G.istRmw u₁ → G.istRmw u₂ → u₁ = u₂

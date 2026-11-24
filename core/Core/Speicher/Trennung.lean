@@ -173,7 +173,7 @@ theorem sb_hb {m : Modus} {a b : SbEv} (h : (sbGraph m).hb a b) : sbPo a b :=
 theorem sb_ohne_sc_erlaubt (m : Modus) (hm : m ≠ .sc) :
     (sbGraph m).Konsistent ∧ (sbGraph m).po a1 b1 ∧ (sbGraph m).po a2 b2 ∧
       (sbGraph m).rb b1 a2 ∧ (sbGraph m).rb b2 a1 := by
-  refine ⟨⟨sb_wf m, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨⟨sb_wf m, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
   · intro a h
     have := sb_hb h
     revert this
@@ -193,6 +193,8 @@ theorem sb_ohne_sc_erlaubt (m : Modus) (hm : m ≠ .sc) :
     intro a b
     show sbPo a b ∨ sbRf a b → sbRang a < sbRang b
     cases a <;> cases b <;> decide
+  · intro w u _ hu
+    exact absurd hu (sb_kein_rmw m u)
   · exact Or.inr (Or.inr (Or.inl ⟨rfl, rfl⟩))
   · exact Or.inr (Or.inr (Or.inr ⟨rfl, rfl⟩))
   · exact ⟨iy, Or.inl ⟨rfl, rfl⟩, Or.inr ⟨rfl, rfl⟩, by decide⟩
