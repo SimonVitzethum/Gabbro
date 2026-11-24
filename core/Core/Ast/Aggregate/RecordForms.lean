@@ -43,7 +43,7 @@ def tupleBindForm (ctx : Scope × Option (Ty .value)) :
   befehl := fun a => .bindeTupel 0 a.types (a.pattern.names.map Option.isSome)
   position := fun a => (expr 0 a.value).code.length
 
-/-- The schema marker is the statement's only change to the local stack. -/
+/-- The schema marker occupies the same declaration position in the local and global stacks. -/
 def RecordDeclBindingAussage : Prop :=
   ∀ scope (args : Surface.RecordDeclArgs) (frame : Rahmen),
     let next := ((recordDeclForm scope).befehl args).auswerten frame

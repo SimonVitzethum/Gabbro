@@ -368,7 +368,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
   | .definiereRecord name labels types, frame =>
     let schema : Dynamisch := ⟨recordSchemaType name labels types, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale }
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
   | .baueRecord dst name labels types sources, frame =>
     frame.schreibe dst ((liesRecord frame.temp types sources).map fun record =>
       ⟨recordValueType name labels types, record⟩)
@@ -384,7 +384,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
   | .definiereVariante name labels cases, frame =>
     let schema : Dynamisch := ⟨variantSchemaType name labels cases, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale }
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
   | .baueVariante dst name labels cases index, frame => frame.schreibe dst (do
     let value ← variantActual (cases.get index) (frame.temp dst)
     pure ⟨variantValueType name labels cases, variantInject cases index value⟩)

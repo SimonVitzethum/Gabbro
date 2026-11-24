@@ -167,8 +167,9 @@ inductive AtomReads (scope : Scope) :
       AtomReads scope (.word ref.name.val :: openParen :: input) (.recordValue ref args fields fits) rest
   | variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
       (index : Fin payloads.length) (written : labels[index.val]? = some label)
-      (ordinary : ordinaryLocal label) (available : availableCase scope label) :
-      CasePayloadRead scope input (payload : CasePayload scope (payloads.get index)) rest →
+      (ordinary : ordinaryLocal label) (available : availableCase scope label)
+      (payload : CasePayload scope (payloads.get index)) :
+      CasePayloadRead scope input payload rest →
       AtomReads scope (.word label.val :: input) (.variantValue ref label index written ordinary available payload) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
