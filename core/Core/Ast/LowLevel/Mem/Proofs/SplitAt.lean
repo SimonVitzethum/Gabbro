@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 
 @[expose] public section
@@ -43,56 +44,6 @@ private theorem memParseOfPrint {form} (tree : MemTree form)
   change tree.production (canonicalTokens pieces)
   rw [align]
   exact prints
-
-theorem memParse (form : MemForm) : MemParseAussage form := by
-  intro text tree
-  constructor
-  · intro parsed
-    rcases parsed with ⟨root, pieces, lex, derives⟩
-    refine ⟨pieces, lex, ?_⟩
-    cases derives with
-    | production production children =>
-        obtain ⟨expected, rfl, reads⟩ := production
-        simpa only [canonicalTokens, children.terminalTokens] using reads
-  · rintro ⟨pieces, lex, prod⟩
-    refine ⟨True.intro, pieces, lex, ?_⟩
-    refine Derives.production ⟨semanticTokens pieces, rfl, ?_⟩
-      (memDerivesSymbols (semanticTokens pieces))
-    simpa only [canonicalTokens] using prod
-
-theorem memInversionSplitAt : MemInversionAussage .splitAt := by
-  intro tree tokens prod
-  obtain ⟨pieces, lex, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
-  refine ⟨pieces, lex, ?_⟩
-  cases tree with
-  | splitAt region point =>
-      simp only [MemTree.production] at prod
-      rw [aligned]
-      exact (memPrintsSplitAt region point).trans prod.symm
-
-theorem memEindeutigSplitAt : MemEindeutigAussage .splitAt := by
-  intro first second tokens hfirst hsecond
-  cases first with
-  | splitAt r1 p1 =>
-      cases second with
-      | splitAt r2 p2 =>
-          simp only [MemTree.production] at hfirst hsecond
-          rw [hfirst] at hsecond
-          have hregion := congrArg (fun l : List Token => l[0]?) hsecond
-          simp only [List.getElem?_cons_zero, Option.some.injEq, Token.word.injEq] at hregion
-          have hpoint := congrArg (fun l : List Token => l[4]?) hsecond
-          simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-            Token.natural.injEq] at hpoint
-          have hrs : r1 = r2 := Subtype.ext hregion
-          subst r2
-          subst p2
-          rfl
-
-theorem memDruckSplitAt : MemDruckAussage .splitAt := by
-  intro tree
-  cases tree with
-  | splitAt region point =>
-      exact ⟨memPrintsSplitAt region point, memParseOfPrint _ (memPrintsSplitAt region point)⟩
 
 private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : Kontext}
     {s : MemState} {w : PUnit} {plans : List Plan} {u : MemState}
@@ -168,11 +119,6 @@ private theorem memHeadSingle {target : ZielDaten} {op : MemInstruction} {s : Me
     change (if (op.evaluate target s entryContext).isSome = true then some op else none) = some op
     rw [if_pos heval]
 
-theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
-  intro k scope tree op _ s c
-  change memHead k.plattform.ziel [op] s c = some op ↔ _
-  exact memHeadSingle
-
 private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
     Annahme.RegelLokal (memUnit k op) op := by
   change ∀ (c : Kontext) (s u : MemState) (w : PUnit) (P : Plan),
@@ -192,94 +138,6 @@ private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
   · intro l hl
     cases hl
 
-theorem memAnnahme (form : MemForm) : MemAnnahmeAussage form := by
-  intro k scope tree op _
-  exact memRegelLokal k op
-
-theorem memIdeal (form : MemForm) : MemIdealAussage form := by
-  intro k scope tree op _
-  change ∀ (c : Kontext) (s : MemState) (w : PUnit) (es es' : List Plan) (s1 s2 : MemState),
-    MemInstruction.step k.plattform.ziel op c s w es s1 →
-    MemInstruction.step k.plattform.ziel op c s w es' s2 → es = es' ∧ s1 = s2
-  intro c s w es es' s1 s2 h1 h2
-  obtain ⟨f1, he1, hes1, hs1⟩ := memImplTransfer h1
-  obtain ⟨f2, he2, hes2, hs2⟩ := memImplTransfer h2
-  rw [he1] at he2
-  cases Option.some.inj he2
-  exact ⟨hes1.trans hes2.symm, hs1.trans hs2.symm⟩
-
-theorem memFortschritt (form : MemForm) : MemFortschrittAussage form := by
-  intro k scope tree op _
-  change ∀ (s : MemState) (c : Kontext),
-    memHead k.plattform.ziel [op] s c = some op →
-      (∃ w es s', MemInstruction.step k.plattform.ziel op c s w es s') ∨
-        ∃ b, (memUnit k op).system.blockiert s c b
-  intro s c hc
-  rcases memHeadSingle.mp hc with ⟨hstatus, hcentry, hpc, heval⟩
-  subst c
-  left
-  cases he : op.evaluate k.plattform.ziel s entryContext with
-  | none =>
-      simp only [he, Option.isSome_none] at heval
-      cases heval
-  | some frame =>
-      exact ⟨(), [plan], frame.advance entryContext s, ⟨frame, he, rfl, rfl⟩⟩
-
-theorem memErhaltung (form : MemForm) : MemErhaltungAussage form := by
-  intro k scope tree op _
-  constructor
-  · change I.RegelAbgleich (memUnit k op) op
-    intro hw t c w s u s' i plan spur bezug crash ready head impl execute
-    obtain ⟨protocol, frames⟩ := bezug
-    change s.lokal = i.lokal at frames
-    change { s with lokal := i.lokal } = i at protocol
-    rw [← frames] at protocol
-    subst i
-    change MemInstruction.step k.plattform.ziel op c s w [plan] u at impl
-    obtain ⟨frame, heval, planEq, hu⟩ := memImplTransfer impl
-    subst u
-    exact Or.inl ⟨s', .kontext crash ready ⟨op, head, ⟨frame, heval, planEq, rfl⟩⟩ execute,
-      I.ProtokollBezug.refl _, rfl⟩
-  · change I.RegelKomponierbar memSetup (memUnit k op).system op
-    intro t s c w plans u head gut ideal
-    change MemInstruction.step k.plattform.ziel op c s w plans u at ideal
-    obtain ⟨frame, heval, planEq, hu⟩ := memImplTransfer ideal
-    subst u
-    refine ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, ?_⟩
-    exact memVollzug frame t c s
-
-theorem memRegelSicher (form : MemForm) : MemRegelSicherAussage form := by
-  intro k scope tree op _
-  change Sicherheit.RegelSicher (memSafetyUnit k op) op
-  intro H ρ t c w vor zwischen nach plan spur head impl execute
-  change MemInstruction.step k.plattform.ziel op c vor w [plan] zwischen at impl
-  obtain ⟨frame, heval, planEq, hu⟩ := memImplTransfer impl
-  subst zwischen
-  cases (List.cons.inj planEq).1
-  obtain ⟨traceEq, nextEq⟩ := memGenauInternal execute
-  subst spur
-  subst nach
-  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Nat UInt8) := List.not_mem_nil
-  have wirkungen : NeueWirkungen vor (frame.advance c vor) (⟨[], []⟩ : SchrittSpur Nat UInt8) [] :=
-    Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
-  refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
-  · intro i actor access recorded _
-    cases recorded
-  · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
-    intro _ obj alive lost
-    exact nomatch alive.symm.trans lost
-  · intro _
-    refine ⟨fun _ _ => trivial, ?_⟩
-    intro i d declared _
-    change [][i]? = some d at declared
-    cases declared
-  · intro _ l changeOwner
-    exact (changeOwner rfl).elim
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
-
 private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
     Annahme.AussenLokal (memUnit k op) := by
   change Annahme.AussenLokal (memUnit k op)
@@ -293,22 +151,6 @@ private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
       obtain ⟨rfl, rfl⟩ := memGenauInternal execute
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-
-theorem memAussenLokal (form : MemForm) : MemAussenLokalAussage form := by
-  intro k scope tree op _
-  exact memAussenLokalUnit k op
-
-theorem memKosten (form : MemForm) : MemKostenAussage form := by
-  intro k scope tree op _
-  change ∀ t c s w middle next p trace,
-    MemInstruction.step k.plattform.ziel op c s w [p] middle →
-    FuehrtSchrittAus memSetup t c s middle p trace next →
-    trace = ⟨[], []⟩ ∧ (memUnit k op).stotterLaenge op = 0
-  intro t c s w middle next p trace impl execute
-  obtain ⟨frame, heval, planEq, hu⟩ := memImplTransfer impl
-  subst middle
-  cases (List.cons.inj planEq).1
-  exact ⟨(memGenauInternal execute).1, rfl⟩
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
@@ -486,13 +328,7 @@ theorem memErfuellbarSplitAt : MemErfuellbarAussage .splitAt := by
       MemInstruction.step k.plattform.ziel i entryContext s () [plan] (next.advance entryContext s)
     exact ⟨memWitnessOp, hhead, ⟨next, heval, rfl, rfl⟩⟩
 
-theorem splitAt_aussage : SplitAtAussage := by
-  refine ⟨?_, splitAt_meaning, ?_⟩
-  · exact ⟨memParse .splitAt, memInversionSplitAt, memEindeutigSplitAt, memDruckSplitAt,
-      memElaboriert .splitAt, memRealisiert .splitAt, memAnnahme .splitAt, memIdeal .splitAt,
-      memEinheit .splitAt, memImpl .splitAt, memFortschritt .splitAt, memErhaltung .splitAt,
-      memRegelSicher .splitAt, memRegelAntwortSicher .splitAt, memAussenLokal .splitAt,
-      memKosten .splitAt, memSchranken, memEtiketten, memFluss⟩
-  · exact memErfuellbarSplitAt
+theorem splitAt_aussage : SplitAtAussage :=
+  ⟨memObligationsKern_alle .splitAt, splitAt_meaning, memErfuellbarSplitAt⟩
 
 end Gabbro.Core.Ast.LowLevel

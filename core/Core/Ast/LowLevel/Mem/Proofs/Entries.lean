@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPagesSatisfiability
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.Merge

@@ -4,6 +4,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergeObligations
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -243,16 +244,16 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     exact List.nodup_nil
   constructor
   · refine ⟨tree, ?_, ?_⟩
-    · exact (memDruckAussage_merge tree).2
+    · exact (memDruckKern .merge tree).2
     · exact ⟨op, hElab, rfl⟩
   constructor
-  · exact (memDruckAussage_merge tree).2
+  · exact (memDruckKern .merge tree).2
   constructor
   · exact hElab
   constructor
   · exact System.IErreichbar.start
   constructor
-  · apply (memRealisiertAussage_merge k scope tree op hElab s entryContext).2
+  · apply (memRealisiertKern .merge k scope tree op hElab s entryContext).2
     refine ⟨?_, rfl, ?_, ?_⟩
     · dsimp [s, E, I.start, memBoot]
       rfl

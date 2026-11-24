@@ -97,10 +97,4 @@ theorem memKostenActivate (form : MemForm) : MemKostenAussage form := by
   cases (List.cons.inj hp).1
   exact ⟨(MemInstruction.activateGenauInternal execute).1, rfl⟩
 
-theorem activateObligations : memObligationsKern .activateSpace := by
-  refine ⟨memParseActivate _, memInversionActivate _, memEindeutigActivate _, memDruckActivate _, memElaboriert _,
-    memRealisiertActivate _, memAnnahmeActivate _, memIdealActivate _, memEinheit _, memImpl _, memFortschrittActivate _,
-    memErhaltungActivate _, memRegelSicherActivate _, activateRegelAntwortSicher _, memAussenLokalActivate _, memKostenActivate _,
-    memSchranken, memEtiketten, memFluss⟩
-
 end Gabbro.Core.Ast.LowLevel
