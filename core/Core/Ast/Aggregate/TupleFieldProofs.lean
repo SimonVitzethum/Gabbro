@@ -119,6 +119,149 @@ theorem TupleFieldSuffix : TupleFieldSuffixAussage := by
   obtain ⟨i, hival, tail⟩ := tupleFieldInvGen allowed _ base rfl n read
   exact ExprTail.consumes tail
 
+open Gabbro.Core.Text
+
+theorem exprTailLower {scope low high : Nat} {inputType resultType : Ty .value}
+    {left : Expr scope inputType} {input : List Token}
+    {tree : Expr scope resultType} {rest : List Token}
+    (hle : low ≤ high) (blocked : ¬ Continues low rest)
+    (tail : ExprTail scope high left input tree rest) :
+    ExprTail scope low left input tree rest := by
+  cases tail with
+  | stop _ => exact .stop blocked
+  | binary op hop right restTail =>
+      exact .binary op (le_trans hle hop) right (exprTailLower hle blocked restTail)
+  | div hdiv right nonzero restTail =>
+      exact .div (le_trans hle hdiv) right nonzero (exprTailLower hle blocked restTail)
+  | compare op hcmp right follows restTail =>
+      exact .compare op (le_trans hle hcmp) right follows (exprTailLower hle blocked restTail)
+  | logic op hlogic right restTail =>
+      exact .logic op (le_trans hle hlogic) right (exprTailLower hle blocked restTail)
+  | arrayIndex base lower upper hidx idx restTail =>
+      exact .arrayIndex base lower upper (le_trans hle hidx) idx (exprTailLower hle blocked restTail)
+  | tupleField base index hproj restTail =>
+      exact .tupleField base index (le_trans hle hproj) (exprTailLower hle blocked restTail)
+  | recordField base field index written hproj restTail =>
+      exact .recordField base field index written (le_trans hle hproj) (exprTailLower hle blocked restTail)
+
+theorem exprReadsLower {scope low high : Nat} {input : List Token} {type : Ty .value}
+    {tree : Expr scope type} {rest : List Token}
+    (hle : low ≤ high) (blocked : ¬ Continues low rest)
+    (read : ExprReads scope high input tree rest) :
+    ExprReads scope low input tree rest := by
+  cases read with
+  | atom first tail => exact .atom first (exprTailLower hle blocked tail)
+
+theorem tupleFieldTailLower {scope : Scope} {first second : Ty .value} {types : List (Ty .value)}
+    {n : Nat} {input' : List Token} {inputType : Ty .value}
+    {left : Expr scope inputType} {more : List Token} {base : Expr scope inputType}
+    (eqT : inputType = tupleType (first :: second :: types))
+    (hn : n < (first :: second :: types).length)
+    (blocked : ¬ Continues 0 input')
+    (tail : ExprTail scope 8 left more base (dot :: .natural n :: input')) :
+    ∃ i : Fin (first :: second :: types).length, i.val = n ∧
+      ExprTail scope 0 left more (.tupleField (eqT ▸ base) i) input' := by
+  subst inputType
+  induction tail with
+  | stop _ =>
+      refine ⟨⟨n, hn⟩, rfl, ?_⟩
+      exact .tupleField base ⟨n, hn⟩ (Nat.zero_le _) (.stop blocked)
+  | binary op hle right restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .binary op (Nat.zero_le _) right tail0⟩
+  | div hle right nonzero restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .div (Nat.zero_le _) right nonzero tail0⟩
+  | compare op hle right follows restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .compare op (Nat.zero_le _) right follows tail0⟩
+  | logic op hle right restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .logic op (Nat.zero_le _) right tail0⟩
+  | arrayIndex base' lower upper hle idx restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .arrayIndex base' lower upper (Nat.zero_le _) idx tail0⟩
+  | tupleField base' idx hle restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .tupleField base' idx (Nat.zero_le _) tail0⟩
+  | recordField base' field idx written hle restTail ih =>
+      obtain ⟨i, hi, tail0⟩ := ih
+      exact ⟨i, hi, .recordField base' field idx written (Nat.zero_le _) tail0⟩
+
+theorem tupleFieldReadsLower {scope : Scope} {first second : Ty .value} {types : List (Ty .value)}
+    {n : Nat} {input input' : List Token} {inputType : Ty .value}
+    {base : Expr scope inputType}
+    (eqT : inputType = tupleType (first :: second :: types))
+    (hn : n < (first :: second :: types).length)
+    (blocked : ¬ Continues 0 input')
+    (read : ExprReads scope 8 input base (dot :: .natural n :: input')) :
+    ∃ i : Fin (first :: second :: types).length, i.val = n ∧
+      ExprReads scope 0 input (.tupleField (eqT ▸ base) i) input' := by
+  cases read with
+  | atom firstAtom tail =>
+      obtain ⟨i, hi, tail0⟩ := tupleFieldTailLower (scope := scope) (first := first)
+        (second := second) (types := types) (n := n) (input' := input') (left := firstAtom)
+        (base := base) eqT hn blocked tail
+      exact ⟨i, hi, .atom firstAtom tail0⟩
+
+theorem tupleFieldPrintTokens {scope : Scope} {first second : Ty .value} {tailTypes : List (Ty .value)}
+    (base : Expr scope (tupleType (first :: second :: tailTypes)))
+    (index : Fin (first :: second :: tailTypes).length) :
+    (Expr.tupleField base index).printTokens =
+      openParen :: (base.printTokens ++ [dot, .natural index.val, closeParen]) := by
+  simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    printOpen, printClose, printDot, printInteger, printPunctuation, PrintedToken.unquoted]
+
+theorem tupleFieldPrints (scope : Scope) (args : TupleFieldArgs scope) :
+    (tupleField scope).production args
+      (((Category.expression scope).printPieces ((tupleField scope).tree args)).map PrintedToken.value) := by
+  change postfixProduction (fun input rest =>
+      ExprReads scope 8 input args.base (dot :: .natural args.index.val :: rest))
+    ((Expr.tupleField args.base args.index).printTokens)
+  rw [tupleFieldPrintTokens args.base args.index]
+  right
+  refine ⟨args.base.printTokens ++ [dot, .natural args.index.val, closeParen], rfl, ?_⟩
+  apply Expr.printReads
+  rintro ⟨op, rest, hEq, hle⟩
+  have htok : op.token = dot := (List.cons.inj hEq).1.symm
+  have opEq : op = .projection := Infix.token_injective (by simpa only [Infix.token] using htok)
+  subst op
+  have bad : ¬ (8 : Nat) ≤ 7 := by decide
+  exact bad (by simpa only [Infix.precedence] using hle)
+
+theorem tupleFieldReads (scope : Scope) (args : TupleFieldArgs scope) (tokens : List Token)
+    (read : (tupleField scope).production args tokens) :
+    (Category.expression scope).reads tokens ((tupleField scope).tree args) := by
+  change ExprReads scope 0 tokens (Expr.tupleField args.base args.index) []
+  unfold postfixProduction at read
+  rcases read with plain | grouped
+  · obtain ⟨i, hi, r0⟩ := tupleFieldReadsLower (scope := scope) (first := args.first)
+      (second := args.second) (types := args.tail) (n := args.index.val)
+      (input := tokens) (input' := []) (inputType := _) (base := args.base)
+      rfl args.index.isLt noOperatorAtEnd plain
+    have ieq : i = args.index := Fin.ext hi
+    subst i
+    exact r0
+  · rcases grouped with ⟨inside, rfl, groupedRead⟩
+    obtain ⟨i, hi, r0⟩ := tupleFieldReadsLower (scope := scope) (first := args.first)
+      (second := args.second) (types := args.tail) (n := args.index.val)
+      (input := inside) (input' := [closeParen]) (inputType := _) (base := args.base)
+      rfl args.index.isLt noOperatorAtClose groupedRead
+    have ieq : i = args.index := Fin.ext hi
+    subst i
+    exact .atom (.grouped r0) (.stop noOperatorAtEnd)
+
+theorem tupleFieldErfuellbar (scope : Scope) : (tupleField scope).Satisfiable := by
+  let a : Ty .value := .int 1 1
+  let b : Ty .value := .int 2 2
+  let base : Expr scope (tupleType [a, b]) := .tupleValue (.lit 1) (.lit 2) .empty
+  let args : TupleFieldArgs scope := ⟨a, b, [], base, ⟨0, by decide⟩⟩
+  exact Rule.satisfiableOfPrint args (tupleFieldPrints scope args)
+
+theorem TupleFieldDerivation : TupleFieldDerivationAussage := by
+  intro scope
+  exact ⟨fun args => tupleFieldReads scope args, tupleFieldPrints scope, tupleFieldErfuellbar scope⟩
+
 end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
@@ -200,5 +343,9 @@ theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
     ) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
+
+theorem TupleFieldParse : TupleFieldParseAussage := by
+  intro scope args text pieces lex prod
+  exact (Surface.TupleFieldDerivation scope).parse lex prod
 
 end Gabbro.Core.Ast.Semantik

@@ -129,5 +129,80 @@ theorem AssignFieldRegelSicher : AssignFieldRegelSicherAussage := by
     (fun args => stmt_keine_invarianten ((Surface.assignField ctx).tree args).2)
     platform args).2.2.2
 
+open Gabbro.Core.Text
+
+theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
+    wertAls target ⟨source, value⟩ = some (Wert.widen source target fits value) := by
+  cases source with
+  | int lo hi =>
+      cases target with
+      | int lower upper =>
+          simp only [Fits] at fits
+          have hb : lower ≤ value.wert ∧ value.wert ≤ upper :=
+            ⟨Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
+          simp [wertAls, hb, Wert.widen]
+      | _ => simp [Fits, wertAls, Wert.widen] at fits
+  | array el count =>
+      cases target with
+      | array el' count' =>
+          cases count with
+          | zero =>
+              cases count' with
+              | zero => rfl
+              | succ n =>
+                  simp only [Fits] at fits
+                  cases fits
+          | succ n =>
+              cases count' with
+              | zero =>
+                  simp only [Fits] at fits
+                  cases fits
+              | succ m =>
+                  simp only [Fits] at fits
+                  cases fits
+                  simp [wertAls]
+      | _ => simp [Fits, wertAls, Wert.widen] at fits
+  | _ => cases target <;> simp [Fits, wertAls, Wert.widen] at fits ⊢
+
+theorem AssignFieldParse : AssignFieldParseAussage := by
+  intro ctx args text pieces lex prod
+  apply (Category.statement ctx.1 ctx.2).syntax.parse_iff.mpr
+  refine ⟨pieces, lex, ?_⟩
+  rcases prod with ⟨input, htok, valueRead⟩
+  rw [htok]
+  exact .assignField args.ref args.visible args.writable args.field args.index args.written args.fits valueRead
+
+theorem AssignFieldFrame : AssignFieldFrameAussage := by
+  intro ctx args frame record value hlocal htemp
+  have hwiden : wertAls (args.types.get args.index) ⟨args.source, value⟩ =
+      some (Wert.widen args.source (args.types.get args.index) args.fits value) :=
+    wertAls_widen _ _ _
+  have hold : wertAls (recordValueType args.name args.labels args.types)
+      ⟨recordValueType args.name args.labels args.types, record⟩ = some record := by
+    simp only [wertAls, dif_pos]
+  have hlt : args.ref.index < frame.lokale.length := by
+    by_contra h
+    have hn : frame.lokale[args.ref.index]? = none := List.getElem?_eq_none (Nat.ge_of_not_lt h)
+    rw [hn] at hlocal
+    cases hlocal
+  change
+    let widened : Wert (args.types.get args.index) :=
+      Wert.widen args.source (args.types.get args.index) args.fits value
+    let layout : Wert (tupleType args.types) := by simpa only [recordValueType, Wert] using record
+    let updated : Wert (recordValueType args.name args.labels args.types) := by
+      simpa only [recordValueType, Wert] using tupleSet args.types args.index widened layout
+    let next : Rahmen :=
+      (Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame
+    next.lokale[args.ref.index]? = some (some ⟨recordValueType args.name args.labels args.types, updated⟩) ∧
+      (∀ i, i ≠ args.ref.index → next.lokale[i]? = frame.lokale[i]?) ∧
+      next.pc = frame.pc + 1 ∧ next.temp = frame.temp
+  dsimp [Befehl.auswerten]
+  simp only [hlocal, htemp, hold, hwiden, Option.bind, List.getElem?_set_self hlt]
+  constructor
+  · rfl
+  constructor
+  · intro i hi
+    exact List.getElem?_set_ne hi.symm
+  constructor <;> rfl
 
 end Gabbro.Core.Ast.Semantik
