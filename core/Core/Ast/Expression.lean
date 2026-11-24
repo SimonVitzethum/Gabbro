@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Expression.Atoms
+public import Core.Ast.Expression.Resolution
 public import Core.Ast.Expression.Suffix
 
 @[expose] public section
@@ -291,8 +291,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | optionIsSome _ _ _ _ otherTail => exact tailDet otherTail
   case itemsClose =>
     intros
-    rename_i delimiter _ _ _ otherRead
-    rcases delimiter with h | h <;> subst h
+    rename_i _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl
     all_goals
       cases otherRead with
       | close => exact ⟨rfl, rfl⟩
@@ -301,10 +301,10 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
         | atom atomRead _ => cases atomRead
   case itemsNext =>
     intros
-    rename_i exprRead tailRead exprDet tailDet delimiter _ _ _ otherRead
+    rename_i exprRead tailRead exprDet tailDet _ _ _ delimiter otherRead
     cases otherRead with
     | close =>
-      rcases delimiter with h | h <;> subst h
+      rcases delimiter with rfl | rfl
       all_goals
         cases exprRead with
         | atom atomRead _ => cases atomRead
@@ -316,12 +316,12 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       exact ⟨rfl, rfl⟩
   case itemsTailClose =>
     intros
-    rename_i delimiter _ _ _ otherRead
-    rcases delimiter with h | h <;> subst h <;> cases otherRead <;> exact ⟨rfl, rfl⟩
+    rename_i _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl <;> cases otherRead <;> exact ⟨rfl, rfl⟩
   case itemsTailComma =>
     intros
-    rename_i itemsDet delimiter _ _ _ otherRead
-    rcases delimiter with h | h <;> subst h
+    rename_i itemsDet _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl
     all_goals
       cases otherRead with
       | comma _ otherItems =>
@@ -336,13 +336,15 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
   case labeledNext =>
     intros
     rename_i name exprRead tailRead exprDet tailDet _ _ _ _ otherRead
+    generalize hname : name.val = spelling at otherRead
     cases otherRead with
     | next otherName otherExpr otherTail =>
+      cases Subtype.ext hname
       obtain ⟨same, rfl⟩ := exprDet otherExpr
       cases same
       obtain ⟨same, rfl⟩ := tailDet otherTail
       cases same
-      congr 2
+      exact ⟨rfl, rfl⟩
   case labeledTailClose =>
     intros
     rename_i otherRead
