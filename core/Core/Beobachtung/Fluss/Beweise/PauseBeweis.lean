@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Fluss.Antwort
+public import Core.Beobachtung.Fluss.Beweise.Antwort
 public import Core.Beobachtung.Fluss.Interrupt
 
 @[expose] public section
