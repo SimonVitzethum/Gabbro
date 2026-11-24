@@ -103,4 +103,68 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
         exact hnarrow token hmem
     · cases h
 
+private theorem neue_rechte_map (space : Adressraum) (rights : List Speicherdienst)
+    (hne : rights ≠ []) (von gen pages base : Nat)
+    (ok : ∀ entry ∈ space.entries, entry.2.rights ≠ [] ∧ entry.2.generation ≤ space.generation)
+    (entry : Nat × Seiteneintrag)
+    (hmem : entry ∈ space.entries ++
+      (List.range pages).map fun i => (base + i, (⟨von + i, rights, gen⟩ : Seiteneintrag))) :
+    entry.2.rights ≠ [] ∧ entry.2.generation ≤ space.generation := by
+  rcases List.mem_append.mp hmem with hold | hnew
+  · exact ok entry hold
+  · obtain ⟨i, _, rfl⟩ := List.mem_map.mp hnew
+    exact ⟨hne, Nat.le_refl _⟩
+
+theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
+    (rights : List Speicherdienst) (s : MemState) (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = some next)
+    (inv : (s.lokal c).TabellenGedeckt) : next.TabellenGedeckt := by
+  simp only [MemInstruction.evaluate] at h
+  cases hs : (s.lokal c).spaces[sp]? with
+  | none =>
+    simp only [hs, Option.bind_eq_bind, Option.bind_none] at h
+    cases h
+  | some space =>
+    cases hr : heldMemRegion target s c slot with
+    | none =>
+      simp only [hs, hr, Option.bind_eq_bind, Option.bind_some, Option.bind_none] at h
+      cases h
+    | some region =>
+      simp only [hs, hr, Option.bind_eq_bind, Option.bind_some] at h
+      split at h
+      · rename_i cond
+        simp only [Option.pure_def, Option.some.injEq] at h
+        subst h
+        obtain ⟨hspaces, hnarrow⟩ := inv
+        have hlt : sp < (s.lokal c).spaces.length :=
+          (List.getElem?_eq_some_iff.mp hs).1
+        have hall := cond.2.2.2.2
+        have hne := cond.1
+        refine ⟨?spaces, ?narrow⟩
+        · intro sp' space' found
+          by_cases same : sp' = sp
+          · subst same
+            have hset := List.getElem?_set_self (l := (s.lokal c).spaces) hlt
+            rw [hset] at found
+            have heq : space' = _ := (Option.some.inj found).symm
+            subst heq
+            have hspace := hspaces sp space hs
+            obtain ⟨hfrei, hflags, hrights⟩ := hspace
+            refine ⟨?frei, ?flags, ?rights⟩
+            · exact Adressraum.mapFreiAusstehend space _ hfrei
+                (mapSpace_neue_eintraege_fern space (virt / target.seitengranule)
+                  hall rights (region.extent.von / target.seitengranule) space.generation)
+            · exact hflags
+            · intro entry hmem
+              exact neue_rechte_map space rights hne _ _ _ _ hrights entry hmem
+          · have found0 : (s.lokal c).spaces[sp']? = some space' := by
+              have : ((s.lokal c).spaces.set sp _)[sp']? = some space' := found
+              rw [List.getElem?_set_ne (Ne.symm same)] at this
+              exact this
+            exact hspaces sp' space' found0
+        · intro token mem
+          have hmem : token ∈ (s.lokal c).verengt := mem
+          exact hnarrow token hmem
+      · cases h
+
 end Gabbro.Core.Ast.LowLevel
