@@ -9,3 +9,6 @@ public import Core.Text.Model
 public import Core.Speicher
 public import Core.Maschine
 public import Core.Ideal
+meta import Core.Waechter.Check
+
+#check_core

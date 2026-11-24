@@ -1,0 +1,54 @@
+module
+public meta import Lean
+public meta import Core.Waechter.Closing
+public meta import Core.Waechter.Decision
+public meta import Core.Waechter.Pins
+public meta import Core.Waechter.Registry
+public meta import Core.Waechter.Semantics
+
+open Lean Elab Command
+
+namespace Gabbro.Core.Waechter
+
+private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
+  (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
+  (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),
+  (`Gabbro.Core.Ziel.NI, 7136388435487395955),
+  (`Gabbro.Core.Ziel.GabbroZielForm, 10442611768856402706)]
+
+private meta def acceptance : AcceptanceSpec := {}
+private meta def registry : Array RegistryFamily := #[]
+private meta def wildcardRoots : Array Name := #[]
+private meta def catalogueKinds : Array ClosedKinds := #[]
+private meta def closing : Option ClosingSpec := none
+
+/-- Runs the package guards after the root's model imports have been elaborated. -/
+elab "#check_core" : command => do
+  let started ← IO.monoMsNow
+  let root ← IO.FS.realPath (← getFileName)
+  let (sources, layoutErrors) ← readCoreSources root
+  let imported ← getEnv
+  let scanned := sources.map fun source => (source, auditSource imported source)
+  let (hygiene, reached) := packageErrors sources
+  let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
+  -- An orphan need not have any compiled artifact. Check the reached modules without it.
+  let reachableSources := sources.filter (reached.contains ·.moduleName)
+  let env ← auditEnvironment reachableSources
+  let env := withAxiomSummaries (env.setExporting false)
+  let declarations := coreDeclarations env
+  errors := errors ++ compiledImportErrors env ++ pinErrors env pins ++ acceptanceErrors env acceptance
+  let semanticErrors ← liftTermElabM <| withEnv env do
+    let mut errors ← declarationErrors declarations
+    errors := errors ++ (← decisionErrors declarations)
+    errors := errors ++ (← registryErrors registry)
+    errors := errors ++ (← semanticsErrors wildcardRoots catalogueKinds scanned)
+    if let some spec := closing then
+      errors := errors ++ (← closingErrors spec pins (imported.setExporting true))
+    return errors
+  errors := errors ++ semanticErrors
+  for error in errors do
+    logError error
+  logInfo m!"Core guards ran in {(← IO.monoMsNow) - started} ms"
+
+end Gabbro.Core.Waechter

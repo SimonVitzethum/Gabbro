@@ -81,8 +81,8 @@ Bindings that are part of the definitions:
   together with the total reactive outside policy; request-specific replies are separate events of the run, and an
   offered delivery is recorded even when the implementation fails to consume it, so a failure never makes a run
   inadmissible or unfair. `FairLaeufe K H` are the schedules and policies that are fair in the rows' sense — over
-  hardware alone, independently of any program and of refinement success; the sixth conjunct proves that each of
-  them lifts to a run of every accepted program.
+  hardware alone, independently of any program and of refinement success; the seventh conjunct proves that every
+  such history lifts to a run from every admissible start of every accepted program denoted by raw text.
 - Starts: `ZulStart E H s` are the catalogue-conformant starts (every legal boot input, start assignment and
   initial outside state the rows allow), defined independently of loader success; every run starts at one. For
   EVERY admissible start a run exists and every admissible fair history lifts to a run from it, so a loader that
@@ -348,7 +348,7 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 
 | Step | Done when | Depends on | New lines |
 |---|---|---|---|
-| **M0 Package and guards** | the first commit (DONE 2026-11-23: the package and `Core/Ziel/Form.lean`) is scaffolding; guards 1–3 and 5–8 of §6 are Lean modules of the package root BEFORE the first semantic commit (until then nothing but the shape enters); guard 4 is activated at M12 | — | 2 000–5 000 |
+| **M0 Package and guards** | the first commit (DONE 2026-11-23: the package and `Core/Ziel/Form.lean`) is scaffolding; guards 1–3 and 5–8 of §6 are Lean modules of the package root BEFORE the first semantic commit (until then nothing but the shape enters); guard 4 is activated at M12; the semantic commits of M3 and M4 that reached `dev` before the guards are precursor work: published history is kept, and the commit that activates the guards checks every one of their modules under all active guards in the root build, so nothing enters the accepted baseline unguarded | — | 2 000–5 000 |
 | **M1 Text** | constructor-independent foundations: raw text, tokens with source spans and trivia, the FRAMEWORK of the parse relation `Parse` and of `WohlgeformterText` (each constructor adds its rule when it enters), the canonicalisation relation of the round trip, the registry type of §3.1, and the INVENTORY as data with source reference and owning step: today's forms, every low-level form (LOW-LEVEL-SYNTAX-PLAN §4), async, the M6F forms, the PLAN §0 forms (substring, bounded `while`, effect groups, tuples), aggregate passing and in-place construction (PLAN P1), the clause forms of B11 and the persistence forms of B22 | M0 | 5 000–12 000 |
 | **M2 Catalogue** | `Hardware` of §3.3 with rows for x86-64, AArch64 and RISC-V 64 (ported from the S2 branch `agent/s2-catalogue`); catalogue-conformant starts `ZulStart`; hardware histories `hw` with `FairLaeufe`, independent of programs; joint satisfiability per platform; folded in: A1 foreign software as rows, A2 register answers, A3 float hardware, A4 address ranges and core plan, A6 C interop (only outside the address space, as rows — never `extern fn` or a program-written assumption, §3.3 and §5), the persistence envelope of B22 | M0 | 16 000–42 000 |
 | **M3 Memory model** | RC11 with truly SC `seq_cst`, `po ∪ rf` acyclic, DRF-SC, the operational graph machine (sound and complete), the sink and append lemmas, ported from `grammatik/Grammatik/Speichermodell/RC11/` and the branch `agent/s5b-w`; an event type that the machines of M4 and `I` both produce | M0 | 15 000–40 000 |

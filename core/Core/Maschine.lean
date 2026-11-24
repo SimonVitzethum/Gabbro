@@ -11,3 +11,4 @@ public import Core.Maschine.Ergebnis
 public import Core.Maschine.Einheit
 public import Core.Maschine.Zustand
 public import Core.Maschine.Regel
+public import Core.Maschine.Ereignisse
