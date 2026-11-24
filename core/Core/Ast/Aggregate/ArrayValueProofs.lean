@@ -129,8 +129,10 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
       | next second rest =>
           let tail := ExprItems.next second rest
           change ItemsRead scope closeBracket
-            (head.printTokens ++ (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket])))
-            (.next head tail) []
+            (head.printTokens ++ (comma ::
+              (second.printPieces.map PrintedToken.value ++
+                (rest.printTail.map PrintedToken.value ++ [closeBracket]))))
+            (.next head (.next second rest)) []
           exact .next
             (headRead (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket]))
               noOperatorAtComma)
