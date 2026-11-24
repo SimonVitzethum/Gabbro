@@ -40,9 +40,10 @@ theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
       (((Category.expression scope).printPieces ((Expr.textLength args.base).typed)).map
         PrintedToken.value) := by
   refine ⟨args.base.printTokens ++ [closeParen], ?_, ?_⟩
-  · simp [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
+  · simp only [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
       printLenof, printOpen, printClose, keywordName, Identifier.print, PrintedToken.unquoted,
-      printPunctuation, lenofKeyword, openParen, closeParen]
+      printPunctuation, lenofKeyword, openParen, closeParen, List.map_cons, List.map_append,
+      List.map_nil]
   · exact Expr.printReads args.base noOperatorAtClose
 
 end Gabbro.Core.Ast.Surface
@@ -84,17 +85,17 @@ theorem textLength_inversion : TextLengthInversionAussage := by
       have same : label.val = "lenof".toList := by
         simpa [lenofKeyword] using (List.cons.inj hh).1.symm
       exact (ordinary.2.2 same).elim
-  all_goals simp [lenofKeyword, trueKeyword, falseKeyword, openParen, closeParen,
-    minus, bang, openBracket, closeBracket, comma, colon, dot, semicolon, sliceRange] at hh
+  all_goals cases hh
 
 theorem textLength_bytes : TextLengthBytesAussage := by
   intro capacity text frame h
   have hval : wertAls (.text capacity) (⟨.text capacity, text⟩ : Dynamisch) = some text := by
     cases text with
     | mk bytes bound =>
-        simp [wertAls, bound]
+        simp only [wertAls, dif_pos bound]
         rfl
-  simp [Befehl.auswerten, Rahmen.schreibe, h, hval, TextValue.lengthValue]
+  simp only [Befehl.auswerten, Rahmen.schreibe, Option.bind_some, Option.map_some,
+    Function.update_self, h, hval, TextValue.lengthValue]
   rfl
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
@@ -162,7 +163,7 @@ theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := b
   · intro answer h
     cases h
   · intro answer
-    simp
+    simp only [List.not_mem_nil]
 
 theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   intro scope platform args
@@ -173,7 +174,7 @@ theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
   cases spurEq
   refine ⟨rfl, rfl, ?_⟩
-  simp [Fragment.einheit]
+  simp only [Fragment.einheit]
 
 theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   intro platform start
@@ -190,25 +191,30 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   · rfl
   · apply System.IErreichbar.schritt eintritt () [plan] System.IErreichbar.start
     refine ⟨b0, ?_, ?_⟩
-    · simp [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
+    · simp only [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
         system, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
-        Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength]
+        Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength,
+        if_pos rfl, List.getElem?_cons_zero]
     · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
     · rfl
     · rfl
-    · simp [E, form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
-        Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start, Zustand.start, startdaten,
-        Rahmen.start, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit]
+    · simp only [E, form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen,
+        Fragment.einzel, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start,
+        Zustand.start, startdaten, Rahmen.start, Quellform.einheit, Quellform.fragment,
+        fragment, Fragment.einheit, Function.update_self, if_pos rfl]
   · intro g guard
-    simp [b, textLengthForm, Befehl.guard] at guard
+    have hg : ((textLengthForm []).befehl args).guard (s.lokal eintritt) = none := by
+      simp only [textLengthForm, Befehl.guard]
+    rw [hg] at guard
+    cases guard
   · dsimp
     constructor
     · rfl
-    · simp [b, textLengthForm, args, s, s0, b0, Befehl.nach, Befehl.auswerten,
+    · simp only [b, textLengthForm, args, s, s0, b0, Befehl.nach, Befehl.auswerten,
         Rahmen.schreibe, Rahmen.start, wertAls, TextValue.literal, I.start, Zustand.start,
-        startdaten]
+        startdaten, Function.update_self, if_pos rfl]
       rfl
 
 end Gabbro.Core.Ast.Semantik
