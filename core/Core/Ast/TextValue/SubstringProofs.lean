@@ -113,7 +113,7 @@ private theorem substringErfuellbar (scope : Scope) : (substring scope).Satisfia
 
 private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDerivationAussage := by
   intro scope
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, substringPrint scope, substringErfuellbar scope⟩
   · intro args tokens production
     change ExprReads scope 0 tokens (Expr.substring args.base args.first args.last) []
     rcases production with plain | grouped
@@ -124,8 +124,36 @@ private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDer
           | stop =>
               exact .atom atomRead (.substring args.base args.first args.last (by omega)
                 firstRead lastRead (.stop noOperatorAtEnd))
-          | textConcat left right hle rightRead tail =>
+          | binary op hle _ _ =>
+              have prec : op.precedence ≤ 7 := by
+                simpa [Infix.precedence] using substringInfixPrecLe7 (.arith op)
+              omega
+          | div hle _ _ _ =>
+              have prec := substringInfixPrecLe7 .div
+              omega
+          | compare op hle _ _ =>
+              have prec := substringInfixPrecLe7 (.compare op)
+              omega
+          | logic op hle _ _ =>
+              have prec := substringInfixPrecLe7 (.logic op)
+              omega
+          | arrayIndex _ _ _ hle _ _ =>
+              have prec := substringInfixPrecLe7 .index
+              omega
+          | tupleField _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
+              omega
+          | recordField _ _ _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
+              omega
+          | textConcat _ _ hle _ _ =>
               simp only [Arith.precedence] at hle
+              omega
+          | textIndex _ _ hle _ _ =>
+              have prec := substringInfixPrecLe7 .index
+              omega
+          | substring _ _ _ hle _ _ _ =>
+              have prec := substringInfixPrecLe7 .index
               omega
     · rcases grouped with ⟨inside, rfl, first, last, baseRead, firstRead, lastRead⟩
       cases baseRead with
@@ -137,8 +165,36 @@ private theorem substringDerivationLocal : Gabbro.Core.Ast.Semantik.SubstringDer
                 .atom atomRead (.substring args.base args.first args.last (by omega)
                   firstRead lastRead (.stop noOperatorAtClose))
               exact .atom (.grouped inner) (.stop noOperatorAtEnd)
-          | textConcat left right hle rightRead tail =>
+          | binary op hle _ _ =>
+              have prec : op.precedence ≤ 7 := by
+                simpa [Infix.precedence] using substringInfixPrecLe7 (.arith op)
+              omega
+          | div hle _ _ _ =>
+              have prec := substringInfixPrecLe7 .div
+              omega
+          | compare op hle _ _ =>
+              have prec := substringInfixPrecLe7 (.compare op)
+              omega
+          | logic op hle _ _ =>
+              have prec := substringInfixPrecLe7 (.logic op)
+              omega
+          | arrayIndex _ _ _ hle _ _ =>
+              have prec := substringInfixPrecLe7 .index
+              omega
+          | tupleField _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
+              omega
+          | recordField _ _ _ _ hle _ =>
+              have prec := substringInfixPrecLe7 .projection
+              omega
+          | textConcat _ _ hle _ _ =>
               simp only [Arith.precedence] at hle
+              omega
+          | textIndex _ _ hle _ _ =>
+              have prec := substringInfixPrecLe7 .index
+              omega
+          | substring _ _ _ hle _ _ _ =>
+              have prec := substringInfixPrecLe7 .index
               omega
 
 end Gabbro.Core.Ast.Surface
@@ -154,9 +210,17 @@ private theorem substringRootLookup (p : Fragment) (b : Befehl) :
 
 private theorem substringAmOrt (scope : Scope) : (substringForm scope).RegelAmOrt := by
   intro args
-  simp only [Quellform.RegelAmOrt, substringForm, Quellform.fragment, fragment,
-    Fragment.anhaengen, Fragment.einzel, List.length_append, List.getElem?_append_right,
-    Nat.sub_self, List.getElem?_cons_zero]
+  dsimp [substringForm, Quellform.fragment, fragment, expr]
+  let p := ((expr 0 args.base).anhaengen (expr 1 args.first)).anhaengen (expr 2 args.last)
+  let b : Befehl := .substring 0 args.capacity
+  change (p.anhaengen (.einzel b)).code[
+    (expr 0 args.base).code.length + (expr 1 args.first).code.length +
+      (expr 2 args.last).code.length]? = some b
+  have hlen : p.code.length = (expr 0 args.base).code.length +
+      (expr 1 args.first).code.length + (expr 2 args.last).code.length := by
+    simp [p, Fragment.anhaengen, List.length_append]
+  rw [← hlen]
+  exact substringRootLookup p b
 
 theorem substringDerivation : SubstringDerivationAussage :=
   Surface.substringDerivationLocal
@@ -286,7 +350,7 @@ theorem substringRegelSicher : SubstringRegelSicherAussage := by
 theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   intro scope platform args
   dsimp only
-  intro tstamp ctx st choice stepPlan u spur trail nextState hhead hImpl hExec
+  intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
   obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
@@ -302,7 +366,7 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
 theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   intro scope platform args
   dsimp only
-  intro tstamp ctx st choice stepPlan u spur trail nextState hhead hImpl hExec
+  intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
   obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) hImpl hExec
@@ -346,9 +410,9 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
     Ast.parse_print _, rfl, reached, ?_, ?_, ?_⟩
   · exact form.realisiert (substringAmOrt []) platform args s₃ rfl rfl rfl rfl
   · intro g guard
-    have hgval : b.guard (s₃.lokal eintritt) =
+    have hgval : (form.befehl args).guard (s₃.lokal eintritt) =
         some ⟨.teilfolge, (0, 0, (TextValue.literal [] : TextValue cap).bytes.size)⟩ := by
-      simpa [b, zero, Zahl.literal] using hb.1
+      simpa [form, b, zero, Zahl.literal] using hb.1
     rw [hgval] at guard
     cases guard
     simp [waechterBedarf]
@@ -356,11 +420,11 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
         (0, 0, (TextValue.literal [] : TextValue cap).bytes.size) := by
       simp [waechterBedarf]
     have hgood := hb.2.1 hw
-    change (b.auswerten (s₃.lokal eintritt)).stopp = none ∧
-      ((b.auswerten (s₃.lokal eintritt)).temp 0).isSome = true
+    change ((form.befehl args).auswerten (s₃.lokal eintritt)).stopp = none ∧
+      (((form.befehl args).auswerten (s₃.lokal eintritt)).temp 0).isSome = true
     refine ⟨?_, ?_⟩
-    · simp [b, s₃, s₂, s₁, s₀, Befehl.auswerten, Rahmen.schreibe, waechterBedarf, cap]
+    · simp [form, b, s₃, s₂, s₁, s₀, Befehl.auswerten, Rahmen.schreibe, waechterBedarf, cap]
     · have ht := hgood.1
-      simpa [b] using congrArg (fun frame : Rahmen => (frame.temp 0).isSome) ht
+      simpa [b, zero, Zahl.literal] using congrArg (fun frame : Rahmen => (frame.temp 0).isSome) ht
 
 end Gabbro.Core.Ast.Semantik
