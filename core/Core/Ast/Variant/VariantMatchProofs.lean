@@ -256,8 +256,9 @@ theorem variantMatch_inversion : VariantMatchInversionAussage := by
     cases callRead
     apply ordinary.2 |>.elim
     rw [← Token.word.inj (List.cons.inj tokens).1]
-    have present : "match" ∈ ["let", "if", "return", "while", "for", "leave", "next"] ++ ["match"] :=
-      List.mem_append_right _ List.mem_cons_self
+    have present : "match" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"] :=
+      List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))
     exact List.mem_map.mpr ⟨"match", present, rfl⟩
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable <;> cases (List.cons.inj tokens).1
