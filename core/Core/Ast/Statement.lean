@@ -240,7 +240,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     (motive_3 := fun _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ _ _ => True)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) right
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) right
   all_goals try (intros; trivial)
   · intros
     rename_i other
