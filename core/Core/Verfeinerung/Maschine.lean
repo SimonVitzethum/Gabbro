@@ -20,11 +20,12 @@ abbrev Zustandsbezug (lokal : LokalerBezug Lok) (s i : Zustand L Ort Wert Raum L
 /-- A private concrete step preserves the entire M4 trace and spends part of a
     finite private suffix. A matched step preserves the concrete trace verbatim. -/
 inductive SpurAbgleich (vorher nachher : Nat) :
-    Option (SchrittSpur Ort Wert) → Option (SchrittWahl Wahl × SchrittSpur Ort Wert) → Prop where
+    Option (SchrittWahl Wahl × SchrittSpur Ort Wert) → Option (SchrittWahl Wahl × SchrittSpur Ort Wert) → Prop where
   | pause : SpurAbgleich vorher nachher none none
-  | privat (sinkt : nachher < vorher) : SpurAbgleich vorher nachher (some ⟨[], []⟩) none
-  | schritt (wahl : SchrittWahl Wahl) (spur : SchrittSpur Ort Wert) :
-      SpurAbgleich vorher nachher (some spur) (some (wahl, spur))
+  | privat (c : Kontext) (w : Wahl) (sinkt : nachher < vorher) :
+      SpurAbgleich vorher nachher (some (.kontext c w, ⟨[], []⟩)) none
+  | schritt (event : SchrittWahl Wahl × SchrittSpur Ort Wert) :
+      SpurAbgleich vorher nachher (some event) (some event)
 
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
@@ -35,11 +36,11 @@ abbrev PrivatMass (L Ort Wert Raum Lok Grund : Type) :=
     step on the same tick or proves that this transition only advances private work. -/
 def RegelAbgleich (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (lokal : LokalerBezug Lok) (mass : PrivatMass L Ort Wert Raum Lok Grund) (f : F) : Prop :=
-  ∀ hw t c s u s' i plan spur, Zustandsbezug lokal s i →
+  ∀ hw t c w s u s' i plan spur, Zustandsbezug lokal s i →
     (hw.angebot t).crash = false → KannSchreiten hw t c s →
-    E.system.kopf s c = some f → (E.system.regel f).impl c s [plan] u →
+    E.system.kopf s c = some f → (E.system.regel f).impl c s w [plan] u →
     FuehrtSchrittAus E.einrichtung t c s u plan spur s' →
-    (∃ w i', Schritt E.einrichtung E.system E.katalog hw t i (.kontext c w, spur) i' ∧
+    (∃ i', Schritt E.einrichtung E.system E.katalog hw t i (.kontext c w, spur) i' ∧
       Zustandsbezug lokal s' i') ∨
     (spur = ⟨[], []⟩ ∧ Zustandsbezug lokal s' i ∧ mass s' i < mass s i)
 
@@ -63,13 +64,13 @@ theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E lokal mass)
       Zustandsbezug lokal s' r.1 ∧
       Takt (Schritt E.einrichtung E.system E.katalog hw) (fun n _ => ¬ AbsturzAngeboten E.katalog hw n)
         t i r.2 r.1 ∧ SpurAbgleich (mass s i) (mass s' r.1) (some spur) r.2 ∧
-      (r.2 = none → ∃ c, KannSchreiten hw t c i) := by
+      (r.2 = none → ∃ c w, spur = (.kontext c w, ⟨[], []⟩) ∧ KannSchreiten hw t c i) := by
   cases konkret with
   | kontext normal ready rule execute =>
     obtain ⟨f, kopf, impl⟩ := rule
-    rcases pflicht.regel f _ _ _ _ _ _ _ _ _ bezug normal ready kopf impl execute with step | privateStep
-    · obtain ⟨w, i', step, related⟩ := step
-      exact ⟨(i', some (.kontext _ w, _)), related, .schritt rfl step, .schritt _ _, fun h => nomatch h⟩
+    rcases pflicht.regel f _ _ _ _ _ _ _ _ _ _ bezug normal ready kopf impl execute with step | privateStep
+    · obtain ⟨i', step, related⟩ := step
+      exact ⟨(i', some _), related, .schritt rfl step, .schritt _, fun h => nomatch h⟩
     · obtain ⟨rfl, related, decreases⟩ := privateStep
       have shared := bezug.1
       change { s with lokal := i.lokal } = i at shared
@@ -77,23 +78,23 @@ theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E lokal mass)
         rw [← shared]
         exact h
       exact ⟨(i, none), related, .wartet rfl rfl (fun offer => Bool.noConfusion (normal.symm.trans offer.2)),
-        .privat decreases, fun _ => ⟨_, idealReady ready⟩⟩
+        .privat _ _ decreases, fun _ => ⟨_, _, rfl, idealReady ready⟩⟩
   | antwort normal arrives =>
     obtain ⟨i', step, publicEq, sameLocal⟩ := bezug.1.antwort arrives
-    refine ⟨(i', some (.antwort _, _)), ⟨publicEq, ?_⟩, .schritt rfl (.antwort normal step), .schritt _ _,
+    refine ⟨(i', some (.antwort _, _)), ⟨publicEq, ?_⟩, .schritt rfl (.antwort normal step), .schritt _,
       fun h => nomatch h⟩
     rw [arrives.2.2.2, sameLocal]
     exact bezug.2
   | interrupt normal enters =>
     obtain ⟨i', step, publicEq, sameLocal⟩ := bezug.1.interrupt enters
     obtain ⟨_, _, _, _, _, _, _, _, _, _, state⟩ := enters
-    refine ⟨(i', some (.interrupt _, _)), ⟨publicEq, ?_⟩, .schritt rfl (.interrupt normal step), .schritt _ _,
+    refine ⟨(i', some (.interrupt _, _)), ⟨publicEq, ?_⟩, .schritt rfl (.interrupt normal step), .schritt _,
       fun h => nomatch h⟩
     rw [state, sameLocal]
     exact bezug.2
   | absturz crash =>
     exact ⟨(s', some (.absturz, _)), ⟨ProtokollBezug.refl s', pflicht.lokal_refl _⟩,
-      .schritt rfl (.absturz (bezug.1.absturz crash)), .schritt _ _, fun h => nomatch h⟩
+      .schritt rfl (.absturz (bezug.1.absturz crash)), .schritt _, fun h => nomatch h⟩
 
 /-- A single ideal run has the same hardware and start, the related states at each
     tick, and exactly the recorded concrete events after private ticks are erased. -/
@@ -105,24 +106,25 @@ structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) (lokal : LokalerBezu
   spur : ∀ t, SpurAbgleich ((ρ.zeit.zustand t).elim 0 fun s => mass s (η.zeit.zustand t))
     ((ρ.zeit.zustand (t + 1)).elim 0 fun s => mass s (η.zeit.zustand (t + 1))) (ρ.zeit.spur t) (η.zeit.spur t)
   frei : ∀ t, η.belegt t = none ↔ ρ.zeit.spur t = none ∨ η.zeit.spur t ≠ none
+  belegt : ∀ t c, η.belegt t = some c → ∃ w, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩)
   endlich : ρ.zeit.Endlich ↔ η.zeit.Endlich
 
-theorem SpurAbgleich.gedeckt {prior later : Nat} {konkret : Option (SchrittSpur Ort Wert)}
+theorem SpurAbgleich.gedeckt {prior later : Nat} {konkret : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
     {ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
     (h : SpurAbgleich prior later konkret ideal) (pause : konkret = none) : ideal = none := by
   cases h with
   | pause => rfl
-  | privat _ => cases pause
-  | schritt _ _ => cases pause
+  | privat _ _ _ => cases pause
+  | schritt _ => cases pause
 
-theorem SpurAbgleich.sinkt {prior later : Nat} {konkret : Option (SchrittSpur Ort Wert)}
-    {ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)} {event : SchrittSpur Ort Wert}
+theorem SpurAbgleich.sinkt {prior later : Nat} {konkret ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    {event : SchrittWahl Wahl × SchrittSpur Ort Wert}
     (h : SpurAbgleich prior later konkret ideal) (privateTick : ideal = none) (step : konkret = some event) :
     later < prior := by
   cases h with
   | pause => cases step
-  | privat decreases => exact decreases
-  | schritt _ _ => cases privateTick
+  | privat _ _ decreases => exact decreases
+  | schritt _ => cases privateTick
 
 /-- Lift the local M4 obligations to one maximal ideal run over the given
     concrete run, with the canonical start and matching finite/infinite status. -/
@@ -135,7 +137,8 @@ theorem laufabgleich (pflicht : AbgleichPflichten E lokal mass)
   let budget := fun (t : Nat) i => (ρ.zeit.zustand t).elim 0 fun s => mass s i
   let lokalTakt := fun t i (label : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)) i' =>
     SpurAbgleich (budget t i) (budget (t + 1) i') (ρ.zeit.spur t) label ∧
-      (ρ.zeit.spur t ≠ none → label = none → ∃ c, KannSchreiten ρ.hw t c i)
+      (ρ.zeit.spur t ≠ none → label = none →
+        ∃ c w, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧ KannSchreiten ρ.hw t c i)
   obtain ⟨z, loaded, init⟩ := pflicht.laden h ρ.start run.1 run.2.2.1
   have folgt : Zeitlauf.Fortsetzung ρ.zeit bezug lokalTakt
       (Schritt E.einrichtung E.system E.katalog ρ.hw) (fun n _ => ¬ AbsturzAngeboten E.katalog ρ.hw n) := by
@@ -155,8 +158,11 @@ theorem laufabgleich (pflicht : AbgleichPflichten E lokal mass)
           obtain ⟨r, rel, idealTick, aligned, privateTick⟩ := pflicht.schritt related step
           refine ⟨r, ⟨next, rfl, rel⟩, ⟨idealTick, fun empty => ?_⟩, ?_⟩
           · cases empty.symm.trans mark
-          · refine ⟨?_, fun _ => privateTick⟩
-            simpa only [budget, atCut, after, mark, Option.elim] using aligned
+          · constructor
+            · simpa only [budget, atCut, after, mark, Option.elim] using aligned
+            · intro _ idle
+              obtain ⟨c, w, named, ready⟩ := privateTick idle
+              exact ⟨c, w, mark.trans (congrArg some named), ready⟩
     | wartet mark after stuck =>
       have idealStuck := pflicht.pause _ _ _ _ related stuck
       have noCrash : ¬ AbsturzAngeboten E.katalog ρ.hw t :=
@@ -199,13 +205,16 @@ theorem laufabgleich (pflicht : AbgleichPflichten E lokal mass)
     · obtain ⟨k, tail⟩ := finite.mpr ends
       exact ⟨k.val, fun t after => (frei t).mpr (Or.inl (tail t after))⟩
   have occupied (t c) (marked : belegt t = some c) :
-      ideal.spur t = none ∧ KannSchreiten ρ.hw t c (ideal.zustand t) := by
+      (ideal.spur t = none ∧ KannSchreiten ρ.hw t c (ideal.zustand t)) ∧
+      ∃ w, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) := by
     by_cases priv : ρ.zeit.spur t ≠ none ∧ ideal.spur t = none
     · rw [show belegt t = some (Classical.choose ((ticks t).2.2 priv.1 priv.2)) from dif_pos priv] at marked
-      exact ⟨priv.2, Option.some.inj marked ▸ Classical.choose_spec ((ticks t).2.2 priv.1 priv.2)⟩
+      obtain ⟨w, named, ready⟩ := Option.some.inj marked ▸ Classical.choose_spec ((ticks t).2.2 priv.1 priv.2)
+      exact ⟨⟨priv.2, ready⟩, w, named⟩
     · rw [show belegt t = none from dif_neg priv] at marked
       cases marked
-  exact ⟨⟨ρ.start, h, ρ.hw, ideal, belegt⟩, ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, occupied⟩,
-    rfl, rfl, related, fun t => (ticks t).2.1, frei, finite⟩
+  exact ⟨⟨ρ.start, h, ρ.hw, ideal, belegt⟩,
+    ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, fun t c h => (occupied t c h).1⟩,
+    rfl, rfl, related, fun t => (ticks t).2.1, frei, fun t c h => (occupied t c h).2, finite⟩
 
 end Gabbro.Core.Maschine.I

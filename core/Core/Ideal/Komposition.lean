@@ -144,7 +144,7 @@ theorem komposition_erfuellbar (k : Katalog.Katalog) (hw : HwLauf) (t : Nat) (c 
       Schritt e system k hw t s (.kontext c (), ⟨[], []⟩) s := by
   let plan : SchrittPlan L Ort Wert Bedingung := ⟨.intern, [], [], fun _ => false, fun _ => .na, e.initial⟩
   let form : Regel (Zustand L Ort Wert Raum Lok Grund) (SchrittPlan L Ort Wert Bedingung) Unit :=
-    ⟨fun _ s es u => es = [plan] ∧ u = s, fun _ s _ es u => es = [plan] ∧ u = s⟩
+    ⟨fun _ s _ es u => es = [plan] ∧ u = s, fun _ s _ es u => es = [plan] ∧ u = s⟩
   let system : MaschinenSystem L Ort Wert Raum Lok Grund Bedingung Unit Unit :=
     ⟨fun _ => form, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
   have execute (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) :

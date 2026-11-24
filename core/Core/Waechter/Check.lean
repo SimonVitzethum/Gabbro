@@ -37,14 +37,14 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
   (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
-  (`Gabbro.Core.Maschine.I.Schritt, 4043611520882110875),
-  (`Gabbro.Core.Maschine.ImplSchritt, 17810737499791217162),
-  (`Gabbro.Core.Maschine.Laeufe, 6154662030244297406),
-  (`Gabbro.Core.Maschine.I.Laeufe, 5538047729942842429),
+  (`Gabbro.Core.Maschine.I.Schritt, 14151434032004698387),
+  (`Gabbro.Core.Maschine.ImplSchritt, 15943044553270713957),
+  (`Gabbro.Core.Maschine.Laeufe, 8177209107770278793),
+  (`Gabbro.Core.Maschine.I.Laeufe, 16162192231473975173),
   (`Gabbro.Core.Maschine.I.AussenBezug, 14721192888943763921),
-  (`Gabbro.Core.Maschine.I.Bestimmt, 11443836326703950274),
-  (`Gabbro.Core.Maschine.I.Fortschritt, 7949663685199510761),
-  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 17498789594400322395)]
+  (`Gabbro.Core.Maschine.I.Bestimmt, 14914196100496038554),
+  (`Gabbro.Core.Maschine.I.Fortschritt, 3573843142675553985),
+  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 18203029128940835155)]
 
 private meta def acceptance : AcceptanceSpec := {
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }

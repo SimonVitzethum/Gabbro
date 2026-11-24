@@ -45,24 +45,33 @@ theorem Laufabgleich.aussen_am_schnitt (h : Laufabgleich ρ η lokal mass) (k : 
   obtain ⟨s, load, related⟩ := h.schnitt k
   exact ⟨s, load, related.1.aussen⟩
 
-theorem SpurAbgleich.beobachtung {v n : Nat} {c : Option (SchrittSpur Ort Wert)}
-    {i : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)} (h : SpurAbgleich v n c i)
+/-- The concrete run records the reads-from and coherence choices as well as
+    program order. The matched ideal run uses the same resolution at every tick. -/
+theorem Laufabgleich.speicherwahl (h : Laufabgleich ρ η lokal mass) (t : Nat) :
+    ∃ s, ρ.zeit.zustand t = some s ∧ SpeicherWahlGleich s.graph (η.zeit.zustand t).graph := by
+  obtain ⟨s, loaded, related⟩ := h.zustand t
+  have eq := congrArg Zustand.graph related.1
+  rw [← eq]
+  exact ⟨s, loaded, rfl, rfl, rfl⟩
+
+theorem SpurAbgleich.beobachtung {v n : Nat} {c i : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    (h : SpurAbgleich v n c i)
     (sicht : SchrittSpur Ort Wert → List Obs) (privat : sicht ⟨[], []⟩ = []) :
-    c.elim [] sicht = i.elim [] (sicht ∘ Prod.snd) := by
+    c.elim [] (sicht ∘ Prod.snd) = i.elim [] (sicht ∘ Prod.snd) := by
   cases h with
   | pause => rfl
-  | privat _ => exact privat
-  | schritt _ _ => rfl
+  | privat _ _ _ => exact privat
+  | schritt _ => rfl
 
 /-- Equality of the entire ordered observed prefix. In particular either
     projection of the M4 step trace, or a projection keeping both, may be used. -/
 theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η lokal mass)
     (sicht : SchrittSpur Ort Wert → List Obs) (privat : sicht ⟨[], []⟩ = []) (k : Maschine.Schnitt E ρ) :
-    Zeitlauf.praefix (fun t => (ρ.zeit.spur t).elim [] sicht) k.val =
+    Zeitlauf.praefix (fun t => (ρ.zeit.spur t).elim [] (sicht ∘ Prod.snd)) k.val =
       Zeitlauf.praefix (fun t => (η.zeit.spur t).elim [] (sicht ∘ Prod.snd))
         (Zeitlauf.schnittBild ρ.zeit η.zeit k).val := by
   let beob := fun t => (η.zeit.spur t).elim [] (sicht ∘ Prod.snd)
-  have gleich : (fun t => (ρ.zeit.spur t).elim [] sicht) = beob :=
+  have gleich : (fun t => (ρ.zeit.spur t).elim [] (sicht ∘ Prod.snd)) = beob :=
     funext fun t => (h.spur t).beobachtung sicht privat
   rw [gleich]
   exact (η.zeit.praefix_letzterSchnitt beob (fun t no => by simp only [beob, no, Option.elim]) k.val).symm
@@ -71,7 +80,7 @@ theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η lokal mass)
     and the recovery continuations start in one and the same state. -/
 theorem Laufabgleich.absturz (h : Laufabgleich ρ η lokal mass) {t : Nat}
     (offer : AbsturzAngeboten E.katalog ρ.hw t) :
-    ρ.zeit.spur t = some absturzSpur ∧ η.zeit.spur t = some (.absturz, absturzSpur) ∧
+    ρ.zeit.spur t = some (.absturz, absturzSpur) ∧ η.zeit.spur t = some (.absturz, absturzSpur) ∧
       ρ.zeit.zustand (t + 1) = some (η.zeit.zustand (t + 1)) := by
   obtain ⟨s, load, rel⟩ := h.zustand t
   have shared := rel.1

@@ -24,22 +24,22 @@ private theorem zustandsbezug_eq {s i : Zustand L Ort Wert Raum Lok Grund}
 theorem abgleich_aus_gleichen_regeln
     (laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
       E.laden s (h.lade E.bild) = some (start E s).2)
-    (regeln : ∀ f c s plans u, (E.system.regel f).impl c s plans u ↔
-      ∃ w, (E.system.regel f).ideal c s w plans u) :
+    (regeln : ∀ f c s w plans u, (E.system.regel f).impl c s w plans u ↔
+      (E.system.regel f).ideal c s w plans u) :
     AbgleichPflichten E Eq (fun _ _ => 0) := by
   refine ⟨fun _ => rfl, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, rfl⟩, ?_, ?_⟩
-  · intro f hw t c s u s' i plan spur rel normal bereit kopf impl execute
+  · intro f hw t c w s u s' i plan spur rel normal bereit kopf impl execute
     have same := zustandsbezug_eq rel
     subst i
-    obtain ⟨w, form⟩ := (regeln f c s [plan] u).mp impl
-    exact Or.inl ⟨w, s', .kontext normal bereit ⟨f, kopf, form⟩ execute, ProtokollBezug.refl _, rfl⟩
+    exact Or.inl ⟨s', .kontext normal bereit ⟨f, kopf, (regeln f c s w [plan] u).mp impl⟩ execute,
+      ProtokollBezug.refl _, rfl⟩
   · intro hw t s i rel stuck label next step
     have same := zustandsbezug_eq rel
     subst i
     cases step with
     | kontext normal ready rule execute =>
       obtain ⟨f, kopf, form⟩ := rule
-      exact stuck _ _ (.schritt (.kontext normal ready ⟨f, kopf, (regeln _ _ _ _ _).mpr ⟨_, form⟩⟩ execute))
+      exact stuck _ _ (.schritt (.kontext normal ready ⟨f, kopf, (regeln _ _ _ _ _ _).mpr form⟩ execute))
     | antwort normal arrives => exact stuck _ _ (.schritt (.antwort normal arrives))
     | interrupt normal enters => exact stuck _ _ (.schritt (.interrupt normal enters))
     | absturz crash => exact stuck _ _ (.schritt (.absturz crash))
@@ -68,22 +68,16 @@ theorem abgleich_erfuellbar :
   let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
   let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
     { s with lokal := Function.update s.lokal c (!s.lokal c) }
-  let impl c s plans u := plans = [plan] ∧ u = update c s
+  let impl c s (_ : Unit) plans u := plans = [plan] ∧ u = update c s
   let sy : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-    ⟨fun _ => ⟨impl, fun c s _ => impl c s⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+    ⟨fun _ => ⟨impl, impl⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
   let E₀ : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     ⟨k, bild, e, sy, fun s => daten s.bootCore, fun _ _ => 0,
       fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))⟩
   have abgleich : AbgleichPflichten E₀ Eq (fun _ _ => 0) := by
-    refine abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) ?_
-    intro _ _ _ _ _
-    constructor
-    · intro rule
-      exact ⟨(), rule⟩
-    · rintro ⟨_, rule⟩
-      exact rule
+    exact abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
   let sicht : Nat → AussenVerlauf → AussenSicht :=
     fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let hw := Umgebung.referenzLauf k 1 sicht
@@ -107,8 +101,8 @@ theorem abgleich_erfuellbar :
   have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ admissible.2.1)
   let z := (start E₀ s).2
   let z' := update entry z
-  let label : SchrittSpur Unit Unit := ⟨[], []⟩
-  have execute : FuehrtSchrittAus e 0 entry z z' plan label z' :=
+  let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
+  have execute : FuehrtSchrittAus e 0 entry z z' plan label.2 z' :=
     ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ hn => (List.not_mem_nil hn).elim,
       [], z', .intern, .nil _, rfl⟩
   have first : Lauffolge E₀ hw 0 (some z) label (some z') := by
