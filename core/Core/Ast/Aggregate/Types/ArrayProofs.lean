@@ -177,7 +177,7 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
   let argsVal : Surface.MutableLocalArgs [] none :=
     ⟨name, ordinary, written, by change written.valid; trivial, written.type, value, by rfl⟩
   let args : {a : Surface.MutableLocalArgs [] none // arrayTypeUse a.written} :=
-    ⟨argsVal, by change arrayTypeUse (WrittenType.array .bool 1); simp [arrayTypeUse]⟩
+    ⟨argsVal, by change arrayTypeUse (WrittenType.array .bool 1); simp only [arrayTypeUse]⟩
   let form := typeUseForm ([], none) arrayTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2

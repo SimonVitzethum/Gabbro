@@ -35,12 +35,12 @@ namespace Gabbro.Core.Ast.Surface
 
 private theorem infixPrecLe7 (op : Infix) : op.precedence ≤ 7 := by
   cases op with
-  | arith a => cases a <;> simp [Infix.precedence, Arith.precedence]
-  | div => simp [Infix.precedence]
-  | compare c => simp [Infix.precedence]
-  | logic l => cases l <;> simp [Infix.precedence]
-  | index => simp [Infix.precedence]
-  | projection => simp [Infix.precedence]
+  | arith a => cases a <;> simp only [Infix.precedence, Arith.precedence]
+  | div => simp only [Infix.precedence]
+  | compare c => simp only [Infix.precedence]
+  | logic l => cases l <;> simp only [Infix.precedence]
+  | index => simp only [Infix.precedence]
+  | projection => simp only [Infix.precedence]
 
 theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   intro scope element count minimum input type base tree rest allowed read
@@ -277,8 +277,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       have boundProof : offset.wert.toNat < Nat.succ count :=
         (indexPosition offset lower upper).isLt
       constructor
-      · simp [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl,
-          if_neg (not_lt_of_ge nonneg), posval]
+      · simp only [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl, Option.bind,
+          if_neg (not_lt_of_ge nonneg), posval, Option.some.injEq]
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
@@ -290,14 +290,14 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
             (Sigma.mk (.array element (count + 1)) val) = some val := by
           change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
             some (same ▸ val) else none) = some val
-          simp
+          rw [dif_pos rfl]
         have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) val) := by
           rw [harr]
           rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
-        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, val, Rahmen.zahl, alsGanzzahl,
-          Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
-          indexPosition]
+        simp only [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, val, Rahmen.zahl,
+          alsGanzzahl, Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof,
+          dif_pos leCount, indexPosition, Option.some.injEq]
         rfl
 
 end Gabbro.Core.Ast.Semantik
