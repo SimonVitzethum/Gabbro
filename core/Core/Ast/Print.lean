@@ -189,43 +189,47 @@ theorem Expr.printTokens_binary (op : Arith) (left : Expr scope (.int lo₁ hi�
 -- Extend the original Expr.printAtom using the leaf or grouped productions.
 theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     AtomReads scope (tree.printTokens ++ rest) tree rest := by
-  induction tree with
-  | lit value => exact .lit
-  | binary op left right leftIH rightIH =>
-      apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
-      exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
-        (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
-  | trueLit => exact .trueLit
-  | falseLit => exact .falseLit
-  | variable ref visible ordinary => exact .variable ref visible ordinary
-  | negativeLit magnitude => exact .negativeLit
-  | neg operand operandIH =>
-      have start : NegationStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
-        refine ⟨?_, ?_⟩
-        · intro tail
-          constructor <;> intro h <;> cases h
-        · intro n tail h
-          cases h
-      exact .neg start (.grouped (operandIH (closeParen :: rest)))
-  | not operand operandIH =>
-      have primary : PrimaryStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
-        intro tail
+  induction tree
+  · exact .lit
+  · rename_i op left right leftIH rightIH
+    apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
+    exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
+      (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
+  · exact .trueLit
+  · exact .falseLit
+  · rename_i ref visible ordinary
+    exact .variable ref visible ordinary
+  · exact .negativeLit
+  · rename_i operand operandIH
+    have start : NegationStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
+      refine ⟨?_, ?_⟩
+      · intro tail
         constructor <;> intro h <;> cases h
-      exact .not primary (.grouped (operandIH (closeParen :: rest)))
-  | div left right nonzero leftIH rightIH =>
-      apply .grouped
-      apply ExprReads.atom (leftIH (Infix.div.token :: right.printTokens ++ closeParen :: rest))
-      exact .div (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
-        (.stop noOperatorAtClose)) nonzero (.stop noOperatorAtClose)
-  | compare op left right leftIH rightIH =>
-      apply .grouped
-      apply ExprReads.atom (leftIH ((Infix.compare op).token :: right.printTokens ++ closeParen :: rest))
-      refine .compare op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
-        (.stop noOperatorAtClose)) ?_ (.stop noOperatorAtClose)
-      intro op' tail h
-      cases h
-  | logic op left right leftIH rightIH =>
-      apply .grouped
+      · intro n tail h
+        cases h
+    exact .neg start (.grouped (operandIH (closeParen :: rest)))
+  · rename_i operand operandIH
+    have primary : PrimaryStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
+      intro tail
+      constructor <;> intro h <;> cases h
+    exact .not primary (.grouped (operandIH (closeParen :: rest)))
+  · rename_i left right nonzero leftIH rightIH
+    apply .grouped
+    apply ExprReads.atom (leftIH (Infix.div.token :: right.printTokens ++ closeParen :: rest))
+    exact .div (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
+      (.stop noOperatorAtClose)) nonzero (.stop noOperatorAtClose)
+  · rename_i op left right leftIH rightIH
+    apply .grouped
+    apply ExprReads.atom (leftIH ((Infix.compare op).token :: right.printTokens ++ closeParen :: rest))
+    refine .compare op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
+      (.stop noOperatorAtClose)) ?_ (.stop noOperatorAtClose)
+    intro op' tail h
+    cases h
+  · rename_i op left right leftIH rightIH
+    apply .grouped
+    apply ExprReads.atom (leftIH ((Infix.logic op).token :: right.printTokens ++ closeParen :: rest))
+    exact .logic op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
+      (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
       apply ExprReads.atom (leftIH ((Infix.logic op).token :: right.printTokens ++ closeParen :: rest))
       exact .logic op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
         (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
