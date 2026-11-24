@@ -24,6 +24,54 @@ public import Core.Ast.Semantik.Formbeweise
 - `TupleBindLocalsAussage`
 -/
 
+namespace Gabbro.Core.Ast.Surface
+
+open Gabbro.Core.Text
+
+private theorem patternName_consumes {input : List Token} {name : Option Identifier} {rest : List Token}
+    (read : PatternNameReads input name rest) : rest <:+ input := by
+  cases read <;> exact List.suffix_cons _ _
+
+private theorem patternTail_consumes : (input : List Token) → (names : List (Option Identifier)) →
+    (rest : List Token) → PatternTailReads input names rest → rest <:+ input
+  | _, _, _, .close => List.suffix_cons _ _
+  | _, _, _, @PatternTailReads.next input name more names rest nameRead tailRead =>
+      (patternTail_consumes more names rest tailRead).trans (patternName_consumes nameRead)
+
+private theorem tuplePattern_consumes : (input : List Token) → (pattern : TuplePattern) →
+    (rest : List Token) → TuplePatternReads (openParen :: input) pattern rest → rest <:+ input
+  | _, _, _, @TuplePatternReads.tuple input first next second more tail rest firstRead secondRead tailRead =>
+      (patternTail_consumes more tail rest tailRead).trans
+        ((patternName_consumes secondRead).trans
+          ((List.suffix_cons comma next).trans (patternName_consumes firstRead)))
+
+private theorem tupleAnnotation_consumes : (input : List Token) → (annotation : Option WrittenType) →
+    (rest : List Token) → TupleAnnotationReads input annotation rest → rest <:+ input
+  | _, _, _, .absent => List.suffix_cons _ _
+  | _, _, _, @TupleAnnotationReads.written input written more rest typeRead =>
+      (List.suffix_cons colon input).trans
+        ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead))
+
+theorem tupleBind_suffix : TupleBindSuffixAussage := by
+  intro scope result input tree rest read
+  cases read
+  case tupleBind =>
+      rename_i input' pattern annotation checked value more rhs patternRead annotationRead valueRead
+      exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
+        ((tupleAnnotation_consumes more annotation rhs annotationRead).trans
+          (tuplePattern_consumes input pattern more patternRead))
+  all_goals contradiction
+
+theorem tupleBind_inversion : TupleBindInversionAussage := by
+  intro scope result input tree rest read
+  cases read
+  case tupleBind =>
+      rename_i input' pattern annotation checked value more rhs patternRead annotationRead valueRead
+      refine ⟨⟨_, _, _, _, _, _, _⟩, more, rhs, patternRead, annotationRead, valueRead, rfl⟩
+  all_goals contradiction
+
+end Gabbro.Core.Ast.Surface
+
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Waechter
@@ -119,5 +167,32 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
   · simp only [List.length_append, List.length_reverse]
     rw [hlen]
     rw [tupleLocals_length args.types value args.pattern.names args.checked.1]
+
+theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
+  intro platform start
+  let pattern : TuplePattern := ⟨none, none, []⟩
+  have checked : pattern.valid none [.bool, .bool] := by
+    simpa [pattern, TuplePattern.valid]
+  let args : Surface.TupleBindArgs [] :=
+    ⟨.bool, .bool, [], pattern, none, checked, .tupleValue .trueLit .falseLit .empty⟩
+  let form := tupleBindForm ([], none)
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  let s₂ := (Befehl.wahrheitswert 1 false).nach eintritt s₁
+  let s₃ := (Befehl.baueTupel 0 [.bool, .bool]).nach eintritt s₂
+  have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨.wahrheitswert 1 false, rfl, rfl, rfl⟩
+  have third : E.system.ISchritt eintritt s₂ () [plan] s₃ :=
+    ⟨.baueTupel 0 [.bool, .bool], rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan]
+      (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second) third
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₃ reached
+    (form.realisiert (tupleBind_am_ort ([], none)) platform args s₃ rfl rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
 
 end Gabbro.Core.Ast.Semantik
