@@ -62,7 +62,8 @@ inductive AtomReads (scope : Scope) :
 /-- Higher-precedence operators stay in the right operand. A same-precedence operator
     belongs to the outer continuation, giving left associativity. -/
 inductive ExprTail (scope : Scope) :
-    Nat → {type : Ty .value} → Expr scope type → List Token → Expr scope type → List Token → Prop where
+    Nat → {inputType : Ty .value} → Expr scope inputType → List Token →
+      {resultType : Ty .value} → Expr scope resultType → List Token → Prop where
   | stop : ¬ Continues minimum rest → ExprTail scope minimum left rest left rest
   | binary (op : Arith) : minimum ≤ op.precedence →
       ExprReads scope (op.precedence + 1) input right more →
@@ -74,48 +75,50 @@ end
 /-- Inverting the atom production recovers both the literal and its complete suffix. -/
 theorem AtomReads.lit_inversion
     (read : AtomReads scope (.natural value :: rest) tree suffix) :
-    tree = .lit value ∧ suffix = rest := by
+    tree.typed = (Expr.lit (scope := scope) value).typed ∧ suffix = rest := by
   cases read
   exact ⟨rfl, rfl⟩
 
 /-- One precedence proof for all registered infix operators. Adding an operator
     only extends the token and precedence tables and the token injectivity proof. -/
 theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
-    (right : ExprReads scope minimum input b rest') : a = b ∧ rest = rest' := by
+    (right : ExprReads scope minimum input b rest') : a.typed = b.typed ∧ rest = rest' := by
   revert b rest'
   refine ExprReads.rec
     (motive_1 := fun min input _ a rest _ =>
-      ∀ {b rest'}, ExprReads scope min input b rest' → a = b ∧ rest = rest')
+      ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprReads scope min input b rest' → a.typed = b.typed ∧ rest = rest')
     (motive_2 := fun input _ a rest _ =>
-      ∀ {b rest'}, AtomReads scope input b rest' → a = b ∧ rest = rest')
-    (motive_3 := fun min _ first input a rest _ =>
-      ∀ {b rest'}, ExprTail scope min first input b rest' → a = b ∧ rest = rest')
+      ∀ {otherType} {b : Expr scope otherType} {rest'}, AtomReads scope input b rest' → a.typed = b.typed ∧ rest = rest')
+    (motive_3 := fun min _ first input _ a rest _ =>
+      ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
     ?_ ?_ ?_ ?_ ?_ left
-  · intro _ _ _ _ _ _ _ _ _ atomDet tailDet _ _ other
+  · intro _ _ _ _ _ _ _ _ _ _ atomDet tailDet _ _ _ other
     cases other with
     | atom atom tail =>
-      obtain ⟨rfl, rfl⟩ := atomDet atom
+      obtain ⟨same, rfl⟩ := atomDet atom
+      cases same
       exact tailDet tail
-  · intro _ _ _ _ other
-    obtain ⟨rfl, rfl⟩ := other.lit_inversion
-    exact ⟨rfl, rfl⟩
-  · intro _ _ _ _ _ insideDet _ _ other
+  · intro _ _ _ _ _ other
+    obtain ⟨same, suffix⟩ := other.lit_inversion
+    exact ⟨same.symm, suffix.symm⟩
+  · intro _ _ _ _ _ insideDet _ _ _ other
     cases other with
     | grouped inside =>
       obtain ⟨same, suffix⟩ := insideDet inside
       exact ⟨same, (List.cons.inj suffix).2⟩
-  · intro _ _ _ _ blocked _ _ other
+  · intro _ _ _ _ blocked _ _ _ other
     cases other with
     | stop => exact ⟨rfl, rfl⟩
     | binary op allowed => exact (blocked ⟨op, _, rfl, allowed⟩).elim
-  · intro _ input _ _ _ _ _ op allowed _ _ operandDet tailDet _ _ other
+  · intro _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ operandDet tailDet _ _ _ other
     generalize h : op.token = token at other
     cases other with
     | stop blocked => exact (blocked ⟨op, input, congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ operand tail =>
       have same := Arith.token_injective h
       subst op'
-      obtain ⟨rfl, rfl⟩ := operandDet operand
+      obtain ⟨same, rfl⟩ := operandDet operand
+      cases same
       exact tailDet tail
 
 /-- The suffix index delimits an exact source slice, including for grouped and infix children. -/
@@ -123,9 +126,9 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
   refine ExprReads.rec
     (motive_1 := fun _ input _ _ rest _ => rest <:+ input)
     (motive_2 := fun input _ _ rest _ => rest <:+ input)
-    (motive_3 := fun _ _ _ input _ rest _ => rest <:+ input)
+    (motive_3 := fun _ _ _ input _ _ rest _ => rest <:+ input)
     ?_ ?_ ?_ ?_ ?_ read
-  · intro _ _ _ _ _ _ _ _ _ atom tail
+  · intro _ _ _ _ _ _ _ _ _ _ atom tail
     exact tail.trans atom
   · intro _ _
     exact List.suffix_cons _ _
@@ -133,7 +136,7 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
     exact ((List.suffix_cons closeParen rest).trans child).trans (List.suffix_cons openParen input)
   · intro _ rest _ _ _
     exact List.suffix_refl rest
-  · intro _ input _ _ _ _ _ op _ _ _ operand tail
+  · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
     exact (tail.trans operand).trans (List.suffix_cons op.token input)
 
 end Gabbro.Core.Ast

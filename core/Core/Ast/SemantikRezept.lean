@@ -16,6 +16,13 @@ half of the registry. The syntax proof supplies the corresponding `Surface.Rule.
    predicates go in `Quellklauseln` in source order. A new partial operation adds an
    operand type and a `waechterBedarf` case. Its use is collected from the pre-state
    at the source head, including when there is no hardware opportunity or successor.
+   Integer values carry proofs of both inclusive bounds. For total arithmetic, prove
+   that the exact result fits the interval inferred by the AST and preserve that
+   interval through execution. Explicit narrowing uses `ganzzahlBereichOperanden`
+   on the value and the declared endpoints. Widening uses the written SG-1 attribute
+   and interval containment. A concrete storage width needs a representation proof
+   that the source interval fits. Both the ideal system and source guard table are
+   independent of the selected platform.
 2. Specify the concrete and ideal transitions separately. For an existing kind of local
    instruction, supply its `Befehl.auswerten` and `Befehl.guard` arms. The plan and successor
    are then given by `Befehl.ideal` and `Befehl.impl`. For a form with a different effect,
@@ -60,7 +67,7 @@ def Quellform.AnnahmeAussage : Prop :=
     let b := form.befehl args
     RegelLokal E b ∧
     (∀ s c (g : Bedarf), E.system.kopf s c = some b →
-      b.guard platform.ziel.wbits (s.lokal c) = some g → E.quelltabellen.guard s g.1 g.2) ∧
+      b.guard (s.lokal c) = some g → E.quelltabellen.guard s g.1 g.2) ∧
     ∀ t c s w stepPlan u spur next, (E.system.regel b).ideal c s w [stepPlan] u →
       FuehrtSchrittAus E.einrichtung t c s u stepPlan spur next →
       ∀ ev : FrageEreignis, Ereignis.frage ev ∉ spur.aussen
@@ -94,7 +101,7 @@ def Quellform.ErfuellbarAm (platform : Plattform) (start : AussenStart) (args : 
   ∃ (text : RawText) (s : Zustand),
     Ast.Parse text (form.produktion.tree args) ∧ Elaboriert platform (form.produktion.tree args) E ∧
     E.system.IErreichbar (I.start E start).2 s ∧ Realisiert form platform args s ∧
-    ∀ (g : Bedarf), (form.befehl args).guard platform.ziel.wbits (s.lokal eintritt) = some g →
+    ∀ (g : Bedarf), (form.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2
 ```
 
@@ -171,19 +178,20 @@ in the requested temporary. At the fragment root that temporary and the instruct
 index are both zero.
 
 ```lean
-def literalForm (scope : Scope) : Quellform (.expression scope .integer) Nat where
+def literalForm (scope : Scope) : Quellform (.expression scope) Nat where
   produktion := Surface.literal scope
   befehl := .literal 0
   position := fun _ => 0
 
 def LiteralErfuellbar : Prop :=
-  ∀ start, ∃ value, (literalForm []).ErfuellbarAm .x86_64 start value
+  ∀ (platform : Plattform) start, ∃ value, (literalForm []).ErfuellbarAm platform start value
 ```
 
 The corresponding equation in `expr` is
 `| .lit value => .einzel (.literal slot value)`. The transfer increments the program
-counter and writes `Int.ofNat value` at `slot` with `Function.update`; the guard
-is `some ⟨.ganzzahlBereich, (Int.ofNat value, width)⟩`. The ideal and implementation
+counter and writes `Ganzzahl.literal value` at `slot` with `Function.update`. The
+result carries the bounds `value .. value`, so this total instruction has no guard.
+The ideal and implementation
 relations both require `plans = [plan]` and `u = b.nach c s`. The literal arm of
 `exprSchema` fixes all obligations to
 `⟨.surface, Quellform.statements literalForm LiteralErfuellbar constructor⟩`.
@@ -198,16 +206,13 @@ theorem literal_am_ort (scope : Scope) : (literalForm scope).RegelAmOrt :=
   fun _ => rfl
 
 theorem literal_erfuellbar : LiteralErfuellbar := by
-  intro start
+  intro platform start
   let form := literalForm []
-  let s := (I.start (form.einheit .x86_64 1) start).2
-  refine ⟨1, form.erfuellbar_aus_erreichbar .x86_64 start 1 s .start
-    (form.realisiert (literal_am_ort []) .x86_64 1 s rfl rfl) ?_⟩
+  let s := (I.start (form.einheit platform 1) start).2
+  refine ⟨1, form.erfuellbar_aus_erreichbar platform start 1 s .start
+    (form.realisiert (literal_am_ort []) platform 1 s rfl rfl) ?_⟩
   intro g guard
-  have same : (⟨.ganzzahlBereich, (1, Plattform.x86_64.ziel.wbits)⟩ : Bedarf) = g :=
-    Option.some.inj guard
-  subst g
-  exact kleinerWert 1 (by omega) (by omega)
+  cases guard
 
 def literalEntry : RegistryEntry ``Expr.lit (exprSchema ``Expr.lit) := by
   rw [exprSchema, ite_eq_left rfl]
@@ -215,6 +220,7 @@ def literalEntry : RegistryEntry ``Expr.lit (exprSchema ``Expr.lit) := by
     (fun _ _ => rfl) literal_erfuellbar
 ```
 
-`kleinerWert` is the arithmetic bound on the exact integer at the chosen signed width.
-`Beispiele.lean` checks this proof and the add, multiply and binding cases.
+`Beispiele.lean` checks the literal, add, multiply and binding cases on every platform.
+It also proves that an out-of-range literal cannot inhabit a declared range and
+that explicit narrowing of that value fails the pinned guard row.
 -/

@@ -15,6 +15,7 @@
 module
 
 public import Core.Maschine.Start
+import Init.Omega
 
 @[expose] public section
 
@@ -31,7 +32,14 @@ def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .shift, (s, w) => s < w
   | .konvertierung, (v, w) => v < 2 ^ w
   | .entpacken, tag => tag = Nat.succ Nat.zero
-  | .ganzzahlBereich, (v, w) => 0 < w ∧ -(2 ^ (w - 1) : Int) ≤ v ∧ v < (2 ^ (w - 1) : Int)
+  | .ganzzahlBereich, (abstand, anzahl) => 0 ≤ abstand ∧ abstand < (anzahl : Int)
+
+/-- The pinned narrowing row is exactly membership in the declared range. -/
+theorem ganzzahlBereich_iff (wert lo hi : Int) :
+    waechterBedarf .ganzzahlBereich (ganzzahlBereichOperanden wert lo hi) ↔
+      lo ≤ wert ∧ wert ≤ hi := by
+  change (0 ≤ wert - lo ∧ wert - lo < ((hi + 1 - lo).toNat : Int)) ↔ _
+  omega
 
 
 /-- **A unit's partial-operation uses**: at each `I` cut, the partial operations the unit

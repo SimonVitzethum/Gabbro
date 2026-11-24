@@ -11,7 +11,7 @@ open Gabbro.Core.Text
 /-- The continuation after the common binding header and initializer. A new
     continuation starts at its own discriminator, such as the word `else`. -/
 inductive LetTailReads (scope : Scope) (name : Identifier) (ordinary : name.val ≠ "mut".toList)
-    (value : Expr scope .integer) : List Token → Statement scope → List Token → Prop where
+    (value : Expr scope type) : List Token → Statement scope → List Token → Prop where
   | plain : LetTailReads scope name ordinary value (semicolon :: rest)
       ⟨_, .letValue name ordinary value⟩ rest
 
@@ -42,20 +42,22 @@ inductive StmtReads (scope : Scope) : List Token → Statement scope → List To
 
 theorem StmtReads.let_header
     (read : StmtReads scope (letKeyword :: .word spelling :: assignment :: input) tree rest) :
-    ∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (value : Expr scope .integer) (more : List Token),
+    ∃ (name : Identifier) (ordinary : name.val ≠ "mut".toList) (type : Ty .value)
+      (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads scope name ordinary value more tree rest := by
   cases read with
-  | letBinding name ordinary initializer tail => exact ⟨name, ordinary, _, _, rfl, initializer, tail⟩
+  | letBinding name ordinary initializer tail => exact ⟨name, ordinary, _, _, _, rfl, initializer, tail⟩
 
 theorem StmtReads.deterministic (left : StmtReads scope input a rest)
     (right : StmtReads scope input b rest') : a = b ∧ rest = rest' := by
   cases left with
   | letBinding name ordinary initializer tail =>
-    obtain ⟨name', ordinary', _, _, sameName, initializer', tail'⟩ := right.let_header
+    obtain ⟨name', ordinary', _, _, _, sameName, initializer', tail'⟩ := right.let_header
     have same : name' = name := Subtype.ext sameName
     subst name'
-    obtain ⟨rfl, rfl⟩ := initializer.deterministic initializer'
+    obtain ⟨same, rfl⟩ := initializer.deterministic initializer'
+    cases same
     exact tail.deterministic tail'
 
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads scope (closeBrace :: input) tree rest := by

@@ -15,8 +15,8 @@ inductive PartielleOperation where
   | ganzzahlBereich
   deriving DecidableEq, Repr
 
-/-- The inputs required to check one use. Integer results use the full exact
-    result and the contextual signed width, so a wrapped result cannot pass. -/
+/-- The inputs required to check one use. Integer narrowing uses the exact
+    result relative to the lower bound and the cardinality of the declared range. -/
 def Operanden : PartielleOperation → Type
   | .division => Nat × Nat
   | .modulo => Nat × Nat
@@ -26,6 +26,11 @@ def Operanden : PartielleOperation → Type
   | .entpacken => Nat
   | .ganzzahlBereich => Int × Nat
 
+
+/-- Translate the declared inclusive range to a zero-based interval. An empty
+    range has cardinality zero and admits no value. -/
+def ganzzahlBereichOperanden (wert lo hi : Int) : Operanden .ganzzahlBereich :=
+  (wert - lo, (hi + 1 - lo).toNat)
 
 /-- Written predicates, kept in source order as elaboration combines fragments. -/
 structure Quellklauseln (S : Type) where

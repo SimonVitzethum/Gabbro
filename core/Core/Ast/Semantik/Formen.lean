@@ -9,13 +9,13 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Katalog Waechter
 open Lean (Name)
 
-def literalForm (scope : Scope) : Quellform (.expression scope .integer) Nat where
+def literalForm (scope : Scope) : Quellform (.expression scope) Nat where
   produktion := Surface.literal scope
   befehl := .literal 0
   position := fun _ => 0
 
 def binaryForm (scope : Scope) :
-    Quellform (.expression scope .integer) (Surface.BinaryArgs scope) where
+    Quellform (.expression scope) (Surface.BinaryArgs scope) where
   produktion := Surface.binary scope
   befehl := fun args => .binaer args.op 0
   position := fun args => (((expr 0 args.left).anhaengen (expr 1 args.right)).code).length
@@ -26,14 +26,14 @@ def letForm (scope : Scope) : Quellform (.statement scope) (Surface.LetArgs scop
   position := fun args => (expr 0 args.value).code.length
 
 def LiteralErfuellbar : Prop :=
-  ∀ start, ∃ value, (literalForm []).ErfuellbarAm .x86_64 start value
+  ∀ (platform : Plattform) start, ∃ value, (literalForm []).ErfuellbarAm platform start value
 
 def BinaryErfuellbar : Prop :=
-  ∀ start op, ∃ args : Surface.BinaryArgs [], args.op = op ∧
-    (binaryForm []).ErfuellbarAm .x86_64 start args
+  ∀ (platform : Plattform) start op, ∃ args : Surface.BinaryArgs [], args.op = op ∧
+    (binaryForm []).ErfuellbarAm platform start args
 
 def LetErfuellbar : Prop :=
-  ∀ start, ∃ args, (letForm []).ErfuellbarAm .x86_64 start args
+  ∀ (platform : Plattform) start, ∃ args, (letForm []).ErfuellbarAm platform start args
 
 /-- Missing constructor specifications yield an uninhabitable registry entry. -/
 def nichtSpezifiziert (constructor : Name) : RegistrySchema constructor :=

@@ -104,7 +104,8 @@ def Expr.printPieces : Expr scope type → List PrintedToken
 def Expr.printTokens (tree : Expr scope type) : List Token :=
   tree.printPieces.map PrintedToken.value
 
-theorem Expr.printTokens_binary (op : Arith) (left right : Expr scope .integer) :
+theorem Expr.printTokens_binary (op : Arith) (left : Expr scope (.int lo₁ hi₁))
+    (right : Expr scope (.int lo₂ hi₂)) :
     (Expr.binary op left right).printTokens =
       [openParen] ++ left.printTokens ++ [op.token] ++ right.printTokens ++ [closeParen] := by
   simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
@@ -134,7 +135,7 @@ def Stmt.printTokens (tree : Stmt before after) : List Token :=
   tree.printPieces.map PrintedToken.value
 
 theorem Stmt.printTokens_let (name : Identifier) (ordinary : name.val ≠ "mut".toList)
-    (value : Expr scope .integer) :
+    (value : Expr scope type) :
     (Stmt.letValue name ordinary value).printTokens =
       [letKeyword, .word name.val, assignment] ++ value.printTokens ++ [semicolon] := by
   simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append,

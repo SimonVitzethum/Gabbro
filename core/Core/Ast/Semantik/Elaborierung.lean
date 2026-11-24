@@ -43,7 +43,7 @@ def unitBody : UnitBody before after → Fragment
   | .step first rest => (decl first).anhaengen (unitBody rest)
 
 def fragment : (category : Category) → category.Tree → Fragment
-  | .expression _ _, tree => expr 0 tree
+  | .expression _, tree => expr 0 tree.2
   | .statement _, tree => stmt tree.2
   | .block _, tree => block tree.2
   | .unit, tree => unitBody tree.2
@@ -74,9 +74,9 @@ def laden (start : AussenStart) (image : Ladung) : Option Zustand :=
   else none
 
 /-- Guards are collected at the source head, including at a cut with no hardware opportunity. -/
-def Fragment.tabellen (p : Fragment) (width : Nat) : Quelltabellen Zustand :=
+def Fragment.tabellen (p : Fragment) : Quelltabellen Zustand :=
   ⟨p.klauseln, fun s op args => ∃ c b, kopf p.code s c = some b ∧
-    b.guard width (s.lokal c) = some ⟨op, args⟩⟩
+    b.guard (s.lokal c) = some ⟨op, args⟩⟩
 
 /-- The current forms each take one concrete step at their linearisation point. State
     matching is equality at those points and the number of private steps is zero. -/
@@ -90,10 +90,17 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   laden := laden
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
-  quelltabellen := p.tabellen platform.ziel.wbits
+  quelltabellen := p.tabellen
 
 def elaborieren (platform : Plattform) {category : Category} (tree : category.Tree) : Einheit :=
   (fragment category tree).einheit platform
+
+/-- Platform selection binds the hardware catalogue without changing the source system or its guards. -/
+theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category}
+    (tree : category.Tree) :
+    (elaborieren left tree).system = (elaborieren right tree).system ∧
+      (elaborieren left tree).quelltabellen = (elaborieren right tree).quelltabellen :=
+  ⟨rfl, rfl⟩
 
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=

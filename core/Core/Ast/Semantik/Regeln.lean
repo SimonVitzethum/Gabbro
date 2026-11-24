@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Tree
+public import Core.Ast.Semantik.Arithmetik
 public import Core.Maschine.Start
 
 @[expose] public section
@@ -9,14 +9,27 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
 
+/-- The runtime integer package retains its two bounds and their proofs. -/
+structure Ganzzahl where
+  lo : Int
+  hi : Int
+  zahl : Zahl lo hi
+
+def Ganzzahl.typ (value : Ganzzahl) : Ty .value := .int value.lo value.hi
+
+def Ganzzahl.literal (value : Int) : Ganzzahl := ⟨value, value, Zahl.literal value⟩
+
+def Ganzzahl.binaer (op : Arith) (a b : Ganzzahl) : Ganzzahl :=
+  ⟨_, _, op.auswerten a.zahl b.zahl⟩
+
 /-- Each context has its own instruction pointer, temporary slots and immutable locals.
     Locals are stored in scope order. Temporaries are numbered by the elaborator. -/
 structure Rahmen where
   pc : Nat
-  temp : Nat → Int
-  lokale : List (Identifier × Int)
+  temp : Nat → Ganzzahl
+  lokale : List (Identifier × Ganzzahl)
 
-def Rahmen.start : Rahmen := ⟨0, fun _ => 0, []⟩
+def Rahmen.start : Rahmen := ⟨0, fun _ => Ganzzahl.literal 0, []⟩
 
 abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
 abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
@@ -29,29 +42,25 @@ inductive Befehl where
   | binaer (op : Arith) (links : Nat)
   | binden (name : Identifier) (quelle : Nat)
 
-def operation : Arith → Int → Int → Int
-  | .add => Int.add
-  | .mul => Int.mul
-
-/-- Mathematical evaluation at the instruction boundary. The separate range
-    guard makes each use representable in the machine type of an accepted run. -/
+/-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
   | .literal dst val, frame =>
-    { frame with pc := frame.pc + 1, temp := Function.update frame.temp dst (Int.ofNat val) }
+    { frame with pc := frame.pc + 1, temp := Function.update frame.temp dst (Ganzzahl.literal val) }
   | .binaer op left, frame =>
     { frame with
       pc := frame.pc + 1
-      temp := Function.update frame.temp left (operation op (frame.temp left) (frame.temp (left + 1))) }
+      temp := Function.update frame.temp left (Ganzzahl.binaer op (frame.temp left) (frame.temp (left + 1))) }
   | .binden name src, frame =>
     { frame with pc := frame.pc + 1, lokale := (name, frame.temp src) :: frame.lokale }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
-def Befehl.guard : Befehl → Nat → Rahmen → Option Bedarf
-  | .literal _ val, width, _ => some ⟨.ganzzahlBereich, (Int.ofNat val, width)⟩
-  | .binaer op left, width, frame =>
-    some ⟨.ganzzahlBereich, (operation op (frame.temp left) (frame.temp (left + 1)), width)⟩
-  | .binden _ _, _, _ => none
+/-- The three worked instructions are total. Explicit narrowing will contribute
+    the range guard at its own instruction. -/
+def Befehl.guard : Befehl → Rahmen → Option Bedarf
+  | .literal _ _, _ => none
+  | .binaer _ _, _ => none
+  | .binden _ _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 

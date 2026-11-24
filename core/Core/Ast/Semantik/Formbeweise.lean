@@ -62,7 +62,7 @@ theorem Quellform.erfuellbar_aus_erreichbar (form : Quellform category Arguments
     (platform : Plattform) (start : AussenStart) (args : Arguments) (s : Zustand)
     (reachable : (form.einheit platform args).system.IErreichbar (I.start (form.einheit platform args) start).2 s)
     (occurrence : Realisiert form platform args s)
-    (safeGuard : ∀ g, (form.befehl args).guard platform.ziel.wbits (s.lokal eintritt) = some g →
+    (safeGuard : ∀ g, (form.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2) :
     form.ErfuellbarAm platform start args :=
   ⟨Ast.print (category := category) (form.produktion.tree args), s, Ast.parse_print _, rfl,

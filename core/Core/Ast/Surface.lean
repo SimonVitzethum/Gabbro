@@ -37,13 +37,13 @@ theorem Rule.satisfiableOfPrint {rule : Rule category Arguments} (args : Argumen
   exact ⟨args, _, pieces, lexical, alignment.symm ▸ prints⟩
 
 /-- Inventory key `surface.SExpr.lit`. -/
-def literal (scope : Scope) : Rule (.expression scope .integer) Nat where
-  tree := Expr.lit
+def literal (scope : Scope) : Rule (.expression scope) Nat where
+  tree := fun value => (Expr.lit value).typed
   production := fun value tokens => tokens = [.natural value]
 
 theorem literal_print (scope : Scope) (value : Nat) :
     (literal scope).production value
-      (((Category.expression scope .integer).printPieces (.lit value)).map PrintedToken.value) :=
+      (((Category.expression scope).printPieces (Expr.lit value).typed).map PrintedToken.value) :=
   rfl
 
 theorem literal_erfuellbar (scope : Scope) : (literal scope).Satisfiable :=
@@ -60,8 +60,9 @@ theorem literal_entry (scope : Scope) : (literal scope).Entry where
 
 structure BinaryArgs (scope : Scope) where
   op : Arith
-  left : Expr scope .integer
-  right : Expr scope .integer
+  {lo₁ hi₁ lo₂ hi₂ : Int}
+  left : Expr scope (.int lo₁ hi₁)
+  right : Expr scope (.int lo₂ hi₂)
 
 /-- The production for a left atom and one precedence-sensitive infix step. -/
 def BinaryArgs.readStep (args : BinaryArgs scope) (input rest : List Token) : Prop :=
@@ -74,14 +75,14 @@ theorem BinaryArgs.readStep_sound (args : BinaryArgs scope) (read : args.readSte
   exact .atom left (.binary args.op (Nat.zero_le _) right (.stop blocked))
 
 /-- Inventory key `surface.SExpr.bin`. Includes ordinary infix and canonical grouping. -/
-def binary (scope : Scope) : Rule (.expression scope .integer) (BinaryArgs scope) where
-  tree := fun args => .binary args.op args.left args.right
+def binary (scope : Scope) : Rule (.expression scope) (BinaryArgs scope) where
+  tree := fun args => (Expr.binary args.op args.left args.right).typed
   production := fun args tokens =>
     args.readStep tokens [] ∨ ∃ inner, tokens = openParen :: inner ∧ args.readStep inner [closeParen]
 
 theorem binary_print (args : BinaryArgs scope) :
     (binary scope).production args
-      (((Category.expression scope .integer).printPieces (.binary args.op args.left args.right)).map
+      (((Category.expression scope).printPieces (Expr.binary args.op args.left args.right).typed).map
         PrintedToken.value) := by
   change (binary scope).production args (Expr.binary args.op args.left args.right).printTokens
   unfold binary
@@ -112,7 +113,8 @@ theorem binary_entry (scope : Scope) : (binary scope).Entry where
 structure LetArgs (scope : Scope) where
   name : Identifier
   ordinary : name.val ≠ "mut".toList
-  value : Expr scope .integer
+  {type : Ty .value}
+  value : Expr scope type
 
 /-- The ordinary immutable unannotated production of inventory key `surface.SAnw.bind`. -/
 def letValue (scope : Scope) : Rule (.statement scope) (LetArgs scope) where

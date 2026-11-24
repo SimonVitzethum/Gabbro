@@ -65,7 +65,7 @@ def Quellform.AnnahmeAussage : Prop :=
     let b := form.befehl args
     RegelLokal E b ∧
     (∀ s c (g : Bedarf), E.system.kopf s c = some b →
-      b.guard platform.ziel.wbits (s.lokal c) = some g → E.quelltabellen.guard s g.1 g.2) ∧
+      b.guard (s.lokal c) = some g → E.quelltabellen.guard s g.1 g.2) ∧
     ∀ t c s w stepPlan u spur next, (E.system.regel b).ideal c s w [stepPlan] u →
       FuehrtSchrittAus E.einrichtung t c s u stepPlan spur next →
       ∀ ev : FrageEreignis, Ereignis.frage ev ∉ spur.aussen
@@ -101,7 +101,7 @@ def Quellform.ErfuellbarAm (platform : Plattform) (start : AussenStart) (args : 
   ∃ (text : RawText) (s : Zustand),
     Ast.Parse text (form.produktion.tree args) ∧ Elaboriert platform (form.produktion.tree args) E ∧
     E.system.IErreichbar (I.start E start).2 s ∧ Realisiert form platform args s ∧
-    ∀ (g : Bedarf), (form.befehl args).guard platform.ziel.wbits (s.lokal eintritt) = some g →
+    ∀ (g : Bedarf), (form.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2
 
 def Quellform.statements {cat : Scope → Category} {args : Scope → Type}
