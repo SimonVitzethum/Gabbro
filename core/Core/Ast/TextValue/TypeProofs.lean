@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Type
 
 Prove the pinned statements in this file.
 
+- `TextTypeInversionAussage`
+- `TextTypeDerivationAussage`
+- `TextTypeWidenAussage`
 - `TextTypeParseAussage`
 - `TextTypeElaboriertAussage`
 - `TextTypeRealisiertAussage`

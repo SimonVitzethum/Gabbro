@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Literal
 
 Prove the pinned statements in this file.
 
+- `TextLiteralInversionAussage`
+- `TextLiteralDerivationAussage`
+- `TextLiteralBytesAussage`
 - `TextLiteralParseAussage`
 - `TextLiteralElaboriertAussage`
 - `TextLiteralRealisiertAussage`

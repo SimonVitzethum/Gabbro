@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Index
 
 Prove the pinned statements in this file.
 
+- `TextIndexDerivationAussage`
+- `TextIndexSuffixAussage`
+- `TextIndexBytesAussage`
 - `TextIndexParseAussage`
 - `TextIndexElaboriertAussage`
 - `TextIndexRealisiertAussage`

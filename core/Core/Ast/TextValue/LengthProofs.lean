@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Length
 
 Prove the pinned statements in this file.
 
+- `TextLengthInversionAussage`
+- `TextLengthDerivationAussage`
+- `TextLengthBytesAussage`
 - `TextLengthParseAussage`
 - `TextLengthElaboriertAussage`
 - `TextLengthRealisiertAussage`

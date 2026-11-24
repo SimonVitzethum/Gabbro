@@ -79,6 +79,9 @@ def SubstringErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (substringForm []).TextErfuellbar platform start args
 
 def SubstringProofPacket : Prop :=
+  SubstringDerivationAussage ∧
+  SubstringSuffixAussage ∧
+  SubstringBytesAussage ∧
   SubstringParseAussage ∧
   SubstringElaboriertAussage ∧
   SubstringRealisiertAussage ∧

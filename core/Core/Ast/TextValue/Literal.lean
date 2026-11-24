@@ -71,6 +71,9 @@ def TextLiteralErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (textLiteralForm []).TextErfuellbar platform start args
 
 def TextLiteralProofPacket : Prop :=
+  TextLiteralInversionAussage ∧
+  TextLiteralDerivationAussage ∧
+  TextLiteralBytesAussage ∧
   TextLiteralParseAussage ∧
   TextLiteralElaboriertAussage ∧
   TextLiteralRealisiertAussage ∧

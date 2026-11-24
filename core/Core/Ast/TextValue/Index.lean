@@ -75,6 +75,9 @@ def TextIndexErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (textIndexForm []).TextErfuellbar platform start args
 
 def TextIndexProofPacket : Prop :=
+  TextIndexDerivationAussage ∧
+  TextIndexSuffixAussage ∧
+  TextIndexBytesAussage ∧
   TextIndexParseAussage ∧
   TextIndexElaboriertAussage ∧
   TextIndexRealisiertAussage ∧

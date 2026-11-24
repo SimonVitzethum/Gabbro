@@ -75,6 +75,9 @@ def TextConcatErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (textConcatForm []).TextErfuellbar platform start args
 
 def TextConcatProofPacket : Prop :=
+  TextConcatInversionAussage ∧
+  TextConcatDerivationAussage ∧
+  TextConcatBytesAussage ∧
   TextConcatParseAussage ∧
   TextConcatElaboriertAussage ∧
   TextConcatRealisiertAussage ∧

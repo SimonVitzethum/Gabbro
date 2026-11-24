@@ -70,6 +70,9 @@ def TextTypeErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (typeUseForm ([], none) textTypeUse).TextErfuellbar platform start args
 
 def TextTypeProofPacket : Prop :=
+  TextTypeInversionAussage ∧
+  TextTypeDerivationAussage ∧
+  TextTypeWidenAussage ∧
   TextTypeParseAussage ∧
   TextTypeElaboriertAussage ∧
   TextTypeRealisiertAussage ∧

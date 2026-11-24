@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Concat
 
 Prove the pinned statements in this file.
 
+- `TextConcatInversionAussage`
+- `TextConcatDerivationAussage`
+- `TextConcatBytesAussage`
 - `TextConcatParseAussage`
 - `TextConcatElaboriertAussage`
 - `TextConcatRealisiertAussage`

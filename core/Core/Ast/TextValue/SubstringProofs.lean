@@ -7,6 +7,9 @@ public import Core.Ast.TextValue.Substring
 
 Prove the pinned statements in this file.
 
+- `SubstringDerivationAussage`
+- `SubstringSuffixAussage`
+- `SubstringBytesAussage`
 - `SubstringParseAussage`
 - `SubstringElaboriertAussage`
 - `SubstringRealisiertAussage`

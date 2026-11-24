@@ -73,6 +73,9 @@ def TextLengthErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ args, (textLengthForm []).TextErfuellbar platform start args
 
 def TextLengthProofPacket : Prop :=
+  TextLengthInversionAussage ∧
+  TextLengthDerivationAussage ∧
+  TextLengthBytesAussage ∧
   TextLengthParseAussage ∧
   TextLengthElaboriertAussage ∧
   TextLengthRealisiertAussage ∧
