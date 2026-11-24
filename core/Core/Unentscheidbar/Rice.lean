@@ -7,6 +7,7 @@ public import Mathlib.Computability.Halting
 
 namespace Gabbro.Core.Unentscheidbar
 
+open Ast.Semantik
 open Nat.Partrec.Code
 
 /-- Rice-Transfer auf simulierte Programme: eine Eigenschaft `Q` der

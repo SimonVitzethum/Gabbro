@@ -8,6 +8,7 @@ public import Mathlib.Computability.Reduce
 
 namespace Gabbro.Core.Unentscheidbar
 
+open Ast.Semantik
 open Nat.Partrec.Code
 
 /-- Das Gabbro-Halteprädikat bei fester Eingabe `n`: der simulierte Code `c`
