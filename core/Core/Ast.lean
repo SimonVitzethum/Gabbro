@@ -8,6 +8,9 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Freigabe
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Tabelle
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Lauf
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Reserviert
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Rechte
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.RechteLauf
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Stufung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap

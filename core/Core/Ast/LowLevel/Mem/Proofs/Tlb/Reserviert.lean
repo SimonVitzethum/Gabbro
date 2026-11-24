@@ -76,7 +76,7 @@ theorem flush_verweigert_gecachte_uebersetzung (target : ZielDaten) (s : MemStat
 theorem freigabe_ohne_pflicht_unsicher :
     ∃ (before after : MemFrame), before.TlbGedeckt ∧ ¬ after.TlbGedeckt ∧
       after.tlb = before.tlb := by
-  let token : Zuruecknahme := ⟨0, 0, 1, 1, 5⟩
+  let token : Zuruecknahme := ⟨0, 0, 1, 1, 5, false⟩
   let cell : TlbZelle := ⟨7, 0, 0, ⟨5, [.read], 0⟩⟩
   refine ⟨{ spaces := [{ tabellen := ⟨0, 0⟩, entries := [], generation := 1, ausstehend := [token] }]
             tlb := ⟨[cell]⟩ },
