@@ -11,22 +11,22 @@ open Gabbro.Core.Ast
 theorem tyTrue : ∀ t : Ty .value, True
   | .int _ _ => trivial
   | .bool => trivial
-  | .array el _ => tyTrue el
+  | .array el _ => by have _ := tyTrue el; trivial
   | .productEnd => trivial
-  | .product h t => tyTrue h; tyTrue t
-  | .record _ _ lay => tyTrue lay
-  | .recordSchema _ _ lay => tyTrue lay
+  | .product h t => by have _ := tyTrue h; have _ := tyTrue t; trivial
+  | .record _ _ lay => by have _ := tyTrue lay; trivial
+  | .recordSchema _ _ lay => by have _ := tyTrue lay; trivial
   | .sumEnd => trivial
-  | .sum h t => tyTrue h; tyTrue t
-  | .variant _ _ _ lay => tyTrue lay
-  | .variantSchema _ _ _ lay => tyTrue lay
+  | .sum h t => by have _ := tyTrue h; have _ := tyTrue t; trivial
+  | .variant _ _ _ lay => by have _ := tyTrue lay; trivial
+  | .variantSchema _ _ _ lay => by have _ := tyTrue lay; trivial
   | .text _ => trivial
-  | .carrierSchema _ _ lay _ => tyTrue lay
+  | .carrierSchema _ _ lay _ => by have _ := tyTrue lay; trivial
   | .effectGroupSchema _ => trivial
   | .address _ => trivial
   | .ownedRegion => trivial
-  | .regionView el => tyTrue el
-  | .ptr _ _ ref => tyTrue ref
+  | .regionView el => by have _ := tyTrue el; trivial
+  | .ptr _ _ ref => by have _ := tyTrue ref; trivial
 
 def smallDecode : Nat → Option Nat
   | 0 => none
@@ -36,8 +36,8 @@ def smallDecode : Nat → Option Nat
     have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
     have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
     have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-    if p.1 = 0 then some (smallDecode payload.unpair.1).getD 0
-    else if p.1 = 1 then some (smallDecode payload.unpair.2).getD 0
+    if p.1 = 0 then smallDecode payload.unpair.1
+    else if p.1 = 1 then smallDecode payload.unpair.2
     else some payload
 termination_by n => n
 decreasing_by assumption
