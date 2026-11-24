@@ -43,7 +43,7 @@ private theorem noAddAtPrec6 (more : List Token) :
   have opAdd : op = .arith .add :=
     Infix.token_injective (by simpa only [Infix.token] using (List.cons.inj same).1.symm)
   subst op
-  simp only [Infix.precedence, Arith.precedence] at allowed
+  change 6 ≤ 5 at allowed
   omega
 
 theorem textConcatInversion : TextConcatInversionAussage := by
@@ -74,7 +74,8 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
   rw [tokens]
   refine Or.inr ⟨_, rfl, ?_⟩
   refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_⟩
-  · exact Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen]))
+  · simpa only [List.singleton_append, List.cons_append, List.append_assoc] using
+      (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
@@ -90,16 +91,18 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
         | stop =>
             exact .atom atomRead
               (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtEnd))
-        | binary => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
-        | div => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
-        | compare => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Compare.spelling] at *
-        | logic => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Logic.spelling] at *
-        | arrayIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
-        | tupleField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
-        | recordField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
-        | textConcat => simp_all [Arith.precedence] at *
-        | textIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
-        | substring => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | binary _ _ _ tail => cases tail
+        | div _ _ _ tail => cases tail
+        | compare _ _ _ _ tail => cases tail
+        | logic _ _ _ tail => cases tail
+        | arrayIndex _ _ _ _ _ tail => cases tail
+        | tupleField _ _ _ tail => cases tail
+        | recordField _ _ _ _ _ tail => cases tail
+        | textConcat _ _ allowed _ _ =>
+            change 6 ≤ 5 at allowed
+            omega
+        | textIndex _ _ _ _ tail => cases tail
+        | substring _ _ _ _ _ _ tail => cases tail
     · rcases grouped with ⟨inside, rfl, body⟩
       rcases body with ⟨rhs, leftRead, rightRead⟩
       cases leftRead with
@@ -109,16 +112,18 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
             exact .atom (.grouped (.atom atomRead
               (.textConcat args.left args.right (Nat.zero_le _) rightRead
                 (.stop noOperatorAtClose)))) (.stop noOperatorAtEnd)
-        | binary => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
-        | div => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token] at *
-        | compare => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Compare.spelling] at *
-        | logic => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, Logic.spelling] at *
-        | arrayIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
-        | tupleField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
-        | recordField => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, dot] at *
-        | textConcat => simp_all [Arith.precedence] at *
-        | textIndex => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
-        | substring => simp_all [Infix.precedence, Arith.precedence, Infix.token, Arith.token, openBracket] at *
+        | binary _ _ _ tail => cases tail
+        | div _ _ _ tail => cases tail
+        | compare _ _ _ _ tail => cases tail
+        | logic _ _ _ tail => cases tail
+        | arrayIndex _ _ _ _ _ tail => cases tail
+        | tupleField _ _ _ tail => cases tail
+        | recordField _ _ _ _ _ tail => cases tail
+        | textConcat _ _ allowed _ _ =>
+            change 6 ≤ 5 at allowed
+            omega
+        | textIndex _ _ _ _ tail => cases tail
+        | substring _ _ _ _ _ _ tail => cases tail
   · let decoded : List Char := []
     let a := (sourceUtf8 decoded).size
     let left : Expr scope (.text a) := .textLiteral decoded
@@ -260,9 +265,11 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
   · constructor
     · rfl
     ·       have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        simp [s₂, s₁, a, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+        dsimp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+        simp [a]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        simp [s₂, a, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+        dsimp [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+        simp [a]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
       change (((((Befehl.textConcat 0 a a).nach eintritt s₂).lokal eintritt).temp 0).isSome) = true
