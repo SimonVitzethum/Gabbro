@@ -26,12 +26,14 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
       obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · refine ⟨fun _ _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
-      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-        ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
-      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ =>
-        ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
-      tiefenBezug_eq rfl⟩
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ p.klauseln.invariant, _) ∧

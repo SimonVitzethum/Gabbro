@@ -155,7 +155,7 @@ private theorem stopWaechterHalten (k : Katalog) (code : List ExecInstruction) :
 private theorem stopAkzeptiertX86 (code : List ExecInstruction) :
     Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, stopKlauselnWahr _ code, stopWaechterHalten _ code⟩
-  refine ⟨by simpa only [execProgram] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩
+  refine ⟨by simpa only [execProgram] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_⟩
   · intro i
     exact execRegelLokal Plattform.x86_64.katalog i
   · exact ⟨zulassung_m2 _, by
@@ -169,6 +169,14 @@ private theorem stopAkzeptiertX86 (code : List ExecInstruction) :
           exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
             (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
   · exact execProgramFlussLokal _ code
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
 
 private theorem stopJoint : StopJointAussage := by
   let decl : ExecStateDecl := ⟨64, .kernel, .off, []⟩
