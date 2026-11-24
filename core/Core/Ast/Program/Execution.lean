@@ -34,7 +34,7 @@ theorem Rahmen.LaufN.eins {first : Rahmen} (active : first.Aktiv) (lookup : code
 theorem Rahmen.LaufN.lauf (walk : Rahmen.LaufN code n first last) : Rahmen.Lauf code first last := by
   induction walk with
   | null => exact .start
-  | step live returned head _ ih => exact (.schritt .start ⟨_, live, returned, head, rfl⟩).trans ih
+  | step live returned head _ ih => exact Rahmen.Lauf.trans (.schritt .start ⟨_, live, returned, head, rfl⟩) ih
 
 theorem Rahmen.Aktiv.ausdruck {first last : Rahmen} (active : first.Aktiv)
     (same : last = { first with pc := last.pc, temp := last.temp }) : last.Aktiv :=
