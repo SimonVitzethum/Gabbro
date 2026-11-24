@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Fluss.Satz
+public import Core.Beobachtung.Satz
 public import Core.Beobachtung.Fluss.Quellfragment
 public import Core.Verfeinerung.Formen.Familie
 

@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Execution
-public import Core.Beobachtung.Fluss.Satz
+public import Core.Beobachtung.Satz
 
 @[expose] public section
 
