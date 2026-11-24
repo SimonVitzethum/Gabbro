@@ -53,16 +53,6 @@ private theorem tupleAnnotation_consumes : (input : List Token) → (annotation 
       ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead)).trans
         (List.suffix_cons colon input)
 
-private theorem openParen_ne_word (name : List Char) : openParen ≠ Token.word name := by
-  intro h
-  unfold openParen at h
-  nomatch h
-
-private theorem letKeyword_ne_word (name : List Char) : letKeyword ≠ Token.word name := by
-  intro h
-  unfold letKeyword at h
-  cases h
-
 private theorem directCall_not_tupleBind {scope : Scope} {input : List Token}
     {tokens : List Token} {call : DirectCall scope} {rest : List Token}
     (read : CallReads scope tokens call (semicolon :: rest))
@@ -86,9 +76,9 @@ theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
       have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
       have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
       rw [← (List.cons.inj htok).2] at patternRead
-      refine ⟨⟨_,_,_,_,_,_,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
+      refine ⟨⟨_,_,_,_,_,‹_›,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
   case directCall callRead =>
-      exact directCall_not_tupleBind callRead htok
+      exact (directCall_not_tupleBind callRead htok).elim
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
@@ -130,15 +120,17 @@ private theorem patternTail_printReads : (names : List (Option Identifier)) → 
     PatternTailReads (patternTailTokens names rest) names rest
   | [], rest, use => .close
   | name :: names, rest, use => by
+      have closeTok : printClose.value = closeParen := by rfl
+      have commaTok : printComma.value = comma := by rfl
       have htokens : patternTailTokens (name :: names) rest =
           comma :: (patternNamePieces name).map PrintedToken.value ++ patternTailTokens names rest := by
         cases names with
-        | nil => simp [patternTailTokens, commaSeparated]
-        | cons d ds => simp [patternTailTokens, commaSeparated, List.intersperse, List.map_append]
+        | nil => simp [patternTailTokens, commaSeparated, closeTok]
+        | cons d ds => simp [patternTailTokens, commaSeparated, List.intersperse, List.map_append, commaTok, closeTok]
       rw [htokens]
       apply PatternTailReads.next
-      · exact patternName_printReads name (patternTailTokens names rest) (fun nm h => use nm (by simp [h]))
-      · exact patternTail_printReads names rest (fun nm h => use nm (by simp [h]))
+      · exact patternName_printReads name (patternTailTokens names rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
+      · exact patternTail_printReads names rest (fun nm h => use nm (by simp_all [TuplePattern.names]))
 
 private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List Token)
     (use : ∀ nm, nm ∈ pattern.names.filterMap (fun x => x) → nm.val ≠ ['_']) :
@@ -156,8 +148,8 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
           apply TuplePatternReads.tuple
           · exact patternName_printReads first
               (comma :: (patternNamePieces second).map PrintedToken.value ++ closeParen :: rest)
-              (fun nm h => use nm (by simp [h]))
-          · exact patternName_printReads second (closeParen :: rest) (fun nm h => use nm (by simp [h]))
+              (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          · exact patternName_printReads second (closeParen :: rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
           · exact .close
       | cons c cs =>
           have hcs : (commaSeparated (patternNamePieces first :: patternNamePieces second :: (c :: cs).map patternNamePieces)).map PrintedToken.value =
@@ -169,9 +161,9 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
           apply TuplePatternReads.tuple
           · exact patternName_printReads first
               (comma :: (patternNamePieces second).map PrintedToken.value ++ comma :: patternTailTokens (c :: cs) rest)
-              (fun nm h => use nm (by simp [h]))
-          · exact patternName_printReads second (patternTailTokens (c :: cs) rest) (fun nm h => use nm (by simp [h]))
-          · exact patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp [h]))
+              (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          · exact patternName_printReads second (patternTailTokens (c :: cs) rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          · exact patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp_all [TuplePattern.names]))
 
 private theorem tupleAnnotation_printReads (annotation : Option WrittenType) (valueRest : List Token)
     (valid : ∀ written ∈ annotation.toList, written.valid) :
