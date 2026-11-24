@@ -61,6 +61,17 @@ def TranslationCache.invalidate (cache : TranslationCache) (space base pages : N
   fun core sp index =>
     if sp = space ∧ pageRange base pages index then none else cache core sp index
 
+theorem TranslationCache.invalidate_hit (cache : TranslationCache)
+    (space base pages core index : Nat) (covered : pageRange base pages index) :
+    cache.invalidate space base pages core space index = none :=
+  if_pos ⟨rfl, covered⟩
+
+theorem TranslationCache.invalidate_miss (cache : TranslationCache)
+    (space base pages core actual index : Nat)
+    (outside : actual ≠ space ∨ ¬ pageRange base pages index) :
+    cache.invalidate space base pages core actual index = cache core actual index :=
+  if_neg fun inside => outside.elim (fun other => other inside.1) (fun uncovered => uncovered inside.2)
+
 /-- The operations use the acting frame as their authority source. Table
     updates and invalidation are reflected in a single successor frame. -/
 def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
