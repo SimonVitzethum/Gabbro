@@ -153,12 +153,12 @@ private theorem erfuellbar_von {form : Form} {k : Katalog} {scope : RegionScope}
     rw [hs]
     have hcond : entryContext = entryContext ∧ (s.lokal entryContext).pc = 0 ∧
         (op.evaluate s entryContext).isSome := ⟨rfl, hp, by rw [hEvalS]; rfl⟩
-    simp only [hcond, ↓reduceIte]
+    simp only [hcond, ↓reduceIte, and_true, true_and]
   · exact hEvalS
   · change op.ideal entryContext s () [plan] (transfer.apply entryContext s)
     exact ⟨transfer, hEvalS, rfl, rfl⟩
   · change op.impl entryContext s () [plan] (transfer.apply entryContext s)
-    simp only [Instruction.impl, hEvalS]
+    simp only [Instruction.impl, hEvalS, and_self]
 
 theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -224,7 +224,11 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
     (start := start) (text := text) (transfer := transfer)
   · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   · change [name.val].Nodup
-    exact List.nodup_cons.mpr ⟨by intro h; cases h, List.nodup_nil⟩
+    apply List.nodup_cons.mpr
+    constructor
+    · intro h
+      cases h
+    · exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
     · exact Umgebung.referenz_hardware k 1 sicht
@@ -237,7 +241,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
     rfl
   · have hslot : scope.slot name = some 0 := by
       simpa [scope, name] using lowName_slot
-    simp only [elaborate, hslot, op, tree]
+    simp only [elaborate, hslot, op, tree, Option.map_some]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
@@ -245,7 +249,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
       change 0x1000 < 2 ^ (52 : Nat)
       omega
     change op.evaluate s entryContext = some transfer
-    simp only [op, Instruction.evaluate, hhr, hlt, transfer, k, ↓reduceIte]
+    simp only [op, Instruction.evaluate, hhr, hlt, transfer, k, Option.bind, ↓reduceIte]
 
 theorem view_erfuellbar : ErfuellbarAussage .view := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -276,7 +280,11 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     (start := start) (text := text) (transfer := transfer)
   · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   · change [name.val].Nodup
-    exact List.nodup_cons.mpr ⟨by intro h; cases h, List.nodup_nil⟩
+    apply List.nodup_cons.mpr
+    constructor
+    · intro h
+      cases h
+    · exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
     · exact Umgebung.referenz_hardware k 1 sicht
@@ -286,12 +294,16 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
   · apply tree_parse_print tree
     refine ⟨written.printPieces.map PrintedToken.value, rfl, ?_⟩
-    exact TypeReads.integer (by decide) (by intro more h; cases h)
+    exact TypeReads.integer
+      (by
+        simp only [WrittenType.valid, WrittenType.storage, ↓reduceIte, Option.getD_none]
+        omega)
+      (by intro more h; cases h)
   · have hslot : scope.slot name = some 0 := by
       simpa [scope, name] using lowName_slot
     have hlayout : layout k.plattform.ziel written = some shape := by
       rfl
-    simp only [elaborate, hslot, hlayout, op, tree]
+    simp only [elaborate, hslot, hlayout, op, tree, Option.bind]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
@@ -302,7 +314,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
       · change 0x1000 + 1 ≤ 0x2000
         omega
     change op.evaluate s entryContext = some transfer
-    simp only [op, Instruction.evaluate, hhr, hcond, transfer, ↓reduceIte]
+    simp only [op, Instruction.evaluate, hhr, hcond, transfer, Option.bind, ↓reduceIte]
 
 theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -334,7 +346,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   · apply tree_parse_print tree
     dsimp [tree, abi, row]
     rfl
-  · simp only [elaborate, tree, scope, op, allowed]
+  · simp only [elaborate, tree, scope, op, allowed, ↓reduceIte]
   · simp only [op, transfer, Instruction.evaluate]
 
 end Gabbro.Core.Ast.LowLevel
