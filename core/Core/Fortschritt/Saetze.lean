@@ -44,8 +44,8 @@ theorem zaehle_mono (m k : Nat → Bool) (a n : Nat)
     · have hk : k (a + n) = true := h (a + n) (Nat.le_add_right _ _) (Nat.lt_succ_self _) hm
       simp only [I.zaehle, if_pos hm, if_pos hk]
       exact Nat.succ_le_succ le
-    · simp only [I.zaehle, if_neg hm]
-      exact Nat.le_step le
+    · simp only [I.zaehle, if_neg hm, Nat.add_zero]
+      exact Nat.le_trans le (Nat.le_add_right _ _)
 
 /-- The tick count splits over consecutive intervals. -/
 theorem zaehle_add (m : Nat → Bool) (a n₁ n₂ : Nat) :
@@ -179,7 +179,8 @@ theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
               have hdd : d' = c :=
                 (SchrittWahl.kontext.inj
                   (congrArg Prod.fst (Option.some.inj (event.symm.trans himp_eq)))).1
-              exact hdd ▸ mark
+              rw [← hdd]
+              exact mark
           · exact (hcon t h1 h2 (Or.inl ⟨w, spur, step⟩)).elim
         | antwort _ => simp only [himp_eq, Bool.false_eq_true] at himp
         | interrupt _ => simp only [himp_eq, Bool.false_eq_true] at himp
@@ -194,7 +195,7 @@ theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
     intro t h1 h2 hm
     have hb : η.belegt t = some c := hbelegt t h1 h2 hm
     show decide (η.belegt t = some c) = true
-    rw [hb]
+    rw [hb, decide_eq_true_eq]
   omega
 
 /-- `waitFree` leaves no weakly hanging context: service ticks from `individuell` become own
@@ -218,7 +219,7 @@ theorem waitfrei_schliesst_schwaches_haengen_aus {ρ : Maschine.Lauf E} {η : I.
     intro k
     induction k with
     | zero => exact ⟨0, [], rfl, fun t h => (List.not_mem_nil h).elim,
-        List.pairwise_nil, fun t h => (List.not_mem_nil h).elim⟩
+        List.Pairwise.nil, fun t h => (List.not_mem_nil h).elim⟩
     | succ k ih =>
       obtain ⟨U, L, hlen, hmem, hpair, hbound⟩ := ih
       obtain ⟨t, htle, hnut, hber⟩ :=
@@ -251,7 +252,7 @@ theorem waitfrei_schliesst_schwaches_haengen_aus {ρ : Maschine.Lauf E} {η : I.
     have h := hmem t ht
     have hlive : (η.zeit.zustand t).status c = .laeuft :=
       (opened.2 t h.1).2.1
-    rcases pf.vollzug valid h.2 hlive h.2.2 with hcrash | ⟨w, spur, chosen⟩
+    rcases pf.vollzug valid h.2.1 hlive h.2.2 with hcrash | ⟨w, spur, chosen⟩
     · have herl : I.Erledigt η c t := Or.inr (Or.inl hcrash)
       exact ((opened.2 t h.1).2.2 herl).elim
     · simp only [chosen, decide_eq_true_eq]
