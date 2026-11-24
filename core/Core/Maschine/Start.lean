@@ -153,15 +153,22 @@ structure Lauf where
   umgebung : Umgebung
   hw : HwLauf
   zeit : Zeitlauf (Schritt E.einrichtung E.system E.katalog hw) (fun t _ => ¬ AbsturzAngeboten E.katalog hw t)
+  /-- The context using a core opportunity for a private implementation step. -/
+  belegt : Nat → Option Kontext
 
 abbrev Schnitt (ρ : Lauf E) : Type := ρ.zeit.Schnitt
 
 def ZustandAm (ρ : Lauf E) (t : Schnitt E ρ) : AussenStart × Zustand L Ort Wert Raum Lok Grund :=
   (ρ.start, ρ.zeit.zustand t.val)
 
+/-- Maximal ideal runs use the same hardware opportunities. A private core step
+    occupies its tick without adding an ideal transition. Unoccupied ticks must
+    still take a step whenever one is possible. -/
 def Laeufe (ρ : Lauf E) : Prop :=
   Hardware E.katalog ρ.umgebung ∧ ρ.hw.konform E.katalog ρ.umgebung ∧
-    E.ZulStart ρ.umgebung ρ.start ∧ ρ.zeit.zustand 0 = (start E ρ.start).2 ∧ ρ.zeit.Maximal
+    E.ZulStart ρ.umgebung ρ.start ∧ ρ.zeit.zustand 0 = (start E ρ.start).2 ∧
+    ρ.zeit.Maximal (fun t => ρ.belegt t = none) ∧
+    (∀ t c, ρ.belegt t = some c → ρ.zeit.spur t = none ∧ KannSchreiten ρ.hw t c (ρ.zeit.zustand t))
 
 /-- A crash offer is mandatory even at an ideal cut where a private step could normally pause. -/
 theorem absturz_am_schnitt (ρ : Lauf E) {t : Nat} (offer : AbsturzAngeboten E.katalog ρ.hw t) :
@@ -185,8 +192,9 @@ theorem lauf_mit_hw {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   have pause t z (stuck : KeinSchritt (Schritt E.einrichtung E.system E.katalog hw) t z) :
       ¬ AbsturzAngeboten E.katalog hw t :=
     fun offer => stuck _ _ (.absturz (absturz_schritt_erfuellbar _ _ offer z))
-  exact ⟨⟨s, h, hw, zeit.erlaubePausen pause⟩,
-    ⟨hardware, konform, start, init, zeit.erlaubePausen_maximal pause⟩, rfl, rfl⟩
+  exact ⟨⟨s, h, hw, zeit.erlaubePausen pause, fun _ => none⟩,
+    ⟨hardware, konform, start, init, zeit.erlaubePausen_maximal pause _ (fun _ => rfl),
+      fun _ _ h => nomatch h⟩, rfl, rfl⟩
 
 end I
 
