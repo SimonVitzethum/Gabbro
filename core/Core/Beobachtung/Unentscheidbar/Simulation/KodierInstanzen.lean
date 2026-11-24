@@ -380,70 +380,70 @@ def tyVonCode : Code → Option (Ty .value)
 theorem tyCode_ofCode : ∀ t : Ty .value, tyVonCode (tyZuCode t) = some t
   | .int lo hi => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .bool => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .array el cnt => by
       have ih := tyCode_ofCode el
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .productEnd => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .product h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2]
   | .record nm ls lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .recordSchema nm ls lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .sumEnd => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .sum h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2]
   | .variant nm ls hp lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .variantSchema nm ls hp lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .text cap => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .carrierSchema cnt ls lay ex => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .effectGroupSchema eff => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .address space => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .ownedRegion => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .regionView el => by
       have ih := tyCode_ofCode el
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .ptr space recht referent => by
       have ih := tyCode_ofCode referent
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
 
 instance instEncodableTy (k : Kind) : Encodable (Ty k) := by
   cases k
