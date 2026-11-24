@@ -27,11 +27,14 @@ def wertInhalt (type : Ty .value) (value : Wert type) : Int ⊕ Bool ⊕ Option 
 
 private theorem wertInhalt_widen (fits : Fits source target) (value : Wert source) :
     wertInhalt source value = wertInhalt target (Wert.widen source target fits value) := by
-  cases source <;> cases target
-  case array.array source count target other =>
-    cases count <;> cases other
+  cases source
+  case array source count =>
+    cases count <;> cases target
+    case zero.array target other => cases other
+    case succ.array n target other => cases other
     all_goals first | rfl | cases fits <;> rfl
-  all_goals first | rfl | cases fits <;> rfl
+  all_goals
+    cases target <;> first | rfl | cases fits <;> rfl
 
 theorem wertIn_widen (fits : Fits source target) (value : Wert source) :
     ∃ widened : Wert target, wertIn target ⟨source, value⟩ = some ⟨target, widened⟩ ∧
@@ -171,6 +174,7 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
     first
     | exact List.suffix_refl _
     | exact List.suffix_cons _ _
+    | exact List.suffix_append _ _
     | trivial
     | apply List.IsSuffix.trans <;> assumption
 
