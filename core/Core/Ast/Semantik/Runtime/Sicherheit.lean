@@ -10,7 +10,7 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Annahme Sicherheit Katalog
 
 def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
-    Sicherheit.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl :=
+    Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
   ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
 
 theorem Befehl.sicher (p : Fragment) (platform : Plattform)
@@ -18,9 +18,9 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
     RegelSicher (p.sicherheitsEinheit platform) b := by
   intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
   obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
-  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur PUnit Int) := List.not_mem_nil
+  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
   have wirkungen :
-      NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur PUnit Int) [] :=
+      NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
     Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
   refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
   · intro i actor access recorded _

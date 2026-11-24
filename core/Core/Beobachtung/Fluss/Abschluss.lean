@@ -38,7 +38,7 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     Nichtinterferent (p.einheit plattform) := by
   apply ni_akzeptierter_einheit (p.einheit plattform) h (fragment_start_ni p plattform)
   · intro f quelle
-    cases familie : f.simFamilie with
+    cases familie : f.familie with
     | skalar => exact beweise.skalar p plattform f familie quelle
     | kontrollfluss => exact beweise.kontrollfluss p plattform f familie quelle
     | aufrufSchleife => exact beweise.aufrufSchleife p plattform f familie quelle

@@ -54,13 +54,13 @@ theorem Fragment.beschriftet_fluss_lokal (p : Fragment) (platform : Plattform) (
       rw [(List.cons.inj transfer₁.1).1, (List.cons.inj transfer₂.1).1, transfer₁.2, transfer₂.2]
       obtain ⟨lokale, ende, initial, rechte, leihen, antwort⟩ := gleich
       refine ⟨⟨?_, ende, initial, rechte, leihen, antwort⟩, rfl, rfl⟩
-      have region : Zustand.regionLive v₁ c = Zustand.regionLive v₂ c := by
+      have region : Zustand.regionLive v₁ = Zustand.regionLive v₂ := by
         funext slot
         simp only [Zustand.regionLive, rechte, leihen]
       have kopf₁ : p.code[(v₁.lokal c).pc]? = some f := kopf_code (code := p.code) links.1
       intro d _ _
-      change ((Function.update v₁.lokal c (f.auswerten (v₁.lokal c) (Zustand.regionLive v₁ c))) d).sicht β =
-        ((Function.update v₂.lokal c (f.auswerten (v₂.lokal c) (Zustand.regionLive v₂ c))) d).sicht β
+      change ((Function.update v₁.lokal c (f.auswerten (v₁.lokal c) (Zustand.regionLive v₁))) d).sicht β =
+        ((Function.update v₂.lokal c (f.auswerten (v₂.lokal c) (Zustand.regionLive v₂))) d).sicht β
       rw [region]
       by_cases hd : d = c
       · subst hd

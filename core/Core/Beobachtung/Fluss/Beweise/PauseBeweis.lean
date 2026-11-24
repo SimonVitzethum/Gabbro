@@ -178,7 +178,7 @@ theorem pauseNI : PauseNIAussage := by
           have ruht₁ : v₁.status c₂ = .ruht := by
             rw [statusEq]
             exact ruht₂
-          let label : Speicher.Etikett PUnit Int :=
+          let label : Speicher.Etikett Ast.Semantik.Zelle Int :=
             aussenEtikett E.einrichtung (.interrupt k irq .handler)
           have labelNicht : ¬ label.art.liest := by
             simp only [label, aussenEtikett, Speicher.Art.liest]
@@ -190,7 +190,7 @@ theorem pauseNI : PauseNIAussage := by
           have folge₁ : Speicherfolge v₁.initial .aussen v₁.graph [label]
               [(.aussen, label)] graph' :=
             .cons (.ohne (Or.inl (by simp only [label, aussenEtikett]))) stepGraph (.nil _)
-          let spur₁ : SchrittSpur PUnit Int := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
+          let spur₁ : SchrittSpur Ast.Semantik.Zelle Int := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
           let nach₁ := { Zustandseintritt v₁ k irqId c₂ nmi with graph := graph' }
           have enters₁ : UnterbrechungsSchritt E.einrichtung ρ₁.hw t irqId v₁ spur₁ nach₁ := by
             refine ⟨k, irq, c₂, nmi, intOffer₁, pending₁, nimmt₁, ruht₁, ?_, ?_, rfl⟩

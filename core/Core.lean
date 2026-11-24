@@ -9,6 +9,7 @@ public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
@@ -30,6 +31,7 @@ public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
+public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
@@ -39,11 +41,13 @@ public import Core.Verfeinerung.Formen.Erfuellbar
 public import Core.Verfeinerung.Abnahme.StotterMass
 public import Core.Verfeinerung.Abnahme.Flush
 public import Core.Verfeinerung.Abnahme.LockFree
+public import Core.Verfeinerung.Review.Befunde
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
+public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
@@ -86,9 +90,15 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.BuendelUnterZulStart
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
@@ -97,8 +107,14 @@ public import Core.Beobachtung.Unentscheidbar.Reduktion
 public import Core.Beobachtung.Unentscheidbar.Rice
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
-public import Core.Beobachtung.SchrankenBeweise.Gegenbeispiel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
+public import Core.Beobachtung.SchrankenBeweise.Klasse
+public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
+public import Core.Ast.Semantik.Runtime.Klasse.Klasse
+public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
+public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
+public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
+public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 meta import Core.Waechter.Check
 
 #check_core
