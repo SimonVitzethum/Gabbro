@@ -130,7 +130,8 @@ theorem Instruction.regelSicher {k : Katalog} (op : Instruction k) :
   · intro _
     refine ⟨fun _ _ => trivial, ?_⟩
     intro i d declared _
-    simp [safetyUnit] at declared
+    change [][i]? = some d at declared
+    cases declared
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
