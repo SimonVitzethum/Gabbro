@@ -17,6 +17,8 @@ produces its result. The two private relations are empty.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 /-- One ideal step is determined by the plan and the successor it writes, and
     the ideal rule of the fixed instruction is exactly that step. -/
 theorem execution_ideal (form : Form) : IdealAussage form := by
@@ -105,5 +107,7 @@ theorem execution_fortschritt (form : Form) : FortschrittAussage form := by
       change ∃ t, op.evaluate s c = some t ∧ [plan] = [plan] ∧
         transfer.apply c s = t.apply c s
       exact ⟨transfer, hEval, rfl, rfl⟩
+
+end
 
 end Gabbro.Core.Ast.LowLevel
