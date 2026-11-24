@@ -58,7 +58,7 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     (fun _ _ blk => (block blk).klauseln.invariant = [])
     (fun _ br => (bracedBlock br).klauseln.invariant = [])
     (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
     Fragment.anhaengen, Fragment.einzel, Fragment.leer,
@@ -117,7 +117,7 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
   refine @Gabbro.Core.Ast.VariantArms.rec result
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => (variantArms ar).branches.length = p.length)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
 
@@ -152,7 +152,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => ∀ (i : Nat) (hib : i < (variantArms ar).branches.length),
       ((variantArms ar).branches[i]).2 = true → (p[i]?).join.isSome = true)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
   · intro scope labels payloads label caseName body rest ih i hib hb
@@ -230,32 +230,9 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       (by simpa [entry] using hb)
   exact vm_case_payload_some a.payloads value i rfl hsome
 
-private theorem vm_read_suffix {result scope allowed labels payloads input arms rest}
-    (read : @Gabbro.Core.Ast.VariantArmsRead result scope allowed input labels payloads arms rest) :
-    rest <:+ input := by
-  refine @Gabbro.Core.Ast.VariantArmsRead.rec (result := result)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ a _ _ _ a2 _ => a2 <:+ a)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    scope allowed input labels payloads arms rest read
-  all_goals simp_all [BlockReads.consumes]
-  · intro scope input body more x x1 next rest label caseName blockRead restRead ih
-    exact ih.trans ((BlockReads.consumes blockRead).trans
-      ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
-  · intro type scope input more x x1 next rest label binder ordinary body blockRead restRead ih
-    exact ih.trans ((BlockReads.consumes blockRead).trans
-      ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans
-        ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))))))
-  · intro scope input body rest labels payloads nonempty shape blockRead
-    exact (List.suffix_cons Gabbro.Core.Ast.closeBrace rest).trans
-      ((BlockReads.consumes blockRead).trans
-        ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
-
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
-  exact vm_read_suffix read
+  exact read.consumes
 
 theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage := by
   intro ctx args text pieces lexed production
@@ -286,7 +263,7 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   have written : labels[index.val]? = some lbl := by
     simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
-    simp [Gabbro.Core.Ast.ordinaryLocal, lbl, Gabbro.Core.Ast.keywordName]
+    exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
     · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,

@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Variant.Obligations
+import Core.Ast.Declaration.Members
 
 /-!
 # TaggedDecl
@@ -21,7 +22,6 @@ public import Core.Ast.Variant.Obligations
 - `TaggedDeclBindingAussage`
 -/
 
-import Core.Ast.Declaration.Members
 
 @[expose] public section
 

@@ -78,4 +78,8 @@ theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : r
 theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : rest <:+ input := by
   statement_suffix BlockReads.rec read
 
+theorem VariantArmsRead.consumes
+    (read : VariantArmsRead result scope allowed input arms rest) : rest <:+ input := by
+  statement_suffix VariantArmsRead.rec read
+
 end Gabbro.Core.Ast
