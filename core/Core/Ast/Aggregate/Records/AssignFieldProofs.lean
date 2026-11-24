@@ -160,7 +160,7 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
               | succ m =>
                   cases fits
                   simp only [wertAls]
-                  dsimp [Wert.widen]
+                  simp [Wert.widen, Fits]
       | _ => simp [Fits, wertAls, Wert.widen] at fits
   | _ =>
       cases target with
@@ -193,8 +193,12 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
   dsimp only
   refine ⟨?_, ?_, ?_, ?_⟩
   · simp only [assignFieldForm, Befehl.auswerten]
-    rw [hlocal]
-    simp [Option.bind, htemp, hold, hwiden, List.getElem?_set_self hlt, recordValueType, Wert]
+    rw [hlocal, htemp]
+    simp only [Option.bind]
+    rw [hold, hwiden]
+    simp only [Option.bind]
+    rw [List.getElem?_set_self hlt]
+    simp [recordValueType, Wert]
   · intro i hi
     simp [assignFieldForm, Befehl.auswerten, List.getElem?_set_ne (Ne.symm hi)]
   · simp [assignFieldForm, Befehl.auswerten]
