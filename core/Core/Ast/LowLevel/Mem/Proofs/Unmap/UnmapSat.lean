@@ -241,7 +241,7 @@ private theorem satFrames2 :
 
 private theorem satPage0 : pageRange 0 1 0 := ⟨by omega, by omega⟩
 
-private def token2 : Zuruecknahme := ⟨0, 0, 1, 1, 1⟩
+private def token2 : Zuruecknahme := ⟨0, 0, 1, 1, 1, false⟩
 private def space3 : Adressraum := ⟨tableExtent, [], 1, [token2]⟩
 private def s3frame : MemFrame :=
   { (satS2.lokal entryContext) with result := some (.pending token2), spaces := [space3] }
