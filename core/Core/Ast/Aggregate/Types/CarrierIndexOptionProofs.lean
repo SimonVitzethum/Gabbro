@@ -229,12 +229,13 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
     intro t mem
     cases mem
   let args : Surface.FunctionArgs scope :=
-    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done, by simp [param], by
+    ⟨fname, fOrdinary, [param], none, validNone, none, .braces .done, by decide, by
       intro h
       cases h⟩
   have belongs : ∃ p ∈ args.parameters, indexOptionTypeUse p.written := by
     refine ⟨param, ?_, ?_⟩
-    · simp [args, param]
+    · change param ∈ ([param] : List (Parameter scope))
+      simp only [List.mem_singleton]
     · trivial
   let witness : {args : Surface.FunctionArgs scope // ∃ p ∈ args.parameters, indexOptionTypeUse p.written} :=
     ⟨args, belongs⟩
