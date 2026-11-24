@@ -178,6 +178,7 @@ theorem neg_print (args : NegArgs scope) :
   · simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation,
       PrintedToken.unquoted, Arith.print_value, String.reduceToList, List.map_append,
       List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    rfl
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
@@ -215,6 +216,7 @@ theorem notValue_print (args : Expr scope .bool) :
   · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose,
       printPunctuation, PrintedToken.unquoted, String.reduceToList, List.map_append,
       List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    rfl
   · intro tail
     constructor <;> intro h <;> cases h
   · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
@@ -305,9 +307,10 @@ theorem comparison_reads (scope : Scope) (args : CompareArgs scope)
 theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (comparison scope).production a (canonicalTokens pieces) := by
   intro op
   let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
-  refine ⟨args, ?_, ?_, rfl, ?_, ?_⟩
-  obtain ⟨_, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
-  exact ⟨text, pieces, lexical, production⟩
+  let toks := (Category.expression scope).printPieces ((comparison scope).tree args)
+  obtain ⟨pieces, lexical, alignment⟩ := PrintedToken.renderLexed 0 toks
+  refine ⟨args, PrintedToken.render toks, pieces, rfl, lexical, ?_⟩
+  exact alignment.symm ▸ comparison_print args
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -346,9 +349,10 @@ theorem logic_reads (scope : Scope) (args : LogicArgs scope)
 theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (logic scope).production a (canonicalTokens pieces) := by
   intro op
   let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
-  refine ⟨args, ?_, ?_, rfl, ?_, ?_⟩
-  obtain ⟨_, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
-  exact ⟨text, pieces, lexical, production⟩
+  let toks := (Category.expression scope).printPieces ((logic scope).tree args)
+  obtain ⟨pieces, lexical, alignment⟩ := PrintedToken.renderLexed 0 toks
+  refine ⟨args, PrintedToken.render toks, pieces, rfl, lexical, ?_⟩
+  exact alignment.symm ▸ logic_print args
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
@@ -366,13 +370,11 @@ def assignVar (scope : Scope) (result : Option (Ty .value)) : Rule (.statement s
 -- Mirror letValue_print for the declared spelling.
 theorem assignVar_print (args : AssignArgs scope) :
     (assignVar scope result).production args (((Category.statement scope result).printPieces ((assignVar scope result).tree args)).map PrintedToken.value) := by
-  change (assignVar scope result).production args
-    (Stmt.assignVar args.ref args.visible args.writable args.value args.fits).printTokens
   unfold assignVar
-  simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, printAssignment,
-    printSemicolon, Identifier.print, printPunctuation, PrintedToken.unquoted,
-    String.reduceToList, List.map_append, List.map_cons, List.map_nil, List.cons_append,
-    List.nil_append]
+  simp only [Category.printPieces, Stmt.printTokens, Stmt.printPieces, Expr.printTokens,
+    printAssignment, printSemicolon, Identifier.print, printPunctuation,
+    PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
+    List.cons_append, List.nil_append]
   exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
@@ -425,9 +427,10 @@ theorem ifElse_print (args : IfArgs scope result) :
   change (ifElse scope result).production args (Stmt.ite args.condition args.yes args.no).printTokens
   unfold ifElse
   simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces, Expr.printTokens,
-    printOpenBrace, printCloseBrace, elseName, Identifier.print, printPunctuation,
-    PrintedToken.unquoted, keywordName, String.reduceToList, List.map_append, List.map_cons,
-    List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    printOpenBrace, printCloseBrace, ifName, elseName, Identifier.print, printPunctuation,
+    PrintedToken.unquoted, keywordName, ifKeyword, elseKeyword, String.reduceToList,
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
+    List.append_assoc]
   refine ⟨args.condition.printTokens ++ args.yes.printPieces.map PrintedToken.value ++
       elseKeyword :: args.no.printPieces.map PrintedToken.value,
     args.yes.printPieces.map PrintedToken.value ++ elseKeyword :: args.no.printPieces.map PrintedToken.value,
@@ -465,7 +468,8 @@ def braced (scope : Scope) (result : Option (Ty .value)) : Rule (.block scope re
 -- Mirror Block.printItems_reads for the declared spelling.
 theorem braced_print (args : Statements result scope) :
     (braced scope result).production args (((Category.block scope result).printPieces ((braced scope result).tree args)).map PrintedToken.value) := by
-  change (braced scope result).production args (.braces args.2).printPieces.map PrintedToken.value
+  change (braced scope result).production args
+    ((BracedBlock.braces args.2).printPieces.map PrintedToken.value)
   unfold braced
   simp only [BracedBlock.printPieces, printOpenBrace, printCloseBrace, printPunctuation,
     PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
