@@ -41,6 +41,8 @@ private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rf
 private theorem printDotVal : printDot.value = dot := by rfl
 private theorem printSlotsVal : printSlots.value = Token.word ['s', 'l', 'o', 't', 's'] := by rfl
 private theorem printCommaVal : printComma.value = comma := by rfl
+private theorem ifTrue {α : Type} (t e : α) : (if True then t else e) = t := rfl
+private theorem ifFalse {α : Type} (t e : α) : (if False then t else e) = e := rfl
 private def egName : Identifier :=
   ⟨['g'], 'g', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
     fun _ member => (List.not_mem_nil member).elim⟩
@@ -141,27 +143,38 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       by_cases he : head.exported
       · by_cases ie : item.exported
         · have hh' := hh
-          simp_all [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal]
-          obtain ⟨hval, hin⟩ := hh'
-          have hnameval : head.name.val = item.name.val := by
-            simpa [identPrintVal] using hval
-          refine ⟨item, Subtype.ext hnameval.symm, by rw [he, ie], ?_, ?_⟩
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          have c1 := List.cons.inj hh'
+          have c2 := List.cons.inj c1.2
+          have c3 := List.cons.inj c2.2
+          have c4 := List.cons.inj c3.2
+          have hnameval : item.name = head.name := by
+            apply Subtype.ext
+            exact (Token.word.inj c3.1).symm
+          have hin : input = input' := c4.2
+          refine ⟨item, hnameval, by rw [he, ie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
           · rfl
         · have hh' := hh
-          simp_all [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal]
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          cases hh'
       · by_cases ie : item.exported
         · have hh' := hh
-          simp_all [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal]
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          cases hh'
         · have hh' := hh
-          simp_all [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal]
-          obtain ⟨hval, hin⟩ := hh'
-          have hnameval : head.name.val = item.name.val := by
-            simpa [identPrintVal] using hval
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
+          have c1 := List.cons.inj hh'
+          have c2 := List.cons.inj c1.2
+          have c3 := List.cons.inj c2.2
+          have hnameval : item.name = head.name := by
+            apply Subtype.ext
+            exact (Token.word.inj c2.1).symm
+          have hin : input = input' := c3.2
           have hhe : head.exported = false := by simpa using he
           have hie : item.exported = false := by simpa using ie
-          refine ⟨item, Subtype.ext hnameval.symm, by rw [hhe, hie], ?_, ?_⟩
+          refine ⟨item, hnameval, by rw [hhe, hie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
           · rfl
@@ -240,9 +253,9 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
       | none => simp [hfx] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp only [hfx, hrest] at h
+          | none => simp [hfx, hrest] at h
           | some ys' =>
-              simp only [hfx, hrest] at h
+              simp [hfx, hrest] at h
               subst ys
               simpa [ih ys' hrest]
 private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
@@ -260,9 +273,9 @@ private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
       | none => simp [hfx] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp only [hfx, hrest] at h
+          | none => simp [hfx, hrest] at h
           | some ys' =>
-              simp only [hfx, hrest] at h
+              simp [hfx, hrest] at h
               subst ys
               cases i with
               | zero => exact hfx
@@ -350,7 +363,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
         | _ => none) with
       | none =>
-          simp only [hcmd] at hmem
+          simp [hcmd] at hmem
           exact ih site (List.mem_filterMap.mpr hmem)
       | some first =>
           cases cmd with
