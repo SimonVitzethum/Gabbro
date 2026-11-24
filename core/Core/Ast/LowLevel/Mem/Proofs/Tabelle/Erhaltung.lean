@@ -104,7 +104,7 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
     · cases h
 
 private theorem neue_rechte_map (space : Adressraum) (rights : List Speicherdienst)
-    (hne : rights ≠ []) (von gen pages base : Nat)
+    (hne : rights ≠ []) (von gen pages base : Nat) (hgen : gen ≤ space.generation)
     (ok : ∀ entry ∈ space.entries, entry.2.rights ≠ [] ∧ entry.2.generation ≤ space.generation)
     (entry : Nat × Seiteneintrag)
     (hmem : entry ∈ space.entries ++
@@ -113,7 +113,7 @@ private theorem neue_rechte_map (space : Adressraum) (rights : List Speicherdien
   rcases List.mem_append.mp hmem with hold | hnew
   · exact ok entry hold
   · obtain ⟨i, _, rfl⟩ := List.mem_map.mp hnew
-    exact ⟨hne, Nat.le_refl _⟩
+    exact ⟨hne, hgen⟩
 
 theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
     (rights : List Speicherdienst) (s : MemState) (c : Kontext) {next : MemFrame}
@@ -144,8 +144,7 @@ theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
         · intro sp' space' found
           by_cases same : sp' = sp
           · subst same
-            have hset := List.getElem?_set_self (l := (s.lokal c).spaces) hlt
-            rw [hset] at found
+            simp only [List.getElem?_set_self hlt] at found
             have heq : space' = _ := (Option.some.inj found).symm
             subst heq
             have hspace := hspaces sp space hs
@@ -156,7 +155,7 @@ theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
                   hall rights (region.extent.von / target.seitengranule) space.generation)
             · exact hflags
             · intro entry hmem
-              exact neue_rechte_map space rights hne _ _ _ _ hrights entry hmem
+              exact neue_rechte_map space rights hne _ _ _ _ (Nat.le_refl _) hrights entry hmem
           · have found0 : (s.lokal c).spaces[sp']? = some space' := by
               have : ((s.lokal c).spaces.set sp _)[sp']? = some space' := found
               rw [List.getElem?_set_ne (Ne.symm same)] at this
