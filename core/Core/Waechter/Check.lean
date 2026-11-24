@@ -312,8 +312,12 @@ elab "#check_core" : command => do
     let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
-    let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-      ++ safetyErrors env index safety ++ aussagePinErrors env index pins
+    -- The pin hashes walk the closure of every pin; run them on their own threads so that the
+    -- command's heartbeat budget does not grow with the number of pins.
+    let pinTask := Task.spawn fun _ => pinErrors env index pins
+    let aussageTask := Task.spawn fun _ => aussagePinErrors env index pins
+    let dependencyErrors := compiledImportErrors env ++ pinTask.get ++ acceptanceErrors env index acceptance
+      ++ safetyErrors env index safety ++ aussageTask.get
     let pinNames := pins.map (·.1)
     let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
@@ -327,7 +331,7 @@ elab "#check_core" : command => do
       coveredNames := coveredNames.insert root
       for name in index.closure root do
         coveredNames := coveredNames.insert name
-    let binderTask ← Meta.MetaM.asTask' (pure (⟨#[], #[]⟩ : BinderFindings))
+    let binderTask ← Meta.MetaM.asTask' (binderFindings env (coveredNames.contains ·) closing.isSome)
     let binder ← withoutModifyingState binderTask.get
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
