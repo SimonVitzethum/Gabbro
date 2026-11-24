@@ -19,6 +19,7 @@ inductive Zeile where
   | endpoint (e : Endpunkt)
   | persistence
   | dauer (id maximum : Nat)
+  | zufall (id : Nat)
   deriving DecidableEq, Repr
 
 def ZielZeilen : List Zeile := [.target, .cores, .interrupts, .mmu, .nativeFloat, .loader]
@@ -49,10 +50,14 @@ instance (k : Katalog) (r : Zeile) : Decidable (k.enthaelt r) :=
   inferInstanceAs (Decidable (r ∈ k.zeilen))
 
 /-- Exactly the platform's approved rows may be selected, with all required base rows.
-    The reviewed device windows in a full platform profile are disjoint. -/
+    Random-source rows (M9P) are selected per program: any `.zufall id` row may appear,
+    and the declared draw law behind `id` is fixed by the probability layer
+    (`Beobachtung.Wahrscheinlichkeit`), never here. The reviewed device windows in a
+    full platform profile are disjoint. -/
 def KatalogWohlgeformt (k : Katalog) : Prop :=
   k.zeilen.Nodup ∧
-    ZielZeilen ⊆ k.zeilen ∧ k.zeilen ⊆ k.plattform.zeilen ∧
+    ZielZeilen ⊆ k.zeilen ∧
+    (∀ r ∈ k.zeilen, r ∈ k.plattform.zeilen ∨ ∃ id, r = .zufall id) ∧
     k.plattform.ziel.gut ∧ k.plattform.systemAbi.gut k.plattform.ziel ∧
     k.plattform.uart.gut k.plattform.ziel ∧ k.plattform.virtio.gut k.plattform.ziel ∧
     k.plattform.uart.window.getrennt k.plattform.virtio.window
@@ -65,13 +70,15 @@ theorem Plattform.zeilen_nodup (p : Plattform) : p.zeilen.Nodup := by
       reduceCtorEq, Zeile.endpoint.injEq, false_or, not_false_eq_true, true_and]
 
 theorem Plattform.katalog_wohlgeformt (p : Plattform) : KatalogWohlgeformt p.katalog :=
-  ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => h,
+  ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => Or.inl h,
     ziele_gut p, systemAbi_gut p, geraete_gut p⟩
 
-/-- Look up a maximum in a selected row. Approval of the selection is a separate catalogue rule. -/
+/-- Look up a maximum in a selected row. Random-source rows carry no duration maximum.
+    Approval of the selection is a separate catalogue rule. -/
 def Katalog.dauerMaximum (k : Katalog) (id : Nat) : Option Nat :=
   k.zeilen.findSome? fun
     | .dauer n max => if n = id then some max else none
-    | .target | .cores | .interrupts | .mmu | .nativeFloat | .loader | .endpoint _ | .persistence => none
+    | .target | .cores | .interrupts | .mmu | .nativeFloat | .loader | .endpoint _ | .persistence
+    | .zufall _ => none
 
 end Gabbro.Core.Katalog

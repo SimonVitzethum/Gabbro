@@ -45,6 +45,11 @@ public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.SchrankenB8
 public import Core.Beobachtung.SchrankenB8Aussagen
 public import Core.Beobachtung.SchrankenB8Erfuellbar
+public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
+public import Core.Beobachtung.Wahrscheinlichkeit.Form
+public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
+public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 meta import Core.Waechter.Check
 
 #check_core

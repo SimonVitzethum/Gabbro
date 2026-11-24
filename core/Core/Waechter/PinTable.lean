@@ -98,7 +98,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.zeitRechtzeitigErweiternAussage, 297006329917228257),
   (`Gabbro.Core.Beobachtung.zeitSpaetErweiternAussage, 6353056367267666316),
   (`Gabbro.Core.Beobachtung.khLeerlaufAussage, 8931345734634578642),
-  (`Gabbro.Core.Katalog.Katalog.dauerMaximum, 16990558230020595847),
+  (`Gabbro.Core.Katalog.Katalog.dauerMaximum, 0),
   (`Gabbro.Core.Ast.Ty, 11778562012426237599),
   (`Gabbro.Core.Ast.Local, 12494921867450307309),
   (`Gabbro.Core.Ast.Expr, 17304713255317030706),
@@ -165,7 +165,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Katalog.Hardware, 3517031233163520317),
   (`Gabbro.Core.Katalog.FairLaeufe, 3377533376377286296),
   (`Gabbro.Core.Katalog.ZulStart, 339235726871917878),
-  (`Gabbro.Core.Katalog.KatalogWohlgeformt, 17814518153659352653),
+  (`Gabbro.Core.Katalog.KatalogWohlgeformt, 0),
   (`Gabbro.Core.Katalog.GeraeteUebergang, 11023072156822412079),
   (`Gabbro.Core.Katalog.atomar, 7794746235685721259),
   (`Gabbro.Core.Katalog.dma, 4560393809987731272),
@@ -212,6 +212,18 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Fortschritt.StarvationFrei, 5626090967859860399),
   (`Gabbro.Core.Fortschritt.LockFrei, 18035599849138421110),
   (`Gabbro.Core.Fortschritt.WaitFrei, 7129896085423078866),
-  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 5322603302426740766)]
+  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 5322603302426740766),
+  (`Gabbro.Core.Beobachtung.Zufallsquelle, 0),
+  (`Gabbro.Core.Beobachtung.Hebebuendel, 0),
+  (`Gabbro.Core.Beobachtung.GabbroZielProb, 0),
+  (`Gabbro.Core.Beobachtung.ProbNichtLeer, 0),
+  (`Gabbro.Core.Beobachtung.hebeAussage, 0),
+  (`Gabbro.Core.Beobachtung.prEreignisAussage, 0),
+  (`Gabbro.Core.Beobachtung.kostenErwartungAussage, 0),
+  (`Gabbro.Core.Beobachtung.fastSicherAbschlussAussage, 0),
+  (`Gabbro.Core.Beobachtung.fastSicherFortschrittAussage, 0),
+  (`Gabbro.Core.Beobachtung.infoTheoretischAussage, 0),
+  (`Gabbro.Core.Beobachtung.reduktionAussage, 0),
+  (`Gabbro.Core.Beobachtung.quelleDeklariertAussage, 0)]
 
 end Gabbro.Core.Waechter
