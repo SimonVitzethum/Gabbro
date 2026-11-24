@@ -41,7 +41,7 @@ private theorem tupleItemsTail_print (scope : Scope) : (types : List (Ty .value)
     (items : ExprItems scope types) →
     ItemsTail scope closeParen (items.printTail.map PrintedToken.value ++ [closeParen]) items []
   | _, .empty => by
-      simp [ExprItems.printTail]
+      simp only [ExprItems.printTail, List.map_nil, List.nil_append]
       exact .close
   | _, .next head tail => by
       simp only [ExprItems.printTail, List.map_cons, List.map_append, List.map_nil]
