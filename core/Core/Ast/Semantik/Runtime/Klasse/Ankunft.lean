@@ -44,7 +44,7 @@ private theorem eintrittArgumente_arrival {frame : Rahmen} {types : List (Ty .va
 private theorem ruf_arrival (frame : Rahmen) (name : Identifier) (sources : List (Ty .value))
     (bind : Option (Ty .value)) :
     (frame.ruf name sources bind).arrivalRegions = frame.arrivalRegions := by
-  simp only [Rahmen.ruf, Id.run, Id.pure, Id.bind]
+  simp only [Rahmen.ruf, Id.run]
   repeat
     first
     | rfl
@@ -60,7 +60,7 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
       Rahmen.pass, Rahmen.setzeMass, ruf_arrival, Rahmen.rueckkehr, Rahmen.bindeRegion,
-      Id.run, Id.pure, Id.bind]
+      Id.run]
   all_goals
     repeat
       first
@@ -103,14 +103,14 @@ theorem ankunft_wird_gelesen :
     simp only [LowLevel.RegionInitializer.value, value, dif_pos hpos]
   have success : (Befehl.bindeRegion 0 .address).auswerten frame (fun _ => true) =
       { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale } := by
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, Id.pure, Id.bind, ankuenftsReceiver,
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
       List.getElem?_cons_zero, ankuenftsUnborrowed, Bool.not_true, Bool.false_or,
       Bool.false_eq_true, ite_false, hvalue]
     rfl
   have refused : (Befehl.bindeRegion 0 .address).auswerten
         { frame with arrivalRegions := [] } (fun _ => true) =
       ({ frame with arrivalRegions := [] } : Rahmen).halt Abschluss.ungueltigerBereich := by
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, Id.pure, Id.bind, ankuenftsReceiver,
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
       List.getElem?_nil, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
   refine ⟨frame, [], ?_⟩
   intro equal
