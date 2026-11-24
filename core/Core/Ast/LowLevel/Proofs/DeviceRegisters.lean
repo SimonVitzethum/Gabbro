@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Device
 public import Core.Ast.LowLevel.DeviceSyntax
+public import Core.Ast.LowLevel.Execution
 
 @[expose] public section
 
@@ -164,5 +165,116 @@ def RegisterReadElseAussage : Prop :=
     d = .fallibleRead destination binding offset promise handler →
     (∀ err, d.resume (.refused err) = .branch handler) ∧
     ∀ value, d.resume (.readOutOfRange value) = .branch handler
+
+theorem register_fallible_resume :
+    ∀ (k : Katalog) (scope : Scope) (d : Denotation k scope) destination binding offset promise handler,
+      d = .fallibleRead destination binding offset promise handler →
+      (∀ err, d.resume (.refused err) = .branch handler) ∧
+      ∀ value, d.resume (.readOutOfRange value) = .branch handler := by
+  intro k scope d destination binding offset promise handler definition
+  subst d
+  constructor <;> intro result <;> rfl
+
+theorem register_read_provable :
+    RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧
+      RegisterCommitAussage ∧ RegisterSafetyAussage :=
+  ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit, register_safety⟩
+
+theorem registerRegelSicher_falsch :
+    ¬ RegisterRegelSicherAussage (fun access => ∃ offset, access = .read offset) := by
+  intro hsicher
+  let k : Katalog := Plattform.x86_64.katalog
+  let binding : Binding k :=
+    { handle := ⟨0, ⟨⟨.virtio, 0⟩, 0⟩, [.read, .write]⟩
+      row := Plattform.x86_64.virtio
+      selected := by
+        simp only [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
+          List.map_cons, List.mem_append, List.mem_cons, eq_self, or_true, true_or]
+      described := rfl }
+  let access : RegisterAccess := .read 0x70
+  let einr : Einrichtung PUnit Nat UInt8 PUnit Frame PUnit PUnit :=
+    { LowLevel.setup k with invariant := fun s _ => s.verlauf = [] }
+  let sys : MaschinenSystem PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=
+    { regel := fun _ => registerRule binding access
+      kopf := fun _ _ => some ()
+      fertig := fun _ _ => False
+      blockiert := fun _ _ _ => False }
+  let maschine : Maschine.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=
+    { katalog := k
+      bild := LowLevel.image
+      einrichtung := einr
+      system := sys
+      startdaten := fun start => LowLevel.bootData k start.regions (start.assignment 0)
+      startmedium := LowLevel.medium
+      laden := LowLevel.loaded k
+      lokalerBezug := Eq
+      stotterLaenge := fun _ => 0
+      quelltabellen := ⟨.leer, fun _ _ _ => False⟩ }
+  let E : Sicherheit.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit :=
+    ⟨maschine, []⟩
+  let owner : Kontext := .faden 0
+  let boot : State :=
+    Zustand.start (fun _ => { phases := fun o => if o = binding.object then some .ready else none })
+      (fun _ => .laeuft) (fun _ => ⟨some owner, .nutzer, (), fun _ => false, 0, false, []⟩)
+      ⟨fun _ => true, fun _ => 0⟩ (fun _ => 0) (.leer (fun _ => 0))
+  let ownedRegion : LoanRegion := ⟨⟨0, 0⟩, ⟨0, 4096⟩, true, true⟩
+  let vor : State :=
+    { boot with buchung := { boot.buchung with
+        geraet := fun o => if o = binding.object then some (owner, .frei) else none
+        aussengriff := fun c h right => c = owner ∧ h = binding.handle ∧ right ∈ h.rights
+        umfang := fun i => if i = 0 then List.range 4096 else []
+        haelt := fun c h _right => c = owner ∧ h = ownedRegion.handle } }
+  let q : Frage := binding.question access
+  let plan : Plan := { internal with aktion := .frage q }
+  let zwischen : State := setFrame vor owner { (vor.lokal owner) with pending := some q }
+  let event : FrageEreignis := vor.stelleFrage 0 owner q
+  let label : Speicher.Etikett Nat UInt8 := ⟨.aussen, 0, .na, 0, 0⟩
+  obtain ⟨g', hschritt⟩ := Speicher.Zustand.schritt_ohne_lesen
+    Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
+    (.kontext owner) label (by simp)
+  let folge : Speicherfolge (fun _ : Nat => (0 : UInt8)) (.kontext owner)
+      Speicher.Zustand.leer [label] [( .kontext owner, label)] g' :=
+    .cons (Initialisierung.ohne (Or.inl rfl)) hschritt (.nil _)
+  let spur : SchrittSpur Nat UInt8 := ⟨[(.kontext owner, label)], [.frage event]⟩
+  let nach : State := { zwischen.frage event with graph := g' }
+  let sicht0 : AussenSicht :=
+    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
+  let H : Umgebung := Umgebung.referenz k 2 (fun _ _ => sicht0)
+  let hw : HwLauf := Umgebung.referenzLauf k 2 (fun _ _ => sicht0)
+  let start : AussenStart := ⟨0, fun _ => none, [], fun _ => none, sicht0⟩
+  let ρ : Lauf E := ⟨start, hw, Classical.choose (Zeitlauf.existiert (Lauffolge E hw) none)⟩
+  have owns : Befugt binding .ready access vor owner := by
+    refine ⟨rfl, rfl, ?_, rfl⟩
+    intro z inAccess
+    change z ∈ [⟨binding.handle, access.operation.required⟩] at inAccess
+    cases List.mem_singleton.mp inAccess
+    refine ⟨rfl, rfl, ?_⟩
+    cases access with
+    | read _ | fallibleRead _ _ => exact List.mem_cons_self
+    | write _ _ => exact List.mem_cons_of_mem _ List.mem_cons_self
+  have rule : Rule binding access .ready none owner vor plan zwischen := by
+    exact Rule.issue owns rfl
+  have impl : (sys.regel ()).impl owner vor () [plan] zwischen := by
+    change ∃ p, [p] = [plan] ∧ Rule binding access .ready none owner vor p zwischen
+    exact ⟨plan, rfl, rule⟩
+  have executed : FuehrtSchrittAus einr 0 owner vor zwischen plan spur nach := by
+    refine ⟨?_, ?_, ?_⟩
+    · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    · intro l inRead
+      simp at inRead
+    · refine ⟨[], zwischen.frage event, ?_, ?_, ?_⟩
+      · exact FuehrtAus.frage q
+      · simpa [einr, LowLevel.setup, aussenEtikett, label, spur] using folge
+      · rfl
+  have hs := hsicher k binding access E ⟨0x70, rfl⟩ rfl rfl H ρ 0 owner () vor zwischen nach
+    plan spur (by rfl) impl executed
+  have hvor : Sicherheit.InvariantenAmSchnitt E vor := by
+    refine ⟨?_, ?_⟩
+    · intro l free
+      rfl
+    · intro i d hd
+      simp [E] at hd
+  have hleer : nach.verlauf = [] := (hs.invarianten hvor).1 () rfl
+  simp [nach, zwischen, Zustand.frage, event, vor, boot] at hleer
 
 end Gabbro.Core.Ast.LowLevel.Device
