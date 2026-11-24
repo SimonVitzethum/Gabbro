@@ -1,6 +1,12 @@
 module
 
 public import Core.Ast.Grammar
+public import Core.Ast.LowLevel.Proofs.Syntax
+public import Core.Ast.LowLevel.Proofs.Elaboration
+public import Core.Ast.LowLevel.Proofs.Execution
+public import Core.Ast.LowLevel.Proofs.Preservation
+public import Core.Ast.LowLevel.Proofs.Meaning
+public import Core.Ast.LowLevel.Proofs.Satisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
