@@ -42,6 +42,9 @@ public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Region
 public import Core.Beobachtung.Fluss.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
+public import Core.Beobachtung.SchrankenB8
+public import Core.Beobachtung.SchrankenB8Aussagen
+public import Core.Beobachtung.SchrankenB8Erfuellbar
 meta import Core.Waechter.Check
 
 #check_core
