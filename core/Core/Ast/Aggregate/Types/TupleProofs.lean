@@ -94,8 +94,8 @@ theorem tupleType_derivation : TupleTypeDerivationAussage := by
   have closeTok : printClose.value = closeParen := by rfl
   have printEq : (WrittenType.tuple first second tail).printPieces.map PrintedToken.value =
       openParen :: (ft ++ [comma] ++ st ++ tt ++ [closeParen]) := by
-    simp [WrittenType.printPieces, WrittenTypes.printTail, ft, st, tt, openTok, commaTok, closeTok,
-      List.singleton_append, List.append_assoc]
+    simp only [WrittenType.printPieces, WrittenTypes.printTail, List.map_append, List.map_cons,
+      List.map_nil, ft, st, tt, openTok, commaTok, closeTok, List.singleton_append, List.append_assoc]
   rw [printEq]
   simp only [List.cons_append]
   refine TypeReads.tuple (input := ft ++ [comma] ++ st ++ tt ++ [closeParen] ++ rest)
