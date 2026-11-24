@@ -28,6 +28,28 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Ast.Semantik
 
+theorem tupleTypeInjAux : ∀ {a b : List (Ty .value)}, tupleType a = tupleType b → a = b := by
+  intro a
+  induction a with
+  | nil =>
+      intro b h
+      cases b with
+      | nil => rfl
+      | cons y ys =>
+          simp only [tupleType] at h
+          cases h
+  | cons x xs ih =>
+      intro b h
+      cases b with
+      | nil =>
+          simp only [tupleType] at h
+          cases h
+      | cons y ys =>
+          simp only [tupleType] at h
+          injection h with h1 h2
+          subst y
+          exact congrArg (fun l => x :: l) (ih h2)
+
 theorem tupleFieldInvGen {scope first second types minimum input type}
     {tree : Expr scope type} {rest} (allowed : minimum ≤ Infix.projection.precedence) :
     ∀ (inputType : Ty .value) (base0 : Expr scope inputType),
@@ -71,7 +93,7 @@ theorem tupleFieldInvGen {scope first second types minimum input type}
     | tupleField base' index' hle tail =>
         rename_i a b ts input'
         have hlists : a :: b :: ts = first :: second :: types :=
-          Gabbro.Core.Ast.Surface.tupleType_inj_aux eqT
+          tupleTypeInjAux eqT
         injection hlists with ha htail
         injection htail with hb hts
         subst a
