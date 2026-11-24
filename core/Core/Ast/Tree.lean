@@ -257,7 +257,7 @@ theorem directName_of_singleton (spelling : name.val = [c]) : directName name :=
   simp only [directName, ordinaryLocal, ordinaryAtomWord, spelling, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false]
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-  all_goals first | (intro same; cases same) | skip
+  all_goals first | (intro same; cases same; done) | skip
   · rintro (same | same | same | same | same | same | same | same) <;> cases same
 
 structure DirectCall (scope : Scope) where
