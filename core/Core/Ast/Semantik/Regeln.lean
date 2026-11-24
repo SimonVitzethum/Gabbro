@@ -22,13 +22,13 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema _, _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema _, _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
@@ -36,6 +36,7 @@ def anfangswert : Ty .value → Option Dynamisch
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
   | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
   | .variantSchema name labels payloads layout => some ⟨.variantSchema name labels payloads layout, PUnit.unit⟩
+  | .carrierSchema count => some ⟨.carrierSchema count, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where

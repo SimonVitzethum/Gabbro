@@ -230,7 +230,7 @@ def functionCode (result : Option WrittenType) (measure : Option (Measure scope)
     | some m => (expr 0 m.expression).anhaengen (.einzel (.pruefeMass 0))
   (prologue.anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
 
-def functionInstruction (before : Scope) (name : Identifier) (parameters : List Parameter)
+def functionInstruction (before : Scope) (name : Identifier) (parameters : List (Parameter before))
     (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment) : Befehl :=
   .definiere name (parameters.map (fun p => p.written.type)) (writtenResult result)
     before.length (body.code.length + 1) hasMeasure

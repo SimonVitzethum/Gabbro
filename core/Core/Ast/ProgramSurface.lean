@@ -41,7 +41,7 @@ structure MutableLocalArgs (scope : Scope) (result : Option (Ty .value)) where
   name : Identifier
   ordinary : ordinaryLocal name
   written : WrittenType
-  valid : written.valid
+  valid : written.valid scope
   type : Ty .value
   value : Expr scope type
   fits : Fits type written.type
@@ -102,7 +102,7 @@ structure BindDirectArgs (scope : Scope) (result : Option (Ty .value)) where
   name : Identifier
   ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name
   written : WrittenType
-  valid : written.valid
+  valid : written.valid scope
   call : DirectCall scope
 
 /-- SYNTAX §7, typed result binding. -/
@@ -207,7 +207,7 @@ structure ConstantArgs (scope : Scope) where
   name : Identifier
   ordinary : ordinaryLocal name
   written : WrittenType
-  valid : written.valid
+  valid : written.valid scope
   type : Ty .value
   value : Expr scope type
   staticValue : value.static
@@ -241,9 +241,9 @@ theorem constant_entry (scope : Scope) : (constant scope).Entry :=
 structure FunctionArgs (scope : Scope) where
   name : Identifier
   ordinary : directName name
-  parameters : List Parameter
+  parameters : List (Parameter scope)
   result : Option WrittenType
-  valid : ∀ t ∈ result.toList, WrittenType.valid t
+  valid : ∀ t ∈ result.toList, WrittenType.valid scope t
   measure : Option (Measure (functionScope scope parameters))
   body : BracedBlock (writtenResult result) (functionScope scope parameters)
   distinct : (parameters.map (fun p => p.name.val)).Nodup
@@ -325,7 +325,7 @@ theorem StmtReads.mutableLocal_inversion
     (read : StmtReads result scope (letKeyword :: keyword "mut" :: .word spelling :: colon :: input)
       tree rest) :
     ∃ (a : Surface.MutableLocalArgs scope result) (rhs : List Token),
-      a.name.val = spelling ∧ TypeReads input a.written (assignment :: rhs) ∧
+      a.name.val = spelling ∧ TypeReads scope input a.written (assignment :: rhs) ∧
       ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (Surface.mutableLocal scope result).tree a := by
   sorry
@@ -342,7 +342,7 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
 theorem StmtReads.bindDirect_inversion
     (read : StmtReads result scope (letKeyword :: .word spelling :: colon :: input) tree rest) :
     ∃ (a : Surface.BindDirectArgs scope result) (rhs : List Token),
-      a.name.val = spelling ∧ TypeReads input a.written (assignment :: rhs) ∧
+      a.name.val = spelling ∧ TypeReads scope input a.written (assignment :: rhs) ∧
       CallReads scope rhs a.call (semicolon :: rest) ∧
       tree = (Surface.bindDirect scope result).tree a := by
   sorry

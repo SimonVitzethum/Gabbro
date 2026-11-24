@@ -7,7 +7,7 @@ public import Core.Ast.Semantik.Quellform
 
 namespace Gabbro.Core.Ast.Semantik
 
-def taggedDeclForm (scope : Scope) : Quellform (.declaration scope) Surface.TaggedDeclArgs where
+def taggedDeclForm (scope : Scope) : Quellform (.declaration scope) (Surface.TaggedDeclArgs scope) where
   produktion := Surface.taggedDecl scope
   befehl := fun a => .definiereVariante a.name.val (variantLabels a.cases) (variantPayloads a.cases)
   position := fun _ => 0
@@ -24,7 +24,7 @@ def variantMatchForm (ctx : Scope × Option (Ty .value)) :
   position := fun a => (expr 0 a.value).code.length
 
 def TaggedDeclBindingAussage : Prop :=
-  ∀ scope (a : Surface.TaggedDeclArgs) (frame : Rahmen),
+  ∀ scope (a : Surface.TaggedDeclArgs scope) (frame : Rahmen),
     let next := ((taggedDeclForm scope).befehl a).auswerten frame
     let marker : Dynamisch := ⟨variantSchemaType a.name.val (variantLabels a.cases) (variantPayloads a.cases), PUnit.unit⟩
     next.pc = frame.pc + 1 ∧ next.lokale = some marker :: frame.lokale ∧

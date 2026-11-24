@@ -36,6 +36,7 @@ inductive Ty : Kind → Type where
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | text (capacity : Nat) : Ty .value
+  | carrierSchema (count : Nat) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -61,6 +62,15 @@ structure Binding where
 
 abbrev Scope := List Binding
 
+/-- The nearest declaration of a written carrier name fixes its index bound. -/
+def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
+  match scope.find? (fun binding => binding.name.val == name.val) with
+  | some ⟨_, .carrierSchema count, _, _⟩ => some count
+  | _ => none
+
+/-- Finite carriers of equal count share the same checked numerical index type. -/
+def indexType (count : Nat) : Ty .value := .int 0 ((count : Int) - 1)
+
 /-- Newest binder first. Uses carry a typed de Bruijn index; resolution of a written
     name must select the nearest binding under the applicable scope rules. -/
 inductive Local : Scope → Ty .value → Type where
@@ -81,7 +91,7 @@ def Local.nameVisible : Local scope type → Prop
   | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.nameVisible
 
 def Ty.valueBinding : Ty .value → Prop
-  | .recordSchema .. | .variantSchema .. => False
+  | .recordSchema .. | .variantSchema .. | .carrierSchema .. => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=
@@ -119,6 +129,12 @@ structure RecordArguments (labels : List Identifier) (types : List (Ty .value))
 def variantLayout : List (Option (Ty .value)) → Ty .value
   | [] => .sumEnd
   | head :: tail => .sum (head.getD .productEnd) (variantLayout tail)
+
+/-- The two cases of the carrier index option use the ordinary tagged layout.
+    The empty identity is reserved for generated types and cannot name a declaration. -/
+def indexOptionType (count : Nat) : Ty .value :=
+  .variant [] ["Some".toList, "None".toList] [true, false]
+    (variantLayout [some (indexType count), none])
 
 def variantValueType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
   .variant name (labels.map Subtype.val) (payloads.map Option.isSome) (variantLayout payloads)

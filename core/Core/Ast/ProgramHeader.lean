@@ -58,6 +58,18 @@ def printStringType : PrintedToken := printProgramWord 's' ['t', 'r', 'i', 'n', 
 def printMax : PrintedToken := printProgramWord 'm' ['a', 'x'] (by decide)
   (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro c (rfl | rfl) <;> decide)
 
+def printIndex : PrintedToken := printProgramWord 'i' ['n', 'd', 'e', 'x'] (by decide) (by
+  simp only [List.mem_cons, List.not_mem_nil, or_false]
+  rintro c (rfl | rfl | rfl | rfl) <;> decide)
+
+def printInto : PrintedToken := printProgramWord 'i' ['n', 't', 'o'] (by decide) (by
+  simp only [List.mem_cons, List.not_mem_nil, or_false]
+  rintro c (rfl | rfl | rfl) <;> decide)
+
+def printOption : PrintedToken := printProgramWord 'o' ['p', 't', 'i', 'o', 'n'] (by decide) (by
+  simp only [List.mem_cons, List.not_mem_nil, or_false]
+  rintro c (rfl | rfl | rfl | rfl | rfl) <;> decide)
+
 mutual
 
 
@@ -71,6 +83,8 @@ def WrittenType.printPieces : WrittenType → List PrintedToken
   | .tuple first second rest => [printOpen] ++ first.printPieces ++ [printComma] ++
       second.printPieces ++ rest.printTail ++ [printClose]
   | .text capacity => [printStringType, printMax, printInteger capacity]
+  | .index carrier _ => [printIndex, printInto, carrier.print]
+  | .indexOption carrier _ => [printOption, printIndex, printInto, carrier.print]
 
 def WrittenTypes.printTail : WrittenTypes → List PrintedToken
   | .empty => []
@@ -84,42 +98,47 @@ inductive SignedReads : List Token → Int → List Token → Prop where
 
 mutual
 
-inductive TypeReads : List Token → WrittenType → List Token → Prop where
-  | bool : TypeReads (keyword "bool" :: rest) .bool rest
-  | integer (valid : (WrittenType.integer signed width none).valid)
+inductive TypeReads (scope : Scope) : List Token → WrittenType → List Token → Prop where
+  | bool : TypeReads scope (keyword "bool" :: rest) .bool rest
+  | integer (valid : (WrittenType.integer signed width none).valid scope)
       (closed : ∀ more, rest ≠ keyword "in" :: more) :
-      TypeReads (.word (intSpelling signed width) :: rest) (.integer signed width none) rest
-  | interval (valid : (WrittenType.integer signed width (some (lo, hi))).valid) :
+      TypeReads scope (.word (intSpelling signed width) :: rest) (.integer signed width none) rest
+  | interval (valid : (WrittenType.integer signed width (some (lo, hi))).valid scope) :
       SignedReads input lo (closedRange :: more) → SignedReads more hi rest →
-      TypeReads (.word (intSpelling signed width) :: keyword "in" :: input)
+      TypeReads scope (.word (intSpelling signed width) :: keyword "in" :: input)
         (.integer signed width (some (lo, hi))) rest
   | array (count : Nat) (bound : Expr [] (.int count count)) :
-      TypeReads input element (semicolon :: boundInput) →
+      TypeReads scope input element (semicolon :: boundInput) →
       ExprReads [] 0 boundInput bound (closeBracket :: rest) →
-      TypeReads (openBracket :: input) (.array element count) rest
-  | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
-      TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
-  | text : TypeReads (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
+      TypeReads scope (openBracket :: input) (.array element count) rest
+  | tuple : TypeReads scope input first (comma :: secondInput) → TypeReads scope secondInput second more →
+      TypeItemsTail scope more tail rest → TypeReads scope (openParen :: input) (.tuple first second tail) rest
+  | text : TypeReads scope (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
+  | index (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
+      TypeReads scope (keyword "index" :: keyword "into" :: .word carrier.val :: rest) (.index carrier count) rest
+  | indexOption (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
+      TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest)
+        (.indexOption carrier count) rest
 
-inductive TypeItemsTail : List Token → WrittenTypes → List Token → Prop where
-  | close : TypeItemsTail (closeParen :: rest) .empty rest
-  | comma : TypeReads input head more → TypeItemsTail more tail rest →
-      TypeItemsTail (comma :: input) (.next head tail) rest
+inductive TypeItemsTail (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
+  | close : TypeItemsTail scope (closeParen :: rest) .empty rest
+  | comma : TypeReads scope input head more → TypeItemsTail scope more tail rest →
+      TypeItemsTail scope (comma :: input) (.next head tail) rest
 
 end
 
-def Parameter.printPieces (p : Parameter) : List PrintedToken :=
+def Parameter.printPieces (p : Parameter scope) : List PrintedToken :=
   [p.name.print, printColon] ++ p.written.printPieces
 
 mutual
-inductive ParamsRead : List Token → List Parameter → List Token → Prop where
-  | empty : ParamsRead (closeParen :: rest) [] rest
-  | first (p : Parameter) : TypeReads input p.written more → ParamsTail more ps rest →
-      ParamsRead (.word p.name.val :: colon :: input) (p :: ps) rest
+inductive ParamsRead (scope : Scope) : List Token → List (Parameter scope) → List Token → Prop where
+  | empty : ParamsRead scope (closeParen :: rest) [] rest
+  | first (p : Parameter scope) : TypeReads scope input p.written more → ParamsTail scope more ps rest →
+      ParamsRead scope (.word p.name.val :: colon :: input) (p :: ps) rest
 
-inductive ParamsTail : List Token → List Parameter → List Token → Prop where
-  | close : ParamsTail (closeParen :: rest) [] rest
-  | comma : ParamsRead input ps rest → ParamsTail (comma :: input) ps rest
+inductive ParamsTail (scope : Scope) : List Token → List (Parameter scope) → List Token → Prop where
+  | close : ParamsTail scope (closeParen :: rest) [] rest
+  | comma : ParamsRead scope input ps rest → ParamsTail scope (comma :: input) ps rest
 end
 
 mutual
@@ -149,32 +168,32 @@ theorem SignedReads.deterministic (left : SignedReads input a rest) (right : Sig
   sorry
 
 -- Mirror ExprReads.deterministic, dispatch on the width spelling and then on in.
-theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeReads input b more) :
+theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : TypeReads scope input b more) :
     a = b ∧ rest = more := by
   sorry
 
 -- Mirror ExprReads.consumes for the signed interval endpoints.
-theorem TypeReads.consumes (read : TypeReads input a rest) : rest <:+ input := by
+theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ input := by
   sorry
 
 -- Mirror Expr.printReads with the range suffix discriminator.
-theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
+theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     (closed : ∀ more, rest ≠ keyword "in" :: more) :
-    TypeReads (tree.printPieces.map PrintedToken.value ++ rest) tree rest := by
+    TypeReads scope (tree.printPieces.map PrintedToken.value ++ rest) tree rest := by
   sorry
 
 -- Mirror BlockItems.deterministic, applying TypeReads.deterministic to each parameter.
-theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : ParamsRead input b more) :
+theorem ParamsRead.deterministic (left : ParamsRead scope input a rest) (right : ParamsRead scope input b more) :
     a = b ∧ rest = more := by
   sorry
 
 -- Mirror BlockItems.consumes, including the final close parenthesis.
-theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input := by
+theorem ParamsRead.consumes (read : ParamsRead scope input ps rest) : rest <:+ input := by
   sorry
 
 -- Mirror Block.printItems_reads with commas between the ordered parameters.
-theorem ParamsRead.printReads (ps : List Parameter) :
-    ParamsRead ((commaSeparated (ps.map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest)
+theorem ParamsRead.printReads (ps : List (Parameter scope)) :
+    ParamsRead scope ((commaSeparated (ps.map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest)
       ps rest := by
   sorry
 

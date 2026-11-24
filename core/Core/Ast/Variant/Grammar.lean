@@ -39,15 +39,15 @@ def VariantMember.printPieces (member : VariantMember) : List PrintedToken :=
     | none => []
     | some written => printOpen :: written.printPieces ++ [printClose])
 
-inductive VariantMemberRead : List Token → VariantMember → List Token → Prop where
+inductive VariantMemberRead (scope : Scope) : List Token → VariantMember → List Token → Prop where
   | nullary (name : Identifier) (closed : ∀ suffix, rest ≠ openParen :: suffix) :
-      VariantMemberRead (.word name.val :: rest) ⟨name, none⟩ rest
-  | payload (name : Identifier) : TypeReads input written (closeParen :: rest) →
-      VariantMemberRead (.word name.val :: openParen :: input) ⟨name, some written⟩ rest
+      VariantMemberRead scope (.word name.val :: rest) ⟨name, none⟩ rest
+  | payload (name : Identifier) : TypeReads scope input written (closeParen :: rest) →
+      VariantMemberRead scope (.word name.val :: openParen :: input) ⟨name, some written⟩ rest
 
-inductive VariantMembersTailRead : List Token → List VariantMember → List Token → Prop where
-  | done : VariantMembersTailRead (closeBrace :: rest) [] rest
-  | next : VariantMemberRead input member more → VariantMembersTailRead more tail rest →
-      VariantMembersTailRead (comma :: input) (member :: tail) rest
+inductive VariantMembersTailRead (scope : Scope) : List Token → List VariantMember → List Token → Prop where
+  | done : VariantMembersTailRead scope (closeBrace :: rest) [] rest
+  | next : VariantMemberRead scope input member more → VariantMembersTailRead scope more tail rest →
+      VariantMembersTailRead scope (comma :: input) (member :: tail) rest
 
 end Gabbro.Core.Ast

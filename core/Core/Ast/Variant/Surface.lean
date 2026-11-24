@@ -8,21 +8,21 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-structure TaggedDeclArgs where
+structure TaggedDeclArgs (scope : Scope) where
   exported : Bool
   name : Identifier
   first : VariantMember
   tail : List VariantMember
-  valid : ∀ member ∈ first :: tail, member.valid
+  valid : ∀ member ∈ first :: tail, member.valid scope
   distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup
 
-def TaggedDeclArgs.cases (a : TaggedDeclArgs) : List VariantMember := a.first :: a.tail
+def TaggedDeclArgs.cases (a : TaggedDeclArgs scope) : List VariantMember := a.first :: a.tail
 
-def taggedDecl (scope : Scope) : Rule (.declaration scope) TaggedDeclArgs where
+def taggedDecl (scope : Scope) : Rule (.declaration scope) (TaggedDeclArgs scope) where
   tree := fun a => ⟨_, .tagged a.exported a.name a.first a.tail a.valid a.distinct⟩
   production := fun a tokens =>
     ∃ input more, tokens = taggedDeclarationPrefix a.exported ++ [.word a.name.val, assignment, openBrace] ++ input ∧
-      VariantMemberRead input a.first more ∧ VariantMembersTailRead more a.tail [semicolon]
+      VariantMemberRead scope input a.first more ∧ VariantMembersTailRead scope more a.tail [semicolon]
 
 structure VariantValueArgs (scope : Scope) where
   labels : List Identifier
@@ -64,12 +64,12 @@ def TaggedDeclInversionAussage : Prop :=
   ∀ {scope input tree rest} (exported : Bool) (name : Identifier),
     DeclReads scope (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
       tree rest →
-    ∃ (a : TaggedDeclArgs) (more : List Token), a.exported = exported ∧ a.name = name ∧
-      VariantMemberRead input a.first more ∧ VariantMembersTailRead more a.tail (semicolon :: rest) ∧
+    ∃ (a : TaggedDeclArgs scope) (more : List Token), a.exported = exported ∧ a.name = name ∧
+      VariantMemberRead scope input a.first more ∧ VariantMembersTailRead scope more a.tail (semicolon :: rest) ∧
       tree = (taggedDecl scope).tree a
 
 def TaggedDeclSuffixAussage : Prop :=
-  ∀ {input variants rest}, VariantMembersTailRead input variants (semicolon :: rest) → rest <:+ input
+  ∀ {scope input variants rest}, VariantMembersTailRead scope input variants (semicolon :: rest) → rest <:+ input
 
 def TaggedDeclDerivationAussage : Prop :=
   ∀ scope, (taggedDecl scope).Entry

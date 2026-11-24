@@ -37,9 +37,9 @@ inductive TuplePatternReads : List Token → TuplePattern → List Token → Pro
       TuplePatternReads (openParen :: input) ⟨first, second, tail⟩ rest
 
 /-- This relation consumes the assignment token, so absence and presence cannot overlap. -/
-inductive TupleAnnotationReads : List Token → Option WrittenType → List Token → Prop where
-  | absent : TupleAnnotationReads (assignment :: rest) none rest
-  | written : TypeReads input type (assignment :: rest) →
-      TupleAnnotationReads (colon :: input) (some type) rest
+inductive TupleAnnotationReads (scope : Scope) : List Token → Option WrittenType → List Token → Prop where
+  | absent : TupleAnnotationReads scope (assignment :: rest) none rest
+  | written : TypeReads scope input type (assignment :: rest) →
+      TupleAnnotationReads scope (colon :: input) (some type) rest
 
 end Gabbro.Core.Ast

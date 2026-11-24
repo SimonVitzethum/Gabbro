@@ -9,17 +9,17 @@ namespace Gabbro.Core.Ast
 open Gabbro.Core.Text
 
 def ArrayTypeInversionAussage : Prop :=
-  ∀ {input type rest}, TypeReads (openBracket :: input) type rest →
+  ∀ {scope input type rest}, TypeReads scope (openBracket :: input) type rest →
     ∃ (element : WrittenType) (count : Nat) (bound : Expr [] (.int count count)) (boundInput : List Token),
-      TypeReads input element (semicolon :: boundInput) ∧
+      TypeReads scope input element (semicolon :: boundInput) ∧
         ExprReads [] 0 boundInput bound (closeBracket :: rest) ∧ type = .array element count
 
 def ArrayTypeSuffixAussage : Prop :=
-  ∀ {input type rest}, TypeReads (openBracket :: input) type rest → rest <:+ input
+  ∀ {scope input type rest}, TypeReads scope (openBracket :: input) type rest → rest <:+ input
 
 def ArrayTypeDerivationAussage : Prop :=
-  ∀ (element : WrittenType) (count : Nat) (rest : List Token), element.valid →
-    TypeReads ((WrittenType.array element count).printPieces.map PrintedToken.value ++ rest)
+  ∀ scope (element : WrittenType) (count : Nat) (rest : List Token), element.valid scope →
+    TypeReads scope ((WrittenType.array element count).printPieces.map PrintedToken.value ++ rest)
       (.array element count) rest
 
 def ArrayTypeIndexAussage : Prop :=
@@ -27,22 +27,22 @@ def ArrayTypeIndexAussage : Prop :=
 
 def ArrayTypeSyntaxErfuellbarAussage : Prop :=
   ∃ (element : WrittenType) (count : Nat) (text : RawText) (pieces : List Piece),
-    (WrittenType.array element count).valid ∧ Lexed text pieces ∧
-      TypeReads (canonicalTokens pieces) (.array element count) []
+    (WrittenType.array element count).valid [] ∧ Lexed text pieces ∧
+      TypeReads [] (canonicalTokens pieces) (.array element count) []
 
 def TupleTypeInversionAussage : Prop :=
-  ∀ {input type rest}, TypeReads (openParen :: input) type rest →
+  ∀ {scope input type rest}, TypeReads scope (openParen :: input) type rest →
     ∃ first second tail secondInput more,
-      TypeReads input first (comma :: secondInput) ∧ TypeReads secondInput second more ∧
-        TypeItemsTail more tail rest ∧ type = .tuple first second tail
+      TypeReads scope input first (comma :: secondInput) ∧ TypeReads scope secondInput second more ∧
+        TypeItemsTail scope more tail rest ∧ type = .tuple first second tail
 
 def TupleTypeSuffixAussage : Prop :=
-  ∀ {input type rest}, TypeReads (openParen :: input) type rest → rest <:+ input
+  ∀ {scope input type rest}, TypeReads scope (openParen :: input) type rest → rest <:+ input
 
 def TupleTypeDerivationAussage : Prop :=
-  ∀ (first second : WrittenType) (tail : WrittenTypes) (rest : List Token),
-    (WrittenType.tuple first second tail).valid →
-      TypeReads ((WrittenType.tuple first second tail).printPieces.map PrintedToken.value ++ rest)
+  ∀ scope (first second : WrittenType) (tail : WrittenTypes) (rest : List Token),
+    (WrittenType.tuple first second tail).valid scope →
+      TypeReads scope ((WrittenType.tuple first second tail).printPieces.map PrintedToken.value ++ rest)
         (.tuple first second tail) rest
 
 def TupleTypeIndexAussage : Prop :=
@@ -51,8 +51,8 @@ def TupleTypeIndexAussage : Prop :=
 
 def TupleTypeSyntaxErfuellbarAussage : Prop :=
   ∃ (first second : WrittenType) (tail : WrittenTypes) (text : RawText) (pieces : List Piece),
-    (WrittenType.tuple first second tail).valid ∧ Lexed text pieces ∧
-      TypeReads (canonicalTokens pieces) (.tuple first second tail) []
+    (WrittenType.tuple first second tail).valid [] ∧ Lexed text pieces ∧
+      TypeReads [] (canonicalTokens pieces) (.tuple first second tail) []
 
 end Gabbro.Core.Ast
 

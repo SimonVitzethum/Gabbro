@@ -52,6 +52,8 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Semantik.TextIndexProofPacket, 11023641487762198285),
   (`Gabbro.Core.Ast.Semantik.SubstringProofPacket, 11170221467426855156),
   (`Gabbro.Core.Ast.Semantik.TextTypeProofPacket, 17136284651896008181),
+  (`Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, 0),
   (`Gabbro.Core.Sicherheit.RegelSicher, 13353270854043846204),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
@@ -241,7 +243,9 @@ private meta def registry : Array RegistryFamily := #[
 private meta def openTypeEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket),
   (`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.Semantik.TupleTypeProofPacket),
-  (`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket)]
+  (`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket),
+  (`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket),
+  (`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket)]
 
 private meta def wildcardRoots : Array Name := #[
   `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,

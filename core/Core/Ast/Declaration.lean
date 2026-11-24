@@ -11,9 +11,9 @@ open Gabbro.Core.Text
 
 abbrev Declaration (before : Scope) := (after : Scope) × Decl before after
 
-inductive ResultReads : List Token → Option WrittenType → List Token → Prop where
-  | absent (closed : ∀ tail, rest ≠ arrow :: tail) : ResultReads rest none rest
-  | typed : TypeReads input written rest → ResultReads (arrow :: input) (some written) rest
+inductive ResultReads (before : Scope) : List Token → Option WrittenType → List Token → Prop where
+  | absent (closed : ∀ tail, rest ≠ arrow :: tail) : ResultReads before rest none rest
+  | typed : TypeReads before input written rest → ResultReads before (arrow :: input) (some written) rest
 
 inductive MeasureReads (scope : Scope) : List Token → Option (Measure scope) → List Token → Prop where
   | absent (closed : ∀ tail, rest ≠ keyword "decreases" :: tail) :
@@ -22,33 +22,33 @@ inductive MeasureReads (scope : Scope) : List Token → Option (Measure scope) �
       MeasureReads scope (keyword "decreases" :: input) (some m) rest
 
 inductive DeclReads (before : Scope) : List Token → Declaration before → List Token → Prop where
-  | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType) (valid : written.valid)
+  | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType) (valid : written.valid before)
       (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
-      TypeReads input written (assignment :: rhs) →
+      TypeReads before input written (assignment :: rhs) →
       ExprReads before 0 rhs value (semicolon :: rest) →
       DeclReads before (keyword "const" :: .word name.val :: colon :: input)
         ⟨_, .constant name ordinary written valid value staticValue fits⟩ rest
   | function (name : Identifier) (ordinary : directName name) (result : Option WrittenType)
-      (valid : ∀ t ∈ result.toList, WrittenType.valid t) (parameters : List Parameter)
+      (valid : ∀ t ∈ result.toList, WrittenType.valid before t) (parameters : List (Parameter before))
       (measure : Option (Measure (functionScope before parameters)))
       (body : BracedBlock (writtenResult result) (functionScope before parameters))
       (distinct : (parameters.map (fun p => p.name.val)).Nodup)
       (returns : result.isSome = true → body.returns = true) :
-      ParamsRead input parameters afterParams →
-      ResultReads afterParams result afterResult →
+      ParamsRead before input parameters afterParams →
+      ResultReads before afterParams result afterResult →
       MeasureReads (functionScope before parameters) afterResult measure afterMeasure →
       BlockReads (writtenResult result) (functionScope before parameters) afterMeasure body rest →
       DeclReads before (keyword "fn" :: .word name.val :: openParen :: input)
         ⟨before, .function name ordinary parameters result valid measure body distinct returns⟩ rest
-  | record (exported : Bool) (name : Identifier) (valid : ∀ member ∈ fields, member.written.valid)
+  | record (exported : Bool) (name : Identifier) (valid : ∀ member ∈ fields, member.written.valid before)
       (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
-      RecordMembersRead input fields (semicolon :: rest) →
+      RecordMembersRead before input fields (semicolon :: rest) →
       DeclReads before
         (recordDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
         ⟨_, .record exported name fields valid distinct⟩ rest
-  | tagged (exported : Bool) (name : Identifier) (valid : ∀ member ∈ first :: tail, member.valid)
+  | tagged (exported : Bool) (name : Identifier) (valid : ∀ member ∈ first :: tail, member.valid before)
       (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
-      VariantMemberRead input first more → VariantMembersTailRead more tail (semicolon :: rest) →
+      VariantMemberRead before input first more → VariantMembersTailRead before more tail (semicolon :: rest) →
       DeclReads before
         (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
         ⟨_, .tagged exported name first tail valid distinct⟩ rest
@@ -78,9 +78,9 @@ def Decl.printPieces : Decl before after → List PrintedToken
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion
     (read : DeclReads before (keyword "const" :: .word spelling :: colon :: input) tree rest) :
-    ∃ (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType) (valid : written.valid)
+    ∃ (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType) (valid : written.valid before)
       (type : Ty .value) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) (rhs : List Token),
-      name.val = spelling ∧ TypeReads input written (assignment :: rhs) ∧
+      name.val = spelling ∧ TypeReads before input written (assignment :: rhs) ∧
       ExprReads before 0 rhs value (semicolon :: rest) ∧
       tree = ⟨_, .constant name ordinary written valid value staticValue fits⟩ := by
   sorry
@@ -88,15 +88,15 @@ theorem DeclReads.constant_inversion
 -- Mirror BlockReads.braced_inversion and keep every header derivation in token order.
 theorem DeclReads.function_inversion
     (read : DeclReads before (keyword "fn" :: .word spelling :: openParen :: input) tree rest) :
-    ∃ (name : Identifier) (ordinary : directName name) (ps : List Parameter)
-      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid t)
+    ∃ (name : Identifier) (ordinary : directName name) (ps : List (Parameter before))
+      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid before t)
       (measure : Option (Measure (functionScope before ps)))
       (body : BracedBlock (writtenResult result) (functionScope before ps))
       (distinct : (ps.map (fun p => p.name.val)).Nodup)
       (returns : result.isSome = true → body.returns = true)
       (afterParams afterResult afterMeasure : List Token),
-      name.val = spelling ∧ ParamsRead input ps afterParams ∧
-      ResultReads afterParams result afterResult ∧
+      name.val = spelling ∧ ParamsRead before input ps afterParams ∧
+      ResultReads before afterParams result afterResult ∧
       MeasureReads (functionScope before ps) afterResult measure afterMeasure ∧
       BlockReads (writtenResult result) (functionScope before ps) afterMeasure body rest ∧
       tree = ⟨before, .function name ordinary ps result valid measure body distinct returns⟩ := by

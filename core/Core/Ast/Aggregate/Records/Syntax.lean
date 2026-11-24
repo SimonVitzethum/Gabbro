@@ -12,11 +12,11 @@ def RecordDeclInversionAussage : Prop :=
   ∀ {scope input tree rest} (exported : Bool) (name : Identifier),
     DeclReads scope (recordDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
       tree rest →
-    ∃ a : RecordDeclArgs, a.exported = exported ∧ a.name = name ∧
-      RecordMembersRead input a.members (semicolon :: rest) ∧ tree = (recordDecl scope).tree a
+    ∃ a : RecordDeclArgs scope, a.exported = exported ∧ a.name = name ∧
+      RecordMembersRead scope input a.members (semicolon :: rest) ∧ tree = (recordDecl scope).tree a
 
 def RecordDeclSuffixAussage : Prop :=
-  ∀ {input fields rest}, RecordMembersRead input fields (semicolon :: rest) → rest <:+ input
+  ∀ {scope input fields rest}, RecordMembersRead scope input fields (semicolon :: rest) → rest <:+ input
 
 def RecordDeclDerivationAussage : Prop :=
   ∀ scope, (recordDecl scope).Entry
@@ -84,7 +84,7 @@ def TupleBindInversionAussage : Prop :=
   ∀ {scope result input tree rest},
     StmtReads result scope (letKeyword :: openParen :: input) tree rest →
     ∃ (a : TupleBindArgs scope) (more rhs : List Token), TuplePatternReads (openParen :: input) a.pattern more ∧
-      TupleAnnotationReads more a.annotation rhs ∧ ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
+      TupleAnnotationReads scope more a.annotation rhs ∧ ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (tupleBind (scope, result)).tree a
 
 def TupleBindSuffixAussage : Prop :=

@@ -22,7 +22,7 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .productEnd => PUnit
   | _, .product head tail => Wert head × Wert tail
   | _, .record _ _ layout => Wert layout
-  | _, .recordSchema .. | _, .variantSchema .. => PUnit
+  | _, .recordSchema .. | _, .variantSchema .. | _, .carrierSchema .. => PUnit
   | _, .sumEnd => Empty
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout

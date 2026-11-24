@@ -11,12 +11,12 @@ open Maschine Katalog
 open Gabbro.Core.Text
 
 def TextTypeInversionAussage : Prop :=
-  ∀ {input type rest}, TypeReads (keyword "string" :: input) type rest →
+  ∀ {scope input type rest}, TypeReads scope (keyword "string" :: input) type rest →
     ∃ capacity, input = keyword "max" :: .natural capacity :: rest ∧ type = .text capacity
 
 def TextTypeDerivationAussage : Prop :=
-  ∀ capacity rest,
-    TypeReads ((WrittenType.text capacity).printPieces.map PrintedToken.value ++ rest) (.text capacity) rest
+  ∀ scope capacity rest,
+    TypeReads scope ((WrittenType.text capacity).printPieces.map PrintedToken.value ++ rest) (.text capacity) rest
 
 def TextTypeWidenAussage : Prop :=
   ∀ source target (value : TextValue source), source ≤ target →

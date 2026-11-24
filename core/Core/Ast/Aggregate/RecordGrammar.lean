@@ -30,10 +30,10 @@ def RecordMember.printPieces (member : RecordMember) : List PrintedToken :=
   [member.name.print, printColon] ++ member.written.printPieces ++ [printComma]
 
 /-- The ordinary record production keeps declaration order and consumes the closing brace. -/
-inductive RecordMembersRead : List Token → List RecordMember → List Token → Prop where
-  | close : RecordMembersRead (closeBrace :: rest) [] rest
-  | next (name : Identifier) : TypeReads input written (comma :: more) →
-      RecordMembersRead more remaining rest →
-      RecordMembersRead (.word name.val :: colon :: input) (⟨name, written⟩ :: remaining) rest
+inductive RecordMembersRead (scope : Scope) : List Token → List RecordMember → List Token → Prop where
+  | close : RecordMembersRead scope (closeBrace :: rest) [] rest
+  | next (name : Identifier) : TypeReads scope input written (comma :: more) →
+      RecordMembersRead scope more remaining rest →
+      RecordMembersRead scope (.word name.val :: colon :: input) (⟨name, written⟩ :: remaining) rest
 
 end Gabbro.Core.Ast

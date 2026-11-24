@@ -184,6 +184,8 @@ inductive WrittenType where
   | array (element : WrittenType) (count : Nat)
   | tuple (first second : WrittenType) (rest : WrittenTypes)
   | text (capacity : Nat)
+  | index (carrier : Identifier) (count : Nat)
+  | indexOption (carrier : Identifier) (count : Nat)
 
 inductive WrittenTypes where
   | empty
@@ -205,6 +207,8 @@ def WrittenType.type : WrittenType → Ty .value
   | .array element count => .array element.type count
   | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
   | .text capacity => .text capacity
+  | .index _ count => indexType count
+  | .indexOption _ count => indexOptionType count
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -214,31 +218,32 @@ end
 
 mutual
 
-def WrittenType.valid : WrittenType → Prop
+def WrittenType.valid (scope : Scope) : WrittenType → Prop
   | .bool => True
   | .integer signed width range =>
     let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
-  | .array element _ => element.valid
-  | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
+  | .array element _ => element.valid scope
+  | .tuple first second rest => first.valid scope ∧ second.valid scope ∧ rest.valid scope
   | .text _ => True
+  | .index carrier count | .indexOption carrier count => scope.carrierCount carrier = some count
 
-def WrittenTypes.valid : WrittenTypes → Prop
+def WrittenTypes.valid (scope : Scope) : WrittenTypes → Prop
   | .empty => True
-  | .next head tail => head.valid ∧ tail.valid
+  | .next head tail => head.valid scope ∧ tail.valid scope
 
 end
 
-structure Parameter where
+structure Parameter (scope : Scope) where
   name : Identifier
   written : WrittenType
-  valid : written.valid
+  valid : written.valid scope
   ordinary : ordinaryLocal name
 
-def Parameter.binding (p : Parameter) : Binding := ⟨p.name, p.written.type, false, false⟩
+def Parameter.binding (p : Parameter scope) : Binding := ⟨p.name, p.written.type, false, false⟩
 
-def functionScope (outer : Scope) (parameters : List Parameter) : Scope :=
+def functionScope (outer : Scope) (parameters : List (Parameter outer)) : Scope :=
   (parameters.map Parameter.binding).reverse ++ outer
 
 def directName (name : Identifier) : Prop :=
@@ -275,12 +280,12 @@ def TuplePattern.bindings (pattern : TuplePattern) (types : List (Ty .value)) : 
   ((pattern.names.zip types).filterMap fun (name, type) =>
     name.map fun id => ⟨id, type, false, false⟩).reverse
 
-def TuplePattern.valid (pattern : TuplePattern) (annotation : Option WrittenType)
+def TuplePattern.valid (pattern : TuplePattern) (scope : Scope) (annotation : Option WrittenType)
     (types : List (Ty .value)) : Prop :=
   pattern.names.length = types.length ∧
     ((pattern.names.filterMap id).map Subtype.val).Nodup ∧
     (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_'] ∧ ordinaryLocal name) ∧
-    ∀ written ∈ annotation.toList, written.valid ∧ written.type = tupleType types
+    ∀ written ∈ annotation.toList, written.valid scope ∧ written.type = tupleType types
 
 def payloadBinding (name : Identifier) (type : Ty .value) : Binding :=
   ⟨name, type, false, false⟩
@@ -305,13 +310,13 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   | retVoid (declared : result = none) : Stmt result scope scope
   /-- SYNTAX §7, a scalar mutable local with a written type. -/
   | letMutable (name : Identifier) (ordinary : ordinaryLocal name)
-      (written : WrittenType) (valid : written.valid) (value : Expr scope type)
+      (written : WrittenType) (valid : written.valid scope) (value : Expr scope type)
       (fits : Fits type written.type) : Stmt result scope (⟨name, written.type, true, false⟩ :: scope)
   /-- SYNTAX §6, direct call whose ordinary result is discarded. -/
   | directCall (call : DirectCall scope) : Stmt result scope scope
   /-- SYNTAX §7, direct call with a written result-binding type. -/
   | bindDirect (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
-      (written : WrittenType) (valid : written.valid) (call : DirectCall scope) :
+      (written : WrittenType) (valid : written.valid scope) (call : DirectCall scope) :
       Stmt result scope (⟨name, written.type, false, false⟩ :: scope)
   /-- SYNTAX §8, O18. The operation spelling bounds passes and the condition is retested. -/
   | whileBounded (condition : Expr scope .bool)
@@ -325,7 +330,7 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (body : BracedBlock result (rangeBinding name low high :: scope)) : Stmt result scope scope
   /-- SYNTAX §7, bind a positional product once, in left-to-right pattern order. -/
   | tupleBind (pattern : TuplePattern) (annotation : Option WrittenType)
-      (checked : pattern.valid annotation (first :: second :: types))
+      (checked : pattern.valid scope annotation (first :: second :: types))
       (value : Expr scope (tupleType (first :: second :: types))) :
       Stmt result scope (pattern.bindings (first :: second :: types) ++ scope)
   /-- Field assignment updates exactly one position of a writable record local. -/
@@ -413,17 +418,17 @@ def variantPayloads (cases : List VariantMember) : List (Option (Ty .value)) :=
 def variantBinding (name : Identifier) (cases : List VariantMember) : Binding :=
   ⟨name, variantSchemaType name.val (variantLabels cases) (variantPayloads cases), false, true⟩
 
-def VariantMember.valid (member : VariantMember) : Prop :=
-  ordinaryLocal member.label ∧ member.label.val ≠ ['_'] ∧ ∀ type ∈ member.payload.toList, type.valid
+def VariantMember.valid (member : VariantMember) (scope : Scope) : Prop :=
+  ordinaryLocal member.label ∧ member.label.val ≠ ['_'] ∧ ∀ type ∈ member.payload.toList, type.valid scope
 
 /-- Constant values can enter the declaration scope. Function signatures are resolved
     across the whole unit, allowing forward calls and checked recursive cycles. -/
 inductive Decl : Scope → Scope → Type where
   | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType)
-      (valid : written.valid) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
+      (valid : written.valid before) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
       Decl before (⟨name, written.type, false, true⟩ :: before)
-  | function (name : Identifier) (ordinary : directName name) (parameters : List Parameter)
-      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid t)
+  | function (name : Identifier) (ordinary : directName name) (parameters : List (Parameter before))
+      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid before t)
       (decreases : Option (Measure (functionScope before parameters)))
       (body : BracedBlock (writtenResult result) (functionScope before parameters))
       (distinct : (parameters.map (fun p => p.name.val)).Nodup)
@@ -431,12 +436,12 @@ inductive Decl : Scope → Scope → Type where
       Decl before before
   /-- The ordinary record declaration installs its nominal schema in the declaration scope. -/
   | record (exported : Bool) (name : Identifier) (fields : List RecordMember)
-      (valid : ∀ member ∈ fields, member.written.valid)
+      (valid : ∀ member ∈ fields, member.written.valid before)
       (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
       Decl before (recordBinding name fields :: before)
   /-- The declared tag order determines the closed sum and its exhaustive matches. -/
   | tagged (exported : Bool) (name : Identifier) (first : VariantMember) (tail : List VariantMember)
-      (valid : ∀ member ∈ first :: tail, member.valid)
+      (valid : ∀ member ∈ first :: tail, member.valid before)
       (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
       Decl before (variantBinding name (first :: tail) :: before)
 
