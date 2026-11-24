@@ -64,7 +64,7 @@ private theorem directCall_not_tupleBind {scope : Scope} {input : List Token}
     simpa [letKeyword] using headEq.symm
   have inList : call.name.val ∈ ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList := by
     rw [nameEq]
-    simp
+    exact List.mem_map.2 ⟨"let", List.mem_cons_self, rfl⟩
   exact (call.ordinary.2 inList).elim
 
 theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
