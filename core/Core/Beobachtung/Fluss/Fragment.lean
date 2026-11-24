@@ -49,17 +49,14 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
   | succ t ih =>
     obtain ⟨s, hs⟩ := ih
     have ht := ρ.zeit.takt t
-    generalize hz : ρ.zeit.zustand t = z at ht
-    generalize hn : ρ.zeit.zustand (t + 1) = n at ht
+    rw [hs] at ht
     cases ht with
     | schritt _ step =>
+      generalize hn : ρ.zeit.zustand (t + 1) = n at step
       cases step with
-      | schritt _ =>
-        exact ⟨_, hn⟩
+      | schritt _ => exact ⟨_, hn⟩
     | wartet _ gleich _ =>
-      rw [hz] at hs
-      rw [← gleich] at hs
-      exact ⟨s, hn.trans hs⟩
+      exact ⟨s, gleich⟩
 
 -- (shared silence computation lives in `fragment_kontext_schritt_still` below)
 
@@ -180,7 +177,8 @@ theorem stummer_schritt_koppelt
   have centry : c = Ast.Semantik.eintritt := by
     by_contra hc
     have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor).symm.trans kopf
-    rw [show Ast.Semantik.kopf p.code vor c = none from if_neg hc] at h
+    have hnone : Ast.Semantik.kopf p.code vor c = none := if_neg hc
+    rw [hnone] at h
     cases h
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
@@ -268,7 +266,8 @@ theorem stummer_schritt_koppelt
                 by_contra hc
                 have h : Ast.Semantik.kopf p.code w₂ c' = some f :=
                   (sysKopf w₂).symm.trans kopf₂'
-                rw [show Ast.Semantik.kopf p.code w₂ c' = none from if_neg hc] at h
+                have hnone : Ast.Semantik.kopf p.code w₂ c' = none := if_neg hc
+                rw [hnone] at h
                 cases h
               rw [centry, centry'] at *
               obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau f impl₂'rule aus₂'
