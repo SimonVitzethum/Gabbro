@@ -271,6 +271,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | done => exact ⟨rfl, rfl⟩
     | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
+    trace_state
     rename_i _ first next stRead blockRead ihBlock b rest' other
     cases other with
     | done => exact (StmtReads.disjoint_closeBrace stRead).elim
