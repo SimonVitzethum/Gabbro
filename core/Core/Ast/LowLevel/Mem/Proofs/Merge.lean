@@ -44,8 +44,8 @@ theorem merge_meaning : MergeMeaningAussage := by
       · dsimp [next]
         rw [List.getElem?_set_self']
         cases h : ((s.lokal c).regions.set first (some joined))[second]? with
-        | none => simp only [Option.map_none, Option.join_none]
-        | some _ => simp only [Option.map_some, Option.join_some]
+        | none => rfl
+        | some _ => rfl
       · intro addr
         change min left.extent.von right.extent.von ≤ addr ∧
             addr < max left.extent.bis right.extent.bis ↔
