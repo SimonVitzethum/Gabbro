@@ -175,7 +175,8 @@ theorem neg_print (args : NegArgs scope) :
   change (neg scope).production args (Expr.neg args.operand).printTokens
   unfold neg
   refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, Arith.print_value, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+  · change Arith.sub.token :: Token.punctuation "(".toList :: (args.operand.printTokens ++ [Token.punctuation ")".toList]) = minus :: openParen :: (args.operand.printTokens ++ [closeParen])
+    simp only [Arith.token, minus, openParen, closeParen, String.reduceToList]
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
@@ -210,7 +211,8 @@ theorem notValue_print (args : Expr scope .bool) :
   change (notValue scope).production args (Expr.not args).printTokens
   unfold notValue
   refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+  · change Token.punctuation "!".toList :: Token.punctuation "(".toList :: (args.printTokens ++ [Token.punctuation ")".toList]) = bang :: openParen :: (args.printTokens ++ [closeParen])
+    simp only [bang, openParen, closeParen, String.reduceToList]
   · intro tail
     constructor <;> intro h <;> cases h
   · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
