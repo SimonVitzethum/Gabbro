@@ -200,6 +200,29 @@ def fortschrittPflicht (B : Zufallsbindung)
     (∀ band, (∃ n, band ∉ ueberlebt n) → Ziel (hb.replay band)) →
     FortschrittForm B hb Ziel
 
+/-- Program-declared data of the information-theoretic GabbroProve duty: the
+    budget class, the bound and the distinguishing game are fixed by the program
+    and handed to the duty as data, never quantified by the language. -/
+structure InfoDeklaration
+    (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) where
+  imBudget : Gegner → Prop
+  eps : ENNReal
+  spiel : Gegner → Maschine.Lauf E → Prop
+
+/-- Program-declared data of the reduction GabbroProve duty: the scheme-adversary
+    class, the reduction, the primitive-adversary class carrying the named hardness
+    assumption, the factor and the two games are fixed by the program. -/
+structure ReduktionDeklaration
+    (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) where
+  schemaGegner : Gegner → Prop
+  reduktion : Gegner → Gegner
+  primitivGegner : Gegner → Prop
+  c : ENNReal
+  spiel : Gegner → Maschine.Lauf E → Prop
+  ziel : Gegner → Maschine.Lauf E → Prop
+
 /-- `planned.probability.informationTheoretic`: every adversary in budget has
     advantage at most `eps`. GabbroProve user duty, proved per program: the
     statement quantifies over every adversary, so no finite clause captures it.
@@ -218,7 +241,8 @@ def SchrankenForm (B : Zufallsbindung)
 /-- `planned.probability.reduction`: the scheme's advantage reduces to a
     primitive with named hardness. GabbroProve user duty, proved per program:
     the statement quantifies over every scheme adversary, so no finite clause
-    captures it. -/
+    captures it. The reduction must land in the declared primitive class — that
+    is where the named hardness assumption is consumed. -/
 def ReduktionForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
@@ -229,6 +253,7 @@ def ReduktionForm (B : Zufallsbindung)
     (primitivGegner : Gegner → Prop)
     (c : ENNReal) (spiel ziel : Gegner → Maschine.Lauf E → Prop) : Prop :=
   ∀ A : Gegner, schemaGegner A →
+    primitivGegner (reduktion A) ∧
     hb.mu {band | spiel A (hb.replay band)} ≤
       c * hb.mu {band | ziel (reduktion A) (hb.replay band)}
 

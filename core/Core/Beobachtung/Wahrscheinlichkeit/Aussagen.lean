@@ -12,16 +12,18 @@
   - `planned.probability.cost`: `kostenErwartungAussage`
   - `planned.probability.termination`: `fastSicherAbschlussAussage`
   - `planned.probability.progress`: `fastSicherFortschrittAussage`
-  - `planned.probability.informationTheoretic`: `infoTheoretischAussage`
-  - `planned.probability.reduction`: `reduktionAussage`
+  - `planned.probability.informationTheoretic`: `InfoTheoretischPflicht`
+  - `planned.probability.reduction`: `ReduktionPflicht`
   - `planned.probability.draw` is decided by finite catalogue-row lookup (B11(d)),
     hence a checker rule by construction and needs neither an obligation here nor
     an undecidability proof.
 
   The two cryptographic obligations are GabbroProve user duties, proved per
-  program over the generic model: their statements quantify over every adversary,
+  program over the generic model: their bodies quantify over every adversary,
   so no finite checker clause captures them (`Unentscheidbar.lean` pins why).
-  They are kept here as vocabulary, not as part of `GabbroZielProb`.
+  Their bound data is fixed by the program, so they are predicates over declared
+  data here, never ∀-sentences over parameters the language may instantiate.
+  They stay outside `GabbroZielProb`.
 -/
 module
 
@@ -90,53 +92,53 @@ def fastSicherFortschrittAussage : Prop :=
     (Ziel : Maschine.Lauf E → Prop) (qNum qDen : Nat),
     fortschrittPflicht B hb Ziel qNum qDen
 
-/-- `planned.probability.informationTheoretic`: every in-budget adversary has
-    advantage at most `eps`. GabbroProve user duty: the statement quantifies over
-    every adversary, so no finite checker clause captures it.
-    Difficulty: per program (the user proves it over the generic model).
-    Sketch: fix the program; bound the adversary's distinguishing advantage by
-    the query budget and the primitive's named hardness; no checker step. -/
-def infoTheoretischAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
-    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
+/-- `planned.probability.informationTheoretic` as a GabbroProve duty: the program
+    declares its budget class, bound and game, then proves the resulting
+    `SchrankenForm` over the generic model. No `∀` over those parameters — they
+    are program-fixed; instantiating a zero bound is no longer a move the language
+    can make (the former free-bound `Aussage` was refuted). Difficulty: per program.
+    Sketch: bound the declared adversary's distinguishing advantage by its query
+    budget and the primitive's named hardness; no checker step. -/
+def InfoTheoretischPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Katalog.Umgebung}
     (hb : Hebebuendel B S E h)
-    (imBudget : Gegner → Prop)
-    (eps : ENNReal)
-    (spiel : Gegner → Maschine.Lauf E → Prop),
-    SchrankenForm B hb imBudget eps spiel
+    (deklaration : InfoDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E) : Prop :=
+  SchrankenForm B hb deklaration.imBudget deklaration.eps deklaration.spiel
 
-/-- `planned.probability.reduction`: every scheme advantage reduces to a primitive
-    with named hardness. GabbroProve user duty: the statement quantifies over
-    every scheme adversary, so no finite checker clause captures it.
-    Difficulty: per program (the user proves it over the generic model).
-    Sketch: fix program and reduction; the reduction adversary runs the scheme
-    adversary as a black box, so its success bounds the scheme's success up to
-    the stated factor; the primitive's hardness stays a named assumption. -/
-def reduktionAussage : Prop :=
-  ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
-    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung)
+/-- `planned.probability.reduction` as a GabbroProve duty: the program declares
+    its scheme class, reduction, primitive class, factor and games, then proves
+    the resulting `ReduktionForm`. `primitivGegner` is consumed by the form: the
+    reduction must land in the declared primitive class, which carries the named
+    hardness assumption. No `∀` over the program-fixed parameters (the former
+    free-bound `Aussage`, whose `primitivGegner` was unused, was refuted).
+    Difficulty: per program. Sketch: run the declared scheme adversary as a black
+    box; its declared success bounds the scheme's success up to the factor. -/
+def ReduktionPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Katalog.Umgebung}
     (hb : Hebebuendel B S E h)
-    (schemaGegner : Gegner → Prop)
-    (reduktion : Gegner → Gegner)
-    (primitivGegner : Gegner → Prop)
-    (c : ENNReal)
-    (spiel ziel : Gegner → Maschine.Lauf E → Prop),
-    ReduktionForm B hb schemaGegner reduktion primitivGegner c spiel ziel
+    (deklaration : ReduktionDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E) : Prop :=
+  ReduktionForm B hb deklaration.schemaGegner deklaration.reduktion
+    deklaration.primitivGegner deklaration.c deklaration.spiel deklaration.ziel
 
 /-- The lift exists (B11(a), model side): for every binding, scheduler and
-    environment with hardware and a selected source row, a lift bundle exists.
-    The bundle's fields (cylinder-faithful measure, admitted replay, causality,
-    scheduler discipline, band answers) are the whole specification; the proof is
-    the model-side Ionescu-Tulcea construction, replaying the machine
-    deterministically and consuming band draws in trace order.
-    Consistency (Hy4): `massErhalt` quantifies only over key-`Nodup` cylinders —
-    a contradictory path (one position, two outcomes) denotes the empty band set
-    while the law product is positive, so no law mentions such objects.
-    Difficulty: schwer. Sketch: build the replay by recursion over cuts (always
-    step the scheduler's choice when enabled, else any enabled step); the band
-    measure is the Kolmogorov extension of the cylinder weights over the
+    environment with hardware, a selected source row and an admissible start, a
+    lift bundle exists. The admissible start is necessary: `replayZulaessig`
+    contains `ZulStart`, whose first conjunct is image validity, so an otherwise
+    admissible unit with an invalid image has no bundle (the former unsharpened
+    form was refuted). The bundle's fields (cylinder-faithful measure, admitted
+    replay, causality, scheduler discipline, band answers) are the whole
+    specification; the proof is the model-side Ionescu-Tulcea construction,
+    replaying the machine deterministically and consuming band draws in trace
+    order. Consistency (Hy4): `massErhalt` quantifies only over key-`Nodup`
+    cylinders — a contradictory path (one position, two outcomes) denotes the
+    empty band set while the law product is positive, so no law mentions such
+    objects. Difficulty: schwer. Sketch: build the replay by recursion over cuts
+    (always step the scheduler's choice when enabled, else any enabled step); the
+    band measure is the Kolmogorov extension of the cylinder weights over the
     consistent family, which agree on intersections by the product form of
     `ZylinderGewicht`. -/
 def hebeAussage : Prop :=
@@ -145,6 +147,7 @@ def hebeAussage : Prop :=
     (B : Zufallsbindung) (S : Scheduler) (h : Katalog.Umgebung),
     Katalog.Hardware E.katalog h →
     E.katalog.enthaelt (Katalog.Zeile.zufall B.quelle.id) →
+    (∃ s : Katalog.AussenStart, E.ZulStart h s) →
     ∃ _ : Hebebuendel B S E h, True
 
 end Gabbro.Core.Beobachtung
