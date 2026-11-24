@@ -148,7 +148,7 @@ theorem TupleAnnotationReads.deterministic (left : TupleAnnotationReads scope in
       obtain ⟨rfl, tail⟩ := typeRead.deterministic otherType
       exact ⟨rfl, (List.cons.inj tail).2⟩
 
-theorem binderHead_eq {name other : Identifier}
+theorem binderHead_eq {name other : Identifier} {lead marker : Token}
     (same : lead :: .word name.val :: marker :: input = lead :: .word other.val :: marker :: more) :
     name = other ∧ input = more := by
   have tail := List.cons.inj (List.cons.inj same).2
