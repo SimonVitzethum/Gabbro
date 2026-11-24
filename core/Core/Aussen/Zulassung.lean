@@ -30,25 +30,25 @@ structure ZulassungsRegel (p : Plattform) : Prop where
     s.erfolg p q = .ok (.handle h) → ∃ name, q.operation = .resolve name
 
 /-- A successful answer establishes the same-event ownership of the primary handle. -/
-theorem griffbindung_gilt (s : AussenSicht) (p : Plattform) (q : Frage) (a : Antwort)
+theorem griffbindung_gilt (p : Plattform) (s : AussenSicht) (q : Frage) (a : Antwort)
     (antwort : atomar p s q = .antwort a) (erfolg : a.result.isOk = true) :
     (s.gueltig q.endpoint ⟨q.handle, q.operation.required⟩) = true := by
   cases hv : a.result with
   | ok v => exact (atomar_aktuell antwort hv).2.2 _ List.mem_cons_self
   | error e =>
     rw [hv] at erfolg
-    simp only [Except.isOk] at erfolg
-    exact Bool.false_ne_true erfolg
+    simp only [Except.isOk, Except.toBool] at erfolg
+    exact False.elim erfolg
 
 /-- A failed same-event precondition answers through the failure channel. -/
-theorem fehlerkanal_gilt (s : AussenSicht) (p : Plattform) (q : Frage)
+theorem fehlerkanal_gilt (p : Plattform) (s : AussenSicht) (q : Frage)
     (offered : p.operationAngeboten q = true)
     (denied : q.zugriffe.all (s.gueltig q.endpoint) = false) :
     ∃ a, atomar p s q = .antwort a ∧ a.result.isOk = false :=
   ⟨_, atomar_ungueltig offered denied, rfl⟩
 
 /-- Only `resolve` answers with a handle. -/
-theorem namen_nur_griff_gilt (s : AussenSicht) (p : Plattform) (q : Frage) (h : Handle)
+theorem namen_nur_griff_gilt (p : Plattform) (s : AussenSicht) (q : Frage) (h : Handle)
     (erf : s.erfolg p q = .ok (.handle h)) :
     ∃ name, q.operation = .resolve name := by
   cases q with
@@ -67,9 +67,9 @@ theorem namen_nur_griff_gilt (s : AussenSicht) (p : Plattform) (q : Frage) (h : 
     row definitions: same-event ownership from the atomic answer, the failure channel
     from the explicit refusal, handle answers only from `resolve`. -/
 theorem zulassung_m2 (p : Plattform) : ZulassungsRegel p where
-  griffbindung := griffbindung_gilt
-  fehlerkanal := fehlerkanal_gilt
-  namen_nur_griff := namen_nur_griff_gilt
+  griffbindung := griffbindung_gilt p
+  fehlerkanal := fehlerkanal_gilt p
+  namen_nur_griff := namen_nur_griff_gilt p
 
 /-- Satisfiability: the admission rule holds on every platform. -/
 theorem zulassung_erfuellbar : ∃ p, ZulassungsRegel p :=

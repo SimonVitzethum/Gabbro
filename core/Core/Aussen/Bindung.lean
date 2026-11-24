@@ -90,15 +90,15 @@ theorem revalidiert_gueltig (p : Plattform) (s : AussenSicht) (q : Frage) (a : A
   | ok v => exact .frisch (List.all_eq_true.mpr (atomar_aktuell antwort hv).2.2)
   | error e =>
     rw [hv] at erfolg
-    simp only [Except.isOk] at erfolg
-    exact Bool.false_ne_true erfolg
+    simp only [Except.isOk, Except.toBool] at erfolg
+    exact False.elim erfolg
 
 /-- Satisfiability: a hosted read is valid at commit. -/
 theorem gueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :
     ∃ s q a, GueltigBeiCommit p s q ∧ atomar p s q = .antwort a ∧
       a.result.isOk = true := by
   obtain ⟨s, q, a, _, _, reply, result⟩ := hosted_lesen_erfuellbar p bytes
-  have ok : a.result.isOk = true := by simp only [result, Except.isOk]
+  have ok : a.result.isOk = true := by simp only [result, Except.isOk, Except.toBool]
   exact ⟨s, q, a,
     .frisch (List.all_eq_true.mpr (atomar_aktuell reply result).2.2), reply, ok⟩
 
@@ -108,7 +108,7 @@ theorem ungueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :
     ∃ s₁ q a s₂, atomar p s₁ q = .antwort a ∧ a.result.isOk = true ∧
       (∀ o, (s₂.objects o).alive = false) ∧ ¬ GueltigBeiCommit p s₂ q := by
   obtain ⟨s, q, a, _, _, reply, result⟩ := hosted_lesen_erfuellbar p bytes
-  have ok : a.result.isOk = true := by simp only [result, Except.isOk]
+  have ok : a.result.isOk = true := by simp only [result, Except.isOk, Except.toBool]
   obtain ⟨s₂, tot, nval⟩ := fruehere_antwort_ungueltig p s q
     ⟨q.handle, q.operation.required⟩ List.mem_cons_self (reihe_instabil p _)
   exact ⟨s, q, a, s₂, reply, ok, tot, nval⟩

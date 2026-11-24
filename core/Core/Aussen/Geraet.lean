@@ -77,7 +77,9 @@ theorem geraet_erfuellbar :
     exact ⟨by omega, by omega, trivial, trivial⟩
   have erlaubtOk : (⟨7, ⟨0, 4096⟩, true, true⟩ : Leihe).erlaubt
       (DmaZugriff.read 7 0 1) := by
-    refine ⟨rfl, rfl, by omega, by omega⟩
+    refine ⟨rfl, rfl, by omega, ?_⟩
+    show (0 : Nat) + 0 + 1 ≤ 4096
+    omega
   exact ⟨Plattform.virtio .x86_64, Plattform.x86_64.ziel, ⟨7, ⟨0, 4096⟩, true, true⟩,
     DmaZugriff.read 7 0 1, .lend rfl seitenOk, ⟨rfl, rfl, erlaubtOk⟩⟩
 
