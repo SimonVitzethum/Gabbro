@@ -144,7 +144,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           List.length_nil, Nat.add_zero, hpcMid2, L, R]
         omega
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
-          alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpL, tmpR, Expr.wert]
+          alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpL, tmpR,
+          preserveR slot (Nat.lt_succ_self slot), Arith.result, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
       · intro i hi
@@ -241,7 +242,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           List.length_nil, Nat.add_zero, hpcMid, L]
         omega
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, alsBoolean,
-          Option.bind_some, Option.map_some, tmpMid, Expr.wert]
+          Option.bind_some, Option.map_some, Option.map, tmpMid, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokMid]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retMid]
       · intro i hi
