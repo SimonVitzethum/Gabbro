@@ -28,7 +28,7 @@ open Gabbro.Core.Speicher
     the six assumptions are six `scSchritt` steps closing `wx → r1x → r1y → wy → r2y → r2x → wx`;
     a transitive path around that loop is a `scSchritt` cycle, which `SCKonsistent` excludes. -/
 theorem iriw_sc_verboten : IriwScVerbotenAussage := by
-  intro E Ort Wert finE G hk hsc wx wy r1x r1y r2y r2x hf1 hp1 hrb1 hf2 hp2 hrb2
+  intro E Ort Wert G hk hsc wx wy r1x r1y r2y r2x hf1 hp1 hrb1 hf2 hp2 hrb2
   have hn : G.NurSC := fun a => Or.inr (hsc a)
   have hr : G.Rennfrei := by
     intro a b _ hnab
@@ -75,7 +75,7 @@ def irLab (m : Modus) : IriwEv → Etikett Bool Nat
 /-- Program order: the initial writes precede every other event, `wx; r1x; r1y` and `wy; r2y; r2x`
     are the two reader threads (the write of a location is in the same thread as its reader here;
     that only adds order and leaves the IRIW shape intact). -/
-@[reducible] def irPo (a b : IriwEv) : Prop :=
+abbrev irPo (a b : IriwEv) : Prop :=
   (a = irIX ∧ b ≠ irIX) ∨
   (a = irIY ∧ b ≠ irIX ∧ b ≠ irIY) ∨
   (a = irWX ∧ (b = irR1X ∨ b = irR1Y)) ∨
@@ -83,15 +83,15 @@ def irLab (m : Modus) : IriwEv → Etikett Bool Nat
   (a = irR1X ∧ b = irR1Y) ∨
   (a = irR2Y ∧ b = irR2X)
 
-@[reducible] def irRf (a b : IriwEv) : Prop :=
+abbrev irRf (a b : IriwEv) : Prop :=
   (a = irWX ∧ b = irR1X) ∨ (a = irIY ∧ b = irR1Y) ∨
   (a = irWY ∧ b = irR2Y) ∨ (a = irIX ∧ b = irR2X)
 
-@[reducible] def irMo (a b : IriwEv) : Prop :=
+abbrev irMo (a b : IriwEv) : Prop :=
   (a = irIX ∧ b = irWX) ∨ (a = irIY ∧ b = irWY)
 
 /-- The transitive closure of `rf ∪ mo ∪ rb` in this graph, in closed form. -/
-@[reducible] def irEco (a b : IriwEv) : Prop :=
+abbrev irEco (a b : IriwEv) : Prop :=
   (a = irIX ∧ (b = irWX ∨ b = irR2X ∨ b = irR1X)) ∨
   (a = irR2X ∧ (b = irWX ∨ b = irR1X)) ∨
   (a = irWX ∧ b = irR1X) ∨
