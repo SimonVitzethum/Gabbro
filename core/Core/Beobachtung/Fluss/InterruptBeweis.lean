@@ -186,7 +186,11 @@ theorem interruptNI : InterruptNIAussage := by
                   rw [statusN, ruhtρ]
                 · have statusN : nρ.status d = vρ.status d := by
                     rw [nextρ]
-                    simp only [Zustandseintritt, Function.update, hdc, Ne.symm hdc, ↓reduceIte]
+                    simp only [Zustandseintritt, Function.update]
+                    split
+                    · rename_i hcd
+                      exact (hdc hcd.symm).elim
+                    · rfl
                   rw [statusN]
                   cases hst : vρ.status d <;> rfl
               rw [eqNone] at hd
@@ -226,7 +230,7 @@ theorem interruptNI : InterruptNIAussage := by
             have lenApp : (L₁ ++ sObs).length = (L₂ ++ sObs).length := by
               rw [List.length_append, List.length_append, len']
             rw [lenApp, List.take_length]
-            exact List.Forall₂.rel_append cov' reflS
+            exact List.rel_append cov' reflS
           · intro v' w' hv' hw'
             rw [zustandNach₁] at hv'
             rw [hn₂] at hw'
