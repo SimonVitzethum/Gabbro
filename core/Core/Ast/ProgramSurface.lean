@@ -67,7 +67,7 @@ theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : Mu
 theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (mutableLocal scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinaryName : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : MutableLocalArgs scope result := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
   exact Rule.satisfiableOfPrint a (mutableLocal_print a)
 
@@ -97,7 +97,7 @@ theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : Dire
 theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (directCall scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinaryName : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : DirectCallArgs scope result := ⟨name, ordinaryName, []⟩
   exact Rule.satisfiableOfPrint a (directCall_print a)
 
@@ -132,7 +132,7 @@ theorem bindDirect_reads {scope : Scope} {result : Option (Ty .value)} {a : Bind
 theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (bindDirect scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinaryName : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
     constructor
     · change ['x'] ≠ ['m', 'u', 't']
@@ -140,7 +140,7 @@ theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
       cases h
     · exact ordinaryName
   let callName : Identifier := keywordName 'y' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have callOrdinary : directName callName := by simp only [directName, ordinaryLocal, callName, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have callOrdinary : directName callName := by simp only [directName, ordinaryLocal, callName, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : BindDirectArgs scope result := ⟨name, ordinary, .bool, trivial, ⟨callName, callOrdinary, []⟩⟩
   exact Rule.satisfiableOfPrint a (bindDirect_print a)
 
@@ -218,7 +218,7 @@ theorem forRange_reads {scope : Scope} {result : Option (Ty .value)} {a : ForRan
 theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (forRange scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinary : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : ForRangeArgs scope result := ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
   exact Rule.satisfiableOfPrint a (forRange_print a)
 
@@ -256,7 +256,7 @@ theorem constant_reads {scope : Scope} {a : ConstantArgs scope} {tokens : List T
 theorem constant_syntax_erfuellbar (scope : Scope) :
     (constant scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinary : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : ConstantArgs scope := ⟨name, ordinary, .bool, trivial, .bool, Expr.trueLit, trivial, trivial⟩
   exact Rule.satisfiableOfPrint a (constant_print a)
 
@@ -295,7 +295,7 @@ theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List T
 theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinary : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let a : FunctionArgs scope := ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
   exact Rule.satisfiableOfPrint a (function_print a)
 
@@ -331,7 +331,7 @@ theorem program_reads {a : ProgramArgs} {tokens : List Token}
 theorem program_syntax_erfuellbar  :
     (program).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, not_false_eq_true]
+  have ordinary : directName name := by simp only [directName, ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
   let first : Decl [] [] :=
 .function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
   let a : ProgramArgs := ⟨[], [], first, .done⟩
