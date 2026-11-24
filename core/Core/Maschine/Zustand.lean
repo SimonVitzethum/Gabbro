@@ -18,6 +18,7 @@ public import Core.Maschine.Sperre
 public import Core.Maschine.Griff
 public import Core.Maschine.Ergebnis
 public import Core.Maschine.Speicherfolge
+public import Core.Sicherheit.Buchung
 
 @[expose] public section
 
@@ -51,6 +52,7 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   persistenz : PersistZustand
   epoche : Nat
   verworfen : Kontext → Nat
+  buchung : Sicherheit.Buchung Ort := .leer
 
 namespace Zustand
 
