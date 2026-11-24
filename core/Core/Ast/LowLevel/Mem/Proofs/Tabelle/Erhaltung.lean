@@ -147,11 +147,12 @@ theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
             simp only [List.getElem?_set_self hlt] at found
             have heq : space' = _ := (Option.some.inj found).symm
             subst heq
-            have hspace := hspaces sp space hs
+            have hspace := hspaces sp' space hs
             obtain ⟨hfrei, hflags, hrights⟩ := hspace
             refine ⟨?frei, ?flags, ?rights⟩
             · exact Adressraum.mapFreiAusstehend space _ hfrei
                 (mapSpace_neue_eintraege_fern space (virt / target.seitengranule)
+                  ((region.extent.bis - region.extent.von) / target.seitengranule)
                   hall rights (region.extent.von / target.seitengranule) space.generation)
             · exact hflags
             · intro entry hmem
