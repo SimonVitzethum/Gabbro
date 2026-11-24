@@ -80,7 +80,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
         List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
       exact .ite (condExpr.printReads noOperatorAtOpenBrace)
-        (by simpa only [BracedBlock.printPieces, elseKeyword, printOpenBrace, printCloseBrace,
+        (by simpa only [BracedBlock.printPieces, elseKeyword, openBrace, closeBrace, printOpenBrace, printCloseBrace,
           printPunctuation, PrintedToken.unquoted, keywordName, String.reduceToList,
           List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
           List.append_assoc] using
