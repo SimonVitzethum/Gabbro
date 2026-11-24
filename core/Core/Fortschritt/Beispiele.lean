@@ -67,7 +67,7 @@ def dispatch2 : Kern → Option Kontext
   | _ + 2 => none
 
 /-- The witness unit: toggle steps, no blocked reasons, checked stutter length one. -/
-def E_w (Dispatch : Kern → Option Kontext) : Einheit Unit Unit Unit Unit Bool Unit Unit Unit :=
+def E_w (Dispatch : Kern → Option Kontext) : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtung Dispatch, toggleSystem,
     fun _ => wDaten Dispatch, fun _ => 0,
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)

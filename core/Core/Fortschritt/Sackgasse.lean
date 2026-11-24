@@ -74,7 +74,7 @@ def deadStart : Zustand Bool Unit Unit Unit Bool Unit :=
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))) with
     sperren := fun l => if l then ⟨some B, []⟩ else ⟨some A, []⟩ }
 
-def E_dead : Einheit Bool Unit Unit Unit Bool Unit Unit Unit :=
+def E_dead : Einheit Bool Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, deadEinrichtung, deadSystem,
     fun _ => wDaten dispatch1, fun _ => 0, fun _ _ => some deadStart,
     Eq, fun _ => 1, .leer, .leer, .leer, .leer⟩

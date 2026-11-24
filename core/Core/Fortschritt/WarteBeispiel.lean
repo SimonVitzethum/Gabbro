@@ -35,7 +35,7 @@ def e1Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
 def e1System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e1Regel, e1Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
-def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit :=
+def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtung dispatch2, e1System,
     fun _ => wDaten dispatch2, fun _ => 0,
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
@@ -309,7 +309,7 @@ theorem e1_hmono : ∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), 1 ≤ t₁ → t�
 /-- The premise bundle holds jointly: queued head waiter, free lock, take enabled,
     declared hold bound five, no owners. -/
 theorem warte_praemissen_erfuellbar :
-    ∃ (E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit) (ρ : Maschine.Lauf E)
+    ∃ (E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit) (ρ : Maschine.Lauf E)
       (c : Kontext) (H a : Nat),
       WartePraemissen E ρ () c 0 H a ∧
       ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
