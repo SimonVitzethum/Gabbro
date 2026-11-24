@@ -45,7 +45,7 @@ private theorem indexToken_ne_option : keyword "index" ≠ keyword "option" := b
 private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "index" ≠ .word (intSpelling signed width) := by
   intro h
-  change .word "index".toList = .word (intSpelling signed width) at h
+  change Token.word "index".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
   · exact (by decide : ('i' : Char) ≠ 'u') (List.cons.inj hl).1
@@ -66,7 +66,7 @@ theorem carrierIndexInversion : CarrierIndexInversionAussage := by
   cases read with
   | bool => exact (indexToken_ne_bool (List.cons.inj htok).1).elim
   | integer valid closed =>
-      rename_i signed width more
+      rename_i signed width
       exact (indexToken_ne_intWord signed width (List.cons.inj htok).1).elim
   | interval valid ls rs =>
       rename_i signed width input' lo hi more
@@ -243,7 +243,7 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
   let form := carrierTypeForm scope indexTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
-  refine ⟨args, ?_⟩
+  refine ⟨scope, args, ?_⟩
   refine ⟨Ast.print (form.produktion.tree args), s₀, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print (form.produktion.tree args)
   · rfl
