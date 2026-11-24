@@ -17,7 +17,11 @@ def keyword (word : String) : Token := .word word.toList
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 def printClosedRange : PrintedToken := printPunctuation ".." (by
-  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
+  intro c head
+  obtain rfl := Option.some.inj head
+  apply punctuationHead
+  simp only [List.mem_cons, Char.reduceEq, true_or, false_or])
 def printOpenRange : PrintedToken := printPunctuation "..<" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 
@@ -29,8 +33,15 @@ def printProgramWord (head : Char) (tail : List Char) (first : 'a' ≤ head ∧ 
 -- Mirror returnName and the punctuationHead lemma for each new terminal.
 def printConst : PrintedToken := printProgramWord 'c' ['o', 'n', 's', 't'] (by decide) (by sorry)
 def printFn : PrintedToken := printProgramWord 'f' ['n'] (by decide) (by sorry)
-def printBoolType : PrintedToken := printProgramWord 'b' ['o', 'o', 'l'] (by decide) (by sorry)
-def printIn : PrintedToken := printProgramWord 'i' ['n'] (by decide) (by sorry)
+def printBoolType : PrintedToken := printProgramWord 'b' ['o', 'o', 'l'] (by decide) (by
+  intro c member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl <;> decide)
+def printIn : PrintedToken := printProgramWord 'i' ['n'] (by decide) (by
+  intro c member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  subst c
+  decide)
 def printMut : PrintedToken := printProgramWord 'm' ['u', 't'] (by decide) (by sorry)
 def printWhile : PrintedToken := printProgramWord 'w' ['h', 'i', 'l', 'e'] (by decide) (by sorry)
 def printBounded : PrintedToken := printProgramWord 'b' ['o', 'u', 'n', 'd', 'e', 'd'] (by decide) (by sorry)
@@ -46,9 +57,17 @@ def printOnExceeded : PrintedToken :=
 def intSpelling (signed : Bool) (width : Nat) : List Char :=
   (if signed then 'i' else 'u') :: (toString width).toList
 
--- Mirror printInteger.lexeme using the decimal digit tail of the width.
 def intTypeName (signed : Bool) (width : Nat) : Identifier :=
-  ⟨intSpelling signed width, (if signed then 'i' else 'u'), (toString width).toList, rfl, by sorry, by sorry⟩
+  ⟨intSpelling signed width, (if signed then 'i' else 'u'), (toString width).toList, rfl, by
+    apply Or.inl
+    apply Or.inl
+    cases signed <;> decide, by
+    intro c member
+    change c ∈ width.repr.toList at member
+    rw [Nat.toList_repr] at member
+    have digit := Nat.isDigit_of_mem_toDigits (b := 10) (by decide) (by decide) member
+    apply Or.inr
+    simpa only [Char.isDigit, Char.le_def, Bool.and_eq_true, decide_eq_true_eq] using digit⟩
 
 def signedPieces (number : Int) : List PrintedToken :=
   if number < 0 then [Arith.sub.print, printInteger number.natAbs] else [printInteger number.natAbs]
