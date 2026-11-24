@@ -6,15 +6,15 @@ public import Core.Beobachtung.Unentscheidbar.Modell
 
 namespace Scratch
 
-open Nat.Partrec.Code
+open Nat.Partrec
 
 def natZuCode : Nat → Code
-  | 0 => .zero
-  | n + 1 => .succ (natZuCode n)
+  | 0 => Code.zero
+  | n + 1 => Code.succ (natZuCode n)
 
 def codeZuNat : Code → Option Nat
-  | .zero => some 0
-  | .succ c => (codeZuNat c).map Nat.succ
+  | Code.zero => some 0
+  | Code.succ c => (codeZuNat c).map Nat.succ
   | _ => none
 
 theorem codeZuNat_natZuCode (n : Nat) : codeZuNat (natZuCode n) = some n := by
@@ -27,18 +27,18 @@ inductive Mini where
   | node : Mini → Mini → Mini
 
 def miniZuCode : Mini → Code
-  | .leaf n => .pair (natZuCode 0) (natZuCode n)
-  | .node a b => .pair (natZuCode 1) (.pair (miniZuCode a) (.pair (miniZuCode b) .zero))
+  | .leaf n => Code.pair (natZuCode 0) (natZuCode n)
+  | .node a b => Code.pair (natZuCode 1) (Code.pair (miniZuCode a) (Code.pair (miniZuCode b) Code.zero))
 
 def miniVonCode : Code → Option Mini
-  | .pair tag kids =>
+  | Code.pair tag kids =>
       match codeZuNat tag with
       | some 0 => do
           let n ← codeZuNat kids
           some (.leaf n)
       | some 1 =>
           match kids with
-          | .pair a (.pair b .zero) => do
+          | Code.pair a (Code.pair b Code.zero) => do
               let a' ← miniVonCode a
               let b' ← miniVonCode b
               some (.node a' b')
