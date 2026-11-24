@@ -239,7 +239,7 @@ private theorem vm_read_suffix {result scope allowed labels payloads input arms 
     (fun _ _ _ _ _ => True)
     (fun _ _ a _ _ _ a2 _ => a2 <:+ a)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    scope allowed input labels payloads arms rest
+    scope allowed input labels payloads arms rest read
   all_goals simp_all [BlockReads.consumes]
 
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
