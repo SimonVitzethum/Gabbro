@@ -21,11 +21,18 @@ def plan : Plan := âŸ¨.intern, [], [], fun _ => false, fun _ => .na, fun _ => 0â
 
 def Transfer.apply {k : Katalog} (transfer : Transfer k) (c : Kontext) (s : State k) : State k :=
   let frame := s.lokal c
-  { s with lokal := Function.update s.lokal c {
+  { s with
+    lokal := Function.update s.lokal c {
       frame with
       pc := frame.pc + 1
       result := some transfer.value
-      borrowed := transfer.loan.toList ++ frame.borrowed } }
+      borrowed := transfer.loan.toList ++ frame.borrowed
+      regions := transfer.regionen.getD frame.regions
+      spaces := transfer.raeume.getD frame.spaces
+      tlb := transfer.tlb.getD frame.tlb
+      aktiverRaum := transfer.aktiv.getD frame.aktiverRaum
+      marken := transfer.marken.getD frame.marken }
+    rechte := transfer.rechte.getD s.rechte }
 
 def Instruction.ideal {k : Katalog} (op : Instruction k) (c : Kontext) (s : State k)
     (_ : PUnit.{1}) (plans : List Plan) (next : State k) : Prop :=
