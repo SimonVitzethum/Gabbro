@@ -111,6 +111,7 @@ public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Ziel.Korrektheit.Probe
+public import Core.Ziel.Korrektheit.Pruefer
 meta import Core.Waechter.Check
 
 #check_core

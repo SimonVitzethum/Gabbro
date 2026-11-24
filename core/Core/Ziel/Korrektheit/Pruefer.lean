@@ -99,24 +99,6 @@ accepted unit. -/
 def PrueferVollstaendigAussage (C : Pruefer) : Prop :=
   ∀ P t, C.fragment P t = true → Annahme.Akzeptiert (einheitVon P t) → C.pruefe P t = true
 
-/-- Soundness of the three components gives soundness of the checker. -/
-theorem pruefer_korrekt_aus_teilen (C : Pruefer) (lokal : PrueferLokalKorrektAussage C)
-    (klauseln : PrueferKlauselnKorrektAussage C) (waechter : PrueferWaechterKorrektAussage C) :
-    PrueferKorrektAussage C := by
-  intro P t h
-  simp only [Pruefer.pruefe, Bool.and_eq_true] at h
-  exact ⟨lokal P t h.1.1, klauseln P t h.1.2, waechter P t h.2⟩
-
-/-- Completeness of the three components gives completeness of the checker on the joint fragment. -/
-theorem pruefer_vollstaendig_aus_teilen (C : Pruefer) (lokal : PrueferLokalVollstaendigAussage C)
-    (klauseln : PrueferKlauselnVollstaendigAussage C) (waechter : PrueferWaechterVollstaendigAussage C) :
-    PrueferVollstaendigAussage C := by
-  intro P t hf hA
-  obtain ⟨hl, hk, hw⟩ := hA
-  simp only [Pruefer.fragment, Bool.and_eq_true] at hf
-  simp only [Pruefer.pruefe, Bool.and_eq_true]
-  exact ⟨⟨lokal P t hf.1.1 hl, klauseln P t hf.1.2 hk⟩, waechter P t hf.2 hw⟩
-
 /-- The checker is not trivial in either direction: it accepts some unit (it is not a refuse-everything
 checker, for which soundness is empty) and it refuses some unit of its own fragment that is not accepted (it is
 not an accept-everything checker; with soundness this is a unit the model itself refuses). Feeds:
