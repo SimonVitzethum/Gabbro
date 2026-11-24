@@ -102,7 +102,7 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.LowLevel.MemTree.unmapSpace, `Gabbro.Core.Ast.LowLevel.unmapEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.flushSpace, `Gabbro.Core.Ast.LowLevel.flushEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.activateEntry)], #[]⟩,
-  ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[], #[
+  ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[
     (`Gabbro.Core.Ast.LowLevel.ExecTree.stateDecl, `Gabbro.Core.Ast.LowLevel.StateDeclAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jump, `Gabbro.Core.Ast.LowLevel.JumpAussage),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jumpLong, `Gabbro.Core.Ast.LowLevel.JumpLongAussage),
