@@ -556,7 +556,10 @@ theorem function_erfuellbar : functionJoint := by
     constructor
     · constructor <;> intro h <;> cases h
     · decide
-  let a : Surface.FunctionArgs [] := ⟨name, ordinaryName, [], none, by intro t mem; cases mem, none, .braces .done, by exact List.nodup_nil, by intro h; cases h⟩
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
+    intro t mem
+    cases mem
+  let a : Surface.FunctionArgs [] := ⟨name, ordinaryName, [], none, validNone, none, .braces .done, List.nodup_nil, by intro h; cases h⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s₀,
@@ -759,7 +762,10 @@ theorem program_erfuellbar : programJoint := by
     constructor
     · constructor <;> intro h <;> cases h
     · decide
-  let first : Decl [] [] := .function name ord [] none (by intro t mem; cases mem) none (.braces .done) (by exact List.nodup_nil) (by intro h; cases h)
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
+    intro t mem
+    cases mem
+  let first : Decl [] [] := .function name ord [] none validNone none (.braces .done) List.nodup_nil (by intro h; cases h)
   let a : Surface.ProgramArgs := ⟨[], [], first, .done⟩
   let defIns : Befehl := .definiere name [] none 0 3 false []
   let E := form.einheit platform a
