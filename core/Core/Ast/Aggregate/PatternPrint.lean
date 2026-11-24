@@ -62,16 +62,17 @@ theorem TuplePattern.printReads (pattern : TuplePattern) (rest : List Token)
                   (commaSeparated ((c :: cs).map patternNamePieces)).map PrintedToken.value := by
             rfl
           rw [hcs]
-          apply TuplePatternReads.tuple
-          · simpa only [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternName_printReads first
-                (comma :: (patternNamePieces second).map PrintedToken.value ++ patternTailTokens (c :: cs) rest)
-                (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa only [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternName_printReads second (patternTailTokens (c :: cs) rest)
-                (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa only [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp_all [TuplePattern.names])))
+          let tailTokens := patternTailTokens (c :: cs) rest
+          let secondTokens := (patternNamePieces second).map PrintedToken.value ++ tailTokens
+          have firstRead := patternName_printReads first (comma :: secondTokens)
+            (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          have secondRead := patternName_printReads second tailTokens
+            (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          have tailRead := patternTail_printReads (c :: cs) rest
+            (fun nm h => use nm (by simp_all [TuplePattern.names]))
+          simpa only [tailTokens, secondTokens, patternTailTokens, closeTok, commaTok,
+            List.map_append, List.map_cons, List.map_nil, List.append_assoc, List.cons_append,
+            List.nil_append, List.singleton_append] using (TuplePatternReads.tuple firstRead secondRead tailRead)
 
 theorem TupleAnnotationReads.printReads (annotation : Option WrittenType) (valueRest : List Token)
     (valid : ∀ written ∈ annotation.toList, written.valid scope) :
@@ -89,4 +90,4 @@ theorem TupleAnnotationReads.printReads (annotation : Option WrittenType) (value
         unfold assignment keyword at eq
         cases eq)
 
-private end Gabbro.Core.Ast
+end Gabbro.Core.Ast

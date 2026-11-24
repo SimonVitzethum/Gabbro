@@ -68,7 +68,7 @@ private theorem directCall_not_tupleBind {scope : Scope} {input : List Token}
     exact List.mem_map.2 ⟨"let", List.mem_cons_self, rfl⟩
   exact (call.ordinary.2 inList).elim
 
-theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
+private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
   intro scope result input tree rest read
   generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
