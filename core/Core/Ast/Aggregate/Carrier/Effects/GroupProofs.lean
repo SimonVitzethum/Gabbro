@@ -313,7 +313,7 @@ theorem effectGroup_scope : EffectGroupScopeAussage := by
   constructor
   · simpa [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding, beq_iff_eq]
   constructor
-  · simp [EffectGroupDeclaration.binding, effectGroupBinding, Ty.valueBinding]
+  · simpa [EffectGroupDeclaration.binding, effectGroupBinding, Ty.valueBinding]
   · intro name hne
     simpa [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding, beq_iff_eq, hne, Ne.symm hne]
 theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
@@ -331,12 +331,12 @@ theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
   rw [hw] at hresolve
   dsimp [WrittenCarrierEffect.resolve] at hresolve
   cases hc : scope.effectCarrier effect.carrier with
-  | none => simp [hc] at hresolve
+  | none => simp only [WrittenCarrierEffect.resolve, hc, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hresolve
   | some pair =>
       rcases pair with ⟨position, exportedFlag⟩
       by_cases hflag : exportedFlag
       · exact ⟨position, by simpa [hc, hflag]⟩
-      · simp [hc, hexported, hflag] at hresolve
+      · simp only [WrittenCarrierEffect.resolve, hc, hexported, hflag, Option.bind_eq_bind, Option.bind_some, reduceCtorEq] at hresolve
 theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
