@@ -232,13 +232,41 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
     (read : AtomReads scope (.word word :: rest) tree suffix) :
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
-  cases read
-  · exact (ordinary.1 rfl).elim
-  · exact (ordinary.2 rfl).elim
-  · rename_i ty ref vis ord
-    refine (⟨ref, vis, ord, rfl, rfl, rfl⟩ : ∃ (r : Local scope ty) (v : r.visible) (o : ordinaryLocal r.binding.name),
-      r.binding.name.val = ref.binding.name.val ∧
-      (Expr.variable ref vis ord).typed = (Expr.variable r v o).typed ∧ rest = rest)
+  refine (AtomReads.rec
+    (motive_1 := fun _ input _ tree rest _ => True)
+    (motive_2 := fun input ty tree suf _ =>
+      input = .word word :: rest →
+      ∃ (ref : Local scope ty) (v : ref.visible) (o : ordinaryLocal ref.binding.name),
+        ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref v o).typed ∧ suf = rest)
+    (motive_3 := fun _ _ _ input _ _ rest _ => True)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read rfl)
+  · trivial
+  · intro h
+    cases h
+  · intro h
+    cases h
+  · intro h
+    injection h with name
+    exact (ordinary.1 name.symm).elim
+  · intro h
+    injection h with name
+    exact (ordinary.2 name.symm).elim
+  · intro h
+    injection h with name tail
+    subst word
+    exact ⟨_, _, _, rfl, rfl, tail⟩
+  · intro h
+    cases h
+  · intro h
+    cases h
+  · intro h
+    cases h
+  · trivial
+  · trivial
+  · trivial
+  · trivial
+  · trivial
+
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
