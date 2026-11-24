@@ -37,11 +37,11 @@ theorem nimmt_am_kopf {o : Option Kontext} {qq : List Kontext} {h : Kontext} {q 
   exact ⟨_, .frei h q⟩
 
 /-- Head shape of a queue known by its zeroth entry. -/
-theorem schlange_kopfform {q : List Kontext} {c : Kontext} (h : q[0]? = some c) :
+theorem schlange_kopfform {q : List Kontext} {c : Kontext} (h : q[(0 : Nat)]? = some c) :
     ∃ r, q = c :: r := by
   cases q with
   | nil =>
-    have hnone : (([] : List Kontext)[0]? = none) := rfl
+    have hnone : (([] : List Kontext)[(0 : Nat)]? = none) := rfl
     rw [hnone] at h
     cases h
   | cons x xs =>
@@ -69,14 +69,22 @@ theorem gibt_abgeben {s s' : SperrZustand} {h : Kontext} (hg : s.Gibt h s') :
 theorem halter_summe_schranke (e : List Nat) (H : Nat) (hall : ∀ x ∈ e, x ≤ H + 1) :
     e.sum ≤ e.length * (H + 1) := by
   induction e with
-  | nil => simp only [List.sum_nil, List.length_nil, Nat.zero_mul]
+  | nil =>
+    have h0 : ([] : List Nat).sum = 0 := rfl
+    have h1 : ([] : List Nat).length * (H + 1) = 0 := by
+      simp only [List.length_nil, Nat.zero_mul]
+    omega
   | cons x e ih =>
     have hx : x ≤ H + 1 := hall x (List.mem_cons.mpr (Or.inl rfl))
     have htail : e.sum ≤ e.length * (H + 1) :=
       ih (fun y hy => hall y (List.mem_cons.mpr (Or.inr hy)))
-    simp only [List.sum_cons, List.length_cons]
-    calc x + e.sum ≤ (H + 1) + e.length * (H + 1) := Nat.add_le_add hx htail
-      _ = (e.length + 1) * (H + 1) := by rw [Nat.add_mul, Nat.one_mul]
+    have hsum : (x :: e).sum = x + e.sum := rfl
+    have hlen : (x :: e).length = e.length + 1 := rfl
+    have hdist : (e.length + 1) * (H + 1) = (H + 1) + e.length * (H + 1) := by
+      rw [Nat.add_mul, Nat.one_mul]
+      exact Nat.add_comm _ _
+    rw [hsum, hlen, hdist]
+    exact Nat.add_le_add hx htail
 
 /-- A hold bound on the owner's own steps, from `HalteSchranken` and the unit data. -/
 theorem halte_kosten_schranke {ρ : Maschine.Lauf E} {l : L} {h : Kontext} {H a n : Nat}
@@ -89,7 +97,7 @@ theorem halte_kosten_schranke {ρ : Maschine.Lauf E} {l : L} {h : Kontext} {H a 
 
 /-- The index-zero case: a head waiter sees the lock within one hand-off. -/
 theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Nat}
-    (hqueue0 : ∃ s, ρ.zeit.zustand a = some s ∧ (s.sperren l).schlange[0]? = some c)
+    (hqueue0 : ∃ s, ρ.zeit.zustand a = some s ∧ (s.sperren l).schlange[(0 : Nat)]? = some c)
     (hbleibt : ∀ t s, a ≤ t → ρ.zeit.zustand t = some s → (s.sperren l).besitzer ≠ some c →
       c ∈ (s.sperren l).schlange)
     (hgibt : ∀ h b s, a ≤ b → ρ.zeit.zustand b = some s → (s.sperren l).besitzer = some h →
@@ -102,8 +110,8 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
       (s₂.sperren l).schlange[i₂]? = some c → i₂ ≤ i₁) :
     ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
       ((s.sperren l).besitzer = some c ∨
-        ((s.sperren l).besitzer = none ∧ (s.sperren l).schlange[0]? = some c ∧
-          ∃ s', (s.sperren l).Nimmt c s'))) ∧
+        (∃ h₀ r, (s.sperren l).besitzer = none ∧ (s.sperren l).schlange = h₀ :: r ∧
+          ∃ s', (s.sperren l).Nimmt h₀ s'))) ∧
       e.length ≤ 0 + 1 ∧ (∀ x ∈ e, x ≤ H + 1) ∧ e.sum ≤ (0 + 1) * (H + 1) := by
   obtain ⟨s, hsa, hidx⟩ := hqueue0
   obtain ⟨r, hr⟩ := schlange_kopfform hidx
@@ -132,8 +140,8 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
         rw [hsq] at hmem_r
         exact (List.not_mem_nil hmem_r).elim
       | cons h₀ rest =>
-        have hq0 : (s₁.sperren l).schlange[0]? = some h₀ := by rw [hsq]
-        have h2 : (s₁.sperren l).schlange[0]? = some c := hi0 ▸ hi_r
+        have hq0 : (s₁.sperren l).schlange[(0 : Nat)]? = some h₀ := by rw [hsq]
+        have h2 : (s₁.sperren l).schlange[(0 : Nat)]? = some c := hi0 ▸ hi_r
         have h₀eq : h₀ = c := Option.some.inj (hq0.symm.trans h2)
         subst h₀eq
         have hred : s₂.sperren l = ⟨some c, rest⟩ := hs2q
@@ -155,10 +163,10 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
             _ ≤ (0 + 1) * (H + 1) :=
               Nat.mul_le_mul_right _ (by simp only [List.length_cons, List.length_nil]; omega)
   | none =>
-    refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨hown, hidx, ?_⟩⟩, ?_, ?_, ?_⟩
+    refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨c, r, hown, hr, ?_⟩⟩, ?_, ?_, ?_⟩
     · cases hs : s.sperren l with
       | mk o qq =>
-        rw [hs] at hown hr ⊢
+        rw [hs] at hown hr
         exact nimmt_am_kopf hown hr
     · calc ([] : List Nat).length = 0 := rfl
         _ ≤ 0 + 1 := Nat.zero_le _
@@ -186,8 +194,8 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
       (s₂.sperren l).schlange[i₂]? = some c → i₂ ≤ i₁) →
     ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
       ((s.sperren l).besitzer = some c ∨
-        ((s.sperren l).besitzer = none ∧ (s.sperren l).schlange[0]? = some c ∧
-          ∃ s', (s.sperren l).Nimmt c s'))) ∧
+        (∃ h₀ r, (s.sperren l).besitzer = none ∧ (s.sperren l).schlange = h₀ :: r ∧
+          ∃ s', (s.sperren l).Nimmt h₀ s'))) ∧
       e.length ≤ i + 1 ∧ (∀ x ∈ e, x ≤ H + 1) ∧ e.sum ≤ (i + 1) * (H + 1) := by
   intro fuel
   induction fuel with
@@ -280,14 +288,14 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
               exact (List.not_mem_nil hmem_r).elim
             | cons h₀ rest =>
               -- No owner after the release, yet the queue is nonempty — the new head owns it.
-              have hcontra : (s₂.sperren l).besitzer = some h₀ := hs2q
+              have hcontra : (s₂.sperren l).besitzer = some h₀ := by rw [hs2q]
               rw [hcontra] at hnew
               cases hnew
       | none =>
-        refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨hown, hidx, ?_⟩⟩, ?_, ?_, ?_⟩
+        refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨c, r, hown, hr, ?_⟩⟩, ?_, ?_, ?_⟩
         · cases hs : s.sperren l with
           | mk o qq =>
-            rw [hs] at hown hr ⊢
+            rw [hs] at hown hr
             exact nimmt_am_kopf hown hr
         · calc ([] : List Nat).length = 0 := rfl
             _ ≤ i + 1 + 1 := Nat.zero_le _

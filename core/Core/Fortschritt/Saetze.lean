@@ -31,13 +31,15 @@ variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
 /-- Monotonicity of the tick count in the marked predicate. -/
-theorem zaehle_mono (m k : Nat → Bool) : ∀ (a n : Nat),
-    (∀ t, a ≤ t → t < a + n → m t = true → k t = true) → I.zaehle m a n ≤ I.zaehle k a n
-  | _, 0, _ => Nat.zero_le _
-  | a, n + 1, h =>
+theorem zaehle_mono (m k : Nat → Bool) (a n : Nat)
+    (h : ∀ t, a ≤ t → t < a + n → m t = true → k t = true) :
+    I.zaehle m a n ≤ I.zaehle k a n := by
+  induction n generalizing a with
+  | zero => exact Nat.zero_le _
+  | succ n ih =>
     have hsub : ∀ t, a ≤ t → t < a + n → m t = true → k t = true :=
       fun t le lt hm => h t le (by omega) hm
-    have le := zaehle_mono m k a n hsub
+    have le := ih a hsub
     by_cases hm : m (a + n) = true
     · have hk : k (a + n) = true := h (a + n) (Nat.le_add_right _ _) (Nat.lt_succ_self _) hm
       simp only [I.zaehle, if_pos hm, if_pos hk]
@@ -52,7 +54,7 @@ theorem zaehle_add (m : Nat → Bool) (a n₁ n₂ : Nat) :
   | zero => simp only [Nat.add_zero, I.zaehle]
   | succ n₂ ih =>
     have h1 : n₁ + (n₂ + 1) = (n₁ + n₂) + 1 := (Nat.add_assoc n₁ n₂ 1).symm
-    have h2 : a + (n₁ + n₂) = (a + n₁) + n₂ := Nat.add_assoc a n₁ n₂
+    have h2 : a + (n₁ + n₂) = (a + n₁) + n₂ := (Nat.add_assoc a n₁ n₂).symm
     rw [h1]
     simp only [I.zaehle]
     rw [h2, ih]
@@ -81,7 +83,7 @@ theorem zaehle_ge_length (m : Nat → Bool) (a n : Nat) (L : List Nat)
           zaehle_add m a _ _
         _ = I.zaehle m a (x + 1 - a) + I.zaehle m (x + 1) (a + n - (x + 1)) := by rw [h2]
     have htail : L.length ≤ I.zaehle m (x + 1) (a + n - (x + 1)) := by
-      apply ih hpair'
+      apply zaehle_ge_length _ _ _ _ hpair'
       intro t ht
       have h := hmem' t ht
       have hlt := hfirst t ht
@@ -106,7 +108,7 @@ theorem klassen_fortschritt_aus_pflichten {ρ : Maschine.Lauf E} {η : I.Lauf E}
     (bound : I.StotterSchranke η)
     (pf : I.FortschrittsPflichten (.lockFree formen) ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw) :
-    StarvationFrei E ρ η ∧ LockFrei E formen η ∧ PerCutFrei E η := by
+    StarvationFrei ρ η ∧ LockFrei formen η ∧ PerCutFrei η := by
   obtain ⟨nohang, klasse⟩ := matched.fortschritt valid bound pf fair
   exact ⟨nohang, klasse, klasse.1⟩
 
@@ -116,7 +118,7 @@ theorem fortschritt_am_aus_pflichten {η : I.Lauf E}
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
     (regeln : ∀ f, RegelFortschritt E.system f)
     (komponierbar : ∀ f, I.RegelKomponierbar E.einrichtung E.system f) :
-    PerCutFrei (E := E) η := by
+    PerCutFrei η := by
   intro t c live disp
   exact I.fortschritt_im_lauf valid fertig regeln komponierbar t c live disp
 
@@ -124,8 +126,9 @@ theorem fortschritt_am_aus_pflichten {η : I.Lauf E}
     same state, and `WaechterHalten` excludes a closed waiting set at every one of them. -/
 theorem deadlockfrei_aus_waechter {η : I.Lauf E}
     (valid : I.Laeufe E η) (h : WaechterHalten E) :
-    DeadlockFrei (E := E) η := by
-  intro t C hC
+    DeadlockFrei η := by
+  intro t hC
+  obtain ⟨C, hC⟩ := hC
   obtain ⟨k, _, same⟩ := Zeitlauf.schnitt_deckt η.zeit t
   rw [← same] at hC
   exact (h.2 η valid k) ⟨C, hC⟩
@@ -135,7 +138,7 @@ theorem deadlockfrei_aus_waechter {η : I.Lauf E}
     bounded by the unit's checked length. Exceeding it forces a discharging step. -/
 theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
     (matched : I.Laufabgleich ρ η) (bound : I.StotterSchranke η) :
-    WaitFrei (E := E) ρ η := by
+    WaitFrei ρ η := by
   intro c f a hhead0 hlive0 hdisp0 hhead hlive hbereit n hcount
   by_contra hcon
   push_neg at hcon
@@ -163,7 +166,9 @@ theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
           simp only [himp_eq] at himp
           have hdc : c = d := decide_eq_true_eq.mp himp
           subst hdc
-          rcases (matched.spur t).ideales_etikett with idle | step
+          have hmatch := matched.spur t
+          rw [himp_eq] at hmatch
+          rcases hmatch.ideales_etikett with idle | step
           · cases mark : η.belegt t with
             | none =>
               rcases (matched.frei t).mp mark with no | used
@@ -174,8 +179,7 @@ theorem waitfrei_aus_abgleich {ρ : Maschine.Lauf E} {η : I.Lauf E}
               have hdd : d' = c :=
                 (SchrittWahl.kontext.inj
                   (congrArg Prod.fst (Option.some.inj (event.symm.trans himp_eq)))).1
-              subst hdd
-              exact mark
+              exact hdd ▸ mark
           · exact (hcon t h1 h2 (Or.inl ⟨w, spur, step⟩)).elim
         | antwort _ => simp only [himp_eq, Bool.false_eq_true] at himp
         | interrupt _ => simp only [himp_eq, Bool.false_eq_true] at himp

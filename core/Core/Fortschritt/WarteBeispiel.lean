@@ -314,8 +314,8 @@ theorem warte_praemissen_erfuellbar :
       WartePraemissen E ρ () c 0 H a ∧
       ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
         ((s.sperren ()).besitzer = some c ∨
-          ((s.sperren ()).besitzer = none ∧ (s.sperren ()).schlange[0]? = some c ∧
-            ∃ s', (s.sperren ()).Nimmt c s'))) ∧
+          (∃ h₀ r, (s.sperren ()).besitzer = none ∧ (s.sperren ()).schlange = h₀ :: r ∧
+            ∃ s', (s.sperren ()).Nimmt h₀ s'))) ∧
         e.length ≤ 0 + 1 ∧ (∀ x ∈ e, x ≤ H + 1) ∧ e.sum ≤ (0 + 1) * (H + 1) := by
   refine ⟨E_1, ρ', A, 5, 1,
     ⟨e1halten, e1_halte, ⟨S_c, rfl, rfl⟩, e1_hbleibt, e1_hgibt, e1_hmono⟩, ?_⟩
