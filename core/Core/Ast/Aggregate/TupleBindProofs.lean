@@ -124,11 +124,7 @@ private theorem patternTail_printReads : (names : List (Option Identifier)) → 
       have commaTok : printComma.value = comma := by rfl
       have htokens : patternTailTokens (name :: names) rest =
           comma :: (patternNamePieces name).map PrintedToken.value ++ patternTailTokens names rest := by
-        cases names with
-        | nil => simp only [patternTailTokens, commaSeparated, List.intersperse, List.flatten,
-            List.map_append, List.map_cons, List.map_nil, closeTok]
-        | cons d ds => simp only [patternTailTokens, commaSeparated, List.intersperse, List.flatten,
-            List.map_append, List.map_cons, List.map_nil, commaTok, closeTok]
+        cases names <;> rfl
       rw [htokens]
       apply PatternTailReads.next
       · exact patternName_printReads name (patternTailTokens names rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
@@ -159,8 +155,7 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
               (patternNamePieces first).map PrintedToken.value ++ comma ::
                 (patternNamePieces second).map PrintedToken.value ++ comma ::
                   (commaSeparated ((c :: cs).map patternNamePieces)).map PrintedToken.value := by
-            simp only [commaSeparated, List.intersperse, List.flatten, List.map_append,
-              List.map_cons, List.map_nil, commaTok]
+            rfl
           rw [hcs]
           apply TuplePatternReads.tuple
           · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
@@ -186,7 +181,8 @@ private theorem tupleAnnotation_printReads (annotation : Option WrittenType) (va
       exact WrittenType.printReads written (valid written List.mem_cons_self) (by
         intro more h
         have eq : assignment = keyword "in" := (List.cons.inj h).1
-        simp [assignment, keyword] at eq)
+        unfold assignment keyword at eq
+        cases eq)
 
 private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : TupleBindArgs ctx.1) :
     (tupleBind ctx).production args
