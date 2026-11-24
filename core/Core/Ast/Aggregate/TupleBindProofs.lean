@@ -105,8 +105,9 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
   simp only [Option.map_some, Option.getD_some]
   have hlen : (args.pattern.bindings args.types).length =
       ((args.pattern.names.zip args.types).filterMap fun (name, _) => name).length := by
+    simp only [TuplePattern.bindings, List.length_reverse]
     let z := args.pattern.names.zip args.types
-    change (z.filterMap (fun x => Option.map (fun id => ⟨id, x.2, false, false⟩) x.1)).length =
+    change (z.filterMap (fun x => Option.map (fun id => (⟨id, x.2, false, false⟩ : Binding)) x.1)).length =
       (z.filterMap fun x => x.1).length
     induction z with
     | nil => rfl
@@ -118,7 +119,7 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
   · simp only [List.length_append, List.length_reverse]
     rw [hlen]
     rw [tupleLocals_length args.types value args.pattern.names args.checked.1]
-  · rfl
-  · rfl
+  · trivial
+  · trivial
 
 end Gabbro.Core.Ast.Semantik
