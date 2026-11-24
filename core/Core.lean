@@ -110,12 +110,6 @@ public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
-public import Core.Ziel.Korrektheit.Pruefer
-public import Core.Ziel.Korrektheit.Frontend
-public import Core.Ziel.Korrektheit.Speicher
-public import Core.Ziel.Korrektheit.Maschine
-public import Core.Ziel.Korrektheit.Verfeinerung
-public import Core.Ziel.Korrektheit.Probe
 meta import Core.Waechter.Check
 
 #check_core
