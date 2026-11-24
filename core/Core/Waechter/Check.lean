@@ -26,6 +26,8 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadAussage, 6471857298157990996),
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterWriteAussage, 720651405021861656),
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadElseAussage, 2959279117036688291),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterTransitionAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.Device.LendAussage, 0),
   (`Gabbro.Core.Ast.Ty, 3989644667745438811),
   (`Gabbro.Core.Ast.Local, 18043796543273204751),
   (`Gabbro.Core.Ast.Expr, 9166984138855068896),

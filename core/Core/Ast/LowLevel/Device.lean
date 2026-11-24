@@ -30,6 +30,8 @@ structure Binding (k : Katalog) where
   selected : k.enthaelt (.endpoint handle.origin.object.endpoint)
   described : k.plattform.geraet handle.origin.object.endpoint = some row
 
+def Binding.object (binding : Binding k) : Objekt := binding.handle.origin.object
+
 def Binding.question (binding : Binding k) (access : RegisterAccess) : Frage :=
   ⟨binding.handle.origin.object.endpoint, binding.handle, [], access.operation⟩
 
