@@ -120,4 +120,13 @@ theorem variantValue_payload : VariantValuePayloadAussage := by
     rfl
   · exact vv_case_inject a.payloads a.index payload
 
+theorem variantValue_suffix : Gabbro.Core.Ast.Surface.VariantValueSuffixAussage := by
+  intro scope input type payload rest read
+  cases read with
+  | bare closed => exact List.suffix_refl _
+  | empty => exact (List.suffix_cons _ _).trans (List.suffix_cons _ _)
+  | value exprRead =>
+      exact (List.suffix_cons _ _).trans
+        ((ExprReads.consumes exprRead).trans (List.suffix_cons _ _))
+
 end Gabbro.Core.Ast.Semantik

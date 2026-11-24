@@ -82,4 +82,19 @@ theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage :
   intro scope a frame
   simp [Befehl.auswerten, taggedDeclForm]
 
+private theorem td_member_suffix {input member rest}
+    (read : Gabbro.Core.Ast.VariantMemberRead input member rest) : rest <:+ input := by
+  cases read with
+  | nullary name closed => exact List.suffix_refl _
+  | payload name typeRead =>
+      exact (List.suffix_cons _ _).trans
+        ((TypeReads.consumes typeRead).trans (List.suffix_cons _ _))
+
+theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
+  intro input variants rest read
+  induction read with
+  | done => exact List.suffix_cons _ _
+  | next memberRead tailRead ih =>
+      exact ih.trans ((td_member_suffix memberRead).trans (List.suffix_cons _ _))
+
 end Gabbro.Core.Ast.Semantik
