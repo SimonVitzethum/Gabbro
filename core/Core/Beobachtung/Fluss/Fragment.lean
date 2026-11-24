@@ -267,16 +267,16 @@ theorem stummer_schritt_koppelt
             | kontext _hka _hbe regel₂' aus₂' =>
               rename_i _ _ _ _ _ c' _
               obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
-              have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-              subst ff₂
               have centry' : c' = Ast.Semantik.eintritt := by
                 by_contra hc
-                have h : Ast.Semantik.kopf p.code w₂ c' = some f :=
+                have h : Ast.Semantik.kopf p.code w₂ c' = some f₂ :=
                   (sysKopf w₂).symm.trans kopf₂'
                 have hnone : Ast.Semantik.kopf p.code w₂ c' = none := if_neg hc
                 rw [hnone] at h
                 cases h
               rw [centry, centry'] at *
+              have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+              subst ff₂
               obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau f impl₂'rule aus₂'
               have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                 rw [nachEq₂, nachGlied₂]
@@ -291,12 +291,15 @@ theorem stummer_schritt_koppelt
                 change NiedrigeBeob _ ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
                 rw [still₂, List.append_nil]
               -- post-state equality from the coupled pre-states
-              have regionEq : vor.regionLive c = w₂.regionLive c := by
+              have regionEq : Ast.Semantik.Zustand.regionLive vor c =
+                  Ast.Semantik.Zustand.regionLive w₂ c := by
                 funext slot
                 simp only [Ast.Semantik.Zustand.regionLive, rechteGleich, leihenGleich]
               have lokPost : (f.nach c vor).lokal = (f.nach c w₂).lokal := by
-                show Function.update vor.lokal c (f.auswerten (vor.lokal c) (vor.regionLive c)) =
-                  Function.update w₂.lokal c (f.auswerten (w₂.lokal c) (w₂.regionLive c))
+                show Function.update vor.lokal c
+                    (f.auswerten (vor.lokal c) (Ast.Semantik.Zustand.regionLive vor c)) =
+                  Function.update w₂.lokal c
+                    (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂ c))
                 rw [lokEqFun, regionEq]
               refine ⟨?_, ?_, ?_⟩
               · -- prefix: both sides append nothing
