@@ -100,7 +100,7 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
         memberTokenList args.members := by
       induction args.members with
       | nil => rfl
-      | cons m ms ih => simp [memberTokenList, RecordMember.printPieces, ih]
+      | cons m ms ih => simp [memberTokenList, RecordMember.printPieces, ih, List.append_assoc]
     by_cases h : args.exported <;>
       simp [h, hmem, List.flatMap, recordDecl, Category.printPieces, Decl.printPieces,
         recordDeclarationHead, recordDeclarationPrefix, keyword,

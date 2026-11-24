@@ -29,9 +29,12 @@ open Gabbro.Core.Text
 @[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
 @[simp] private theorem printCommaVal : printComma.value = comma := by rfl
 @[simp] private theorem printColonVal : printColon.value = colon := by rfl
+@[simp] private theorem printOpenVal : printOpen.value = openParen := by rfl
+@[simp] private theorem printCloseVal : printClose.value = closeParen := by rfl
 
 theorem recordValue_inversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
+  generalize hh : Token.word ref.name.val :: openParen :: input = hs at read
   cases read with
   | lit => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
   | grouped inner => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
@@ -45,38 +48,39 @@ theorem recordValue_inversion : RecordValueInversionAussage := by
   | tupleValue => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
   | recordValue ref' fields fits labelRead =>
       rename_i inp lbs tys als ats args
-      refine ⟨⟨lbs, tys, ref', als, ats, args, fields, fits⟩, ?_, labelRead, ?_⟩
-      · apply Subtype.ext
-        injection (List.cons.inj (show Token.word ref.name.val :: openParen :: inp =
-          Token.word ref'.name.val :: openParen :: _ by rfl)).1 with h
+      have hnval : ref'.name.val = ref.name.val := by
+        injection (List.cons.inj hh).1 with h
         exact h.symm
+      have hin := (List.cons.inj hh).2
+      refine ⟨⟨lbs, tys, ref', als, ats, args, fields, fits⟩, Subtype.ext hnval, ?_, ?_⟩
+      · cases hin
+        exact labelRead
       · rfl
   | variantValue => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
 
-private theorem labeledItems_consumes (scope : Scope) :
-    ∀ (labels : List Identifier) (types : List (Ty .value)) (items : LabeledItems scope labels types),
-      (∀ {input rest}, LabeledItemsRead scope input items rest → rest <:+ input) ∧
-      (∀ {input rest}, LabeledItemsTail scope input items rest → rest <:+ input)
-  | _, _, .empty => ⟨
+private theorem labeledItems_consumes (scope : Scope) (labels : List Identifier)
+    (types : List (Ty .value)) (items : LabeledItems scope labels types) :
+    (∀ {input rest}, LabeledItemsRead scope input items rest → rest <:+ input) ∧
+    (∀ {input rest}, LabeledItemsTail scope input items rest → rest <:+ input) := by
+  induction items with
+  | empty => exact ⟨
       (by intro input rest read; cases read; exact List.suffix_cons _ _),
       (by intro input rest read; cases read; exact List.suffix_cons _ _)⟩
-  | _, _, .next name value tail => ⟨
+  | next name value tail ih => exact ⟨
       (by
         intro input rest read
         cases read with
         | next n valueRead tailRead =>
-            obtain ⟨u, hu⟩ := (labeledItems_consumes scope _ _ tail).2 tailRead
+            obtain ⟨u, hu⟩ := ih.2 tailRead
             obtain ⟨v, hv⟩ := ExprReads.consumes valueRead
             refine ⟨.word name.val :: colon :: v ++ u, ?_⟩
-            rw [hv, hu]
-            simp),
+            simpa [hv, hu, List.append_assoc]),
       (by
         intro input rest read
         cases read with
         | comma l v r ir =>
-            obtain ⟨u, hu⟩ :=
-              (labeledItems_consumes scope _ _ (LabeledItems.next name value tail)).1 ir
-            exact ⟨comma :: u, by rw [hu]; rfl⟩)⟩
+            obtain ⟨u, hu⟩ := (labeledItems_consumes scope _ _ (LabeledItems.next name value tail)).1 ir
+            exact ⟨comma :: u, by simpa [hu]⟩)⟩
 
 theorem recordValue_suffix : RecordValueSuffixAussage := by
   intro scope input labels types items rest read
@@ -138,7 +142,7 @@ theorem recordValue_derivation : RecordValueDerivationAussage := by
   let args : RecordValueArgs sc :=
     ⟨[], [], ref, ([] : List Identifier), ([] : List (Ty .value)), .empty, fields,
       fun i => Fin.elim0 i⟩
-  exact Rule.satisfiableOfPrint args (recordValue_print sc args)
+  exact Rule.satisfiableOfPrint args (recordValue_print (scope := sc) args)
 
 end Gabbro.Core.Ast.Surface
 
@@ -148,7 +152,8 @@ open Maschine Annahme Katalog Waechter
 
 private theorem rv_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
   intro args
-  simp [recordValueForm, Quellform.fragment, Semantik.fragment, Fragment.anhaengen,
+  simp [recordValueForm, Quellform.fragment, Semantik.fragment, Fragment.anhaengen, expr,
+    RecordValueArgs.expression, Expr.typed,
     List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
 theorem recordValue_parse : RecordValueParseAussage := by

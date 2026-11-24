@@ -66,7 +66,7 @@ private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : M
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
   refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
   · simp [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens,
-      letName, printMut, printAssignment, printSemicolon]
+      letName, printMut, printAssignment, printSemicolon, letKeyword, keyword]
   · simpa [Expr.printTokens] using
       (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 
