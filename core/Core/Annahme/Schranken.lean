@@ -35,6 +35,7 @@ public import Core.Sicherheit.Laufkonstruktion
 namespace Gabbro.Core.Annahme
 
 open Gabbro.Core.Maschine
+open Gabbro.Core.Katalog
 open Gabbro.Core.Beobachtung
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
@@ -136,6 +137,7 @@ theorem speicherZustand_leer (h : E.schranken.speicher = none)
 /-- The identity local relation respects every depth measure. -/
 theorem tiefenBezug_eq (h : E.lokalerBezug = Eq) : TiefenBezug E := by
   intro l l' rel c
+  rw [h] at rel
   cases rel
   rfl
 
@@ -240,7 +242,7 @@ private theorem grenzen_schranken : SchrankenLokal grenzenEinheit := by
       have nichtsLebt : LebendeZellen (I.start grenzenEinheit η.start).2 = ∅ :=
         zellen_leer_grenzen (fun _ => rfl)
       rw [nichtsLebt, Set.encard_empty]
-      exact zero_le _
+      exact zero_le
   · intro i η lauf t c w spur vor nach vorEq kf spurEq nachEq step _ _
     exact nomatch kf
   · intro η lauf t w spur vor nach vorEq spurEq wahl nachEq step stapelVor speicherVor
@@ -266,10 +268,10 @@ private theorem grenzen_schranken : SchrankenLokal grenzenEinheit := by
         rw [grenzen_speicher] at eq
         obtain rfl := Option.some.inj eq
         have nichtsLebt : LebendeZellen
-            (s.wiederanlauf grenzenEinheit.einrichtung.wiederanlauf t p) = ∅ :=
+            (vor.wiederanlauf grenzenEinheit.einrichtung.wiederanlauf t p) = ∅ :=
           zellen_leer_grenzen (fun _ => rfl)
         rw [nichtsLebt, Set.encard_empty]
-        exact zero_le _
+        exact zero_le
 
 /-- Joint satisfiability of the checker row with a real finite bound: depth exactly one
     against ceiling one, empty live set against ceiling one, on an admitted ideal run.
