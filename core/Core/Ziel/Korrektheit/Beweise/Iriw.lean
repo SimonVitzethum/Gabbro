@@ -121,6 +121,15 @@ theorem irMo_trans (a b c : IriwEv) : (irMo a b ∧ irMo b c) → irMo a c := by
 theorem irEco_trans (a b c : IriwEv) : (irEco a b ∧ irEco b c) → irEco a c := by
   cases a <;> cases b <;> cases c <;> decide
 
+theorem irEco_von_rf (a b : IriwEv) : irRf a b → irEco a b := by
+  cases a <;> cases b <;> decide
+
+theorem irEco_von_mo (a b : IriwEv) : irMo a b → irEco a b := by
+  cases a <;> cases b <;> decide
+
+theorem irRf_po (a b : IriwEv) : irRf a b → irPo a b := by
+  cases a <;> cases b <;> decide
+
 theorem irRf_eindeutig (w w' r : IriwEv) : (irRf w r ∧ irRf w' r) → w = w' := by
   cases w <;> cases w' <;> cases r <;> decide
 
@@ -214,10 +223,8 @@ theorem ir_rb {m : Modus} {r w : IriwEv} (h : (irGraph m).rb r w) :
 
 theorem ir_eco_schritt {m : Modus} {a b : IriwEv} (h : (irGraph m).ecoSchritt a b) : irEco a b := by
   rcases h with h | h | h
-  · revert h
-    cases a <;> cases b <;> decide
-  · revert h
-    cases a <;> cases b <;> decide
+  · exact irEco_von_rf a b h
+  · exact irEco_von_mo a b h
   · rcases ir_rb h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> decide
 
 theorem ir_eco {m : Modus} {a b : IriwEv} (h : (irGraph m).eco a b) : irEco a b := by
@@ -226,9 +233,7 @@ theorem ir_eco {m : Modus} {a b : IriwEv} (h : (irGraph m).eco a b) : irEco a b 
 
 /-- Every `rf` edge lies inside program order here, so `hb_in_po` describes `hb` by `irPo`. -/
 theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
-  Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) (by
-    intro x y
-    cases x <;> cases y <;> decide) h
+  Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) irRf_po h
 
 theorem ir_kein_sc (e : IriwEv) : ¬ (irGraph .ra).sc e := by
   cases e <;> simp only [Graph.sc, irGraph, irLab, reduceCtorEq]
