@@ -335,6 +335,5 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
             Dynamisch)
         rw [if_neg (not_lt_of_ge nonneg)]
         rw [dif_pos boundProof]
-        rfl
 
 end Gabbro.Core.Ast.Semantik
