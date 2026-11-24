@@ -39,8 +39,8 @@ def ZielFX (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (∀ result, result ∈ (ErgebnisseAmSchnitt ρ k).2 ↔
       ∃ e, e ∈ Katalogspur ρ k ∧ result = .katalog e)
 
-theorem I.SimPflichten.zielFX {lokal : I.LokalerBezug Lok} {laenge : F → Nat}
-    (pflicht : I.SimPflichten E lokal laenge) {h : Umgebung} {ρ : Maschine.Lauf E}
+theorem I.SimPflichten.zielFX
+    (pflicht : I.SimPflichten E) {h : Umgebung} {ρ : Maschine.Lauf E}
     (run : Maschine.Laeufe E h ρ) (k : Maschine.Schnitt E ρ) : ZielFX E h ρ k := by
   obtain ⟨z, loaded, memory, answers⟩ := pflicht.abgleich.sicherheit_am_schnitt run k
   refine ⟨run, z, loaded, memory, answers, fun t _ => pflicht.autoritaet h ρ run t, ?_, ?_⟩

@@ -74,12 +74,15 @@ public meta structure AcceptanceSpec where
   syntaxModules : Array Name := #[]
   idealModules : Array Name := #[]
   catalogueModules : Array Name := #[]
+  forbidden : Array Name := #[]
+  forbiddenModules : Array Name := #[]
 
 /-- M4 lists the ideal entry points and their module prefixes. M5 lists every acceptance definition
     (including its three components) and the syntax and catalogue module prefixes. The forward traversal
-    checks each Core dependency, including helpers behind allowed definitions. The reverse traversal checks
-    the ideal entry points for every acceptance definition. Review the placement and meaning of definitions
-    in the approved modules. Lean cannot infer semantic layers from their expressions alone. -/
+    checks each Core dependency, including helpers behind allowed definitions. Forbidden declaration and
+    module prefixes take priority over the allowed modules. The reverse traversal checks the ideal entry
+    points for every acceptance definition. Review the placement and meaning of definitions in the approved
+    modules. Lean cannot infer semantic layers from their expressions alone. -/
 public meta def acceptanceErrors (env : Environment) (spec : AcceptanceSpec) : Array String := Id.run do
   let mut errors := #[]
   let allowedModules := spec.syntaxModules ++ spec.idealModules ++ spec.catalogueModules
@@ -95,10 +98,11 @@ public meta def acceptanceErrors (env : Environment) (spec : AcceptanceSpec) : A
       root.isPrefixOf name && env.getModuleIdxFor? root == env.getModuleIdxFor? name
   for root in spec.acceptance do
     for name in coreClosure env #[root] do
-      if isAcceptance name then continue
       if let some idx := env.getModuleIdxFor? name then
         let mod := env.header.moduleNames[idx.toNat]!
-        unless allowedModules.any (·.isPrefixOf mod) do
+        if spec.forbidden.any (·.isPrefixOf name) || spec.forbiddenModules.any (·.isPrefixOf mod) then
+          errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is forbidden"
+        else if !isAcceptance name && !allowedModules.any (·.isPrefixOf mod) then
           errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is outside the whitelist"
   for root in spec.ideal do
     for name in coreClosure env #[root] do

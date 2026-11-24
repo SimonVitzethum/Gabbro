@@ -32,9 +32,10 @@ inductive Wirkung where
   | freigabe (c : Kontext) (g : Griff)
   | aussen (e : AussenCommit)
 
-/-- Implementation observations supplied by the forms. Locations are indexed by a capability's
-    object and an offset, access operands by the concrete event index of the current graph epoch.
-    The effects ledger keeps the emitted releases and unmediated commits in execution order. -/
+/-- Shared allocation extents and context holdings, together with the observations supplied by
+    concrete forms. Locations are indexed by a capability's object and offset. Concrete access
+    operands are indexed by event in the current graph epoch. The effects ledger keeps emitted
+    releases and unmediated commits in execution order. -/
 structure Buchung (Ort : Type) where
   umfang : Nat → List Ort
   haelt : Kontext → Griff → Speicherrecht → Prop
