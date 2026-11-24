@@ -6,7 +6,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.ActivatePreservation
 
 namespace Gabbro.Core.Ast.LowLevel
 
-open Gabbro.Core.Text Katalog Maschine Waechter Aussen
+open Gabbro.Core.Text Katalog Maschine Waechter Aussen Annahme
 
 private def lowName : Identifier :=
   ⟨['r'], ⟨'r', [], rfl, by
@@ -160,13 +160,13 @@ theorem activateJoint : ActivateJointAussage := by
   let space : Identifier := spaceName
   let scope : MemScope := ⟨[tablesName], [space], []⟩
   let op : MemInstruction := .activateSpace 0
-  let prefix : List MemInstruction := [.newSpace 0]
+  let pre : List MemInstruction := [.newSpace 0]
   let tree : MemTree .activateSpace := .activateSpace space
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start := lowStart env [extent]
   let text : RawText := tree.print
-  let E := memProgram k (prefix ++ [op])
+  let E := memProgram k (pre ++ [op])
   let s0 := (I.start E start).2
   have hw : Hardware k env := Katalog.Umgebung.referenz_hardware k 1 sicht
     (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
@@ -226,7 +226,7 @@ theorem activateJoint : ActivateJointAussage := by
   obtain ⟨frame0, hframe0⟩ := Option.isSome_iff_exists.mp heval0
   let s := frame0.advance entryContext s0
   have hhead0 : E.system.kopf s0 entryContext = some (.newSpace 0) := by
-    change memHead target (prefix ++ [op]) s0 entryContext = some (.newSpace 0)
+    change memHead target (pre ++ [op]) s0 entryContext = some (.newSpace 0)
     unfold memHead
     simp only [entryContext, ↓reduceIte, hs0status, hs0pc, List.getElem?_cons_zero]
     exact if_pos heval0
@@ -277,19 +277,19 @@ theorem activateJoint : ActivateJointAussage := by
     dsimp
     rw [if_pos hAktiv]
   obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp heval
-  refine ⟨k, scope, tree, op, env, start, text, prefix, s, next, ?_, hw, hzul, ?_,
+  refine ⟨k, scope, tree, op, env, start, text, pre, s, next, ?_, hw, hzul, ?_,
     hnodupR, hnodupS, hnodupM, hbezeichnet, hparse, hopElab, hreach, ?_, hnext, ?_, ?_⟩
   · exact ⟨tablesName, rfl, rfl⟩
-  · exact memAkzeptiert k (prefix ++ [op])
-  · change memHead target (prefix ++ [op]) s entryContext = some op
+  · exact memAkzeptiert k (pre ++ [op])
+  · change memHead target (pre ++ [op]) s entryContext = some op
     unfold memHead
     simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
       List.getElem?_cons_zero]
     exact if_pos heval
-  · change ∃ i, memHead target (prefix ++ [op]) s entryContext = some i ∧
+  · change ∃ i, memHead target (pre ++ [op]) s entryContext = some i ∧
       (MemInstruction.rule target i).ideal entryContext s () [plan] (next.advance entryContext s)
     refine ⟨op, ?_, ?_⟩
-    · change memHead target (prefix ++ [op]) s entryContext = some op
+    · change memHead target (pre ++ [op]) s entryContext = some op
       unfold memHead
       simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
         List.getElem?_cons_zero]
@@ -297,10 +297,10 @@ theorem activateJoint : ActivateJointAussage := by
     · change ∃ frame, op.evaluate target s entryContext = some frame ∧
         [plan] = [plan] ∧ next.advance entryContext s = frame.advance entryContext s
       exact ⟨next, hnext, rfl, rfl⟩
-  · change ∃ i, memHead target (prefix ++ [op]) s entryContext = some i ∧
+  · change ∃ i, memHead target (pre ++ [op]) s entryContext = some i ∧
       (MemInstruction.rule target i).impl entryContext s () [plan] (next.advance entryContext s)
     refine ⟨op, ?_, ?_⟩
-    · change memHead target (prefix ++ [op]) s entryContext = some op
+    · change memHead target (pre ++ [op]) s entryContext = some op
       unfold memHead
       simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
         List.getElem?_cons_zero]
