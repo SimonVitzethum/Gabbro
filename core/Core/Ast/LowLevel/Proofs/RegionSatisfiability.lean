@@ -149,7 +149,7 @@ theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
       cases same
       exact True.intro) none body (List.nodup_singleton _) (fun _ => rfl)
   let unit : Ast.Unit := ⟨[], .step signature .done⟩
-  refine ⟨unit, Ast.print (category := .unit) unit, elaborieren .x86_64 unit,
+  refine ⟨unit, Ast.print (category := .unit) unit, elaborieren .x86_64 (category := .unit) unit,
     Ast.parse_print _, ⟨rfl, ⟨⟨.nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩⟩, ?_⟩
   · exact rfl
   · exact List.mem_cons_self

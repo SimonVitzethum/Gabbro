@@ -20,6 +20,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.LowLevel.EnvironmentAussage, 4514224908322717946),
   (`Gabbro.Core.Ast.Semantik.EnvironmentUnitAussage, 15733259603368706660),
   (`Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage, 3525134736315824921),
+  (`Gabbro.Core.Ast.Semantik.AddressTypeUnitErfuellbarAussage, 0),
   (`Gabbro.Core.Ast.Semantik.RegionAddressUnitAussage, 10499648118045920537),
   (`Gabbro.Core.Ast.Semantik.ViewUnitAussage, 14449785275102840490),
   (`Gabbro.Core.Ast.Semantik.RegionBindUnitAussage, 5229462174105162127),
