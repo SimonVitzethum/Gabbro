@@ -247,7 +247,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
         injection sameFirst with hMiddle hFirst
         cases hMiddle
         cases hFirst
-        cases moreEq
+        cases moreEq.symm
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
         cases sameNext
         exact ⟨rfl, restEq⟩
@@ -284,7 +284,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
         injection sameFirst with hMiddle hFirst
         cases hMiddle
         cases hFirst
-        cases moreEq
+        cases moreEq.symm
         subst_vars
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
         cases sameNext
