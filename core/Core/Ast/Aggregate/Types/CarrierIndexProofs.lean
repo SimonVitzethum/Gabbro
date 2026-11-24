@@ -53,7 +53,7 @@ private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
     have mem : ('n' : Char) ∈ Nat.toDigits 10 width := by
       have inTail : ('n' : Char) ∈ (toString width).toList := by
         rw [tailEq]
-        simp
+        decide
       simpa using inTail
     have digit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (by decide) (by decide) mem
     have notDigit : ('n' : Char).isDigit = false := by decide
@@ -217,27 +217,30 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
   let count : Nat := 1
   let scope : Scope := [⟨carrier, .carrierSchema count, false, false⟩]
   have resolved : scope.carrierCount carrier = some count := by
-    simp [Scope.carrierCount, scope, carrierIndex_singleIdent]
+    decide
   have paramOrdinary : ordinaryLocal paramName := by
-    simp [ordinaryLocal, ordinaryAtomWord, paramName, carrierIndex_singleIdent]
+    dsimp [ordinaryLocal, ordinaryAtomWord, paramName, carrierIndex_singleIdent]
+    decide
   let param : Parameter scope := ⟨paramName, .index carrier count, resolved, paramOrdinary⟩
   have fnOrdinary : directName fnName := by
     constructor
-    · change ordinaryAtomWord fnName.val
-      simp [ordinaryAtomWord, fnName, carrierIndex_singleIdent]
-    · simp [fnName, carrierIndex_singleIdent]
+    · dsimp [ordinaryLocal, ordinaryAtomWord, fnName, carrierIndex_singleIdent]
+      decide
+    · dsimp [fnName, carrierIndex_singleIdent]
+      decide
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem
   let argsVal : Surface.FunctionArgs scope :=
     ⟨fnName, fnOrdinary, [param], none, validNone, none, .braces .done, by
-      simp [param], by
+      decide, by
       intro h
       cases h⟩
   let args : {a : Surface.FunctionArgs scope // ∃ p ∈ a.parameters, indexTypeUse p.written} :=
     ⟨argsVal, by
       refine ⟨param, ?_, ?_⟩
-      · simp [argsVal]
+      · change param ∈ [param]
+        exact List.mem_cons_self param []
       · change True
         trivial⟩
   let form := carrierTypeForm scope indexTypeUse
