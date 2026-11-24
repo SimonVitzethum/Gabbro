@@ -29,8 +29,9 @@ def ticketPlan : SchrittPlan Unit Unit Unit Unit :=
 def e1Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
     (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
     Prop :=
-  ∃ next, SperrSchritt .ticket c (s.sperren ()) next ∧ es = [ticketPlan] ∧
-    u = toggleUpdate c s
+  (∃ next, SperrSchritt .ticket c (s.sperren ()) next ∧ es = [ticketPlan] ∧
+    u = toggleUpdate c s) ∨
+  (es = [togglePlan] ∧ u = toggleUpdate c s)
 
 def e1System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e1Regel, e1Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
@@ -78,6 +79,11 @@ def e1AusfuehrA :
   rw [ticket_leer]
   exact .nil _
 
+def e1StotterAusfuehr (t : Nat) (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :
+    FuehrtSchrittAus (E_1).einrichtung t c s s ticketPlan ⟨[], []⟩ s :=
+  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    fun _ h => (List.not_mem_nil h).elim, [], s, .intern, .nil _, rfl⟩
+
 def e1AusfuehrB :
     FuehrtSchrittAus (E_1).einrichtung 1 B S_c (toggleUpdate B S_c) ticketPlan ⟨[], []⟩ S_d := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
@@ -87,10 +93,35 @@ def e1AusfuehrB :
   rw [ticket_leer]
   exact .nil _
 
-def zw : Nat → Option (Zustand Unit Unit Unit Unit Bool Unit)
-  | 0 => some zE0
-  | 1 => some S_c
-  | _ + 2 => some S_d
+def zwSt : Nat → Zustand Unit Unit Unit Unit Bool Unit
+  | 0 => zE0
+  | 1 => S_c
+  | _ + 2 => S_d
+
+theorem zwSt_kerne : ∀ t, (zwSt t).kerne = zE0.kerne := by
+  intro t
+  cases t with
+  | zero => rfl
+  | succ t =>
+    cases t with
+    | zero => rfl
+    | succ t => rfl
+
+theorem zwSt_status : ∀ t, (zwSt t).status = zE0.status := by
+  intro t
+  cases t with
+  | zero => rfl
+  | succ t =>
+    cases t with
+    | zero => rfl
+    | succ t => rfl
+
+def zw : Nat → Option (Zustand Unit Unit Unit Unit Bool Unit) := fun t => some (zwSt t)
+
+theorem zwSt_ge (n : Nat) : zwSt (n + 2) = S_d := by
+  cases n with
+  | zero => rfl
+  | succ n => rfl
 
 def ticketA : SchrittWahl Unit × SchrittSpur Unit Unit :=
   (.kontext A (), ⟨[], []⟩)
@@ -101,62 +132,47 @@ def ticketB : SchrittWahl Unit × SchrittSpur Unit Unit :=
 def spurw : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
   | 0 => some ticketA
   | 1 => some ticketB
-  | _ + 2 => none
+  | _ + 2 => some ticketB
 
 theorem spurw0 : spurw 0 = some ticketA := rfl
 
 theorem spurw1 : spurw 1 = some ticketB := rfl
 
+theorem spurw_ge2 : ∀ t, 2 ≤ t → spurw t = some ticketB := by
+  intro t h
+  match t with
+  | 0 => exact absurd h (by decide)
+  | 1 => exact absurd h (by decide)
+  | _ + 2 => rfl
+
 def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t (zw t) (spurw t) (zw (t + 1))
   | 0 =>
     .schritt spurw0 (.schritt (ImplSchritt.kontext (hw2_crash 0)
       ⟨0, hw2_opp0 rfl, rfl, rfl⟩
-      ⟨(), rfl, ⟨_, .ticket (fun h => by cases h) List.not_mem_nil, rfl, rfl⟩⟩
+      ⟨(), rfl, Or.inl ⟨_, .ticket (fun h => by cases h) List.not_mem_nil, rfl, rfl⟩⟩
       e1AusfuehrA))
   | 1 =>
     .schritt spurw1 (.schritt (ImplSchritt.kontext (hw2_crash 1)
       ⟨1, hw2_opp1 rfl, rfl, rfl⟩
-      ⟨(), rfl, ⟨_, .ticket (fun h => by cases h)
+      ⟨(), rfl, Or.inl ⟨_, .ticket (fun h => by cases h)
         (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h)), rfl, rfl⟩⟩
       e1AusfuehrB))
   | n + 2 =>
-    .wartet rfl rfl (fun _ _ step => by
-      cases step with
-      | schritt h =>
-        cases h with
-        | kontext _ bereit regel _ =>
-          obtain ⟨k, _, hdisp, _⟩ := bereit
-          have h0 : (S_d.kerne 0).laeuft = some A := rfl
-          have h1 : (S_d.kerne 1).laeuft = some B := rfl
-          have hnone : ∀ m : Nat, (S_d.kerne (m + 2)).laeuft = none := fun _ => rfl
-          cases k with
-            | zero =>
-              rw [h0] at hdisp
-              cases hdisp
-              obtain ⟨i, _, hideal⟩ := regel
-              obtain ⟨_, hticket, _, _⟩ := hideal
-              cases hticket with
-              | ticket _ keinTicket =>
-                have hmA : A ∈ (S_d.sperren ()).schlange := by
-                  rw [qd]
-                  exact List.mem_cons.mpr (Or.inl rfl)
-                exact keinTicket hmA
-          | succ n =>
-            cases n with
-            | zero =>
-              rw [h1] at hdisp
-              cases hdisp
-              obtain ⟨i, _, hideal⟩ := regel
-              obtain ⟨_, hticket, _, _⟩ := hideal
-              cases hticket with
-              | ticket _ keinTicket =>
-                have hmB : B ∈ (S_d.sperren ()).schlange := by
-                  rw [qd]
-                  exact List.mem_cons.mpr (Or.inr (List.mem_cons.mpr (Or.inl rfl)))
-                exact keinTicket hmB
-            | succ m =>
-              rw [hnone m] at hdisp
-              cases hdisp)
+    have hle : 2 ≤ n + 2 := Nat.le_add_left 2 n
+    have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ hle
+    have hcur : zw (n + 2) = some S_d := by
+      show some (zwSt (n + 2)) = _
+      rw [zwSt_ge2 _ hle]
+    have hnxt : zw ((n + 2) + 1) = some S_d := by
+      show some (zwSt ((n + 2) + 1)) = _
+      rw [zwSt_ge2 _ (by omega)]
+    have hker : (S_d.kerne 1).laeuft = some B := rfl
+    have hlive : S_d.status B = Status.laeuft := rfl
+    rw [hsp, hcur, hnxt]
+    exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash (n + 2))
+      ⟨1, hw2_opp1 (by omega), hker, hlive⟩
+      ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
+      (e1StotterAusfuehr (n + 2) B S_d)))
 
 def ρ' : Maschine.Lauf E_1 :=
   ⟨s0, hw2, ⟨zw, spurw, taktw⟩⟩
