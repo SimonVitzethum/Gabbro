@@ -22,12 +22,15 @@ theorem implTransfer {k : Katalog} {op : MemInstruction} {c : Kontext} {s : MemS
   cases he : op.evaluate k.plattform.ziel s c with
   | none =>
       dsimp [MemInstruction.rule, MemInstruction.step] at h
-      rw [he] at h
-      cases h
+      rcases h with ⟨frame, heq, _, _⟩
+      rw [he] at heq
+      cases heq
   | some frame =>
       dsimp [MemInstruction.rule, MemInstruction.step] at h
       rw [he] at h
-      exact ⟨frame, rfl, h.1, h.2⟩
+      rcases h with ⟨frame', heq, hp, hu⟩
+      cases heq
+      exact ⟨frame, rfl, hp, hu⟩
 
 theorem vollzug {k : Katalog} (op : MemInstruction) (frame : MemFrame)
     (t : Nat) (c : Kontext) (s : MemState) :
@@ -69,7 +72,7 @@ theorem vollzugGenau {k : Katalog} (op : MemInstruction) {t : Nat} {c : Kontext}
     trace = ⟨[], []⟩ ∧ next = u := by
   obtain ⟨_, _, hp, _⟩ := implTransfer (k := k) (op := op) (w := w) rule
   cases (List.cons.inj hp).1
-  exact genauInternal execute
+  exact genauInternal (k := k) execute
 
 theorem abgleich {k : Katalog} (op : MemInstruction) : I.RegelAbgleich (memUnit k op) op := by
   intro hw t c w s u s' i pl spur related crash kann head impl execute
@@ -88,7 +91,8 @@ theorem komponierbar {k : Katalog} (op : MemInstruction) :
   intro t s c w plans u head gut ideal
   obtain ⟨frame, evaluate, planEq, hu⟩ := ideal
   subst u
-  exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, vollzug op frame t c s⟩
+  dsimp [memUnit, memProgram]
+  exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, vollzug (k := k) op frame t c s⟩
 
 theorem regelSicher {k : Katalog} (op : MemInstruction) :
     Gabbro.Core.Sicherheit.RegelSicher (memSafetyUnit k op) op := by
@@ -96,7 +100,8 @@ theorem regelSicher {k : Katalog} (op : MemInstruction) :
   obtain ⟨frame, _, planEq, _⟩ := implTransfer (k := k) (op := op) (w := w) impl
   subst zwischen
   cases (List.cons.inj planEq).1
-  obtain ⟨traceEq, nextEq⟩ := genauInternal execute
+  dsimp [memSafetyUnit, memUnit, memProgram] at execute
+  obtain ⟨traceEq, nextEq⟩ := genauInternal (k := k) execute
   subst trace
   subst nach
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Nat UInt8) := List.not_mem_nil
@@ -122,14 +127,15 @@ theorem regelSicher {k : Katalog} (op : MemInstruction) :
 
 theorem aussenLokal {k : Katalog} (op : MemInstruction) :
     Gabbro.Core.Annahme.AussenLokal (memUnit k op) := by
-  refine ⟨zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_aus_kontext
+  refine ⟨zulassung_m2 k.plattform, ?_⟩
+  apply aussen_gueltig_aus_kontext (memUnit k op)
   intro run t s c w spur s' step
   cases step with
   | kontext _ _ regel execute =>
     obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
     cases (List.cons.inj planEq).1
-    obtain ⟨rfl, rfl⟩ := genauInternal execute
+    dsimp [memUnit, memProgram] at execute
+    obtain ⟨rfl, rfl⟩ := genauInternal (k := k) execute
     exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
       (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
 
@@ -141,7 +147,7 @@ theorem kosten {k : Katalog} (op : MemInstruction) :
   intro t c s w middle next p trace impl execute
   obtain ⟨_, _, hp, _⟩ := implTransfer (k := k) (op := op) (w := w) impl
   cases (List.cons.inj hp).1
-  exact ⟨(genauInternal execute).1, rfl⟩
+  exact ⟨(genauInternal (k := k) execute).1, rfl⟩
 
 end MemInstruction
 
