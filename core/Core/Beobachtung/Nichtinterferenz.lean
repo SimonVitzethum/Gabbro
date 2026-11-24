@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Spur
+public import Core.Beobachtung.Fluss.Quellregel
 
 @[expose] public section
 
@@ -52,8 +53,9 @@ def Kopplung (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (ρ₁ 
 /-- The coupling implies the old prefix cover (witness: the coupling cut). -/
 theorem kopplung_prefix {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
     {ρ₁ ρ₂ : Lauf E} {predictor : Praediktor} {t u : Nat}
-    (h : Kopplung E ρ₁ ρ₂ predictor t u) : PraefixAbgedeckt E ρ₁ ρ₂ predictor t :=
-  ⟨u, h.1⟩
+    (h : Kopplung E ρ₁ ρ₂ predictor t u) : PraefixAbgedeckt E ρ₁ ρ₂ predictor t := by
+  unfold PraefixAbgedeckt
+  exact ⟨u, h.1⟩
 
 /-- Same-cut length equality follows from one-sided coupling directly: it is
     maintained as part of the invariant, so the crash case no longer needs a
@@ -141,7 +143,7 @@ theorem ni_spur_aus_pflichten (pflicht : NIPflichten E) {h₁ h₂ ρ₁ ρ₂}
     (vergleich : Vergleich E h₁ h₂ ρ₁ ρ₂) :
     NiedrigAequiv E (NiedrigeBeob E ρ₁) (NiedrigeBeob E ρ₂) := by
   refine fun p => ⟨fun t => kopplung_prefix (anfangUndSchritte pflicht vergleich p t), fun u => ?_⟩
-  obtain ⟨t, h⟩ := anfangUndSchritte pflicht vergleich.symm p u
+  obtain ⟨t, h⟩ := kopplung_prefix (anfangUndSchritte pflicht vergleich.symm p u)
   exact ⟨t, relation_umkehren h⟩
 
 /-- Both NI conclusions over an admitted comparison start. Existence is discharged by the
