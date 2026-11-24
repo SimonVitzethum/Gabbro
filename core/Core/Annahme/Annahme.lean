@@ -72,10 +72,12 @@ instance trivialeKlauseln : KlauselTabelle trivialeEinheit where
 instance trivialeVerwendung : GuardVerwendung trivialeEinheit where
   bedarf := fun _ _ _ _ => False
 
-/-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
-    conjuncts hold jointly — no uses to guard, nothing written to violate, never blocked. -/
-theorem akzeptiert_erfuellbar
-    : ∃ E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, Akzeptiert E := by
+/-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system — with its clause
+    table and guard uses — where all three conjuncts hold jointly: no uses to guard, nothing
+    written to violate, never blocked. -/
+theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit)
+    (K : KlauselTabelle E) (G : GuardVerwendung E),
+    @Akzeptiert Unit Unit Unit Unit Unit Unit Unit Unit Unit inferInstance E K G := by
   have hL : Lokal trivialeEinheit :=
     ⟨Plattform.katalog_wohlgeformt .x86_64, fun i => ?_, Aussen.zulassung_m2 .x86_64,
       fun i => ?_⟩
@@ -94,7 +96,7 @@ theorem akzeptiert_erfuellbar
     obtain ⟨c, hc⟩ := hex
     obtain ⟨b, hb, _⟩ := hall c hc
     exact False.elim hb
-  exact ⟨trivialeEinheit, hL, hK, hW⟩
+  exact ⟨trivialeEinheit, trivialeKlauseln, trivialeVerwendung, ⟨hL, hK, hW⟩⟩
 
 /-- **A system with a closed waiting set at an `I` cut is not accepted.** -/
 theorem geschlossen_nicht_akzeptiert [DecidableEq L]
