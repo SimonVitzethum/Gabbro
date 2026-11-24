@@ -67,7 +67,7 @@ theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : Mu
 theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (mutableLocal scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by simp only [ordinaryLocal, name, keywordName, String.toList, List.mem_cons, List.not_mem_nil, List.cons.injEq, String.reduceEq, String.Internal.toArray, Array.toList, not_false_eq_true]
+  have ordinaryName : ordinaryLocal name := ⟨by decide, by decide⟩
   let a : MutableLocalArgs scope result := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
   exact Rule.satisfiableOfPrint a (mutableLocal_print a)
 
