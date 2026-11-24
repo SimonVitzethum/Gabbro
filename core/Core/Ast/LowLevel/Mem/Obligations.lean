@@ -86,6 +86,7 @@ theorem memRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussage fo
   · intro t c w vor zwischen nach p trace _ impl execute befugt
     obtain ⟨frame, _, planEq, rfl⟩ := impl
     cases (List.cons.inj planEq).1
+    rcases trace with ⟨memory, events⟩
     obtain ⟨_, _, _, _, action, _, after⟩ := execute
     cases action
     rw [after]

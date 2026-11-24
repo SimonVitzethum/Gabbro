@@ -248,6 +248,7 @@ theorem register_regelAntwortSicher (kind : RegisterAccess → Prop) : RegisterR
   intro k binding access _ t c w vor middle next plan trace _ impl execute befugt
   obtain ⟨selected, plans, step⟩ := impl
   cases (List.cons.inj plans).1
+  rcases trace with ⟨memory, events⟩
   obtain ⟨_, _, _, _, action, _, after⟩ := execute
   cases step with
   | issue owns _ =>
