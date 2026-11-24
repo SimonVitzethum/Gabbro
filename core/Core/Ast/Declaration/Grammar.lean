@@ -326,91 +326,111 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
     exact ((List.suffix_cons _ _).trans
       (EffectListReads.consumes CarrierEffectReads.consumes effects)).trans (List.suffix_append _ _)
 
--- Mirror BracedBlock.printReads using ParamsRead.printReads for the function header.
 theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
     DeclReads before (tree.printPieces.map PrintedToken.value ++ rest) ⟨after, tree⟩ rest := by
+  have hpConst : printConst.value = keyword "const" := rfl
+  have hpName (name : Identifier) : name.print.value = .word name.val := rfl
+  have hpColon : printColon.value = colon := rfl
+  have hpAssign : printAssignment.value = assignment := rfl
+  have hpSemi : printSemicolon.value = semicolon := rfl
+  have hpOpen : printOpen.value = openParen := rfl
+  have hpOpenBrace : printOpenBrace.value = openBrace := rfl
+  have hpCloseBrace : printCloseBrace.value = closeBrace := rfl
+  have hpArrow : printArrow.value = arrow := rfl
+  have hpFn : printFn.value = keyword "fn" := rfl
+  have hpDecreases : printDecreases.value = keyword "decreases" := rfl
+  have hpEffects : printEffects.value = keyword "effects" := rfl
   cases tree with
   | constant name ordinary written valid value staticValue fits =>
-      simp only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil,
-        List.cons_append, List.nil_append, List.append_assoc]
-      refine .constant (rhs := value.printPieces.map PrintedToken.value ++ semicolon :: rest)
-        name ordinary written valid value staticValue fits ?_ ?_
-      · exact WrittenType.printReads written valid (by
-          intro more h
-          cases h)
-      · exact Expr.printReads value noOperatorAtSemicolon
-  | function name ordinary parameters result valid measure body distinct returns =>
-      cases body with
-      | braces items =>
-        let afterParams :=
-          (resultPieces result).map PrintedToken.value ++
-            (measurePieces measure).map PrintedToken.value ++
-            (BracedBlock.braces items).printPieces.map PrintedToken.value ++ rest
-        let afterResult :=
-          (measurePieces measure).map PrintedToken.value ++
-            (BracedBlock.braces items).printPieces.map PrintedToken.value ++ rest
-        let afterMeasure := (BracedBlock.braces items).printPieces.map PrintedToken.value ++ rest
-        have proof : DeclReads before
-            (printFn.value :: name.print.value :: printOpen.value ::
-              ((commaSeparated (parameters.map Parameter.printPieces)).map PrintedToken.value ++
-                printClose.value :: afterParams))
-            ⟨before, .function name ordinary parameters result valid measure (BracedBlock.braces items) distinct returns⟩ rest :=
-          .function (afterParams := afterParams) (afterResult := afterResult) (afterMeasure := afterMeasure)
-            name ordinary result valid parameters measure (BracedBlock.braces items) distinct returns
-            (by
-              simpa only [List.map_append, List.map_cons, List.map_nil, List.cons_append,
-                List.nil_append, List.append_assoc] using
-                (ParamsRead.printReads (ps := parameters) (rest := afterParams)))
-            (by
-              cases result with
-              | none =>
-                  refine ResultReads.absent ?_
-                  intro more h
-                  cases measure with
-                  | none =>
-                      simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
-                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                      cases h.1
-                  | some m0 =>
-                      simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
-                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                      cases h.1
-              | some written =>
-                  refine ResultReads.typed ?_
-                  have hwt := WrittenType.printReads (rest := afterResult) written (valid written (by exact (List.mem_singleton).2 rfl)) (by
-                    intro more h
-                    cases measure with
-                    | none =>
-                        simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                        cases h.1
-                    | some m0 =>
-                        simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                        cases h.1)
-                  rw [← List.append_assoc] at hwt
-                  rw [← List.append_assoc] at hwt
-                  exact hwt)
-            (by
-              cases measure with
-              | none =>
-                  refine MeasureReads.absent ?_
-                  intro more h
-                  simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, List.cons.injEq, String.reduceEq, and_false, false_and, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                    printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                  cases h.1
-              | some m =>
-                  refine MeasureReads.present m ?_
-                  have hexpr := Expr.printReads (rest := afterMeasure) m.expression (by
-                    simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace,
-                      printPunctuation, PrintedToken.unquoted, openBrace] using
-                      (noOperatorAtOpenBrace (minimum := 0)
-                        (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest)))
-                  rw [← List.append_assoc] at hexpr
-                  exact hexpr)
-            ((BracedBlock.braces items).printReads rest)
-        simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
-          afterParams, afterResult, afterMeasure, List.map_append, List.map_cons, List.map_nil,
-          List.cons_append, List.nil_append, List.append_assoc] using proof
+    let rhs := value.printTokens ++ (semicolon :: rest)
+    have writtenRead := written.printReads valid (rest := assignment :: rhs)
+      (by intro tail impossible; cases impossible)
+    have valueRead := value.printReads (minimum := 0) (rest := semicolon :: rest) noOperatorAtSemicolon
+    simpa only [Decl.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpConst, hpName, hpColon, hpAssign, hpSemi, rhs] using
+      (DeclReads.constant name ordinary written valid value staticValue fits writtenRead valueRead)
+  | function name ordinary parameters result valid measure body distinct returns effects =>
+    let afterMeasure := body.printPieces.map PrintedToken.value ++ rest
+    let afterEffects := (measurePieces measure).map PrintedToken.value ++ afterMeasure
+    let afterResult := (effectClausePieces effects).map PrintedToken.value ++ afterEffects
+    let afterParams := (resultPieces result).map PrintedToken.value ++ afterResult
+    have bodyHead : ∃ tail, afterMeasure = openBrace :: tail := by
+      cases body
+      exact ⟨_, rfl⟩
+    have measureHead : ∃ head tail, afterEffects = head :: tail ∧
+        (head = openBrace ∨ head = keyword "decreases") := by
+      cases measure with
+      | none =>
+        obtain ⟨tail, eq⟩ := bodyHead
+        exact ⟨_, tail, eq, Or.inl rfl⟩
+      | some m => exact ⟨_, _, rfl, Or.inr rfl⟩
+    have resultHead : ∃ head tail, afterResult = head :: tail ∧
+        (head = openBrace ∨ head = keyword "decreases" ∨ head = keyword "effects") := by
+      cases effects with
+      | none =>
+        obtain ⟨head, tail, eq, casesHead⟩ := measureHead
+        exact ⟨head, tail, eq, casesHead.elim Or.inl (fun eq => Or.inr (Or.inl eq))⟩
+      | some clause => exact ⟨_, _, rfl, Or.inr (Or.inr rfl)⟩
+    have resultClosed : ∀ head, head = arrow ∨ head = keyword "in" →
+        ∀ tail, afterResult ≠ head :: tail := by
+      rintro head (rfl | rfl) tail equal <;>
+        obtain ⟨_, _, prefixEq, rfl | rfl | rfl⟩ := resultHead <;> rw [prefixEq] at equal <;> cases equal
+    have bodyRead := body.printReads rest
+    have effectRead := EffectClauseReads.printReads effects (rest := afterEffects) (by
+      intro tail same
+      obtain ⟨_, _, head, rfl | rfl⟩ := measureHead <;> rw [head] at same <;> cases same)
+    have measureRead : MeasureReads (functionScope before parameters) afterEffects measure afterMeasure := by
+      cases measure with
+      | none =>
+        apply MeasureReads.absent
+        intro tail same
+        obtain ⟨_, head⟩ := bodyHead
+        rw [head] at same
+        cases same
+      | some m =>
+        have blocked : ¬ Continues 0 afterMeasure := by
+          obtain ⟨_, head⟩ := bodyHead
+          rw [head]
+          exact noOperatorAtOpenBrace
+        simpa only [afterEffects, measurePieces, Expr.printTokens, List.map_cons,
+          List.cons_append, hpDecreases] using
+          (MeasureReads.present m (m.expression.printReads (minimum := 0) blocked))
+    have resultRead : ResultReads before afterParams result afterResult := by
+      cases result with
+      | none => exact .absent (resultClosed _ (Or.inl rfl))
+      | some written =>
+        have read := written.printReads (valid written List.mem_cons_self)
+          (resultClosed _ (Or.inr rfl))
+        simpa only [afterParams, resultPieces, List.map_cons, List.cons_append, hpArrow] using
+          (ResultReads.typed read)
+    have paramsRead := ParamsRead.printReads (rest := afterParams) parameters
+    simpa only [Decl.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpFn, hpName, hpOpen,
+      afterMeasure, afterEffects, afterResult, afterParams] using
+      (DeclReads.function name ordinary result valid parameters measure body distinct returns effects
+        paramsRead resultRead effectRead measureRead bodyRead)
+  | record exported name fields valid distinct =>
+    have hpHead : (recordDeclarationHead exported).map PrintedToken.value = recordDeclarationPrefix exported := by
+      cases exported <;> rfl
+    have body := RecordMembersRead.printReads (rest := semicolon :: rest) fields valid
+    simpa only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, List.append_assoc, hpHead, hpName, hpAssign, hpOpenBrace, hpCloseBrace, hpSemi] using
+      (DeclReads.record exported name valid distinct body)
+  | tagged exported name first tail valid distinct =>
+    have hpHead : (taggedDeclarationHead exported).map PrintedToken.value = taggedDeclarationPrefix exported := by
+      cases exported <;> rfl
+    obtain ⟨_, firstRead, tailRead⟩ := variantMembers_printReads first tail (rest := semicolon :: rest) valid
+    simpa only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, List.append_assoc, hpHead, hpName, hpAssign, hpOpenBrace, hpCloseBrace, hpSemi] using
+      (DeclReads.tagged exported name valid distinct firstRead tailRead)
+  | table item =>
+    have body := TableFieldsRead.printReads (rest := closeBrace :: rest) item.fields item.valid
+    simpa only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, List.append_assoc, hpCloseBrace] using (DeclReads.table item body)
+  | effectGroup item =>
+    have body := EffectListReads.printReads (read := CarrierEffectReads) (rest := semicolon :: rest)
+      item.written WrittenCarrierEffect.printPieces (fun item _ suffix => CarrierEffectReads.printReads item suffix)
+    simpa only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, List.append_assoc, hpCloseBrace, hpSemi] using (DeclReads.effectGroup item body)
 
 end Gabbro.Core.Ast
