@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Records.Construction
 public import Core.Ast.Semantik.Formbeweise
+import Core.Ast.Semantik.Runtime.ExpressionAggregates
 
 /-!
 # RecordValue
@@ -52,46 +53,33 @@ theorem RecordValueInversion : RecordValueInversionAussage := by
   | recordValue actual fields fits labelRead =>
     cases hinput
     exact ⟨⟨_, _, actual, _, _, _, fields, fits⟩, Subtype.ext (Token.word.inj hword).symm, labelRead, rfl⟩
+  | _ => cases hword
 
 theorem RecordValueSuffix : RecordValueSuffixAussage := by
   intro scope input labels types items rest read
   exact read.consumes
 
-private theorem labeledPrintReads (items : LabeledItems scope labels types) (rest : List Token) :
-    LabeledItemsRead scope (items.printPieces.map PrintedToken.value ++ closeParen :: rest) items rest ∧
-    LabeledItemsTail scope (items.printTail.map PrintedToken.value ++ closeParen :: rest) items rest := by
-  induction items with
-  | empty => exact ⟨.close, .close⟩
-  | next label value tail ih =>
-    let more := tail.printTail.map PrintedToken.value ++ closeParen :: rest
-    have blocked : ¬ Continues 0 more := by
-      cases tail with
-      | empty => exact noOperatorAtClose
-      | next _ _ _ => exact noOperatorAtComma
-    have read := LabeledItemsRead.next label (value.printReads blocked) ih.2
-    refine ⟨?_, ?_⟩
-    · simpa only [LabeledItems.printPieces, List.map_append, List.map_cons, List.map_nil,
-        List.cons_append, List.nil_append, List.append_assoc, Expr.printTokens, more,
-        show printColon.value = colon from rfl,
-        show label.print.value = .word label.val from rfl] using read
-    · simpa only [LabeledItems.printTail, LabeledItems.printPieces, List.map_append, List.map_cons,
-        List.map_nil, List.cons_append, List.nil_append, List.append_assoc, Expr.printTokens, more,
-        show printComma.value = comma from rfl, show printColon.value = colon from rfl,
-        show label.print.value = .word label.val from rfl] using
-        (LabeledItemsTail.comma label value tail read)
-
 private theorem recordValuePrints (scope : Scope) (args : RecordValueArgs scope) :
     (recordValue scope).production args
       (((Category.expression scope).printPieces ((recordValue scope).tree args)).map PrintedToken.value) := by
-  refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, (labeledPrintReads args.args []).1⟩
-  simp only [Category.printPieces, recordValue, RecordValueArgs.expression, Expr.typed, Expr.printPieces,
-    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
-  rfl
+  refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, ?_⟩
+  · simp only [Category.printPieces, recordValue, RecordValueArgs.expression, Expr.typed, Expr.printPieces,
+      List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    rfl
+  · have read : AtomReads scope (.word args.ref.name.val :: openParen ::
+        (args.args.printPieces.map PrintedToken.value ++ [closeParen])) args.expression [] := by
+      simpa only [RecordValueArgs.expression, Expr.printPieces, Expr.printTokens, List.map_append,
+        List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_nil, List.append_assoc,
+        show args.ref.name.print.value = .word args.ref.name.val from rfl,
+        show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
+        args.expression.printAtom []
+    cases read with
+    | recordValue _ _ _ labelsRead => exact labelsRead
 
 theorem RecordValueDerivation : RecordValueDerivationAussage := by
-  rintro scope ⟨example⟩
+  rintro scope ⟨witness⟩
   exact ⟨fun args _ => recordValue_reads scope args, recordValuePrints scope,
-    Rule.satisfiableOfPrint example (recordValuePrints scope example)⟩
+    Rule.satisfiableOfPrint witness (recordValuePrints scope witness)⟩
 
 end Gabbro.Core.Ast.Surface
 
@@ -133,8 +121,7 @@ theorem recordValue_regelSicher : RecordValueRegelSicherAussage := by
 theorem recordValue_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
   intro args
   change (((labeledCode 0 args.args).code ++ [_])[(labeledCode 0 args.args).code.length]?) = _
-  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
-  rfl
+  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero, recordValueForm, Nat.zero_add]
 
 theorem recordValue_realisiert : RecordValueRealisiertAussage := by
   intro scope platform args s running active live atPc

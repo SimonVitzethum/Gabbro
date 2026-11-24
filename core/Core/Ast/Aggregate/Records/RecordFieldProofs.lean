@@ -139,11 +139,47 @@ theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   obtain ⟨fld, i, checked, hval, tail⟩ := recordFieldInvGen allowed _ base rfl field read
   exact ExprTail.consumes tail
 
+open Gabbro.Core.Text
+
+private theorem fieldPrints (a : RecordFieldArgs scope) :
+    (recordField scope).production a
+      (((Category.expression scope).printPieces ((recordField scope).tree a)).map PrintedToken.value) := by
+  refine Or.inr ⟨a.base.printTokens ++ [dot, .word a.field.val, closeParen], ?_, ?_⟩
+  · simp only [Category.printPieces, recordField, RecordFieldArgs.expression, Expr.typed, Expr.printPieces,
+      Expr.printTokens, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+    rfl
+  · apply a.base.printReads
+    rintro ⟨op, rest, same, allowed⟩
+    have eq : (Infix.projection : Infix) = op :=
+      Infix.token_injective (List.cons.inj same).1
+    subst op
+    exact (by decide : ¬ (8 : Nat) ≤ 7) allowed
+
+private theorem fieldReads (a : RecordFieldArgs scope)
+    (base : ExprReads scope 8 input a.base (dot :: .word a.field.val :: rest))
+    (blocked : ¬ Continues 0 rest) : ExprReads scope 0 input a.expression rest := by
+  cases base with
+  | atom atomRead tail =>
+    exact .atom atomRead (tail.follow (Nat.zero_le _)
+      (.recordField a.base a.field a.index a.written (Nat.zero_le _) (.stop blocked)))
+
+theorem RecordFieldDerivation : RecordFieldDerivationAussage := by
+  rintro scope ⟨witness⟩
+  refine ⟨?_, fieldPrints, Rule.satisfiableOfPrint witness (fieldPrints witness)⟩
+  intro a tokens production
+  rcases production with plain | ⟨inside, rfl, grouped⟩
+  · exact fieldReads a plain noOperatorAtEnd
+  · exact .atom (.grouped (fieldReads a grouped noOperatorAtClose)) (.stop noOperatorAtEnd)
+
 end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog Waechter
+
+theorem RecordFieldParse : RecordFieldParseAussage := by
+  intro scope args text pieces lexed production
+  exact (Surface.RecordFieldDerivation scope ⟨args⟩).parse lexed production
 
 theorem RecordFieldElaboriert : RecordFieldElaboriertAussage := by
   intro scope platform args

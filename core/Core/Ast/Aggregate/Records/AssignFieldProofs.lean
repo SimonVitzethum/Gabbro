@@ -97,8 +97,8 @@ private theorem assignFieldPrints (ctx : Scope × Option (Ty .value)) (args : As
   · exact args.value.printReads noOperatorAtSemicolon
 
 theorem AssignFieldDerivation : AssignFieldDerivationAussage := by
-  rintro ctx ⟨example⟩
-  refine ⟨?_, assignFieldPrints ctx, Rule.satisfiableOfPrint example (assignFieldPrints ctx example)⟩
+  rintro ctx ⟨witness⟩
+  refine ⟨?_, assignFieldPrints ctx, Rule.satisfiableOfPrint witness (assignFieldPrints ctx witness)⟩
   rintro args tokens ⟨input, rfl, valueRead⟩
   exact .assignField args.ref args.visible args.writable args.field args.index args.written args.fits valueRead
 

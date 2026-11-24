@@ -78,6 +78,31 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
       (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
 
+private theorem textConcatReads (args : TextConcatArgs scope)
+    (left : ExprReads scope (Arith.add.precedence + 1) input args.left (Arith.add.token :: rhs))
+    (right : ExprReads scope (Arith.add.precedence + 1) rhs args.right rest)
+    (blocked : ¬ Continues 0 rest) :
+    ExprReads scope 0 input args.expression rest := by
+  cases left with
+  | atom atomRead tail =>
+    exact .atom atomRead (tail.follow (Nat.zero_le _)
+      (.textConcat args.left args.right (Nat.zero_le _) right (.stop blocked)))
+
+theorem textConcatDerivation : TextConcatDerivationAussage := by
+  intro scope
+  refine ⟨?_, textConcatPrint scope, ?_⟩
+  · intro args tokens production
+    rcases production with ⟨rhs, left, right⟩ | ⟨inside, rfl, rhs, left, right⟩
+    · exact textConcatReads args left right noOperatorAtEnd
+    · exact .atom (.grouped (textConcatReads args left right noOperatorAtClose)) (.stop noOperatorAtEnd)
+  · let empty := Expr.textLiteral (scope := scope) []
+    let args : TextConcatArgs scope := ⟨_, _, empty, empty⟩
+    exact Rule.satisfiableOfPrint args (textConcatPrint scope args)
+
+theorem textConcatParse : TextConcatParseAussage := by
+  intro scope args text pieces lexed production
+  exact (textConcatDerivation scope).parse lexed production
+
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   have hl : left.bytes.size ≤ a := left.bound
