@@ -498,16 +498,19 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
     change kopf (programm tree).code s0 eintritt = some bt
     simp [E, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, elaborieren, fragment, eintritt, bt]
+      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+      elaborieren, fragment, eintritt, Rahmen.start, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
     change kopf (programm tree).code s1 eintritt = some bg
     simp [E, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, elaborieren, fragment, eintritt, Befehl.nach,
+      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+      elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach,
       Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
     change kopf (programm tree).code s eintritt = some b
     simp [E, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start,
-      Zustand.start, startdaten, Fragment.einheit, elaborieren, fragment, eintritt,
+      Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel,
+      Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema,
       Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
       functionForm, functionInstruction, bt, bg, b, scope]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
@@ -530,7 +533,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     refine ⟨sig, ?_, ?_⟩
     · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
         a, scope, clause, body, functionCode, bracedBlock, Fragment.anhaengen, Fragment.einzel,
-        writtenResult, declaredEffects]
+        Fragment.leer, block, writtenResult, declaredEffects]
     · simp [sig, group, eff]
 
 end Gabbro.Core.Ast.Semantik
