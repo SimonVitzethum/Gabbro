@@ -75,7 +75,9 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     cases noBlock with
     | braces noBody =>
       simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces,
-        Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+        Expr.printTokens, printOpenBrace, printCloseBrace, elseName, Identifier.print,
+        printPunctuation, PrintedToken.unquoted,
+        List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
       exact .ite (condExpr.printReads noOperatorAtOpenBrace)
         (ihYes (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
