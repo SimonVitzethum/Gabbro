@@ -50,7 +50,7 @@ def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .index, (i, n) => i < n
   | .shift, (s, w) => s < w
   | .konvertierung, (v, w) => v < 2 ^ w
-  | .entpacken, tag => tag = Nat.succ Nat.zero
+  | .entpacken, tag => tag = Nat.succ Nat.zero -- the success tag 1
 
 /-- **A unit's partial-operation uses**: at each `I` cut, the partial operations the unit
     performs with their operand values. The M6 constructors supply it per program. -/
