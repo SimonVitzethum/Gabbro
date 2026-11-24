@@ -252,6 +252,6 @@ def befehlDecode (n : Nat) : Option Befehl := do
 instance : Encodable Befehl :=
   Encodable.ofLeftInjection befehlCode befehlDecode (by
     intro b
-    cases b <;> simp [befehlCode, befehlDecode, Encodable.encodek, Fin.ext_iff])
+    cases b <;> simp only [befehlCode, befehlDecode, Encodable.encodek])
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
