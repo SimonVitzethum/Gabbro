@@ -24,7 +24,7 @@ theorem rightsToken_injective : Function.Injective rightsToken := by
   cases a <;> cases b <;> simp only [rightsToken] at h ⊢
   all_goals first
     | rfl
-    | exact False.elim ((keyword_ne (by decide)) h)
+    | exact False.elim ((keyword_ne (by intro same; simp only [String.reduceEq] at same)) h)
 
 theorem rightsTokens_inj (first second : List Speicherdienst)
     (h : rightsTokens first = rightsTokens second) : first = second := by

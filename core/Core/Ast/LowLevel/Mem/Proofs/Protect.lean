@@ -262,7 +262,9 @@ private theorem satCovered :
 
 private theorem satAny :
     (space2.abbildung 0).any (fun entry => protRights.all (fun right => right ∈ entry.rights)) = true := by
-  simp [space2, satRights, protRights, Adressraum.abbildung]
+  rw [satFirst]
+  simp only [Option.any_some, protRights, satRights, List.all_cons, List.all_nil,
+    Bool.true_and, List.mem_singleton, decide_true]
 
 private theorem satSpaces2 : (satS2.lokal entryContext).spaces = [space2] := by
   rfl
