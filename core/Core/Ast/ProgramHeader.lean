@@ -95,7 +95,7 @@ def printOnExceeded : PrintedToken :=
   Identifier.print ⟨"on_exceeded".toList, 'o', "n_exceeded".toList, rfl, by
     exact .inl (.inl ⟨by decide, by decide⟩), by
     intro c member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    simp at member
     rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide⟩
 
 def intSpelling (signed : Bool) (width : Nat) : List Char :=
@@ -200,7 +200,7 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
         simpa [Nat.ofDigitChars_ten_toDigits] using hv'
       exact ⟨rfl, hv⟩
   refine (TypeReads.rec
-    (motive := fun input tree rest => ∀ (input' : List Token) (b : WrittenType) (more : List Token),
+    (motive := fun input tree rest _deriv => ∀ (input' : List Token) (b : WrittenType) (more : List Token),
       TypeReads input' b more → input = input' → tree = b ∧ rest = more)
     ?_ ?_ ?_ left) input b more right rfl
   · intro input' b more right hEq
@@ -273,7 +273,7 @@ theorem TypeReads.consumes (read : TypeReads input a rest) : rest <:+ input := b
       have loS : _ <:+ _ := signed_suffix loRead
       have moreS : _ <:+ _ := (List.suffix_cons closedRange _).trans loS
       exact ((hiS.trans moreS).trans (List.suffix_cons (keyword "in") _)).trans
-        (List.suffix_cons (.word (intSpelling signed width)) _)
+        (List.suffix_cons (Token.word (intSpelling signed width)) _)
 
 -- Mirror Expr.printReads with the range suffix discriminator.
 theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
@@ -283,14 +283,17 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
       SignedReads ((signedPieces number).map PrintedToken.value ++ tail) number tail := by
     intro number tail
     unfold signedPieces
-    split with hneg
-    · change SignedReads (minus :: .natural number.natAbs :: tail) number tail
+    by_cases hneg : number < 0
+    · simp only [if_pos hneg, List.map_cons, List.map_nil]
+      rw [Arith.print_value]
+      change SignedReads (minus :: .natural number.natAbs :: tail) number tail
       have hnum : number = -(number.natAbs : Int) := by
         have hnat : (number.natAbs : Int) = -number := Int.ofNat_natAbs_of_nonpos (Int.le_of_lt hneg)
         omega
       rw [hnum]
       exact SignedReads.negative
-    · change SignedReads (.natural number.natAbs :: tail) number tail
+    · simp only [if_neg hneg, List.map_cons, List.map_nil]
+      change SignedReads (.natural number.natAbs :: tail) number tail
       have hnum : number = (number.natAbs : Int) := Int.eq_natAbs_of_nonneg (by omega)
       rw [hnum]
       exact SignedReads.positive
@@ -321,9 +324,9 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     subst w'
     rfl
   refine (ParamsRead.rec
-    (motive_1 := fun input params rest => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
+    (motive_1 := fun input params rest _deriv => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
       ParamsRead input' b more → input = input' → params = b ∧ rest = more)
-    (motive_2 := fun input params rest => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
+    (motive_2 := fun input params rest _deriv => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
       ParamsTail input' b more → input = input' → params = b ∧ rest = more)
     ?_ ?_ ?_ ?_ left) input b more right rfl
   · intro rest right hEq
@@ -358,8 +361,8 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
 -- Mirror BlockItems.consumes, including the final close parenthesis.
 theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input := by
   refine ParamsRead.rec
-    (motive_1 := fun input params rest => rest <:+ input)
-    (motive_2 := fun input params rest => rest <:+ input)
+    (motive_1 := fun input params rest _deriv => rest <:+ input)
+    (motive_2 := fun input params rest _deriv => rest <:+ input)
     ?_ ?_ ?_ ?_ read
   · intro rest
     exact List.suffix_cons _ _
@@ -374,9 +377,10 @@ theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input :
 theorem ParamsRead.printReads (ps : List Parameter) :
     ParamsRead ((commaSeparated (ps.map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest)
       ps rest := by
-  have comma_cons : ∀ (p : List PrintedToken) (ps : List (List PrintedToken)),
-      commaSeparated (p :: ps) =
-        p ++ (match ps with | [] => [] | _ => [printComma] ++ commaSeparated ps) := by
+  have comma_cons : ∀ (p : Parameter) (ps : List Parameter),
+      commaSeparated ((p :: ps).map Parameter.printPieces) =
+        Parameter.printPieces p ++
+          (match ps with | [] => [] | _ => [printComma] ++ commaSeparated (ps.map Parameter.printPieces)) := by
     intro p ps
     cases ps with
     | nil => simp [commaSeparated]
@@ -401,28 +405,46 @@ theorem ParamsRead.printReads (ps : List Parameter) :
 -- Mirror BlockItems.deterministic and apply ExprReads.deterministic at each argument.
 theorem ArgsRead.deterministic (left : ArgsRead scope input a rest) (right : ArgsRead scope input b more) :
     a = b ∧ rest = more := by
-  revert b more
-  induction left with
-  | empty =>
-      intro b more right
-      cases right with
-      | empty => exact ⟨rfl, rfl⟩
-  | first e tail ih =>
-      intro b more right
-      cases right with
-      | first e' tail' =>
-          obtain ⟨same, rfl⟩ := ExprReads.deterministic e e'
-          cases same
-          obtain ⟨eq, rfl⟩ := ih tail'
-          cases eq
-          exact ⟨rfl, rfl⟩
+  refine (ArgsRead.rec
+    (motive_1 := fun input args rest _deriv => ∀ (b : List (TypedExpr scope)) (more : List Token),
+      ArgsRead scope input b more → args = b ∧ rest = more)
+    (motive_2 := fun input args rest _deriv => ∀ (b : List (TypedExpr scope)) (more : List Token),
+      ArgsTail scope input b more → args = b ∧ rest = more)
+    ?_ ?_ ?_ ?_ left) b more right
+  · intro rest b more right
+    cases right with
+    | empty => exact ⟨rfl, rfl⟩
+    | first e tail => cases e with | atom a _ => cases a
+  · intro e moreL es rest tailRead tailIH b more right
+    cases right with
+    | first e' tailRead' =>
+        obtain ⟨same, rfl⟩ := ExprReads.deterministic e e'
+        cases same
+        obtain ⟨eq, rfl⟩ := tailIH es' more tailRead'
+        cases eq
+        exact ⟨rfl, rfl⟩
+  · intro rest b more right
+    cases right with
+    | close => exact ⟨rfl, rfl⟩
+    | comma pr => cases pr
+  · intro inputL es rest pr prIH b more right
+    cases right with
+    | comma pr' => exact prIH es' more' pr'
 
 -- Mirror BlockItems.consumes and compose expression suffixes.
 theorem ArgsRead.consumes (read : ArgsRead scope input args rest) : rest <:+ input := by
-  induction read with
-  | empty => exact List.suffix_cons _ _
-  | first e tail ih =>
-      exact ih.trans (ExprReads.consumes e)
+  refine ArgsRead.rec
+    (motive_1 := fun input args rest _deriv => rest <:+ input)
+    (motive_2 := fun input args rest _deriv => rest <:+ input)
+    ?_ ?_ ?_ ?_ read
+  · intro rest
+    exact List.suffix_cons _ _
+  · intro e moreL es rest tailRead tailIH
+    exact tailIH.trans (ExprReads.consumes e)
+  · intro rest
+    exact List.suffix_cons _ _
+  · intro inputL es rest pr prIH
+    exact prIH.trans (List.suffix_cons comma inputL)
 
 -- Mirror StmtReads.assign_inversion for the written name and parenthesized argument suffix.
 theorem CallReads.inversion (read : CallReads scope input call rest) :
@@ -461,34 +483,41 @@ theorem CallReads.consumes (read : CallReads scope input call rest) : rest <:+ i
 -- Mirror BracedBlock.printReads using Expr.printReads before close parentheses or commas.
 theorem DirectCall.printReads (call : DirectCall scope) :
     CallReads scope (call.printPieces.map PrintedToken.value ++ rest) call rest := by
-  have comma_cons : ∀ (p : List PrintedToken) (ps : List (List PrintedToken)),
-      commaSeparated (p :: ps) =
-        p ++ (match ps with | [] => [] | _ => [printComma] ++ commaSeparated ps) := by
-    intro p ps
-    cases ps with
+  have comma_cons : ∀ (e : TypedExpr scope) (es : List (TypedExpr scope)),
+      commaSeparated ((e :: es).map (fun exp => exp.2.printPieces)) =
+        e.2.printPieces ++
+          (match es with | [] => [] | _ => [printComma] ++ commaSeparated (es.map (fun exp => exp.2.printPieces))) := by
+    intro e es
+    cases es with
     | nil => simp [commaSeparated]
-    | cons q qs => simp [commaSeparated, List.append_assoc]
-  have noComma : ¬ Continues 0 (comma :: more) := by
-    intro h
+    | cons f fs => simp [commaSeparated, List.append_assoc]
+  have noComma : ∀ (more : List Token), ¬ Continues 0 (comma :: more) := by
+    intro more h
     rcases h with ⟨op, tail, h, _⟩
-    cases op <;> simp [Infix.token, Arith.token, Compare.spelling, Logic.spelling, comma] at h
-  apply CallReads.applied
-  induction call.args with
-  | nil =>
-      simp [DirectCall.printPieces, commaSeparated, List.map_append, List.append_assoc]
-      exact ArgsRead.empty
-  | cons exp exps ih =>
-      cases exps with
-      | nil =>
-          simp [DirectCall.printPieces, commaSeparated, List.map_append, List.append_assoc]
-          apply ArgsRead.first
-          · exact exp.2.printReads noOperatorAtClose
-          · exact ArgsTail.close
-      | cons e es =>
-          rw [comma_cons]
-          simp only [List.map_append, List.append_assoc, List.map_cons]
-          apply ArgsRead.first
-          · exact exp.2.printReads (by intro h; exact noComma h)
-          · exact ArgsTail.comma ih
+    cases op with
+    | arith a => cases a <;> cases h
+    | div => cases h
+    | compare c => cases c <;> cases h
+    | logic l => cases l <;> cases h
+  have argsRead : ArgsRead scope
+      ((commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest)
+      call.args rest := by
+    induction call.args with
+    | nil =>
+        simp [commaSeparated]
+        exact ArgsRead.empty
+    | cons exp exps ih =>
+        cases exps with
+        | nil =>
+            simp [commaSeparated]
+            apply ArgsRead.first
+            · exact exp.2.printReads noOperatorAtClose
+            · exact ArgsTail.close
+        | cons e es =>
+            rw [comma_cons]
+            apply ArgsRead.first
+            · exact exp.2.printReads (by intro h; exact noComma _ h)
+            · exact ArgsTail.comma ih
+  simpa [DirectCall.printPieces, List.map_append, List.append_assoc] using (CallReads.applied call argsRead)
 
 end Gabbro.Core.Ast
