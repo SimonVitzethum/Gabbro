@@ -159,3 +159,52 @@ def environmentBefehlEntry : RegistryEntry ``Befehl.waehleUmgebung
   exact environmentBefehlProofs
 
 end Gabbro.Core.Ast.Semantik
+
+namespace Gabbro.Core.Ast.LowLevel
+
+open Gabbro.Core.Waechter Gabbro.Core.Ast.Semantik
+
+/-- Turn a bundled form promise into the typed registry entry for that form. -/
+def aussageEntry (c : Lean.Name) (form : Form)
+    (h : obligations form ∧ MeaningAussage form) :
+    RegistryEntry c ⟨.surface, statements c form⟩ := by
+  rcases h.1 with ⟨hp, hi, he, hd, hel, hr, ha, hid, hiu, him, hfo, her, hs, har, hau, hk, hsa⟩
+  refine ⟨?_, ⟨ha, hau, h.2⟩, hid, hiu, him, ⟨her, hfo, hs, har, hk⟩, hsa⟩
+  exact OriginProofs.surface ⟨hp, hi, he, hd⟩ hel hr
+
+def addressTypeTreeEntry : RegistryEntry ``Gabbro.Core.Ast.LowLevel.Tree.addressType
+    (schema ``Gabbro.Core.Ast.LowLevel.Tree.addressType) := by
+  rw [schema, if_pos (by rw [beq_iff_eq])]
+  exact aussageEntry ``Gabbro.Core.Ast.LowLevel.Tree.addressType .addressType
+    addressType_aussage
+
+def regionAddressTreeEntry : RegistryEntry ``Gabbro.Core.Ast.LowLevel.Tree.regionAddress
+    (schema ``Gabbro.Core.Ast.LowLevel.Tree.regionAddress) := by
+  rw [schema,
+    if_neg (by
+      rw [beq_iff_eq]
+      exact differentLabels (a := "regionAddress") (b := "addressType")
+        (by intro same; simp only [String.reduceEq] at same)),
+    if_pos (by rw [beq_iff_eq])]
+  exact aussageEntry ``Gabbro.Core.Ast.LowLevel.Tree.regionAddress .regionAddress
+    regionAddress_aussage
+
+def environmentTreeEntry : RegistryEntry ``Gabbro.Core.Ast.LowLevel.Tree.environment
+    (schema ``Gabbro.Core.Ast.LowLevel.Tree.environment) := by
+  rw [schema,
+    if_neg (by
+      rw [beq_iff_eq]
+      exact differentLabels (a := "environment") (b := "addressType")
+        (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (by
+      rw [beq_iff_eq]
+      exact differentLabels (a := "environment") (b := "regionAddress")
+        (by intro same; simp only [String.reduceEq] at same)),
+    if_neg (by
+      rw [beq_iff_eq]
+      exact differentLabels (a := "environment") (b := "view")
+        (by intro same; simp only [String.reduceEq] at same))]
+  exact aussageEntry ``Gabbro.Core.Ast.LowLevel.Tree.environment .environment
+    environment_aussage
+
+end Gabbro.Core.Ast.LowLevel
