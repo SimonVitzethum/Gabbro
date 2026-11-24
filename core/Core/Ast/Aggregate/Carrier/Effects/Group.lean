@@ -29,16 +29,16 @@ def EffectGroupDerivationAussage : Prop :=
 
 def EffectGroupScopeAussage : Prop :=
   ∀ (scope : Scope) (item : EffectGroupDeclaration scope),
-    (item.binding :: scope).effectGroup item.name = some item.resolved ∧
+    Scope.effectGroup (item.binding :: scope) item.name = some item.resolved ∧
       ¬ item.binding.type.valueBinding ∧
     ∀ name : Identifier, name.val ≠ item.name.val →
-      (item.binding :: scope).effectGroup name = scope.effectGroup name
+      Scope.effectGroup (item.binding :: scope) name = scope.effectGroup name
 
 def EffectGroupExpansionAussage : Prop :=
   ∀ scope bound terms expanded,
     expandEffects scope bound terms = some expanded →
     ∃ parts : List (List CarrierEffect), parts.length = terms.length ∧
-      (∀ i (term : EffectTerm) (part : List CarrierEffect),
+      (∀ (i : Nat) (term : EffectTerm) (part : List CarrierEffect),
         terms[i]? = some term → parts[i]? = some part → term.resolve scope bound = some part) ∧
       expanded = parts.flatten
 
