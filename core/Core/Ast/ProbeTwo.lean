@@ -35,10 +35,9 @@ theorem probe (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
     (read : AtomReads scope (.word word :: rest) tree suffix) :
     ∃ (ref : Local scope type) (visible : ref.visible) (o : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible o).typed ∧ suffix = rest := by
-  cases read with
-  | trueLit => exact (ordinary.1 rfl).elim
-  | falseLit => exact (ordinary.2 rfl).elim
-  | `variable ref vis ord => exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
-  | _ => cases read
+  cases read
+  case trueLit => exact (ordinary.1 rfl).elim
+  case falseLit => exact (ordinary.2 rfl).elim
+  case _ ty ref vis ord => exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
 
 end Gabbro.Core.Ast.ProbeTwo
