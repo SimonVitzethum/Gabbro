@@ -268,7 +268,7 @@ theorem TupleFieldRegelSicher : TupleFieldRegelSicherAussage := by
   intro scope platform args
   exact (Quellform.erhaltung (tupleFieldForm scope)
     (fun args => expr_keine_invarianten 0 ((Surface.tupleField scope).tree args).2)
-    platform args).2.2.2
+    platform args).2.2.2.1
 
 theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
   intro platform start

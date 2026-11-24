@@ -353,7 +353,7 @@ theorem substringKernOrt : SubstringKernOrtAussage := by
 
 theorem substringRegelSicher : SubstringRegelSicherAussage := by
   intro scope platform args
-  exact (substringErhaltung scope platform args).2.2.2
+  exact (substringErhaltung scope platform args).2.2.2.1
 
 theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   intro scope platform args

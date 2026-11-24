@@ -259,7 +259,7 @@ theorem tableErhaltung : TableErhaltungAussage := by
 
 theorem tableRegelSicher : TableRegelSicherAussage := by
   intro scope platform item
-  exact (tableErhaltung scope platform item).2.2.2
+  exact (tableErhaltung scope platform item).2.2.2.1
 
 theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
   intro platform start

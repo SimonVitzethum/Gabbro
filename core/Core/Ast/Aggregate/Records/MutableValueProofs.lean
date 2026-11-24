@@ -145,7 +145,7 @@ theorem mutableValue_erhaltung : MutableValueErhaltungAussage := by
 theorem mutableValue_regelSicher : MutableValueRegelSicherAussage := by
   intro ctx platform args
   exact (Quellform.erhaltung (mutableValueForm ctx) (fun a =>
-    stmt_keine_invarianten ((Surface.mutableValue ctx).tree a).2) platform args).2.2.2
+    stmt_keine_invarianten ((Surface.mutableValue ctx).tree a).2) platform args).2.2.2.1
 
 theorem mutableValue_erfuellbar : MutableValueErfuellbarAmAussage := by
   intro platform start

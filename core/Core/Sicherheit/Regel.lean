@@ -34,4 +34,26 @@ def RegelSicher : Form → Prop := fun f =>
     FuehrtSchrittAus E.maschine.einrichtung t c vor zwischen plan spur nach →
     SchrittSicherheit E H ρ t vor nach spur
 
+/-- The owner and handle rights of an outstanding question are available at arrival.
+    Answered questions and questions from a previous boot hold no such obligation. -/
+def OffeneFragenBefugt (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
+  ∀ q ∈ s.fragen, s.epoche ≤ q.cut →
+    (∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance) →
+    (∃ c, c.nummer = q.context ∧ EigeneGriffe s c q.question) ∧
+    RegisterErlaubt s q.context q.question
+
+/-- A context preserves pending authority through its update, including for each new question
+    it issues. This is independent of the safety of the effects it commits in that same step. -/
+def RegelAntwortSicher (f : Form) : Prop :=
+  ∀ t c w vor zwischen nach plan spur,
+    E.maschine.system.kopf vor c = some f →
+    (E.maschine.system.regel f).impl c vor w [plan] zwischen →
+    FuehrtSchrittAus E.maschine.einrichtung t c vor zwischen plan spur nach →
+    OffeneFragenBefugt vor → OffeneFragenBefugt nach
+
+/-- Evidence supplied by an implementation form. Pending authority must survive even
+    a step that commits no effect, since a later hardware tick can deliver an answer. -/
+def RegelPflichten (f : Form) : Prop :=
+  RegelSicher E f ∧ RegelAntwortSicher E f
+
 end Gabbro.Core.Sicherheit
