@@ -17,28 +17,39 @@ def OptionLetReadAt (result : Option (Ty .value)) (scope : Scope) (mutable : Boo
     OptionInitializerReads scope count rhs value (semicolon :: rest) ∧
     tree = ⟨_, .letOption mutable name ordinary carrier resolved value⟩
 
+private theorem directHead_not_reserved (ordinary : directName name) (keywordName : String)
+    (reserved : keywordName ∈ ["let", "if", "return", "while", "for", "leave", "next", "match"])
+    (same : Token.word name.val :: first = keyword keywordName :: second) : False :=
+  ordinary.2 (List.mem_map.mpr ⟨keywordName, reserved, (Token.word.inj (List.cons.inj same).1).symm⟩)
+
+local macro "reject_statement_prefix" equality:ident : tactic =>
+  `(tactic|
+    (exfalso
+     first
+     | (cases (List.cons.inj $equality).1; done)
+     | (cases (List.cons.inj (List.cons.inj $equality).2).1; done)
+     | (cases (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).1; done)
+     | cases (List.cons.inj (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).2).1))
+
 -- Mirror StmtReads.ret_inversion using the semicolon discriminator.
 theorem StmtReads.returnVoid_inversion
     (read : StmtReads result scope (returnKeyword :: semicolon :: input) tree rest) :
     ∃ (a : Surface.ReturnVoidArgs scope result),
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
-  generalize htok : (returnKeyword :: semicolon :: input) = toks at read
+  generalize h : (returnKeyword :: semicolon :: input) = tokens at read
   cases read with
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName] | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | ret _ _ expr =>
-      cases expr with
-      | atom atomRead _ => cases atomRead <;> simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | retVoid declared =>
-      injection htok with _ htail
-      injection htail with _ hrfl
-      subst rest
-      exact ⟨⟨declared⟩, rfl, rfl⟩
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | directCall callRead =>
-      cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+    exact ⟨⟨declared⟩, rfl, (List.cons.inj (List.cons.inj h).2).2.symm⟩
+  | ret _ _ valueRead =>
+    rw [← (List.cons.inj h).2] at valueRead
+    cases valueRead with
+    | atom atomRead _ => cases atomRead
+  | retOption _ valueRead =>
+    rw [← (List.cons.inj h).2] at valueRead
+    cases valueRead
+  | directCall callRead => cases callRead; reject_statement_prefix h
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
@@ -49,27 +60,24 @@ theorem StmtReads.mutableLocal_inversion
       ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (Surface.mutableLocal scope result).tree a) ∨
     OptionLetReadAt result scope true spelling input tree rest := by
-  generalize htok : (letKeyword :: keyword "mut" :: .word spelling :: colon :: input) = toks at read
+  generalize h : (letKeyword :: keyword "mut" :: Token.word spelling :: colon :: input) = tokens at read
   cases read with
-  | letMutable name ordinary written valid fits typeRead exprRead =>
-      simp only [List.cons.injEq] at htok
-      obtain ⟨_, ⟨_, ⟨hspelling, ⟨_, hinput⟩⟩⟩⟩ := htok
-      injection hspelling with hname
-      subst input
-      refine Or.inl ⟨⟨name, ordinary, written, valid, _, _, fits⟩, _, ?_, typeRead, exprRead, rfl⟩
-      exact hname.symm
-  | letOption mutable name ordinary carrier resolved typeRead initializerRead =>
-    cases mutable <;> simp only [optionLetHead, letKeyword, keyword, colon,
-      Bool.false_eq_true, if_false, if_true, List.nil_append, List.cons_append,
-      List.cons.injEq, Token.word.injEq, true_and] at htok
-  · exact (ordinary.1 htok.1.symm).elim
-  · obtain ⟨spellingEq, rfl⟩ := htok
-    exact Or.inr ⟨name, carrier, _, ordinary, resolved, _, _, spellingEq.symm,
-      typeRead, initializerRead, rfl⟩
-  | directCall callRead =>
-      cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letMutable name ordinary written valid fits typeRead valueRead =>
+    have tail := (List.cons.inj (List.cons.inj h).2).2
+    have nameEq := Token.word.inj (List.cons.inj tail).1
+    cases (List.cons.inj (List.cons.inj tail).2).2
+    exact .inl ⟨⟨name, ordinary, written, valid, _, _, fits⟩, _, nameEq.symm, typeRead, valueRead, rfl⟩
+  | letOption mutable name ordinary carrier resolved typeRead valueRead =>
+    cases mutable with
+    | false => reject_statement_prefix h
+    | true =>
+      have tail := (List.cons.inj (List.cons.inj h).2).2
+      have nameEq := Token.word.inj (List.cons.inj tail).1
+      cases (List.cons.inj (List.cons.inj tail).2).2
+      exact .inr ⟨name, carrier, _, ordinary, resolved, _, _, nameEq.symm, typeRead, valueRead, rfl⟩
+  | tupleBind _ patternRead _ _ => cases patternRead; reject_statement_prefix h
+  | directCall callRead => cases callRead; reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror CallReads.inversion after disambiguating the reserved statement heads.
 theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directName name)
@@ -77,18 +85,23 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
     ∃ (a : Surface.DirectCallArgs scope result),
       a.name = name ∧ ArgsRead scope input a.args (semicolon :: rest) ∧
       tree = (Surface.directCall scope result).tree a := by
-  generalize htok : (.word name.val :: openParen :: input) = toks at read
+  generalize h : (Token.word name.val :: openParen :: input) = tokens at read
   cases read with
   | directCall callRead =>
-      cases callRead
-      rename_i call args argsProof
-      injection htok with hhead htail
-      injection hhead with hval
-      injection htail with hargs
-      subst input
-      refine ⟨call, Subtype.ext hval.symm, ?_, rfl⟩
-      exact argsProof
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+    cases callRead with
+    | applied call argsRead =>
+      have nameEq := Token.word.inj (List.cons.inj h).1
+      cases (List.cons.inj (List.cons.inj h).2).2
+      exact ⟨call, Subtype.ext nameEq.symm, argsRead, rfl⟩
+  | ret _ _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
+  | retVoid _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
+  | retOption _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
+  | ite _ _ _ => exact (directHead_not_reserved ordinary "if" (by decide) h).elim
+  | whileBounded _ _ _ _ _ _ _ => exact (directHead_not_reserved ordinary "while" (by decide) h).elim
+  | variantMatch _ _ => exact (directHead_not_reserved ordinary "match" (by decide) h).elim
+  | tupleBind _ _ _ _ => exact (directHead_not_reserved ordinary "let" (by decide) h).elim
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror StmtReads.let_header with the written type and the call's argument derivation.
 theorem StmtReads.bindDirect_inversion
@@ -98,30 +111,24 @@ theorem StmtReads.bindDirect_inversion
       CallReads scope rhs a.call (semicolon :: rest) ∧
       tree = (Surface.bindDirect scope result).tree a) ∨
     OptionLetReadAt result scope false spelling input tree rest := by
-  generalize htok : (letKeyword :: .word spelling :: colon :: input) = toks at read
+  generalize h : (letKeyword :: Token.word spelling :: colon :: input) = tokens at read
   cases read with
   | bindDirect name ordinary written valid typeRead callRead =>
-      cases callRead
-      rename_i call args argsProof
-      injection htok with _ htail
-      injection htail with hspelling htail
-      injection htail with _ htail
-      injection hspelling with hname
-      subst input
-      refine Or.inl ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied call argsProof, rfl⟩
-      exact hname.symm
-  | letOption mutable name ordinary carrier resolved typeRead initializerRead =>
-    cases mutable <;> simp only [optionLetHead, letKeyword, keyword, colon,
-      Bool.false_eq_true, if_false, if_true, List.nil_append, List.cons_append,
-      List.cons.injEq, Token.word.injEq, true_and] at htok
-  · obtain ⟨spellingEq, rfl⟩ := htok
-    exact Or.inr ⟨name, carrier, _, ordinary, resolved, _, _, spellingEq.symm,
-      typeRead, initializerRead, rfl⟩
-  · exact False.elim (by cases htok.2)
-  | directCall callRead =>
-      cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+    have tail := (List.cons.inj h).2
+    have nameEq := Token.word.inj (List.cons.inj tail).1
+    cases (List.cons.inj (List.cons.inj tail).2).2
+    exact .inl ⟨⟨name, ordinary, written, valid, _⟩, _, nameEq.symm, typeRead, callRead, rfl⟩
+  | letOption mutable name ordinary carrier resolved typeRead valueRead =>
+    cases mutable with
+    | false =>
+      have tail := (List.cons.inj h).2
+      have nameEq := Token.word.inj (List.cons.inj tail).1
+      cases (List.cons.inj (List.cons.inj tail).2).2
+      exact .inr ⟨name, carrier, _, ordinary, resolved, _, _, nameEq.symm, typeRead, valueRead, rfl⟩
+    | true => reject_statement_prefix h
+  | tupleBind _ patternRead _ _ => cases patternRead; reject_statement_prefix h
+  | directCall callRead => cases callRead; reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror StmtReads.ite_inversion and retain the distinct bound and body derivations.
 theorem StmtReads.boundedWhile_inversion
@@ -132,22 +139,19 @@ theorem StmtReads.boundedWhile_inversion
         (keyword "ops" :: keyword "on_exceeded" :: .word a.overflow.val :: bodyInput) ∧
       BlockReads result scope bodyInput a.body rest ∧
       tree = (Surface.boundedWhile scope result).tree a) ∨
-    (∃ tail, input = assignment :: tail) := by
-  generalize htok : (keyword "while" :: input) = toks at read
+    AssignmentStart input := by
+  generalize h : (keyword "while" :: input) = tokens at read
   cases read with
-  | whileBounded nonnegative overflow bound staticBound condRead boundRead blockRead =>
-      injection htok with _ hinput
-      subst input
-      refine Or.inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩, _, _, condRead, boundRead, blockRead, rfl⟩
-  | assignVar _ _ _ _ _ =>
-      injection htok with _ htail
-      exact Or.inr ⟨_, htail⟩
+  | whileBounded nonnegative overflow bound staticBound condRead boundRead bodyRead =>
+    cases (List.cons.inj h).2
+    exact .inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩, _, _, condRead, boundRead, bodyRead, rfl⟩
+  | assignVar _ _ _ _ _ => exact .inr (.inl ⟨_, (List.cons.inj h).2⟩)
+  | assignField _ _ _ _ _ _ _ _ => exact .inr (.inr ⟨_, _, (List.cons.inj h).2⟩)
   | directCall callRead =>
-      cases callRead
-      rename_i call args argsProof
-      injection htok with hhead htail
-      exact (call.ordinary.2 (by injection hhead with hval; simpa [hval])).elim
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+    cases callRead with
+    | applied call argsRead => exact (directHead_not_reserved call.ordinary "while" (by decide) h.symm).elim
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
 theorem StmtReads.forRange_inversion
@@ -158,23 +162,17 @@ theorem StmtReads.forRange_inversion
       OverflowReads handlerInput a.overflow bodyInput ∧
       BlockReads result (rangeBinding a.name a.lo a.hi :: scope) bodyInput a.body rest ∧
       tree = (Surface.forRange scope result).tree a := by
-  generalize htok : (keyword "for" :: .word spelling :: keyword "in" :: input) = toks at read
+  generalize h : (keyword "for" :: Token.word spelling :: keyword "in" :: input) = tokens at read
   cases read with
-  | forRange name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
-      simp only [List.cons.injEq, and_true, true_and] at htok
-      obtain ⟨hspelling, hinput⟩ := htok
-      injection hspelling with hname
-      subst input
-      refine ⟨⟨name, ordinary, _, _, _, _, lo, hi, staticBounds, _, body⟩,
-        _, _, _, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
-      exact hname.symm
-  | directCall callRead =>
-      cases callRead
-      rename_i call args argsProof
-      injection htok with hhead htail
-      injection htail with hspelling hargs
-      cases hspelling
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | forRange name ordinary body lower upper staticBounds lowerRead upperRead handlerRead bodyRead =>
+    have tail := (List.cons.inj h).2
+    have nameEq := Token.word.inj (List.cons.inj tail).1
+    cases (List.cons.inj (List.cons.inj tail).2).2
+    exact ⟨⟨name, ordinary, _, _, _, _, lower, upper, staticBounds, _, body⟩,
+      _, _, _, nameEq.symm, lowerRead, upperRead, handlerRead, bodyRead, rfl⟩
+  | directCall callRead => cases callRead; reject_statement_prefix h
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
+  | _ => reject_statement_prefix h
 
 -- Mirror UnitBody.printReads and recover the first declaration's unconsumed suffix.
 theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads [] tokens a.unit) :

@@ -33,8 +33,8 @@ theorem assignVar_reads (scope : Scope) (result : Option (Ty .value)) (args : As
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
 theorem assignVar_erfuellbar  : ∃ (scope : Scope) (result : Option (Ty .value)), (assignVar scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (by intro c h; cases h)
-  let scope : Scope := [⟨name, .int 1 1, true⟩]
-  let args : AssignArgs scope := ⟨.here, trivial, rfl, .lit 1, ⟨by decide, by decide⟩⟩
+  let scope : Scope := [⟨name, .int 1 1, true, false⟩]
+  let args : AssignArgs scope := ⟨.here, ⟨trivial, trivial⟩, rfl, .lit 1, ⟨by decide, by decide⟩⟩
   exact ⟨scope, none, Rule.satisfiableOfPrint args (assignVar_print args)⟩
 
 def returnValue (scope : Scope) (expected : Ty .value) : Rule (.statement scope (some expected)) (ReturnArgs scope expected) where
