@@ -86,7 +86,10 @@ private theorem readRecord (frame : Rahmen) (types : List (Ty .value)) (slots : 
   | nil => rfl
   | cons type tail ih =>
     have next := ih (fun i => slots i.succ) (fun i => values i.succ) (fun i => placed i.succ)
-    simp only [List.ofFn_succ, liesRecord, tupleOfFn, placed 0, next, bind, Option.bind, pure]
+    have head : (frame.temp (slots 0)).bind (wertAls type) = some (values 0) := placed 0
+    simp only [List.ofFn_succ, liesRecord, tupleOfFn]
+    rw [head, next]
+    rfl
 
 theorem arrayValue {items : ExprItems scope types} (principal : arrayElement types = some element)
     (fits : ∀ i : Fin types.length, Fits (types.get i) element)
@@ -110,9 +113,11 @@ theorem arrayValue {items : ExprItems scope types} (principal : arrayElement typ
       some (Vector.ofFn widened) := by
     rw [allRead]
     exact Vector.ofFnM_pure
-  simp only [Befehl.auswerten, arrayRead, bind, Option.bind, pure, Expr.wert, widened, values]
+  simp only [Befehl.auswerten, Expr.wert]
+  rw [arrayRead]
+  rfl
 
-theorem arrayIndex (lower : 0 ≤ lo) (upper : hi < (count : Int))
+theorem arrayIndex {count : Nat} (lower : 0 ≤ lo) (upper : hi < (count : Int))
     (base : Ausdruckswert env slot (array : Expr scope (.array element count)))
     (index : Ausdruckswert env (slot + 1) (subscript : Expr scope (.int lo hi))) :
     Ausdruckswert env slot (.arrayIndex array subscript lower upper) := by
@@ -170,7 +175,7 @@ theorem recordValue (ref : RecordRef scope labels types) (args : LabeledItems sc
     simp only [TemporaryValue] at actual
     simp only [sources, actual, Option.bind_some, widened, values, wertAls_widen _ _ (fits i)]
   simp only [Befehl.auswerten, readRecord frame types sources widened placed,
-    Option.map_some, Expr.wert, widened, values, sources]
+    Option.map_some, Expr.wert, widened, values, sources] <;> rfl
 
 theorem recordField (read : Ausdruckswert env slot (base : Expr scope (recordValueType name labels types)))
     (field : Identifier) (index : Fin types.length) (written : RecordFieldAt labels field index.val) :
@@ -197,7 +202,8 @@ theorem caseValue (read : Ausdruckswert env slot value) :
   obtain ⟨after, trace, known⟩ := read pre post before position active typed checked input
   refine ⟨after, trace, ?_⟩
   simp only [TemporaryValue] at known
-  simp only [CaseTemp, variantActual, known, Option.bind_some, wertAls_selbst (value.wert env)]
+  simp only [CaseTemp, variantActual, known, Option.bind_some]
+  exact wertAls_selbst (value.wert env)
 
 theorem variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
     (index : Fin payloads.length) (written : labels[index.val]? = some label)
