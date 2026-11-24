@@ -274,6 +274,26 @@ def rangeType (lo hi : Int) : Ty .value := .int (min lo hi) (max lo hi)
 def rangeBinding (name : Identifier) (lo hi : Int) : Binding :=
   ⟨name, rangeType lo hi, true, false⟩
 
+/-- The written pattern has at least two positions. A blank position introduces no local. -/
+structure TuplePattern where
+  first : Option Identifier
+  second : Option Identifier
+  rest : List (Option Identifier)
+
+def TuplePattern.names (pattern : TuplePattern) : List (Option Identifier) :=
+  pattern.first :: pattern.second :: pattern.rest
+
+def TuplePattern.bindings (pattern : TuplePattern) (types : List (Ty .value)) : Scope :=
+  ((pattern.names.zip types).filterMap fun (name, type) =>
+    name.map fun id => ⟨id, type, false, false⟩).reverse
+
+def TuplePattern.valid (pattern : TuplePattern) (annotation : Option WrittenType)
+    (types : List (Ty .value)) : Prop :=
+  pattern.names.length = types.length ∧
+    ((pattern.names.filterMap id).map Subtype.val).Nodup ∧
+    (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_']) ∧
+    ∀ written ∈ annotation.toList, written.valid ∧ written.type = tupleType types
+
 mutual
 
 /-- The enclosing function's result is available in each statement and branch. -/
@@ -312,6 +332,11 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (staticBounds : lo.static ∧ hi.static)
       (overflow : Option Identifier)
       (body : BracedBlock result (rangeBinding name low high :: scope)) : Stmt result scope scope
+  /-- SYNTAX §7, bind a positional product once, in left-to-right pattern order. -/
+  | tupleBind (pattern : TuplePattern) (annotation : Option WrittenType)
+      (checked : pattern.valid annotation (first :: second :: types))
+      (value : Expr scope (tupleType (first :: second :: types))) :
+      Stmt result scope (pattern.bindings (first :: second :: types) ++ scope)
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where

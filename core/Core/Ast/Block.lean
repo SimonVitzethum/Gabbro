@@ -38,6 +38,9 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
   | .forRange name _ lo hi _ overflow body =>
     [printFor, name.print, printIn] ++ lo.printPieces ++ [printOpenRange] ++ hi.printPieces ++
       overflowPieces overflow ++ body.printPieces
+  | .tupleBind pattern annotation _ value =>
+    [letName.print] ++ pattern.printPieces ++ tupleAnnotationPieces annotation ++
+      [printAssignment] ++ value.printPieces ++ [printSemicolon]
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []

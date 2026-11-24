@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.ProgramHeader
+public import Core.Ast.Aggregate.Pattern
 
 @[expose] public section
 
@@ -94,6 +94,11 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       BlockReads result (rangeBinding name low high :: scope) bodyInput body rest →
       StmtReads result scope (keyword "for" :: .word name.val :: keyword "in" :: input)
         ⟨scope, .forRange name ordinary lo hi staticBounds overflow body⟩ rest
+  | tupleBind (checked : pattern.valid annotation (first :: second :: types)) :
+      TuplePatternReads input pattern more →
+      TupleAnnotationReads more annotation rhs →
+      ExprReads scope 0 rhs (value : Expr scope (tupleType (first :: second :: types))) (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: input) ⟨_, .tupleBind pattern annotation checked value⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :

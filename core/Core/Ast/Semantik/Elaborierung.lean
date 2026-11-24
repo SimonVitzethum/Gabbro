@@ -87,6 +87,8 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
+  | .tupleBind pattern _ _ _ =>
+    ((pattern.names.filterMap id).any (fun name => name.val == index.val), false)
   | .ite _ yes no =>
     let (ys, yw) := BracedBlock.rangeUses index yes
     let (ns, nw) := BracedBlock.rangeUses index no
@@ -144,6 +146,10 @@ def stmt : Stmt result before after → Fragment
     let again := Fragment.einzel (.forNaechster (body.code.length + 1) index)
     (((((endpoints.anhaengen setup).anhaengen branch).anhaengen body).anhaengen again).anhaengen
       (.einzel (.blockEnde 1)))
+
+  | .tupleBind (first := first) (second := second) (types := tail) pattern _ _ value =>
+    (expr 0 value).anhaengen (.einzel (.bindeTupel 0
+      (first :: second :: tail) (pattern.names.map Option.isSome)))
 
 def block : Block result before after → Fragment
   | .done => .leer

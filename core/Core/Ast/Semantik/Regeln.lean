@@ -55,6 +55,12 @@ def liesTupel (temp : Nat → Option Dynamisch) (slot : Nat) :
     let more ← liesTupel temp (slot + 1) tail
     pure (value, more)
 
+def tupleLocals : (types : List (Ty .value)) → Wert (tupleType types) → List Bool → List (Option Dynamisch)
+  | head :: tail, values, keep :: more =>
+    let rest := tupleLocals tail values.2 more
+    if keep then some ⟨head, values.1⟩ :: rest else rest
+  | _, _, _ => []
+
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
@@ -257,6 +263,7 @@ inductive Befehl where
   | liesArray (basis : Nat) (element : Ty .value) (count : Nat)
   | baueTupel (ziel : Nat) (types : List (Ty .value))
   | liesTupelfeld (basis : Nat) (types : List (Ty .value)) (index : Fin types.length)
+  | bindeTupel (quelle : Nat) (types : List (Ty .value)) (bind : List Bool)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -365,7 +372,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let values ← Vector.ofFnM (n := count) fun i => (frame.temp (dst + i.val)).bind (wertAls element)
     pure ⟨.array element count, values⟩)
   | .liesArray base element count, frame => frame.schreibe base (do
-    let values ← (frame.temp base).bind (wertAls (.array element count))
+    let values : Vector (Wert element) count ← (frame.temp base).bind (wertAls (.array element count))
     let index ← frame.zahl (base + 1)
     if index.zahl.wert < 0 then none else
       if bound : index.zahl.wert.toNat < count then
@@ -376,6 +383,10 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
   | .liesTupelfeld base types index, frame => frame.schreibe base (do
     let values ← (frame.temp base).bind (wertAls (tupleType types))
     pure ⟨types.get index, tupleGet types index values⟩)
+  | .bindeTupel source types bind, frame =>
+    let value := (frame.temp source).bind (wertAls (tupleType types))
+    let locals := (value.map fun product => tupleLocals types product bind).getD []
+    { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
