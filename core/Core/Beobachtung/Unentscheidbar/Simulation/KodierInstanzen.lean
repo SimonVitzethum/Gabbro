@@ -157,10 +157,7 @@ instance : Encodable Identifier :=
     rcases id with ⟨name, h⟩
     rcases h with ⟨c, rest, rfl, hs, hp⟩
     simp only [identifierFinv]
-    rw [dif_pos hs, dif_pos hp]
-    apply congrArg some
-    apply Subtype.ext
-    rfl)
+    rw [dif_pos hs, dif_pos hp])
 
 /-! ## CarrierEffect -/
 
@@ -301,13 +298,16 @@ def tyOfCode : Nat → Option (Ty .value)
         some (.ptr space recht referent)
     | _ => none
 termination_by n => n
-decreasing_by omega
+decreasing_by
+  simp only [p, payload] at *
+  omega
 
 lemma tyCode_ofCode (t : Ty .value) : tyOfCode (tyCode t) = some t := by
   induction t <;> simp [tyCode, tyOfCode, *]
 
-instance : Encodable (Ty .value) :=
-  Encodable.ofLeftInjection tyCode tyOfCode tyCode_ofCode
+instance instEncodableTy (k : Kind) : Encodable (Ty k) := by
+  cases k
+  exact Encodable.ofLeftInjection (β := Ty .value) tyCode tyOfCode tyCode_ofCode
 
 /-! ## Rufstelle -/
 
