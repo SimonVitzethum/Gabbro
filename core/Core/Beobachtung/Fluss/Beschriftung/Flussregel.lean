@@ -2,6 +2,10 @@ module
 
 public import Core.Beobachtung.Fluss.Beschriftung.Sprung
 public import Core.Beobachtung.Fluss.Beschriftung.AufgabenBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 
 @[expose] public section
 
@@ -47,6 +51,39 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .blockEnde count =>
     (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
     (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc (i + count)) = true)
+  | .definiere _ _ _ _ skip _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + skip) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + skip) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .zurueckSprung abstand =>
+    (∀ s, oeffentlich (β.temp (pc - abstand) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc - abstand) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .setzePasszahl quelle _ =>
+    oeffentlich (β.temp pc quelle) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .liesArray basis _ _ => β.SchreibRegel pc basis [.temp basis, .temp (basis + 1)]
+  | .liesTupelfeld basis _ _ => β.SchreibRegel pc basis [.temp basis]
+  | .liesRecordFeld basis _ _ _ _ => β.SchreibRegel pc basis [.temp basis]
+  | .definiereRecord _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true)
+  | .baueVariante ziel _ _ _ _ => β.SchreibRegel pc ziel [.temp ziel]
+  | .optionIstBesetzt ziel _ => β.SchreibRegel pc ziel [.temp ziel]
+  | .definiereVariante _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true)
+  | .definiereTraeger _ _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true)
+  | .definiereEffektgruppe _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true)
+  | .waehleUmgebung _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .textLiteral ziel _ => β.SchreibRegel pc ziel []
+  | .textConcat basis _ _ => β.SchreibRegel pc basis [.temp basis, .temp (basis + 1)]
+  | .textLength basis _ => β.SchreibRegel pc basis [.temp basis]
   | _ => β = Beschriftung.alleOeffentlich
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
@@ -79,6 +116,33 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
   | bindeWert quelle ziel global =>
     exact bindeWertSicht β pc quelle ziel global regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
   | blockEnde count => exact blockEndeSicht β pc count regel.1 regel.2
+  | definiere name ps res glob skip meas calls effs =>
+    exact definiereSicht β pc name ps res glob skip meas calls effs regel.1 regel.2
+  | zurueckSprung abstand => exact zurueckSprungSicht β pc abstand regel.1 regel.2
+  | setzePasszahl quelle stelle =>
+    exact setzePasszahlSicht β pc quelle stelle regel.1 regel.2.1 regel.2.2
+  | liesArray basis element count =>
+    exact liesArraySicht β pc basis element count regel
+  | liesTupelfeld basis types index =>
+    exact liesTupelfeldSicht β pc basis types index regel
+  | liesRecordFeld basis name labels types index =>
+    exact liesRecordFeldSicht β pc basis name labels types index regel
+  | definiereRecord name labels types =>
+    exact definiereRecordSicht β pc name labels types regel.1 regel.2
+  | baueVariante ziel name labels cases index =>
+    exact baueVarianteSicht β pc ziel name labels cases index regel
+  | optionIstBesetzt ziel count => exact optionIstBesetztSicht β pc ziel count regel
+  | definiereVariante name labels cases =>
+    exact definiereVarianteSicht β pc name labels cases regel.1 regel.2
+  | definiereTraeger count labels layout exported =>
+    exact definiereTraegerSicht β pc count labels layout exported regel.1 regel.2
+  | definiereEffektgruppe effects =>
+    exact definiereEffektgruppeSicht β pc effects regel.1 regel.2
+  | waehleUmgebung name abi row =>
+    exact waehleUmgebungSicht β pc name abi row regel.1 regel.2
+  | textLiteral ziel decoded => exact textLiteralSicht β pc ziel decoded regel
+  | textConcat basis a b => exact textConcatSicht β pc basis a b regel
+  | textLength basis capacity => exact textLengthSicht β pc basis capacity regel
   | _ =>
     have gleich : β = Beschriftung.alleOeffentlich := regel
     rw [gleich]

@@ -8364,10 +8364,13 @@ The memory forms modelled the shootdown of a revoked mapping as ONE step that cl
 translation cache and released the frames (implementation rule = ideal rule, stutter budget 0), and the
 cache could not be filled at all (`tlb` was never populated), so no stale translation was expressible and
 the safety of reuse held only because nothing could go wrong. Now the cache is a finite list of cells
-(core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `protect` and
-`map` still clear their range on all cores in one step (open item P1: a staged `protect` — narrow the table, shoot down, complete once no cell with wider rights remains — and dropping `map`'s clearing, a no-op by `tlbGedeckt_erreichbar`); `flush` is the RELEASE
-step and refuses while any core caches a translation of the token's range, so the invalidation on the other
-cores is the work of their handlers (`FlushProtokoll`), never implied by the release.
+(core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `map`
+still clears its range on all cores in one step (open item P1b: dropping that clearing, a no-op by
+`tlbGedeckt_erreichbar`); `protect` is STAGED (item P1, closed): it narrows the table, records a pending
+narrowing token (`MemFrame.verengt`, `Zuruecknahme.nurRechte`) and leaves every cache alone; `flush` of the bound
+token is its completion step. `flush` is the RELEASE step for an unmapped range and refuses while any core caches
+a translation of the token's range; for a narrowing it refuses while any cell of the range is wider than the table.
+The invalidation on the other cores is the work of their handlers (`FlushProtokoll`), never implied by either step.
 
 | Theorem | File | Statement |
 |---|---|---|
@@ -8378,3 +8381,13 @@ cores is the work of their handlers (`FlushProtokoll`), never implied by the rel
 | `flush_verweigert_gecachte_uebersetzung`, `freigabe_ohne_pflicht_unsicher` | `Mem/Proofs/Tlb/Reserviert.lean` | The guard has teeth, and it is necessary: a release that leaves the cell behind breaks the invariant. |
 | `FlushKette.ohne_abdeckung`, `FlushProtokoll` | `Verfeinerung/Abnahme/Flush.lean` | The old protocol admitted a release after a send to nobody; the protocol now also requires the send to name every existing core. |
 | `FlushProtokoll.frei_bei_freigabe` | `Verfeinerung/Abnahme/Flush.lean` | Under the protocol and the cache laws (a cell sits on an existing core, no refill of a revoked page after the send, a handler clears its core's cells of the range) no cell of the range survives the release. |
+| `ProtectMeaningAussage` | `Mem/SpaceObligations.lean` | The first step of a staged narrowing: the table is narrowed in the range only (`narrowed.abbildung` outside, `ausstehend` and `generation` unchanged), the result is `.pending` of the token `verengung sp base pages generation`, the token joins `verengt`, `next.tlb = old tlb` (no cache is touched); refused when a stronger right is asked for or when a pending narrowing covers a page of the range (pinned `ProtectAussage`). |
+| `FlushMeaningAussage` (rights part) | `Mem/SpaceObligations.lean` | The completion of a narrowing: enabled exactly when the token is in `verengt` AND no cell of its range is wider than the table (`TranslationCache.NichtBreiter`); table and caches unchanged, the token ends, the result is `.protected`; refused otherwise. |
+| `MemFrame.TlbRechteGedeckt`, `tlbRechte_evaluate` | `Mem/Proofs/Tlb/Rechte.lean`, `RechteLauf.lean` | Every cached cell grants at most what the table entry of its page grants (entry maps the cell's frame), UNLESS a pending narrowing token covers the page; every memory instruction keeps this, including a fill and any drop by hardware (`TlbRechteGedeckt.verdraengt`). |
+| `tlbRechteGedeckt_erreichbar` | `Mem/Proofs/Tlb/RechteLauf.lean` | Every state any Mem unit reaches, for every code and every start, satisfies it (proved jointly with `TlbGedeckt`, `tlbInvarianten_erreichbar`). |
+| `protect_ohne_stufung_unsicher` | `Mem/Proofs/Tlb/Stufung.lean` | Why the staging is needed: a `protect` that only narrows the table (`MemFrame.protectOhneStufung`) breaks the invariant for every frame in which a core caches a translation with a right the narrowed table lacks. |
+| `flush_abschluss_nicht_breiter`, `TlbRechteGedeckt.ohne_verengung` | `Mem/Proofs/Tlb/Stufung.lean` | A completed narrowing leaves no wider cell in its range and changes neither table nor cache; outside every pending narrowing a cell grants at most the table. |
+| `uebersetze_gecacht`, `gecachte_rechte_gedeckt` | `Mem/Proofs/Tlb/Stufung.lean` | The MMU grants through a cached entry only a right of that entry; by the invariant it is a table right unless a narrowing of the page is pending. |
+| `MemInstruction.tlbVerdraengen` | `Mem/Meaning.lean` | The drop of every cached translation of one page of one space on one core (hardware eviction or the core's own shootdown handler); always enabled, no table change, no source form. It keeps both cache invariants (`tlbGedeckt_tlbVerdraengen`, `tlbRechte_tlbVerdraengen`) and is what makes a completion step enabled in a run. |
+
+Open items after the staged `protect`: (P1b) `map` still clears its range in one step (H3 drops it; the proof `tlbRechte_mapSpace` takes the sub-cache from either form); (H4) the drop as a step of the core's own handler context after an interrupt entry, with `keineFuellung_speicher` and `handlerLeert` instantiated for the memory machine; (H5) the staged flush unit with implementation ≠ ideal (stutter length > 0) and the proof of `FlushSimAussage`, which then also serves the narrowing completion; (H9) `FlushJointAussage` for the completion of a narrowing (prefix `newSpace, mapSpace, protectSpace, bindToken`, op `flushSpace`), then joined to `JointAussageMem .flushSpace`.
