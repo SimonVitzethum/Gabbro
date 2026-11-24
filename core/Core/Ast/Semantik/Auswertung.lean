@@ -365,7 +365,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           mid (sw.auswerten mid) := by
         refine ⟨sw, retL, ?_, rfl⟩
         simpa only [sw, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
-          List.singleton_append, List.cons_append, hpcMid, L, R] using
+          List.singleton_append, List.cons_append, List.nil_append, hpcMid, L, R] using
           (lookupSeq (pre ++ L) sw (R ++ post) :
             ((pre ++ L) ++ sw :: (R ++ post))[(pre ++ L).length]? = some sw)
       by_cases htake : (left.wert env) = op.skips
@@ -374,16 +374,17 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
             alsBoolean, Option.bind_some, htake, if_pos rfl, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R]
           omega
-        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, htake,
-            if_pos rfl, if_true, Expr.wert]
+        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
+          rw [if_true]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
           simp only [sw, Befehl.auswerten]
           exact preserveL i hi
-      · have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
-          simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some, htake,
-            if_neg htake, if_false]
+      · have hs : some (left.wert env) = some op.skips := congrArg some htake
+        have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
+          simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some,
+            if_pos hs, if_true]
           rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
             Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
@@ -404,13 +405,14 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
             simp only [expr, Fragment.anhaengen, Fragment.einzel, List.length_append,
               List.length_cons, List.length_nil, Nat.add_zero, L, R]
           rw [hlen]
+          rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+            Nat.add_zero] at pcR
           omega
         · rw [tmpR]
           simp only [Expr.wert, htake, if_false]
         · simp only [sw, Befehl.auswerten, lokR, lokL]
         · exact retR
         · intro i hi
-          simp only [sw, Befehl.auswerten]
           exact (preserveR i hi).trans (preserveL i hi)
 
 end Gabbro.Core.Ast.Semantik
