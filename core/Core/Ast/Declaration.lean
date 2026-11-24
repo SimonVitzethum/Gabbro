@@ -245,10 +245,10 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   intro more h
                   cases measure with
                   | none =>
-                      simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                      simp only [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                   | some m0 =>
-                      simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                      simp only [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
@@ -256,10 +256,10 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                     intro more h
                     cases measure with
                     | none =>
-                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                        simp only [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                     | some m0 =>
-                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                        simp only [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)
                   rw [← List.append_assoc] at hwt
                   rw [← List.append_assoc] at hwt
@@ -269,7 +269,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
               | none =>
                   refine MeasureReads.absent ?_
                   intro more h
-                  simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                  simp only [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                     printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some m =>
                   refine MeasureReads.present m ?_
