@@ -310,7 +310,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
-    have hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis := by
+    have hcond : shape.fits extent := by
       constructor
       · change 0x1000 % 1 = 0
         rfl

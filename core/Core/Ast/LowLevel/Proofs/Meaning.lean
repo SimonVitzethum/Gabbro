@@ -114,7 +114,7 @@ theorem viewMeaning : ViewMeaningAussage := by
               cases heval
           | some pair =>
               rcases pair with ⟨handleV, extent⟩
-              by_cases hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
+              by_cases hcond : shape.fits extent
               · simp only [Instruction.evaluate] at heval
                 rw [hhr] at heval
                 dsimp at heval
