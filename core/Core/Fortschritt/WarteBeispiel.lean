@@ -26,12 +26,15 @@ open Gabbro.Core.Beobachtung
 def ticketPlan : SchrittPlan Unit Unit Unit Unit :=
   ⟨.sperre () .ticket, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 
+def stutterPlan : SchrittPlan Unit Unit Unit Unit :=
+  ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
+
 def e1Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
     (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
     Prop :=
   (∃ next, SperrSchritt .ticket c (s.sperren ()) next ∧ es = [ticketPlan] ∧
     u = toggleUpdate c s) ∨
-  (es = [togglePlan] ∧ u = toggleUpdate c s)
+  (es = [stutterPlan] ∧ u = s)
 
 def e1System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e1Regel, e1Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
@@ -80,9 +83,10 @@ def e1AusfuehrA :
   rw [ticket_leer]
   exact .nil _
 
-def e1StotterAusfuehr (t : Nat) (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :
-    FuehrtSchrittAus (E_1).einrichtung t c s s ticketPlan ⟨[], []⟩ s :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+def e1StotterAusfuehr (t : Nat) (c : Zustand Unit Unit Unit Unit Bool Unit)
+    (s : Zustand Unit Unit Unit Unit Bool Unit) :
+    FuehrtSchrittAus (E_1).einrichtung t c s s stutterPlan ⟨[], []⟩ s := by
+  refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, [], s, .intern, .nil _, rfl⟩
 
 def e1AusfuehrB :
@@ -167,12 +171,11 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
   | n + 2 =>
     have hle : 2 ≤ n + 2 := Nat.le_add_left 2 n
     have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ hle
+    have hzw : ∀ t, zw t = some (zwSt t) := fun _ => rfl
     have hcur : zw (n + 2) = some S_d := by
-      show some (zwSt (n + 2)) = _
-      rw [zwSt_ge2 _ hle]
+      rw [hzw, zwSt_ge2 _ hle]
     have hnxt : zw ((n + 2) + 1) = some S_d := by
-      show some (zwSt ((n + 2) + 1)) = _
-      rw [zwSt_ge2 _ (by omega)]
+      rw [hzw, zwSt_ge2 _ (by omega)]
     have hker : (S_d.kerne 1).laeuft = some B := rfl
     have hlive : S_d.status B = Status.laeuft := rfl
     rw [hsp, hcur, hnxt]
