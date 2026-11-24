@@ -71,8 +71,10 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
     change p.environmentAllowed _ ∧ p.code.all (Befehl.platformAllowed .x86_64) = true
     rw [instructions]
     refine ⟨⟨List.nodup_nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩
-    simp only [List.all_cons, List.all_nil, allowed, definition, Befehl.platformAllowed,
-      Option.toList, List.append_nil, platformType, Bool.and_self]
+    simp only [Befehl.platformAllowed] at allowed
+    simp only [List.all_cons, List.all_nil, definition, Befehl.platformAllowed,
+      Option.toList, List.append_nil, platformType, Bool.true_and, Bool.and_true]
+    exact allowed
   have accepted : Annahme.Akzeptiert E := by
     refine Fragment.akzeptiert_ohne_bedarf p .x86_64 rfl ?_
     intro b occurs frame
