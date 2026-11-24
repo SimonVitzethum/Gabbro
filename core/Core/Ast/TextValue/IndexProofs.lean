@@ -323,6 +323,8 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
     simp [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal]
+  have hstop₂ : (s₂.lokal eintritt).stopp = none := by
+    simp [s₂, s₁, Befehl.nach, Rahmen.schreibe, Befehl.auswerten]
   refine ⟨args, ?_⟩
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
@@ -337,7 +339,7 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
     simp at hg
     subst g
     exact hcapPos
-  · simpa [textIndexForm, args, capacity, Befehl.nach, frame₂, heval, Rahmen.schreibe]
+  · simpa [textIndexForm, args, capacity, Befehl.nach, frame₂, heval, Rahmen.schreibe, hstop₂]
   · simpa [textIndexForm, args, capacity, Befehl.nach, frame₂, heval, Rahmen.schreibe]
 
 end Gabbro.Core.Ast.Semantik
