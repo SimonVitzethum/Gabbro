@@ -57,47 +57,50 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
   case lit value =>
       intro env frame bound active pre post hpc
       let b : Befehl := .literal slot value
-      have step : Rahmen.Schritt (pre ++ (expr slot (Expr.lit value)).code ++ post)
+      have step : Rahmen.Schritt (pre ++ (expr slot (Expr.lit (scope := scope) value)).code ++ post)
           frame (b.auswerten frame) := by
-        simpa only [b, expr, Fragment.einzel, List.singleton_append] using stepAt pre b post frame active hpc
+        simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
+          stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, hpc]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Zahl.literal, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Zahl.literal, Expr.wert]
       · rfl
       · rfl
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case trueLit =>
       intro env frame bound active pre post hpc
       let b : Befehl := .wahrheitswert slot true
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.trueLit : Expr scope .bool)).code ++ post)
           frame (b.auswerten frame) := by
-        simpa only [b, expr, Fragment.einzel, List.singleton_append] using stepAt pre b post frame active hpc
+        simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
+          stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, hpc]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, active]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case falseLit =>
       intro env frame bound active pre post hpc
       let b : Befehl := .wahrheitswert slot false
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.falseLit : Expr scope .bool)).code ++ post)
           frame (b.auswerten frame) := by
-        simpa only [b, expr, Fragment.einzel, List.singleton_append] using stepAt pre b post frame active hpc
+        simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
+          stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, hpc]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, active]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case _ =>
-      intro ref visible ordinary env frame bound active pre post hpc
+      intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
       have hb := bound ref
       have joined : frame.lokale[ref.index]?.join = some ⟨ref.binding.type, env ref⟩ := by
@@ -106,28 +109,30 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have typeEq : ref.binding.type = type := local_binding_type ref
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.variable ref visible ordinary)).code ++ post)
           frame (b.auswerten frame) := by
-        simpa only [b, expr, Fragment.einzel, List.singleton_append] using stepAt pre b post frame active hpc
+        simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
+          stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, hpc]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, joined, typeEq, Expr.wert]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, active]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, joined, typeEq, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case negativeLit magnitude =>
       intro env frame bound active pre post hpc
       let b : Befehl := .negativ slot magnitude
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.negativeLit magnitude)).code ++ post)
           frame (b.auswerten frame) := by
-        simpa only [b, expr, Fragment.einzel, List.singleton_append] using stepAt pre b post frame active hpc
+        simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
+          stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, hpc]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, active]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
   case neg operand operandIH =>
       intro env frame bound active pre post hpc
@@ -149,15 +154,15 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
           List.singleton_append] using stepAt (pre ++ L) b post mid retMid hpcMid
       refine ⟨b.auswerten mid, .schritt walk' step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid]
         rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
           Nat.add_zero]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpMid, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpMid, Expr.wert]
       · rw [lokMid]
       · rfl
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
   case not operand operandIH =>
       intro env frame bound active pre post hpc
@@ -179,15 +184,15 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
           List.singleton_append] using stepAt (pre ++ L) b post mid retMid hpcMid
       refine ⟨b.auswerten mid, .schritt walk' step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid]
         rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
           Nat.add_zero]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, alsBoolean, tmpMid, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, alsBoolean, tmpMid, Expr.wert]
       · rw [lokMid]
       · rfl
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
   case div left right nonzero leftIH rightIH =>
       intro env frame bound active pre post hpc
@@ -221,16 +226,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (.schritt walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid2]
         rw [List.length_append, List.length_append, List.length_append, List.length_cons,
           List.length_nil, Nat.add_zero]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
           Expr.wert]
       · rw [lokR, lokL]
       · rfl
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
   case compare op left right leftIH rightIH =>
@@ -265,16 +270,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (.schritt walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
           hpcMid2]
         rw [List.length_append, List.length_append, List.length_append, List.length_cons,
           List.length_nil, Nat.add_zero]
-      · simp only [b, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
           Expr.wert]
       · rw [lokR, lokL]
       · rfl
       · intro i hi
-        simp only [b, Befehl.auswerten, Rahmen.schreibe]
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
   case logic op left right leftIH rightIH =>
