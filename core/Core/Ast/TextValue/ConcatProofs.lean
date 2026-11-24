@@ -218,14 +218,11 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
   · constructor
     · rfl
     · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        dsimp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        have h01 : (0 : Nat) ≠ 1 := by omega
-        rw [Function.update_of_ne h01, Function.update_self]
-        simp only [a]
+        simp only [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe,
+          Function.update_self, Function.update_of_ne (show (0 : Nat) ≠ 1 by omega), a]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
-        dsimp [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        rw [Function.update_self]
-        simp only [a]
+        simp only [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe,
+          Function.update_self, a]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
       change (((((textConcatForm []).befehl args).nach eintritt s₂).lokal eintritt).temp 0).isSome = true
