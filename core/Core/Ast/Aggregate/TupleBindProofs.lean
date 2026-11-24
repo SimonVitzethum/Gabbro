@@ -126,9 +126,11 @@ private theorem patternTail_printReads : (names : List (Option Identifier)) → 
           comma :: (patternNamePieces name).map PrintedToken.value ++ patternTailTokens names rest := by
         cases names with
         | nil => simp only [patternTailTokens, commaSeparated, List.intersperse, List.flatten,
-            List.map_append, List.map_cons, List.map_nil, closeTok]
+            List.map_append, List.map_cons, List.map_nil, List.append_nil, List.append_assoc,
+            List.cons_append, closeTok]
         | cons d ds => simp only [patternTailTokens, commaSeparated, List.intersperse, List.flatten,
-            List.map_append, List.map_cons, List.map_nil, commaTok, closeTok]
+            List.map_append, List.map_cons, List.map_nil, List.append_nil, List.append_assoc,
+            List.cons_append, commaTok, closeTok]
       rw [htokens]
       apply PatternTailReads.next
       · exact patternName_printReads name (patternTailTokens names rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
@@ -160,7 +162,8 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
                 (patternNamePieces second).map PrintedToken.value ++ comma ::
                   (commaSeparated ((c :: cs).map patternNamePieces)).map PrintedToken.value := by
             simp only [commaSeparated, List.intersperse, List.flatten, List.map_append,
-              List.map_cons, List.map_nil, commaTok]
+              List.map_cons, List.map_nil, List.append_nil, List.append_assoc,
+              List.cons_append, commaTok]
           rw [hcs]
           apply TuplePatternReads.tuple
           · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
