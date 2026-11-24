@@ -102,13 +102,13 @@ private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest 
   induction written with
   | nil =>
       intro rest
-      simp [egTokens]
+      simp only [egTokens, List.nil_append]
       exact EffectListReads.close
   | cons effect more ih =>
       intro rest
       cases more with
       | nil =>
-          simp [egTokens]
+          simp only [egTokens, List.append_nil]
           exact EffectListReads.last (egWrittenPrintReads effect (closeBrace :: rest))
       | cons effect2 tail =>
           simp only [egTokens, List.map_append, List.append_assoc, List.cons_append]
@@ -141,7 +141,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       by_cases he : head.exported
       · by_cases ie : item.exported
         · have hh' := hh
-          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
             identPrintVal, printOpenBraceVal] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
@@ -151,14 +151,14 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
             exact effectRead
           · rfl
         · have hh' := hh
-          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
             identPrintVal, printOpenBraceVal] at hh'
       · by_cases ie : item.exported
         · have hh' := hh
-          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
             identPrintVal, printOpenBraceVal] at hh'
         · have hh' := hh
-          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
+          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
             identPrintVal, printOpenBraceVal] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
