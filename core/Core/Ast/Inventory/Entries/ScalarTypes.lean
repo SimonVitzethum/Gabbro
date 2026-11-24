@@ -89,56 +89,72 @@ private theorem scalarTypeUseAussage (belongs : WrittenType → Prop) : LocalTyp
     scalarTypeAnnahme belongs, scalarTypeIdeal belongs, scalarTypeEinheit belongs,
     scalarTypeImpl belongs, scalarTypeErhaltung belongs⟩
 
-private theorem scalarName : Identifier :=
+private def scalarName : Identifier :=
   ⟨['x'], ⟨'x', [], rfl,
     Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
     by intro a m; cases m⟩⟩
 
-private theorem reachableArgs (belongs : WrittenType → Prop)
-    (atRoot : ∀ ctx, (typeUseForm ctx belongs).RegelAmOrt)
-    (platform : Plattform) (start : AussenStart)
-    (name : Identifier) (ordinary : ordinaryLocal name)
-    (written : WrittenType) (valid : written.valid [])
-    (type : Ty .value) (value : Expr [] type) (fits : Fits type written.type)
-    (member : belongs written) (instruction : Befehl) :
-    ∃ args : {a : Surface.MutableLocalArgs [] none // belongs a.written},
-      args.val.written = written ∧ (typeUseForm ([], none) belongs).ErfuellbarAm platform start args := by
-  let argsVal : Surface.MutableLocalArgs [] none := ⟨name, ordinary, written, valid, type, value, fits⟩
-  let args : {a : Surface.MutableLocalArgs [] none // belongs a.written} := ⟨argsVal, member⟩
-  let form := typeUseForm ([], none) belongs
-  let E := form.einheit platform args
-  let s₀ := (I.start E start).2
-  let s₁ := instruction.nach eintritt s₀
-  have step : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨instruction, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start step
-  refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₁ reached
-    (form.realisiert (atRoot ([], none)) platform args s₁ rfl rfl rfl rfl) ?_⟩
-  intro g guard
-  cases guard
-
 private theorem boolTypeErfuellbarAm : BoolTypeErfuellbarAussage := by
   intro platform start
   have ordinary : ordinaryLocal scalarName := (directName_of_singleton (name := scalarName) rfl).1
-  exact reachableArgs boolTypeUse (scalarType_am_ort boolTypeUse) platform start
-    scalarName ordinary .bool trivial .bool .trueLit trivial trivial
-    (.wahrheitswert 0 true)
+  let argsVal : Surface.MutableLocalArgs [] none :=
+    ⟨scalarName, ordinary, .bool, trivial, .bool, .trueLit, trivial⟩
+  let args : {a : Surface.MutableLocalArgs [] none // boolTypeUse a.written} := ⟨argsVal, trivial⟩
+  let form := typeUseForm ([], none) boolTypeUse
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  have step : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start step
+  exact ⟨args, form.erfuellbar_aus_erreichbar platform start args s₁ reached
+    (form.realisiert (scalarType_am_ort boolTypeUse ([], none)) platform args s₁ rfl rfl rfl rfl)
+    (by intro g guard; cases guard)⟩
 
-private theorem integerTypeErfuellbarAm : IntegerTypeErfuellbarAussage := by
-  intro platform start signed bounded
+private theorem integerErfuellbar (platform : Plattform) (start : AussenStart) (signed : Bool)
+    (bounded : Bool) :
+    ∃ (width : Nat) (interval : Option (Int × Int))
+      (args : {a : Surface.MutableLocalArgs [] none // integerTypeUse a.written}),
+      interval.isSome = bounded ∧ args.val.written = .integer signed width interval ∧
+      (typeUseForm ([], none) integerTypeUse).ErfuellbarAm platform start args := by
   have ordinary : ordinaryLocal scalarName := (directName_of_singleton (name := scalarName) rfl).1
   cases bounded with
   | false =>
-      obtain ⟨args, written, erf⟩ := reachableArgs integerTypeUse (scalarType_am_ort integerTypeUse)
-        platform start scalarName ordinary (.integer signed 1 none)
-        (by cases signed <;> decide) (.int 0 0) (.lit 0)
-        (by cases signed <;> decide) trivial (.literal 0 0)
-      exact ⟨1, none, args, rfl, written, erf⟩
+      let interval : Option (Int × Int) := none
+      let argsVal : Surface.MutableLocalArgs [] none :=
+        ⟨scalarName, ordinary, .integer signed 1 interval, by cases signed <;> decide,
+          .int 0 0, .lit 0, by cases signed <;> decide⟩
+      let args : {a : Surface.MutableLocalArgs [] none // integerTypeUse a.written} := ⟨argsVal, trivial⟩
+      let form := typeUseForm ([], none) integerTypeUse
+      let E := form.einheit platform args
+      let s₀ := (I.start E start).2
+      let s₁ := (Befehl.literal 0 0).nach eintritt s₀
+      have step : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 0, rfl, rfl, rfl⟩
+      have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start step
+      exact ⟨1, interval, args, rfl, rfl,
+        form.erfuellbar_aus_erreichbar platform start args s₁ reached
+          (form.realisiert (scalarType_am_ort integerTypeUse ([], none)) platform args s₁ rfl rfl rfl rfl)
+          (by intro g guard; cases guard)⟩
   | true =>
-      obtain ⟨args, written, erf⟩ := reachableArgs integerTypeUse (scalarType_am_ort integerTypeUse)
-        platform start scalarName ordinary (.integer signed 1 (some (0, 0)))
-        (by cases signed <;> decide) (.int 0 0) (.lit 0)
-        (by cases signed <;> decide) trivial (.literal 0 0)
-      exact ⟨1, some (0, 0), args, rfl, written, erf⟩
+      let interval : Option (Int × Int) := some (0, 0)
+      let argsVal : Surface.MutableLocalArgs [] none :=
+        ⟨scalarName, ordinary, .integer signed 1 interval, by cases signed <;> decide,
+          .int 0 0, .lit 0, by cases signed <;> decide⟩
+      let args : {a : Surface.MutableLocalArgs [] none // integerTypeUse a.written} := ⟨argsVal, trivial⟩
+      let form := typeUseForm ([], none) integerTypeUse
+      let E := form.einheit platform args
+      let s₀ := (I.start E start).2
+      let s₁ := (Befehl.literal 0 0).nach eintritt s₀
+      have step : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 0, rfl, rfl, rfl⟩
+      have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start step
+      exact ⟨1, interval, args, rfl, rfl,
+        form.erfuellbar_aus_erreichbar platform start args s₁ reached
+          (form.realisiert (scalarType_am_ort integerTypeUse ([], none)) platform args s₁ rfl rfl rfl rfl)
+          (by intro g guard; cases guard)⟩
+
+private theorem integerTypeErfuellbarAm : IntegerTypeErfuellbarAussage := by
+  intro platform start signed bounded
+  exact integerErfuellbar platform start signed bounded
 
 private theorem boolTypeRegistry : BoolTypeRegistryAussage :=
   ⟨boolTypeDerivation, scalarTypeUseAussage boolTypeUse, boolTypeErfuellbarAm⟩
