@@ -94,6 +94,29 @@ private def scalarName : Identifier :=
     Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
     by intro a m; cases m⟩⟩
 
+private theorem integerValidNone (signed : Bool) : (WrittenType.integer signed 1 none).valid [] := by
+  cases signed <;>
+    simp only [WrittenType.valid, WrittenType.storage, Option.getD, pow_zero, pow_one,
+      Nat.reduceSub] <;> omega
+
+private theorem integerValidSome (signed : Bool) :
+    (WrittenType.integer signed 1 (some (0, 0))).valid [] := by
+  cases signed <;>
+    simp only [WrittenType.valid, WrittenType.storage, Option.getD, pow_zero, pow_one,
+      Nat.reduceSub] <;> omega
+
+private theorem integerFitsNone (signed : Bool) :
+    Fits (.int 0 0) (WrittenType.integer signed 1 none).type := by
+  cases signed <;>
+    simp only [Fits, WrittenType.type, WrittenType.storage, Option.getD, pow_zero, pow_one,
+      Nat.reduceSub] <;> omega
+
+private theorem integerFitsSome (signed : Bool) :
+    Fits (.int 0 0) (WrittenType.integer signed 1 (some (0, 0))).type := by
+  cases signed <;>
+    simp only [Fits, WrittenType.type, WrittenType.storage, Option.getD, pow_zero, pow_one,
+      Nat.reduceSub] <;> omega
+
 private theorem boolTypeErfuellbarAm : BoolTypeErfuellbarAussage := by
   intro platform start
   have ordinary : ordinaryLocal scalarName := (directName_of_singleton (name := scalarName) rfl).1
@@ -122,8 +145,8 @@ private theorem integerErfuellbar (platform : Plattform) (start : AussenStart) (
   | false =>
       let interval : Option (Int × Int) := none
       let argsVal : Surface.MutableLocalArgs [] none :=
-        ⟨scalarName, ordinary, .integer signed 1 interval, by cases signed <;> decide,
-          .int 0 0, .lit 0, by cases signed <;> decide⟩
+        ⟨scalarName, ordinary, .integer signed 1 interval, integerValidNone signed,
+          .int 0 0, .lit 0, integerFitsNone signed⟩
       let args : {a : Surface.MutableLocalArgs [] none // integerTypeUse a.written} := ⟨argsVal, trivial⟩
       let form := typeUseForm ([], none) integerTypeUse
       let E := form.einheit platform args
@@ -138,8 +161,8 @@ private theorem integerErfuellbar (platform : Plattform) (start : AussenStart) (
   | true =>
       let interval : Option (Int × Int) := some (0, 0)
       let argsVal : Surface.MutableLocalArgs [] none :=
-        ⟨scalarName, ordinary, .integer signed 1 interval, by cases signed <;> decide,
-          .int 0 0, .lit 0, by cases signed <;> decide⟩
+        ⟨scalarName, ordinary, .integer signed 1 interval, integerValidSome signed,
+          .int 0 0, .lit 0, integerFitsSome signed⟩
       let args : {a : Surface.MutableLocalArgs [] none // integerTypeUse a.written} := ⟨argsVal, trivial⟩
       let form := typeUseForm ([], none) integerTypeUse
       let E := form.einheit platform args
