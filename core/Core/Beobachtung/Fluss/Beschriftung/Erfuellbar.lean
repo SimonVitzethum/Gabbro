@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
+public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
 
 @[expose] public section
 
