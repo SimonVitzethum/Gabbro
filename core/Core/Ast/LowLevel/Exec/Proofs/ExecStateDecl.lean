@@ -51,8 +51,13 @@ private theorem execGuardsTokensPrint (guards : List ExecGuard) :
           simp only [List.map_cons, List.map_nil, List.intersperse_singleton, List.intersperse_nil,
             execGuardVal, guardsTokens]
       | cons h hs =>
+          have ih' :
+              List.map PrintedToken.value
+                  (List.intersperse printComma (guardPrint h :: List.map guardPrint hs)) =
+                List.intersperse comma (guardKeyword h :: List.map guardKeyword hs) := by
+            simpa only [List.map_cons, guardsTokens] using ih
           simp only [List.map_cons, List.intersperse_cons_cons, execPrintCommaVal, execGuardVal,
-            ih, guardsTokens]
+            ih', guardsTokens]
 
 private theorem execStateDeclPrints (name : Identifier) (decl : ExecStateDecl) :
     (ExecTree.stateDecl name decl).production
