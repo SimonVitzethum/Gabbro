@@ -65,24 +65,21 @@ theorem Zahl.div_bounds (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero :
     · exact Int.le_trans (Int.tdiv_le_self b.wert (Int.le_trans hcase.1 a.unten)) a.oben
   · rw [quotientBounds, if_neg hcase]
     dsimp only
-    let m : Nat := max lo₁.natAbs hi₁.natAbs
-    have haAbs : a.wert.natAbs ≤ m := by
+    let m : Int := max (lo₁.natAbs : Int) (hi₁.natAbs : Int)
+    have haAbs : (a.wert.natAbs : Int) ≤ m := by
       rcases Int.natAbs_eq a.wert with nonneg | nonpos
       · have upper : (a.wert.natAbs : Int) ≤ hi₁ := by
           rw [← nonneg]
           exact a.oben
-        have bound : (a.wert.natAbs : Int) ≤ (m : Int) := by
-          exact Int.le_trans upper
-            (Int.le_trans Int.le_natAbs (Int.le_max_right _ _))
-        omega
-      · have upper : (a.wert.natAbs : Int) ≤ (-lo₁) := by omega
+        exact Int.le_trans upper
+          (Int.le_trans Int.le_natAbs (Int.le_max_right _ _))
+      · have h1 : lo₁ ≤ -(a.wert.natAbs : Int) := by simpa [nonpos] using a.unten
+        have upper : (a.wert.natAbs : Int) ≤ (-lo₁) := by omega
         have upper' : (a.wert.natAbs : Int) ≤ (lo₁.natAbs : Int) := by
           rw [← Int.natAbs_neg lo₁]
           exact Int.le_trans upper Int.le_natAbs
-        have bound : (a.wert.natAbs : Int) ≤ (m : Int) :=
-          Int.le_trans upper' (Int.le_max_left _ _)
-        omega
-    have hbAbs : 1 ≤ b.wert.natAbs := by
+        exact Int.le_trans upper' (Int.le_max_left _ _)
+    have hbAbs : (1 : Int) ≤ (b.wert.natAbs : Int) := by
       rcases nonzero with positive | negative
       · have lower : (1 : Int) ≤ b.wert := Int.le_trans positive b.unten
         have eq : b.wert = (b.wert.natAbs : Int) := by
@@ -92,9 +89,11 @@ theorem Zahl.div_bounds (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero :
         rcases Int.natAbs_eq b.wert with eq | eq
         · omega
         · omega
-    have hqAbs : (a.wert.tdiv b.wert).natAbs ≤ m := by
+    have hdiv : (a.wert.tdiv b.wert).natAbs ≤ a.wert.natAbs := by
       rw [Int.natAbs_tdiv]
-      exact Nat.le_trans (Nat.div_le_self _ _) haAbs
+      exact Nat.div_le_self _ _
+    have hqAbs : ((a.wert.tdiv b.wert).natAbs : Int) ≤ m := by
+      exact Int.le_trans (Int.ofNat_le.mpr hdiv) haAbs
     rcases Int.natAbs_eq (a.wert.tdiv b.wert) with eq | eq
     · constructor <;> omega
     · constructor <;> omega
