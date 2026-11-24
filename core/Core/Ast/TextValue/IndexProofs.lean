@@ -210,9 +210,11 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     rfl
   · intro byte nonneg hbyte
     simp only [Befehl.auswerten, htext, hzahl, not_lt_of_ge nonneg, hbyte, Rahmen.schreibe]
+    rfl
   · intro hfail
     rcases hfail with hneg | hge
     ·       simp only [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt]
+      rfl
     · have hnonneg : 0 ≤ index.zahl.wert := by omega
       have hge' : (text.bytes.size : Int) ≤ (index.zahl.wert.toNat : Int) := by
         rw [Int.toNat_of_nonneg hnonneg]
@@ -222,6 +224,7 @@ theorem textIndexBytes : TextIndexBytesAussage := by
         simp only [getElem?_eq_none_iff]
         exact not_lt_of_ge hnat
       simp only [Befehl.auswerten, htext, hzahl, not_lt_of_ge hnonneg, hout, Rahmen.halt]
+      rfl
 
 theorem textIndexParse : TextIndexParseAussage := by
   intro scope args text pieces lexed production
@@ -278,8 +281,10 @@ theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
   subst stepPlan
   constructor
   · intro answer
-    simp only [plan]
+    intro equal
+    cases equal
   · intro answer
+    change Ereignis.antwort answer ∉ ([] : List Ereignis)
     exact List.not_mem_nil _
 
 theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
@@ -319,14 +324,16 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   let byte : UInt8 := text.bytes[0]'(by simpa using hlt)
   have hbyte : text.bytes[(0 : Int).toNat]? = some byte := by
     rw [getElem?_eq_some_iff]
-    exact ⟨by simpa using hlt, by simp only [byte]⟩
+    exact ⟨by simpa using hlt, by simp only [byte]; rfl⟩
   have hbyte0 : text.bytes[0]? = some byte := by simpa using hbyte
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
-    simp only [Befehl.auswerten, htext, hzahl, hbyte0, Zahl.literal, lt_irrefl]
+    simp only [Befehl.auswerten, htext, hzahl, hbyte, hbyte0, Zahl.literal, lt_irrefl]
+    rfl
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
     simp only [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
-      startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten]
+      startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten,
+      Function.update_self, Nat.zero_add]
   refine ⟨args, ?_⟩
   refine ⟨Ast.print (category := .expression []) (form.produktion.tree args), s₂, ?_, ?_, reached, ?_, ?_, ?_, ?_⟩
   · exact Ast.parse_print _
