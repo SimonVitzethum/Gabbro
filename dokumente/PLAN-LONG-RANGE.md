@@ -1,9 +1,9 @@
 # Long-range plans: generated-program corpus, `async`, self-hosted checker and compiler
 
 *Moved out of the former work list (Phase C items 10, 11, 12) on 2026-10-20, text unchanged in substance. **None of the three is started:**
-Simon asked for no new agents for now (2026-10-18). This file keeps the designs.*
+No new agents were requested for now (2026-10-18). This file keeps the designs.*
 
-## 1. One-off corpus of ALL generated programs (Simon, 2026-10-18)
+## 1. One-off corpus of ALL generated programs (2026-10-18)
 
 **Goal.** Generate ONCE every valid program and every single-fault refusal up to the largest size bound that fits, over the 16
 declarations of the family, store them zstd-compressed in a git SUBMODULE (at most 30 GiB on disk), generated one after another with
@@ -26,7 +26,7 @@ low RAM, reused until the next language change.
   corpus stale.
 - Stored are G terms, not source text, until the G-to-source printer exists (measuring them needs source text, not G terms: still
   the blocker).
-- This leaves Simon's older rule "no regenerable generated files in the repo" on purpose, because generating is expensive; the
+- This leaves the older rule "no regenerable generated files in the repo" in place on purpose, because generating is expensive; the
   submodule lives outside the main repo.
 
 ## 2. `async fn` and `.await` in the Lean model (asked 2026-10-18; decided by the coordinator under "strongest variant")
@@ -59,5 +59,5 @@ the transformation as a lowering.
 
 ## 3. Self-hosted checker and compiler
 
-Moved to [`PLAN-SELF-HOSTING.md`](PLAN-SELF-HOSTING.md) (Simon, 2026-10-25): checker and compiler written in Gabbro,
+Moved to [`PLAN-SELF-HOSTING.md`](PLAN-SELF-HOSTING.md) (2026-10-25): checker and compiler written in Gabbro,
 every computation in Gabbro, Lean for specification and proof; both tools proved through M and N and logic proofs.

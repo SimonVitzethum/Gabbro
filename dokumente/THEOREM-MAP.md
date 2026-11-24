@@ -2441,7 +2441,7 @@ premise.
 
 ### 22.2 The three repairs
 
-**P1 (decisive): the start conditions have an owner.** `invariant false` on any lock emptied
+**P1 (decisive): the start conditions have an owning duty.** `invariant false` on any lock emptied
 every body obligation (`∀ U, HavocOk S U → …`, no member) and every start (`sperren`), so probe
 A (`ensures false` everywhere) went through the concrete checker. `StartZulaessig.req` and
 `.sperren` belonged to no premise group. Now `StartPflicht` is part of (b), over the memory
@@ -3184,8 +3184,8 @@ unchanged.
 
 ## 47. Worker pools in the goal theorem: `einzeln := EinzelnPool`, legs proved (fix lane F10, 2026-09-22)
 
-**A reviewed `Spec.lean` diff** (review G06 F1, OFFEN O18, Simon 2026-09-21: "switch the Spec
-to PoolSicher and prove the legs"). The text of `GabbroZiel` and of `Ziel` is unchanged.
+**A reviewed `Spec.lean` diff** (review G06 F1, OFFEN O18, 2026-09-21: change the Spec
+to `PoolSicher` and prove the legs). The text of `GabbroZiel` and of `Ziel` is unchanged.
 
 | Premise | Before | After |
 |---|---|---|
@@ -3495,7 +3495,7 @@ before it are unchanged. Files `grammatik/Grammatik/Zielsatz/{Verbund,VerbundZeu
 
 | theorem / definition | file | statement |
 |---|---|---|
-| `mitRumpf`, `verbindeP`, `verbinde`, `teilP` | Spec | the linked unit: every body from its owner (`e`), both units' starts and roots, the shared rest |
+| `mitRumpf`, `verbindeP`, `verbinde`, `teilP` | Spec | the linked unit: every body from its declaring unit (`e`), both units' starts and roots, the shared rest |
 | `Verbindbar`, `Platzhalter`, `HuelleV`, `KeinRueckruf`, `LokBedarf`, `GetrenntV`, `SchreibGetrenntV`, `PoolSicherV`, `SchnittstelleSpec`, `NutzerTeil` | Spec | one link declaration; leaf placeholders; the COMPOSED hull of a root; no callback through an import; the three whole-program components over composed hulls; the user's duty over the bodies a unit owns |
 | **`GabbroZielVerbund`**, **`gabbro_ziel_verbund`** | Spec, Verbund | each unit accepted alone + `Verbindbar` + `SchnittstelleSpec` + `NutzerTeil` per unit + `E₂.Q = E₁.Q` + the linked runtime -> `ZielF` on every reachable thread machine of the linked program |
 | `stmtOrteP_mitRumpf` … `grundArmsOrteP_mitRumpf`, `fussOrteG_mitRumpf2`, `koerper_mitRumpf2`, `invGutS_mitRumpf2`, `invGutGrund_mitRumpf2` | Verbund | a body's footprint and its triples depend on its own text and the contracts only (structural induction over the syntax) |
@@ -3516,7 +3516,7 @@ code), positive pair `tabelle-bib.gab` + `tabelle-app.gab`; deleted `tests/verbu
 **Note (Opus agent F, 2026-09-26, review E F1, `messung/OPUS-F-VERBUND-RENNEN.md` (retired report, in the history)).** No Lean
 change. The deleted Rust side then decided the three whole-program components of `SchnittstelleSpec`
 instead of refusing around them: deleted `verbund.rs::verbinde_alle` composed the units into the linked
-program (`verbundtext`: each body from its owner, each unit's starts -- the surface of
+program (`verbundtext`: each body from its declaring unit, each unit's starts -- the surface of
 `verbinde e E₁ E₂`) and ran the whole checker over it, so `lok`/`renn`/`einzeln` were decided by
 deleted `fusswache2.rs` over the linked call graphs, which under `KeinRueckruf` are the composed hulls
 (`huelle_of_reach`). The blanket `N503` for threads on both sides is gone; `N516` (not yet a Lean judgment) refuses a
@@ -3707,7 +3707,7 @@ component's premise; both are recorded here because §57 reads differently now.
 
 ## 60. Premise (b) for EVERY source text: the duties are computed in Lean (parser lane, 2026-09-30, P6)
 
-**The principle** (Simon, 2026-09-30): nothing in the compiler or the checker is there for particular
+**The principle** (2026-09-30): nothing in the compiler or the checker is there for particular
 programs; GabbroV is proved always right by GENERIC theorems over every source text. This section is
 that statement for premise (b) of the goal theorem, in `programmlogik/bruecke/Bruecke/Quelle.lean` (Mathlib-free, on
 `grammatik`'s toolchain; `programmlogik/bruecke/Bruecke/Vorlage.lean` writes the template).
@@ -3782,9 +3782,9 @@ reason yet -- and a fallible gate whose answer is not an integer range; both ref
 
 ## 63. A gate that hands over a REGION: the template `tor.region` (C-free lane, 2026-09-30)
 
-**The decision.** Simon, 2026-09-30: memory from outside comes as a region, never from a number;
-no int->ptr conversion enters the language; in Lean ONE generic form, "a foreign routine hands over
-a new region". A `syscall` answering `ptr<normal, …> u8 or R` was accepted by the checker and
+**The decision** (2026-09-30): memory from outside comes as a region, never from a number;
+no int->ptr conversion enters the language; in Lean ONE generic form: a foreign routine hands over
+a new region. A `syscall` answering `ptr<normal, …> u8 or R` was accepted by the checker and
 refused by the emitter (`C183`); it lowers now, and the extent its contract names is held.
 
 | Lean name | File | What it says |
@@ -4107,8 +4107,8 @@ borrow rule is the model's reading only at one pointer type; **a frame that name
 ## 75. Objects below a table: `ObjGetrennt` (`own`/separation slice 2b, 2026-10-17, `dokumente/A1-OWN-PAPER.md`)
 
 **The question.** Slice 2 (§74) separates carriers: two pointer parameters of one table type are one
-carrier in machine G whatever their roots, so `R014`'s distinct roots had no model statement. Simon's
-decision of 2026-10-17: the model gets finer objects below a table. **The choice:** an object is a SLOT
+carrier in machine G whatever their roots, so `R014`'s distinct roots had no model statement. The
+2026-10-17 decision: the model gets finer objects below a table. **The choice:** an object is a SLOT
 (`Obj` = carrier + identity, every field of slot `nr` of `tab`). G's world is already indexed this way,
 so nothing in G changes; a pointer to one object is the pair of parameters G already has (capability
 `ptr n rw` + index into its table, `ObjPar`, positions from the bottom of the context), so the identity
@@ -4212,7 +4212,7 @@ PARAMETER `Conf` (run at 64 bit little endian and 32 bit big endian in the witne
 | **L3 start** (2026-10-18, `Code/Conc/`, NOT in `lowerS`): `publish` is a RELEASE store into the cell of the atomic global, `await` an ACQUIRE load (`lowerPublish`, `lowerAwait`; the cell must be word-sized, `atomicG`). `publish_ok` for EVERY interface `S` (a store does not consult it); `await_ok`: if `S` allows the image of the world's value at the cell, the lowered code refines G's `await` on that world (the continuation's refinement is `lowerB_ok`: no premise about it; a continuation `lowerB` refuses, e.g. one that itself awaits, has no lowering); `await_ok_sc` the exact SC refinement for an unshared global; `await_ok_gx` reads it on a PRESENTED world of machine GX (`PresentedAt`) | `Conc/{Lower,Publish,Await}` | `atomicG`, `Rep` of the presented world |
 | **L3 (1), the shared atomics** (2026-10-18): `Layout.shared` (machine GX's `Tg`, `LayoutOk.shAtomic`: shared implies atomic); **`Rep` keeps only the EXISTENCE of a shared cell** (a word of the right type), the strong equation for every other cell, and every refinement proof of `Refine/` carries this one relation (no second `RepX`, no copy of the strong form). `lowerE` refuses a plain read of a shared global (only `await` reads it). `rep_agree` (worlds that agree outside the shared atomics are represented alike), `rep_presented`, `rep_successor`, **`rep_gx`**: the memory half of the GX simulation (the IR memory represents the machine's memory, hence every presented one; if it represents the memory of G's step on the presented memory it represents the memory the GX step leaves), `Sees.shared` (the GX interface: any value of the type at a shared cell, the memory's elsewhere), **`await_ok_shared`**: for a shared global the lowered `await` refines G's `await` on `σ[g := xg]` for EVERY `xg`, the memory representing the actual world | `Lower/Rep`, `Conc/{Present,Shared}` | `TgShared lay Tg`, `LayoutOk`, `FnOk`, `CallRef` against `Sees.shared lay` |
 | **L3 (2), the thread machine** (2026-10-18): `Th`, `TM` (one shared memory, a thread table), `TStep`, `TReach` (an interleaving step of `Step` of one thread); `treach_solo` (a run of one thread is a machine run in which only it moves, `upd_other`); **`stmt_gx`**: a GX step of a statement that ends normally (`blatt`/`dannBlatt` of G, any statement the lowering covers) is matched by thread-machine steps: the thread reaches the continuation label, the shared memory represents the successor memory, the locals are `ρ'`, every other thread is as it was, with the frame `Fr`; `envRep_other` (another thread's locals survive a run) | `Conc/{Thread,GXStep}` | `lowerS_ok`'s hypotheses, `TgShared`, the presented memory agrees with the machine's outside `Tg` |
-| **L3 (3), the ticket lock** (2026-10-18): `Layout.lblk`/`lsrv` (the two word cells of each lock, `LayoutOk.lkT/lkG/lkX/lkN/lkS`; `Fresh` and `WfL` exclude them). `lockTake` (`armw add` on the next cell, acquire), `lockSpin` (`aload` the serving cell, `brc eq`), `lockRel` (`astor` serving `rt + 1`, release); the thread runs `take_run`, `spin_enter`, `spin_wait`, `rel_run`. The invariant over all threads `LockRel` (ghost `Tkt`: tickets served and handed out, the owner of each ticket, `inside`; the cells hold them modulo `2^wbits`; G's held locks, counted in `offen`, are exactly the holder). The steps: `take_step`, `spin_wait_step` (G silent), **`spin_enter_step`** (G's `dannLocks`: `RufFreiG` is DERIVED, the relation holds after the `nimmt`), **`release_step`** (`freiGib`), `lockRel_exclusive` (two holders are one), `lock_store_post` (a lock cell is no table, no global, no local: `Rep`, `WfL`, every thread's `EnvRep` survive) | `Conc/{Lock,LockRel}` | the named assumption: fewer than `2^wbits` tickets outstanding on a lock at once (premise of `take_step`); thread-local premises (the ticket register, the thread is not queued) |
+| **L3 (3), the ticket lock** (2026-10-18): `Layout.lblk`/`lsrv` (the two word cells of each lock, `LayoutOk.lkT/lkG/lkX/lkN/lkS`; `Fresh` and `WfL` exclude them). `lockTake` (`armw add` on the next cell, acquire), `lockSpin` (`aload` the serving cell, `brc eq`), `lockRel` (`astor` serving `rt + 1`, release); the thread runs `take_run`, `spin_enter`, `spin_wait`, `rel_run`. The invariant over all threads `LockRel` (ghost `Tkt`: tickets served and handed out, the holder of each ticket, `inside`; the cells hold them modulo `2^wbits`; G's held locks, counted in `offen`, are exactly the holder). The steps: `take_step`, `spin_wait_step` (G silent), **`spin_enter_step`** (G's `dannLocks`: `RufFreiG` is DERIVED, the relation holds after the `nimmt`), **`release_step`** (`freiGib`), `lockRel_exclusive` (two holders are one), `lock_store_post` (a lock cell is no table, no global, no local: `Rep`, `WfL`, every thread's `EnvRep` survive) | `Conc/{Lock,LockRel}` | the named assumption: fewer than `2^wbits` tickets outstanding on a lock at once (premise of `take_step`); thread-local premises (the ticket register, the thread is not queued) |
 | the L3 witnesses (2026-10-18): `SharedWitness` (`LayoutOk` with a shared global, a `Rep` that disagrees at the shared cell and its failure without sharing, the refused plain read, **`await_shared_zeuge`**: the GX `await` instantiated on a module, cell `0`, world `5`, read `7`), `GXWitness` (**`stmt_gx_zeuge`**: two threads, the shared atomic presented as 9 and left as 3, cell 0), `LockWitness` (**`lock_witness`**: two threads contend on one lock; take, take, enter, wait, release, enter; `LockRel` after every step, `RufFreiG` twice, G holds the lock in thread 1 only at the end, cells `next = 2`, `serving = 1`) | `Conc/{SharedWitness,GXWitness,LockWitness}` | none |
 | the witnesses (2026-10-18): `Refine/Witness` has four more functions (`mt`: the three matches; `bits`: the seven arithmetic forms; `fail`/`callf`: a failure channel taken at both arms), all lowering at both targets, their source meaning an `ok` (kernel); `Conc/Witness` lowers `publish` and `await` at both targets | `Refine/Witness`, `Conc/Witness` | none |
 
@@ -4357,7 +4357,7 @@ NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.4: mov
 
 NOT proved: the `Spec.lean` change (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.5: the mode in G, recommended; or a layer statement) and the syntax (`lock L rank N rw`, `reads L { ... }`, the signature clause `reads L`: proposals); the legs of `Ziel` that are proved by induction over `RufErreichbarG` and have no layer twin (`schwach`, `vertrag`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `folge`, `fortschritt`, `zeit`, `keinKernHalt`: a layer-reachable machine is not G-reachable); the checker rule that DERIVES `LeserLos` (a PREMISE here); one mode per (thread, lock) in the layer; fairness (a stream of readers can starve a writer; a writer-preference bit is not modelled); the composition of the `Code` steps with ALL interleavings (the steps are per-thread, as the ticket lock's); an emitter (Lean first).
 
-## 83. Comments: `//`, nesting `/* */`, `///` doc trivia (Simon's decision, 2026-10-18; lexical syntax, `SYNTAX.md` `comment`)
+## 83. Comments: `//`, nesting `/* */`, `///` doc trivia (decided 2026-10-18; lexical syntax, `SYNTAX.md` `comment`)
 
 *Files: `grammatik/Grammatik/Parser/Lex/{Lexer,LexerVertrauen,LexerDoku}.lean`, deleted `lex.rs`. Model only for the lexer; `gabbro_ziel` is untouched (the statement does not mention comments).*
 
@@ -4549,7 +4549,7 @@ obligations are planned work, not additional theorems proved by this section.
 | `AdmissionBoundary.unmeasured_non_tail_rejected`, `admitted_cycle_has_measure_or_tail` | Generic over actual Gabbro programs: every reachable unmeasured non-tail cycle rejects its start. The existing conditional tail-cycle witness is still admitted. |
 | `TerminationCompatibility.no_complete_halting_test` | Given an **explicit computable halting reduction** from Mathlib partial-recursive codes, the target's normal-halting predicate is not computable. The reference witness is the source code model, not a claimed Gabbro compiler. |
 
-Simon confirmed that decidable classes and checking supplied termination proofs remain required while conditional runs are allowed.
+It is confirmed that decidable classes and checking supplied termination proofs remain required while conditional runs are allowed.
 No Gabbro construct, classifier, measure duty or goal premise changed. Still open: raw BF text to validated vectors, real Gabbro
 stack workers/protocol, their admission and initialization, the TM2-to-G simulation and the final universality theorem.
 
@@ -4948,7 +4948,7 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   merges two items); each with a `_zeuge`. Probes (kernel-decided): `zwei_ok`/`zwei_traeger`/
   `zwei_wirkung` (two `C`, one written through a `use`d function and one by path), `tief_ok`/`tief_traeger`,
   `unsichtbar_refused`, `falsch_getrennt` (an effect on `a::C` and a body writing `b::C` stay apart).
-* Not yet followed (Simon, 2026-10-25: Lean model only): the deleted parser, checker and LLVM named items by
+* Not yet followed (2026-10-25: Lean model only): the deleted parser, checker and LLVM named items by
   short name and refused a second one (`N039`, `N042` — neither yet a Lean judgment) -- former work item O28.
 
 
@@ -5092,7 +5092,7 @@ membership in the carrier list. Old table-only cases are the `.inl` lifts of the
   witnesses (restoration on reason returns, a two-thread guarded observation) and a generator family over global
   carriers.
 C14, source-bound profile, build selection, placement and userspace entry (2026-11-02), grammatik side, not yet
-built by the owner of the build:
+built by the build agent:
 `Parser/Profil/Register.lean` reads the `profile`/`requires profile` blocks and the `assume` registry off the
 original tree, decodes the five keyed modes with a closed decoder, and admits the whole binding with `bindungB`
 (one profile, agreeing modes, resolved assumptions, covered library requirements). The keyed half is a
@@ -5320,7 +5320,7 @@ Integration evidence: `36662142d` (`feat(owner): ghost run ledger with G/GX cons
 * **`ownerLedger_zeuge_grant`**: For arbitrary `M : RufMaschineG D`, `threads : List Faden`, the conclusion is `(ownerLedgerOf names minted M threads).owns names root token`.
 * **`ownerLedger_zeuge_run`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `M : RufMaschineG D`, `threads : List Faden`, assuming `hr : RufErreichbarG P O passes (RufStartG P sp init) M`, the conclusion is `OwnerInvG names minted M threads`.
 
-Stage-0 boundary: Nominal owner flow and escrow admission do not bypass the source metadata gate or establish a provider binding. The shared gate is `itemMetadata` in
+Stage-0 boundary: Nominal ownership flow and escrow admission do not bypass the source metadata gate or establish a provider binding. The shared gate is `itemMetadata` in
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; `nested_duties_refused_zeuge` pins inherited refusals; `invariant_bound_zeuge` pins invariant admission (there is no package-specific `_bound` theorem in this gate).
 
 
@@ -5685,7 +5685,7 @@ Stage-0 boundary: `itemMetadata` and `clausesMetadata` in
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean` still reject unbound
 cost, limit, induction, load, moves, quits, keeps, part, arch and refs clauses;
 providers, placement, entry handles and required allocation are not admitted merely
-by having C08 contracts. `capability_unbound_zeuge` witnesses refused owner pointers
+by having C08 contracts. `capability_unbound_zeuge` witnesses refused ownership-qualified pointers
 and entry handles; `required_allocation_refused_zeuge` witnesses refused allocation;
 `nested_duties_refused_zeuge` retains nested duties; `invariant_bound_zeuge` records invariant admission under C05.
 
@@ -5799,15 +5799,15 @@ Stage-0 boundary: `bindElse` in
 ## 123. C09: checked call-boundary escrow supplement (2026-11-02)
 
 This supplements section 110. `OwnerFlow.EscrowReady` in
-`Kern/Syntax/Marken/Owner/Interface.lean` requires a valid flow, owner inputs
+`Kern/Syntax/Marken/Owner/Interface.lean` requires a valid flow, ownership inputs
 disjoint from ordinary consumption, and a declared eigner for every input;
 `RufPasst.ownerReady` now requires this escrow condition.
 
 `grammatik/Grammatik/Kern/Syntax/Marken/Owner/Escrow.lean`:
 
-* **`OwnerFlow.escrow_outputs_conserve`**: Escrow readiness implies distinct output identities, an input for every output, and owner status with an in-range stage for every output.
-* **`escrow_call_outputs_present`**: Every owner output occurs as a mark resource in `nachSig`.
-* **`escrow_call_ready`**: Call admission makes every owner input available in the caller's resource list.
+* **`OwnerFlow.escrow_outputs_conserve`**: Escrow readiness implies distinct output identities, an input for every output, and ownership status with an in-range stage for every output.
+* **`escrow_call_outputs_present`**: Every ownership output occurs as a mark resource in `nachSig`.
+* **`escrow_call_ready`**: Call admission makes every ownership input available in the caller's resource list.
 * **`escrow_push_preserved`**: A canonical invocation push preserves `OwnerInvG`.
 * **`escrow_pop_preserved`**: A canonical invocation return, on either channel, preserves `OwnerInvG`.
 * **`escrow_loan_roundtrip`**: A successful borrow from a valid ledger is restored to the exact original state by the matching return.
@@ -5816,14 +5816,14 @@ disjoint from ordinary consumption, and a declared eigner for every input;
 `grammatik/Grammatik/Kern/Syntax/Marken/Owner/Witness.lean`:
 
 * **`escrow_handoff_ready_zeuge`**: The concrete handoff signature satisfies escrow readiness.
-* **`escrow_call_admitted_zeuge`**: The concrete handoff call satisfies `RufPasst` with its supplied owner resources.
+* **`escrow_call_admitted_zeuge`**: The concrete handoff call satisfies `RufPasst` with its supplied ownership resources.
 * **`escrow_outputs_conserve_zeuge`**: The concrete handoff outputs have distinct identities and each comes from an explicit input.
-* **`escrow_move_return_exists_zeuge`**: The moved owner can be transferred from the grandchild back to the child frame with a fresh grant.
+* **`escrow_move_return_exists_zeuge`**: The moved ownership mark can be transferred from the grandchild back to the child frame with a fresh grant.
 
 Stage-0 boundary: the elaborator still exports `Marke := Empty`, so these
-model-level escrow proofs do not open the source owner-flow gate or establish
-connected owner lowering. The ghost ledger remains an identity fold while
-recorded events carry no owner payload.
+model-level escrow proofs do not open the source ownership-flow gate or establish
+connected ownership lowering. The ghost ledger remains an identity fold while
+recorded events carry no ownership payload.
 
 ## 124. C01: products and nominal records (2026-11-02)
 
@@ -5989,11 +5989,11 @@ theorem with a ∀-over-syntax premise. Unbuilt code (no Lean run in this branch
 
 `grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowFixture.lean`:
 
-* **`escrowD`**: One owner mark (`true`, three stages), one guarded table, two functions sharing the single loan
-  signature `escrowSig` (`false` calls, `true` is entered). No ordinary signature produces an owner.
+* **`escrowD`**: One ownership mark (`true`, three stages), one guarded table, two functions sharing the single loan
+  signature `escrowSig` (`false` calls, `true` is entered). No ordinary signature produces an ownership mark.
 * **`escrowLoan` / `escrowReadyE`**: The nominal loan roundtrip, proved escrow-ready (valid, disjoint from ordinary
   consumption, declared eigner).
-* **`mintedE` / `loanedE` / `movedE`**: Post-mint, borrowed and transferred owner states with validity and grant
+* **`mintedE` / `loanedE` / `movedE`**: Post-mint, borrowed and transferred ownership states with validity and grant
   lemmas (`mintedValidE`, `mintGrantE`, `loanedGrantE`, `movedGrantE`).
 
 `grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowRun.lean`:
@@ -6009,7 +6009,7 @@ theorem with a ∀-over-syntax premise. Unbuilt code (no Lean run in this branch
 * **`escrow_push_preserved_zeuge`**: The ghost ledger survives the push.
 * **`escrow_loan_roundtrip_zeuge`**: Borrow at the push inverts exactly at the return.
 * **`escrow_return_restore_zeuge`**: The return restores the saved identity and stage.
-* **`escrow_return_transfer_zeuge`**: The moved owner hands back at the lender.
+* **`escrow_return_transfer_zeuge`**: The moved ownership mark hands back at the lender.
 * **`escrow_return_advance_zeuge`**: The stage-changing move advances before the handoff back.
 * **`escrow_return_retire_zeuge`**: The terminal move retires without replenishing mint authority.
 * **`escrow_pop_preserved_zeuge`**: The ghost ledger survives the return.
@@ -6106,7 +6106,7 @@ Open: the lead build of this branch (single-module checks of the touched modules
 
 ## 136. C02 items 1-4: sound decoders, resolved identity and export metadata (2026-11-03)
 
-On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended owner answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row collections. Covers inventory items 1-4 (lossless call arguments and region tokens, resolved translator/library identity and export metadata, typed input schemas and sound decoders, canonical translator map and payload typing); items 5-16 stay with their owners. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
+On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row collections. Covers inventory items 1-4 (lossless call arguments and region tokens, resolved translator/library identity and export metadata, typed input schemas and sound decoders, canonical translator map and payload typing); items 5-16 remain unassigned. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
 
 `grammatik/Grammatik/Logik/Vertraege/UebersetzungDecoder.lean`:
 
@@ -6130,7 +6130,7 @@ Open: the lead build of this branch (single-module checks of the two new modules
 
 ## 137. C02 items 5-8: certificates, obligations, actual-path expansion, connected correctness (2026-11-03)
 
-On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended owner answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row values. Covers inventory items 5-8 (source-bound certificates, pure execution/termination/effect-cost obligations, immutable payload initialization and ordinary call expansion in the actual compiler path, connected source/image correctness with refusal witnesses and one end-to-end acceptance witness); items 9-16 stay with their owners. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
+On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row values. Covers inventory items 5-8 (source-bound certificates, pure execution/termination/effect-cost obligations, immutable payload initialization and ordinary call expansion in the actual compiler path, connected source/image correctness with refusal witnesses and one end-to-end acceptance witness); items 9-16 remain unassigned. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
 
 `grammatik/Grammatik/Parser/Stmt/LibraryZertifikat.lean` (fixtures from `LibraryFixtures.lean`, certificates from `LibraryCertificates.lean`):
 
@@ -6353,7 +6353,7 @@ Implementation branch `c17-const2`, continued from `cb63c4f9a`.
   Bool uses typed Boolean expressions; option uses `none`/`some` at its declared finite
   bound; tags retain named constructors and complete typed payloads; short strings retain
   checked UTF-8 bytes and their declared maximum. `resultSchemas` keeps ordinary closed
-  reason values tied to their declared owner even when a foreign owner has equal cardinality.
+  reason values tied to their declaring declaration even when a foreign declaration has equal cardinality.
 * `Values.Function.call_equation` and `Certificate.sound` use ordinary typed G return and
   both original predicates, independent of world/oracle/pass budget/positive call depth.
   Portable candidates are evaluated by canonical G semantics, not a second source interpreter.
@@ -6399,11 +6399,11 @@ proof retain their original metadata and admission guarantees; no runner was add
 
 `Values/Witness.lean` (included by the grammar root) contains exact-value witnesses for
 both Bool results; None/Some; bare tags and numeric/Boolean/string payloads; closed reason
-owner/case identity; empty/one-byte/zero-maximum strings; original qualified names in body
+declaration/case identity; empty/one-byte/zero-maximum strings; original qualified names in body
 and argument; and joint instantiations of the normalization, argument, quotation, common
 replacement and actual substitution theorems. Negative witnesses cover wrong result/payload
 types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
-reason owner, and parameter/local/pattern/quantifier shadowing.
+reason declaration, and parameter/local/pattern/quantifier shadowing.
 
 This is the expression-result slice with integer parameters. Still refused: noninteger
 parameters, block/control bodies, calls inside bodies/contracts needing parameter binding,
@@ -6417,19 +6417,19 @@ Measured locally: static diff/whitespace checks, module headers and <500-line li
 2897 reachable local imports. The lead still owes changed-module/dependent checks, final witness
 integration, standard-axiom inspection and the guardians. **Zero new compiled/executed cases.**
 
-## 144. C12: owned access and call-scoped owner loans (2026-11-03)
+## 144. C12: owned access and call-scoped ownership loans (2026-11-03)
 
 On `c12-own`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Owned access is a new pair of
 constructors at the end of each inductive (`Expr.thruOwn`, `Stmt.assignThruOwn`): the same guarded carrier as
-`thru`/`assignThru`, plus the resolved owner identity (`D.ownerNr o = some m`), the table's owner entry
+`thru`/`assignThru`, plus the resolved ownership identity (`D.ownerNr o = some m`), the table's ownership entry
 (`m ∈ D.eigner t`) and the guard at the held stage (`Sum.inr (m, s) ∈ D.braucht t`). Machine G evaluates and
 executes them exactly like the plain forms on the underlying table. The borrow/return is the C09
 `OwnerFlow.loans` shape, not `konsumiert`/`produziert`: `eigner_nie_erzeugt` is untouched (ordinary production
-still never mints an owner). A signature that `borrows m` holds `Res.marke m 0` for the call; the caller gets it
+still never mints an ownership mark). A signature that `borrows m` holds `Res.marke m 0` for the call; the caller gets it
 back on normal return (`nachSig` erases and re-appends the loan identity).
 
-`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean`, `Teil2.lean`: the two constructors with the owner
-premises. `grammatik/Grammatik/Kern/Semantik/Semantik/T1/Teil1.lean`, `T2/Teil2.lean`: `orte`/`eval`/`execStmt`
+`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean`, `Teil2.lean`: the two constructors with the
+ownership premises. `grammatik/Grammatik/Kern/Semantik/Semantik/T1/Teil1.lean`, `T2/Teil2.lean`: `orte`/`eval`/`execStmt`
 arms identical to the plain forms. `grammatik/Grammatik/Kern/Semantik/Maschine/T1/Teil1.lean`,
 `T1/Teil3.lean`, `T9/Teil2.lean`: the machine preservation and memory-fixedness arms. `grammatik/Grammatik/Kern/Syntax/Satz/T1.lean`:
 `zeigerOwn_hat_waechter`, `zeigerOwn_schreibt_mit_recht` (same guards as the plain twins).
@@ -6438,14 +6438,14 @@ arms identical to the plain forms. `grammatik/Grammatik/Kern/Semantik/Maschine/T
 249 to 250 words). `SEffekt.borrows` (constructor at the end) with parser, printer, instantiation-surface,
 name-resolution and reference arms. `UEffekte.leiht`/`UFnKopf.leiht`/`UFn.leiht` thread it to `mkSig.owner.loans`
 (`leihtAt`, owners only, `leihtAt_eigner`/`leihtAt_stufe`); `uMarkenPruef` covers `leiht`, `uLeihtPruef` refuses a
-`borrows` of a non-owner and of a consumed mark (`loan without owner`, `mark both consumed and borrowed`).
-`declOf.ownerNr` is the unit owner namespace (`ownerNr_eq`); the owned place lowerings (`durchOwnTerm`,
+`borrows` of a non-ownership mark and of a consumed mark (`loan without owner`, `mark both consumed and borrowed`).
+`declOf.ownerNr` is the unit ownership namespace (`ownerNr_eq`); the owned place lowerings (`durchOwnTerm`,
 `durchOwnTermB`, `assignDurchOwnStmt`, `assignDurchOwnStmtB` in `UebersetzeAllg/Teil3.lean`,
 `UebersetzeAllg2/Teil1.lean`, with `ownGuard_holds`) build `thruOwn`/`assignThruOwn` from the resolved mark,
 requiring the guard in hand (`access without held guard`, `owned read/write without owner guard` otherwise).
 
 Calls: `ownerReadyB` decides callee escrow readiness (valid over own inputs, disjoint from ordinary consumption,
-every input a table owner) and `ownerReadyB_ok` supplies `RufPasst.ownerReady` at direct calls (`lowRufKopf`)
+every input a table ownership mark) and `ownerReadyB_ok` supplies `RufPasst.ownerReady` at direct calls (`lowRufKopf`)
 and the general check (`rufPasstB`); `signaturOwner`/`sigAt_owner` name the resolved loans, `ende_eq` returns
 them. `Einbettung.ownerNr` transports the registry across embeddings (`einE`, `Einbettung.id`); `exE`/`exS`
 carry `thruOwn`/`assignThruOwn` with renamed marks (`eignerE`, `brauchtE`).
@@ -6460,7 +6460,7 @@ fine cells number them at the end (`kE` 63, `kS` 29, `kTab` rows, `fzE`/`fzS` ce
 
 Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `ownAtMarke_borrow_ok` (borrow, owned read and
 write, returned mark: `stufe = "OK"`); `ownAtMarke_ohneLeiht_refused` (access without the loan:
-`lower: access without held guard`); `ownAtMarke_fremdLeiht_refused` (borrow of a non-owner:
+`lower: access without held guard`); `ownAtMarke_fremdLeiht_refused` (borrow of a non-ownership mark:
 `elab: loan without owner: Fremd`).
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the
@@ -6468,7 +6468,7 @@ guardians); the generator never draws owned access (no owned-pointer generation 
 refused (no live grant/generation interface); callers of borrowing functions lower only when escrow-ready, the
 dynamic escrow replay is C09's.
 
-## 145. C09: checked owner mint end to end (2026-11-03)
+## 145. C09: checked ownership mint end to end (2026-11-03)
 
 On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The mint is a separate,
 checked `OwnerFlow` output with provenance and uniqueness, never ordinary production:
@@ -6478,8 +6478,8 @@ the lead builds and reports back.
 `grammatik/Grammatik/Kern/Syntax/Marken/Owner/Interface.lean`:
 
 * **`OwnerFlow.mints`**: the checked mint list (last field). Mints are start-frame inputs (`inputs`)
-  and both-channel outputs (`outputs`): the admitted minter holds its fresh owner from the start
-  (`anfang`) and returns it (`ende`). `Valid` checks mints owner-only and bounded; conservation
+  and both-channel outputs (`outputs`): the admitted minter holds its fresh ownership mark from the start
+  (`anfang`) and returns it (`ende`). `Valid` checks mints ownership-only and bounded; conservation
   (`outputs_nodup`, `output_from_input`, `output_bounded`) and the embedding transport
   (`escrowReady_map`, with the mapped mint case) cover them; `empty_of_empty` and `map`/`inputs_map`/
   `outputs_map` carry the third list.
@@ -6490,7 +6490,7 @@ the lead builds and reports back.
 * **`mint_present_nachSig` / `mint_anfang_mem` / `mint_ende_mem`**: the call transformer appends
   every mint output; the start frame holds it; the return carries it on either channel (`Stmt.ret`
   and `Stmt.retWhy` balance against the one `ende`).
-* **`mint_resolved` / `mint_disjoint`**: every minted owner is a declared eigner; no consumed mark
+* **`mint_resolved` / `mint_disjoint`**: every minted ownership mark is a declared eigner; no consumed mark
   is also minted in one signature (both from `EscrowReady`).
 * **`OwnerState.mint_token_identity`**: a successful `recordMint` issues exactly the declared
   identity and stage. Uniqueness within a signature is `Valid.1` (one input per nominal identity);
@@ -6502,7 +6502,7 @@ the lead builds and reports back.
 
 * **`mintAtMarke_ok`**: mint then owned read and write: `stufe = "OK"`.
 * **`mintTwice_refused`**: the second mint of the same instance: `elab: duplicate mint: Marke`.
-* **`mintFremd_refused`**: mint of a non-owner: `elab: mint without owner: Fremd`.
+* **`mintFremd_refused`**: mint of a non-ownership mark: `elab: mint without owner: Fremd`.
 
 Open: the lead build of this branch; the dynamic escrow replay of the mint edge and the C08
 software-call transition (`recordMint` is bookkeeping after the authorized foreign return); wiring
@@ -6535,13 +6535,13 @@ Model (`Owner/MintMove.lean`, `Owner/Witness.lean`):
 Elaboration and Stage 0 (`moves` effect, ghost lowering):
 
 * `SEffekt.moves` (last-but-one constructor) with reader, printer, name resolution, surface and
-  `UFnKopf`/`UEffekte`/`UFn` threading; `bewegtAt`/`bewegtMovesAt` resolve handoffs to table owners
+  `UFnKopf`/`UEffekte`/`UFn` threading; `bewegtAt`/`bewegtMovesAt` resolve handoffs to table ownership marks
   at stage 0 (`bewegtMovesAt_inputs/outputs`); `mkSig` carries them; `uBewegtPruef` refuses moves of
-  non-owners and marks both consumed or borrowed and moved; `ende_eq`/`signaturOwner` cover the
+  non-ownership marks and marks both consumed or borrowed and moved; `ende_eq`/`signaturOwner` cover the
   extended flow; calls check `ownerReadyB` generically and lower with no new IR (ghost handoff).
 * Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `moveAtMarke_ok` (handoff through a
   call: `stufe = "OK"`); `moveReasonAtMarke_ok` (the moved mark comes back on the reason channel:
-  `stufe = "OK"`); `moveFremd_refused` (move of a non-owner: `elab: move without owner: Fremd`);
+  `stufe = "OK"`); `moveFremd_refused` (move of a non-ownership mark: `elab: move without owner: Fremd`);
   `moveBorrowed_refused` (borrowed and moved: `elab: mark both borrowed and moved: Marke`);
   `moveDropped_refused` (move without holding: `lower: call without held mark`).
 
@@ -6555,7 +6555,7 @@ On `s0-c12own` (from integration branch `c-runde1`); no model change, `Spec.lean
 `gabbro_ziel` unchanged. The C12 constructors `Expr.thruOwn` / `Stmt.assignThruOwn` (same guarded
 carrier as `thru`/`assignThru`, §145) now lower in the Stage-0 Senke (`stage0/Stage0/Senke/…`),
 which previously refused them by name (no `thruOwn` in `stage0/` except the `counterDepthS`
-ghost count): `lowE` reuses the plain slot read path (`slotValueC`; the owner mark emits
+ghost count): `lowE` reuses the plain slot read path (`slotValueC`; the ownership mark emits
 nothing), `lowS` reuses the plain slot store path (`slotStoreC`), `lowE_thruOwn` joins the
 `lowE_eqs` family. Correctness reuses the plain arms: `lowE_ok` / `lowE_top` cover `thruOwn`
 in their combined slot/thru arms (same G `eval` and `orte` on the success path), the
@@ -6588,7 +6588,7 @@ Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
   when locals extend the lowering scope; `lowRetiresL_unheld` refuses an absent input.
   The existing dependent block/end-block readers propagate this exact inventory into the
   unchanged `Perm ende` return gate.
-* `terminalMovesAt` resolves an owner's existing `consumes` (`takes`) effect to a terminal
+* `terminalMovesAt` resolves an ownership mark's existing `consumes` (`takes`) effect to a terminal
   `OwnerMove` (`after := none`). `nimmtAt` retains only ordinary consumed marks; `ownerMovesAt`
   combines terminal transfers and handbacks. `terminalMovesAt_outputs` / `ownerMovesAt_outputs`
   prove terminal moves contribute no output; `mkSig`, `sigAt_owner`, `signaturOwner` and `ende_eq`
@@ -6600,7 +6600,7 @@ Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
 * `ExportMetadata` admits only the plain nominal declaration `linear type Mark;` through the
   checked mark registry. It retains refusal of mint effects and ghost value types while the
   C08 software-call/root-once bridge is open (`mint_effect_metadata_refused`,
-  `owner_mint_type_refused_zeuge`); ordinary `takes` and owner terminal transfer can now reach IR.
+  `owner_mint_type_refused_zeuge`); ordinary `takes` and ownership terminal transfer can now reach IR.
 
 Measured here: static diff/whitespace check, changed Lean module headers and file sizes below
 500 lines. No Lean, lake, build, guardian or runner invocation; all new proof bodies and witnesses
@@ -6614,7 +6614,7 @@ the lead must compile them, reduce the witnesses and recheck `gabbro_ziel` on
 exactly the standard axioms. `Spec.lean` and its meaning are unchanged.
 
 `Logik/Ruf/Guest/Boundary.lean` remains the canonical `GuestBoundary`: immutable
-code, an explicit fallible software service, exact pointer inputs, genuine owner
+code, an explicit fallible software service, exact pointer inputs, genuine ownership
 resources for transferred regions, a closed ordinary userspace ABI and explicit
 return behavior. `Invocation.lower_eq` identifies the existing
 `Block.bindAxiomOptElse`; no guest interpreter, new machine step or hardware
@@ -6683,7 +6683,7 @@ Open: the lead build of this branch (single-module checks of the touched modules
 
 ## 179. C16: provenance, replay, counterprobe, export/Stage-0 (2026-11-03)
 
-On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 13-16 of the C16/C02 round-3 list: the report/token provenance through call push and normal return (item 13), G/GX replay and ownership conservation (item 14), counterprobe binding with artifact identity and measured status (item 15), and the connected export/Stage-0 correctness with emitted sample work (item 16). The elaborator-side provenance/export files are registered in `Alle/Teil1`, not `Satz.lean`: the call machine and the elaborator/`declOf` layers sit above `Satz.lean` in the import order, so `Satz.lean` keeps only the kernel-evidence files. Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 13-16 of the C16/C02 round-3 list: the report/token provenance through call push and normal return (item 13), G/GX replay and ownership conservation (item 14), counterprobe binding with artifact identity and measured status (item 15), and the connected export/Stage-0 correctness with emitted sample work (item 16). The elaborator-side provenance/export files are registered in `Alle/Teil1`, not `Satz.lean`: the call machine and the elaborator/`declOf` layers sit above `Satz.lean` in the import order, so `Satz.lean` keeps only the kernel-evidence files. Recommended answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
 
 `grammatik/Grammatik/Kern/Syntax/Satz/PruefungHerkunft.lean`:
 
@@ -6762,7 +6762,7 @@ Open: the lead build of this branch (single-module checks of the touched modules
 
 ## 180. C16 close-out: derived Duty admission and the GX evidence fold (2026-11-03)
 
-On `c16-close` (`c12-own` at `ee9844da3` merged with `c16-a` at `5517b5333`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Implements inventory item 16 of the C16/C02 round-3 list on top of the C12 linear marks, pending lead compilation: `declOf` now carries `Marke = Fin u.marken.length`, so the Duty gap `uCheckDecl_unbewohnt`/`stage0_pruef_leer` is deleted and replaced by the derivation, admission and actual-history fold below. No change to the C12 owner rules (`eigner_nie_erzeugt` untouched; nothing near `thruOwn`/`assignThruOwn` or the OwnerFlow files). Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+On `c16-close` (`c12-own` at `ee9844da3` merged with `c16-a` at `5517b5333`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Implements inventory item 16 of the C16/C02 round-3 list on top of the C12 linear marks, pending lead compilation: `declOf` now carries `Marke = Fin u.marken.length`, so the Duty gap `uCheckDecl_unbewohnt`/`stage0_pruef_leer` is deleted and replaced by the derivation, admission and actual-history fold below. No change to the C12 ownership rules (`eigner_nie_erzeugt` untouched; nothing near `thruOwn`/`assignThruOwn` or the OwnerFlow files). Recommended answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
 
 `grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Ableitung.lean`:
 
@@ -6816,7 +6816,7 @@ actual fixture at every layer.
 Continuation from `717635600` (implementation attempts only; **no Lean/lake/build was run by this sub-agent**):
 
 * **`Pruefung/Lauf/Consumer.lean`**: `CheckConsumerSelection`, `uCheckConsumer` and `uCheckDriver` select one declared gate. The driver binds the producer Bool and transfers its completed Duty to that consumer. The inherited input mark is the producer's invocation permit, not an already completed report. The consumer invokes the existing wrapper and explicitly retires the physical mark, with empty outputs on both normal and reason channels. Reason dispatch retains the exact foreign reason; retirement happens once before its exhaustive match. `uCheckConsumer_ressourcen`, `uCheckDriver_ressourcen` and `uCheckDriver_reihenfolge` state the exact generated interfaces and call order.
-* **`UStmt.retireMark`**, **`UebersetzeAllg2/Teil4.lowStmtL`**: lower retirement only for a declared check Duty that is actually present. Missing/already consumed marks refuse by name. The target is the existing `Stmt.retires`; no kernel execution constructor, owner-flow change or new hardware assumption is introduced. Stage 0 already erases this zero-effect rule through its generic instruction proof.
+* **`UStmt.retireMark`**, **`UebersetzeAllg2/Teil4.lowStmtL`**: lower retirement only for a declared check Duty that is actually present. Missing/already consumed marks refuse by name. The target is the existing `Stmt.retires`; no kernel execution constructor, ownership-flow change or new hardware assumption is introduced. Stage 0 already erases this zero-effect rule through its generic instruction proof.
 * **`Pruefung/Lauf/Erhaltung.lean`**: `duty_retired_once`, `duty_consumer_conservation`, `duty_cycle_conservation` and `duty_retirement_payload` state physical uniqueness, empty residual resources and payload preservation through the actual consumer rule.
 * **`Pruefung/Lauf/Recording.lean`**, **`Erzeuge.uProbeFn`**: the actual canonical elaborator now emits a private typed reporter per returning source site. It evaluates the written verdict, captures the available numeric/Bool observations once, and substitutes those captured places into the separately evaluated floors. The reporter receives the actual samples, floor Bools and written verdict as ordinary call arguments and returns their conjunction. Missing locals are explicit absent observations, not zero measurements. `UFn.checkReturn` retains the source check/site, parameter positions and floor range. Reporters are ordinary emitted work with the existing call/lowering cost; ghost recording itself emits no runtime log writes.
 * **`Pruefung/Lauf/History.lean`**: `actualCheckReturn` decodes saved typed `Env` arguments and the real returned Bool. `decodeCheckReturn_origin` and `replayEintrag_from_samples` establish sample/floor/verdict provenance. `checkGhostStep_probe_return` appends that capture at the enclosing producer's normal return. `checkGhostHistory_event` respects G/GX's newest-first call log; `checkGhostGX_log` reads the same log without consulting later presented memory. `stampCheckReport_values` preserves values and floors while `checkObservationPoint_distinct` distinguishes repeated producer activations. `consumeCheckEntry_once` refuses a second consumption without another completed producer, and `checkGhostComplete` refuses outstanding entries or invalid reuse.
@@ -6922,7 +6922,7 @@ no full green build or newly verified source-to-IR case is claimed here.
 **Unmerged scoped-return work.** At this snapshot, `scoped-fin` (`575d97bcf`) and
 `merge-void`, `merge-meta`, `merge-c10`, `merge-async` are not ancestors of `c-runde1`.
 Their presence in separate worktrees does not establish integration or build success.
-The owner decision of 2026-11-03 strengthens `StartEndeG` by conjoining `StartScopedEndeG`:
+The 2026-11-03 decision strengthens `StartEndeG` by conjoining `StartScopedEndeG`:
 completed empty-stack scoped roots owe ensures and invariants at the saved pre-release
 world, preserving the ordinary-return conjunct. Evaluation and cleanup must be separate
 and the protocol must preserve existing source costs. This is open model work, not a
@@ -6985,7 +6985,7 @@ There is a second boundary: `kEnde` sends a scoped return through `kPop`, and `k
 (`Nichtinterferenz/SchrittBasis.lean`). A new root cleanup transition therefore also needs a change to
 the K transition; a new arm of `schrittK_von_g*` alone cannot establish the existing correspondence.
 
-Recommendation pending the owner decision: distinguish pending cleanup from completion. Capture the
+Recommendation pending the decision: distinguish pending cleanup from completion. Capture the
 result before releasing, perform cleanup for roots as well as callees, and classify only the released
 return state as finished. This needs an explicit terminal residue carrying the saved result, a matching
 K root transition, and agreement on the definitions of completion used by `Spec`; the existing
@@ -6995,7 +6995,7 @@ replay/noninterference arms and finished-thread proofs remain open.
 
 ## 184. Scoped-return release and completion checkpoint (2026-11-03)
 
-Owner-selected design after §182; source inspection only, no build or Lean check. This changes
+Selected design after §182; source inspection only, no build or Lean check. This changes
 `RufSchrittG` through two new group-7 rules, `rueckScopedWert` and `rueckScopedGrund`.
 Each recognizes the same three heads (end return, end-block cons, block cons), evaluates the value
 at the read world before cleanup, applies `R.scopes.foldl World.gibt`, and answers through

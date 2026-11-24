@@ -33,7 +33,7 @@ environment move the goal theorem quantifies (`LogikFn`). The locality of foreig
 
 ## The boundary
 
-The source text enters only through Stage 0's run (owner, 2026-11-22; Stage 0 gets its own correctness
+The source text enters only through Stage 0's run (2026-11-22; Stage 0 gets its own correctness
 proofs). The generated `Pruefung` module checks the run facts by running Stage 0's front end; no theorem
 imports it.
 

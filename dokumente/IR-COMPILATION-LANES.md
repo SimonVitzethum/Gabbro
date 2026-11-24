@@ -1,11 +1,11 @@
 # Gabbro-to-IR compilation lanes
 
-Machine-access source policy (owner, 2026-11-23): assembly bodies, `prim fn`, `raw fn` and
+Machine-access source policy (2026-11-23): assembly bodies, `prim fn`, `raw fn` and
 `entrust` are removed and have only the reserved-word refusals `N594`–`N597`. Any older
 lane below proposing source assembly or entrust admission is superseded by the checked
 language constructs in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
 
-## Native CPU floating point (owner decisions, 2026-11-04 and 2026-11-05)
+## Native CPU floating point (decisions, 2026-11-04 and 2026-11-05)
 
 This decision supersedes the software-floating-point implementation described in the
 historical checkpoints below. Stage 0 compiles and proves the IR; the assembly runner
@@ -38,23 +38,23 @@ No hardware certificate assumes the final source/IR simulation or its safety res
 
 Integration is in progress. Neither these implementation changes nor an isolated adapter
 check establish an end-to-end result: the connected lowering, physical instruction proofs,
-CPU regressions and acceptance checks still require integration. The owner's current
+CPU regressions and acceptance checks still require integration. The current
 validation scope is Lean and the Lean portions of GabbroV; all Rust/Cargo and LLVM
-checks are deliberately unmeasured. On 2026-11-05 the owner authorised pushing once
+checks are deliberately unmeasured. Pushing was authorized on 2026-11-05 once
 the grammar, Stage-0 and GabbroV Lean checks are green, without waiting for those
 deferred checks. This is not a green four-guardian acceptance.
 
-**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
-Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
+**RESUMED with two agents (2026-10-31).** The pause ended with exactly TWO Claude
+Sonnet 5.5 implementation agents authorized, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
 `t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
 with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 ## Checked frontend follow-up (2026-10-31)
 
-Root integrated IR-01 through `77f74c248`: dependent original scalar/alias scopes, fixed-count
+IR-01 was integrated through `77f74c248`: dependent original scalar/alias scopes, fixed-count
 fieldless tables and canonical typing/collector retention for every original array declaration,
 including unused declarations. The selected-ABI guard and two-check global limit are preserved.
-The five generic array statements are in Stage0; the per-program array witness was removed with the other Stage-0 witnesses (owner, 2026-11-19).
+The five generic array statements are in Stage0; the per-program array witness was removed with the other Stage-0 witnesses (2026-11-19).
 
 Measured on the merged sources: 13 affected modules through Stage0 and Nachpruefung, all five new
 array audits on standard axioms, layout over 1414 Lean files, and 11 textual source-to-IR/ASM or
@@ -66,7 +66,7 @@ not a completed lane, full ABI integration or whole-language verification.
 
 ## Checked integration checkpoint (2026-10-31)
 
-Root merged the coherent published IR-01 source/profile bridge through `587dfb27d`, IR-02 integer/runner
+The coherent published IR-01 source/profile bridge was merged through `587dfb27d`, IR-02 integer/runner
 lowering through `1f3d586f1`, IR-08 narrowing/traversal through `4c126f4db` and IR-12 source/start-byte
 proofs through `e4815ed3f`. Preserve the selected-ABI guard from `63addf850`. Full-ABI dirty work and
 later follow-up commits are excluded from this checkpoint; no lane is declared complete.
@@ -79,7 +79,7 @@ Split the unchanged all-27-image kernel witness into finite cases to check it wi
 CLI regression execution used `lean --run` and the assembly runner, not a claimed native CLI rebuild.
 This is a checked incremental userspace compiler integration, not total language/ISA/platform verification.
 
-Root validation logs are retained in `.scratch-integration/merged/`. Source files stayed fixed throughout
+Validation logs are retained in `.scratch-integration/merged/`. Source files stayed fixed throughout
 the successful combined checks; artifact-gap and interrupted aggregate-fixture logs are preserved too.
 Slot-1 integration priority is released; IR-01 and IR-08 may resume their deferred module checks.
 
@@ -134,9 +134,9 @@ language design in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md); no cano
 build is authorized by that planning task.
 Final coverage must state this precise domain rather than claim all syntax except registers only.
 
-**RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1
-implementation agents, each owning one lane, followed by one final integration/proof agent. Root coordinates
-interfaces, performs direct review and measures form coverage. Do not advance a round by declaring an
+**RESUMED (2026-10-31).** Up to six parallel Sol 6.1
+implementation agents were authorized, each owning one lane, followed by one final integration/proof agent. Interface coordination,
+direct review and form-coverage measurement are centralized. Do not advance a round by declaring an
 incomplete lane complete.
 
 **Scope.** Compile all existing Gabbro except device-register reads/writes/fallible reads and register
@@ -156,7 +156,7 @@ The former Lean source runtime, replay/fast execution, syscall C trampoline and 
 The pure gate binding parser is `Stage0/Bindung.lean`; the compiler entry is `Stage0/Haupt.lean` -> `IRBild`.
 Existing computed `floatOf` and real protected-counter `forever` lowering must be retained.
 
-| Preserved worker | Last committed HEAD | Uncommitted work at pause | Resume owner |
+| Preserved worker | Last committed HEAD | Uncommitted work at pause | Resume lane |
 |---|---|---|---|
 | `/home/simon/.t3/worktrees/Gabbro/t3-857b75c9`, `t3/stage0-forever-ir-lowering` | `241f925d6` (signed64 literals; includes inventory `f31e1f68a`) | unsigned64 materialization/bit-operation edits in `Ausdruck.lean`, `Gleichungen.lean`, `Satz.lean`, `Wort.lean`; interrupted check, not accepted as green | IR-02 |
 | `/home/simon/.t3/worktrees/Gabbro/t3-30ae6751`, `t3/stage0-float-lowering` | `a490d09aa` (actual RIGHT execution through copy/increment/endjump to LEFT) | LEFT reentry `Pre` restoration in `Arithmetik/Initialisierung.lean`; interrupted check, not accepted as green | IR-04 |
@@ -178,7 +178,7 @@ unchanged broad suites in place of closing a connected translation case.
 
 ## Authorized seven-round schedule
 
-**Staffing update:** The owner increased concurrency to six implementation agents. The original round
+**Staffing update:** Concurrency increased to six implementation agents. The original round
 table remains the lane allocation; it no longer limits execution to two slots. IR-01 and IR-03 continue;
 IR-02, IR-04, IR-11 and IR-12 start on four additional slots. Shared ABI changes from IR-03 must be
 coordinated before consumers integrate; independent emitter/frontend work proceeds meanwhile. All Lean
@@ -201,13 +201,13 @@ agents active; only genuine interface dependencies may delay a particular succes
 the prerequisites needed by that successor. Each lane must implement its real compiler
 path and connected generic proof, not merely produce an inventory or isolated helpers. Report unresolved
 dependencies explicitly and continue resolving them; seven rounds are an allocation, not a correctness claim.
-Root serializes shared interfaces and merges. Exactly one Lean check runs globally under the shared lock.
+Shared interfaces and merges are serialized. Exactly one Lean check runs globally under the shared lock.
 
 After round seven, one final implementation agent composes the proofs and proves structural coverage of
 all canonical source syntax except the explicitly excluded register forms. Prove both semantic correctness
 of emitted IR and completeness for supported well-formed non-register syntax within explicit target/resource
-limits; correctness conditional on successful emission alone does not prove coverage. Root reviews the
-result directly. No claim of full coverage is allowed while any syntax family or nested variant is missing.
+limits; correctness conditional on successful emission alone does not prove coverage. The
+result is reviewed directly. No claim of full coverage is allowed while any syntax family or nested variant is missing.
 
 A lane owns a family through its actual source frontend, model/desugaring obligations, IR generation and
 connected correctness theorem. Another lane may provide a representation or primitive, but ownership does
@@ -222,14 +222,14 @@ conditional whole-run assumption or a test-only path is not a completed lane.
 | **IR-04 — Complete source floating point** | Existing source float comparisons/literals/conversion/narrowing plus Add/Sub/Mul/Div; actual normalization, IEEE rounding/carry/packing, zero/subnormal/ties/overflow and range Stop107. Finish the actual candidate, not a detached differently emitted pipeline. | Existing scalar IR primitives; IR-03 frame/value interface. Prioritize formats actually exposed by the source model. | Real `Block.float` hooks and mutual soundness are connected for all source operators; preserve computed `floatOf`. |
 | **IR-05 — Options, sums, reasons and dispatch** | All option/sum/reason constructors, payloads and matches, exhaustive cases and error-arm binding. Remove sentinel/index/tag/payload-size limitations through the shared representation. | IR-02 arithmetic and IR-03 layouts; coordinate call error channels with IR-10/11. | Generic construction, decoding, branching and environment extension with no unsupported in-scope case or payload variant. |
 | **IR-06 — Memory, bytes, references and tables** | Variables/globals/table and capability reads/writes, references/reachability, byte ranges, table/global declarations and layouts. Remove eight-byte and single-word data limits; maintain exact footprints and permissions. | IR-03 base layout; export primitives to IR-07 and IR-09. Close open-region integration when IR-07 supplies its provider contract. | Actual load/store/copy paths preserve the source memory relation and support all represented field/value shapes. |
-| **IR-07 — Arenas, regions, ownership and table states** | Arenas/allocation/release, open-region providers, owner/backed relationships, group/table invariants, ordinary table-state transitions, `breaking`, `advances` and `retires`. Device-register transitions remain excluded. | IR-01 source export, IR-03 values, IR-06 memory primitives, IR-08 control and IR-09 synchronization interfaces. | Missing model/provider obligations are closed generically before acceptance; ownership, freshness, invariants and declared failure/capacity behavior are preserved. |
+| **IR-07 — Arenas, regions, ownership and table states** | Arenas/allocation/release, open-region providers, ownership/backing relationships, group/table invariants, ordinary table-state transitions, `breaking`, `advances` and `retires`. Device-register transitions remain excluded. | IR-01 source export, IR-03 values, IR-06 memory primitives, IR-08 control and IR-09 synchronization interfaces. | Missing model/provider obligations are closed generically before acceptance; ownership, freshness, invariants and declared failure/capacity behavior are preserved. |
 | **IR-08 — Control flow, blocks and source budgets** | Conditions, quantifiers, sequencing, checks/narrowing, traversal/retry/forever, leave/next and terminating blocks, with actual exits/targets, invariants, nested protected counters and configured source-budget stops. | Stable value/frame and child/callee contracts from IR-03/10; integration closes those contracts, not assumed whole-body execution. | Mutual block/statement/end-block correctness covers every in-scope child combination and exit, retaining existing forever support. No new separate machine-cost project. |
 | **IR-09 — Concurrency, locks, atomics and RCU** | Atomic declarations/read-modify-write, publish/await payloads, exchange, lock modes/early exits, shared state, concurrent starts and RCU. Preserve the G/GX/world and ordering guarantees. | IR-06 memory, IR-08 exits; agree lifetime interfaces with IR-07 before final RCU integration; IR-12 connects roots/images. | Formally connected concurrent lowering without dropped effects, weakened memory assumptions or unsupported legal body combinations. |
 | **IR-10 — Functions, calls, contracts and snapshots** | Function declarations; direct/indirect calls, arguments/results, recursion/depth, return/reason paths, pre/postconditions, multiple/computed `old` snapshots and full end-block contexts. | IR-03 shared ABI, IR-05 error payloads, IR-08 control, IR-11 foreign interfaces. | Generic function/callee/ABI/image theorems close on the same actual memories; no one-word or single-snapshot limitation remains. |
 | **IR-11 — Foreign calls, assumptions, syscalls and ASM bodies** | Foreign signatures, declared assumptions, axiom calls and result/error channels, syscall variables/bindings, generic buffers and real source ASM bodies. An exported signature is not executable ASM support. | IR-10 call contracts, IR-06 buffers and IR-12 profiles/linking. Use existing runner capabilities or a narrowly required verified addition. | Actual callable paths with generic effect/result/error correctness. Do not silently turn software/OS behavior into a new hardware axiom. |
 | **IR-12 — Profiles, entries, boot, entrust and final images** | Targets/profiles, conditional `when` declarations, entries and ABI setup, boot/entrust, unit linking/relocation, roots/start arguments, image layout and compiler options. No new ISA/backend project. | IR-01 unit/name exports, IR-07 regions, IR-09 roots, IR-10/11 ABI and bindings. | Correct source-to-image integration for the declared profiles; no implicit dropped declaration, unresolved supported entry or legacy Lean execution fallback. |
 | **IR-13 — Formats, declared checks, accumulators and walkers** | `format`, check declarations, `accumulates` and `walk`; wire layouts, field validation, generated operations, traversal and aggregation semantics. Desugar to proved existing primitives where possible. | IR-01 frontend, IR-02/03 values, IR-05/06 data, IR-07/08 invariants/control, IR-09 concurrency and IR-10 contracts. | Complete source constructs, not only parser nodes or handwritten replacement examples, with generic expansion/lowering proofs. |
-| **IR-14 — Integrated compiler and formal closure** | Shared package/root/CLI integration, final `irBild` pipeline, combined generic soundness, accepted image/ABI/profile correspondence and final form coverage. Root owns this lane and all reviews/measurements. | All other lanes. Resolve shared-module integration after agreed interface changes. | Every in-scope family and all its nested surface/type variants is connected; zero missing/restricted semantic cases remain beyond explicit legitimate target/resource limits. No default refusal may conceal an unowned form. |
+| **IR-14 — Integrated compiler and formal closure** | Shared package/root/CLI integration, final `irBild` pipeline, combined generic soundness, accepted image/ABI/profile correspondence and final form coverage. This lane owns all reviews and measurements. | All other lanes. Resolve shared-module integration after agreed interface changes. | Every in-scope family and all its nested surface/type variants is connected; zero missing/restricted semantic cases remain beyond explicit legitimate target/resource limits. No default refusal may conceal an unowned form. |
 
 **Execution order.** First freeze IR-03's shared encoding/width/offset/frame interfaces together with the
 scalar/call consumers; do not build independent wide-value ABIs in several lanes. Start IR-01 and scalar
@@ -247,7 +247,7 @@ IR-14 sequences shared changes. No two workers edit or compile the same tree.
 ## Exhaustive primary ownership of the current form inventory
 
 The baseline inventory counts 117 typed non-register cases (Float's four operators separately) and 34
-non-device top-level families. Each of those 151 families has exactly one primary owner below; this mapping
+non-device top-level families. Each of those 151 families has exactly one primary owning lane below; this mapping
 was checked for omissions and duplicate ownership. It is a planning allocation, not a proof of language
 completeness. All nested `STyp`/`SExpr`/`SAnw`/declaration variants, attributes, type domains and syntax sugar
 remain obligations of their parent lane. Supporting `Args`, payload, result and arm constructors belong to
@@ -280,14 +280,14 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
    coverage: arbitrary semantic/representation refusals must also be removed or remain explicitly open.
 3. Build the affected connected compiler chain under the global lock. Audit the new statements and
    `gabbro_ziel` for only the standard axioms; no `sorry`, `admit`, `native_decide`, new axioms or weakened
-   contracts. Check layout. Root audits form coverage directly; example counts are not coverage percentages.
+   contracts. Check layout. Form coverage is audited directly; example counts are not coverage percentages.
 4. Use actual textual Gabbro -> IR -> assembly execution for relevant behavioral regressions, in addition
    to generic proofs; do not substitute typed-only fixtures or tests for a connected lowering theorem.
    The compiler remains compilation-only; there is no source-execution fallback.
 5. Commit every green connected step using the required message file and `commit.sh`; report accepted
    source forms, generic proof attachment and exact remaining limits. Do not claim all-language completion
-   while any in-scope family or nested variant remains missing/restricted. Reviews are performed directly
-   by Root, not delegated as implementation or substituted by a new guardian.
+   while any in-scope family or nested variant remains missing/restricted. Reviews are performed directly,
+   not delegated as implementation or substituted by a new guardian.
 
 **Execution is authorized.** Follow the seven-round schedule above; preserve all interrupted work and
 never treat it as checked. Final closure is blocked while any in-scope syntax or generic proof is missing.
@@ -437,7 +437,7 @@ files); `git diff --check` passed. These regressions measure behaviors, not comp
 The required canonical work is a typed translator input/result model, region literal/layout semantics,
 checked translator termination/cost/effects, library-call payload binding and desugaring correctness into G,
 including name/type and checker rules. No source interpreter, declaration erasure, default acceptance or
-invented hardware assumption is authorized as a substitute. Owner decision: compiler-side Stage0 adapters
+invented hardware assumption is authorized as a substitute. Decision: compiler-side Stage0 adapters
 are allowed only when proved against existing canonical semantics; genuinely missing canonical semantics
 remain blocked by the explicit no-grammar-rebuild instruction. Separate authorization and canonical-model
 validation are needed for that change. IR-01 is therefore explicitly incomplete; the remaining independent
@@ -445,7 +445,7 @@ frontend/proof work above also stays open rather than being transferred silently
 
 ### IR-01 contract mitigation and remaining semantic proof boundary
 
-Root review correctly distinguishes the `Normalization` rewrite trace from source/program denotational
+Review correctly distinguishes the `Normalization` rewrite trace from source/program denotational
 preservation. `source_sound` projects provenance and that local trace; it does **not** prove original
 source acceptance, equality to the originally refusing `elabU`, environment-extension preservation or
 source-to-image execution. Exact alias/constant environment collection and the semantic program bridge
@@ -645,7 +645,7 @@ Exact remaining prerequisites/restrictions:
 - Atomic/global payload representation remains subject to the existing scalar
   memory/emitter domain. Full aggregate ABI and memory migration belongs to
   IR-03/06; no low-word aggregate representation is introduced here.
-- Root argument/multiplicity/frame work stays with IR-12; this lane does not
+- Argument/multiplicity/frame work stays with IR-12; this lane does not
   duplicate its pending integration or claim an additional root theorem.
 
 This is an independent connected lock-body extension, not closure of IR-09.
@@ -735,7 +735,7 @@ equality claim between new supplied scopes and the incomplete old scopes for new
 IR-09 published checked lock reason-arm lowering as `e67b53dc8`. It remains incomplete for RCU,
 shared lock holding, function returns under locks, full GX composition and dependent ABI/root integration.
 Its active lane now implements IR-10 functions/calls/snapshots on shared Lean slot 2.
-This is a worker handoff, not completion of IR-09. Root integrates the coherent green checkpoint separately.
+This is a worker handoff, not completion of IR-09. The coherent green checkpoint is integrated separately.
 
 ## Rolling worker handoff: control checkpoint
 
@@ -807,7 +807,7 @@ IR simulation remain jointly inhabited.
 
 Environments/DependentScopes/Source/Elaboration/Compiler/IRBild/SourceWitness checks green; nine
 relevant generic/whole-source/witness audits use only the standard three axioms. Slot1 checks
-were deferred during root's requested merge-check priority, then resumed after explicit release.
+were deferred during the requested merge-check priority, then resumed after explicit release.
 No grammar build, Bindung change, pre-emit ABI-guard edit, Senke/ABI edit or broad unchanged suite
 rerun. Discovery completeness for all dependency graphs is not proved; nonmaterializable custom
 negative bounds and further constant/signature forms may still refuse. IR-01 remains incomplete.
@@ -844,7 +844,7 @@ ArrayWitness direct checks pass within 4G/5G scopes. Nine generic/whole-source/w
 report only propext, Classical.choice, Quot.sound; layout check passes all1399 Lean files.
 No unchanged broad suite or grammar build was run. Two Lean checks globally now control work:
 IR01 stays slot1, all own harnesses route each check/run/audit through the same capped slot1
-launcher with unset ELAN_TOOLCHAIN and isolated outputs. Other workers' slots remain root-owned.
+launcher with unset ELAN_TOOLCHAIN and isolated outputs. Other workers' slots remain centrally coordinated.
 No Bindung/pre-emit ABI guard or Senke code was edited. IR-01 remains incomplete on the listed
 remaining constant/type/signature forms, discovery completeness and canonical prerequisites.
 
@@ -1031,7 +1031,7 @@ transition is included. A typed emitter alone is not textual form coverage.
 |---|---|---|
 | Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable old/new constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: materialize both signed-word state constants with the existing word materializer. |
 | Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `stmt without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
-| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `stmt without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
+| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `stmt without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no ownership marks), not missing emitter. |
 | Stmt `retires` | Typed emitter likewise emits no instructions with a connected `lowS_ok` branch. Source `quits` clause is refused as `clause without G form`. | Existing model consumes a held mark and names its assumption. Missing canonical mark/signature export, not missing emitter. |
 | TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowBodyF`/`lowEndL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
 | TopLevel `stateT` | Compiled by `uZustand`: named stages become ordinals in first-written order; allowed pairs feed `D.erlaubt`. State-transition requires/effects clauses refuse as `state transition clause without G form`; non-name stages as `state stage without G form`. | Source provenance (`compile_source_program`), checked `lowShiftL`, then `shift_ok`. Clause-bearing transition semantics need a canonical model/export rule; this lane adds none. |
@@ -1039,7 +1039,7 @@ transition is included. A typed emitter alone is not textual form coverage.
 
 Additional parent-lane obligations: `table ... backed ...` and `owner ...` refuse
 as `table without G form` in `uTabelle`; the canonical ownership model exists,
-but `declOf` exports neither owner marks nor their resource contracts. Open
+but `declOf` exports neither ownership marks nor their resource contracts. Open
 `table T from provider` exports a numeric-field region and `alloc T` becomes a
 provider call; actual fresh/disjoint provider memory, layout extension and
 lifetime contracts remain a missing provider-contract integration (IR-06 memory
@@ -1230,9 +1230,9 @@ proofs and the still missing export obligations, not a completed source theorem.
 | ID / source form | Exact refusal or absent export | Target canonical construction | Existing Stage0 proof; what export must preserve |
 |---|---|---|---|
 | A01 `breaking I { ... }` | Named scopes export through `uBreaking`; unknown invariant names remain refused by the G reader. | `Stmt.breaking` (S:610) | `lowS_ok` branch :146 recurses through `lowB_ok`. Resolve each invariant name (multiple names become nested scopes); retain body/exits and invariant restoration at return. C05 removes the independent invariant clauses; the metadata gate now admits the retained predicate. Carrier resolution, declared reads and restoration remain checked. Integration and corpus measurements are pending. |
-| A02 linear/ghost mark order, `consumes`/`allocs`, advances clause/statement | `Uebersetze.lean:1925/1952/2538`: `effect without G form`, `clause without G form`, `... step`; `UebersetzeAllg.lean:231/232/382` fixes empty signatures/`Marke := Empty` | `D.Marke/stufen`, `Signatur.konsumiert/produziert`, `Res.marke`, `nachSig`, `Stmt.advances` (S:185/89/287/306/637) | `lowS_ok` :151 and generic call/bind/return branches. Export one consistent mark namespace, exact flow/conformance/return resources, possession and `a+1 < stufen`; never produce an owner mark. Complete owner minting is C09. |
+| A02 linear/ghost mark order, `consumes`/`allocs`, advances clause/statement | `Uebersetze.lean:1925/1952/2538`: `effect without G form`, `clause without G form`, `... step`; `UebersetzeAllg.lean:231/232/382` fixes empty signatures/`Marke := Empty` | `D.Marke/stufen`, `Signatur.konsumiert/produziert`, `Res.marke`, `nachSig`, `Stmt.advances` (S:185/89/287/306/637) | `lowS_ok` :151 and generic call/bind/return branches. Export one consistent mark namespace, exact flow/conformance/return resources, possession and `a+1 < stufen`; never produce an ownership mark. Complete ownership minting is C09. |
 | A03 `retires m from s ...` | `Uebersetze.lean:1953`, `clause without G form`; raw `quits` tail has no body export | `Stmt.retires` (S:640), final resource list | `lowS_ok` :152. Resolve mark/stage/assumption, consume exactly that mark on the correct exits and retain assumption provenance. Runtime erasure is not erasure of the obligation. |
-| A04 `table ... owner m` guard metadata, given valid initial ownership | `Uebersetze.lean:1172`, `table without G form`; `UebersetzeAllg.lean:382/387` exports no owners | `D.eigner`, `D.braucht` with `.inr (m,s)`, `darf` (S:190/192/301) | Generic `lowE_ok`/`lowS_ok` slot/thru/store proofs. Export shared/owner guards, uniqueness and `eigner_nie_erzeugt`. The current `own`→writable Bool conversion is insufficient; minter/borrow-return semantics are C09. |
+| A04 `table ... owner m` guard metadata, given valid initial ownership | `Uebersetze.lean:1172`, `table without G form`; `UebersetzeAllg.lean:382/387` exports no ownership marks | `D.eigner`, `D.braucht` with `.inr (m,s)`, `darf` (S:190/192/301) | Generic `lowE_ok`/`lowS_ok` slot/thru/store proofs. Export shared/ownership guards, uniqueness and `eigner_nie_erzeugt`. The current `own`→writable Bool conversion is insufficient; minter/borrow-return semantics are C09. |
 | A05 scalar `table ... backed k` and backed accesses | `Uebersetze.lean:1172`, `table without G form`; runtime narrow bounds also :2860 | Static count plus explicit `Block.check`/`Block.narrow` and slots (S:699/703) | `blockCheck_case`, `lowB_ok`/`lowEnd_ok`. Preserve address-space count versus backed bound; prove the backing guard before each access, not just `i < count`. Preserve table identity through narrowing. |
 | A06 table constants, `ops insert/remove/relabel`, `occupied f`, on represented scalar tables | `Uebersetze.lean:1132/1163/1165`, `table without G form` for non-invariant parts | Generated Fn/signatures/requires/calls/conditionals/stores (S header :31; ordinary `Stmt`/`Programm`) | `lowE_ok`/`lowS_ok`/`lowFun_spec` for generated functions. Generate freshness/reachability/leaf/occupancy contracts, exact effects and `by ops` writer discipline. No dedicated ops instruction is needed; a generic source generator proof is still missing. |
 | A07 scalar dynamic arena ceiling, constant `grow ... by n else ...`, dynamic alloc over represented storage | `Uebersetze.lean:3992` (`arena with a dynamic ceiling without G form`), :2538 (`... grow`) | `DynForm`, `Block.dynGrowB/dynAlloc` in `Bausteine/Arena/ArenaDyn.lean:270/341/362`, reducing to check/narrow/stores | `lowE_ok`/`lowB_ok`/`blockCheck_case`; canonical `dynGrow_commit`/`dynAlloc_simuliert`. Export committed counter, `used <= committed <= M`, failure and effects. Physical provision/commit is B06/C08, not established by a counter update. |
@@ -1276,8 +1276,8 @@ whose only blocker is the canonical exporter.
 | B07 userspace child body at a checked stack handoff | `Uebersetze.lean:2538`, `stmt without G form: child` | Generic thread-machine `FadenSchritt.kind` and goal rules; `spawn_kind_ziel` is a concrete witness, not a generic compiler theorem; existing `Senke.CloneAnswers`/clone support is not a source-child attachment theorem | Connect actual gate/stack/entry contract, resource transfer, starts, frame/ABI and parent/child outcomes. No `lowS/lowB/lowEnd` child case; never execute child sequentially in parent. Boot/ASM excluded. |
 | B08 richer closed concurrent-start arguments | `Uebersetze.lean:4071`, `concurrent member with an argument outside its parameter's type`; restricted `uStartArg` | Args/Env/starts exist; literal/Bool/None/table-capability starts already export. `StartArgument.expression:11` is proved by the same restricted matcher | Extend reification/extraction and initialization/image proofs for checked constants, Some, tags, arrays/function references. Retain source identity, multiplicity, closure and exact value/type. Large arguments also need B02. |
 
-**C — canonical model/admission rule or semantic binding missing; owner
-decision first.** There is no complete emitter+proof for the requested source
+**C — canonical model/admission rule or semantic binding missing; decision
+first.** There is no complete emitter+proof for the requested source
 semantics merely because an abstract theorem or primitive can be found.
 
 | ID / source form | Exact refusal / default | Model evidence and missing rule | Required decision / preserved guarantees |
@@ -1290,7 +1290,7 @@ semantics merely because an abstract theorem or primitive can be found.
 | C06 nontrivial function-pointer requires/ensures | `Uebersetze.lean:4603/4604`, `contract on a function-pointer type without G form` | Signatur/SigPasst has effects/resources/floor but no predicate contract; Programm requires/ensures is indexed by concrete Fn | Indirect caller duty and target conformance rule (O43), preserving every possible target's contracts. Trivial requires/ensures true already pass. |
 | C07 fallible indirect calls / pointer reason channels | `Uebersetze.lean:4617`, `pointer type with a reason channel without G form`; :3009/2534 requires let-else | Stmt.callInd/Block.bindCallInd/Endblock.bindCallInd require zero reasons (S:601/658/774); no indirect bind-else | Canonical error continuation/conformance/resource rule before emitter+proof. Do not erase the channel or substitute a direct target. |
 | C08 foreign/axiom/syscall contracts, resource effects, provider contracts and fallible void handling | `Uebersetze.lean:4039` (axiomT requires), :4126/4132 (foreign effect/clause), :4186 (gate pre/post), :4156 (reason channel without answer) | D.Ax has typed answers/writes but no requires/ensures or linear signature flow. Ref/provider refinements supply duties, not source contract admission | Establish user-logic contract/admission and provider freshness/disjointness bridge; OS behavior is not hardware. A ref type/TorOK is insufficient. Model a fallible unit/void result explicitly, not as an invented number. |
-| C09 complete owner minter and own borrow/return discipline | `Uebersetze.lean:1172/1925/1806/822`, table/resource/result/type boundaries | Owner guards/initial resources exist (A04); Ty has no mark value, foreign calls preserve Λ, `eigner_nie_erzeugt` forbids owner production by every signature (S:203) | Connect unique mint, root/start-once and borrowing/returning an existing mark without production/duplication. `own`→writable Bool at :1005/1758 supplies no such proof. |
+| C09 complete ownership minter and own borrow/return discipline | `Uebersetze.lean:1172/1925/1806/822`, table/resource/result/type boundaries | Ownership guards/initial resources exist (A04); Ty has no mark value, foreign calls preserve Λ, `eigner_nie_erzeugt` forbids ownership production by every signature (S:203) | Connect unique mint, root/start-once and borrowing/returning an existing mark without production/duplication. `own`→writable Bool at :1005/1758 supplies no such proof. |
 | C10 shared locks and full RCU/observes/reclamation | `Uebersetze.lean:1212` (shared declaration), :3590 (`shared lock without G form`), :4039 (rcuT), :2538 (watch); other masks :1203 | Stmt.observes (Z:200) is ordinary locks sugar; Res.held has no reader/writer distinction or grace-period/reclamation state | Canonical shared/RCU lifetime admission preserving rank, exclusion and reclamation. An exclusive lock is not automatically the requested RCU semantics; non-irqs masks need a named mask rule too. |
 | C11 consuming traversal, no-else arena alloc, lock-crossing return admission | `Uebersetze.lean:3175/3536/2538`; `UebersetzeAllg3.lean:178/799` (`return under locks`) | Stmt.traverse is a fixed index sweep; Isabelle.Consuming/GabbroV.GvTraversal is not its source expansion. Arena alloc requires a failure Endblock. Stmt.ret requires Λ.Perm V.ende, incompatible with an extra held lock under current admission | Establish the consuming mutation/measure, capacity duty for omitted failure, or resource-aware cleanup/return rule respectively. Stage0 also keeps retFrei restrictions; loosening that gate alone is unsafe. These are control-admission variants, not runtime no-ops. |
 | C12 named spaces, unsupported rights, byte/raw/entry pointer wrappers | `Uebersetze.lean:1004/1013/1023/1757/1766`; :963 rejects a nontable pointee | Ty.ptr n rw is a table capability, not a byte extent/space value; fnptr is a checked function identity | Define safe userspace region/code-capability semantics and checked profiles first. No data/code confusion or fabricated table number. Numeric raw addresses remain excluded. |
@@ -1350,11 +1350,11 @@ each and share substantial work. B: **25-55 person-days** across eight packages,
 overlapping existing IR-03/04/06/10/11/12 work; do not add this twice to staffed
 lanes. C: **5-10 person-days for canonical design/decisions**, then provisionally
 **30-70+ person-days** for model/admission, goal validation and implementation;
-no completion date precedes the owner's decisions. Unchanged guarantees and
+no completion date precedes the decisions. Unchanged guarantees and
 available Lean slots are assumed.
 
 Critical path: canonical resource/signature/source-expansion interface for
-A02-A08/A24; shared value/ABI/gate/region interface for B; owner decisions for C.
+A02-A08/A24; shared value/ABI/gate/region interface for B; decisions for C.
 A useful first batch is A01, A11-A15, A21-A23 (roughly 3-7 person-days combined),
 then shared resource export. Four independent ad hoc IR-13 exporters would
 duplicate that boundary. This catalogue grants no implementation/build authority.
@@ -1367,7 +1367,7 @@ compiled or proved by this planning task.**
 ### Model extension design: C13, C17, C05, C04 (2026-11-01)
 
 Design baseline: `f40b2537b`; static source inspection only, no Lean edits or builds.
-Implement in the order below, with one owner of `grammatik/`. Names marked **new**
+Implement in the order below, with one agent responsible for `grammatik/`. Names marked **new**
 are proposed definitions, not claims about existing declarations. Paths below are
 relative to `grammatik/Grammatik/`, except explicit `stage0/` paths. These designs
 do not close catalogue cells: completion requires the generic source preservation
@@ -1577,7 +1577,7 @@ general index expressions (C13), and building all of it.
 | C05 | `Kern/Syntax/Syntax`, `Semantik/Semantik/T1`, `Syntax/Satz/T4`; all declaration fixtures and carrier clients; `Interferenz*`, `VertragsFuss`, `Zielsatz/Kern/Spec`, invariant/replay/atomic/idle-root/link modules; exporter and Stage-0 `Funktion`, `Rueckkehr`, return emission, invariant-return and recursion proof clients |
 | C04 | `Kern/Syntax/Zucker` and expansion witnesses; `Parser/Elab/Uebersetze*`, source normalization/provenance, generated-function lowering and certificates; rebuild existing goal/IR clients of the expansion without altering G's primitive shift |
 
-The grammatik owner batches edits/builds; grammar builds use measured available
+The `grammatik/` agent batches edits/builds; grammar builds use measured available
 memory minus 2 GiB under the prescribed scope and count against the two global
 Lean slots. Stage-0 checks retain 5 GiB slot limits. After each implementation
 batch: full grammar build, layout check, Lean guardian and witnesses; print
@@ -1627,7 +1627,7 @@ address; C01 does not authorize raw-address access or privileged boot execution.
 | Layer | Implementable change |
 |---|---|
 | Types and values | In `Kern/Syntax/Typen`, append **new** `Ty.prod (name : Nat) (fields : List Ty)` and, at the ownership stage, **new** `Ty.linear (name : Nat) (repr : Ty)`. A resolved declaration number supplies nominal identity; anonymous structural products receive an interned identity derived from their complete ordered schema. Canonical alias expansion preserves the original identity. Export/link relocation must map these identities just as it maps table/signature identities. `Val F passt (.prod r fs)` is the dependent tuple `(i : Fin fs.length) → Val F passt (fs.get i)`; the empty tuple has one mathematical value. `Val F passt (.linear r τ) = Val F passt τ`; the wrapper preserves ownership identity in the type, not an extra runtime word. Extend the nested structural recursion used for arrays to lists of child types, with an explicit decreasing type-size argument if Lean cannot elaborate recursion through `List.get`; no arbitrary depth/fuel cut. Add **new** `prodGetW` and `prodSetW` at typed indices and prove get/set, other-field preservation and extensionality. |
-| Typed expressions | `Args` currently follows `Expr`, outside its mutual family (`Syntax/Syntax:553`). Move that same definition into the mutual family before appending **new** `Expr.prod (r : Nat) (args : Args D Γ Λ fs) : Expr D Γ Λ (.prod r fs)`, **new** `Expr.prodGet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) : Expr D Γ Λ (fs.get i)`, and **new** `Expr.prodSet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) (e : Expr D Γ Λ (fs.get i)) : Expr D Γ Λ (.prod r fs)`. Keep `Args.nil/cons` and their order. A **new** indexed `FieldPath : Ty → Ty → Type` composes these projections/replacements for nested places; elaboration resolves names to indices, never runtime strings. No general `linear` introduction expression may manufacture an owner. |
+| Typed expressions | `Args` currently follows `Expr`, outside its mutual family (`Syntax/Syntax:553`). Move that same definition into the mutual family before appending **new** `Expr.prod (r : Nat) (args : Args D Γ Λ fs) : Expr D Γ Λ (.prod r fs)`, **new** `Expr.prodGet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) : Expr D Γ Λ (fs.get i)`, and **new** `Expr.prodSet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) (e : Expr D Γ Λ (fs.get i)) : Expr D Γ Λ (.prod r fs)`. Keep `Args.nil/cons` and their order. A **new** indexed `FieldPath : Ty → Ty → Type` composes these projections/replacements for nested places; elaboration resolves names to indices, never runtime strings. No general `linear` introduction expression may manufacture an ownership mark. |
 | `eval` and assignment | In `Kern/Semantik/Semantik/T1`, `eval .prod` packages the evaluated arguments in declaration order, `eval .prodGet` selects the component, and `eval .prodSet` replaces precisely that component. Their `orte` are respectively argument reads, base reads, and base plus replacement reads. **No new `Stmt` constructor or primitive `execStmt` case:** local `p.f = e` expands to `assignVar p (prodSet (var p) i e)`; a record-valued table field expands through `assignSlot`, `assignThru` or `assignSlotRef`, and a global through `assignGlob`. Capture the place/index and RHS once with existing block/end-block binders before expansion; preserve source evaluation order. A record-field store is a read/modify/write of its containing cell and requires that carrier's existing write permission and guards. Prove the expansion against `execStmt` in T2, including preservation of every sibling. Do not route a state-field update around `Stmt.shift` or erase `where` checks. |
 | All value positions | `D.params`, `D.erg`, `D.typ`, `D.gtyp`, `ErgExpr.val`, `Env` and `World.slots/globs` already range over arbitrary `Ty`; use them unchanged for product parameters/results, locals and table/global cells. C03 makes `Ty.sum` payloads arbitrary `Ty`, so products also travel inside sums. Initialization must supply every field exactly once; no zero/default field and no projection masquerading as a whole result. `Stmt.verbund` in `Zucker:215` remains count-one carrier sugar, not the product constructor. Carrier records and by-value records share the resolved schema, but a by-value product is not a table capability. |
 | Source export | `Parser/Expr/Typ.STyp.raw` holds brace types; `SItemTief.typeT` holds names/modifiers; labelled `SExpr.call` is the existing `P(a: ..., b: ...)` construction (`SYNTAX.md:660`). Add **new** `URecord` and a checked schema collector in `Parser/Elab/Uebersetze`, preserving field names/order/types and nominal/linear/ghost modifiers. Resolve dependencies acyclically; recursive values require an existing safe indirection. Replace the relevant refusals in `uAliase:822`, `uTyp:988–1023`, `uFeldTyp:1029–1034`, parameter/result elaboration around :1780/:2050, and `uRestFehler:4039`. Reuse the canonical type/field reader for balanced `raw` groups, not a comma splitter. Extend `USide`, `UParamArt.wert`, `UFnKopf.resTy`, `UProg`, `uWertBlatt`, `uSeiteBlatt`, `uZugriff`, assignment and return elaboration; field access to a product must be distinguished from a carrier slot lookup. Reject missing/duplicate/unknown constructor labels and retain source argument evaluation order before arranging fields in declaration order. In `UebersetzeAllg`, extend `declOf`, field typing, `lowWertE`, `lowSideVal/lowSideEns/lowEns`; in `UebersetzeAllg2/3`, extend binding, argument/store lowering, `lowErg`, `lowStructL`, `lowEndL` and `lowerAllg`. Carry schema/constructor/projection/update preservation through the actual `Frontend.elabWithScopes` and `Compiler.CanonicalSourceProgram`, not a witness-only exporter. |
@@ -1636,7 +1636,7 @@ address; C01 does not authorize raw-address access or privileged boot execution.
 
 **Ownership is checked per field, not inferred from a byte copy.** Existing
 `Res.marke`, `D.eigner`, `Signatur.konsumiert/produziert` and `nachSig` govern
-resource marks; `Ty.ptr n rw` alone carries no unique owner (`Val` is unit).
+resource marks; `Ty.ptr n rw` alone carries no unique ownership mark (`Val` is unit).
 The deleted Rust checker's `m2.rs` tracked `Zustand::{Lebt,Verbraucht}` by variable, and `m3.rs` handled
 root separation. Neither supplies a generic proof of partial record moves.
 
@@ -1646,7 +1646,7 @@ permissions themselves. Define path get/set recursively from `prodGetW` and
 `prodSetW`, with get-after-set and disjoint-path frame lemmas. Array indexing
 uses existing `arrGet/arrSet`; inventory keys append the evaluated bounded
 element index. Representation steps cannot bypass `ValueUse` or unwrap an
-owner into a freely copyable capability.
+ownership mark into a freely copyable capability.
 
 Implement **new** `ValueUse`, an inductive derivation over the existing typed
 syntax, with input/output availability maps keyed by local/cell plus `FieldPath`.
@@ -1682,10 +1682,10 @@ The same mechanism covers whole records, parameters, results and payloads:
   carried inventory at back edges and prove all exit inventories. A divergent
   branch has no terminating-exit obligation. No new eventual-consumption claim
   about an infinite run follows from linearity.
-- Existing marks remain in `Λ`; a field carrying an owner names that same mark,
+- Existing marks remain in `Λ`; a field carrying an ownership mark names that same mark,
   not a newly minted one. Parameter/result transfer renames its location; stage
   changes/retirement use `advances`/`retires` and existing signature transitions.
-  Provider freshness and the existing owner-minter obligations remain user logic.
+  Provider freshness and the existing ownership-minter obligations remain user logic.
   Ghost linear fields have proof obligations but no independent payload word;
   export them to the existing mark context, with a certificate matching each
   erased field to its resource. `URecord` keeps the full schema and a checked
@@ -1704,7 +1704,7 @@ For linear table/global cells, availability is a ghost inventory over the
 existing `Speicher`, keyed by actual `(t,k,f,path)` or `(g,path)`, not a new heap.
 A move leaves stale representation bits but no usable permission; its next read
 requires a live inventory entry. The shared inventory is updated under the same
-carrier guards/owner marks as the store; aliases name the same entry. Computed
+carrier guards/ownership marks as the store; aliases name the same entry. Computed
 indices need a proved equality/disjointness fact, not distinct syntax. Add **new**
 `ValueOwnership` relating each live linear atom to exactly one location, and
 prove preservation under the existing G/GX step and foreign-call contract.
@@ -1762,7 +1762,7 @@ safe capability/reference relation supplied by the declared storage/binding,
 whose correspondence is proved as user logic. Without that relation or an
 agreed `va` unit, refuse the affected walker by name; never fabricate an address
 conversion, flatten an unrelated table, or claim complete walk coverage. These
-are source-meaning decisions for the grammatik owner/owner, not implementation
+are source-meaning decisions, not implementation
 freedom to guess paging constants. Safe finite walkers proceed independently.
 
 **C03 — open reasons and arbitrary typed tagged payloads.**
@@ -1785,7 +1785,7 @@ known case count. Recursively preserve IEEE well-formedness. Prove
 `antwortTyB_iff` and `einpassen_voll` for these definitions with **one consistent
 function image** across all nested function-pointer leaves, then restore
 `antwortenB_iff`/`StelleOk` and halt classification. Decoding completeness is not
-provider freshness or an owner minting proof. For all-copyable old programs,
+provider freshness or an ownership minting proof. For all-copyable old programs,
 `ValueUse`/ownership obligations are empty and derive automatically; stages
 must not add an unrelated user premise to an existing accepted scalar program.
 
@@ -1865,7 +1865,7 @@ must actually pass export, `AkzeptiertX`, IR emission and the assembly runner.
 | Package | Positive witnesses | Negative twins / retained refusals |
 |---|---|---|
 | C01 values/layout | Empty and heterogeneous scalar product; two equal-shape nominal records; nested record/array/string and a >64-bit field; field replacement preserves siblings; record parameter → table cell → sum payload → call result; old-field contract; overlapping-copy temporary | Foreign nominal identity, unknown/missing/duplicate field, wrong range/type, recursive-by-value schema, out-of-range array index, truncated result, unsupported byte layout, state/where bypass, unguarded carrier or shared-atomic contract |
-| C01 ownership | Move one linear field and use its scalar sibling; refill moved field then move whole record; two linear fields transferred independently; linear payload match; guarded cell handoff through an alias; both normal/error exits conserve ownership; ghost mark/stage survives erasure | Read moved path/whole partial record, duplicate field move, overwrite/drop live leaf, unequal branch inventory, missing consumes position, forged owner, aliasing computed cell, unproved initial/provider ownership, ghost runtime use |
+| C01 ownership | Move one linear field and use its scalar sibling; refill moved field then move whole record; two linear fields transferred independently; linear payload match; guarded cell handoff through an alias; both normal/error exits conserve ownership; ghost mark/stage survives erasure | Read moved path/whole partial record, duplicate field move, overwrite/drop live leaf, unequal branch inventory, missing consumes position, forged ownership mark, aliasing computed cell, unproved initial/provider ownership, ghost runtime use |
 | C01 mappings | L=1; N=2/L=3 with real child links; unreachable/nonleaf entries excluded; early large-page leaf; shared child at two distinct paths; every node field plus va/level/index; nested quantified binder and generated invariant | Zero/unknown levels, invalid down target, synthesized-name collision, missing safe child binding/va scale, L*N domain bound, wrong active index suffix, missing invariant restoration; raw-address or boot behavior remains excluded |
 | C03 | Closed and open declarations with equal known cases but different identities; undeclared open code survives foreign call → else binder → return → caller equality; open declaration with no known cases; codes >64 bits; bool/record/array/string/reference payloads through match and calls; closed integer tags retain their compact theorem | Open `match` (M125), foreign-reason equality/forwarding, code outside u128, duplicate codes, unknown closed code, absent/extra/wrong payload, malformed nested raw answer, discarded fields, unproved reference provenance, non-atomic multiword exchange |
 
@@ -1887,7 +1887,7 @@ embeddings, goal witnesses, exporter and the GabbroV bridge. C03's changed
 answer proofs. Stage 0 rebuilds aggregate encoding/layout, world/init/snapshot,
 expression and dispatch, assignment/binding, direct/indirect/foreign calls,
 returns, recursion, start/image and frontend/compiler provenance consumers.
-One grammatik owner batches these changes; no simultaneous grammar mutation.
+One `grammatik/` agent batches these changes; no simultaneous grammar mutation.
 Implementation builds use the authorized available-memory-minus-2-GiB scope
 and two global slots; Stage-0 checks use their prescribed 5-GiB slots. Require
 full grammar build, layout check, Lean guardian/axiom audit and connected
@@ -1898,8 +1898,8 @@ changes no measured proof/acceptance status; no builds were run.
 ### Model extension design: C06, C07, C08 (2026-11-01)
 
 Separate compilation carries the same C06 refinement duty as the full user
-logic, restricted to each target's actual owner. `NutzerTeil`, `NutzerTeilA`
-and `NutzerTeilO` therefore include owner-restricted `PtrZielVerfeinert` facts;
+logic, restricted to each target's actual ownership. `NutzerTeil`, `NutzerTeilA`
+and `NutzerTeilO` therefore include ownership-restricted `PtrZielVerfeinert` facts;
 placeholders do not inherit another unit's obligation. `Verbindbar` and project
 `Passend` share the existing pointer and axiom contract tables as well as
 requires/ensures. Body replacement and linking transport those contracts,
@@ -1984,7 +1984,7 @@ excuse to collapse their contracts by signature number.
 | Channel/type | Adopt C03's `Signatur.gruende : Option ReasonSpec`, `reasonTy`, `SigPasst.gruende` equality and generalized outcomes. Preserve descriptor identity/openness and full u128 codes. An open channel with zero known cases is still a channel. Keep `Stmt.callInd` and nonfallible `Block/Endblock.bindCallInd` restricted to `gruende = none`; never discard a reason via the present `keinGrundSig` path. No separate pointer-only error type. |
 | Syntax and resources | Append **new** `Block.bindCallIndElse` and `Endblock.bindCallIndElse`: `p : Expr D Γ Λ (.fnptr n)`, signature arguments, `hp : RufPasst D V (D.sigNr n) Λ`, `hr : (D.sigNr n).gruende = some r`, `err : Endblock D V l (reasonTy (some r) :: Γ) Λc`, and a success continuation under `Λc := nachSig D (D.sigNr n) Λ`. For a success result `e := (D.sigNr n).erg`, its context is `ErgCtx Γ e`; the block continuation ends in `Λ'`, the end-block continuation must terminate. Use arbitrary `e`, not `he : e = some τ`, so void success binds no value. Append **new** `Stmt.callIndElse` with the same arguments/`hp`/`hr`, `err` and result resource `Λc`; success discards only the normal value and continues in Γ. Implement it as checked sugar over `Block.bindCallIndElse` with an empty success tail and scope projection; no duplicate dispatch semantics. Existing `Stmt.callInd` is unchanged except C03's channel premise. |
 | Sequential and G | Extend `execBlock/execEnd` in `Semantik/Semantik/T2` and havoc/rely variants: record `p.orte ++ args.orte`, evaluate once, call `R f` with `umsig hf`; normal value is transported by `SigPasst.erg` into `ergEnv`, reason by `SigPasst.gruende` into the exact `err` binder. Both use `nachSig`; propagate logic/hardware stops unchanged. Generalize `GRest.wartetSonst` (`Logik/Ruf/Maschine/RufMaschineG/T1`) to optional result and C03 descriptor, sharing direct and indirect continuations; migrate direct `bindCallElse` to the same optional-result interface rather than adding a second wait stack. Append push rules for new block/end forms at the end of `RufSchrittG`, patterned on `dannBindCallInd` and `dannBindCallElse`; save selected `f`, entry world/arguments and interface resource equality. Reuse generalized value/reason pop rules, including `retWhy` inside `cons`, without re-evaluating `p`. Statement sugar must retain loop/end continuation and both return paths. |
-| Duty/acceptance | C06's pre and universal refinement apply before either outcome. Normal returns expose type post; errors expose reason identity plus owed invariants and `Λc`, not type normal ensures. Extend `vOk/gOk`, fragment checks, `ants`, footprints, masks, `ueberBoden`, terminal/progress predicates and `AbgK` through **both** continuations and every admitted target. `D.eigner_nie_erzeugt` still prohibits minting an owner merely through `produziert`. Error paths cannot restore consumed marks, invent success-only marks or fall off. Preserve locks on reason exits exactly as on ordinary `bindCallElse`. |
+| Duty/acceptance | C06's pre and universal refinement apply before either outcome. Normal returns expose type post; errors expose reason identity plus owed invariants and `Λc`, not type normal ensures. Extend `vOk/gOk`, fragment checks, `ants`, footprints, masks, `ueberBoden`, terminal/progress predicates and `AbgK` through **both** continuations and every admitted target. `D.eigner_nie_erzeugt` still prohibits minting an ownership mark merely through `produziert`. Error paths cannot restore consumed marks, invent success-only marks or fall off. Preserve locks on reason exits exactly as on ordinary `bindCallElse`. |
 | Export coordinates | Remove the `uZeigerSig:4617` reason-channel refusal only after descriptor parsing/lowering; preserve `FnSig.fehler` through `elabZeigerTyp`, `UFn/UFnKopf`, `mkSig` and `sigPasstB`. `uAnw1:2534`, `uBindWert:3009` currently require let-else; add appended `UStmt` forms for indirect else, resolving the pointer variable rather than looking up a direct target. Extend `uAnwReihe`, `uEndeKanal`, `lowZeigerN/lowRufKopfN`, `UebersetzeAllg3` block/end/final binding paths. Type-check annotation/result/channel and preserve shadowing, original arguments, error binder and post-call resource scope. No-channel calls keep existing export. |
 | Stage 0 | `Anweisung.lowInd` currently rejects nonzero reasons. Generalize its call assembly independently of outcome dispatch, then use the same checked status/error continuation mechanism as direct `bindCallElse` (`elseC`, `Faelle/CallElse`) for new indirect constructors. Use C03/IR-03's complete return and reason spans with status outside both; void has zero value words and no synthetic source number. Prove new normal/reason versions of `execBlock_ind_eq/execEnd_ind_eq`, `indAntwort/indBind_ok`, and statement-sugar simulation, preserving saved pointer, caller parameters/snapshots, reserved scratch, loop targets and resources. Connect through `lowS_ok/lowB_ok/lowEnd_ok`, function and image theorems, including a runtime-selected target that returns an unknown open reason. |
 
@@ -1993,9 +1993,9 @@ excuse to collapse their contracts by signature number.
 | Layer | Implementable change |
 |---|---|
 | Canonical signature/contract | Replace independent foreign shape fields with **new** `Deklaration.asignatur : Ax → Signatur Tab Glob Lock Marke`; keep `aparams/aerg/aschreibt/agschreibt/agruende` as the single canonical projections, not duplicated stored state. Add **new** `Programm.axVertrag : ∀ a, CallContract D (D.asignatur a)`, with exact argument/result/old contexts. Generalize the existing `AxEns`/`AxVertragO` in `Logik/Vertraege/AxiomVertrag`: its current `Q a σ' v` has neither entry world nor arguments and only sees the normal-result decoder. The new contract relation uses pre-world, original arguments, post-world and C03's decoded normal-or-reason outcome; normal post applies only on normal return. Replace the restricted `AxEnsLokal` rule (only write carriers) with explicit guarded pre/post footprints and two-world replay. Migrate `Einheit.Q` to this canonical relation, derived from the exported contract, not independently supplied as an unrelated stronger predicate. |
-| Caller/resource rules | Replace the duplicated `hw/hg/hd/hgd` call premises by `RufPasst D V (D.asignatur a) Λ`; nonfallible `Stmt.axiomCall` requires `aerg = none` **and** `agruende = none`, and exits in `nachSig D (D.asignatur a) Λ`. Add the no-channel premise to ordinary `bindAxiom`. Generalize `Block/Endblock.bindAxiomElse` success to `ErgCtx Γ (D.aerg a)`, error to `reasonTy (D.agruende a) :: Γ`, both under the same `nachSig`; a `none` result has `ErgVal none = Unit` (`Semantik/T1:353`) and adds no local. Generalize `bindAxiom` consistently to optional result to avoid a separate void API. Append **new** `Stmt.axiomCallElse` as scope-erasing sugar over the generalized binder, as for C07. Include foreign signatures in owner-never-produced, floor, held-set, mask and linear-flow checks. Foreign effects must realize consumes/produces/held permissions at both exits; arbitrary `locks` effects need proved acquire/release traces and floor behavior, not a fabricated no-lock frame. Unmodeled masks/publishes/other effects remain refused until their generic trace rule exists. |
+| Caller/resource rules | Replace the duplicated `hw/hg/hd/hgd` call premises by `RufPasst D V (D.asignatur a) Λ`; nonfallible `Stmt.axiomCall` requires `aerg = none` **and** `agruende = none`, and exits in `nachSig D (D.asignatur a) Λ`. Add the no-channel premise to ordinary `bindAxiom`. Generalize `Block/Endblock.bindAxiomElse` success to `ErgCtx Γ (D.aerg a)`, error to `reasonTy (D.agruende a) :: Γ`, both under the same `nachSig`; a `none` result has `ErgVal none = Unit` (`Semantik/T1:353`) and adds no local. Generalize `bindAxiom` consistently to optional result to avoid a separate void API. Append **new** `Stmt.axiomCallElse` as scope-erasing sugar over the generalized binder, as for C07. Include foreign signatures in ownership-never-produced, floor, held-set, mask and linear-flow checks. Foreign effects must realize consumes/produces/held permissions at both exits; arbitrary `locks` effects need proved acquire/release traces and floor behavior, not a fabricated no-lock frame. Unmodeled masks/publishes/other effects remain refused until their generic trace rule exists. |
 | Premise provenance | Add **new** declaration metadata `AxOrigin`: `software` or `hardware (a : D.Annahme)`. It is not inferred from the word `extern`, `syscall`, `axiom` or an ABI number. Add **new** `ForeignPflicht E O` in `NutzerPflicht/NutzerPflichtA`, hence make that duty explicitly parameterized by the actual oracle/binding realization `O`. For every software item its proved implementation/binding establishes frame, held-lock/trace discipline, result/reason decoding, postcondition under pre, resource transfer and provider facts. The body's own `CallSitePflicht` establishes pre at every call. Sequential logic still quantifies over **all** answers satisfying the declared summaries, not just this O. Narrow `HardwareAnnahmen`'s foreign part to explicitly named hardware-origin items; keep genuine register/weak-memory hardware conditions. Re-establish combined per-call `GutO`/contract facts from the two groups, then feed the existing replay proofs. Conditional contracts are used only at a site whose pre is proved; localize any proof currently demanding unconditional `AxVertragO` accordingly. No normalization to an out-of-range raw answer: void and full-range types have no such sentinel. |
-| Akzeptiert | Add **new** `schnittstellenB` with a proved iff to a corresponding **new** field of `AkzeptiertSpec`/`AkzeptiertSpecX`: all referenced pointer/foreign signatures and origin names resolve, parameter/result/channel descriptors agree with calls, resource lists have valid stages/multiplicities, foreign-produced marks satisfy owner-never-produced, and contract/boundary-clause reads satisfy guard/ghost/atomic restrictions. Enumerate signatures/origins/clauses from the finite unit; do not infer missing contracts from `fs` alone. Fold the component into `Akzeptiert` and `AkzeptiertX`, and extend their soundness proofs. Reuse existing `stufenB`, `fussWB`, `maskenB`, `antwortenB` for their semantic obligations, including both error branches. `PtrVerfeinert`, software implementation proofs and grant-history realization remain in (b), not this Bool. |
+| Akzeptiert | Add **new** `schnittstellenB` with a proved iff to a corresponding **new** field of `AkzeptiertSpec`/`AkzeptiertSpecX`: all referenced pointer/foreign signatures and origin names resolve, parameter/result/channel descriptors agree with calls, resource lists have valid stages/multiplicities, foreign-produced marks satisfy ownership-never-produced, and contract/boundary-clause reads satisfy guard/ghost/atomic restrictions. Enumerate signatures/origins/clauses from the finite unit; do not infer missing contracts from `fs` alone. Fold the component into `Akzeptiert` and `AkzeptiertX`, and extend their soundness proofs. Reuse existing `stufenB`, `fussWB`, `maskenB`, `antwortenB` for their semantic obligations, including both error branches. `PtrVerfeinert`, software implementation proofs and grant-history realization remain in (b), not this Bool. |
 | Existing bridge and required closure | Reuse `Logik/Ruf/FremdRuf/T2.AxPre`, `AufruferPflicht`, `AxVertragOP` and T3's `RufFolgePflicht` to state the pre split, but do not cite `hardware_aus_vertragP` as machine-level closure: its own CUTS require `hraus`, exclude void, and only prove oracle/sequence coincidence. Extend actual `RufSchrittG` axiom/binder rules and their recorded `AxEintrag` replay with precondition-at-call and outcome-sensitive post/resource facts. Generalize `Kern/Semantik/Syscall/SyscallPaarung.KernelEintragG`, `UserSyscallG`, `PaarGut` and `syscall_paarung` to typed/void/open outcomes and resource/extent evidence; tie the proved dispatch/binding implementation to the same `O.wirkt`. An OS implementation proof can discharge this **user** obligation; an unproved OS promise cannot enter (c) under a different name. The current theorem already separates program ABI data from hardware and supplies a reusable pairing shape, not a complete source export. |
 | Provider realization | `D.anbieter_passt` proves only open-table/parameter/result shape. `Unbounded/GRefine.RegionRepr` and `allocate_refines` assume the candidate and installed contents; `GRegion.oK` accepts any K. Neither proves physical freshness. Build **new** `ProviderRealisiert` as the provider clause of `ForeignPflicht`, a relation on successful boundary transitions and a history of live grants: region/table identity, cell or extent, byte base/length/alignment/rights, initialized contents, provenance, and an injective mapping to the actual binding memory. Success introduces a grant absent from all live grants; all bytes are in the returned REGION and disjoint from every live grant and compiler frame/code/snapshot allocation. Failure introduces no grant; any other state/resource effect must satisfy the declared failure frame. Release/reuse needs the existing ownership ledger and no outstanding borrow; no new allocator or `int → ref` source form. Use `Schablonen/SchablonenOhneLibc.RegionVertrag/region_zugriff`, `Unbounded.Heap.Valid/allocate_refines` and the ownership interfaces as lemmas in that transition proof, not detached witnesses. Extend the region contract predicate vocabulary/export to retain freshness/disjointness/length clauses as checked semantic relations to this grant history; never lower them to `true`. |
 | Provider history in G | Add **new** `BoundaryRecord D` (item, original arguments, entry/exit memories, decoded outcome and declared grant/release identity) and an append-only history field at the end of `RufMaschineG`; `RufStartG` starts from **new** `Einheit.grants0`, the source-declared initial inventory; extend `StartPflicht` to prove its provenance, disjoint realization and correspondence to initial capabilities, rather than assuming an empty external world. Each foreign step appends exactly its actual record; other steps preserve the field. A **new** `GrantInventory` is the deterministic fold of those records: success-grant inserts, declared release removes after ownership/borrow checks, reason return grants nothing. Extend `BoundaryClause` with the explicit release case for existing consumes/release declarations; no implicit collection on scope exit. `ProviderTreueG` relates that history to a single global inventory across all threads and to the binding realization, preventing per-thread freshness from admitting cross-thread aliases. This is ghost specification data, erased from emitted code, not a second executable heap. Lift its step preservation through GX, spawn, idle root and linking. Sequential `CallSitePflicht` carries the same inventory through boundary prefixes; its transport proof identifies it with this global history. |
@@ -2064,13 +2064,13 @@ gets a non-degenerate `_zeuge` with all premises jointly, then source-export,
 |---|---|---|
 | C06 | Two runtime-selectable same-shape targets with distinct stronger posts/weaker pres; state-reading type pre and `old` post; callback through parameter/table/result and a proved foreign thunk; nonempty effects/mark flow | Stronger target pre, weaker target post, reversed implication, bad second target, forged image pointer, old/current mixup, hidden shared-atomic contract, unproved Held/floor/effect/refinement pair; preserve N589/N590 until the corresponding full path is proved |
 | C07 | Both indirect value paths in Block/Endblock; statement and void success; dynamically selected error target; open channel with no known cases; unknown >64-bit reason forwarded through nested calls; consumed/produced marks and a held lock on both exits | Missing else, falling-off error block, wrong nominal channel, zero-known-open treated as none, re-evaluated target, stale/error payload span, normal post assumed on error, early return skipping lock release, different branch inventory |
-| C08 | Argument/old/result-dependent extern and named hardware axiom; proved syscall pairing with real buffer write; fallible Bool/reference/void; two fresh grants, preserved first grant, release/reuse with no borrower; provider availability as user proof; no-channel void and never | Missing software proof, hardware label on OS behavior, false pre, return outside declared decoder, malformed open reason/tree, unproved resource effect, owner minted by produces, failure treated as pure, repeated/overlapping/short/misaligned grant, raw int-to-region, read-only grant written, missing backing/availability, ambiguous/unbound gate |
+| C08 | Argument/old/result-dependent extern and named hardware axiom; proved syscall pairing with real buffer write; fallible Bool/reference/void; two fresh grants, preserved first grant, release/reuse with no borrower; provider availability as user proof; no-channel void and never | Missing software proof, hardware label on OS behavior, false pre, return outside declared decoder, malformed open reason/tree, unproved resource effect, ownership minted by produces, failure treated as pure, repeated/overlapping/short/misaligned grant, raw int-to-region, read-only grant written, missing backing/availability, ambiguous/unbound gate |
 
 Existing unsupported ABI widths/effects are explicit interim refusals, not a
 reason to shrink the source theorem. ASM bodies, boot/privileged execution,
 raw-address syntax and device-register forms stay outside this assignment.
 
-**Owner questions — source meaning, with recommendations.**
+**Open questions — source meaning, with recommendations.**
 
 - **C08 hardware classification:** does existing `axiom ... falsifier ...` always
   mean a hardware-origin operation, or may it declare a software service?
@@ -2082,7 +2082,7 @@ raw-address syntax and device-register forms stay outside this assignment.
 - **C07/C08 resource effects on errors:** are declared produces/consumes common
   to every returning exit, or success-only? Recommend the existing ordinary-call
   rule: one `nachSig` for normal and reason exits; no resource rollback on error.
-  If the owner intends outcome-specific effects, extend the canonical signature
+  If outcome-specific effects are intended, extend the canonical signature
   with explicit per-outcome flow and migrate direct calls too before acceptance;
   do not introduce that meaning only for syscall/pointer calls.
 
@@ -2090,7 +2090,7 @@ Normal ensures applying only to normal returns, OS behavior as user logic,
 region-only external memory and OOM as user logic are existing rules, not open
 choices. No normal-result postcondition on reasons is proposed.
 
-**Staging and rebuild impact.** One grammatik owner first adds typed interface
+**Staging and rebuild impact.** One `grammatik/` agent first adds typed interface
 contracts/O43 and caller-duty replay with scalar no-channel witnesses (C06).
 In a separate compiling boundary batch, introduce canonical foreign signatures,
 software/hardware provenance and actual-machine pre/post replay (C08 foundation);
@@ -2110,7 +2110,7 @@ world/init/layout, mutual lowering, function/recursion/image correctness and
 frontend/compiler provenance. Existing narrower adequacy CUTS such as
 `Logik/Ruf/Adaequat/RufAdaequatRufG/T10` are not proofs of the new cases. Extend
 only the generic bridge actually consumed by the pipeline and report remaining
-cuts precisely. The implementation owner uses the authorized grammar memory
+cuts precisely. The implementation agent uses the authorized grammar memory
 scope (fresh MemAvailable minus 2 GiB, swap zero), within the current two global
 Lean slots; Stage-0 checks retain 5-GiB slot scopes. Require the full grammar
 build, layout check, Lean guardian/standard-axiom audit and connected Stage-0
@@ -2139,7 +2139,7 @@ exporter intermediates. No new admission branch defaults to true.
 
 | Package | Core change | Spec impact | Engineering days |
 |---|---|---|---|
-| C09 | One-shot mint authority and stack-aware owner transfer/loan conservation | **Yes:** initial/minted owner provenance and lifetime become checked goal facts; signatures still cannot produce owners | 12–20 |
+| C09 | One-shot mint authority and stack-aware ownership transfer/loan conservation | **Yes:** initial/minted ownership provenance and lifetime become checked goal facts; signatures still cannot produce ownership marks | 12–20 |
 | C10 | Mode-aware shared locks; separate RCU observation, retirement, grace and reclaim resources | **Yes:** canonical concurrency domain grows; mode-aware invariant visibility and RCU lifetime facts, no race exemption | 30–50: RW 9–15, RCU 21–35 |
 | C11 | Consuming loop with current-state selection/decrease; proof-duty narrowing; checked return cleanup | **Yes:** new control/duty cases and costs, same safety/conservation conclusions | 18–30: traversal 8–13, allocation 3–5, cleanup 7–12 |
 | C18 | Checked static-array reset plus a proved page-return binding and live-range ownership | **Yes:** reset/provider lifetime and zero observations covered explicitly; no OS assumption | 14–24 |
@@ -2151,36 +2151,36 @@ path: resource conservation and return replay, then RW/GX integration, then RCU
 publication/reclamation and provider realization. Share cleanup and lifetime
 interfaces across packages instead of charging for independent implementations.
 
-**C09 — owner mint, linear handoff and scoped borrow/return.**
+**C09 — ownership mint, linear handoff and scoped borrow/return.**
 
-Present boundary: `Kern/Syntax/Syntax.lean:203` forbids an owner in **every**
+Present boundary: `Kern/Syntax/Syntax.lean:203` forbids an ownership mark in **every**
 `Signatur.produziert`; `nachSig` erases consumed marks and appends produced ones.
-`Ty`/`Val` in `Kern/Syntax/Typen` have no owner value, and environments can copy
+`Ty`/`Val` in `Kern/Syntax/Typen` have no ownership value, and environments can copy
 ordinary values. `Marken.MarkenSchritt` in `Kern/Syntax/Marken` has an `erzeuge` rule that
 explicitly excludes owners. `eigner_nachRuf_aus_anfang` and
 `eigner_aus_leer_nie` in `Kern/Syntax/Typen` express the
 present no-production boundary. Arena handles in `Bausteine/Arena/Ownership`
 are a different resource: `State.lend/endLoan`, `borrow_result`, `factory_checked`
-and `Ruhe.startOwn_arenen` do not mint `D.Marke` owners. Also,
-`Nebenlaeufigkeit/Rennfreiheit/RennfreiVoll` explicitly records that owner-mark
+and `Ruhe.startOwn_arenen` do not mint `D.Marke` ownership marks. Also,
+`Nebenlaeufigkeit/Rennfreiheit/RennfreiVoll` explicitly records that ownership-mark
 ordering is not proved on G there; do not cite that theorem as this bridge.
 
 | Layer | Implementable change |
 |---|---|
-| Kern resource interface | Keep `D.eigner_nie_erzeugt` for **ordinary production**, including pointer signatures and foreign effects. Add **new** `OwnerFlow` beside `Signatur`: exact owner inputs, moved normal/reason outputs and call-scoped loans, each referring to an existing `(m,stage)`; no output without a corresponding input. Define **new** `nachOwner` as transfer of those identities, composed with ordinary `nachSig`, never as owner `produziert`. Extend `RufPasst`, `SigPasst`, `Signatur.anfang` and `Vertrag.ende` consistently. Require disjoint move/loan sets, one occurrence per owner identity across stages, bounded stages and equal branch inventories. Preserve the old no-production lemmas with the stronger conclusion “output owner came from input or the distinguished mint transition”. |
-| Source values | Represent named `linear ghost` owner bindings by a checked source binding-to-`Res.marke` map, not a copyable `.int`, `.ptr` or unit-valued `Ty` token. Every source variable move, parameter/result handoff and borrow consumes or suspends exactly that map entry. Return metadata carries the same nominal mark and stage. This provides a source-to-resource preservation theorem even though the ghost value has no IR word. `own` on a pointer also requires the matching owner resource and C12's live capability; the current writable Bool is insufficient. No new copyable `Ty.owner` is needed for this ghost fragment; nonghost/stored owner values remain refused until a resource-indexed representation is proved. |
-| Unique mint | Add **new** `OwnerMintDecl` mapping each owner to exactly one resolved foreign minter and one root/site. Append **new** `Block.ownerMint` and `Endblock.ownerMint`: execute that binding once, add `.marke m s` only on its successful return, then continue under `.marke m s :: Λ` with the ghost-name resource binding (Block continuation ends in `Λ'`, Endblock continuation terminates). Arguments/effects/software proof use C08; the transition is not an arbitrary owner-producing axiom. The machine carries **new** `OwnerState`, with a permanent spent-mint set and a location for each live mark (active frame, suspended transfer/loan escrow, or retired). A mint requires unspent authority, records it spent, and never replenishes it after consume/return/reset. Append the corresponding event and G push/answer rules; the actual foreign invocation and its call log/effects remain present. Erase an external call only with a proved ghost-only implementation/erasure theorem. |
-| Roots and admission | Add **new** `ownerB`/`OwnerAdmission` to `Akzeptiert` and `AkzeptiertSpec(X)`. Check the complete direct/indirect call graph, exactly one syntactic mint site outside all loops, root with no caller/address-taking, one declared occurrence across `E.starts ++ E.gestartet`, and no repeated/spawned execution of that occurrence. `EinzelnPool` is not sufficient: pool-safe roots still cannot mint twice. Extend `Laufzeit.einmal`, `StartZulaessig`, `FadenMaschine` start/child and GX spawn preservation so dormant starts cannot restart the mint. “Once” is at most one execution, not a liveness promise that a branch reaches the call. Initial owners and minted owners have disjoint origins; no unaccounted owner may occur in a start signature. |
+| Kern resource interface | Keep `D.eigner_nie_erzeugt` for **ordinary production**, including pointer signatures and foreign effects. Add **new** `OwnerFlow` beside `Signatur`: exact ownership inputs, moved normal/reason outputs and call-scoped loans, each referring to an existing `(m,stage)`; no output without a corresponding input. Define **new** `nachOwner` as transfer of those identities, composed with ordinary `nachSig`, never as ownership `produziert`. Extend `RufPasst`, `SigPasst`, `Signatur.anfang` and `Vertrag.ende` consistently. Require disjoint move/loan sets, one occurrence per ownership identity across stages, bounded stages and equal branch inventories. Preserve the old no-production lemmas with the stronger conclusion “output ownership came from input or the distinguished mint transition”. |
+| Source values | Represent named `linear ghost` ownership bindings by a checked source binding-to-`Res.marke` map, not a copyable `.int`, `.ptr` or unit-valued `Ty` token. Every source variable move, parameter/result handoff and borrow consumes or suspends exactly that map entry. Return metadata carries the same nominal mark and stage. This provides a source-to-resource preservation theorem even though the ghost value has no IR word. `own` on a pointer also requires the matching ownership resource and C12's live capability; the current writable Bool is insufficient. No new copyable `Ty.owner` is needed for this ghost fragment; nonghost/stored ownership values remain refused until a resource-indexed representation is proved. |
+| Unique mint | Add **new** `OwnerMintDecl` mapping each ownership mark to exactly one resolved foreign minter and one root/site. Append **new** `Block.ownerMint` and `Endblock.ownerMint`: execute that binding once, add `.marke m s` only on its successful return, then continue under `.marke m s :: Λ` with the ghost-name resource binding (Block continuation ends in `Λ'`, Endblock continuation terminates). Arguments/effects/software proof use C08; the transition is not an arbitrary ownership-producing axiom. The machine carries **new** `OwnerState`, with a permanent spent-mint set and a location for each live mark (active frame, suspended transfer/loan escrow, or retired). A mint requires unspent authority, records it spent, and never replenishes it after consume/return/reset. Append the corresponding event and G push/answer rules; the actual foreign invocation and its call log/effects remain present. Erase an external call only with a proved ghost-only implementation/erasure theorem. |
+| Roots and admission | Add **new** `ownerB`/`OwnerAdmission` to `Akzeptiert` and `AkzeptiertSpec(X)`. Check the complete direct/indirect call graph, exactly one syntactic mint site outside all loops, root with no caller/address-taking, one declared occurrence across `E.starts ++ E.gestartet`, and no repeated/spawned execution of that occurrence. `EinzelnPool` is not sufficient: pool-safe roots still cannot mint twice. Extend `Laufzeit.einmal`, `StartZulaessig`, `FadenMaschine` start/child and GX spawn preservation so dormant starts cannot restart the mint. “Once” is at most one execution, not a liveness promise that a branch reaches the call. Initial ownership marks and minted ownership marks have disjoint origins; no unaccounted ownership mark may occur in a start signature. |
 | Calls and borrowing | On move, the caller loses use until the actual callee returns the same identity or consumes it as declared. On loan, move authority into a callee-frame escrow and disable the lender, including suspended callers; the callee may use the guard but cannot consume, mint, escape or re-loan beyond its checked scope. Restore exactly the saved identity/stage on every returning outcome. Exceptions/reasons use the common outcome rule agreed in C07/C08; no rollback that recreates a consumed mark. Start/child cannot capture a loan. Terminal consumption moves to retired and cannot restore mint authority. Model nested loans as a stack of exclusive escrows, with one active accessor globally. |
-| G/GX proof and Spec | Extend `RufMaschineG/T1` frame/machine state, T2 call/mint/pop rules and T3 starts; prove **new** `OwnerInvG` by reachable-step induction, including suspended frames and spawn. Its projection supplies `Marken.einfaedig_aus_verlauf_getragen`, with appended mint/transfer cases and a spent-set invariant; uniqueness at one instant alone does not prove once-ever minting. Extend `Nebenlaeufigkeit/Allgemein/Geteilt`'s `OwnerAnfang.eigner_nie_erzeugt` interface rather than discarding its premise. Derive owner-guard access provenance and non-overlap for `RennfreiBis(GA)`, preserving the existing unshared-carrier separation checks. Thread the ledger unchanged through GX presented-memory changes. Add owner provenance/conservation to `Ziel`, `ZielX` and `ZielFX`; state this strengthening and the root admission in `Spec.lean`, without hardware authority to mint software permissions. |
-| Export and Stage 0 | Coordinates: `Parser/Elab/Uebersetze.lean:822/1005/1172/1758/1806/1925`; `UebersetzeAllg.lean:382–393` currently exports `Marke := Empty` and no owners. Lower one nominal namespace, `owner` guards, real minter/site/root provenance and exact source parameter/result flow. IR-01/07 own this bridge, IR-10 call/return metadata, IR-09/12 starts. Resource-only handoffs emit no bytes after the simulation relates source bindings to the ledger; minter software effects still lower through IR-11. Extend `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec`, `Compiler.compile_source_program` and `IRBild.irBild_correct`; no detached signature witness closes C09. |
+| G/GX proof and Spec | Extend `RufMaschineG/T1` frame/machine state, T2 call/mint/pop rules and T3 starts; prove **new** `OwnerInvG` by reachable-step induction, including suspended frames and spawn. Its projection supplies `Marken.einfaedig_aus_verlauf_getragen`, with appended mint/transfer cases and a spent-set invariant; uniqueness at one instant alone does not prove once-ever minting. Extend `Nebenlaeufigkeit/Allgemein/Geteilt`'s `OwnerAnfang.eigner_nie_erzeugt` interface rather than discarding its premise. Derive ownership-guard access provenance and non-overlap for `RennfreiBis(GA)`, preserving the existing unshared-carrier separation checks. Thread the ledger unchanged through GX presented-memory changes. Add ownership provenance/conservation to `Ziel`, `ZielX` and `ZielFX`; state this strengthening and the root admission in `Spec.lean`, without hardware authority to mint software permissions. |
+| Export and Stage 0 | Coordinates: `Parser/Elab/Uebersetze.lean:822/1005/1172/1758/1806/1925`; `UebersetzeAllg.lean:382–393` currently exports `Marke := Empty` and no ownership marks. Lower one nominal namespace, `owner` guards, real minter/site/root provenance and exact source parameter/result flow. IR-01/07 own this bridge, IR-10 call/return metadata, IR-09/12 starts. Resource-only handoffs emit no bytes after the simulation relates source bindings to the ledger; minter software effects still lower through IR-11. Extend `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec`, `Compiler.compile_source_program` and `IRBild.irBild_correct`; no detached signature witness closes C09. |
 
 Witnesses: one guarded read and write after a root mint; move through two calls;
-normal/reason return of the same owner; nested scoped borrow with restoration;
-owner stage advance and final consumption; dormant root spawned once. Negative
+normal/reason return of the same ownership mark; nested scoped borrow with restoration;
+ownership stage advance and final consumption; dormant root spawned once. Negative
 twins: two mint sites, mint in a loop/callback/contract expression, duplicate
 start/pool/restart, initial-plus-minted duplicate, access by suspended lender,
-loan escape/consume, wrong returned stage, owner in ordinary `allocs`, and forged
+loan escape/consume, wrong returned stage, ownership mark in ordinary `allocs`, and forged
 `own` from `rw`. Use existing `examples/114`/`115` as source requirements, not
 proofs; the deleted Rust `kbedingung.rs` and D265–D268 of the deleted sentence register were
 the structural contract to port — none of the four rules is yet a Lean judgment. Software minter behavior belongs to
@@ -2209,7 +2209,7 @@ references in the deleted `schablonen.rs` were never a connected
 
 | Layer | Implementable change |
 |---|---|
-| RW syntax/resources | Add **new** `LockMode` (reader/writer); generalize the existing `Res.held L` to `held L mode`, signature holdings/floors, guard requirements and `Stmt.locks L mode`. This changes existing arguments, not constructor order. A read requires reader-or-writer authority; a store/foreign write requires writer authority. Introduce **new** `darfRead/darfWrite` and global counterparts, replacing the shared `darf/gdarf` calls in expressions versus writes; owner obligations stay conjunctive. No Bool write permission can manufacture a writer resource. Carry mode in acquire/release events, `offen`'s mode-aware projection, `HeldGenau` and call conformance. Invariant predicates may be read with reader authority; functions requiring writer-held cannot be called with reader-held. |
+| RW syntax/resources | Add **new** `LockMode` (reader/writer); generalize the existing `Res.held L` to `held L mode`, signature holdings/floors, guard requirements and `Stmt.locks L mode`. This changes existing arguments, not constructor order. A read requires reader-or-writer authority; a store/foreign write requires writer authority. Introduce **new** `darfRead/darfWrite` and global counterparts, replacing the shared `darf/gdarf` calls in expressions versus writes; ownership obligations stay conjunctive. No Bool write permission can manufacture a writer resource. Carry mode in acquire/release events, `offen`'s mode-aware projection, `HeldGenau` and call conformance. Invariant predicates may be read with reader authority; functions requiring writer-held cannot be called with reader-held. |
 | Canonical RW machine | Generalize `RufFreiG`/`dannLocks`/`GRest.frei`/`freiGib` to mode compatibility: reader acquire requires no writer, writer acquire requires no reader or writer; record each actual section's mode, not a fixed `Lese t L`. Reject recursive taking and upgrade; retain increasing `D.rang` over **both** modes, signature floor and handler mask rules. Generalize `RwExkl` to the machine-state invariant and derive `LeserLos` from typing, effects and admitted calls. Writer release restores `S.inv`; reader release preserves it. Reader acquire sees it because there is no writer. No wrapper that hides foreign threads remains on the canonical trust path. |
 | RW proofs/Spec | Integrate `RwSchritt.rwExkl_schritt`, `RwOrdnung.rennfrei_rw/rwSicht_schritt`, `RwInv.sperrInvRw_schritt/leser_sieht_inv` and `RwRang.kein_warteZyklus_rw` with the actual G rules. `SperrInvG` gains the stronger reader-only/free case; retain its existing free-lock fact. `InvRuheG`/`InvSichtG`, `SperrWechselG`/`SperrSichtG` and GX analogues must still give unchanged carriers under another holder and invariants at every move. Extend visibility to every reader; replace “holder alone” prose by “writer alone; readers share an invariant-preserving view”. Pairwise reader reads may coexist; every pair with a write remains ordered. Prove the old exclusive specialization and all original invariant facts; do not weaken them to return-only checks. |
 | RCU declaration and resources | Give domains their own **new** declaration identity/metadata (protected carriers, publication roots, reclaim place/service), distinct from `D.Lock`. Replace `Stmt.observes` sugar with a canonical scoped observation constructor. Append **new** `Res.observing d site`, `Res.retired d site` and `Res.reclaimable d site`; static sites bind dynamic records in the frame, not runtime epochs in `Λ`. The **new** machine RCU state records nested observations per thread/frame, fresh observation tickets, publication generations, retired object/range identities and grace cutoffs. Observation permits only reads through the captured, live published generation; never grants write, ownership, writer exclusion or a rank. No observation capability escapes its lexical scope or survives reclaim. |
@@ -2233,7 +2233,7 @@ reclaim metadata may support observation only; never infer a reclamation rule.
 
 **C11 — consuming traversal, capacity duty and returns across lock scopes.**
 
-Owner decision (2026-11-03): strengthen `StartEndeG`, hence the meaning of
+Decision (2026-11-03): strengthen `StartEndeG`, hence the meaning of
 `Ziel.startEnde` in `Spec/Teil2.lean`, by conjoining `StartScopedEndeG` with
 the unchanged expression-return clause. A completed scoped root stores its
 evaluated answer together with the read world before release; its frame
@@ -2243,16 +2243,16 @@ reachable machines after other threads have changed released carriers.
 `ScopedRueckGutG` supplies the guarantee at the cleanup source; the saved-answer
 invariant carries it to completion. This adds a guarantee without changing
 the existing goal fields or any existing conjunct. Static implementation is
-pending the lead's module checks and standard-axiom audit.
+pending the module checks and standard-axiom audit.
 
 | Subpackage | Implementable change |
 |---|---|
 | Consuming Kern/G | Append **new** `Stmt.consumeTraverse`: finite represented domain, current-world membership predicate, declared edge relation/projection, invariant, measure `Expr D Γ Λ (.int 0 bound)` and body `Block D V true (.index (D.count t) :: Γ) Λ Λ`, with the domain predicate/edge tests typed over those represented indices. Define a deterministic current-state selector over `alleIndizes`, selecting a minimal remaining member for the declared well-founded edge relation, with index order as tie-break. Each completed body pass must remove its selected member, introduce no new domain member/edge, preserve the invariant and strictly decrease the measure. The user body's declared `touches … consumes` performs the actual mutation; the traversal must not silently free the object a second time. Recompute selection in the post-body world; a saved initial index sweep is not this semantics. Empty selection terminates only with the selector-completeness theorem. Add matching `GRest` selection/body continuations and `RufSchrittG` cases, carrying the previous measure and finite initial bound. A failed required decrease/invariant is a logical failure, excluded by the user's body duty, never a successful early exit. |
-| Consuming proofs/admission | `Isabelle/Consuming.ordnung_bleibt_unter_entfernen`, `blattheit_braucht_minimale_auswahl`, `leermenge` and `umhaengen_kann_zyklus_erzeugen` explain the obligations, but their `Tabelle` is not G storage. Prove a generic projection from actual `World D` and actual emitted mutations to that relation. Prove each selector result belongs to the current domain, minimality, strict fall and completeness; establish a bounded run by the entry measure and finite selection cost. This is a state-reading loop measure, not C17's `Mass` with empty footprint. Require exclusive owner/writer authority over domain/edge mutations, with stable membership while selecting; no concurrent insertion. `Akzeptiert` checks supported finite projection, guards, declared effects and absence of leave/next targeting this consuming binder; `NutzerPflicht(A)` supplies decrease/removal/invariant obligations on all returning passes. Preserve the `S008` restriction (Lean: `Kern/Semantik/Evaluation/Terminierung.lean`); `N580` is not yet a Lean judgment. Return may propagate after C11 cleanup, but then no post-loop emptiness claim is made. Rehanging needs a separately proved current relation/decrease rule and remains refused in the removal cut. |
+| Consuming proofs/admission | `Isabelle/Consuming.ordnung_bleibt_unter_entfernen`, `blattheit_braucht_minimale_auswahl`, `leermenge` and `umhaengen_kann_zyklus_erzeugen` explain the obligations, but their `Tabelle` is not G storage. Prove a generic projection from actual `World D` and actual emitted mutations to that relation. Prove each selector result belongs to the current domain, minimality, strict fall and completeness; establish a bounded run by the entry measure and finite selection cost. This is a state-reading loop measure, not C17's `Mass` with empty footprint. Require exclusive ownership/writer authority over domain/edge mutations, with stable membership while selecting; no concurrent insertion. `Akzeptiert` checks supported finite projection, guards, declared effects and absence of leave/next targeting this consuming binder; `NutzerPflicht(A)` supplies decrease/removal/invariant obligations on all returning passes. Preserve the `S008` restriction (Lean: `Kern/Semantik/Evaluation/Terminierung.lean`); `N580` is not yet a Lean judgment. Return may propagate after C11 cleanup, but then no post-loop emptiness claim is made. Rehanging needs a separately proved current relation/decrease rule and remains refused in the removal cut. |
 | Consuming export/IR | `uSchleifenKopf:3175` currently refuses consuming; `UStmt` must retain `touches`, measure, relation and selector metadata instead of reusing `traverseBeg` blindly. Extend the domain adapter from A14, `lowS`, `Anweisung/Faelle/Schleifen/Traversal.traverse_case`, `Anweisung/Schleife` and `Code/Refine/Loops/Traverse` with a consuming branch and dynamic re-selection. Reuse index/load/store primitives; prove binder scope, scratch preservation, remaining measure, work bound and every exit. `GabbroV/GvTraversal.trav_schedule_vollstaendig` proves a fixed sweep, so extend its bridge to the current-state selector; it is not already a consuming theorem. IR-07/08 own mutation/control, IR-06 represented edges, IR-09 exclusion. |
 | No-else allocation | Retain `Block.arenaAlloc` in `Bausteine/Arena/ArenaZucker.lean:203` with its explicit ceiling-failure `Endblock`. Add one **new** generic `Block.narrowRequired`/`Endblock.narrowRequired`, the same typed narrowing with a logical failure instead of a source else; derive **new** `arenaAllocRequired` sugar by reusing `arenaRumpf`. Evaluate used/count once, require `used < capacity`, store initialized payload, then bump in the existing order. Failure is a **new** appended capacity case of `Logik`, excluded by `KoerperGutS/SA` and the actual source user's capacity proof. Dynamic committed storage additionally needs availability/commit proof or the explicit provider path; OOM remains user logic. Do not insert `retWhy`, fabricate a value, turn full into hardware failure, or assume a provider never fails. Check branch/call/loop/root allocation counts conservatively, but a Rust count is not the Lean proof. |
 | Allocation export/IR | `Uebersetze.lean:3536` and `UebersetzeAllg3.lean:957/1251` separate no-else admission from A23's missing Endblock sugar. Implement both Block/Endblock required narrowing paths and source capacity obligations; keep supplied else semantics unchanged. Reuse existing `lowB_ok/lowEnd_ok` narrow/store/bind code with an explicit failed-capacity trap matching logical failure, proved unreachable under the user duty. Re-establish `ArenaReset.reset_alloc_laueft_rumpf`, fresh-generation facts and `ArenaOwnership` allocation/state agreement on the shared body. IR-07 owns capacity/liveness, IR-08 control, IR-10 duty propagation. |
-| Resource-aware return | Replace `Stmt.ret/retWhy` and `Endblock.ret/retWhy`'s bare `Λ.Perm V.ende` evidence by **new** `RueckRessourcen`: exact residual `V.ende` plus a list of locally acquired scopes to close. Exact return is its empty-cleanup case; keep one return API. A **new** scope-indexed `cleanupB` and soundness judgment traverse the actual syntax, recording each lexical acquisition/observation and borrowed signature resource. They must verify that the return's list is exactly the crossed scopes in reverse order, not an arbitrary erase of extra resources. Calls inherit held resources but never acquire permission to release the caller's signature locks. Owner moves/loans remain conserved, marks cannot be discarded as cleanup, and returned capabilities cannot borrow a scope that is about to end. Add this check to `AkzeptiertSpec(X)`/`Akzeptiert`, with proofs and export correspondence. |
+| Resource-aware return | Replace `Stmt.ret/retWhy` and `Endblock.ret/retWhy`'s bare `Λ.Perm V.ende` evidence by **new** `RueckRessourcen`: exact residual `V.ende` plus a list of locally acquired scopes to close. Exact return is its empty-cleanup case; keep one return API. A **new** scope-indexed `cleanupB` and soundness judgment traverse the actual syntax, recording each lexical acquisition/observation and borrowed signature resource. They must verify that the return's list is exactly the crossed scopes in reverse order, not an arbitrary erase of extra resources. Calls inherit held resources but never acquire permission to release the caller's signature locks. Ownership moves/loans remain conserved, marks cannot be discarded as cleanup, and returned capabilities cannot borrow a scope that is about to end. Add this check to `AkzeptiertSpec(X)`/`Akzeptiert`, with proofs and export correspondence. |
 | Return G/replay | Evaluate and save the full return value/reason while all required guards still hold. Append a **new** pending-return continuation to `GRest`, retaining the saved result and exact residual resources; unwind each real `frei`/observation scope once, check its owed lock/lifetime invariant, then perform the existing value/reason pop and call-log return. The sequential `execStmt/execEnd` rules propagate the saved result while existing enclosing lock `mapWelt (·.gibt L)` releases it; never also release inside the leaf. Prove sequential/G replay equality with the pending cleanup. Generalize `GRest.anRueck_perm`/`Stmt.istRueck_perm` in `Nebenlaeufigkeit/Allgemein/Verklemmung/T2` to the residual resources **after** cleanup; immediate pop at the inner return is no longer valid. Preserve `SperrWechselG`, `InvAmGrundG`, floors, old-entry snapshots and both success/reason contracts. Leave/next keep their existing `peelFreiLeave/Next` behavior and use the same scoped cleanup relation when generalized. |
 | Return exporter/IR | Remove `UebersetzeAllg3.lean:178/799`'s `return under locks` only when scope evidence is generated. In `stage0/Stage0/Senke/Anweisung.lowS`, `Sperre/OhneRet`, `Sperre/Ticket/Satz.locks_okT` and `retC`, replace the `retFreiB` gate with proved exit classification and one shared cleanup-target mechanism. Save the whole result span in reserved storage across releases/calls; emit reverse-order releases before the outer contract/return epilogue. Share ordinary/reason/observation exits with IR-08/09/10, respecting IR-03 spans and IR-10 old snapshots. Prove releases on every crossing edge, no release of an unentered scope, no double release, restored masks, preserved saved value and exact final resources. Removing `retFreiB` without this proof is explicitly insufficient. |
 
@@ -2335,7 +2335,7 @@ ignored failure and stale resident-content assumption after return.
    `gabbro_ziel` remains **exactly** `propext`, `Classical.choice`, `Quot.sound`.
    Each generic syntax theorem needs a non-degenerate `_zeuge` satisfying all
    premises jointly, plus corresponding source-export/admission/IR/runner cases.
-5. Document the precise `Spec.lean` diff in each implementation commit: new owner
+5. Document the precise `Spec.lean` diff in each implementation commit: new ownership
    and lifecycle facts; RW reader visibility; grace dependency/progress domain;
    consuming/capacity/cleanup duties; released-page zero/extent interpretation.
    Retain every old exclusive specialization, race freedom with a write,
@@ -2344,14 +2344,14 @@ ignored failure and stale resident-content assumption after return.
    invariant is additional; it cannot replace an existing whole-carrier/group
    invariant whose restoration the program still owes.
 
-**Owner questions — genuine source-meaning choices, with recommendations.**
+**Open questions — genuine source-meaning choices, with recommendations.**
 
-- **C09 borrow/return:** should a borrowed owner grant write access and may its
+- **C09 borrow/return:** should a borrowed ownership mark grant write access and may its
   stage advance? Recommend an exclusive, call-scoped loan, with the lender
   suspended, and return of the identical stage; explicit move/return handles a
   stage-changing handoff. Read-sharing needs its own frozen/read-only authority,
   not duplication of `.marke`. The existing D266 `consumes`+`allocs` refusal is
-  lifted only for explicit proved transfer/loan, never owner production.
+   lifted only for explicit proved transfer/loan, never ownership production.
 - **C10 RCU updates and grace binding:** `examples/31` and historical documentation
   suggest plain in-place writer updates plus a named grace assumption. That
   conflicts with the standing race guarantee and OS-as-user-logic rule.
@@ -2377,7 +2377,7 @@ ignored failure and stale resident-content assumption after return.
   already described by the source form, preserving static reservation and live
   neighbors. For its no-else spelling, prove service availability/completion in
   user logic; do not ignore errors or add an OS assumption. A fallible spelling
-  would require a separate owner-approved source rule. Actual allocation OOM
+   would require a separate approved source rule. Actual allocation OOM
   being user logic and a ceiling else being a capacity path are already decided.
 
 **Staging/rebuild impact.** Freeze the resource-flow, cleanup and provider
@@ -2414,7 +2414,7 @@ translator interpreter, callback machine, check-token system or execution backen
 
 | Package | Core change | Spec impact | Engineering days |
 |---|---|---|---|
-| C02 | Source-bound translation certificate, immutable typed payload and ordinary library-call expansion | Conservative generated-program interpretation; exact translator relation needs the owner decision below | 14–24: identity/export 4–6, certified maps/products 7–13, full call/image closure 3–5 |
+| C02 | Source-bound translation certificate, immutable typed payload and ordinary library-call expansion | Conservative generated-program interpretation; exact translator relation needs the decision below | 14–24: identity/export 4–6, certified maps/products 7–13, full call/image closure 3–5 |
 | C12 | Space/rights-aware data capabilities, live byte slices and restricted entry handles | **Yes:** live capability provenance/extent and code/data separation; generalize the address-space statement | 20–34: table rights/spaces 5–8, live byte capabilities 10–17, entry handles 5–9 |
 | C14 | Source-bound profile, build selection, placement and userspace entry/service correspondence | **Yes:** assumption provenance and selected-program statement; guest boundary remains user logic | 12–20: profile/selection 5–8, layout 3–5, userspace entry 4–7 |
 | C15 | Per-core cells with proved identity, initialization, synchronized update and quiescent fold | **Yes:** accumulator/history correspondence, with existing race/time qualifications retained | 16–28: cells/algebra 5–9, concurrency/identity 7–12, export/IR closure 4–7 |
@@ -2423,7 +2423,7 @@ translator interpreter, callback machine, check-token system or execution backen
 These **74–126 person-days** include generic proofs, witnesses, export and
 connected Stage-0 work; shared work charged to earlier packages is excluded.
 They are estimates, not measured build times. Implementation remains gated by
-the explicit source-meaning questions below and the single grammatik owner.
+the explicit source-meaning questions below and the single `grammatik/` agent.
 
 **C02 — translators, payload regions and library calls.**
 
@@ -2442,14 +2442,14 @@ integer rows and an identity translator; it is not a generic map proof.
 | Lossless source/export | Generalize the existing `SAnw.bindLib/lcall` arguments to one **new** `SLibraryCall` record: resolved library/function paths, ordered `List SExpr` arguments and a balanced token tree for the region, retaining source coordinates for diagnostics. Change `parseLibRuf`, both consumers, equality/printer/round-trip/name-resolution clients together; never reconstruct tokens from the old count. Preserve translator identity, `SKlausel.load`, scopes, declaration visibility and exactly one translator per library function in **new** `ULibrary` metadata in `UProg`. Coordinates: `Uebersetze.lean:1998` (`fn is not impl`), :2538 (unhandled `lcall/bindLib` statement default), :4039 (`transT` default). Library bodies become ordinary checked `UFn`s, retaining all contracts/effects/reasons/costs. |
 | Canonical map/input | Add **new** `TranslationDecl D` after typed syntax: source declaration IDs, input schema/region decoder, output schema, pure translator function, payload parameter position and target function. The decoder is a closed, checked relation from the retained token tree to a typed value; identity integer rows are its first constructor. Additional token/tree schemas require an explicit typed schema using C01 products/arrays/sums and a decoder soundness theorem, not an unchecked convention. Proposed compile-time table parameters/results denote by-value row collections (`Ty.arr` of the C01 row product), with a schema-to-source-type proof; they are not runtime `Ty.ptr` capabilities or reads of an unrelated mutable table. This compile-time interpretation belongs to the C02 source-meaning decision. A general translator needs C17's source-preserving finite instantiation/control rules. Unsupported schemas remain refused. |
 | Certificate and totality | Add **new** `TranslationCertificate` recording the exact call site, decoder derivation, translator/body identity, input, output and output typing. Under the recommended stronger map meaning, require an execution derivation of the **existing** pure `rufAt`/`execEnd` semantics from that input to that output, plus source-derived `MassPflicht`/termination and absence of logic/hardware/budget stops. Equality of output types alone is insufficient. Check finite derivations or kernel proofs produced by an untrusted candidate generator; resource exhaustion refuses translation. Do not restore the retired executable Lean interpreter, or call an unrelated evaluator a translator. Pure means no carrier/foreign/atomic/lock/resource effects and no hidden runtime dependence, recursively through direct/indirect callees. Bill compilation work separately from the runtime program's `ZeitAb`; no generic timing project. |
-| Payload and G expansion | Materialize one immutable private payload per source call site, with every row/field/value initialized exactly as certified. Map the schema to C01 fields and the selected checked layout; the last library parameter is filled once with its read-only table/region capability, never also supplied by the caller. Add **new** `LibraryExpansion P` relating the source call, payload initialization and an ordinary `call/bindCall/bindCallElse` to the resolved library function. Evaluate ordinary arguments once in source order; compile-time translation has no runtime side effect. The actual call retains requires/ensures, normal/reason outcomes, signature flow, log and runtime cost. Payload lifetime is the image lifetime unless a separately proved nonescaping shorter lifetime is used; no mutable or linear/owner payload is admitted by an immutable byte copy. |
+| Payload and G expansion | Materialize one immutable private payload per source call site, with every row/field/value initialized exactly as certified. Map the schema to C01 fields and the selected checked layout; the last library parameter is filled once with its read-only table/region capability, never also supplied by the caller. Add **new** `LibraryExpansion P` relating the source call, payload initialization and an ordinary `call/bindCall/bindCallElse` to the resolved library function. Evaluate ordinary arguments once in source order; compile-time translation has no runtime side effect. The actual call retains requires/ensures, normal/reason outcomes, signature flow, log and runtime cost. Payload lifetime is the image lifetime unless a separately proved nonescaping shorter lifetime is used; no mutable or linear/ownership payload is admitted by an immutable byte copy. |
 | Akzeptiert and proofs | No new execution constructor is necessary. Add **new** `libraryB`/`LibraryAdmission` to the Bool/`AkzeptiertSpec(X)`, checking finite identities, complete payloads, read-only access, certificate references and generated call closure; kernel-checked certificate correctness is a separate proof, never a trusted flag. Use generated bodies' ordinary `NutzerPflicht(A)` and C06/C08 duties. Re-establish `Extraktion` read sets, `VertragsFuss`, `RahmenTreu`, `Getrennt` capability leaves, `Folge/FolgeBeweis` and `KostenG` for the expansion. Initialization/frame lemmas establish the immutable payload is never overwritten and disjoint from writable regions. The common goal closure below applies without new hardware premises. |
 | Stage 0 | IR-01/13 own lossless decoding/schema/source provenance; IR-03/06 own complete payload spans and initialization in `Senke/Welt/{Lay,WeltAt,StartLayout}` and `Ausdruck/Aggregat`; IR-10 owns the ordinary call/return proof. Extend `Frontend.elabWithScopes`, `Compiler.Compiled` and `CanonicalSourceProgram` with exact translation/expansion certificates, then `compile_source_program` and `IRBild.irBild_correct`. Prove source library calls equal their generated calls under the payload relation, including contracts that read the payload, old snapshots and reason paths. `nutzlastZert_mem` is a scalar field lemma inside this proof, not the whole certificate. |
 
 **Spec:** the existing goal applies to the generated accepted program; record
 the source-to-generated interpretation explicitly. Stronger translator-result
 correspondence changes the current output-only translation promise and requires
-owner review; it adds no oracle assumption. Missing/ambiguous translator,
+review; it adds no oracle assumption. Missing/ambiguous translator,
 unretained tokens, malformed schema, wrong arity/type, unproved totality/map,
 effects, mutable/linear payload and unproved payload precondition stay refused.
 Witnesses: existing `examples/0106-summe-uebersetzt.gab` identity, a nonidentity
@@ -2462,11 +2462,11 @@ body under the same name, omitted field, escaping mutable alias and wrong profil
 
 Implementation continuation (2026-11-02, not built by the implementation agent):
 `Ty.ptr` now has one table-capability descriptor containing a nominal space,
-independent read/write flags, retained owner identity and table target. Reads
+independent read/write flags, retained ownership identity and table target. Reads
 and writes resolve the same guarded carrier through a registered-space lookup;
 write-only stores use the ordinary statement semantics and write frame. The
 exporter preserves both flags, and argument re-views can only attenuate access
-without changing target, space or owner. Separation still compares underlying
+without changing target, space or ownership. Separation still compares underlying
 tables, including write-only views and differently labelled aliases. Declaration
 embeddings preserve the nominal-space registry and each table's space.
 The old normal readable `ptr n rw` cases specialize to the same values, stores,
@@ -2489,8 +2489,8 @@ forward-only meaning (Lean: `N575`/`N577` in `Bausteine/Schablonen/SchablonenMod
 
 | Layer | Implementable change |
 |---|---|
-| One data-capability type | In `Kern/Syntax/Typen`, add **new** `DataRights` (read/write flags and an optional resolved owner identity), **new** `DataTarget.table n` / `.bytes` and **new** `DataCapTy` (nominal space ID, rights, target). Generalize existing `Ty.ptr` to take `DataCapTy`; do not keep an old pointer API beside a new equivalent one. Table capability values remain `Unit` because the table identity is in the type. Byte capability values are **new** `RegionSlice` data: grant identity/generation, logical byte-carrier reference, offset and length, with natural-number bounds, never a numeric machine base. Space/owner/carrier IDs are finite declaration references checked against `Deklaration`, not globally meaningful guessed numbers. Arrays/products/sums recurse through this type using C01/C03. |
-| Rights and spaces | Add **new** declaration maps for table/global space, region schema and the owner-ID-to-`D.Marke` correspondence. Canonical rights union handles `r`, `w`, `rw` and combinations without dropping `own@…`; `w` allows stores but not reads/read-modify-write. Reuse C09's `OwnerFlow`/loans for own, not the read/write flags. `x` is admitted only for a checked code interface; never combine data write and execute into an unproved self-modifying-code capability. Different space names are nominally different, not automatically physically disjoint: C08's realization proves backing separation. Reject cross-space coercion unless an explicit proved boundary relation transports the same origin and attenuated rights. Device/mmio/port/boot effects and numeric raw addresses remain excluded. |
+| One data-capability type | In `Kern/Syntax/Typen`, add **new** `DataRights` (read/write flags and an optional resolved ownership identity), **new** `DataTarget.table n` / `.bytes` and **new** `DataCapTy` (nominal space ID, rights, target). Generalize existing `Ty.ptr` to take `DataCapTy`; do not keep an old pointer API beside a new equivalent one. Table capability values remain `Unit` because the table identity is in the type. Byte capability values are **new** `RegionSlice` data: grant identity/generation, logical byte-carrier reference, offset and length, with natural-number bounds, never a numeric machine base. Space/ownership/carrier IDs are finite declaration references checked against `Deklaration`, not globally meaningful guessed numbers. Arrays/products/sums recurse through this type using C01/C03. |
+| Rights and spaces | Add **new** declaration maps for table/global space, region schema and the ownership-ID-to-`D.Marke` correspondence. Canonical rights union handles `r`, `w`, `rw` and combinations without dropping `own@…`; `w` allows stores but not reads/read-modify-write. Reuse C09's `OwnerFlow`/loans for own, not the read/write flags. `x` is admitted only for a checked code interface; never combine data write and execute into an unproved self-modifying-code capability. Different space names are nominally different, not automatically physically disjoint: C08's realization proves backing separation. Reject cross-space coercion unless an explicit proved boundary relation transports the same origin and attenuated rights. Device/mmio/port/boot effects and numeric raw addresses remain excluded. |
 | Producers, lifetime and G | Generalize `Expr.ptrOf/thru`, `Stmt.assignThru` and their permission premises to the descriptor; ordinary table dereference still names exactly the existing carrier and guard set. New byte slices come only from declared initial grants, a C08 successful provider boundary, or a checked bounded subslice of an existing live slice; no arbitrary slice literal/int conversion. Attach **new** `CapUse` derivations to uses/flows, checked by **new** `capUseB`, reusing C01 `ValueUse`, C09 loans and C08 `GrantInventory`/`BoundaryRecord`. The dynamic invariant is slice generation live, extent included, rights sufficient, and no revoked loan. Actual grant IDs live in values/ledger, not in a guessed static type parameter. Extend `World` with a **new** read-only grant view for sequential semantics; `RufMaschineG.weltVon` obtains it from the deterministic C08 boundary-history fold, not a second mutable inventory. Foreign steps update that same view via the canonical boundary transition; ordinary memory stores preserve it. Append **new** `Ereignis.capUse` recording grant/generation, selected interval and access mode at a successful use. Prove the view/history agreement through locals, fields, calls, suspended frames, returns, starts, cleanup, GX presented memory and release/reuse. |
 | Byte operations | Map a live slice to a declared byte field (`D.typ t f = .int 0 255`) of a closed/open byte carrier via the grant realization. Share `World.bytesAb`/existing byte stores; do not add an independent byte heap. Append **new** `Block.capRead`, `Endblock.capRead` and `Stmt.capWrite` for checked byte-run access, with capability/index operands evaluated once, static run length `n`, exact byte-order rule and ordinary result/continuation contexts. Require at typing/admission the enclosing signature's writes and `darf` proofs for **every** possible root, not just the selected runtime root. At execution resolve the carrier and grant view, check rights/liveness and require `i ≥ 0`, `n ≤ length`, `i ≤ length-n`; invalidity uses existing `Logik.bereich`, excluded on legal runs by user duty. Checks precede memory effects; an unknown root cannot be a stuck match. The success result is `.int 0 (256^n-1)`; empty runs are allowed at the end. All accesses record the resolved underlying carrier's existing guards/effects; footprints conservatively include the finite carrier set permitted by the capability schema. No guessed single carrier for a dynamically returned region. Typed-object byte views require a proved encoding/decoding invariant; initially refuse them rather than letting a byte write create an invalid typed value. |
 | Entry wrappers | Append **new** `Ty.entry (space sig : Nat)` with a finite entry-binding identity as value. Add declaration metadata mapping that identity to signature, selected image entry and allowed forwarding site; **new** `EntryUse` is the entry case of `CapUse`. An initial/generated wrapper is the only producer; source `&f` remains `fnptr`, and no Gabbro expression calls, compares, stores, duplicates or casts an entry handle. Its one forwarding use is the matching foreign parameter outside loops, preserving N575–N577. C14 proves the wrapper/root/service correspondence. Ordinary callable `ptr<code,x>` resolves to the existing checked `fnptr`/C06 contract, never to an arbitrary byte-slice offset. Guest-code capability is usable only by its C08/C14 isolation service, not as an ordinary verified function target. |
@@ -2561,7 +2561,7 @@ implements N cells nor supplies the `min` neutral value.
 | Layer | Implementable change |
 |---|---|
 | Canonical descriptor/expansion | Add **new** `AccumulatorDecl D` after syntax: declaration identity, positive constant N, storage width/signedness/range, closed merge operator, N distinct private global carriers and locks, core-query binding and generated update/reduction functions. Add **new** `AccumulatorExpansion P` relating every source assignment to merge and every source read to the N-cell fold. Generate **N carriers**, not N supposedly independent W locations in one table: W/races remain carrier-granular. Source writes/effects expand to the full permitted cell set, with real guards. No new G execution constructor is needed; use ordinary bind/call, conditional dispatch, arithmetic/check/narrow, global stores and locks. |
-| Core identity | C08's **new** core-query contract returns exactly a `Fin N`-equivalent bounded value with a boundary record identifying the executing core at that query. Tie it to the same declared core assignment used by the userspace scheduler/binding; a thread number, modulo reduction or constant 0 is not evidence. Query once per source update; migration after the query does not reselect the destination. If the owner requires the core at the store rather than at query time, require a proved pinned/no-migration scope spanning both. Runtime scheduling/pinning is software user logic; no implicit OS/hardware assumption. Source cannot supply an arbitrary cell selector. |
+| Core identity | C08's **new** core-query contract returns exactly a `Fin N`-equivalent bounded value with a boundary record identifying the executing core at that query. Tie it to the same declared core assignment used by the userspace scheduler/binding; a thread number, modulo reduction or constant 0 is not evidence. Query once per source update; migration after the query does not reselect the destination. If the core at the store is required rather than at query time, require a proved pinned/no-migration scope spanning both. Runtime scheduling/pinning is software user logic; no implicit OS/hardware assumption. Source cannot supply an arbitrary cell selector. |
 | Correct concurrency first | Use one existing exclusive lock per private carrier around the complete load/merge/store. This is a concrete safe expansion for reentrant/same-core updaters and gives live readers race-free cells. It avoids needing an unproved assertion that one hardware core implies one unfinished writer. Generate a compatible total lock-rank order and infer/check caller floors after expansion; update holds only its selected cell lock. Prove an optional lock erasure only when a C09-style unique updater lease excludes every conflicting update/read throughout the emitted sequence; this optimization is not required for completion. Never implement a plain load/store under the deleted per-core exemption, or add an unbounded CAS loop under a bounded source cost. |
 | Neutral values/operators | Use the mathematical range `[lo,hi]` plus preserved storage width `w`. `max` starts at `lo`, `min` at `hi`; `add` starts at 0, which must inhabit the declared range; bitwise `or` starts at all-zero and `and` at the w-bit all-ones pattern (signed interpretation is explicit). Require the bit-pattern neutral and every returned fold value to inhabit the declared type; reject a restricted range lacking them rather than silently use 0. Bool or/and use false/true. Prove max/min/bitwise laws on those typed encodings, extending the existing abstract `MergeMonoid` facts; its Nat-max/Bool-or instances do not prove signed word cases. Checked integer add uses mathematical sums with user range/overflow duties at each cell update **and each actual reduction prefix**. It is not automatically a total monoid on a bounded subtype, and wrapping/saturation is never implicit; wrapping needs its explicit C13 type/rule. |
 | History and quiescence | Define **new** `AccHistory` from generated update call/store records, grouped by accumulator and queried core. At the actual store, record its saved argument/core and pre/post cell values in the shared ghost history; retain an in-flight contribution until the matching release/completion. A failure before any store adds none; a later failure cannot erase a store already performed. Prove each guarded cell equals its completed fold plus any committed in-flight contribution since one-time initialization. For live reads, take/release cell locks in index order and return the fold of those recorded samples; no whole-fold linearizability claim. Define **new** `AccQuiescent` over the read interval: initialization complete and no update in flight or occurring in that interval. Derive it from a proved joined/frozen writer phase or an internal all-cell lock scope acquired in increasing rank, never from a caller-provided Bool. Under it, prove sampled fold equals fold of all contributions and the abstract neutral-start RMW chain. Conditional permutation equality for checked addition requires all compared prefixes in range; nonnegative contributions suffice if the total fits, mixed signs need the stronger prefix duty. No reset/restart of initialized cells while a writer or observation survives. |
@@ -2587,15 +2587,15 @@ constraints, not yet Lean judgments and not a generic expansion theorem. In part
 tests whether a floor **names** the measured quantity; this proves no useful
 lower bound. `spiegel_und_sonde` records the settled rule: `expects` names an
 external probe owned by exactly one obligation (N024). Earlier comments saying
-this is unresolved do not reopen that owner decision.
+this is unresolved do not reopen that decision.
 
 | Layer | Implementable change |
 |---|---|
 | Descriptor and exact expansion | Add **new** `CheckDecl D` after syntax: resolved declaration/claim text, ordered measured place selectors, generated Boolean probe/producer, typed floors, actual gate functions/checks, unique optional external probe identity/text, build mode and source coordinates. Store its finite metadata with `Programm` so `Akzeptiert` sees the same declaration as the generated code; `Einheit` retains its source certificate. A **new** `CheckExpansion P` proves the generated probe is the written `canFail`, every returning path yields Bool and its signature contains all actual reads/calls. Reuse A24's `Res.marke`/`Signatur.produziert/konsumiert` and `nachSig`: no second evidence-token type. Generated names must be collision-checked (the deleted `erzeugernamen.rs` did this; not yet a Lean judgment), not an open external symbol that can replace the source probe. |
 | Invocation and gates | A declared check is not itself an execution step. Bind its generated producer to an explicit generated/declared test-driver call site under C14, or a resolved ordinary call, and prove that call through the same G/IR pipeline. The driver observes the returned Bool/report and transfers its Duty to one selected declared consumer; invoking another consumer requires another completed producer invocation. Record that selection in the expansion, rather than auto-running all gates or duplicating one Duty across their list. If a gate is called without the required producer report, ordinary resource admission refuses it. A driver handling a false result still must discharge the completed obligation through an admitted failure-handling consumer. Its policy is explicit user logic; merely declaring `gates` cannot invent execution, measurement or success. |
-| Measurements and floors | Resolve measured places and aliases at their true scopes, including locals bound inside the probe only after their definitions and only on paths where they exist. Capture actual sampled values with a typed path-indexed **new** `CheckReport`, identifying source place, observation point, value and guard/region provenance. A report contains copyable observations/ghost provenance, never a second usable owner or a capability surviving its loan; noncopyable measurements need a proved read-only projection or refuse. Missing values on an early returning path are explicit absent samples, never zero. Evaluate applicable floors over those snapshots and retain their Bool outcomes. A check is read-only on program payload: recursively verify actual direct/indirect/foreign effect summaries and frames, not base-name equality or textual absence of assignment. Observation/acquire/await synchronization is allowed only through its proved existing/C10 rule and is recorded; no assumption that repeated reads form one snapshot. Measurement service calls use C08 contracts, including failure and changed software metadata. |
+| Measurements and floors | Resolve measured places and aliases at their true scopes, including locals bound inside the probe only after their definitions and only on paths where they exist. Capture actual sampled values with a typed path-indexed **new** `CheckReport`, identifying source place, observation point, value and guard/region provenance. A report contains copyable observations/ghost provenance, never a second usable ownership mark or a capability surviving its loan; noncopyable measurements need a proved read-only projection or refuse. Missing values on an early returning path are explicit absent samples, never zero. Evaluate applicable floors over those snapshots and retain their Bool outcomes. A check is read-only on program payload: recursively verify actual direct/indirect/foreign effect summaries and frames, not base-name equality or textual absence of assignment. Observation/acquire/await synchronization is allowed only through its proved existing/C10 rule and is recorded; no assumption that repeated reads form one snapshot. Measurement service calls use C08 contracts, including failure and changed software metadata. |
 | Admission and obligations | Add **new** `checkB`/`CheckAdmission` to `AkzeptiertSpec(X)` and Bool: source/producer/gate identity, full observation/footprint scope, complete Boolean exits, read-only frame, floors at supported comparison sites, and one-to-one counterprobe ownership. Generate a **new** `CheckSitePflicht` clause of the existing sequential caller-duty judgment, transported by C06/C08 prefix replay: all range/guard/old/availability duties, exact report-to-Duty correspondence and any **declared** gate precondition. A floor contributes a checked Boolean assertion/record, not an inferred theorem because its text mentions a name. Claim/counterprobe strings remain labels; no `ensures` is derived from them or from one successful sample. Contract use of a semantic claim needs an explicit formal predicate and user proof, outside prose interpretation. |
-| Duty and both verdicts | Recommended meaning: Duty records a completed measurement/probe **with its verdict**, not proof that the prose claim is true. The generated ordinary producer returns Bool and produces one Duty on **each** normal return, including false; false/floor-failure remain distinguishable report data. A halted/divergent/foreign-failure path produces no completed report unless explicitly returned as a false verdict; no success is silently synthesized. The consuming gate discharges that same report once; a success-only gate needs its explicit user-logic precondition that the report's verdict and applicable floors hold. This preserves the common `nachSig` rule of C07/C08 and avoids a special success-only resource signature. If the owner instead requires all `gates` to demand success implicitly, specify that generated precondition and failure routing before enabling the source; do not secretly produce Duty only on one branch of a fixed signature. Gates naming other checks compose the existing consume/produce flow, with cycle/rank/termination obligations and no duplicate token. |
+| Duty and both verdicts | Recommended meaning: Duty records a completed measurement/probe **with its verdict**, not proof that the prose claim is true. The generated ordinary producer returns Bool and produces one Duty on **each** normal return, including false; false/floor-failure remain distinguishable report data. A halted/divergent/foreign-failure path produces no completed report unless explicitly returned as a false verdict; no success is silently synthesized. The consuming gate discharges that same report once; a success-only gate needs its explicit user-logic precondition that the report's verdict and applicable floors hold. This preserves the common `nachSig` rule of C07/C08 and avoids a special success-only resource signature. If all `gates` are instead required to demand success implicitly, specify that generated precondition and failure routing before enabling the source; do not secretly produce Duty only on one branch of a fixed signature. Gates naming other checks compose the existing consume/produce flow, with cycle/rank/termination obligations and no duplicate token. |
 | Evidence in G/GX | Add **new** `CheckEvidence` to C08/C09's shared ghost history/location inventory: producer call activation, actual report, current token location and consuming gate event. Capture each measured value/floor result through a generated private typed identity-sample function at that exact site: its evaluated call argument supplies the report entry and its result is the same value. The checked expansion identifies these functions and their producer activation; source cannot call them independently. Record samples at their actual pushes, then complete the report at the producer's normal pop and consume it at the admitted gate push. This avoids inventing lost local values at return. Match ordinary function entry/return events and `CheckExpansion`, rather than allowing a public empty `allocs Duty` function to forge completion. Extend `RufMaschineG/T1–T3` and GX replay with this metadata; unrelated calls preserve it. No new execution constructor is required. Add **new** `CheckTreueG` to `Ziel/ZielX/ZielFX`: each live/consumed Duty has exactly one corresponding completed report and compatible transfer history. C09/C01 conservation handles movement through frames/fields; no duplicable report may manufacture a second Duty. |
 | Counterprobe admission | Bind the external `expects` name uniquely to the check, exact probe text, selected source/build/image and a typed external test adapter under C08. Record **new** probe status `notRun`, `passed`, `failed` with execution provenance. Structural admission requires a valid unique binding, not a fabricated successful run. A measured acceptance claim requires an actual result for the matching artifact, expected false verdict and satisfied test-setup duties; absence remains unmeasured, an unexpected true verdict fails that measurement. An untrusted test log is evidence metadata, never a Lean axiom discharging a universal claim. Formal proof that a constructed test state makes the probe false is a separate generic/source-derived theorem, not proof that external hardware ran it. |
 | Export/Stage 0 | Lower `checkT` into the generated `UFn`s and retained `CheckDecl`, not just `Block.check`. Reuse source statement/expression/old/range lowering for `canFail`, A24 signatures for ordinary gates and C08 signatures/duties for foreign gates; error paths must retain exact C03 reasons and C11 cleanup. IR-13/01 own expansion and scope/measurement identity; IR-10/11 caller/foreign gates; IR-09 observations; IR-12 selected probe/image identity. Emit real probe/floor/observation/sample-call work with existing kernels, prove samples/Bool results agree, and erase only ghost report/Duty bookkeeping after its generic simulation. An identity-sample call may be inlined only with a connected equivalence proof preserving its logical record and accounted cost; it is initially an ordinary emitted call. Extend function/pop/push, `Compiler.Compiled`, `CanonicalSourceProgram`, `compile_source_program` and `IRBild.irBild_correct`; a printed list of measures is not the measured execution. |
@@ -2645,11 +2645,11 @@ jointly satisfying its admission and semantic duties, plus matching source,
 `AkzeptiertX`, connected IR and assembly-runner fixtures. Model edits require the
 full grammar build, layout check and Lean guardian with **exactly** `propext`,
 `Classical.choice`, `Quot.sound`; describe each Spec meaning change in its commit.
-One grammatik owner batches changes, using freshly measured available memory
+One `grammatik/` agent batches changes, using freshly measured available memory
 minus 2 GiB and the two global slots; Stage-0 checks retain the 5-GiB slot scopes
 and isolated artifacts. No build was performed by this document task.
 
-**Owner questions — genuine source-meaning choices, with recommendations.**
+**Open questions — genuine source-meaning choices, with recommendations.**
 
 - **C02 output promise:** must output equal the declared translator's map, or
   is any well-typed certified payload the language meaning? The Lean
@@ -2665,7 +2665,7 @@ and isolated artifacts. No build was performed by this document task.
   protection and any barriers; names alone confer neither disjointness nor
   TOCTOU protection. Recommend `own` remain the C09 exclusive loan/move, not an
   extra copyable write bit; this reuses the existing C09 ownership question.
-- **C14 guest meaning:** the owner removed `entrust` on 2026-11-23. The generic
+- **C14 guest meaning:** `entrust` was removed on 2026-11-23. The generic
   guest/isolation model remains; future source constructs follow LOW-LEVEL-SYNTAX-PLAN.
 - **C15 core/reduction meaning:** is the destination the core sampled at update
   entry or the core executing the store, and may reads synchronize? Recommend
@@ -2690,7 +2690,7 @@ and isolated artifacts. No build was performed by this document task.
   is separate from structural source admission, and unrun never means passed.
 
 **Staging.** Freeze the common schema/resource/boundary/capability descriptors
-with the grammatik owner first. Build C14 profile/selection and C12 table rights
+with the `grammatik/` agent first. Build C14 profile/selection and C12 table rights
 as conservative foundations; join C01 values and C08 boundaries before C02
 identity payloads and C12 byte/entry transport. Then close general C02 maps with
 C17 termination/control, C14 actual entry/service binding and C16 check/report
@@ -2717,7 +2717,7 @@ whole package. Dependencies in parentheses affect the richer slice only.
 | C06 pointer contracts | D3 | 7–12 | IR-10, contract replay | 7 |
 | C08 foreign/provider contracts | D3 | 16–27 | C06 foundation; C03 outcomes; (C09/C12 resources/grants) | 8 foundation; 15 provider closure |
 | C12 spaces/capabilities/entry wrappers | D5 | 20–34 | C01/C08/C09, IR-03/06/11/12 | 9 rights; 16 live bytes/entry |
-| C09 mint/owner loans | D4 | 12–20 | C08, common C01/C12 location flow | 10 |
+| C09 mint/ownership loans | D4 | 12–20 | C08, common C01/C12 location flow | 10 |
 | C11 consuming/capacity/cleanup | D4 | 18–30 | C09; C08/C12; IR-07/08/10 | 11 cleanup/capacity; 17 consuming |
 | C02 translators/library payloads | D5 | 14–24 | C01/C14, IR-01/03/10/13; (C17 maps, C08/C12 regions) | 12 identity; 18 full maps |
 | C07 indirect reason calls | D3 | 6–10 | C03/C06, common C08 outcome flow | 13 |
@@ -2736,7 +2736,7 @@ progress. Shared interfaces/ABI work is counted in its owning package; B/IR-lane
 work already charged elsewhere must not be added again. Critical path is
 value/channel migration → software contract and grant replay → capability and
 resource conservation → RCU/entry/page-service closure, under the available Lean
-slots and owner decisions. No elapsed completion date or universal speed claim
+slots and decisions. No elapsed completion date or universal speed claim
 follows from these person-day ranges.
 
 Validation of this design is static source/name/path inspection and
@@ -2751,7 +2751,7 @@ generic cut and the later table's “still undesigned” remainder. D1's runtime
 `decreases` design remains applicable. **New** below marks proposed declarations,
 not existing Lean names. Paths start at `grammatik/Grammatik/` unless prefixed
 `stage0/`. No implementation, grammar rebuild or additional agent is authorized
-by this document; the designated grammatik owner implements the approved rules.
+by this document; the designated `grammatik/` agent implements the approved rules.
 
 **Grounded boundary and architectural choice.**
 
@@ -2848,7 +2848,7 @@ measure value with `rufAt` fuel.
 |---|---|
 | Existing wrapper meaning | Add **new** `WrapperDecl` under `Kern/Syntax/`, keyed by resolved declaration identity, containing flags, typed payload list, optional representation and ordered distinct stage names. **New** `WrapperMeaning` relates the original `SItemTief.typeT` to this descriptor and its existing monomorphic representation. Linear/ghost wrappers map to a fresh `D.Marke`, preserving payload identity and `D.stufen`; a type-equal payload does not merge two marks. `order` names give the existing strict forward-stage rule, not a memory order or sorting comparator. Value wrappers retain nominal/opaque constructor-access evidence even when their represented `Ty` is equal. Multi-field values depend on C01's product rule; do not collapse them to one integer. Names such as `Duty(check)` resolve the declared check identity through C16, not an invented type variable. |
 | Formal templates, explicitly new | Full parametric wrappers need a distinct binder/application rule. Proposed **new** `TemplateParam` has `type`, `constant` and `order` binders in a telescope; a constant's type is a `TypeTemplate` scoped over preceding binders. **New** `TypeTemplate` is a finite syntax with bound de Bruijn parameters, closed monomorphic types, bounded arrays, named wrapper application and C01 products when available. **New** `TemplateDecl` retains source ID, parameter kinds, flags, payload/representation templates, order template and source contract/body/measure templates of its associated instances. It contains syntax, never arbitrary Lean functions. **New** `Instantiation` supplies exactly one resolved type/typed closed value/finite distinct stage list per matching binder; dependent constant types are checked after preceding substitutions. Fully resolve actuals; no inferred defaults or unresolved placeholders. These definitions do not reinterpret existing `typeT` payloads. |
-| Parser/export rule | Append **new** `STyp.app (name : List String) (args : List TemplateActual)` to `STyp`, and **new** `SItemTief.templateT` carrying explicit kinded binders and the existing wrapper declaration body. **New** `TemplateActual` distinguishes type/value/order syntax. Proposed surface spelling for owner review: `type W<type T, const N : u32, order S>([T; N]) order S;` and explicit applications `W<u8, 4, { raw, ready }>`; existing `type W(T)` continues to mean payload types. Extend `parseTyp`/`parseTypNach`, `parseTypTief`, equality, printing/round trips, `Aufloesung.loese`, `Oeffentlich.huelleZu`, width normalization and Stage-0 source traversals. This is a proposed canonical grammar extension, not an assertion that existing sources already contain this syntax. If the owner limits C17 to existing syntax, close existing checked wrappers and retain a precise refusal for genuinely parametric applications. |
+| Parser/export rule | Append **new** `STyp.app (name : List String) (args : List TemplateActual)` to `STyp`, and **new** `SItemTief.templateT` carrying explicit kinded binders and the existing wrapper declaration body. **New** `TemplateActual` distinguishes type/value/order syntax. Proposed surface spelling for review: `type W<type T, const N : u32, order S>([T; N]) order S;` and explicit applications `W<u8, 4, { raw, ready }>`; existing `type W(T)` continues to mean payload types. Extend `parseTyp`/`parseTypNach`, `parseTypTief`, equality, printing/round trips, `Aufloesung.loese`, `Oeffentlich.huelleZu`, width normalization and Stage-0 source traversals. This is a proposed canonical grammar extension, not an assertion that existing sources already contain this syntax. If C17 is limited to existing syntax, close existing checked wrappers and retain a precise refusal for genuinely parametric applications. |
 | Checked monomorphisation | **New** `instantiateTemplate` substitutes capture-free through every type, bound/count, payload, contract, effect, body, stage reference and D1 measure; lower only the resulting closed declarations. **New** `InstantiationValid` checks kinds/arity, range/width/layout, unique stage labels, valid stage lookup/forward moves, visibility/opacity, fresh instantiated identity and resource use. Descriptor instantiation precedes G checking: `Akzeptiert`/`AkzeptiertX`, footprints, ghost restrictions, all cost and user-logic duties are rechecked for every emitted instance. No blanket “template checked once” bypass. Use a deterministic key `(source ID, normalized typed actuals)`; cache only certificates at that key. A checked finite instance closure accounts for all referenced dependencies, rejects growing/cyclic type expansion, and includes instances reached only by contracts/constants/arrays. Code sharing additionally needs an explicit representation/meaning isomorphism; identical layouts alone cannot merge opaque types, marks or witness identities. |
 | Generic preservation theorem | Define **new** `TemplateMeaning` by structural interpretation under a kind-correct substitution, using existing monomorphic `Ty`/G and `WrapperMeaning`; it is not defined as successful execution of `instantiateTemplate`. Prove substitution identity/composition, alpha invariance, and **new** `instantiateTemplate_sound`: every successful checked instance has exactly that interpreted type/value representation, predicate truth, body outcomes, effects/resources, costs and measure values under all related environments/worlds. For ordered linear wrappers prove injective stage-name encoding and preservation/reflection of allowed forward moves, `nach` resources and unique ownership. Transport generated IDs through declaration embeddings; prove the instantiated source-to-G diagram commutes, then apply existing `gabbro_ziel` to the accepted monomorphic unit. A value equality theorem alone does not preserve contracts or linearity. |
 
@@ -2856,8 +2856,8 @@ Non-linear `order` currently has no canonical value-operation rule; do not assig
 it numeric order, mutable typestate or erasable decoration by analogy. Recommended
 language decision: order remains a protocol on linear wrappers, including generic
 instances. Until decided, reject non-linear ordered wrappers explicitly (also at
-unused declarations) instead of allowing `uAliase` to discard the words. If the
-owner requests copyable staged values, that needs an explicit value/stage
+unused declarations) instead of allowing `uAliase` to discard the words. If
+copyable staged values are requested, that needs an explicit value/stage
 constructor and transition semantics with a separate `Spec`/cost review; this
 design does not pretend existing `Res.marke` proves that different feature.
 
@@ -2908,9 +2908,9 @@ Extend GabbroV's `GvBruecke` source/export provenance where its represented
 fragment changes; do not restore the retired source runtime.
 
 Kern/Elab modules, parser constructors/traversals and every `UKonstFn` consumer
-require a coordinated grammar rebuild by its single owner, followed by affected
+require a coordinated grammar rebuild by its single responsible agent, followed by affected
 Stage-0 compilation and the Lean guardian/layout/axiom checks. The full template
-parser extension needs the owner's syntax decision and coordination with the
+parser extension needs the syntax decision and coordination with the
 single authorized rebuild batch; it is not covered by the pure-export exception
 alone. Use the current two-slot/memory policy; no such check was run for this
 document. Avoid an import cycle: descriptors/purity syntax precede semantics,
@@ -2948,7 +2948,7 @@ sentence and poison probe when implementation introduces its refusal code.
 | Canonical pure loop-free blocks, source relation, evaluator soundness and Stage-0 literal/array bridge | 6–10 | Generic source-to-value theorem is consumed by the compiled pipeline; old collector retired |
 | Logical contracts and final-scope dependency/certificate integration | 3–5 | Both false-clause refusals and nested/dependent positive cases certified |
 | Bounded traversal/retry and work/termination proofs | 3–5 | Generic finite-loop/control proof and connected witnesses |
-| Existing wrappers plus full explicit type/value/order instantiation and preservation | 6–10 | Owner syntax/order decisions, finite instance closure, resource and body preservation |
+| Existing wrappers plus full explicit type/value/order instantiation and preservation | 6–10 | Syntax/order decisions, finite instance closure, resource and body preservation |
 | D1 runtime decreases binding (unchanged estimate) | 2–4 | Existing `MassPflicht`/termination theorem connected |
 
 Full C17: **20–34 person-days**; remainder beyond D1 measures: **18–30**,
@@ -2958,11 +2958,11 @@ to delay block/contract semantics. Do not also charge the old optional 1–2 day
 With all other D5 package estimates unchanged, the overall full C estimate
 becomes **245–414 person-days** (previously 237–404). Shared C01/C13/ABI work
 remains charged there. Critical path is canonical source relation and final-scope
-certification, then loop/control proofs and the owner-approved template grammar;
+certification, then loop/control proofs and the approved template grammar;
 limited Lean slots and the coordinated rebuild affect elapsed time. Commit each
 compiling implementation step; no helper-only stage closes C17.
 
-**Owner questions, with recommendations.** (1) Approve canonical pure G block
+**Open questions, with recommendations.** (1) Approve canonical pure G block
 evaluation, concrete compile-time requires/ensures and bounded loops as above;
 keep recursion separately gated. (2) Confirm existing wrapper payload lists are
 not retroactively formal binders, and approve explicit kinded template/application
@@ -2972,7 +2972,7 @@ wrapper slice to existing syntax and retain the application refusal. (3) Keep
 a separate semantic decision before copyable staged values. (4) Treat evaluator
 work caps as explicit compilation resource refusals, independent of source
 `costs`, with no implicit language bound of 64. These decisions change source
-admission/meaning and must be recorded by the owner before enabling those rules.
+admission/meaning and must be recorded before enabling those rules.
 
 Validation: source/name/path inspection and `git diff --check` only. **Zero new
 language cases compiled or proved; no Lean file edited and no build run.**
@@ -3222,7 +3222,7 @@ Stage0/export statements on standard axioms and six axiom-free declarations. Sta
 check: 1452 Lean files, zero violations; after staging, layout checks all 1551 Lean files
 with no folder over 20 entries. No master file previously below 500 lines reached 500;
 Nachpruefung remains 499 lines. The Lean guardian uses its actual model/certificate/
-coverage/runner stages plus the owner-required direct Stage0 closure and actual irBild
+coverage/runner stages plus the required direct Stage0 closure and actual irBild
 regressions; the cached native Stage0 compiler executable was not rebuilt. Logs and
 resource metrics remain in ignored arbeitsprotokoll/export-work/.
 
@@ -3813,7 +3813,7 @@ or selected `when TESTBUILD`.
 
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean` checks **original**
 source metadata before expansion can erase it. It refuses raw/entry/wrap/embed types;
-owner-qualified, byte-target, malformed or non-atomic-target pointers; non-unvisited
+ownership-qualified, byte-target, malformed or non-atomic-target pointers; non-unvisited
 or raw traversal modes; retry/forever/exchange/await source metadata; allocations
 other than the admitted immutable unannotated static-arena forms (required, or
 with a recursively checked explicit failure continuation); provider
@@ -3882,10 +3882,10 @@ statement parser refusal; they do not substitute for the generic proof.
 | C06 | Structural function references and indirect calls with source contract-conformance gate reach IR (`lit32` address); contract predicates must themselves lower and restore old state; unsupported clauses/effects/foreign reference results still refuse. |
 | C07 | Source `let x = pointer(...) else (e) {...}` reaches `bindCallIndElse` and IR (pipeline image-shape witness present); value-discarding statement-else spelling fails parser `wanted ;`; G `callIndElse` is already lowered; wide/source-open reason paths remain bounded by source/channel/dispatch gates. |
 | C08 | Scalar/Bool nonfallible calls, optional value/void and fallible nonnegative-integer/void binders reach conditional F/R/E arms; statement-else has no source producer; fallible Bool/reference, wide or region results, unbound gates/provider grants refuse. |
-| C09 | Ordinary calls with static mark flow have the call arms; G `advances/retires` have empty-code proofs; these are not dynamic mint/loan/escrow lowering; owner-qualified capabilities and provider ownership flows fail original type/provider gates. |
+| C09 | Ordinary calls with static mark flow have the call arms; G `advances/retires` have empty-code proofs; these are not dynamic mint/loan/escrow lowering; ownership-qualified capabilities and provider ownership flows fail original type/provider gates. |
 | C10 | Exclusive lock bodies without returns reach release-aware IR; shared locks are explicitly refused by canonical elaboration; full RW/RCU observation/grace/reclaim has no producing form in this inventory. |
 | C11 | Required narrowing uses the full-span N arms with stop 107; the signed-word width refusal is removed (lead check pending). Ordinary traversal reaches IR. G `consumeTraverse` compiles the current fixed-sweep placeholder, but source `by consuming` is refused; scoped value/reason returns explicitly refuse. |
-| C12 | Declared table capabilities with decoded rights/named spaces and safe slot/thru/open-reference access reach T arms; owner-qualified/byte/raw/entry targets, runtime region grants and reference foreign-result decoding refuse. |
+| C12 | Declared table capabilities with decoded rights/named spaces and safe slot/thru/open-reference access reach T arms; ownership-qualified/byte/raw/entry targets, runtime region grants and reference foreign-result decoding refuse. |
 | C13 | Scalar/wide arithmetic, wrapping/saturating builtins, scans/popcount/rotations/bswap and bounded count/quantifiers reach IR under local size checks; byte spans `n>=2^31`, oversized folds, unsupported old-under-fold snapshots and non-scalar string indices refuse. Layout sugar only reaches IR through its checked literal/expression export, not a new pointer-address conversion. |
 | C14 | `when TESTBUILD` selection and consistent `profile`/requirements are prepared before elaboration; plain userspace entry and ordinary layout paths exist. Boot/entrust/hardware entry, incompatible runner ABI, named sections and original aligned/placement metadata refuse at their respective gates; an alignment lemma alone does not bypass original metadata admission. |
 | C15 | Supported per-core accumulator expansion becomes ordinary table/expression/store/traversal code; metadata requires bound per-core count and admitted operator, canonical elaboration checks positive count, integer/neutral range and nonnegative AND. Unsupported operators/counts/neutral values refuse; no new concurrency claim was measured. |
@@ -3903,7 +3903,7 @@ statement parser refusal; they do not substitute for the generic proof.
 **Authority and scope.** This is a document-only design against integration commit
 `a4783537dd56d44193eaf5e6e3f2e908e2628926` on `c-runde1`, inspected in `low-plan`.
 It records no build, theorem recheck, source compilation or execution measurement.
-The owner orders of 2026-11-03 supersede the older exclusion of device registers
+The orders of 2026-11-03 supersede the older exclusion of device registers
 in LOW-LEVEL-SYNTAX-PLAN.md and the earlier implementation scope: implement all
 its language/model concepts, including device operations, in the **Lean model,
 canonical parser/exporter and checker only**. No implementation
@@ -3929,7 +3929,7 @@ are changed. Runner-based validation is **deferred, not in scope**. Front-end
 admission here does not claim a new source-to-IR or executable-image case. Byte
 certificates are checked mathematical evidence about a supplied body/image;
 adding an emitter, execution backend or image startup is outside this lane.
-The proposed goal diff below must be shown to the owner before its merge; this
+The proposed goal diff below must be shown before its merge; this
 document does not apply it or record that approval as received.
 
 **Baseline inventory (plan step 1).** Paths beginning with `Kern/`, `Parser/`,
@@ -3942,7 +3942,7 @@ have been split: implementation must use the current modules named here.
 | Finite addresses and layout | `Speichermodell/Adressen/Layout.lean`: `Adresse = Nat × Nat`, `AdressLayout`, `LayoutOk`, `adresse`, `inZelle/inTabelle/inGlobal`, `zellen_getrennt`, `geaendert_im_bereich`. `NamedSpaces.lean` witnesses nominal spaces and independent backing identities. `Platzierung.lean`: `Zugriff`, `Platzierung`, `PlatzOk`, alignment and W/X checks. | These are abstract byte layouts, not finite physical addresses, CPU translation or physical alias coherence. `LayoutOk` is a premise, not a mapping established by boot. Distinct nominal spaces do not prove physical separation. |
 | Bounds and raw writes | `Speichermodell/Adressen/Bereich.lean`: `ImBereich`, `AussenGleich`, `ImBereichO`, `rufSchrittGX_aussen`, `rufErreichbarGX_aussen`. OPEN tables permit nonnegative indices without a declared ceiling. | Foreign outside-write exclusion is assumed through `ImBereichO`; no address-selected span, finite physical capacity, lifetime epoch or raw-access trace is connected. |
 | Existing safe regions/references | `Kern/Syntax/Typen/Shape.lean`: `Ty.ptr`, `Ty.ref`, by-value arrays/products. `DataCap.lean`: `DataTarget.table`, `DataCapTy` with space/rights/target and `attenuates`; `DataRights.lean`: independent read/write and optional owner. `Typen/Teil1.lean`: `Val`, `Val.zelle/vonZelle`. `Syntax/Syntax/Teil1.lean`: `Deklaration.offen`, `anbieter/anbieter_passt`. | No `address`, architectural `context` or scoped `ram_view` constructor. A numeric cell index in `Val` is not a source integer-to-reference producer. Do not substitute a new heap for C12's region work. |
-| Linear ownership | `Kern/Syntax/Marken/Owner/*`: `OwnerState`, nominal owners, activation flow, escrow and loans; `Signatur.owner`, `inputMarks/outputMarks` and `RufPasst.ownerReady` feed calls. | `Owner/Ledger.lean` explicitly folds call events without owner payload as the identity (`ownerFoldStep`, `ownerLedger_eq_base`); this alone does not establish dynamic mint, remap or physical authority. C09/C08 reachable-step integration must be reused after completion. Phase marks alone confer neither RAM nor privilege. |
+| Linear ownership | `Kern/Syntax/Marken/Owner/*`: `OwnerState`, nominal ownership marks, activation flow, escrow and loans; `Signatur.owner`, `inputMarks/outputMarks` and `RufPasst.ownerReady` feed calls. | `Owner/Ledger.lean` explicitly folds call events without ownership payload as the identity (`ownerFoldStep`, `ownerLedger_eq_base`); this alone does not establish dynamic mint, remap or physical authority. C09/C08 reachable-step integration must be reused after completion. Phase marks alone confer neither RAM nor privilege. |
 | Providers | `Hardware/Anbieter/Region.lean`: `Strecke`, `Zust`, `Gut`, `PStep.hole/fuell/zurueck/gib`, `Lauf`, `gut_nach`, `lauf_gut`, `lebend_getrennt`, `hole_neu_null`, `ram_gefuellt`, and overlap/outside-commit defect witnesses. | `Nat` spans and a resident-bit map, with freshness/alignment as step premises; no finite physical/virtual alias or epoch model. Its header classifies software-provider promises inconsistently as hardware and user logic. Derive software realization from the actual implementation, retaining the useful transition relation. |
 | C08 software boundary | `Syntax/Syntax/Teil1.lean`: `AxOrigin`, `Deklaration.axHerkunft/axBeleg/asignatur`. `Logik/Ruf/FremdRuf/T4–T6.lean`: `Konzession`, `BoundaryRecord`, `GrantInventory`, `ProviderOk/ProviderRealisiert`, `ForeignPflicht`, `ProviderTreueG`, `GrantsStart`, `ProviderBindung`. | Existing histories and contract predicates are foundations, not an ASM instruction proof. Unresolved origin still reads as hardware in the provisional split. The new certified domain must refuse unresolved provenance and discharge software frame, trace, extent and initialization facts. |
 | Present goal boundary | `Zielsatz/Kern/Spec.lean` is the ONE ASSUMPTION LIST; definitions are in `Spec/Teil1.lean` (`NutzerPflicht`, `HardwareAnnahmen`, `Laufzeit`) and `Spec/Teil2.lean` (`NutzerPflichtA`). `Logik/Ruf/FremdRuf/T8.lean` and `Zielsatz/Atomar/GabbroZielFremd.lean` split `AxVertragOSw` from `AxVertragOHw`; `gabbro_ziel_fremd` recombines the old premise. | The split still assumes whole `GutO`; it does not certify instructions, loader, physical ownership or software extents. Do not label that preparatory theorem complete low-level support. |
@@ -3973,9 +3973,9 @@ this commit; their planned completion must not be reimplemented by this lane.
   Thus zero length and one-past endpoints are explicit, arithmetic never wraps
   silently, and neither equality nor a serialized address carries authority.
 - **Context:** `LowContext P` is an opaque handle to one finite authority ledger,
-  realized by existing C09 owner/grant resources, with a separate linear resource
+  realized by existing C09 ownership/grant resources, with a separate linear resource
   for consumption; ordinary handle bits cannot mint or duplicate that resource.
-  The ledger records physical backing ID, finite spans, permissions/class, owner,
+  The ledger records physical backing ID, finite spans, permissions/class, ownership,
   epoch, mappings/regime and CPU privilege/mask state, with explicit loan entries.
   Checked partition/merge and call escrow reuse one ownership discipline; context
   literals, reconstruction from numbers and consumption with outstanding loans refuse.
@@ -4052,8 +4052,8 @@ their new replay theorem must handle that history without assuming them equal.
 2. **L02 — linear contexts and physical authority.** Goal: establish authority
    provenance, not a privileged numeric handle. Append context type/resource and
    acquisition/split/merge/loan judgments; use C09's ledger and C08 grants rather
-   than an independent allocator. A finite list of disjoint physical intervals
-   carries backing ID, owner, epoch, class and rights; mapping records may alias
+than an independent allocator. A finite list of disjoint physical intervals
+carries backing ID, ownership, epoch, class and rights; mapping records may alias
    intervals but must preserve their ownership identity. Context acquisition
    derives from an explicit starting-state ownership specification or a proved
    provider call; ordinary expressions cannot construct it. Prove conservation,
@@ -4219,11 +4219,11 @@ their new replay theorem must handle that history without assuming them equal.
    restriction exactly; retain every existing race/contract/invariant guarantee.
    Joint fixture: two cores, one protected carrier, two virtual aliases to the
    same physical bytes, a real write, interrupt and quiescent revoke/reuse;
-   counterexamples include hidden shared write, alias-based duplicate owner and
-   stale remote translation. Consequence: exported trace/ownership obligations
+counterexamples include hidden shared write, alias-based duplicate ownership mark and
+stale remote translation. Consequence: exported trace/ownership obligations
    feed GabbroV and the goal, not an assumed global simulation predicate.
-   Depends on L02–L06/L08, C05/C08/C09/C10/C11/C12/C15/C18. Files:
-   `Speichermodell/Adressen/*`, C09 owner and C12 realization modules,
+Depends on L02–L06/L08, C05/C08/C09/C10/C11/C12/C15/C18. Files:
+`Speichermodell/Adressen/*`, C09 ownership and C12 realization modules,
    `Nebenlaeufigkeit/*`, `Code/Conc/*`, new `Code/Refine/Low/Interleaving/*`.
    **20–34 days; Lean 3,500–6,000 LOC, Rust 0.**
 
@@ -4252,7 +4252,7 @@ their new replay theorem must handle that history without assuming them equal.
     **12–20 days; Lean 2,100–3,600 LOC, Rust 0.**
 
 11. **L11 — reviewed goal and software/hardware premise separation.** Goal:
-    implement the precise proposal below, after the owner has seen its diff.
+    implement the precise proposal below, after its diff has been reviewed.
     Derive software frame/trace/ensures/extents and runtime facts from L08–L10
     under caller duties; do not retain whole-oracle `GutO` as a hardware shortcut.
     Extend the generalized user obligation and goal with authority/lifetime/
@@ -4403,7 +4403,7 @@ The code and proof modules themselves are not edited here.
 +  source admission, physical authority or architectural execution claim.
 @@ -140,0 +164,11 @@
 +  * `autoritaet`, `lebenszeit`, `privileg` -- every reachable architectural
-+    prefix preserves the live owner/loan/epoch ledger and its permitted CPU
++    prefix preserves the live ownership/loan/epoch ledger and its permitted CPU
 +    mode; address bits alone grant neither data nor code authority. (a), (b-low).
 +  * `rohSpur` -- every raw RAM and device transaction, including hidden stack
 +    and descriptor/page-table accesses, is represented with its actual physical
@@ -4495,7 +4495,7 @@ Definition-layer contract for that exact header change:
   safety theorem. Its certificate obligations are source-derived propositions.
 - `LowPflicht E B` is one shared software-duty record. Its fields are universal
   body/ABI refinement under declared preconditions; caller-prefix duty;
-  provider/owner/loan realization; boot/entry/root/spawn establishment;
+  provider/ownership/loan realization; boot/entry/root/spawn establishment;
   interrupt/guest preservation; and exact access/atomic-order/byte/relocation
   correspondence. Each field is discharged through L08–L10's generic theorems,
   not by assuming correctness on reachable machines or checking one fixture.
@@ -4533,7 +4533,7 @@ Definition-layer contract for that exact header change:
 
 `Fair`, waiting premises, the separate termination measure duties, linked-unit
 hardware agreement and the rest of the NOT CLAIMED list remain. No `ensures`
-is inferred and no refusal becomes a warning. The owner review must cover this
+is inferred and no refusal becomes a warning. The review must cover this
 whole premise/conclusion change and the C08-dependent definition realization,
 not merely the comment wording. Implementation must present the actual final
 `Spec.lean`/definition diff again if completed C interfaces change these types.
@@ -4559,7 +4559,7 @@ flowchart TD
   L09 --> L10
   L07 --> L10
   L10 --> L11["L11: reviewed Spec + goal"]
-  Owner["Owner sees actual proposed Spec diff before merge"] --> L11
+  DiffReview["Actual proposed Spec diff is reviewed before merge"] --> L11
   L11 --> L12
   L12 --> L13
   L13 --> L14
@@ -4582,7 +4582,7 @@ inductive changes serially and resolves current C-interface drift before work.
 Specific C dependencies explain the global gate: C01/C03 provide complete values
 and reason exits; C02/C17 module/library expansion and substitution; C04/C05
 transition/invariant contracts; C06/C07 named/indirect call contracts; C08 actual
-software bindings/providers; C09 owner provenance/escrow/loans; C10 multicore
+software bindings/providers; C09 ownership provenance/escrow/loans; C10 multicore
 quiescence; C11 scoped cleanup and reference lifetimes; C12 region capabilities,
 spaces/rights and realization; C13 arithmetic/layout; C14 checked profiles,
 entry/guest metadata; C15 core identity/accumulator preservation; C16 proof-duty

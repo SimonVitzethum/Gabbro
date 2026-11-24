@@ -4,11 +4,11 @@
 > [PERFECT-MODEL.md](PERFECT-MODEL.md) §8, on the same level as every other form; the goal theorem they serve is
 > PERFECT-MODEL §2. Where this plan speaks of the goal or of `Spec.lean`, PERFECT-MODEL decides.
 
-Status: design. Ordered for complete implementation by the owner on 2026-11-03; **redesigned by the owner's
-decision O23 of 2026-11-23** (PLAN-COMPILER-READY §8): "context ist auch nur iasm, und GIR soll Compiler- und
-Modellsache sein, nicht Nutzersache, deshalb Syntax für alles, auch von 16-Bit-Boot an, also auch schon Long Jump
-oder Jump; Ziel: der Kernel kompiliert fast gleich für alle Architekturen, abgesehen von Registern oder Adressen."
-The compile-time selection `if (…) then { … } else { … }` (§4.10) is the owner's addition O24 of the same day.
+Status: design. Ordered for complete implementation on 2026-11-03; **redesigned by decision
+O23 of 2026-11-23** (PLAN-COMPILER-READY §8): `context<P>` is itself only inline assembly; GIR is a compiler and
+model matter, not a user matter, so syntax is required for everything from 16-bit boot onward, including long
+jumps; the kernel compiles nearly identically on all architectures apart from registers and addresses.
+The compile-time selection `if (…) then { … } else { … }` (§4.10) is addition O24 of the same day.
 O26 (same day) adds devices found at run time, wide and enqueued device stores (§4.6) and hard timing (§4.18);
 CPU code that the compiler did not emit stays refused.
 O25 (same day) adds hardware virtualisation, IOMMU spaces, suspend/resume, debug and performance units,
@@ -56,7 +56,7 @@ A review of 2026-11-23 (GPT Sol 6.1, 25 findings, each checked by the lead) is f
 | first boundary only at 64-bit firmware entry; 16/32-bit only as an opaque generated start item for further cores | boot from 16 bit impossible in source; the start item was a hidden blob | execution states of every width are declared states; `jump long` transfers between them; the start code of further cores is Gabbro source |
 | `ram_view(c, a, n)` looked up authority by address in a context ledger | address → authority lookup; the context had to be threaded everywhere | raw memory is owned as regions from the start (§4.2); addresses are inert data used for tables and devices only |
 
-The authority ledger (live spans, spaces, permissions, memory class, owner, epoch, per-core execution state) stays
+The authority ledger (live spans, spaces, permissions, memory class, ownership, epoch, per-core execution state) stays
 — as part of machine state in the model, tracked statically by the checker as a typestate of each code point. It is
 no longer a value the user passes around.
 
@@ -687,7 +687,7 @@ they are not part of that measure, and neither is the choice of the discovery pa
    acceptance in `Akzeptiert`, generic preservation and an `_erfuellbar` lemma per construct (AGENTS.md §3).
    `gabbro_ziel` stays on the standard axioms; the new assumptions (`ResetState`, `BiosHandoff`, `VirtUnit`,
    `Iommu`, `SecureUnit`, the firmware services, resident firmware, non-maskable delivery) are the closed LOW-LEVEL
-   ASSUMPTION LIST of the `Spec.lean` header (owner, 2026-11-23); each enters premise (c) with its construct.
+   ASSUMPTION LIST of the `Spec.lean` header (2026-11-23); each enters premise (c) with its construct.
 2. Connection to G/GX and the no-bypass theorem: no path reaches privileged state except through these constructs.
 3. Parser/exporter/checker (L10): the constructs above; refusals by name for everything unmodelled. Assembly bodies, `prim fn`, `raw fn` and
    `entrust` are deleted (2026-11-23), with the reserved-word refusals `N594`–`N597`. The `context<P>` surface
@@ -727,7 +727,7 @@ Deliberately without a construct:
 
 | Item | Status |
 |---|---|
-| JIT compilers, loadable kernel modules written in Gabbro | no new syntax (owner, 2026-11-23); CPU code the compiler did not emit is refused (O26). `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
-| CPU code the compiler did not emit (option ROMs, binary-only drivers) | refused at every privilege of the image (owner O26). A guest or VM runs whatever code it contains anyway (that is what a guest is), so an option ROM can run inside a VM like any guest code, without support or trust from the language |
+| JIT compilers, loadable kernel modules written in Gabbro | no new syntax (2026-11-23); CPU code the compiler did not emit is refused (O26). `make executable` stays the only way to code: modules are compiled with the kernel and chosen by compile-time selection, or loaded as items the same compiler emitted for this image. Code generated at run time does not become executable |
+| CPU code the compiler did not emit (option ROMs, binary-only drivers) | refused at every privilege of the image (O26). A guest or VM runs whatever code it contains anyway (that is what a guest is), so an option ROM can run inside a VM like any guest code, without support or trust from the language |
 | DRAM initialisation on real boards | not a language gap (driver logic under the reset boundary); vendor details are not public on most platforms, so the reset gate runs on emulator platforms |
 | speculation mitigations, retpolines, fences | compiler work under B17, never a user construct |

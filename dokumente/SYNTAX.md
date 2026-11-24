@@ -485,7 +485,7 @@ variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "
 fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
 (* «B8»: a function pointer type is a SIGNATURE of its own, because at an indirect call there is
    no name to resolve -- what is known about the callee is what the type says. *)
-(* CHANGED 2026-10-21 (Simon: pointer types are STRUCTURAL; Lean model first). A function `f`
+(* CHANGED 2026-10-21 (pointer types are structural; Lean model first). A function `f`
    may be the value of the type when it CONFORMS (`Deklaration.passt`, `SigPasst`): equal
    parameter types, result and reason channel; `f`'s writes among the type's; `f` holds no lock
    by signature and takes none (no lock crosses an indirect call: `N036`, the type's floor stands
@@ -682,10 +682,10 @@ version answers the question at the type instead of at an alias analysis:
 | | rule | Lean |
 |---|---|---|
 | **what a pointer points at** | a `ptr<space, right> T` is a value of type *"the carrier `T`, number `n`, with right `rw`"*. Its only producer is the name of a **declared** carrier (`&T`, §4); there is no address of an expression and no arithmetic on a pointer | `Ty.ptr n rw`; `Expr.ptrOf t n (ht : D.tabNr n = some t) rw` |
-| **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.thru p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
+| **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the ownership mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.thru p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
 | **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignThru (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
 | **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `LANGUAGE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (THEOREM-MAP §74, §75) |
-| **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own@m> T` is SUGAR for *"`T` is `owner m` and the callee `borrows m`"* — the mark is loaned for the call (`OwnerFlow.loans`) and comes back on normal return (`nachSig` erases and re-appends it; ordinary `produziert` still never mints an owner). Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt`, `Expr.thruOwn`, `Stmt.assignThruOwn` |
+| **`own`** | the ownership **mark** of §9 (`table … owner m`): a parameter `ptr<…, own@m> T` is SUGAR for *"`T` is `owner m` and the callee `borrows m`"* — the mark is loaned for the call (`OwnerFlow.loans`) and comes back on normal return (`nachSig` erases and re-appends it; ordinary `produziert` still never mints an ownership mark). Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt`, `Expr.thruOwn`, `Stmt.assignThruOwn` |
 | **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
 | **`x`** | code space; a pointer with `x` is a `fnptr` (§2) for executable code | `Ty.fnptr` |
 
@@ -999,7 +999,7 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "divergent" | "
            (* «P6a»: only at an `impl fn`; the path names a declared `spec fn` (`M130`/`M131`). *)
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
-           (* owner 2026-11-22: `requires`/`ensures` are accepted only where the checker proves
+           (* 2026-11-22: `requires`/`ensures` are accepted only where the checker proves
               them; a condition it cannot prove is a run-time check, `checks` below or
               `checkstmt` (§7). *)
            [ "maintains" identlist ]
@@ -1023,7 +1023,7 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "divergent" | "
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ buildgate ]
            { "checks" pred "else" path }
-           (* owner 2026-11-22: a run-time checked precondition, the last clauses before the body:
+           (* 2026-11-22: a run-time checked precondition, the last clauses before the body:
               `if !pred { return path; }` at the start of the body; the caller owes nothing. *)
            ( endblock | "=" pred ";" | ";" ) ;
            (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
@@ -1376,7 +1376,7 @@ stmt       = letstmt | allocstmt | resetstmt | growstmt | freestmt | childstmt |
            | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
            | libcall ";"                                         (* lane E1: statement position *)
            | checkstmt ;
-checkstmt  = "check" expr "else" endblock ;   (* owner 2026-11-22: a run-time check; the statements
+checkstmt  = "check" expr "else" endblock ;   (* 2026-11-22: a run-time check; the statements
    after it run where expr holds. Sugar over a branch on `!expr` (`Block.check`). *)
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
@@ -1659,7 +1659,7 @@ constructor a case.
 The context Λ says what the derivation holds; the STAND says what the run
 holds. One stand per run: every linear mark is free or owned by exactly one
 thread at exactly one stage. A mark step is one of three — create (only from
-void, only below the stage count, never an `owner` mark: owner marks are never
+void, only below the stage count, never an `owner` mark: ownership marks are never
 produced, `eigner_nie_erzeugt`), advance (only in the hand of the same thread,
 only to the next stage below the count), consume (only from the hand into the
 void). There is no fourth step: no forging, no duplication, no handoff to
@@ -1675,7 +1675,7 @@ another thread.
 
 Single-threadedness (W4) is the shape every mark step preserves: two events
 naming stages `s`, `s'` of the SAME mark name the SAME thread — stages may
-differ (advance changes the stage, never the owner), threads may not.
+differ (advance changes the stage, never the owning thread), threads may not.
 Lean: `Grammatik/Kern/Syntax/Marken.lean` (`Stand`, `MarkenSchritt`, `Verlauf`,
 `Einfaedig`); the projection into `Gesittet.marke_eindeutig` is the wiring
 lane's work.
@@ -2055,7 +2055,7 @@ table      = [ "pub" ] "table" ident [ "space" ident ] [ "count" constexpr ] [ "
    and every access to the table -- read or write -- holds it (`D267`, reads through the
    very walk `E010` reads). The single mint executes exactly once: one static site, outside
    every loop, in a root nothing calls, started at most once (`D268`). One mint, one
-   execution, no copy -- so a second owner of the same slots cannot come into being. A mark
+    execution, no copy -- so a second ownership mark for the same slots cannot come into being. A mark
    with no minter, no mint execution, or a minter no guarded access exercises, keeps the
    `D026` refusal; a malformed producer falls under `D265`-`D268`. *)
 treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
@@ -2134,7 +2134,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` is not yet a Lean judgment; the END of the range is held against the length (`M103` in `SchablonenT5SemBasis.lean`); it is a store (`writes X`) | none: the Lean exporter refuses the statement by name (`LG005` in `Bausteine/Arena/ArenaDyn/Teil2.lean`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (Lean model of `N426` in `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal and `N213` are not yet Lean judgments) | no constructor yet: the committed prefix is checker flow, and the lowering refuses the statement by name until the dynamic arm lands |
 | `free A[i];` | give exactly one slot back: the name dies statically (`N586` in `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the Lean exporter refuses by name (`LG005`) until the Block form lands |
-| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `poison/694`, producers `examples/114`/`115`, poisons `poison/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
+| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `poison/694`, producers `examples/114`/`115`, poisons `poison/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no ownership mark, no access; one mint, one execution, no second ownership mark |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I : p;` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every value return, within the writer's declared `costs`. **Such a function holds the locks of every carrier of `I`** (`U003`: `invarianten_gehalten`), because it reads them all at return. Reason exits retain the invariant proof obligation. | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
@@ -2146,7 +2146,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `walk W levels n { node : [Pte; 512], down : f when p, leaf : q }` | `n` tables of `count 512`, one per level; `mappings of` is a `traverse` per level, nested `n` deep, filtered by `p`/`q` — SUGAR («SG-16») | `D.Tab` per level; `Stmt.traverse` nested; `Expr.forallSlots` nested |
 | `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.getBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.check c sonst rest` («SG-16») |
 | `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`). **`pub` since 2026-09-28** — see below | `Ty.why n` |
-| `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair. **The stages of `S` are the numbers 0, 1, 2, … in the order the stage names are first written** in its `transition` lines; each line allows its one pair; **the field a `transition` statement is applied to is the field `S` governs** (one state per field; a pair declared by two states is ambiguous and refused); the target stage lies in the field's range (Simon, 2026-10-21) | `D.erlaubt t f von nach`; `Stmt.shift` («SG-19») |
+| `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair. **The stages of `S` are the numbers 0, 1, 2, … in the order the stage names are first written** in its `transition` lines; each line allows its one pair; **the field a `transition` statement is applied to is the field `S` governs** (one state per field; a pair declared by two states is ambiguous and refused); the target stage lies in the field's range (2026-10-21) | `D.erlaubt t f von nach`; `Stmt.shift` («SG-19») |
 
 A nested assignment such as `T.slots[i].point.x = value;` reads the
 containing record and stores its updated value at the same slot. The
@@ -2186,7 +2186,7 @@ private one, `N038`).
 ### 9.1 Arenas — a heap that is never unbounded («E4»)
 
 **Specified, the words lexed, the declaration checked.** `CHECKER.md` §3 fixes the
-owner's rule — *a heap is allowed but never unbounded: every region has an upper and a
+rule — *a heap is allowed but never unbounded: every region has an upper and a
 lower bound* — and the arena is the monotone form: release only as a whole (`reset`),
 no fragmentation, allocation fails only beyond the upper bound. The pool form (fixed
 element size, per-element release) exists already: every `table T count N` with generated
@@ -2270,7 +2270,7 @@ future work, not a silent promise).
   slot, the index a bare name bound by `alloc` to the current generation. The
   name dies statically -- any later read or second `free` falls with `N586`
   (copies died with it, rebinding clears it, joins take the union, `reset`
-  clears it); a parameter index is borrowed (the owner frees), a computed place
+   clears it); a parameter index is borrowed (the owning thread frees), a computed place
   names no death to carry. No `else`: freeing a live slot cannot fail. At run
   time the slot carries the link word (intrusive LIFO, zero overhead), so the
   next `alloc` reuses it without commit and without sampling; elements under
@@ -2677,7 +2677,7 @@ they point at stands in §1 beside `entrydecl`.
   every target is a case of the declared channel (`N067`). The decoding is
   generated; an errno outside the table is `hardware (annahme a)` — the kernel
   answered outside its contract.
-* **a REGION answer** (C-free lane, 2026-09-30; Simon's decision 1: memory from
+* **a REGION answer** (C-free lane, 2026-09-30; decision 1: memory from
   outside comes as a region, never from a number) — `-> ptr<normal, …> u8 or R`:
   the stub hands the kernel's word over as the address after the sign leg, and
   the word zero is `hardware` (the proved template `tor.region`; without the
@@ -2863,7 +2863,7 @@ keyed mode assumptions the profile induces its own model
 
 ### 12.3 `target` — system calls as named variables, bound per kernel (Opus agent L, OFFEN O31)
 
-**Simon's request (2026-09-26), built.** A gate used to carry its kernel in its own text:
+**Request (2026-09-26), built.** A gate used to carry its kernel in its own text:
 `abi linux arch x86_64 number 1`, the register map, the errno map, the named assumption.
 Since this section, a gate can name a **variable** instead, and ONE statement elsewhere
 binds it for a kernel:
@@ -3007,7 +3007,7 @@ domains · recursion in `spec fn` · hand-written lemmas · **the braced compoun
 first) · **a `forever` without `progress`** («SG-11») · **an `else` that falls off** («SG-5») ·
 **a `state` write that is not a declared transition** («SG-19») · **a register access against
 its class** («SG-15») · **a publication without its declared payload** («SG-13») · **a second
-owner of a carrier** («SG-9»).
+ownership mark for a carrier** («SG-9»).
 
 Every item in bold after the first is new in the third version, and each one is an
 **absence of a constructor** in `Syntax.lean` — not a refusal a pass issues, but a term that
@@ -3626,7 +3626,7 @@ the reader can retain that syntax, but child construction currently needs a call
 Cost/resource annotations are analysis input, not canonical G certificates.
 
 `Async/Executor/Library.gab` contains an unverified generative module template
-with an explicit capacity of 1–64 tasks, one owner and externally posted
+with an explicit capacity of 1–64 tasks, one owning thread and externally posted
 notification bits. Each module use has separate state. Its `spawn` registers
 a previously installed task ID; it does not take ownership of a generated future.
 Task slots are not reused. Generic ring arithmetic and finite notification-trace

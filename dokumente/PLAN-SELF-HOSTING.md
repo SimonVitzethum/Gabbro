@@ -1,7 +1,7 @@
 # PLAN-SELF-HOSTING — checker and compiler written in Gabbro, computing in Gabbro
 
-*Simon, 2026-10-25; design corrected 2026-11-12. It supersedes `PLAN-LONG-RANGE.md` §3 (earlier versions are in git).
-The LLVM back-end design was superseded by [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) (owner, 2026-11-10): one
+*2026-10-25; design corrected 2026-11-12. It supersedes `PLAN-LONG-RANGE.md` §3 (earlier versions are in git).
+The LLVM back-end design was superseded by [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) (2026-11-10): one
 architecture-neutral GIR, every pass proved with GabbroV, real instructions as cells with per-target table rows,
 no refinement and no translation validation; the current gates and order are [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md).*
 
@@ -32,7 +32,7 @@ no refinement and no translation validation; the current gates and order are [PL
 These are planned ordinary Gabbro programs, to be accepted by the checker and proved terminating, deterministic
 and correct against their Lean specifications; this table is not a claim that they already exist.
 
-## 2. Bootstrap: stage 0 translates, a verified x86-64 runner runs (Simon, 2026-10-26; changed 2026-10-28)
+## 2. Bootstrap: stage 0 translates, a verified x86-64 runner runs (2026-10-26; changed 2026-10-28)
 
 | Part | Written in | Runs on | Does |
 |---|---|---|---|
@@ -40,7 +40,7 @@ and correct against their Lean specifications; this table is not a claim that th
 | the runner | x86-64 machine code, its bytes proved in Lean (§2.2) | x86-64, Linux | runs `S0IR`: every run is a run of the thread machine over GX (proved); raw Linux syscalls for IO; Gabbro threads on OS threads |
 | stage 1 | full Gabbro | the runner | `gpruef` and `gkomp` (the checker and the compiler of §1) |
 
-* **Decisions (Simon, 2026-10-28).** There is no interpreter written in Gabbro. Lean stage 0 only translates Gabbro into
+* **Decisions (2026-10-28).** There is no interpreter written in Gabbro. Lean stage 0 only translates Gabbro into
   `S0IR`; it does not run programs. `S0IR` runs on a small x86-64 runner whose machine code is formally verified (the
   precedent is seL4's binary verification). No LLVM, no C and no unvalidated code is on the bootstrap path: it would
   void every guarantee, and stage 0 would have no reason to exist. The runner is x86-64, not AArch64: the available
@@ -79,13 +79,13 @@ is proved to be a run of the thread machine (`RufSchrittG`) over GX, so the goal
 Built from the syntax of `Kern/Syntax/Syntax.lean` (64 `Expr`, 46 `Stmt`/`Block`, 21 `Endblock` formers) and the
 outcomes of `Kern/Semantik/Semantik/T1.lean`.
 
-**The governing rule: the IR is as SMALL as possible** (Simon, 2026-10-28). Every handler of the runner is machine
+**The governing rule: the IR is as SMALL as possible** (2026-10-28). Every handler of the runner is machine
 code that must be proved, at 20-30 times the lines of the code itself. So whatever can be expressed by a sequence of
 IR instructions is LOWERED in Lean (cheap to prove) and never added to the runner: locks, budgets, reasons, switches,
 unsigned and wide arithmetic, floats, byte buffers, contract checks and stops are all lowerings. The price is speed
 (more IR instructions per G step, §2.1.8); the runner stays a few hundred machine instructions.
 
-**Proof budget** (Simon, 2026-10-28): the runner's proofs (x86-64 subset, handlers, loader, threads, `runner_tso`)
+**Proof budget** (2026-10-28): the runner's proofs (x86-64 subset, handlers, loader, threads, `runner_tso`)
 may take up to 60 000 lines of Lean; 80 000 is the hard limit. Inside that budget an instruction is added to the
 base set only for speed that a measurement asks for, and only if it needs no new hardware assumption (§2.1.3, speed
 set).
@@ -592,7 +592,7 @@ the runner wrote; estimated +20 000 - 35 000 lines, so it fits under the hard li
 The active reboot checkpoint, scope and complete fourteen-lane work plan are in
 [IR-COMPILATION-LANES.md](IR-COMPILATION-LANES.md). Work remains paused until explicit resume.
 
-### 2.2 The verified x86-64 runner (Simon, 2026-10-28)
+### 2.2 The verified x86-64 runner (2026-10-28)
 
 **What it is.** A program of x86-64 machine code (no C, no compiler, no Lean runtime) that loads an `S0IR` image and
 runs it (§2.1.5): a loader, a dispatch loop through an indirect jump table, and 24 handlers (§2.1.3); everything
@@ -619,12 +619,12 @@ For the runner:
    (CakeML's x64 back end) -- with the Intel and AMD manuals as the cross-check; what a vendor leaves undefined (some
    flags) stays FREE.
 2. **Differential tests on the CPU:** random register and memory states plus the edge cases (overflow, sign, shift
-   counts, alignment), each instruction executed on Simon's x86-64 machine and compared with the Lean evaluation of the
+    counts, alignment), each instruction executed on the available x86-64 machine and compared with the Lean evaluation of the
    model. A stage of `pruefe-lean.py` (no fifth guardian); the machine is named in `AGENTS.md` §4.
 3. **x86-TSO** (Sewell, Owens et al.) for several cores, with its litmus tests run on the same machine.
 4. **Named assumption:** the CPU implements this model for these instructions -- the trust base seL4 has.
 
-* **Why x86-64:** the AArch64 machine at hand is 5-10 times slower, and `arm/` is far from complete (Simon, 2026-10-28).
+* **Why x86-64:** the AArch64 machine at hand is 5-10 times slower, and `arm/` is far from complete (2026-10-28).
   The compiler's own targets (`gkomp`: x86-64 and AArch64, `ARM-PLAN.md`) are not affected.
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
   bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
@@ -759,13 +759,13 @@ The tools read inputs of unbounded size; each need is modelled in Lean before it
 The parity-based Rust deletion schedule was superseded by the actual deletion on 2026-11-10 (AGENTS.md §3);
 Stage 0 compiles today, and the runner leaves the tree when the compiler compiles itself (PLAN-COMPILER-READY K7).
 
-## 7. Targets: a new ISA is a profile, not a port (Simon, 2026-10-25)
+## 7. Targets: a new ISA is a profile, not a port (2026-10-25)
 
 The LLVM/profile-only route is superseded by [MACHINE-IR-PLAN.md](MACHINE-IR-PLAN.md) §6–§9 and
 [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) §4.5: x86-64, AArch64 and RISC-V 64 share source semantics,
 GIR, passes and proofs; each target supplies its table, binding library and image profile.
 
-## 8. Performance: at least `gcc -O3` and `clang -O3` (Simon, 2026-10-25)
+## 8. Performance: at least `gcc -O3` and `clang -O3` (2026-10-25)
 
 **Requirement:** the code `gkomp` produces is at least as fast as equivalent C compiled with `gcc -O3` or `clang -O3`,
 on x86-64 and AArch64 (both measured on real hardware). This raises the minimum of AGENTS.md §11 (80 %) to 100 %. A
@@ -812,7 +812,7 @@ deleted on 2026-11-10, not components or deletion work still present today (AGEN
 The former detailed totals and critical path are superseded by PLAN-COMPILER-READY §6–§7; this correction adds
 no size or timing estimate.
 
-## 10. Decisions (Simon, 2026-10-25; 2026-10-26)
+## 10. Decisions (2026-10-25; 2026-10-26)
 
 0. (2026-10-26, changed 2026-10-28) The bootstrap (§2): stage 0 in Lean (`stage0/`) only translates Gabbro into the IR
    `S0IR`; a formally verified x86-64 machine-code runner runs it (not AArch64: the machine is 5-10 times slower and
@@ -826,7 +826,7 @@ All decided:
 4. The old target schedule is superseded by PLAN-COMPILER-READY §4.5: all three targets are designed in from the
    start, with the same kernel sources measured on the second binding (AArch64, K6); this is a plan, not a build claim.
 
-First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
+First step (2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
 §3.4 and §4 rest on.
 
 

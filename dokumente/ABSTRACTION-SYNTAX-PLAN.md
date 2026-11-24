@@ -16,7 +16,7 @@ Paths are relative to `grammatik/Grammatik/Parser/`; no build was run for this a
 | 3b | Lean front end present: `Dyn/{Collect,Closed,Rewrite,Frontend}` and source witnesses close linked implementations into tagged dispatch. Stage-0 gate on `syntax-s0` (2026-11-04, needs the lead build) accepts the expanded closed sums; source-text-to-image witness covers a `dyn` call with two linked implementations. Closed on `syntax-s0` (needs the lead build): payloads of any size and shape (scalar, wide, aggregate, aliased) are carried through the closed sum into the existing tagged sum layout — the scalar/8-byte gate is removed, with `scene_wide_payload_closed_zeuge`, `scene_alias_payload_closed_zeuge` and `scene_wide_payload_accepted_zeuge`. Lowering premise (Stage 0, branch s0-gaps1): sum payloads beyond one word lower through `sumPayloadWords`/`sumOff` and the `encodeWords` sum branch. | This code uses closed sums, not the proposed `Ty.dyn` extension. Downcast/equality/implementation tests and unsupported bound conversions refuse by design; unrestricted dynamic linking is missing. |
 | 3c | Lean front end present: `Elab/Generic/PointerTypes`, `Signatures.vertragPasstB/vertragPasstAt/passtAt` share C06/O43 contract inclusion with static function arguments. | Conjunct inclusion compares written predicates (including names); arbitrary implication and positional normalization are not supplied here. This header does not establish the planned generic call/goal proof by frontend presence alone. |
 
-The owner decisions of 2026-11-02 and the intended scope below remain the design reference;
+The decisions of 2026-11-02 and the intended scope below remain the design reference;
 the table records code already present, independently of the historical implementation order.
 
 Every form below follows §3 of `AGENTS.md`: the Lean model first (front end, exporter, the generic theorem of
@@ -207,7 +207,7 @@ if exists k in slots of Jobs : Jobs[k].failed { … }
 item      += specdecl | impldecl ;
 specdecl   = [ "pub" ] "spec" ident "[" ident { "," ident } [ ";" effparams ] "]"
              "{" { specfn } "}" ;
-effparams  = "effects" ident { "," ident } ;                (* effect parameters, owner 2026-11-02 *)
+effparams  = "effects" ident { "," ident } ;                (* effect parameters, 2026-11-02 *)
 specfn     = "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
              [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ";" ;

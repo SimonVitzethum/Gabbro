@@ -1,9 +1,9 @@
 # PERFECT-MODEL — the one definition of Gabbro's goal theorem, its model and the way there
 
-Status: **binding** (owner, 2026-11-23). This file is the ONLY place where the goal theorem, the model it speaks
+Status: **binding** (2026-11-23). This file is the ONLY place where the goal theorem, the model it speaks
 about and the construction of that model in the package `core/` are defined. `AGENTS.md` §3 and the rows B23, B24 and O27 of
 [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) point here and hold no own version. It was settled after ten
-critical reviews (all on 2026-11-23). It changes only by an owner decision, shown as a concrete diff of this file
+critical reviews (all on 2026-11-23). It changes only by an explicit decision, shown as a concrete diff of this file
 before merge; nothing else may restate, extend or soften it. A draft elsewhere is not a decision.
 
 ## 1. The promise
@@ -100,7 +100,7 @@ Bindings that are part of the definitions:
   assignment, every `lebt0`, every order assignment of `SchwachX`, the address layout) is embedded into an
   accepted text and an actual loader run, its cut is named, and the exact old conclusion is transported with its
   nested quantifiers (`spawnSicht`, `SchwachX`, `ZeitAbX`); an old budget stop transports as a finite prefix. A
-  case a new loader or memory rule cannot represent needs a preservation argument or an owner-approved exclusion,
+   case a new loader or memory rule cannot represent needs a preservation argument or an approved exclusion,
   listed here (none so far).
 - `NI`: `GleichePolitik` means the same total policies for the LOW outside choices (outside choice-givers,
   hardware scheduling, answers to low questions), defined on public history before either run; scheduler
@@ -120,7 +120,7 @@ Bindings that are part of the definitions:
   equal up to each declared release, differing only as that release authorises; the labelled-flow rule of `Lokal`
   that proves it is named in the registry.
 
-**2.2 The safety theorems beside it (owner, 2026-11-24).** The goal implies memory safety, invariant
+**2.2 The safety theorems beside it (2026-11-24).** The goal implies memory safety, invariant
 preservation, race freedom and TOCTOU freedom through the refinement of `I`. As a safety net they are stated AGAIN,
 directly over the implementation runs, in a separate theorem (`core/Core/Ziel/Sicherheit.lean`):
 
@@ -368,7 +368,7 @@ ratchet:
    only together with all of it.
 6. No `_ =>` in `I`, the rules and the fundamental proofs; no hardware or stop kind outside the catalogue.
 7. No `sorry`, `admit`, `native_decide`, `axiom`, `unsafe`, `_zeuge`, `decide +kernel`, no witness modules.
-8. Fast builds (owner, 2026-11-23): `core/` is elaborated under `maxHeartbeats` 100 000 (half of Lean's default,
+8. Fast builds (2026-11-23): `core/` is elaborated under `maxHeartbeats` 100 000 (half of Lean's default,
    set in its lakefile); a source scan fails the build on any `set_option maxHeartbeats`,
    `synthInstance.maxHeartbeats` or `maxRecDepth`, on `decide` over anything but small finite goals, on bare `simp`
    in a terminal position where `simp only` would do, and on unbounded `aesop`. Proofs go by structure (`induction`,
@@ -379,7 +379,7 @@ ratchet:
 
 The enforceable promise: **a new constructor keeps the build red until its complete rules, its jointly
 satisfiable premises, the generic preservation of the pinned guarantees and the approved semantic diff exist.**
-A wrong but consistent `I`-rule or `Bezeichnet`-rule is caught only by the pin and the owner's review — the
+A wrong but consistent `I`-rule or `Bezeichnet`-rule is caught only by the pin and review — the
 review of a new language design stays part of the trusted base.
 
 ## 7. Trusted base and honest limits
@@ -392,7 +392,7 @@ fragment and is connected by `pruefer_korrekt`.
 
 ## 8. Building `core/` — the plan
 
-Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migrating `grammatik/`. Rules:
+Decision (2026-11-23): the model is built FRESH in the package `core/`, not by migrating `grammatik/`. Rules:
 - `grammatik/` is frozen: no new features; only repairs that keep the `master` gate green. Its `gabbro_ziel` stays
   green and is the interim promise until M12. Deliveries for `grammatik/` that were not merged by 2026-11-23 are
   not merged; what they contain is ported.
@@ -422,7 +422,7 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 | **M9 Observations and NI** | `ImSchranken`: hold bounds and cost and time first (B8), then stack (B9), memory (B21), real time (B19, including the numeric upper bounds of the L18 forms); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope with the B22 forms and their registry entries | M7 | 69 000–178 000 |
 | **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7, model side); waiting bounds and starvation freedom (B13) on M9's hold bounds | M7, M9 (B8 part) | 24 000–63 000 |
 | **M9P Probability** | random sources as rows with their draw laws; the B11 clause forms with their registry entries; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (model side) | M9 | 30 000–80 000 |
-| **M11 Transport** | `ZielFX` is defined and proved in `core/`; the package `uebergang/` imports `grammatik/` and `core/` and proves that `ZielFX` preserves today's whole guarantee from the full premises of today's `GabbroZiel` (§2.1), including the budgeted-G prefix correspondence for the retained fragment (§3.5); an excluded case only with the owner's approval | M6, M6F, M6L, M7, M8, M9, M9P, M10 | 6 000–20 000 |
+| **M11 Transport** | `ZielFX` is defined and proved in `core/`; the package `uebergang/` imports `grammatik/` and `core/` and proves that `ZielFX` preserves today's whole guarantee from the full premises of today's `GabbroZiel` (§2.1), including the budgeted-G prefix correspondence for the retained fragment (§3.5); an excluded case only with approval | M6, M6F, M6L, M7, M8, M9, M9P, M10 | 6 000–20 000 |
 | **M12 Closing** | the model is closed: `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); `gabbro_sicherheit : GabbroSicherheitForm R₀ S₀` (§2.2); the closing guard of §6 active; zero open registry entries. `grammatik/` and `uebergang/` stay until Stage 0, the bridge and the guardians have switched to `core/` (PLAN-COMPILER-READY phase B); then both are removed in one green cutover and the header of `Spec.lean` gives way to this file's §2 | M11 | 4 000–11 000 |
 | **Total** | | | **570 000–1 473 000** new (without the low-level forms 326 000–857 000; M6L 236 000–596 000) |
 
