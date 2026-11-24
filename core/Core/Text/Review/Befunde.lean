@@ -23,9 +23,10 @@
     `RegelAntwortSicherAussage` are generic theorems over an arbitrary `Befehl`: their traces are
     forced to `⟨[], []⟩` by `Befehl.vollzug_genau`, or discharged by `Befehl.sicher`/`.antwortSicher`.
     Again the "empty traces" case.
-  * `LocalTypeUseAussage` quantifies over `{a // select a.written}`. With `select := fun _ => False`
-    that subtype is empty, so all eight obligations hold although no written type ever gets a use -
-    the "premise that never holds" case.
+  * `LocalTypeUseAussage` quantifies over `{a // select a.written}` and additionally
+    demands a selected written type (`∃ w, select w`). The empty selector `fun _ => False`
+    is therefore refuted (`localTypeUseAussage_leer_falsch`) instead of proving all eight
+    obligations vacuously - the former "premise that never holds" case.
 -/
 module
 
@@ -162,30 +163,11 @@ theorem falschesLiteralForm_antwort_vakuös (platform : Plattform) (n : Nat) :
       (falschesLiteralForm.fragment n) platform (falschesLiteralForm.befehl n) :=
   antwortSicher_allQuellformen falschesLiteralForm platform n
 
-/-- With a selector that admits no written type, the argument subtype of `typeUseForm` is empty.
-    Every one of the eight `LocalTypeUseAussage` conjuncts is then a quantification over no cases. -/
-theorem localTypeUseAussage_leer :
-    LocalTypeUseAussage (fun _ : Gabbro.Core.Ast.WrittenType => False) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro ctx args
-    cases args.2
-  · intro ctx platform args
-    cases args.2
-  · intro ctx platform args s
-    cases args.2
-  · intro ctx platform args
-    cases args.2
-  · intro ctx
-    constructor
-    · intro args
-      cases args.2
-    · intro args
-      cases args.2
-  · intro ctx platform args
-    cases args.2
-  · intro ctx args
-    cases args.2
-  · intro ctx platform args
-    cases args.2
+/-- With a selector that admits no written type the strengthened `LocalTypeUseAussage`
+    is false: the required selected written type is missing. -/
+theorem localTypeUseAussage_leer_falsch :
+    ¬ LocalTypeUseAussage (fun _ : Gabbro.Core.Ast.WrittenType => False) := by
+  rintro ⟨⟨w, hw⟩, _⟩
+  exact hw
 
 end Gabbro.Core.Text.Review

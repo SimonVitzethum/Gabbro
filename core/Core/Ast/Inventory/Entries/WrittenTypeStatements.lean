@@ -17,8 +17,11 @@ def integerTypeUse : WrittenType → Prop
   | .integer .. => True
   | _ => False
 
-/-- A written scalar type takes effect at the binding instruction of a typed local. -/
+/-- A written scalar type takes effect at the binding instruction of a typed local.
+    The selector must admit at least one written type, so the obligations below
+    quantify over a real use and not over the empty subtype. -/
 def LocalTypeUseAussage (select : WrittenType → Prop) : Prop :=
+  (∃ w, select w) ∧
   (∀ ctx, (typeUseForm ctx select).ParseAussage) ∧
   (∀ ctx, (typeUseForm ctx select).ElaboriertAussage) ∧
   (∀ ctx, (typeUseForm ctx select).RealisiertAussage) ∧

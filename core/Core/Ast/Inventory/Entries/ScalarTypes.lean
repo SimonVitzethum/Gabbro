@@ -84,8 +84,9 @@ private theorem scalarTypeErhaltung (belongs : WrittenType → Prop) :
   exact Quellform.erhaltung (typeUseForm ctx belongs)
     (fun args => scalarType_keine_invarianten belongs ctx args)
 
-private theorem scalarTypeUseAussage (belongs : WrittenType → Prop) : LocalTypeUseAussage belongs :=
-  ⟨scalarTypeParse belongs, scalarTypeElaboriert belongs, scalarTypeRealisiert belongs,
+private theorem scalarTypeUseAussage (belongs : WrittenType → Prop)
+    (belegt : ∃ w, belongs w) : LocalTypeUseAussage belongs :=
+  ⟨belegt, scalarTypeParse belongs, scalarTypeElaboriert belongs, scalarTypeRealisiert belongs,
     scalarTypeAnnahme belongs, scalarTypeIdeal belongs, scalarTypeEinheit belongs,
     scalarTypeImpl belongs, scalarTypeErhaltung belongs⟩
 
@@ -180,10 +181,11 @@ private theorem integerTypeErfuellbarAm : IntegerTypeErfuellbarAussage := by
   exact integerErfuellbar platform start signed bounded
 
 private theorem boolTypeRegistry : BoolTypeRegistryAussage :=
-  ⟨boolTypeDerivation, scalarTypeUseAussage boolTypeUse, boolTypeErfuellbarAm⟩
+  ⟨boolTypeDerivation, scalarTypeUseAussage boolTypeUse ⟨.bool, trivial⟩, boolTypeErfuellbarAm⟩
 
 private theorem integerTypeRegistry : IntegerTypeRegistryAussage :=
-  ⟨integerTypeDerivation, scalarTypeUseAussage integerTypeUse, integerTypeErfuellbarAm⟩
+  ⟨integerTypeDerivation, scalarTypeUseAussage integerTypeUse
+    ⟨.integer true 1 none, trivial⟩, integerTypeErfuellbarAm⟩
 
 public theorem boolTypeEntry : RegistryPacketProof ``WrittenType.bool BoolTypeRegistryAussage :=
   ⟨boolTypeRegistry⟩
