@@ -239,8 +239,10 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
             | nil => exact (List.not_mem_nil hmem).elim
             | cons h₀ rest =>
               by_cases heq' : h₀ = c
-              · have hown' : (s.sperren l).besitzer = some c := by
-                  rw [hvn, hs2q, heq']
+              · have hred : (SperrZustand.abgeben ⟨some d', c :: rest⟩).besitzer
+                  = some c := rfl
+                have hown' : (s.sperren l).besitzer = some c := by
+                  rw [hvn, hs2q, heq', hred]
                 exact (hown1 hown').elim
               · have hmem' : c = h₀ ∨ c ∈ rest := List.mem_cons.mp hmem
                 rcases hmem' with hcontra | hr
