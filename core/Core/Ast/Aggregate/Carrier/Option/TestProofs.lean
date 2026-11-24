@@ -58,20 +58,84 @@ private theorem optionTest_keine_invarianten (scope : Scope) (args : OptionTestA
   change (expr 0 (Expr.optionIsSome args.ref args.visible args.ordinary)).klauseln.invariant = []
   exact expr_keine_invarianten 0 _
 
-theorem optionTestInversion : OptionTestInversionAussage := by
-  intro scope count minimum input type ref visible ordinary tree rest prec read
+private theorem optionIsSomeInvGen {scope count minimum input tree rest}
+    {optTy : Ty .value} {refT : Local scope optTy} {vis : refT.visible}
+    {ord : ordinaryLocal refT.binding.name}
+    (eqT : optTy = indexOptionType count)
+    (allowed : minimum ≤ Infix.projection.precedence) :
+    ExprTail scope minimum (.variable refT vis ord)
+      (dot :: .word indexIsSomeName.val :: openParen :: closeParen :: input) tree rest →
+    ExprTail scope minimum (.optionIsSome (eqT ▸ refT) (eqT ▸ vis) (eqT ▸ ord)) input tree rest := by
+  intro read
+  generalize htok : (dot :: .word indexIsSomeName.val :: openParen :: closeParen :: input) = toks at read
   cases read with
   | stop blocked =>
-      exact (blocked ⟨.projection, _, rfl, prec⟩).elim
-  | optionIsSome _ _ _ _ tailRead =>
-      exact tailRead
+      exact (blocked ⟨.projection, _, by simpa only [Infix.token] using htok.symm, allowed⟩).elim
+  | binary op _ _ _ =>
+      have head : dot = op.token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .arith op :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | div _ _ _ _ =>
+      have head : dot = Infix.div.token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .div :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | compare op _ _ _ _ =>
+      have head : dot = (Infix.compare op).token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .compare op :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | logic op _ _ _ =>
+      have head : dot = (Infix.logic op).token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .logic op :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | arrayIndex _ _ _ _ _ _ =>
+      have head : dot = openBracket := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .index :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | tupleField _ index' _ _ =>
+      have restEq : .word indexIsSomeName.val :: openParen :: closeParen :: input =
+          .natural index'.val :: _ := (List.cons.inj htok).2
+      cases (List.cons.inj restEq).1
+  | recordField _ field' _ _ _ _ =>
+      rename_i nm' lbls' tys' input'
+      change .record nm' (lbls'.map Subtype.val) (tupleType tys') = indexOptionType count at eqT
+      cases eqT
+  | textConcat _ _ _ _ =>
+      have head : dot = Arith.add.token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .arith Arith.add :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | textIndex _ _ _ _ =>
+      have head : dot = openBracket := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .index :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | substring _ _ _ _ _ _ =>
+      have head : dot = openBracket := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .index :=
+        Infix.token_injective (by simpa only [Infix.token] using head)
+      cases eq
+  | optionIsSome _ _ _ _ tail =>
+      rename_i input'
+      have inEq : input = input' :=
+        (List.cons.inj (List.cons.inj (List.cons.inj (List.cons.inj htok).2).2).2).2
+      subst input'
+      exact tail
+
+theorem optionTestInversion : OptionTestInversionAussage := by
+  intro scope count minimum input type ref visible ordinary tree rest prec read
+  exact optionIsSomeInvGen (refT := ref) (vis := visible) (ord := ordinary) rfl prec read
 
 theorem optionTestCases : OptionTestCasesAussage := by
   intro count slot value frame hframe
   dsimp only
   have hbind : (frame.temp slot).bind (wertAls (indexOptionType count)) = some value := by
     rw [hframe]
-    rfl
+    simp only [Option.bind, wertAls, dif_pos rfl]
   have hres : ((Befehl.optionIstBesetzt slot count).auswerten frame).temp slot =
       some ⟨.bool, indexOptionPresent value⟩ := by
     rw [Befehl.auswerten, Rahmen.schreibe]
@@ -81,6 +145,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
   rw [hres]
   cases value with
   | inl payload =>
+      simp only [indexOptionPresent]
       constructor
       · constructor
         · intro _
@@ -95,11 +160,12 @@ theorem optionTestCases : OptionTestCasesAussage := by
   | inr rest =>
       cases rest with
       | inl unit =>
+          simp only [indexOptionPresent]
           constructor
           · constructor
             · intro h
               cases h
-            · intro h
+            · rintro ⟨_, h⟩
               cases h
           · constructor
             · intro _
@@ -129,7 +195,7 @@ theorem optionTestDerivation : OptionTestDerivationAussage := by
             (ExprTail.optionIsSome args.ref args.visible args.ordinary (by omega)
               (.stop noOperatorAtClose))))
         (.stop noOperatorAtEnd)
-  · exact Rule.satisfiableOfPrint a (optionTestPrint scope a)
+  · exact Surface.Rule.satisfiableOfPrint a (optionTestPrint scope a)
 
 theorem optionTestParse : OptionTestParseAussage := by
   intro scope args text pieces lexed production
@@ -251,7 +317,7 @@ theorem optionTestInitialized : OptionTestInitializedAussage := by
       (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start step₀) step₁) step₂
   let b : Befehl := .optionIstBesetzt 0 0
   refine ⟨scope, tree, Ast.print (category := .block scope none) tree, s₃, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact Ast.parse_print
+  · exact Ast.parse_print (category := .block scope none) tree
   · exact reached
   · change E.system.kopf s₃ eintritt = some (.optionIstBesetzt 0 0)
     rfl
