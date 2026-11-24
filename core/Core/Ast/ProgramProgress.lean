@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Semantik.ProgramRegistry
-public import Core.Ast.Program.Execution
+public import Core.Ast.Program.Loops
 public import Core.Ast.Program.Recursion
 import Core.Ast.Semantik.LocalEffects
 
@@ -17,13 +17,6 @@ The finite count of such units is stated independently of their stutter length.
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
-
-/-- Exiting a loop includes returning from its surrounding function or requesting its handler. -/
-def SchleifenAusgang (first limit : Nat) (before after : Rahmen) : Prop :=
-  after.stopp.isSome = true ∨ after.rueckgabe.isSome = true ∨
-    after.fortsetzungen.length < before.fortsetzungen.length ∨
-    (after.fortsetzungen.length = before.fortsetzungen.length ∧
-      (after.pc < first ∨ limit ≤ after.pc))
 
 /-- A test that takes a pass consumes exactly one permit. The zero-budget
     branch requests its named handler only after the final test is true. -/
@@ -162,38 +155,6 @@ theorem program_unbounded_refused (frame : Rahmen) (entry : Identifier) (bad : F
     (Befehl.starte entry |>.auswerten frame).stopp = some (.unbeschraenkteRekursion bad.name) := by
   simpa [Befehl.auswerten, unique, firstBad, Rahmen.halt]
 
-/-- One successful loop body segment either exits or reaches its back-edge on the
-    same stack. Its budget includes all calls and nested loop instructions. -/
-def SchleifenKoerper (code : List Befehl) (origin : Rahmen) (first limit body back budget : Nat) : Prop :=
-  ∀ frame, (∃ n, Rahmen.LaufN code n origin frame) → frame.Aktiv →
-    frame.pc = body → frame.fortsetzungen.length = origin.fortsetzungen.length →
-    Binnen code budget frame (fun out =>
-      SchleifenAusgang first limit origin out ∨
-        out.Aktiv ∧ out.pc = back ∧ out.fortsetzungen.length = origin.fortsetzungen.length)
-
-/-- One closed bound evaluation and setup, at most N+1 tests, and at most N
-    bodies followed by a backward jump. A final true test requests the handler. -/
-theorem boundedWhile_terminiert (a : Surface.BoundedWhileArgs scope result) (frame : Rahmen)
-    (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
-    (typed : frame.traegt env)
-    (checked : frame.WaechterHalten ((boundedWhileForm scope result).fragment a).code)
-    (bodyBudget : Nat)
-    (body : let f := (boundedWhileForm scope result).fragment a
-      let test := (boundedWhileForm scope result).position a
-      SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 1) bodyBudget)
-    (condition : let f := (boundedWhileForm scope result).fragment a
-      let test := (boundedWhileForm scope result).position a
-      ∀ atTest, (∃ n, Rahmen.LaufN f.code n frame atTest) →
-        atTest.pc = test → atTest.fortsetzungen.length = frame.fortsetzungen.length →
-        atTest.Aktiv → ((atTest.temp 0).bind alsBoolean).isSome = true) :
-    let f := (boundedWhileForm scope result).fragment a
-    let N := (a.bound.wert env).wert.toNat
-    let bound := (expr 0 a.bound).code.length + 1 +
-      (N + 1) * ((expr 0 a.condition).code.length + 1) + N * (bodyBudget + 1)
-    Binnen f.code bound frame (SchleifenAusgang 0 f.code.length frame) := by
-  -- Mirror expr_ergebnis_typ for bound and tests, then induct using pass_fortschritt.
-  sorry
-
 /-- The for setup computes the exact half-open range size from both static values.
     The two endpoint computations are separate; evaluating the upper endpoint
     does not overwrite the lower endpoint's value. -/
@@ -215,26 +176,6 @@ theorem forRange_leer (frame : Rahmen) (lower upper : Ganzzahl) (index : Ty .val
     next.pc = frame.pc + skipEmpty ∧ next.lokale = frame.lokale ∧ next.stopp = frame.stopp := by
   have hnot : ¬ lower.zahl.wert < upper.zahl.wert := by omega
   simpa [Befehl.auswerten, readLower, readUpper, empty, hnot]
-
-theorem forRange_terminiert (a : Surface.ForRangeArgs scope result) (frame : Rahmen)
-    (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
-    (typed : frame.traegt env)
-    (checked : frame.WaechterHalten ((forRangeForm scope result).fragment a).code)
-    (bodyBudget : Nat)
-    (body : let f := (forRangeForm scope result).fragment a
-      let test := (forRangeForm scope result).position a
-      SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 2) bodyBudget)
-    (backEdge : let f := (forRangeForm scope result).fragment a
-      ∀ back, (∃ n, Rahmen.LaufN f.code n frame back) →
-        back.pc = f.code.length - 2 → back.fortsetzungen.length = frame.fortsetzungen.length →
-        back.Aktiv → ∀ instruction, f.code[back.pc]? = some instruction →
-        (instruction.auswerten back).Aktiv) :
-    let f := (forRangeForm scope result).fragment a
-    let N := ((a.upper.wert env).wert - (a.lower.wert env).wert).toNat
-    let bound := (expr 0 a.lower).code.length + (expr 1 a.upper).code.length + 3 + N * (bodyBudget + 2)
-    Binnen f.code bound frame (SchleifenAusgang 0 f.code.length frame) := by
-  -- Mirror boundedWhile_terminiert using forRange_passzahl and the generated increment.
-  sorry
 
 /-- A finite table gives a total depth bound, even when recursive functions
     call each other. The saved activations are ordered from oldest to newest. -/

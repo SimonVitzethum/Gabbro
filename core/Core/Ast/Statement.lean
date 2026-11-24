@@ -192,6 +192,9 @@ theorem StmtReads.let_header
       exfalso
       injection hs with hhead htail
       exact (by decide : letKeyword ≠ ifKeyword) hhead
+  | _ =>
+      exfalso
+      cases hs
 
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
   cases read
@@ -216,6 +219,9 @@ theorem StmtReads.assign_inversion
       exfalso
       cases conditionRead with
       | atom a t => exact AtomReads.not_assignment a
+  | _ =>
+      exfalso
+      cases hs
 
 -- Mirror StmtReads.let_header and exclude assignment with AtomReads.not_assignment.
 theorem StmtReads.ret_inversion
@@ -237,6 +243,9 @@ theorem StmtReads.ret_inversion
       right
       exact ⟨_, rfl⟩
   | ite conditionRead yesRead noRead =>
+      exfalso
+      cases hs
+  | _ =>
       exfalso
       cases hs
 
@@ -261,6 +270,9 @@ theorem StmtReads.ite_inversion
   | letBinding name ordinary read tail =>
       exfalso
       cases hs
+  | _ =>
+      exfalso
+      cases hs
 
 -- Mirror the original BlockReads.deterministic inversion on braced.
 theorem BlockReads.braced_inversion
@@ -275,6 +287,7 @@ theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace ::
   intro read
   cases read with
   | directCall callRead => cases callRead
+  | _ => contradiction
 
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
@@ -459,3 +472,4 @@ theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
       exact ⟨rfl, rfl⟩
 
 end Gabbro.Core.Ast
+
