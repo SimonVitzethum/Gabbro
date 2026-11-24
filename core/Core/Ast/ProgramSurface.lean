@@ -534,13 +534,13 @@ theorem StmtReads.bindDirect_inversion
   generalize htok : (letKeyword :: .word spelling :: colon :: input) = toks at read
   cases read with
   | bindDirect name ordinary written valid typeRead callRead =>
+      cases callRead
+      rename_i call args argsProof
       injection htok with _ htail
       injection htail with hspelling htail
       injection htail with _ htail
       injection hspelling with hname
       subst input
-      cases callRead
-      rename_i call args argsProof
       refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsProof, rfl⟩
       exact hname.symm
   | directCall callRead =>
@@ -579,9 +579,9 @@ theorem StmtReads.boundedWhile_inversion
   | directCall callRead =>
       cases callRead
       rename_i call args argsProof
-      injection htok with hhead _
-          injection hhead with hval
-          exact (call.ordinary.2 (by simpa [hval])).elim
+      injection htok with hhead htail
+      injection hhead with hval
+      exact (call.ordinary.2 (by simpa [hval])).elim
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
@@ -613,9 +613,9 @@ theorem StmtReads.forRange_inversion
   | directCall callRead =>
       cases callRead
       rename_i call args argsProof
-      injection htok with _ htail
-          injection htail with hspelling _
-          cases hspelling
+      injection htok with hhead htail
+      injection htail with hspelling hargs
+      cases hspelling
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
