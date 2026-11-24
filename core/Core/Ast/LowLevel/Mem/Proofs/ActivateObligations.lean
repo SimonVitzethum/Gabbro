@@ -319,6 +319,7 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
           | zero =>
               rw [hpc] at hhead
               simp only [List.getElem?_cons_zero] at hhead
+              change (if (op.evaluate target s entryContext).isSome then some op else none) = some op at hhead
               by_cases he : (op.evaluate target s entryContext).isSome
               · rw [if_pos he] at hhead
                 exact ⟨hs, rfl, hpc, he⟩
