@@ -68,21 +68,15 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
     ((Expr.arrayIndex args.base args.offset args.lower args.upper).printTokens)
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
     [closeBracket, closeParen], ?_, ?_⟩
-  · change openParen :: args.base.printTokens ++
-        (openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen])) =
-      openParen :: (args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
-        [closeBracket, closeParen])
-    simp only [List.append_assoc]
+  · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
+      List.map_nil, List.singleton_append, List.append_assoc]
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · change ExprReads scope 8
-      (args.base.printTokens ++ (openBracket ::
-        (args.offset.printTokens ++ [closeBracket, closeParen]))) args.base
-      (openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
-    apply Expr.printReads
-    intro cont
-    obtain ⟨op, more, same, allowed⟩ := cont
-    have prec := infixPrecLe7 op
-    omega
+  · simpa only [List.singleton_append, List.append_assoc] using
+      (Expr.printReads (minimum := 8) args.base (by
+        intro cont
+        obtain ⟨op, more, same, allowed⟩ := cont
+        have prec := infixPrecLe7 op
+        omega))
   · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
@@ -267,18 +261,20 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   dsimp only
   have nonneg : 0 ≤ offset.wert := Int.le_trans lower offset.unten
   have posval : (indexPosition offset lower upper).val = offset.wert.toNat := rfl
-  by_cases hc : count = 0
-  · subst count
-    have above : offset.wert < (0 : Int) := Int.lt_of_le_of_lt offset.oben upper
-    omega
-  constructor
-  · simp [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl,
-      if_neg (not_lt_of_ge nonneg), posval]
-  constructor
-  · change (indexPosition offset lower upper).val < count
-    exact (indexPosition offset lower upper).isLt
-  · have boundProof : offset.wert.toNat < count := (indexPosition offset lower upper).isLt
-    simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wertAls, Rahmen.zahl, alsGanzzahl,
-      Option.bind, if_neg (not_lt_of_ge nonneg), hc, dif_pos boundProof, indexPosition]
+  cases count with
+  | zero =>
+      have above : offset.wert < (0 : Int) := Int.lt_of_le_of_lt offset.oben upper
+      omega
+  | succ count =>
+      have boundProof : offset.wert.toNat < Nat.succ count :=
+        (indexPosition offset lower upper).isLt
+      constructor
+      · simp [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl,
+          if_neg (not_lt_of_ge nonneg), posval]
+      constructor
+      · change (indexPosition offset lower upper).val < Nat.succ count
+        exact (indexPosition offset lower upper).isLt
+      · simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wertAls, Rahmen.zahl, alsGanzzahl,
+          Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
