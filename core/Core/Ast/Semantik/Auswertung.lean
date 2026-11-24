@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Elaborierung
+public import Core.Annahme.Waechter
 
 @[expose] public section
 

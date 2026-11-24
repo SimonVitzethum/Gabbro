@@ -15,6 +15,7 @@ def SubstringDerivationAussage : Prop :=
 
 def SubstringSuffixAussage : Prop :=
   ∀ {scope capacity type minimum first rest} {base : Expr scope (.text capacity)} {tree : Expr scope type},
+    minimum ≤ Infix.index.precedence →
     ExprTail scope minimum base (openBracket :: first) tree rest → rest <:+ first
 
 def SubstringBytesAussage : Prop :=
