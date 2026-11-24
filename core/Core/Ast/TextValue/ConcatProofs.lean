@@ -115,7 +115,7 @@ private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {inpu
   | substring base first' last _ reads₁ reads₂ tail' =>
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailLowerConcat tail' right rightRead blocked)
-termination_by tail => sizeOf tail
+termination_by sizeOf tail
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
   intro scope
@@ -142,10 +142,11 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
 
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
+  have hl : left.bytes.size ≤ a := left.bound
+  have hr : right.bytes.size ≤ b := right.bound
   dsimp
   simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
     left.bound, right.bound]
-  trace_state
   all_goals omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
