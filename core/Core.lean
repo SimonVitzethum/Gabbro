@@ -88,6 +88,7 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
+public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
