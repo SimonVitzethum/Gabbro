@@ -78,6 +78,11 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
       (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
 
+private theorem suffix_length_le {a b : List Token} (h : a <:+ b) : a.length ≤ b.length := by
+  rcases h with ⟨t, ht⟩
+  rw [← ht]
+  simp
+
 private theorem textTailCompose {scope it it2 it3}
     {first : Expr scope it} {input : List Token} {tree : Expr scope it2} {rest : List Token}
     {tree2 : Expr scope it3} {final : List Token}
@@ -87,24 +92,33 @@ private theorem textTailCompose {scope it it2 it3}
   cases tail with
   | stop _ => exact next
   | binary op _ reads tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .binary op (Nat.zero_le _) reads (textTailCompose tail' next)
   | div _ reads nonzero tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .div (Nat.zero_le _) reads nonzero (textTailCompose tail' next)
   | compare op _ reads follows tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .compare op (Nat.zero_le _) reads follows (textTailCompose tail' next)
   | logic op _ reads tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .logic op (Nat.zero_le _) reads (textTailCompose tail' next)
   | arrayIndex base lower upper _ reads tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .arrayIndex base lower upper (Nat.zero_le _) reads (textTailCompose tail' next)
   | tupleField base index _ tail' =>
       exact .tupleField base index (Nat.zero_le _) (textTailCompose tail' next)
   | recordField base field index written _ tail' =>
       exact .recordField base field index written (Nat.zero_le _) (textTailCompose tail' next)
   | textConcat left right' _ reads tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .textConcat left right' (Nat.zero_le _) reads (textTailCompose tail' next)
   | textIndex base offset _ reads tail' =>
+      have hlen : _ := suffix_length_le (ExprReads.consumes reads)
       exact .textIndex base offset (Nat.zero_le _) reads (textTailCompose tail' next)
   | substring base first' last _ reads₁ reads₂ tail' =>
+      have hlen₁ : _ := suffix_length_le (ExprReads.consumes reads₁)
+      have hlen₂ : _ := suffix_length_le (ExprReads.consumes reads₂)
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailCompose tail' next)
 termination_by input.length
@@ -154,6 +168,7 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   all_goals
     first
     | rfl
+    | exact Nat.add_le_add hl hr
     | omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
