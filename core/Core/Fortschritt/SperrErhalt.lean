@@ -179,7 +179,7 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
   suffices key : ∀ d s, a + d ≤ t → ρ.zeit.zustand (a + d) = some s →
       c ∈ (s.sperren l).schlange by
     have hkk : a + (t - a) = t := by omega
-    rw [hkk] at *
+    rw [← hkk] at hzt
     exact key (t - a) s (by omega) hzt
   intro d
   induction d with
@@ -202,7 +202,7 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
         rw [hkk, hzs] at heq
         nomatch heq
     | some sk =>
-      have hmem : c ∈ (sk.sperren l).schlange := ih (by omega) sk hzk
+      have hmem : c ∈ (sk.sperren l).schlange := ih sk (by omega) hzk
       have hown1 : (s.sperren l).besitzer ≠ some c :=
         hnie _ s (by omega) (by omega) hzs
       have hown0 : (sk.sperren l).besitzer ≠ some c :=
@@ -261,7 +261,7 @@ theorem nodup_bleibt {ρ : Maschine.Lauf E} {l : L} {a t : Nat}
       (s.sperren l).schlange.Nodup by
     have hkk : a + (k - a) = k := by omega
     have hle' : a + (k - a) ≤ t := by omega
-    rw [hkk] at hle' ⊢
+    rw [← hkk] at hzk
     exact key (k - a) s hle' hzk
   intro d
   induction d with
@@ -282,7 +282,7 @@ theorem nodup_bleibt {ρ : Maschine.Lauf E} {l : L} {a t : Nat}
         rw [hkk, hzs] at heq
         nomatch heq
     | some sk =>
-      have hnd : (sk.sperren l).schlange.Nodup := ih (by omega) sk hzk
+      have hnd : (sk.sperren l).schlange.Nodup := ih sk (by omega) hzk
       have hzk1 : ρ.zeit.zustand (a + d + 1) = some s := by
         rw [show a + d + 1 = a + (d + 1) from by omega]
         exact hzs
@@ -358,10 +358,8 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
       obtain ⟨r, hsq, hnx⟩ := nimmt_inv hn
       have hqq' : q = d :: r := congrArg SperrZustand.schlange hsq
       rw [hqq'] at hq1 hnd
-      have hq2' : r[i₂]? = some c := by
-        have hrr : r = (⟨some d, r⟩ : SperrZustand).schlange := rfl
-        rw [hrr, ← hnx, ← hqq] at *
-        exact hq2
+      have hqr' : q' = r := hqq.trans (by rw [hnx])
+      rw [hqr'] at hq2
       have hown' : (⟨some d, r⟩ : SperrZustand).besitzer ≠ some c := by
         rw [← hnx]
         exact hown
@@ -375,7 +373,7 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
         have hjr : r[j]? = some c := hq1
         have hr : r.Nodup := (List.nodup_cons.mp hnd).2
         have hej : j = i₂ := List.Nodup.eq_of_getElem?_eq hr
-          (List.getElem?_eq_some_iff.mp hjr).1 (hjr.trans hq2'.symm)
+          (List.getElem?_eq_some_iff.mp hjr).1 (hjr.trans hq2.symm)
         omega
     | geben hg =>
       obtain ⟨qq, hsq, hs2q⟩ := gibt_abgeben hg
@@ -388,10 +386,8 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
         exact (List.not_mem_nil hmem).elim
       | cons h₀ rest =>
         have hab : SperrZustand.abgeben ⟨some d, h₀ :: rest⟩ = ⟨some h₀, rest⟩ := rfl
-        have hq2' : rest[i₂]? = some c := by
-          have hrr : rest = (⟨some h₀, rest⟩ : SperrZustand).schlange := rfl
-          rw [hrr, ← hab, ← hs2q, ← hqq] at *
-          exact hq2
+        have hqr' : q' = rest := hqq.trans (by rw [hs2q, hab])
+        rw [hqr'] at hq2
         have hq1' : (h₀ :: rest)[i₁]? = some c := hq1
         have hown' : (⟨some h₀, rest⟩ : SperrZustand).besitzer ≠ some c := by
           rw [← hab, ← hs2q]
@@ -406,7 +402,7 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
           have hjr : rest[j]? = some c := hq1'
           have hr : rest.Nodup := (List.nodup_cons.mp hnd).2
           have hej : j = i₂ := List.Nodup.eq_of_getElem?_eq hr
-            (List.getElem?_eq_some_iff.mp hjr).1 (hjr.trans hq2'.symm)
+            (List.getElem?_eq_some_iff.mp hjr).1 (hjr.trans hq2.symm)
           omega
 
 /-- Queue positions do not grow until the waiter first owns the lock. -/
@@ -425,7 +421,7 @@ theorem mono_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t t₁ t
   suffices key : ∀ d i', t₁ + d ≤ t₂ → ∀ s', ρ.zeit.zustand (t₁ + d) = some s' →
       (s'.sperren l).schlange[i']? = some c → i' ≤ i₁ by
     have hkk : t₁ + (t₂ - t₁) = t₂ := by omega
-    rw [hkk] at *
+    rw [← hkk] at hz2
     exact key (t₂ - t₁) i₂ (by omega) s₂ hz2 hq2
   intro d
   induction d with
@@ -433,7 +429,7 @@ theorem mono_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t t₁ t
     intro i' _ s' hzs hq'
     rw [Nat.add_zero] at hzs
     have hss : s' = s₁ := Option.some.inj (hzs.symm.trans hz1)
-    subst hss
+    rw [hss] at hq'
     have hnd : (s₁.sperren l).schlange.Nodup :=
       nodup_bleibt hod hfrei hle (by omega) hz1
     have hei : i' = i₁ := List.Nodup.eq_of_getElem?_eq hnd
@@ -460,7 +456,7 @@ theorem mono_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t t₁ t
       obtain ⟨i', hi'⟩ := mem_getElem? hmem'
       have hnd : (sk.sperren l).schlange.Nodup :=
         nodup_bleibt hod hfrei (by omega) (by omega) hzk
-      have hle1 : i' ≤ i₁ := ih (by omega) sk hzk hi'
+      have hle1 : i' ≤ i₁ := ih i' (by omega) sk hzk hi'
       have hown1 : (s'.sperren l).besitzer ≠ some c :=
         hnie _ s' (by omega) (by omega) hzs
       have hzk1 : ρ.zeit.zustand (t₁ + d + 1) = some s' := by
