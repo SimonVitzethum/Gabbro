@@ -122,11 +122,11 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
       cases tail with
       | empty =>
           simp only [ExprItems.printTail, List.map_nil, List.nil_append]
-          exact .next (Expr.printReads head noOperatorAtCloseBracket) .close
+          exact .next (Expr.printReads (rest := []) head noOperatorAtCloseBracket) .close
       | next second rest =>
           simp only [ExprItems.printTail, List.map_cons, List.map_append]
-          exact .next (Expr.printReads head noOperatorAtComma)
-            (.comma (Or.inr rfl) (itemsPrintRead tail))
+          exact .next (Expr.printReads (rest := comma :: _) head noOperatorAtComma)
+            (.comma (Or.inr rfl) (itemsPrintRead (.next second rest)))
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
@@ -139,6 +139,7 @@ private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
       printPunctuation, PrintedToken.unquoted,
       (show (Token.punctuation "[".toList : Token) = openBracket by decide),
       (show (Token.punctuation "]".toList : Token) = closeBracket by decide)]
+    rfl
   exact itemsPrintRead args.items
 
 theorem arrayValueDerivation : ArrayValueDerivationAussage := by

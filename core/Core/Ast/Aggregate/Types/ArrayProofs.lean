@@ -59,7 +59,10 @@ theorem arrayTypeDerivation : ArrayTypeDerivationAussage := by
     .atom .lit (.stop noOperatorAtCloseBracket)
   simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
     List.append_assoc, printOpenBracket, printSemicolon, printCloseBracket, printInteger,
-    printPunctuation, PrintedToken.unquoted] using
+    printPunctuation, PrintedToken.unquoted,
+    (show (Token.punctuation "[".toList : Token) = openBracket by decide),
+    (show (Token.punctuation ";".toList : Token) = semicolon by decide),
+    (show (Token.punctuation "]".toList : Token) = closeBracket by decide)] using
     (TypeReads.array count (Expr.lit count) elementRead boundRead)
 
 theorem arrayTypeIndex : ArrayTypeIndexAussage := by

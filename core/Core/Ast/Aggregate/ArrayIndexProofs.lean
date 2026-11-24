@@ -75,6 +75,7 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
       (show (Token.punctuation "[".toList : Token) = openBracket by decide),
       (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
       (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+    rfl
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
   · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
       (Expr.printReads (minimum := 8)
@@ -286,8 +287,7 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           exact values
         have wert : wertAls (.array element (count + 1))
             (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
-          unfold wertAls
-          repeat' split <;> simp
+          rfl
         simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 
