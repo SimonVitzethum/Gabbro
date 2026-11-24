@@ -16,7 +16,8 @@ before merge; nothing else may restate, extend or soften it. A draft elsewhere i
 Everything `I` allows is the program's logic. Everything else — known or unknown, from memory errors to TOCTOU —
 is an error and is excluded. "Effects" are all effects the pinned semantics records: outside questions and
 answers, device accesses, outputs, stops, internal state changes and authority effects — an unauthorised internal
-write that is undone before any output is an error too. The promise is over the modelled machine (G∞, after
+write that is undone before any output is an error too. The promise is over the modelled machine of `core/` (for the
+fragment retained from today's model also G∞, transported in M11; new low-level forms have no G counterpart; after
 B6/C9 the image). The user is not a premise. Hardware enters only as catalogue rows.
 
 ## 2. The theorem
@@ -71,13 +72,15 @@ Bindings that are part of the definitions:
   predicates, defined without `Bezeichnet`, acceptance or any parser — so a total `Bezeichnet` into the
   intrinsically typed unit is meaningful; printing and parsing round-trip modulo an explicitly defined trivia and
   canonicalisation relation. `Form` is
-  derived from the actual constructors of the reference AST. `Realisiert f a E` ties ONE occurrence of the
+  derived from the actual constructors of the reference AST (surface constructors only; core-only constructors
+  carry an origin proof instead, §6.5). `Realisiert f a E` ties ONE occurrence of the
   constructor in `a` to its corresponding ideal and implementation transitions in one admissible matched run (for
   a declaration form: its effect on the unit).
 - Catalogue: `KatalogWohlgeformt K` is an approved row selection whose composition is valid; `Akzeptiert E →
   KatalogWohlgeformt (katalog E)` follows from `Lokal`. `Hardware K H` says the environment `H` behaves as the
   rows say on the OUTSIDE side of the interaction, mandatory answers included; permitted non-answers are explicit
-  in the rows. `hw ρ` is the run's exogenous opportunity schedule (core steps, interrupt and delivery opportunities)
+  in the rows. `hw ρ` is the run's exogenous opportunity schedule (core steps, interrupt and delivery opportunities, and
+  crash points with their recovery continuation under the persistence envelope of B22)
   together with the total reactive outside policy; request-specific replies are separate events of the run, and an
   offered delivery is recorded even when the implementation fails to consume it, so a failure never makes a run
   inadmissible or unfair. `FairLaeufe K H` are the schedules and policies that are fair in the rows' sense — over
@@ -308,7 +311,11 @@ ratchet:
 4. The closing guard (from M12): one argument-free `R₀ : Rahmen` with every field bound to its approved concrete
    constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
    elaborated type, each field binding of `R₀`, their transitive semantic dependencies down to explicit trusted
-   roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`).
+   roots, and the axiom set (`propext`, `Classical.choice`, `Quot.sound`). It also checks that `Akzeptiert` of
+   `R₀` unfolds to `Lokal ∧ KlauselnWahr ∧ WaechterHalten` of §3.2 with the outside rule of §4 inside `Lokal`, and
+   that the public projections of §2.1 and the releases of `NiedrigAequiv` are the pinned label constants; beside
+   the goal, M12 proves NI non-degenerate (`ni_erfuellbar`: an accepted program that reads a high answer and two
+   environments with equal public projection and different high parts, both admitted).
 5. The registry of §3.1, indexed by each actual constructor of the reference AST and of the core syntax, with
    typed proofs (not names): each SURFACE constructor carries its `Parse` and `Elaboriert` proofs and a source
    occurrence as `Realisiert` evidence; each CORE-ONLY constructor (e.g. a continuation node created when an
