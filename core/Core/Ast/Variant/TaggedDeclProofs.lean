@@ -114,6 +114,8 @@ theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
   | effectGroup item _ =>
     cases visibility : item.exported <;> cases exported <;>
       simp_all [taggedDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, programWordValue, keyword]
+  | environment =>
+    cases exported <;> cases (List.cons.inj tokens).1
   | _ => cases exported <;> simp_all [taggedDeclarationPrefix, keyword, assignment, colon, openBrace, openParen, semicolon]
 
 private theorem taggedDeclPrints (scope : Scope) (args : TaggedDeclArgs scope) :
