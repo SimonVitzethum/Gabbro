@@ -246,10 +246,10 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   cases measure with
                   | none =>
                       simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
-                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases] at h
+                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                   | some m0 =>
                       simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
-                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases] at h
+                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
                   exact WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
@@ -257,22 +257,22 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                     cases measure with
                     | none =>
                         simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases] at h
+                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
                     | some m0 =>
                         simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases] at h))
+                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h))
             (by
               cases measure with
               | none =>
                   refine MeasureReads.absent ?_
                   intro more h
                   simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                    printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases] at h
+                    printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some m =>
                   refine MeasureReads.present m ?_
                   exact Expr.printReads (rest := afterMeasure) m.expression (by
                     simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace,
-                      printPunctuation] using
+                      printPunctuation, PrintedToken.unquoted] using
                       (noOperatorAtOpenBrace (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
             ((BracedBlock.braces items).printReads rest)
         simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
