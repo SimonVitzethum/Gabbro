@@ -194,10 +194,10 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
         (∃ s₁ s₂, ρ.zeit.zustand r = some s₁ ∧ ρ.zeit.zustand (r + 1) = some s₂ ∧
           (s₁.sperren l).Gibt h (s₂.sperren l)) ∧
         Kontextkosten ρ h b (r + 1 - b) ≤ H + 1) →
-    (∀ t₁ t₂ s₁ s₂ i₁ i₂, a ≤ t₁ → t₁ ≤ t₂ → ρ.zeit.zustand t₁ = some s₁ →
+    (∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), a ≤ t₁ → t₁ ≤ t₂ → ρ.zeit.zustand t₁ = some s₁ →
       ρ.zeit.zustand t₂ = some s₂ → (s₁.sperren l).schlange[i₁]? = some c →
       (s₂.sperren l).schlange[i₂]? = some c → i₂ ≤ i₁) →
-    ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
+    ∃ (b : Nat) (e : List Nat), a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
       ((s.sperren l).besitzer = some c ∨
         (∃ h₀ r, (s.sperren l).besitzer = none ∧ (s.sperren l).schlange = h₀ :: r ∧
           ∃ s', (s.sperren l).Nimmt h₀ s'))) ∧
