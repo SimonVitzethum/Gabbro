@@ -123,45 +123,96 @@ def boundedWhileProofs : RegistryEntry ``Stmt.whileBounded
 
 -- Mirror Rule.Entry.parse using the source production and lexical premises.
 theorem forRange_parse (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).ParseAussage := by
-  sorry
+  intro args text pieces lexed production
+  exact (Surface.forRange_entry scope result).parse lexed production
 
 -- Mirror elab_korrekt using the compositional fragment.
 theorem forRange_elaboriert (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).ElaboriertAussage := by
-  sorry
+  intro platform args
+  rfl
 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem forRange_realisiert (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).RealisiertAussage := by
-  sorry
+  intro platform args s running active live atPc
+  exact (forRangeForm scope result).realisiert (fun args => by
+    change (((((((expr 0 args.lower).anhaengen (expr 1 args.upper)).anhaengen (.einzel (Befehl.forAnfang 0 1 (rangeBinding args.name args.lo args.hi).type ((bracedBlock args.body).code.length + 4) (BracedBlock.rangeUses args.name args.body).1 ((BracedBlock.rangeUses args.name args.body).2 && args.overflow.isNone)))).anhaengen (.einzel (forInstruction (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (Befehl.forNaechster ((bracedBlock args.body).code.length + 1) (rangeBinding args.name args.lo args.hi).type))).anhaengen (.einzel (Befehl.blockEnde 1))).code[(expr 0 args.lower).code.length + (expr 1 args.upper).code.length + 1]? = some (forInstruction (bracedBlock args.body) args.overflow); grind [Fragment.anhaengen, Fragment.einzel]) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem forRange_annahme (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).AnnahmeAussage := by
-  sorry
+  intro platform args
+  refine ⟨((forRangeForm scope result).befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, (forRangeForm scope result).befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := ((forRangeForm scope result).befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem forRange_ideal (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).IdealAussage := by
-  sorry
+  constructor
+  · intro args
+    change (((((((expr 0 args.lower).anhaengen (expr 1 args.upper)).anhaengen (.einzel (Befehl.forAnfang 0 1 (rangeBinding args.name args.lo args.hi).type ((bracedBlock args.body).code.length + 4) (BracedBlock.rangeUses args.name args.body).1 ((BracedBlock.rangeUses args.name args.body).2 && args.overflow.isNone)))).anhaengen (.einzel (forInstruction (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (Befehl.forNaechster ((bracedBlock args.body).code.length + 1) (rangeBinding args.name args.lo args.hi).type))).anhaengen (.einzel (Befehl.blockEnde 1))).code[(expr 0 args.lower).code.length + (expr 1 args.upper).code.length + 1]? = some (forInstruction (bracedBlock args.body) args.overflow)
+    grind [Fragment.anhaengen, Fragment.einzel]
+  · intro args
+    constructor
+    · exact ((forRangeForm scope result).befehl args).bestimmt
+    · intro c s w plans u
+      exact Iff.rfl
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem forRange_einheit (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).EinheitAussage := by
-  sorry
+  intro platform args
+  exact ⟨rfl, ((forRangeForm scope result).befehl args).kommutation⟩
 
 -- Mirror Quellform.ImplAussage with the explicit transfer and its plan.
 theorem forRange_impl (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).ImplAussage := by
-  sorry
+  intro args c s w plans u
+  exact Iff.rfl
 
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem forRange_erhaltung (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).ErhaltungsAussage := by
-  sorry
+  intro platform args
+  have inv : ((forRangeForm scope result).fragment args).klauseln.invariant = [] := by
+    change (stmt ((forRangeForm scope result).produktion.tree args).2).klauseln.invariant = []
+    exact stmt_keine_invarianten _
+  exact ⟨((forRangeForm scope result).befehl args).abgleich ((forRangeForm scope result).fragment args) platform,
+    ((forRangeForm scope result).befehl args).fortschritt ((forRangeForm scope result).fragment args),
+    ((forRangeForm scope result).befehl args).komponierbar ((forRangeForm scope result).fragment args) platform,
+    ((forRangeForm scope result).befehl args).sicher ((forRangeForm scope result).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem forRange_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((forRangeForm scope result).fragment a).sicherheitsEinheit platform)
       ((forRangeForm scope result).befehl a) := by
-  sorry
+  have inv : ((forRangeForm scope result).fragment a).klauseln.invariant = [] := by
+    change (stmt ((forRangeForm scope result).produktion.tree a).2).klauseln.invariant = []
+    exact stmt_keine_invarianten _
+  exact ((forRangeForm scope result).befehl a).sicher ((forRangeForm scope result).fragment a) platform inv
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem forRange_erfuellbar : forRangeJoint := by
-  sorry
+  intro platform start
+  let ctx : StatementContext := ([], none)
+  let form := forRangeForm ctx.1 ctx.2
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryName : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  let a : Surface.ForRangeArgs [] none := ⟨name, ordinaryName, 1, 1, 3, 3, Expr.lit 1, Expr.lit 3, ⟨trivial, trivial⟩, none, .braces .done⟩
+  let setup : Befehl := .forAnfang 0 1 (rangeBinding name 1 3).type ((bracedBlock a.body).code.length + 4) (BracedBlock.rangeUses name a.body).1 ((BracedBlock.rangeUses name a.body).2 && a.overflow.isNone)
+  let E := form.einheit platform a
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.literal 0 1).nach eintritt s₀
+  let s₂ := (Befehl.literal 1 3).nach eintritt s₁
+  let s₃ := setup.nach eintritt s₂
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start
+      ⟨.literal 0 1, rfl, rfl, rfl⟩) ⟨.literal 1 3, rfl, rfl, rfl⟩) ⟨setup, rfl, rfl, rfl⟩
+  refine ⟨ctx, a, form.erfuellbar_aus_erreichbar platform start a s₃ reached
+    (form.realisiert (fun args => by
+    change (((((((expr 0 args.lower).anhaengen (expr 1 args.upper)).anhaengen (.einzel (Befehl.forAnfang 0 1 (rangeBinding args.name args.lo args.hi).type ((bracedBlock args.body).code.length + 4) (BracedBlock.rangeUses args.name args.body).1 ((BracedBlock.rangeUses args.name args.body).2 && args.overflow.isNone)))).anhaengen (.einzel (forInstruction (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (Befehl.forNaechster ((bracedBlock args.body).code.length + 1) (rangeBinding args.name args.lo args.hi).type))).anhaengen (.einzel (Befehl.blockEnde 1))).code[(expr 0 args.lower).code.length + (expr 1 args.upper).code.length + 1]? = some (forInstruction (bracedBlock args.body) args.overflow); grind [Fragment.anhaengen, Fragment.einzel]) platform a s₃ rfl rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
 
 def forRangeProofs : RegistryEntry ``Stmt.forRange
     ⟨.surface, Quellform.statements (Context := StatementContext) (fun ctx => forRangeForm ctx.1 ctx.2) forRangeJoint ``Stmt.forRange⟩ where
