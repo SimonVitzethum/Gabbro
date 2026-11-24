@@ -28,18 +28,19 @@ def Adressraum.TabellenGedeckt (space : Adressraum) (sp : Nat) : Prop :=
 
 /-- Every table entry of every space is covered, and every pending narrowing owns no frame. -/
 def MemFrame.TabellenGedeckt (frame : MemFrame) : Prop :=
-  (∀ sp space, frame.spaces[sp]? = some space → space.TabellenGedeckt sp) ∧
+  (∀ (sp : Nat) (space : Adressraum),
+    frame.spaces[sp]? = some space → space.TabellenGedeckt sp) ∧
     (∀ token ∈ frame.verengt, token.nurRechte = true)
 
-/-- A fresh frame (no space) satisfies the table invariant. -/
-theorem MemFrame.TabellenGedeckt.leer {frame : MemFrame} (empty : frame.spaces = []) :
-    frame.TabellenGedeckt := by
+/-- A fresh frame (no space, no narrowing) satisfies the table invariant. -/
+theorem MemFrame.TabellenGedeckt.leer {frame : MemFrame} (empty : frame.spaces = [])
+    (vempty : frame.verengt = []) : frame.TabellenGedeckt := by
   refine ⟨?spaces, ?narrow⟩
   · intro sp space found
     rw [empty] at found
     cases found
   · intro token mem
-    rw [empty] at mem
+    rw [vempty] at mem
     cases mem
 
 theorem MemFrame.TabellenGedeckt.aus_gleich {frame next : MemFrame}
@@ -60,13 +61,13 @@ theorem MemFrame.tabellenSicht_hit {frame : MemFrame} {sp page : Nat} {entry : S
     (hit : frame.tabellenSicht sp page = some entry) :
     ∃ space, frame.spaces[sp]? = some space ∧ space.abbildung page = some entry := by
   unfold MemFrame.tabellenSicht at hit
-  cases hfound : frame.spaces[sp]? with
+  cases h : frame.spaces[sp]? with
   | none =>
-    simp only [hfound] at hit
+    simp only [h] at hit
     cases hit
   | some space =>
-    simp only [hfound] at hit
-    exact ⟨space, hfound, hit⟩
+    simp only [h] at hit
+    exact ⟨space, rfl, hit⟩
 
 /-- A table entry makes its own single-page extent reserved: the space holding it overlaps it. -/
 theorem Adressraum.eintrag_reserviert {frame : MemFrame} {sp : Nat} {space : Adressraum}
@@ -101,6 +102,7 @@ theorem Adressraum.eintrag_reserviert {frame : MemFrame} {sp : Nat} {space : Adr
     have self : ¬ (⟨ent.frame * granule, (ent.frame + 1) * granule⟩ : Strecke).getrennt
         ⟨ent.frame * granule, (ent.frame + 1) * granule⟩ := by
       intro h
+      unfold Strecke.getrennt at h
       rw [expand] at h
       rcases h with h | h
       · omega

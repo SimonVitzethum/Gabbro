@@ -24,13 +24,10 @@ private theorem frei_narrow (space : Adressraum) (base pages : Nat) (rights : Li
   have hpage : entry.1 = old.1 := by
     cases old with
     | mk pg ent =>
-      simp only at heq
-      cases h : decide (pageRange base pages pg) with
-      | true =>
-        simp only [h] at heq
+      by_cases hc : pageRange base pages pg
+      · simp only [hc, ite_true] at heq
         simp only [heq]
-      | false =>
-        simp only [h] at heq
+      · simp only [hc, ite_false] at heq
         simp only [heq]
   rw [hpage]
   exact wf old hold token tmem
@@ -43,21 +40,17 @@ private theorem rechte_narrow (space : Adressraum) (base pages : Nat)
     entry.2.rights ≠ [] ∧
       entry.2.generation ≤ (narrowRights space base pages rights).generation := by
   unfold narrowRights at hmem
-  simp only at hmem
   obtain ⟨old, hold, heq⟩ := List.mem_map.mp hmem
   have hgen : (narrowRights space base pages rights).generation = space.generation := rfl
   rw [hgen]
   have holdOk := ok old hold
   cases old with
   | mk pg ent =>
-    simp only at heq
-    cases h : decide (pageRange base pages pg) with
-    | true =>
-      simp only [h] at heq
+    by_cases hc : pageRange base pages pg
+    · simp only [hc, ite_true] at heq
       cases heq
       exact ⟨hne, holdOk.2⟩
-    | false =>
-      simp only [h] at heq
+    · simp only [hc, ite_false] at heq
       cases heq
       exact holdOk
 
