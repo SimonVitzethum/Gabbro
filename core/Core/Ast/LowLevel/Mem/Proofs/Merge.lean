@@ -18,7 +18,8 @@ theorem merge_meaning : MergeMeaningAussage := by
     | some _ =>
         cases missing with
         | inl h1 =>
-            simp only [MemInstruction.evaluate, hfirst, h1, Option.bind_eq_bind, Option.bind_none]
+            rw [hfirst] at h1
+            cases h1
         | inr h2 =>
             simp only [MemInstruction.evaluate, hfirst, h2, Option.bind_eq_bind, Option.bind_some,
               Option.bind_none]
@@ -41,13 +42,9 @@ theorem merge_meaning : MergeMeaningAussage := by
           if_pos adj]
         rfl
       · dsimp [next]
-        by_cases hlt : second < ((s.lokal c).regions.set first (some joined)).length
-        · rw [List.getElem?_set_self hlt]
-          rfl
-        · have hge : ((s.lokal c).regions.set first (some joined)).length ≤ second :=
-            Nat.le_of_not_gt hlt
-          rw [List.getElem?_eq_none_iff.mpr hge]
-          rfl
+        rw [List.getElem?_set]
+        simp only [if_pos rfl]
+        split <;> rfl
       · intro addr
         change min left.extent.von right.extent.von ≤ addr ∧
             addr < max left.extent.bis right.extent.bis ↔
