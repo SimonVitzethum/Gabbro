@@ -370,7 +370,7 @@ theorem nie_erledigt_B : ∀ t, ¬ I.Erledigt ηAB B t := by
     cases hend
 
 /-- `B` is always enabled on the starvation run. -/
-theorem bereit_B (t : Nat) (_ : 0 ≤ t) : I.Bereit (ZAB t) B :=
+theorem bereit_B (t : Nat) (_ : 0 ≤ t) : I.Bereit (E := E_w dispatch2) (ZAB t) B :=
   ⟨(), [togglePlan], toggleUpdate B (ZAB t), (), rfl, rfl, rfl⟩
 
 /-- `B` hangs on the fair schedule: dispatched, open, enabled, never discharged. -/

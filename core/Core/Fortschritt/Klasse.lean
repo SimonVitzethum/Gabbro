@@ -75,7 +75,7 @@ def WaitFrei (ρ : Maschine.Lauf E) (η : I.Lauf E) : Prop :=
     (∃ k, ((η.zeit.zustand a).kerne k).laeuft = some c) →
     (∀ t, a ≤ t → E.system.kopf (η.zeit.zustand t) c = some f) →
     (∀ t, a ≤ t → (η.zeit.zustand t).status c = .laeuft) →
-    (∀ t, a ≤ t → I.Bereit (η.zeit.zustand t) c) →
+    (∀ t, a ≤ t → I.Bereit (E := E) (η.zeit.zustand t) c) →
     ∀ n, E.stotterLaenge f < Kontextkosten ρ c a n →
       ∃ t, a ≤ t ∧ t < a + n ∧ I.Erledigt η c t
 

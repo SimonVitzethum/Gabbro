@@ -204,12 +204,12 @@ theorem waitfrei_schliesst_schwaches_haengen_aus {ρ : Maschine.Lauf E} {η : I.
     (pf : I.FortschrittsPflichten (.blockierend : I.FortschrittsKlasse F) ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw)
     {c f a} (opened : I.BleibtOffen η c f a)
-    (enabled : ∀ t, a ≤ t → I.Bereit (η.zeit.zustand t) c) :
+    (enabled : ∀ t, a ≤ t → I.Bereit (E := E) (η.zeit.zustand t) c) :
     False := by
   have hact : I.Aktiviert η c a := Or.inl enabled
   -- A chain of bound+1 strictly increasing serviced ticks.
   have build : ∀ k : Nat, ∃ U : Nat, ∃ L : List Nat, L.length = k ∧
-      (∀ t ∈ L, a ≤ t ∧ nutzbar t c ∧ I.Bereit (η.zeit.zustand t) c) ∧
+      (∀ t ∈ L, a ≤ t ∧ nutzbar t c ∧ I.Bereit (E := E) (η.zeit.zustand t) c) ∧
       L.Pairwise (· < ·) ∧ ∀ t ∈ L, t < U := by
     intro k
     induction k with
