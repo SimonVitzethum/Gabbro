@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.Declaration.Readers
 import Core.Ast.Declaration.Members
-import Core.Ast.Declaration.Effects
+import Core.Ast.Declaration.EffectReaders
 
 @[expose] public section
 
