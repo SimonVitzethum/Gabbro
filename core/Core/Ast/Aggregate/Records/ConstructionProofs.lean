@@ -26,23 +26,32 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
+@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
+@[simp] private theorem printCommaVal : printComma.value = comma := by rfl
+@[simp] private theorem printColonVal : printColon.value = colon := by rfl
+
 theorem recordValue_inversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
-  generalize hh : Token.word ref.name.val :: openParen :: input = hs at read
   cases read with
+  | lit => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | grouped inner => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | trueLit => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | falseLit => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | «variable» ref' visible ordinary => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | negativeLit => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | neg => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | not => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | arrayValue => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
+  | tupleValue => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
   | recordValue ref' fields fits labelRead =>
-      rename_i input' lbs tys als ats args
-      have hnval : ref'.name.val = ref.name.val := by
-        injection (List.cons.inj hh).1 with h
+      rename_i inp lbs tys als ats args
+      refine ⟨⟨lbs, tys, ref', als, ats, args, fields, fits⟩, ?_, labelRead, ?_⟩
+      · apply Subtype.ext
+        injection (List.cons.inj (show Token.word ref.name.val :: openParen :: inp =
+          Token.word ref'.name.val :: openParen :: _ by rfl)).1 with h
         exact h.symm
-      have hin := (List.cons.inj hh).2
-      refine ⟨⟨lbs, tys, ref', als, ats, args, fields, fits⟩, ?_, ?_, ?_⟩
-      · exact Subtype.ext hnval
-      · simpa [hin] using labelRead
       · rfl
-  | _ =>
-      simp [keyword, trueKeyword, falseKeyword, openParen, openBracket, comma,
-        dot, assignment, semicolon] at hh
+  | variantValue => exfalso; rintro ⟨a, _, _, ht⟩; have := congrArg Sigma.fst ht; cases this
 
 private theorem labeledItems_consumes (scope : Scope) :
     ∀ (labels : List Identifier) (types : List (Ty .value)) (items : LabeledItems scope labels types),
@@ -58,15 +67,15 @@ private theorem labeledItems_consumes (scope : Scope) :
         | next n valueRead tailRead =>
             obtain ⟨u, hu⟩ := (labeledItems_consumes scope _ _ tail).2 tailRead
             obtain ⟨v, hv⟩ := ExprReads.consumes valueRead
-            refine ⟨.word n.val :: colon :: v ++ u, ?_⟩
+            refine ⟨.word name.val :: colon :: v ++ u, ?_⟩
             rw [hv, hu]
             simp),
       (by
         intro input rest read
         cases read with
-        | comma label value' remaining itemRead =>
+        | comma l v r ir =>
             obtain ⟨u, hu⟩ :=
-              (labeledItems_consumes scope _ _ (LabeledItems.next label value' remaining)).1 itemRead
+              (labeledItems_consumes scope _ _ (LabeledItems.next name value tail)).1 ir
             exact ⟨comma :: u, by rw [hu]; rfl⟩)⟩
 
 theorem recordValue_suffix : RecordValueSuffixAussage := by
@@ -82,11 +91,8 @@ private theorem labeledItems_print_reads (scope : Scope) :
   | _, _, .next name value tail => by
       have blocked : ¬ Continues 0 (tail.printTail.map PrintedToken.value ++ [closeParen]) := by
         cases tail with
-        | empty =>
-            simpa [LabeledItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
-        | next n v t =>
-            have commaToken : printComma.value = comma := by rfl
-            simpa [LabeledItems.printTail, commaToken] using (noOperatorAtComma (minimum := 0))
+        | empty => simpa [LabeledItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
+        | next n v t => simpa [LabeledItems.printTail] using (noOperatorAtComma (minimum := 0))
       have valueRead : ExprReads scope 0
           (value.printTokens ++ tail.printTail.map PrintedToken.value ++ [closeParen])
           value (tail.printTail.map PrintedToken.value ++ [closeParen]) := by
@@ -94,9 +100,7 @@ private theorem labeledItems_print_reads (scope : Scope) :
       have tailRead : LabeledItemsTail scope
           (tail.printTail.map PrintedToken.value ++ [closeParen]) tail [] := by
         cases tail with
-        | empty =>
-            simp [LabeledItems.printTail]
-            exact .close
+        | empty => simp [LabeledItems.printTail]; exact .close
         | next n v t =>
             simpa [LabeledItems.printTail, LabeledItems.printPieces] using
               (LabeledItemsTail.comma n v t (labeledItems_print_reads scope _ _ (.next n v t)))
@@ -107,7 +111,7 @@ private theorem recordValue_print (scope : Scope) (args : RecordValueArgs scope)
     (recordValue scope).production args
       (((Category.expression scope).printPieces ((recordValue scope).tree args)).map PrintedToken.value) := by
   refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, ?_⟩
-  · simp [recordValue, RecordValueArgs.expression, Category.printPieces, Expr.printPieces]
+  · simp [recordValue, RecordValueArgs.expression, Expr.typed, Category.printPieces, Expr.printPieces]
   · exact labeledItems_print_reads scope _ _ args.args
 
 theorem recordValue_derivation : RecordValueDerivationAussage := by
@@ -125,19 +129,15 @@ theorem recordValue_derivation : RecordValueDerivationAussage := by
     ⟨['r'], 'r', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let sc : Scope := recordBinding rName [] :: []
-  let ref : RecordRef sc [] [] :=
-    { name := rName
-      schema := Local.here
-      visible := trivial
-      spelled := rfl
-      shape := rfl
-      distinct := by simp }
+  let ref : RecordRef sc ([] : List Identifier) ([] : List (Ty .value)) :=
+    { name := rName, schema := Local.here, visible := trivial,
+      spelled := rfl, shape := rfl, distinct := by decide }
   let fields : RecordArguments ([] : List Identifier) ([] : List (Ty .value))
       ([] : List Identifier) ([] : List (Ty .value)) :=
-    ⟨rfl, by simp, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i)⟩
+    ⟨rfl, by decide, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i)⟩
   let args : RecordValueArgs sc :=
-    ⟨([] : List Identifier), ([] : List (Ty .value)), ref,
-      ([] : List Identifier), ([] : List (Ty .value)), .empty, fields, fun i => Fin.elim0 i⟩
+    ⟨[], [], ref, ([] : List Identifier), ([] : List (Ty .value)), .empty, fields,
+      fun i => Fin.elim0 i⟩
   exact Rule.satisfiableOfPrint args (recordValue_print sc args)
 
 end Gabbro.Core.Ast.Surface
@@ -148,12 +148,8 @@ open Maschine Annahme Katalog Waechter
 
 private theorem rv_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
   intro args
-  change (((labeledCode 0 args.args).code ++ [Befehl.baueRecord 0 args.ref.name.val args.labels args.types
-    (List.ofFn fun i : Fin args.types.length => (args.fields.slot i).val)])[
-    (labeledCode 0 args.args).code.length]? = some
-      (.baueRecord 0 args.ref.name.val args.labels args.types
-        (List.ofFn fun i : Fin args.types.length => (args.fields.slot i).val)))
-  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  simp [recordValueForm, Quellform.fragment, Semantik.fragment, Fragment.anhaengen,
+    List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
 theorem recordValue_parse : RecordValueParseAussage := by
   intro scope args text pieces lexed prod
@@ -201,19 +197,15 @@ theorem recordValue_erfuellbar : RecordValueErfuellbarAmAussage := by
     ⟨['r'], 'r', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let sc : Scope := recordBinding rName [] :: []
-  let ref : RecordRef sc [] [] :=
-    { name := rName
-      schema := Local.here
-      visible := trivial
-      spelled := rfl
-      shape := rfl
-      distinct := by simp }
+  let ref : RecordRef sc ([] : List Identifier) ([] : List (Ty .value)) :=
+    { name := rName, schema := Local.here, visible := trivial,
+      spelled := rfl, shape := rfl, distinct := by decide }
   let fields : RecordArguments ([] : List Identifier) ([] : List (Ty .value))
       ([] : List Identifier) ([] : List (Ty .value)) :=
-    ⟨rfl, by simp, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i)⟩
+    ⟨rfl, by decide, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i)⟩
   let args : Surface.RecordValueArgs sc :=
-    ⟨([] : List Identifier), ([] : List (Ty .value)), ref,
-      ([] : List Identifier), ([] : List (Ty .value)), .empty, fields, fun i => Fin.elim0 i⟩
+    ⟨[], [], ref, ([] : List Identifier), ([] : List (Ty .value)), .empty, fields,
+      fun i => Fin.elim0 i⟩
   let form := recordValueForm sc
   let E := form.einheit platform args
   let s := (I.start E start).2

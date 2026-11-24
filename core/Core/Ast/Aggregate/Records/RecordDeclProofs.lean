@@ -26,6 +26,12 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
+@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
+@[simp] private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
+    (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
+@[simp] private theorem ppValue (s : String) (p1 p2) :
+    (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
+
 theorem recordDecl_inversion : RecordDeclInversionAussage := by
   intro scope input tree rest ex name read
   generalize hh : recordDeclarationPrefix ex ++ [Token.word name.val, assignment, openBrace] ++ input = hs at read
@@ -90,12 +96,15 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
     (recordDecl scope).production args
       (((Category.declaration scope).printPieces ((recordDecl scope).tree args)).map PrintedToken.value) := by
   refine ⟨memberTokenList args.members ++ [closeBrace, semicolon], ?_, ?_⟩
-  · by_cases h : args.exported <;>
-      simp [h, memberTokenList, recordDecl, Category.printPieces, Decl.printPieces,
-        recordDeclarationHead, recordDeclarationPrefix, keyword, List.flatMap,
-        RecordMember.printPieces, List.map_append,
-        printPub, printTypeDecl, printAssignment, printOpenBrace,
-        printCloseBrace, printSemicolon]
+  · have hmem : args.members.flatMap (fun m => (RecordMember.printPieces m).map PrintedToken.value) =
+        memberTokenList args.members := by
+      induction args.members with
+      | nil => rfl
+      | cons m ms ih => simp [memberTokenList, RecordMember.printPieces, ih]
+    by_cases h : args.exported <;>
+      simp [h, hmem, List.flatMap, recordDecl, Category.printPieces, Decl.printPieces,
+        recordDeclarationHead, recordDeclarationPrefix, keyword,
+        recordDeclarationHead, printPub, printTypeDecl]
   · exact recordMembers_print_reads args.members args.valid
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by

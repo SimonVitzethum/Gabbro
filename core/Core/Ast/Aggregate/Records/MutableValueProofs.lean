@@ -25,6 +25,12 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
+@[simp] private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
+@[simp] private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
+    (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
+@[simp] private theorem ppValue (s : String) (p1 p2) :
+    (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
+
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
   generalize hh : letKeyword :: keyword "mut" :: Token.word name :: assignment :: input = hs at read
