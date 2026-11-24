@@ -142,7 +142,6 @@ theorem eh_kosten_null (a n : Nat) : Kontextkosten ρ_h stuckHalter a n = 0 := b
   unfold Kontextkosten
   apply zaehle_null
   intro t
-  simp only []
   have hsp : ρ_h.zeit.spur (a + t) = some posLabel ∨
       ρ_h.zeit.spur (a + t) = some bLabel := by
     by_cases h : (a + t) % 2 = 0
