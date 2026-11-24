@@ -225,7 +225,6 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       cases firstEq
       obtain ⟨sameYes, moreEq⟩ := ihYes yesRead'
       cases sameYes
-        subst_vars
       obtain ⟨sameNo, restEq⟩ := ihNo noRead'
       cases sameNo
       exact ⟨rfl, restEq⟩
