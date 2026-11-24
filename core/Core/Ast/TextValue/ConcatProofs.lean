@@ -86,14 +86,13 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, wertAls,
     dif_pos left.bound, dif_pos right.bound, Option.bind, TextValue.concat,
     ByteArray.size_append, hleft, hright]
-  constructor
-  · rfl
-  constructor
-  · rfl
-  constructor
-  · change left.bytes.size + right.bytes.size ≤ a + b
-    exact Nat.add_le_add hl hr
-  · trivial
+  repeat' constructor
+  all_goals
+    first
+    | rfl
+    | trivial
+    | change left.bytes.size + right.bytes.size ≤ a + b
+      exact Nat.add_le_add hl hr
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
@@ -220,14 +219,13 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
     · rfl
     · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
         dsimp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        have h10 : (1 : Nat) ≠ 0 := by omega
         have h01 : (0 : Nat) ≠ 1 := by omega
-        simp only [Function.update_self, Function.update_of_ne, h10, h01, a]
+        rw [Function.update_of_ne h01, Function.update_self]
+        simp only [a]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
         dsimp [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        have h10 : (1 : Nat) ≠ 0 := by omega
-        have h01 : (0 : Nat) ≠ 1 := by omega
-        simp only [Function.update_self, Function.update_of_ne, h10, h01, a]
+        rw [Function.update_self]
+        simp only [a]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
       change (((((textConcatForm []).befehl args).nach eintritt s₂).lokal eintritt).temp 0).isSome = true
