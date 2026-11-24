@@ -142,7 +142,7 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
             ⟨Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
           simp only [wertAls, Wert.widen]
           rw [dif_pos hb]
-      | _ => simp [Fits, wertAls, Wert.widen] at fits
+      | _ => simp only [Fits, wertAls, Wert.widen] at fits
   | array el count =>
       cases target with
       | array el' count' =>
