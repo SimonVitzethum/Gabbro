@@ -73,7 +73,7 @@ theorem ticket_leer (s : Zustand Unit Unit Unit Unit Bool Unit) (c : Kontext) :
 def e1AusfuehrA :
     FuehrtSchrittAus (E_1).einrichtung 0 A zE0 (toggleUpdate A zE0) ticketPlan ⟨[], []⟩ S_c := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, [], S_c,
+    fun _ h => (List.not_mem_nil h).elim, _, S_c,
     .sperre (.ticket (fun h => by cases h) List.not_mem_nil) (fun w => (w rfl).elim), ?_, rfl⟩
   rw [ticket_leer]
   exact .nil _
@@ -81,7 +81,7 @@ def e1AusfuehrA :
 def e1AusfuehrB :
     FuehrtSchrittAus (E_1).einrichtung 1 B S_c (toggleUpdate B S_c) ticketPlan ⟨[], []⟩ S_d := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, [], S_d,
+    fun _ h => (List.not_mem_nil h).elim, _, S_d,
     .sperre (.ticket (fun h => by cases h)
       (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h))) (fun w => (w rfl).elim), ?_, rfl⟩
   rw [ticket_leer]
@@ -130,22 +130,24 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
           have h1 : (S_d.kerne 1).laeuft = some B := rfl
           have hnone : ∀ m : Nat, (S_d.kerne (m + 2)).laeuft = none := fun _ => rfl
           cases k with
-          | zero =>
-            rw [h0] at hdisp
-            cases hdisp
-            obtain ⟨_, hticket, _, _⟩ := regel
-            cases hticket with
-            | ticket _ keinTicket =>
-              have hmA : A ∈ (S_d.sperren ()).schlange := by
-                rw [qd]
-                exact List.mem_cons.mpr (Or.inl rfl)
-              exact keinTicket hmA
+            | zero =>
+              rw [h0] at hdisp
+              cases hdisp
+              obtain ⟨i, _, hideal⟩ := regel
+              obtain ⟨_, hticket, _, _⟩ := hideal
+              cases hticket with
+              | ticket _ keinTicket =>
+                have hmA : A ∈ (S_d.sperren ()).schlange := by
+                  rw [qd]
+                  exact List.mem_cons.mpr (Or.inl rfl)
+                exact keinTicket hmA
           | succ n =>
             cases n with
             | zero =>
               rw [h1] at hdisp
               cases hdisp
-              obtain ⟨_, hticket, _, _⟩ := regel
+              obtain ⟨i, _, hideal⟩ := regel
+              obtain ⟨_, hticket, _, _⟩ := hideal
               cases hticket with
               | ticket _ keinTicket =>
                 have hmB : B ∈ (S_d.sperren ()).schlange := by
