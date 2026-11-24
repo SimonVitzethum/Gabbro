@@ -197,6 +197,7 @@ theorem stummer_schritt_koppelt
     | schritt impl =>
       cases impl with
       | kontext keinAbsturz₁ bereit₁ regel₁ aus₁ =>
+        rename_i left_u left_plan
         obtain ⟨f₁, kopf₁, impl₁rule⟩ := regel₁
         have ff : f = f₁ := Option.some.inj (kopf.symm.trans kopf₁)
         subst ff
@@ -261,26 +262,30 @@ theorem stummer_schritt_koppelt
         | wartet _ _ hp =>
           exact (hp _ _ (Lauffolge.schritt step₂)).elim
         | schritt label₂ step₂' =>
-          cases step₂' with
-          | schritt impl₂' =>
-            cases impl₂' with
-            | kontext _hka _hbe regel₂' aus₂' =>
-              rename_i _ _ _ _ _ c' _
-              obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
-              have centry' : c' = Ast.Semantik.eintritt := by
-                by_contra hc
-                have h : Ast.Semantik.kopf p.code w₂ c' = some f₂ :=
-                  (sysKopf w₂ c').symm.trans kopf₂'
-                unfold Ast.Semantik.kopf at h
-                rw [if_neg hc] at h
-                cases h
-              -- both sides run at the entry context
-              have c_eq : c' = c := centry'.trans centry.symm
-              rw [c_eq] at kopf₂'
-              have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-              subst ff₂
-              obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := _) f impl₂'rule aus₂'
-              rw [c_eq] at nachGlied₂
+          rename_i ev₂
+          cases ev₂ with
+          | mk wahl₂ sp₂ =>
+            cases wahl₂ with
+            | kontext c₂ w₂' =>
+              cases step₂' with
+              | schritt impl₂' =>
+                cases impl₂' with
+                | kontext _ _ regel₂' aus₂' =>
+                  obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
+                  have centry' : c₂ = Ast.Semantik.eintritt := by
+                    by_contra hc
+                    have h : Ast.Semantik.kopf p.code w₂ c₂ = some f₂ :=
+                      (sysKopf w₂ c₂).symm.trans kopf₂'
+                    unfold Ast.Semantik.kopf at h
+                    rw [if_neg hc] at h
+                    cases h
+                  -- both sides run at the entry context
+                  have c_eq : c₂ = c := centry'.trans centry.symm
+                  rw [c_eq] at kopf₂'
+                  have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+                  subst ff₂
+                  obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := _) f impl₂'rule aus₂'
+                  rw [c_eq] at nachGlied₂
               have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                 rw [nachEq₂, nachGlied₂]
               have still₂ : schrittBeob ρ₂ predictor t = [] :=
@@ -347,17 +352,26 @@ theorem stummer_schritt_koppelt
               · -- length: both sides append nothing
                 rw [e₁, e₂]
                 exact len
-            | antwort h₂' => exact (keineAntwort₂ _ _ label₂).elim
-            | interrupt _ h₂' =>
-              obtain ⟨_, _, _, _, _, pending₂, _, _, _, _, _⟩ := h₂'
-              have contra := pending₂.2.2.2.2
-              rw [auswahl₂none] at contra
-              cases contra
-            | absturz h₂' =>
-              obtain ⟨offer₂, _, _⟩ := h₂'
-              have crash₂true : (ρ₂.hw.angebot t).crash = true := offer₂.2
-              rw [crash₂true] at crash₂
-              cases crash₂
+            | antwort a =>
+              exact (keineAntwort₂ a sp₂ label₂).elim
+            | interrupt id =>
+              cases step₂' with
+              | schritt impl₂' =>
+                cases impl₂' with
+                | interrupt _ h₂' =>
+                  obtain ⟨_, _, _, _, _, pending₂, _, _, _, _, _⟩ := h₂'
+                  have contra := pending₂.2.2.2.2
+                  rw [auswahl₂none] at contra
+                  cases contra
+            | absturz =>
+              cases step₂' with
+              | schritt impl₂' =>
+                cases impl₂' with
+                | absturz h₂' =>
+                  obtain ⟨offer₂, _, _⟩ := h₂'
+                  have crash₂true : (ρ₂.hw.angebot t).crash = true := offer₂.2
+                  rw [crash₂true] at crash₂
+                  cases crash₂
 
 /-- Pauses coincide under the coupling: lockstep through step kinds forces the right
     run to idle along. Pinned for the prover; needs the same transfer machinery as
