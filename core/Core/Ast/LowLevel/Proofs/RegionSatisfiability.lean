@@ -109,10 +109,10 @@ theorem viewUnit_erfuellbar : ∃ written valid, RegionUnitErfuellbarAussage (.v
   exact ⟨written, valid, regionUnit_joint (.view written valid) ⟨0, 0, 1, false⟩ rfl rfl⟩
 
 theorem regionAddressUnit : RegionAddressUnitAussage :=
-  ⟨regionUnit_realized, regionUnit_transfer _, regionAddressUnit_erfuellbar⟩
+  ⟨regionUnit_realized, regionUnit_sicherheit, regionUnit_transfer _, regionAddressUnit_erfuellbar⟩
 
 theorem viewUnit : ViewUnitAussage :=
-  ⟨regionUnit_realized, fun _ _ => regionUnit_transfer _, viewUnit_erfuellbar⟩
+  ⟨regionUnit_realized, regionUnit_sicherheit, fun _ _ => regionUnit_transfer _, viewUnit_erfuellbar⟩
 
 theorem regionBindUnit : RegionBindUnitAussage := ⟨regionAddressUnit, viewUnit⟩
 

@@ -68,6 +68,11 @@ theorem regionUnit_realized : RegionUnitRealizedAussage := by
     (Category.unit.syntax.parse_iff).mpr ⟨pieces, lexed, read⟩,
     fun _ _ => rfl, regionUnitForm.realisiert position⟩
 
+theorem regionUnit_sicherheit : regionUnitForm.SicherheitsAussage := by
+  rintro platform ⟨args, init⟩
+  exact (regionUnitForm.befehl (args, init)).sicherheitsPflichten
+    (regionUnitForm.fragment (args, init)) platform (programm_keine_invarianten (args.unit init))
+
 /-- A successful bind uses the live slot named by the receiver, and returns
     exactly the target-indexed value determined by that checked extent. -/
 def RegionUnitTransferAussage (init : RegionInitializer) : Prop :=
@@ -97,11 +102,12 @@ def RegionUnitErfuellbarAussage (init : RegionInitializer) : Prop :=
     ∃ value, (after.lokal eintritt).lokale.head? = some (some ⟨init.type, value⟩)
 
 def RegionAddressUnitAussage : Prop :=
-  RegionUnitRealizedAussage ∧ RegionUnitTransferAussage .address ∧
+  RegionUnitRealizedAussage ∧ regionUnitForm.SicherheitsAussage ∧ RegionUnitTransferAussage .address ∧
     RegionUnitErfuellbarAussage .address
 
 def ViewUnitAussage : Prop :=
-  RegionUnitRealizedAussage ∧ (∀ written valid, RegionUnitTransferAussage (.view written valid)) ∧
+  RegionUnitRealizedAussage ∧ regionUnitForm.SicherheitsAussage ∧
+    (∀ written valid, RegionUnitTransferAussage (.view written valid)) ∧
     ∃ written valid, RegionUnitErfuellbarAussage (.view written valid)
 
 def RegionBindUnitAussage : Prop := RegionAddressUnitAussage ∧ ViewUnitAussage

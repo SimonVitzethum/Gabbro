@@ -75,9 +75,29 @@ def MemRegelSicherAussage (form : MemForm) : Prop :=
 
 def MemRegelAntwortSicherAussage (form : MemForm) : Prop :=
   ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →
+    Sicherheit.RegelAntwortSicher (memSafetyUnit k op) op ∧
     ∀ t c s w middle next p trace, op.step k.plattform.ziel c s w [p] middle →
       FuehrtSchrittAus (memUnit k op).einrichtung t c s middle p trace next →
       (∀ ev : AntwortEreignis, Ereignis.antwort ev ∉ trace.aussen) ∧ next.verbraucht = s.verbraucht
+
+theorem memRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussage form := by
+  intro k scope tree op _
+  constructor
+  · intro t c w vor zwischen nach p trace _ impl execute befugt
+    obtain ⟨frame, _, planEq, rfl⟩ := impl
+    cases (List.cons.inj planEq).1
+    obtain ⟨_, _, _, _, action, _, after⟩ := execute
+    cases action
+    rw [after]
+    exact befugt
+  · intro t c s w middle next p trace impl execute
+    obtain ⟨_, _, planEq, rfl⟩ := impl
+    cases (List.cons.inj planEq).1
+    rcases trace with ⟨memory, events⟩
+    obtain ⟨_, _, _, _, action, _, after⟩ := execute
+    cases action
+    rw [after]
+    exact ⟨fun _ => List.not_mem_nil, rfl⟩
 
 def MemAussenLokalAussage (form : MemForm) : Prop :=
   ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →

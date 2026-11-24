@@ -236,10 +236,10 @@ theorem effectGroup_erhaltung : EffectGroupErhaltungAussage := by
   let p := (effectGroupForm scope).fragment args
   let b := (effectGroupForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform (by rfl)⟩
 theorem effectGroup_regelSicher : EffectGroupRegelSicherAussage := by
   intro scope platform args
-  exact (effectGroup_erhaltung scope platform args).2.2.2
+  exact (effectGroup_erhaltung scope platform args).2.2.2.1
 private theorem mapM_option_length {α β : Type} (f : α → Option β) :
     ∀ (xs : List α) (ys : List β), xs.mapM f = some ys → xs.length = ys.length := by
   intro xs

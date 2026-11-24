@@ -71,7 +71,7 @@ theorem constant_erhaltung (scope : Scope) : (constantForm scope).ErhaltungsAuss
   exact ⟨((constantForm scope).befehl args).abgleich ((constantForm scope).fragment args) platform,
     ((constantForm scope).befehl args).fortschritt ((constantForm scope).fragment args),
     ((constantForm scope).befehl args).komponierbar ((constantForm scope).fragment args) platform,
-    ((constantForm scope).befehl args).sicher ((constantForm scope).fragment args) platform inv⟩
+    ((constantForm scope).befehl args).sicherheitsPflichten ((constantForm scope).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem constant_sicher (scope : Scope) platform a :

@@ -217,7 +217,7 @@ theorem optionMatchErhaltung : OptionMatchErhaltungAussage := by
 
 theorem optionMatchRegelSicher : OptionMatchRegelSicherAussage := by
   intro ctx platform a
-  exact (optionMatchErhaltung ctx platform a).2.2.2
+  exact (optionMatchErhaltung ctx platform a).2.2.2.1
 
 theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
   intro platform start

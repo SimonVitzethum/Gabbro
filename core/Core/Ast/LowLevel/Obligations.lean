@@ -73,10 +73,10 @@ def RegelSicherAussage (form : Form) : Prop :=
   ∀ k scope (tree : Tree form) op, elaborate k scope tree = some op →
     Sicherheit.RegelSicher (safetyUnit op) op
 
-/-- The local registration and region-metadata forms have no reply event and
-    cannot consume an outstanding answer as a side effect. -/
+/-- The local forms preserve pending authority and neither emit nor consume a reply. -/
 def RegelAntwortSicherAussage (form : Form) : Prop :=
   ∀ k scope (tree : Tree form) op, elaborate k scope tree = some op →
+    Sicherheit.RegelAntwortSicher (safetyUnit op) op ∧
     ∀ t c s w middle next p trace, op.impl c s w [p] middle →
       FuehrtSchrittAus (unit op).einrichtung t c s middle p trace next →
       (∀ ev : AntwortEreignis, Ereignis.antwort ev ∉ trace.aussen) ∧

@@ -80,7 +80,8 @@ theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
   exact ⟨((programForm).befehl args).abgleich (programForm.fragment args) platform,
     ((programForm).befehl args).fortschritt (programForm.fragment args),
     ((programForm).befehl args).komponierbar (programForm.fragment args) platform,
-    ((programForm).befehl args).sicher (programForm.fragment args) platform (programm_keine_invarianten args.unit)⟩
+    ((programForm).befehl args).sicherheitsPflichten (programForm.fragment args) platform
+      (programm_keine_invarianten args.unit)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem program_sicher  platform a :

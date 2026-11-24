@@ -153,7 +153,7 @@ theorem AssignFieldRegelSicher : AssignFieldRegelSicherAussage := by
   intro ctx platform args
   exact (Quellform.erhaltung (assignFieldForm ctx)
     (fun args => stmt_keine_invarianten ((Surface.assignField ctx).tree args).2)
-    platform args).2.2.2
+    platform args).2.2.2.1
 
 open Gabbro.Core.Text
 

@@ -25,7 +25,7 @@ theorem Quellform.erhaltung (form : Quellform category Arguments)
   let p := form.fragment args
   let b := form.befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (ohneInvarianten args)⟩
+    b.sicherheitsPflichten p platform (ohneInvarianten args)⟩
 
 def Quellform.eintrag {cat : Scope → Category} {args : Scope → Type}
     (forms : (scope : Scope) → Quellform (cat scope) (args scope)) (joint : Prop) (constructor : Name)

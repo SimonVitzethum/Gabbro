@@ -137,6 +137,6 @@ theorem environmentUnit_erhaltung : environmentUnitForm.ErhaltungsAussage := by
   let p := environmentUnitForm.fragment args
   let b := environmentUnitForm.befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (programm_keine_invarianten args.unit)⟩
+    b.sicherheitsPflichten p platform (programm_keine_invarianten args.unit)⟩
 
 end Gabbro.Core.Ast.Semantik

@@ -195,8 +195,10 @@ Consequences:
   tracked work list: open work and findings live in plans or in a gitignored scratch file.
 - **Commits:** Conventional Commits (`type(scope): summary`), message from a file (`git commit -F`), the model's
   `Co-Authored-By` line and no other trailers. Commit every building step. In a shared checkout commit by path.
-- **Branches:** the integration branch is pushed to `dev` without a build gate — `dev` may be red. `master` only
-  advances to a `dev` commit whose full builds of every package and both guardians are green (owner, 2026-11-19).
+- **Branches:** every merge into `dev` is green (owner, 2026-11-24): `dev` advances only by fast-forward to a commit
+  on which the full build of every package the change touches, with its guards, is green — after merging the latest
+  `dev`; if `dev` moved meanwhile, merge and check again. Work starts only from a green `dev`. `master` only advances
+  to a `dev` commit whose full builds of every package and both guardians are green (owner, 2026-11-19).
 - **Master gate: the two guardians** (`./instrumente/abnahme.py`): `instrumente/pruefe-lean.py` (Lean model and
   Stage 0: builds, `gabbro_ziel` on the standard axioms, no forbidden tokens, layout, every Lean file reached from a
   package root) and

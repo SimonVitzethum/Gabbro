@@ -140,23 +140,20 @@ theorem Instruction.regelSicher {k : Katalog} (op : Instruction k) :
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
-/-- No registration and region-metadata step consumes an answer or emits an
-    answer event: the trace is empty and the ledger is unchanged. -/
 theorem Instruction.regelAntwortSicher {k : Katalog} (op : Instruction k) :
+    Sicherheit.RegelAntwortSicher (safetyUnit op) op ∧
     ∀ t c s w middle next p trace, op.impl c s w [p] middle →
       FuehrtSchrittAus (unit op).einrichtung t c s middle p trace next →
       (∀ ev : AntwortEreignis, Ereignis.antwort ev ∉ trace.aussen) ∧
       next.verbraucht = s.verbraucht := by
-  intro t c s w middle next p trace impl execute
-  obtain ⟨_, _, hp, _⟩ := Instruction.implTransfer (op := op) (w := w) impl
-  cases (List.cons.inj hp).1
-  obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal execute
-  subst trace
-  subst next
   constructor
-  · intro ev
-    exact List.not_mem_nil
-  · exact execute.1.verbraucht
+  · intro t c w vor zwischen nach p trace _ impl execute befugt
+    obtain ⟨transfer, _, _, rfl⟩ := Instruction.implTransfer (op := op) (w := w) impl
+    obtain ⟨_, rfl⟩ := op.vollzugGenau (w := w) impl execute
+    exact befugt
+  · intro t c s w middle next p trace impl execute
+    obtain ⟨rfl, rfl⟩ := op.vollzugGenau (w := w) impl execute
+    exact ⟨fun _ => List.not_mem_nil, execute.1.verbraucht⟩
 
 /-- The unit admits all M2 catalogue rows and no ideal step asks a question. -/
 theorem Instruction.aussenLokal {k : Katalog} (op : Instruction k) :

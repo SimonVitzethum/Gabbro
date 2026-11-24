@@ -88,6 +88,10 @@ def Quellform.ImplAussage : Prop :=
   ∀ args c s w plans u, (form.befehl args).impl c s w plans u ↔
     plans = [plan] ∧ u = (form.befehl args).nach c s
 
+def Quellform.SicherheitsAussage : Prop :=
+  ∀ platform args,
+    Sicherheit.RegelPflichten ((form.fragment args).sicherheitsEinheit platform) (form.befehl args)
+
 def Quellform.ErhaltungsAussage : Prop :=
   ∀ platform args,
     let p := form.fragment args
@@ -95,7 +99,7 @@ def Quellform.ErhaltungsAussage : Prop :=
     let b := form.befehl args
     I.RegelAbgleich E b ∧ Ideal.RegelFortschritt E.system b ∧
       I.RegelKomponierbar E.einrichtung E.system b ∧
-      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+      Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
 
 def Quellform.ErfuellbarAm (platform : Plattform) (start : AussenStart) (args : Arguments) : Prop :=
   let E := form.einheit platform args
@@ -116,7 +120,7 @@ Kommutation vor nach andere
 I.RegelAbgleich E b
 Ideal.RegelFortschritt E.system b
 I.RegelKomponierbar E.einrichtung E.system b
-Sicherheit.RegelSicher safetyUnit b
+Sicherheit.RegelPflichten safetyUnit b
 ```
 
 Use the actual rule equations for the ideal and implementation fields, including
@@ -135,7 +139,9 @@ The pre-state, plan and intermediate state come from the concrete rule.
 trace addresses and the release ledger. Invariant preservation carries the cut predicate
 and establishes the lock-handoff conditions. Race freedom carries graph order and checks
 device authority in the trace and journal. TOCTOU freedom checks commit validity and
-authority under the policies allowed by the chosen rows. For stateful forms, state the
+authority under the policies allowed by the chosen rows. `RegelPflichten` also requires
+`RegelAntwortSicher` so pending questions retain their authority until delivery.
+For stateful forms, state the
 source-level condition that makes each of these fields provable and prove it is preserved.
 M7S connects these conditions to the run induction and handles startup, pauses and
 environment steps.

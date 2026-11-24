@@ -111,4 +111,15 @@ theorem sicherheit_aus_regeln_erfuellbar :
     Befehl.sicher p platform keine, ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
     z₆, ⟨7, Int.le_refl _, Int.le_refl _⟩, ende, rfl, rfl⟩
 
+/-- Every concrete run of a current fragment without invariant declarations is
+    safe. The instruction proof is applied in the enclosing machine. -/
+theorem fragment_sicher (p : Fragment) (platform : Plattform) (keine : p.klauseln.invariant = []) :
+    ∀ H (ρ : Lauf (p.sicherheitsEinheit platform)),
+      Maschine.Laeufe (p.einheit platform) H ρ →
+      Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
+        InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
+        Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
+        ToctouFrei (p.sicherheitsEinheit platform) H ρ :=
+  sicherheit_aus_regeln (arithmetik_grenzen platform keine) (Befehl.sicherheitsPflichten p platform keine)
+
 end Gabbro.Core.Sicherheit

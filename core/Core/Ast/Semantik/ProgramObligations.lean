@@ -80,7 +80,7 @@ theorem returnVoid_erhaltung (scope : Scope) (result : Option (Ty .value)) : (re
   exact ⟨((returnVoidForm scope result).befehl args).abgleich ((returnVoidForm scope result).fragment args) platform,
     ((returnVoidForm scope result).befehl args).fortschritt ((returnVoidForm scope result).fragment args),
     ((returnVoidForm scope result).befehl args).komponierbar ((returnVoidForm scope result).fragment args) platform,
-    ((returnVoidForm scope result).befehl args).sicher ((returnVoidForm scope result).fragment args) platform rfl⟩
+    ((returnVoidForm scope result).befehl args).sicherheitsPflichten ((returnVoidForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem returnVoid_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
@@ -167,7 +167,7 @@ theorem mutableLocal_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((mutableLocalForm scope result).befehl args).abgleich ((mutableLocalForm scope result).fragment args) platform,
     ((mutableLocalForm scope result).befehl args).fortschritt ((mutableLocalForm scope result).fragment args),
     ((mutableLocalForm scope result).befehl args).komponierbar ((mutableLocalForm scope result).fragment args) platform,
-    ((mutableLocalForm scope result).befehl args).sicher ((mutableLocalForm scope result).fragment args) platform (by
+    ((mutableLocalForm scope result).befehl args).sicherheitsPflichten ((mutableLocalForm scope result).fragment args) platform (by
       change (stmt ((mutableLocalForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 
@@ -270,7 +270,7 @@ theorem directCall_erhaltung (scope : Scope) (result : Option (Ty .value)) : (di
   exact ⟨((directCallForm scope result).befehl args).abgleich ((directCallForm scope result).fragment args) platform,
     ((directCallForm scope result).befehl args).fortschritt ((directCallForm scope result).fragment args),
     ((directCallForm scope result).befehl args).komponierbar ((directCallForm scope result).fragment args) platform,
-    ((directCallForm scope result).befehl args).sicher ((directCallForm scope result).fragment args) platform (by
+    ((directCallForm scope result).befehl args).sicherheitsPflichten ((directCallForm scope result).fragment args) platform (by
       change (stmt ((directCallForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 
@@ -355,7 +355,7 @@ theorem bindDirect_erhaltung (scope : Scope) (result : Option (Ty .value)) : (bi
   exact ⟨((bindDirectForm scope result).befehl args).abgleich ((bindDirectForm scope result).fragment args) platform,
     ((bindDirectForm scope result).befehl args).fortschritt ((bindDirectForm scope result).fragment args),
     ((bindDirectForm scope result).befehl args).komponierbar ((bindDirectForm scope result).fragment args) platform,
-    ((bindDirectForm scope result).befehl args).sicher ((bindDirectForm scope result).fragment args) platform (by
+    ((bindDirectForm scope result).befehl args).sicherheitsPflichten ((bindDirectForm scope result).fragment args) platform (by
       change (stmt ((bindDirectForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 
