@@ -30,9 +30,9 @@ open Maschine Annahme Katalog Waechter
 private theorem vv_amOrt (scope : Scope) : (variantValueForm scope).RegelAmOrt := by
   intro a
   change (((caseCode 0 a.payload).code ++
-    [(.baueVariante 0 a.ref.name.val a.labels a.payloads a.index)]).getElem?
-      (caseCode 0 a.payload).code.length) =
-    some (.baueVariante 0 a.ref.name.val a.labels a.payloads a.index)
+    [(Befehl.baueVariante 0 a.ref.name.val a.labels a.payloads a.index)]))[
+      (caseCode 0 a.payload).code.length]? =
+    some (Befehl.baueVariante 0 a.ref.name.val a.labels a.payloads a.index)
   rw [List.getElem?_append_right (Nat.le_refl _)]
   simp
 
@@ -50,8 +50,13 @@ theorem variantValue_erhaltung : VariantValueErhaltungAussage := by
   intro scope platform args
   let p := (variantValueForm scope).fragment args
   let b := (variantValueForm scope).befehl args
+  have inv : p.klauseln.invariant = [] := by
+    dsimp [p, Quellform.fragment, fragment]
+    cases hp : args.payload with
+    | nullary paren => rfl
+    | value e => simpa [caseCode, hp] using expr_keine_invarianten 0 e
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicher p platform inv⟩
 
 theorem variantValue_regelSicher : VariantValueRegelSicherAussage := by
   intro scope platform args

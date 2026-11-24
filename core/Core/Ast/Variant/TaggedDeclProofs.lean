@@ -80,6 +80,6 @@ theorem taggedDecl_impl : TaggedDeclImplAussage := by
 
 theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage := by
   intro scope a frame
-  rfl
+  simp [Befehl.auswerten]
 
 end Gabbro.Core.Ast.Semantik
