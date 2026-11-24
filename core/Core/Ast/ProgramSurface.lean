@@ -507,7 +507,8 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
   cases read with
   | directCall callRead =>
       cases callRead with
-      | applied call argsRead =>
+      | applied argsRead =>
+          rename_i call input0
           injection htok with hhead htail
           injection hhead with hval
           injection htail with hargs
@@ -540,7 +541,8 @@ theorem StmtReads.bindDirect_inversion
       injection hspelling with hname
       subst input
       cases callRead with
-      | applied call argsRead =>
+      | applied argsRead =>
+          rename_i call input0
           refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsRead, rfl⟩
           exact hname.symm
   | directCall callRead =>
@@ -566,26 +568,11 @@ theorem StmtReads.boundedWhile_inversion
       BlockReads result scope bodyInput a.body rest ∧
       tree = (Surface.boundedWhile scope result).tree a) ∨
     (∃ tail, input = assignment :: tail) := by
-  generalize htok : (keyword "while" :: input) = toks at read
   cases read with
   | whileBounded nonnegative overflow bound staticBound condRead boundRead blockRead =>
       refine Or.inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩,
         _, _, condRead, boundRead, blockRead, rfl⟩
-  | assignVar _ _ _ _ _ =>
-      injection htok with _ htail
-      exact Or.inr ⟨_, htail⟩
-  | directCall callRead =>
-      cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon,
-        colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | directCall callRead => cases callRead
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
 theorem StmtReads.forRange_inversion
@@ -596,45 +583,21 @@ theorem StmtReads.forRange_inversion
       OverflowReads handlerInput a.overflow bodyInput ∧
       BlockReads result (rangeBinding a.name a.lo a.hi :: scope) bodyInput a.body rest ∧
       tree = (Surface.forRange scope result).tree a := by
-  generalize htok : (keyword "for" :: .word spelling :: keyword "in" :: input) = toks at read
   cases read with
   | forRange name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
-      injection htok with _ htail
-      injection htail with hspelling htail
-      injection htail with _ htail
-      injection hspelling with hname
-      subst input
       refine ⟨⟨name, ordinary, _, _, _, _, lo, hi, staticBounds, _, body⟩,
         _, _, _, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
-      exact hname.symm
-  | directCall callRead =>
-      cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon,
-        colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+      rfl
+  | directCall callRead => cases callRead
 
 -- Mirror UnitBody.printReads and recover the first declaration's unconsumed suffix.
 theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads [] tokens a.unit) :
     ∃ rest, DeclReads [] tokens ⟨a.middle, a.first⟩ rest ∧
       UnitReads a.middle rest ⟨a.after, a.rest⟩ := by
-  generalize htok : a.unit = u at read
   cases read with
   | done =>
-      simp [Surface.ProgramArgs.unit] at htok
+      simp [ProgramArgs.unit] at *
   | step firstDecl nextRead =>
-      simp only [Surface.ProgramArgs.unit] at htok
-      injection htok with hafter hbody
-      injection hbody with hfirst hnext
-      cases hafter
-      cases hfirst
-      cases hnext
       exact ⟨_, firstDecl, nextRead⟩
 
 end Gabbro.Core.Ast
