@@ -287,7 +287,9 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           exact values
         have wert : wertAls (.array element (count + 1))
             (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
-          rfl
+          change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
+            some (same ▸ vv) else none) = some vv
+          simp
         simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 

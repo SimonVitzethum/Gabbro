@@ -117,16 +117,24 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
   cases items with
   | empty => exact .close
   | next head tail =>
-      simp only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_cons,
-        List.map_nil, List.singleton_append]
+      have headRead (more : List Token) (blocked : ¬ Continues 0 more) :
+          ExprReads scope 0 (head.printTokens ++ more) head more :=
+        Expr.printReads (rest := more) head blocked
       cases tail with
       | empty =>
-          simp only [ExprItems.printTail, List.map_nil, List.nil_append]
-          exact .next (Expr.printReads (rest := []) head noOperatorAtCloseBracket) .close
+          simpa only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_nil,
+            List.singleton_append, List.append_nil] using
+            (.next (headRead [closeBracket] noOperatorAtCloseBracket)
+              (.close : ItemsRead scope closeBracket (closeBracket :: []) ExprItems.empty []))
       | next second rest =>
-          simp only [ExprItems.printTail, List.map_cons, List.map_append]
-          exact .next (Expr.printReads (rest := comma :: _) head noOperatorAtComma)
-            (.comma (Or.inr rfl) (itemsPrintRead (.next second rest)))
+          let tail := ExprItems.next second rest
+          simpa only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_cons,
+            List.map_nil, List.singleton_append, List.append_assoc, printComma,
+            printPunctuation, PrintedToken.unquoted,
+            (show (Token.punctuation ",".toList : Token) = comma by decide)] using
+            (.next (headRead (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket]))
+                noOperatorAtComma)
+              (.comma (Or.inr rfl) (itemsPrintRead tail)))
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
