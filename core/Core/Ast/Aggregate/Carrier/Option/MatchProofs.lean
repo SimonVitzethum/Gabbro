@@ -133,7 +133,7 @@ private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
   · simp only [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
       Expr.printTokens, printOpenBrace, printCloseBrace, printPunctuation,
       PrintedToken.unquoted, openBrace, closeBrace, List.map_cons, List.map_append,
-      List.map_nil, List.cons_append, List.nil_append, String.toList_ofList]
+      List.map_nil, List.cons_append, List.nil_append, String.toList_ofList, String.reduceEq]
   · exact Expr.printReads a.val.value noOperatorAtOpenBrace
   · exact om_arms_printReads a.val.arms []
 
