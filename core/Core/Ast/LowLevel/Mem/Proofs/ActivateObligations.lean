@@ -97,13 +97,14 @@ private theorem rightsKey_inj : Function.Injective rightsKey := by
               cases rs' with
               | nil =>
                   change [rightsToken r] = [rightsToken r'] at h
-                  injection h with h'
-                  have : r = r' := rightsToken_inj h'
+                  simp only [List.cons.injEq] at h
+                  have : r = r' := rightsToken_inj h.1
                   subst r'
                   rfl
               | cons q qs =>
                   change [rightsToken r] = rightsToken r' :: comma :: rightsKey (q :: qs) at h
-                  cases h
+                  simp only [List.cons.injEq] at h
+                  cases h.2
       | cons q qs =>
           cases b with
           | nil => cases h
@@ -111,14 +112,15 @@ private theorem rightsKey_inj : Function.Injective rightsKey := by
               cases rs' with
               | nil =>
                   change rightsToken r :: comma :: rightsKey (q :: qs) = [rightsToken r'] at h
-                  cases h
+                  simp only [List.cons.injEq] at h
+                  cases h.2
               | cons q' qs' =>
                   change rightsToken r :: comma :: rightsKey (q :: qs) =
                     rightsToken r' :: comma :: rightsKey (q' :: qs') at h
-                  injection h with hhead htail
-                  injection htail with _ htail'
-                  change rightsToken r' = rightsToken r at hhead
-                  have : r' = r := rightsToken_inj hhead
+                  simp only [List.cons.injEq] at h
+                  rcases h with ⟨hhead, htail⟩
+                  rcases htail with ⟨_, htail'⟩
+                  have : r = r' := rightsToken_inj hhead
                   subst r'
                   cases ih htail'
                   rfl
@@ -309,23 +311,27 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
     unfold memHead at hhead
     by_cases hc : c = entryContext
     · subst c
-      simp only [↓reduceIte] at hhead
+      rw [if_pos rfl] at hhead
       cases hs : s.status entryContext with
       | laeuft =>
-          simp only [hs] at hhead
+          rw [hs] at hhead
           cases hpc : (s.lokal entryContext).pc with
           | zero =>
+              rw [hpc] at hhead
+              simp only [List.getElem?_cons_zero] at hhead
               by_cases he : (op.evaluate target s entryContext).isSome
-              · simp only [if_pos he] at hhead
+              · rw [if_pos he] at hhead
                 exact ⟨hs, rfl, hpc, he⟩
-              · simp only [if_neg he] at hhead
+              · rw [if_neg he] at hhead
                 cases hhead
           | succ n =>
+              rw [hpc] at hhead
+              simp only [List.getElem?_cons_succ, List.getElem?_nil] at hhead
               cases hhead
       | ruht | beendet =>
-          simp only [hs] at hhead
+          rw [hs] at hhead
           cases hhead
-    · simp only [hc, ↓reduceIte] at hhead
+    · rw [if_neg hc] at hhead
       cases hhead
   · rintro ⟨hs, hc, hpc, he⟩
     subst c
@@ -366,7 +372,7 @@ theorem memFortschritt (form : MemForm) : MemFortschrittAussage form := by
   left
   have hcond := (memRealisiert form k scope tree op hop s c).mp hhead
   have heval : (op.evaluate k.plattform.ziel s c).isSome := hcond.2.2.2
-  obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mpr heval
+  obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mp heval
   exact ⟨(), [plan], frame.advance c s, frame, hframe, rfl, rfl⟩
 
 namespace MemInstruction
