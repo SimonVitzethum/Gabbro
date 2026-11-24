@@ -27,56 +27,60 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-private theorem tupleItemsTail_print {scope : Scope} {types : List (Ty .value)}
+private theorem tupleTailBlocked {scope : Scope} {types : List (Ty .value)}
     (items : ExprItems scope types) :
-    ItemsTail scope closeParen (items.printTail.map PrintedToken.value ++ [closeParen]) items [] := by
-  induction items with
-  | empty =>
+    ¬ Continues 0 (items.printTail.map PrintedToken.value ++ [closeParen]) := by
+  match items with
+  | .empty =>
+      simpa [ExprItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
+  | .next _ _ =>
+      simpa [ExprItems.printTail] using (noOperatorAtComma (minimum := 0))
+
+private theorem tupleItemsTail_print (scope : Scope) : (types : List (Ty .value)) →
+    (items : ExprItems scope types) →
+    ItemsTail scope closeParen (items.printTail.map PrintedToken.value ++ [closeParen]) items []
+  | _, .empty => by
       simp [ExprItems.printTail]
       exact .close
-  | @next type' types' head tail ih =>
+  | _, .next head tail => by
       simp only [ExprItems.printTail, List.map_cons, List.map_append, List.map_nil]
       apply ItemsTail.comma (by simp)
-      exact .next (Expr.printReads head (by
-        cases tail with
-        | empty =>
-            simpa [ExprItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
-        | next _ _ =>
-            simpa [ExprItems.printTail] using (noOperatorAtComma (minimum := 0)))) ih
+      exact .next (Expr.printReads head (tupleTailBlocked tail))
+        (tupleItemsTail_print scope _ tail)
 
 theorem tupleValue_inversion : TupleValueInversionAussage := by
   intro scope input type firstType secondInput tree rest first firstRead read
-  cases read with
-  | lit => contradiction
-  | grouped inner =>
+  cases read
+  case grouped inner =>
       have same := ExprReads.deterministic firstRead inner
       have bad : comma = closeParen := (List.cons.inj same.2).1
       simp [comma, closeParen] at bad
-  | trueLit => contradiction
-  | falseLit => contradiction
-  | variable => contradiction
-  | negativeLit => contradiction
-  | neg => contradiction
-  | not => contradiction
-  | arrayValue => contradiction
-  | tupleValue fRead sRead tRead =>
+  case tupleValue fRead sRead tRead =>
       have same := ExprReads.deterministic firstRead fRead
       have listsEq := List.cons.inj same.2
       rw [← listsEq.2] at sRead
       refine ⟨⟨_, _, _, _, _, _⟩, _, same.1, sRead, tRead, rfl⟩
-  | recordValue => contradiction
-  | variantValue => contradiction
+  all_goals contradiction
 
-private theorem itemsTail_consumes {scope close : Token} {input : List Token}
-    {types : List (Ty .value)} {items : ExprItems scope types} {rest : List Token}
-    (read : ItemsTail scope close input items rest) : rest <:+ input := by
-  induction read with
-  | close => exact List.suffix_cons _ _
-  | comma _ itemRead ih => exact ih.trans (List.suffix_cons _ _)
+mutual
+  private theorem itemsRead_consumes (scope : Scope) (close : Token) :
+      (input : List Token) → (types : List (Ty .value)) → (items : ExprItems scope types) →
+      (rest : List Token) → ItemsRead scope close input items rest → rest <:+ input
+    | _, _, _, _, _, .close => List.suffix_refl _
+    | _, _, _, _, _, .next headRead tailRead =>
+        (itemsTail_consumes scope close _ _ _ _ tailRead).trans (ExprReads.consumes headRead)
+
+  private theorem itemsTail_consumes (scope : Scope) (close : Token) :
+      (input : List Token) → (types : List (Ty .value)) → (items : ExprItems scope types) →
+      (rest : List Token) → ItemsTail scope close input items rest → rest <:+ input
+    | _, _, _, _, _, .close => List.suffix_cons _ _
+    | _, _, _, _, _, .comma _ itemRead =>
+        (itemsRead_consumes scope close _ _ _ _ itemRead).trans (List.suffix_cons _ _)
+end
 
 theorem tupleValue_suffix : TupleValueSuffixAussage := by
   intro scope input types items rest read
-  exact itemsTail_consumes read
+  exact itemsTail_consumes scope closeParen input types items rest read
 
 private theorem tupleValue_reads (scope : Scope) (args : TupleValueArgs scope) {tokens : List Token}
     (prod : (tupleValue scope).production args tokens) :
@@ -98,15 +102,15 @@ private theorem tupleValue_print (scope : Scope) (args : TupleValueArgs scope) :
   let tailTokens := args.tail.printTail.map PrintedToken.value
   refine ⟨firstTokens ++ [comma] ++ secondTokens ++ tailTokens ++ [closeParen],
     secondTokens ++ tailTokens ++ [closeParen], tailTokens ++ [closeParen], ?_, ?_, ?_, ?_⟩
-  · simp [Expr.printTokens, Expr.printPieces, firstTokens, secondTokens, tailTokens]
-  · exact Expr.printReads args.first noOperatorAtComma
-  · exact Expr.printReads args.second (by
-      cases args.tail with
-      | empty =>
-          simpa [tailTokens, ExprItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
-      | next _ _ =>
-          simpa [tailTokens, ExprItems.printTail] using (noOperatorAtComma (minimum := 0)))
-  · simpa [tailTokens] using (tupleItemsTail_print (scope := scope) args.tail)
+  · simp [Expr.printTokens, Expr.printPieces, firstTokens, secondTokens, tailTokens,
+      printOpen, printComma, printClose, printPunctuation, openParen, comma, closeParen]
+  · simpa [firstTokens, secondTokens, tailTokens] using
+      (Expr.printReads (tree := args.first) (minimum := 0)
+        (rest := secondTokens ++ tailTokens ++ [closeParen]) noOperatorAtComma)
+  · simpa [secondTokens, tailTokens] using
+      (Expr.printReads (tree := args.second) (minimum := 0)
+        (rest := tailTokens ++ [closeParen]) (tupleTailBlocked args.tail))
+  · simpa [tailTokens] using (tupleItemsTail_print scope _ args.tail)
 
 theorem tupleValue_derivation : TupleValueDerivationAussage := by
   intro scope
@@ -159,7 +163,7 @@ theorem tupleValue_impl : TupleValueImplAussage := by
 theorem tupleValue_erhaltung : TupleValueErhaltungAussage := by
   intro scope
   exact (tupleValueForm scope).erhaltung (fun args => by
-    simpa [Quellform.fragment, Semantik.fragment] using
+    simpa [Quellform.fragment, Semantik.fragment, TupleValueArgs.expression] using
       (expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail)))
 
 theorem tupleValue_regelSicher : TupleValueRegelSicherAussage := by
