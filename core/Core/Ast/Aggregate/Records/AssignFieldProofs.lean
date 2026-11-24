@@ -35,42 +35,19 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
       injection hTail with hDot hTail2
       injection hTail2 with hWord hTail3
       injection hTail3 with hAssign hInput
-      have hn : name = ref.binding.name.val := by injection hName with h; exact h
-      have hf : field = fld.val := by injection hWord with h; exact h
-      subst input'
+      have hn : name = ref.binding.name.val := by injection hName with h
+      have hf : field = fld.val := by injection hWord with h
+      have inputEq : input = input' := hInput
+      have valueRead' : ExprReads scope 0 input value (semicolon :: rest) := by
+        simpa only [inputEq] using valueRead
       exact ⟨⟨nm, labs, tys, ref, visible, writable, fld, index, checked, _, value, fits⟩,
-        hn.symm, hf.symm, valueRead, rfl⟩
-  | assignVar ref visible writable fits valueRead =>
-      simp_all [assignment, dot]
-  | letBinding letName ordinary value more letTail =>
-      simp_all [letKeyword, keyword, dot]
-  | ret declared fits valueRead =>
-      simp_all [returnKeyword, dot]
-  | ite condition first yes more no =>
-      simp_all [ifKeyword, dot]
-  | retVoid declared =>
-      simp_all [returnKeyword, dot]
-  | letMutable letName ordinary written valid fits typeRead valueRead =>
-      simp_all [letKeyword, keyword, dot]
-  | directCall callRead =>
-      simp_all [dot]
-  | bindDirect letName ordinary written valid typeRead callRead =>
-      simp_all [letKeyword, keyword, dot]
-  | whileBounded nonnegative overflow bound staticBound conditionRead boundRead bodyRead =>
-      simp_all [keyword, dot]
-  | forRange letName ordinary body lo hi staticBounds overflow bodyRead =>
-      simp_all [keyword, dot]
-  | tupleBind checked patternRead annotationRead valueRead =>
-      simp_all [letKeyword, dot]
-  | letMutableValue letName ordinary valueRead =>
-      simp_all [letKeyword, keyword, dot]
-  | variantMatch valueRead armsRead =>
-      simp_all [keyword, dot]
+        hn.symm, hf.symm, valueRead', rfl⟩
+  all_goals simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read
   obtain ⟨a, hname, hfield, valueRead, htree⟩ := AssignFieldInversion read
-  exact (ExprReads.consumes valueRead).trans (List.suffix_cons semicolon)
+  exact (ExprReads.consumes valueRead).trans (List.suffix_cons semicolon rest)
 
 end Gabbro.Core.Ast.Surface
 
@@ -134,6 +111,6 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).pc = frame.pc + 1 ∧
     ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).temp = frame.temp
   simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, hlocal, htemp, dif_pos,
-    List.getElem?_set_self, ne_eq, List.getElem?_set_of_ne, and_self]
+    List.getElem?_set_self, ne_eq, List.getElem?_set_ne, and_self]
 
 end Gabbro.Core.Ast.Semantik
