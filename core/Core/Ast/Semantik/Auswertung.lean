@@ -174,7 +174,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
   case negativeLit magnitude =>
       intro env frame bound active pre post hpc
       let b : Befehl := .negativ slot magnitude
-      have step : Rahmen.Schritt (pre ++ (expr slot (Expr.negativeLit magnitude)).code ++ post)
+      have step : Rahmen.Schritt (pre ++ (expr slot (Expr.negativeLit (scope := scope) magnitude)).code ++ post)
           frame (b.auswerten frame) := by
         simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
           stepAt pre b post frame active hpc
@@ -289,7 +289,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
           alsGanzzahl, Option.bind_eq_bind, Option.bind_some, Option.map_some, Option.pure_def, Ganzzahl.pack,
           tmpL, tmpR, preserveR slot (Nat.lt_succ_self slot), Arith.result,
-          Zahl.div, dif_pos (show 1 ≤ lo₂ ∨ hi₂ ≤ -1 from nonzero), Expr.wert]
+          Zahl.div, dif_pos (by simpa only [Divisor] using nonzero), Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
       · intro i hi
@@ -364,16 +364,17 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have stepSw : Rahmen.Schritt (pre ++ (expr slot (Expr.logic op left right)).code ++ post)
           mid (sw.auswerten mid) := by
         refine ⟨sw, retL, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid, L, R] using
+        simpa only [sw, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
+          List.singleton_append, hpcMid, L, R] using
           (lookupSeq (pre ++ L) sw (R ++ post) :
             ((pre ++ L) ++ sw :: (R ++ post))[(pre ++ L).length]? = some sw)
       by_cases htake : (left.wert env) = op.skips
       · refine ⟨sw.auswerten mid, .schritt walkL' stepSw, ?_, ?_, ?_, ?_, ?_⟩
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
-            alsBoolean, htake, if_pos rfl, List.length_append, List.length_cons,
+            alsBoolean, htake, if_pos rfl, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R]
           omega
-        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, htake, if_pos rfl, Expr.wert]
+        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, htake, if_pos rfl, if_true, Expr.wert]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
@@ -395,10 +396,9 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         have walkR' : Rahmen.Lauf (pre ++ (expr slot (Expr.logic op left right)).code ++ post)
             (sw.auswerten mid) out := by
           simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using walkR
-        refine ⟨out, (laufTrans _ (laufTrans _ walkL' stepSw) walkR'), ?_, ?_, ?_, ?_, ?_⟩
-        · rw [List.length_append, List.length_append, List.length_append, List.length_cons,
-            List.length_nil, Nat.add_zero]
-          exact pcR
+        refine ⟨out, (laufTrans _ (.schritt walkL' stepSw) walkR'), ?_, ?_, ?_, ?_, ?_⟩
+        · simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.length_append,
+            List.length_cons, List.length_nil, Nat.add_zero, L, R] using pcR
         · rw [tmpR]
           simp only [Expr.wert, htake, if_false]
         · rw [lokR, lokL]
