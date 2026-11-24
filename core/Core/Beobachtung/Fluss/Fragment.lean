@@ -310,7 +310,8 @@ theorem stummer_schritt_koppelt
                 exact cov
               · -- state: publicly equal post-states, preserved machine fields
                 intro a b ha hb
-                rw [zustandNach₁, zustandNach₂] at ha hb
+                rw [zustandNach₁] at ha
+                rw [zustandNach₂] at hb
                 obtain rfl := Option.some.inj ha
                 obtain rfl := Option.some.inj hb
                 refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
