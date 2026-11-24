@@ -274,6 +274,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.fastSicherAbschlussUnentscheidbarAussage, 5213210525041502284),
   (`Gabbro.Core.Beobachtung.fastSicherFortschrittUnentscheidbarAussage, 40684611434820117),
   (`Gabbro.Core.Beobachtung.infoTheoretischUnentscheidbarAussage, 16689545193038773293),
-  (`Gabbro.Core.Beobachtung.reduktionUnentscheidbarAussage, 5339248618883769678)]
+  (`Gabbro.Core.Beobachtung.reduktionUnentscheidbarAussage, 5339248618883769678),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.SubstratAussage, 7138760794111439863),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.HalteUnentscheidbarAussage, 3166139954183202709),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.RiceAussage, 7924061033844860658)]
 
 end Gabbro.Core.Waechter
