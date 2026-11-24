@@ -21,8 +21,13 @@ def InversionAussage (form : Form) : Prop :=
 def EindeutigAussage (form : Form) : Prop :=
   ∀ (a b : Tree form) text, Parse text a → Parse text b → a = b
 
+def Tree.printable : Tree form → Prop
+  | .view _ type => type.valid
+  | _ => True
+
 def DruckAussage (form : Form) : Prop :=
-  ∀ tree : Tree form, tree.production (tree.printPieces.map PrintedToken.value) ∧ Parse tree.print tree
+  ∀ tree : Tree form, tree.printable →
+    tree.production (tree.printPieces.map PrintedToken.value) ∧ Parse tree.print tree
 
 def ElaboriertAussage (form : Form) : Prop :=
   ∀ k scope (tree : Tree form) E,
