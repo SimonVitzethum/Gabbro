@@ -252,15 +252,16 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
-                  exact WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
-                    intro more h
-                    cases measure with
-                    | none =>
-                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
-                    | some m0 =>
-                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                          printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h))
+                  simpa only [afterResult, List.append_assoc] using
+                    (WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
+                      intro more h
+                      cases measure with
+                      | none =>
+                          simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                            printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                      | some m0 =>
+                          simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                            printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)))
             (by
               cases measure with
               | none =>
@@ -272,7 +273,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   refine MeasureReads.present m ?_
                   exact Expr.printReads (rest := afterMeasure) m.expression (by
                     simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace,
-                      printPunctuation, PrintedToken.unquoted] using
+                      printPunctuation, PrintedToken.unquoted, openBrace] using
                       (noOperatorAtOpenBrace (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
             ((BracedBlock.braces items).printReads rest)
         simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
