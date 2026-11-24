@@ -35,10 +35,12 @@ private theorem om_amOrt (ctx : OptionContext) : (optionMatchForm ctx).RegelAmOr
   let valueCode := (expr 0 a.val.value).code
   let bodyCode := (variantArms a.val.arms).body.code
   change (((valueCode ++ [head]) ++ bodyCode)[valueCode.length]?) = some head
-  have hlt : valueCode.length < (valueCode ++ [head]).length := by simp
+  have hlt : valueCode.length < (valueCode ++ [head]).length := by
+    simp only [List.length_append, List.length_cons, List.length_nil]
+    omega
   rw [List.getElem?_append_left hlt]
   rw [List.getElem?_append_right (Nat.le_refl _)]
-  simp
+  rfl
 
 private theorem om_arms_inv (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
@@ -64,13 +66,15 @@ private theorem om_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     match ar with
     | .done => rfl
     | .nullary _ _ body rest => by
-        simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel, bracedInv,
-          go rest, Quellklauseln.anhaengen, Quellklauseln.leer]
+        simp only [variantArms, MatchCode.prepend, if_false, if_true, Fragment.anhaengen,
+          Fragment.einzel, bracedInv, go rest, Quellklauseln.anhaengen, Quellklauseln.leer,
+          List.append_nil, List.nil_append]
     | .payload _ _ _ body rest => by
-        simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel, bracedInv,
-          go rest, Quellklauseln.anhaengen, Quellklauseln.leer]
+        simp only [variantArms, MatchCode.prepend, if_false, if_true, Fragment.anhaengen,
+          Fragment.einzel, bracedInv, go rest, Quellklauseln.anhaengen, Quellklauseln.leer,
+          List.append_nil, List.nil_append]
     | .wildcard body _ _ => by
-        simp [variantArms, bracedInv, Quellklauseln.leer]
+        simp only [variantArms, bracedInv, Quellklauseln.leer]
   exact go arms
 
 private theorem om_keine_invarianten (ctx : OptionContext) (a : OptionMatchArgs ctx) :
@@ -79,8 +83,8 @@ private theorem om_keine_invarianten (ctx : OptionContext) (a : OptionMatchArgs 
     (Fragment.einzel (Befehl.waehleVariante 0 a.val.name a.val.labels a.val.payloads
       (variantArms a.val.arms).branches))).anhaengen
       (variantArms a.val.arms).body).klauseln.invariant = [])
-  simp [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
-    expr_keine_invarianten, om_arms_inv]
+  simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
+    expr_keine_invarianten, om_arms_inv, List.append_nil, List.nil_append]
 
 private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope} {allowed : Bool}
     {labels : List Identifier} {payloads : List (Option (Ty .value))}
@@ -111,7 +115,7 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     intro s l p body nonempty shape ih3
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
       (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more)))
-  all_goals simp
+  all_goals (intros; trivial)
 
 private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
     (optionMatchForm ctx).produktion.production a
