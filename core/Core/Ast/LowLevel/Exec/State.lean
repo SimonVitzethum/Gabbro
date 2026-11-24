@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Syntax
+public import Core.Maschine.Start
 
 @[expose] public section
 
