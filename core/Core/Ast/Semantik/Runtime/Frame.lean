@@ -24,14 +24,14 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
-  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ | ⟨.ptr .., _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
   | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema _, _⟩ => none
-  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ => none
+  | ⟨.address _, _⟩ | ⟨.ownedRegion, _⟩ | ⟨.regionView _, _⟩ | ⟨.ptr .., _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
@@ -254,7 +254,8 @@ def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
   | ⟨.int .., _⟩ | ⟨.bool, _⟩ | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩
   | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩ | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩
   | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text .., _⟩
-  | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema .., _⟩ | ⟨.address .., _⟩ | ⟨.ownedRegion, _⟩ => false
+  | ⟨.carrierSchema .., _⟩ | ⟨.effectGroupSchema .., _⟩ | ⟨.address .., _⟩ | ⟨.ownedRegion, _⟩
+  | ⟨.ptr .., _⟩ => false
 
 def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
   let hasView := fun (values : List (Option Dynamisch)) =>

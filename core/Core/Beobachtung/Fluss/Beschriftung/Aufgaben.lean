@@ -1,13 +1,13 @@
 module
 
-public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
+public import Core.Beobachtung.Fluss.Beschriftung.Sprung
 
 @[expose] public section
 
 /-! Pinned duties for the next label rules. Each statement fixes the rule an instruction of the
     control-flow family gets, and says that the rule is sound for the public view. A prover
     supplies the `theorem`; the lead then adds the rule to `Befehl.FlussRegel` and replaces the
-    fallback case for that instruction. The statements are stated, not yet proved. -/
+    fallback case for that instruction. The statements are proved in `AufgabenBeweise`. -/
 
 namespace Gabbro.Core.Ast.Semantik
 
