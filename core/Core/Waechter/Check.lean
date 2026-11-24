@@ -36,7 +36,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
-<  (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
+  (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
   (`Gabbro.Core.Maschine.I.Schritt, 4043611520882110875),
   (`Gabbro.Core.Maschine.ImplSchritt, 17810737499791217162),
   (`Gabbro.Core.Maschine.Laeufe, 6154662030244297406),
