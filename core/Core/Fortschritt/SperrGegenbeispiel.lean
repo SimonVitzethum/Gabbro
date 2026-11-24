@@ -159,9 +159,6 @@ theorem eh_halte : HalteSchranken E_h ρ_h := by
   have h5 : E_h.schranken.halten l = some 5 := by cases l; rfl
   have hH5 : H' = 5 := Option.some.inj (hH.symm.trans h5)
   subst hH5
-  intro n' hn
-  have hn5 : n' = 5 := Option.some.inj hn
-  subst hn5
   by_cases hcH : c = stuckHalter
   · subst hcH
     have hcost := eh_kosten_null a n
