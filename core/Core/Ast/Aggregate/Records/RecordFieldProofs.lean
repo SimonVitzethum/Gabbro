@@ -59,9 +59,10 @@ theorem labelList_inj_aux : ∀ {a b : List Identifier}, a.map Subtype.val = b.m
       cases b with
       | nil => cases h
       | cons y ys =>
-          simp only [List.map_cons, List.cons.injEq] at h
+          injection h with hy hrest
+          have yEq : y = x := Subtype.ext hy.symm
           subst y
-          exact congrArg (fun l => x :: l) (ih h.2)
+          exact congrArg (fun l => x :: l) (ih hrest)
 
 theorem recordFieldInvGen {scope name labels types minimum input type}
     {tree : Expr scope type} {rest} (allowed : minimum ≤ Infix.projection.precedence) :
