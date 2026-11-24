@@ -65,19 +65,11 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
         ((tupleAnnotation_consumes _ _ _ annotationRead).trans
           (tuplePattern_consumes input _ _ patternRead))
-  all_goals simp at htok
-
-theorem tupleBind_inversion : TupleBindInversionAussage := by
-  intro scope result input tree rest read
-  generalize htok : letKeyword :: openParen :: input = tokens at read
-  cases read
-  case tupleBind =>
-      have patternRead : TuplePatternReads _ _ _ := ‹_›
-      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
-      have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
-      rw [← (List.cons.inj htok).2] at patternRead
-      refine ⟨⟨_, _, _, _, _, _, _⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
-  all_goals simp at htok
+  all_goals
+    first
+    | contradiction
+    | simp at htok
+    | cases htok
 
 end Gabbro.Core.Ast.Surface
 
