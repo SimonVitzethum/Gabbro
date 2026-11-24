@@ -281,8 +281,7 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
   have hp₁ : r₁.pc = 0 := rfl
   have hp₂ : r₂.pc = 0 := rfl
   have hview : r₁.sicht β = r₂.sicht β := by
-    simp only [Rahmen.sicht]
-    rw [hp₁, hp₂]
+    simp only [Rahmen.sicht, hp₁, hp₂]
     rw [htemp]
     rfl
   have hAfter := aussage β 0 5 [] [] hQ hL hL2 r₁ r₂ (fun _ => false) rfl hview
