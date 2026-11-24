@@ -53,12 +53,12 @@ private theorem substringNoOpAtSlice : ¬ Continues minimum (sliceRange :: more)
   rintro ⟨op, _, same, _⟩
   have htok : op.token = sliceRange := (List.cons.inj same).1.symm
   cases op with
-  | arith a => cases a <;> simp [Infix.token, Arith.token, sliceRange] at htok
-  | div => simp [Infix.token, sliceRange] at htok
-  | compare c => cases c <;> simp [Infix.token, Compare.spelling, sliceRange] at htok
-  | logic l => cases l <;> simp [Infix.token, Logic.spelling, sliceRange] at htok
-  | index => simp [Infix.token, openBracket, sliceRange] at htok
-  | projection => simp [Infix.token, dot, sliceRange] at htok
+  | arith a => cases a <;> (have hf : False := by simpa [Infix.token, Arith.token, sliceRange] using htok; exact hf.elim)
+  | div => have hf : False := by simpa [Infix.token, sliceRange] using htok; exact hf.elim
+  | compare c => cases c <;> (have hf : False := by simpa [Infix.token, Compare.spelling, sliceRange] using htok; exact hf.elim)
+  | logic l => cases l <;> (have hf : False := by simpa [Infix.token, Logic.spelling, sliceRange] using htok; exact hf.elim)
+  | index => have hf : False := by simpa [Infix.token, openBracket, sliceRange] using htok; exact hf.elim
+  | projection => have hf : False := by simpa [Infix.token, dot, sliceRange] using htok; exact hf.elim
 
 private theorem substringPrintTokens
     (base : Expr scope (.text capacity))
@@ -218,8 +218,7 @@ private theorem substringAmOrt (scope : Scope) : (substringForm scope).RegelAmOr
       (expr 2 args.last).code.length]? = some b
   have hlen : p.code.length = (expr 0 args.base).code.length +
       (expr 1 args.first).code.length + (expr 2 args.last).code.length := by
-    simp [p, Fragment.anhaengen, List.length_append]
-    omega
+    simpa [p, Fragment.anhaengen, List.length_append, Nat.add_assoc]
   rw [← hlen]
   exact substringRootLookup p b
 
@@ -234,7 +233,8 @@ theorem substringSuffix : SubstringSuffixAussage := by
       exact (blocked ⟨.index, first, htok.symm, allowed⟩).elim
   | textConcat left right hle rightRead tail =>
       have hname : openBracket = Arith.add.token := (List.cons.inj htok).1
-      simp [Arith.token, openBracket] at hname
+      have hf : False := by simpa [Arith.token, openBracket] using hname
+      exact hf.elim
   | textIndex tbase offset hle offsetRead tail =>
       have hfirst : first = _ := (List.cons.inj htok).2
       subst first
@@ -259,8 +259,7 @@ theorem substringBytes : SubstringBytesAussage := by
   let b : Befehl := .substring 0 capacity
   let next : Rahmen := b.auswerten frame
   have hguard : b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ := by
-    simp [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound]
-    rfl
+    simpa [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound]
   change b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ ∧
     (waechterBedarf .teilfolge (i, j, text.bytes.size) →
       let out := text.slice i.toNat j.toNat
@@ -273,12 +272,12 @@ theorem substringBytes : SubstringBytesAussage := by
     have hcond : 0 ≤ i ∧ i ≤ j ∧ j ≤ (text.bytes.size : Int) := by
       simpa [waechterBedarf] using hw
     have haus : next = frame.schreibe 0 (some ⟨.text capacity, text.slice i.toNat j.toNat⟩) := by
-      simp [next, b, i, j, Befehl.auswerten, htext, hfirst, hlast, wertAls, text.bound, hcond]
+      simpa [next, b, i, j, Befehl.auswerten, htext, hfirst, hlast, wertAls, text.bound, hcond]
     have hjle : j.toNat ≤ text.bytes.size := by omega
     have hilj : i.toNat ≤ j.toNat := by omega
     refine ⟨?_, ?_, ?_, ?_⟩
     · rw [haus]
-      simp [Rahmen.schreibe]
+      simpa [Rahmen.schreibe]
     · rw [haus]
       rfl
     · change (text.slice i.toNat j.toNat).bytes.size = j.toNat - i.toNat
@@ -291,8 +290,8 @@ theorem substringBytes : SubstringBytesAussage := by
         simpa [ByteArray.size_extract, min_eq_left hjle] using hk'
       have hik : i.toNat + k < text.bytes.size := by omega
       change (text.bytes.extract i.toNat j.toNat)[k]? = text.bytes[i.toNat + k]?
-      rw [show (text.bytes.extract i.toNat j.toNat)[k]? = some ((text.bytes.extract i.toNat j.toNat)[k]'hk') by simp [hk']]
-      rw [show text.bytes[i.toNat + k]? = some (text.bytes[i.toNat + k]'hik) by simp [hik]]
+      rw [show (text.bytes.extract i.toNat j.toNat)[k]? = some ((text.bytes.extract i.toNat j.toNat)[k]'hk') by simpa [hk']]
+      rw [show text.bytes[i.toNat + k]? = some (text.bytes[i.toNat + k]'hik) by simpa [hik]]
       congr 1
       exact ByteArray.getElem_extract (start := i.toNat) (stop := j.toNat) hk'
   · intro hnw
@@ -300,7 +299,7 @@ theorem substringBytes : SubstringBytesAussage := by
       intro hc
       exact hnw (by simpa [waechterBedarf] using hc)
     have haus : next = frame.halt .ungueltigerWert := by
-      simp [next, b, i, j, Befehl.auswerten, htext, hfirst, hlast, wertAls, text.bound, hnot]
+      simpa [next, b, i, j, Befehl.auswerten, htext, hfirst, hlast, wertAls, text.bound, hnot]
     rw [haus]
     rfl
 
@@ -360,7 +359,7 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   subst spur
   constructor
   · intro answer
-    simp [plan]
+    simpa [plan]
   · intro answer
     exact List.not_mem_nil
 
@@ -375,7 +374,7 @@ theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   refine ⟨rfl, rfl, ?_⟩
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
-  simp [Fragment.einheit]
+  simpa [Fragment.einheit]
 
 theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   intro platform start
@@ -398,12 +397,12 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
   let b : Befehl := form.befehl args
   let zero : Ganzzahl := ⟨0, 0, Zahl.literal 0⟩
   have ht0 : (s₃.lokal eintritt).temp 0 = some ⟨.text cap, TextValue.literal []⟩ := by
-    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, cap]
+    simpa [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, cap]
   have ht1 : (s₃.lokal eintritt).zahl 1 = some zero := by
-    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+    simpa [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
       alsGanzzahl, zero]
   have ht2 : (s₃.lokal eintritt).zahl 2 = some zero := by
-    simp [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+    simpa [s₃, s₂, s₁, s₀, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
       alsGanzzahl, zero]
   have hb := substringBytes cap (TextValue.literal []) zero zero (s₃.lokal eintritt) ht0 ht1 ht2
   dsimp [Quellform.TextErfuellbar]
@@ -416,24 +415,24 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
       simpa [form, substringForm, args, b, zero, Zahl.literal] using hb.1
     rw [hgval] at guard
     cases guard
-    simp [waechterBedarf]
+    simpa [waechterBedarf]
   · have hw : waechterBedarf .teilfolge
         (0, 0, (TextValue.literal [] : TextValue cap).bytes.size) := by
-      simp [waechterBedarf]
+      simpa [waechterBedarf]
     have hgood := hb.2.1 hw
     refine ⟨?_, ?_⟩
-    · have hstartstopp : ((E.startdaten start).lokal eintritt).stopp = none := by
-        simp [E, form, substringForm, args, Quellform.einheit, Fragment.einheit, startdaten,
+    ·       have hstartstopp : ((E.startdaten start).lokal eintritt).stopp = none := by
+        simpa [E, form, substringForm, args, Quellform.einheit, Fragment.einheit, startdaten,
           Rahmen.start]
-      simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
+      simpa [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
         Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, waechterBedarf,
         wertAls, TextValue.literal, Zahl.literal, I.start, Zustand.start, startdaten,
         hstartstopp, cap]
     · have ht := hgood.1
       have hsame : (b.nach eintritt s₃).lokal eintritt =
           (Befehl.substring 0 cap).auswerten (s₃.lokal eintritt) := by
-        simp [b, form, substringForm, args, Befehl.nach]
+        simpa [b, form, substringForm, args, Befehl.nach]
       rw [hsame, ht]
-      simp
+      simpa
 
 end Gabbro.Core.Ast.Semantik
