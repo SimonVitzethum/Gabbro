@@ -1,6 +1,8 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Execution
+public import Core.Annahme.Annahme
+public import Core.Verfeinerung.Maschine
 public import Core.Waechter.Registry
 
 @[expose] public section
@@ -46,7 +48,7 @@ def MemAnnahmeAussage (form : MemForm) : Prop :=
     Annahme.RegelLokal (memUnit k op) op
 
 def MemIdealAussage (form : MemForm) : Prop :=
-  ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →
+  ∀ (k : Katalog) scope (tree : MemTree form) op, elaborateMem scope tree = some op →
     Ideal.RegelBestimmt (op.rule k.plattform.ziel)
 
 def MemEinheitAussage (form : MemForm) : Prop :=
@@ -95,10 +97,10 @@ def MemFlussAussage : Prop := ∀ k op, (memUnit k op).fluss = .leer
     includes forms that need the spaces or tokens produced by earlier steps. -/
 def MemErfuellbarNach (form : MemForm) (precedes : List MemInstruction → MemInstruction → Prop) : Prop :=
   ∃ (k : Katalog) (scope : MemScope) (tree : MemTree form) (op : MemInstruction)
-    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) (prefix : List MemInstruction)
+    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) («prefix» : List MemInstruction)
     (s : MemState) (next : MemFrame),
-    let E := memProgram k (prefix ++ [op])
-    precedes prefix op ∧ Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
+    let E := memProgram k («prefix» ++ [op])
+    precedes «prefix» op ∧ Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
     (scope.regionen.map Subtype.val).Nodup ∧ (scope.raeume.map Subtype.val).Nodup ∧
     (scope.marken.map Subtype.val).Nodup ∧
     BezeichnetMem k scope text (memUnit k op) form ∧ MemParse text tree ∧

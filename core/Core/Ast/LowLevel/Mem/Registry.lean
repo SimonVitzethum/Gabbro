@@ -10,29 +10,29 @@ namespace Gabbro.Core.Ast.LowLevel
 open Katalog
 
 def MapJointAussage : Prop :=
-  MemErfuellbarNach .mapSpace fun prefix op =>
-    ∃ tables virt frames rights, prefix = [.newSpace tables] ∧ op = .mapSpace 0 virt frames rights
+  MemErfuellbarNach .mapSpace fun «prefix» op =>
+    ∃ tables virt frames rights, «prefix» = [.newSpace tables] ∧ op = .mapSpace 0 virt frames rights
 
 def ProtectJointAussage : Prop :=
-  MemErfuellbarNach .protectSpace fun prefix op =>
+  MemErfuellbarNach .protectSpace fun «prefix» op =>
     ∃ tables virt frames original narrowed pages,
-      prefix = [.newSpace tables, .mapSpace 0 virt frames original] ∧
+      «prefix» = [.newSpace tables, .mapSpace 0 virt frames original] ∧
       op = .protectSpace 0 virt pages narrowed
 
 def UnmapJointAussage : Prop :=
-  MemErfuellbarNach .unmapSpace fun prefix op =>
+  MemErfuellbarNach .unmapSpace fun «prefix» op =>
     ∃ tables virt frames rights pages,
-      prefix = [.newSpace tables, .mapSpace 0 virt frames rights] ∧ op = .unmapSpace 0 virt pages
+      «prefix» = [.newSpace tables, .mapSpace 0 virt frames rights] ∧ op = .unmapSpace 0 virt pages
 
 def FlushJointAussage : Prop :=
-  MemErfuellbarNach .flushSpace fun prefix op =>
+  MemErfuellbarNach .flushSpace fun «prefix» op =>
     ∃ tables virt frames rights pages name,
-      prefix = [.newSpace tables, .mapSpace 0 virt frames rights, .unmapSpace 0 virt pages, .bindToken name] ∧
+      «prefix» = [.newSpace tables, .mapSpace 0 virt frames rights, .unmapSpace 0 virt pages, .bindToken name] ∧
       op = .flushSpace name
 
 def ActivateJointAussage : Prop :=
-  MemErfuellbarNach .activateSpace fun prefix op =>
-    ∃ tables, prefix = [.newSpace tables] ∧ op = .activateSpace 0
+  MemErfuellbarNach .activateSpace fun «prefix» op =>
+    ∃ tables, «prefix» = [.newSpace tables] ∧ op = .activateSpace 0
 
 def MeaningAussageMem : MemForm → Prop
   | .splitAt => SplitAtMeaningAussage
