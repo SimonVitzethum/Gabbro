@@ -133,24 +133,34 @@ instance : Encodable FirmwareZeile :=
 A written name is a subtype of `List Char`. The inverse checks the spelling
 constructively and rebuilds the proof component. -/
 
-noncomputable def identifierFinv (name : List Char) : Option Identifier := by
-  classical
+local instance nameStartDecidable (c : Char) : Decidable (isNameStart c) := by
+  unfold isNameStart isLetter
+  infer_instance
+
+local instance namePartDecidable (c : Char) : Decidable (isNamePart c) := by
+  unfold isNamePart isNameStart isLetter
+  infer_instance
+
+def identifierFinv (name : List Char) : Option Identifier :=
   match name with
-  | [] => exact none
+  | [] => none
   | c :: rest =>
-      if h1 : isNameStart c then
-        if h2 : ∀ a ∈ rest, isNamePart a then
-          exact some ⟨c :: rest, ⟨c, rest, rfl, h1, h2⟩⟩
-        else exact none
-      else exact none
+    if h1 : isNameStart c then
+      if h2 : ∀ a ∈ rest, isNamePart a then
+        some ⟨c :: rest, ⟨c, rest, rfl, h1, h2⟩⟩
+      else none
+    else none
 
 instance : Encodable Identifier :=
   Encodable.ofLeftInjection (fun id : Identifier => id.val) identifierFinv (by
     intro id
-    classical
     rcases id with ⟨name, h⟩
     rcases h with ⟨c, rest, rfl, hs, hp⟩
-    simp [identifierFinv, hs, hp])
+    simp only [identifierFinv]
+    rw [dif_pos hs, dif_pos hp]
+    apply congrArg some
+    apply Subtype.ext
+    rfl)
 
 /-! ## CarrierEffect -/
 
@@ -207,8 +217,8 @@ def tyCode : Ty .value → Nat
       Nat.pair 17 (Nat.pair (Encodable.encode space)
         (Nat.pair (Encodable.encode recht) (tyCode referent))) + 1
 
-def tyOfCode : Nat → Ty .value
-  | 0 => .bool
+def tyOfCode : Nat → Option (Ty .value)
+  | 0 => none
   | n + 1 =>
     let p := n.unpair
     let payload := p.2
@@ -224,44 +234,80 @@ def tyOfCode : Nat → Ty .value
     have hb22 : payload.unpair.2.unpair.2.unpair.2 < n + 1 :=
       lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
     match p.1 with
-    | 0 => .int (Encodable.decode payload.unpair.1).getD 0 (Encodable.decode payload.unpair.2).getD 0
-    | 1 => .bool
-    | 2 => .array (tyOfCode payload.unpair.1) (Encodable.decode payload.unpair.2).getD 0
-    | 3 => .productEnd
-    | 4 => .product (tyOfCode payload.unpair.1) (tyOfCode payload.unpair.2)
-    | 5 => .record (Encodable.decode payload.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.1).getD [] (tyOfCode payload.unpair.2.unpair.2)
-    | 6 => .recordSchema (Encodable.decode payload.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.1).getD [] (tyOfCode payload.unpair.2.unpair.2)
-    | 7 => .sumEnd
-    | 8 => .sum (tyOfCode payload.unpair.1) (tyOfCode payload.unpair.2)
-    | 9 => .variant (Encodable.decode payload.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.2.unpair.1).getD []
-        (tyOfCode payload.unpair.2.unpair.2.unpair.2)
-    | 10 => .variantSchema (Encodable.decode payload.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.1).getD []
-        (Encodable.decode payload.unpair.2.unpair.2.unpair.1).getD []
-        (tyOfCode payload.unpair.2.unpair.2.unpair.2)
-    | 11 => .text (Encodable.decode payload).getD 0
-    | 12 => .carrierSchema (Encodable.decode payload.unpair.1).getD 0
-        (Encodable.decode payload.unpair.2.unpair.1).getD []
-        (tyOfCode payload.unpair.2.unpair.2.unpair.1)
-        (Encodable.decode payload.unpair.2.unpair.2.unpair.2).getD false
-    | 13 => .effectGroupSchema (Encodable.decode payload).getD []
-    | 14 => .address (Encodable.decode payload).getD .physical
-    | 15 => .ownedRegion
-    | 16 => .regionView (tyOfCode payload)
-    | 17 => .ptr (Encodable.decode payload.unpair.1).getD .physical
-        (Encodable.decode payload.unpair.2.unpair.1).getD .r
-        (tyOfCode payload.unpair.2.unpair.2)
-    | _ => .bool
+    | 0 => do
+        let lo : Int ← Encodable.decode payload.unpair.1
+        let hi : Int ← Encodable.decode payload.unpair.2
+        some (.int lo hi)
+    | 1 => some .bool
+    | 2 => do
+        let el ← tyOfCode payload.unpair.1
+        let cnt : Nat ← Encodable.decode payload.unpair.2
+        some (.array el cnt)
+    | 3 => some .productEnd
+    | 4 => do
+        let h ← tyOfCode payload.unpair.1
+        let t ← tyOfCode payload.unpair.2
+        some (.product h t)
+    | 5 => do
+        let nm : List Char ← Encodable.decode payload.unpair.1
+        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
+        let lay ← tyOfCode payload.unpair.2.unpair.2
+        some (.record nm ls lay)
+    | 6 => do
+        let nm : List Char ← Encodable.decode payload.unpair.1
+        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
+        let lay ← tyOfCode payload.unpair.2.unpair.2
+        some (.recordSchema nm ls lay)
+    | 7 => some .sumEnd
+    | 8 => do
+        let h ← tyOfCode payload.unpair.1
+        let t ← tyOfCode payload.unpair.2
+        some (.sum h t)
+    | 9 => do
+        let nm : List Char ← Encodable.decode payload.unpair.1
+        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
+        let hp' : List Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.1
+        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.2
+        some (.variant nm ls hp' lay)
+    | 10 => do
+        let nm : List Char ← Encodable.decode payload.unpair.1
+        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
+        let hp' : List Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.1
+        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.2
+        some (.variantSchema nm ls hp' lay)
+    | 11 => do
+        let cap : Nat ← Encodable.decode payload
+        some (.text cap)
+    | 12 => do
+        let cnt : Nat ← Encodable.decode payload.unpair.1
+        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
+        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.1
+        let ex : Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.2
+        some (.carrierSchema cnt ls lay ex)
+    | 13 => do
+        let eff : List CarrierEffect ← Encodable.decode payload
+        some (.effectGroupSchema eff)
+    | 14 => do
+        let space : AddressSpace ← Encodable.decode payload
+        some (.address space)
+    | 15 => some .ownedRegion
+    | 16 => do
+        let el ← tyOfCode payload
+        some (.regionView el)
+    | 17 => do
+        let space : AddressSpace ← Encodable.decode payload.unpair.1
+        let recht : PtrRecht ← Encodable.decode payload.unpair.2.unpair.1
+        let referent ← tyOfCode payload.unpair.2.unpair.2
+        some (.ptr space recht referent)
+    | _ => none
+termination_by n => n
+decreasing_by omega
 
-lemma tyCode_ofCode (t : Ty .value) : tyOfCode (tyCode t) = t := by
+lemma tyCode_ofCode (t : Ty .value) : tyOfCode (tyCode t) = some t := by
   induction t <;> simp [tyCode, tyOfCode, *]
 
 instance : Encodable (Ty .value) :=
-  Encodable.ofLeftInverse tyCode tyOfCode tyCode_ofCode
+  Encodable.ofLeftInjection tyCode tyOfCode tyCode_ofCode
 
 /-! ## Rufstelle -/
 
