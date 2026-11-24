@@ -90,7 +90,9 @@ theorem interruptNI : InterruptNIAussage := by
       .ohne (Or.inl (by rfl))
     obtain ⟨g₁, hs⟩ := Speicher.Zustand.schritt_ohne_lesen gutW.1 gutW.2 .aussen label
       (by simp only [label, aussenEtikett, Speicher.Art.liest, not_false_eq_true])
-    let spur₂ : SchrittSpur PUnit Int := ⟨[label], [(.aussen, label)]⟩
+    let spur₂ : SchrittSpur PUnit Int :=
+      { speicher := [(.aussen, label)]
+        aussen := [Ereignis.interrupt k irq Eintritt.handler] }
     let next₂ := { Zustandseintritt v₂ k id c nmi with graph := g₁ }
     have folge₂ : Speicherfolge v₂.initial .aussen v₂.graph [label] spur₂.speicher next₂.graph := by
       dsimp only [spur₂, next₂]
@@ -190,7 +192,7 @@ theorem interruptNI : InterruptNIAussage := by
               List.nil_append, List.append_nil, keinEnde, if_false]
           have beobEq : schrittBeob ρ₁ predictor t = schrittBeob ρ₂ predictor t := by
             exact (interruptBeob ρ₁ spur v₁ next₁ tick zustand₁ zustandNach₁ aussen₁ append₁ ruht₁ nextEq₁).trans
-              (interruptBeob ρ₂ _ v₂ na₂ label₂ zustand₂ hn₂ aussenR appendR ruhtR nextEqR).symm
+              (interruptBeob ρ₂ _ v₂ _ label₂ zustand₂ hn₂ aussenR appendR ruhtR nextEqR).symm
           have e₁ : NiedrigeBeob E ρ₁ predictor (t + 1) =
               NiedrigeBeob E ρ₁ predictor t ++ schrittBeob ρ₁ predictor t := by
             change NiedrigeBeob E ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
@@ -215,14 +217,20 @@ theorem interruptNI : InterruptNIAussage := by
             induction sObs with
             | nil => exact .nil
             | cons e es ih => exact .cons (.gleich e) ih
+          have appendForall : ∀ {a b s : List (NiedrigesEreignis PUnit Int PUnit Ast.Semantik.Befehl)},
+              List.Forall₂ (EreignisAequiv E.fluss.freigabe) a b →
+              List.Forall₂ (EreignisAequiv E.fluss.freigabe) s s →
+              List.Forall₂ (EreignisAequiv E.fluss.freigabe) (a ++ s) (b ++ s) := by
+            intro a b s hab hs
+            induction hab with
+            | nil => exact hs
+            | cons hTail ih => exact .cons hTail ih
           refine ⟨?_, ?_, ?_⟩
           · rw [e₁, e₂, beobEq]
             have lenApp : (L₁ ++ sObs).length = (L₂ ++ sObs).length := by
               rw [List.length_append, List.length_append, len']
             rw [lenApp, List.take_length]
-            induction cov' with
-            | nil => exact reflS
-            | cons hTail ih => exact .cons hTail ih
+            exact appendForall cov' reflS
           · intro v' w' hv' hw'
             rw [zustandNach₁] at hv'
             rw [hn₂] at hw'
@@ -232,24 +240,33 @@ theorem interruptNI : InterruptNIAussage := by
             · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
               · intro d place hp
                 rw [nextEq₁, nextEqR]
-                exact congrFun (congrFun lokGleich d) place hp
+                simp only [Zustandseintritt]
+                exact lokGleich d place hp
               · intro d
-                rw [nextEq₁, nextEqR, ← statusEq]
+                rw [nextEq₁, nextEqR]
+                simp only [Zustandseintritt, statusEq]
               · intro x
                 rw [nextEq₁, nextEqR]
+                simp only [Zustandseintritt]
                 exact initialGleich x
               · rw [nextEq₁, nextEqR]
+                simp only [Zustandseintritt]
                 exact rechteGleich
               · rw [nextEq₁, nextEqR]
+                simp only [Zustandseintritt]
                 exact leihenGleich
               · intro d
                 rw [nextEq₁, nextEqR]
+                simp only [Zustandseintritt, AntwortSicht]
                 exact antwortGleich d
             · rw [nextEq₁, nextEqR]
-              exact epocheEq
-            · rw [nextEq₁, nextEqR, geliefertEq]
-            · rw [nextEq₁, nextEqR, kerneEq]
-            · rw [nextEq₁, nextEqR, statusEq]
+              simp only [Zustandseintritt, epocheEq]
+            · rw [nextEq₁, nextEqR]
+              simp only [Zustandseintritt, geliefertEq]
+            · rw [nextEq₁, nextEqR]
+              simp only [Zustandseintritt, kerneEq]
+            · rw [nextEq₁, nextEqR]
+              simp only [Zustandseintritt, statusEq]
           · rw [e₁, e₂, beobEq, List.length_append, List.length_append, len']
 
 end Gabbro.Core.Beobachtung
