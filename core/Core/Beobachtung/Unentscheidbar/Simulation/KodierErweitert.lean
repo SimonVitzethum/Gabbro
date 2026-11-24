@@ -14,116 +14,122 @@ open Gabbro.Core.Text
 
 /-! ## WrittenType and WrittenTypes
 
-The two mutually recursive spellings use the same preorder code discipline as
-`Ty`, with mutually recursive structural decoders and a generalized inverse
-lemma over the leftover token list. -/
+The two mutually recursive spellings use the same first-order Nat codes as
+`Ty`: a constructor tag paired with its children, shifted by one so every
+child code is strictly smaller. The decoders are partial and recursive on that
+strictly smaller child code, which makes the termination argument local. -/
 
 mutual
-  def writtenTypeCode : WrittenType → List Nat
-    | .bool => [0]
+  def writtenTypeCode : WrittenType → Nat
+    | .bool => Nat.pair 0 0 + 1
     | .integer signed width interval =>
-        1 :: Encodable.encode signed :: Encodable.encode width :: Encodable.encode interval :: []
-    | .array element count => 2 :: writtenTypeCode element ++ [Encodable.encode count]
+        Nat.pair 1 (Nat.pair (Encodable.encode signed)
+          (Nat.pair (Encodable.encode width) (Encodable.encode interval))) + 1
+    | .array element count =>
+        Nat.pair 2 (Nat.pair (writtenTypeCode element) (Encodable.encode count)) + 1
     | .tuple first second rest =>
-        3 :: writtenTypeCode first ++ writtenTypeCode second ++ writtenTypesCode rest
-    | .text capacity => [4, Encodable.encode capacity]
-    | .index carrier count => [5, Encodable.encode carrier, Encodable.encode count]
-    | .indexOption carrier count => [6, Encodable.encode carrier, Encodable.encode count]
-    | .address space => [7, Encodable.encode space]
-    | .ownedRegion => [8]
+        Nat.pair 3 (Nat.pair (writtenTypeCode first)
+          (Nat.pair (writtenTypeCode second) (writtenTypesCode rest))) + 1
+    | .text capacity => Nat.pair 4 (Encodable.encode capacity) + 1
+    | .index carrier count =>
+        Nat.pair 5 (Nat.pair (Encodable.encode carrier) (Encodable.encode count)) + 1
+    | .indexOption carrier count =>
+        Nat.pair 6 (Nat.pair (Encodable.encode carrier) (Encodable.encode count)) + 1
+    | .address space => Nat.pair 7 (Encodable.encode space) + 1
+    | .ownedRegion => Nat.pair 8 0 + 1
     | .ptr space recht referent =>
-        9 :: Encodable.encode space :: Encodable.encode recht :: writtenTypeCode referent
+        Nat.pair 9 (Nat.pair (Encodable.encode space)
+          (Nat.pair (Encodable.encode recht) (writtenTypeCode referent))) + 1
 
-  def writtenTypesCode : WrittenTypes → List Nat
-    | .empty => [0]
-    | .next head tail => 1 :: writtenTypeCode head ++ writtenTypesCode tail
+  def writtenTypesCode : WrittenTypes → Nat
+    | .empty => Nat.pair 0 0 + 1
+    | .next head tail =>
+        Nat.pair 1 (Nat.pair (writtenTypeCode head) (writtenTypesCode tail)) + 1
 
-  def writtenTypeDecode : List Nat → Option (WrittenType × List Nat)
-    | 0 :: rest => some (.bool, rest)
-    | 1 :: s :: w :: i :: rest => do
-        let signed : Bool ← Encodable.decode s
-        let width : Nat ← Encodable.decode w
-        let interval : Option (Int × Int) ← Encodable.decode i
-        some (.integer signed width interval, rest)
-    | 2 :: rest => do
-        let (element, r1) ← writtenTypeDecode rest
-        match r1 with
-        | count :: r2 =>
-            let c : Nat ← Encodable.decode count
-            some (.array element c, r2)
-        | _ => none
-    | 3 :: rest => do
-        let (first, r1) ← writtenTypeDecode rest
-        let (second, r2) ← writtenTypeDecode r1
-        let (tail, r3) ← writtenTypesDecode r2
-        some (.tuple first second tail, r3)
-    | 4 :: cap :: rest => do
-        let c : Nat ← Encodable.decode cap
-        some (.text c, rest)
-    | 5 :: carrier :: count :: rest => do
-        let car : Identifier ← Encodable.decode carrier
-        let c : Nat ← Encodable.decode count
-        some (.index car c, rest)
-    | 6 :: carrier :: count :: rest => do
-        let car : Identifier ← Encodable.decode carrier
-        let c : Nat ← Encodable.decode count
-        some (.indexOption car c, rest)
-    | 7 :: space :: rest => do
-        let s : AddressSpace ← Encodable.decode space
-        some (.address s, rest)
-    | 8 :: rest => some (.ownedRegion, rest)
-    | 9 :: space :: recht :: rest => do
-        let s : AddressSpace ← Encodable.decode space
-        let r : PtrRecht ← Encodable.decode recht
-        let (referent, r') ← writtenTypeDecode rest
-        some (.ptr s r referent, r')
-    | _ => none
+  def writtenTypeOfCode : Nat → Option WrittenType
+    | 0 => none
+    | n + 1 =>
+      let p := n.unpair
+      let payload := p.2
+      have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
+      have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+      have hb1 : payload.unpair.2.unpair.1 < n + 1 :=
+        lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
+      have hb2 : payload.unpair.2.unpair.2 < n + 1 :=
+        lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
+      match p.1 with
+      | 0 => some .bool
+      | 1 => do
+          let signed : Bool ← Encodable.decode payload.unpair.1
+          let width : Nat ← Encodable.decode payload.unpair.2.unpair.1
+          let interval : Option (Int × Int) ← Encodable.decode payload.unpair.2.unpair.2
+          some (.integer signed width interval)
+      | 2 => do
+          let element ← writtenTypeOfCode payload.unpair.1
+          let count : Nat ← Encodable.decode payload.unpair.2
+          some (.array element count)
+      | 3 => do
+          let first ← writtenTypeOfCode payload.unpair.1
+          let second ← writtenTypeOfCode payload.unpair.2.unpair.1
+          let rest ← writtenTypesOfCode payload.unpair.2.unpair.2
+          some (.tuple first second rest)
+      | 4 => do
+          let capacity : Nat ← Encodable.decode payload
+          some (.text capacity)
+      | 5 => do
+          let carrier : Identifier ← Encodable.decode payload.unpair.1
+          let count : Nat ← Encodable.decode payload.unpair.2
+          some (.index carrier count)
+      | 6 => do
+          let carrier : Identifier ← Encodable.decode payload.unpair.1
+          let count : Nat ← Encodable.decode payload.unpair.2
+          some (.indexOption carrier count)
+      | 7 => do
+          let space : AddressSpace ← Encodable.decode payload
+          some (.address space)
+      | 8 => some .ownedRegion
+      | 9 => do
+          let space : AddressSpace ← Encodable.decode payload.unpair.1
+          let recht : PtrRecht ← Encodable.decode payload.unpair.2.unpair.1
+          let referent ← writtenTypeOfCode payload.unpair.2.unpair.2
+          some (.ptr space recht referent)
+      | _ => none
 
-  def writtenTypesDecode : List Nat → Option (WrittenTypes × List Nat)
-    | 0 :: rest => some (.empty, rest)
-    | 1 :: rest => do
-        let (head, r1) ← writtenTypeDecode rest
-        let (tail, r2) ← writtenTypesDecode r1
-        some (.next head tail, r2)
-    | _ => none
+  def writtenTypesOfCode : Nat → Option WrittenTypes
+    | 0 => none
+    | n + 1 =>
+      let p := n.unpair
+      let payload := p.2
+      have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
+      have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+      match p.1 with
+      | 0 => some .empty
+      | 1 => do
+          let head ← writtenTypeOfCode payload.unpair.1
+          let tail ← writtenTypesOfCode payload.unpair.2
+          some (.next head tail)
+      | _ => none
 end
 
 mutual
-  lemma writtenTypeDecode_code : ∀ (w : WrittenType) (rest : List Nat),
-      writtenTypeDecode (writtenTypeCode w ++ rest) = some (w, rest) := by
-    intro w
-    induction w <;> (intro rest; simp [writtenTypeCode, writtenTypeDecode,
-      writtenTypesDecode_code, writtenTypesCode, writtenTypesDecode, *, List.append_assoc])
+  lemma writtenTypeCode_ofCode (w : WrittenType) :
+      writtenTypeOfCode (writtenTypeCode w) = some w := by
+    induction w <;> simp [writtenTypeCode, writtenTypeOfCode, writtenTypesCode_ofCode,
+      writtenTypesCode, writtenTypesOfCode, *]
 
-  lemma writtenTypesDecode_code : ∀ (w : WrittenTypes) (rest : List Nat),
-      writtenTypesDecode (writtenTypesCode w ++ rest) = some (w, rest) := by
-    intro w
-    induction w <;> (intro rest; simp [writtenTypesCode, writtenTypesDecode, *, List.append_assoc])
+  lemma writtenTypesCode_ofCode (w : WrittenTypes) :
+      writtenTypesOfCode (writtenTypesCode w) = some w := by
+    induction w <;> simp [writtenTypesCode, writtenTypesOfCode, writtenTypeCode_ofCode,
+      writtenTypeCode, writtenTypeOfCode, *]
 end
 
 instance : Encodable WrittenType :=
-  Encodable.ofLeftInjection
-    (fun w => Encodable.encode (writtenTypeCode w))
-    (fun n => do
-      let toks : List Nat ← Encodable.decode n
-      let (w, rest) ← writtenTypeDecode toks
-      if rest.isEmpty then some w else none)
-    (by
-      intro w
-      rw [Encodable.encodek, writtenTypeDecode_code]
-      simp)
+  Encodable.ofLeftInjection writtenTypeCode writtenTypeOfCode writtenTypeCode_ofCode
 
 instance : Encodable WrittenTypes :=
-  Encodable.ofLeftInjection
-    (fun w => Encodable.encode (writtenTypesCode w))
-    (fun n => do
-      let toks : List Nat ← Encodable.decode n
-      let (w, rest) ← writtenTypesDecode toks
-      if rest.isEmpty then some w else none)
-    (by
-      intro w
-      rw [Encodable.encodek, writtenTypesDecode_code]
-      simp)
+  Encodable.ofLeftInjection writtenTypesCode writtenTypesOfCode writtenTypesCode_ofCode
 
 /-! ## RegionInitializer -/
 

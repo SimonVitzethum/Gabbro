@@ -133,24 +133,24 @@ instance : Encodable FirmwareZeile :=
 A written name is a subtype of `List Char`. The inverse checks the spelling
 constructively and rebuilds the proof component. -/
 
-def identifierFinv (name : List Char) : Option Identifier :=
+noncomputable def identifierFinv (name : List Char) : Option Identifier := by
+  classical
   match name with
-  | [] => none
+  | [] => exact none
   | c :: rest =>
-    if h1 : isNameStart c then
-      if h2 : ∀ a ∈ rest, isNamePart a then
-        some ⟨c :: rest, ⟨c, rest, rfl, h1, h2⟩⟩
-      else none
-    else none
+      if h1 : isNameStart c then
+        if h2 : ∀ a ∈ rest, isNamePart a then
+          exact some ⟨c :: rest, ⟨c, rest, rfl, h1, h2⟩⟩
+        else exact none
+      else exact none
 
 instance : Encodable Identifier :=
   Encodable.ofLeftInjection (fun id : Identifier => id.val) identifierFinv (by
     intro id
+    classical
     rcases id with ⟨name, h⟩
     rcases h with ⟨c, rest, rfl, hs, hp⟩
-    simp only [identifierFinv]
-    rw [dif_pos hs, dif_pos hp]
-    rfl)
+    simp [identifierFinv, hs, hp])
 
 /-! ## CarrierEffect -/
 
@@ -177,120 +177,91 @@ instance : Encodable CarrierEffect :=
 decoder consumes that list and returns the leftover tail, so recursion is
 structural on the list and the inverse lemma is generalized over the tail. -/
 
-def tyCode : Ty .value → List Nat
-  | .int lo hi => 0 :: Encodable.encode lo :: Encodable.encode hi :: []
-  | .bool => [1]
-  | .array el cnt => 2 :: tyCode el ++ [Encodable.encode cnt]
-  | .productEnd => [3]
-  | .product h t => 4 :: tyCode h ++ tyCode t
-  | .record nm ls lay => 5 :: Encodable.encode nm :: Encodable.encode ls :: tyCode lay
-  | .recordSchema nm ls lay => 6 :: Encodable.encode nm :: Encodable.encode ls :: tyCode lay
-  | .sumEnd => [7]
-  | .sum h t => 8 :: tyCode h ++ tyCode t
+def tyCode : Ty .value → Nat
+  | .int lo hi => Nat.pair 0 (Nat.pair (Encodable.encode lo) (Encodable.encode hi)) + 1
+  | .bool => Nat.pair 1 0 + 1
+  | .array el cnt => Nat.pair 2 (Nat.pair (tyCode el) (Encodable.encode cnt)) + 1
+  | .productEnd => Nat.pair 3 0 + 1
+  | .product h t => Nat.pair 4 (Nat.pair (tyCode h) (tyCode t)) + 1
+  | .record nm ls lay =>
+      Nat.pair 5 (Nat.pair (Encodable.encode nm) (Nat.pair (Encodable.encode ls) (tyCode lay))) + 1
+  | .recordSchema nm ls lay =>
+      Nat.pair 6 (Nat.pair (Encodable.encode nm) (Nat.pair (Encodable.encode ls) (tyCode lay))) + 1
+  | .sumEnd => Nat.pair 7 0 + 1
+  | .sum h t => Nat.pair 8 (Nat.pair (tyCode h) (tyCode t)) + 1
   | .variant nm ls hp lay =>
-      9 :: Encodable.encode nm :: Encodable.encode ls :: Encodable.encode hp :: tyCode lay
+      Nat.pair 9 (Nat.pair (Encodable.encode nm)
+        (Nat.pair (Encodable.encode ls) (Nat.pair (Encodable.encode hp) (tyCode lay)))) + 1
   | .variantSchema nm ls hp lay =>
-      10 :: Encodable.encode nm :: Encodable.encode ls :: Encodable.encode hp :: tyCode lay
-  | .text cap => [11, Encodable.encode cap]
+      Nat.pair 10 (Nat.pair (Encodable.encode nm)
+        (Nat.pair (Encodable.encode ls) (Nat.pair (Encodable.encode hp) (tyCode lay)))) + 1
+  | .text cap => Nat.pair 11 (Encodable.encode cap) + 1
   | .carrierSchema cnt ls lay ex =>
-      12 :: Encodable.encode cnt :: Encodable.encode ls :: tyCode lay ++ [Encodable.encode ex]
-  | .effectGroupSchema eff => [13, Encodable.encode eff]
-  | .address space => [14, Encodable.encode space]
-  | .ownedRegion => [15]
-  | .regionView el => 16 :: tyCode el
+      Nat.pair 12 (Nat.pair (Encodable.encode cnt)
+        (Nat.pair (Encodable.encode ls) (Nat.pair (tyCode lay) (Encodable.encode ex)))) + 1
+  | .effectGroupSchema eff => Nat.pair 13 (Encodable.encode eff) + 1
+  | .address space => Nat.pair 14 (Encodable.encode space) + 1
+  | .ownedRegion => Nat.pair 15 0 + 1
+  | .regionView el => Nat.pair 16 (tyCode el) + 1
   | .ptr space recht referent =>
-      17 :: Encodable.encode space :: Encodable.encode recht :: tyCode referent
+      Nat.pair 17 (Nat.pair (Encodable.encode space)
+        (Nat.pair (Encodable.encode recht) (tyCode referent))) + 1
 
-def tyDecode : List Nat → Option (Ty .value × List Nat)
-  | 0 :: lo :: hi :: rest => do
-      let l : Int ← Encodable.decode lo
-      let h : Int ← Encodable.decode hi
-      some (.int l h, rest)
-  | 1 :: rest => some (.bool, rest)
-  | 2 :: rest => do
-      let (el, r1) ← tyDecode rest
-      match r1 with
-      | cnt :: r2 =>
-          let c : Nat ← Encodable.decode cnt
-          some (.array el c, r2)
-      | _ => none
-  | 3 :: rest => some (.productEnd, rest)
-  | 4 :: rest => do
-      let (h, r1) ← tyDecode rest
-      let (t, r2) ← tyDecode r1
-      some (.product h t, r2)
-  | 5 :: nm :: ls :: rest => do
-      let n : List Char ← Encodable.decode nm
-      let l : List (List Char) ← Encodable.decode ls
-      let (lay, r) ← tyDecode rest
-      some (.record n l lay, r)
-  | 6 :: nm :: ls :: rest => do
-      let n : List Char ← Encodable.decode nm
-      let l : List (List Char) ← Encodable.decode ls
-      let (lay, r) ← tyDecode rest
-      some (.recordSchema n l lay, r)
-  | 7 :: rest => some (.sumEnd, rest)
-  | 8 :: rest => do
-      let (h, r1) ← tyDecode rest
-      let (t, r2) ← tyDecode r1
-      some (.sum h t, r2)
-  | 9 :: nm :: ls :: hp :: rest => do
-      let n : List Char ← Encodable.decode nm
-      let l : List (List Char) ← Encodable.decode ls
-      let p : List Bool ← Encodable.decode hp
-      let (lay, r) ← tyDecode rest
-      some (.variant n l p lay, r)
-  | 10 :: nm :: ls :: hp :: rest => do
-      let n : List Char ← Encodable.decode nm
-      let l : List (List Char) ← Encodable.decode ls
-      let p : List Bool ← Encodable.decode hp
-      let (lay, r) ← tyDecode rest
-      some (.variantSchema n l p lay, r)
-  | 11 :: cap :: rest => do
-      let c : Nat ← Encodable.decode cap
-      some (.text c, rest)
-  | 12 :: cnt :: ls :: rest => do
-      let c : Nat ← Encodable.decode cnt
-      let l : List (List Char) ← Encodable.decode ls
-      let (lay, r1) ← tyDecode rest
-      match r1 with
-      | ex :: r2 =>
-          let e : Bool ← Encodable.decode ex
-          some (.carrierSchema c l lay e, r2)
-      | _ => none
-  | 13 :: eff :: rest => do
-      let e : List CarrierEffect ← Encodable.decode eff
-      some (.effectGroupSchema e, rest)
-  | 14 :: space :: rest => do
-      let s : AddressSpace ← Encodable.decode space
-      some (.address s, rest)
-  | 15 :: rest => some (.ownedRegion, rest)
-  | 16 :: rest => do
-      let (el, r) ← tyDecode rest
-      some (.regionView el, r)
-  | 17 :: space :: recht :: rest => do
-      let s : AddressSpace ← Encodable.decode space
-      let r : PtrRecht ← Encodable.decode recht
-      let (referent, r') ← tyDecode rest
-      some (.ptr s r referent, r')
-  | _ => none
+def tyOfCode : Nat → Ty .value
+  | 0 => .bool
+  | n + 1 =>
+    let p := n.unpair
+    let payload := p.2
+    have hp : payload < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le n) (Nat.lt_succ_self n)
+    have ha : payload.unpair.1 < n + 1 := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+    have hb : payload.unpair.2 < n + 1 := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+    have hb1 : payload.unpair.2.unpair.1 < n + 1 :=
+      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
+    have hb2 : payload.unpair.2.unpair.2 < n + 1 :=
+      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
+    have hb21 : payload.unpair.2.unpair.2.unpair.1 < n + 1 :=
+      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
+    have hb22 : payload.unpair.2.unpair.2.unpair.2 < n + 1 :=
+      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
+    match p.1 with
+    | 0 => .int (Encodable.decode payload.unpair.1).getD 0 (Encodable.decode payload.unpair.2).getD 0
+    | 1 => .bool
+    | 2 => .array (tyOfCode payload.unpair.1) (Encodable.decode payload.unpair.2).getD 0
+    | 3 => .productEnd
+    | 4 => .product (tyOfCode payload.unpair.1) (tyOfCode payload.unpair.2)
+    | 5 => .record (Encodable.decode payload.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.1).getD [] (tyOfCode payload.unpair.2.unpair.2)
+    | 6 => .recordSchema (Encodable.decode payload.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.1).getD [] (tyOfCode payload.unpair.2.unpair.2)
+    | 7 => .sumEnd
+    | 8 => .sum (tyOfCode payload.unpair.1) (tyOfCode payload.unpair.2)
+    | 9 => .variant (Encodable.decode payload.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.2.unpair.1).getD []
+        (tyOfCode payload.unpair.2.unpair.2.unpair.2)
+    | 10 => .variantSchema (Encodable.decode payload.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.1).getD []
+        (Encodable.decode payload.unpair.2.unpair.2.unpair.1).getD []
+        (tyOfCode payload.unpair.2.unpair.2.unpair.2)
+    | 11 => .text (Encodable.decode payload).getD 0
+    | 12 => .carrierSchema (Encodable.decode payload.unpair.1).getD 0
+        (Encodable.decode payload.unpair.2.unpair.1).getD []
+        (tyOfCode payload.unpair.2.unpair.2.unpair.1)
+        (Encodable.decode payload.unpair.2.unpair.2.unpair.2).getD false
+    | 13 => .effectGroupSchema (Encodable.decode payload).getD []
+    | 14 => .address (Encodable.decode payload).getD .physical
+    | 15 => .ownedRegion
+    | 16 => .regionView (tyOfCode payload)
+    | 17 => .ptr (Encodable.decode payload.unpair.1).getD .physical
+        (Encodable.decode payload.unpair.2.unpair.1).getD .r
+        (tyOfCode payload.unpair.2.unpair.2)
+    | _ => .bool
 
-lemma tyDecode_code : ∀ (t : Ty .value) (rest : List Nat),
-    tyDecode (tyCode t ++ rest) = some (t, rest) := by
-  intro t
-  induction t <;> (intro rest; simp [tyCode, tyDecode, *, List.append_assoc])
+lemma tyCode_ofCode (t : Ty .value) : tyOfCode (tyCode t) = t := by
+  induction t <;> simp [tyCode, tyOfCode, *]
 
 instance : Encodable (Ty .value) :=
-  Encodable.ofLeftInjection
-    (fun t => Encodable.encode (tyCode t))
-    (fun n => do
-      let toks : List Nat ← Encodable.decode n
-      let (t, rest) ← tyDecode toks
-      if rest.isEmpty then some t else none)
-    (by
-      intro t
-      rw [Encodable.encodek, tyDecode_code]
-      simp)
+  Encodable.ofLeftInverse tyCode tyOfCode tyCode_ofCode
 
 /-! ## Rufstelle -/
 
