@@ -270,6 +270,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.LowLevel.Device.TakeBackErfuellbarAussage, 10616024588335787325),
   (`Gabbro.Core.Ast.LowLevel.Device.TransitionErfuellbarAussage, 15316100297566631120),
   (`Gabbro.Core.Ast.LowLevel.FlushNarrowJointAussage, 14542472173194282462),
+  (`Gabbro.Core.Ast.LowLevel.FlushNarrowWideJointAussage, 13237997050584933894),
   (`Gabbro.Core.Ast.Semantik.BaueArraySichtAussage, 11256319820550370324),
   (`Gabbro.Core.Ast.Semantik.BaueRecordSichtAussage, 14128368628368643236),
   (`Gabbro.Core.Ast.Semantik.BaueTupelSichtAussage, 17368313068749549884),
