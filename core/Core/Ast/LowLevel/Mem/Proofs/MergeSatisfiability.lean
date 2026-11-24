@@ -1,5 +1,6 @@
 module
 
+public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.MergeObligations
 public import Core.Ast.LowLevel.Mem.Proofs.MergePreservation
@@ -14,7 +15,7 @@ open Gabbro.Core.Aussen
 
 private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
-  refine ⟨⟨hwf, ?_, zulassung_m2 k.plattform, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, ⟨⟨zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code⟩⟩, ?_, ?_⟩
   · intro i c s u w pl hstep
     dsimp [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hpl, hu⟩

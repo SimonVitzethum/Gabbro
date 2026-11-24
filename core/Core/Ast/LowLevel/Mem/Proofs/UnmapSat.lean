@@ -1,5 +1,6 @@
 module
 
+public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap
 
 @[expose] public section
@@ -256,7 +257,7 @@ private theorem satEval3 :
 theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   let E := memProgram k code
-  refine ⟨⟨hwf, ?_, Aussen.zulassung_m2 k.plattform, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, ⟨⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code⟩⟩, ?_, ?_⟩
   · intro i c s u w P hideal
     simp only [E, memProgram, MemInstruction.rule, MemInstruction.step] at hideal
     have hP : P = plan := by
