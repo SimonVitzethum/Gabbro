@@ -98,9 +98,9 @@ theorem optionAbsent : OptionAbsentAussage := by
   dsimp
   simp only [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType,
-    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get_cons_succ,
-    List.get_cons_zero, List.getElem?_cons_zero, List.cons_append, List.nil_append,
-    List.append_nil, Function.update_same, Option.bind_some]
+    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get,
+    List.getElem?_cons_zero, List.cons_append, List.nil_append, List.append_nil,
+    Function.update_self, Option.bind_some, id_eq]
   change some (⟨indexOptionType count, Sum.inr (Sum.inl PUnit.unit)⟩ : Dynamisch) =
     some ⟨indexOptionType count, (Sum.inr (Sum.inl PUnit.unit) : Wert (indexOptionType count))⟩
   rfl
@@ -111,9 +111,9 @@ theorem optionPresent : OptionPresentAussage := by
   have hw := wertAls_indexPresent fits value
   simp only [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, htemp, hw,
-    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get_cons_succ,
-    List.get_cons_zero, List.getElem?_cons_zero, List.cons_append, List.nil_append,
-    List.append_nil, Function.update_same, Option.bind_some]
+    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get,
+    List.getElem?_cons_zero, List.cons_append, List.nil_append, List.append_nil,
+    Function.update_self, Option.bind_some, id_eq]
 
 private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     (optionLetForm ctx).produktion.production a
@@ -129,10 +129,12 @@ private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     have hColon : printColon.value = Token.punctuation [':'] := by rfl
     have hAssign : printAssignment.value = assignment := by rfl
     have hSemi : printSemicolon.value = semicolon := by rfl
-    cases a.mutable <;>
-      simp only [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
-        hLet, hMut, hName, hColon, hAssign, hSemi, List.map_append, List.map_cons, List.map_nil,
-        List.cons_append, List.nil_append, List.append_assoc, if_true, if_false]
+    have hIf : List.map PrintedToken.value (if a.mutable then [printMut] else []) =
+        (if a.mutable then [Token.word "mut".toList] else []) := by
+      cases a.mutable <;> rfl
+    simp only [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
+      hLet, hMut, hName, hColon, hAssign, hSemi, hIf, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc]
   · exact WrittenType.printReads (.indexOption a.carrier a.count) a.resolved (by
       intro more h
       cases h)
@@ -146,8 +148,8 @@ private theorem returnOption_prints (ctx : OptionContext) (a : OptionReturnArgs 
   refine ⟨a.value.printPieces.map PrintedToken.value ++ [semicolon], ?_, ?_⟩
   · have hRet : returnName.print.value = Token.word "return".toList := by rfl
     have hSemi : printSemicolon.value = Token.punctuation [';'] := by rfl
-    simp only [Category.printPieces, Stmt.printPieces, hRet, hSemi, List.map_append,
-      List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+    simp only [Category.printPieces, Stmt.printPieces, hRet, hSemi, returnKeyword, semicolon,
+      List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · exact optionInitializerPrint ctx.1 a.count a.value [semicolon]
 
 theorem optionLetDerivation : OptionLetDerivationAussage := by
