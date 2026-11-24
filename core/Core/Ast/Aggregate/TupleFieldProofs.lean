@@ -176,18 +176,18 @@ theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
   let a : Ty .value := .int 1 1
   let b : Ty .value := .int 2 2
   let base : Expr [] (tupleType [a, b]) := .tupleValue (.lit 1) (.lit 2) .empty
-  let args : Surface.TupleFieldArgs [] := ⟨a, b, [], base, ⟨0, by simp [a, b]⟩⟩
+  let args : Surface.TupleFieldArgs [] := ⟨a, b, [], base, ⟨0, by decide⟩⟩
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
   let s₁ := (Befehl.literal 0 1).nach eintritt s₀
   let s₂ := (Befehl.literal 1 2).nach eintritt s₁
   let s₃ := (Befehl.baueTupel 0 [a, b]).nach eintritt s₂
-  let s₄ := (Befehl.liesTupelfeld 0 [a, b] ⟨0, by simp [a, b]⟩).nach eintritt s₃
+  let s₄ := (Befehl.liesTupelfeld 0 [a, b] ⟨0, by decide⟩).nach eintritt s₃
   have h₁ : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
   have h₂ : E.system.ISchritt eintritt s₁ () [plan] s₂ := ⟨.literal 1 2, rfl, rfl, rfl⟩
   have h₃ : E.system.ISchritt eintritt s₂ () [plan] s₃ := ⟨.baueTupel 0 [a, b], rfl, rfl, rfl⟩
   have h₄ : E.system.ISchritt eintritt s₃ () [plan] s₄ :=
-    ⟨.liesTupelfeld 0 [a, b] ⟨0, by simp [a, b]⟩, rfl, rfl, rfl⟩
+    ⟨.liesTupelfeld 0 [a, b] ⟨0, by decide⟩, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₃ :=
     .schritt eintritt () [plan]
       (.schritt eintritt () [plan]
