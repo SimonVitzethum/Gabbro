@@ -150,7 +150,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           have c4 := List.cons.inj c3.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
-            exact (Token.word.injEq.mp c3.1).symm
+            exact (Token.word.inj c3.1).symm
           have hin : input = input' := c4.2
           refine ⟨item, hnameval, by rw [he, ie], ?_, ?_⟩
           · rw [hin]
@@ -170,7 +170,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           have c3 := List.cons.inj c2.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
-            exact (Token.word.injEq.mp c2.1).symm
+            exact (Token.word.inj c2.1).symm
           have hin : input = input' := c3.2
           have hhe : head.exported = false := by simpa using he
           have hie : item.exported = false := by simpa using ie
