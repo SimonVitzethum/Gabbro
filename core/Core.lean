@@ -58,6 +58,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Variante
 public import Core.Beobachtung.Fluss.Beschriftung.Text
 public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
 public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
@@ -81,6 +82,7 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
+public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 meta import Core.Waechter.Check
