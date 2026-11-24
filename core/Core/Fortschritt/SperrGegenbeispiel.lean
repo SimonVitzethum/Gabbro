@@ -142,10 +142,7 @@ theorem eh_kosten_null (a n : Nat) : Kontextkosten ρ_h stuckHalter a n = 0 := b
   unfold Kontextkosten
   apply zaehle_null
   intro t
-  show (match ρ_h.zeit.spur (a + t) with
-    | some (.kontext d _, _) => decide (stuckHalter = d)
-    | some (.antwort _, _) | some (.interrupt _, _) | some (.absturz, _) | none =>
-      false) = false
+  simp only []
   have hsp : ρ_h.zeit.spur (a + t) = some posLabel ∨
       ρ_h.zeit.spur (a + t) = some bLabel := by
     by_cases h : (a + t) % 2 = 0
@@ -155,7 +152,9 @@ theorem eh_kosten_null (a n : Nat) : Kontextkosten ρ_h stuckHalter a n = 0 := b
     · right
       show spur_h (a + t) = some bLabel
       simp only [spur_h, if_neg h]
-  rcases hsp with hsp | hsp <;> rw [hsp] <;> rfl
+  rcases hsp with hsp | hsp
+  · rw [hsp]
+  · rw [hsp]
 
 /-- The stuck run meets every hold bound. -/
 theorem eh_halte : HalteSchranken E_h ρ_h := by
