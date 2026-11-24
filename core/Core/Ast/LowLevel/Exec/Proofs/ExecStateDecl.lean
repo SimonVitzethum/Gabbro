@@ -326,10 +326,18 @@ private theorem execAussenLokalProgram (k : Katalog) (code : List ExecInstructio
 
 private theorem execAkzeptiert (k : Katalog) (code : List ExecInstruction)
     (wf : KatalogWohlgeformt k) : Annahme.Akzeptiert (execProgram k code) := by
-  refine ⟨⟨wf, ?_, ?_, execProgramFlussLokal k code⟩, execKlauseln k code, execWaechter k code⟩
+  refine ⟨⟨wf, ?_, ?_, execProgramFlussLokal k code, ?_⟩, execKlauseln k code, execWaechter k code⟩
   · intro i
     exact execRegelLokal k i
   · exact execAussenLokalProgram k code
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
 
 private def execStateName : Identifier :=
   ⟨['s'], ⟨'s', [], rfl, by

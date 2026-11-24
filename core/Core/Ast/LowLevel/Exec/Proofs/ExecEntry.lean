@@ -284,9 +284,17 @@ private theorem entryZulStart {k : Katalog} {h : Katalog.Umgebung}
 
 private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (execUnit k op) := by
-  refine ⟨⟨hwf, ?_, ⟨execAussenLokalUnit k op, execFlussLokal k op⟩⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, execAussenLokalUnit k op, execFlussLokal k op, ?_⟩, ?_, ?_⟩
   · intro i
     exact execRegelLokal k i
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro ρ runs
     dsimp [kanonischeKlauseln, execUnit, execProgram, Quelltabellen.leer, Quellklauseln.leer]
     refine ⟨?_, ?_, ?_⟩
