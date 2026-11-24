@@ -264,7 +264,8 @@ theorem stummer_schritt_koppelt
           cases step₂' with
           | schritt impl₂' =>
             cases impl₂' with
-            | @kontext _ _ _ _ _ c' _ _ _ regel₂' aus₂' =>
+            | kontext _ _ regel₂' aus₂' =>
+              rename_i _ _ _ _ _ c' _
               obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
               have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
               subst ff₂
