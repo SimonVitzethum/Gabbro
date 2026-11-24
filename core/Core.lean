@@ -21,6 +21,7 @@ public import Core.Aussen
 public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
 public import Core.Verfeinerung.Erfuellbar
+public import Core.Ast.LowLevel.Obligations
 meta import Core.Waechter.Check
 
 #check_core

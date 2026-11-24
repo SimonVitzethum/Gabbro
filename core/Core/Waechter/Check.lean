@@ -13,6 +13,10 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ast.LowLevel.AddressTypeAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.RegionAddressAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.ViewAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.EnvironmentAussage, 0),
   (`Gabbro.Core.Ast.Ty, 1661992858257814112),
   (`Gabbro.Core.Ast.Local, 10226539279135981292),
   (`Gabbro.Core.Ast.Expr, 4714328598751380849),
@@ -139,6 +143,11 @@ private meta def acceptance : AcceptanceSpec := {
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[
+  ⟨`Gabbro.Core.Ast.LowLevel.Tree, `Gabbro.Core.Ast.LowLevel.schema, #[], #[
+    (`Gabbro.Core.Ast.LowLevel.Tree.addressType, `Gabbro.Core.Ast.LowLevel.AddressTypeAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.regionAddress, `Gabbro.Core.Ast.LowLevel.RegionAddressAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.view, `Gabbro.Core.Ast.LowLevel.ViewAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.environment, `Gabbro.Core.Ast.LowLevel.EnvironmentAussage)]⟩,
   ⟨`Gabbro.Core.Ast.Expr, `Gabbro.Core.Ast.Semantik.exprSchema, #[
     (`Gabbro.Core.Ast.Expr.lit, `Gabbro.Core.Ast.Semantik.literalEntry),
     (`Gabbro.Core.Ast.Expr.binary, `Gabbro.Core.Ast.Semantik.binaryEntry),
