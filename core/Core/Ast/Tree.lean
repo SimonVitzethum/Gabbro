@@ -46,11 +46,6 @@ def quotientBounds (lo hi divisorLo : Int) : Int × Int :=
 def quotientType (lo hi divisorLo : Int) : Ty .value :=
   .int (quotientBounds lo hi divisorLo).1 (quotientBounds lo hi divisorLo).2
 
-def ordinaryAtomWord (word : RawText) : Prop :=
-  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList
-
-def ordinaryLocal (name : Identifier) : Prop := ordinaryAtomWord name.val
-
 /-- The implicit widening at a typed destination is inclusion of the source interval. -/
 def Fits : Ty .value → Ty .value → Prop
   | .int lo hi, .int lower upper => lower ≤ lo ∧ hi ≤ upper

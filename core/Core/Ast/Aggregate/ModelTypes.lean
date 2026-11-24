@@ -13,6 +13,11 @@ open Gabbro.Core.Text
 def Identifier := { name : RawText // ∃ c rest, name = c :: rest ∧
   isNameStart c ∧ ∀ a ∈ rest, isNamePart a }
 
+def ordinaryAtomWord (word : RawText) : Prop :=
+  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList
+
+def ordinaryLocal (name : Identifier) : Prop := ordinaryAtomWord name.val
+
 /-- Kinds separate value types from other type-level forms as they are introduced. -/
 inductive Kind where
   | value
@@ -96,6 +101,7 @@ def RecordFieldAt (labels : List Identifier) (field : Identifier) (index : Nat) 
 
 structure RecordRef (scope : Scope) (labels : List Identifier) (types : List (Ty .value)) where
   name : Identifier
+  ordinary : ordinaryLocal name
   schema : Local scope (recordSchemaType name.val labels types)
   visible : schema.nameVisible
   spelled : schema.binding.name.val = name.val
