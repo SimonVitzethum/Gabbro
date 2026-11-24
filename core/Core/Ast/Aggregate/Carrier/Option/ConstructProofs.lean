@@ -71,13 +71,12 @@ theorem optionInitializerPrint : OptionInitializerPrintAussage := by
   | absent =>
       exact OptionInitializerReads.absent
   | present operand fits =>
-      have someTok : indexSomeName.print.value = .word indexSomeName.val := by rfl
-      have openTok : printOpen.value = openParen := by rfl
-      have closeTok : printClose.value = closeParen := by rfl
+      change OptionInitializerReads scope count
+        (indexSomeName.print.value :: printOpen.value ::
+          (operand.printTokens ++ [printClose.value] ++ rest)) (.present operand fits) rest
       apply OptionInitializerReads.present fits
-      simpa only [OptionInitializer.printPieces, Expr.printTokens, List.map_append, List.map_cons,
-        List.map_nil, someTok, openTok, closeTok, List.cons_append, List.nil_append,
-        List.append_assoc] using
+      change ExprReads scope 0 (operand.printTokens ++ [closeParen] ++ rest) operand (closeParen :: rest)
+      simpa only [List.append_assoc] using
         (Expr.printReads (tree := operand) (minimum := 0) (rest := closeParen :: rest) noOperatorAtClose)
 
 private theorem wertAls_indexPresent {count : Nat} {lo hi : Int}
@@ -94,7 +93,7 @@ theorem optionAbsent : OptionAbsentAussage := by
   dsimp
   simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType,
-    indexSomeName, indexNoneName]
+    indexSomeName, indexNoneName, List.map]
 
 theorem optionPresent : OptionPresentAussage := by
   intro scope count lo hi slot operand fits frame value htemp
@@ -102,28 +101,19 @@ theorem optionPresent : OptionPresentAussage := by
   have hw := wertAls_indexPresent fits value
   simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, htemp, hw,
-    indexSomeName, indexNoneName]
+    indexSomeName, indexNoneName, List.map]
 
 private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     (optionLetForm ctx).produktion.production a
       (((Category.statement ctx.1 ctx.2).printPieces ((optionLetForm ctx).produktion.tree a)).map
         PrintedToken.value) := by
   dsimp [optionLetForm]
-  let typePieces := (WrittenType.indexOption a.carrier a.count).printPieces.map PrintedToken.value
-  let valPieces := a.value.printPieces.map PrintedToken.value
-  refine ⟨typePieces ++ (assignment :: valPieces), valPieces, ?_, ?_, ?_⟩
-  · have letTok : letName.print.value = letKeyword := by rfl
-    have mutTok : printMut.value = .word "mut".toList := by rfl
-    have colonTok : printColon.value = colon := by rfl
-    have optTok : printOption.value = keyword "option" := by rfl
-    have idxTok : printIndex.value = keyword "index" := by rfl
-    have intoTok : printInto.value = keyword "into" := by rfl
-    have assignTok : printAssignment.value = assignment := by rfl
-    have semiTok : printSemicolon.value = semicolon := by rfl
-    have carrierTok : a.carrier.print.value = .word a.carrier.val := by rfl
-    simp only [Category.printPieces, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
-      WrittenType.printPieces, optionLetHead, letTok, mutTok, colonTok, optTok, idxTok, intoTok,
-      assignTok, semiTok, carrierTok, List.cons_append, List.append_assoc]
+  refine ⟨(WrittenType.indexOption a.carrier a.count).printPieces.map PrintedToken.value ++
+      (assignment :: a.value.printPieces.map PrintedToken.value),
+    a.value.printPieces.map PrintedToken.value, ?_, ?_, ?_⟩
+  · cases a.mutable <;>
+      simp [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
+        letKeyword, colon, Identifier.print, List.cons_append, List.append_assoc]
   · exact WrittenType.printReads (.indexOption a.carrier a.count) a.resolved (by
       intro more h
       cases h)
@@ -134,11 +124,8 @@ private theorem returnOption_prints (ctx : OptionContext) (a : OptionReturnArgs 
       (((Category.statement ctx.1 ctx.2).printPieces ((optionReturnForm ctx).produktion.tree a)).map
         PrintedToken.value) := by
   dsimp [optionReturnForm]
-  refine ⟨a.value.printPieces.map PrintedToken.value, ?_, ?_⟩
-  · have retTok : returnName.print.value = returnKeyword := by rfl
-    have semiTok : printSemicolon.value = semicolon := by rfl
-    simp only [Category.printPieces, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
-      retTok, semiTok, List.cons_append]
+  refine ⟨a.value.printPieces.map PrintedToken.value ++ [semicolon], ?_, ?_⟩
+  · simp [Category.printPieces, Stmt.printPieces, returnKeyword, semicolon, List.cons_append]
   · exact optionInitializerPrint ctx.1 a.count a.value [semicolon]
 
 theorem optionLetDerivation : OptionLetDerivationAussage := by
@@ -146,7 +133,8 @@ theorem optionLetDerivation : OptionLetDerivationAussage := by
   rcases nonemptyArgs with ⟨a⟩
   refine ⟨?_, letOption_prints ctx, ?_⟩
   · intro tokens prod
-    rcases prod with ⟨input, rhs, rfl, typeRead, initRead⟩
+    rcases prod with ⟨input, rhs, hEq, typeRead, initRead⟩
+    subst tokens
     exact StmtReads.letOption a.mutable a.name a.ordinary a.carrier a.resolved typeRead initRead
   · exact Surface.Rule.satisfiableOfPrint a (letOption_prints ctx a)
 
@@ -155,7 +143,8 @@ theorem optionReturnDerivation : OptionReturnDerivationAussage := by
   rcases nonemptyArgs with ⟨a⟩
   refine ⟨?_, returnOption_prints ctx, ?_⟩
   · intro tokens prod
-    rcases prod with ⟨input, rfl, initRead⟩
+    rcases prod with ⟨input, hEq, initRead⟩
+    subst tokens
     exact StmtReads.retOption a.declared initRead
   · exact Surface.Rule.satisfiableOfPrint a (returnOption_prints ctx a)
 
