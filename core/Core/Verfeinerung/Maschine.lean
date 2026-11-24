@@ -32,7 +32,9 @@ abbrev PrivatMass (L Ort Wert Raum Lok Grund : Type) :=
   Zustand L Ort Wert Raum Lok Grund → Zustand L Ort Wert Raum Lok Grund → Nat
 
 /-- M4 obligations at the head of one context. A form either supplies its ideal
-    step on the same tick or proves that this transition only advances private work. -/
+    step on the same tick or proves that this transition only advances private work.
+    The private case requires that the ideal machine has no transition at this tick,
+    which also ensures maximality when private work forms part of a finite tail. -/
 def RegelAbgleich (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (lokal : LokalerBezug Lok) (mass : PrivatMass L Ort Wert Raum Lok Grund) (f : F) : Prop :=
   ∀ hw t c s u s' i plan spur, Zustandsbezug lokal s i →

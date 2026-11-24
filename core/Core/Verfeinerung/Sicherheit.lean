@@ -1,6 +1,6 @@
 module
 
-public import Core.Maschine.Start
+public import Core.Verfeinerung.Protokoll
 
 @[expose] public section
 
@@ -54,14 +54,18 @@ theorem ImplSchritt.verbrauch {k hw t spur} (step : ImplSchritt e Sy k hw t s sp
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι}
 
 /-- The M4 graph and answer-consumption invariants hold on every hardware cut
-    from a canonical successful load, including at crashes. -/
+    from a load with the canonical protocol state, including at crashes. -/
 theorem speicher_verbrauch_im_lauf {ρ : Lauf E}
-    (init : ρ.zeit.zustand 0 = some (I.start E ρ.start).2) (t : Nat) :
+    (init : ∃ z, ρ.zeit.zustand 0 = some z ∧ I.ProtokollBezug z (I.start E ρ.start).2) (t : Nat) :
     ∃ z, ρ.zeit.zustand t = some z ∧ z.SpeicherGut ∧ z.Verbrauch := by
   induction t with
   | zero =>
-    exact ⟨_, init, ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩,
-      fun _ => Nat.zero_le _⟩
+    obtain ⟨z, load, related⟩ := init
+    have canonical : (I.start E ρ.start).2.SpeicherGut ∧ (I.start E ρ.start).2.Verbrauch :=
+      ⟨⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩, fun _ => Nat.zero_le _⟩
+    change { z with lokal := (I.start E ρ.start).2.lokal } = (I.start E ρ.start).2 at related
+    rw [← related] at canonical
+    exact ⟨z, load, canonical⟩
   | succ t ih =>
     obtain ⟨z, loaded, memory, answers⟩ := ih
     have tick := ρ.zeit.takt t
