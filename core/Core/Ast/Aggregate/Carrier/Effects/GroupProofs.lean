@@ -144,7 +144,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       · by_cases ie : item.exported
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
-          obtain ⟨hval, hin⟩ := hh'
+          have hval := hh'.1
+          have hin := hh'.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
             first
@@ -163,7 +164,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           cases hh'
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
-          obtain ⟨hval, hin⟩ := hh'
+          have hval := hh'.1
+          have hin := hh'.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
             first
