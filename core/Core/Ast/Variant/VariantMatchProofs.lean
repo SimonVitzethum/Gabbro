@@ -250,3 +250,5 @@ theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage 
   exact vm_read_suffix read
 
 end Gabbro.Core.Ast.Semantik
+
+#check (@Gabbro.Core.Ast.VariantArmsRead.rec : Nat)
