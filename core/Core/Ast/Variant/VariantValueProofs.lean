@@ -138,4 +138,45 @@ theorem variantValue_parse : Gabbro.Core.Ast.Semantik.VariantValueParseAussage :
   exact .atom (.variantValue args.ref args.label args.index args.written
     args.ordinary args.available args.payload payloadRead) (.stop Gabbro.Core.Ast.noOperatorAtEnd)
 
+theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
+  intro platform start
+  let name : Gabbro.Core.Ast.Identifier :=
+    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (by simp)
+  let lbl : Gabbro.Core.Ast.Identifier :=
+    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
+  let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
+  let labels : List Gabbro.Core.Ast.Identifier := Gabbro.Core.Ast.variantLabels [member]
+  let payloads : List (Option (Ty .value)) := Gabbro.Core.Ast.variantPayloads [member]
+  let schemaType : Ty .value := variantSchemaType name.val labels payloads
+  let binding : Gabbro.Core.Ast.Binding := ⟨name, schemaType, false, true⟩
+  let scope : Scope := [binding]
+  let refSchema : Local scope schemaType := .here
+  let ref : Gabbro.Core.Ast.VariantRef scope labels payloads :=
+    ⟨name, refSchema, trivial, rfl, by simp [labels, payloads,
+      Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads],
+      by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
+  let index : Fin payloads.length := ⟨0, by simp [payloads, Gabbro.Core.Ast.variantPayloads]⟩
+  have written : labels[index.val]? = some lbl := by
+    simp [labels, index, Gabbro.Core.Ast.variantLabels]
+  have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
+    simp [Gabbro.Core.Ast.ordinaryLocal, lbl, Gabbro.Core.Ast.keywordName]
+  have available : availableCase scope lbl := by
+    constructor
+    · simp [scope, binding, schemaType, variantSchemaType, labels, lbl, payloads,
+        Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
+    · intro b hb
+      simp [scope] at hb
+      subst b
+      simp [name, lbl, Gabbro.Core.Ast.keywordName]
+  let a : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
+    ⟨labels, payloads, ref, lbl, index, written, ordinary, available, .nullary false⟩
+  refine ⟨scope, a, ?_⟩
+  let form := variantValueForm scope
+  let s := (I.start (form.einheit platform a) start).2
+  dsimp [Quellform.ErfuellbarAm]
+  refine ⟨Ast.print (category := .expression scope) (form.produktion.tree a), s,
+    Ast.parse_print _, rfl, .start, ?_, ?_⟩
+  · exact form.realisiert (vv_amOrt scope) platform a s rfl rfl rfl rfl
+  · intro g guard; cases guard
+
 end Gabbro.Core.Ast.Semantik
