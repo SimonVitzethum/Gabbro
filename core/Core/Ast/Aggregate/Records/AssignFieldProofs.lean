@@ -30,8 +30,8 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   have noDotExpr : ∀ {t : Ty .value} (tree : Expr scope t) (r : List Gabbro.Core.Text.Token),
       ¬ ExprReads scope 0 (dot :: .word field :: assignment :: input) tree r := by
     intro tree r rd
-    rcases rd with ⟨atom, tail⟩
-    cases atom
+    cases rd with
+    | atom a t => cases a
   generalize htok : (.word name :: dot :: .word field :: assignment :: input) = toks at read
   cases read with
   | assignField ref visible writable fld index checked fits valueRead =>
