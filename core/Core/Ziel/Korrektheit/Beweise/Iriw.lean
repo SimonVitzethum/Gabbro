@@ -112,6 +112,9 @@ def irRang : IriwEv → Nat
 
 def irGraph (m : Modus) : Graph IriwEv Bool Nat := ⟨irLab m, irPo, irRf, irMo⟩
 
+example : Decidable (irIX = irIY) := by infer_instance
+example (a b : IriwEv) : Decidable (irPo a b) := by infer_instance
+
 theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
   po_trans := by
     intro a b c
