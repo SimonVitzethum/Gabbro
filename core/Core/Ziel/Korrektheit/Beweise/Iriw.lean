@@ -1,0 +1,248 @@
+/-
+  File:      core/Core/Ziel/Korrektheit/Beweise/Iriw.lean
+  Subject:   PROOFS of the two pinned independent-reads statements of the memory layer (M3):
+             independent reads of independent writes are forbidden with `seq_cst` and allowed with
+             release/acquire. Both proofs stay generic over every consistent graph (forbidden half)
+             or exhibit one concrete RC11-consistent graph (allowed half); no fixture is evaluated
+             on the compiler path.
+
+  Feeding facts: `Graph.drf_sc`, `Graph.scSchritt`, `Graph.rb`, `Graph.hb_in_po`,
+  `Graph.hb_von_po`, `Graph.eco_von_rb`, `Konsistent.psc`, `Konsistent.kohaerent`,
+  `transGen_von_trans`, `transGen_mono`, `transGen_kopf`, `azyklisch_von_rang`,
+  and the closed-form graph relations of `Core/Speicher/Trennung.lean`.
+-/
+module
+
+public import Core.Ziel.Korrektheit.Speicher
+
+@[expose] public section
+
+namespace Gabbro.Core.Ziel.Korrektheit
+
+open Gabbro.Core
+open Gabbro.Core.Speicher
+
+/-- INDEPENDENT READS OF INDEPENDENT WRITES ARE FORBIDDEN UNDER `seq_cst`. Feeds: `drf_sc` (an
+    all-`seq_cst` graph has no plain access, hence is race free, hence sequentially consistent),
+    `scSchritt` (`rf`, `po` and `rb` are each one step of the SC order), `Graph.rb`. Proof sketch:
+    the six assumptions are six `scSchritt` steps closing `wx → r1x → r1y → wy → r2y → r2x → wx`;
+    a transitive path around that loop is a `scSchritt` cycle, which `SCKonsistent` excludes. -/
+theorem iriw_sc_verboten : IriwScVerbotenAussage := by
+  intro E Ort Wert finE G hk hsc wx wy r1x r1y r2y r2x hf1 hp1 hrb1 hf2 hp2 hrb2
+  have hn : G.NurSC := fun a => Or.inr (hsc a)
+  have hr : G.Rennfrei := by
+    intro a b _ hnab
+    rcases hnab with hna | hna
+    · have hsa : G.modus a = Modus.sc := hsc a
+      have hna' : G.modus a = Modus.na := hna
+      rw [hsa] at hna'
+      cases hna'
+    · have hsb : G.modus b = Modus.sc := hsc b
+      have hnb' : G.modus b = Modus.na := hna
+      rw [hsb] at hnb'
+      cases hnb'
+  have hSC : G.SCKonsistent := Graph.drf_sc hk hn hr
+  have h1 : G.scSchritt wx r1x := Or.inr (Or.inl hf1)
+  have h2 : G.scSchritt r1x r1y := Or.inl hp1
+  have h3 : G.scSchritt r1y wy := Or.inr (Or.inr (Or.inr hrb1))
+  have h4 : G.scSchritt wy r2y := Or.inr (Or.inl hf2)
+  have h5 : G.scSchritt r2y r2x := Or.inl hp2
+  have h6 : G.scSchritt r2x wx := Or.inr (Or.inr (Or.inr hrb2))
+  have hp : Relation.TransGen G.scSchritt wx wx :=
+    (((((Relation.TransGen.single h1).tail h2).tail h3).tail h4).tail h5).tail h6
+  exact hSC wx hp
+
+/-- The eight events of the release/acquire IRIW outcome: the initial writes `ix`, `iy`, the two
+    release writes `wx`, `wy`, and the acquire readers `r1x; r1y` and `r2y; r2x`. -/
+inductive IriwEv where
+  | irIX | irIY | irWX | irWY | irR1X | irR1Y | irR2Y | irR2X
+  deriving DecidableEq, Repr
+
+open IriwEv
+
+/-- `r1x` reads `x := 1` from `wx` and `r1y` reads the initial `y := 0`; `r2y` reads `y := 1` from
+    `wy` and `r2x` reads the initial `x := 0`. Every access carries the mode `m`. -/
+def irLab (m : Modus) : IriwEv → Etikett Bool Nat
+  | irIX => ⟨.schreiben, false, m, 0, 0⟩
+  | irIY => ⟨.schreiben, true, m, 0, 0⟩
+  | irWX => ⟨.schreiben, false, m, 0, 1⟩
+  | irWY => ⟨.schreiben, true, m, 0, 1⟩
+  | irR1X => ⟨.lesen, false, m, 1, 0⟩
+  | irR1Y => ⟨.lesen, true, m, 0, 0⟩
+  | irR2Y => ⟨.lesen, true, m, 1, 0⟩
+  | irR2X => ⟨.lesen, false, m, 0, 0⟩
+
+/-- Program order: the initial writes precede every other event, `wx; r1x; r1y` and `wy; r2y; r2x`
+    are the two reader threads (the write of a location is in the same thread as its reader here;
+    that only adds order and leaves the IRIW shape intact). -/
+@[reducible] def irPo (a b : IriwEv) : Prop :=
+  (a = irIX ∧ b ≠ irIX) ∨
+  (a = irIY ∧ b ≠ irIX ∧ b ≠ irIY) ∨
+  (a = irWX ∧ (b = irR1X ∨ b = irR1Y)) ∨
+  (a = irWY ∧ (b = irR2Y ∨ b = irR2X)) ∨
+  (a = irR1X ∧ b = irR1Y) ∨
+  (a = irR2Y ∧ b = irR2X)
+
+@[reducible] def irRf (a b : IriwEv) : Prop :=
+  (a = irWX ∧ b = irR1X) ∨ (a = irIY ∧ b = irR1Y) ∨
+  (a = irWY ∧ b = irR2Y) ∨ (a = irIX ∧ b = irR2X)
+
+@[reducible] def irMo (a b : IriwEv) : Prop :=
+  (a = irIX ∧ b = irWX) ∨ (a = irIY ∧ b = irWY)
+
+/-- The transitive closure of `rf ∪ mo ∪ rb` in this graph, in closed form. -/
+@[reducible] def irEco (a b : IriwEv) : Prop :=
+  (a = irIX ∧ (b = irWX ∨ b = irR2X ∨ b = irR1X)) ∨
+  (a = irR2X ∧ (b = irWX ∨ b = irR1X)) ∨
+  (a = irWX ∧ b = irR1X) ∨
+  (a = irIY ∧ (b = irWY ∨ b = irR1Y ∨ b = irR2Y)) ∨
+  (a = irR1Y ∧ (b = irWY ∨ b = irR2Y)) ∨
+  (a = irWY ∧ b = irR2Y)
+
+/-- A rank that every `po` and `rf` step raises, for `ohneLB`. -/
+def irRang : IriwEv → Nat
+  | irIX => 0
+  | irIY => 1
+  | irWX => 2
+  | irWY => 3
+  | irR1X => 4
+  | irR1Y => 5
+  | irR2Y => 6
+  | irR2X => 7
+
+def irGraph (m : Modus) : Graph IriwEv Bool Nat := ⟨irLab m, irPo, irRf, irMo⟩
+
+theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
+  po_trans := by
+    intro a b c
+    show irPo a b → irPo b c → irPo a c
+    cases a <;> cases b <;> cases c <;> decide
+  po_irrefl := by
+    intro a
+    show ¬ irPo a a
+    cases a <;> decide
+  rf_schreibt := by
+    intro w r h
+    revert h
+    cases w <;> cases r <;> decide
+  rf_liest := by
+    intro w r h
+    revert h
+    cases w <;> cases r <;> decide
+  rf_ort := by
+    intro w r h
+    revert h
+    cases w <;> cases r <;> decide
+  rf_wert := by
+    intro w r h
+    revert h
+    cases w <;> cases r <;> decide
+  rf_eindeutig := by
+    intro w w' r h1 h2
+    revert h1 h2
+    cases w <;> cases w' <;> cases r <;> decide
+  mo_schreibt := by
+    intro a b h
+    revert h
+    cases a <;> cases b <;> decide
+  mo_ort := by
+    intro a b h
+    revert h
+    cases a <;> cases b <;> decide
+  mo_trans := by
+    intro a b c
+    show irMo a b → irMo b c → irMo a c
+    cases a <;> cases b <;> cases c <;> decide
+  mo_irrefl := by
+    intro a
+    show ¬ irMo a a
+    cases a <;> decide
+  mo_total := by
+    intro a b ha hb ho hne
+    revert ha hb ho hne
+    cases a <;> cases b <;> decide
+
+theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
+  intro hu
+  cases u <;> simp only [Graph.istRmw, irGraph, irLab, reduceCtorEq] at hu
+
+theorem ir_rb {m : Modus} {r w : IriwEv} (h : (irGraph m).rb r w) :
+    (r = irR1Y ∧ w = irWY) ∨ (r = irR2X ∧ w = irWX) := by
+  obtain ⟨w', h1, h2, _⟩ := h
+  revert h1 h2
+  cases w' <;> cases r <;> cases w <;> decide
+
+theorem ir_eco_schritt {m : Modus} {a b : IriwEv} (h : (irGraph m).ecoSchritt a b) : irEco a b := by
+  rcases h with h | h | h
+  · revert h
+    cases a <;> cases b <;> decide
+  · revert h
+    cases a <;> cases b <;> decide
+  · rcases ir_rb h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> decide
+
+theorem ir_eco {m : Modus} {a b : IriwEv} (h : (irGraph m).eco a b) : irEco a b := by
+  have htr : ∀ x y z, irEco x y → irEco y z → irEco x z := by
+    intro x y z
+    cases x <;> cases y <;> cases z <;> decide
+  exact transGen_von_trans htr (transGen_mono (fun _ _ h => ir_eco_schritt h) h)
+
+/-- Every `rf` edge lies inside program order here, so `hb_in_po` describes `hb` by `irPo`. -/
+theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
+  Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) (by
+    intro x y
+    cases x <;> cases y <;> decide) h
+
+theorem ir_kein_sc (e : IriwEv) : ¬ (irGraph .ra).sc e := by
+  cases e <;> simp only [Graph.sc, irGraph, irLab, reduceCtorEq]
+
+theorem ir_konsistent : (irGraph .ra).Konsistent where
+  wf := ir_wf .ra
+  hb_irrefl := by
+    intro a h
+    have hp := ir_hb h
+    revert hp
+    cases a <;> decide
+  kohaerent := by
+    intro a b hab he
+    have hp := ir_hb hab
+    have he' := ir_eco he
+    revert hp he'
+    cases a <;> cases b <;> decide
+  atomar := by
+    intro w u _ _ hu
+    exact absurd hu (ir_kein_rmw .ra u)
+  psc := by
+    intro a h
+    obtain ⟨c, hc⟩ := transGen_kopf h
+    exact (ir_kein_sc a) hc.1
+  ohneLB := by
+    refine azyklisch_von_rang irRang ?_
+    intro a b
+    cases a <;> cases b <;> decide
+
+/-- THE SAME SHAPE IS ALLOWED BELOW `seq_cst`. Feeds: `ir_konsistent` (well-formedness, coherence,
+    atomicity, empty `psc` and `ohneLB` for the small graph), `hb_in_po`, `transGen_von_trans`,
+    `transGen_mono`, `azyklisch_von_rang` (the consistency fields), `Graph.rb` (the two `rb` edges).
+    Proof sketch: `irGraph .ra` is RC11-consistent by closed-form case analysis over its eight events;
+    its two readers disagree on `x` and `y` exactly as the forbidden `seq_cst` shape requires. -/
+theorem iriw_ra_erlaubt : IriwRaErlaubtAussage := by
+  have hf1 : (irGraph .ra).rf irWX irR1X := by
+    show irRf irWX irR1X
+    decide
+  have hp1 : (irGraph .ra).po irR1X irR1Y := by
+    show irPo irR1X irR1Y
+    decide
+  have hrb1 : (irGraph .ra).rb irR1Y irWY := by
+    exact ⟨irIY, Or.inr ⟨rfl, rfl⟩, Or.inr ⟨rfl, rfl⟩, by decide⟩
+  have hf2 : (irGraph .ra).rf irWY irR2Y := by
+    show irRf irWY irR2Y
+    decide
+  have hp2 : (irGraph .ra).po irR2Y irR2X := by
+    show irPo irR2Y irR2X
+    decide
+  have hrb2 : (irGraph .ra).rb irR2X irWX := by
+    exact ⟨irIX, Or.inl ⟨rfl, rfl⟩, Or.inl ⟨rfl, rfl⟩, by decide⟩
+  exact ⟨IriwEv, Bool, Nat, irGraph .ra, ir_konsistent,
+    irWX, irWY, irR1X, irR1Y, irR2Y, irR2X, hf1, hp1, hrb1, hf2, hp2, hrb2⟩
+
+end Gabbro.Core.Ziel.Korrektheit
