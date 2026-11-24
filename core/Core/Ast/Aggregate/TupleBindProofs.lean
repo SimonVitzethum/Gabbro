@@ -115,7 +115,7 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
         cases hx : x.1 with
         | none => simpa [hx] using ih
         | some id => simpa [hx] using congrArg Nat.succ ih
-  refine ⟨rfl, ?_, ?_, ?_⟩
+  refine ⟨trivial, ?_, trivial, trivial⟩
   · simp only [List.length_append, List.length_reverse]
     rw [hlen]
     rw [tupleLocals_length args.types value args.pattern.names args.checked.1]
