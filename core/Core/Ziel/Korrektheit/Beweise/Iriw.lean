@@ -112,14 +112,34 @@ def irRang : IriwEv → Nat
 
 def irGraph (m : Modus) : Graph IriwEv Bool Nat := ⟨irLab m, irPo, irRf, irMo⟩
 
-example : (irPo irIX irIY ∧ irPo irIY irIX) → irPo irIX irIX := by decide
-example : (irPo irIX irIY ∧ irEco irIY irIX) → False := by decide
+theorem irPo_trans (a b c : IriwEv) : (irPo a b ∧ irPo b c) → irPo a c := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem irMo_trans (a b c : IriwEv) : (irMo a b ∧ irMo b c) → irMo a c := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem irEco_trans (a b c : IriwEv) : (irEco a b ∧ irEco b c) → irEco a c := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem irRf_eindeutig (w w' r : IriwEv) : (irRf w r ∧ irRf w' r) → w = w' := by
+  cases w <;> cases w' <;> cases r <;> decide
+
+theorem irMo_total (m : Modus) (a b : IriwEv) :
+    ((irGraph m).schreibt a ∧ (irGraph m).schreibt b ∧
+      (irGraph m).ort a = (irGraph m).ort b ∧ a ≠ b) → irMo a b ∨ irMo b a := by
+  cases a <;> cases b <;> decide
+
+theorem irRb_closed (w' r w : IriwEv) :
+    (irRf w' r ∧ irMo w' w) → (r = irR1Y ∧ w = irWY) ∨ (r = irR2X ∧ w = irWX) := by
+  cases w' <;> cases r <;> cases w <;> decide
+
+theorem irKoh (a b : IriwEv) : (irPo a b ∧ irEco b a) → False := by
+  cases a <;> cases b <;> decide
 
 theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
   po_trans := by
-    intro a b c
-    show irPo a b → irPo b c → irPo a c
-    cases a <;> cases b <;> cases c <;> decide
+    intro a b c hab hbc
+    exact irPo_trans a b c ⟨hab, hbc⟩
   po_irrefl := by
     intro a
     show ¬ irPo a a
@@ -142,8 +162,7 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     cases w <;> cases r <;> decide
   rf_eindeutig := by
     intro w w' r h1 h2
-    revert h1 h2
-    cases w <;> cases w' <;> cases r <;> decide
+    exact irRf_eindeutig w w' r ⟨h1, h2⟩
   mo_schreibt := by
     intro a b h
     revert h
@@ -153,17 +172,15 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
     revert h
     cases a <;> cases b <;> decide
   mo_trans := by
-    intro a b c
-    show irMo a b → irMo b c → irMo a c
-    cases a <;> cases b <;> cases c <;> decide
+    intro a b c hab hbc
+    exact irMo_trans a b c ⟨hab, hbc⟩
   mo_irrefl := by
     intro a
     show ¬ irMo a a
     cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
-    revert ha hb ho hne
-    cases a <;> cases b <;> decide
+    exact irMo_total m a b ⟨ha, hb, ho, hne⟩
 
 theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
   intro hu
@@ -172,8 +189,7 @@ theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
 theorem ir_rb {m : Modus} {r w : IriwEv} (h : (irGraph m).rb r w) :
     (r = irR1Y ∧ w = irWY) ∨ (r = irR2X ∧ w = irWX) := by
   obtain ⟨w', h1, h2, _⟩ := h
-  revert h1 h2
-  cases w' <;> cases r <;> cases w <;> decide
+  exact irRb_closed w' r w ⟨h1, h2⟩
 
 theorem ir_eco_schritt {m : Modus} {a b : IriwEv} (h : (irGraph m).ecoSchritt a b) : irEco a b := by
   rcases h with h | h | h
@@ -184,10 +200,8 @@ theorem ir_eco_schritt {m : Modus} {a b : IriwEv} (h : (irGraph m).ecoSchritt a 
   · rcases ir_rb h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> decide
 
 theorem ir_eco {m : Modus} {a b : IriwEv} (h : (irGraph m).eco a b) : irEco a b := by
-  have htr : ∀ x y z, irEco x y → irEco y z → irEco x z := by
-    intro x y z
-    cases x <;> cases y <;> cases z <;> decide
-  exact transGen_von_trans htr (transGen_mono (fun _ _ h => ir_eco_schritt h) h)
+  exact transGen_von_trans (fun x y z hxy hyz => irEco_trans x y z ⟨hxy, hyz⟩)
+    (transGen_mono (fun _ _ h => ir_eco_schritt h) h)
 
 /-- Every `rf` edge lies inside program order here, so `hb_in_po` describes `hb` by `irPo`. -/
 theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
@@ -207,10 +221,7 @@ theorem ir_konsistent : (irGraph .ra).Konsistent where
     cases a <;> decide
   kohaerent := by
     intro a b hab he
-    have hp := ir_hb hab
-    have he' := ir_eco he
-    revert hp he'
-    cases a <;> cases b <;> decide
+    exact irKoh a b ⟨ir_hb hab, ir_eco he⟩
   atomar := by
     intro w u _ _ hu
     exact absurd hu (ir_kein_rmw .ra u)
