@@ -58,6 +58,12 @@ private theorem optionTest_keine_invarianten (scope : Scope) (args : OptionTestA
   change (expr 0 (Expr.optionIsSome args.ref args.visible args.ordinary)).klauseln.invariant = []
   exact expr_keine_invarianten 0 _
 
+private theorem optionIsSomeCast {scope count optTy} (eqT : optTy = indexOptionType count)
+    {refT : Local scope optTy} (vis : refT.visible) (ord : ordinaryLocal refT.binding.name) :
+    (eqT ▸ refT).visible ∧ ordinaryLocal (eqT ▸ refT).binding.name := by
+  subst optTy
+  exact ⟨vis, ord⟩
+
 private theorem optionIsSomeInvGen {scope count minimum input tree rest}
     {optTy : Ty .value} {refT : Local scope optTy} {vis : refT.visible}
     {ord : ordinaryLocal refT.binding.name}
@@ -65,7 +71,8 @@ private theorem optionIsSomeInvGen {scope count minimum input tree rest}
     (allowed : minimum ≤ Infix.projection.precedence) :
     ExprTail scope minimum (.variable refT vis ord)
       (dot :: .word indexIsSomeName.val :: openParen :: closeParen :: input) tree rest →
-    ExprTail scope minimum (.optionIsSome (eqT ▸ refT) (eqT ▸ vis) (eqT ▸ ord)) input tree rest := by
+    ExprTail scope minimum (.optionIsSome (eqT ▸ refT) (optionIsSomeCast eqT vis ord).1
+      (optionIsSomeCast eqT vis ord).2) input tree rest := by
   intro read
   generalize htok : (dot :: .word indexIsSomeName.val :: openParen :: closeParen :: input) = toks at read
   cases read with
@@ -100,9 +107,7 @@ private theorem optionIsSomeInvGen {scope count minimum input tree rest}
       have restEq : .word indexIsSomeName.val :: openParen :: closeParen :: input =
           .natural index'.val :: _ := (List.cons.inj htok).2
       cases (List.cons.inj restEq).1
-  | recordField _ field' _ _ _ _ =>
-      rename_i nm' lbls' tys' input'
-      change .record nm' (lbls'.map Subtype.val) (tupleType tys') = indexOptionType count at eqT
+  | recordField _ _ _ _ _ _ =>
       cases eqT
   | textConcat _ _ _ _ =>
       have head : dot = Arith.add.token := (List.cons.inj htok).1
@@ -120,10 +125,7 @@ private theorem optionIsSomeInvGen {scope count minimum input tree rest}
         Infix.token_injective (by simpa only [Infix.token] using head)
       cases eq
   | optionIsSome _ _ _ _ tail =>
-      rename_i input'
-      have inEq : input = input' :=
-        (List.cons.inj (List.cons.inj (List.cons.inj (List.cons.inj htok).2).2).2).2
-      subst input'
+      cases htok
       exact tail
 
 theorem optionTestInversion : OptionTestInversionAussage := by
@@ -135,7 +137,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
   dsimp only
   have hbind : (frame.temp slot).bind (wertAls (indexOptionType count)) = some value := by
     rw [hframe]
-    simp only [Option.bind, wertAls, dif_pos rfl]
+    simp only [Option.bind, wertAls, indexOptionType, dif_pos rfl]
   have hres : ((Befehl.optionIstBesetzt slot count).auswerten frame).temp slot =
       some ⟨.bool, indexOptionPresent value⟩ := by
     rw [Befehl.auswerten, Rahmen.schreibe]
@@ -151,7 +153,7 @@ theorem optionTestCases : OptionTestCasesAussage := by
         · intro _
           exact ⟨payload, rfl⟩
         · intro _
-          rfl
+          simp
       · constructor
         · intro h
           cases h
@@ -169,9 +171,9 @@ theorem optionTestCases : OptionTestCasesAussage := by
               cases h
           · constructor
             · intro _
-              rfl
+              simp
             · intro _
-              rfl
+              simp
       | inr empty => cases empty
 
 theorem optionTestDerivation : OptionTestDerivationAussage := by
