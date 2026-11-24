@@ -94,8 +94,8 @@ def AssignFieldProgramAussage : Prop :=
   ∀ platform start, ∃ (tree : Ast.Unit) (text : Gabbro.Core.Text.RawText) (s : Zustand)
     (src indexLocal : Nat) (name : List Char) (labels : List Identifier)
     (types : List (Ty .value)) (i : Fin types.length),
-    Ast.Parse text tree ∧
-    let E := elaborieren platform tree
+    Ast.Parse (category := .unit) text tree ∧
+    let E := elaborieren platform (category := .unit) tree
     let b := Befehl.setzeRecordFeld src indexLocal name labels types i
     E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
     ∃ (before after : Wert (recordValueType name labels types)),
