@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Records.Declarations
 public import Core.Ast.Semantik.Formbeweise
+import Core.Ast.Declaration.Members
 
 /-!
 # RecordDecl
@@ -29,10 +30,6 @@ open Gabbro.Core.Text
 private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
 private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
-private theorem ppValue (s : String) (p1 p2) :
-    (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
-private theorem printColonVal : printColon.value = colon := by rfl
-private theorem printCommaVal : printComma.value = comma := by rfl
 private theorem printAssignmentVal : printAssignment.value = assignment := by rfl
 private theorem printOpenBraceVal : printOpenBrace.value = openBrace := by rfl
 private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rfl

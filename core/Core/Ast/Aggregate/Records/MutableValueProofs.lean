@@ -58,7 +58,7 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
   | tupleBind checked patternRead annotationRead valueRead =>
       cases patternRead
       simp_all [keyword, letKeyword, openParen]
-  | letOption mutable _ _ _ _ _ _ _ =>
+  | letOption mutable _ _ _ _ _ _ =>
       cases mutable <;> simp_all [optionLetHead, keyword, letKeyword, assignment]
   | _ =>
       simp_all [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,

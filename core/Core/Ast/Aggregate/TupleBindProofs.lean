@@ -80,8 +80,7 @@ private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
       refine ⟨⟨_,_,_,_,_,‹_›,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
-  case letOption =>
-      rename_i mutable
+  case letOption mutable _ _ _ _ _ _ =>
       cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
   all_goals
     exfalso
@@ -102,8 +101,7 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
           (tuplePattern_consumes input _ _ patternRead))
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
-  case letOption =>
-      rename_i mutable
+  case letOption mutable _ _ _ _ _ _ =>
       cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
   all_goals
     exfalso
