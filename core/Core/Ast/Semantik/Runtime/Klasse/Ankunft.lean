@@ -26,6 +26,9 @@ def AnkunftUnveraendertAussage : Prop :=
   ∀ (b : Befehl) (frame : Rahmen) (live : Nat → Bool),
     (b.auswerten frame live).arrivalRegions = frame.arrivalRegions
 
+private theorem id_pure_arrival (frame : Rahmen) : (pure frame).arrivalRegions =
+    frame.arrivalRegions := rfl
+
 /-- A successful entry keeps the grant of the caller's frame: both arms of
     `Rahmen.eintrittArgumente` are a `{ frame with … }` update. -/
 private theorem eintrittArgumente_arrival {frame : Rahmen} {types : List (Ty .value)}
@@ -59,8 +62,8 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   intro b frame live
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
-      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, Rahmen.rueckkehr, Rahmen.bindeRegion,
-      Id.run]
+      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, id_pure_arrival, Rahmen.rueckkehr,
+      Rahmen.bindeRegion, Id.run]
   all_goals
     repeat
       first
@@ -77,7 +80,7 @@ private def ankuenftsRahmen (regions : List Katalog.Strecke) : Rahmen :=
 private theorem ankuenftsReceiver (regions : List Katalog.Strecke) :
     (ankuenftsRahmen regions).lokale[0]?.join.bind (wertAls .ownedRegion) = some (0 : Nat) := by
   simp only [ankuenftsRahmen, List.getElem?_cons_zero, Option.join, Option.bind_some, id_eq,
-    wertAls, dif_pos rfl]
+    wertAls, dif_pos rfl, dif_pos True.intro]
 
 private theorem ankuenftsUnborrowed (regions : List Katalog.Strecke) :
     (ankuenftsRahmen regions).borrowsRegion 0 = false := by
@@ -107,9 +110,8 @@ theorem ankunft_wird_gelesen :
       List.getElem?_cons_zero, ankuenftsUnborrowed, Bool.not_true, Bool.false_or,
       Bool.false_eq_true, ite_false, hvalue]
     rfl
-  have refused : (Befehl.bindeRegion 0 .address).auswerten
-        { frame with arrivalRegions := [] } (fun _ => true) =
-      ({ frame with arrivalRegions := [] } : Rahmen).halt Abschluss.ungueltigerBereich := by
+  have refused : (Befehl.bindeRegion 0 .address).auswerten (ankuenftsRahmen []) (fun _ => true) =
+      (ankuenftsRahmen []).halt Abschluss.ungueltigerBereich := by
     simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
       List.getElem?_nil, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
   refine ⟨frame, [], ?_⟩
