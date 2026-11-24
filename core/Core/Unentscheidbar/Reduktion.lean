@@ -26,15 +26,19 @@ theorem dom_iff_haeltMit {programm : Nat.Partrec.Code → List Befehl}
     (eval c n).Dom ↔ GabbroHaltsAt programm start n c := by
   constructor
   · intro hd
-    refine ⟨Part.get _ hd, (ht _).mp ?_⟩
-    apply Part.ext
-    intro a
-    constructor
-    · intro ha
-      exact Part.mem_unique ha (Part.get_mem hd)
-    · intro e
-      rw [e]
-      exact Part.get_mem hd
+    have hEq : eval c n = Part.some (Part.get _ hd) := by
+      apply Part.ext
+      intro a
+      constructor
+      · intro ha
+        have heq : a = Part.get _ hd := Part.mem_unique ha (Part.get_mem hd)
+        rw [heq]
+        exact Part.mem_some_iff.mpr rfl
+      · intro e
+        have heq : a = Part.get _ hd := Part.mem_some_iff.mp e
+        rw [heq]
+        exact Part.get_mem hd
+    exact ⟨_, (ht _).mp hEq⟩
   · rintro ⟨a, ha⟩
     rw [(ht a).mpr ha]
     exact Part.dom_iff_mem.mpr ⟨a, Part.mem_some_iff.mpr rfl⟩
