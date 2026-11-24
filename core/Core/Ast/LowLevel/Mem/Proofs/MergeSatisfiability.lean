@@ -100,11 +100,8 @@ private theorem memZulStart {k : Katalog} {h : Katalog.Umgebung} {regions : List
 private theorem memRegionOk (extent : Strecke)
     (hbounds : extent.von < extent.bis ∧ extent.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits)
     (hsep : extent.getrennt (Plattform.x86_64.virtio.window)) :
-    ∀ r ∈ [extent], r.von < r.bis ∧ r.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits ∧
-      ∀ e d, Plattform.x86_64.geraet e = some d → d.bus = .mmio → r.getrennt d.window := by
-  intro r hr
-  have : r = extent := List.mem_singleton.mp hr
-  subst r
+    extent.von < extent.bis ∧ extent.bis ≤ 2 ^ (Plattform.x86_64).ziel.physicalBits ∧
+      ∀ e d, Plattform.x86_64.geraet e = some d → d.bus = .mmio → extent.getrennt d.window := by
   refine ⟨hbounds.1, hbounds.2, ?_⟩
   intro e d hdev hmmio
   cases e with
@@ -144,6 +141,13 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     { frame with
       result := some (.merged joined)
       regions := (frame.regions.set 0 (some joined)).set 1 none }
+  have hslotL : scope.slotRegion memNameL = some 0 := by
+    change List.idxOf? memNameL.val [memNameL.val, memNameR.val] = some 0
+    simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
+  have hslotR : scope.slotRegion memNameR = some 1 := by
+    change List.idxOf? memNameR.val [memNameL.val, memNameR.val] = some 1
+    simp only [memNameL, memNameR, List.idxOf?_cons, beq_self_eq_true, if_true, if_false,
+      Option.map_some]
   have hleft : heldMemRegion k.plattform.ziel s entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
     dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
     rfl
@@ -162,7 +166,6 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     rw [hleft, hright]
     simp only [Option.bind_some]
     rw [if_pos hadj]
-    rfl
   refine ⟨k, scope, tree, op, env, start, text, [], s, next, ?_⟩
   dsimp only
   constructor
@@ -200,25 +203,25 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
         · exact List.Pairwise.nil
     · intro r hr
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hr
-      rcases hr with rfl | rfl
-      · apply memRegionOk
-        · change 0x1000 < 0x2000 ∧ 0x2000 ≤ 2 ^ (52 : Nat)
-          constructor <;> omega
-        · unfold Strecke.getrennt
-          change 0x2000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x1000
-          exact Or.inl (by omega)
-      · apply memRegionOk
-        · change 0x2000 < 0x3000 ∧ 0x3000 ≤ 2 ^ (52 : Nat)
-          constructor <;> omega
-        · unfold Strecke.getrennt
-          change 0x3000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x2000
-          exact Or.inl (by omega)
+      rcases hr with heq | heq
+      · subst r
+        exact memRegionOk extentL
+          ⟨by change 0x1000 < 0x2000; omega, by change 0x2000 ≤ 2 ^ (52 : Nat); omega⟩
+          (by unfold Strecke.getrennt
+             change 0x2000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x1000
+             exact Or.inl (by omega))
+      · subst r
+        exact memRegionOk extentR
+          ⟨by change 0x2000 < 0x3000; omega, by change 0x3000 ≤ 2 ^ (52 : Nat); omega⟩
+          (by unfold Strecke.getrennt
+             change 0x3000 ≤ 0x10000000 ∨ 0x10000200 ≤ 0x2000
+             exact Or.inl (by omega))
   constructor
   · apply memProgram_akzeptiert
     simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   constructor
   · change (memNameL.val :: memNameR.val :: []).Nodup
-    exact List.nodup_cons.mpr ⟨by simp only [List.mem_singleton, memNameL_ne_R], List.nodup_nil⟩
+    exact List.nodup_cons.mpr ⟨by simp only [List.mem_singleton, memNameL_ne_R], List.nodup_singleton _⟩
   constructor
   · change ([] : List (List Char)).Nodup
     exact List.nodup_nil
@@ -229,15 +232,13 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   · refine ⟨tree, ?_, ?_⟩
     · exact (memDruckAussage_merge tree).2
     · refine ⟨op, ?_, rfl⟩
-      dsimp [scope, MemScope.slotRegion, Identifier]
-      simp only [List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true,
-        memNameL_ne_R, beq_iff_eq, if_false]
+      dsimp [elaborateMem]
+      rw [hslotL, hslotR]
   constructor
   · exact (memDruckAussage_merge tree).2
   constructor
-  · dsimp [scope, MemScope.slotRegion, Identifier]
-    simp only [List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true,
-      memNameL_ne_R, beq_iff_eq, if_false]
+  · dsimp [elaborateMem]
+    rw [hslotL, hslotR]
   constructor
   · exact System.IErreichbar.start
   constructor
@@ -248,7 +249,7 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   constructor
   · exact heval
   constructor
-  · exact ⟨op, rfl, ⟨next, heval, rfl⟩⟩
-  · exact ⟨op, rfl, ⟨next, heval, rfl⟩⟩
+  · exact ⟨op, rfl, ⟨next, heval, rfl, rfl⟩⟩
+  · exact ⟨op, rfl, ⟨next, heval, rfl, rfl⟩⟩
 
 end Gabbro.Core.Ast.LowLevel
