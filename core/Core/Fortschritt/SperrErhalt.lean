@@ -199,7 +199,7 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
         cases step
       | wartet _ heq _ =>
         have hkk : a + d + 1 = a + (d + 1) := by omega
-        rw [hkk, hzs] at heq
+        rw [hkk, hzs, hzk] at heq
         nomatch heq
     | some sk =>
       have hmem : c ∈ (sk.sperren l).schlange := ih sk (by omega) hzk
@@ -279,7 +279,7 @@ theorem nodup_bleibt {ρ : Maschine.Lauf E} {l : L} {a t : Nat}
         cases step
       | wartet _ heq _ =>
         have hkk : a + d + 1 = a + (d + 1) := by omega
-        rw [hkk, hzs] at heq
+        rw [hkk, hzs, hzk] at heq
         nomatch heq
     | some sk =>
       have hnd : (sk.sperren l).schlange.Nodup := ih sk (by omega) hzk
@@ -358,7 +358,7 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
       obtain ⟨r, hsq, hnx⟩ := nimmt_inv hn
       have hqq' : q = d :: r := congrArg SperrZustand.schlange hsq
       rw [hqq'] at hq1 hnd
-      have hqr' : q' = r := hqq.trans (by rw [hnx])
+      have hqr' : next.schlange = r := by rw [hnx]
       rw [hqr'] at hq2
       have hown' : (⟨some d, r⟩ : SperrZustand).besitzer ≠ some c := by
         rw [← hnx]
@@ -386,7 +386,7 @@ theorem schritt_index_mono {c : Kontext} {q q' : List Kontext} {i₁ i₂ : Nat}
         exact (List.not_mem_nil hmem).elim
       | cons h₀ rest =>
         have hab : SperrZustand.abgeben ⟨some d, h₀ :: rest⟩ = ⟨some h₀, rest⟩ := rfl
-        have hqr' : q' = rest := hqq.trans (by rw [hs2q, hab])
+        have hqr' : next.schlange = rest := by rw [hs2q, hab]
         rw [hqr'] at hq2
         have hq1' : (h₀ :: rest)[i₁]? = some c := hq1
         have hown' : (⟨some h₀, rest⟩ : SperrZustand).besitzer ≠ some c := by
@@ -445,7 +445,7 @@ theorem mono_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t t₁ t
         cases step
       | wartet _ heq _ =>
         have hkk : t₁ + d + 1 = t₁ + (d + 1) := by omega
-        rw [hkk, hzs] at heq
+        rw [hkk, hzs, hzk] at heq
         nomatch heq
     | some sk =>
       have hmem' : c ∈ (sk.sperren l).schlange :=
