@@ -71,7 +71,7 @@ private theorem jumpMeaning : JumpMeaningAussage := by
   change (do
     let cur ← (s.lokal c).current
     if cur == state ∧ ¬ (s.lokal c).halted ∧ state < (s.lokal c).states.length then
-      pure { (s.lokal c) with result := some (.jumped code state) }
+      some { (s.lokal c) with result := some (ExecResult.jumped code state) }
     else none) = some frame at h
   cases hcur : (s.lokal c).current with
   | none =>
@@ -79,13 +79,15 @@ private theorem jumpMeaning : JumpMeaningAussage := by
       cases h
   | some cur =>
       simp only [hcur, Option.bind_some] at h
+      dsimp at h
       by_cases hcond : cur == state ∧ ¬ (s.lokal c).halted ∧ state < (s.lokal c).states.length
-      · simp only [hcond, if_true, Option.some.injEq] at h
+      · rw [if_pos hcond] at h
+        simp only [Option.some.injEq] at h
         subst frame
         have hcurEq : cur = state := beq_iff_eq.mp hcond.1
         subst cur
         exact ⟨rfl, hcond.2.2, hcond.2.1, rfl, rfl⟩
-      · simp only [hcond, if_false] at h
+      · rw [if_neg hcond] at h
         cases h
 
 private def jumpStateName : Identifier :=
@@ -120,17 +122,12 @@ private theorem jumpSlotCode_slot : jumpScope.slotCode jumpCodeName = some 0 := 
   exact jumpCode_slot
 
 private theorem jumpCodeState_slot : jumpScope.codeState jumpCodeName = some 0 := by
-  change (do let (_, state) ← [(jumpCodeName, jumpStateName)].find?
-      (fun p => p.1.val == jumpCodeName.val)
-      [jumpStateName.val].idxOf? state.val) = some 0
-  simp only [List.find?_cons, beq_self_eq_true, if_true, jumpState_slot]
+  simp only [jumpScope, ExecScope.codeState, ExecScope.slotState, List.find?_cons,
+    beq_self_eq_true, if_true, List.map_cons, List.map_nil, jumpState_slot]
 
-private theorem jumpElab : elaborateExec jumpScope (.jump jumpCodeName) = some (.jump 0 0) := by
-  change (do
-    let code ← jumpScope.slotCode jumpCodeName
-    let state ← jumpScope.codeState jumpCodeName
-    pure (.jump code state)) = some (.jump 0 0)
-  simp only [jumpSlotCode_slot, jumpCodeState_slot, Option.bind_some]
+private theorem jumpElab : elaborateExec jumpScope (ExecTree.jump jumpCodeName) =
+    some (ExecInstruction.jump 0 0) := by
+  simp only [elaborateExec, jumpSlotCode_slot, jumpCodeState_slot, Option.bind_some]
 
 private theorem imageGueltigX86Jump : image.gueltig (Plattform.x86_64).ziel := by
   refine ⟨List.Mem.head _, ?_, ?_⟩
@@ -280,23 +277,24 @@ private theorem jumpJoint : JumpJointAussage := by
   have hs0pc : (s0.lokal entryContext).pc = 0 := by
     rfl
   let frame0 : ExecFrame := ExecFrame.declare (s0.lokal entryContext) decl
-  have heval0 : (.declareState decl).evaluate s0 entryContext = some frame0 := by
-    change (if decl.wellformed then pure (ExecFrame.declare (s0.lokal entryContext) decl) else none) =
+  have heval0 : (ExecInstruction.declareState decl).evaluate s0 entryContext = some frame0 := by
+    change (if decl.wellformed then some (ExecFrame.declare (s0.lokal entryContext) decl) else none) =
       some frame0
     rw [if_pos decl_wf]
     rfl
   let s : ExecState := frame0.advance entryContext s0
-  have hhead0 : E.system.kopf s0 entryContext = some (.declareState decl) := by
-    change execHead (pre ++ [op]) s0 entryContext = some (.declareState decl)
-    exact (execHead_some_iff (.declareState decl) s0 entryContext).2
+  have hhead0 : E.system.kopf s0 entryContext = some (ExecInstruction.declareState decl) := by
+    change execHead (pre ++ [op]) s0 entryContext = some (ExecInstruction.declareState decl)
+    exact (execHead_some_iff (ExecInstruction.declareState decl) s0 entryContext).2
       ⟨hs0status, rfl, hs0pc, by rw [heval0]; rfl⟩
-  have hstep0 : (ExecInstruction.rule (.declareState decl)).ideal entryContext s0 () [plan] s := by
-    change ∃ frame, (.declareState decl).evaluate s0 entryContext = some frame ∧
+  have hstep0 : (ExecInstruction.rule (ExecInstruction.declareState decl)).ideal
+      entryContext s0 () [plan] s := by
+    change ∃ frame, (ExecInstruction.declareState decl).evaluate s0 entryContext = some frame ∧
       [plan] = [plan] ∧ s = frame.advance entryContext s0
     exact ⟨frame0, heval0, rfl, rfl⟩
   have hreach : E.system.IErreichbar s0 s := by
     exact System.IErreichbar.schritt entryContext () [plan] System.IErreichbar.start
-      ⟨.declareState decl, hhead0, hstep0⟩
+      ⟨ExecInstruction.declareState decl, hhead0, hstep0⟩
   have hsstatus : s.status entryContext = .laeuft := by
     simpa [s, ExecFrame.advance] using hs0status
   have hspc : (s.lokal entryContext).pc = 1 := by
@@ -309,10 +307,11 @@ private theorem jumpJoint : JumpJointAussage := by
       s0, I.start, E, execProgram, execBoot, jumpStart, Zustand.start, entryContext, ↓reduceIte]
   have hsstates : (s.lokal entryContext).states = [decl] := by
     simp only [s, ExecFrame.advance, frame0, ExecFrame.declare, Function.update_self,
-      s0, I.start, E, execProgram, execBoot, jumpStart, Zustand.start, entryContext, ↓reduceIte]
-  let next : ExecFrame := { (s.lokal entryContext) with result := some (.jumped 0 0) }
-  have hcond : (0 == 0 ∧ ¬ (s.lokal entryContext).halted ∧
-      0 < (s.lokal entryContext).states.length) = true := by
+      List.nil_append, s0, I.start, E, execProgram, execBoot, jumpStart, Zustand.start,
+      entryContext, ↓reduceIte]
+  let next : ExecFrame := { (s.lokal entryContext) with result := some (ExecResult.jumped 0 0) }
+  have hcond : 0 == 0 ∧ ¬ (s.lokal entryContext).halted ∧
+      0 < (s.lokal entryContext).states.length := by
     rw [hshalted, hsstates]
     decide
   have heval : op.evaluate s entryContext = some next := by
@@ -320,16 +319,21 @@ private theorem jumpJoint : JumpJointAussage := by
       let cur ← (s.lokal entryContext).current
       if cur == 0 ∧ ¬ (s.lokal entryContext).halted ∧
           0 < (s.lokal entryContext).states.length then
-        pure { (s.lokal entryContext) with result := some (.jumped 0 0) }
+        some { (s.lokal entryContext) with result := some (ExecResult.jumped 0 0) }
       else none) = some next
     rw [hscurrent]
     dsimp
     rw [if_pos hcond]
     rfl
+  have hevalSome : (op.evaluate s entryContext).isSome = true := by
+    rw [heval]
+    rfl
   have hhead : E.system.kopf s entryContext = some op := by
     change execHead (pre ++ [op]) s entryContext = some op
-    exact (execHead_some_iff op s entryContext).2
-      ⟨hsstatus, rfl, hspc, by rw [heval]; rfl⟩
+    unfold execHead
+    simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
+      List.getElem?_cons_zero]
+    exact if_pos hevalSome
   have hstep : E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
     change ∃ frame, op.evaluate s entryContext = some frame ∧ [plan] = [plan] ∧
