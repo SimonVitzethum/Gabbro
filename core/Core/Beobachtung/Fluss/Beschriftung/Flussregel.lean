@@ -6,6 +6,11 @@ public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
 
 @[expose] public section
 
@@ -14,8 +19,8 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Beobachtung
 
 /-- The label rule of an instruction at `pc`: the checker's decision for that instruction.
-    Instructions without a precise rule are accepted only under the all-public declaration;
-    a labelled unit using them is refused, never accepted on an unproved rule. -/
+    Every instruction has a pinned, proved sight statement, so every instruction gets its
+    precise rule here from the premises of that statement. -/
 def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .literal dst _ => β.SchreibRegel pc dst []
   | .wahrheitswert dst _ => β.SchreibRegel pc dst []
@@ -84,7 +89,85 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .textLiteral ziel _ => β.SchreibRegel pc ziel []
   | .textConcat basis _ _ => β.SchreibRegel pc basis [.temp basis, .temp (basis + 1)]
   | .textLength basis _ => β.SchreibRegel pc basis [.temp basis]
-  | _ => β = Beschriftung.alleOeffentlich
+  | .zurueck quelle _ =>
+    oeffentlich (β.temp pc quelle) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .rufe _ _ _ =>
+    (∀ s, oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal pc i) = true)
+  | .rueckVoid =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .pruefeMass quelle =>
+    oeffentlich (β.temp pc quelle) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .whileTest quelle exitPunkt _ =>
+    oeffentlich (β.temp pc quelle) = true ∧
+    ∀ q, q = pc + 1 ∨ q = pc + exitPunkt →
+      (∀ s, oeffentlich (β.temp q s) = true → oeffentlich (β.temp pc s) = true) ∧
+      (∀ i, oeffentlich (β.lokal q i) = true → oeffentlich (β.lokal pc i) = true)
+  | .forAnfang unter ober _ skipEmpty _ _ =>
+    oeffentlich (β.temp pc unter) = true ∧
+    oeffentlich (β.temp pc ober) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true → oeffentlich (β.lokal pc i) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) 0) = true → oeffentlich (β.temp pc unter) = true) ∧
+    (∀ s, oeffentlich (β.temp (pc + skipEmpty) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + skipEmpty) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .forTest exitPunkt _ =>
+    oeffentlich (β.lokal pc 0) = true ∧
+    ∀ q, q = pc + 1 ∨ q = pc + exitPunkt →
+      (∀ s, oeffentlich (β.temp q s) = true → oeffentlich (β.temp pc s) = true) ∧
+      (∀ i, oeffentlich (β.lokal q i) = true → oeffentlich (β.lokal pc i) = true)
+  | .forNaechster rueckAbstand _ =>
+    oeffentlich (β.lokal pc 0) = true ∧
+    (∀ s, oeffentlich (β.temp (pc - rueckAbstand) s) = true →
+      oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, i ≠ 0 → oeffentlich (β.lokal (pc - rueckAbstand) i) = true →
+      oeffentlich (β.lokal pc i) = true) ∧
+    (oeffentlich (β.lokal (pc - rueckAbstand) 0) = true →
+      oeffentlich (β.lokal pc 0) = true)
+  | .starte _ => ∀ s, oeffentlich (β.temp pc s) = true
+  | .ende => oeffentlich β.ergebnis = true → oeffentlich (β.lokal pc 0) = true
+  | .baueArray ziel _ count => β.SchreibRegel pc ziel (tempBereich ziel count)
+  | .baueTupel ziel types => β.SchreibRegel pc ziel (tempBereich ziel types.length)
+  | .bindeTupel quelle types bind =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    oeffentlich (β.temp pc quelle) = true ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) (i + behalteneTupel types bind)) = true →
+      oeffentlich (β.lokal pc i) = true)
+  | .baueRecord ziel _ _ _ sources => β.SchreibRegel pc ziel (sources.map Komp.temp)
+  | .setzeRecordFeld source indexLocal _ _ _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ j, j ≠ indexLocal → oeffentlich (β.lokal (pc + 1) j) = true →
+      oeffentlich (β.lokal pc j) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) indexLocal) = true → oeffentlich (β.temp pc source) = true) ∧
+    (oeffentlich (β.lokal (pc + 1) indexLocal) = true → oeffentlich (β.lokal pc indexLocal) = true)
+  | .waehleVariante source _ _ _ branches =>
+    oeffentlich (β.temp pc source) = true ∧
+    ∀ b ∈ branches,
+      (∀ s, oeffentlich (β.temp (pc + b.1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+      (∀ i, oeffentlich (β.lokal (pc + b.1) (i + (if b.2 then 1 else 0))) = true →
+        oeffentlich (β.lokal pc i) = true) ∧
+      (b.2 = true → oeffentlich (β.lokal (pc + b.1) 0) = true →
+        oeffentlich (β.temp pc source) = true)
+  | .textIndex basis _ =>
+    oeffentlich (β.temp pc basis) = true ∧
+    oeffentlich (β.temp pc (basis + 1)) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .substring basis _ =>
+    oeffentlich (β.temp pc basis) = true ∧
+    oeffentlich (β.temp pc (basis + 1)) = true ∧
+    oeffentlich (β.temp pc (basis + 2)) = true ∧
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
+  | .bindeRegion _ _ =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal pc i) = true)
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
     f.SichtErhaltendBei Beschriftung.alleOeffentlich pc := by
@@ -143,10 +226,40 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
   | textLiteral ziel decoded => exact textLiteralSicht β pc ziel decoded regel
   | textConcat basis a b => exact textConcatSicht β pc basis a b regel
   | textLength basis capacity => exact textLengthSicht β pc basis capacity regel
-  | _ =>
-    have gleich : β = Beschriftung.alleOeffentlich := regel
-    rw [gleich]
-    exact Befehl.sichtErhaltend_oeffentlich _
+  | zurueck quelle zieltyp =>
+    exact zurueckSicht β pc quelle zieltyp regel.1 regel.2.1 regel.2.2
+  | rufe name args bind => exact rufeSicht β pc name args bind regel.1 regel.2
+  | rueckVoid => exact rueckVoidSicht β pc regel.1 regel.2
+  | pruefeMass quelle => exact pruefeMassSicht β pc quelle regel.1 regel.2.1 regel.2.2
+  | whileTest quelle exitPunkt handler =>
+    exact whileTestSicht β pc quelle exitPunkt handler regel.1 regel.2
+  | forAnfang unter ober index skipEmpty shadowed missingHandler =>
+    exact forAnfangSicht β pc unter ober index skipEmpty shadowed missingHandler
+      regel.1 regel.2.1 regel.2.2.1 regel.2.2.2.1 regel.2.2.2.2.1 regel.2.2.2.2.2.1
+      regel.2.2.2.2.2.2
+  | forTest exitPunkt handler =>
+    exact forTestSicht β pc exitPunkt handler regel.1 regel.2
+  | forNaechster rueckAbstand index =>
+    exact forNaechsterSicht β pc rueckAbstand index regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
+  | starte name => exact starteSicht β pc name regel
+  | ende => exact endeSicht β pc regel
+  | baueArray ziel element count => exact baueArraySicht β pc ziel element count regel
+  | baueTupel ziel types => exact baueTupelSicht β pc ziel types regel
+  | bindeTupel quelle types bind =>
+    exact bindeTupelSicht β pc quelle types bind regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
+  | baueRecord ziel name labels types sources =>
+    exact baueRecordSicht β pc ziel name labels types sources regel
+  | setzeRecordFeld source indexLocal name labels types index =>
+    exact setzeRecordFeldSicht β pc source indexLocal name labels types index
+      regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
+  | waehleVariante source name labels cases branches =>
+    exact waehleVarianteSicht β pc source name labels cases branches regel.1 regel.2
+  | textIndex basis capacity =>
+    exact textIndexSicht β pc basis capacity regel.1 regel.2.1 regel.2.2.1 regel.2.2.2
+  | substring basis capacity =>
+    exact substringSicht β pc basis capacity regel.1 regel.2.1 regel.2.2.1 regel.2.2.2.1
+      regel.2.2.2.2
+  | bindeRegion receiver init => exact bindeRegionSicht β pc receiver init regel.1 regel.2
 
 /-- Per instruction family: the rule is sound for every declaration. -/
 def FamilienSicht (familie : SimFamilie) : Prop :=

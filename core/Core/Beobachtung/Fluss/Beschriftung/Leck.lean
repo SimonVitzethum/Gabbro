@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
+public import Core.Beobachtung.Fluss.Beschriftung.Sprung
 
 @[expose] public section
 
