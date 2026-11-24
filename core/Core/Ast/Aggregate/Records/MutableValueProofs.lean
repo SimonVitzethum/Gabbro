@@ -18,8 +18,10 @@ public import Core.Ast.Semantik.Formbeweise
 - `MutableValueImplAussage`
 - `MutableValueErhaltungAussage`
 - `MutableValueRegelSicherAussage`
-- `MutableValueErfuellbarAmAussage`
--/
+ - `MutableValueErfuellbarAmAussage`
+ -/
+
+@[expose] public section
 
 namespace Gabbro.Core.Ast.Surface
 
