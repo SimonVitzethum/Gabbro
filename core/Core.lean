@@ -14,7 +14,8 @@ public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
-public import Core.Ideal
+public import Core.Ideal.Eigenschaften
+public import Core.Ideal.Komposition
 public import Core.Ideal.Linearisierung
 public import Core.Ideal.Replay
 public import Core.Ideal.Absturz
@@ -92,10 +93,11 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Beobachtung.Wahrscheinlichkeit.PflichtBeweise
-public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
+public import Core.Beobachtung.Wahrscheinlichkeit.KostenErwartungBeweis
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
+public import Core.Beobachtung.Review.Befunde
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
@@ -112,10 +114,14 @@ public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
+public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
+public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
+public import Core.Linken.Modul
+public import Core.Linken.Aussage
 meta import Core.Waechter.Check
 
 #check_core
