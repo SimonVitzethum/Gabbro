@@ -52,7 +52,7 @@ theorem akzeptiert_aussen [DecidableEq L]
 theorem akzeptiert_fluss [DecidableEq L]
     {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) :
     Beobachtung.FlussLokal E :=
-  h.1.2.2.2
+  h.1.2.2.2.1
 
 /-- The trivial rule: no implementation step, no `I` step. -/
 def trivialesRegel
@@ -113,7 +113,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
   · refine ⟨fun η _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
-      fun i _ _ _ _ _ _ _ _ kf _ _ _ _ _ => nomatch kf,
+      fun i _ _ _ _ _ _ _ _ _ kf _ _ _ _ => nomatch kf,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ =>
         ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
       tiefenBezug_eq rfl⟩
