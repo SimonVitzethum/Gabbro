@@ -52,6 +52,7 @@ theorem substrat_rice (s : SimulationsSubstrat) (Q : List Befehl → Prop)
   have r2 : (fun c => Q (s.programm c)) ≤₀
       (fun i => ∃ p, s.dekodiere i = some p ∧ Q p) :=
     ⟨_, s.komposition_berechenbar, fun c => by
+      show Q (s.programm c) ↔ _
       constructor
       · intro hQ
         exact ⟨s.programm c, s.dekodiere_links _, hQ⟩

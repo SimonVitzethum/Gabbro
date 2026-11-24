@@ -40,7 +40,7 @@ theorem dom_iff_haeltMit {s : SimulationsSubstrat} {c : Nat.Partrec.Code} {n : �
         exact Part.get_mem hd
     exact ⟨_, (ht _).mp hEq⟩
   · rintro ⟨a, ha⟩
-    rw [(ht a).mp ha]
+    rw [(ht a).mpr ha]
     exact Part.dom_iff_mem.mpr ⟨a, Part.mem_some_iff.mpr rfl⟩
 
 /-- Das Halteproblem der μ-rekursiven Codes reduziert sich many-one auf das
@@ -52,6 +52,7 @@ theorem substrat_halts_reduktion (s : SimulationsSubstrat) (n : ℕ) :
     (fun c => (eval c n).Dom) ≤₀ HaeltProg s n :=
   ⟨_, s.komposition_berechenbar, fun c => by
     have ht := s.treue c n
+    show (eval c n).Dom ↔ _
     rw [dom_iff_haeltMit ht]
     constructor
     · rintro ⟨a, ha⟩
