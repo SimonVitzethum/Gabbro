@@ -68,6 +68,10 @@ private theorem directCall_not_tupleBind {scope : Scope} {input : List Token}
     exact List.mem_map.2 ⟨"let", List.mem_cons_self, rfl⟩
   exact (call.ordinary.2 inList).elim
 
+private theorem optionLet_not_tupleBind (mutable : Bool) (name : Identifier) {input tail : List Token}
+    (same : letKeyword :: openParen :: input = optionLetHead mutable name ++ tail) : False := by
+  cases mutable <;> cases (List.cons.inj (List.cons.inj same).2).1
+
 private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
   intro scope result input tree rest read
   generalize htok : letKeyword :: openParen :: input = tokens at read
@@ -80,8 +84,8 @@ private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
       refine ⟨⟨_,_,_,_,_,‹_›,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
-  case letOption mutable _ _ _ _ _ _ =>
-      cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
+  case letOption =>
+      exact (optionLet_not_tupleBind _ _ htok).elim
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
@@ -101,8 +105,8 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
           (tuplePattern_consumes input _ _ patternRead))
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
-  case letOption mutable _ _ _ _ _ _ =>
-      cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
+  case letOption =>
+      exact (optionLet_not_tupleBind _ _ htok).elim
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
