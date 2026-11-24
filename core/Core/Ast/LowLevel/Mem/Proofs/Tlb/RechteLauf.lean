@@ -38,6 +38,14 @@ theorem tlbRechte_newSpace (target : ZielDaten) (tables : Nat) (s : MemState) (c
       exact inv.bei_gleich rfl mem found1
     · cases h
 
+theorem tlbRechte_tlbVerdraengen (target : ZielDaten) (core sp page : Nat) (s : MemState)
+    (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.tlbVerdraengen core sp page).evaluate target s c = some next)
+    (inv : (s.lokal c).TlbRechteGedeckt) : next.TlbRechteGedeckt := by
+  simp only [MemInstruction.evaluate, Option.some.injEq] at h
+  subst h
+  exact inv.verdraengt (fun zelle mem => (List.mem_filter.mp mem).1) rfl rfl
+
 theorem tlbRechte_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemState)
     (c : Kontext) {next : MemFrame} (h : op.evaluate target s c = some next)
     (cover : (s.lokal c).TlbGedeckt) (inv : (s.lokal c).TlbRechteGedeckt) :
@@ -66,6 +74,7 @@ theorem tlbRechte_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemSt
     have kept := erhaelt_bindToken target name s c next h
     exact inv.aus_gleich kept.1 kept.2.1 kept.2.2
   | tlbFuellen core space page => exact tlbRechte_tlbFuellen target core space page s c h inv
+  | tlbVerdraengen core space page => exact tlbRechte_tlbVerdraengen target core space page s c h inv
 
 /-- Every context's frame of a state satisfies the invariant. -/
 def MemState.TlbRechteGedeckt (s : MemState) : Prop := ∀ c, (s.lokal c).TlbRechteGedeckt

@@ -23,6 +23,11 @@ inductive MemInstruction where
       elaborates to it: it stands for the translations hardware caches on its own, so that every
       statement over the unit also covers runs with stale translations. -/
   | tlbFuellen (core space page : Nat)
+  /-- A core drops every cached translation of one page of one space: an eviction the hardware does on
+      its own, or the work of the core's own shootdown handler. It is always enabled and changes no
+      table. No source form elaborates to it; it is what lets a completion step (`flush`) become
+      enabled. -/
+  | tlbVerdraengen (core space page : Nat)
 
 def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
   | .splitAt region point => (scope.slotRegion region).map (fun slot => .splitRegion slot point)
@@ -307,6 +312,9 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
     let space ← frame.spaces[sp]?
     let entry ← space.abbildung page
     pure { frame with tlb := frame.tlb.fill ⟨core, sp, page, entry⟩ }
+  | .tlbVerdraengen core sp page =>
+    some { frame with tlb := ⟨frame.tlb.zellen.filter fun zelle =>
+      !decide (zelle.kern = core ∧ zelle.raum = sp ∧ zelle.seite = page)⟩ }
 
 /-- Evaluation reads only the acting frame, region rights and loans. -/
 theorem MemInstruction.evaluate_congr (op : MemInstruction) (target : ZielDaten) (c : Kontext)
