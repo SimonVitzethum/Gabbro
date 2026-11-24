@@ -38,7 +38,10 @@ theorem bindungsZeuge : ∃ B : Zufallsbindung, B.quelle = muenzQuelle :=
 
 /-- The example platform row: the coin row is selected on x86-64. -/
 theorem beispielPlattformZufall : Zeile.zufall 0 ∈ Plattform.x86_64.zeilen := by
-  decide
+  apply List.mem_append_right
+  apply List.mem_cons_of_mem
+  apply List.mem_append_right
+  exact List.mem_singleton_self _
 
 /-- Declaration discipline, proved (B11(d), model side): every `.zufall` row
     selected in an accepted catalogue is backed by exactly one platform-declared
