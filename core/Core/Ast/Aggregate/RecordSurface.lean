@@ -47,7 +47,7 @@ structure RecordFieldArgs (scope : Scope) where
   base : Expr scope (recordValueType name labels types)
   field : Identifier
   index : Fin types.length
-  written : labels[index.val]? = some field
+  written : RecordFieldAt labels field index.val
 
 def RecordFieldArgs.expression (a : RecordFieldArgs scope) : Expr scope (a.types.get a.index) :=
   .recordField a.base a.field a.index a.written
@@ -66,7 +66,7 @@ structure AssignFieldArgs (scope : Scope) where
   writable : ref.binding.mutable = true
   field : Identifier
   index : Fin types.length
-  written : labels[index.val]? = some field
+  written : RecordFieldAt labels field index.val
   source : Ty .value
   value : Expr scope source
   fits : Fits source (types.get index)

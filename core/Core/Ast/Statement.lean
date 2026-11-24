@@ -101,7 +101,7 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       StmtReads result scope (letKeyword :: input) ⟨_, .tupleBind pattern annotation checked value⟩ rest
   | assignField (ref : Local scope (recordValueType name labels types)) (visible : ref.visible)
       (writable : ref.binding.mutable = true) (field : Identifier) (index : Fin types.length)
-      (checked : labels[index.val]? = some field) (fits : Fits source (types.get index)) :
+      (checked : RecordFieldAt labels field index.val) (fits : Fits source (types.get index)) :
       ExprReads scope 0 input (value : Expr scope source) (semicolon :: rest) →
       StmtReads result scope (.word ref.binding.name.val :: dot :: .word field.val :: assignment :: input)
         ⟨scope, .assignField ref visible writable field index checked value fits⟩ rest

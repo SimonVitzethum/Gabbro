@@ -202,7 +202,7 @@ inductive ExprTail (scope : Scope) :
       ExprTail scope minimum (.tupleField base index) input tree rest →
       ExprTail scope minimum base (dot :: .natural index.val :: input) tree rest
   | recordField (base : Expr scope (recordValueType name labels types)) (field : Identifier)
-      (index : Fin types.length) (written : labels[index.val]? = some field) :
+      (index : Fin types.length) (written : RecordFieldAt labels field index.val) :
       minimum ≤ Infix.projection.precedence →
       ExprTail scope minimum (.recordField base field index written) input tree rest →
       ExprTail scope minimum base (dot :: .word field.val :: input) tree rest

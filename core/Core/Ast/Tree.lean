@@ -105,7 +105,7 @@ inductive Expr (scope : Scope) : Ty .value → Type where
       Expr scope (recordValueType ref.name.val labels types)
   /-- A field is selected by a checked offset in the ordered nominal schema. -/
   | recordField (base : Expr scope (recordValueType name labels types))
-      (field : Identifier) (index : Fin types.length) (written : labels[index.val]? = some field) :
+      (field : Identifier) (index : Fin types.length) (written : RecordFieldAt labels field index.val) :
       Expr scope (types.get index)
   /-- The selected tag determines whether its one payload expression is required. -/
   | variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
@@ -267,7 +267,7 @@ def TuplePattern.valid (pattern : TuplePattern) (annotation : Option WrittenType
     (types : List (Ty .value)) : Prop :=
   pattern.names.length = types.length ∧
     ((pattern.names.filterMap id).map Subtype.val).Nodup ∧
-    (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_']) ∧
+    (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_'] ∧ ordinaryLocal name) ∧
     ∀ written ∈ annotation.toList, written.valid ∧ written.type = tupleType types
 
 def payloadBinding (name : Identifier) (type : Ty .value) : Binding :=
@@ -319,7 +319,7 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- Field assignment updates exactly one position of a writable record local. -/
   | assignField (ref : Local scope (recordValueType name labels types)) (visible : ref.visible)
       (writable : ref.binding.mutable = true) (field : Identifier) (index : Fin types.length)
-      (written : labels[index.val]? = some field) (value : Expr scope source)
+      (written : RecordFieldAt labels field index.val) (value : Expr scope source)
       (fits : Fits source (types.get index)) : Stmt result scope scope
   /-- The inferred mutable binding uses the initializer's exact type. -/
   | letMutableValue (name : Identifier) (ordinary : ordinaryLocal name)

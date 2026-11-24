@@ -88,6 +88,10 @@ def recordSchemaType (name : List Char) (labels : List Identifier) (types : List
     Ty .value :=
   .recordSchema name (labels.map Subtype.val) (tupleType types)
 
+/-- Resolving a field at a program point requires an unambiguous declared label. -/
+def RecordFieldAt (labels : List Identifier) (field : Identifier) (index : Nat) : Prop :=
+  (labels.map Subtype.val).Nodup ∧ labels[index]? = some field
+
 structure RecordRef (scope : Scope) (labels : List Identifier) (types : List (Ty .value)) where
   name : Identifier
   schema : Local scope (recordSchemaType name.val labels types)

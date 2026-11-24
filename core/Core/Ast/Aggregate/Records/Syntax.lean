@@ -40,7 +40,7 @@ def RecordFieldInversionAussage : Prop :=
     (field : Identifier),
     minimum ≤ Infix.projection.precedence →
     ExprTail scope minimum base (dot :: .word field.val :: input) tree rest →
-    ∃ (i : Fin types.length) (checked : labels[i.val]? = some field),
+    ∃ (i : Fin types.length) (checked : RecordFieldAt labels field i.val),
       ExprTail scope minimum (.recordField base field i checked) input tree rest
 
 def RecordFieldSuffixAussage : Prop :=
