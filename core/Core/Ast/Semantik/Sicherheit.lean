@@ -68,13 +68,13 @@ theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
 -- Extend the original stmt_keine_invarianten by mutual recursion over Stmt and Block.
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
-  have blockEmpty : ∀ {r b a} (body : Block r b a), (block body).klauseln.invariant = [] := by
-    intro r b a body
-    cases body with
-    | done => rfl
-    | step first rest =>
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-          stmt_keine_invarianten first, blockEmpty rest, List.nil_append]
+  let rec blockEmpty : ∀ {r b a} (body : Block r b a), (block body).klauseln.invariant = [] :=
+    fun {r b a} body =>
+      match body with
+      | .done => rfl
+      | .step first rest => by
+          simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+            stmt_keine_invarianten first, blockEmpty rest, List.nil_append]
   cases tree with
   | letValue name ordinary value =>
       simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
