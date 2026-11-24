@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.Types.Model
+public import Core.Beobachtung.Unentscheidbar.Modell
 
 @[expose] public section
 
@@ -8,17 +8,25 @@ namespace Scratch
 
 open Gabbro.Core.Ast
 
-example (t : Ty .value) : True := by
-  induction t using Ty.rec <;> trivial
-
-example (t : Ty .value) : True := by
-  let k : Kind := .value
-  induction (show Ty k from t) <;> trivial
-
-example : ∀ (k : Kind) (t : Ty k), True := by
-  intro k t
-  cases k
-  induction t <;> trivial
+theorem tyTrue : ∀ t : Ty .value, True
+  | .int _ _ => trivial
+  | .bool => trivial
+  | .array el _ => tyTrue el
+  | .productEnd => trivial
+  | .product h t => tyTrue h; tyTrue t
+  | .record _ _ lay => tyTrue lay
+  | .recordSchema _ _ lay => tyTrue lay
+  | .sumEnd => trivial
+  | .sum h t => tyTrue h; tyTrue t
+  | .variant _ _ _ lay => tyTrue lay
+  | .variantSchema _ _ _ lay => tyTrue lay
+  | .text _ => trivial
+  | .carrierSchema _ _ lay _ => tyTrue lay
+  | .effectGroupSchema _ => trivial
+  | .address _ => trivial
+  | .ownedRegion => trivial
+  | .regionView el => tyTrue el
+  | .ptr _ _ ref => tyTrue ref
 
 def smallDecode : Nat → Option Nat
   | 0 => none
