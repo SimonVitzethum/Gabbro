@@ -31,6 +31,12 @@ open Gabbro.Core.Text
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
 @[simp] private theorem ppValue (s : String) (p1 p2) :
     (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
+@[simp] private theorem printColonVal : printColon.value = colon := by rfl
+@[simp] private theorem printCommaVal : printComma.value = comma := by rfl
+@[simp] private theorem printAssignmentVal : printAssignment.value = assignment := by rfl
+@[simp] private theorem printOpenBraceVal : printOpenBrace.value = openBrace := by rfl
+@[simp] private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rfl
+@[simp] private theorem printSemicolonVal : printSemicolon.value = semicolon := by rfl
 
 theorem recordDecl_inversion : RecordDeclInversionAussage := by
   intro scope input tree rest ex name read
@@ -100,7 +106,7 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
         memberTokenList args.members := by
       induction args.members with
       | nil => rfl
-      | cons m ms ih => simp [memberTokenList, RecordMember.printPieces, ih, List.append_assoc]
+      | cons m ms ih => simpa [memberTokenList, RecordMember.printPieces] using ih
     by_cases h : args.exported <;>
       simp [h, hmem, List.flatMap, recordDecl, Category.printPieces, Decl.printPieces,
         recordDeclarationHead, recordDeclarationPrefix, keyword,

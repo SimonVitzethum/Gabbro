@@ -30,6 +30,10 @@ open Gabbro.Core.Text
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
 @[simp] private theorem ppValue (s : String) (p1 p2) :
     (printPunctuation s p1 p2).value = Token.punctuation s.toList := by rfl
+@[simp] private theorem letKeywordVal : letKeyword = Token.word ['l', 'e', 't'] := by rfl
+@[simp] private theorem keywordMutVal : keyword "mut" = Token.word ['m', 'u', 't'] := by rfl
+@[simp] private theorem assignmentVal : assignment = Token.punctuation ['='] := by rfl
+@[simp] private theorem semicolonVal : semicolon = Token.punctuation [';'] := by rfl
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
