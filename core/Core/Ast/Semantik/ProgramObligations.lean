@@ -128,9 +128,10 @@ theorem mutableLocal_realisiert (scope : Scope) (result : Option (Ty .value)) : 
   let form := mutableLocalForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
-      ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
+      [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -147,9 +148,10 @@ theorem mutableLocal_annahme (scope : Scope) (result : Option (Ty .value)) : (mu
 theorem mutableLocal_ideal (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).IdealAussage := by
   constructor
   · intro args
-    change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
-      ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
+      [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
     · exact ((mutableLocalForm scope result).befehl args).bestimmt
@@ -172,21 +174,24 @@ theorem mutableLocal_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((mutableLocalForm scope result).befehl args).abgleich ((mutableLocalForm scope result).fragment args) platform,
     ((mutableLocalForm scope result).befehl args).fortschritt ((mutableLocalForm scope result).fragment args),
     ((mutableLocalForm scope result).befehl args).komponierbar ((mutableLocalForm scope result).fragment args) platform,
-    ((mutableLocalForm scope result).befehl args).sicher ((mutableLocalForm scope result).fragment args) platform rfl⟩
+    ((mutableLocalForm scope result).befehl args).sicher ((mutableLocalForm scope result).fragment args) platform (by
+      change (stmt ((mutableLocalForm scope result).produktion.tree args).2).klauseln.invariant = []
+      exact stmt_keine_invarianten _)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem mutableLocal_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((mutableLocalForm scope result).fragment a).sicherheitsEinheit platform)
       ((mutableLocalForm scope result).befehl a) := by
-  exact ((mutableLocalForm scope result).befehl a).sicher ((mutableLocalForm scope result).fragment a) platform rfl
+  exact ((mutableLocalForm scope result).befehl a).sicher ((mutableLocalForm scope result).fragment a) platform (by
+    change (stmt ((mutableLocalForm scope result).produktion.tree a).2).klauseln.invariant = []
+    exact stmt_keine_invarianten _)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem mutableLocal_erfuellbar : mutableLocalJoint := by
   intro platform start
   let ctx : StatementContext := ([], none)
   let form := mutableLocalForm ctx.1 ctx.2
-  let name : Identifier := ⟨['x'], 'x', [], rfl, by decide,
-    fun _ member => (List.not_mem_nil member).elim⟩
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinaryName : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
     constructor
@@ -199,9 +204,10 @@ theorem mutableLocal_erfuellbar : mutableLocalJoint := by
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s,
     Ast.parse_print (form.produktion.tree a), rfl, .start,
     form.realisiert (fun args => by
-      change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
-        ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
-      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero])
+      change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
+        [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+      simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+        Nat.sub_self, List.getElem?_cons_zero])
       platform a s rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
@@ -232,9 +238,10 @@ theorem directCall_realisiert (scope : Scope) (result : Option (Ty .value)) : (d
   let form := directCallForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change (List.getElem? ((argsCode 0 args.args).code ++ [callInstruction args none])
-      ((argsCode 0 args.args).code.length) = some (callInstruction args none))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code
+      [(argsCode 0 args.args).code.length]? = some (callInstruction args none)
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -251,9 +258,10 @@ theorem directCall_annahme (scope : Scope) (result : Option (Ty .value)) : (dire
 theorem directCall_ideal (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).IdealAussage := by
   constructor
   · intro args
-    change (List.getElem? ((argsCode 0 args.args).code ++ [callInstruction args none])
-      ((argsCode 0 args.args).code.length) = some (callInstruction args none))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code
+      [(argsCode 0 args.args).code.length]? = some (callInstruction args none)
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
     · exact ((directCallForm scope result).befehl args).bestimmt
@@ -276,13 +284,17 @@ theorem directCall_erhaltung (scope : Scope) (result : Option (Ty .value)) : (di
   exact ⟨((directCallForm scope result).befehl args).abgleich ((directCallForm scope result).fragment args) platform,
     ((directCallForm scope result).befehl args).fortschritt ((directCallForm scope result).fragment args),
     ((directCallForm scope result).befehl args).komponierbar ((directCallForm scope result).fragment args) platform,
-    ((directCallForm scope result).befehl args).sicher ((directCallForm scope result).fragment args) platform rfl⟩
+    ((directCallForm scope result).befehl args).sicher ((directCallForm scope result).fragment args) platform (by
+      change (stmt ((directCallForm scope result).produktion.tree args).2).klauseln.invariant = []
+      exact stmt_keine_invarianten _)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem directCall_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((directCallForm scope result).fragment a).sicherheitsEinheit platform)
       ((directCallForm scope result).befehl a) := by
-  exact ((directCallForm scope result).befehl a).sicher ((directCallForm scope result).fragment a) platform rfl
+  exact ((directCallForm scope result).befehl a).sicher ((directCallForm scope result).fragment a) platform (by
+    change (stmt ((directCallForm scope result).produktion.tree a).2).klauseln.invariant = []
+    exact stmt_keine_invarianten _)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem directCall_erfuellbar : directCallJoint := by
@@ -314,9 +326,10 @@ theorem bindDirect_realisiert (scope : Scope) (result : Option (Ty .value)) : (b
   let form := bindDirectForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change (List.getElem? ((argsCode 0 args.call.args).code ++ [callInstruction args.call (some args.written.type)])
-      ((argsCode 0 args.call.args).code.length) = some (callInstruction args.call (some args.written.type)))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code
+      [(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
@@ -333,9 +346,10 @@ theorem bindDirect_annahme (scope : Scope) (result : Option (Ty .value)) : (bind
 theorem bindDirect_ideal (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).IdealAussage := by
   constructor
   · intro args
-    change (List.getElem? ((argsCode 0 args.call.args).code ++ [callInstruction args.call (some args.written.type)])
-      ((argsCode 0 args.call.args).code.length) = some (callInstruction args.call (some args.written.type)))
-    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code
+      [(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
+    simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+      Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
     · exact ((bindDirectForm scope result).befehl args).bestimmt
@@ -358,13 +372,17 @@ theorem bindDirect_erhaltung (scope : Scope) (result : Option (Ty .value)) : (bi
   exact ⟨((bindDirectForm scope result).befehl args).abgleich ((bindDirectForm scope result).fragment args) platform,
     ((bindDirectForm scope result).befehl args).fortschritt ((bindDirectForm scope result).fragment args),
     ((bindDirectForm scope result).befehl args).komponierbar ((bindDirectForm scope result).fragment args) platform,
-    ((bindDirectForm scope result).befehl args).sicher ((bindDirectForm scope result).fragment args) platform rfl⟩
+    ((bindDirectForm scope result).befehl args).sicher ((bindDirectForm scope result).fragment args) platform (by
+      change (stmt ((bindDirectForm scope result).produktion.tree args).2).klauseln.invariant = []
+      exact stmt_keine_invarianten _)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem bindDirect_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((bindDirectForm scope result).fragment a).sicherheitsEinheit platform)
       ((bindDirectForm scope result).befehl a) := by
-  exact ((bindDirectForm scope result).befehl a).sicher ((bindDirectForm scope result).fragment a) platform rfl
+  exact ((bindDirectForm scope result).befehl a).sicher ((bindDirectForm scope result).fragment a) platform (by
+    change (stmt ((bindDirectForm scope result).produktion.tree a).2).klauseln.invariant = []
+    exact stmt_keine_invarianten _)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem bindDirect_erfuellbar : bindDirectJoint := by
