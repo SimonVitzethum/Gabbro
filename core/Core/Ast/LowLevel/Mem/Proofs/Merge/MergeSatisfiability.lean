@@ -4,6 +4,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergeObligations
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -42,7 +43,8 @@ private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_⟩
+  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,
+      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
     obtain ⟨_, ⟨c, mem⟩, blockiert⟩ := h
     obtain ⟨_, nein, _⟩ := blockiert c mem
     exact nein
@@ -243,16 +245,16 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     exact List.nodup_nil
   constructor
   · refine ⟨tree, ?_, ?_⟩
-    · exact (memDruckAussage_merge tree).2
+    · exact (memDruckKern .merge tree).2
     · exact ⟨op, hElab, rfl⟩
   constructor
-  · exact (memDruckAussage_merge tree).2
+  · exact (memDruckKern .merge tree).2
   constructor
   · exact hElab
   constructor
   · exact System.IErreichbar.start
   constructor
-  · apply (memRealisiertAussage_merge k scope tree op hElab s entryContext).2
+  · apply (memRealisiertKern .merge k scope tree op hElab s entryContext).2
     refine ⟨?_, rfl, ?_, ?_⟩
     · dsimp [s, E, I.start, memBoot]
       rfl
