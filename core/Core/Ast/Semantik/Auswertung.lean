@@ -369,7 +369,8 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L) sw (R ++ post) :
             ((pre ++ L) ++ sw :: (R ++ post))[(pre ++ L).length]? = some sw)
       by_cases htake : (left.wert env) = op.skips
-      · have hs : some (left.wert env) = some op.skips := congrArg some htake
+      · have hs : some (Expr.wert (fun {type} => env) left) = some op.skips := congrArg some htake
+        have ht : Expr.wert (fun {type} => env) left = op.skips := htake
         refine ⟨sw.auswerten mid, .schritt walkL' stepSw, ?_, ?_, ?_, ?_, ?_⟩
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
             alsBoolean, Option.bind_some, if_true, List.length_append, List.length_cons,
@@ -377,15 +378,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           rw [if_pos hs]
           omega
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
-          rw [if_pos htake]
+          rw [if_pos ht]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
           simp only [sw, Befehl.auswerten]
           exact preserveL i hi
-      · have hs : some (left.wert env) ≠ some op.skips := by
+      · have hs : some (Expr.wert (fun {type} => env) left) ≠ some op.skips := by
           intro same
           exact htake (Option.some.inj same)
+        have ht : ¬ Expr.wert (fun {type} => env) left = op.skips := htake
         have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
           simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some,
             if_false, L, R, Expr.wert]
@@ -415,7 +417,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           omega
         · rw [tmpR]
           simp only [Expr.wert]
-          rw [if_neg htake]
+          rw [if_neg ht]
         · simp only [sw, Befehl.auswerten, lokR, lokL]
         · exact retR
         · intro i hi
