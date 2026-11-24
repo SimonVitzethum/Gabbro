@@ -9,6 +9,7 @@ public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
