@@ -24,69 +24,117 @@ public import Core.Ast.Semantik.Formbeweise
 
 namespace Gabbro.Core.Ast.Surface
 
-theorem RecordFieldInversion : RecordFieldInversionAussage := by
-  intro scope name labels types minimum input type base tree rest field allowed read
-  have tupleType_inj : ∀ {a b : List (Ty .value)}, tupleType a = tupleType b → a = b := by
-    intro a
-    induction a with
-    | nil =>
-        intro b h
-        cases b <;> simp only [tupleType] at h ⊢
-    | cons x xs ih =>
-        intro b h
-        cases b with
-        | nil => simp only [tupleType] at h
-        | cons y ys =>
-            simp only [tupleType] at h
-            have hx : x = y := by injection h with h1 _; exact h1
-            have hxy : tupleType xs = tupleType ys := by injection h with _ h2; exact h2
-            subst y
-            exact congrArg (fun l => x :: l) (ih hxy)
-  have label_inj : ∀ {a b : List Identifier}, a.map Subtype.val = b.map Subtype.val → a = b := by
-    intro a
-    induction a with
-    | nil =>
-        intro b h
-        cases b <;> simp at h ⊢
-    | cons x xs ih =>
-        intro b h
-        cases b with
-        | nil => simp at h
-        | cons y ys =>
-            simp only [List.map_cons, List.cons.injEq] at h
-            subst y
-            exact congrArg (fun l => x :: l) (ih h.2)
-  have invGen : ∀ (inputType : Ty .value) (base0 : Expr scope inputType),
+theorem tupleType_inj_aux : ∀ {a b : List (Ty .value)}, tupleType a = tupleType b → a = b := by
+  intro a
+  induction a with
+  | nil =>
+      intro b h
+      cases b with
+      | nil => rfl
+      | cons y ys =>
+          simp only [tupleType] at h
+          cases h
+  | cons x xs ih =>
+      intro b h
+      cases b with
+      | nil =>
+          simp only [tupleType] at h
+          cases h
+      | cons y ys =>
+          simp only [tupleType] at h
+          injection h with h1 h2
+          subst y
+          exact congrArg (fun l => x :: l) (ih h2)
+
+theorem labelList_inj_aux : ∀ {a b : List Identifier}, a.map Subtype.val = b.map Subtype.val → a = b := by
+  intro a
+  induction a with
+  | nil =>
+      intro b h
+      cases b with
+      | nil => rfl
+      | cons y ys =>
+          simp only [List.map_cons, List.map_nil] at h
+          cases h
+  | cons x xs ih =>
+      intro b h
+      cases b with
+      | nil =>
+          simp only [List.map_cons, List.map_nil] at h
+          cases h
+      | cons y ys =>
+          simp only [List.map_cons, List.cons.injEq] at h
+          subst y
+          exact congrArg (fun l => x :: l) (ih h.2)
+
+theorem recordFieldInvGen {scope name labels types minimum input type}
+    {tree : Expr scope type} {rest} (allowed : minimum ≤ Infix.projection.precedence) :
+    ∀ (inputType : Ty .value) (base0 : Expr scope inputType),
       (eqT : inputType = recordValueType name labels types) →
-      ExprTail scope minimum base0 (dot :: .word field.val :: input) tree rest →
-      ∃ i : Fin types.length, ∃ checked : RecordFieldAt labels field i.val,
-        ExprTail scope minimum (.recordField (eqT ▸ base0) field i checked) input tree rest := by
-    intro inputType base0 eqT r
+      (word : List Char) →
+      ExprTail scope minimum base0 (dot :: .word word :: input) tree rest →
+      ∃ (fld : Identifier) (i : Fin types.length) (checked : RecordFieldAt labels fld i.val),
+        fld.val = word ∧
+        ExprTail scope minimum (.recordField (eqT ▸ base0) fld i checked) input tree rest := by
+    intro inputType base0 eqT word r
+    generalize htok : (dot :: .word word :: input) = toks at r
     cases r with
     | stop blocked =>
         exfalso
-        exact blocked ⟨.projection, .word field.val :: input, rfl, allowed⟩
-    | binary _ _ _ _ => cases eqT
-    | div _ _ _ _ => cases eqT
-    | compare _ _ _ _ _ => cases eqT
-    | logic _ _ _ _ => cases eqT
-    | arrayIndex _ _ _ _ _ _ => cases eqT
-    | tupleField _ _ _ _ => cases eqT
+        exact blocked ⟨.projection, .word word :: input,
+          by simpa only [Infix.token] using htok.symm, allowed⟩
+    | binary op hle _ _ =>
+        have head : dot = op.token := (List.cons.inj htok).1
+        have eq : (.projection : Infix) = .arith op :=
+          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+        cases eq
+    | div hle _ _ _ =>
+        have head : dot = Infix.div.token := (List.cons.inj htok).1
+        have eq : (.projection : Infix) = .div :=
+          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+        cases eq
+    | compare op hle _ _ _ =>
+        have head : dot = (Infix.compare op).token := (List.cons.inj htok).1
+        have eq : (.projection : Infix) = .compare op :=
+          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+        cases eq
+    | logic op hle _ _ =>
+        have head : dot = (Infix.logic op).token := (List.cons.inj htok).1
+        have eq : (.projection : Infix) = .logic op :=
+          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+        cases eq
+    | arrayIndex _ _ _ hle _ _ =>
+        have head : dot = openBracket := (List.cons.inj htok).1
+        have eq : (.projection : Infix) = .index :=
+          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+        cases eq
+    | tupleField _ index' hle _ =>
+        have restEq : .word word :: input = .natural index'.val :: _ := (List.cons.inj htok).2
+        cases (List.cons.inj restEq).1
     | recordField base' field' index written hle tail =>
-        rename_i nm' labs' tys'
+        rename_i nm' labs' tys' input'
         injection eqT with hnm hlabs hlayout
-        have htys : tys' = types := tupleType_inj hlayout
-        have hlbs : labs' = labels := label_inj hlabs
+        have htys : tys' = types := tupleType_inj_aux hlayout
+        have hlbs : labs' = labels := labelList_inj_aux hlabs
+        have restEq : .word word :: input = .word field'.val :: input' := (List.cons.inj htok).2
+        have wf : field'.val = word := (List.cons.inj restEq).1.symm
+        have inputEq : input = input' := (List.cons.inj restEq).2
         subst nm'
         subst tys'
         subst labs'
-        subst field'
-        exact ⟨index, written, tail⟩
-  exact invGen _ base rfl read
+        subst input'
+        exact ⟨field', index, written, wf, tail⟩
+
+theorem RecordFieldInversion : RecordFieldInversionAussage := by
+  intro scope name labels types minimum input type base tree rest field allowed read
+  obtain ⟨fld, i, checked, hval, tail⟩ := recordFieldInvGen allowed _ base rfl field.val read
+  have ef : fld = field := Subtype.ext hval
+  subst fld
+  exact ⟨i, checked, tail⟩
 
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   intro scope name labels types minimum input type field base tree rest allowed read
-  obtain ⟨i, checked, tail⟩ := RecordFieldInversion (field := field) allowed read
+  obtain ⟨fld, i, checked, hval, tail⟩ := recordFieldInvGen allowed _ base rfl field read
   exact ExprTail.consumes tail
 
 end Gabbro.Core.Ast.Surface
