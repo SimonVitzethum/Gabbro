@@ -188,15 +188,16 @@ theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
   have h₃ : E.system.ISchritt eintritt s₂ () [plan] s₃ := ⟨.baueTupel 0 [a, b], rfl, rfl, rfl⟩
   have h₄ : E.system.ISchritt eintritt s₃ () [plan] s₄ :=
     ⟨.liesTupelfeld 0 [a, b] ⟨0, by simp [a, b]⟩, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₄ :=
-    .schritt eintritt () [plan] (.schritt eintritt () [plan]
-      (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start h₁) h₂) h₃) h₄
-  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₄ reached
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan]
+      (.schritt eintritt () [plan]
+        (.schritt eintritt () [plan] .start h₁) h₂) h₃
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₃ reached
     (form.realisiert (fun args => by
       change (((expr 0 args.base).code ++ [Befehl.liesTupelfeld 0 args.types args.index])[(expr 0 args.base).code.length]? =
         some (.liesTupelfeld 0 args.types args.index))
       simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
-    ) platform args s₄ rfl rfl rfl rfl) ?_⟩
+    ) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
