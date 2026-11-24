@@ -17,16 +17,19 @@ structure Fragment where
   /-- The position where the body of a context other than `eintritt` starts. The body of
       `eintritt` is the fragment itself, from its first instruction; its entry here is unused. -/
   eintritte : Kontext → Option Nat
+  /-- The memory the fragment declares: its locks, its address spaces and the initial content of the
+      cells of its regions. -/
+  speicher : Speicherplan
 
-def Fragment.leer : Fragment := ⟨[], .leer, [], fun _ => none⟩
+def Fragment.leer : Fragment := ⟨[], .leer, [], fun _ => none, .leer⟩
 
-def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, [], fun _ => none⟩
+def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, [], fun _ => none, .leer⟩
 
 /-- Sequencing shifts the entries of the second fragment behind the first one's instructions; the
     first fragment's entry of a context wins. -/
 def Fragment.anhaengen (a b : Fragment) : Fragment :=
   ⟨a.code ++ b.code, a.klauseln.anhaengen b.klauseln, a.eingang,
-    fun c => (a.eintritte c).or ((b.eintritte c).map (· + a.code.length))⟩
+    fun c => (a.eintritte c).or ((b.eintritte c).map (· + a.code.length)), a.speicher.anhaengen b.speicher⟩
 
 /-- **A body for the contexts selected by `gilt`**: the whole fragment is what each of them runs
     from its first instruction (handlers, NMI handlers and threads started by the program). -/

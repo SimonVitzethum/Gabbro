@@ -46,24 +46,24 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
   let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
   let entry := Semantik.eintritt
   let b : Semantik.Befehl := .rufe Semantik.mainName [] none
-  let daten : Startdaten Int PUnit Semantik.Rahmen PUnit :=
+  let daten : Startdaten Int Nat Semantik.Rahmen PUnit :=
     ⟨fun _ => Semantik.Rahmen.start [],
       fun c => if c = entry then .laeuft else .ruht,
-      fun core => ⟨if core = 0 then some entry else none, .nutzer, (), fun _ => false, 0, false, []⟩,
+      fun core => ⟨if core = 0 then some entry else none, .nutzer, 0, fun _ => false, 0, false, []⟩,
       ⟨fun _ => false, fun _ => 0⟩⟩
-  let e : Einrichtung PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit :=
-    ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False,
+  let e : Einrichtung Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit :=
+    ⟨fun _ => 0, fun l => Semantik.Zelle.sperre l, fun _ => Semantik.Zelle.aussen, fun _ => 0, fun _ _ _ => False,
       fun _ _ => True, ⟨0, 0⟩, ⟨entry, 0, fun _ => daten, fun _ _ => 0⟩,
       fun _ => 0, fun _ _ _ => none⟩
   let plan : Semantik.Plan := Semantik.plan
   let update (_c : Kontext) (s : Semantik.Zustand) : Semantik.Zustand :=
     { s with
       rechte := ⟨fun j => decide (j = 0 ∨ j = 1), s.rechte.gen⟩,
-      buchung := { s.buchung with umfang := fun j => if j = 0 ∨ j = 1 then [()] else [] } }
+      buchung := { s.buchung with umfang := fun j => if j = 0 ∨ j = 1 then [Semantik.Zelle.aussen] else [] } }
   let regel : Regel Semantik.Zustand Semantik.Plan PUnit :=
     ⟨fun c s _ plans u => plans = [plan] ∧ u = update c s,
       fun c s _ plans u => plans = [plan] ∧ u = update c s⟩
-  let sy : MaschinenSystem PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl :=
+  let sy : MaschinenSystem Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl :=
     ⟨fun _ => regel, fun _ c => if c = entry then some b else none,
       fun _ _ => False, fun _ _ _ => False⟩
   let E : Semantik.Einheit :=

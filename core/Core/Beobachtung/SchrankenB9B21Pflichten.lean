@@ -179,7 +179,7 @@ def schrankenTransferAussage : Prop :=
     `stapelErhaltenAussage` applies; memory is untouched by the `intern` wrapper
     (`FuehrtAus.intern` keeps rights and booking). -/
 def rufSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
     (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value)),
     (∀ (c : Kontext) (s u : Semantik.Zustand) (w : PUnit) (plans : List Semantik.Plan),
@@ -198,7 +198,7 @@ def rufSchrankenAussage : Prop :=
     both legs follow by `stapelErhaltenAussage`/`speicherErhaltenAussage` with reflexive
     inclusions, through the `intern` wrapper. -/
 def aggregatSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length),
     (∀ (ziel : Nat) (element : Ty .value) (count : Nat),
       RegelSchranken E (Semantik.Befehl.baueArray ziel element count)) ∧
@@ -219,7 +219,7 @@ def aggregatSchrankenAussage : Prop :=
     the `substring` capacity premise is the `waechterBedarf .teilfolge` guard, already
     part of `WaechterHalten`. -/
 def textSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length),
     (∀ (ziel : Nat) (decoded : List Char),
       RegelSchranken E (Semantik.Befehl.textLiteral ziel decoded)) ∧
@@ -258,7 +258,7 @@ def speicherverwaltungSchrankenAussage : Prop :=
     (`halt` only sets `stopp`; success extends `lokale` only) and change no booking, so
     both legs follow by the preservation helpers through the `intern` wrapper. -/
 def regionSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
     (receiver : Nat) (init : RegionInitializer),
     RegelSchranken E (Semantik.Befehl.bindeRegion receiver init)
@@ -270,7 +270,7 @@ def regionSchrankenAussage : Prop :=
     Difficulty: leicht-mittel. Sketch: `stapelErhaltenAussage` plus
     `speicherErhaltenAussage` with the two footprint facts. -/
 def kontrollflussSkalarSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
     (b : Semantik.Befehl),
     (∀ {η : I.Lauf E}, I.Laeufe E η → ∀ t c w spur vor nach,

@@ -12,7 +12,7 @@ open Ast.Semantik (Fragment Befehl)
 def KontrollflussNIAussage : Prop :=
   FamilienNI .kontrollfluss
 
-private abbrev FragmentBeob := List (NiedrigesEreignis PUnit Int PUnit Befehl)
+private abbrev FragmentBeob := List (NiedrigesEreignis Ast.Semantik.Zelle Int PUnit Befehl)
 
 private theorem spekulationszugriffe_leer {Ort : Type} (h : Spekulationshuelle) :
     h.zugriffe ([] : List (Option Ort)) = [] := by
@@ -36,7 +36,7 @@ private theorem fragment_impl_nach {p : Fragment} (plattform : Plattform)
 
 private theorem fragment_aus_leer {p : Fragment} (plattform : Plattform)
     {t : Nat} {c : Kontext} {s u : Ast.Semantik.Zustand}
-    {spur : SchrittSpur PUnit Int} {next : Ast.Semantik.Zustand}
+    {spur : SchrittSpur Ast.Semantik.Zelle Int} {next : Ast.Semantik.Zustand}
     (aus : FuehrtSchrittAus (p.einheit plattform).einrichtung t c s u
       Ast.Semantik.plan spur next) :
     spur.speicher = [] ∧ spur.aussen = [] ∧ next = {u with graph := next.graph} := by

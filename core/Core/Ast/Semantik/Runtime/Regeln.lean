@@ -311,7 +311,7 @@ def Befehl.impl (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
 
 def Befehl.regel (b : Befehl) : Regel := ⟨b.impl, b.ideal⟩
 
-abbrev LokalSystem := MaschinenSystem PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
+abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
 /-- The entry context: the boot context whose body starts at the first instruction. -/
 def eintritt : Kontext := .faden 0

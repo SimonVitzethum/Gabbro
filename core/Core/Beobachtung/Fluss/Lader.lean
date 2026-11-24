@@ -19,7 +19,7 @@ theorem fragment_geladen (p : Fragment) (plattform : Plattform) {h : Umgebung}
   have zeile := hardware.lader Ast.Semantik.bild gueltig
   have start : (h.lade Ast.Semantik.bild).starts 0 = some 0 := lader_start zeile 0
   have byte : (h.lade Ast.Semantik.bild).bytes 0 = some 0 := (zeile.2.1 0 0 rfl).2
-  change Ast.Semantik.laden p.eingang p.eintritte plattform s (h.lade Ast.Semantik.bild) = _
+  change Ast.Semantik.laden p.eingang p.eintritte p.speicher plattform s (h.lade Ast.Semantik.bild) = _
   rw [Ast.Semantik.laden, if_pos ⟨start, byte⟩]
   rfl
 

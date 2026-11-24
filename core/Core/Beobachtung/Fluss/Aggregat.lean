@@ -61,7 +61,7 @@ theorem aggregatNI : AggregatNIAussage := by
             (if ∃ d, (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten d).isSome = true
              then [NiedrigesEreignis.ende (neuBeendet vor (f.nach c vor) (p.einheit plattform).etiketten)]
              else []) =
-              ([] : List (NiedrigesEreignis PUnit Int PUnit Befehl)) := by
+              ([] : List (NiedrigesEreignis Ast.Semantik.Zelle Int PUnit Befehl)) := by
           rw [if_neg keinEnde]
         simp only [schrittBeob, spurGlied, zustand, zustandNach,
           List.filterMap_nil, List.flatMap_nil, List.nil_append, kontextLeer]
