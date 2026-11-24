@@ -75,12 +75,14 @@ private theorem Quellform.program_occurrence {category : Category} {args : Type}
       E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
         E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
         E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) := by
-  obtain ⟨text, s, parsed, _, reach, _, head, ideal, concrete, _⟩ := occurrence
+  obtain ⟨text, s, parsed, _, reach, realized, _⟩ := occurrence
+  obtain ⟨_, head, ideal, concrete⟩ := realized
   exact ⟨category, form.produktion.tree a, text, s, form.befehl a, tag, parsed, reach, head, ideal, concrete⟩
 
-private theorem reach_step {E : Einheit} {start : Zustand} {s : Zustand} {b : Befehl}
-    (reach : E.system.IErreichbar start s) (head : E.system.kopf s eintritt = some b) :
-    E.system.IErreichbar start (b.nach eintritt s) :=
+private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustand} {s : Zustand} {b : Befehl}
+    (reach : (p.einheit platform).system.IErreichbar start s)
+    (head : (p.einheit platform).system.kopf s eintritt = some b) :
+    (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
   .schritt eintritt () [plan] reach ⟨b, head, rfl, rfl⟩
 
 private theorem while_occurrences :

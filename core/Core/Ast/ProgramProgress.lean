@@ -435,13 +435,13 @@ theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung 
     change middle.pc = body.length at atEnd
     rw [atEnd, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  have locals : middle.lokale = frame.lokale := congrArg Rahmen.lokale preserved
-  have globals : middle.globale = frame.globale := congrArg Rahmen.globale preserved
+  have locals : middle.lokale = frame.lokale := by rw [preserved]
+  have globals : middle.globale = frame.globale := by rw [preserved]
   refine ⟨_, value, n + 1, bind.auswerten middle, ?_, counted.trans (.step live.1 live.2 lookup .null), ?_⟩
   · simpa only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add] using
       Nat.add_le_add_right limit 1
-  · simp only [bind, Befehl.auswerten, tmp, Option.bind_some, value, atEnd, locals, globals,
-      List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
+  · simp only [bind, body, Befehl.auswerten, tmp, Option.bind_some, value, atEnd, locals, globals,
+      List.length_append, List.length_cons, List.length_nil, Nat.zero_add, if_true, and_true]
 
 /-- Counted transitions are public step units even when they transfer control
     backwards or across a caller boundary. A bound of zero refers to private steps. -/
