@@ -171,13 +171,13 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
         (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h)), rfl, rfl⟩⟩
       e1AusfuehrB))
   | n + 2 =>
-    have hle : 2 ≤ n + 2 := Nat.le_add_left 2 n
-    have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ hle
-    have hzw : ∀ t, zw t = some (zwSt t) := fun _ => rfl
+    have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ (Nat.le_add_left 2 n)
     have hcur : zw (n + 2) = some S_d := by
-      rw [hzw, zwSt_ge2 _ hle]
+      show some (zwSt (n + 2)) = _
+      exact zwSt_ge2 _ (Nat.le_add_left 2 n)
     have hnxt : zw ((n + 2) + 1) = some S_d := by
-      rw [hzw, zwSt_ge2 _ (by omega)]
+      show some (zwSt ((n + 2) + 1)) = _
+      exact zwSt_ge2 _ (by omega)
     have hker : (S_d.kerne 1).laeuft = some B := rfl
     have hlive : S_d.status B = Status.laeuft := rfl
     rw [hsp, hcur, hnxt]
@@ -344,7 +344,7 @@ theorem warte_praemissen_erfuellbar :
     ∃ (E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit) (ρ : Maschine.Lauf E)
       (c : Kontext) (H a : Nat),
       WartePraemissen E ρ () c 0 H a ∧
-      ∃ b e, a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
+      ∃ (b : Nat) (e : List Nat), a ≤ b ∧ (∃ s, ρ.zeit.zustand b = some s ∧
         ((s.sperren ()).besitzer = some c ∨
           (∃ h₀ r, (s.sperren ()).besitzer = none ∧ (s.sperren ()).schlange = h₀ :: r ∧
             ∃ s', (s.sperren ()).Nimmt h₀ s'))) ∧
