@@ -45,7 +45,7 @@ theorem definiereSicht : DefiniereSichtAussage := by
       simpa only [Rahmen.sicht] using
         congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
     rw [pcEq, hFu]
-  rw [sicht_definiere, sicht_definiere, h, pcEq, hTe, hLe, hF]
+  rw [sicht_definiere, sicht_definiere, h, hF, pcEq, hTe, hLe]
 
 theorem zurueckSprungSicht : ZurueckSprungSichtAussage := by
   intro β pc abstand hT hL r₁ r₂ live hpc h
@@ -58,7 +58,8 @@ theorem zurueckSprungSicht : ZurueckSprungSichtAussage := by
     one entry derived from the converted value. -/
 theorem sicht_setzePasszahl_some (β : Beschriftung) (r : Rahmen) (stelle : Nat)
     (value : Ganzzahl) :
-    ({ r with pc := r.pc + 1,
+    ({ r with
+      pc := r.pc + 1
       zaehler := Function.update r.zaehler (r.pc + stelle)
         (some value.zahl.wert.toNat) }).sicht β =
       { r.sicht β with
