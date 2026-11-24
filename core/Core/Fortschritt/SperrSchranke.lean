@@ -309,7 +309,10 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
               exact (List.not_mem_nil hmem_r).elim
             | cons h₀ rest =>
               -- No owner after the release, yet the queue is nonempty — the new head owns it.
-              have hcontra : (s₂.sperren l).besitzer = some h₀ := by simp only [hs2q]
+              have hcontra : (s₂.sperren l).besitzer = some h₀ := by
+                have hred : (SperrZustand.abgeben ⟨some h, h₀ :: rest⟩).besitzer = some h₀ := rfl
+                rw [hs2q]
+                exact hred
               rw [hcontra] at hnew
               cases hnew
       | none =>
