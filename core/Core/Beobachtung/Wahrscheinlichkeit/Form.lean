@@ -4,15 +4,25 @@
 
   `GabbroZielProb` is the quantitative statement beside `GabbroZielForm`, reusing
   every safety leg: safety already holds for every random outcome, and this shape
-  adds the six B11(c) statement forms over the lift bundle of `Hebung`:
-  probability bounds on run events, expected cost, almost-sure termination and
-  progress of randomized loops, and the two cryptographic adversary forms.
+  adds the four B11(c) statement forms the checker decides over the lift bundle of
+  `Hebung`: probability bounds on finite-cylinder run events, expected cost under a
+  geometric exit summary, almost-sure termination and progress of randomized loops
+  with per-iteration exit probability at least `q > 0`.
 
-  The (c)-side (named assumptions and declared bounds: the source law, the claimed
-  `p`, `b`, budgets, hardness) enters as `ProbAnnahmen`: what the program declares
-  through its clause forms. Checking those declarations (B11(d): decide exactly on
-  finite state, refuse on infinite state) is the checker's obligation, pinned in
-  `Aussagen`; this file fixes the statement shape only.
+  The (c)-side no longer contains free propositions (Hy4 refuted the old
+  `ProbAnnahmen` shape: six unconstrained `Prop` fields admit `fun _ … => True`,
+  which demands e.g. `μ univ ≤ 0`). Every premise below is specific: the checker's
+  computable verdict `pruefeProb k = true` over finite clause data (rationals as
+  `Nat` pairs, drawn from the program's loop summary), plus certified facts about
+  the declared source law (`ZylinderGewicht`) or the loop's survival family. The
+  checker decides or refuses; nothing is derived, no refusal becomes a warning.
+
+  The two cryptographic forms (`SchrankenForm`, `ReduktionForm`) have no decidable
+  fragment: they quantify over every adversary (an arbitrary Lean function), so no
+  finite clause captures them. They are GabbroProve user duties, proved per program
+  over the generic model, with the primitive's hardness kept as a named assumption
+  in (c) — never as a free premise. They stay here as vocabulary, not as part of
+  `GabbroZielProb`; `Unentscheidbar.lean` pins why no checker decides them.
 
   Like `Ziel/Form.lean`, this file proves nothing about runs: the force lies in the
   pinned lift (`hebeAussage`) and the per-form obligations, never in this shape
@@ -28,95 +38,211 @@ namespace Gabbro.Core.Beobachtung
 
 open Katalog
 
-/-- The (c)-side: what the program declares. Each field is one claimed bound, as the
-    future clause forms (`planned.probability.*`) will state it; the checker decides
-    them, the statements below give them meaning over the lift. -/
-structure ProbAnnahmen (B : Zufallsbindung)
+/-- Finite clause syntax: the form plus finite data from the program (a finite
+    cylinder path or a loop summary with rational weights as `Nat` pairs).
+    The cryptographic forms have no constructor: they are GabbroProve duties. -/
+inductive ProbKlausel where
+  | ereignis (pfad : List (Nat × Nat)) (wNum wDen pNum pDen : Nat) : ProbKlausel
+  | kosten (cNum cDen qNum qDen bNum bDen : Nat) : ProbKlausel
+  | abschluss (qNum qDen : Nat) : ProbKlausel
+  | fortschritt (qNum qDen : Nat) : ProbKlausel
+
+/-- Key consistency of a raw clause path: no draw position appears twice.
+    Computable, no `Classical`. The checker refuses inconsistent finite paths, so
+    every accepted clause denotes a genuine partial function and `massErhalt`
+    applies to it. -/
+def schluesselNodupB : List (Nat × Nat) → Bool
+  | [] => true
+  | p :: rest =>
+      schluesselNodupB rest && !(rest.any fun q => decide (q.1 = p.1))
+
+/-- The checker's verdict: pure `Nat` arithmetic, computable, no `Classical`.
+    - `ereignis`: the path is key-consistent and the certified cylinder weight `w`
+      is a well-formed rational in `[0, 1]` dominating the claimed bound `p`
+      (exactness for loop-free, finite-path programs: the weight is computed by
+      the checker over the finite state and certified in Lean against the
+      declared law).
+    - `kosten`: the geometric certificate `c / q ≤ b` with exit rate `q ∈ (0, 1]`.
+    - `abschluss` / `fortschritt`: a nontrivial geometric exit rate `q ∈ (0, 1]`. -/
+def pruefeProb : ProbKlausel → Bool
+  | .ereignis pfad wNum wDen pNum pDen =>
+      schluesselNodupB pfad &&
+        decide (wDen ≠ 0 ∧ pDen ≠ 0 ∧ wNum * pDen ≥ pNum * wDen ∧ wNum ≤ wDen)
+  | .kosten cNum cDen qNum qDen bNum bDen =>
+      decide (cDen ≠ 0 ∧ qDen ≠ 0 ∧ bDen ≠ 0 ∧ 0 < qNum ∧ qNum ≤ qDen ∧
+        cNum * qDen * bDen ≤ bNum * cDen * qNum)
+  | .abschluss qNum qDen =>
+      decide (qDen ≠ 0 ∧ 0 < qNum ∧ qNum ≤ qDen)
+  | .fortschritt qNum qDen =>
+      decide (qDen ≠ 0 ∧ 0 < qNum ∧ qNum ≤ qDen)
+
+/-- A finite `Nat` path as a cylinder over `Q`: outcomes reduced modulo `Q.anz`
+    (the same reduction as `Ziehung`, so the clause always denotes). -/
+def natZylinder (Q : Zufallsquelle) (pfad : List (Nat × Nat)) : Zylinder Q :=
+  ⟨pfad.map fun p => (p.1, ⟨p.2 % Q.anz, Nat.mod_lt _ Q.pos⟩)⟩
+
+/-- The band event of a clause path: exactly the set `massErhalt` speaks about,
+    so the lift proof rewrites with it directly. -/
+def zylinderEreignis (Q : Zufallsquelle) (pfad : List (Nat × Nat)) : Set Band :=
+  {band | ∀ p ∈ (natZylinder Q pfad).pfad, band Q.id p.1 % Q.anz = p.2.val}
+
+/-- The run event of a clause path: runs whose replay comes from the cylinder.
+    The preimage `{band | Ereignis (replay band)}` in `PrForm` contains the
+    cylinder, so the cylinder bound carries over by monotonicity of the measure. -/
+def laufZylinderEreignis (B : Zufallsbindung) (S : Scheduler)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
-    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h) where
-  prBehauptet : (Maschine.Lauf E → Prop) → ENNReal → Prop
-  kostenBehauptet : (Maschine.Lauf E → Nat) → ENNReal → Prop
-  abschlussBehauptet : (Maschine.Lauf E → Prop) → Prop
-  fortschrittBehauptet : (Maschine.Lauf E → Prop) → Prop
-  schrankeBehauptet : (Gegner → Prop) → ENNReal → (Gegner → Maschine.Lauf E → Prop) → Prop
-  reduktionBehauptet : (Gegner → Maschine.Lauf E → Prop) →
-    (Gegner → Maschine.Lauf E → Prop) → ENNReal → ENNReal → Prop
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (pfad : List (Nat × Nat)) : Maschine.Lauf E → Prop :=
+  fun ρ => ∃ band, hb.replay band = ρ ∧ band ∈ zylinderEreignis B.quelle pfad
 
 /-- `planned.probability.event`: the run event holds with probability at least `p`,
-    under every scheduler and every non-random policy (the bundle quantifies them). -/
+    exactly the bound the checker certified on the finite cylinder. -/
 def PrForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (Ereignis : Maschine.Lauf E → Prop) (p : ENNReal) : Prop :=
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (Ereignis : Maschine.Lauf E → Prop) (p : ENNReal) : Prop :=
   hb.mu {band | Ereignis (hb.replay band)} ≥ p
 
 /-- `planned.probability.cost`: the expected cost is at most `b`, building on the
-    cost model the run carries. -/
+    geometric summary the checker certified. -/
 def KostenForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (kosten : Maschine.Lauf E → Nat) (b : ENNReal) : Prop :=
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (kosten : Maschine.Lauf E → Nat) (b : ENNReal) : Prop :=
   MeasureTheory.lintegral hb.mu (fun band => (kosten (hb.replay band) : ENNReal)) ≤ b
 
 /-- `planned.probability.termination`: almost-sure termination of a randomized loop. -/
 def AbschlussForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (Ziel : Maschine.Lauf E → Prop) : Prop :=
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (Ziel : Maschine.Lauf E → Prop) : Prop :=
   hb.mu {band | Ziel (hb.replay band)} = 1
 
 /-- `planned.probability.progress`: almost-sure progress of a randomized operation
-    (randomized backoff, lock-free retry). Same measure-one shape as termination,
-    over a progress predicate instead of a termination predicate. -/
+    toward its goal. -/
 def FortschrittForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (Ziel : Maschine.Lauf E → Prop) : Prop :=
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (Ziel : Maschine.Lauf E → Prop) : Prop :=
   hb.mu {band | Ziel (hb.replay band)} = 1
 
+/-- `planned.probability.event` as a checker obligation: the computable verdict,
+    plus the certified weight equation against the declared source law (proved in
+    Lean from the platform table, not assumed). The weight equation is a premise,
+    not part of the verdict, because only the platform table knows the law: the
+    checker computes the weight from the program's finite state, Lean certifies it
+    against the declared law. -/
+def ereignisPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (pfad : List (Nat × Nat))
+    (wNum wDen pNum pDen : Nat) : Prop :=
+  pruefeProb (.ereignis pfad wNum wDen pNum pDen) = true →
+    ZylinderGewicht B.quelle (natZylinder B.quelle pfad)
+      = (wNum : ENNReal) / (wDen : ENNReal) →
+    PrForm B hb (laufZylinderEreignis B S hb pfad)
+      ((pNum : ENNReal) / (pDen : ENNReal))
+
+/-- `planned.probability.cost` as a checker obligation: the computable verdict on
+    the geometric certificate, plus the loop's survival family (monotone,
+    geometric decay, cost linear in the exit index). The checker's loop summary
+    (per-iteration cost at most `c`, exit rate at least `q`) yields the decay by
+    induction; the pinned premise is the decay itself. -/
+def kostenPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (kosten : Maschine.Lauf E → Nat)
+    (cNum cDen qNum qDen bNum bDen : Nat) : Prop :=
+  pruefeProb (.kosten cNum cDen qNum qDen bNum bDen) = true →
+    ∀ ueberlebt : Nat → Set Band, (∀ n, MeasurableSet (ueberlebt n)) →
+    (∀ n, ueberlebt (n + 1) ⊆ ueberlebt n) →
+    (∀ n, hb.mu (ueberlebt n) ≤ (1 - (qNum : ENNReal) / (qDen : ENNReal)) ^ n) →
+    (∀ band, ∃ n, band ∉ ueberlebt n ∧ (kosten (hb.replay band) : ENNReal)
+      ≤ (n : ENNReal) * ((cNum : ENNReal) / (cDen : ENNReal))) →
+    KostenForm B hb kosten ((bNum : ENNReal) / (bDen : ENNReal))
+
+/-- `planned.probability.termination` as a checker obligation: the computable
+    verdict on the exit rate, plus the loop's survival family with geometric
+    decay and the exit link (leaving the family means reaching the goal). -/
+def abschlussPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (Ziel : Maschine.Lauf E → Prop)
+    (qNum qDen : Nat) : Prop :=
+  pruefeProb (.abschluss qNum qDen) = true →
+    ∀ ueberlebt : Nat → Set Band, (∀ n, MeasurableSet (ueberlebt n)) →
+    (∀ n, ueberlebt (n + 1) ⊆ ueberlebt n) →
+    (∀ n, hb.mu (ueberlebt n) ≤ (1 - (qNum : ENNReal) / (qDen : ENNReal)) ^ n) →
+    (∀ band, (∃ n, band ∉ ueberlebt n) → Ziel (hb.replay band)) →
+    AbschlussForm B hb Ziel
+
+/-- `planned.probability.progress` as a checker obligation: same geometric shape
+    as termination, read as retry progress toward the goal. -/
+def fortschrittPflicht (B : Zufallsbindung)
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h) (Ziel : Maschine.Lauf E → Prop)
+    (qNum qDen : Nat) : Prop :=
+  pruefeProb (.fortschritt qNum qDen) = true →
+    ∀ ueberlebt : Nat → Set Band, (∀ n, MeasurableSet (ueberlebt n)) →
+    (∀ n, ueberlebt (n + 1) ⊆ ueberlebt n) →
+    (∀ n, hb.mu (ueberlebt n) ≤ (1 - (qNum : ENNReal) / (qDen : ENNReal)) ^ n) →
+    (∀ band, (∃ n, band ∉ ueberlebt n) → Ziel (hb.replay band)) →
+    FortschrittForm B hb Ziel
+
 /-- `planned.probability.informationTheoretic`: every adversary in budget has
-    advantage at most `eps`. The adversary is any Lean function over the history
-    (B11), never assumed to be a Gabbro program. -/
+    advantage at most `eps`. GabbroProve user duty, proved per program: the
+    statement quantifies over every adversary, so no finite clause captures it.
+    The primitive's hardness stays a named assumption, never a free premise. -/
 def SchrankenForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (imBudget : Gegner → Prop) (eps : ENNReal)
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h)
+    (imBudget : Gegner → Prop)
+    (eps : ENNReal)
     (spiel : Gegner → Maschine.Lauf E → Prop) : Prop :=
-  ∀ A : Gegner, imBudget A → hb.mu {band | spiel A (hb.replay band)} ≤ eps
+  ∀ A : Gegner, imBudget A →
+    hb.mu {band | spiel A (hb.replay band)} ≤ eps
 
-/-- `planned.probability.reduction`: the scheme's advantage reduces to the
-    primitive's, whose hardness is a named assumption in (c). -/
+/-- `planned.probability.reduction`: the scheme's advantage reduces to a
+    primitive with named hardness. GabbroProve user duty, proved per program:
+    the statement quantifies over every scheme adversary, so no finite clause
+    captures it. -/
 def ReduktionForm (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {S : Scheduler} {h : Umgebung} (hb : Hebebuendel B S E h)
-    (spielS spielP : Gegner → Maschine.Lauf E → Prop)
-    (c δ : ENNReal) : Prop :=
-  ∀ A : Gegner, ∃ D : Gegner,
-    hb.mu {band | spielS A (hb.replay band)} ≤
-      c * hb.mu {band | spielP D (hb.replay band)} + δ
+    {S : Scheduler} {h : Umgebung}
+    (hb : Hebebuendel B S E h)
+    (schemaGegner : Gegner → Prop)
+    (reduktion : Gegner → Gegner)
+    (primitivGegner : Gegner → Prop)
+    (c : ENNReal) (spiel ziel : Gegner → Maschine.Lauf E → Prop) : Prop :=
+  ∀ A : Gegner, schemaGegner A →
+    hb.mu {band | spiel A (hb.replay band)} ≤
+      c * hb.mu {band | ziel (reduktion A) (hb.replay band)}
 
-/-- The probabilistic statement beside the goal: every declared bound holds on the
-    lift, for every bundle (hence every scheduler and every non-random policy). -/
+/-- The language's promise beside the goal: every clause the checker accepts
+    holds on the lift. The cryptographic forms are not part of this sentence;
+    they are GabbroProve duties (see `SchrankenForm`, `ReduktionForm`). -/
 def GabbroZielProb (B : Zufallsbindung) (S : Scheduler)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (h : Umgebung) : Prop :=
-  ∀ hb : Hebebuendel B S E h, ∀ ann : ProbAnnahmen B hb,
-    (∀ Ereignis p, ann.prBehauptet Ereignis p → PrForm B hb Ereignis p) ∧
-    (∀ kosten b, ann.kostenBehauptet kosten b → KostenForm B hb kosten b) ∧
-    (∀ Ziel, ann.abschlussBehauptet Ziel → AbschlussForm B hb Ziel) ∧
-    (∀ Ziel, ann.fortschrittBehauptet Ziel → FortschrittForm B hb Ziel) ∧
-    (∀ imBudget eps spiel, ann.schrankeBehauptet imBudget eps spiel →
-      SchrankenForm B hb imBudget eps spiel) ∧
-    (∀ spielS spielP c δ, ann.reduktionBehauptet spielS spielP c δ →
-      ReduktionForm B hb spielS spielP c δ)
+  ∀ hb : Hebebuendel B S E h,
+    (∀ pfad wNum wDen pNum pDen, ereignisPflicht B hb pfad wNum wDen pNum pDen) ∧
+    (∀ kosten cNum cDen qNum qDen bNum bDen,
+      kostenPflicht B hb kosten cNum cDen qNum qDen bNum bDen) ∧
+    (∀ Ziel qNum qDen, abschlussPflicht B hb Ziel qNum qDen) ∧
+    (∀ Ziel qNum qDen, fortschrittPflicht B hb Ziel qNum qDen)
 
 /-- Non-vacuity of the probabilistic shape: the source admits an event strictly
     inside `(0, 1)`. A degenerate source (or a degenerate instantiation) satisfies
