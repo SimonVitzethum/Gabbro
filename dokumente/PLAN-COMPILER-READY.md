@@ -207,7 +207,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B21 | **memory bounds (owner, 2026-11-14: definitely; an unbounded heap must stay possible)**: per function and per run an upper bound on region/heap/arena use and on stack, computed and checked like `ZeitAb`, with the allocator contract — wherever a bound is declared or derivable (bounded regions, arenas with a ceiling, stack), also as a bound in the size of the input; OPEN regions (`Deklaration.offen`) without a ceiling stay admitted exactly as today, and for them the statement claims no bound (only what the provider gave), never a refusal | 4 000–10 000 / 1–2 / — |
 | B22 | **crash consistency, hardware-independent (owner, 2026-11-14).** An abstract persistence semantics: writes to persistent places become durable only through explicit flush/fence steps, in any order the abstraction allows (so every medium within the envelope is covered); interruption is possible at EVERY step; declared crash invariants and statements of the form "if interrupted at point x, the persistent state satisfies P_x" are checked by the checker or proved as program logic; recovery code is ordinary Gabbro verified like any other. **Decided:** a separate statement `GabbroZielAbsturz` beside the goal that reuses the safety legs; crash invariants and P_x are decided by the checker in the decidable fragment, the rest is program logic. Design: `persistent` tables/statics, `flush`/`fence` statements, a ghost durable state, one named medium envelope (design file of the lead) | 12 000–30 000 / 2–3 / — |
 | B23 | **no TOCTOU** — defined in [PERFECT-MODEL.md](PERFECT-MODEL.md) §4 and built as its step M10; counted in B24 | — |
-| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and its construction in `core/` (steps M0–M12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. The construction takes in the model side of every model item of this plan (the L rows, S8–S10, A1–A4, A6, B7–B22, C11, the §0 forms, P1; owner, 2026-11-23); their size counts only here, from PERFECT-MODEL §8 | 562 000–1 453 000 new |
+| B24 | **one theorem: no error except logic and hardware** — the theorem, the model and its construction in `core/` (steps M0–M12) are defined ONLY in [PERFECT-MODEL.md](PERFECT-MODEL.md); this row holds no own version. The construction takes in the model side of every model item of this plan (the L rows, S8–S10, A1–A4, A6, B7–B22, C11, the §0 forms, P1; owner, 2026-11-23); their size counts only here, from PERFECT-MODEL §8 | 570 000–1 473 000 new |
 
 ### C11 — non-emptiness in the statement
 
@@ -500,16 +500,16 @@ are batched per step. Stage-0 builds start only in phase B.
 
 | Stream | Lean LOC (estimate) |
 |---|---|
-| M the model, built in `core/` (PERFECT-MODEL §8; includes the model side of L0–L18, S8–S10, A1–A4, A6, B7–B22, C11, the §0 forms, P1) | 562 000–1 453 000 |
+| M the model, built in `core/` (PERFECT-MODEL §8; includes the model side of L0–L18, S8–S10, A1–A4, A6, B7–B22, C11, the §0 forms, P1) | 570 000–1 473 000 |
 | S Stage 0 complete (S1–S7) | 8 400–23 800 |
 | V GabbroV to R2 | 12 400–40 900 |
 | A5 (d) for Stage-0 images | 1 500–4 000 |
 | B6 image theorem | 30 000–80 000 |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 |
 | K kernel ready, Lean side (K1–K6, K8) | 92 000–246 000 |
-| **sum** | **≈ 790 300–2 057 700** |
+| **sum** | **≈ 798 300–2 077 700** |
 
-**Everything together: 790 300–2 057 700 new Lean lines.** Only the Lean part is estimated (owner, 2026-11-23): the compiler written in Gabbro (C7, C8) and the Gabbro parts of the kernel rows come later and are not counted here. Not included: C6
+**Everything together: 798 300–2 077 700 new Lean lines.** Only the Lean part is estimated (owner, 2026-11-23): the compiler written in Gabbro (C7, C8) and the Gabbro parts of the kernel rows come later and are not counted here. Not included: C6
 (location assignment, scheduling, idiom cells, optimisation passes, further tables), which is sized only after C5
 has measured what one proved pass costs.
 
@@ -518,8 +518,8 @@ Parts of the sum by gate (each includes what the earlier gates need):
 | Up to | Lean LOC |
 |---|---|
 | the earlier front-end and bridge subset (S1, S2, S6, V; the compiler start itself needs R3 and R4, see §0) | 16 500–54 200 |
-| R3 and R4: trusted Stage-0 output on the migrated model, low-level included (adds M, the rest of S, A5, B6) | 614 300–1 601 700 |
-| R5 kernel ready, Lean side (adds C1–C5, C9, K) | 790 300–2 057 700 |
+| R3 and R4: trusted Stage-0 output on the migrated model, low-level included (adds M, the rest of S, A5, B6) | 622 300–1 621 700 |
+| R5 kernel ready, Lean side (adds C1–C5, C9, K) | 798 300–2 077 700 |
 
 Calibration (**measured**): seven Stage-0 forms took about 490 lines and 16 builds (2026-11-12); the float
 satisfiability proof about 2 100 lines; the sequential `Senke` 62 700 lines; the goal-theorem proof `ZielOrt`

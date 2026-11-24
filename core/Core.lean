@@ -5,6 +5,7 @@
 -/
 module
 public import Core.Ziel.Form
+public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Speicher
 public import Core.Maschine
