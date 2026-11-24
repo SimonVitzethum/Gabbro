@@ -89,22 +89,20 @@ private theorem tupleLocals_length : (types : List (Ty .value)) → (value : Wer
   | t :: ts, (head, tail), name :: names, h => by
       cases name with
       | none =>
-          simp only [Option.map_none, List.zip_cons_cons, List.filterMap_cons, Option.filterMap_none,
-            tupleLocals, Option.isSome_none, if_false]
-          exact tupleLocals_length ts tail names (by simpa using h)
+          simpa [tupleLocals] using (tupleLocals_length ts tail names (by simpa using h))
       | some id =>
-          simp only [Option.map_some, List.zip_cons_cons, List.filterMap_cons, Option.filterMap_some,
-            tupleLocals, Option.isSome_some, if_true, List.length_cons]
-          congr 1
-          exact tupleLocals_length ts tail names (by simpa using h)
+          simpa [tupleLocals] using (tupleLocals_length ts tail names (by simpa using h))
 
 theorem tupleBind_locals : TupleBindLocalsAussage := by
   intro ctx args frame value temp
   have got : wertAls (tupleType args.types) ⟨tupleType args.types, value⟩ = some value := by
-    simp [wertAls]
+    change (if same : tupleType args.types = tupleType args.types then some (same ▸ value) else none) = some value
+    rw [dif_pos rfl]
   simp only [tupleBindForm, Quellform.befehl, Befehl.auswerten]
-  rw [temp, got]
-  simp only [Option.bind_some, Option.map_some, Option.getD_some]
+  rw [temp]
+  simp only [Option.bind_some]
+  rw [got]
+  simp only [Option.map_some, Option.getD_some]
   have hlen : (args.pattern.bindings args.types).length =
       ((args.pattern.names.zip args.types).filterMap fun (name, _) => name).length := by
     simp [TuplePattern.bindings]
