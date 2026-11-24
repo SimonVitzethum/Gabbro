@@ -234,40 +234,20 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
   cases tree
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
+    exact (ordinary.1 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
+    exact (ordinary.2 rfl).elim
   · rename_i ref vis ord
     cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
-    · exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
+    exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
   · cases read
-    · exact (ordinary.1 rfl).elim
-    · exact (ordinary.2 rfl).elim
 
 
 
