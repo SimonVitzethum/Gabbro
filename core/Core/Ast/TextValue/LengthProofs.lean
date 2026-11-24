@@ -43,7 +43,7 @@ theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
   · simp only [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
       printLenof, printOpen, printClose, keywordName, Identifier.print, PrintedToken.unquoted,
       printPunctuation, lenofKeyword, openParen, closeParen, List.map_cons, List.map_append,
-      List.map_nil, List.append_assoc, String.reduceToList]
+      List.map_nil, List.append_assoc, List.cons_append, List.nil_append, String.reduceToList]
   · exact Expr.printReads args.base noOperatorAtClose
 
 end Gabbro.Core.Ast.Surface
@@ -198,7 +198,7 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp only [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
         system, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
         Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength,
-        if_pos rfl, if_true, List.getElem?_cons_zero]
+        if_pos rfl, if_true, Option.isNone, List.getElem?_cons_zero]
     · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
