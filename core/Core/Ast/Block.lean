@@ -77,9 +77,9 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces,
         Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
-      refine .ite (condExpr.printReads noOperatorAtOpenBrace) ?_ ?_
-      · exact .braced (yesBody.printItems_reads (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
-      · exact .braced (noBody.printItems_reads rest)
+      exact .ite (condExpr.printReads noOperatorAtOpenBrace)
+        (.braced (yesBody.printItems_reads (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest)))
+        (.braced (noBody.printItems_reads rest))
   · intros
     rename_i rest
     exact .done
@@ -107,6 +107,7 @@ theorem Block.printItems_reads (tree : Block result before after) (rest : List T
     exact .done
   · intros
     rename_i _ _ first next _ ihBlock rest
+    simp only [Block.printItems, List.map_append, List.append_assoc]
     exact .step (Stmt.printReads first (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihBlock rest)
   · intros
     rename_i body ihBody rest
