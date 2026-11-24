@@ -28,6 +28,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
   have dotToken : printDot.value = dot := rfl
   have commaToken : printComma.value = comma := rfl
   have colonToken : printColon.value = colon := rfl
+  have sliceToken : printSliceRange.value = sliceRange := rfl
   have lenofToken : printLenof.value = lenofKeyword := rfl
   have nameToken (name : Identifier) : name.print.value = .word name.val := rfl
   have integerToken (value : Nat) : (printInteger value).value = .natural value := rfl
@@ -136,8 +137,9 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     have baseRead := baseIH (openBracket :: index.printTokens ++ closeBracket :: closeParen :: rest)
     have indexRead := ExprReads.atom (minimum := 0) (indexIH (closeBracket :: closeParen :: rest))
       (.stop noOperatorAtCloseBracket)
-    exact .grouped (.atom baseRead (.arrayIndex base loBound hiBound (Nat.zero_le _)
-      indexRead (.stop noOperatorAtClose)))
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, openBracketToken, closeBracketToken] using
+      (AtomReads.grouped (.atom baseRead (.arrayIndex base loBound hiBound (Nat.zero_le _)
+        indexRead (.stop noOperatorAtClose))))
   case tupleValue =>
     intros
     rename_i first second items firstIH secondIH itemsIH rest
@@ -150,8 +152,8 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
       (.stop noOperatorAtComma)
     have secondRead := ExprReads.atom (secondIH tail) (.stop blocked)
     have tailRead := (itemsIH closeParen rest noOperatorAtClose).2
-    simpa only [Expr.printTokens, Expr.printPieces, tail, List.map_append,
-      List.append_assoc, List.cons_append, List.nil_append] using
+    simpa only [Expr.printTokens, Expr.printPieces, tail, List.map_append, List.map_cons, List.map_nil,
+      List.append_assoc, List.cons_append, List.nil_append, openToken, commaToken, closeToken] using
       (AtomReads.tupleValue firstRead secondRead tailRead)
   case tupleField =>
     intros
@@ -185,15 +187,17 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i left right leftIH rightIH rest
     have leftRead := leftIH (Arith.add.token :: right.printTokens ++ closeParen :: rest)
     have rightRead := ExprReads.atom (minimum := Arith.add.precedence + 1) (rightIH (closeParen :: rest)) (.stop noOperatorAtClose)
-    exact .grouped (.atom leftRead (.textConcat left right (Nat.zero_le _) rightRead (.stop noOperatorAtClose)))
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, Arith.print_value] using
+      (AtomReads.grouped (.atom leftRead (.textConcat left right (Nat.zero_le _) rightRead (.stop noOperatorAtClose))))
   case textIndex =>
     intros
     rename_i base offset baseIH offsetIH rest
     have baseRead := baseIH (openBracket :: offset.printTokens ++ closeBracket :: closeParen :: rest)
     have offsetRead := ExprReads.atom (minimum := 0) (offsetIH (closeBracket :: closeParen :: rest))
       (.stop noOperatorAtCloseBracket)
-    exact .grouped (.atom baseRead (.textIndex base offset (Nat.zero_le _)
-      offsetRead (.stop noOperatorAtClose)))
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, openBracketToken, closeBracketToken] using
+      (AtomReads.grouped (.atom baseRead (.textIndex base offset (Nat.zero_le _)
+        offsetRead (.stop noOperatorAtClose))))
   case substring =>
     intros
     rename_i base first last baseIH firstIH lastIH rest
@@ -203,8 +207,9 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
       (firstIH (sliceRange :: last.printTokens ++ closeBracket :: closeParen :: rest))
       (.stop noOperatorAtSliceRange)
     have lastRead := ExprReads.atom (minimum := 0) (lastIH (closeBracket :: closeParen :: rest)) (.stop noOperatorAtCloseBracket)
-    exact .grouped (.atom baseRead (.substring base first last (Nat.zero_le _)
-      firstRead lastRead (.stop noOperatorAtClose)))
+    simpa only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc, openToken, closeToken, openBracketToken, closeBracketToken, sliceToken] using
+      (AtomReads.grouped (.atom baseRead (.substring base first last (Nat.zero_le _)
+        firstRead lastRead (.stop noOperatorAtClose))))
   case textLength =>
     intros
     rename_i base baseIH rest
