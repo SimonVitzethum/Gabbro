@@ -65,6 +65,7 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
   cases tick with
   | wartet label _ _ => cases label
   | schritt label step =>
+      cases label
       cases nach : ρ₁.zeit.zustand (t + 1) with
       | none =>
           rw [nach] at step
@@ -112,8 +113,8 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                   have kontextLeer : kontextBeob ρ₁ predictor t c vor next spur = ([] : FragmentBeob) := by
                     rw [kontextBeob]
                     rw [kopf]
-                    simp only [zugriffeLeer, List.map_nil, konstantFalsch, ↓reduceIte,
-                      List.nil_append, commitLeer, ausgabeLeer, zeitLeer]
+                    simp only [zugriffeLeer, List.map_nil, konstantFalsch, Bool.false_eq_true,
+                      ↓reduceIte, List.nil_append, commitLeer, ausgabeLeer, zeitLeer]
                   have keinEnde :
                       ¬ ∃ c', (neuBeendet vor next (p.einheit plattform).etiketten c').isSome = true := by
                     rintro ⟨c', h⟩
@@ -123,7 +124,7 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                       cases vor.status c' <;> rfl
                     rw [hn] at h
                     cases h
-                  rw [schrittBeob, spurAt, vorAt, nach]
+                  simp only [schrittBeob, spurAt, vorAt, nach]
                   rw [spurLeer, aussenLeer, kontextLeer]
                   simp only [keinEnde, ↓reduceIte, List.nil_append]
                   rfl
