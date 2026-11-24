@@ -118,7 +118,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Annahme.WaechterHalten, 16860721752260323354),
   (`Gabbro.Core.Annahme.GeschlossenWartend, 6249161161004728275),
   (`Gabbro.Core.Maschine.PartielleOperation, 17845138986886266319),
-  (`Gabbro.Core.Annahme.waechterBedarf, 9657614452858633655)]
+  (`Gabbro.Core.Annahme.waechterBedarf, 2466293456166709549)]
 
 private meta def safety : Array Name := #[
   `Gabbro.Core.Sicherheit.RegelSicher,
