@@ -92,13 +92,13 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
     have nameEq := Token.word.inj (List.cons.inj h).1
     cases (List.cons.inj (List.cons.inj h).2).2
     exact ⟨_, Subtype.ext nameEq.symm, by assumption, rfl⟩
-  | ret _ _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
-  | retVoid _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
-  | retOption _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
-  | ite _ _ _ => exact (directHead_not_reserved ordinary "if" (by decide) h).elim
-  | whileBounded _ _ _ _ _ _ _ => exact (directHead_not_reserved ordinary "while" (by decide) h).elim
-  | variantMatch _ _ => exact (directHead_not_reserved ordinary "match" (by decide) h).elim
-  | tupleBind _ _ _ _ => exact (directHead_not_reserved ordinary "let" (by decide) h).elim
+  | ret _ _ _ => exact (directHead_not_reserved ordinary "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) h).elim
+  | retVoid _ => exact (directHead_not_reserved ordinary "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) h).elim
+  | retOption _ _ => exact (directHead_not_reserved ordinary "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) h).elim
+  | ite _ _ _ => exact (directHead_not_reserved ordinary "if" (List.Mem.tail _ (List.Mem.head _)) h).elim
+  | whileBounded _ _ _ _ _ _ _ => exact (directHead_not_reserved ordinary "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) h).elim
+  | variantMatch _ _ => exact (directHead_not_reserved ordinary "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) h).elim
+  | tupleBind _ _ _ _ => exact (directHead_not_reserved ordinary "let" (List.Mem.head _) h).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
   | _ => reject_statement_prefix h
 
@@ -149,7 +149,7 @@ theorem StmtReads.boundedWhile_inversion
   | directCall callRead =>
     cases callRead
     rename_i call _ _
-    exact (directHead_not_reserved call.ordinary "while" (by decide) h.symm).elim
+    exact (directHead_not_reserved call.ordinary "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) h.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
   | _ => reject_statement_prefix h
 
