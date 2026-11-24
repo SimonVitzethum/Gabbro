@@ -89,7 +89,7 @@ private theorem waitProgramAkzeptiert (code : List ExecInstruction) :
     Annahme.Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
   let E := execProgram Plattform.x86_64.katalog code
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨zulassung_m2 _, ?_⟩,
-    execProgramFlussLokal _ code⟩, ?_, ?_⟩
+    execProgramFlussLokal _ code, ?_⟩, ?_, ?_⟩
   · intro i
     exact execRegelLokal Plattform.x86_64.katalog i
   · apply aussen_gueltig_aus_kontext
@@ -108,6 +108,14 @@ private theorem waitProgramAkzeptiert (code : List ExecInstruction) :
         rw [List.append_nil]
       · intro h q hq hcut hans
         exact h q hq hcut hans
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro ρ lauf
     change (∀ p ∈ ([] : List (ExecState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (ExecState → Prop)), p (ρ.zeit.zustand t.val)) ∧
