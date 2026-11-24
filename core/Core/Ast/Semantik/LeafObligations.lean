@@ -49,7 +49,7 @@ theorem trueLit_erhaltung (ctx : Scope) : (trueLitForm ctx).ErhaltungsAussage :=
 theorem trueLit_erfuellbar : trueLitJoint := by
   intro platform start
   let form := trueLitForm []
-  let s := (I.start (form.einheit platform PUnit.unit) start).2
+  let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
   refine ⟨PUnit.unit, form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
     (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_⟩
   intro g guard
@@ -98,7 +98,7 @@ theorem falseLit_erhaltung (ctx : Scope) : (falseLitForm ctx).ErhaltungsAussage 
 theorem falseLit_erfuellbar : falseLitJoint := by
   intro platform start
   let form := falseLitForm []
-  let s := (I.start (form.einheit platform PUnit.unit) start).2
+  let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
   refine ⟨PUnit.unit, form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
     (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_⟩
   intro g guard
@@ -162,7 +162,7 @@ theorem variable_erfuellbar : variableJoint := by
   let ref : Local scope .bool := .here
   let args : Surface.VariableArgs scope := ⟨ref, trivial, ordinary⟩
   let form := variableForm scope
-  let s := (I.start (form.einheit platform args) start).2
+  let s := (Maschine.I.start (form.einheit platform args) start).2
   refine ⟨scope, args, form.erfuellbar_aus_erreichbar platform start args s .start
     (form.realisiert (fun _ => rfl) platform args s rfl rfl rfl) ?_⟩
   intro g guard
@@ -211,7 +211,7 @@ theorem negativeLit_erhaltung (ctx : Scope) : (negativeLitForm ctx).ErhaltungsAu
 theorem negativeLit_erfuellbar : negativeLitJoint := by
   intro platform start
   let form := negativeLitForm []
-  let s := (I.start (form.einheit platform 1) start).2
+  let s := (Maschine.I.start (form.einheit platform 1) start).2
   refine ⟨1, by omega, form.erfuellbar_aus_erreichbar platform start 1 s .start
     (form.realisiert (fun _ => rfl) platform 1 s rfl rfl rfl) ?_⟩
   intro g guard
@@ -233,7 +233,7 @@ theorem neg_realisiert (ctx : Scope) : (negForm ctx).RealisiertAussage := by
   exact (negForm ctx).realisiert (fun args => by
     change ((expr 0 args.operand).code ++ [Befehl.negieren 0])[(expr 0 args.operand).code.length]? =
       some (.negieren 0)
-    rw [List.getElem?_append_right (Nat.le_refl _)]
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl) platform args s running active atPc
 
 -- Mirror Quellform.annahme including the guard operands at the source head.
@@ -246,7 +246,7 @@ theorem neg_ideal (ctx : Scope) : (negForm ctx).IdealAussage := by
   · intro args
     change ((expr 0 args.operand).code ++ [Befehl.negieren 0])[(expr 0 args.operand).code.length]? =
       some (.negieren 0)
-    rw [List.getElem?_append_right (Nat.le_refl _)]
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
   · exact ⟨((negForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
 
@@ -271,7 +271,7 @@ theorem neg_erfuellbar : negJoint := by
   let form := negForm []
   let args : Surface.NegArgs [] := ⟨.lit 1⟩
   let E := form.einheit platform args
-  let s₀ := (I.start E start).2
+  let s₀ := (Maschine.I.start E start).2
   let s₁ := (Befehl.literal 0 1).nach eintritt s₀
   have first : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
@@ -279,7 +279,7 @@ theorem neg_erfuellbar : negJoint := by
     (form.realisiert (fun args => by
       change ((expr 0 args.operand).code ++ [Befehl.negieren 0])[(expr 0 args.operand).code.length]? =
         some (.negieren 0)
-      rw [List.getElem?_append_right (Nat.le_refl _)]
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
       rfl) platform args s₁ rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
@@ -300,7 +300,7 @@ theorem notValue_realisiert (ctx : Scope) : (notValueForm ctx).RealisiertAussage
   exact (notValueForm ctx).realisiert (fun args => by
     change ((expr 0 args).code ++ [Befehl.verneinen 0])[(expr 0 args).code.length]? =
       some (.verneinen 0)
-    rw [List.getElem?_append_right (Nat.le_refl _)]
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl) platform args s running active atPc
 
 -- Mirror Quellform.annahme including the guard operands at the source head.
@@ -313,7 +313,7 @@ theorem notValue_ideal (ctx : Scope) : (notValueForm ctx).IdealAussage := by
   · intro args
     change ((expr 0 args).code ++ [Befehl.verneinen 0])[(expr 0 args).code.length]? =
       some (.verneinen 0)
-    rw [List.getElem?_append_right (Nat.le_refl _)]
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
   · exact ⟨((notValueForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
 
@@ -338,7 +338,7 @@ theorem notValue_erfuellbar : notValueJoint := by
   let form := notValueForm []
   let args : Expr [] .bool := .trueLit
   let E := form.einheit platform args
-  let s₀ := (I.start E start).2
+  let s₀ := (Maschine.I.start E start).2
   let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
   have first : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
@@ -346,7 +346,7 @@ theorem notValue_erfuellbar : notValueJoint := by
     (form.realisiert (fun args => by
       change ((expr 0 args).code ++ [Befehl.verneinen 0])[(expr 0 args).code.length]? =
         some (.verneinen 0)
-      rw [List.getElem?_append_right (Nat.le_refl _)]
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
       rfl) platform args s₁ rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
