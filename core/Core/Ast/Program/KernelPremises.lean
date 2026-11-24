@@ -134,9 +134,9 @@ private theorem unit_occurrences :
       (∀ platform start, ProgramInstructionPremises ``Befehl.ende platform start) := by
   have ordinary : directName mainName := mainName_direct
   let main : Decl [] [] := .function mainName ordinary [] none (by intro _ h; cases h)
-    (some ⟨0, 0, .lit 0, by omega⟩) (.braces .done) List.nodup_nil (by intro h; cases h)
+    (some ⟨0, 0, .lit 0, by omega⟩) (.braces .done) List.nodup_nil (by intro h; cases h) none
   let unit : Ast.Unit := ⟨[], .step main .done⟩
-  let define : Befehl := .definiere mainName [] none 0 5 true []
+  let define : Befehl := .definiere mainName [] none 0 5 true [] none
   have cut (platform : Plattform) (start : AussenStart) :
       let E := elaborieren platform (category := .unit) unit
       let s₀ := (I.start E start).2
