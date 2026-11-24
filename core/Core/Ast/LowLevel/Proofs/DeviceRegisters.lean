@@ -279,7 +279,7 @@ theorem registerRegelSicher_falsch :
     refine ⟨?_, ?_, ?_⟩
     · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     · intro l inRead
-      simp [plan, internal] at inRead
+      simpa only [plan, internal, List.not_mem_nil] using inRead
     · refine ⟨[], zwischen.frage event, ?_, ?_, ?_⟩
       · exact FuehrtAus.frage q
       · simpa [spur, label, vor, boot, Zustand.start, plan, internal, schreibEreignisse, nach] using folge
@@ -291,8 +291,10 @@ theorem registerRegelSicher_falsch :
     · intro l free
       rfl
     · intro i d hd
-      simp [E] at hd
+      change none = some d at hd
+      cases hd
   have hleer : nach.verlauf = [] := (hs.invarianten hvor).1 () rfl
-  simp [nach, zwischen, Zustand.frage, event, vor, boot] at hleer
+  simp only [nach, zwischen, Zustand.frage, Zustand.stelleFrage, event, vor, boot,
+    Zustand.start, List.nil_append, List.cons_ne_nil] at hleer
 
 end Gabbro.Core.Ast.LowLevel.Device
