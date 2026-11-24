@@ -69,7 +69,7 @@ theorem ExprTail.recordProjection
     have htype := congrArg Sigma.fst sameBase
     cases htype
 
-private theorem indexOptionType_injective (same : indexOptionType a = indexOptionType b) : a = b := by
+theorem indexOptionType_injective (same : indexOptionType a = indexOptionType b) : a = b := by
   have endpoint : (a : Int) - 1 = (b : Int) - 1 := by
     injection same with _ _ _ layout
     injection layout with payload _

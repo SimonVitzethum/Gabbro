@@ -93,6 +93,12 @@ private theorem variantLayout_injective {a b : List (Option (Ty .value))}
         cases head <;> cases other <;> first | rfl | exact congrArg some hvalue | cases htag
       rw [hhead, ih htags hvalues]
 
+theorem variantValueType_injective
+    (same : variantValueType name labels payloads = variantValueType name' labels' payloads') :
+    name = name' ∧ labels = labels' ∧ payloads = payloads' := by
+  injection same with hn hl ht hp
+  exact ⟨hn, identifierList_injective hl, variantLayout_injective ht hp⟩
+
 private theorem Local.label_mem_scope (ref : Local scope type)
     (member : label ∈ type.variantLabels) :
     label ∈ scope.flatMap (fun binding => binding.type.variantLabels) := by
