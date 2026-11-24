@@ -169,7 +169,8 @@ private theorem flushZul : flushE.ZulStart flushEnv flushStart := by
     · rename_i hi0
       subst i
       cases hi
-      exact ⟨by decide, flushHardware.kerne⟩
+      exact ⟨by simp only [flushE, memProgram, image, List.length_cons,
+        List.length_nil, Nat.zero_lt_succ], flushHardware.kerne⟩
     · cases hi
   · change List.Pairwise Strecke.getrennt [⟨0, 4096⟩, ⟨4096, 8192⟩]
     refine List.Pairwise.cons ?_ (List.Pairwise.cons ?_ List.Pairwise.nil)
@@ -234,11 +235,11 @@ private theorem flushHead0 : flushE.system.kopf flushS0 entryContext = some (.ne
   simp only [flushE, memProgram, memHead, flushS0status, flushS0pc, flushCode,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil,
     ↓reduceIte, Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide)]
+  rw [if_pos (by rfl)]
 
 private theorem flushEval0 :
     ((.newSpace 0 : MemInstruction).evaluate Plattform.x86_64.katalog.plattform.ziel
-      flushS0 entryContext).isSome = true := by decide
+      flushS0 entryContext).isSome = true  := by rfl
 
 private def flushF1 := ((.newSpace 0 : MemInstruction).evaluate
   Plattform.x86_64.katalog.plattform.ziel flushS0 entryContext).get flushEval0
@@ -260,11 +261,11 @@ private theorem flushHead1 : flushE.system.kopf flushS1 entryContext =
   simp only [flushE, memProgram, memHead, flushS1status, flushS1pc, flushCode,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil,
     ↓reduceIte, Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide)]
+  rw [if_pos (by rfl)]
 
 private theorem flushEval1 :
     ((.mapSpace 0 0 1 [.read] : MemInstruction).evaluate
-      Plattform.x86_64.katalog.plattform.ziel flushS1 entryContext).isSome = true := by decide
+      Plattform.x86_64.katalog.plattform.ziel flushS1 entryContext).isSome = true  := by rfl
 
 private def flushF2 := ((.mapSpace 0 0 1 [.read] : MemInstruction).evaluate
   Plattform.x86_64.katalog.plattform.ziel flushS1 entryContext).get flushEval1
@@ -285,11 +286,11 @@ private theorem flushHead2 : flushE.system.kopf flushS2 entryContext = some (.un
   simp only [flushE, memProgram, memHead, flushS2status, flushS2pc, flushCode,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil,
     ↓reduceIte, Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide)]
+  rw [if_pos (by rfl)]
 
 private theorem flushEval2 :
     ((.unmapSpace 0 0 1 : MemInstruction).evaluate
-      Plattform.x86_64.katalog.plattform.ziel flushS2 entryContext).isSome = true := by decide
+      Plattform.x86_64.katalog.plattform.ziel flushS2 entryContext).isSome = true  := by rfl
 
 private def flushF3 := ((.unmapSpace 0 0 1 : MemInstruction).evaluate
   Plattform.x86_64.katalog.plattform.ziel flushS2 entryContext).get flushEval2
@@ -310,11 +311,11 @@ private theorem flushHead3 : flushE.system.kopf flushS3 entryContext = some (.bi
   simp only [flushE, memProgram, memHead, flushS3status, flushS3pc, flushCode,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil,
     ↓reduceIte, Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide)]
+  rw [if_pos (by rfl)]
 
 private theorem flushEval3 :
     ((.bindToken flushName : MemInstruction).evaluate
-      Plattform.x86_64.katalog.plattform.ziel flushS3 entryContext).isSome = true := by decide
+      Plattform.x86_64.katalog.plattform.ziel flushS3 entryContext).isSome = true  := by rfl
 
 private def flushF4 := ((.bindToken flushName : MemInstruction).evaluate
   Plattform.x86_64.katalog.plattform.ziel flushS3 entryContext).get flushEval3
@@ -335,10 +336,10 @@ private theorem flushHead4 : flushE.system.kopf flushS4 entryContext = some flus
   simp only [flushE, memProgram, memHead, flushS4status, flushS4pc, flushCode,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil,
     ↓reduceIte, Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide)]
+  rw [if_pos (by rfl)]
 
 private theorem flushEval4 :
-    (flushOp.evaluate Plattform.x86_64.katalog.plattform.ziel flushS4 entryContext).isSome = true := by decide
+    (flushOp.evaluate Plattform.x86_64.katalog.plattform.ziel flushS4 entryContext).isSome = true  := by rfl
 
 private def flushF5 := (flushOp.evaluate
   Plattform.x86_64.katalog.plattform.ziel flushS4 entryContext).get flushEval4
