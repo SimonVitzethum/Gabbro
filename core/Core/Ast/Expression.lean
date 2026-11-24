@@ -236,11 +236,9 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   case trueLit => exact (ordinary.1 rfl).elim
   case falseLit => exact (ordinary.2 rfl).elim
   case _ =>
-    rename_i a ref vis ord
-    simp_all
-    refine ⟨ref, rfl, ?_⟩
-    subst_vars
-    rfl
+    rename_i ty ref vis ord
+    let type := ty
+    exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
 
 
 
