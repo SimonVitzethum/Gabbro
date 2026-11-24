@@ -24,10 +24,53 @@ public import Core.Ast.Semantik.Formbeweise
 
 namespace Gabbro.Core.Ast.Surface
 
+theorem RecordFieldInversion : RecordFieldInversionAussage := by
+  intro scope name labels types minimum input type base tree rest field allowed read
+  generalize htok : (dot :: .word field.val :: input) = toks at read
+  cases read with
+  | stop blocked =>
+      exfalso
+      exact blocked ⟨.projection, .word field.val :: input,
+        by simpa only [Infix.token] using htok.symm, allowed⟩
+  | binary op hle _ _ =>
+      have head : dot = op.token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .arith op :=
+        Infix.token_injective (by simpa only [Infix.token] using head.symm)
+      cases eq
+  | div hle _ _ _ =>
+      have head : dot = Infix.div.token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .div :=
+        Infix.token_injective (by simpa only [Infix.token] using head.symm)
+      cases eq
+  | compare op hle _ _ _ =>
+      have head : dot = (Infix.compare op).token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .compare op :=
+        Infix.token_injective (by simpa only [Infix.token] using head.symm)
+      cases eq
+  | logic op hle _ _ =>
+      have head : dot = (Infix.logic op).token := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .logic op :=
+        Infix.token_injective (by simpa only [Infix.token] using head.symm)
+      cases eq
+  | arrayIndex _ _ _ hle _ _ =>
+      have head : dot = openBracket := (List.cons.inj htok).1
+      have eq : (.projection : Infix) = .index :=
+        Infix.token_injective (by simpa only [Infix.token] using head.symm)
+      cases eq
+  | tupleField _ index' hle _ =>
+      have restEq : .word field.val :: input = .natural index'.val :: _ := (List.cons.inj htok).2
+      cases (List.cons.inj restEq).1
+  | recordField _ field' index written hle tail =>
+      have restEq : .word field.val :: input = .word field'.val :: _ := (List.cons.inj htok).2
+      have nameEq : field.val = field'.val := (List.cons.inj restEq).1
+      have fld : field = field' := Subtype.ext nameEq
+      subst field'
+      exact ⟨index, written, tail⟩
+
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   intro scope name labels types minimum input type field base tree rest allowed read
-  exact (ExprTail.consumes read).trans
-    ((List.suffix_cons (.word field) input).trans (List.suffix_cons dot (.word field :: input)))
+  obtain ⟨i, checked, tail⟩ := RecordFieldInversion (field := field) allowed read
+  exact ExprTail.consumes tail
 
 end Gabbro.Core.Ast.Surface
 
