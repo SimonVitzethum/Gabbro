@@ -9,6 +9,7 @@ public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
@@ -30,6 +31,7 @@ public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
+public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
@@ -39,6 +41,7 @@ public import Core.Verfeinerung.Formen.Erfuellbar
 public import Core.Verfeinerung.Abnahme.StotterMass
 public import Core.Verfeinerung.Abnahme.Flush
 public import Core.Verfeinerung.Abnahme.LockFree
+public import Core.Verfeinerung.Review.Befunde
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
@@ -92,6 +95,10 @@ public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.BuendelUnterZulStart
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
