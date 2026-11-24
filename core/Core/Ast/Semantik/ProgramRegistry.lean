@@ -26,18 +26,19 @@ theorem boundedWhile_realisiert (scope : Scope) (result : Option (Ty .value)) : 
   exact (boundedWhileForm scope result).realisiert (fun args => by
     change ((((((expr 0 args.bound).anhaengen (.einzel (.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)))).anhaengen (expr 0 args.condition)).anhaengen (.einzel (whileInstruction args.condition (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (.zurueckSprung ((expr 0 args.condition).code.length + (bracedBlock args.body).code.length + 1)))).code[(expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length]? = some (whileInstruction args.condition (bracedBlock args.body) args.overflow)
 
-simp only [Fragment.anhaengen, Fragment.einzel]
-have hlt1 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length < (((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]) ++ (bracedBlock args.body).code).length := by
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt1 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length < (((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]) ++ (bracedBlock args.body).code).length := by
       simp only [List.length_append, List.length_cons, List.length_nil]
       omega
-have hlt2 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length < ((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]).length := by
+    have hlt2 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length < ((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]).length := by
       simp only [List.length_append, List.length_cons, List.length_nil]
       omega
-rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
-rw [List.getElem?_append_right]
-· simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-· simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+    rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
+    rw [List.getElem?_append_right]
+    · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
+    · simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem boundedWhile_annahme (scope : Scope) (result : Option (Ty .value)) : (boundedWhileForm scope result).AnnahmeAussage := by
@@ -65,7 +66,7 @@ theorem boundedWhile_ideal (scope : Scope) (result : Option (Ty .value)) : (boun
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
   · intro args
     constructor
     · exact ((boundedWhileForm scope result).befehl args).bestimmt
@@ -141,7 +142,7 @@ theorem boundedWhile_erfuellbar : boundedWhileJoint := by
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
   intro g guard
   cases guard
 
@@ -184,7 +185,8 @@ theorem forRange_realisiert (scope : Scope) (result : Option (Ty .value)) : (for
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
+    ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem forRange_annahme (scope : Scope) (result : Option (Ty .value)) : (forRangeForm scope result).AnnahmeAussage := by
@@ -215,7 +217,7 @@ theorem forRange_ideal (scope : Scope) (result : Option (Ty .value)) : (forRange
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
   · intro args
     constructor
     · exact ((forRangeForm scope result).befehl args).bestimmt
@@ -289,7 +291,8 @@ theorem forRange_erfuellbar : forRangeJoint := by
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
+    ) platform a s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -432,6 +435,7 @@ theorem function_realisiert (scope : Scope) : (functionForm scope).RealisiertAus
   exact (functionForm scope).realisiert (fun args => by
     change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
     simp only [Fragment.anhaengen, Fragment.einzel, List.nil_append, List.getElem?_cons_zero]
+    ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem function_annahme (scope : Scope) : (functionForm scope).AnnahmeAussage := by
@@ -557,6 +561,7 @@ theorem function_erfuellbar : functionJoint := by
     (form.realisiert (fun args => by
     change ((Fragment.einzel (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
     simp only [Fragment.anhaengen, Fragment.einzel, List.nil_append, List.getElem?_cons_zero]
+    ) platform a s₀ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
@@ -593,7 +598,8 @@ theorem program_realisiert  : (programForm).RealisiertAussage := by
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
+    ) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem program_annahme  : (programForm).AnnahmeAussage := by
@@ -618,7 +624,7 @@ theorem program_ideal  : (programForm).IdealAussage := by
     rw [List.getElem?_append_right]
     · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+      omega
   · intro args
     constructor
     · exact ((programForm).befehl args).bestimmt
@@ -764,13 +770,14 @@ theorem program_erfuellbar : programJoint := by
       change (((unitBody args.unit.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)).code[(unitBody args.unit.2).code.length]? = some (.starte mainName)
       simp only [Fragment.anhaengen, Fragment.einzel]
       have hlt : (unitBody args.unit.2).code.length < ((unitBody args.unit.2).code ++ [.starte mainName]).length := by
-      simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+        simp only [List.length_append, List.length_cons, List.length_nil]
+        omega
       rw [List.getElem?_append_left hlt]
       rw [List.getElem?_append_right]
       · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
       · simp only [List.length_append, List.length_cons, List.length_nil]
-    omega
+        omega
+    ) platform a s₁ rfl rfl rfl rfl) ?_⟩
     intro g guard
     cases guard
   · refine ⟨a.unit, Ast.print (category := .unit) a.unit, s₁, Ast.parse_print _, ?_, ?_, ?_, ?_, ?_, ?_⟩
