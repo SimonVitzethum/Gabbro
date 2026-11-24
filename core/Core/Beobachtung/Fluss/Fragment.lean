@@ -50,11 +50,17 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
     obtain ⟨s, hs⟩ := ih
     have ht := ρ.zeit.takt t
     rw [hs] at ht
-    match ht with
-    | .schritt _ step =>
-      match step with
-      | .schritt _ => exact ⟨_, rfl⟩
-    | .wartet _ gleich _ =>
+    cases ht with
+    | schritt _ step =>
+      cases hn : ρ.zeit.zustand (t + 1) with
+      | none =>
+        rw [hn] at step
+        cases step
+      | some n =>
+        rw [hn] at step
+        cases step with
+        | schritt _ => exact ⟨n, hn⟩
+    | wartet _ gleich _ =>
       exact ⟨s, gleich⟩
 
 -- (shared silence computation lives in `fragment_kontext_schritt_still` below)
