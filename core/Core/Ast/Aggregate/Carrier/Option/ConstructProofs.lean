@@ -71,11 +71,15 @@ theorem optionInitializerPrint : OptionInitializerPrintAussage := by
   | absent =>
       exact OptionInitializerReads.absent
   | present operand fits =>
-      change OptionInitializerReads scope count
-        (indexSomeName.print.value :: printOpen.value ::
-          (operand.printTokens ++ [printClose.value] ++ rest)) (.present operand fits) rest
+      have hprint : (.present operand fits : OptionInitializer scope count).printPieces.map
+          PrintedToken.value ++ rest =
+        indexSomeName.print.value :: printOpen.value ::
+          (operand.printTokens ++ [printClose.value] ++ rest) := by
+        simp [OptionInitializer.printPieces, Expr.printTokens, List.append_assoc]
+      rw [hprint]
       apply OptionInitializerReads.present fits
-      change ExprReads scope 0 (operand.printTokens ++ [closeParen] ++ rest) operand (closeParen :: rest)
+      have hc : printClose.value = closeParen := by rfl
+      rw [hc]
       simpa only [List.append_assoc] using
         (Expr.printReads (tree := operand) (minimum := 0) (rest := closeParen :: rest) noOperatorAtClose)
 
@@ -91,9 +95,9 @@ private theorem wertAls_indexPresent {count : Nat} {lo hi : Int}
 theorem optionAbsent : OptionAbsentAussage := by
   intro scope count slot frame
   dsimp
-  simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
-    indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType,
-    indexSomeName, indexNoneName, List.map]
+  change (some (⟨indexOptionType count, Sum.inr (Sum.inl PUnit.unit)⟩ : Dynamisch)) =
+    some ⟨indexOptionType count, (Sum.inr (Sum.inl PUnit.unit) : Wert (indexOptionType count))⟩
+  rfl
 
 theorem optionPresent : OptionPresentAussage := by
   intro scope count lo hi slot operand fits frame value htemp
@@ -109,8 +113,8 @@ private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
         PrintedToken.value) := by
   dsimp [optionLetForm]
   refine ⟨(WrittenType.indexOption a.carrier a.count).printPieces.map PrintedToken.value ++
-      (assignment :: a.value.printPieces.map PrintedToken.value),
-    a.value.printPieces.map PrintedToken.value, ?_, ?_, ?_⟩
+      (assignment :: (a.value.printPieces.map PrintedToken.value ++ [semicolon])),
+    a.value.printPieces.map PrintedToken.value ++ [semicolon], ?_, ?_, ?_⟩
   · cases a.mutable <;>
       simp [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
         letKeyword, colon, Identifier.print, List.cons_append, List.append_assoc]
@@ -125,27 +129,28 @@ private theorem returnOption_prints (ctx : OptionContext) (a : OptionReturnArgs 
         PrintedToken.value) := by
   dsimp [optionReturnForm]
   refine ⟨a.value.printPieces.map PrintedToken.value ++ [semicolon], ?_, ?_⟩
-  · simp [Category.printPieces, Stmt.printPieces, returnKeyword, semicolon, List.cons_append]
+  · simp [Category.printPieces, Stmt.printPieces, returnName, keywordName, Identifier.print,
+      printSemicolon, returnKeyword, semicolon, List.cons_append]
   · exact optionInitializerPrint ctx.1 a.count a.value [semicolon]
 
 theorem optionLetDerivation : OptionLetDerivationAussage := by
   intro ctx nonemptyArgs
   rcases nonemptyArgs with ⟨a⟩
   refine ⟨?_, letOption_prints ctx, ?_⟩
-  · intro tokens prod
+  · intro b tokens prod
     rcases prod with ⟨input, rhs, hEq, typeRead, initRead⟩
     subst tokens
-    exact StmtReads.letOption a.mutable a.name a.ordinary a.carrier a.resolved typeRead initRead
+    exact StmtReads.letOption b.mutable b.name b.ordinary b.carrier b.resolved typeRead initRead
   · exact Surface.Rule.satisfiableOfPrint a (letOption_prints ctx a)
 
 theorem optionReturnDerivation : OptionReturnDerivationAussage := by
   intro ctx nonemptyArgs
   rcases nonemptyArgs with ⟨a⟩
   refine ⟨?_, returnOption_prints ctx, ?_⟩
-  · intro tokens prod
+  · intro b tokens prod
     rcases prod with ⟨input, hEq, initRead⟩
     subst tokens
-    exact StmtReads.retOption a.declared initRead
+    exact StmtReads.retOption b.declared initRead
   · exact Surface.Rule.satisfiableOfPrint a (returnOption_prints ctx a)
 
 private theorem letOption_amOrt (ctx : OptionContext) : (optionLetForm ctx).RegelAmOrt := by
