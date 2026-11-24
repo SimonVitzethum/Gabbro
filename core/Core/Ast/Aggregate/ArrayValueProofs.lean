@@ -125,11 +125,12 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
           simpa only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_nil,
             List.singleton_append, List.append_nil] using
             (.next (headRead [closeBracket] noOperatorAtCloseBracket)
-              (.close : ItemsRead scope closeBracket (closeBracket :: []) ExprItems.empty []))
+              (ItemsTail.close : ItemsTail scope closeBracket [closeBracket] ExprItems.empty []))
       | next second rest =>
           let tail := ExprItems.next second rest
-          simpa only [ExprItems.printPieces, ExprItems.printTail, List.map_append, List.map_cons,
-            List.map_nil, List.singleton_append, List.append_assoc, printComma,
+          simpa only [ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
+            List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
+            printComma,
             printPunctuation, PrintedToken.unquoted,
             (show (Token.punctuation ",".toList : Token) = comma by decide)] using
             (.next (headRead (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket]))
