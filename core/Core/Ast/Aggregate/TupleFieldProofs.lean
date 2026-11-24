@@ -26,7 +26,7 @@ Prove the pinned statements in this file.
 
 namespace Gabbro.Core.Ast.Surface
 
-open Gabbro.Core.Ast.Semantik (tupleType_inj_aux)
+open Gabbro.Core.Ast.Semantik
 
 theorem tupleFieldInvGen {scope first second types minimum input type}
     {tree : Expr scope type} {rest} (allowed : minimum ≤ Infix.projection.precedence) :
@@ -71,14 +71,16 @@ theorem tupleFieldInvGen {scope first second types minimum input type}
     | tupleField base' index' hle tail =>
         rename_i a b ts input'
         have hlists : a :: b :: ts = first :: second :: types :=
-          tupleType_inj_aux eqT
+          Gabbro.Core.Ast.Surface.tupleType_inj_aux eqT
         injection hlists with ha htail
         injection htail with hb hts
         subst a
         subst b
         subst ts
-        have numEq : .natural index'.val :: input = .natural n :: input' := (List.cons.inj htok).2
-        have hidx : index'.val = n := by injection (List.cons.inj numEq).1 with h; exact h
+        have numEq : .natural n :: input = .natural index'.val :: input' := (List.cons.inj htok).2
+        have hidx : index'.val = n := by
+          injection (List.cons.inj numEq).1 with h
+          exact h.symm
         have inputEq : input = input' := (List.cons.inj numEq).2
         subst input'
         exact ⟨index', hidx, tail⟩
@@ -87,11 +89,11 @@ theorem tupleFieldInvGen {scope first second types minimum input type}
         cases (List.cons.inj restEq).1
 
 theorem TupleFieldInversion : TupleFieldInversionAussage := by
-  intro scope first second types minimum input type base tree rest n allowed read
+  intro scope first second types minimum n input type base tree rest allowed read
   exact tupleFieldInvGen allowed _ base rfl n read
 
 theorem TupleFieldSuffix : TupleFieldSuffixAussage := by
-  intro scope first second types minimum input type base tree rest n allowed read
+  intro scope first second types minimum n input type base tree rest allowed read
   obtain ⟨i, hival, tail⟩ := tupleFieldInvGen allowed _ base rfl n read
   exact ExprTail.consumes tail
 
