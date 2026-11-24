@@ -127,14 +127,15 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
             (.next (headRead [closeBracket] noOperatorAtCloseBracket)
               (ItemsTail.close : ItemsTail scope closeBracket [closeBracket] ExprItems.empty []))
       | next second rest =>
-          let tail := ExprItems.next second rest
-          simpa [tail, Expr.printTokens, ExprItems.printPieces, ExprItems.printTail,
-            List.append_assoc, List.singleton_append, printComma, printPunctuation,
-            PrintedToken.unquoted,
-            (show (Token.punctuation ",".toList : Token) = comma by decide)] using
-            (.next (headRead (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket]))
-                noOperatorAtComma)
-              (.comma (Or.inr rfl) (itemsPrintRead tail)))
+          simp only [ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
+            List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
+            printComma, printPunctuation, PrintedToken.unquoted,
+            (show (Token.punctuation ",".toList : Token) = comma by decide)]
+          exact .next
+            (headRead (comma ::
+              ((ExprItems.next second rest).printPieces.map PrintedToken.value ++ [closeBracket]))
+              noOperatorAtComma)
+            (.comma (Or.inr rfl) (itemsPrintRead (ExprItems.next second rest)))
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args

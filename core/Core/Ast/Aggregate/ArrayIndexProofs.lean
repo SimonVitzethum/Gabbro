@@ -283,16 +283,20 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
       ·
-        let vv : Vector (Wert element) (count + 1) := values
+        let vv : Wert (.array element (count + 1)) := by
+          change Vector (Wert element) (count + 1)
+          exact values
+        have vvEq : (vv : Vector (Wert element) (count + 1)) = values := by rfl
         have wert : wertAls (.array element (count + 1))
-            (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
+            (Sigma.mk (.array element (count + 1)) vv) = some vv := by
           change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
             some (same ▸ vv) else none) = some vv
           simp
         have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) vv) := by
-          simpa [vv] using harr
+          rw [harr]
+          simp [vvEq]
         have leCount : offset.wert ≤ (count : Int) := by omega
-        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
+        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, vvEq, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
           indexPosition]
         rfl
