@@ -365,23 +365,25 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           mid (sw.auswerten mid) := by
         refine ⟨sw, retL, ?_, rfl⟩
         simpa only [sw, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
-          List.singleton_append, hpcMid, L, R] using
+          List.singleton_append, List.cons_append, hpcMid, L, R] using
           (lookupSeq (pre ++ L) sw (R ++ post) :
             ((pre ++ L) ++ sw :: (R ++ post))[(pre ++ L).length]? = some sw)
       by_cases htake : (left.wert env) = op.skips
       · refine ⟨sw.auswerten mid, .schritt walkL' stepSw, ?_, ?_, ?_, ?_, ?_⟩
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
-            alsBoolean, htake, if_pos rfl, if_true, List.length_append, List.length_cons,
+            alsBoolean, Option.bind_some, htake, if_pos rfl, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R]
           omega
-        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, htake, if_pos rfl, if_true, Expr.wert]
+        · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, htake,
+            if_pos rfl, if_true, Expr.wert]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
           simp only [sw, Befehl.auswerten]
           exact preserveL i hi
       · have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
-          simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, htake, if_false]
+          simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some, htake,
+            if_neg htake, if_false]
           rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
             Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
@@ -397,12 +399,18 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
             (sw.auswerten mid) out := by
           simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using walkR
         refine ⟨out, (laufTrans _ (.schritt walkL' stepSw) walkR'), ?_, ?_, ?_, ?_, ?_⟩
-        · simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.length_append,
-            List.length_cons, List.length_nil, Nat.add_zero, L, R] using pcR
+        · have hlen : (expr slot (Expr.logic op left right)).code.length =
+              (expr slot left).code.length + (0 + 1) + (expr slot right).code.length := by
+            simp only [expr, Fragment.anhaengen, Fragment.einzel, List.length_append,
+              List.length_cons, List.length_nil, Nat.add_zero, L, R]
+          rw [hlen]
+          omega
         · rw [tmpR]
           simp only [Expr.wert, htake, if_false]
-        · rw [lokR, lokL]
+        · simp only [sw, Befehl.auswerten, lokR, lokL]
         · exact retR
-        · exact preserveR
+        · intro i hi
+          simp only [sw, Befehl.auswerten]
+          exact (preserveR i hi).trans (preserveL i hi)
 
 end Gabbro.Core.Ast.Semantik
