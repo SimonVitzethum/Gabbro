@@ -15,6 +15,7 @@ public import Core.Ideal.Linearisierung
 public import Core.Ideal.Replay
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
+public import Core.Annahme
 meta import Core.Waechter.Check
 
 #check_core

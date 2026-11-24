@@ -39,9 +39,39 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.I.Schritt, 8264302221316684132),
   (`Gabbro.Core.Maschine.ImplSchritt, 11039588729123112511),
   (`Gabbro.Core.Maschine.Laeufe, 14862217329025593899),
-  (`Gabbro.Core.Maschine.I.Laeufe, 17628005016946070159)]
+  (`Gabbro.Core.Maschine.I.Laeufe, 17628005016946070159),
+  (`Gabbro.Core.Annahme.Akzeptiert, 0),
+  (`Gabbro.Core.Annahme.Lokal, 0),
+  (`Gabbro.Core.Annahme.AussenLokal, 0),
+  (`Gabbro.Core.Annahme.KlauselnWahr, 0),
+  (`Gabbro.Core.Annahme.WaechterHalten, 0),
+  (`Gabbro.Core.Annahme.GeschlossenWartend, 0),
+  (`Gabbro.Core.Annahme.PartielleOperation, 0),
+  (`Gabbro.Core.Annahme.waechterBedarf, 0)]
 
 private meta def acceptance : AcceptanceSpec := {
+  acceptance := #[
+    `Gabbro.Core.Annahme.RegelLokal,
+    `Gabbro.Core.Annahme.RegelAussen,
+    `Gabbro.Core.Annahme.AussenLokal,
+    `Gabbro.Core.Annahme.Lokal,
+    `Gabbro.Core.Annahme.stale_griff_ungueltig,
+    `Gabbro.Core.Annahme.fruehere_provenienz_verweigert,
+    `Gabbro.Core.Annahme.fruehere_ableitung_verweigert,
+    `Gabbro.Core.Annahme.KlauselTabelle,
+    `Gabbro.Core.Annahme.KlauselnWahr,
+    `Gabbro.Core.Annahme.PartielleOperation,
+    `Gabbro.Core.Annahme.Operanden,
+    `Gabbro.Core.Annahme.waechterBedarf,
+    `Gabbro.Core.Annahme.GuardVerwendung,
+    `Gabbro.Core.Annahme.InternBlockiert,
+    `Gabbro.Core.Annahme.GeschlossenWartend,
+    `Gabbro.Core.Annahme.WaechterHalten,
+    `Gabbro.Core.Annahme.Akzeptiert,
+    `Gabbro.Core.Annahme.akzeptiert_katalog],
+  syntaxModules := #[`Core.Ast],
+  idealModules := #[`Core.Maschine, `Core.Ideal],
+  catalogueModules := #[`Core.Katalog, `Core.Aussen],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[]
 private meta def wildcardRoots : Array Name := #[
