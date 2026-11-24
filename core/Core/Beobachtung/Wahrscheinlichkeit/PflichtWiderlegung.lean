@@ -32,7 +32,7 @@ theorem kostenErwartung_widerlegt
     (hb : Hebebuendel B S E h) : ¬ kostenErwartungAussage := by
   intro hall
   letI : MeasureTheory.IsProbabilityMeasure hb.mu := hb.istWMass
-  have hk := hall L Ort Wert Raum Lok Grund Bedingung Wahl Form inferInstance E B S h hb
+  have hk := hall L Ort Wert Raum Lok Grund Bedingung Wahl Form E B S h hb
     (fun _ => 2) 1 1 1 1 1 1
   have hwider : ¬ kostenPflicht B hb (fun _ => 2) 1 1 1 1 1 1 := by
     intro hpflicht
@@ -40,8 +40,9 @@ theorem kostenErwartung_widerlegt
       (fun _ => MeasurableSet.empty)
       (fun _ => Set.empty_subset _)
       (fun n => by simp only [measure_empty, zero_le])
-      (fun band => ⟨2, by simp only [Set.not_mem_empty], by norm_num⟩)
-    change MeasureTheory.lintegral hb.mu (fun _ => (2 : ENNReal)) ≤ 1 at hres
+      (fun band => ⟨2, by simp only [Set.mem_empty_iff_false, not_false_eq_true], by norm_num⟩)
+    change MeasureTheory.lintegral hb.mu (fun _ => (2 : ENNReal)) ≤ (1 : ENNReal) / (1 : ENNReal) at hres
+    norm_num at hres
     rw [lintegral_const, IsProbabilityMeasure.measure_univ, mul_one] at hres
     norm_num at hres
   exact hwider hk
