@@ -12,23 +12,6 @@ variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 variable {vor nach : Zustand L Ort Wert Raum Lok Grund} {spur : SchrittSpur Ort Wert}
 
-/-- The owner and handle rights of an outstanding question are available at arrival.
-    Answered questions and questions from a previous boot hold no such obligation. -/
-def OffeneFragenBefugt (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ∀ q ∈ s.fragen, s.epoche ≤ q.cut →
-    (∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance) →
-    (∃ c, c.nummer = q.context ∧ EigeneGriffe s c q.question) ∧
-    RegisterErlaubt s q.context q.question
-
-/-- A context preserves pending authority through its update, including for each new question
-    it issues. This is independent of the safety of the effects it commits in that same step. -/
-def RegelAntwortSicher (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (f : Form) : Prop :=
-  ∀ t c w vor zwischen nach plan spur,
-    E.maschine.system.kopf vor c = some f →
-    (E.maschine.system.regel f).impl c vor w [plan] zwischen →
-    FuehrtSchrittAus E.maschine.einrichtung t c vor zwischen plan spur nach →
-    OffeneFragenBefugt vor → OffeneFragenBefugt nach
-
 /-- Obligations at the unit's non-form boundaries. An arbitrary loader needs a safe start
     specification. Declared predicates may observe catalogue, interrupt or recovery state and
     therefore must be proved at those updates as well as at the execution of forms. -/

@@ -41,6 +41,18 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
+/-- The local value transfer leaves the question ledger and its authority unchanged. -/
+theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) :
+    Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
+  intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
+  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  exact befugt
+
+theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
+    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    RegelPflichten (p.sicherheitsEinheit platform) b :=
+  ⟨b.sicher p platform keine, b.antwortSicher p platform⟩
+
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
   refine @Expr.rec scope

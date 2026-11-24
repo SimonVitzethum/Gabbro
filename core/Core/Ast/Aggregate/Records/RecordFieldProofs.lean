@@ -225,7 +225,7 @@ theorem RecordFieldRegelSicher : RecordFieldRegelSicherAussage := by
   intro scope platform args
   exact (Quellform.erhaltung (recordFieldForm scope)
     (fun args => expr_keine_invarianten 0 ((Surface.recordField scope).tree args).2)
-    platform args).2.2.2
+    platform args).2.2.2.1
 
 theorem RecordFieldValue : RecordFieldValueAussage := by
   intro scope args frame record h

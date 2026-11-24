@@ -48,11 +48,11 @@ theorem taggedDecl_erhaltung : TaggedDeclErhaltungAussage := by
   let p := (taggedDeclForm scope).fragment args
   let b := (taggedDeclForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform (by rfl)⟩
 
 theorem taggedDecl_regelSicher : TaggedDeclRegelSicherAussage := by
   intro scope platform args
-  exact (taggedDecl_erhaltung scope platform args).2.2.2
+  exact (taggedDecl_erhaltung scope platform args).2.2.2.1
 
 theorem taggedDecl_elaboriert : TaggedDeclElaboriertAussage := by
   intro scope platform args

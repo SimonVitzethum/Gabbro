@@ -140,7 +140,7 @@ theorem TextTypeKernOrt : TextTypeKernOrtAussage := by
 theorem TextTypeRegelSicher : TextTypeRegelSicherAussage := by
   intro ctx platform args
   exact (Quellform.erhaltung (typeUseForm ctx textTypeUse)
-    (fun a => textTypeOhneInvarianten ctx a) platform args).2.2.2
+    (fun a => textTypeOhneInvarianten ctx a) platform args).2.2.2.1
 
 theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
   intro ctx platform args

@@ -149,7 +149,7 @@ theorem textLength_kernOrt : TextLengthKernOrtAussage := by
 theorem textLength_regelSicher : TextLengthRegelSicherAussage := by
   intro scope platform args
   exact (Quellform.erhaltung (textLengthForm scope) (fun a =>
-    expr_keine_invarianten 0 ((Surface.textLength scope).tree a).2) platform args).2.2.2
+    expr_keine_invarianten 0 ((Surface.textLength scope).tree a).2) platform args).2.2.2.1
 
 theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := by
   intro scope platform args
