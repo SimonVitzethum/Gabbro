@@ -56,7 +56,8 @@ theorem tupleValue_inversion : TupleValueInversionAussage := by
   case grouped inner =>
       have same := ExprReads.deterministic firstRead inner
       have bad : comma = closeParen := (List.cons.inj same.2).1
-      simp [comma, closeParen] at bad
+      simp only [comma, closeParen, Token.punctuation.injEq, String.reduceToList,
+        List.cons.injEq, Char.reduceEq, false_and] at bad
   case tupleValue fRead sRead =>
       rename_i firstType' firstExpr' secondInput' secondType' secondExpr' more' tailTypes' items' secondSub
       have same := ExprReads.deterministic firstRead fRead
