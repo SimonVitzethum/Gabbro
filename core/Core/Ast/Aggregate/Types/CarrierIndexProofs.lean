@@ -233,14 +233,15 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
     cases mem
   let argsVal : Surface.FunctionArgs scope :=
     ⟨fnName, fnOrdinary, [param], none, validNone, none, .braces .done, by
-      decide, by
+      change (paramName :: []).Nodup
+      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true], by
       intro h
       cases h⟩
   let args : {a : Surface.FunctionArgs scope // ∃ p ∈ a.parameters, indexTypeUse p.written} :=
     ⟨argsVal, by
       refine ⟨param, ?_, ?_⟩
       · change param ∈ [param]
-        exact List.mem_cons_self param []
+        exact List.mem_cons_self
       · change True
         trivial⟩
   let form := carrierTypeForm scope indexTypeUse
