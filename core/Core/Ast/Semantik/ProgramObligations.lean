@@ -47,10 +47,7 @@ theorem returnVoid_elaboriert (scope : Scope) (result : Option (Ty .value)) : (r
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem returnVoid_realisiert (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).RealisiertAussage := by
   intro platform args s running active live atPc
-  let form := returnVoidForm scope result
-  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, active, live, atPc]
-  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
+  exact (returnVoidForm scope result).realisiert (fun _ => rfl) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem returnVoid_annahme (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).AnnahmeAussage := by
@@ -125,13 +122,10 @@ theorem mutableLocal_elaboriert (scope : Scope) (result : Option (Ty .value)) : 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem mutableLocal_realisiert (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).RealisiertAussage := by
   intro platform args s running active live atPc
-  let form := mutableLocalForm scope result
-  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, active, live, atPc]
+  exact (mutableLocalForm scope result).realisiert (fun args => by
     change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code[(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-      Nat.sub_self, List.getElem?_cons_zero]
-  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
+      Nat.sub_self, List.getElem?_cons_zero]) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem mutableLocal_annahme (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).AnnahmeAussage := by
@@ -202,8 +196,7 @@ theorem mutableLocal_erfuellbar : mutableLocalJoint := by
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s,
     Ast.parse_print (form.produktion.tree a), rfl, .start,
     form.realisiert (fun args => by
-      change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
-        [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+      change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code[(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
       simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
         Nat.sub_self, List.getElem?_cons_zero])
       platform a s rfl rfl rfl rfl, ?_⟩
@@ -233,13 +226,10 @@ theorem directCall_elaboriert (scope : Scope) (result : Option (Ty .value)) : (d
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem directCall_realisiert (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).RealisiertAussage := by
   intro platform args s running active live atPc
-  let form := directCallForm scope result
-  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, active, live, atPc]
+  exact (directCallForm scope result).realisiert (fun args => by
     change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code[(argsCode 0 args.args).code.length]? = some (callInstruction args none)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-      Nat.sub_self, List.getElem?_cons_zero]
-  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
+      Nat.sub_self, List.getElem?_cons_zero]) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem directCall_annahme (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).AnnahmeAussage := by
@@ -319,13 +309,10 @@ theorem bindDirect_elaboriert (scope : Scope) (result : Option (Ty .value)) : (b
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem bindDirect_realisiert (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).RealisiertAussage := by
   intro platform args s running active live atPc
-  let form := bindDirectForm scope result
-  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, active, live, atPc]
+  exact (bindDirectForm scope result).realisiert (fun args => by
     change ((argsCode 0 args.call.args).anhaengen (.einzel (callInstruction args.call (some args.written.type)))).code[(argsCode 0 args.call.args).code.length]? = some (callInstruction args.call (some args.written.type))
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-      Nat.sub_self, List.getElem?_cons_zero]
-  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
+      Nat.sub_self, List.getElem?_cons_zero]) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem bindDirect_annahme (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).AnnahmeAussage := by
