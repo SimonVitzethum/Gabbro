@@ -220,9 +220,7 @@ def Expr.printPieces : Expr scope type → List PrintedToken
   | .recordField base field _ _ =>
     [printOpen] ++ base.printPieces ++ [printDot, field.print, printClose]
   | .variantValue _ label _ _ _ _ value =>
-    match value with
-    | .nullary false => [printOpen, label.print, printClose]
-    | _ => label.print :: value.printPieces
+    [printOpen, label.print] ++ value.printPieces ++ [printClose]
   | .textLiteral decoded => [PrintedToken.textLiteral decoded]
   | .textConcat left right =>
     [printOpen] ++ left.printPieces ++ [Arith.add.print] ++ right.printPieces ++ [printClose]
