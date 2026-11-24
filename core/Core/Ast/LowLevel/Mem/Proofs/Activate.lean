@@ -224,8 +224,21 @@ theorem activateJoint : ActivateJointAussage := by
       rfl
     · change 0x2000 % 4096 = 0
       rfl
+  have liveTable : (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 = true := by
+    simp only [MemRegion.live, s0, I.start, E, memProgram, lowStart, memBoot, Zustand.start,
+      entryContext, ↓reduceIte, List.isEmpty_cons, Bool.not_true, Bool.false_and,
+      List.all_cons, List.all_nil, Bool.true_and]
   have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
-    decide
+    unfold heldMemRegion
+    change (if (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
+        (s0.lokal entryContext).unreserved target.seitengranule extent then
+      some ⟨extent, [⟨0, 0⟩]⟩ else none) = some ⟨extent, [⟨0, 0⟩]⟩
+    rw [if_pos]
+    constructor
+    · exact liveTable
+    · unfold MemFrame.unreserved
+      change ([] : List Adressraum).all (fun _ => true) = true
+      rfl
   let frame0 : MemFrame :=
     { (s0.lokal entryContext) with
       result := some (.space (s0.lokal entryContext).spaces.length),
@@ -272,8 +285,13 @@ theorem activateJoint : ActivateJointAussage := by
     refine ⟨⟨hseiten, List.nodup_nil, ?_⟩, ?_, ?_⟩
     · intro entry hmem
       cases hmem
-    · simp only [MemFrame.covered, hsregions]
-      decide
+    · simp only [MemFrame.covered, hsregions, List.any_cons, List.any_nil, Bool.or_false]
+      have hl : (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s = true := by
+        change (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 = true
+        exact liveTable
+      rw [hl]
+      change decide (extent.von ≤ extent.von ∧ extent.von < extent.bis ∧ extent.bis ≤ extent.bis) = true
+      rfl
     · rfl
   have heval : (op.evaluate target s entryContext).isSome := by
     change ((MemInstruction.activateSpace 0).evaluate target s entryContext).isSome
