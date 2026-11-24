@@ -9,6 +9,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Tabelle
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Lauf
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Reserviert
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Erfuellbar
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Fuellung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
@@ -38,6 +39,7 @@ public import Core.Ast.LowLevel.Proofs.DeviceTransition
 public import Core.Ast.LowLevel.Proofs.DeviceLend
 public import Core.Ast.LowLevel.Proofs.DeviceDma
 public import Core.Ast.LowLevel.Proofs.DeviceSatisfiability
+public import Core.Ast.LowLevel.Exec.Proofs.ExecJumpLong
 public import Core.Ast.Inventory.All
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface

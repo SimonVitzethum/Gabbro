@@ -52,6 +52,14 @@ public import Core.Beobachtung.Fluss.Beschriftung.Skalar
 public import Core.Beobachtung.Fluss.Beschriftung.Sprung
 public import Core.Beobachtung.Fluss.Beschriftung.Aufgaben
 public import Core.Beobachtung.Fluss.Beschriftung.AufgabenBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleife
+public import Core.Beobachtung.Fluss.Beschriftung.Aggregat
+public import Core.Beobachtung.Fluss.Beschriftung.Variante
+public import Core.Beobachtung.Fluss.Beschriftung.Text
+public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
 public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
