@@ -112,6 +112,12 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
   have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
     intro s w h
     cases s <;> cases h
+  have not_text : ∀ (s : Bool) (w : Nat), keyword "string" ≠ .word (intSpelling s w) := by
+    intro s w same
+    cases s <;> cases same
+  have not_option : ∀ (s : Bool) (w : Nat), keyword "option" ≠ .word (intSpelling s w) := by
+    intro s w same
+    cases s <;> cases same
   have not_index : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "index".toList := by
     intro s w h
     cases s with
@@ -168,7 +174,10 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         injection hEq with hword htail; injection hword with hspell
         exact (closed _ htail).elim
     case index =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+      case text =>
+      exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
+    case indexOption =>
+      exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
     all_goals cases hEq
   · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
     cases rightDeriv
@@ -187,9 +196,12 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         obtain ⟨hhi, hrest⟩ := SignedReads.deterministic hiRead hiRead'
         cases hlo; cases hhi; exact ⟨rfl, hrest⟩
     case index =>
-      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+      case text =>
+      exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
+    case indexOption =>
+      exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
     all_goals cases hEq
-  · intro element _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
+  · intro _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
     cases other with
     | array otherCount otherBound otherElement otherBoundRead =>
       obtain ⟨rfl, suffix⟩ := ih _ _ _ otherElement (List.cons.inj equality).2
@@ -217,6 +229,8 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       simp only [List.cons.injEq, Token.natural.injEq, true_and] at equality
       obtain ⟨rfl, rfl⟩ := equality
       exact ⟨rfl, rfl⟩
+    | integer => exact (not_text _ _ (List.cons.inj equality).1).elim
+    | interval => exact (not_text _ _ (List.cons.inj equality).1).elim
     | _ => cases equality
   · intro count rest carrier resolved input' out rest' other equality
     cases other with
@@ -239,6 +253,8 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       cases Subtype.ext spelling
       cases Option.some.inj (resolved.symm.trans otherResolved)
       exact ⟨rfl, rfl⟩
+    | integer => exact (not_option _ _ (List.cons.inj equality).1).elim
+    | interval => exact (not_option _ _ (List.cons.inj equality).1).elim
     | _ => cases equality
   · intro rest input' out rest' other equality
     cases other with
@@ -317,14 +333,13 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     intro s w; rfl
   have hpIn : printIn.value = keyword "in" := by rfl
   have hpRange : printClosedRange.value = closedRange := by rfl
-  revert rest
   refine WrittenType.rec
     (motive_1 := fun tree => tree.valid scope →
       ∀ rest, (∀ more, rest ≠ keyword "in" :: more) →
         TypeReads scope (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
     (motive_2 := fun trees => trees.valid scope → ∀ rest,
       TypeItemsTail scope (trees.printTail.map PrintedToken.value ++ closeParen :: rest) trees rest)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ tree valid rest closed
   · intro _ rest _
     have hp : printBoolType.value = keyword "bool" := by rfl
     simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
