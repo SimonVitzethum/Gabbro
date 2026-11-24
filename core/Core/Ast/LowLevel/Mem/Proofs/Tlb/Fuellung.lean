@@ -44,7 +44,7 @@ theorem Adressraum.unmapFreiAusstehend (space : Adressraum) (sp base pages first
     ({ space with
         entries := space.entries.filter (fun (pg, _) => !decide (pageRange base pages pg)),
         generation := space.generation + 1,
-        ausstehend := ⟨sp, base, pages, space.generation + 1, first⟩ :: space.ausstehend }
+        ausstehend := ⟨sp, base, pages, space.generation + 1, first, false⟩ :: space.ausstehend }
       : Adressraum).FreiAusstehend := by
   intro entry hentry token' htmem
   have hentryOld : entry ∈ space.entries := (List.mem_filter.mp hentry).1
