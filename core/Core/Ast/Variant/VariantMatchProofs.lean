@@ -328,7 +328,8 @@ theorem variantMatch_inversion : Gabbro.Core.Ast.Surface.VariantMatchInversionAu
   cases read with
   | variantMatch valueRead armsRead =>
       injection htoks with hi
-      subst hi
+      subst input
       exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
+  | _ => simp at htoks
 
 end Gabbro.Core.Ast.Semantik
