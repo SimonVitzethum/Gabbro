@@ -88,21 +88,23 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     VariantArmsRead result scope allowed
       (arms.printPieces.map PrintedToken.value ++ closeBrace :: more) arms more := by
   refine @Gabbro.Core.Ast.VariantArms.rec result
+    (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun s a l p ar => VariantArmsRead result s a
       (ar.printPieces.map PrintedToken.value ++ closeBrace :: more) ar more)
-    ?_ ?_ ?_ ?_ scope allowed labels payloads arms
-  · intro s a
-    simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ scope allowed labels payloads arms
+  all_goals try trivial
+  · simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
     exact .done
-  · intro s a l p label caseName body rest ih
+  · intro label caseName body rest ih3 ih4
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
       (.nullary label caseName
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih)
-  · intro s a l p label binder ord body rest ih
+        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+  · intro label binder ord body rest ih3 ih4
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
       (.payload label binder ord body
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih)
-  · intro s l p body nonempty shape
+        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih4)
+  · intro body nonempty shape ih3
     simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
       (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more)))
 
