@@ -50,8 +50,8 @@ theorem trueLit_erfuellbar : trueLitJoint := by
   intro platform start
   let form := trueLitForm []
   let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
-  refine ⟨PUnit.unit, form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
-    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_⟩
+  refine form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
+    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_
   intro g guard
   cases guard
 
@@ -99,8 +99,8 @@ theorem falseLit_erfuellbar : falseLitJoint := by
   intro platform start
   let form := falseLitForm []
   let s := (Maschine.I.start (form.einheit platform PUnit.unit) start).2
-  refine ⟨PUnit.unit, form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
-    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_⟩
+  refine form.erfuellbar_aus_erreichbar platform start PUnit.unit s .start
+    (form.realisiert (fun _ => rfl) platform PUnit.unit s rfl rfl rfl) ?_
   intro g guard
   cases guard
 
