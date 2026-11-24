@@ -16,6 +16,7 @@ meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Registry
 meta import Core.Ast.LowLevel.Exec.Proofs.ExecKern
+meta import Core.Ast.LowLevel.Exec.Proofs.ExecJump
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision

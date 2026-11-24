@@ -44,6 +44,7 @@ theorem katalog_antwort_erfuellbar (p : Plattform) (bytes : List UInt8) :
     apply List.mem_append_right
     apply List.mem_cons_of_mem
     apply List.mem_append_left
+    apply List.mem_append_left
     apply List.mem_map_of_mem
     cases p <;> exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
   exact ⟨s, q, a, ⟨selected, reply⟩, ⟨a, selected, reply⟩, result⟩
