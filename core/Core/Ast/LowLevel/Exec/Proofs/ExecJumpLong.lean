@@ -426,7 +426,7 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     rw [hs2halted, hs2stapel, hs2spaces]
     try dsimp [jlSecondDecl]
     simp only [Bool.true_and, Bool.not_false, stackOk, spaceOk, List.length_cons,
-      List.length_nil, Nat.reduceLT, decide_true, if_true]
+      List.length_nil, Nat.zero_add, Nat.reduceLT, decide_true, if_true]
     simpa only [next, code, dest, hs2states, hs2stapel, hs2halted, hs2spaces]
   have hhead0 : E.system.kopf s0 entryContext = some (.declareState jlFirstDecl) := by
     change execHead (pre ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
