@@ -97,25 +97,25 @@ private def scalarName : Identifier :=
 private theorem integerValidNone (signed : Bool) : (WrittenType.integer signed 1 none).valid [] := by
   cases signed <;>
     simp only [WrittenType.valid, WrittenType.storage, Option.getD, pow_zero, pow_one,
-      Nat.reduceSub] <;> omega
+      Nat.reduceSub, Int.reduceSub, reduceCtorEq, ite_true, ite_false, Prod.fst, Prod.snd] <;> omega
 
 private theorem integerValidSome (signed : Bool) :
     (WrittenType.integer signed 1 (some (0, 0))).valid [] := by
   cases signed <;>
     simp only [WrittenType.valid, WrittenType.storage, Option.getD, pow_zero, pow_one,
-      Nat.reduceSub] <;> omega
+      Nat.reduceSub, Int.reduceSub, reduceCtorEq, ite_true, ite_false, Prod.fst, Prod.snd] <;> omega
 
 private theorem integerFitsNone (signed : Bool) :
     Fits (.int 0 0) (WrittenType.integer signed 1 none).type := by
   cases signed <;>
     simp only [Fits, WrittenType.type, WrittenType.storage, Option.getD, pow_zero, pow_one,
-      Nat.reduceSub] <;> omega
+      Nat.reduceSub, Int.reduceSub, reduceCtorEq, ite_true, ite_false, Prod.fst, Prod.snd] <;> omega
 
 private theorem integerFitsSome (signed : Bool) :
     Fits (.int 0 0) (WrittenType.integer signed 1 (some (0, 0))).type := by
   cases signed <;>
     simp only [Fits, WrittenType.type, WrittenType.storage, Option.getD, pow_zero, pow_one,
-      Nat.reduceSub] <;> omega
+      Nat.reduceSub, Int.reduceSub, reduceCtorEq, ite_true, ite_false, Prod.fst, Prod.snd] <;> omega
 
 private theorem boolTypeErfuellbarAm : BoolTypeErfuellbarAussage := by
   intro platform start
