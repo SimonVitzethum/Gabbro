@@ -434,7 +434,8 @@ theorem ifElse_print (args : IfArgs scope result) :
   refine ⟨args.condition.printTokens ++ args.yes.printPieces.map PrintedToken.value ++
       elseKeyword :: args.no.printPieces.map PrintedToken.value,
     args.yes.printPieces.map PrintedToken.value ++ elseKeyword :: args.no.printPieces.map PrintedToken.value,
-    args.no.printPieces.map PrintedToken.value, rfl, ?_, ?_, ?_⟩
+    args.no.printPieces.map PrintedToken.value, ?_, ?_, ?_, ?_⟩
+  · simpa only [Expr.printTokens, elseKeyword, String.reduceToList]
   · apply args.condition.printReads
     cases args.yes with
     | braces body =>
@@ -474,7 +475,8 @@ theorem braced_print (args : Statements result scope) :
   simp only [BracedBlock.printPieces, printOpenBrace, printCloseBrace, printPunctuation,
     PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
     List.cons_append, List.nil_append]
-  exact ⟨args.2.printItems.map PrintedToken.value, rfl, Block.printItems_reads args.2 []⟩
+  exact ⟨args.2.printItems.map PrintedToken.value ++ [closeBrace], rfl,
+    Block.printItems_reads args.2 []⟩
 
 -- Mirror BracedBlock.printReads by applying the new production and its child proofs.
 theorem braced_reads (scope : Scope) (result : Option (Ty .value)) (args : Statements result scope)
