@@ -119,7 +119,7 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
   constructor
   · intro ρ lauf t op args bedarf
     change False at bedarf
-    exact bedarf
+    exact False.elim bedarf
   · intro ρ lauf t h
     rcases h with ⟨C, nonempty, blocked⟩
     obtain ⟨c, hc⟩ := nonempty
@@ -129,7 +129,7 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, memKlauselnWahr _ code, memWaechterHalten _ code⟩
-  refine ⟨by simpa [Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
+  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
   · intro i
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
@@ -190,7 +190,7 @@ theorem activateJoint : ActivateJointAussage := by
     · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
   have hparse : MemParse text tree := (memDruck .activateSpace tree).2
   have hopElab : elaborateMem scope tree = some op := by
-    simp only [elaborateMem, tree, scope, MemScope.slotRaum, List.map_cons, List.map_nil,
+    simp only [elaborateMem, tree, scope, space, MemScope.slotRaum, List.map_cons, List.map_nil,
       spaceName_slot, Option.map_some, op]
   have hbezeichnet : BezeichnetMem k scope text (memUnit k op) .activateSpace := by
     refine ⟨tree, hparse, ?_⟩
@@ -272,13 +272,16 @@ theorem activateJoint : ActivateJointAussage := by
       cases hmem
     · simp only [MemFrame.covered, hsregions]
       decide
-    · intro entry hmem
-      cases hmem
+    · rfl
   have heval : (op.evaluate target s entryContext).isSome := by
     change ((MemInstruction.activateSpace 0).evaluate target s entryContext).isSome
     rw [Option.isSome_iff_exists]
     refine ⟨{ (s.lokal entryContext) with result := some .activated, active := some 0 }, ?_⟩
-    unfold MemInstruction.evaluate
+    change (do let space ← (s.lokal entryContext).spaces[0]?
+               if space.Aktivierbar target s entryContext then
+                 some { (s.lokal entryContext) with result := some .activated, active := some 0 }
+               else none) =
+      some { (s.lokal entryContext) with result := some .activated, active := some 0 }
     rw [hsspaces]
     dsimp
     rw [if_pos hAktiv]
