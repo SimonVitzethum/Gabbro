@@ -19,8 +19,8 @@ public import Core.Ast.Inventory.All
   * `entwurf`  - async/await/join/Executor, probability (M9P), persistence (M9),
                  predicates, contracts and declaration families: waits for a design.
 
-  Counts over the 546 inventory entries: 84 covered, 205 productions, 257 open
-  (117 sofort, 9 substrat, 1 pegel, 130 entwurf). The five L4 forms marked
+  Counts over the 546 inventory entries: 85 covered, 205 productions, 256 open
+  (116 sofort, 9 substrat, 1 pegel, 130 entwurf). The five L4 forms marked
   `skeleton` below have rejected constructors in `Core.Ast.LowLevel.Exec.Syntax`.
   No form here has a grammar or parser production in `grammatik/`; enabling a
   form adds its spelling, meaning and duties in separate modules.
@@ -42,7 +42,7 @@ structure OffeneForm where
   kategorie : OffenKategorie
   grund : String
 
-/-- 117 entries. -/
+/-- 116 entries. -/
 def offenSofort : List OffeneForm :=
   [
     ⟨"surface.SExpr.float", "Float", "Expr", .sofort, "A floating-point literal, retaining its spelling."⟩,
@@ -64,7 +64,6 @@ def offenSofort : List OffeneForm :=
     ⟨"surface.SAnw.lcall", "Lcall", "Stmt", .sofort, "Call a library translator in statement position."⟩,
     ⟨"surface.SAnw.elsif", "Elsif", "Stmt", .sofort, "One ordered else-if arm of a conditional."⟩,
     ⟨"surface.SAnw.each", "Each", "Stmt", .sofort, "`traverse b [of e] over KIND of S by MODE [decreases …] [touches …] [invariant p] { … }`: binder, `o"⟩,
-    ⟨"surface.SAnw.loop", "Loop", "Stmt", .sofort, "A forever loop with its written header and body."⟩,
     ⟨"surface.SAnw.waive", "Waive", "Stmt", .sofort, "An assertion-check block with a list of named checks."⟩,
     ⟨"surface.SAnw.trim", "Trim", "Stmt", .sofort, "Narrow a value with an explicit failure body."⟩,
     ⟨"surface.SAnw.locks", "Locks", "Stmt", .sofort, "Execute a block holding the written lock, optionally shared."⟩,
