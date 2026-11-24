@@ -393,7 +393,8 @@ theorem effectGroup_signature : EffectGroupSignatureAussage := by
       | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
       | _ => none), E⟩
   refine ⟨f, ?_, ?_, ?_⟩
-  · simpa [functionForm, functionInstruction, Befehl.auswerten, f, E, code]
+  · simp only [functionForm, functionInstruction, Befehl.auswerten, f, E, code]
+    rfl
   · simpa [f, E]
   · intro site hsite
     exact codeRufe_effects code.code E site hsite
