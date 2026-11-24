@@ -30,6 +30,8 @@ Prove the pinned statements in this file.
 - `TextLengthErfuellbarAmAussage`
 -/
 
+@[expose] public section
+
 namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text

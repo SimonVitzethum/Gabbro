@@ -27,6 +27,8 @@ Prove the pinned statements in this file.
 - `TextTypeErfuellbarAmAussage`
 -/
 
+@[expose] public section
+
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Waechter
