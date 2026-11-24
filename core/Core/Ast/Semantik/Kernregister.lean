@@ -161,6 +161,7 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
 -- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.
 theorem befehlSchema_program (constructor : Name) (registered : constructor ∈ programConstructors) :
     befehlSchema constructor = ⟨.core, programKernStatements constructor⟩ := by
+  unfold programConstructors at registered
   rcases registered with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [befehlSchema]
 
 def kern_bindeWert : RegistryEntry ``Befehl.bindeWert (befehlSchema ``Befehl.bindeWert) := by
