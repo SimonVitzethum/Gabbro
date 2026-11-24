@@ -3,6 +3,7 @@ public meta import Lean
 meta import Lean.Elab.Task
 meta import Core.Ast.Inventory.Entries.Arrays
 meta import Core.Ast.Inventory.Entries.Option
+meta import Core.Ast.Inventory.Entries.Records
 meta import Core.Ast.Inventory.Entries.WrittenTypeStatements
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.Closing
@@ -300,8 +301,8 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Expr.arrayIndex, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.tupleValue, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.tupleField, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Expr.recordValue, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Expr.recordField, `Gabbro.Core.Ast.Semantik.RecordFieldProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Expr.recordValue, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, some `Gabbro.Core.Ast.Semantik.recordValueEntry⟩,
+  ⟨`Gabbro.Core.Ast.Expr.recordField, `Gabbro.Core.Ast.Semantik.RecordFieldProofPacket, some `Gabbro.Core.Ast.Semantik.recordFieldEntry⟩,
   ⟨`Gabbro.Core.Ast.Expr.variantValue, `Gabbro.Core.Ast.Semantik.VariantValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.textLiteral, `Gabbro.Core.Ast.Semantik.TextLiteralProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.textConcat, `Gabbro.Core.Ast.Semantik.TextConcatProofPacket, none⟩,
@@ -310,12 +311,12 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Expr.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Expr.optionIsSome, `Gabbro.Core.Ast.Semantik.OptionTestProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Stmt.tupleBind, `Gabbro.Core.Ast.Semantik.TupleBindProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Stmt.assignField, `Gabbro.Core.Ast.Semantik.AssignFieldProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Stmt.letMutableValue, `Gabbro.Core.Ast.Semantik.MutableValueProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Stmt.assignField, `Gabbro.Core.Ast.Semantik.AssignFieldProofPacket, some `Gabbro.Core.Ast.Semantik.assignFieldEntry⟩,
+  ⟨`Gabbro.Core.Ast.Stmt.letMutableValue, `Gabbro.Core.Ast.Semantik.MutableValueProofPacket, some `Gabbro.Core.Ast.Semantik.mutableValueEntry⟩,
   ⟨`Gabbro.Core.Ast.Stmt.variantMatch, `Gabbro.Core.Ast.Semantik.VariantMatchProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Stmt.letOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Stmt.retOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Decl.record, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Decl.record, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket, some `Gabbro.Core.Ast.Semantik.recordDeclEntry⟩,
   ⟨`Gabbro.Core.Ast.Decl.tagged, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Decl.table, `Gabbro.Core.Ast.Semantik.TableProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Decl.effectGroup, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, none⟩,
@@ -323,11 +324,11 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesArray, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueTupel, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesTupelfeld, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueRecord, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesRecordFeld, `Gabbro.Core.Ast.Semantik.RecordFieldProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueRecord, `Gabbro.Core.Ast.Semantik.RecordValueProofPacket, some `Gabbro.Core.Ast.Semantik.buildRecordValueEntry⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesRecordFeld, `Gabbro.Core.Ast.Semantik.RecordFieldProofPacket, some `Gabbro.Core.Ast.Semantik.buildRecordFieldEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.bindeTupel, `Gabbro.Core.Ast.Semantik.TupleBindProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.setzeRecordFeld, `Gabbro.Core.Ast.Semantik.AssignFieldProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereRecord, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.setzeRecordFeld, `Gabbro.Core.Ast.Semantik.AssignFieldProofPacket, some `Gabbro.Core.Ast.Semantik.buildAssignFieldEntry⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereRecord, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket, some `Gabbro.Core.Ast.Semantik.buildRecordDeclEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueVariante, `Gabbro.Core.Ast.Semantik.VariantValueProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.waehleVariante, `Gabbro.Core.Ast.Semantik.VariantMatchProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereVariante, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket, none⟩,
