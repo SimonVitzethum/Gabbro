@@ -287,5 +287,3 @@ theorem zaehle_all_true (m : Nat → Bool) (a n : Nat) (hall : ∀ t, m (a + t) 
     rw [ih]
 
 end Gabbro.Core.Fortschritt
-
-end Gabbro.Core.Fortschritt
