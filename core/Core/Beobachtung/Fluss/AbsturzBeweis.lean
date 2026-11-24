@@ -145,7 +145,10 @@ private theorem wiederanlauf_beobachtungsgleich
     rw [wiederanlauf_keineAntwort s₁ w t p₁ c, wiederanlauf_keineAntwort s₂ w t p₂ c]
 
 theorem absturzNI : AbsturzNIAussage := by
-  intro p plattform h₁ h₂ ρ₁ ρ₂ vergleich predictor t w spur tick formw kopplung
+  unfold AbsturzNIAussage ProtokollwahlNI
+  intro p plattform
+  dsimp only
+  intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t w spur tick formw kopplung
   cases w with
   | kontext _ _ => cases formw
   | antwort _ => cases formw
