@@ -67,9 +67,7 @@ theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : Mu
 theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (mutableLocal scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    decide
+  have ordinaryName : ordinaryLocal name := by decide
   let a : MutableLocalArgs scope result := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
   exact Rule.satisfiableOfPrint a (mutableLocal_print a)
 
@@ -99,10 +97,7 @@ theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : Dire
 theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (directCall scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : directName name := by
-    change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    decide
+  have ordinaryName : directName name := by decide
   let a : DirectCallArgs scope result := ⟨name, ordinaryName, []⟩
   exact Rule.satisfiableOfPrint a (directCall_print a)
 
@@ -137,9 +132,7 @@ theorem bindDirect_reads {scope : Scope} {result : Option (Ty .value)} {a : Bind
 theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (bindDirect scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    decide
+  have ordinaryName : ordinaryLocal name := by decide
   have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
     constructor
     · change ['x'] ≠ ['m', 'u', 't']
@@ -147,10 +140,7 @@ theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
       cases h
     · exact ordinaryName
   let callName : Identifier := keywordName 'y' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have callOrdinary : directName callName := by
-    change (['y'] ≠ ['t', 'r', 'u', 'e'] ∧ ['y'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['y'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    decide
+  have callOrdinary : directName callName := by decide
   let a : BindDirectArgs scope result := ⟨name, ordinary, .bool, trivial, ⟨callName, callOrdinary, []⟩⟩
   exact Rule.satisfiableOfPrint a (bindDirect_print a)
 
@@ -229,9 +219,7 @@ theorem forRange_reads {scope : Scope} {result : Option (Ty .value)} {a : ForRan
 theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (forRange scope result).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    decide
+  have ordinary : ordinaryLocal name := by decide
   let a : ForRangeArgs scope result :=
     ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
   exact Rule.satisfiableOfPrint a (forRange_print a)
@@ -270,9 +258,7 @@ theorem constant_reads {scope : Scope} {a : ConstantArgs scope} {tokens : List T
 theorem constant_syntax_erfuellbar (scope : Scope) :
     (constant scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    decide
+  have ordinary : ordinaryLocal name := by decide
   let a : ConstantArgs scope := ⟨name, ordinary, .bool, trivial, .bool, Expr.trueLit, trivial, trivial⟩
   exact Rule.satisfiableOfPrint a (constant_print a)
 
@@ -311,10 +297,7 @@ theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List T
 theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by
-    change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    decide
+  have ordinary : directName name := by decide
   let a : FunctionArgs scope :=
     ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
   exact Rule.satisfiableOfPrint a (function_print a)
@@ -351,10 +334,7 @@ theorem program_reads {a : ProgramArgs} {tokens : List Token}
 theorem program_syntax_erfuellbar  :
     (program).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinary : directName name := by
-    change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    decide
+  have ordinary : directName name := by decide
   let first : Decl [] [] :=
     .function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
   let a : ProgramArgs := ⟨[], [], first, .done⟩
@@ -482,8 +462,7 @@ theorem StmtReads.boundedWhile_inversion
       cases callRead
       rename_i call args argsProof
       injection htok with hhead htail
-      injection hhead with hval
-      exact (call.ordinary.2 (by simpa [hval])).elim
+      exact (call.ordinary.2 (by injection hhead with hval; simpa [hval])).elim
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
@@ -498,9 +477,8 @@ theorem StmtReads.forRange_inversion
   generalize htok : (keyword "for" :: .word spelling :: keyword "in" :: input) = toks at read
   cases read with
   | forRange name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
-      injection htok with _ htail
-      injection htail with hspelling htail
-      injection htail with _ htail
+      simp only [List.cons.injEq, and_true] at htok
+      obtain ⟨hspelling, hinput⟩ := htok
       injection hspelling with hname
       subst input
       refine ⟨⟨name, ordinary, _, _, _, _, lo, hi, staticBounds, _, body⟩,
@@ -520,8 +498,6 @@ theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads 
       UnitReads a.middle rest ⟨a.after, a.rest⟩ := by
   cases a with
   | mk middle after first rest =>
-    cases read with
-    | step firstDecl nextRead =>
-        exact ⟨_, firstDecl, nextRead⟩
+    cases read with | step firstDecl nextRead => exact ⟨_, firstDecl, nextRead⟩
 
 end Gabbro.Core.Ast
