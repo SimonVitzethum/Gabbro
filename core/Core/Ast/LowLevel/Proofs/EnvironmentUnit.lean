@@ -110,4 +110,92 @@ def EnvironmentUnitAussage : Prop :=
     environmentUnitForm.ImplAussage ∧ environmentUnitForm.ErhaltungsAussage ∧
     EnvironmentUnitErfuellbarAussage
 
+theorem environmentUnit_elaboriert : environmentUnitForm.ElaboriertAussage := by
+  intro platform args allowed
+  exact elab_korrekt platform (environmentUnitForm.produktion.tree args) allowed
+
+theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
+  intro platform args
+  refine ⟨(environmentUnitForm.befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, environmentUnitForm.befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := (environmentUnitForm.befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
+
+theorem environmentUnit_ideal : environmentUnitForm.IdealAussage := by
+  refine ⟨environmentUnit_am_ort, ?_⟩
+  intro args
+  refine ⟨(environmentUnitForm.befehl args).bestimmt, ?_⟩
+  intro c s w plans u
+  exact Iff.rfl
+
+theorem environmentUnit_einheit : environmentUnitForm.EinheitAussage := by
+  intro platform args
+  exact ⟨rfl, (environmentUnitForm.befehl args).kommutation⟩
+
+theorem environmentUnit_impl : environmentUnitForm.ImplAussage :=
+  fun args c s w plans u => Iff.rfl
+
+theorem block_keine_invarianten {result : Option (Ty .value)} {before after : Scope}
+    (body : Block result before after) : (block body).klauseln.invariant = [] := by
+  induction body with
+  | done => rfl
+  | step first rest ih =>
+      simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+        stmt_keine_invarianten, ih]
+
+theorem bracedBlock_keine_invarianten {result : Option (Ty .value)} {before : Scope}
+    (body : BracedBlock result before) : (bracedBlock body).klauseln.invariant = [] := by
+  cases body with
+  | braces body =>
+      simp only [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
+        block_keine_invarianten]
+
+theorem functionCode_keine_invarianten {result : Option WrittenType} {scope : Scope}
+    (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
+    (functionCode result measure body).klauseln.invariant = [] := by
+  cases measure with
+  | none =>
+      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, bracedBlock_keine_invarianten]
+  | some m =>
+      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten,
+        bracedBlock_keine_invarianten]
+
+theorem decl_keine_invarianten {before after : Scope} (d : Decl before after) :
+    (decl d).klauseln.invariant = [] := by
+  cases d with
+  | constant name ordinary written valid value staticValue fits =>
+      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten]
+  | function name ordinary parameters result valid decreases body distinct returns =>
+      simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+        Quellklauseln.anhaengen, Quellklauseln.leer, functionCode_keine_invarianten]
+  | record exported name fields valid distinct => rfl
+  | tagged exported name first tail valid distinct => rfl
+  | environment name abi row => rfl
+
+theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBody before after) :
+    (unitBody body).klauseln.invariant = [] := by
+  induction body with
+  | done => rfl
+  | step first rest ih =>
+      simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
+        decl_keine_invarianten, ih]
+
+theorem environmentUnit_ohneInvarianten (args : EnvironmentArgs) :
+    (environmentUnitForm.fragment args).klauseln.invariant = [] := by
+  change (programm (EnvironmentArgs.unit args)).klauseln.invariant = []
+  simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+    Quellklauseln.anhaengen, Quellklauseln.leer, unitBody_keine_invarianten]
+
+theorem environmentUnit_erhaltung : environmentUnitForm.ErhaltungsAussage := by
+  intro platform args
+  let p := environmentUnitForm.fragment args
+  let b := environmentUnitForm.befehl args
+  exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
+    b.sicher p platform (environmentUnit_ohneInvarianten args)⟩
+
 end Gabbro.Core.Ast.Semantik
