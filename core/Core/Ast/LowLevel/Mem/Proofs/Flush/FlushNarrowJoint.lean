@@ -140,7 +140,8 @@ private def narrowPref : List MemInstruction :=
 
 private def narrowOp : MemInstruction := .flushSpace narrowName
 
-private def narrowCode : List MemInstruction := narrowPref ++ [narrowOp]
+private def narrowCode : List MemInstruction :=
+  [.newSpace 0, .mapSpace 0 0 1 mapRightsN, .protectSpace 0 0 1 narrowRightsN, .bindToken narrowName, narrowOp]
 
 private theorem narrowPrefEq : narrowPref ++ [narrowOp] = narrowCode := by rfl
 
@@ -401,11 +402,11 @@ private theorem narrowF5keinToken :
     a run with a wider cached cell would need a `tlbVerdraengen` step before `flushSpace` (THEOREM-MAP §219). -/
 def FlushNarrowJointAussage : Prop :=
   ∃ (k : Katalog) (scope : MemScope) (tree : MemTree .flushSpace) (op : MemInstruction)
-    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) (prefix : List MemInstruction)
+    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) («prefix» : List MemInstruction)
     (s : MemState) (next : MemFrame) (token : Zuruecknahme),
-    let E := memProgram k (prefix ++ [op])
+    let E := memProgram k («prefix» ++ [op])
     (∃ tables virt frames rights pages narrowed name,
-      prefix = [.newSpace tables, .mapSpace 0 virt frames rights,
+      «prefix» = [.newSpace tables, .mapSpace 0 virt frames rights,
         .protectSpace 0 virt pages narrowed, .bindToken name] ∧ op = .flushSpace name) ∧
     Hardware k env ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
     (scope.regionen.map Subtype.val).Nodup ∧ (scope.raeume.map Subtype.val).Nodup ∧
