@@ -226,7 +226,7 @@ theorem activateJoint : ActivateJointAussage := by
       rfl
   have liveTable : (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 = true := by
     simp only [MemRegion.live, s0, I.start, E, memProgram, lowStart, memBoot, Zustand.start,
-      entryContext, ↓reduceIte, List.isEmpty_cons, Bool.not_true, Bool.false_and,
+      entryContext, ↓reduceIte, start, List.isEmpty_cons, Bool.not_true, Bool.false_and,
       List.all_cons, List.all_nil, Bool.true_and]
   have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
     unfold heldMemRegion
@@ -285,7 +285,8 @@ theorem activateJoint : ActivateJointAussage := by
     refine ⟨⟨hseiten, List.nodup_nil, ?_⟩, ?_, ?_⟩
     · intro entry hmem
       cases hmem
-    · simp only [MemFrame.covered, hsregions, List.any_cons, List.any_nil, Bool.or_false]
+    · simp only [MemFrame.covered, hsregions, List.any_cons, List.any_nil, Bool.or_false,
+        Option.any_some]
       have hl : (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s = true := by
         change (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 = true
         exact liveTable
