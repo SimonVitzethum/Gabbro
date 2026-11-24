@@ -134,6 +134,18 @@ private theorem intSpelling_not_index : ∀ (s : Bool) (w : Nat), intSpelling s 
     have digit := Nat.isDigit_of_mem_toDigits (b := 10) (by decide) (by decide) member
     contradiction
 
+local macro "different_type_head" equal:ident : tactic =>
+  `(tactic|
+    (have head := (List.cons.inj $equal).1
+     simp only [keyword, String.reduceToList, Token.word.injEq, List.cons.injEq,
+       Char.reduceEq, false_and, reduceCtorEq] at head))
+
+local macro "different_integer_head" equal:ident : tactic =>
+  `(tactic|
+    (have head := Token.word.inj (List.cons.inj $equal).1
+     unfold intSpelling at head
+     split at head <;> cases head))
+
 private theorem textType_det
     (other : TypeReads scope input out rest')
     (equality : keyword "string" :: keyword "max" :: .natural capacity :: rest = input) :
@@ -145,7 +157,7 @@ private theorem textType_det
     exact ⟨rfl, rfl⟩
   | integer => exact (intSpelling_not_text _ _ (List.cons.inj equality).1).elim
   | interval => exact (intSpelling_not_text _ _ (List.cons.inj equality).1).elim
-  | _ => have head := (List.cons.inj equality).1; cases head
+  | _ => different_type_head equality
 
 private theorem carrierIndex_det
     (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
@@ -163,7 +175,7 @@ private theorem carrierIndex_det
     exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
   | interval =>
     exact (intSpelling_not_index _ _ (Token.word.inj (List.cons.inj equality).1).symm).elim
-  | _ => have head := (List.cons.inj equality).1; cases head
+  | _ => different_type_head equality
 
 private theorem carrierOption_det
     (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
@@ -179,7 +191,7 @@ private theorem carrierOption_det
     exact ⟨rfl, rfl⟩
   | integer => exact (intSpelling_not_option _ _ (List.cons.inj equality).1).elim
   | interval => exact (intSpelling_not_option _ _ (List.cons.inj equality).1).elim
-  | _ => have head := (List.cons.inj equality).1; cases head
+  | _ => different_type_head equality
 
 -- Mirror ExprReads.deterministic, dispatch on the width spelling and then on in.
 theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : TypeReads scope input b more) :
@@ -216,7 +228,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
     case interval valid' loRead' hiRead' =>
         injection hEq with hword htail; injection hword with hspell
         exact (not_bool _ _ hspell.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
+    all_goals first | different_type_head hEq | different_integer_head hEq
   · intro signed width rest valid closed input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -235,7 +247,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
+    all_goals first | different_type_head hEq | different_integer_head hEq
   · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
     cases rightDeriv
     case bool =>
@@ -258,7 +270,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       exact (intSpelling_not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (intSpelling_not_option _ _ (List.cons.inj hEq).1.symm).elim
-    all_goals have head := (List.cons.inj hEq).1; first | cases head | cases signed <;> cases head
+    all_goals first | different_type_head hEq | different_integer_head hEq
   · intro _ _ _ _ count bound elementRead boundRead ih input' out rest' other equality
     cases other with
     | array otherCount otherBound otherElement otherBoundRead =>
@@ -271,7 +283,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         omega
       cases counts
       exact ⟨rfl, (List.cons.inj more).2⟩
-    | _ => have head := (List.cons.inj equality).1; cases head
+    | _ => different_type_head equality
   · intro _ _ _ _ _ _ _ firstRead secondRead tailRead firstDet secondDet tailDet input' out rest' other equality
     cases other with
     | tuple otherFirst otherSecond otherTail =>
@@ -280,7 +292,7 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       obtain ⟨rfl, rfl⟩ := secondDet _ _ _ otherSecond rfl
       obtain ⟨rfl, rfl⟩ := tailDet _ _ _ otherTail rfl
       exact ⟨rfl, rfl⟩
-    | _ => have head := (List.cons.inj equality).1; cases head
+    | _ => different_type_head equality
   · intros
     exact textType_det (by assumption) (by assumption)
   · intros
@@ -294,16 +306,16 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
       have nameEq := Token.word.inj (List.cons.inj operands).1
       cases LowLevel.AddressSpace.name_injective (String.toList_injective nameEq)
       exact ⟨rfl, (List.cons.inj (List.cons.inj operands).2).2⟩
-    | integer => rename_i signed _ _ _; cases signed <;> cases (List.cons.inj equality).1
-    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases (List.cons.inj equality).1
-    | _ => cases (List.cons.inj equality).1
+    | integer => different_integer_head equality
+    | interval => different_integer_head equality
+    | _ => different_type_head equality
   · intro rest input' out rest' other equality
     cases other with
     | ownedRegion =>
       exact ⟨rfl, List.append_cancel_left (as := LowLevel.ownedRegionTokens) equality⟩
-    | integer => rename_i signed _ _ _; cases signed <;> cases (List.cons.inj equality).1
-    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases (List.cons.inj equality).1
-    | _ => cases (List.cons.inj equality).1
+    | integer => different_integer_head equality
+    | interval => different_integer_head equality
+    | _ => different_type_head equality
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
@@ -350,8 +362,8 @@ theorem TypeReads.consumes (read : TypeReads scope input a rest) : rest <:+ inpu
   · intros
     exact (((List.suffix_cons _ _).trans (List.suffix_cons _ _)).trans
       (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
-  · intros; exact List.suffix_append _ _
-  · intros; exact List.suffix_append _ _
+  · intro rest space; exact List.suffix_append space.tokens rest
+  · intro rest; exact List.suffix_append LowLevel.ownedRegionTokens rest
   · intros; exact List.suffix_cons _ _
   · intros
     rename_i headSuffix tailSuffix
