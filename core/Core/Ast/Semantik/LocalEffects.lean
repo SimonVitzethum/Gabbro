@@ -131,12 +131,14 @@ theorem branch_effect (frame : Rahmen) (bit : Bool)
   dsimp only
   by_cases h : bit = whenValue
   · have hs : some bit = some whenValue := congrArg some h
-    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_pos hs, if_true]
+    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_pos hs, if_pos h,
+      if_true]
     repeat' constructor <;> rfl
   · have hs : some bit ≠ some whenValue := by
       intro same
       exact h (Option.some.inj same)
-    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_neg hs, if_false]
+    simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_neg hs, if_neg h,
+      if_false]
     repeat' constructor <;> rfl
 
 -- Mirror Block.printItems_reads by following the scope extension through each statement.
