@@ -37,9 +37,12 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
       Rahmen.pass, Rahmen.setzeMass, Rahmen.ruf, Rahmen.rueckkehr, Rahmen.eintrittArgumente,
-      Rahmen.bindeRegion, Id.run] <;>
-    repeat split <;>
-    rfl
+      Rahmen.bindeRegion, Id.run]
+  all_goals
+    repeat
+      first
+      | rfl
+      | split
 
 private def ankuenftsRahmen (regions : List Katalog.Strecke) : Rahmen :=
   { Rahmen.start [] with
