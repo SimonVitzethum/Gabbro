@@ -31,6 +31,21 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Annahme Katalog Waechter
 open Gabbro.Core.Text
 
+private theorem optionToken_ne_bool : keyword "option" ≠ keyword "bool" := by decide
+
+private theorem optionToken_ne_string : keyword "option" ≠ keyword "string" := by decide
+
+private theorem optionToken_ne_index : keyword "option" ≠ keyword "index" := by decide
+
+private theorem optionToken_ne_intWord (signed : Bool) (width : Nat) :
+    keyword "option" ≠ .word (intSpelling signed width) := by
+  intro h
+  change .word "option".toList = .word (intSpelling signed width) at h
+  injection h with hl
+  cases signed
+  · exact (by decide : ('o' : Char) ≠ 'u') (List.cons.inj hl).1
+  · exact (by decide : ('o' : Char) ≠ 'i') (List.cons.inj hl).1
+
 private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) :
     (carrierTypeForm scope belongs).RegelAmOrt := by
   intro args
@@ -84,11 +99,36 @@ private theorem carrier_keine_invarianten (scope : Scope) (belongs : WrittenType
     List.append_nil, List.nil_append]
   exact codeInv a.result a.measure a.body
 
+private theorem carrier_signature (scope : Scope) (args : Surface.FunctionArgs scope) (frame : Rahmen) :
+    CarrierParameterEffect scope args frame := by
+  unfold CarrierParameterEffect
+  dsimp [functionForm, functionInstruction, Befehl.auswerten]
+  refine ⟨⟨args.name, frame.pc + 1, args.parameters.map (fun p => p.written.type),
+    writtenResult args.result, scope.length, args.measure.isSome,
+    (functionCode args.result args.measure args.body).code.filterMap fun
+      | .rufe target callArgs bind => some ⟨target, callArgs, bind⟩
+      | _ => none⟩, ?_, rfl, rfl⟩
+  rfl
+
 theorem carrierIndexOptionInversion : CarrierIndexOptionInversionAussage := by
   intro scope input written rest read
+  generalize htok : keyword "option" :: input = toks at read
   cases read with
+  | bool => exact (optionToken_ne_bool (List.cons.inj htok).1).elim
+  | integer valid closed =>
+      rename_i signed width
+      exact (optionToken_ne_intWord signed width (List.cons.inj htok).1).elim
+  | interval valid ls rs =>
+      rename_i signed width input' lo hi more
+      exact (optionToken_ne_intWord signed width (List.cons.inj htok).1).elim
+  | array count bound elemRead boundRead =>
+      cases (List.cons.inj htok).1
+  | tuple firstRead secondRead tailRead =>
+      cases (List.cons.inj htok).1
+  | text => exact (optionToken_ne_string (List.cons.inj htok).1).elim
+  | index carrier resolved => exact (optionToken_ne_index (List.cons.inj htok).1).elim
   | indexOption carrier resolved =>
-      exact ⟨carrier, _, rfl, resolved, rfl⟩
+      exact ⟨carrier, _, (List.cons.inj htok).2, resolved, rfl⟩
 
 theorem carrierIndexOptionDerivation : CarrierIndexOptionDerivationAussage := by
   intro scope carrier count rest resolved
@@ -163,8 +203,7 @@ theorem carrierIndexOptionErhaltung : CarrierIndexOptionErhaltungAussage := by
 
 theorem carrierIndexOptionSignature : CarrierIndexOptionSignatureAussage := by
   intro scope args frame h
-  dsimp [CarrierParameterEffect, functionForm, functionInstruction, Befehl.auswerten]
-  refine ⟨?_, rfl, rfl, rfl⟩
+  exact carrier_signature scope args frame
 
 theorem carrierIndexOptionRegelSicher : CarrierIndexOptionRegelSicherAussage := by
   intro scope platform args
@@ -184,11 +223,8 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
   let param : Parameter scope := ⟨pname, .indexOption carrier 1, resolved, pOrdinary⟩
   let fname : Identifier := keywordName 'f' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have fOrdinary : directName fname := by
-    change (['f'] ≠ ['t', 'r', 'u', 'e'] ∧ ['f'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-      ['f'] ∉ ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+    dsimp [directName, ordinaryLocal, ordinaryAtomWord, fname]
+    decide
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem
@@ -211,7 +247,6 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
   · exact form.realisiert (carrier_am_ort scope _) platform witness s rfl rfl rfl rfl
   · intro g guard
     cases guard
-  · dsimp [CarrierParameterEffect, functionForm, functionInstruction, Befehl.auswerten]
-    refine ⟨?_, rfl, rfl, rfl⟩
+  · exact carrier_signature scope args (s.lokal eintritt)
 
 end Gabbro.Core.Ast.Semantik
