@@ -84,7 +84,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
           printPunctuation, PrintedToken.unquoted, keywordName, String.reduceToList,
           List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
           List.append_assoc] using
-          ihYes (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
+          ihYes (elseKeyword :: openBrace :: noBody.printItems.map PrintedToken.value ++ closeBrace :: rest))
         (ihNo rest)
   · intros
     rename_i rest
