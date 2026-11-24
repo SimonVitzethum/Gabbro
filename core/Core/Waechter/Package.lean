@@ -83,17 +83,39 @@ public meta def packageErrors (sources : Array Source) : Array String × NameSet
       errors := errors.push s!"unreachable module {source.moduleName} in {source.path}"
   return (errors, reached)
 
+/-- At the exported level Lean can read just the interface of a known foreign module. Supplying
+    the artifact list avoids its opportunistic loading of all three `.olean` parts.
+    Keep the IR files so the compiled name index and compiled import checks use the same data. -/
+private meta def foreignInterfaces (env : Environment) (sources : Array Source) : IO (NameMap ImportArtifacts) := do
+  let privateImports := NameSet.ofList <| (sources.flatMap (·.header.imports)).toList.filterMap fun imp =>
+    if imp.importAll then some imp.module else none
+  let mut artifacts := {}
+  for (mod, data) in env.header.modules.zip env.header.moduleData do
+    if isCoreModule mod.module || mod.importAll || privateImports.contains mod.module ||
+        !mod.hasData || !data.isModule then continue
+    let olean ← findOLean mod.module
+    let irSig := olean.withExtension "ir.sig"
+    let ir := if ← irSig.pathExists then #[irSig, olean.withExtension "ir"] else #[]
+    artifacts := artifacts.insert mod.module (.ofArrays #[#[olean], ir])
+  return artifacts
+
 /-- An audit view of Core's compiled modules. Importing each one with its private data exposes hidden bodies
     and auxiliaries. External libraries stay at their ordinary interfaces. -/
-public meta def auditEnvironment (sources : Array Source) : IO Environment := do
+public meta def auditEnvironment (imported : Environment) (sources : Array Source) : IO Environment := do
   let imports := sources.filterMap fun source =>
     if source.moduleName == `Core then none
     else some ({ module := source.moduleName, importAll := true } : Import)
-  withImporting do
-    let (_, state) ← (importModulesCore imports (globalLevel := .exported)).run
+  let load (artifacts : NameMap ImportArtifacts) := withImporting do
+    let (_, state) ← (importModulesCore imports (globalLevel := .exported) (arts := artifacts)).run
     -- The command only queries the private audit view. The original environment retains its public view.
     finalizeImport state imports {} (leakEnv := false) (loadExts := false)
       (level := .exported) (isModule := false)
+  try
+    load (← foreignInterfaces imported sources)
+  catch _ =>
+    -- A private Core path may upgrade a foreign import to `import all`. In that
+    -- case Lean rejects the incomplete artifacts and the full import is required.
+    load {}
 
 /-- Checks the direct imports serialized by each Core module. Allowed libraries manage their internal
     import graph. In particular, Mathlib's ImportGraph dependency uses Lake's own modules. -/

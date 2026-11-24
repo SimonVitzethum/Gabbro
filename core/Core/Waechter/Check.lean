@@ -148,7 +148,7 @@ elab "#check_core" : command => do
   let (hygiene, reached) := packageErrors sources
   -- An orphan need not have any compiled artifact. Check the reached modules without it.
   let reachableSources := sources.filter (reached.contains ·.moduleName)
-  let env ← auditEnvironment reachableSources
+  let env ← auditEnvironment imported reachableSources
   let scanned := scans.flatMap (·.get)
   let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
