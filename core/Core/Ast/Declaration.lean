@@ -195,8 +195,8 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
       have h2 := h1.trans exprRead.consumes
       have h3 := h2.trans (List.suffix_cons assignment _)
       have h4 := h3.trans typeRead.consumes
-      exact (h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
-  | function _ _ _ _ _ _ _ _ _ paramsRead resultRead measureRead blockRead =>
+      exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | function _ _ _ _ parameters _ _ _ _ paramsRead resultRead measureRead blockRead =>
       have h1 := blockRead.consumes
       have h2 := h1.trans (measureConsumes (functionScope before parameters) measureRead)
       have h3 := h2.trans (resultConsumes resultRead)
@@ -234,17 +234,19 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
             ⟨before, .function name ordinary parameters result valid measure (BracedBlock.braces items) distinct returns⟩ rest :=
           .function (afterParams := afterParams) (afterResult := afterResult) (afterMeasure := afterMeasure)
             name ordinary result valid parameters measure (BracedBlock.braces items) distinct returns
-            (ParamsRead.printReads parameters)
+            (by
+              simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append] using
+                (ParamsRead.printReads (ps := parameters) (rest := afterParams)))
             (by
               cases result with
               | none =>
                   refine ResultReads.absent ?_
                   intro more h
-                  simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                    printOpenBrace, printDecreases] at h
+                  simp [afterParams, afterResult, resultPieces, measurePieces, BracedBlock.printPieces,
+                    arrow, keyword, printOpenBrace, printDecreases] at h
               | some written =>
                   refine ResultReads.typed ?_
-                  exact WrittenType.printReads written (valid written (by simp)) (by
+                  exact WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
                     intro more h
                     simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                       printOpenBrace, printDecreases] at h))
@@ -253,11 +255,11 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
               | none =>
                   refine MeasureReads.absent ?_
                   intro more h
-                  simp [afterMeasure, BracedBlock.printPieces, arrow, keyword,
+                  simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                     printOpenBrace, printDecreases] at h
               | some m =>
-                  refine MeasureReads.present ?_
-                  exact Expr.printReads m.expression (by
+                  refine MeasureReads.present m ?_
+                  exact Expr.printReads (rest := afterMeasure) m.expression (by
                     simpa [afterMeasure, BracedBlock.printPieces, List.map_append] using
                       (noOperatorAtOpenBrace (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
             ((BracedBlock.braces items).printReads rest)
