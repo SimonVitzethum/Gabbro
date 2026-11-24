@@ -80,9 +80,10 @@ theorem StmtReads.let_header
   | letBinding name ordinary read tail =>
       injection hs with h1 h2
       injection h2 with hname hmore
-      subst hname
+      cases hname
+      cases hmore
       exact ⟨name, ordinary, _, _, _, rfl, read, tail⟩
-  | _ => exfalso; cases hs
+  | _ => exfalso; simp_all
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
   cases read
