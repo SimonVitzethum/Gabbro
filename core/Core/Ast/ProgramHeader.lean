@@ -96,7 +96,8 @@ def printOnExceeded : PrintedToken :=
     exact .inl (.inl ⟨by decide, by decide⟩), by
     intro c member
     simp at member
-    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide⟩
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      first | exact .inl (.inr rfl) | exact .inl (.inl ⟨by decide, by decide⟩)⟩
 
 def intSpelling (signed : Bool) (width : Nat) : List Char :=
   (if signed then 'i' else 'u') :: (toString width).toList
@@ -200,11 +201,11 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
         simpa [Nat.ofDigitChars_ten_toDigits] using hv'
       exact ⟨rfl, hv⟩
   refine (TypeReads.rec
-    (motive := fun input tree rest _deriv => ∀ (input' : List Token) (b : WrittenType) (more : List Token),
-      TypeReads input' b more → input = input' → tree = b ∧ rest = more)
+    (motive := fun input tree rest _deriv => ∀ (input' : List Token) (b' : WrittenType) (more' : List Token),
+      TypeReads input' b' more' → input = input' → tree = b' ∧ rest = more')
     ?_ ?_ ?_ left) input b more right rfl
-  · intro input' b more right hEq
-    cases right with
+  · intro rest input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | bool => exact ⟨rfl, rfl⟩
     | integer valid' closed' =>
         injection hEq with hword htail
@@ -214,8 +215,8 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
         injection hEq with hword htail
         injection hword with hspell
         exact (not_bool _ _ hspell.symm).elim
-  · intro valid closed input' b more right hEq
-    cases right with
+  · intro signed width rest valid closed input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | bool =>
         injection hEq with hword htail
         injection hword with hspell
@@ -224,16 +225,15 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
         injection hEq with hword htail
         injection hword with hspell
         obtain ⟨hs, hw⟩ := spelling_inj hspell
-        subst s'
-        subst w'
+        cases hs
+        cases hw
         exact ⟨rfl, htail⟩
     | interval valid' loRead' hiRead' =>
         injection hEq with hword htail
         injection hword with hspell
-        have bad := closed' _ htail.symm
-        exact bad.elim
-  · intro valid loRead hiRead input' b more right hEq
-    cases right with
+        exact (closed' _ htail.symm).elim
+  · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | bool =>
         injection hEq with hword htail
         injection hword with hspell
@@ -247,15 +247,15 @@ theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeRea
         injection hword with hspell
         injection htail with htailIn
         obtain ⟨hs, hw⟩ := spelling_inj hspell
-        subst s'
-        subst w'
+        cases hs
+        cases hw
         cases htailIn
         obtain ⟨hlo, hmore⟩ := SignedReads.deterministic loRead loRead'
         injection hmore with hmoreIn
         cases hmoreIn
         obtain ⟨hhi, hrest⟩ := SignedReads.deterministic hiRead hiRead'
-        subst lo'
-        subst hi'
+        cases hlo
+        cases hhi
         exact ⟨rfl, hrest⟩
 
 -- Mirror ExprReads.consumes for the signed interval endpoints.
@@ -265,15 +265,19 @@ theorem TypeReads.consumes (read : TypeReads input a rest) : rest <:+ input := b
     cases r with
     | positive => exact List.suffix_cons _ _
     | negative => exact (List.suffix_cons _ _).trans (List.suffix_cons _ _)
-  cases read with
-  | bool => exact List.suffix_cons _ _
-  | integer valid closed => exact List.suffix_cons _ _
-  | interval valid loRead hiRead =>
-      have hiS : rest <:+ _ := signed_suffix hiRead
-      have loS : _ <:+ _ := signed_suffix loRead
-      have moreS : _ <:+ _ := (List.suffix_cons closedRange _).trans loS
-      exact ((hiS.trans moreS).trans (List.suffix_cons (keyword "in") _)).trans
-        (List.suffix_cons (Token.word (intSpelling signed width)) _)
+  refine TypeReads.rec
+    (motive := fun input tree rest _deriv => rest <:+ input)
+    ?_ ?_ ?_ read
+  · intro rest
+    exact List.suffix_cons _ _
+  · intro signed width rest valid closed
+    exact List.suffix_cons _ _
+  · intro signed width lo hi input more rest valid loRead hiRead
+    have hiS : rest <:+ more := signed_suffix hiRead
+    have loS : closedRange :: more <:+ input := signed_suffix loRead
+    have moreS : more <:+ input := (List.suffix_cons closedRange more).trans loS
+    exact ((hiS.trans moreS).trans (List.suffix_cons (keyword "in") input)).trans
+      (List.suffix_cons (Token.word (intSpelling signed width)) (keyword "in" :: input))
 
 -- Mirror Expr.printReads with the range suffix discriminator.
 theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
@@ -287,29 +291,29 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
     · simp only [if_pos hneg, List.map_cons, List.map_nil]
       rw [Arith.print_value]
       change SignedReads (minus :: .natural number.natAbs :: tail) number tail
-      have hnum : number = -(number.natAbs : Int) := by
+      have hnum : -(number.natAbs : Int) = number := by
         have hnat : (number.natAbs : Int) = -number := Int.ofNat_natAbs_of_nonpos (Int.le_of_lt hneg)
         omega
-      rw [hnum]
-      exact SignedReads.negative
+      exact hnum ▸ (SignedReads.negative (n := number.natAbs) (rest := tail))
     · simp only [if_neg hneg, List.map_cons, List.map_nil]
       change SignedReads (.natural number.natAbs :: tail) number tail
-      have hnum : number = (number.natAbs : Int) := Int.eq_natAbs_of_nonneg (by omega)
-      rw [hnum]
-      exact SignedReads.positive
+      have hnum : (number.natAbs : Int) = number := (Int.eq_natAbs_of_nonneg (by omega)).symm
+      exact hnum ▸ (SignedReads.positive (n := number.natAbs) (rest := tail))
   cases tree with
   | bool =>
-      simpa [WrittenType.printPieces, printBoolType, printProgramWord, keywordName, Identifier.print] using
-        (TypeReads.bool (rest := rest))
-  | integer signed width none =>
-      simpa [WrittenType.printPieces, intTypeName, intSpelling, Identifier.print] using
-        (TypeReads.integer valid closed)
-  | integer signed width (some (lo, hi)) =>
-      have loRead := signed_printReads lo (closedRange :: (signedPieces hi).map PrintedToken.value ++ rest)
-      have hiRead := signed_printReads hi rest
-      simpa [WrittenType.printPieces, intTypeName, intSpelling, Identifier.print, printIn, printClosedRange,
-        keywordName, printProgramWord, List.map_append, List.append_assoc] using
-        (TypeReads.interval valid loRead hiRead)
+      have hp : printBoolType.value = keyword "bool" := by rfl
+      simpa [WrittenType.printPieces, hp] using (TypeReads.bool (rest := rest))
+  | integer signed width interval =>
+      cases interval with
+      | none =>
+          simpa [WrittenType.printPieces, intTypeName, intSpelling, Identifier.print] using
+            (TypeReads.integer (signed := signed) (width := width) valid closed)
+      | some bounds =>
+          have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest)
+          have hiRead := signed_printReads bounds.2 rest
+          simpa [WrittenType.printPieces, intTypeName, intSpelling, Identifier.print, printIn, printClosedRange,
+            keywordName, printProgramWord, List.map_append, List.append_assoc] using
+            (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
 
 -- Mirror BlockItems.deterministic, applying TypeReads.deterministic to each parameter.
 theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : ParamsRead input b more) :
@@ -329,12 +333,12 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     (motive_2 := fun input params rest _deriv => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
       ParamsTail input' b more → input = input' → params = b ∧ rest = more)
     ?_ ?_ ?_ ?_ left) input b more right rfl
-  · intro rest right hEq
-    cases right with
+  · intro rest input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | empty => exact ⟨rfl, rfl⟩
     | first p t tail => cases hEq
-  · intro p inputL moreL rest ps tRead tailRead tailIH right hEq
-    cases right with
+  · intro inputL moreL psL restL p tRead tailRead tailIH input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | first p' tRead' tailRead' =>
         injection hEq with hword hin
         injection hword with hnv
@@ -343,16 +347,16 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
         obtain ⟨sameWritten, sameMore⟩ := TypeReads.deterministic tRead tRead'
         cases sameMore
         have hp : p = p' := param_eq p p' hnv.symm sameWritten
-        subst p'
-        obtain ⟨eqps, eqrest⟩ := tailIH inputL ps' more tailRead' rfl
-        subst ps'
+        cases hp
+        obtain ⟨eqps, eqrest⟩ := tailIH moreL ps' more' tailRead' rfl
+        cases eqps
         exact ⟨rfl, eqrest⟩
-  · intro rest right hEq
-    cases right with
+  · intro rest input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | close => exact ⟨rfl, rfl⟩
     | comma pr => cases hEq
-  · intro inputL ps rest pr prIH right hEq
-    cases right with
+  · intro inputL psL restL pr prIH input' b' more' rightDeriv hEq
+    cases rightDeriv with
     | comma pr' =>
         injection hEq with hin
         cases hin
@@ -366,11 +370,11 @@ theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input :
     ?_ ?_ ?_ ?_ read
   · intro rest
     exact List.suffix_cons _ _
-  · intro p inputL moreL rest ps tRead tailRead tailIH
+  · intro inputL moreL psL restL p tRead tailRead tailIH
     exact tailIH.trans (TypeReads.consumes tRead)
   · intro rest
     exact List.suffix_cons _ _
-  · intro inputL ps rest pr prIH
+  · intro inputL psL restL pr prIH
     exact prIH.trans (List.suffix_cons comma inputL)
 
 -- Mirror Block.printItems_reads with commas between the ordered parameters.
@@ -394,12 +398,12 @@ theorem ParamsRead.printReads (ps : List Parameter) :
       | nil =>
           simp [commaSeparated]
           apply ParamsRead.first
-          · exact p.written.printReads p.valid (by intro more h; cases h)
+          · exact p.written.printReads p.valid (by simp [commaSeparated, printClose, printComma, keyword])
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
           apply ParamsRead.first
-          · exact p.written.printReads p.valid (by intro more h; cases h)
+          · exact p.written.printReads p.valid (by simp [commaSeparated, printClose, printComma, keyword])
           · exact ParamsTail.comma ih
 
 -- Mirror BlockItems.deterministic and apply ExprReads.deterministic at each argument.
@@ -411,24 +415,24 @@ theorem ArgsRead.deterministic (left : ArgsRead scope input a rest) (right : Arg
     (motive_2 := fun input args rest _deriv => ∀ (b : List (TypedExpr scope)) (more : List Token),
       ArgsTail scope input b more → args = b ∧ rest = more)
     ?_ ?_ ?_ ?_ left) b more right
-  · intro rest b more right
-    cases right with
+  · intro rest b' more' rightDeriv
+    cases rightDeriv with
     | empty => exact ⟨rfl, rfl⟩
     | first e tail => cases e with | atom a _ => cases a
-  · intro e moreL es rest tailRead tailIH b more right
-    cases right with
-    | first e' tailRead' =>
-        obtain ⟨same, rfl⟩ := ExprReads.deterministic e e'
+  · intro inputL typeL exprL restL esL restL2 eProof tailProof tailIH b' more' rightDeriv
+    cases rightDeriv with
+    | first eProof' tailProof' =>
+        obtain ⟨same, rfl⟩ := ExprReads.deterministic eProof eProof'
         cases same
-        obtain ⟨eq, rfl⟩ := tailIH es' more tailRead'
+        obtain ⟨eq, rfl⟩ := tailIH es' more' tailProof'
         cases eq
         exact ⟨rfl, rfl⟩
-  · intro rest b more right
-    cases right with
+  · intro rest b' more' rightDeriv
+    cases rightDeriv with
     | close => exact ⟨rfl, rfl⟩
     | comma pr => cases pr
-  · intro inputL es rest pr prIH b more right
-    cases right with
+  · intro inputL esL restL pr prIH b' more' rightDeriv
+    cases rightDeriv with
     | comma pr' => exact prIH es' more' pr'
 
 -- Mirror BlockItems.consumes and compose expression suffixes.
@@ -439,11 +443,11 @@ theorem ArgsRead.consumes (read : ArgsRead scope input args rest) : rest <:+ inp
     ?_ ?_ ?_ ?_ read
   · intro rest
     exact List.suffix_cons _ _
-  · intro e moreL es rest tailRead tailIH
-    exact tailIH.trans (ExprReads.consumes e)
+  · intro inputL typeL exprL restL esL restL2 eProof tailProof tailIH
+    exact tailIH.trans (ExprReads.consumes eProof)
   · intro rest
     exact List.suffix_cons _ _
-  · intro inputL es rest pr prIH
+  · intro inputL esL restL pr prIH
     exact prIH.trans (List.suffix_cons comma inputL)
 
 -- Mirror StmtReads.assign_inversion for the written name and parenthesized argument suffix.
@@ -516,8 +520,10 @@ theorem DirectCall.printReads (call : DirectCall scope) :
         | cons e es =>
             rw [comma_cons]
             apply ArgsRead.first
-            · exact exp.2.printReads (by intro h; exact noComma _ h)
+            · apply Expr.printReads
+              apply noComma
             · exact ArgsTail.comma ih
-  simpa [DirectCall.printPieces, List.map_append, List.append_assoc] using (CallReads.applied call argsRead)
+  simpa [DirectCall.printPieces, Identifier.print, printOpen, printClose, printPunctuation,
+    List.map_append, List.append_assoc] using (CallReads.applied call argsRead)
 
 end Gabbro.Core.Ast
