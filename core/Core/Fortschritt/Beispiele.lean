@@ -82,11 +82,11 @@ def s0 : AussenStart := ⟨0, fun _ => some 0, [], fun _ => none, sicht0 0 []⟩
 
 def z1 : Zustand Unit Unit Unit Unit Bool Unit := (I.start (E_w dispatch1) s0).2
 
-theorem z1_dispatch0 : (z1.kerne 0).laeuft = some A := rfl
+theorem z1_dispatch0 : (z1.kerne Nat.zero).laeuft = some A := rfl
 
 theorem z1_live : ∀ c, z1.status c = .laeuft := fun _ => rfl
 
-theorem z1_dispatchN (n : Nat) : (z1.kerne (n + 1)).laeuft = none := rfl
+theorem z1_dispatchN (n : Nat) : (z1.kerne (Nat.succ n)).laeuft = none := rfl
 
 def Z1 : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => z1
@@ -185,9 +185,9 @@ theorem pos_starvationfrei : StarvationFrei (E := E_w dispatch1) ρ1 η1 := by
     have herl : I.Erledigt η1 A a := Or.inl ⟨(), ⟨[], []⟩, rfl⟩
     exact ((hopen.2 a (Nat.le_refl _)).2.2 herl).elim
   | succ n =>
-    have hnone : dispatch1 (n + 1) = none := rfl
-    rw [hnone] at hdis
-    cases hdis
+    have hnone : (z1.kerne (Nat.succ n)).laeuft = none := rfl
+    rw [hnone] at hdisp
+    cases hdisp
 
 /-- The stepping run is lock-free for every form: each cut steps, and steps never stop. -/
 theorem pos_lockfrei : LockFrei (E := E_w dispatch1) (fun _ => True) η1 := by
@@ -320,13 +320,13 @@ theorem zABρ_status : ∀ t, (ZABρ t).status = zAB0.status := by
   | zero => rfl
   | succ t ih => exact ih
 
-theorem zAB0_dispatch0 : (zAB0.kerne 0).laeuft = some A := rfl
+theorem zAB0_dispatch0 : (zAB0.kerne Nat.zero).laeuft = some A := rfl
 
-theorem zAB0_dispatch1 : (zAB0.kerne 1).laeuft = some B := rfl
+theorem zAB0_dispatch1 : (zAB0.kerne (Nat.succ Nat.zero)).laeuft = some B := rfl
 
 theorem zAB0_live : ∀ c, zAB0.status c = .laeuft := fun _ => rfl
 
-theorem zAB0_dispatchN (m : Nat) : (zAB0.kerne (m + 2)).laeuft = none := rfl
+theorem zAB0_dispatchN (m : Nat) : (zAB0.kerne (Nat.succ (Nat.succ m))).laeuft = none := rfl
 
 def spurAB (t : Nat) : Option (SchrittWahl Unit × SchrittSpur Unit Unit) :=
   if t % 2 = 0 then some posLabel else none
@@ -514,10 +514,10 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
               ⟨1, hw2_opp1 h1, by rw [ηAB_zustand, zAB_kerne]; exact zAB0_dispatch1, hlive⟩
               ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t B (ZAB t))⟩)))
       | succ m =>
-        have hnone : (zAB0.kerne (m + 2)).laeuft = none := rfl
+        have hnone : (zAB0.kerne (Nat.succ (Nat.succ m))).laeuft = none := rfl
         rw [hnone] at hdispk
         cases hdispk
-  · intro a hactive
+    · intro a hactive
     by_cases ha : a % 2 = 0
     · exact ⟨a, Nat.le_refl _, Or.inr ⟨A, (), (), ⟨[], []⟩, trivial, rfl, spurAB_eq ha⟩⟩
     · have h1 : (a + 1) % 2 = 0 := by omega
