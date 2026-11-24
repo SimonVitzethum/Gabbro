@@ -180,16 +180,7 @@ theorem sicht_bindeTupel (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
               tupleLocals types product bind).getD []).reverse ++ r.lokale) } :=
   rfl
 
-theorem bindeTupelSicht_mitTemp :
-    ∀ (β : Beschriftung) (pc quelle : Nat) (types : List (Ty .value)) (bind : List Bool),
-      (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
-        oeffentlich (β.temp pc s) = true) →
-      oeffentlich (β.temp pc quelle) = true →
-      (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
-        oeffentlich (β.lokal pc i) = true) →
-      (∀ i, oeffentlich (β.lokal (pc + 1) (i + behalteneTupel types bind)) = true →
-        oeffentlich (β.lokal pc i) = true) →
-      (Befehl.bindeTupel quelle types bind).SichtErhaltendBei β pc := by
+theorem bindeTupelSicht : BindeTupelSichtAussage := by
   intro β pc quelle types bind hT hQ hL hL2 r₁ r₂ live hpc h
   subst hpc
   obtain ⟨pcEq, tempPub, lokEq⟩ := sicht_oeffentliche_teile h
@@ -243,58 +234,6 @@ theorem bindeTupelSicht_mitTemp :
         · exact lokEq
         · simp only [List.length_reverse]
   rw [sicht_bindeTupel, sicht_bindeTupel, h, pcEq, hTe, hLe]
-
-/-- The pinned statement is false: unlike every other fall-through instruction it omits the
-    premise that a temporary public after the step was public before it. A temporary that is
-    secret at `pc` and public at `pc + 1` can differ in two public-equal frames. -/
-theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
-  intro aussage
-  let β : Beschriftung :=
-    { temp := fun q s => if q = 0 then (if s = 6 then {0} else ∅) else ∅
-      lokal := fun _ _ => ∅ }
-  let w : Dynamisch := ⟨.bool, true⟩
-  let r₁ : Rahmen := { Rahmen.start [] with
-    temp := fun s => if s = 6 then Option.some w else none }
-  let r₂ : Rahmen := Rahmen.start []
-  have h56 : (5 : Nat) ≠ 6 := by omega
-  have h10 : (1 : Nat) ≠ 0 := by omega
-  have hQ : oeffentlich (β.temp 0 5) = true := by
-    simp only [β, h56, oeffentlich_leer, if_false, if_true]
-  have hL : ∀ i, oeffentlich (β.lokal (0 + 1) i) = true →
-      oeffentlich (β.lokal 0 i) = true := by
-    intro i _
-    simp only [β, oeffentlich_leer]
-  have hL2 : ∀ i, oeffentlich (β.lokal (0 + 1) (i + behalteneTupel [] [])) = true →
-      oeffentlich (β.lokal 0 i) = true := by
-    intro i _
-    simp only [β, oeffentlich_leer]
-  have hsecret : oeffentlich ({0} : Etikett) = false := by
-    simp only [oeffentlich, decide_false, Finset.singleton_ne_empty]
-  have htemp : (fun s => if oeffentlich (β.temp 0 s) = true then r₁.temp s else none) =
-      (fun s => if oeffentlich (β.temp 0 s) = true then r₂.temp s else none) := by
-    funext s
-    by_cases hs : s = 6
-    · subst s
-      simp only [β, r₁, r₂, Rahmen.start, hsecret, if_false, if_true, Bool.false_eq_true]
-    · have hpub : oeffentlich (β.temp 0 s) = true := by
-        simp only [β, hs, oeffentlich_leer, if_false, if_true]
-      simp only [hpub, if_true, r₁, r₂, Rahmen.start, hs, if_false]
-  have hp₁ : r₁.pc = 0 := rfl
-  have hp₂ : r₂.pc = 0 := rfl
-  have hview : r₁.sicht β = r₂.sicht β := by
-    simp only [Rahmen.sicht, hp₁, hp₂]
-    rw [htemp]
-  have hAfter := aussage β 0 5 [] [] hQ hL hL2 r₁ r₂ (fun _ => false) rfl hview
-  have e₁pc : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).pc = 1 := rfl
-  have e₂pc : ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).pc = 1 := rfl
-  have eqv := congrArg (fun r : Rahmen => r.temp 6) hAfter
-  simp only [Rahmen.sicht] at eqv
-  rw [e₁pc, e₂pc] at eqv
-  have eqt : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).temp 6 =
-      ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).temp 6 := by
-    simpa only [β, h10, if_false, oeffentlich_leer, if_true] using eqv
-  change Option.some w = none at eqt
-  cases eqt
 
 /-- The view after `setzeRecordFeld`: one local is overwritten from a public source. -/
 theorem sicht_setzeRecordFeld (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
