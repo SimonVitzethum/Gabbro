@@ -214,30 +214,29 @@ instance : Encodable WrittenTypes :=
 
 /-! ## RegionInitializer -/
 
-def regionInitializerCode (i : RegionInitializer) : Nat :=
-  Encodable.encode <| match i with
-    | .address => Option.none
-    | .view written _ => Option.some (Encodable.encode written)
-
 noncomputable def viewRegion (written : WrittenType) : Option RegionInitializer := by
   classical
-  if h : written.valid [] then Option.some (.view written h) else Option.none
+  exact if h : written.valid [] then Option.some (.view written h) else Option.none
 
-noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer := do
-  let o : Option Nat ← Encodable.decode n
-  match o with
-  | Option.none => Option.some .address
-  | Option.some w => do
-      let written : WrittenType ← Encodable.decode w
+def regionInitializerCode (i : RegionInitializer) : Nat :=
+  match i with
+  | .address => 0
+  | .view written _ => Encodable.encode written + 1
+
+noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer :=
+  match n with
+  | 0 => Option.some .address
+  | k + 1 => do
+      let written : WrittenType ← Encodable.decode k
       viewRegion written
 
 instance : Encodable RegionInitializer :=
   Encodable.ofLeftInjection regionInitializerCode regionInitializerDecode (by
     intro i
     cases i with
-    | address => simp [regionInitializerCode, regionInitializerDecode, Encodable.encodek]
+    | address => rfl
     | view written valid =>
         classical
-        simp [regionInitializerCode, regionInitializerDecode, Encodable.encodek, valid])
+        simp [regionInitializerCode, regionInitializerDecode, Encodable.encodek, viewRegion, valid])
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
