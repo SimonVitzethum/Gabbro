@@ -325,6 +325,7 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
           refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨h₀, rest, hown, hq, ?_⟩⟩, ?_, ?_, ?_⟩
           · cases hs : s.sperren l with
             | mk o qq =>
+              simp only [hs] at hown hq ⊢
               exact nimmt_am_kopf hown hq
         · calc ([] : List Nat).length = 0 := rfl
             _ ≤ i + 1 + 1 := Nat.zero_le _
