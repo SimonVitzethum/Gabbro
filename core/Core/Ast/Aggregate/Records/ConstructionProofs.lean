@@ -28,43 +28,47 @@ open Gabbro.Core.Text
 
 theorem recordValue_inversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
+  generalize hw : Token.word ref.name.val = w at read
   cases read with
-  | lit => contradiction
-  | grouped inner => contradiction
-  | trueLit => contradiction
-  | falseLit => contradiction
-  | variable => contradiction
-  | negativeLit => contradiction
-  | neg => contradiction
-  | not => contradiction
-  | arrayValue => contradiction
-  | tupleValue => contradiction
+  | lit => simp_all
+  | grouped inner => simp_all
+  | trueLit => simp_all
+  | falseLit => simp_all
+  | variable => simp_all
+  | negativeLit => simp_all
+  | neg => simp_all
+  | not => simp_all
+  | arrayValue => simp_all
+  | tupleValue => simp_all
   | recordValue ref' args fields fits labelRead =>
+      have hnval : ref'.name.val = ref.name.val := by
+        injection hw with h
+        exact h.symm
       refine ⟨⟨_, _, ref', _, _, args, fields, fits⟩, ?_, labelRead, ?_⟩
-      · apply Subtype.ext
-        simp_all
+      · exact Subtype.ext hnval
       · rfl
-  | variantValue => contradiction
+  | variantValue ref' label index written ordinary available payload payloadRead =>
+      cases payloadRead <;> simp_all
 
-private theorem labeledItems_consumes (scope : Scope) (labels types : List Identifier) :
-    ∀ (items : LabeledItems scope labels types),
+private theorem labeledItems_consumes (scope : Scope) :
+    ∀ (labels : List Identifier) (types : List (Ty .value)) (items : LabeledItems scope labels types),
       (∀ {input rest}, LabeledItemsRead scope input items rest → rest <:+ input) ∧
       (∀ {input rest}, LabeledItemsTail scope input items rest → rest <:+ input)
-  | .empty => ⟨
+  | _, _, .empty => ⟨
       (by intro input rest read; cases read; exact List.suffix_cons _ _),
       (by intro input rest read; cases read; exact List.suffix_cons _ _)⟩
-  | .next name value tail => ⟨
+  | _, _, .next name value tail => ⟨
       (by
         intro input rest read
         cases read with
         | next n valueRead tailRead =>
-            exact ((labeledItems_consumes scope labels types tail).2 tailRead).trans
+            exact ((labeledItems_consumes scope _ _ tail).2 tailRead).trans
               (List.suffix_cons colon (List.suffix_cons (.word n.val) (ExprReads.consumes valueRead)))),
       (by
         intro input rest read
         cases read with
         | comma label value' remaining itemRead =>
-            exact ((labeledItems_consumes scope labels types tail).1 itemRead).trans
+            exact ((labeledItems_consumes scope _ _ tail).1 itemRead).trans
               (List.suffix_cons comma _))⟩
 
 theorem recordValue_suffix : RecordValueSuffixAussage := by
@@ -103,7 +107,7 @@ private theorem recordValue_print (scope : Scope) (args : RecordValueArgs scope)
     (recordValue scope).production args
       (((Category.expression scope).printPieces ((recordValue scope).tree args)).map PrintedToken.value) := by
   refine ⟨args.args.printPieces.map PrintedToken.value ++ [closeParen], ?_, ?_⟩
-  · rfl
+  · simp [Category.printPieces, Expr.printPieces]
   · exact labeledItems_print_reads scope _ _ args.args
 
 theorem recordValue_derivation : RecordValueDerivationAussage := by
@@ -206,7 +210,7 @@ theorem recordValue_erfuellbar : RecordValueErfuellbarAmAussage := by
       distinct := by simp }
   let fields : RecordArguments [] [] [] [] :=
     ⟨rfl, by simp, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i)⟩
-  let args : RecordValueArgs scope :=
+  let args : Surface.RecordValueArgs scope :=
     ⟨[], [], ref, [], [], .empty, fields, fun i => Fin.elim0 i⟩
   let form := recordValueForm scope
   let E := form.einheit platform args
@@ -224,7 +228,7 @@ theorem recordValue_slots : RecordValueSlotsAussage := by
         tupleOfFn args.types fun i =>
           Wert.widen (args.actualTypes.get (args.fields.slot i)) (args.types.get i)
             (args.fits i) (tupleGet args.actualTypes (args.fields.slot i) actual)⟩
-  simp [Befehl.auswerten, Rahmen.schreibe, liesRecord, wertAls, h, recordValueType,
-    Wert.widen, tupleOfFn]
+  simp [recordValueForm, Befehl.auswerten, Rahmen.schreibe, liesRecord, wertAls, h,
+    recordValueType, Wert.widen, tupleOfFn]
 
 end Gabbro.Core.Ast.Semantik

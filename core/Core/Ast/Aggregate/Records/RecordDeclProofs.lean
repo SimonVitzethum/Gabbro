@@ -27,31 +27,37 @@ namespace Gabbro.Core.Ast.Surface
 open Gabbro.Core.Text
 
 theorem recordDecl_inversion : RecordDeclInversionAussage := by
-  intro scope input tree rest exported name read
+  intro scope input tree rest ex name read
+  generalize hp : recordDeclarationPrefix ex = p at read
+  generalize hn : Token.word name.val = w at read
   cases read with
-  | constant => contradiction
-  | function => contradiction
+  | constant =>
+      cases ex <;> simp [recordDeclarationPrefix] at hp
+  | function =>
+      cases ex <;> simp [recordDeclarationPrefix] at hp
   | record e n valid distinct memberRead =>
-      refine ⟨⟨e, n, _, valid, distinct⟩, ?_, ?_, memberRead, ?_⟩
-      · simp_all [recordDeclarationPrefix]
-      · apply Subtype.ext
-        simp_all [recordDeclarationPrefix]
-      · rfl
-  | tagged => contradiction
+      have he : e = ex := by
+        cases e <;> cases ex <;> simp [recordDeclarationPrefix] at hp ⊢
+      subst e
+      have hnval : n.val = name.val := by
+        injection hn with h
+        exact h.symm
+      refine ⟨⟨ex, n, _, valid, distinct⟩, rfl, Subtype.ext hnval, memberRead, ?_⟩
+      rfl
+  | tagged ex' n valid distinct firstRead tailRead =>
+      cases ex <;> cases ex' <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix] at hp
 
 theorem recordDecl_suffix : RecordDeclSuffixAussage := by
   intro input fields rest read
-  induction fields generalizing input rest with
-  | nil =>
-      cases read
-      exact List.suffix_cons _ _
-  | cons m ms ih =>
-      cases read with
-      | next n typeRead memberRead =>
-          obtain ⟨t, ht⟩ := TypeReads.consumes typeRead
-          have moreSuffix : _ := ⟨t ++ [comma], by rw [ht]; simp⟩
-          have headSuffix : _ := ⟨[.word n.val, colon], rfl⟩
-          exact ((ih memberRead).trans moreSuffix).trans headSuffix
+  induction read with
+  | close =>
+      exact (List.suffix_cons semicolon rest).trans (List.suffix_cons closeBrace (semicolon :: rest))
+  | next n typeRead memberRead ih =>
+      obtain ⟨s, hs⟩ := ih
+      obtain ⟨t, ht⟩ := TypeReads.consumes typeRead
+      refine ⟨[.word n.val, colon] ++ t ++ [comma] ++ s, ?_⟩
+      rw [hs, ht]
+      simp
 
 private theorem recordMembers_print_reads (fields : List RecordMember) :
     RecordMembersRead
@@ -62,21 +68,22 @@ private theorem recordMembers_print_reads (fields : List RecordMember) :
       simp [RecordMember.printPieces]
       exact .close
   | cons m ms ih =>
-      change RecordMembersRead
-        (.word m.name.val :: colon :: m.written.printPieces.map PrintedToken.value ++
-          comma :: ((ms.flatMap RecordMember.printPieces).map PrintedToken.value ++ [closeBrace, semicolon]))
-        (⟨m.name, m.written⟩ :: ms) [semicolon]
-      apply RecordMembersRead.next
-      · exact WrittenType.printReads m.written m.written.valid
+      have readm : TypeReads
+          (m.written.printPieces.map PrintedToken.value ++
+            comma :: ((ms.flatMap RecordMember.printPieces).map PrintedToken.value ++ [closeBrace, semicolon]))
+          m.written
+          (comma :: ((ms.flatMap RecordMember.printPieces).map PrintedToken.value ++ [closeBrace, semicolon])) :=
+        WrittenType.printReads m.written m.written.valid
           (by intro more same; cases same)
-      · exact ih
+      have step := RecordMembersRead.next m.name readm ih
+      simpa [RecordMember.printPieces] using step
 
 private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
     (recordDecl scope).production args
       (((Category.declaration scope).printPieces ((recordDecl scope).tree args)).map PrintedToken.value) := by
   refine ⟨(args.members.flatMap RecordMember.printPieces).map PrintedToken.value ++
     [closeBrace, semicolon], ?_, ?_⟩
-  · rfl
+  · simp [Category.printPieces, Decl.printPieces]
   · exact recordMembers_print_reads args.members
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by
@@ -90,7 +97,8 @@ theorem recordDecl_derivation : RecordDeclDerivationAussage := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  let args : RecordDeclArgs := ⟨false, name, [], (fun m h => (List.not_mem_nil m).elim), by simp⟩
+  let args : RecordDeclArgs :=
+    ⟨false, name, [], (fun m h => (List.not_mem_nil m h).elim), by simp⟩
   exact Rule.satisfiableOfPrint args (recordDecl_print scope args)
 
 end Gabbro.Core.Ast.Surface
@@ -149,7 +157,8 @@ theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  let args : RecordDeclArgs := ⟨false, name, [], (fun m h => (List.not_mem_nil m).elim), by simp⟩
+  let args : Surface.RecordDeclArgs :=
+    ⟨false, name, [], (fun m h => (List.not_mem_nil m h).elim), by simp⟩
   let form := recordDeclForm []
   let E := form.einheit platform args
   let s := (I.start E start).2
@@ -160,6 +169,6 @@ theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
 
 theorem recordDecl_binding : RecordDeclBindingAussage := by
   intro scope args frame
-  simp [Befehl.auswerten, recordBinding]
+  simp [recordDeclForm, Befehl.auswerten, recordBinding]
 
 end Gabbro.Core.Ast.Semantik

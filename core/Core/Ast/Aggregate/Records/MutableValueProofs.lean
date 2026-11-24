@@ -27,45 +27,43 @@ open Gabbro.Core.Text
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
+  generalize ht : keyword "mut" = t at read
+  generalize hn : Token.word name.val = w at read
   cases read with
-  | letBinding => contradiction
-  | assignVar => contradiction
-  | ret => contradiction
-  | ite => contradiction
-  | retVoid => contradiction
-  | letMutable => contradiction
-  | directCall callRead => cases callRead
-  | bindDirect => contradiction
-  | whileBounded => contradiction
-  | forRange => contradiction
-  | tupleBind checked patternRead annotationRead valueRead => cases patternRead
-  | assignField => contradiction
   | letMutableValue n ordinary value valueRead =>
-      exact ⟨⟨n, ordinary, value⟩, rfl, valueRead, rfl⟩
-  | variantMatch => contradiction
+      have hnval : n.val = name.val := by
+        injection hn with h
+        exact h.symm
+      refine ⟨⟨n, ordinary, value⟩, ?_, valueRead, ?_⟩
+      · exact Subtype.ext hnval
+      · rfl
+  | tupleBind checked patternRead annotationRead valueRead =>
+      cases patternRead
+      simp_all [keyword]
+  | directCall callRead =>
+      cases callRead
+      simp_all [keyword]
+  | _ => simp_all [keyword]
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
   intro scope result name input tree rest read
   obtain ⟨a, hname, valueRead, htree⟩ := mutableValue_inversion read
-  exact (ExprReads.consumes valueRead).trans (List.suffix_cons semicolon rest)
+  exact (List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)
 
 private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : MutableValueArgs ctx.1) :
     (mutableValue ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
-  change ∃ input,
-      letKeyword :: keyword "mut" :: .word args.name.val :: assignment :: input =
-        letKeyword :: keyword "mut" :: .word args.name.val :: assignment :: input ∧
-      ExprReads ctx.1 0 input args.value (semicolon :: [])
-  refine ⟨args.value.printTokens ++ [semicolon], rfl, ?_⟩
-  simpa [Expr.printTokens] using
-    (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
+  refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
+  · simp [Category.printPieces, Stmt.printPieces, Expr.printTokens]
+  · simpa [Expr.printTokens] using
+      (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 
 theorem mutableValue_derivation : MutableValueDerivationAussage := by
   intro ctx
   refine ⟨
     (fun args tokens prod => by
       rcases prod with ⟨input, rfl, valueRead⟩
-      exact StmtReads.letMutableValue args.name args.ordinary args.value valueRead),
+      exact StmtReads.letMutableValue args.name args.ordinary valueRead),
     mutableValue_print ctx,
     ?_⟩
   let name : Identifier :=
@@ -148,7 +146,7 @@ theorem mutableValue_erfuellbar : MutableValueErfuellbarAmAussage := by
     · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
       intro same
       cases same
-  let args : MutableValueArgs [] := ⟨name, ordinary, .int 1 1, .lit 1⟩
+  let args : Surface.MutableValueArgs [] := ⟨name, ordinary, .int 1 1, .lit 1⟩
   let form := mutableValueForm ([], none)
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
