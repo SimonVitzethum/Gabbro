@@ -227,8 +227,8 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
           · calc ([] : List Nat).sum = 0 := rfl
               _ ≤ (i + 1 + 1) * (H + 1) := Nat.zero_le _
         · obtain ⟨r, hbr, hg, hcost⟩ := hgibt h a s (Nat.le_refl _) hsa hown
-          obtain ⟨s₁, s₂, hr1, hr2, hgibt⟩ := hg
-          obtain ⟨q, hsq, hs2q⟩ := gibt_abgeben hgibt
+          obtain ⟨s₁, s₂, hr1, hr2, hgibt_step⟩ := hg
+          obtain ⟨q, hsq, hs2q⟩ := gibt_abgeben hgibt_step
           have hown_r : (s₁.sperren l).besitzer = some h := by rw [hsq]
           have hmem_r :=
             hbleibt r s₁ hbr hr1 (fun heq' => heq (Option.some.inj (hown_r.symm.trans heq')))
@@ -240,13 +240,13 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                 hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl hnew⟩, ?_, ?_, ?_⟩
               · calc [Kontextkosten ρ h a (r + 1 - a)].length = 1 := rfl
                   _ ≤ i + 1 + 1 := by omega
-              · have hbnd1 : ∀ x ∈ [Kontextkosten ρ h a (r' + 1 - a)], x ≤ H + 1 := by
+              · have hbnd1 : ∀ x ∈ [Kontextkosten ρ h a (r + 1 - a)], x ≤ H + 1 := by
                   intro x hx
-                  have heq : x = Kontextkosten ρ h a (r' + 1 - a) := List.mem_singleton.mp hx
+                  have heq : x = Kontextkosten ρ h a (r + 1 - a) := List.mem_singleton.mp hx
                   subst heq
                   exact hcost
                 exact hbnd1
-              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r' + 1 - a)] H hbnd1
+              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r + 1 - a)] H hbnd1
                 calc [Kontextkosten ρ h a (r + 1 - a)].sum
                     ≤ [Kontextkosten ρ h a (r + 1 - a)].length * (H + 1) := hsum
                   _ ≤ (i + 1 + 1) * (H + 1) :=
@@ -255,8 +255,15 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
               have hmem2 := hbleibt (r + 1) s₂ (hbr.trans (Nat.le_succ _)) hr2
                 (fun heq'' => heq' (Option.some.inj (hnew.symm.trans heq'')))
               obtain ⟨j, hj⟩ := mem_getElem? hmem2
+              have hqne : ∃ h₀ rest, q = h₀ :: rest := by
+                cases q with
+                | nil =>
+                  rw [hs2q] at hmem2
+                  exact (List.not_mem_nil hmem2).elim
+                | cons h₀ rest => exact ⟨h₀, rest, rfl⟩
+              obtain ⟨h₀, rest, hqcons⟩ := hqne
               have hjr : (s₁.sperren l).schlange[j + 1]? = some c := by
-                rw [hsq]
+                rw [hsq, hqcons]
                 exact hj
               have hji : j + 1 ≤ i + 1 :=
                 hmono a r s s₁ (i + 1) (j + 1) (Nat.le_refl _) hbr hsa hr1 hidx hjr
