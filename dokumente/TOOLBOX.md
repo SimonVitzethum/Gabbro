@@ -3,7 +3,7 @@
 **What this is.** What measures the project (two guardians since 2026-11-10, when Rust and C left the repository), the helper parts and tools beside
 them, the probe corpora, and the working rules **W1–W29** the old instrument folder earned.
 *On 2026-10-17 the folder of 95 entries (54 `pruefe-*` guardians, 22 `zaehle-*` counters, a mutation
-run, `abnahme.py`, helpers) was cut to four guardians (Simon's decision: exactly four).* Everything
+run, `abnahme.py`, helpers) was cut to four guardians (decided: exactly four).* Everything
 else stays in Git: `git show 414feafc:instrumente/<name>`.
 
 **Admission condition for a rule:** it comes from a *mistake in this folder* and the mistake is named.

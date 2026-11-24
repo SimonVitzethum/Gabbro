@@ -120,7 +120,7 @@ could not run (no test declared, or an `aarch64` binary on a machine without `qe
 ## 7. Plan: linking Gabbro projects with dependencies (2026-10-25, for review)
 
 *Status: implemented in the deleted build (2026-10-25; files in git history only)
-except the open points of §7.11; the Lean side is §7.5-§7.10. Set by Simon: two or more Gabbro projects, the source of each present, each with
+except the open points of §7.11; the Lean side is §7.5-§7.10. Setting: two or more Gabbro projects, the source of each present, each with
 its own `gabbro.build`, dependencies between them. **Everything crosses the boundary, every guarantee is kept, and
 the result is as usable as possible**: whatever works inside one project works across projects, and nothing that
 could be allowed is refused. Out of scope: a dependency available only as a binary; dynamic loading.*
