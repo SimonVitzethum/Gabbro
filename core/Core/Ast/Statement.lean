@@ -287,31 +287,25 @@ theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : res
     (motive_3 := fun before input tree rest _ => rest <:+ input)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intros
-    rename_i name ordinary value more exprRead tail
-    trace_state
+    rename_i s inputS t valS moreS treeS restS name ordinary exprRead tail
     exact (tail.consumes.trans exprRead.consumes).trans
       (List.suffix_append [letKeyword, .word name.val, assignment] _)
   · intros
-    rename_i ref visible writable fits exprRead
-    trace_state
+    rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead
     exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
   · intros
-    rename_i declared fits exprRead
-    trace_state
+    rename_i e t s inputS val restS declared fits exprRead
     exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
   · intros
-    rename_i condition yes no condRead yesRead noRead
-    trace_state
-    exact (((noRead.consumes.trans (List.suffix_cons elseKeyword _)).trans yesRead.consumes).trans
-      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+    rename_i s inputS condE firstE yesB moreB noB firstS condR yesR noR ihYes ihNo
+    exact (((ihNo.trans (List.suffix_cons elseKeyword _)).trans ihYes).trans
+      (ExprReads.consumes yesR)).trans (List.suffix_cons ifKeyword _)
   · exact List.suffix_cons _ _
   · intros
     rename_i first next stRead blockRead ihSt ihBlock
-    trace_state
     exact ihBlock.trans ihSt
   · intros
     rename_i body inner ih
-    trace_state
     exact ih.trans (List.suffix_cons openBrace _)
 
 theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : rest <:+ input := by
@@ -321,31 +315,25 @@ theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : r
     (motive_3 := fun before input tree rest _ => rest <:+ input)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
   · intros
-    rename_i name ordinary value more exprRead tail
-    trace_state
+    rename_i s inputS t valS moreS treeS restS name ordinary exprRead tail
     exact (tail.consumes.trans exprRead.consumes).trans
       (List.suffix_append [letKeyword, .word name.val, assignment] _)
   · intros
-    rename_i ref visible writable fits exprRead
-    trace_state
+    rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead
     exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
   · intros
-    rename_i declared fits exprRead
-    trace_state
+    rename_i e t s inputS val restS declared fits exprRead
     exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
   · intros
-    rename_i condition yes no condRead yesRead noRead
-    trace_state
-    exact (((noRead.consumes.trans (List.suffix_cons elseKeyword _)).trans yesRead.consumes).trans
-      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+    rename_i s inputS condE firstE yesB moreB noB firstS condR yesR noR ihYes ihNo
+    exact (((ihNo.trans (List.suffix_cons elseKeyword _)).trans ihYes).trans
+      (ExprReads.consumes yesR)).trans (List.suffix_cons ifKeyword _)
   · exact List.suffix_cons _ _
   · intros
     rename_i first next stRead blockRead ihSt ihBlock
-    trace_state
     exact ihBlock.trans ihSt
   · intros
     rename_i body inner ih
-    trace_state
     exact ih.trans (List.suffix_cons openBrace _)
 
 theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : rest <:+ input := by
