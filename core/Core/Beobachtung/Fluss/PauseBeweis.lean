@@ -99,7 +99,11 @@ theorem pauseNI : PauseNIAussage := by
       | none =>
         rw [hlab] at label₂
         cases label₂
-      | some ev => exact ⟨ev.1, ev.2, by simpa using hlab⟩
+      | some ev =>
+        refine ⟨ev.1, ev.2, ?_⟩
+        rw [hlab]
+        cases ev
+        rfl
     obtain ⟨wahl, spur', label'⟩ := someEv
     have evEq := Option.some.inj (label₂.symm.trans label')
     rw [evEq] at step₂
