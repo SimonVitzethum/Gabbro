@@ -164,7 +164,7 @@ private theorem fieldReads (a : RecordFieldArgs scope)
     exact .atom atomRead (tail.follow (Nat.zero_le _)
       (.recordField a.base a.field a.index a.written (Nat.zero_le _) (.stop blocked)))
 
-theorem RecordFieldDerivation : RecordFieldDerivationAussage := by
+public theorem RecordFieldDerivation : RecordFieldDerivationAussage := by
   rintro scope ⟨witness⟩
   refine ⟨?_, fieldPrints, Rule.satisfiableOfPrint witness (fieldPrints witness)⟩
   intro a tokens production
@@ -178,7 +178,7 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog Waechter
 
-theorem RecordFieldParse : RecordFieldParseAussage := by
+public theorem RecordFieldParse : RecordFieldParseAussage := by
   intro scope args text pieces lexed production
   exact (Surface.RecordFieldDerivation scope ⟨args⟩).parse lexed production
 
@@ -235,7 +235,7 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
     Function.update_self, h, dif_pos]
   rfl
 
-theorem RecordFieldErfuellbarAm : RecordFieldErfuellbarAmAussage := by
+public theorem RecordFieldErfuellbarAm : RecordFieldErfuellbarAmAussage := by
   intro platform start
   let value := RecordExample.value
   let index : Fin value.types.length := ⟨0, Nat.zero_lt_succ _⟩

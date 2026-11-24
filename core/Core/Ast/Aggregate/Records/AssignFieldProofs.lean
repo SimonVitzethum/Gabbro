@@ -97,7 +97,7 @@ private theorem assignFieldPrints (ctx : Scope × Option (Ty .value)) (args : As
     rfl
   · exact args.value.printReads noOperatorAtSemicolon
 
-theorem AssignFieldDerivation : AssignFieldDerivationAussage := by
+public theorem AssignFieldDerivation : AssignFieldDerivationAussage := by
   rintro ctx ⟨witness⟩
   refine ⟨?_, assignFieldPrints ctx, Rule.satisfiableOfPrint witness (assignFieldPrints ctx witness)⟩
   rintro args tokens ⟨input, rfl, valueRead⟩
@@ -192,7 +192,7 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
   · simp only [assignFieldForm, Befehl.auswerten]
   · simp only [assignFieldForm, Befehl.auswerten]
 
-theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
+public theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
   intro platform start
   let field : Identifier := ⟨['x'], 'x', [], rfl,
     by unfold Text.isNameStart Text.isLetter; exact Or.inl (Or.inl ⟨by decide, by decide⟩),
@@ -247,7 +247,18 @@ theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
     change none = some g at guard
     cases guard
 
-theorem AssignFieldProgram : AssignFieldProgramAussage := by
+private theorem startSingleFunction (frame : Rahmen) (name : Identifier) (entry globals : Nat)
+    (registered : frame.funktionen = [⟨name, entry, [], none, globals, false, [], none⟩])
+    (outside : frame.funktion = none) (stack : frame.fortsetzungen = []) :
+    let out := (Befehl.starte name).auswerten frame
+    out.rueckgabe = frame.rueckgabe ∧ out.stopp = frame.stopp ∧ out.pc = entry := by
+  simp only [Befehl.auswerten, registered, List.map_cons, List.map_nil, List.nodup_singleton,
+    not_true_eq_false, ite_false, List.find?_cons, Funktion.rekursiv, List.any_nil, Bool.and_false,
+    List.find?_nil, List.flatMap_cons, List.flatMap_nil, List.nil_append, Funktion.finde, beq_self_eq_true,
+    Rahmen.ruf, Rahmen.rufArgumente, outside, stack, List.any_cons]
+  exact ⟨rfl, rfl, rfl⟩
+
+public theorem AssignFieldProgram : AssignFieldProgramAussage := by
   intro platform start
   let value := RecordExample.value
   let name := RecordExample.name
@@ -293,16 +304,83 @@ theorem AssignFieldProgram : AssignFieldProgramAussage := by
   let s₅ := build.nach eintritt s₄
   let s₆ := bindLocal.nach eintritt s₅
   let s₇ := evalFalse.nach eintritt s₆
-  have r₁ : E.system.IErreichbar s₀ s₁ := advance (b := defineSchema) .start rfl
-  have r₂ : E.system.IErreichbar s₀ s₂ := advance (b := defineMain) r₁ rfl
-  have r₃ : E.system.IErreichbar s₀ s₃ := advance (b := startMain) r₂ rfl
-  have r₄ : E.system.IErreichbar s₀ s₄ := advance (b := evalTrue) r₃ rfl
-  have r₅ : E.system.IErreichbar s₀ s₅ := advance (b := build) r₄ rfl
-  have r₆ : E.system.IErreichbar s₀ s₆ := advance (b := bindLocal) r₅ rfl
-  have r₇ : E.system.IErreichbar s₀ s₇ := advance (b := evalFalse) r₆ rfl
+  let updateField := Befehl.setzeRecordFeld 0 0 name.val value.labels value.types index
+  have programCode : (programm tree).code =
+      [defineSchema, defineMain, evalTrue, build, bindLocal, evalFalse, updateField, .blockEnde 1,
+        .rueckVoid, startMain, .ende] := by
+    simp only [tree, schema, main, body, bind, update, programm, unitBody, decl, functionCode, bracedBlock,
+      block, stmt, RecordExample.value, Surface.RecordValueArgs.expression, expr, labeledCode,
+      Fragment.anhaengen, Fragment.einzel, Fragment.leer, List.nil_append, List.cons_append, List.append_nil]
+    rfl
+  have localStep (b : Befehl) (s : Zustand) :
+      ((b.nach eintritt s).lokal eintritt) = b.auswerten (s.lokal eintritt) := by
+    simp only [Befehl.nach, Function.update_self]
+  let LiveAt (s : Zustand) (pc : Nat) :=
+    s.status eintritt = .laeuft ∧ (s.lokal eintritt).rueckgabe = none ∧
+      (s.lokal eintritt).stopp.isNone = true ∧ (s.lokal eintritt).pc = pc
+  have headAt {s : Zustand} {pc : Nat} {b : Befehl} (live : LiveAt s pc)
+      (instruction : (programm tree).code[pc]? = some b) :
+      E.system.kopf s eintritt = some b := by
+    change kopf (programm tree).code s eintritt = some b
+    obtain ⟨running, active, unhalted, position⟩ := live
+    simp only [kopf, ite_true, running, active, unhalted, position, instruction]
+  have live₀ : LiveAt s₀ 0 := ⟨rfl, rfl, rfl, rfl⟩
+  have live₁ : LiveAt s₁ 1 := ⟨rfl, rfl, rfl, rfl⟩
+  have live₂ : LiveAt s₂ 9 := ⟨rfl, rfl, rfl, rfl⟩
+  have live₃ : LiveAt s₃ 2 := by
+    obtain ⟨result, halt, pc⟩ := startSingleFunction (s₂.lokal eintritt) mainName 2 1 rfl rfl rfl
+    refine ⟨live₂.1, ?_⟩
+    dsimp only [s₃]
+    rw [localStep]
+    exact ⟨result.trans live₂.2.1, (congrArg Option.isNone halt).trans live₂.2.2.1, pc⟩
+  have liveAfter {s : Zustand} {pc : Nat} {b : Befehl} (live : LiveAt s pc)
+      (plain : ∀ frame, (b.auswerten frame).rueckgabe = frame.rueckgabe ∧
+        (b.auswerten frame).stopp = frame.stopp ∧ (b.auswerten frame).pc = frame.pc + 1) :
+      LiveAt (b.nach eintritt s) (pc + 1) := by
+    obtain ⟨result, halt, position⟩ := plain (s.lokal eintritt)
+    refine ⟨live.1, ?_⟩
+    rw [localStep]
+    exact ⟨result.trans live.2.1, (congrArg Option.isNone halt).trans live.2.2.1,
+      position.trans (congrArg (· + 1) live.2.2.2)⟩
+  have live₄ : LiveAt s₄ 3 := liveAfter (b := evalTrue) live₃ (fun _ => ⟨rfl, rfl, rfl⟩)
+  have live₅ : LiveAt s₅ 4 := liveAfter (b := build) live₄ (fun _ => ⟨rfl, rfl, rfl⟩)
+  have live₆ : LiveAt s₆ 5 := liveAfter (b := bindLocal) live₅ (fun _ => ⟨rfl, rfl, rfl⟩)
+  have live₇ : LiveAt s₇ 6 := liveAfter (b := evalFalse) live₆ (fun _ => ⟨rfl, rfl, rfl⟩)
+  have r₁ : E.system.IErreichbar s₀ s₁ := advance (b := defineSchema) .start (headAt live₀ (by rw [programCode]; rfl))
+  have r₂ : E.system.IErreichbar s₀ s₂ := advance (b := defineMain) r₁ (headAt live₁ (by rw [programCode]; rfl))
+  have r₃ : E.system.IErreichbar s₀ s₃ := advance (b := startMain) r₂ (headAt live₂ (by rw [programCode]; rfl))
+  have r₄ : E.system.IErreichbar s₀ s₄ := advance (b := evalTrue) r₃ (headAt live₃ (by rw [programCode]; rfl))
+  have r₅ : E.system.IErreichbar s₀ s₅ := advance (b := build) r₄ (headAt live₄ (by rw [programCode]; rfl))
+  have r₆ : E.system.IErreichbar s₀ s₆ := advance (b := bindLocal) r₅ (headAt live₅ (by rw [programCode]; rfl))
+  have r₇ : E.system.IErreichbar s₀ s₇ := advance (b := evalFalse) r₆ (headAt live₆ (by rw [programCode]; rfl))
+  have atUpdate : E.system.kopf s₇ eintritt = some updateField := headAt live₇ (by rw [programCode]; rfl)
+  let before : Wert recTy := (true, PUnit.unit)
+  let after : Wert recTy := (false, PUnit.unit)
+  have temp₄ : (s₄.lokal eintritt).temp 0 = some ⟨.bool, true⟩ := by
+    simp only [s₄, localStep, evalTrue, Befehl.auswerten, Rahmen.schreibe, Function.update_self]
+  have temp₅ : (s₅.lokal eintritt).temp 0 = some ⟨recTy, before⟩ := by
+    dsimp only [s₅]
+    rw [localStep]
+    exact recordValue_slots _ value (s₄.lokal eintritt) (true, PUnit.unit) (fun i => by
+      let first : Fin value.actualTypes.length := ⟨0, Nat.zero_lt_succ _⟩
+      have zero : i = first := Fin.ext (Nat.lt_one_iff.mp i.isLt)
+      rw [zero]
+      exact temp₄)
+  have oldLocal : (s₇.lokal eintritt).lokale[0]? = some (some ⟨recTy, before⟩) := by
+    simp only [s₇, s₆, localStep, evalFalse, bindLocal, Befehl.auswerten, Rahmen.schreibe,
+      temp₅, Option.bind_some, wertIn, wertAls_selbst before, Option.map_some, List.getElem?_cons_zero]
+  have temp₇ : (s₇.lokal eintritt).temp 0 = some ⟨.bool, false⟩ := by
+    simp only [s₇, localStep, evalFalse, Befehl.auswerten, Rahmen.schreibe, Function.update_self]
+  have newLocal : ((updateField.nach eintritt s₇).lokal eintritt).lokale[0]? = some (some ⟨recTy, after⟩) := by
+    rw [localStep]
+    let args : Surface.AssignFieldArgs localScope :=
+      ⟨name.val, value.labels, value.types, ref, ⟨trivial, trivial⟩, rfl, field, index,
+        ⟨List.nodup_singleton _, rfl⟩, .bool, .falseLit, trivial⟩
+    exact (AssignFieldFrame (localScope, none) args (s₇.lokal eintritt) before false oldLocal temp₇).1
   refine ⟨tree, Ast.print (category := .unit) tree, s₇, 0, 0, name.val, value.labels, value.types,
-    index, Ast.parse_print _, r₇, rfl, (true, PUnit.unit), (false, PUnit.unit), rfl, rfl, ?_⟩
+    index, Ast.parse_print _, r₇, atUpdate, before, after, oldLocal, newLocal, ?_⟩
   intro same
   cases same
+
 
 end Gabbro.Core.Ast.Semantik

@@ -36,7 +36,7 @@ private theorem recordValue_reads (scope : Scope) (args : RecordValueArgs scope)
   exact .atom (AtomReads.recordValue args.ref args.fields args.fits labelRead)
     (.stop noOperatorAtEnd)
 
-theorem RecordValueInversion : RecordValueInversionAussage := by
+public theorem RecordValueInversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
   generalize hword : Token.word ref.name.val = word at read
   generalize hinput : openParen :: input = tokens at read
@@ -55,7 +55,7 @@ theorem RecordValueInversion : RecordValueInversionAussage := by
     exact ⟨⟨_, _, actual, _, _, _, fields, fits⟩, Subtype.ext (Token.word.inj hword).symm, labelRead, rfl⟩
   | _ => cases hword
 
-theorem RecordValueSuffix : RecordValueSuffixAussage := by
+public theorem RecordValueSuffix : RecordValueSuffixAussage := by
   intro scope input labels types items rest read
   exact read.consumes
 
@@ -94,7 +94,7 @@ private theorem recordValuePrints (scope : Scope) (args : RecordValueArgs scope)
     List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   rfl
 
-theorem RecordValueDerivation : RecordValueDerivationAussage := by
+public theorem RecordValueDerivation : RecordValueDerivationAussage := by
   rintro scope ⟨witness⟩
   exact ⟨fun args _ => recordValue_reads scope args, recordValuePrints scope,
     Rule.satisfiableOfPrint witness (recordValuePrints scope witness)⟩
@@ -136,21 +136,21 @@ theorem recordValue_regelSicher : RecordValueRegelSicherAussage := by
   exact (Quellform.erhaltung (recordValueForm scope) (fun a =>
     expr_keine_invarianten 0 ((Surface.recordValue scope).tree a).2) platform args).2.2.2
 
-theorem recordValue_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
+private theorem recordValue_amOrt (scope : Scope) : (recordValueForm scope).RegelAmOrt := by
   intro args
   change (((labeledCode 0 args.args).code ++ [_])[(labeledCode 0 args.args).code.length]?) = _
   simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero, recordValueForm, Nat.zero_add]
 
-theorem recordValue_realisiert : RecordValueRealisiertAussage := by
+public theorem recordValue_realisiert : RecordValueRealisiertAussage := by
   intro scope platform args s running active live atPc
   exact (recordValueForm scope).realisiert (recordValue_amOrt scope) platform args s running active live atPc
 
-theorem recordValue_ideal : RecordValueIdealAussage := by
+public theorem recordValue_ideal : RecordValueIdealAussage := by
   intro scope
   exact ⟨recordValue_amOrt scope,
     fun args => ⟨((recordValueForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
 
-theorem recordValue_slots : RecordValueSlotsAussage := by
+public theorem recordValue_slots : RecordValueSlotsAussage := by
   intro scope args frame actual temps
   let widened (i : Fin args.types.length) :=
     Wert.widen (args.actualTypes.get (args.fields.slot i)) (args.types.get i)
@@ -191,7 +191,7 @@ open Gabbro.Core.Text
       subst i
       trivial⟩
 
-theorem recordValue_erfuellbarAm : RecordValueErfuellbarAmAussage := by
+public theorem recordValue_erfuellbarAm : RecordValueErfuellbarAmAussage := by
   intro platform start
   let args := RecordExample.value
   let form := recordValueForm RecordExample.scope
