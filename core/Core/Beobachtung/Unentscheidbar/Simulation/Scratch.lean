@@ -7,6 +7,7 @@ namespace Scratch
 example (xs : List Nat) :
     (do let fs ← some xs; match fs with | [a] => some a | _ => none) =
       (match xs with | [a] => some a | _ => none) := by
+  dsimp
   simp only [Option.bind_some]
 
 end Scratch
