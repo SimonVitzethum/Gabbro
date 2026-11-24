@@ -50,19 +50,18 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
   generalize htok : keyword "string" :: input = toks at read
   cases read with
   | text =>
-      injection htok with htail
-      exact ⟨_, htail, rfl⟩
+      exact ⟨_, (List.cons.inj htok).2, rfl⟩
   | bool =>
       have h : keyword "string" = keyword "bool" := (List.cons.inj htok).1
       simp [keyword] at h
   | integer valid closed =>
-      rename_i signed width more
-      have h : keyword "string" = .word (intSpelling signed width) := (List.cons.inj htok).1
-      simp [keyword, intSpelling] at h
+      rename_i width more
+      have h : keyword "string" = .word (intSpelling width more) := (List.cons.inj htok).1
+      cases width <;> simp [keyword, intSpelling] at h
   | interval valid ls rs =>
       rename_i signed width input' lo hi more
       have h : keyword "string" = .word (intSpelling signed width) := (List.cons.inj htok).1
-      simp [keyword, intSpelling] at h
+      cases signed <;> simp [keyword, intSpelling] at h
   | array count bound elemRead boundRead =>
       rename_i element boundInput
       have h : keyword "string" = openBracket := (List.cons.inj htok).1
@@ -133,6 +132,8 @@ theorem TextTypeRegelSicher : TextTypeRegelSicherAussage := by
 
 theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
   intro ctx platform args
+  change RegelAntwortSicher ((typeUseForm ctx textTypeUse).fragment args) platform
+    ((typeUseForm ctx textTypeUse).befehl args)
   let form := typeUseForm ctx textTypeUse
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
@@ -148,6 +149,8 @@ theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
 
 theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   intro ctx platform args
+  change TextInstructionCost ((typeUseForm ctx textTypeUse).fragment args) platform
+    ((typeUseForm ctx textTypeUse).befehl args)
   let form := typeUseForm ctx textTypeUse
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
@@ -174,7 +177,8 @@ theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   let written : WrittenType := .text capacity
   let value : Expr [] (.text capacity) := .textLiteral []
   let argsVal : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, written, by simp [written], .text capacity, value, by simp [Fits, written]⟩
+    ⟨name, ordinary, written, by simp [WrittenType.valid], .text capacity, value,
+      by simp [Fits, WrittenType.type]⟩
   let args : {a : Surface.MutableLocalArgs [] none // textTypeUse a.written} :=
     ⟨argsVal, by simp [argsVal, written, textTypeUse]⟩
   let form := typeUseForm ([], none) textTypeUse
@@ -184,6 +188,8 @@ theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   have initializer : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
     ⟨.textLiteral 0 [], rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start initializer
+  refine ⟨args, ?_⟩
+  dsimp [Quellform.TextErfuellbar]
   refine ⟨Ast.print (form.produktion.tree args), s₁, Ast.parse_print _, ?_, reached, ?_, ?_, ?_, ?_⟩
   · rfl
   · exact form.realisiert (textTypeAtRoot ([], none)) platform args s₁ rfl rfl rfl rfl
