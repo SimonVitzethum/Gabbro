@@ -348,7 +348,7 @@ theorem stummer_schritt_koppelt
                 rw [e₁, e₂]
                 exact len
             | antwort h₂' => exact (keineAntwort₂ _ _ label₂).elim
-            | interrupt h₂' =>
+            | interrupt _ h₂' =>
               obtain ⟨_, _, _, _, _, pending₂, _, _, _, _, _⟩ := h₂'
               have contra := pending₂.2.2.2.2
               rw [auswahl₂none] at contra
