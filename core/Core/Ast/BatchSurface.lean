@@ -175,7 +175,7 @@ theorem neg_print (args : NegArgs scope) :
   change (neg scope).production args (Expr.neg args.operand).printTokens
   unfold neg
   refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · rfl
+  · simp only [Expr.printTokens, Expr.printPieces, Arith.print_value, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
@@ -210,7 +210,7 @@ theorem notValue_print (args : Expr scope .bool) :
   change (notValue scope).production args (Expr.not args).printTokens
   unfold notValue
   refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · rfl
+  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · intro tail
     constructor <;> intro h <;> cases h
   · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
@@ -243,9 +243,9 @@ theorem division_print (args : DivisionArgs scope) :
   simp only [Expr.printTokens, Expr.printPieces, PrintedToken.slash, List.map_append, List.map_cons,
     List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
-  refine ⟨?_, ?_, ?_, by trivial⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, by trivial⟩
   · exact args.left.printAtom (Infix.div.token :: args.right.printTokens ++ [closeParen])
-  · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
+  · exact ExprReads.atom (args.right.printAtom (rest := [closeParen]) noOperatorAtClose) (.stop noOperatorAtClose)
 
 -- Mirror BinaryArgs.readStep_sound by applying the new production and its child proofs.
 theorem division_reads (scope : Scope) (args : DivisionArgs scope)
@@ -255,7 +255,7 @@ theorem division_reads (scope : Scope) (args : DivisionArgs scope)
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
     exact .atom atomRead (.div (Nat.zero_le _) exprRead args.nonzero (.stop noOperatorAtEnd))
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
-    apply .atom _ (.stop noOperatorAtEnd)
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
     exact .grouped (.atom atomRead (.div (Nat.zero_le _) exprRead args.nonzero (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
@@ -293,7 +293,7 @@ theorem comparison_reads (scope : Scope) (args : CompareArgs scope)
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
     exact .atom atomRead (.compare args.op (Nat.zero_le _) exprRead follows (.stop noOperatorAtEnd))
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
-    apply .atom _ (.stop noOperatorAtEnd)
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
     exact .grouped (.atom atomRead (.compare args.op (Nat.zero_le _) exprRead follows (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
@@ -301,7 +301,7 @@ theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op 
   intro op
   let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
-  exact ⟨a, text, pieces, by simp [args], lexical, production⟩
+  exact ⟨a, text, pieces, by change args.op = op; rfl, lexical, production⟩
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -321,7 +321,7 @@ theorem logic_print (args : LogicArgs scope) :
   unfold logic infixProduction infixStep
   simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Logic.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
-  refine ⟨?_, ?_, ?_, by trivial⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, by trivial⟩
   · exact args.left.printAtom ((Infix.logic args.op).token :: args.right.printTokens ++ [closeParen])
   · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
@@ -333,7 +333,7 @@ theorem logic_reads (scope : Scope) (args : LogicArgs scope)
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := plain
     exact .atom atomRead (.logic args.op (Nat.zero_le _) exprRead (.stop noOperatorAtEnd))
   · obtain ⟨operand, atomRead, exprRead, follows⟩ := grouped
-    apply .atom _ (.stop noOperatorAtEnd)
+    apply ExprReads.atom _ (.stop noOperatorAtEnd)
     exact .grouped (.atom atomRead (.logic args.op (Nat.zero_le _) exprRead (.stop noOperatorAtClose)))
 
 -- Mirror Rule.satisfiableOfPrint with a typed concrete constructor argument.
@@ -341,7 +341,7 @@ theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op 
   intro op
   let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
-  exact ⟨a, text, pieces, by simp [args], lexical, production⟩
+  exact ⟨a, text, pieces, by change args.op = op; rfl, lexical, production⟩
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
