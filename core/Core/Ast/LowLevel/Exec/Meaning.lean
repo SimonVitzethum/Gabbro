@@ -52,6 +52,17 @@ def ExecFrame.declare (frame : ExecFrame) (decl : ExecStateDecl) : ExecFrame :=
     states := frame.states ++ [decl]
     current := match frame.states with | [] => some 0 | _ => frame.current }
 
+/-- A long transfer needs a live stack slot; a space exactly when the
+    destination translates. Both tests are boolean, like `validVirtualRange`. -/
+def stackOk (stapel : List Nat) : Option Nat → Bool
+  | some st => decide (st < stapel.length)
+  | none => true
+
+def spaceOk : ExecTranslation → List Nat → Option Nat → Bool
+  | .on, spaces, some sp => decide (sp < spaces.length)
+  | .off, _, none => true
+  | _, _, _ => false
+
 def ExecInstruction.evaluate (op : ExecInstruction) (s : ExecState) (c : Kontext) :
     Option ExecFrame :=
   let frame := s.lokal c
@@ -66,12 +77,8 @@ def ExecInstruction.evaluate (op : ExecInstruction) (s : ExecState) (c : Kontext
   | .jumpLong target dest space stack => do
       let cur ← frame.current
       let dst ← frame.states[dest]?
-      if cur != dest ∧ ¬ frame.halted ∧
-          (match stack with | some st => st < frame.stapel.length | none => True) ∧
-          (match dst.translation, space with
-            | .on, some sp => sp < frame.spaces.length
-            | .off, none => True
-            | _, _ => False) then
+      if cur != dest && !frame.halted && stackOk frame.stapel stack &&
+          spaceOk dst.translation frame.spaces space then
         pure { frame with
           result := some (.jumpedLong target dest)
           current := some dest
