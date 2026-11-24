@@ -250,6 +250,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     intro op' tail h
     have head := (List.cons.inj h).1
     cases op' <;> simp only [Infix.token, Compare.spelling, String.reduceToList] at head <;> cases head
+  · intro rest
     rename_i op left right leftIH rightIH
     simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
