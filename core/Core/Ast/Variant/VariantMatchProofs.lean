@@ -257,4 +257,11 @@ theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage 
   intro scope result allowed labels payloads input rest arms read
   exact vm_read_suffix read
 
+theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage := by
+  intro ctx args text pieces lexed production
+  apply (Gabbro.Core.Ast.Category.statement ctx.1 ctx.2).syntax.parse_iff.mpr
+  refine ⟨pieces, lexed, ?_⟩
+  rcases production with ⟨input, arms, rfl, valueRead, armsRead⟩
+  exact .variantMatch valueRead armsRead
+
 end Gabbro.Core.Ast.Semantik

@@ -129,4 +129,12 @@ theorem variantValue_suffix : Gabbro.Core.Ast.Surface.VariantValueSuffixAussage 
       exact (List.suffix_cons _ _).trans
         ((ExprReads.consumes exprRead).trans (List.suffix_cons _ _))
 
+theorem variantValue_parse : Gabbro.Core.Ast.Semantik.VariantValueParseAussage := by
+  intro scope args text pieces lexed production
+  apply (Gabbro.Core.Ast.Category.expression scope).syntax.parse_iff.mpr
+  refine ⟨pieces, lexed, ?_⟩
+  rcases production with ⟨input, rfl, payloadRead⟩
+  exact .atom (.variantValue args.ref args.label args.index args.written
+    args.ordinary args.available args.payload payloadRead) (.stop Gabbro.Core.Ast.noOperatorAtEnd)
+
 end Gabbro.Core.Ast.Semantik
