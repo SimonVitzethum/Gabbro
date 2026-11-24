@@ -149,6 +149,73 @@ def PrintedToken.unquoted {value : Token} (spelling : RawText) (lex : Lexeme spe
         · intro _ _ _ bad
           cases bad
 
+private theorem Lexeme.punctuationMember (lex : Lexeme raw kind)
+    (tag : lexicalTag raw = .punctuation) : ∃ word : String, word ∈ Text.punctuation ∧ raw = word.toList := by
+  cases lex with
+  | word start _ =>
+    simp only [lexicalTag, ite_eq_left start] at tag
+    cases tag
+  | punctuation member => exact ⟨_, member, rfl⟩
+  | decimalInteger read => rw [read.lexicalTag] at tag; cases tag
+  | hexInteger read => rw [lexicalTag_hex read] at tag; cases tag
+  | binaryInteger read => rw [lexicalTag_binary read] at tag; cases tag
+  | decimal left _ _ => rw [lexicalTag_decimal left] at tag; cases tag
+  | character => rw [List.singleton_append, List.cons_append, lexicalTag_character] at tag; cases tag
+  | string => rw [List.singleton_append, List.cons_append, lexicalTag_string] at tag; cases tag
+  | whitespace space _ => rw [lexicalTag_space space] at tag; cases tag
+  | line _ notSlash => rw [lexicalTag_line notSlash] at tag; cases tag
+  | doc _ notSlash => rw [lexicalTag_doc notSlash] at tag; cases tag
+  | extendedLine => rw [lexicalTag_longLine] at tag; cases tag
+  | block => rw [List.cons_append, List.singleton_append, lexicalTag_block] at tag; cases tag
+
+private theorem slashSpaceMaximal (rest : RawText) : Maximal ['/'] (' ' :: rest) := by
+  intro other suffix kind same lex
+  cases other with
+  | nil => exact Nat.zero_le _
+  | cons first tail =>
+    obtain rfl := (List.cons.inj same).1
+    cases tail with
+    | nil => exact Nat.le_refl _
+    | cons second tail =>
+      obtain rfl := (List.cons.inj (List.cons.inj same).2).1
+      obtain ⟨word, member, spelling⟩ := lex.punctuationMember rfl
+      exact ((punctuation_spelling member).2.1
+        (spelling ▸ List.mem_cons_of_mem _ List.mem_cons_self)).elim
+
+/-- Division prints as a single slash. The following space excludes both comment openers. -/
+def PrintedToken.slash : PrintedToken where
+  value := .punctuation ['/']
+  spelling := ['/']
+  reads := Lexeme.punctuation (word := "/") (by
+    simp only [punctuation, List.mem_cons, String.reduceEq, false_or, true_or])
+  headNotSpace := by
+    intro c head
+    obtain rfl := Option.some.inj head
+    simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true]
+  separated := by
+    intro rest
+    refine ⟨slashSpaceMaximal rest, ?_, ?_, ?_⟩
+    · intro suffix bad
+      cases bad
+    · intro n c tail bad
+      cases bad
+    · intro n tail bad
+      cases bad
+
+/-- An immediately adjacent slash starts a comment, even before a body is read. -/
+theorem slash_notMaximalAtLine (rest : RawText) : ¬ Maximal ['/'] ('/' :: rest) := by
+  intro maximal
+  have line : Lexeme ['/', '/'] (.trivia .lineComment) :=
+    .line List.not_mem_nil (by intro bad; cases bad)
+  have longer := maximal _ rest _ rfl line
+  exact (by decide : ¬ 2 ≤ 1) longer
+
+/-- A block opener cannot be read as division, including when its comment fails to close. -/
+theorem slash_notBoundaryAtBlock (rest : RawText) :
+    ¬ Boundary ['/'] ('*' :: rest) (.semantic PrintedToken.slash.value) := by
+  intro boundary
+  cases boundary.1 rest rfl
+
 /-- Put one space after each token, including the last. This fixes a spelling
     without requiring token-pair proofs at grammar productions. -/
 def PrintedToken.render : List PrintedToken → RawText
