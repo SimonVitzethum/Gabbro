@@ -295,6 +295,6 @@ theorem registerRegelSicher_falsch :
       cases hd
   have hleer : nach.verlauf = [] := (hs.invarianten hvor).1 () rfl
   simp only [nach, zwischen, Zustand.frage, Zustand.stelleFrage, event, vor, boot,
-    Zustand.start, List.nil_append, List.cons_ne_nil] at hleer
+    Zustand.start, setFrame, List.nil_append, List.cons_ne_nil] at hleer
 
 end Gabbro.Core.Ast.LowLevel.Device
