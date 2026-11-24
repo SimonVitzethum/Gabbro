@@ -169,6 +169,16 @@ theorem BlockReads.braced_inversion
       tree = .braces body ∧ BlockItems result scope input ⟨after, body⟩ rest := by
   cases read
   rename_i after body read
+theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
+    (right : BlockReads result scope input b rest') : a = b ∧ rest = rest' := by
+  cases left with
+  | braced inner =>
+    cases right with
+    | braced inner' =>
+      obtain ⟨same, rfl⟩ := inner.deterministic inner'
+      cases same
+      exact ⟨rfl, rfl⟩
+
   exact ⟨after, body, rfl, read⟩
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
