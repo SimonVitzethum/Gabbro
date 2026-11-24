@@ -282,15 +282,12 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | step stRead' blockRead' =>
         obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
         injection sameFirst with hMiddle hFirst
-        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
-        injection sameFirst with hMiddle hFirst
-        simp_all
+        subst_vars
+        obtain ⟨sameNext, restEq⟩ := ihBlock (by simpa [moreEq] using blockRead')
         cases sameNext
-        exact ⟨rfl, restEq⟩
         exact ⟨rfl, restEq⟩
 
 theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : rest <:+ input := by
-  refine StmtReads.rec
     (motive_1 := fun scope input tree rest _ => rest <:+ input)
     (motive_2 := fun before input tree rest _ => rest <:+ input)
     (motive_3 := fun before input tree rest _ => rest <:+ input)
