@@ -1,14 +1,10 @@
 module
-
 public import Core.Ast.Aggregate.Carrier.Effects.Group
 public import Core.Ast.Semantik.Formbeweise
 import Init.Omega
-
 /-!
 # Effect group
-
 Prove the pinned statements in this file.
-
 - `EffectGroupInversionAussage`
 - `EffectGroupDerivationAussage`
 - `EffectGroupScopeAussage`
@@ -31,15 +27,11 @@ Prove the pinned statements in this file.
 - `EffectGroupErfuellbarAmAussage`
 - `EffectGroupUseErfuellbarAussage`
 -/
-
 @[expose] public section
-
 namespace Gabbro.Core.Ast.Semantik
-
 open Maschine Katalog Waechter
 open Gabbro.Core.Text
 open Gabbro.Core.Ast
-
 private theorem identPrintVal (i : Identifier) : i.print.value = Token.word i.val := by rfl
 private theorem ppwVal (h : Char) (t : List Char) (p1 p2) :
     (printProgramWord h t p1 p2).value = Token.word (h :: t) := by rfl
@@ -49,15 +41,12 @@ private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rf
 private theorem printDotVal : printDot.value = dot := by rfl
 private theorem printSlotsVal : printSlots.value = Token.word ['s', 'l', 'o', 't', 's'] := by rfl
 private theorem printCommaVal : printComma.value = comma := by rfl
-
 private def egName : Identifier :=
   ⟨['g'], 'g', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
     fun _ member => (List.not_mem_nil member).elim⟩
-
 private def egTableName : Identifier :=
   ⟨['t'], 't', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
     fun _ member => (List.not_mem_nil member).elim⟩
-
 private theorem egWrittenPrintReads (effect : WrittenCarrierEffect) (rest : List Token) :
     CarrierEffectReads ((WrittenCarrierEffect.printPieces effect).map PrintedToken.value ++ rest)
       effect rest := by
@@ -83,7 +72,6 @@ private theorem egWrittenPrintReads (effect : WrittenCarrierEffect) (rest : List
       PrintedToken.unquoted, identPrintVal, printDotVal, printSlotsVal,
       List.map_append, List.append_assoc] using
       (CarrierEffectReads.slots CarrierAccess.write carrier (rest := rest))
-
 private def egTokens : List WrittenCarrierEffect → List Token
   | [] => []
   | effect :: more =>
@@ -91,7 +79,6 @@ private def egTokens : List WrittenCarrierEffect → List Token
         match more with
         | [] => []
         | _ => comma :: egTokens more
-
 private theorem egTokens_eq (written : List WrittenCarrierEffect) :
     egTokens written = (commaSeparated (written.map WrittenCarrierEffect.printPieces)).map
       PrintedToken.value := by
@@ -99,15 +86,16 @@ private theorem egTokens_eq (written : List WrittenCarrierEffect) :
   | nil => rfl
   | cons effect more ih =>
       cases more with
-      | nil => simp [egTokens, commaSeparated]
+      | nil => rfl
       | cons effect2 rest =>
           change (WrittenCarrierEffect.printPieces effect).map PrintedToken.value ++
             comma :: egTokens (effect2 :: rest) =
             (commaSeparated ((effect :: effect2 :: rest).map
               WrittenCarrierEffect.printPieces)).map PrintedToken.value
           rw [ih]
-          simp [commaSeparated, printCommaVal, List.map_append, List.append_assoc]
-
+          simp only [commaSeparated, printCommaVal, List.map_append, List.append_assoc,
+            List.cons_append, List.nil_append, List.intersperse_cons_cons, List.flatten_cons,
+            List.flatten_nil, List.map_cons, List.map_nil]
 private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest : List Token),
     EffectListReads CarrierEffectReads (egTokens written ++ closeBrace :: rest) written rest := by
   intro written
@@ -130,7 +118,6 @@ private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest 
           · simpa [egTokens, List.append_assoc] using egWrittenPrintReads effect
               (comma :: egTokens (effect2 :: tail) ++ closeBrace :: rest)
           · exact ih rest
-
 private theorem egPrint (scope : Scope) (item : EffectGroupDeclaration scope) :
     (effectGroupForm scope).produktion.production item
       (((Category.declaration scope).printPieces ((effectGroupForm scope).produktion.tree item)).map
@@ -145,7 +132,6 @@ private theorem egPrint (scope : Scope) (item : EffectGroupDeclaration scope) :
   · simp only [List.map_append, List.append_assoc]
   · simpa [List.map_append, egTokens_eq, printCloseBraceVal, printSemicolonVal,
       List.append_assoc] using (egTokensReads item.written [semicolon])
-
 theorem effectGroup_inversion : EffectGroupInversionAussage := by
   intro scope input tree rest head read
   generalize hh : head.header.map PrintedToken.value ++ input = hs at read
@@ -205,7 +191,6 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
         simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
           printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot,
           keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex] at hh
-
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
   refine ⟨?reads, egPrint scope, ?sat⟩
@@ -214,52 +199,41 @@ theorem effectGroup_derivation : EffectGroupDerivationAussage := by
     exact DeclReads.effectGroup item effectRead
   · exact Surface.Rule.satisfiableOfPrint ⟨false, egName, [], [], rfl⟩
       (egPrint scope ⟨false, egName, [], [], rfl⟩)
-
 private theorem eg_amOrt (scope : Scope) : (effectGroupForm scope).RegelAmOrt := by
   intro item
   rfl
-
 theorem effectGroup_parse : EffectGroupParseAussage := by
   intro scope args text pieces lexed prod
   exact (effectGroup_derivation scope).parse lexed prod
-
 theorem effectGroup_elaboriert : EffectGroupElaboriertAussage := by
   intro scope platform args
   rfl
-
 theorem effectGroup_realisiert : EffectGroupRealisiertAussage := by
   intro scope platform args s running active live atPc
   exact (effectGroupForm scope).realisiert (eg_amOrt scope) platform args s running active live atPc
-
 theorem effectGroup_annahme : EffectGroupAnnahmeAussage := by
   intro scope
   exact Quellform.annahme (effectGroupForm scope)
-
 theorem effectGroup_ideal : EffectGroupIdealAussage := by
   intro scope
   refine ⟨eg_amOrt scope, ?_⟩
   intro args
   exact ⟨((effectGroupForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
-
 theorem effectGroup_einheit : EffectGroupEinheitAussage := by
   intro scope platform args
   exact ⟨rfl, ((effectGroupForm scope).befehl args).kommutation⟩
-
 theorem effectGroup_impl : EffectGroupImplAussage := by
   intro scope args c s w plans u
   rfl
-
 theorem effectGroup_erhaltung : EffectGroupErhaltungAussage := by
   intro scope platform args
   let p := (effectGroupForm scope).fragment args
   let b := (effectGroupForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform (by rfl)⟩
-
 theorem effectGroup_regelSicher : EffectGroupRegelSicherAussage := by
   intro scope platform args
   exact (effectGroup_erhaltung scope platform args).2.2.2
-
 private theorem mapM_option_length {α β : Type} (f : α → Option β) :
     ∀ (xs : List α) (ys : List β), xs.mapM f = some ys → xs.length = ys.length := by
   intro xs
@@ -281,7 +255,6 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
               simp [hfx, hrest] at h
               subst ys
               simp [ih ys' hrest]
-
 private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
     ∀ (xs : List α) (ys : List β) (i : Nat) (hi : i < xs.length) (hi' : i < ys.length),
       xs.mapM f = some ys → f (xs[i]'hi) = some (ys[i]'hi') := by
@@ -307,7 +280,6 @@ private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
                   have hsuccess : i < xs.length := by simpa using hi
                   have hsuccess' : i < ys'.length := by simpa using hi'
                   exact ih ys' i hsuccess hsuccess' hrest
-
 theorem effectGroup_expansion : EffectGroupExpansionAussage := by
   intro scope bound terms expanded h
   let f := EffectTerm.resolve scope bound
@@ -333,7 +305,6 @@ theorem effectGroup_expansion : EffectGroupExpansionAussage := by
       rw [hmapped] at h
       cases h
       rfl
-
 theorem effectGroup_scope : EffectGroupScopeAussage := by
   intro scope item
   constructor
@@ -344,7 +315,6 @@ theorem effectGroup_scope : EffectGroupScopeAussage := by
   · intro name hne
     simp [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding,
       beq_iff_eq, hne, Ne.symm hne]
-
 theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
   intro scope item hexported effect heffect
   obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp heffect
@@ -366,7 +336,6 @@ theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
       by_cases hflag : exportedFlag
       · exact ⟨position, by simpa [hc, hflag]⟩
       · simp [hc, hexported, hflag] at hresolve
-
 theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
@@ -380,7 +349,6 @@ theorem effectGroup_capture : EffectGroupCaptureAussage := by
       rcases hcap with hb | ⟨effect, heffect, hb⟩
       · exact (hcond (Or.inr hb)).elim
       · exact (hnotany (List.any_eq_true.mpr ⟨effect, heffect, hb⟩)).elim
-
 private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierEffect)) :
     ∀ site ∈ code.filterMap (fun
         | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
@@ -406,7 +374,6 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
                 rfl
               · exact ih site (List.mem_filterMap.mpr hmem)
           | _ => simp at hcmd
-
 theorem effectGroup_signature : EffectGroupSignatureAussage := by
   intro scope a frame
   dsimp only
@@ -423,7 +390,6 @@ theorem effectGroup_signature : EffectGroupSignatureAussage := by
   · simp [f, E]
   · intro site hsite
     exact codeRufe_effects code.code E site hsite
-
 theorem effectGroup_call : EffectGroupCallAussage := by
   intro site functions target provided hfind heff hpasses effect hrequired
   have hp := hpasses
@@ -432,12 +398,10 @@ theorem effectGroup_call : EffectGroupCallAussage := by
   have hall : (Funktion.requiredEffects functions target).all
       (fun effect => decide (effect ∈ provided)) = true := hp.left.right
   exact of_decide_eq_true (List.all_eq_true.mp hall effect hrequired)
-
 theorem effectGroup_binding : EffectGroupBindingAussage := by
   intro scope item frame
   simp [effectGroupForm, Befehl.auswerten, EffectGroupDeclaration.binding,
     effectGroupBinding, Rahmen.installSchema]
-
 theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
   intro platform start
   let scope : Scope := [carrierBinding egTableName 1 [] true]
@@ -456,7 +420,6 @@ theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
       (form.realisiert (eg_amOrt scope) platform item s rfl rfl rfl rfl) ?_
     intro g guard
     cases guard
-
 theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   intro platform start
   let carrier : TableDeclaration [] :=
@@ -498,20 +461,17 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
     change kopf (programm tree).code s0 eintritt = some bt
     simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-      elaborieren, fragment, eintritt, Rahmen.start, bt]
+      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
     change kopf (programm tree).code s1 eintritt = some bg
     simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-      elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach,
+      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach,
       Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
     change kopf (programm tree).code s eintritt = some b
     simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start,
       Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel,
-      Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema,
-      Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
+      Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
       functionForm, functionInstruction, bt, bg, b, scope, a, Surface.FunctionArgs.declaration]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
@@ -535,5 +495,4 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
         a, scope, clause, body, functionCode, bracedBlock, Fragment.anhaengen, Fragment.einzel,
         Fragment.leer, block, writtenResult, declaredEffects]
     · simp [sig, group, eff]
-
 end Gabbro.Core.Ast.Semantik
