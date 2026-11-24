@@ -71,6 +71,7 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
       first
       | rfl
       | split
+      | rw [ruf_arrival]
       | apply eintrittArgumente_arrival
         assumption
 
