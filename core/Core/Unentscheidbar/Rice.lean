@@ -2,6 +2,7 @@ module
 
 public import Core.Unentscheidbar.Modell
 public import Mathlib.Computability.Halting
+public import Mathlib.Computability.Reduce
 
 @[expose] public section
 
