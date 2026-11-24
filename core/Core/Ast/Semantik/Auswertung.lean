@@ -375,15 +375,11 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
             alsBoolean, Option.bind_some, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R, Expr.wert]
-          have hif : (if some (Expr.wert (fun {type} => env) left) = some op.skips
-              then (expr slot right).code.length + 1 else 1) =
-              (expr slot right).code.length + 1 := by
-            split
-            · rfl
-            · rename_i hcontra
-              exact False.elim (hs hcontra)
-          rw [hif]
-          omega
+          split
+          · rename_i hcontra
+            omega
+          · rename_i hcontra
+            exact False.elim (hs hcontra)
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
@@ -397,15 +393,12 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         have hpcAfter : (sw.auswerten mid).pc = (pre ++ L ++ [sw]).length := by
           simp only [sw, Befehl.auswerten, hpcMid, tmpL, alsBoolean, Option.bind_some,
             if_false, L, R, Expr.wert]
-          have hif : (if some (Expr.wert (fun {type} => env) left) = some op.skips
-              then (expr slot right).code.length + 1 else 1) = 1 := by
-            split
-            · rename_i hc
-              exact False.elim (hs hc)
-            · rfl
-          rw [hif]
-          rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-            Nat.add_zero]
+          split
+          · rename_i hc
+            exact False.elim (hs hc)
+          · rename_i hc
+            rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+              Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
           intro ty ref
           simp only [sw, Befehl.auswerten]
