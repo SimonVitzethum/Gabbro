@@ -56,7 +56,7 @@ theorem b8_protokoll_erfuellbar :
       (h : Umgebung) (ρ : Lauf E) (t : Nat)
       (w : AntwortEreignis) (spur : Spur) (vor nach : Zustand),
       Laeufe E h ρ ∧ B8Prefix E ρ t ∧ ρ.zeit.zustand t = some vor ∧
-      ρ.zeit.spur t = some (.antwort w, spur) ∧ ProtokollB8Wahl w ∧
+      ρ.zeit.spur t = some (.antwort w, spur) ∧ ProtokollB8Wahl (.antwort w) ∧
       ρ.zeit.zustand (t + 1) = some nach := by
   obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨ρ, _, _, lauf, _, _, _, _, za2, za3, _, _, ea2, _⟩ := konkreter_lauf zul []
