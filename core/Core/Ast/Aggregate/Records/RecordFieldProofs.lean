@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Semantik.Formbeweise
+import Core.Ast.Aggregate.Records.ConstructionProofs
 
 /-!
 # RecordField
@@ -233,5 +234,29 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
   simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, Option.bind,
     Function.update_self, h, dif_pos]
   rfl
+
+theorem RecordFieldErfuellbarAm : RecordFieldErfuellbarAmAussage := by
+  intro platform start
+  let value := RecordExample.value
+  let index : Fin value.types.length := ⟨0, Nat.zero_lt_succ _⟩
+  let checked : RecordFieldAt value.labels RecordExample.field index.val :=
+    ⟨List.nodup_singleton _, rfl⟩
+  let args : Surface.RecordFieldArgs RecordExample.scope :=
+    ⟨value.ref.name.val, value.labels, value.types, value.expression, RecordExample.field, index, checked⟩
+  let form := recordFieldForm RecordExample.scope
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  let build := Befehl.baueRecord 0 value.ref.name.val value.labels value.types [0]
+  let s₂ := build.nach eintritt s₁
+  have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨build, rfl, rfl, rfl⟩
+  refine ⟨RecordExample.scope, args, form.erfuellbar_aus_erreichbar platform start args s₂
+    (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second) ?_ ?_⟩
+  · exact RecordFieldRealisiert _ platform args s₂ rfl rfl rfl rfl
+  · intro guard found
+    cases found
 
 end Gabbro.Core.Ast.Semantik

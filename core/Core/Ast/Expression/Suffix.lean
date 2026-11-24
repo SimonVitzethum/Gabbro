@@ -44,10 +44,10 @@ theorem LabeledItemsRead.consumes (read : LabeledItemsRead scope input items res
   expression_suffix LabeledItemsRead.rec read
 
 /-- Extend the outer operator sequence at a lower precedence, preserving every operand read. -/
-theorem ExprTail.follow (prefix : ExprTail scope minimum first input tree rest) :
+theorem ExprTail.follow (derivation : ExprTail scope minimum first input tree rest) :
     ∀ {lower resultType} {result : Expr scope resultType} {final}, lower ≤ minimum →
       ExprTail scope lower tree rest result final → ExprTail scope lower first input result final := by
-  induction prefix using ExprTail.rec
+  induction derivation using ExprTail.rec
     (motive_1 := fun _ _ _ _ _ _ => True)
     (motive_2 := fun _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ => True)

@@ -238,6 +238,56 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       (by simpa [entry] using hb)
   exact vm_case_payload_some a.payloads value i rfl hsome
 
+open Gabbro.Core.Text
+open Surface
+
+theorem variantMatch_inversion : VariantMatchInversionAussage := by
+  intro scope result input tree rest starts read
+  generalize tokens : keyword "match" :: input = ts at read
+  cases read with
+  | variantMatch valueRead armsRead =>
+    cases (List.cons.inj tokens).2
+    exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
+  | assignVar _ _ _ _ _ => exact ((starts _).1 (List.cons.inj tokens).2).elim
+  | assignField _ _ _ _ _ _ _ _ => exact ((starts _).2 (List.cons.inj tokens).2).elim
+  | directCall callRead =>
+    cases callRead with
+    | applied call _ =>
+      exact (call.ordinary.2 (by
+        rw [← Token.word.inj (List.cons.inj tokens).1]
+        simp only [keyword, List.map_cons, List.map_nil, List.mem_cons]
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))))).elim
+  | letOption mutable _ _ _ _ _ _ =>
+    cases mutable <;> cases (List.cons.inj tokens).1
+  | _ => cases (List.cons.inj tokens).1
+
+private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : VariantMatchArgs ctx) :
+    (variantMatch ctx).production args
+      (((Category.statement ctx.1 ctx.2).printPieces ((variantMatch ctx).tree args)).map PrintedToken.value) := by
+  let armsInput := args.arms.printPieces.map PrintedToken.value ++ [closeBrace]
+  let input := args.value.printTokens ++ openBrace :: armsInput
+  have valueRead : ExprReads ctx.1 0 input args.value (openBrace :: armsInput) :=
+    args.value.printReads noOperatorAtOpenBrace
+  have tokens : ((Stmt.variantMatch args.value args.arms).printPieces.map PrintedToken.value) =
+      keyword "match" :: input := by
+    simp only [Stmt.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+      List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
+    rfl
+  refine ⟨input, armsInput, tokens, valueRead, ?_⟩
+  have parsed : StmtReads ctx.2 ctx.1 (keyword "match" :: input) ((variantMatch ctx).tree args) [] := by
+    have printed := (Stmt.variantMatch args.value args.arms).printReads []
+    simpa only [Stmt.printTokens, List.append_nil, tokens] using printed
+  cases parsed with
+  | variantMatch read arms =>
+    cases (ExprReads.deterministic read valueRead).2
+    exact arms
+
+theorem variantMatch_derivation : VariantMatchDerivationAussage := by
+  rintro ctx ⟨witness⟩
+  refine ⟨?_, variantMatchPrints ctx, Rule.satisfiableOfPrint witness (variantMatchPrints ctx witness)⟩
+  rintro args tokens ⟨input, arms, rfl, valueRead, armsRead⟩
+  exact .variantMatch valueRead armsRead
+
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
   exact read.consumes

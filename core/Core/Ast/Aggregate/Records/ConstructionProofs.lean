@@ -152,16 +152,16 @@ theorem recordValue_slots : RecordValueSlotsAussage := by
 
 open Gabbro.Core.Text
 
-private def RecordExample.name : Identifier :=
+@[expose] public def RecordExample.name : Identifier :=
   keywordName 'r' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
 
-private def RecordExample.field : Identifier :=
+@[expose] public def RecordExample.field : Identifier :=
   keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
 
-private def RecordExample.scope : Scope :=
+@[expose] public def RecordExample.scope : Scope :=
   [⟨RecordExample.name, recordSchemaType RecordExample.name.val [RecordExample.field] [.bool], false, true⟩]
 
-private def RecordExample.value : Surface.RecordValueArgs RecordExample.scope := by
+@[expose] public def RecordExample.value : Surface.RecordValueArgs RecordExample.scope := by
   let localRef : Local RecordExample.scope
       (recordSchemaType RecordExample.name.val [RecordExample.field] [.bool]) := .here
   let ref : RecordRef RecordExample.scope [RecordExample.field] [.bool] :=

@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Semantik.Formbeweise
+import Core.Ast.Aggregate.Records.ConstructionProofs
 import Core.Ast.Semantik.Runtime.ValueCoercion
 
 /-!
@@ -245,5 +246,63 @@ theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
   · intro g guard
     change none = some g at guard
     cases guard
+
+theorem AssignFieldProgram : AssignFieldProgramAussage := by
+  intro platform start
+  let value := RecordExample.value
+  let name := RecordExample.name
+  let field := RecordExample.field
+  let member : RecordMember := ⟨field, .bool⟩
+  let recTy := recordValueType name.val value.labels value.types
+  let localScope : Scope := ⟨field, recTy, true, false⟩ :: RecordExample.scope
+  let ref : Local localScope recTy := .here
+  let index : Fin value.types.length := ⟨0, Nat.zero_lt_succ _⟩
+  let bind : Stmt none RecordExample.scope localScope :=
+    .letMutableValue field (directName_of_singleton (name := field) rfl).1 value.expression
+  let update : Stmt none localScope localScope :=
+    .assignField ref ⟨trivial, trivial⟩ rfl field index
+      ⟨List.nodup_singleton _, rfl⟩ .falseLit trivial
+  let body : BracedBlock none RecordExample.scope := .braces (.step bind (.step update .done))
+  let schema : Decl [] RecordExample.scope :=
+    .record false name [member] (by
+      intro m belongs
+      cases List.mem_singleton.mp belongs
+      trivial) (List.nodup_singleton _)
+  let main : Decl RecordExample.scope RecordExample.scope :=
+    .function mainName mainName_direct [] none (fun _ h => (List.not_mem_nil h).elim)
+      none body List.nodup_nil (fun h => by cases h) none
+  let tree : Ast.Unit := ⟨RecordExample.scope, .step schema (.step main .done)⟩
+  let E := elaborieren platform (category := .unit) tree
+  have advance {s : Zustand} {b : Befehl} (reached : E.system.IErreichbar (I.start E start).2 s)
+      (head : E.system.kopf s eintritt = some b) :
+      E.system.IErreichbar (I.start E start).2 (b.nach eintritt s) :=
+    .schritt eintritt () [plan] reached ⟨b, head, rfl, rfl⟩
+  let defineSchema := Befehl.definiereRecord name.val value.labels value.types
+  let defineMain := functionInstruction RecordExample.scope mainName [] none false
+    (functionCode none none body) none
+  let startMain := Befehl.starte mainName
+  let evalTrue := Befehl.wahrheitswert 0 true
+  let build := Befehl.baueRecord 0 name.val value.labels value.types [0]
+  let bindLocal := Befehl.bindeWert 0 recTy false
+  let evalFalse := Befehl.wahrheitswert 0 false
+  let s₀ := (I.start E start).2
+  let s₁ := defineSchema.nach eintritt s₀
+  let s₂ := defineMain.nach eintritt s₁
+  let s₃ := startMain.nach eintritt s₂
+  let s₄ := evalTrue.nach eintritt s₃
+  let s₅ := build.nach eintritt s₄
+  let s₆ := bindLocal.nach eintritt s₅
+  let s₇ := evalFalse.nach eintritt s₆
+  have r₁ : E.system.IErreichbar s₀ s₁ := advance (b := defineSchema) .start rfl
+  have r₂ : E.system.IErreichbar s₀ s₂ := advance (b := defineMain) r₁ rfl
+  have r₃ : E.system.IErreichbar s₀ s₃ := advance (b := startMain) r₂ rfl
+  have r₄ : E.system.IErreichbar s₀ s₄ := advance (b := evalTrue) r₃ rfl
+  have r₅ : E.system.IErreichbar s₀ s₅ := advance (b := build) r₄ rfl
+  have r₆ : E.system.IErreichbar s₀ s₆ := advance (b := bindLocal) r₅ rfl
+  have r₇ : E.system.IErreichbar s₀ s₇ := advance (b := evalFalse) r₆ rfl
+  refine ⟨tree, Ast.print (category := .unit) tree, s₇, 0, 0, name.val, value.labels, value.types,
+    index, Ast.parse_print _, r₇, rfl, (true, PUnit.unit), (false, PUnit.unit), rfl, rfl, ?_⟩
+  intro same
+  cases same
 
 end Gabbro.Core.Ast.Semantik
