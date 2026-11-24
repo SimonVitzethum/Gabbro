@@ -32,7 +32,7 @@ theorem tupleType_inversion : TupleTypeInversionAussage := by
   cases read
   case tuple =>
       rename_i input' first' secondInput' second' more' tail' rest'
-      exact ⟨first', _, second', secondInput', _, more', tail', rest', rfl⟩
+      exact ⟨_, first', second', input', secondInput', tail', more', rest', rfl⟩
   all_goals contradiction
 
 private theorem typeItemsTail_consumes : (input : List Token) → (tail : WrittenTypes) → (rest : List Token) →
@@ -48,7 +48,8 @@ theorem tupleType_suffix : TupleTypeSuffixAussage := by
   case tuple =>
       rename_i input' first' secondInput' second' more' tail' rest'
       exact (typeItemsTail_consumes secondInput' second' rest rest').trans
-        (TypeReads.consumes more')
+        ((TypeReads.consumes more').trans
+          ((List.suffix_cons comma input').trans (TypeReads.consumes tail')))
   all_goals contradiction
 
 theorem tupleType_index : TupleTypeIndexAussage := by
@@ -77,10 +78,9 @@ private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (
       have commaTok : printComma.value = comma := by rfl
       rw [commaTok]
       apply TypeItemsTail.comma
-      · simpa only [List.append_assoc] using
+      · simpa [List.append_assoc] using
           (WrittenType.printReads head valid.1
             (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
-            (more := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
             (tupleTypeTail_closed tail rest))
       · exact tupleType_printTail tail valid.2 rest
 
@@ -149,7 +149,7 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
       ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type]⟩
+        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type, WrittenTypes.types]⟩
     exact Surface.Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
