@@ -26,23 +26,47 @@ def AnkunftUnveraendertAussage : Prop :=
   ∀ (b : Befehl) (frame : Rahmen) (live : Nat → Bool),
     (b.auswerten frame live).arrivalRegions = frame.arrivalRegions
 
+/-- A successful entry keeps the grant of the caller's frame: both arms of
+    `Rahmen.eintrittArgumente` are a `{ frame with … }` update. -/
+private theorem eintrittArgumente_arrival {frame : Rahmen} {types : List (Ty .value)}
+    {entry : Rahmen} (h : frame.eintrittArgumente types = some entry) :
+    entry.arrivalRegions = frame.arrivalRegions := by
+  unfold Rahmen.eintrittArgumente at h
+  split at h
+  · cases h
+    rfl
+  · split at h
+    · cases h
+      rfl
+    · cases h
+
+/-- A call keeps the grant of the frame it enters from, on every guard outcome. -/
+private theorem ruf_arrival (frame : Rahmen) (name : Identifier) (sources : List (Ty .value))
+    (bind : Option (Ty .value)) :
+    (frame.ruf name sources bind).arrivalRegions = frame.arrivalRegions := by
+  simp only [Rahmen.ruf, Id.run]
+  repeat
+    first
+    | rfl
+    | split
+
 /-- Case split on `Befehl`. Every arm of `Befehl.auswerten` is a frame write, a record update, a
     halt, or a call/return; the helper functions likewise only update the given frame. The two
-    region-touching arms are no different: `Rahmen.bindeRegion` reads the granted extent and returns
-    `{ frame with pc, lokale }`, while `starte` reads the grant through `Rahmen.eintrittArgumente`
-    and enters through `Rahmen.ruf`, which also only updates the frame. Unfolding the helpers and
-    splitting the remaining guards covers every arm. -/
+    region-touching arms are no different: `bindeRegion` reads a granted extent and returns
+    `{ frame with pc, lokale }`; `starte` reads the grant through `Rahmen.eintrittArgumente` and
+    enters through `Rahmen.ruf`. The two helpers above carry those arms, so no case is exempt. -/
 theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   intro b frame live
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
-      Rahmen.pass, Rahmen.setzeMass, Rahmen.ruf, Rahmen.rueckkehr, Rahmen.eintrittArgumente,
-      Rahmen.bindeRegion, Id.run]
+      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, Rahmen.rueckkehr, Rahmen.bindeRegion, Id.run]
   all_goals
     repeat
       first
       | rfl
       | split
+      | apply eintrittArgumente_arrival
+        assumption
 
 private def ankuenftsRahmen (regions : List Katalog.Strecke) : Rahmen :=
   { Rahmen.start [] with
