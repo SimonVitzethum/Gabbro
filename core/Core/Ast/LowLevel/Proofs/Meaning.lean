@@ -22,15 +22,6 @@ open Katalog Maschine
 private lemma layout_endian (target : ZielDaten) (t : WrittenType) (shape : Layout)
     (h : layout target t = some shape) : shape.endian = ByteOrder.ofTarget target := by
   cases t with
-  | bool =>
-      simp only [layout] at h
-      cases h
-  | array element count =>
-      simp only [layout] at h
-      cases h
-  | tuple first second rest =>
-      simp only [layout] at h
-      cases h
   | integer signed width range =>
       simp only [layout] at h
       split at h
@@ -38,6 +29,9 @@ private lemma layout_endian (target : ZielDaten) (t : WrittenType) (shape : Layo
         subst shape
         rfl
       · cases h
+  | _ =>
+    simp only [layout] at h
+    cases h
 
 private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext) (slot : Nat)
     (h : (⟨slot, 0⟩ : Griff) ∈ (s.lokal c).borrowed) :

@@ -161,25 +161,15 @@ theorem Instruction.regelAntwortSicher {k : Katalog} (op : Instruction k) :
 theorem Instruction.aussenLokal {k : Katalog} (op : Instruction k) :
     Gabbro.Core.Annahme.AussenLokal (unit op) := by
   refine ⟨zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_ohne_fragen
-  intro run t s w spur s' step ev
-  intro mem
+  apply aussen_gueltig_aus_kontext
+  intro run t s c w spur s' step
   cases step with
-  | kontext normal ready regel execute =>
-    obtain ⟨i, head, ideal⟩ := regel
-    obtain ⟨transfer, _, hp, _⟩ := ideal
-    cases (List.cons.inj hp).1
-    obtain ⟨spurEq, _⟩ := Instruction.genauInternal execute
-    rw [spurEq] at mem
-    cases mem
-  | antwort normal h =>
-    exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
-  | interrupt normal h =>
-    obtain ⟨_, _, _, _, _, _, _, _, hEq, _, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
-  | absturz h =>
-    obtain ⟨_, hEq, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
+  | kontext _ _ regel execute =>
+    obtain ⟨_, _, transfer, _, planEq, rfl⟩ := regel
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, rfl⟩ := Instruction.genauInternal execute
+    exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+      (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
 
 /-- The unit charges one model step and no private steps. -/
 theorem Instruction.kosten {k : Katalog} (op : Instruction k) :
