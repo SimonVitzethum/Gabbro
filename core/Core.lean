@@ -26,6 +26,9 @@ public import Core.Fortschritt.Verhungern
 public import Core.Fortschritt.Sackgasse
 public import Core.Fortschritt.WarteBeispiel
 public import Core.Fortschritt.WarteBundle
+public import Core.Fortschritt.SperrErhalt
+public import Core.Fortschritt.SperrGegenbeispiel
+public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme
