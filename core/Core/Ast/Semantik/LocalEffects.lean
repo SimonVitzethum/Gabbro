@@ -38,7 +38,7 @@ theorem wertIn_widen (fits : Fits source target) (value : Wert source) :
           have lower : tlo ≤ value.wert := Int.le_trans fits.1 value.unten
           have upper : value.wert ≤ thi := Int.le_trans value.oben fits.2
           refine ⟨⟨value.wert, lower, upper⟩, ?_, rfl⟩
-          simp only [wertIn, dif_pos ⟨lower, upper⟩]
+          simp only [wertIn, dif_pos (show tlo ≤ value.wert ∧ value.wert ≤ thi from ⟨lower, upper⟩)]
 
 -- Mirror Fragment.guard_am_schnitt by exposing the two operand magnitudes at the division head.
 theorem division_guard_exact (frame : Rahmen) (slot : Nat)
@@ -79,10 +79,17 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
     rw [temp]
     exact valueEq
   simp only [Befehl.auswerten, typed]
-  refine ⟨widened, ?_, contents, ?_, rfl, rfl⟩
-  · simp only [List.getElem?_set_self]
+  refine ⟨widened, ?_, contents, ?_, ?_, ?_⟩
+  · have b := bound ref
+    have hlt : ref.index < frame.lokale.length := by
+      by_contra hnot
+      rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_gt hnot)] at b
+      cases b
+    simp [List.getElem?_set, hlt]
   · intro i different
-    simp only [List.getElem?_set_of_ne different]
+    simp [List.getElem?_set, different]
+  · rfl
+  · rfl
 
 -- Mirror Quellform.realisiert's instruction lookup, using wertIn_widen to establish a return.
 theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zustand)
@@ -98,19 +105,18 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
     rw [temp]
     exact valueEq
   refine ⟨widened, ?_, contents, ?_⟩
-  · simp only [Befehl.nach, Befehl.auswerten, Function.update_same, typed]
+  · simp only [Befehl.nach, Befehl.auswerten, Function.update_self, typed]
   · intro code
     unfold kopf
     rw [if_pos rfl]
-    cases hstatus : (Function.update s.lokal eintritt
-        ((Befehl.zurueck slot target).auswerten (s.lokal eintritt))).status eintritt with
+    cases hstatus : (s.status eintritt) with
     | ruht => rfl
     | beendet _ => rfl
     | laeuft =>
       have hret : (Function.update s.lokal eintritt
-          ((Befehl.zurueck slot target).auswerten (s.lokal eintritt))).lokal eintritt |>.rueckgabe =
+          ((Befehl.zurueck slot target).auswerten (s.lokal eintritt)) eintritt).rueckgabe =
           some ⟨target, widened⟩ := by
-        simp only [Function.update_same, Befehl.auswerten, typed]
+        simp only [Function.update_self, Befehl.auswerten, typed]
       rw [hret]
       rfl
 
