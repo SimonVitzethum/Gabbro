@@ -44,8 +44,8 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
     heldRegion s c slot = none := by
   unfold heldRegion
   dsimp
-  simp only [List.contains_eq_mem, h, decide_eq_true_eq, Bool.not_true, Bool.and_false,
-    if_false, Option.bind]
+  simp only [List.contains_eq_mem, h, decide_true, decide_eq_true_eq, Bool.not_true, Bool.and_false,
+    if_false, Option.bind, Option.bind_some]
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
@@ -69,45 +69,45 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
       subst op
       cases hhr : heldRegion s c slot with
       | none =>
-          simp only [Instruction.evaluate, hhr, Option.bind] at heval
+          simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
           cases heval
       | some pair =>
           rcases pair with ⟨handleV, extent⟩
           by_cases hlt : extent.von < 2 ^ k.plattform.ziel.physicalBits
-          · simp only [Instruction.evaluate, hhr, Option.bind] at heval
+          · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
             rw [dif_pos hlt] at heval
             injection heval with hval
             subst transfer
             exact ⟨slot, handleV, extent, ⟨k.plattform.ziel.physicalBits, extent.von, rfl, hlt⟩,
               (by first | exact hslot | rfl), hhr, rfl, rfl, rfl⟩
-          · simp only [Instruction.evaluate, hhr, Option.bind] at heval
+          · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
             rw [dif_neg hlt] at heval
             cases heval
 
 theorem viewMeaning : ViewMeaningAussage := by
   intro k scope region type op s c transfer hop heval
-  simp only [elaborate, Option.bind] at hop
+  simp only [elaborate, Option.bind, Option.bind_some] at hop
   cases hslot : scope.slot region with
   | none =>
-      simp only [hslot, Option.bind] at hop
+      simp only [hslot, Option.bind, Option.bind_some] at hop
       cases hop
   | some slot =>
       cases hlayout : layout k.plattform.ziel type with
       | none =>
-          simp only [hslot, hlayout, Option.bind] at hop
+          simp only [hslot, hlayout, Option.bind, Option.bind_some] at hop
           cases hop
       | some shape =>
-          simp only [hslot, hlayout, Option.bind] at hop
+          simp only [hslot, hlayout, Option.bind, Option.bind_some] at hop
           injection hop with hop'
           subst op
           cases hhr : heldRegion s c slot with
           | none =>
-              simp only [Instruction.evaluate, hhr, Option.bind] at heval
+              simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
               cases heval
           | some pair =>
               rcases pair with ⟨handleV, extent⟩
               by_cases hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
-              · simp only [Instruction.evaluate, hhr, Option.bind] at heval
+              · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
                 rw [if_pos hcond] at heval
                 injection heval with hval
                 subst transfer
@@ -151,7 +151,7 @@ theorem viewMeaning : ViewMeaningAussage := by
                     some handleV⟩ : Transfer k).apply c s) c slot hb
                 exact ⟨slot, handleV, extent, shape, (by first | exact hslot | rfl), hhr,
                   (by first | exact hlayout | rfl), hendian, hcond.1, hcond.2, rfl, rfl, hlast⟩
-              · simp only [Instruction.evaluate, hhr, Option.bind] at heval
+              · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
                 rw [if_neg hcond] at heval
                 cases heval
 
