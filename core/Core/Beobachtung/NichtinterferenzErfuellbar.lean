@@ -56,13 +56,14 @@ private theorem politik_gleich (p₁ p₂ : AussenPolitik) :
     · funext t h q
       simp only [politikProjektion, frage_hoch, verdeckt]
     · funext t h e phase
-      change sichtbar hoch _ = sichtbar hoch _
+      change sichtbar hoch (p₁.dma t (niedrigerVerlauf einheit.etiketten h) e phase) =
+        sichtbar hoch (p₂.dma t (niedrigerVerlauf einheit.etiketten h) e phase)
       simp only [verdeckt]
 
 private theorem umgebung_gleich (b₁ b₂ : List UInt8) :
     GleicheNiedrigeUmgebung einheit (umgebung b₁) (umgebung b₂) := by
   unfold GleicheNiedrigeUmgebung umgebungsProjektion
-  rw [politik_gleich (umgebung b₁).politik (umgebung b₂).politik]
+  rw [politik_gleich (umgebung b₁).politik (umgebung b₂).politik] <;> rfl
 
 private theorem hw_gleich (b₁ b₂ : List UInt8) :
     hwPolitikProjektion einheit (hardware b₁) = hwPolitikProjektion einheit (hardware b₂) :=
@@ -73,7 +74,8 @@ private theorem endet_nicht (vor nach : Zustand)
     ¬ ∃ c, (neuBeendet vor nach einheit.etiketten c).isSome = true := by
   rintro ⟨c, endet⟩
   rcases gleich c with h | h <;>
-    rw [neuBeendet, h] at endet <;> cases vor.status c <;> cases endet
+    cases status : vor.status c <;>
+    rw [neuBeendet, status, h] at endet <;> exact Bool.false_ne_true endet
 
 private theorem verborgen_frage (s : AussenStart) :
     aussenBeob einheit (.frage (gestellt s)) = [] := by
@@ -81,9 +83,7 @@ private theorem verborgen_frage (s : AussenStart) :
 
 private theorem verborgen_antwort (s : AussenStart) (bytes : List UInt8) :
     aussenBeob einheit (.antwort (angekommen s bytes)) = [] := by
-  unfold aussenBeob
-  rw [frage_hoch, verdeckt]
-  rfl
+  simp only [aussenBeob, frage_hoch, verdeckt] <;> rfl
 
 private theorem schritte_stumm {s : AussenStart} {bytes : List UInt8} {ρ : Lauf einheit}
     {g g' : SpeicherGraph Unit Unit}
@@ -100,20 +100,17 @@ private theorem schritte_stumm {s : AussenStart} {bytes : List UInt8} {ρ : Lauf
   | 0 =>
     rw [schrittBeob, e₀, z₀, z₁]
     have kein := endet_nicht (startZustand s) (binde (startZustand s)) (fun _ => Or.inr rfl)
-    simp only [↓reduceIte, kein, if_false]
-    rfl
+    simp only [kein, if_false] <;> rfl
   | 1 =>
     rw [schrittBeob, e₁, z₁, z₂]
     have kein := endet_nicht (binde (startZustand s)) (fragend s g) (fun _ => Or.inl rfl)
     simp only [frageSpur, List.flatMap_cons, List.flatMap_nil, verborgen_frage,
-      kein, if_false, List.append_nil]
-    rfl
+      kein, if_false, List.append_nil] <;> rfl
   | 2 =>
     rw [schrittBeob, e₂, z₂, z₃]
     have kein := endet_nicht (fragend s g) (fertig s bytes g g') (fun _ => Or.inl rfl)
     simp only [antwortSpur, List.flatMap_cons, List.flatMap_nil, verborgen_antwort,
-      kein, if_false, List.append_nil]
-    rfl
+      kein, if_false, List.append_nil] <;> rfl
   | t + 3 => simp only [schrittBeob, still]
 
 private theorem beob_konstant {ρ : Lauf einheit} {s : AussenStart} (p : Praediktor)
@@ -121,9 +118,10 @@ private theorem beob_konstant {ρ : Lauf einheit} {s : AussenStart} (p : Praedik
     NiedrigeBeob einheit ρ p t = [.anfangsspeicher (fun _ => some ())] := by
   induction t with
   | zero =>
-    unfold NiedrigeBeob
-    rw [anfang]
-    rfl
+    change (match ρ.zeit.zustand 0 with
+      | none => [.ladefehler]
+      | some z => [.anfangsspeicher (fun o => sichtbar (einheit.etiketten.ort o) (z.initial o))]) = _
+    rw [anfang] <;> rfl
   | succ t ih =>
     change NiedrigeBeob einheit ρ p t ++ schrittBeob ρ p t = _
     rw [ih, still, List.append_nil]
@@ -169,6 +167,7 @@ theorem ni_erfuellbar :
     rw [hw₁, hw₂]
     exact hw_gleich _ _
   have anders : (ausgabe b₁).result ≠ (ausgabe b₂).result := by
+    change (Except.ok (.data []) : Except AussenFehler AussenWert) ≠ Except.ok (.data [1])
     intro gleich
     cases gleich
   have trace : NiedrigAequiv einheit (NiedrigeBeob einheit ρ₁) (NiedrigeBeob einheit ρ₂) := by
