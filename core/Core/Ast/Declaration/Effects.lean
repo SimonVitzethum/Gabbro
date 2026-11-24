@@ -169,7 +169,7 @@ theorem EffectClauseReads.deterministic
     cases right with
     | absent closed => exact (closed _ rfl).elim
     | present other otherTerms =>
-      obtain ⟨same, rfl⟩ := EffectListReads.deterministic EffectTermReads.deterministic
+      obtain ⟨same, rfl⟩ := EffectListReads.deterministic (read := EffectTermReads) EffectTermReads.deterministic
         EffectTermReads.not_closeBrace terms otherTerms
       cases clause with
       | mk written expanded checked =>

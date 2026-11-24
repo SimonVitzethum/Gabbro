@@ -184,7 +184,7 @@ private theorem printedVariantTail_cons (member : VariantMember) (tail : List Va
   cases tail with
   | nil =>
     simp only [printedVariantTail, List.map_cons, List.map_nil, commaSeparated,
-      List.intersperse_singleton, List.flatten_cons, List.flatten_nil, List.append_nil]
+      List.intersperse_singleton, List.flatten_cons, List.flatten_nil, List.append_nil, List.cons_append]
   | cons next tail =>
     simp only [printedVariantTail, List.map_cons, commaSeparated_cons_cons, List.map_append,
       List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hpComma]
