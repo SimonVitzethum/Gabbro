@@ -230,25 +230,19 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       (by simpa [entry] using hb)
   exact vm_case_payload_some a.payloads value i rfl hsome
 
-private theorem vm_read_suffix {result scope allowed labels payloads input arms rest}
+private theorem vm_read_suffix {result scope allowed input arms rest}
     (read : Gabbro.Core.Ast.VariantArmsRead result scope allowed input arms rest) : rest <:+ input := by
-  induction read with
-  | done => exact List.suffix_cons _ _
-  | nullary label caseName blockRead restRead ih =>
-      exact ih.trans ((BlockReads.consumes blockRead).trans
-        ((List.suffix_cons _ _).trans (List.suffix_cons _ _)))
-  | payload label binder ordinary body blockRead restRead ih =>
-      exact ih.trans ((BlockReads.consumes blockRead).trans
-        ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans
-          ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))))))
-  | wildcard nonempty shape blockRead =>
-      exact (List.suffix_cons _ _).trans ((BlockReads.consumes blockRead).trans
-        ((List.suffix_cons _ _).trans (List.suffix_cons _ _)))
+  refine @Gabbro.Core.Ast.VariantArmsRead.rec (result := result)
+    (fun _ _ _ _ => True)
+    (fun _ _ _ _ => True)
+    (fun _ _ _ _ => True)
+    (fun _ _ a _ _ _ a2 _ => a2 <:+ a)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    scope allowed input arms rest
+  all_goals simp_all [BlockReads.consumes]
 
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
   exact vm_read_suffix read
 
 end Gabbro.Core.Ast.Semantik
-
-#check (@Gabbro.Core.Ast.VariantArmsRead.rec : Nat)

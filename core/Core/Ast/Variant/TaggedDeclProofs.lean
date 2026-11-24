@@ -85,16 +85,21 @@ theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage :
 private theorem td_member_suffix {input member rest}
     (read : Gabbro.Core.Ast.VariantMemberRead input member rest) : rest <:+ input := by
   cases read with
-  | nullary name closed => exact List.suffix_refl _
+  | nullary name closed => exact List.suffix_cons _ _
   | payload name typeRead =>
-      exact (List.suffix_cons _ _).trans
-        ((TypeReads.consumes typeRead).trans (List.suffix_cons _ _))
+      exact (List.suffix_cons rest Gabbro.Core.Ast.closeParen).trans
+        ((TypeReads.consumes typeRead).trans (List.suffix_cons _ Gabbro.Core.Ast.openParen))
+
+private theorem td_tail_suffix {input variants rest}
+    (read : Gabbro.Core.Ast.VariantMembersTailRead input variants rest) : rest <:+ input := by
+  cases read with
+  | done => exact List.suffix_cons _ _
+  | next memberRead tailRead =>
+      exact (td_tail_suffix tailRead).trans
+        ((td_member_suffix memberRead).trans (List.suffix_cons _ _))
 
 theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
   intro input variants rest read
-  induction read with
-  | done => exact List.suffix_cons _ _
-  | next memberRead tailRead ih =>
-      exact ih.trans ((td_member_suffix memberRead).trans (List.suffix_cons _ _))
+  exact (List.suffix_cons rest Gabbro.Core.Ast.semicolon).trans (td_tail_suffix read)
 
 end Gabbro.Core.Ast.Semantik
