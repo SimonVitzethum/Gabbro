@@ -68,30 +68,26 @@ theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
 -- Extend the original stmt_keine_invarianten by mutual recursion over Stmt and Block.
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
-  let rec blockEmpty : ∀ {r b a} (body : Block r b a), (block body).klauseln.invariant = [] :=
-    fun {r b a} body =>
-      match body with
-      | .done => rfl
-      | .step first rest => by
-          simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-            stmt_keine_invarianten first, blockEmpty rest, List.nil_append]
-  cases tree with
-  | letValue name ordinary value =>
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  | assignVar ref visible writable value fits =>
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  | ret declared value fits =>
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  | ite condition yes no =>
-      cases yes with
-      | braces yesBody =>
-      cases no with
-      | braces noBody =>
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten, bracedBlock,
-        blockEmpty yesBody, blockEmpty noBody]
+  refine @Stmt.rec result
+    (fun b a t => (stmt t).klauseln.invariant = [])
+    (fun b a t => (block t).klauseln.invariant = [])
+    (fun b t => (bracedBlock t).klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · intro condition yes no yesIH noIH
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
+  · rfl
+  · intro middle before after first rest firstIH restIH
+    simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+      firstIH, restIH, List.nil_append]
+  · intro before after body bodyIH
+    simp only [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, bodyIH]
 
 end Gabbro.Core.Ast.Semantik
