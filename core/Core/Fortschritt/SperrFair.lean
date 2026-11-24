@@ -70,10 +70,10 @@ theorem sperr_warte_basis_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a 
           _ ≤ (0 + 1) * (H + 1) := Nat.zero_le _
     · obtain ⟨r', hbr, hg, hcost⟩ := hgibt h a s (Nat.le_refl _) hsa hown
       obtain ⟨s₁, s₂, hr1, hr2, hgibt⟩ := hg
-      by_cases hacq : ∃ k s*, a ≤ k ∧ k ≤ r' ∧ ρ.zeit.zustand k = some s* ∧
-          (s*.sperren l).besitzer = some c
-      · obtain ⟨k, s*, hk1, _, hzs, hownk⟩ := hacq
-        refine ⟨k, [], hk1, ⟨s*, hzs, Or.inl hownk⟩, ?_, ?_, ?_⟩
+      by_cases hacq : ∃ k sk, a ≤ k ∧ k ≤ r' ∧ ρ.zeit.zustand k = some sk ∧
+          (sk.sperren l).besitzer = some c
+      · obtain ⟨k, sk, hk1, _, hzs, hownk⟩ := hacq
+        refine ⟨k, [], hk1, ⟨sk, hzs, Or.inl hownk⟩, ?_, ?_, ?_⟩
         · calc ([] : List Nat).length = 0 := rfl
             _ ≤ 0 + 1 := Nat.zero_le _
         · intro x hx
@@ -191,10 +191,10 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
           obtain ⟨s₁, s₂, hr1, hr2, hgibt_step⟩ := hg
           obtain ⟨q, hsq, hs2q⟩ := gibt_abgeben hgibt_step
           have hown_r : (s₁.sperren l).besitzer = some h := by rw [hsq]
-          by_cases hacq : ∃ k s*, a ≤ k ∧ k ≤ r ∧ ρ.zeit.zustand k = some s* ∧
-              (s*.sperren l).besitzer = some c
-          · obtain ⟨k, s*, hk1, _, hzs, hownk⟩ := hacq
-            refine ⟨k, [], hk1, ⟨s*, hzs, Or.inl hownk⟩, ?_, ?_, ?_⟩
+          by_cases hacq : ∃ k sk, a ≤ k ∧ k ≤ r ∧ ρ.zeit.zustand k = some sk ∧
+              (sk.sperren l).besitzer = some c
+          · obtain ⟨k, sk, hk1, _, hzs, hownk⟩ := hacq
+            refine ⟨k, [], hk1, ⟨sk, hzs, Or.inl hownk⟩, ?_, ?_, ?_⟩
             · calc ([] : List Nat).length = 0 := rfl
                 _ ≤ i + 1 + 1 := Nat.zero_le _
             · intro x hx
