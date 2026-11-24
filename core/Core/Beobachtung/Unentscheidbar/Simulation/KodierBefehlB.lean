@@ -2,6 +2,8 @@ module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.KodierBefehl
 
+noncomputable section
+
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
@@ -23,14 +25,12 @@ def befehlVonCodeB : Code → Option Befehl
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.zurueckSprung f0')
-      | _ => Option.none
     | some 26 =>
       match kids with
       | f0 => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : Identifier ← Encodable.decode f0n
           Option.some (.starte f0')
-      | _ => Option.none
     | some 27 =>
       match kids with
       | Code.zero => Option.some .ende
@@ -262,7 +262,6 @@ def befehlVonCodeB : Code → Option Befehl
           let f0n : ℕ ← codeZuNat f0
           let f0' : List CarrierEffect ← Encodable.decode f0n
           Option.some (.definiereEffektgruppe f0')
-      | _ => Option.none
     | some 48 =>
       match kids with
       | Code.pair f0 (Code.pair f1 (f2)) => do

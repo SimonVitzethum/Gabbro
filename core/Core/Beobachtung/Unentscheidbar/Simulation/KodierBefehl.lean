@@ -2,6 +2,8 @@ module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.KodierErweitert
 
+noncomputable section
+
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
@@ -131,21 +133,18 @@ def befehlVonCodeA : Code → Option Befehl
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.negieren f0')
-      | _ => Option.none
     | some 7 =>
       match kids with
       | f0 => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.verneinen f0')
-      | _ => Option.none
     | some 8 =>
       match kids with
       | f0 => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.teilen f0')
-      | _ => Option.none
     | some 9 =>
       match kids with
       | Code.pair f0 (f1) => do
@@ -192,14 +191,12 @@ def befehlVonCodeA : Code → Option Befehl
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.springe f0')
-      | _ => Option.none
     | some 14 =>
       match kids with
       | f0 => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.blockEnde f0')
-      | _ => Option.none
     | some 15 =>
       match kids with
       | Code.pair f0 (Code.pair f1 (f2)) => do
@@ -253,7 +250,6 @@ def befehlVonCodeA : Code → Option Befehl
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.pruefeMass f0')
-      | _ => Option.none
     | some 20 =>
       match kids with
       | Code.pair f0 (f1) => do

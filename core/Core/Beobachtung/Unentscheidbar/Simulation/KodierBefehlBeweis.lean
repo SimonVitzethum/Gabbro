@@ -2,6 +2,8 @@ module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.KodierBefehlB
 
+noncomputable section
+
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
