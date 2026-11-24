@@ -241,7 +241,7 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
     body := .braces .done
     distinct := by
       change (paramName.val :: []).Nodup
-      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true]
+      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true, not_false_eq_true]
     returns := by
       intro h
       cases h
