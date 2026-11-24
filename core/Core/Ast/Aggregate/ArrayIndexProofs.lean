@@ -282,9 +282,7 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
-      · let vv : Wert (.array element (count + 1)) := by
-          change Vector (Wert element) (count + 1)
-          exact values
+      ·         let vv : Vector (Wert element) (count + 1) := values
         have wert : wertAls (.array element (count + 1))
             (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
           change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
