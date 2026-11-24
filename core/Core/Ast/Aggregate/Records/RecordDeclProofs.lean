@@ -20,8 +20,10 @@ import Core.Ast.Declaration.Members
 - `RecordDeclErhaltungAussage`
 - `RecordDeclRegelSicherAussage`
 - `RecordDeclErfuellbarAmAussage`
-- `RecordDeclBindingAussage`
--/
+ - `RecordDeclBindingAussage`
+ -/
+
+@[expose] public section
 
 namespace Gabbro.Core.Ast.Surface
 
