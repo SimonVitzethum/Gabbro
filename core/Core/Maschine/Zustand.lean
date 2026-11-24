@@ -45,6 +45,7 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   antworten : List AntwortEreignis
   verlauf : AussenVerlauf
   verbraucht : Kontext → Nat
+  geliefert : List (Nat × Nat)
   leihen : Nat → Leihe Objekt
 
 namespace Zustand
@@ -83,6 +84,7 @@ def start (lok : Kontext → Lok) (st : Kontext → Status Wert Grund) (kerne : 
   antworten := []
   verlauf := []
   verbraucht := fun _ => 0
+  geliefert := []
   leihen := fun _ => .eigen
 
 /-- **Satisfiability of the start's invariants**: a start state has a consistent complete memory,

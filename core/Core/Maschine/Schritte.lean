@@ -3,6 +3,7 @@ module
 public import Core.Maschine.Aussen
 public import Core.Maschine.Ereignisse
 public import Core.Maschine.Regel
+public import Core.Maschine.Unterbrechung
 
 @[expose] public section
 
@@ -34,6 +35,7 @@ inductive Aktion (L Bedingung : Type) where
   | sperre (l : L) (a : SperrAktion)
   | frage (q : Frage)
   | verbrauche (a : AntwortEreignis)
+  | rueckkehr
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where
@@ -68,6 +70,7 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   antworten : s'.antworten = s.antworten
   verbraucht : s'.verbraucht = s.verbraucht
   verlauf : s'.verlauf = s.verlauf
+  geliefert : s'.geliefert = s.geliefert
 
 abbrev SpeicherSpur (Ort Wert : Type) := List (SpeicherAkteur Ort × Etikett Ort Wert)
 
@@ -97,6 +100,8 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
       FuehrtAus t c s u (.frage q) [] [.frage (s.stelleFrage t c q)] (u.frage (s.stelleFrage t c q))
   | verbrauche {a} (ready : s.naechsteAntwort c = some a) :
       FuehrtAus t c s u (.verbrauche a) [] [] (u.verbrauche c)
+  | rueckkehr {k ausgang} (aktiv : KehrtZurueck s c k) (ende : u.status c = .beendet ausgang) :
+      FuehrtAus t c s u .rueckkehr [] [] (Zustandsrueckkehr u k)
 
 /-- Physical opportunity, dispatch and a live context are required for a context step. -/
 def KannSchreiten (run : HwLauf) (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
@@ -124,6 +129,16 @@ def AntwortSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat)
     Speicherfolge e.initial .aussen s.graph [aussenEtikett e (.antwort a)] spur.speicher s'.graph ∧
     s' = { s.antwort a with graph := s'.graph }
 
+/-- Delivery runs on its own opportunity. A pending offer is consumed only when a handler enters. -/
+def UnterbrechungsSchritt (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
+    (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
+  ∃ k id irq c nmi,
+    (run.angebot t).interrupt k = true ∧ UnterbrechungAusstehend s run t k id irq ∧
+    NimmtUnterbrechung (s.kerne k) k (Nat.pair id.1 id.2) irq c nmi ∧ s.status c = .ruht ∧
+    spur.aussen = [.interrupt k irq .handler] ∧
+    Speicherfolge e.initial .aussen s.graph [aussenEtikett e (.interrupt k irq .handler)]
+      spur.speicher s'.graph ∧ s' = { Zustandseintritt s k id c nmi with graph := s'.graph }
+
 variable [DecidableEq L]
 variable (Sy : MaschinenSystem L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 
@@ -134,6 +149,7 @@ inductive ImplSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
       (regel : Sy.ImplSchritt c s [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
       ImplSchritt k run t s spur s'
   | antwort {s s' spur} (h : AntwortSchritt e k run t s spur s') : ImplSchritt k run t s spur s'
+  | interrupt {s s' spur} (h : UnterbrechungsSchritt e run t s spur s') : ImplSchritt k run t s spur s'
 
 namespace I
 
@@ -144,6 +160,7 @@ inductive Schritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
       (regel : Sy.ISchritt c s w [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
       Schritt k run t s spur s'
   | antwort {s s' spur} (h : AntwortSchritt e k run t s spur s') : Schritt k run t s spur s'
+  | interrupt {s s' spur} (h : UnterbrechungsSchritt e run t s spur s') : Schritt k run t s spur s'
 
 end I
 
@@ -163,17 +180,24 @@ theorem AntwortSchritt.ankunft {k run t s spur s'} (h : AntwortSchritt e k run t
   rw [stateEq]
   exact ⟨a, spurEq, rfl, rfl⟩
 
+theorem UnterbrechungsSchritt.viele {run t s spur s'} (h : UnterbrechungsSchritt e run t s spur s') :
+    s.graph.Viele spur.speicher s'.graph := by
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, append, _⟩ := h
+  exact append.viele
+
 theorem impl_speicher_gut {k run t s spur s'} (h : ImplSchritt e Sy k run t s spur s')
     (gut : s.SpeicherGut) : s'.SpeicherGut := by
   cases h with
   | kontext _ _ aus => exact (aus.viele e).gut gut.1 gut.2
   | antwort h => exact (h.viele e).gut gut.1 gut.2
+  | interrupt h => exact (h.viele e).gut gut.1 gut.2
 
 theorem ideal_speicher_gut {k run t s spur s'} (h : I.Schritt e Sy k run t s spur s')
     (gut : s.SpeicherGut) : s'.SpeicherGut := by
   cases h with
   | kontext _ _ aus => exact (aus.viele e).gut gut.1 gut.2
   | antwort h => exact (h.viele e).gut gut.1 gut.2
+  | interrupt h => exact (h.viele e).gut gut.1 gut.2
 
 theorem warte_genau {t c s u b} :
     FuehrtAus e t c s u (.warte b) [] [] u ↔ e.bedingung s c b :=

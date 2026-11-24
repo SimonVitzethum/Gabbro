@@ -22,21 +22,24 @@ abbrev Kern := Nat
     core. -/
 inductive Kontext where
   | faden (n : Nat)
-  | handler (kern : Kern) (vektor : Nat)
-  | nmi (kern : Kern)
+  | handler (kern : Kern) (vektor instanceId : Nat)
+  | nmi (kern : Kern) (instanceId : Nat)
   deriving DecidableEq, Repr
 
 /-- The context identity at the catalogue boundary. -/
 def Kontext.nummer : Kontext → Nat
   | .faden n => Nat.pair 0 n
-  | .handler k v => Nat.pair 1 (Nat.pair k v)
-  | .nmi k => Nat.pair 2 k
+  | .handler k v i => Nat.pair 1 (Nat.pair k (Nat.pair v i))
+  | .nmi k i => Nat.pair 2 (Nat.pair k i)
 
 theorem Kontext.nummer_injektiv : Function.Injective Kontext.nummer := by
   intro c d h
   cases c <;> cases d <;> simp only [Kontext.nummer, Nat.pair_eq_pair] at h <;>
     rcases h with ⟨tag, args⟩ <;> cases tag
-  all_goals first | (cases args <;> rfl) | (rcases args with ⟨rfl, rfl⟩; rfl)
+  all_goals first
+    | (cases args <;> rfl)
+    | (rcases args with ⟨rfl, rfl⟩; rfl)
+    | (rcases args with ⟨rfl, rfl, rfl⟩; rfl)
 
 /-- **A privilege level**: user, system (kernel), hypervisor. Which of them a core has is a
     catalogue row's statement. -/
@@ -54,6 +57,7 @@ structure KernZustand (Raum : Type) where
   stufe : Stufe
   raum : Raum
   maske : Nat → Bool
+  untergrenze : Nat
   nmiAktiv : Bool
   stapel : List (Option Kontext × Bool)
 

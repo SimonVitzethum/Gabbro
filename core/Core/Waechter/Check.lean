@@ -36,8 +36,8 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
-  (`Gabbro.Core.Maschine.I.Schritt, 3232677623887082691),
-  (`Gabbro.Core.Maschine.ImplSchritt, 4099112030944390459)]
+  (`Gabbro.Core.Maschine.I.Schritt, 8264302221316684132),
+  (`Gabbro.Core.Maschine.ImplSchritt, 11039588729123112511)]
 
 private meta def acceptance : AcceptanceSpec := { ideal := #[`Gabbro.Core.Maschine.I.Schritt] }
 private meta def registry : Array RegistryFamily := #[]
