@@ -1,30 +1,10 @@
 module
 
-public import Core.Ast.Semantik.Runtime.ExpressionCode
-public import Core.Annahme.Waechter
+public import Core.Ast.Semantik.Runtime.Walk
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast.Semantik
-
-/-- The frame relation for expression evaluation uses the resolved de Bruijn slot
-    and carries the typed incoming value at every visible binding. -/
-def Rahmen.traegt (frame : Rahmen) (env : Umgebung scope) : Prop :=
-  ∀ {type} (ref : Local scope type), frame.lokale[ref.index]? = some (some ⟨type, env ref⟩)
-
-def Rahmen.Schritt (code : List Befehl) (before after : Rahmen) : Prop :=
-  ∃ b, before.stopp = none ∧ before.rueckgabe = none ∧
-    code[before.pc]? = some b ∧ after = b.auswerten before
-
-inductive Rahmen.Lauf (code : List Befehl) : Rahmen → Rahmen → Prop where
-  | start : Lauf code frame frame
-  | schritt : Lauf code before middle → Schritt code middle after → Lauf code before after
-
-/-- The source guards hold at every live instruction reached during this evaluation. -/
-def Rahmen.WaechterHalten (code : List Befehl) (frame : Rahmen) : Prop :=
-  ∀ reached, Rahmen.Lauf code frame reached → reached.stopp = none → reached.rueckgabe = none →
-    ∀ b, code[reached.pc]? = some b → ∀ g : Bedarf, b.guard reached = some g →
-      Annahme.waechterBedarf g.1 g.2
 
 /-- Evaluate an expression at its actual address in the containing instruction stream. -/
 theorem expr_ergebnis_typ_am (slot : Nat) (tree : Expr scope type)

@@ -15,8 +15,6 @@ inductive Rahmen.LaufN (code : List Befehl) : Nat → Rahmen → Rahmen → Prop
       LaufN code n (instruction.auswerten before) after →
       LaufN code (n + 1) before after
 
-def Rahmen.Aktiv (frame : Rahmen) : Prop := frame.stopp = none ∧ frame.rueckgabe = none
-
 def Binnen (code : List Befehl) (budget : Nat) (start : Rahmen) (goal : Rahmen → Prop) : Prop :=
   ∃ n out, n ≤ budget ∧ Rahmen.LaufN code n start out ∧ goal out
 
