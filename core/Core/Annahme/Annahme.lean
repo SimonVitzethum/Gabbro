@@ -69,6 +69,7 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   system := trivialesSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
+  quelltabellen := .leer
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
@@ -112,7 +113,8 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     exact triviale_regel_lokal i
   · exact aussen_gueltig_ohne_fragen _ triviale_ideal_stumm
   · intro ρ _
-    exact ⟨trivial, fun _ => trivial, fun _ _ => trivial⟩
+    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
+      fun _ _ _ h => (List.not_mem_nil h).elim⟩
   · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_⟩
     intro h
     obtain ⟨C, hC⟩ := h
@@ -164,6 +166,7 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
   system := kreuzSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
+  quelltabellen := .leer
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
@@ -245,6 +248,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   system := staleSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
+  quelltabellen := .leer
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
     ⟨fun _ => true, fun _ => 0⟩⟩
