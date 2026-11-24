@@ -59,7 +59,8 @@ theorem b8_protokoll_erfuellbar :
       ρ.zeit.spur t = some (.antwort w, spur) ∧ ProtokollB8Wahl (.antwort w) ∧
       ρ.zeit.zustand (t + 1) = some nach := by
   obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
-  obtain ⟨ρ, _, _, lauf, _, _, _, _, za2, za3, _, _, ea2, _⟩ := konkreter_lauf zul []
-  exact ⟨_, _, _, _, _, _, _, _, lauf, hosted_prefix lauf 2, za2, ea2, trivial, za3⟩
+  obtain ⟨ρ, g, g', lauf, _, _, _, _, za2, za3, _, _, ea2, _⟩ := konkreter_lauf zul []
+  exact ⟨einheit, umgebung [], ρ, 2, SchrittWahl.antwort (angekommen s []), antwortSpur s [],
+    fragend s g, fertig s [] g g', lauf, hosted_prefix lauf 2, za2, ea2, trivial, za3⟩
 
 end Gabbro.Core.Beobachtung
