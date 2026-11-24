@@ -238,6 +238,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.fastSicherAbschlussAussage, 15513620066603305435),
   (`Gabbro.Core.Beobachtung.fastSicherFortschrittAussage, 11293854038960625027),
   (`Gabbro.Core.Beobachtung.infoTheoretischAussage, 14815366656830662427),
-  (`Gabbro.Core.Beobachtung.reduktionAussage, 1528882119605236433)]
+  (`Gabbro.Core.Beobachtung.reduktionAussage, 1528882119605236433),
+  (`Gabbro.Core.Ast.Semantik.StarteSichtAussage, 4530529991360797036),
+  (`Gabbro.Core.Ast.Semantik.EndeSichtAussage, 3799476683618660502),
+  (`Gabbro.Core.Ast.Semantik.BindeRegionSichtAussage, 14879179297653489397)]
 
 end Gabbro.Core.Waechter
