@@ -83,8 +83,9 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   have hl : left.bytes.size ≤ a := left.bound
   have hr : right.bytes.size ≤ b := right.bound
   dsimp
-  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, ByteArray.size_append,
-    hleft, hright, left.bound, right.bound]
+  simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, wertAls,
+    dif_pos left.bound, dif_pos right.bound, Option.bind, TextValue.concat,
+    ByteArray.size_append, hleft, hright]
   constructor
   · rfl
   · omega
@@ -208,16 +209,16 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
     Ast.parse_print _, rfl, reached, ?_, ?_, ?_⟩
   · exact form.realisiert (textConcat_amOrt []) platform args s₂ rfl rfl rfl rfl
   · intro g guard
-    simp [Befehl.guard] at guard
+    simp only [Befehl.guard] at guard
     cases guard
   · constructor
     · rfl
     · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
         dsimp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        simp [a]
+        simp only [a]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
         dsimp [s₂, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-        simp [a]
+        simp only [a]
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
       change (((((textConcatForm []).befehl args).nach eintritt s₂).lokal eintritt).temp 0).isSome = true
