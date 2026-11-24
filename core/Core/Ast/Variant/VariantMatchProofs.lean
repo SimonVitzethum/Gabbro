@@ -330,6 +330,6 @@ theorem variantMatch_inversion : Gabbro.Core.Ast.Surface.VariantMatchInversionAu
       injection htoks with hi
       subst input
       exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
-  | _ => simp at htoks
+  | _ => simp [keyword, letKeyword, returnKeyword] at htoks
 
 end Gabbro.Core.Ast.Semantik
