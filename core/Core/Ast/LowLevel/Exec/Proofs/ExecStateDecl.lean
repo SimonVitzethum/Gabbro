@@ -299,7 +299,7 @@ private theorem execKlauseln (k : Katalog) (code : List ExecInstruction) :
 
 private theorem execWaechter (k : Katalog) (code : List ExecInstruction) :
     WaechterHalten (execProgram k code) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ runs t o args bedarf
     dsimp [kanonischeVerwendung, execProgram, Quelltabellen.leer] at bedarf
     cases bedarf
@@ -308,6 +308,8 @@ private theorem execWaechter (k : Katalog) (code : List ExecInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
     exact hblock
+  · intro ρ runs t l h _ hne
+    exact (hne rfl).elim
 
 private theorem execAussenLokalProgram (k : Katalog) (code : List ExecInstruction) :
     Gabbro.Core.Annahme.AussenLokal (execProgram k code) := by
