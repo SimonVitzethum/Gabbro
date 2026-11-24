@@ -29,7 +29,8 @@ inductive Befehl where
   | blockEnde (freigabe : Nat)
   | bindeWert (quelle : Nat) (ziel : Ty .value) (global : Bool)
   | definiere (name : Identifier) (parameter : List (Ty .value)) (result : Option (Ty .value))
-      (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle) (effects : List CarrierEffect)
+      (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle)
+      (effects : Option (List CarrierEffect))
   | rufe (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value))
   | rueckVoid
   | pruefeMass (quelle : Nat)

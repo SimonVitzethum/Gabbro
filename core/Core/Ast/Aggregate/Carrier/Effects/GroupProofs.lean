@@ -14,6 +14,7 @@ Prove the pinned statements in this file.
 - `EffectGroupVisibilityAussage`
 - `EffectGroupCaptureAussage`
 - `EffectGroupSignatureAussage`
+- `EffectGroupInferredAussage`
 - `EffectGroupCallAussage`
 - `EffectGroupBindingAussage`
 - `EffectGroupParseAussage`

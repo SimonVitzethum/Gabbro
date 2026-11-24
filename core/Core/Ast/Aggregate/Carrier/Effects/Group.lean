@@ -59,10 +59,26 @@ def EffectGroupSignatureAussage : Prop :=
       registered.effects = declaredEffects a.effects ∧
       ∀ site ∈ registered.ruft, site.effects = registered.effects
 
+/-- Inference traverses an edge only when its caller omits the effect clause. -/
+inductive EffectContractPath (functions : List Funktion) : Funktion → Funktion → Prop where
+  | here : EffectContractPath functions target target
+  | call {source middle target : Funktion} (missing : source.effects = none) (site : Rufstelle) (edge : site ∈ source.ruft)
+      (lookup : Funktion.finde functions site.name = some middle) :
+      EffectContractPath functions middle target → EffectContractPath functions source target
+
+def EffectGroupInferredAussage : Prop :=
+  ∀ functions target,
+    (functions.map (fun f => f.name.val)).Nodup →
+    Funktion.finde functions target.name = some target →
+    ∀ effect, effect ∈ Funktion.requiredEffects functions target ↔
+      ∃ (origin : Funktion) (declared : List CarrierEffect),
+        EffectContractPath functions target origin ∧ origin.effects = some declared ∧ effect ∈ declared
+
 def EffectGroupCallAussage : Prop :=
-  ∀ (site : Rufstelle) functions target,
+  ∀ (site : Rufstelle) functions target provided,
     Funktion.finde functions site.name = some target →
-    site.passt functions = true → ∀ effect ∈ target.effects, effect ∈ site.effects
+    site.effects = some provided → site.passt functions = true →
+    ∀ effect ∈ Funktion.requiredEffects functions target, effect ∈ provided
 
 def EffectGroupBindingAussage : Prop :=
   ∀ scope (item : EffectGroupDeclaration scope) frame,
@@ -119,7 +135,7 @@ def EffectGroupUseErfuellbarAussage : Prop :=
       E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
       E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
       E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) ∧
-      (∃ signature, after.funktionen.head? = some signature ∧ signature.effects = group.resolved)
+      (∃ signature, after.funktionen.head? = some signature ∧ signature.effects = some group.resolved)
 
 def EffectGroupProofPacket : Prop :=
   EffectGroupInversionAussage ∧
@@ -129,6 +145,7 @@ def EffectGroupProofPacket : Prop :=
   EffectGroupVisibilityAussage ∧
   EffectGroupCaptureAussage ∧
   EffectGroupSignatureAussage ∧
+  EffectGroupInferredAussage ∧
   EffectGroupCallAussage ∧
   EffectGroupBindingAussage ∧
   EffectGroupParseAussage ∧

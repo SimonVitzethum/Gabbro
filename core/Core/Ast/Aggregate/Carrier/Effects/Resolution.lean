@@ -72,8 +72,7 @@ structure EffectClause (scope : Scope) (parameters : List (Parameter scope)) whe
   expanded : List CarrierEffect
   checked : expandEffects scope (parameters.map (fun p => p.name.val)) written = some expanded
 
-def declaredEffects : Option (EffectClause scope ps) → List CarrierEffect
-  | none => []
-  | some clause => clause.expanded
+def declaredEffects (clause : Option (EffectClause scope ps)) : Option (List CarrierEffect) :=
+  clause.map EffectClause.expanded
 
 end Gabbro.Core.Ast

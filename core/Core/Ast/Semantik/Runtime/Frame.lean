@@ -52,7 +52,7 @@ structure Rufstelle where
   name : Identifier
   args : List (Ty .value)
   bind : Option (Ty .value)
-  effects : List CarrierEffect
+  effects : Option (List CarrierEffect)
 
 structure Funktion where
   name : Identifier
@@ -62,7 +62,7 @@ structure Funktion where
   konstanten : Nat
   misstAbstieg : Bool
   ruft : List Rufstelle
-  effects : List CarrierEffect
+  effects : Option (List CarrierEffect)
 
 structure Fortsetzung where
   pc : Nat
@@ -127,13 +127,40 @@ def Funktion.erreichbar (funktionen : List Funktion) (ziel : Identifier) : Nat �
 def Funktion.rekursiv (funktionen : List Funktion) (f : Funktion) : Bool :=
   f.ruft.any fun call => erreichbar funktionen f.name funktionen.length call.name
 
+/-- Explicit contracts bound the effect hull at their call sites. An omitted
+    contract follows the outgoing calls, visiting each function at most once. -/
+def Funktion.effectHull (funktionen : List Funktion) :
+    Nat → List (List Char) → List Identifier → List CarrierEffect
+  | 0, _, _ | _, _, [] => []
+  | fuel + 1, visited, name :: pending =>
+    if visited.contains name.val then effectHull funktionen fuel visited pending
+    else
+      let seen := name.val :: visited
+      match finde funktionen name with
+      | none => effectHull funktionen fuel seen pending
+      | some target =>
+        match target.effects with
+        | some effects => effects ++ effectHull funktionen fuel seen pending
+        | none => effectHull funktionen fuel seen (target.ruft.map Rufstelle.name ++ pending)
+
+def Funktion.requiredEffects (funktionen : List Funktion) (target : Funktion) : List CarrierEffect :=
+  match target.effects with
+  | some effects => effects
+  | none =>
+    let fuel := funktionen.foldl (fun n f => n + f.ruft.length) 1
+    effectHull funktionen fuel [] [target.name]
+
 def Rufstelle.passt (call : Rufstelle) (funktionen : List Funktion) : Bool :=
   match Funktion.finde funktionen call.name with
   | none => false
   | some target =>
+    let effectsPass := match call.effects with
+      | none => true
+      | some provided =>
+        (Funktion.requiredEffects funktionen target).all (fun effect => decide (effect ∈ provided))
     call.args.length == target.parameter.length &&
       (call.args.zip target.parameter).all (fun pair => tyFits pair.1 pair.2) &&
-      target.effects.all (fun effect => decide (effect ∈ call.effects)) &&
+      effectsPass &&
       match call.bind, target.result with
       | none, none | none, some _result => true
       | some written, some declared => tyFits declared written

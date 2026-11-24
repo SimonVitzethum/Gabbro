@@ -253,7 +253,7 @@ def functionCode (result : Option WrittenType) (measure : Option (Measure scope)
 
 def functionInstruction (before : Scope) (name : Identifier) (parameters : List (Parameter before))
     (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment)
-    (effects : List CarrierEffect) : Befehl :=
+    (effects : Option (List CarrierEffect)) : Befehl :=
   .definiere name (parameters.map (fun p => p.written.type)) (writtenResult result)
     before.length (body.code.length + 1) hasMeasure
     (body.code.filterMap fun
