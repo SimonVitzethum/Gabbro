@@ -26,56 +26,56 @@ private theorem memParseOfPrint {form : MemForm} (tree : MemTree form)
     simpa [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
 
 theorem memParseAussage_merge : MemParseAussage .merge := by
-  intro tree text pieces lex prod
-  refine ⟨True.intro, pieces, lex, ?_⟩
-  have symbols : ∀ ts : List LocatedToken,
-      DerivesSymbols (tokenGrammar (fun tokens (tree : MemTree .merge) => tree.production tokens))
-        (ts.map Symbol.terminal) ts := by
-    intro ts
-    induction ts with
-    | nil => exact .nil
-    | cons t ts ih => exact .terminal ih
-  exact .production ⟨semanticTokens pieces, rfl, by
-    have hp : tree.production (canonicalTokens pieces) := prod
-    simpa [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
+  intro text tree
+  constructor
+  · intro parsed
+    rcases parsed with ⟨root, pieces, lex, derives⟩
+    refine ⟨pieces, lex, ?_⟩
+    cases derives with
+    | production production children =>
+      obtain ⟨expected, rfl, reads⟩ := production
+      simpa [canonicalTokens, children.terminalTokens] using reads
+  · intro found
+    rcases found with ⟨pieces, lex, prod⟩
+    refine ⟨True.intro, pieces, lex, ?_⟩
+    have symbols : ∀ ts : List LocatedToken,
+        DerivesSymbols (tokenGrammar (fun tokens (tree : MemTree .merge) => tree.production tokens))
+          (ts.map Symbol.terminal) ts := by
+      intro ts
+      induction ts with
+      | nil => exact .nil
+      | cons t ts ih => exact .terminal ih
+    exact .production ⟨semanticTokens pieces, rfl, by
+      have hp : tree.production (canonicalTokens pieces) := prod
+      simpa [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
 
 theorem memInversionAussage_merge : MemInversionAussage .merge := by
-  intro tree text parsed
-  rcases parsed with ⟨root, pieces, lex, derives⟩
+  intro tree tokens prod
+  obtain ⟨pieces, lex, align⟩ := PrintedToken.renderLexed 0 tree.printPieces
   refine ⟨pieces, lex, ?_⟩
-  cases derives with
-  | production production children =>
-      obtain ⟨expected, rfl, reads⟩ := production
-      simpa [canonicalTokens, children.terminalTokens] using reads
+  rw [align]
+  cases tree with
+  | merge first second =>
+      dsimp [MemTree.printPieces, MemTree.production] at prod ⊢
+      rw [prod]
+      simp only [word, Identifier.print, keyword, PrintedToken.unquoted, printPunctuation,
+        printComma, printOpen, printClose, comma, openParen, closeParen, String.reduceToList,
+        List.map_cons, List.map_nil, Token.word.injEq, and_true, List.cons.injEq]
 
 theorem memEindeutigAussage_merge : MemEindeutigAussage .merge := by
-  intro a b text pa pb
-  rcases pa with ⟨root, pieces, lex, derivesA⟩
-  rcases pb with ⟨root', pieces', lex', derivesB⟩
-  have same : pieces = pieces' := LexedAt.deterministic lex lex'
-  subst pieces'
-  have readsA : a.production (canonicalTokens pieces) := by
-    cases derivesA with
-    | production production children =>
-      obtain ⟨expected, rfl, reads⟩ := production
-      simpa [canonicalTokens, children.terminalTokens] using reads
-  have readsB : b.production (canonicalTokens pieces) := by
-    cases derivesB with
-    | production production children =>
-      obtain ⟨expected, rfl, reads⟩ := production
-      simpa [canonicalTokens, children.terminalTokens] using reads
+  intro a b tokens hpa hpb
   cases a with
   | merge first second =>
     cases b with
     | merge first' second' =>
-      dsimp [MemTree.production] at readsA readsB
-      rw [readsA] at readsB
+      dsimp [MemTree.production] at hpa hpb
+      rw [hpa] at hpb
       have hf : first.val = first'.val := by
-        have h := congrArg (fun l : List Token => l[2]?) readsB
+        have h := congrArg (fun l : List Token => l[2]?) hpb
         simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
           Token.word.injEq] using h
       have hs : second.val = second'.val := by
-        have h := congrArg (fun l : List Token => l[4]?) readsB
+        have h := congrArg (fun l : List Token => l[4]?) hpb
         simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
           Token.word.injEq] using h
       have hfeq : first = first' := Subtype.ext hf
@@ -117,7 +117,7 @@ theorem memRealisiertAussage_merge : MemRealisiertAussage .merge := by
             rw [hget, Option.bind_some] at hhead
             by_cases he : (op.evaluate k.plattform.ziel s entryContext).isSome
             · rw [if_pos he] at hhead
-              exact ⟨rfl, hs, hpc, he⟩
+              exact ⟨hs, rfl, hpc, he⟩
             · rw [if_neg he] at hhead
               cases hhead
           · have hlen : [op].length ≤ (s.lokal entryContext).pc := by
@@ -133,13 +133,12 @@ theorem memRealisiertAussage_merge : MemRealisiertAussage .merge := by
       | beendet e =>
           rw [hs] at hhead
           cases hhead
-    · rw [hc, if_false] at hhead
+    · simp only [hc] at hhead
       cases hhead
   · intro h
     obtain ⟨hc, hs, hpc, he⟩ := h
     subst c
     dsimp [memUnit, memProgram, memHead]
-    rw [if_pos rfl]
     rw [hs]
     have hget : [op][(s.lokal entryContext).pc]? = some op := by
       rw [hpc]
@@ -152,7 +151,7 @@ theorem memAnnahmeAussage_merge : MemAnnahmeAussage .merge := by
   intro hstep
   dsimp [memUnit, memProgram, MemInstruction.rule, MemInstruction.step] at hstep
   rcases hstep with ⟨frame, heval, hplans, hu⟩
-  have hpl : plan = pl := (List.cons.inj hplans).1
+  have hpl : pl = plan := (List.cons.inj hplans).1
   subst pl
   rw [Annahme.Befugt]
   constructor
@@ -212,12 +211,11 @@ theorem memFortschrittAussage_merge : MemFortschrittAussage .merge := by
         | beendet e =>
             rw [hs] at hhead
             cases hhead
-      · rw [hc, if_false] at hhead
+      · simp only [hc] at hhead
         cases hhead
   | some transfer =>
       left
       refine ⟨(), [plan], transfer.advance c s, ?_⟩
-      dsimp [MemInstruction.rule, MemInstruction.step]
       exact ⟨transfer, hEval, rfl, rfl⟩
 
 end Gabbro.Core.Ast.LowLevel
