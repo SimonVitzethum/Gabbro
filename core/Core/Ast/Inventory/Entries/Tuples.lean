@@ -55,9 +55,9 @@ open Waechter
 
 private theorem tupleValuePacket : TupleValueProofPacket :=
   ⟨Surface.tupleValue_inversion, Surface.tupleValue_suffix, Surface.tupleValue_derivation,
-    tupleValueParse, tupleValueElaboriert, tupleValueRealisiert, tupleValueAnnahme,
-    tupleValueIdeal, tupleValueEinheit, tupleValueImpl, tupleValueErhaltung,
-    tupleValueRegelSicher, tupleValueErfuellbar⟩
+    tupleValue_parse, tupleValue_elaboriert, tupleValue_realisiert, tupleValue_annahme,
+    tupleValue_ideal, tupleValue_einheit, tupleValue_impl, tupleValue_erhaltung,
+    tupleValue_regelSicher, tupleValue_erfuellbar⟩
 
 private theorem tupleFieldPacket : TupleFieldProofPacket :=
   ⟨Surface.TupleFieldInversion, Surface.TupleFieldSuffix, Surface.TupleFieldDerivation,
@@ -66,7 +66,7 @@ private theorem tupleFieldPacket : TupleFieldProofPacket :=
     TupleFieldRegelSicher, TupleFieldErfuellbarAm⟩
 
 private theorem tupleBindPacket : TupleBindProofPacket :=
-  ⟨Surface.tupleBindInversionWitness, tupleBind_suffix, tupleBind_derivation,
+  ⟨Surface.tupleBindInversionWitness, Surface.tupleBind_suffix, Surface.tupleBind_derivation,
     tupleBind_parse, tupleBind_elaboriert, tupleBind_realisiert, tupleBind_annahme,
     tupleBind_ideal, tupleBind_einheit, tupleBind_impl, tupleBind_erhaltung,
     tupleBind_regelSicher, tupleBind_erfuellbar, tupleBind_locals⟩
@@ -74,16 +74,16 @@ private theorem tupleBindPacket : TupleBindProofPacket :=
 private theorem tupleTypePacket : TupleTypeProofPacket :=
   ⟨Gabbro.Core.Ast.tupleType_inversion, Gabbro.Core.Ast.tupleType_suffix,
     Gabbro.Core.Ast.tupleType_derivation, Gabbro.Core.Ast.tupleType_index,
-    Gabbro.Core.Ast.tupleType_syntax_erfuellbar, tupleTypeParse, tupleTypeElaboriert,
-    tupleTypeRealisiert, tupleTypeAnnahme, tupleTypeIdeal, tupleTypeEinheit,
-    tupleTypeImpl, tupleTypeErhaltung, tupleTypeRegelSicher, tupleTypeErfuellbar⟩
+    Gabbro.Core.Ast.tupleType_syntax_erfuellbar, tupleType_parse, tupleType_elaboriert,
+    tupleType_realisiert, tupleType_annahme, tupleType_ideal, tupleType_einheit,
+    tupleType_impl, tupleType_erhaltung, tupleType_regelSicher, tupleType_erfuellbar⟩
 
 public def tupleValueEntry :
     RegistryPacketEntry ``Expr.tupleValue (exprSchema ``Expr.tupleValue) TupleValueProofPacket where
   entry := by
     simp only [exprSchema, Lean.Name.str.injEq, String.reduceEq, and_false, ite_true, ite_false]
-    exact ⟨.surface tupleValueParse tupleValueElaboriert tupleValueRealisiert, tupleValueAnnahme,
-      tupleValueIdeal, tupleValueEinheit, tupleValueImpl, tupleValueErhaltung, tupleValueErfuellbar⟩
+    exact ⟨.surface tupleValue_parse tupleValue_elaboriert tupleValue_realisiert, tupleValue_annahme,
+      tupleValue_ideal, tupleValue_einheit, tupleValue_impl, tupleValue_erhaltung, tupleValue_erfuellbar⟩
   packetProof := tupleValuePacket
 
 public def tupleFieldEntry :
@@ -98,16 +98,16 @@ public def tupleBindEntry :
     RegistryPacketEntry ``Stmt.tupleBind (stmtSchema ``Stmt.tupleBind) TupleBindProofPacket where
   entry := by
     simp only [stmtSchema, Lean.Name.str.injEq, String.reduceEq, and_false, ite_true, ite_false]
-    exact ⟨.surface tupleBindParse tupleBindElaboriert tupleBindRealisiert, tupleBindAnnahme,
-      tupleBindIdeal, tupleBindEinheit, tupleBindImpl, tupleBindErhaltung, tupleBindErfuellbar⟩
+    exact ⟨.surface tupleBind_parse tupleBind_elaboriert tupleBind_realisiert, tupleBind_annahme,
+      tupleBind_ideal, tupleBind_einheit, tupleBind_impl, tupleBind_erhaltung, tupleBind_erfuellbar⟩
   packetProof := tupleBindPacket
 
 public def buildTupleEntry :
     RegistryPacketEntry ``Befehl.baueTupel (befehlSchema ``Befehl.baueTupel) TupleValueProofPacket where
   entry := by
     simp only [befehlSchema, Lean.Name.str.injEq, String.reduceEq, and_false, ite_true, ite_false]
-    exact ⟨.core ⟨aus_elaborierung, fun scope => (tupleValueIdeal scope).1⟩, tupleValueAnnahme,
-      tupleValueIdeal, tupleValueEinheit, tupleValueImpl, tupleValueErhaltung, tupleValueErfuellbar⟩
+    exact ⟨.core ⟨aus_elaborierung, fun scope => (tupleValue_ideal scope).1⟩, tupleValue_annahme,
+      tupleValue_ideal, tupleValue_einheit, tupleValue_impl, tupleValue_erhaltung, tupleValue_erfuellbar⟩
   packetProof := tupleValuePacket
 
 public def liesTupleFieldEntry :
@@ -122,8 +122,8 @@ public def bindeTupleEntry :
     RegistryPacketEntry ``Befehl.bindeTupel (befehlSchema ``Befehl.bindeTupel) TupleBindProofPacket where
   entry := by
     simp only [befehlSchema, Lean.Name.str.injEq, String.reduceEq, and_false, ite_true, ite_false]
-    exact ⟨.core ⟨aus_elaborierung, fun ctx => (tupleBindIdeal ctx).1⟩, tupleBindAnnahme,
-      tupleBindIdeal, tupleBindEinheit, tupleBindImpl, tupleBindErhaltung, tupleBindErfuellbar⟩
+    exact ⟨.core ⟨aus_elaborierung, fun ctx => (tupleBind_ideal ctx).1⟩, tupleBind_annahme,
+      tupleBind_ideal, tupleBind_einheit, tupleBind_impl, tupleBind_erhaltung, tupleBind_erfuellbar⟩
   packetProof := tupleBindPacket
 
 public theorem tupleTypeEntry : RegistryPacketProof ``WrittenType.tuple TupleTypeProofPacket :=
