@@ -249,7 +249,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
       change 0x1000 < 2 ^ (52 : Nat)
       omega
     change op.evaluate s entryContext = some transfer
-    simp only [op, Instruction.evaluate, hhr, hlt, transfer, k, Option.bind, ↓reduceIte]
+    simp only [op, Instruction.evaluate, hhr, hlt, transfer, k, Option.bind, Option.bind_some, ↓reduceIte]
 
 theorem view_erfuellbar : ErfuellbarAussage .view := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -296,14 +296,14 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     refine ⟨written.printPieces.map PrintedToken.value, rfl, ?_⟩
     exact TypeReads.integer
       (by
-        simp only [WrittenType.valid, WrittenType.storage, ↓reduceIte, Option.getD_none]
+        change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
         omega)
       (by intro more h; cases h)
   · have hslot : scope.slot name = some 0 := by
       simpa [scope, name] using lowName_slot
     have hlayout : layout k.plattform.ziel written = some shape := by
       rfl
-    simp only [elaborate, hslot, hlayout, op, tree, Option.bind]
+    simp only [elaborate, hslot, hlayout, op, tree, Option.bind, Option.bind_some]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
@@ -314,7 +314,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
       · change 0x1000 + 1 ≤ 0x2000
         omega
     change op.evaluate s entryContext = some transfer
-    simp only [op, Instruction.evaluate, hhr, hcond, transfer, Option.bind, ↓reduceIte]
+    simp only [op, Instruction.evaluate, hhr, hcond, transfer, Option.bind, Option.bind_some, ↓reduceIte]
 
 theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -346,7 +346,10 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   · apply tree_parse_print tree
     dsimp [tree, abi, row]
     rfl
-  · simp only [elaborate, tree, scope, op, allowed, ↓reduceIte]
+  · unfold elaborate
+    simp only [tree, scope]
+    rw [dif_pos allowed]
+    rfl
   · simp only [op, transfer, Instruction.evaluate]
 
 end Gabbro.Core.Ast.LowLevel
