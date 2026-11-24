@@ -15,6 +15,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Stufung
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Erfuellbar
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Fuellung
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowJoint
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
