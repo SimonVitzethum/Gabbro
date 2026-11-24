@@ -57,7 +57,7 @@ theorem tupleType_index : TupleTypeIndexAussage := by
   rfl
 
 private theorem tupleTypeTail_closed (tail : WrittenTypes) (rest : List Token) :
-    ∀ more, tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest ≠ keyword "in" :: more := by
+    ∀ more, tail.printTail.map PrintedToken.value ++ closeParen :: rest ≠ keyword "in" :: more := by
   match tail with
   | .empty =>
       intro more same
@@ -70,7 +70,7 @@ private theorem tupleTypeTail_closed (tail : WrittenTypes) (rest : List Token) :
       cases same
 
 private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (rest : List Token) →
-    TypeItemsTail (tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest) tail rest
+    TypeItemsTail (tail.printTail.map PrintedToken.value ++ closeParen :: rest) tail rest
   | .empty, _, rest => by
       simpa [WrittenTypes.printTail] using (TypeItemsTail.close (rest := rest))
   | .next head tail, valid, rest => by
@@ -80,7 +80,7 @@ private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (
       apply TypeItemsTail.comma
       · simpa [List.append_assoc] using
           (WrittenType.printReads head valid.1
-            (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
+            (rest := tail.printTail.map PrintedToken.value ++ closeParen :: rest)
             (tupleTypeTail_closed tail rest))
       · exact tupleType_printTail tail valid.2 rest
 
@@ -99,14 +99,14 @@ theorem tupleType_derivation : TupleTypeDerivationAussage := by
   rw [printEq]
   simp only [List.cons_append]
   refine TypeReads.tuple (input := ft ++ [comma] ++ st ++ tt ++ [closeParen] ++ rest)
-    (secondInput := st ++ tt ++ [closeParen] ++ rest)
-    (more := tt ++ [closeParen] ++ rest) ?_ ?_ ?_
+    (secondInput := st ++ tt ++ closeParen :: rest)
+    (more := tt ++ closeParen :: rest) ?_ ?_ ?_
   · simpa [ft] using (WrittenType.printReads first valid.1
-      (rest := comma :: (st ++ tt ++ [closeParen] ++ rest))
+      (rest := comma :: (st ++ tt ++ closeParen :: rest))
       (by intro more same; cases same))
   · simpa [st] using (WrittenType.printReads second valid.2.1
-      (rest := tt ++ [closeParen] ++ rest) (tupleTypeTail_closed tail rest))
-  · simpa [tt, List.singleton_append] using (tupleType_printTail tail valid.2.2 rest)
+      (rest := tt ++ closeParen :: rest) (tupleTypeTail_closed tail rest))
+  · simpa [tt] using (tupleType_printTail tail valid.2.2 rest)
 
 theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   let first : WrittenType := .bool
@@ -209,7 +209,8 @@ theorem tupleType_erfuellbar : TupleTypeErfuellbarAmAussage := by
   let w : WrittenType := .tuple .bool .bool .empty
   let a : Surface.MutableLocalArgs [] none :=
     ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-      .tupleValue .trueLit .falseLit .empty, by simp [w, Fits]⟩
+      .tupleValue .trueLit .falseLit .empty,
+      by simpa [w, Fits, WrittenType.type, WrittenTypes.types, tupleType]⟩
   let args : {a : Surface.MutableLocalArgs [] none // tupleTypeUse a.written} :=
     ⟨a, by simp [a, w, tupleTypeUse]⟩
   let form := typeUseForm ([], none) tupleTypeUse
