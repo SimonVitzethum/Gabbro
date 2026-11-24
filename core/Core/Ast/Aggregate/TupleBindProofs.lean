@@ -71,6 +71,11 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
   case letMutableValue =>
       have ne : openParen ≠ keyword "mut" := by decide
       exact (ne (List.cons.inj (List.cons.inj htok).2).1).elim
+  case assignField =>
+      have ne : ∀ name : List Char, openParen ≠ Token.word name := by
+        intro name h
+        cases h
+      exact (ne _ (List.cons.inj (List.cons.inj htok).2).1).elim
   all_goals simp_all
 
 end Gabbro.Core.Ast.Surface
@@ -177,8 +182,7 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simp [pattern, TuplePattern.names]
-    · change ([] : List Identifier).Nodup
-      exact List.nodup_nil
+    · simpa [pattern, TuplePattern.names]
     · intro name mem
       simp [pattern, TuplePattern.names] at mem
     · intro written mem
