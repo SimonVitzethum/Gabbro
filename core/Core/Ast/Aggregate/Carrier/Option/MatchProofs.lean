@@ -133,7 +133,7 @@ private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
   · simp only [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
       Expr.printTokens, printOpenBrace, printCloseBrace, printPunctuation,
       PrintedToken.unquoted, openBrace, closeBrace, List.map_cons, List.map_append,
-      List.map_nil, List.cons_append, List.nil_append]
+      List.map_nil, List.cons_append, List.nil_append, String.toList_ofList]
   · exact Expr.printReads a.val.value noOperatorAtOpenBrace
   · exact om_arms_printReads a.val.arms []
 
@@ -224,9 +224,12 @@ theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
   let ref : Local scope (indexOptionType count) := .here
   have visible : ref.visible := by
     constructor
-    · rfl
+    · change True
+      trivial
     · trivial
   have ordinary : ordinaryLocal name := by
+    change ['o'] ≠ "true".toList ∧ ['o'] ≠ "false".toList ∧ ['o'] ≠ "lenof".toList ∧
+      ['o'] ≠ "Some".toList ∧ ['o'] ≠ "None".toList
     decide
   have refOrdinary : ordinaryLocal ref.binding.name := by
     dsimp [ref, Local.binding]
@@ -235,6 +238,8 @@ theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
     Expr.variable ref visible refOrdinary
   let binder : Identifier := keywordName 'p' [] (by decide) (by intro c hc; cases hc)
   have binderOrdinary : ordinaryLocal binder := by
+    change ['p'] ≠ "true".toList ∧ ['p'] ≠ "false".toList ∧ ['p'] ≠ "lenof".toList ∧
+      ['p'] ≠ "Some".toList ∧ ['p'] ≠ "None".toList
     decide
   let bodySome : BracedBlock none (payloadBinding binder (indexType count) :: scope) := .braces .done
   let bodyNone : BracedBlock none scope := .braces .done
