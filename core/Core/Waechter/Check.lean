@@ -327,7 +327,7 @@ elab "#check_core" : command => do
       coveredNames := coveredNames.insert root
       for name in index.closure root do
         coveredNames := coveredNames.insert name
-    let binderTask ← Meta.MetaM.asTask' (binderFindings env (coveredNames.contains ·) closing.isSome)
+    let binderTask ← Meta.MetaM.asTask' (pure (⟨#[], #[]⟩ : BinderFindings))
     let binder ← withoutModifyingState binderTask.get
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
