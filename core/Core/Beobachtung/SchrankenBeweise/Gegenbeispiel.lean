@@ -112,7 +112,9 @@ private theorem regelSchranken_wachsend_falsch (b : Semantik.Befehl) :
   intro rs
   obtain ⟨start, zul⟩ := zulStart_erfuellbar (Hosted.erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   have zu : start.assignment 0 = some 0 := by
-    obtain ⟨c, hc⟩ := zul.2.2.1 0 (by decide : 0 < Sicherheit.Laufkonstruktion.bild.entries.length)
+    obtain ⟨c, hc⟩ := zul.2.2.1 0 (by
+      change 0 < [0].length
+      exact Nat.zero_lt_succ 0)
     have hc0 : c = 0 := Nat.lt_one_iff.mp (zul.2.2.2.1 0 c hc).2
     simpa [hc0] using hc
   let E := gegenEinheit b

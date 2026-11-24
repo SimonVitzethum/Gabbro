@@ -63,6 +63,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
 public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
 public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
@@ -86,6 +87,10 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
+public import Core.Beobachtung.Unentscheidbar.Modell
+public import Core.Beobachtung.Unentscheidbar.Reduktion
+public import Core.Beobachtung.Unentscheidbar.Rice
+public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Gegenbeispiel
 meta import Core.Waechter.Check
