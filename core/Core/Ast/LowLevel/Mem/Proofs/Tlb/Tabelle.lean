@@ -134,6 +134,7 @@ theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
           | none => rfl
           | some entry =>
               simp only [hfind, Option.isNone] at hiT
+              cases hiT
         have htok : ∀ token ∈ space.ausstehend,
             ∀ i < (region.extent.bis - region.extent.von) / target.seitengranule,
             ¬ token.contains (virt / target.seitengranule + i) := by
