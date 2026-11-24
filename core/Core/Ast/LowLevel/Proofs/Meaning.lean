@@ -38,16 +38,15 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
     heldRegion s c slot = none := by
   unfold heldRegion
   dsimp
-  simp [h, Option.bind]
+  simp [h]
+  cases (s.lokal c).regions[slot]? <;> rfl
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
   simp [elaborate] at hop
-  split at hop
-  · injection hop with hop'
-    subst op
-    exact ⟨_, _, rfl⟩
-  · cases hop
+  rcases hop with ⟨h, hop'⟩
+  subst op
+  exact ⟨_, _, rfl⟩
 
 theorem regionAddressMeaning : RegionAddressMeaningAussage := by
   intro k scope region op s c transfer hop heval
