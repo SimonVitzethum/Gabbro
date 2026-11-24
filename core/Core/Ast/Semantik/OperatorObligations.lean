@@ -174,7 +174,8 @@ theorem division_erfuellbar : divisionJoint := by
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
         simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
           Option.bind_eq_bind, Option.bind_some, Option.pure_def, Zahl.literal]
-      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.symm.trans guard)
+        rfl
+      have eq : g = ⟨.division, (1, 2)⟩ := (Option.some.inj (hg.symm.trans guard)).symm
       subst g
       omega
   · let args : Surface.DivisionArgs [] := ⟨.negativeLit 1, .lit 2, Or.inl (by omega)⟩
@@ -203,7 +204,8 @@ theorem division_erfuellbar : divisionJoint := by
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
         simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
           Option.bind_eq_bind, Option.bind_some, Option.pure_def, Zahl.literal]
-      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.symm.trans guard)
+        rfl
+      have eq : g = ⟨.division, (1, 2)⟩ := (Option.some.inj (hg.symm.trans guard)).symm
       subst g
       omega
 
