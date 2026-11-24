@@ -30,19 +30,19 @@ theorem recordValue_inversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
   generalize hh : Token.word ref.name.val :: openParen :: input = hs at read
   cases read with
-  | recordValue ref' args fields fits labelRead =>
-      have h2 := List.cons.inj hh
-      have hnval0 := h2.1
+  | recordValue ref' fields fits labelRead =>
+      rename_i input' lbs tys als ats args
       have hnval : ref'.name.val = ref.name.val := by
-        injection hnval0 with h
+        injection (List.cons.inj hh).1 with h
         exact h.symm
-      have hin := h2.2
-      refine ⟨⟨_, _, ref', _, _, args, fields, fits⟩, ?_, ?_, ?_⟩
+      have hin := (List.cons.inj hh).2
+      refine ⟨⟨lbs, tys, ref', als, ats, args, fields, fits⟩, ?_, ?_, ?_⟩
       · exact Subtype.ext hnval
       · simpa [hin] using labelRead
       · rfl
   | _ =>
-      simp at hh
+      simp [keyword, trueKeyword, falseKeyword, openParen, openBracket, comma,
+        dot, assignment, semicolon] at hh
 
 private theorem labeledItems_consumes (scope : Scope) :
     ∀ (labels : List Identifier) (types : List (Ty .value)) (items : LabeledItems scope labels types),

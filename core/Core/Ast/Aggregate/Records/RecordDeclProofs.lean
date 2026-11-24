@@ -31,11 +31,12 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
   generalize hh : recordDeclarationPrefix ex ++ [Token.word name.val, assignment, openBrace] ++ input = hs at read
   cases read with
   | record e n valid distinct memberRead =>
+      rename_i fields input'
       have he : e = ex := by
         cases e <;> cases ex <;> simp [recordDeclarationPrefix, keyword] at hh ⊢
       subst e
       have hh' : recordDeclarationPrefix ex ++ ([Token.word name.val, assignment, openBrace] ++ input) =
-          recordDeclarationPrefix ex ++ ([Token.word n.val, assignment, openBrace] ++ _) := by
+          recordDeclarationPrefix ex ++ ([Token.word n.val, assignment, openBrace] ++ input') := by
         simpa only [List.append_assoc] using hh
       have htail := List.append_cancel_left hh'
       have hnval0 : Token.word name.val = Token.word n.val := (List.cons.inj htail).1
@@ -46,8 +47,11 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
       refine ⟨⟨ex, n, _, valid, distinct⟩, rfl, Subtype.ext hnval, ?_, ?_⟩
       · simpa [hin] using memberRead
       · rfl
+  | tagged ex' n valid distinct firstRead tailRead =>
+      cases ex <;> cases ex' <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix, keyword] at hh
   | _ =>
-      cases ex <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix, keyword] at hh
+      cases ex <;> simp [recordDeclarationPrefix, keyword, assignment, colon, openBrace,
+        openParen, semicolon] at hh
 
 private theorem recordMembers_consumes {input : List Token} {fields : List RecordMember} {rest : List Token}
     (read : RecordMembersRead input fields rest) : rest <:+ input := by
@@ -63,35 +67,35 @@ theorem recordDecl_suffix : RecordDeclSuffixAussage := by
   intro input fields rest read
   exact (List.suffix_cons semicolon rest).trans (recordMembers_consumes read)
 
+private def memberTokenList : List RecordMember → List Token
+  | [] => []
+  | m :: ms => m.name.print.value :: colon :: m.written.printPieces.map PrintedToken.value ++
+      comma :: memberTokenList ms
+
 private theorem recordMembers_print_reads (fields : List RecordMember)
     (valid : ∀ m ∈ fields, m.written.valid) :
-    RecordMembersRead
-      (fields.flatMap (fun m => (RecordMember.printPieces m).map PrintedToken.value) ++
-        [closeBrace, semicolon]) fields [semicolon] := by
+    RecordMembersRead (memberTokenList fields ++ [closeBrace, semicolon]) fields [semicolon] := by
   induction fields with
   | nil =>
-      simp
+      simp [memberTokenList]
       exact .close
   | cons m ms ih =>
-      have readm : TypeReads
-          (m.written.printPieces.map PrintedToken.value ++
-            comma :: (ms.flatMap (fun x => (RecordMember.printPieces x).map PrintedToken.value) ++
-              [closeBrace, semicolon]))
-          m.written
-          (comma :: (ms.flatMap (fun x => (RecordMember.printPieces x).map PrintedToken.value) ++
-            [closeBrace, semicolon])) :=
-        WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same)
-      have step := RecordMembersRead.next m.name readm (ih (fun x hx => valid x (List.mem_cons_of_mem m hx)))
-      simpa [RecordMember.printPieces] using step
+      change RecordMembersRead
+        (m.name.print.value :: colon :: m.written.printPieces.map PrintedToken.value ++
+          comma :: (memberTokenList ms ++ [closeBrace, semicolon]))
+        (m :: ms) [semicolon]
+      exact RecordMembersRead.next m.name
+        (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
+        (ih (fun x hx => valid x (List.mem_cons_of_mem m hx)))
 
 private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
     (recordDecl scope).production args
       (((Category.declaration scope).printPieces ((recordDecl scope).tree args)).map PrintedToken.value) := by
-  refine ⟨args.members.flatMap (fun m => (RecordMember.printPieces m).map PrintedToken.value) ++
-    [closeBrace, semicolon], ?_, ?_⟩
-  · cases args.exported <;>
-      simp [recordDecl, Category.printPieces, Decl.printPieces,
-        recordDeclarationHead, recordDeclarationPrefix, keyword, List.flatMap]
+  refine ⟨memberTokenList args.members ++ [closeBrace, semicolon], ?_, ?_⟩
+  · by_cases h : args.exported <;>
+      simp [h, memberTokenList, recordDecl, Category.printPieces, Decl.printPieces,
+        recordDeclarationHead, recordDeclarationPrefix, keyword, List.flatMap,
+        RecordMember.printPieces, List.map_append]
   · exact recordMembers_print_reads args.members args.valid
 
 theorem recordDecl_derivation : RecordDeclDerivationAussage := by

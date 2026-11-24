@@ -30,20 +30,19 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
   generalize hh : letKeyword :: keyword "mut" :: Token.word name :: assignment :: input = hs at read
   cases read with
   | letMutableValue n ordinary valueRead =>
+      rename_i input' ty val
       have h2 := List.cons.inj (List.cons.inj hh).2
       have hnval0 := (List.cons.inj h2.2).1
       have hnval : n.val = name := by
         injection hnval0 with h
         exact h.symm
       have hin := (List.cons.inj (List.cons.inj h2.2).2).2
-      obtain ⟨ty, val, vr⟩ : ∃ (ty : Ty .value) (val : Expr scope ty),
-          ExprReads scope 0 input val (semicolon :: rest) := by
-        refine ⟨_, _, ?_⟩
-        simpa [hin] using valueRead
-      refine ⟨⟨n, ordinary, ty, val⟩, Subtype.ext hnval, vr, ?_⟩
-      rfl
+      refine ⟨⟨n, ordinary, ty, val⟩, Subtype.ext hnval, ?_, ?_⟩
+      · simpa [hin] using valueRead
+      · rfl
   | _ =>
-      simp [keyword, letKeyword, returnKeyword, ifKeyword] at hh
+      simp [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,
+        openParen, openBrace, semicolon] at hh
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
   intro scope result name input tree rest read
