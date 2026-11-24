@@ -205,33 +205,33 @@ theorem pruefeMassSicht : PruefeMassSichtAussage := by
     ← hOb, ← hArr, ← hPlat, ← hEnv]
   cases hfunk : r₁.funktion with
   | none =>
-      simp only [hfunk, Id.run, pure, if_true]
+      simp only [hfunk, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
       exact sicht_halt_gleich .ungueltigerWert h
   | some name =>
       cases hzahl : r₁.zahl quelle with
       | none =>
-          simp only [hfunk, hzahl, Id.run, pure, if_true]
+          simp only [hfunk, hzahl, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
           exact sicht_halt_gleich (.abstieg name) h
       | some value =>
           by_cases hneg : value.zahl.wert < 0
-          · simp only [hfunk, hzahl, hneg, Id.run, pure, if_true, if_false]
+          · simp only [hfunk, hzahl, hneg, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
             exact sicht_halt_gleich (.abstieg name) h
           · cases hprev : r₁.fortsetzungen.find?
                 (fun k => (k.funktion.map Subtype.val) == some name.val) with
             | none =>
-                simp only [hfunk, hzahl, hneg, hprev, Id.run, pure, if_true, if_false]
+                simp only [hfunk, hzahl, hneg, hprev, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                 unfold Rahmen.sicht
                 rw [hTe, hLe, hRueck]
             | some k =>
                 cases hmass : k.mass with
                 | none =>
-                    simp only [hfunk, hzahl, hneg, hprev, hmass, Id.run, pure, if_true, if_false]
+                    simp only [hfunk, hzahl, hneg, hprev, hmass, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                     exact sicht_halt_gleich (.abstieg name) h
                 | some old =>
                     by_cases hge : value.zahl.wert.toNat ≥ old
-                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, pure, if_true, if_false]
+                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                       exact sicht_halt_gleich (.abstieg name) h
-                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, pure, if_true, if_false]
+                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                       unfold Rahmen.sicht
                       rw [hTe, hLe, hRueck]
 
@@ -274,46 +274,46 @@ theorem rufeSicht : RufeSichtAussage := by
     ← hFort, ← hStopp, ← hArr, ← hPlat, ← hEnv]
   cases hfind : Funktion.finde r₁.funktionen name with
   | none =>
-      simp only [hfind, Id.run, pure, if_true]
+      simp only [hfind, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
       exact sicht_halt_gleich (.ungueltigerRuf name) h
   | some callee =>
-      simp only [← rufArgumente_gleich r₁ r₂ hTemp 0 args callee.parameter]
+      simp only [← rufArgumente_gleich r₁ r₂ (fun s => congrFun hTemp s) 0 args callee.parameter]
       cases hargs : r₁.rufArgumente 0 args callee.parameter with
       | none =>
-          simp only [hfind, hargs, Id.run, pure, if_true]
+          simp only [hfind, hargs, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
           exact sicht_halt_gleich (.ungueltigerRuf name) h
       | some callArgs =>
           cases hbind : bind with
           | none =>
-              simp only [hfind, hargs, hbind, Id.run, pure, if_true]
+              simp only [hfind, hargs, hbind, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
               by_cases habstieg :
                 ((⟨r₁.pc + 1, r₁.temp, r₁.lokale, r₁.zaehler, r₁.obergrenzen,
                     r₁.funktion, r₁.mass, none⟩ : Fortsetzung) :: r₁.fortsetzungen).any
                     (fun k => (k.funktion.map Subtype.val) == some name.val) &&
                   !callee.misstAbstieg
-              · simp only [habstieg, if_true]
+              · simp only [habstieg, if_true, Bool.false_eq_true, eq_self_iff_true]
                 exact sicht_halt_gleich (.abstieg name) h
-              · simp only [habstieg, if_false]
+              · simp only [habstieg, if_false, Bool.false_eq_true, eq_self_iff_true]
                 unfold Rahmen.sicht
                 rw [hRueck]
           | some target =>
               cases hres : callee.result with
               | none =>
-                  simp only [hfind, hargs, hbind, hres, Id.run, pure, if_true]
+                  simp only [hfind, hargs, hbind, hres, Id.run, pure, if_true, Bool.false_eq_true, eq_self_iff_true]
                   exact sicht_halt_gleich (.ungueltigerRuf name) h
               | some source =>
                   by_cases hfit : !tyFits source target
-                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, pure, if_true, if_false]
+                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                     exact sicht_halt_gleich (.ungueltigerRuf name) h
-                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, pure, if_true, if_false]
+                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, pure, if_true, if_false, Bool.false_eq_true, eq_self_iff_true]
                     by_cases habstieg :
                       ((⟨r₁.pc + 1, r₁.temp, r₁.lokale, r₁.zaehler, r₁.obergrenzen,
                           r₁.funktion, r₁.mass, some target⟩ : Fortsetzung) :: r₁.fortsetzungen).any
                           (fun k => (k.funktion.map Subtype.val) == some name.val) &&
                         !callee.misstAbstieg
-                    · simp only [habstieg, if_true]
+                    · simp only [habstieg, if_true, Bool.false_eq_true, eq_self_iff_true]
                       exact sicht_halt_gleich (.abstieg name) h
-                    · simp only [habstieg, if_false]
+                    · simp only [habstieg, if_false, Bool.false_eq_true, eq_self_iff_true]
                       unfold Rahmen.sicht
                       rw [hRueck]
 
