@@ -6,6 +6,13 @@ public import Core.Verfeinerung.Formen.Familie
 
 namespace Gabbro.Core.Ast.Semantik
 
+open Maschine
+
 def VarianteSimAussage : Prop := SimFamilie.variante.Pflicht
+
+theorem varianteSim : VarianteSimAussage := by
+  intro p platform b familie
+  refine ⟨I.RegelSimSchritt.aus_gleicher_regel rfl (fun _ _ _ _ _ rule => rule),
+    I.RegelStotterSchranke.null rfl⟩
 
 end Gabbro.Core.Ast.Semantik
