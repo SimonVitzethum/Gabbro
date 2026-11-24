@@ -298,7 +298,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.LiesRecordFeldSichtAussage, 16303408567787572128),
   (`Gabbro.Core.Ast.Semantik.LiesTupelfeldSichtAussage, 16713801374878544054),
   (`Gabbro.Core.Ast.Semantik.OptionIstBesetztSichtAussage, 11382218168381689367),
-  (`Gabbro.Core.Ast.Semantik.PointerTypeUseAussage, 1646305917006616274),
+  (`Gabbro.Core.Ast.Semantik.PointerTypeUseAussage, 15516579165049223693),
   (`Gabbro.Core.Ast.Semantik.PruefeMassSichtAussage, 1371571470644003098),
   (`Gabbro.Core.Ast.Semantik.RueckVoidSichtAussage, 15016942873419555456),
   (`Gabbro.Core.Ast.Semantik.RufeSichtAussage, 15178512974520966823),
