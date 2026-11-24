@@ -247,9 +247,11 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   | none =>
                       simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                        cases h
                   | some m0 =>
                       simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                        cases h
               | some written =>
                   refine ResultReads.typed ?_
                   have hwt := WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
@@ -258,6 +260,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                     | none =>
                         simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                          cases h
                     | some m0 =>
                         simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                           printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h)
@@ -271,6 +274,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   intro more h
                   simp only [List.map_append, List.map_cons, List.map_nil, List.nil_append, List.cons_append, List.append_assoc, afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
                     printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
+                    cases h
               | some m =>
                   refine MeasureReads.present m ?_
                   have hexpr := Expr.printReads (rest := afterMeasure) m.expression (by
