@@ -36,10 +36,11 @@ private theorem expr_ausdrucksschritte (slot : Nat) (tree : Expr scope type) :
     ∀ b ∈ (expr slot tree).code, b.Ausdrucksschritt := by
   induction tree generalizing slot <;>
     simp only [expr, Fragment.anhaengen, Fragment.einzel,
-      List.forall_mem_append, List.forall_mem_singleton] <;>
-    repeat' constructor <;>
+      List.forall_mem_append, List.forall_mem_singleton]
+  all_goals repeat' apply And.intro
+  all_goals
     first
-    | assumption
+    | solve_by_elim
     | intro frame
       exact ⟨Nat.lt_succ_self _, by cases frame; rfl⟩
     | intro frame
@@ -81,6 +82,6 @@ theorem expr_laufN (slot : Nat) (tree : Expr scope type) (env : Umgebung scope)
   obtain ⟨out, walk, atEnd, value, _⟩ := expr_ergebnis_typ slot tree env frame typed active.2 entry
   obtain ⟨n, _, budget, counted, preserved⟩ :=
     walk.ausdrucksLaenge (expr_ausdrucksschritte slot tree) active suffix
-  exact ⟨n, by simpa only [atEnd, entry, Nat.sub_zero] using budget, counted, atEnd, value, preserved⟩
+  exact ⟨n, out, by simpa only [atEnd, entry, Nat.sub_zero] using budget, counted, atEnd, value, preserved⟩
 
 end Gabbro.Core.Ast.Semantik
