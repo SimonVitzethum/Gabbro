@@ -159,7 +159,9 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
     let values := args.wert env
     tupleOfFn types fun i => Wert.widen (actualTypes.get (fields.slot i)) (types.get i) (fits i)
       (tupleGet actualTypes (fields.slot i) values)
-  | .recordField (types := types) base _ index _ => tupleGet types index (base.wert env)
+  | .recordField (types := types) base _ index _ =>
+    let record := base.wert env
+    tupleGet types index record
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit

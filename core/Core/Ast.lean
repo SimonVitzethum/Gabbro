@@ -11,6 +11,10 @@ public import Core.Ast.Aggregate.ArrayIndexProofs
 public import Core.Ast.Aggregate.TupleValueProofs
 public import Core.Ast.Aggregate.TupleFieldProofs
 public import Core.Ast.Aggregate.TypeProofs
+public import Core.Ast.Aggregate.TupleBindProofs
+public import Core.Ast.Aggregate.Records.DeclarationsProofs
+public import Core.Ast.Aggregate.Records.ConstructionProofs
+public import Core.Ast.Aggregate.Records.FieldsProofs
 
 /-!
 # Adding one inventory form

@@ -162,6 +162,16 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements tupleValueForm TupleValueErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.liesTupelfeld then
     ⟨.core, Quellform.kernStatements tupleFieldForm TupleFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.baueRecord then
+    ⟨.core, Quellform.kernStatements recordValueForm RecordValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.liesRecordFeld then
+    ⟨.core, Quellform.kernStatements recordFieldForm RecordFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.bindeTupel then
+    ⟨.core, Quellform.kernStatements tupleBindForm TupleBindErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.setzeRecordFeld then
+    ⟨.core, Quellform.kernStatements assignFieldForm AssignFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.definiereRecord then
+    ⟨.core, Quellform.kernStatements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor

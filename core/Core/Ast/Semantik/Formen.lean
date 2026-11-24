@@ -3,6 +3,10 @@ module
 public import Core.Ast.Semantik.ProgramForms
 public import Core.Ast.Aggregate.Arrays
 public import Core.Ast.Aggregate.Tuples
+public import Core.Ast.Aggregate.TupleBindings
+public import Core.Ast.Aggregate.Records.Declarations
+public import Core.Ast.Aggregate.Records.Construction
+public import Core.Ast.Aggregate.Records.Fields
 
 @[expose] public section
 
@@ -76,6 +80,10 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements tupleValueForm TupleValueErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.tupleField then
     ⟨.surface, Quellform.statements tupleFieldForm TupleFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.recordValue then
+    ⟨.surface, Quellform.statements recordValueForm RecordValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.recordField then
+    ⟨.surface, Quellform.statements recordFieldForm RecordFieldErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=
@@ -99,6 +107,12 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => boundedWhileForm ctx.1 ctx.2) boundedWhileJoint constructor⟩
   else if constructor = ``Stmt.forRange then
     ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => forRangeForm ctx.1 ctx.2) forRangeJoint constructor⟩
+  else if constructor = ``Stmt.tupleBind then
+    ⟨.surface, Quellform.statements tupleBindForm TupleBindErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.assignField then
+    ⟨.surface, Quellform.statements assignFieldForm AssignFieldErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.letMutableValue then
+    ⟨.surface, Quellform.statements mutableValueForm MutableValueErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=
@@ -106,6 +120,8 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements constantForm constantJoint constructor⟩
   else if constructor = ``Decl.function then
     ⟨.surface, Quellform.statements functionForm functionJoint constructor⟩
+  else if constructor = ``Decl.record then
+    ⟨.surface, Quellform.statements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=
