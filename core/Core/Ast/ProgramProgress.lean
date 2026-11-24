@@ -136,7 +136,9 @@ def SchleifenKoerper (code : List Befehl) (origin : Rahmen) (first limit body ba
     bodies followed by a backward jump. A final true test requests the handler. -/
 theorem boundedWhile_terminiert (a : Surface.BoundedWhileArgs scope result) (frame : Rahmen)
     (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
-    (typed : frame.traegt env) (bodyBudget : Nat)
+    (typed : frame.traegt env)
+    (checked : frame.WaechterHalten ((boundedWhileForm scope result).fragment a).code)
+    (bodyBudget : Nat)
     (body : let f := (boundedWhileForm scope result).fragment a
       let test := (boundedWhileForm scope result).position a
       SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 1) bodyBudget)
@@ -177,7 +179,9 @@ theorem forRange_leer (frame : Rahmen) (lower upper : Ganzzahl) (index : Ty .val
 
 theorem forRange_terminiert (a : Surface.ForRangeArgs scope result) (frame : Rahmen)
     (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
-    (typed : frame.traegt env) (bodyBudget : Nat)
+    (typed : frame.traegt env)
+    (checked : frame.WaechterHalten ((forRangeForm scope result).fragment a).code)
+    (bodyBudget : Nat)
     (body : let f := (forRangeForm scope result).fragment a
       let test := (forRangeForm scope result).position a
       SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 2) bodyBudget)
@@ -218,7 +222,8 @@ theorem program_eintritt (frame : Rahmen) (entry : Identifier) (target : Funktio
   sorry
 
 theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung scope)
-    (frame : Rahmen) (active : frame.Aktiv) (typed : frame.traegt env) (initial : frame.pc = 0) :
+    (frame : Rahmen) (active : frame.Aktiv) (typed : frame.traegt env) (initial : frame.pc = 0)
+    (checked : frame.WaechterHalten ((constantForm scope).fragment a).code) :
     let code := ((constantForm scope).fragment a).code
     ∃ value, wertIn a.written.type ⟨a.type, a.value.wert env⟩ = some value ∧
       Binnen code code.length frame (fun out =>

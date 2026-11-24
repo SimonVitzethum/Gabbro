@@ -18,6 +18,8 @@ def wertInhalt (type : Ty .value) (value : Wert type) : Int ⊕ Bool ⊕ Option 
   | .int _ _, number => .inl number.wert
   | .bool, bit => .inr (.inl bit)
   | .array _ 0, _ => .inr (.inr none)
+  | .text _, text =>
+    .inr (.inr (some ⟨.text text.bytes.size, ⟨text.bytes, Nat.le_refl _⟩⟩))
   | type, value => .inr (.inr (some ⟨type, value⟩))
 
 -- Mirror literal_ausserhalb_verweigert with interval containment in the successful direction.
@@ -54,9 +56,9 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
     (temp : (s.lokal eintritt).temp slot = some ⟨source, value⟩) :
     let after := (Befehl.zurueck slot target).nach eintritt s
     ∃ widened : Wert target,
-      (after.lokal eintritt).rueckgabe = some ⟨target, widened⟩ ∧
       wertInhalt source value = wertInhalt target widened ∧
-      ∀ code, kopf code after eintritt = none := by
+      after.lokal eintritt = (s.lokal eintritt).rueckkehr (some ⟨target, widened⟩) ∧
+      ((s.lokal eintritt).fortsetzungen = [] → ∀ code, kopf code after eintritt = none) := by
   sorry
 
 -- Mirror the pc equality of expr_ergebnis_typ and split on the actual Boolean input.

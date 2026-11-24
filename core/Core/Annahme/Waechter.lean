@@ -33,6 +33,7 @@ def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .konvertierung, (v, w) => v < 2 ^ w
   | .entpacken, tag => tag = Nat.succ Nat.zero
   | .ganzzahlBereich, (abstand, anzahl) => 0 ≤ abstand ∧ abstand < (anzahl : Int)
+  | .teilfolge, (first, last, bytes) => 0 ≤ first ∧ first ≤ last ∧ last ≤ (bytes : Int)
 
 /-- The pinned narrowing row is exactly membership in the declared range. -/
 theorem ganzzahlBereich_iff (wert lo hi : Int) :

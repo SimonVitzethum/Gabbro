@@ -53,6 +53,7 @@ def ordinaryLocal (name : Identifier) : Prop :=
 def Fits : Ty .value → Ty .value → Prop
   | .int lo hi, .int lower upper => lower ≤ lo ∧ hi ≤ upper
   | .bool, .bool => True
+  | .text source, .text target => source ≤ target
   | .array _ 0, .array _ 0 => True
   | a, b => a = b
 
@@ -113,6 +114,12 @@ inductive Expr (scope : Scope) : Ty .value → Type where
       (ordinary : ordinaryLocal label) (available : availableCase scope label)
       (payload : CasePayload scope (payloads.get index)) :
       Expr scope (variantValueType ref.name.val labels payloads)
+  | textLiteral (decoded : List Char) : Expr scope (.text decoded.utf8Encode.size)
+  | textConcat (left : Expr scope (.text a)) (right : Expr scope (.text b)) : Expr scope (.text (a + b))
+  | textIndex (base : Expr scope (.text capacity)) (offset : Expr scope (.int lo hi)) :
+      Expr scope (.int 0 255)
+  | substring (base : Expr scope (.text capacity)) (first : Expr scope (.int lo₁ hi₁))
+      (last : Expr scope (.int lo₂ hi₂)) : Expr scope (.text capacity)
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
@@ -149,6 +156,9 @@ def Expr.static : Expr scope type → Prop
   | .recordValue _ items _ _ => items.static
   | .recordField base _ _ _ => base.static
   | .variantValue _ _ _ _ _ _ payload => payload.static
+  | .textConcat left right => left.static ∧ right.static
+  | .textIndex base offset => base.static ∧ offset.static
+  | .substring base first last => base.static ∧ first.static ∧ last.static
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop
@@ -174,6 +184,7 @@ inductive WrittenType where
   | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
   | array (element : WrittenType) (count : Nat)
   | tuple (first second : WrittenType) (rest : WrittenTypes)
+  | text (capacity : Nat)
 
 inductive WrittenTypes where
   | empty
@@ -194,6 +205,7 @@ def WrittenType.type : WrittenType → Ty .value
     .int lo hi
   | .array element count => .array element.type count
   | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
+  | .text capacity => .text capacity
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -211,6 +223,7 @@ def WrittenType.valid : WrittenType → Prop
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
   | .array element _ => element.valid
   | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
+  | .text _ => True
 
 def WrittenTypes.valid : WrittenTypes → Prop
   | .empty => True

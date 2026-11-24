@@ -22,13 +22,13 @@ def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
   | ⟨.bool, _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | ⟨.int .., _⟩ => none
   | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.text _, _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
@@ -247,6 +247,10 @@ inductive Befehl where
       (cases : List (Option (Ty .value))) (index : Fin cases.length)
   | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
       (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
+  | textLiteral (ziel : Nat) (decoded : List Char)
+  | textConcat (basis a b : Nat)
+  | textIndex (basis capacity : Nat)
+  | substring (basis capacity : Nat)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -400,6 +404,29 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     return { frame with pc := frame.pc + offset, lokale :=
       if bind then payload :: frame.lokale else frame.lokale }
 
+  | .textLiteral dst decoded, frame =>
+    frame.schreibe dst (some ⟨.text decoded.utf8Encode.size, TextValue.literal decoded⟩)
+  | .textConcat base a b, frame =>
+    frame.schreibe base (do
+      let left ← (frame.temp base).bind (wertAls (.text a))
+      let right ← (frame.temp (base + 1)).bind (wertAls (.text b))
+      pure ⟨.text (a + b), left.concat right⟩)
+  | .textIndex base capacity, frame => Id.run do
+    let some text := (frame.temp base).bind (wertAls (.text capacity)) |
+      return frame.halt .ungueltigerWert
+    let some offset := frame.zahl (base + 1) | return frame.halt .ungueltigerWert
+    if offset.zahl.wert < 0 then return frame.halt .ungueltigerWert
+    let some byte := text.bytes[offset.zahl.wert.toNat]? | return frame.halt .ungueltigerWert
+    return frame.schreibe base (some ⟨.int 0 255, byteValue byte⟩)
+  | .substring base capacity, frame => Id.run do
+    let some text := (frame.temp base).bind (wertAls (.text capacity)) |
+      return frame.halt .ungueltigerWert
+    let some first := frame.zahl (base + 1) | return frame.halt .ungueltigerWert
+    let some last := frame.zahl (base + 2) | return frame.halt .ungueltigerWert
+    if 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧ last.zahl.wert ≤ (text.bytes.size : Int) then
+      return frame.schreibe base (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩)
+    return frame.halt .ungueltigerWert
+
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
 /-- Division reports both operand magnitudes at the pre-state, as required by the natural-number guard row. -/
@@ -411,6 +438,15 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
   | .liesArray base _ count, frame => do
     let i ← frame.zahl (base + 1)
     pure ⟨.index, (if i.zahl.wert < 0 then count else i.zahl.wert.toNat, count)⟩
+  | .textIndex base capacity, frame => do
+    let text ← (frame.temp base).bind (wertAls (.text capacity))
+    let offset ← frame.zahl (base + 1)
+    pure ⟨.index, (if offset.zahl.wert < 0 then text.bytes.size else offset.zahl.wert.toNat, text.bytes.size)⟩
+  | .substring base capacity, frame => do
+    let text ← (frame.temp base).bind (wertAls (.text capacity))
+    let first ← frame.zahl (base + 1)
+    let last ← frame.zahl (base + 2)
+    pure ⟨.teilfolge, (first.zahl.wert, last.zahl.wert, text.bytes.size)⟩
   | _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩

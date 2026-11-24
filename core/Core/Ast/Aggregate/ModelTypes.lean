@@ -1,6 +1,7 @@
 module
 
 public import Core.Text.Lexeme
+public import Core.Ast.TextValue.Bytes
 
 @[expose] public section
 
@@ -29,6 +30,7 @@ inductive Ty : Kind → Type where
   | sum (head tail : Ty .value) : Ty .value
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
+  | text (capacity : Nat) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/

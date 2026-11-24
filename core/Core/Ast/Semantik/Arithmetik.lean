@@ -26,6 +26,7 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .sumEnd => Empty
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout
+  | _, .text capacity => TextValue capacity
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
@@ -38,6 +39,7 @@ def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : 
       first
       | exact #v[]
       | simp only [Fits] at fits <;> (cases fits <;> exact value)
+  case text.text source target => exact value.widen fits
   all_goals
     first
     | exact value
@@ -132,6 +134,12 @@ def Logic.skips : Logic → Bool
   | .and => false
   | .or => true
 
+def byteValue (byte : UInt8) : Zahl 0 255 :=
+  ⟨byte.toNat, Int.natCast_nonneg _, by
+    have := byte.toBitVec.isLt
+    change byte.toNat < 256 at this
+    omega⟩
+
 def Umgebung (scope : Scope) := ∀ {type}, Local scope type → Wert type
 
 def leereUmgebung : Umgebung [] := by
@@ -174,6 +182,12 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
     tupleGet types index record
   | .variantValue (payloads := payloads) _ _ index _ _ _ payload =>
     variantInject payloads index (payload.wert env)
+  | .textLiteral decoded => TextValue.literal decoded
+  | .textConcat left right => (left.wert env).concat (right.wert env)
+  | .textIndex base offset =>
+    byteValue ((base.wert env).bytes[(offset.wert env).wert.toNat]?.getD 0)
+  | .substring base first last =>
+    (base.wert env).slice (first.wert env).wert.toNat (last.wert env).wert.toNat
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit

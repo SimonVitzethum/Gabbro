@@ -13,6 +13,7 @@ inductive PartielleOperation where
   | konvertierung
   | entpacken
   | ganzzahlBereich
+  | teilfolge
   deriving DecidableEq, Repr
 
 /-- The inputs required to check one use. Integer narrowing uses the exact
@@ -25,6 +26,7 @@ def Operanden : PartielleOperation → Type
   | .konvertierung => Nat × Nat
   | .entpacken => Nat
   | .ganzzahlBereich => Int × Nat
+  | .teilfolge => Int × Int × Nat
 
 
 /-- Translate the declared inclusive range to a zero-based interval. An empty

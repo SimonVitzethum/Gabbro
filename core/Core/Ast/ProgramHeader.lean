@@ -16,8 +16,7 @@ def keyword (word : String) : Token := .word word.toList
 
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
-def printClosedRange : PrintedToken := printPunctuation ".." (by
-  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
+def printClosedRange : PrintedToken := printSliceRange
 def printOpenRange : PrintedToken := printPunctuation "..<" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 
@@ -53,7 +52,14 @@ def intTypeName (signed : Bool) (width : Nat) : Identifier :=
 def signedPieces (number : Int) : List PrintedToken :=
   if number < 0 then [Arith.sub.print, printInteger number.natAbs] else [printInteger number.natAbs]
 
+def printStringType : PrintedToken := printProgramWord 's' ['t', 'r', 'i', 'n', 'g']
+  (by decide) (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro c (rfl | rfl | rfl | rfl | rfl) <;> decide)
+
+def printMax : PrintedToken := printProgramWord 'm' ['a', 'x'] (by decide)
+  (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro c (rfl | rfl) <;> decide)
+
 mutual
+
 
 def WrittenType.printPieces : WrittenType → List PrintedToken
   | .bool => [printBoolType]
@@ -64,6 +70,7 @@ def WrittenType.printPieces : WrittenType → List PrintedToken
       [printSemicolon, printInteger count, printCloseBracket]
   | .tuple first second rest => [printOpen] ++ first.printPieces ++ [printComma] ++
       second.printPieces ++ rest.printTail ++ [printClose]
+  | .text capacity => [printStringType, printMax, printInteger capacity]
 
 def WrittenTypes.printTail : WrittenTypes → List PrintedToken
   | .empty => []
@@ -92,6 +99,7 @@ inductive TypeReads : List Token → WrittenType → List Token → Prop where
       TypeReads (openBracket :: input) (.array element count) rest
   | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
       TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
+  | text : TypeReads (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
 
 inductive TypeItemsTail : List Token → WrittenTypes → List Token → Prop where
   | close : TypeItemsTail (closeParen :: rest) .empty rest

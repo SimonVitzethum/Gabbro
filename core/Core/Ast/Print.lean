@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Expression
-public import Core.Text.Printing
+public import Core.Ast.TextValue.PrintLiteral
 import Init.Data.Nat.ToString
 import Init.Omega
 
@@ -181,7 +181,13 @@ def printColon : PrintedToken := printPunctuation ":" (by
   (fun _ same => tokenHead (c := ':') same (punctuationHead (by
     simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
 
+def printSliceRange : PrintedToken := printPunctuation ".." (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '.') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
 mutual
+
 
 /-- Parenthesise each binary node. This gives a canonical, precedence-independent
     rendering of a tree, while the grammar also admits ordinary infix spelling. -/
@@ -213,7 +219,19 @@ def Expr.printPieces : Expr scope type → List PrintedToken
   | .recordValue ref args _ _ => [ref.name.print, printOpen] ++ args.printPieces ++ [printClose]
   | .recordField base field _ _ =>
     [printOpen] ++ base.printPieces ++ [printDot, field.print, printClose]
-  | .variantValue _ label _ _ _ _ value => label.print :: value.printPieces
+  | .variantValue _ label _ _ _ _ value =>
+    match value with
+    | .nullary false => [printOpen, label.print, printClose]
+    | _ => label.print :: value.printPieces
+  | .textLiteral decoded => [PrintedToken.textLiteral decoded]
+  | .textConcat left right =>
+    [printOpen] ++ left.printPieces ++ [Arith.add.print] ++ right.printPieces ++ [printClose]
+  | .textIndex base offset =>
+    [printOpen] ++ base.printPieces ++ [printOpenBracket] ++ offset.printPieces ++
+      [printCloseBracket, printClose]
+  | .substring base first last =>
+    [printOpen] ++ base.printPieces ++ [printOpenBracket] ++ first.printPieces ++
+      [printSliceRange] ++ last.printPieces ++ [printCloseBracket, printClose]
 
 def ExprItems.printPieces : ExprItems scope types → List PrintedToken
   | .empty => []

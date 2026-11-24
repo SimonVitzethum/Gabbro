@@ -42,7 +42,9 @@ def VariantValueArgs.expression (a : VariantValueArgs scope) :
 def variantValue (scope : Scope) : Rule (.expression scope) (VariantValueArgs scope) where
   tree := fun a => a.expression.typed
   production := fun a tokens =>
-    ∃ input, tokens = .word a.label.val :: input ∧ CasePayloadRead scope input a.payload []
+    (∃ input, tokens = .word a.label.val :: input ∧ CasePayloadRead scope input a.payload []) ∨
+    (∃ input, tokens = openParen :: .word a.label.val :: input ∧
+      CasePayloadRead scope input a.payload [closeParen])
 
 structure VariantMatchArgs (ctx : Scope × Option (Ty .value)) where
   name : List Char

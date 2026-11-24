@@ -62,6 +62,14 @@ def expr (slot : Nat) : Expr scope type → Fragment
     (expr slot base).anhaengen (.einzel (.liesRecordFeld slot name labels types index))
   | .variantValue (labels := labels) (payloads := payloads) ref _ index _ _ _ payload =>
     (caseCode slot payload).anhaengen (.einzel (.baueVariante slot ref.name.val labels payloads index))
+  | .textLiteral decoded => .einzel (.textLiteral slot decoded)
+  | .textConcat (a := a) (b := b) left right =>
+    ((expr slot left).anhaengen (expr (slot + 1) right)).anhaengen (.einzel (.textConcat slot a b))
+  | .textIndex (capacity := capacity) base offset =>
+    ((expr slot base).anhaengen (expr (slot + 1) offset)).anhaengen (.einzel (.textIndex slot capacity))
+  | .substring (capacity := capacity) base first last =>
+    (((expr slot base).anhaengen (expr (slot + 1) first)).anhaengen (expr (slot + 2) last)).anhaengen
+      (.einzel (.substring slot capacity))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer

@@ -49,6 +49,8 @@ def bang : Token := .punctuation ['!']
 def openBracket : Token := .punctuation ['[']
 def closeBracket : Token := .punctuation [']']
 def dot : Token := .punctuation ['.']
+def sliceRange : Token := .punctuation ['.', '.']
+
 def comma : Token := .punctuation [',']
 def colon : Token := .punctuation [':']
 
@@ -169,6 +171,7 @@ inductive AtomReads (scope : Scope) :
       (payload : CasePayload scope (payloads.get index)) :
       CasePayloadRead scope input payload rest →
       AtomReads scope (.word label.val :: input) (.variantValue ref label index written ordinary available payload) rest
+  | textLiteral : AtomReads scope (.string decoded :: rest) (.textLiteral decoded) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
     refuses a comparison at the head of its continuation. -/
@@ -207,6 +210,23 @@ inductive ExprTail (scope : Scope) :
       minimum ≤ Infix.projection.precedence →
       ExprTail scope minimum (.recordField base field index written) input tree rest →
       ExprTail scope minimum base (dot :: .word field.val :: input) tree rest
+  | textConcat (left : Expr scope (.text a)) (right : Expr scope (.text b)) :
+      minimum ≤ Arith.add.precedence →
+      ExprReads scope (Arith.add.precedence + 1) input right more →
+      ExprTail scope minimum (.textConcat left right) more tree rest →
+      ExprTail scope minimum left (Arith.add.token :: input) tree rest
+  | textIndex (base : Expr scope (.text capacity)) (offset : Expr scope (.int lo hi)) :
+      minimum ≤ Infix.index.precedence →
+      ExprReads scope 0 input offset (closeBracket :: more) →
+      ExprTail scope minimum (.textIndex base offset) more tree rest →
+      ExprTail scope minimum base (openBracket :: input) tree rest
+  | substring (base : Expr scope (.text capacity)) (first : Expr scope (.int lo₁ hi₁))
+      (last : Expr scope (.int lo₂ hi₂)) :
+      minimum ≤ Infix.index.precedence →
+      ExprReads scope 0 input first (sliceRange :: lastInput) →
+      ExprReads scope 0 lastInput last (closeBracket :: more) →
+      ExprTail scope minimum (.substring base first last) more tree rest →
+      ExprTail scope minimum base (openBracket :: input) tree rest
 
 /-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
 inductive ItemsRead (scope : Scope) : Token →
@@ -266,7 +286,9 @@ theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest)
 
 -- Mirror AtomReads.lit_inversion, leaving the lookup evidence existential.
 theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
+    (bound : ∃ (type : Ty .value) (ref : Local scope type), ref.visible ∧ ref.binding.name.val = word)
     (read : AtomReads scope (.word word :: rest) tree suffix) :
+
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
   sorry
