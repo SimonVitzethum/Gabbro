@@ -145,7 +145,7 @@ theorem dead_lockfrei_pos : LockFrei (E := E_dead) (fun _ => True) ηdead := by
     rw [hker] at hdispk
     obtain ⟨hcA, _⟩ := dead_dispatch k c hdispk
     subst hcA
-    exact Or.inr (Or.inl ⟨.sperre true, Or.inl ⟨rfl, rfl⟩⟩)
+    exact Or.inr (Or.inr (Or.inl ⟨.sperre true, Or.inl ⟨rfl, rfl⟩⟩))
   · intro a hactive
     obtain ⟨t, hta, c, f, _, _, _, hber⟩ := hactive a (Nat.le_refl _)
     obtain ⟨w, plans, u, ⟨i, _, himp⟩⟩ := hber

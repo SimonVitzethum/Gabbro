@@ -37,7 +37,8 @@ def e1System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e1Regel, e1Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
 def e1Schranken : Schrankendaten Unit Bool :=
-  { Schrankendaten.leer with halten := fun _ => some 5 }
+  { kosten := none, speicher := none, stapel := none, halten := fun _ => some 5,
+    stapelTiefe := fun _ => 0, zeit := fun _ => none, zeitstand := fun _ => [] }
 
 def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtung dispatch2, e1System,
