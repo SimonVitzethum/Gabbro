@@ -457,4 +457,67 @@ theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
     intro g guard
     cases guard
 
+theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
+  intro platform start
+  let carrier : TableDeclaration [] :=
+    ⟨true, egTableName, 1, [], (by intro f h; cases h), by simp⟩
+  let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
+  let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
+  have hchecked : [written].mapM (WrittenCarrierEffect.resolve [carrier.binding] true) =
+      some [eff] := by
+    simp [written, eff, Scope.effectCarrier, carrierBinding, TableDeclaration.binding,
+      carrier, egTableName]
+  let group : EffectGroupDeclaration [carrier.binding] :=
+    ⟨true, egName, [written], [eff], hchecked⟩
+  let scope : Scope := [group.binding, carrier.binding]
+  have hclause : expandEffects scope [] [.group group.name] = some [eff] := by
+    simp [expandEffects, EffectTerm.resolve, Scope.effectGroup,
+      EffectGroupDeclaration.binding, effectGroupBinding, scope, group, eff,
+      beq_iff_eq]
+  let clause : EffectClause scope [] := ⟨[.group group.name], [eff], hclause⟩
+  let fnName : Identifier :=
+    ⟨['f'], 'f', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
+      fun _ member => (List.not_mem_nil member).elim⟩
+  have hdirect : directName fnName := by decide
+  let body : BracedBlock (writtenResult none) (functionScope scope []) := .braces .done
+  let a : Surface.FunctionArgs scope :=
+    ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp,
+      (by intro h; cases h), some clause⟩
+  let tree : Ast.Unit :=
+    ⟨_, .step (.table carrier) (.step (.effectGroup group) (.step a.declaration .done))⟩
+  let E := elaborieren (category := .unit) platform tree
+  let bt : Befehl := tableInstruction carrier
+  let bg : Befehl := .definiereEffektgruppe group.resolved
+  let b : Befehl := (functionForm scope).befehl a
+  let s0 := (I.start E start).2
+  let s1 := bt.nach eintritt s0
+  let s := bg.nach eintritt s1
+  have hhead0 : E.system.kopf s0 eintritt = some bt := by
+    simp [E, tree, s0, bt, unitBody, decl, tableInstruction]
+  have hhead1 : E.system.kopf s1 eintritt = some bg := by
+    simp [E, tree, s1, s0, bt, bg, unitBody, decl, tableInstruction,
+      EffectGroupDeclaration.binding, effectGroupBinding]
+  have hhead2 : E.system.kopf s eintritt = some b := by
+    simp [E, tree, s, s1, s0, bt, bg, b, scope, unitBody, decl, tableInstruction,
+      EffectGroupDeclaration.binding, effectGroupBinding, functionForm, functionInstruction]
+  have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
+  have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
+  have hstep2 : E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) :=
+    ⟨b, hhead2, rfl, rfl⟩
+  have himpl2 : E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) :=
+    ⟨b, hhead2, rfl, rfl⟩
+  have reached : E.system.IErreichbar s0 s :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan] .start hstep0) hstep1
+  refine ⟨carrier, group, a, Ast.print (category := .unit) tree, s, ?_⟩
+  dsimp only
+  refine ⟨?_, ?_, Ast.parse_print tree, rfl, reached, hhead2, hstep2, himpl2, ?_⟩
+  · simp [group, eff]
+  · exact ⟨clause, rfl, rfl⟩
+  · let after := b.auswerten (s.lokal eintritt)
+    let sig : Funktion := ⟨a.name, (s.lokal eintritt).pc + 1, [], none, scope.length,
+      false, [], some [eff]⟩
+    refine ⟨sig, ?_, ?_⟩
+    · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten]
+    · simp [sig, group, eff]
+
 end Gabbro.Core.Ast.Semantik
