@@ -2,13 +2,24 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
+public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
+public import Core.Ast.LowLevel.Mem.Proofs.Activate.Activate
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
+public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPages
+public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPagesSatisfiability
+public import Core.Ast.LowLevel.Mem.Proofs.Merge.Merge
+public import Core.Ast.LowLevel.Mem.Proofs.Protect.Protect
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution
 public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvTypes
 public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
 public import Core.Ast.LowLevel.Proofs.RegionUnit
 public import Core.Ast.LowLevel.Proofs.RegionSatisfiability

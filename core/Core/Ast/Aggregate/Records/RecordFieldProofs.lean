@@ -20,8 +20,10 @@ import Core.Ast.Aggregate.Records.ConstructionProofs
 - `RecordFieldErhaltungAussage`
 - `RecordFieldRegelSicherAussage`
 - `RecordFieldErfuellbarAmAussage`
-- `RecordFieldValueAussage`
--/
+ - `RecordFieldValueAussage`
+ -/
+
+@[expose] public section
 
 namespace Gabbro.Core.Ast.Surface
 

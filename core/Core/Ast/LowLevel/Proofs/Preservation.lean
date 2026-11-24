@@ -18,6 +18,8 @@ four M7S fields, M10 commit and answer discipline, and M9 event counts.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 open Gabbro.Core.Maschine
 open Gabbro.Core.Annahme
 open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
@@ -198,5 +200,7 @@ theorem aussenLokal (form : Form) : AussenLokalAussage form := by
 theorem kosten (form : Form) : KostenAussage form := by
   intro k scope tree op _
   exact Instruction.kosten op
+
+end
 
 end Gabbro.Core.Ast.LowLevel

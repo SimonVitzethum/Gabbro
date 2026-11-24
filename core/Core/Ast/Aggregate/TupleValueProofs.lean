@@ -23,6 +23,8 @@ Prove the pinned statements in this file.
 - `TupleValueErfuellbarAmAussage`
 -/
 
+@[expose] public section
+
 namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text

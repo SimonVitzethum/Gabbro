@@ -22,8 +22,10 @@ import Core.Ast.Semantik.Runtime.ValueCoercion
 - `AssignFieldRegelSicherAussage`
 - `AssignFieldErfuellbarAmAussage`
 - `AssignFieldFrameAussage`
-- `AssignFieldProgramAussage`
--/
+ - `AssignFieldProgramAussage`
+ -/
+
+@[expose] public section
 
 namespace Gabbro.Core.Ast.Surface
 

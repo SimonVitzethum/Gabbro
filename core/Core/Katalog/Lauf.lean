@@ -52,39 +52,82 @@ structure Hardware (k : Katalog) (h : Umgebung) : Prop where
     k.enthaelt (.endpoint e) ∧
       ∃ d l, k.plattform.geraet e = some d ∧ dma d phase l access
 
-/-- The exogenous opportunities at a hardware cut. Offers are recorded even if the implementation
-    is unable to receive or use one. A service offer does not already name a particular question. -/
+/-- A delivery attempt identifies an interrupt by the cut and position of its raise. -/
+inductive InterruptSignal where
+  | erhoben (kern : Nat) (irq : Unterbrechung)
+  | zustellen (kern : Nat) (id : Nat × Nat) (irq : Unterbrechung)
+
+/-- The exogenous opportunities at a hardware cut, including raised interrupts and delivery attempts. -/
 structure Gelegenheit where
   core : Option Nat
   interrupt : Nat → Bool
-  raised : List (Nat × Unterbrechung)
+  interrupts : List InterruptSignal
   delivery : Endpunkt → Bool
   medium : Bool
   crash : Bool
   cycles : Nat
+
+def Gelegenheit.interruptAuswahl (g : Gelegenheit) : Option (Nat × (Nat × Nat) × Unterbrechung) :=
+  g.interrupts.findSome? fun
+    | .erhoben _kern _irq => none
+    | .zustellen kern id irq => some (kern, id, irq)
+
+/-- A delivery consumes the cut's single transition opportunity. Multiple raises can
+    still be recorded at that cut, and a crash takes precedence over delivery. -/
+def Gelegenheit.interruptGueltig (g : Gelegenheit) (h : Umgebung)
+    (ursprung : (Nat × Nat) → Nat → Unterbrechung → Prop) : InterruptSignal → Prop
+  | .erhoben kern irq => kern < h.kernzahl ∧ h.ziel.unterstuetzt irq
+  | .zustellen kern id irq =>
+    kern < h.kernzahl ∧ h.ziel.unterstuetzt irq ∧ g.interrupt kern = true ∧
+      g.interruptAuswahl = some (kern, id, irq) ∧ ursprung id kern irq ∧
+      g.core = none ∧ ∀ e, g.delivery e = false
 
 /-- Infinite hardware input even where the composed implementation run stops at a finite cut. -/
 structure HwLauf where
   angebot : Nat → Gelegenheit
   politik : AussenPolitik
 
-def AngebotGueltig (k : Katalog) (h : Umgebung) (g : Gelegenheit) : Prop :=
+/-- The origin is an actual raise at or before the delivery attempt. The first cut
+    can be audited on its own, without consulting any future offer. -/
+def InterruptSignal.ursprung (signale : Nat → List InterruptSignal) :
+    Nat → (Nat × Nat) → Nat → Unterbrechung → Prop
+  | 0, id, kern, irq => id.1 = 0 ∧ (signale 0)[id.2]? = some (.erhoben kern irq)
+  | t + 1, id, kern, irq =>
+    id.1 ≤ t + 1 ∧ (signale id.1)[id.2]? = some (.erhoben kern irq)
+
+def HwLauf.interruptUrsprung (run : HwLauf) := InterruptSignal.ursprung (fun t => (run.angebot t).interrupts)
+
+/-- Validate one offer against the hardware rows. Run conformance also supplies its
+    history to validate references in interrupt delivery attempts. -/
+def AngebotGueltig (k : Katalog) (h : Umgebung) (g : Gelegenheit)
+    (ursprung : (Nat × Nat) → Nat → Unterbrechung → Prop := fun _ _ _ => True) : Prop :=
   (∀ core, g.core = some core → core < h.kernzahl) ∧
   (∀ core, g.interrupt core = true → core < h.kernzahl) ∧
-  (∀ irq ∈ g.raised, irq.1 < h.kernzahl ∧ h.ziel.unterstuetzt irq.2) ∧
+  (∀ signal ∈ g.interrupts, g.interruptGueltig h ursprung signal) ∧
   (∀ e, g.delivery e = true → k.enthaelt (.endpoint e)) ∧
   ((g.medium = true ∨ g.crash = true) → k.enthaelt .persistence)
 
+theorem AngebotGueltig.interrupt_reserviert {k h g ursprung kern id irq}
+    (gueltig : AngebotGueltig k h g ursprung) (wahl : g.interruptAuswahl = some (kern, id, irq)) :
+    ursprung id kern irq ∧ g.core = none ∧ ∀ e, g.delivery e = false := by
+  obtain ⟨signal, mem, gleich⟩ := List.exists_of_findSome?_eq_some wahl
+  cases signal with
+  | erhoben _ _ => cases gleich
+  | zustellen k' id' irq' =>
+    change some (k', id', irq') = some (kern, id, irq) at gleich
+    cases gleich
+    exact (gueltig.2.2.1 _ mem).2.2.2.2
+
 /-- Row-conformant input for arbitrary implementation runs, including unfair ones. -/
 def HwLauf.konform (k : Katalog) (h : Umgebung) (run : HwLauf) : Prop :=
-  run.politik = h.politik ∧ ∀ i, AngebotGueltig k h (run.angebot i)
+  run.politik = h.politik ∧ ∀ i, AngebotGueltig k h (run.angebot i) (run.interruptUrsprung i)
 
 /-- Fairness quantifies over physical cores and offered service, independently of dispatch, masking,
     query traffic, arrival consumption, or the existence of a successful implementation step. -/
 structure FairLaeufe (k : Katalog) (h : Umgebung) (run : HwLauf) : Prop where
   hardware : Hardware k h
   politik : run.politik = h.politik
-  gueltig : ∀ i, AngebotGueltig k h (run.angebot i)
+  gueltig : ∀ i, AngebotGueltig k h (run.angebot i) (run.interruptUrsprung i)
   kerne : kerneSchreiten h.kernzahl (fun i => (run.angebot i).core)
   interrupts : ∀ c, c < h.kernzahl → ∀ cut, ∃ i, cut ≤ i ∧ (run.angebot i).interrupt c = true
   auslieferung : ∀ e, k.enthaelt (.endpoint e) → ∀ cut, ∃ i, cut ≤ i ∧ (run.angebot i).delivery e = true
