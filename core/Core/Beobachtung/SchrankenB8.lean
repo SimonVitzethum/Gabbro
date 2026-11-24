@@ -250,7 +250,7 @@ private theorem prefix_alle_kh (pflicht : KHPflichten E) {h : Umgebung} {ρ : La
           cases transition with
           | schritt step =>
             cases step with
-            | antwort _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
+            | antwort _ => exact pflicht.protokoll run t _ _ _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | interrupt _ =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -263,7 +263,7 @@ private theorem prefix_alle_kh (pflicht : KHPflichten E) {h : Umgebung} {ρ : La
           cases transition with
           | schritt step =>
             cases step with
-            | interrupt _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
+            | interrupt _ => exact pflicht.protokoll run t _ _ _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | absturz =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
@@ -276,7 +276,7 @@ private theorem prefix_alle_kh (pflicht : KHPflichten E) {h : Umgebung} {ρ : La
           cases transition with
           | schritt step =>
             cases step with
-            | absturz _ => exact pflicht.protokoll run t _ _ ih.1 ih.2 vorEq tick trivial nachEq
+            | absturz _ => exact pflicht.protokoll run t _ _ _ _ ih.1 ih.2 vorEq tick trivial nachEq
       | kontext c w =>
         have recorded := ρ.zeit.takt t
         rw [tick] at recorded
