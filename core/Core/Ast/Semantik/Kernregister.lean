@@ -68,13 +68,7 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
     I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
       I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
       Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
-  jointlySatisfiable := ∀ platform start,
-    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
-      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
-      let E := elaborieren platform tree
-      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+  jointlySatisfiable := ∀ platform start, ProgramInstructionPremises constructor platform start
 
 -- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
 theorem programKern_erfuellbar (constructor : Name) (registered : constructor ∈ programConstructors) :

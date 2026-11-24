@@ -40,28 +40,21 @@ def programConstructors : List Name :=
     ``Befehl.starte,
     ``Befehl.ende]
 
-
 /-- The core instruction has a source occurrence reachable from the canonical entry. -/
-def ProgramInstructionPremises (constructor : Name) : Prop :=
-  ∀ platform start,
-    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
-      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
-      let E := elaborieren platform tree
-      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+def ProgramInstructionPremises (constructor : Name) (platform : Plattform) (start : AussenStart) : Prop :=
+  ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
+    b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
+    let E := elaborieren platform tree
+    E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
+      E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
+      E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
 
 private theorem at_source {category : Category} {tree : category.Tree}
     {platform : Plattform} {start : AussenStart} {s : Zustand} {b : Befehl}
     (tag : b.programConstructor = some constructor)
     (reach : (elaborieren platform tree).system.IErreichbar (I.start (elaborieren platform tree) start).2 s)
     (head : (elaborieren platform tree).system.kopf s eintritt = some b) :
-    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
-      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
-      let E := elaborieren platform tree
-      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) :=
+    ProgramInstructionPremises constructor platform start :=
   ⟨category, tree, Ast.print tree, s, b, tag, Ast.parse_print tree, reach, head,
     ⟨b, head, rfl, rfl⟩, ⟨b, head, rfl, rfl⟩⟩
 
@@ -69,12 +62,7 @@ private theorem Quellform.program_occurrence {category : Category} {args : Type}
     (form : Quellform category args) {platform : Plattform} {start : AussenStart}
     {a : args} (occurrence : form.ErfuellbarAm platform start a)
     (tag : (form.befehl a).programConstructor = some constructor) :
-    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
-      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
-      let E := elaborieren platform tree
-      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s) := by
+    ProgramInstructionPremises constructor platform start := by
   obtain ⟨text, s, parsed, _, reach, realized, _⟩ := occurrence
   obtain ⟨_, head, ideal, concrete⟩ := realized
   exact ⟨category, form.produktion.tree a, text, s, form.befehl a, tag, parsed, reach, head, ideal, concrete⟩
@@ -86,7 +74,8 @@ private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustan
   .schritt eintritt () [plan] reach ⟨b, head, rfl, rfl⟩
 
 private theorem while_occurrences :
-    ProgramInstructionPremises ``Befehl.setzePasszahl ∧ ProgramInstructionPremises ``Befehl.zurueckSprung := by
+    (∀ platform start, ProgramInstructionPremises ``Befehl.setzePasszahl platform start) ∧
+      (∀ platform start, ProgramInstructionPremises ``Befehl.zurueckSprung platform start) := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
   let a : Surface.BoundedWhileArgs [] none :=
     ⟨.trueLit, 1, 1, .lit 1, trivial, by omega, name, .braces .done⟩
@@ -113,7 +102,8 @@ private theorem while_occurrences :
     exact at_source (tree := form.produktion.tree a) (b := .zurueckSprung 3) rfl hb rfl
 
 private theorem for_occurrences :
-    ProgramInstructionPremises ``Befehl.forAnfang ∧ ProgramInstructionPremises ``Befehl.forNaechster := by
+    (∀ platform start, ProgramInstructionPremises ``Befehl.forAnfang platform start) ∧
+      (∀ platform start, ProgramInstructionPremises ``Befehl.forNaechster platform start) := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
   have ordinary : ordinaryLocal name := ⟨by decide, by decide⟩
   let a : Surface.ForRangeArgs [] none :=
@@ -140,7 +130,8 @@ private theorem for_occurrences :
     exact at_source (tree := form.produktion.tree a) (b := .forNaechster 2 index) rfl hb rfl
 
 private theorem unit_occurrences :
-    ProgramInstructionPremises ``Befehl.pruefeMass ∧ ProgramInstructionPremises ``Befehl.ende := by
+    (∀ platform start, ProgramInstructionPremises ``Befehl.pruefeMass platform start) ∧
+      (∀ platform start, ProgramInstructionPremises ``Befehl.ende platform start) := by
   have ordinary : directName mainName := by
     change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
       ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
@@ -172,7 +163,7 @@ private theorem unit_occurrences :
     exact at_source (category := .unit) (tree := unit) (b := .ende) rfl hr rfl
 
 theorem programInstruction_erfuellbar (constructor : Name) (registered : constructor ∈ programConstructors) :
-    ProgramInstructionPremises constructor := by
+    ∀ platform start, ProgramInstructionPremises constructor platform start := by
   simp only [programConstructors, List.mem_cons, List.not_mem_nil, or_false] at registered
   rcases registered with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · intro platform start
