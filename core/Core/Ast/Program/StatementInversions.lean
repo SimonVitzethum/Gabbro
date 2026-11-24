@@ -86,6 +86,9 @@ theorem StmtReads.assign_inversion
   | whileBounded _ _ _ _ condRead _ _ =>
     rw [← (List.cons.inj same).2] at condRead
     exact condRead.not_assignment.elim
+  | forever _ labelRead _ =>
+    rw [← (List.cons.inj same).2] at labelRead
+    exact labelRead.not_assignment.elim
   | variantMatch valueRead _ =>
     rw [← (List.cons.inj same).2] at valueRead
     exact valueRead.not_assignment.elim

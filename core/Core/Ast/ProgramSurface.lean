@@ -18,7 +18,7 @@ def OptionLetReadAt (result : Option (Ty .value)) (scope : Scope) (mutable : Boo
     tree = ⟨_, .letOption mutable name ordinary carrier resolved value⟩
 
 private theorem directHead_not_reserved (ordinary : directName name) (keywordName : String)
-    (reserved : keywordName ∈ ["let", "if", "return", "while", "for", "leave", "next", "match"])
+    (reserved : keywordName ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"])
     (same : Token.word name.val :: first = keyword keywordName :: second) : False :=
   ordinary.2 (List.mem_map.mpr ⟨keywordName, reserved, (Token.word.inj (List.cons.inj same).1).symm⟩)
 
@@ -97,6 +97,7 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
   | retOption _ _ => exact (directHead_not_reserved ordinary "return" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))) h).elim
   | ite _ _ _ => exact (directHead_not_reserved ordinary "if" (List.Mem.tail _ (List.Mem.head _)) h).elim
   | whileBounded _ _ _ _ _ _ _ => exact (directHead_not_reserved ordinary "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) h).elim
+  | forever _ _ _ => exact (directHead_not_reserved ordinary "forever" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))) h).elim
   | variantMatch _ _ => exact (directHead_not_reserved ordinary "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) h).elim
   | tupleBind _ _ _ _ => exact (directHead_not_reserved ordinary "let" (List.Mem.head _) h).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h

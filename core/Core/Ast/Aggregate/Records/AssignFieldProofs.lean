@@ -44,6 +44,10 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
       ¬ TuplePatternReads (dot :: .word field :: assignment :: input) pat rs := by
     intro pat rs rd
     cases rd
+  have noDotLabel : ∀ (label : Option Identifier) (rs : List Gabbro.Core.Text.Token),
+      ¬ LoopLabelReads (dot :: .word field :: assignment :: input) label rs := by
+    intro label rs rd
+    cases rd
   generalize htok : (.word name :: dot :: .word field :: assignment :: input) = toks at read
   cases read with
   | assignField ref visible writable fld index checked fits valueRead =>
@@ -81,6 +85,7 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   | retOption _ initializer =>
       cases initializer <;> cases (List.cons.inj (List.cons.inj htok).2).1
   | letRegion => cases (List.cons.inj (List.cons.inj htok).2).1
+  | forever => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern, noDotLabel]
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read

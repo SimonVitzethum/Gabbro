@@ -55,6 +55,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
     (ys || ns, yw || nw)
   | .variantMatch _ arms => VariantArms.rangeUses index arms
   | .whileBounded _ _ _ _ _ body => BracedBlock.rangeUses index body
+  | .forever _ body => BracedBlock.rangeUses index body
   | .forRange name _ _ _ _ _ body =>
     let (shadow, writes) := BracedBlock.rangeUses index body
     (name.val == index.val || shadow, writes)
@@ -145,6 +146,9 @@ def stmt : Stmt result before after → Fragment
   | .retOption (count := count) _ value =>
     (optionCode 0 value).anhaengen (.einzel (.zurueck 0 (indexOptionType count)))
   | .letRegion _ _ region _ _ init => .einzel (.bindeRegion region.index init)
+  | .forever _ body =>
+    let pass := bracedBlock body
+    pass.anhaengen (.einzel (.zurueckSprung pass.code.length))
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -216,7 +220,7 @@ theorem mainName_direct : directName mainName := by
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   all_goals first | (intro same; cases same; done) | skip
   simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
-  rintro (same | same | same | same | same | same | same | same) <;> cases same
+  rintro (same | same | same | same | same | same | same | same | same) <;> cases same
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)

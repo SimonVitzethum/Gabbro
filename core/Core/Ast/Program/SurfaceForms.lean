@@ -226,6 +226,36 @@ theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value))
 theorem forRange_entry (scope : Scope) (result : Option (Ty .value)) : (forRange scope result).Entry :=
   ⟨fun _ _ => forRange_reads, forRange_print, forRange_syntax_erfuellbar scope result⟩
 
+structure ForeverArgs (scope : Scope) (result : Option (Ty .value)) where
+  label : Option Identifier
+  body : BracedBlock result scope
+
+/-- SYNTAX §8, `syntax.forever` and surface.SAnw.loop: the unbounded service loop. -/
+def forever (scope : Scope) (result : Option (Ty .value)) : Rule (.statement scope result) (ForeverArgs scope result) where
+  tree := fun a => ⟨_, .forever a.label a.body⟩
+  production := fun a tokens => StmtReads result scope tokens ⟨_, .forever a.label a.body⟩ []
+
+-- Mirror Stmt.printReads for the canonical derivation.
+theorem forever_print {scope : Scope} {result : Option (Ty .value)} (a : ForeverArgs scope result) :
+    (forever scope result).production a (((Category.statement scope result).printPieces ((forever scope result).tree a)).map PrintedToken.value) := by
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
+
+-- Mirror Rule.Entry.reads using the corresponding production constructor.
+theorem forever_reads {scope : Scope} {result : Option (Ty .value)} {a : ForeverArgs scope result} {tokens : List Token}
+    (read : (forever scope result).production a tokens) :
+    (Category.statement scope result).reads tokens ((forever scope result).tree a) := by exact read
+
+-- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
+theorem forever_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
+    (forever scope result).Satisfiable := by
+  let a : ForeverArgs scope result := ⟨none, .braces .done⟩
+  exact Rule.satisfiableOfPrint a (forever_print a)
+
+-- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
+theorem forever_entry (scope : Scope) (result : Option (Ty .value)) : (forever scope result).Entry :=
+  ⟨fun _ _ => forever_reads, forever_print, forever_syntax_erfuellbar scope result⟩
+
 structure ConstantArgs (scope : Scope) where
   name : Identifier
   ordinary : ordinaryLocal name

@@ -40,6 +40,38 @@ inductive OverflowReads : List Token → Option Identifier → List Token → Pr
   | named (name : Identifier) :
       OverflowReads (keyword "on_exceeded" :: .word name.val :: rest) (some name) rest
 
+/-- The optional loop label is a single word that directly precedes the loop's opening brace. -/
+inductive LoopLabelReads : List Token → Option Identifier → List Token → Prop where
+  | absent : LoopLabelReads (openBrace :: rest) none (openBrace :: rest)
+  | named (name : Identifier) : LoopLabelReads (.word name.val :: rest) (some name) rest
+
+theorem LoopLabelReads.deterministic (left : LoopLabelReads input a rest)
+    (right : LoopLabelReads input b rest') : a = b ∧ rest = rest' := by
+  generalize eq : input = tokens at right
+  cases right with
+  | absent =>
+    cases left with
+    | absent => cases eq; exact ⟨rfl, rfl⟩
+    | named _ => cases (List.cons.inj eq).1
+  | named otherName =>
+    cases left with
+    | absent => cases (List.cons.inj eq).1
+    | named name =>
+      have sameName := Token.word.inj (List.cons.inj eq).1
+      cases Subtype.ext sameName
+      exact ⟨rfl, (List.cons.inj eq).2⟩
+
+theorem LoopLabelReads.not_assignment (read : LoopLabelReads (assignment :: input) label rest) : False := by
+  cases read
+
+theorem LoopLabelReads.not_dot (read : LoopLabelReads (dot :: input) label rest) : False := by
+  cases read
+
+theorem LoopLabelReads.consumes (read : LoopLabelReads input label rest) : rest <:+ input := by
+  cases read with
+  | absent => exact List.suffix_refl _
+  | named _ => exact List.suffix_cons _ _
+
 inductive OptionInitializerReads (scope : Scope) (count : Nat) :
     List Token → OptionInitializer scope count → List Token → Prop where
   | absent : OptionInitializerReads scope count (.word indexNoneName.val :: rest) .absent rest
@@ -138,6 +170,10 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) →
       StmtReads result scope (letKeyword :: .word name.val :: assignment :: input)
         ⟨_, .letRegion name ordinary region visible receiverOrdinary initializer⟩ rest
+  | forever (label : Option Identifier) :
+      LoopLabelReads input label bodyInput →
+      BlockReads result scope bodyInput body rest →
+      StmtReads result scope (keyword "forever" :: input) ⟨scope, .forever label body⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :

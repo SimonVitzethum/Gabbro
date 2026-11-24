@@ -9,6 +9,10 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
+def loopLabelPieces : Option Identifier → List PrintedToken
+  | none => []
+  | some name => [name.print]
+
 def overflowPieces : Option Identifier → List PrintedToken
   | none => []
   | some name => [printOnExceeded, name.print]
@@ -61,6 +65,7 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
       value.printPieces ++ [printSemicolon]
   | .retOption _ value =>
     [returnName.print] ++ value.printPieces ++ [printSemicolon]
+  | .forever label body => [printForever] ++ loopLabelPieces label ++ body.printPieces
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []
@@ -133,6 +138,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
   have hpOps : printOps.value = keyword "ops" := rfl
   have hpOverflow : printOnExceeded.value = keyword "on_exceeded" := rfl
   have hpFor : printFor.value = keyword "for" := rfl
+  have hpForever : printForever.value = keyword "forever" := rfl
   have hpIn : printIn.value = keyword "in" := rfl
   have hpOpenRange : printOpenRange.value = openRange := rfl
   have hpDot : printDot.value = dot := rfl
@@ -156,7 +162,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
         (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest)
     ?letValue ?assignVar ?ret ?ite ?retVoid ?letMutable ?directCall ?bindDirect
     ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion
-    ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard tree rest
+    ?forever ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard tree rest
   case letValue =>
     intros
     rename_i before ty name ordinary expr rest
@@ -352,6 +358,28 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.cons_append, List.nil_append, List.append_assoc, hpLet, hpName, hpAssign, hpSemi] using
       (StmtReads.letRegion (result := result) name ordinary region visible receiverOrdinary reads)
+  case forever =>
+    intros
+    rename_i label body ih rest
+    let bodyInput := body.printPieces.map PrintedToken.value ++ rest
+    have bodyHead : ∃ tail, bodyInput = openBrace :: tail := by
+      cases body
+      exact ⟨_, rfl⟩
+    have labelRead : LoopLabelReads ((loopLabelPieces label).map PrintedToken.value ++ bodyInput)
+        label bodyInput := by
+      cases label with
+      | none =>
+        obtain ⟨tail, h⟩ := bodyHead
+        simp only [loopLabelPieces, List.map_nil, List.nil_append]
+        rw [h]
+        exact .absent
+      | some name =>
+        simp only [loopLabelPieces, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
+          hpName]
+        exact .named name
+    simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpForever, bodyInput] using
+      (StmtReads.forever label labelRead (ih rest))
   case armsDone =>
     intros
     exact .done
