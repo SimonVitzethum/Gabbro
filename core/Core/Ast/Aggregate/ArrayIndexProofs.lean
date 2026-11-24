@@ -279,16 +279,16 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       constructor
       · change (do
             let i ← frame.zahl (slot + 1)
-            pure ⟨PartielleOperation.index,
-              (if i.zahl.wert < 0 then count + 1 else i.zahl.wert.toNat, count + 1)⟩) =
-          some ⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩
+            pure (⟨PartielleOperation.index,
+              (if i.zahl.wert < 0 then count + 1 else i.zahl.wert.toNat, count + 1)⟩ : Bedarf)) =
+          some (⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩ : Bedarf)
         rw [show frame.zahl (slot + 1) = some ⟨lo, hi, offset⟩ by
           change (frame.temp (slot + 1)).bind alsGanzzahl = some ⟨lo, hi, offset⟩
           rw [hoff]
           rfl]
-        change some ⟨PartielleOperation.index,
-            (if offset.wert < 0 then count + 1 else offset.wert.toNat, count + 1)⟩ =
-          some ⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩
+        change some (⟨PartielleOperation.index,
+            (if offset.wert < 0 then count + 1 else offset.wert.toNat, count + 1)⟩ : Bedarf) =
+          some (⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩ : Bedarf)
         rw [if_neg (not_lt_of_ge nonneg), posval]
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
@@ -307,8 +307,9 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
         simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, harr', hoff, wert, val,
-          Rahmen.zahl, alsGanzzahl, Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof,
-          dif_pos leCount, indexPosition, Option.some.injEq, id_eq]
+          Rahmen.zahl, alsGanzzahl, Option.bind, Option.bind_some,
+          if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
+          indexPosition, Option.some.injEq, id_eq]
         rfl
 
 end Gabbro.Core.Ast.Semantik
