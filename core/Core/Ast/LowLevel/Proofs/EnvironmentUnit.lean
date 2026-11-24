@@ -139,18 +139,19 @@ theorem environmentUnit_impl : environmentUnitForm.ImplAussage :=
 
 theorem block_keine_invarianten {result : Option (Ty .value)} {before after : Scope}
     (body : Block result before after) : (block body).klauseln.invariant = [] := by
-  induction body with
-  | done => rfl
-  | step first rest ih =>
+  match body with
+  | .done => rfl
+  | .step first rest =>
       simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-        stmt_keine_invarianten, ih]
+        stmt_keine_invarianten, List.nil_append, block_keine_invarianten rest]
+termination_by body
 
 theorem bracedBlock_keine_invarianten {result : Option (Ty .value)} {before : Scope}
     (body : BracedBlock result before) : (bracedBlock body).klauseln.invariant = [] := by
   cases body with
   | braces body =>
-      simp only [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
-        block_keine_invarianten]
+      simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, block_keine_invarianten, List.nil_append]
 
 theorem functionCode_keine_invarianten {result : Option WrittenType} {scope : Scope}
     (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
@@ -158,21 +159,24 @@ theorem functionCode_keine_invarianten {result : Option WrittenType} {scope : Sc
   cases measure with
   | none =>
       simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, bracedBlock_keine_invarianten]
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        bracedBlock_keine_invarianten]
   | some m =>
       simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten,
-        bracedBlock_keine_invarianten]
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        expr_keine_invarianten, bracedBlock_keine_invarianten]
 
 theorem decl_keine_invarianten {before after : Scope} (d : Decl before after) :
     (decl d).klauseln.invariant = [] := by
   cases d with
   | constant name ordinary written valid value staticValue fits =>
       simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten]
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        expr_keine_invarianten]
   | function name ordinary parameters result valid decreases body distinct returns =>
       simp only [decl, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-        Quellklauseln.anhaengen, Quellklauseln.leer, functionCode_keine_invarianten]
+        Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+        functionCode_keine_invarianten]
   | record exported name fields valid distinct => rfl
   | tagged exported name first tail valid distinct => rfl
   | environment name abi row => rfl
@@ -183,13 +187,14 @@ theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBody befor
   | done => rfl
   | step first rest ih =>
       simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
-        decl_keine_invarianten, ih]
+        List.nil_append, decl_keine_invarianten, ih]
 
 theorem environmentUnit_ohneInvarianten (args : EnvironmentArgs) :
     (environmentUnitForm.fragment args).klauseln.invariant = [] := by
   change (programm (EnvironmentArgs.unit args)).klauseln.invariant = []
   simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-    Quellklauseln.anhaengen, Quellklauseln.leer, unitBody_keine_invarianten]
+    Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
+    unitBody_keine_invarianten]
 
 theorem environmentUnit_erhaltung : environmentUnitForm.ErhaltungsAussage := by
   intro platform args
