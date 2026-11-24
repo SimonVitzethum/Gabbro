@@ -55,22 +55,73 @@ def RegelLokal (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) (i : ι
     (plan : SchrittPlan L Ort Wert Bedingung),
     (E.system.regel i).ideal c s w [plan] u → Befugt E s c plan
 
-/-- **Obligation of a unit: every outside effect it performs is valid at commit** — each
-    identity, right, generation and precondition holds at the commit snapshot: whenever a
-    composed ideal step emits an outside question, it is valid at the outside view
-    of that commit (the policy sight at the commit cut over the committed history),
-    established in the same catalogue event through its own handle or by a pinned row
-    stability. Under the arbitrary-change rely this pins the `.stabil` disjunct at acceptance
-    time; the `.frisch` disjunct is established at commit by the atomic event (admission
-    rule). The M6 constructors discharge it per form; the refusal theorems below fix what it
-    means. -/
+/-- Ownership and the requested rights in the program's own authority state. -/
+def AussengriffeEigen (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (q : Frage) : Prop :=
+  ∀ z ∈ q.zugriffe, s.buchung.aussengriff c z.handle z.right
+
+/-- A pending request keeps its handles until it is answered or retired with its boot epoch. -/
+def OffeneGriffeEigen (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
+  ∀ q ∈ s.fragen, s.epoche ≤ q.cut →
+    (∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance) →
+    ∃ c, c.nummer = q.context ∧ AussengriffeEigen s c q.question
+
+/-- Outside rules checked on the ideal context step. A question needs program-side rights
+    at issue. An unmediated commit has no catalogue reply that can revalidate it or fail,
+    so it needs pinned stability and its operation must succeed under the admitted rely. -/
+def AussenKontextLokal [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) (c : Kontext)
+    (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
+    (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
+  (∀ ev : FrageEreignis, Ereignis.frage ev ∈ spur.aussen →
+    E.katalog.enthaelt (.endpoint ev.question.endpoint) ∧ AussengriffeEigen s c ev.question) ∧
+  (OffeneGriffeEigen s → OffeneGriffeEigen s') ∧
+  ∃ neu, s'.buchung.wirkungen = s.buchung.wirkungen ++ neu ∧
+    ∀ effect, Sicherheit.Wirkung.aussen effect ∈ neu →
+      effect.kontext = c ∧ AussengriffeEigen s c effect.frage ∧
+      E.katalog.enthaelt (.endpoint effect.frage.endpoint) ∧
+      (∀ z ∈ effect.frage.zugriffe, Aussen.ReihenStabil E.katalog.plattform z.handle.origin.object) ∧
+      ∀ H, Hardware E.katalog H → run.konform E.katalog H →
+        ∃ reply, E.katalog.zulaessig (run.politik.sicht t s.verlauf) effect.frage reply ∧
+          reply.result.isOk = true
+
+/-- The outside rule at the ideal boundaries. An asynchronous effect is checked in the
+    catalogue view of the successful reply, over the history before that reply. Data from
+    an earlier answer may inform the choice, while the catalogue establishes current validity. -/
 def AussenGueltig [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
     Prop :=
   ∀ (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
     (w : SchrittWahl Wahl) (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund),
     I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s' →
-    ∀ (ev : FrageEreignis), Ereignis.frage ev ∈ spur.aussen →
-      Aussen.GueltigBeiCommit E.katalog.plattform (run.politik.sicht t s'.verlauf) ev.question
+    match w with
+    | .kontext c _ => AussenKontextLokal E c run t s spur s'
+    | .antwort a =>
+      ∀ H, Hardware E.katalog H → run.konform E.katalog H → a.reply.result.isOk = true →
+        Aussen.GueltigBeiCommit E.katalog.plattform (run.politik.sicht t s.verlauf) a.question
+    | .interrupt _ | .absturz => True
+
+/-- The reply boundary establishes validity in the commit view for any conformant policy. -/
+theorem antwort_gueltig [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} {run t a s spur s' H}
+    (step : AntwortSchritt E.einrichtung E.katalog run t a s spur s')
+    (hardware : Hardware E.katalog H) (konform : run.konform E.katalog H)
+    (ok : a.reply.result.isOk = true) :
+    Aussen.GueltigBeiCommit E.katalog.plattform (run.politik.sicht t s.verlauf) a.question :=
+  Aussen.atomar_gueltig (step.1.zulaessig hardware konform).2 ok
+
+/-- To prove the outside rule for a unit, the forms only need to discharge the context
+    obligations. The catalogue discharges the answer arm independently of the unit. -/
+theorem aussen_gueltig_aus_kontext [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (kontext : ∀ run t s c w spur s',
+      I.Schritt E.einrichtung E.system E.katalog run t s (.kontext c w, spur) s' →
+      AussenKontextLokal E c run t s spur s') :
+    AussenGueltig E := by
+  intro run t s w spur s' step
+  cases step with
+  | kontext normal bereit regel aus =>
+    exact kontext run t s _ _ spur s' (.kontext normal bereit regel aus)
+  | antwort _ arrives => exact fun _ hw konform ok => antwort_gueltig (E := E) arrives hw konform ok
+  | interrupt _ _ | absturz _ => trivial
 
 /-- **The outside rule of §4 inside `Lokal`**: the selected platform admits only interfaces
     where every query goes through an owned handle with a failure channel (`ZulassungsRegel`),
@@ -151,23 +202,6 @@ theorem anderer_ort_nicht_befugt (E : Einheit L Ort Wert Raum Lok Grund Bedingun
   have gleich : g' = g := Option.some.inj (hx.symm.trans (bindung.trans hy))
   subst g'
   exact ausserhalb g hy (List.mem_of_getElem? ort)
-
-/-- A question event is never a member of a singleton of a different event. -/
-theorem frage_absurd_mem {C : Prop} {ev : FrageEreignis} {y : Ereignis}
-    (mem : Ereignis.frage ev ∈ [y]) (hne : Ereignis.frage ev ≠ y) : C := by
-  rcases List.mem_cons.mp mem with h | h
-  · exact (hne h).elim
-  · cases h
-
-/-- **A unit whose ideal steps emit no outside question satisfies the outside rule.** -/
-theorem aussen_gueltig_ohne_fragen [DecidableEq L]
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    (ideal_stumm : ∀ (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
-      (w : SchrittWahl Wahl) (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund),
-      I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s' →
-      ∀ (ev : FrageEreignis), Ereignis.frage ev ∉ spur.aussen) :
-    AussenGueltig E :=
-  fun run t s w spur s' step ev mem => absurd mem (ideal_stumm run t s w spur s' step ev)
 
 /-- A handle whose recorded generation is stale at the commit snapshot authorises nothing:
     the same-event validity check fails. -/

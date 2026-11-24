@@ -77,6 +77,13 @@ theorem fruehere_antwort_ungueltig (p : Plattform) (s₁ : AussenSicht) (q : Fra
       exact Bool.false_ne_true htrue
     | stabil fest => exact ninstabil (fest t mem)
 
+/-- The successful catalogue event checks all the touched handles in its commit view. -/
+theorem atomar_gueltig {p s q a} (antwort : atomar p s q = .antwort a)
+    (erfolg : a.result.isOk = true) : GueltigBeiCommit p s q := by
+  cases h : a.result with
+  | ok _ => exact .frisch (List.all_eq_true.mpr (atomar_aktuell antwort h).2.2)
+  | error _ => rw [h] at erfolg; cases erfolg
+
 /-- **An atomically revalidated operation is valid at commit even when its choice depended
     on an earlier answer**: the commit snapshot establishes every touched identity, right,
     generation and precondition through its own handle. -/
@@ -85,13 +92,7 @@ theorem revalidiert_gueltig (p : Plattform) (s : AussenSicht) (q : Frage) (a : A
     (wahl : AussenWert → Frage) (entschieden : q = wahl v₀)
     (antwort : atomar p s q = .antwort a) (erfolg : a.result.isOk = true) :
     GueltigBeiCommit p s q := by
-  subst entschieden
-  cases hv : a.result with
-  | ok v => exact .frisch (List.all_eq_true.mpr (atomar_aktuell antwort hv).2.2)
-  | error e =>
-    rw [hv] at erfolg
-    simp only [Except.isOk, Except.toBool] at erfolg
-    exact False.elim (Bool.false_ne_true erfolg)
+  exact atomar_gueltig antwort erfolg
 
 /-- Satisfiability: a hosted read is valid at commit. -/
 theorem gueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :

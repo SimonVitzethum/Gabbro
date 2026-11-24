@@ -127,9 +127,7 @@ theorem antwort_sicher {H ρ t a}
       (erfolg : a.reply.result.isOk = true) :
       Aussen.GueltigBeiCommit E.maschine.katalog.plattform (H'.politik.sicht t vor.verlauf) a.question := by
     rw [hw.antwort _ _ _ angebot.2.2.1] at gleich
-    cases h : a.reply.result with
-    | ok _ => exact .frisch (List.all_eq_true.mpr (atomar_aktuell gleich h).2.2)
-    | error _ => rw [h] at erfolg; cases erfolg
+    exact Aussen.atomar_gueltig gleich erfolg
   refine ⟨⟨⟨zugriff, [], wirkungen, freigaben⟩, invariant,
     fun _ => kein_sperrwechsel (ziel ▸ rfl), rennen, ?_, ?_⟩, ?_, ?_⟩
   · refine ⟨?_, [], wirkungen, fun _ mem => (List.not_mem_nil mem).elim⟩

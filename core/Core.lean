@@ -24,7 +24,6 @@ public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
-public import Core.Beobachtung.Annahmegrenze
 public import Core.Beobachtung.Nichtinterferenz
 meta import Core.Waechter.Check
 

@@ -12,7 +12,7 @@
   proves acceptance is not vacuous in the refusal direction. Non-vacuity of the two local
   obligations: `stale_nicht_aussen_gueltig` (a system emitting a stale-handle question fails
   `AussenGueltig`) and `unbefugt_nicht_regel_lokal` (a step touching an unowned location fails
-  `RegelLokal`), beside their satisfiability (`aussen_gueltig_ohne_fragen`, `befugt_mit_griff`,
+  `RegelLokal`), beside their satisfiability (`akzeptiert_erfuellbar`, `befugt_mit_griff`,
   `befugt_erfuellbar` in `Lokal.lean`).
 -/
 module
@@ -81,28 +81,6 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
   intro c s u w plan h
   exact False.elim h
 
-/-- The trivial ideal machine emits no outside question: the only rule never fires,
-    and arrivals, deliveries and crashes carry no question event. -/
-theorem triviale_ideal_stumm (run : HwLauf) (t : Nat)
-    (s : Zustand Unit Unit Unit Unit Unit Unit) (w : SchrittWahl Unit)
-    (spur : SchrittSpur Unit Unit) (s' : Zustand Unit Unit Unit Unit Unit Unit)
-    (step : I.Schritt trivialeEinheit.einrichtung trivialeEinheit.system
-      trivialeEinheit.katalog run t s (w, spur) s')
-    (ev : FrageEreignis) : Ereignis.frage ev ∉ spur.aussen := by
-  intro mem
-  cases step with
-  | kontext _ _ regel _ =>
-    obtain ⟨i, hi, _⟩ := regel
-    exact nomatch hi
-  | antwort _ h =>
-    exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
-  | interrupt _ h =>
-    obtain ⟨_, _, _, _, _, _, _, _, hEq, _, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
-  | absturz h =>
-    obtain ⟨_, hEq, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
-
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
     conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked. -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
@@ -111,7 +89,12 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
-  · exact aussen_gueltig_ohne_fragen _ triviale_ideal_stumm
+  · apply aussen_gueltig_aus_kontext
+    intro _ _ _ _ _ _ _ step
+    cases step with
+    | kontext _ _ regel _ =>
+      obtain ⟨i, hi, _⟩ := regel
+      exact nomatch hi
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
@@ -256,8 +239,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   laden := fun _ _ => none
 
 /-- **A system that emits a question with a stale handle does NOT satisfy the outside rule**:
-    the composed ideal step emits the stale question while the commit snapshot moved
-    on, so validity at commit fails. -/
+    the issuing context holds no right to its stale handle. -/
 theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
   intro h
   let c : Kontext := .faden 0
@@ -294,7 +276,8 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
       run 0 s (.kontext c (), spur) s' :=
     .kontext rfl hbereit hregel haus
   have hfrage_mem : Ereignis.frage ev ∈ spur.aussen := List.mem_cons_self
-  exact stale_nicht_gueltig _ (h run 0 s (.kontext c ()) spur s' hschritt ev hfrage_mem)
+  exact (h run 0 s (.kontext c ()) spur s' hschritt).1 ev hfrage_mem |>.2
+    ⟨staleFrage.handle, staleFrage.operation.required⟩ List.mem_cons_self
 
 /-- A plan that writes a location. -/
 def unbefugtPlan : SchrittPlan Unit Unit Unit Unit :=
