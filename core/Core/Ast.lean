@@ -96,10 +96,10 @@ The syntax modules and pins in the diff were checked with the pinned Lean toolch
 The M6 semantic additions above are still required to admit this form to the full model.
 
 ```diff
-diff --git a/core/Core/Ast/Tree.lean core/Core/Ast/Tree.lean
+diff --git a/core/Core/Ast/Tree.lean b/core/Core/Ast/Tree.lean
 index 6d2db7918..e354c7fa0 100644
 --- a/core/Core/Ast/Tree.lean
-+++ core/Core/Ast/Tree.lean
++++ b/core/Core/Ast/Tree.lean
 @@ -20,6 +20,8 @@ inductive Ty : Kind → Type where
    /-- The unbounded integer domain of unsuffixed source numerals and their arithmetic.
        Elaboration will supply the contextual machine type. -/
@@ -118,10 +118,10 @@ index 6d2db7918..e354c7fa0 100644
 
  inductive Stmt : Scope → Scope → Type where
    /-- `let name = value;`. The name enters scope after the initializer. -/
-diff --git a/core/Core/Ast/Expression.lean core/Core/Ast/Expression.lean
+diff --git a/core/Core/Ast/Expression.lean b/core/Core/Ast/Expression.lean
 index 05fd0f14f..baeacf483 100644
 --- a/core/Core/Ast/Expression.lean
-+++ core/Core/Ast/Expression.lean
++++ b/core/Core/Ast/Expression.lean
 @@ -58,6 +58,7 @@ inductive AtomReads (scope : Scope) :
    | lit : AtomReads scope (.natural value :: rest) (.lit value) rest
    | grouped : ExprReads scope 0 input tree (closeParen :: rest) →
@@ -179,10 +179,10 @@ index 05fd0f14f..baeacf483 100644
    · intro _ rest _ _ _
      exact List.suffix_refl rest
    · intro _ input _ _ _ _ _ op _ _ _ operand tail
-diff --git a/core/Core/Ast/Print.lean core/Core/Ast/Print.lean
+diff --git a/core/Core/Ast/Print.lean b/core/Core/Ast/Print.lean
 index b460f502f..7df278539 100644
 --- a/core/Core/Ast/Print.lean
-+++ core/Core/Ast/Print.lean
++++ b/core/Core/Ast/Print.lean
 @@ -94,12 +94,22 @@ def letName : Identifier := ⟨['l', 'e', 't'], 'l', ['e', 't'], rfl, by
    · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 101; omega, by change 101 ≤ 122; omega⟩))
    · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 116; omega, by change 116 ≤ 122; omega⟩))⟩
@@ -214,10 +214,10 @@ index b460f502f..7df278539 100644
 
  theorem Expr.printReads (tree : Expr scope type) (blocked : ¬ Continues minimum rest) :
      ExprReads scope minimum (tree.printTokens ++ rest) tree rest :=
-diff --git a/core/Core/Ast/Surface.lean core/Core/Ast/Surface.lean
+diff --git a/core/Core/Ast/Surface.lean b/core/Core/Ast/Surface.lean
 index 298a28ffa..4426c79fd 100644
 --- a/core/Core/Ast/Surface.lean
-+++ core/Core/Ast/Surface.lean
++++ b/core/Core/Ast/Surface.lean
 @@ -147,4 +147,26 @@ theorem letValue_entry (scope : Scope) : (letValue scope).Entry where
    prints := letValue_print
    erfuellbar := letValue_erfuellbar scope
@@ -245,10 +245,10 @@ index 298a28ffa..4426c79fd 100644
 +  erfuellbar := trueLiteral_erfuellbar scope
 +
  end Gabbro.Core.Ast.Surface
-diff --git a/core/Core/Waechter/Check.lean core/Core/Waechter/Check.lean
+diff --git a/core/Core/Waechter/Check.lean b/core/Core/Waechter/Check.lean
 index db98b8c1b..cb7599d2e 100644
 --- a/core/Core/Waechter/Check.lean
-+++ core/Core/Waechter/Check.lean
++++ b/core/Core/Waechter/Check.lean
 @@ -12,16 +12,16 @@ open Lean Elab Command
  namespace Gabbro.Core.Waechter
 
