@@ -45,6 +45,23 @@ private theorem textTypeOhneInvarianten (ctx : Scope × Option (Ty .value))
     ((typeUseForm ctx textTypeUse).fragment args).klauseln.invariant = [] := by
   exact stmt_keine_invarianten (((Surface.mutableLocal ctx.1 ctx.2).tree args.val).2)
 
+private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by
+  decide
+
+private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
+    keyword "string" ≠ .word (intSpelling signed width) := by
+  cases signed
+  · intro h
+    have hl : "string".toList = intSpelling false width := by
+      injection h with hl
+      exact hl
+    exact (by decide : ('s' : Char) ≠ 'u') (List.cons.inj hl).1
+  · intro h
+    have hl : "string".toList = intSpelling true width := by
+      injection h with hl
+      exact hl
+    exact (by decide : ('s' : Char) ≠ 'i') (List.cons.inj hl).1
+
 theorem TextTypeInversion : TextTypeInversionAussage := by
   intro input type rest read
   generalize htok : keyword "string" :: input = toks at read
@@ -52,24 +69,21 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
   | text =>
       exact ⟨_, (List.cons.inj htok).2, rfl⟩
   | bool =>
-      have h : keyword "string" = keyword "bool" := (List.cons.inj htok).1
-      simp [keyword] at h
+      exact (stringToken_ne_bool (List.cons.inj htok).1).elim
   | integer valid closed =>
       rename_i width more
-      have h : keyword "string" = .word (intSpelling width more) := (List.cons.inj htok).1
-      cases width <;> simp [keyword, intSpelling] at h
+      exact (stringToken_ne_intWord width more (List.cons.inj htok).1).elim
   | interval valid ls rs =>
       rename_i signed width input' lo hi more
-      have h : keyword "string" = .word (intSpelling signed width) := (List.cons.inj htok).1
-      cases signed <;> simp [keyword, intSpelling] at h
+      exact (stringToken_ne_intWord signed width (List.cons.inj htok).1).elim
   | array count bound elemRead boundRead =>
       rename_i element boundInput
       have h : keyword "string" = openBracket := (List.cons.inj htok).1
-      simp [keyword, openBracket] at h
+      cases h
   | tuple firstRead secondRead tailRead =>
       rename_i first second more tail more'
       have h : keyword "string" = openParen := (List.cons.inj htok).1
-      simp [keyword, openParen] at h
+      cases h
 
 theorem TextTypeDerivation : TextTypeDerivationAussage := by
   intro capacity rest
@@ -143,9 +157,11 @@ theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
   subst spur
   constructor
   · intro answer
-    simp [plan]
+    change Aktion.intern ≠ Aktion.verbrauche answer
+    intro h
+    cases h
   · intro answer
-    simp
+    exact List.not_mem_nil _
 
 theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   intro ctx platform args
@@ -158,7 +174,7 @@ theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   change ((form.fragment args).einheit platform).stotterLaenge b + [stepPlan].length = 1
-  simp [Fragment.einheit]
+  simp only [Fragment.einheit, List.length_cons, List.length_nil, Nat.zero_add]
 
 theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   intro platform start
@@ -177,10 +193,12 @@ theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
   let written : WrittenType := .text capacity
   let value : Expr [] (.text capacity) := .textLiteral []
   let argsVal : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, written, by simp [written, WrittenType.valid], .text capacity, value,
-      by simp [written, Fits, WrittenType.type]⟩
+    ⟨name, ordinary, written, by simp only [written, WrittenType.valid], .text capacity, value,
+      by
+        simp only [written, Fits, WrittenType.type]
+        exact Nat.le_refl _⟩
   let args : {a : Surface.MutableLocalArgs [] none // textTypeUse a.written} :=
-    ⟨argsVal, by simp [argsVal, written, textTypeUse]⟩
+    ⟨argsVal, by simp only [argsVal, written, textTypeUse]⟩
   let form := typeUseForm ([], none) textTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
