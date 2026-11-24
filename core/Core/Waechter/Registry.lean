@@ -41,39 +41,83 @@ public structure RegistryEntry (constructor : Name) (schema : RegistrySchema con
   preservation : schema.statements.preservation
   jointlySatisfiable : schema.statements.jointlySatisfiable
 
+/-- Evidence for the complete pinned packet of a constructor or an auxiliary form. -/
+public structure RegistryPacketProof (_form : Name) (packet : Prop) : Prop where
+  proof : packet
+
+/-- A scoped constructor must carry the standard schema and every pinned packet obligation. -/
+public structure RegistryPacketEntry (constructor : Name) (schema : RegistrySchema constructor)
+    (packet : Prop) where
+  entry : RegistryEntry constructor schema
+  packetProof : packet
+
+public meta structure RegistryPacket where
+  form : Name
+  statement : Name
+  proof : Option Name := none
+
 public meta structure RegistryFamily where
   inductiveName : Name
   schema : Name
   entries : Array (Name × Name)
   openEntries : Array (Name × Name) := #[]
 
-/-- Open proof packets have an actual proposition pinned by the guard. -/
-public meta def openRegistryErrors (packets : Array (Name × Name)) (pinNames : Array Name)
-    (closing : Bool) : MetaM (Array String) := do
+private meta def packetErrors (row : RegistryPacket) (pinNames : Array Name)
+    (closing : Bool) (expected : Expr) : MetaM (Array String) := do
+  let env ← getEnv
+  let valid := match env.find? row.statement with
+    | some (.defnInfo info) =>
+      isCoreConstant env row.statement && pinNames.contains row.statement && info.type.isProp
+    | _ => false
+  unless valid do
+    return #[s!"registry form {row.form} lacks a pinned proposition {row.statement}"]
+  if let some proof := row.proof then
+    if let some info := env.find? proof then
+      if isCoreConstant env proof && (← isDefEq info.type expected) then
+        return #[]
+    return #[s!"registry entry {proof} lacks the required typed proofs for {row.form} ({row.statement})"]
+  if closing then
+    return #[s!"open registry form {row.form} still requires proofs for {row.statement}"]
+  logInfo m!"open registry form {row.form} requires proofs for {row.statement}"
+  return #[]
+
+/-- Auxiliary forms carry their own pinned propositions. For configured inductives
+    the guard can also compare their rows with the actual constructors. -/
+public meta def auxiliaryRegistryErrors (rows : Array RegistryPacket) (pinNames : Array Name)
+    (closing : Bool) (families : Array Name) : MetaM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
-  for (form, packet) in packets do
-    let valid ← match env.find? packet with
-      | some (.defnInfo info) =>
-        pure (isCoreConstant env packet && pinNames.contains packet && info.type.isProp)
-      | _ => pure false
-    if !valid then
-      errors := errors.push s!"open registry form {form} lacks a pinned proposition {packet}"
-    else if closing then
-      errors := errors.push s!"open registry form {form} still requires proofs for {packet}"
+  let mut supplied : NameSet := {}
+  for row in rows do
+    if supplied.contains row.form then
+      errors := errors.push s!"duplicate auxiliary registry entry for {row.form}"
     else
-      logInfo m!"open registry form {form} requires proofs for {packet}"
+      supplied := supplied.insert row.form
+      unless isCoreConstant env row.form do
+        errors := errors.push s!"unknown auxiliary registry form {row.form}"
+      let expected := mkApp2 (mkConst ``RegistryPacketProof) (toExpr row.form) (mkConst row.statement)
+      errors := errors ++ (← packetErrors row pinNames closing expected)
+  for family in families do
+    let some (.inductInfo info) := env.find? family |
+      errors := errors.push s!"expected an inductive for auxiliary registry family {family}"
+      continue
+    unless isCoreConstant env family do
+      errors := errors.push s!"auxiliary registry family {family} is outside Core"
+    for ctor in info.ctors do
+      unless supplied.contains ctor do
+        errors := errors.push s!"missing auxiliary registry entry for {ctor}"
   return errors
 
 /-- Compares configured families with Lean's actual constructor lists. Each constructor must have one
     Core declaration of type `RegistryEntry constructor (schema constructor)`. The schema selects source
     or internal origin per constructor and is fixed by the language definitions. This guard checks coverage
     and typing. The intended meaning and non-degeneracy of the propositions require review and pins. -/
-public meta def registryErrors (families : Array RegistryFamily) (pinNames : Array Name)
-    (closing : Bool) : MetaM (Array String) := do
+public meta def registryErrors (families : Array RegistryFamily) (packetEntries : Array RegistryPacket)
+    (pinNames : Array Name) (closing : Bool) : MetaM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
   let mut registered : NameSet := {}
+  let mut constructors : NameSet := {}
   for family in families do
     if registered.contains family.inductiveName then
       errors := errors.push s!"duplicate registry family {family.inductiveName}"
@@ -81,6 +125,8 @@ public meta def registryErrors (families : Array RegistryFamily) (pinNames : Arr
     let some (.inductInfo info) := env.find? family.inductiveName |
       errors := errors.push s!"expected an inductive for registry family {family.inductiveName}"
       continue
+    for ctor in info.ctors do
+      constructors := constructors.insert ctor
     unless isCoreConstant env info.name do
       errors := errors.push s!"registry family {info.name} is outside Core"
     let schemaType := mkForall `constructor .default (mkConst ``Name)
@@ -106,17 +152,27 @@ public meta def registryErrors (families : Array RegistryFamily) (pinNames : Arr
       let expected := mkApp2 (mkConst ``RegistryEntry) index (mkApp (mkConst family.schema) index)
       if !isCoreConstant env entry || !schemaOK || !(← isDefEq value.type expected) then
         errors := errors.push s!"registry entry {entry} lacks the required typed proofs for {ctor}"
-    for (ctor, _) in family.openEntries do
+    let packetRows := (packetEntries.filter fun row => info.ctors.contains row.form) ++
+      family.openEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
+    for row in packetRows do
+      let ctor := row.form
       if !info.ctors.contains ctor then
-        errors := errors.push s!"unknown open registry constructor {ctor} for {info.name}"
+        errors := errors.push s!"unknown registry constructor {ctor} for {info.name}"
         continue
       if supplied.contains ctor then
         errors := errors.push s!"duplicate registry entry for {ctor}"
       supplied := supplied.insert ctor
-    errors := errors ++ (← openRegistryErrors family.openEntries pinNames closing)
+      if schemaOK then
+        let index := toExpr ctor
+        let expected := mkApp3 (mkConst ``RegistryPacketEntry) index (mkApp (mkConst family.schema) index)
+          (mkConst row.statement)
+        errors := errors ++ (← packetErrors row pinNames closing expected)
     for ctor in info.ctors do
       unless supplied.contains ctor do
         errors := errors.push s!"missing registry entry for {ctor}"
+  for row in packetEntries do
+    unless constructors.contains row.form do
+      errors := errors.push s!"unknown packet registry constructor {row.form}"
   return errors
 
 end Gabbro.Core.Waechter

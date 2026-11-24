@@ -126,7 +126,7 @@ private theorem kein_interrupt {s : AussenStart} {bytes : List UInt8} {g g'}
     (step : UnterbrechungsSchritt einrichtung (hardware bytes) t id (fertig s bytes g g') spur nach) : False := by
   obtain ⟨_, _, _, _, _, angeboten, _⟩ := step
   have eq := angeboten.2.2.1
-  change ([] : List (Nat × Unterbrechung))[id.2]? = some _ at eq
+  change ([] : List InterruptSignal)[id.2]? = some _ at eq
   rw [List.getElem?_nil] at eq
   cases eq
 
@@ -233,7 +233,7 @@ theorem akzeptiert_ideal_mit_antwort :
   exact ⟨einheit, η, gestellt s, angekommen s bytes, kontext, frageSpur s, antwortSpur s bytes,
     akzeptiert, lauf, rfl, rfl, eigene_frage _, issue_ungueltig [] bytes, rfl, rfl,
     ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl,
-    antwort_commit akzeptiert.1.2.2.2 η lauf (t := 2) (spur := antwortSpur s bytes) rfl rfl⟩
+    antwort_commit (akzeptiert_aussen akzeptiert) η lauf (t := 2) (spur := antwortSpur s bytes) rfl rfl⟩
 
 /-- A concrete run shares the same issuing and answer steps as the ideal run. Its finite
     prefix is followed by genuine idle ticks. -/

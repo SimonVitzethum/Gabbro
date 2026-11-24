@@ -92,9 +92,9 @@ def zeitBeob (ρ : Lauf E) (c : Kontext) (v n : Lok) :
 
 def ausgabeBeob (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (c : Kontext) (v n : Lok) :
     List (NiedrigesEreignis Ort Wert Grund Form) :=
-  ((E.fluss.ausgaben n).drop (E.fluss.ausgaben v).length).filterMap fun
-    | .wert kanal wert => sichtbar (E.etiketten.ausgabe kanal) (.ausgabe c kanal wert)
-    | .freigabe id wert => some (.freigabe c id wert)
+  ((E.fluss.ausgabeZuwachs v n).filter (Ausgabe.niedrig E.etiketten)).map fun
+    | .wert kanal wert => .ausgabe c kanal wert
+    | .freigabe id _ wert => .freigabe c id wert
 
 def commitBeob (p : Plattform) (v n : Zustand L Ort Wert Raum Lok Grund) :
     List (NiedrigesEreignis Ort Wert Grund Form) :=

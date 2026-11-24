@@ -3,6 +3,13 @@ module
 public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.Flush
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap
+public import Core.Ast.LowLevel.Mem.Proofs.UnmapSat
+public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
+public import Core.Ast.LowLevel.Mem.Proofs.SplitPages
+public import Core.Ast.LowLevel.Mem.Proofs.SplitPagesSatisfiability
+public import Core.Ast.LowLevel.Mem.Proofs.Merge
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution

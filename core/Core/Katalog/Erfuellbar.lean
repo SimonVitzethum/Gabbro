@@ -43,7 +43,7 @@ def Umgebung.referenzLauf (k : Katalog) (cores : Nat) (sicht : Nat → AussenVer
   angebot i :=
     { core := some (i % cores)
       interrupt := fun c => decide (c < cores)
-      raised := []
+      interrupts := []
       delivery := fun e => decide (k.enthaelt (.endpoint e))
       medium := decide (k.enthaelt .persistence)
       crash := false

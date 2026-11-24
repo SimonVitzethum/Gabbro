@@ -20,8 +20,10 @@ import Core.Ast.Semantik.Runtime.ExpressionAggregates
 - `RecordValueErhaltungAussage`
 - `RecordValueRegelSicherAussage`
 - `RecordValueErfuellbarAmAussage`
-- `RecordValueSlotsAussage`
--/
+ - `RecordValueSlotsAussage`
+ -/
+
+@[expose] public section
 
 namespace Gabbro.Core.Ast.Surface
 
