@@ -4,6 +4,7 @@ public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
 public meta import Core.Waechter.Registry
+public meta import Core.Waechter.Safety
 public meta import Core.Waechter.Semantics
 
 open Lean Elab Command
@@ -16,6 +17,13 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),
   (`Gabbro.Core.Ziel.NI, 7136388435487395955),
   (`Gabbro.Core.Ziel.GabbroZielForm, 10442611768856402706),
+  (`Gabbro.Core.Ziel.Sicherheit, 3609222519026224003),
+  (`Gabbro.Core.Ziel.SicherheitNichtLeer, 3680087890639914969),
+  (`Gabbro.Core.Ziel.GabbroSicherheitForm, 14131772821008578448),
+  (`Gabbro.Core.Sicherheit.ToctouFrei, 8339508326864064805),
+  (`Gabbro.Core.Sicherheit.Rennfrei, 1013127950566232718),
+  (`Gabbro.Core.Sicherheit.InvariantenErhalten, 13093855396385801283),
+  (`Gabbro.Core.Sicherheit.Speichersicher, 16410947285785007961),
   (`Gabbro.Core.Katalog.Hardware, 15597978166845504711),
   (`Gabbro.Core.Katalog.FairLaeufe, 8964919104053723618),
   (`Gabbro.Core.Katalog.ZulStart, 13125439710374010607),
@@ -36,15 +44,17 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
-  (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
-  (`Gabbro.Core.Maschine.I.Schritt, 4043611520882110875),
-  (`Gabbro.Core.Maschine.ImplSchritt, 17810737499791217162),
-  (`Gabbro.Core.Maschine.Laeufe, 6154662030244297406),
-  (`Gabbro.Core.Maschine.I.Laeufe, 4238928224235792905),
-  (`Gabbro.Core.Maschine.I.AussenBezug, 14721192888943763921),
-  (`Gabbro.Core.Maschine.I.Bestimmt, 11443836326703950274),
-  (`Gabbro.Core.Maschine.I.Fortschritt, 7949663685199510761),
-  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 17498789594400322395),
+  (`Gabbro.Core.Maschine.AbsturzSchritt, 13629927236173472726),
+  (`Gabbro.Core.Maschine.I.Schritt, 10902251193023140292),
+  (`Gabbro.Core.Maschine.ImplSchritt, 2016209155784197599),
+  (`Gabbro.Core.Maschine.Laeufe, 4167332728796031804),
+  (`Gabbro.Core.Maschine.I.Laeufe, 12246219229049549303),
+  (`Gabbro.Core.Maschine.I.AussenBezug, 14545744460845935956),
+  (`Gabbro.Core.Maschine.I.Bestimmt, 9030341408699802814),
+  (`Gabbro.Core.Maschine.I.Fortschritt, 14331443440873085814),
+  (`Gabbro.Core.Maschine.I.Sim, 12240687961120345458),
+  (`Gabbro.Core.Maschine.I.Haengt, 15729417313371872373),
+  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 2131622631997208645),
   (`Gabbro.Core.Annahme.Akzeptiert, 7495189157439494818),
   (`Gabbro.Core.Annahme.Lokal, 8358370778936020596),
   (`Gabbro.Core.Annahme.AussenLokal, 14489867616125512278),
@@ -53,6 +63,10 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Annahme.GeschlossenWartend, 14518909303012624280),
   (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
   (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
+
+private meta def safety : Array Name := #[
+  `Gabbro.Core.Sicherheit.Speichersicher, `Gabbro.Core.Sicherheit.InvariantenErhalten,
+  `Gabbro.Core.Sicherheit.Rennfrei, `Gabbro.Core.Sicherheit.ToctouFrei]
 
 private meta def acceptance : AcceptanceSpec := {
   acceptance := #[
@@ -109,6 +123,7 @@ elab "#check_core" : command => do
   let env := withAxiomSummaries (env.setExporting false)
   let declarations := coreDeclarations env
   errors := errors ++ compiledImportErrors env ++ pinErrors env pins ++ acceptanceErrors env acceptance
+  errors := errors ++ safetyErrors env safety
   let semanticErrors ← liftTermElabM <| withEnv env do
     let mut errors ← declarationErrors declarations
     errors := errors ++ (← decisionErrors declarations)

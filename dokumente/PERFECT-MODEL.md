@@ -120,6 +120,30 @@ Bindings that are part of the definitions:
   equal up to each declared release, differing only as that release authorises; the labelled-flow rule of `Lokal`
   that proves it is named in the registry.
 
+**2.2 The safety theorems beside it (owner, 2026-11-24).** The goal implies memory safety, invariant
+preservation, race freedom and TOCTOU freedom through the refinement of `I`. As a safety net they are stated AGAIN,
+directly over the implementation runs, in a separate theorem (`core/Core/Ziel/Sicherheit.lean`):
+
+```lean
+theorem gabbro_sicherheit :
+    SicherheitNichtLeer                           -- each of the four is violated by some run of some unit
+  ∧ ∀ a E, Bezeichnet a E → Akzeptiert E → ∀ H, Hardware (katalog E) H → ∀ ρ, Laeufe E H ρ →
+      Speichersicher E H ρ ∧ InvariantenErhalten E H ρ ∧ Rennfrei E H ρ ∧ ToctouFrei E H ρ
+```
+
+The four are defined over the implementation machine (§3.5), the memory model (M3) and the outside rule (§4, M10)
+ONLY — never over `I`, `Sim`, `Verfeinert` or `Akzeptiert` (a guard of §6 checks their dependency closure), so an
+error in the ideal meaning or in the refinement cannot hide a violation; they hold on EVERY run, fair or not:
+- `Speichersicher`: every memory access is to an allocated, live (current generation), in-extent location through
+  a handle the acting context holds with the needed right; no release of a released or foreign object; no
+  integer becomes an address.
+- `InvariantenErhalten`: every declared invariant (type, lock-protected, module, loop) holds at every cut at
+  which no context is inside a writer of it, at every release and at every acquisition of its lock.
+- `Rennfrei`: in the run's RC11 graph every two conflicting accesses (same location, one a write, one
+  non-atomic) are ordered by happens-before; device registers only under linear device authority.
+- `ToctouFrei`: every committed outside effect is `GueltigBeiCommit` under every outside history the selected
+  rows admit; no effect is authorised by an earlier answer.
+
 ## 3. The definitions
 
 **3.1 Text and meaning.** The language is ONE reference AST: a Lean inductive family in `core/Core/Ast/`,
@@ -309,7 +333,9 @@ ratchet:
    `grammatik/`, `stage0/` or `programmlogik/`); every module is reached from `Core.lean`; every file has fewer
    than 500 lines.
 2. `Akzeptiert` whitelist (syntax, `I`, catalogue) and the reverse guard (`I` does not mention `Akzeptiert`).
-3. Hash pins: the shape (`Rahmen`, `NichtLeer`, `Verfeinert`, `NI`, `GabbroZielForm`), `I` and its outcome type,
+3. Hash pins: the shape (`Rahmen`, `NichtLeer`, `Verfeinert`, `NI`, `GabbroZielForm`, `Sicherheit`,
+   `SicherheitNichtLeer`, `GabbroSicherheitForm`) and the four safety properties of §2.2 with their closure free
+   of `I`, `Sim`, `Verfeinert` and `Akzeptiert`, `I` and its outcome type,
    `Bezeichnet`, `Parse`, `Sim`, `Hängt`, `NiedrigAequiv`, every catalogue row.
 4. The closing guard (from M12): one argument-free `R₀ : Rahmen` with every field bound to its approved concrete
    constant; the exported `theorem gabbro_ziel : GabbroZielForm R₀`; the guard checks that declaration's
@@ -379,19 +405,20 @@ Owner, 2026-11-23: the model is built FRESH in the package `core/`, not by migra
 | **M6F Further forms** | the same for async (`async fn`, `.await`, `join`, executor; PLAN S8) with complete registry entries (M8 proves their progress after M7 closes), statically checked internal state (PLAN S9), scope regions (PLAN S10), plain payloads of `publish`/`awaits` (B12), invariants inside a running writer (B14), isolation in `I`'s authority (B18) | M6 | 44 000–118 000 |
 | **M6L Low-level forms** | the same for every low-level form of LOW-LEVEL-SYNTAX-PLAN §4 (the former L rows) — outside-interface forms (firmware, OS and device services) select pinned catalogue rows by name, and the selected row supplies the service contract; a program never writes one; done also requires the cross-constructor theorems of the L rows — isolation, TLB shootdown, DMA through the IOMMU, the boot hand-off chain from 16 bit; for timed low-level forms (L18) M6L delivers the time semantics and its local preservation, and their numeric upper bounds close in M9 with B19 | M6 | 236 000–596 000 |
 | **M7 Refinement** | `Sim` of §3.6 for every run; STARTS on M4 from the S7 prototype (`grammatik/Grammatik/Zielsatz/Ideal/Prototyp/`, ported) and grows with every form; CLOSES only with the cases of M6F and M6L (the acceptance case `flush`; linearisability of lock-free structures, B20) and the missing legs (B10); `Sim` covers crash points and the recovery continuation generically from M4 on, and M9 re-closes `Sim` for the persistence forms of B22 | starts M4; closes M6, M6F, M6L | 48 000–125 000 |
+| **M7S Safety theorems** | the four properties of §2.2 defined over the implementation machine, M3 and M10 (defined on M4/M10, before the forms enter), their refutability `SicherheitNichtLeer`, and the generic proof of each from the per-form obligations; every M6/M6F/M6L constructor discharges them with its registry entry; `gabbro_sicherheit` is stated in M12 | M4, M5, M10; closes with M7 | 8 000–20 000 |
 | **M9 Observations and NI** | `ImSchranken`: hold bounds and cost and time first (B8), then stack (B9), memory (B21), real time (B19, including the numeric upper bounds of the L18 forms); `NI` of §2 with information flow (B15), constant time (B16), speculation safety (B17); crash consistency over the persistence envelope with the B22 forms and their registry entries | M7 | 69 000–178 000 |
 | **M8 Progress** | §3.7 per context and per class under hardware-only fairness; liveness with spawned threads (B7, model side); waiting bounds and starvation freedom (B13) on M9's hold bounds | M7, M9 (B8 part) | 24 000–63 000 |
 | **M9P Probability** | random sources as rows with their draw laws; the B11 clause forms with their registry entries; a CAUSAL, measure-preserving lifting under every admitted scheduler and non-random policy; from it the B11 guarantees (model side) | M9 | 30 000–80 000 |
 | **M11 Transport** | `ZielFX` is defined and proved in `core/`; the package `uebergang/` imports `grammatik/` and `core/` and proves that `ZielFX` preserves today's whole guarantee from the full premises of today's `GabbroZiel` (§2.1), including the budgeted-G prefix correspondence for the retained fragment (§3.5); an excluded case only with the owner's approval | M6, M6F, M6L, M7, M8, M9, M9P, M10 | 6 000–20 000 |
-| **M12 Closing** | the model is closed: `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); the closing guard of §6 active; zero open registry entries. `grammatik/` and `uebergang/` stay until Stage 0, the bridge and the guardians have switched to `core/` (PLAN-COMPILER-READY phase B); then both are removed in one green cutover and the header of `Spec.lean` gives way to this file's §2 | M11 | 4 000–11 000 |
-| **Total** | | | **562 000–1 453 000** new (without the low-level forms 326 000–857 000; M6L 236 000–596 000) |
+| **M12 Closing** | the model is closed: `R₀` and `gabbro_ziel : GabbroZielForm R₀` over the concrete constants; non-degeneracy of every premise bundle (C11); `gabbro_sicherheit : GabbroSicherheitForm R₀ S₀` (§2.2); the closing guard of §6 active; zero open registry entries. `grammatik/` and `uebergang/` stay until Stage 0, the bridge and the guardians have switched to `core/` (PLAN-COMPILER-READY phase B); then both are removed in one green cutover and the header of `Spec.lean` gives way to this file's §2 | M11 | 4 000–11 000 |
+| **Total** | | | **570 000–1 473 000** new (without the low-level forms 326 000–857 000; M6L 236 000–596 000) |
 
 **Image gate** (PLAN-COMPILER-READY B6 in phase B, C9 in phase C; outside this plan): it lifts the WHOLE promise
 to images — an image run for every catalogue-conformant start, the lift of every admissible fair hardware history,
 `Verfeinert` on EVERY image run (fair or not), and `NI` with comparison-run existence; state reachability alone
 does not pass it.
 
-Critical path: M3 → M4 → M10 → M5 → M6 → M6L → M7 (close) → M9 → M8 → M11 → M12. M1, M2 and M3 start at once;
+Critical path: M3 → M4 → M10 → M5 → M6 → M6L → M7 (close, with M7S) → M9 → M8 → M11 → M12. M1, M2 and M3 start at once;
 M7 starts on M4 and grows with every form; M6F and M6L run form by form beside M7–M9. Riskiest step: M7, the refinement to `I`; its prototype exists. Scope: every
 model item of [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) is inside a step above (the L rows, S8–S10, A1–A4, A6,
 B7–B22, C11); Stage 0, GabbroV and the compiler and kernel are not — they are rebuilt on `core/` and get easier
