@@ -60,7 +60,9 @@ def RegionUnitRealizedAussage : Prop :=
     regionUnitForm.ElaboriertAussage ∧ regionUnitForm.RealisiertAussage
 
 theorem regionUnit_realized : RegionUnitRealizedAussage := by
-  have position : regionUnitForm.RegelAmOrt := fun _ => rfl
+  have position : regionUnitForm.RegelAmOrt := by
+    rintro ⟨args, init⟩
+    rfl
   exact ⟨position, fun _ _ pieces lexed read =>
     (Category.unit.syntax.parse_iff).mpr ⟨pieces, lexed, read⟩,
     fun _ _ allowed => ⟨rfl, allowed⟩, regionUnitForm.realisiert position⟩

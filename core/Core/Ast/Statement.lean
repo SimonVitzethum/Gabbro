@@ -180,18 +180,19 @@ theorem StmtReads.let_header
   | directCall call =>
     cases call
     exact nomatch (List.cons.inj (List.cons.inj same).2).1
-  | tupleBind pattern _ _ =>
-    cases pattern
+  | tupleBind _ patterns _ _ =>
+    cases patterns
     exact nomatch (List.cons.inj (List.cons.inj same).2).1
   | assignVar => exact nomatch (List.cons.inj (List.cons.inj same).2).1
   | letMutable | letMutableValue => exact nomatch (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).1
-  | assignField | bindDirect =>
+  | assignField => exact nomatch (List.cons.inj (List.cons.inj same).2).1
+  | bindDirect =>
     have punctuation := (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).1
     cases punctuation
   | _ =>
-    have prefix := (List.cons.inj same).1
+    have firstToken := (List.cons.inj same).1
     simp only [letKeyword, keyword, returnKeyword, ifKeyword, String.reduceToList,
-      Token.word.injEq, List.cons.injEq, Char.reduceEq, false_and] at prefix
+      Token.word.injEq, List.cons.injEq, Char.reduceEq, false_and] at firstToken
 
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
