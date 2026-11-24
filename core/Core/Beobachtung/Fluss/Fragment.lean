@@ -49,14 +49,12 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
   | succ t ih =>
     obtain ⟨s, hs⟩ := ih
     have ht := ρ.zeit.takt t
+    rw [hs] at ht
     cases ht with
     | schritt _ step =>
-      generalize hz : ρ.zeit.zustand t = z at step
-      generalize hn : ρ.zeit.zustand (t + 1) = n at step
       cases step with
-      | schritt _ => exact ⟨_, hn⟩
+      | schritt _ => exact ⟨_, rfl⟩
     | wartet _ gleich _ =>
-      rw [hs] at gleich
       exact ⟨s, gleich⟩
 
 -- (shared silence computation lives in `fragment_kontext_schritt_still` below)
