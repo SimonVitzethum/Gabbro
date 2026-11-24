@@ -55,6 +55,9 @@ structure ExecStateDecl where
 def ExecStateDecl.wellformed (decl : ExecStateDecl) : Prop :=
   (decl.widthBits = 16 ∨ decl.widthBits = 32 ∨ decl.widthBits = 64)
 
+instance (decl : ExecStateDecl) : Decidable decl.wellformed :=
+  inferInstanceAs (Decidable (_ ∨ _ ∨ _))
+
 /-- Entry kinds (§4.4). `nonmaskable`, `machineCheck` and `fatal` are not
     blocked by the ordinary interrupt mask; the checker allows only
     lock-free code there, on a declared own stack. -/

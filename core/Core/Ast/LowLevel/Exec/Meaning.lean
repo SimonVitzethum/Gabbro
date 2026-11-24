@@ -89,7 +89,8 @@ def ExecInstruction.evaluate (op : ExecInstruction) (s : ExecState) (c : Kontext
       if frame.entries.all (fun p => p.1.val != name.val) ∧
           (kind.needsOwnStack → stack = .own) ∧
           (kind.needsPriority ↔ priority.isSome) then
-        pure { frame with result := some (.entryDeclared name),
+        pure { frame with
+          result := some (.entryDeclared name)
           entries := frame.entries ++ [(name, kind)] }
       else none
 
