@@ -20,7 +20,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, _⟩ := b.vollzug_genau transfer execute
+      obtain ⟨rfl, _⟩ := b.vollzug_genau (w := ()) transfer execute
       exact List.not_mem_nil mem
     | antwort _ h =>
       exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro same; cases same)
@@ -55,7 +55,11 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
   let entry : Decl [] [] := .function mainName (by
     simp only [directName, ordinaryLocal, mainName, keywordName, String.reduceToList,
       List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, List.cons.injEq,
-      Char.reduceEq, false_and, and_false, false_or, or_false, not_false_eq_true, and_true]) [] none
+      Char.reduceEq, false_and, and_false, false_or, or_false, not_false_eq_true, and_true]
+    constructor <;> intro same
+    all_goals
+      have equal := (List.cons.inj same).1
+      simp only [Char.reduceEq] at equal) [] none
     (fun _ h => (List.not_mem_nil h).elim) none (.braces .done) .nil (fun h => nomatch h)
   let args : EnvironmentArgs := ⟨name, .biosInterrupt, .biosServices, [], .step entry .done⟩
   let E := environmentUnitForm.einheit .x86_64 args
@@ -81,7 +85,7 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
     intro e present
     obtain rfl := List.mem_singleton.mp present
     refine ⟨?_, rfl⟩
-    simp [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte]
+    simp [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte, FirmwareZeile.endpunkt]
   have accepted : Akzeptiert E := by
     apply Fragment.akzeptiert_ohne_bedarf _ _ rfl
     intro b present frame
