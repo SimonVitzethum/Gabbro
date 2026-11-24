@@ -229,7 +229,6 @@ theorem textIndexBytes : TextIndexBytesAussage := by
         simp only [getElem?_eq_none_iff]
         exact not_lt_of_ge hnat
       rw [Befehl.auswerten]
-      dsimp only
       rw [htext, hzahl]
       rw [if_neg (not_lt_of_ge hnonneg)]
       rw [hout]
