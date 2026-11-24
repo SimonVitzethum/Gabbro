@@ -178,175 +178,279 @@ instance : Encodable CarrierEffect :=
     rintro ⟨d, c, a⟩
     simp [carrierEffectCode, carrierEffectDecode, Encodable.encodek])
 
-/-! ## Ty (indexed family, encoded by structural first-order trees)
+/-! ## First-order tree codes
 
-`Ty .value` is recursive. Its code is a preorder list of natural numbers; the
-decoder consumes that list and returns the leftover tail, so recursion is
-structural on the list and the inverse lemma is generalized over the tail. -/
+`Nat.Partrec.Code` is an already-decodable recursive tree. An AST value is
+injected into it by a structural map; the inverse is structural recursion on
+the tree, so no well-founded proof obligations and no meta commands are needed. -/
 
-def tyCode : Ty .value → Nat
-  | .int lo hi => Nat.pair 0 (Nat.pair (Encodable.encode lo) (Encodable.encode hi)) + 1
-  | .bool => Nat.pair 1 0 + 1
-  | .array el cnt => Nat.pair 2 (Nat.pair (tyCode el) (Encodable.encode cnt)) + 1
-  | .productEnd => Nat.pair 3 0 + 1
-  | .product h t => Nat.pair 4 (Nat.pair (tyCode h) (tyCode t)) + 1
+open Nat.Partrec
+
+def natZuCode : Nat → Code
+  | 0 => Code.zero
+  | n + 1 => Code.pair Code.right (natZuCode n)
+
+def codeZuNat : Code → Option Nat
+  | Code.zero => some 0
+  | Code.pair Code.right c => (codeZuNat c).map Nat.succ
+  | _ => none
+
+theorem codeZuNat_natZuCode (n : Nat) : codeZuNat (natZuCode n) = some n := by
+  induction n with
+  | zero => simp [natZuCode, codeZuNat]
+  | succ n ih => simp [natZuCode, codeZuNat, ih]
+
+/-! ## Ty (indexed family) -/
+
+def tyZuCode : Ty .value → Code
+  | .int lo hi =>
+      Code.pair (natZuCode 0) (Code.pair (natZuCode (Encodable.encode lo))
+        (Code.pair (natZuCode (Encodable.encode hi)) Code.zero))
+  | .bool => Code.pair (natZuCode 1) Code.zero
+  | .array el cnt =>
+      Code.pair (natZuCode 2) (Code.pair (tyZuCode el)
+        (Code.pair (natZuCode (Encodable.encode cnt)) Code.zero))
+  | .productEnd => Code.pair (natZuCode 3) Code.zero
+  | .product h t =>
+      Code.pair (natZuCode 4) (Code.pair (tyZuCode h) (Code.pair (tyZuCode t) Code.zero))
   | .record nm ls lay =>
-      Nat.pair 5 (Nat.pair (Encodable.encode nm) (Nat.pair (Encodable.encode ls) (tyCode lay))) + 1
+      Code.pair (natZuCode 5) (Code.pair (natZuCode (Encodable.encode nm))
+        (Code.pair (natZuCode (Encodable.encode ls)) (Code.pair (tyZuCode lay) Code.zero)))
   | .recordSchema nm ls lay =>
-      Nat.pair 6 (Nat.pair (Encodable.encode nm) (Nat.pair (Encodable.encode ls) (tyCode lay))) + 1
-  | .sumEnd => Nat.pair 7 0 + 1
-  | .sum h t => Nat.pair 8 (Nat.pair (tyCode h) (tyCode t)) + 1
+      Code.pair (natZuCode 6) (Code.pair (natZuCode (Encodable.encode nm))
+        (Code.pair (natZuCode (Encodable.encode ls)) (Code.pair (tyZuCode lay) Code.zero)))
+  | .sumEnd => Code.pair (natZuCode 7) Code.zero
+  | .sum h t =>
+      Code.pair (natZuCode 8) (Code.pair (tyZuCode h) (Code.pair (tyZuCode t) Code.zero))
   | .variant nm ls hp lay =>
-      Nat.pair 9 (Nat.pair (Encodable.encode nm)
-        (Nat.pair (Encodable.encode ls) (Nat.pair (Encodable.encode hp) (tyCode lay)))) + 1
+      Code.pair (natZuCode 9) (Code.pair (natZuCode (Encodable.encode nm))
+        (Code.pair (natZuCode (Encodable.encode ls))
+          (Code.pair (natZuCode (Encodable.encode hp)) (Code.pair (tyZuCode lay) Code.zero))))
   | .variantSchema nm ls hp lay =>
-      Nat.pair 10 (Nat.pair (Encodable.encode nm)
-        (Nat.pair (Encodable.encode ls) (Nat.pair (Encodable.encode hp) (tyCode lay)))) + 1
-  | .text cap => Nat.pair 11 (Encodable.encode cap) + 1
+      Code.pair (natZuCode 10) (Code.pair (natZuCode (Encodable.encode nm))
+        (Code.pair (natZuCode (Encodable.encode ls))
+          (Code.pair (natZuCode (Encodable.encode hp)) (Code.pair (tyZuCode lay) Code.zero))))
+  | .text cap => Code.pair (natZuCode 11) (natZuCode (Encodable.encode cap))
   | .carrierSchema cnt ls lay ex =>
-      Nat.pair 12 (Nat.pair (Encodable.encode cnt)
-        (Nat.pair (Encodable.encode ls) (Nat.pair (tyCode lay) (Encodable.encode ex)))) + 1
-  | .effectGroupSchema eff => Nat.pair 13 (Encodable.encode eff) + 1
-  | .address space => Nat.pair 14 (Encodable.encode space) + 1
-  | .ownedRegion => Nat.pair 15 0 + 1
-  | .regionView el => Nat.pair 16 (tyCode el) + 1
+      Code.pair (natZuCode 12) (Code.pair (natZuCode (Encodable.encode cnt))
+        (Code.pair (natZuCode (Encodable.encode ls))
+          (Code.pair (tyZuCode lay) (Code.pair (natZuCode (Encodable.encode ex)) Code.zero))))
+  | .effectGroupSchema eff =>
+      Code.pair (natZuCode 13) (natZuCode (Encodable.encode eff))
+  | .address space => Code.pair (natZuCode 14) (natZuCode (Encodable.encode space))
+  | .ownedRegion => Code.pair (natZuCode 15) Code.zero
+  | .regionView el => Code.pair (natZuCode 16) (tyZuCode el)
   | .ptr space recht referent =>
-      Nat.pair 17 (Nat.pair (Encodable.encode space)
-        (Nat.pair (Encodable.encode recht) (tyCode referent))) + 1
+      Code.pair (natZuCode 17) (Code.pair (natZuCode (Encodable.encode space))
+        (Code.pair (natZuCode (Encodable.encode recht)) (tyZuCode referent)))
 
-def tyOfCode : Nat → Option (Ty .value)
-  | 0 => none
-  | n + 1 =>
-    let p := n.unpair
-    let payload := p.2
-    have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
-    have ha : payload.unpair.1 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-    have hb : payload.unpair.2 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-    have hb1 : payload.unpair.2.unpair.1 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
-    have hb2 : payload.unpair.2.unpair.2 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
-    have hb21 : payload.unpair.2.unpair.2.unpair.1 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
-    have hb22 : payload.unpair.2.unpair.2.unpair.2 < n.succ :=
-      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
-    match p.1 with
-    | 0 => do
-        let lo : Int ← Encodable.decode payload.unpair.1
-        let hi : Int ← Encodable.decode payload.unpair.2
-        some (.int lo hi)
-    | 1 => some .bool
-    | 2 => do
-        let el ← tyOfCode payload.unpair.1
-        let cnt : Nat ← Encodable.decode payload.unpair.2
-        some (.array el cnt)
-    | 3 => some .productEnd
-    | 4 => do
-        let h ← tyOfCode payload.unpair.1
-        let t ← tyOfCode payload.unpair.2
-        some (.product h t)
-    | 5 => do
-        let nm : List Char ← Encodable.decode payload.unpair.1
-        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
-        let lay ← tyOfCode payload.unpair.2.unpair.2
-        some (.record nm ls lay)
-    | 6 => do
-        let nm : List Char ← Encodable.decode payload.unpair.1
-        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
-        let lay ← tyOfCode payload.unpair.2.unpair.2
-        some (.recordSchema nm ls lay)
-    | 7 => some .sumEnd
-    | 8 => do
-        let h ← tyOfCode payload.unpair.1
-        let t ← tyOfCode payload.unpair.2
-        some (.sum h t)
-    | 9 => do
-        let nm : List Char ← Encodable.decode payload.unpair.1
-        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
-        let hp' : List Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.1
-        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.2
-        some (.variant nm ls hp' lay)
-    | 10 => do
-        let nm : List Char ← Encodable.decode payload.unpair.1
-        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
-        let hp' : List Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.1
-        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.2
-        some (.variantSchema nm ls hp' lay)
-    | 11 => do
-        let cap : Nat ← Encodable.decode payload
+def tyVonCode : Code → Option (Ty .value)
+  | Code.pair tag kids =>
+    match codeZuNat tag with
+    | some 0 =>
+      match kids with
+      | Code.pair lo (Code.pair hi Code.zero) => do
+          let lon : Nat ← codeZuNat lo
+          let hin : Nat ← codeZuNat hi
+          let lo' : Int ← Encodable.decode lon
+          let hi' : Int ← Encodable.decode hin
+          some (.int lo' hi')
+      | _ => none
+    | some 1 =>
+      match kids with
+      | Code.zero => some .bool
+      | _ => none
+    | some 2 =>
+      match kids with
+      | Code.pair el (Code.pair cnt Code.zero) => do
+          let el' ← tyVonCode el
+          let cnt' : Nat ← codeZuNat cnt
+          some (.array el' cnt')
+      | _ => none
+    | some 3 =>
+      match kids with
+      | Code.zero => some .productEnd
+      | _ => none
+    | some 4 =>
+      match kids with
+      | Code.pair h (Code.pair t Code.zero) => do
+          let h' ← tyVonCode h
+          let t' ← tyVonCode t
+          some (.product h' t')
+      | _ => none
+    | some 5 =>
+      match kids with
+      | Code.pair nm (Code.pair ls (Code.pair lay Code.zero)) => do
+          let nmn : Nat ← codeZuNat nm
+          let lsn : Nat ← codeZuNat ls
+          let nm' : List Char ← Encodable.decode nmn
+          let ls' : List (List Char) ← Encodable.decode lsn
+          let lay' ← tyVonCode lay
+          some (.record nm' ls' lay')
+      | _ => none
+    | some 6 =>
+      match kids with
+      | Code.pair nm (Code.pair ls (Code.pair lay Code.zero)) => do
+          let nmn : Nat ← codeZuNat nm
+          let lsn : Nat ← codeZuNat ls
+          let nm' : List Char ← Encodable.decode nmn
+          let ls' : List (List Char) ← Encodable.decode lsn
+          let lay' ← tyVonCode lay
+          some (.recordSchema nm' ls' lay')
+      | _ => none
+    | some 7 =>
+      match kids with
+      | Code.zero => some .sumEnd
+      | _ => none
+    | some 8 =>
+      match kids with
+      | Code.pair h (Code.pair t Code.zero) => do
+          let h' ← tyVonCode h
+          let t' ← tyVonCode t
+          some (.sum h' t')
+      | _ => none
+    | some 9 =>
+      match kids with
+      | Code.pair nm (Code.pair ls (Code.pair hp (Code.pair lay Code.zero))) => do
+          let nmn : Nat ← codeZuNat nm
+          let lsn : Nat ← codeZuNat ls
+          let hpn : Nat ← codeZuNat hp
+          let nm' : List Char ← Encodable.decode nmn
+          let ls' : List (List Char) ← Encodable.decode lsn
+          let hp' : List Bool ← Encodable.decode hpn
+          let lay' ← tyVonCode lay
+          some (.variant nm' ls' hp' lay')
+      | _ => none
+    | some 10 =>
+      match kids with
+      | Code.pair nm (Code.pair ls (Code.pair hp (Code.pair lay Code.zero))) => do
+          let nmn : Nat ← codeZuNat nm
+          let lsn : Nat ← codeZuNat ls
+          let hpn : Nat ← codeZuNat hp
+          let nm' : List Char ← Encodable.decode nmn
+          let ls' : List (List Char) ← Encodable.decode lsn
+          let hp' : List Bool ← Encodable.decode hpn
+          let lay' ← tyVonCode lay
+          some (.variantSchema nm' ls' hp' lay')
+      | _ => none
+    | some 11 => do
+        let capn : Nat ← codeZuNat kids
+        let cap : Nat ← Encodable.decode capn
         some (.text cap)
-    | 12 => do
-        let cnt : Nat ← Encodable.decode payload.unpair.1
-        let ls : List (List Char) ← Encodable.decode payload.unpair.2.unpair.1
-        let lay ← tyOfCode payload.unpair.2.unpair.2.unpair.1
-        let ex : Bool ← Encodable.decode payload.unpair.2.unpair.2.unpair.2
-        some (.carrierSchema cnt ls lay ex)
-    | 13 => do
-        let eff : List CarrierEffect ← Encodable.decode payload
+    | some 12 =>
+      match kids with
+      | Code.pair cnt (Code.pair ls (Code.pair lay (Code.pair ex Code.zero))) => do
+          let cntn : Nat ← codeZuNat cnt
+          let lsn : Nat ← codeZuNat ls
+          let exn : Nat ← codeZuNat ex
+          let cnt' : Nat ← Encodable.decode cntn
+          let ls' : List (List Char) ← Encodable.decode lsn
+          let ex' : Bool ← Encodable.decode exn
+          let lay' ← tyVonCode lay
+          some (.carrierSchema cnt' ls' lay' ex')
+      | _ => none
+    | some 13 => do
+        let effn : Nat ← codeZuNat kids
+        let eff : List CarrierEffect ← Encodable.decode effn
         some (.effectGroupSchema eff)
-    | 14 => do
-        let space : AddressSpace ← Encodable.decode payload
+    | some 14 => do
+        let sn : Nat ← codeZuNat kids
+        let space : AddressSpace ← Encodable.decode sn
         some (.address space)
-    | 15 => some .ownedRegion
-    | 16 => do
-        let el ← tyOfCode payload
-        some (.regionView el)
-    | 17 => do
-        let space : AddressSpace ← Encodable.decode payload.unpair.1
-        let recht : PtrRecht ← Encodable.decode payload.unpair.2.unpair.1
-        let referent ← tyOfCode payload.unpair.2.unpair.2
-        some (.ptr space recht referent)
+    | some 15 =>
+      match kids with
+      | Code.zero => some .ownedRegion
+      | _ => none
+    | some 16 => do
+        let el' ← tyVonCode kids
+        some (.regionView el')
+    | some 17 =>
+      match kids with
+      | Code.pair space (Code.pair recht referent) => do
+          let sn : Nat ← codeZuNat space
+          let rn : Nat ← codeZuNat recht
+          let space' : AddressSpace ← Encodable.decode sn
+          let recht' : PtrRecht ← Encodable.decode rn
+          let referent' ← tyVonCode referent
+          some (.ptr space' recht' referent')
+      | _ => none
     | _ => none
-termination_by x => x
-decreasing_by all_goals assumption
+  | _ => none
 
-theorem tyCode_ofCode : ∀ t : Ty .value, tyOfCode (tyCode t) = some t
-  | .int lo hi => by simp [tyCode, tyOfCode]
-  | .bool => by simp [tyCode, tyOfCode]
+theorem tyCode_ofCode : ∀ t : Ty .value, tyVonCode (tyZuCode t) = some t
+  | .int lo hi => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .bool => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .array el cnt => by
       have ih := tyCode_ofCode el
-      simp [tyCode, tyOfCode, ih]
-  | .productEnd => by simp [tyCode, tyOfCode]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+  | .productEnd => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .product h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
-      simp [tyCode, tyOfCode, ih1, ih2]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2]
   | .record nm ls lay => by
       have ih := tyCode_ofCode lay
-      simp [tyCode, tyOfCode, ih]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
   | .recordSchema nm ls lay => by
       have ih := tyCode_ofCode lay
-      simp [tyCode, tyOfCode, ih]
-  | .sumEnd => by simp [tyCode, tyOfCode]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+  | .sumEnd => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .sum h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
-      simp [tyCode, tyOfCode, ih1, ih2]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2]
   | .variant nm ls hp lay => by
       have ih := tyCode_ofCode lay
-      simp [tyCode, tyOfCode, ih]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
   | .variantSchema nm ls hp lay => by
       have ih := tyCode_ofCode lay
-      simp [tyCode, tyOfCode, ih]
-  | .text cap => by simp [tyCode, tyOfCode]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+  | .text cap => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .carrierSchema cnt ls lay ex => by
       have ih := tyCode_ofCode lay
-      simp [tyCode, tyOfCode, ih]
-  | .effectGroupSchema eff => by simp [tyCode, tyOfCode]
-  | .address space => by simp [tyCode, tyOfCode]
-  | .ownedRegion => by simp [tyCode, tyOfCode]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+  | .effectGroupSchema eff => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .address space => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .ownedRegion => by
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .regionView el => by
       have ih := tyCode_ofCode el
-      simp [tyCode, tyOfCode, ih]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
   | .ptr space recht referent => by
       have ih := tyCode_ofCode referent
-      simp [tyCode, tyOfCode, ih]
+      unfold tyVonCode tyZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
 
 instance instEncodableTy (k : Kind) : Encodable (Ty k) := by
   cases k
-  exact Encodable.ofLeftInjection (β := Ty .value) tyCode tyOfCode tyCode_ofCode
+  exact Encodable.ofLeftInjection (β := Ty .value)
+    (fun t => Encodable.encode (tyZuCode t))
+    (fun n => (Encodable.decode n).bind tyVonCode)
+    (by intro t; simp [Encodable.encodek, tyCode_ofCode])
 
 /-! ## Rufstelle -/
 

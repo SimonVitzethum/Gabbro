@@ -13,129 +13,204 @@ open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast.LowLevel
 open Gabbro.Core.Katalog
 open Gabbro.Core.Text
+open Nat.Partrec
 
 /-! ## WrittenType and WrittenTypes
 
-The two mutually recursive spellings use the same first-order Nat codes as
-`Ty`: a constructor tag paired with its children, shifted by one so every
-child code is strictly smaller. The decoders are partial and recursive on that
-strictly smaller child code, which makes the termination argument local. -/
+The mutually recursive spellings use the same `Code` trees as `Ty`; the
+decoders are structural on the tree and the inverse lemmas are equation-defined
+recursive theorems. -/
 
 mutual
-  def writtenTypeCode : WrittenType → Nat
-    | .bool => Nat.pair 0 0 + 1
+  def writtenTypeZuCode : WrittenType → Code
+    | .bool => Code.pair (natZuCode 0) Code.zero
     | .integer signed width interval =>
-        Nat.pair 1 (Nat.pair (Encodable.encode signed)
-          (Nat.pair (Encodable.encode width) (Encodable.encode interval))) + 1
+        Code.pair (natZuCode 1) (Code.pair (natZuCode (Encodable.encode signed))
+          (Code.pair (natZuCode (Encodable.encode width))
+            (natZuCode (Encodable.encode interval))))
     | .array element count =>
-        Nat.pair 2 (Nat.pair (writtenTypeCode element) (Encodable.encode count)) + 1
+        Code.pair (natZuCode 2) (Code.pair (writtenTypeZuCode element)
+          (natZuCode (Encodable.encode count)))
     | .tuple first second rest =>
-        Nat.pair 3 (Nat.pair (writtenTypeCode first)
-          (Nat.pair (writtenTypeCode second) (writtenTypesCode rest))) + 1
-    | .text capacity => Nat.pair 4 (Encodable.encode capacity) + 1
+        Code.pair (natZuCode 3) (Code.pair (writtenTypeZuCode first)
+          (Code.pair (writtenTypeZuCode second) (writtenTypesZuCode rest)))
+    | .text capacity => Code.pair (natZuCode 4) (natZuCode (Encodable.encode capacity))
     | .index carrier count =>
-        Nat.pair 5 (Nat.pair (Encodable.encode carrier) (Encodable.encode count)) + 1
+        Code.pair (natZuCode 5) (Code.pair (natZuCode (Encodable.encode carrier))
+          (natZuCode (Encodable.encode count)))
     | .indexOption carrier count =>
-        Nat.pair 6 (Nat.pair (Encodable.encode carrier) (Encodable.encode count)) + 1
-    | .address space => Nat.pair 7 (Encodable.encode space) + 1
-    | .ownedRegion => Nat.pair 8 0 + 1
+        Code.pair (natZuCode 6) (Code.pair (natZuCode (Encodable.encode carrier))
+          (natZuCode (Encodable.encode count)))
+    | .address space => Code.pair (natZuCode 7) (natZuCode (Encodable.encode space))
+    | .ownedRegion => Code.pair (natZuCode 8) Code.zero
     | .ptr space recht referent =>
-        Nat.pair 9 (Nat.pair (Encodable.encode space)
-          (Nat.pair (Encodable.encode recht) (writtenTypeCode referent))) + 1
+        Code.pair (natZuCode 9) (Code.pair (natZuCode (Encodable.encode space))
+          (Code.pair (natZuCode (Encodable.encode recht)) (writtenTypeZuCode referent)))
 
-  def writtenTypesCode : WrittenTypes → Nat
-    | .empty => Nat.pair 0 0 + 1
+  def writtenTypesZuCode : WrittenTypes → Code
+    | .empty => Code.pair (natZuCode 0) Code.zero
     | .next head tail =>
-        Nat.pair 1 (Nat.pair (writtenTypeCode head) (writtenTypesCode tail)) + 1
+        Code.pair (natZuCode 1) (Code.pair (writtenTypeZuCode head) (writtenTypesZuCode tail))
 
-  def writtenTypeOfCode : Nat → Option WrittenType
-    | 0 => none
-    | n + 1 =>
-      let p := n.unpair
-      let payload := p.2
-      have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
-      have ha : payload.unpair.1 < n.succ := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 < n.succ := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-      have hb1 : payload.unpair.2.unpair.1 < n.succ :=
-        lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
-      have hb2 : payload.unpair.2.unpair.2 < n.succ :=
-        lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
-      match p.1 with
-      | 0 => some .bool
-      | 1 => do
-          let signed : Bool ← Encodable.decode payload.unpair.1
-          let width : Nat ← Encodable.decode payload.unpair.2.unpair.1
-          let interval : Option (Int × Int) ← Encodable.decode payload.unpair.2.unpair.2
-          some (.integer signed width interval)
-      | 2 => do
-          let element ← writtenTypeOfCode payload.unpair.1
-          let count : Nat ← Encodable.decode payload.unpair.2
-          some (.array element count)
-      | 3 => do
-          let first ← writtenTypeOfCode payload.unpair.1
-          let second ← writtenTypeOfCode payload.unpair.2.unpair.1
-          let rest ← writtenTypesOfCode payload.unpair.2.unpair.2
-          some (.tuple first second rest)
-      | 4 => do
-          let capacity : Nat ← Encodable.decode payload
+  def writtenTypeVonCode : Code → Option WrittenType
+    | Code.pair tag kids =>
+      match codeZuNat tag with
+      | some 0 =>
+        match kids with
+        | Code.zero => some .bool
+        | _ => none
+      | some 1 =>
+        match kids with
+        | Code.pair s (Code.pair w i) => do
+            let sn : Nat ← codeZuNat s
+            let wn : Nat ← codeZuNat w
+            let signed : Bool ← Encodable.decode sn
+            let width : Nat ← Encodable.decode wn
+            let ivn : Nat ← codeZuNat i
+            let interval : Option (Int × Int) ← Encodable.decode ivn
+            some (.integer signed width interval)
+        | _ => none
+      | some 2 =>
+        match kids with
+        | Code.pair el cnt => do
+            let element ← writtenTypeVonCode el
+            let cntn : Nat ← codeZuNat cnt
+            let count : Nat ← Encodable.decode cntn
+            some (.array element count)
+        | _ => none
+      | some 3 =>
+        match kids with
+        | Code.pair first (Code.pair second tail) => do
+            let first' ← writtenTypeVonCode first
+            let second' ← writtenTypeVonCode second
+            let tail' ← writtenTypesVonCode tail
+            some (.tuple first' second' tail')
+        | _ => none
+      | some 4 => do
+          let capn : Nat ← codeZuNat kids
+          let capacity : Nat ← Encodable.decode capn
           some (.text capacity)
-      | 5 => do
-          let carrier : Identifier ← Encodable.decode payload.unpair.1
-          let count : Nat ← Encodable.decode payload.unpair.2
-          some (.index carrier count)
-      | 6 => do
-          let carrier : Identifier ← Encodable.decode payload.unpair.1
-          let count : Nat ← Encodable.decode payload.unpair.2
-          some (.indexOption carrier count)
-      | 7 => do
-          let space : AddressSpace ← Encodable.decode payload
+      | some 5 =>
+        match kids with
+        | Code.pair carrier count => do
+            let carn : Nat ← codeZuNat carrier
+            let cntn : Nat ← codeZuNat count
+            let car : Identifier ← Encodable.decode carn
+            let cnt : Nat ← Encodable.decode cntn
+            some (.index car cnt)
+        | _ => none
+      | some 6 =>
+        match kids with
+        | Code.pair carrier count => do
+            let carn : Nat ← codeZuNat carrier
+            let cntn : Nat ← codeZuNat count
+            let car : Identifier ← Encodable.decode carn
+            let cnt : Nat ← Encodable.decode cntn
+            some (.indexOption car cnt)
+        | _ => none
+      | some 7 => do
+          let sn : Nat ← codeZuNat kids
+          let space : AddressSpace ← Encodable.decode sn
           some (.address space)
-      | 8 => some .ownedRegion
-      | 9 => do
-          let space : AddressSpace ← Encodable.decode payload.unpair.1
-          let recht : PtrRecht ← Encodable.decode payload.unpair.2.unpair.1
-          let referent ← writtenTypeOfCode payload.unpair.2.unpair.2
-          some (.ptr space recht referent)
+      | some 8 =>
+        match kids with
+        | Code.zero => some .ownedRegion
+        | _ => none
+      | some 9 =>
+        match kids with
+        | Code.pair space (Code.pair recht referent) => do
+            let sn : Nat ← codeZuNat space
+            let rn : Nat ← codeZuNat recht
+            let space' : AddressSpace ← Encodable.decode sn
+            let recht' : PtrRecht ← Encodable.decode rn
+            let referent' ← writtenTypeVonCode referent
+            some (.ptr space' recht' referent')
+        | _ => none
       | _ => none
-  termination_by x => x
-  decreasing_by all_goals assumption
+    | _ => none
 
-  def writtenTypesOfCode : Nat → Option WrittenTypes
-    | 0 => none
-    | n + 1 =>
-      let p := n.unpair
-      let payload := p.2
-      have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
-      have ha : payload.unpair.1 < n.succ := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 < n.succ := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
-      match p.1 with
-      | 0 => some .empty
-      | 1 => do
-          let head ← writtenTypeOfCode payload.unpair.1
-          let tail ← writtenTypesOfCode payload.unpair.2
-          some (.next head tail)
+  def writtenTypesVonCode : Code → Option WrittenTypes
+    | Code.pair tag kids =>
+      match codeZuNat tag with
+      | some 0 =>
+        match kids with
+        | Code.zero => some .empty
+        | _ => none
+      | some 1 =>
+        match kids with
+        | Code.pair head tail => do
+            let head' ← writtenTypeVonCode head
+            let tail' ← writtenTypesVonCode tail
+            some (.next head' tail')
+        | _ => none
       | _ => none
-  termination_by x => x
-  decreasing_by all_goals assumption
+    | _ => none
 end
 
 mutual
-  lemma writtenTypeCode_ofCode (w : WrittenType) :
-      writtenTypeOfCode (writtenTypeCode w) = some w := by
-    induction w <;> simp [writtenTypeCode, writtenTypeOfCode, writtenTypesCode_ofCode,
-      writtenTypesCode, writtenTypesOfCode, *]
+  theorem writtenTypeCode_ofCode : ∀ w : WrittenType,
+    writtenTypeVonCode (writtenTypeZuCode w) = some w
+  | .bool => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .integer signed width interval => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .array element count => by
+      have ih := writtenTypeCode_ofCode element
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
+  | .tuple first second rest => by
+      have ih1 := writtenTypeCode_ofCode first
+      have ih2 := writtenTypeCode_ofCode second
+      have ih3 := writtenTypesCode_ofCode rest
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2, ih3,
+        writtenTypesVonCode, writtenTypesZuCode]
+  | .text capacity => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .index carrier count => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .indexOption carrier count => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .address space => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .ownedRegion => by
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .ptr space recht referent => by
+      have ih := writtenTypeCode_ofCode referent
+      unfold writtenTypeVonCode writtenTypeZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih]
 
-  lemma writtenTypesCode_ofCode (w : WrittenTypes) :
-      writtenTypesOfCode (writtenTypesCode w) = some w := by
-    induction w <;> simp [writtenTypesCode, writtenTypesOfCode, writtenTypeCode_ofCode,
-      writtenTypeCode, writtenTypeOfCode, *]
+  theorem writtenTypesCode_ofCode : ∀ w : WrittenTypes,
+    writtenTypesVonCode (writtenTypesZuCode w) = some w
+  | .empty => by
+      unfold writtenTypesVonCode writtenTypesZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode]
+  | .next head tail => by
+      have ih1 := writtenTypeCode_ofCode head
+      have ih2 := writtenTypesCode_ofCode tail
+      unfold writtenTypesVonCode writtenTypesZuCode
+      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2,
+        writtenTypeVonCode, writtenTypeZuCode]
 end
 
 instance : Encodable WrittenType :=
-  Encodable.ofLeftInjection writtenTypeCode writtenTypeOfCode writtenTypeCode_ofCode
+  Encodable.ofLeftInjection
+    (fun w => Encodable.encode (writtenTypeZuCode w))
+    (fun n => (Encodable.decode n).bind writtenTypeVonCode)
+    (by intro w; simp [Encodable.encodek, writtenTypeCode_ofCode])
 
 instance : Encodable WrittenTypes :=
-  Encodable.ofLeftInjection writtenTypesCode writtenTypesOfCode writtenTypesCode_ofCode
+  Encodable.ofLeftInjection
+    (fun w => Encodable.encode (writtenTypesZuCode w))
+    (fun n => (Encodable.decode n).bind writtenTypesVonCode)
+    (by intro w; simp [Encodable.encodek, writtenTypesCode_ofCode])
 
 /-! ## RegionInitializer -/
 
