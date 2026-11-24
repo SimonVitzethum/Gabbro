@@ -14,10 +14,20 @@ namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.LowLevel.schema, 15920886754426508322),
+  (`Gabbro.Core.Ast.LowLevel.schemaMem, 0),
   (`Gabbro.Core.Ast.LowLevel.AddressTypeAussage, 14381753684484163457),
   (`Gabbro.Core.Ast.LowLevel.RegionAddressAussage, 1309370043975036102),
   (`Gabbro.Core.Ast.LowLevel.ViewAussage, 1516212684890817929),
   (`Gabbro.Core.Ast.LowLevel.EnvironmentAussage, 11585291546778508478),
+  (`Gabbro.Core.Ast.LowLevel.SplitAtAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.SplitPagesAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.MergeAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.NewSpaceAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.MapAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.ProtectAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.UnmapAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.FlushAussage, 0),
+  (`Gabbro.Core.Ast.LowLevel.ActivateAussage, 0),
   (`Gabbro.Core.Ast.Semantik.EnvironmentUnitAussage, 3132366043312042834),
   (`Gabbro.Core.Beobachtung.NiedrigeBeob, 12874828830239658828),
   (`Gabbro.Core.Beobachtung.NiedrigAequiv, 6744788193181968424),
@@ -155,7 +165,21 @@ private meta def acceptance : AcceptanceSpec := {
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[
-  ⟨`Gabbro.Core.Ast.Expr, `Gabbro.Core.Ast.Semantik.exprSchema, #[
+  ⟨`Gabbro.Core.Ast.LowLevel.Tree, `Gabbro.Core.Ast.LowLevel.schema, #[], #[
+    (`Gabbro.Core.Ast.LowLevel.Tree.addressType, `Gabbro.Core.Ast.LowLevel.AddressTypeAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.regionAddress, `Gabbro.Core.Ast.LowLevel.RegionAddressAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.view, `Gabbro.Core.Ast.LowLevel.ViewAussage),
+    (`Gabbro.Core.Ast.LowLevel.Tree.environment, `Gabbro.Core.Ast.LowLevel.EnvironmentAussage)]⟩,
+  ⟨`Gabbro.Core.Ast.LowLevel.MemTree, `Gabbro.Core.Ast.LowLevel.schemaMem, #[], #[
+    (`Gabbro.Core.Ast.LowLevel.MemTree.splitAt, `Gabbro.Core.Ast.LowLevel.SplitAtAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.splitPages, `Gabbro.Core.Ast.LowLevel.SplitPagesAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.merge, `Gabbro.Core.Ast.LowLevel.MergeAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.newSpace, `Gabbro.Core.Ast.LowLevel.NewSpaceAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.mapSpace, `Gabbro.Core.Ast.LowLevel.MapAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.protectSpace, `Gabbro.Core.Ast.LowLevel.ProtectAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.unmapSpace, `Gabbro.Core.Ast.LowLevel.UnmapAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.flushSpace, `Gabbro.Core.Ast.LowLevel.FlushAussage),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.ActivateAussage)]⟩,
     (`Gabbro.Core.Ast.Expr.lit, `Gabbro.Core.Ast.Semantik.literalEntry),
     (`Gabbro.Core.Ast.Expr.binary, `Gabbro.Core.Ast.Semantik.binaryEntry),
     (`Gabbro.Core.Ast.Expr.trueLit, `Gabbro.Core.Ast.Semantik.trueLitEntry),

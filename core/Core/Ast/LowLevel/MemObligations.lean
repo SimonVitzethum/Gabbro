@@ -331,6 +331,281 @@ def MapAussage : Prop :=
 def ProtectAussage : Prop :=
   memObligationsKern .protectSpace ∧ ProtectJointAussage ∧ ProtectMeaningAussage
 
+/-- `unmap(s, virt, n)` succeeds exactly when every page of the range is
+    mapped with contiguous frames, the base is page-aligned and canonical.
+    The table entries are cleared and the generation moves on, while the
+    cached translations are deliberately left in place: the returned token
+    records space, range, new generation and frame base so that a later
+    `flush` can invalidate them before the frames return. -/
+def UnmapMeaningAussage : Prop :=
+  ∀ (k : Katalog) (scope : MemScope) (sname : Identifier) (virt pages : Nat)
+    (sps : Nat) (s : State k) (c : Kontext) (transfer : Transfer k),
+    MemScope.slotRaum scope sname = some sps →
+    ((s.lokal c).spaces[sps]? = none → (.unmapSpace sps virt pages).evaluate s c = none) ∧
+    (∀ space, (s.lokal c).spaces[sps]? = some space →
+      let z := k.plattform.ziel
+      let g := z.seitengranule
+      let base := virt / g
+      (space.abbildung base = none → (.unmapSpace sps virt pages).evaluate s c = none) ∧
+      (∀ first, space.abbildung base = some first →
+        (0 < pages ∧ virt % g = 0 ∧
+            (∀ i, i < pages → (space.abbildung (base + i)).map Seiteneintrag.frame =
+              some (first.frame + i)) ∧
+            (∀ i, i < pages → z.virtuell (virt + i * g)) →
+          (.unmapSpace sps virt pages).evaluate s c = some transfer →
+          ∃ abbildung tok spaces',
+            transfer.value = .pending tok ∧
+            tok = { raum := sps, seite := base, seiten := pages,
+              generation := space.generation + 1, frameBasis := first.frame } ∧
+            transfer.raeume = some spaces' ∧
+            spaces' = (s.lokal c).spaces.set sps { space with abbildung := abbildung,
+              generation := space.generation + 1,
+              ausstehend := tok :: space.ausstehend } ∧
+            transfer.loan = none ∧ transfer.regionen = none ∧ transfer.rechte = none ∧
+            transfer.tlb = none ∧ transfer.aktiv = none ∧ transfer.marken = none ∧
+            (∀ pg, base ≤ pg ∧ pg < base + pages → abbildung pg = none) ∧
+            (∀ pg, pg < base ∨ base + pages ≤ pg → abbildung pg = space.abbildung pg) ∧
+            tok ∈ ({ space with abbildung := abbildung,
+              generation := space.generation + 1,
+              ausstehend := tok :: space.ausstehend } : Adressraum).ausstehend) ∧
+        (¬ (0 < pages ∧ virt % g = 0 ∧
+            (∀ i, i < pages → (space.abbildung (base + i)).map Seiteneintrag.frame =
+              some (first.frame + i)) ∧
+            (∀ i, i < pages → z.virtuell (virt + i * g))) →
+          (.unmapSpace sps virt pages).evaluate s c = none)))
+
+/-- `flush(name)` succeeds exactly when the named binding resolves to a token
+    that is still pending in its space. It drops the cached translations of
+    the recorded range on every core at once, retires the token from the
+    space and the binding, and returns the recorded frame extent. After the
+    flush no core holds a translation of the range: the table was cleared by
+    the matching `unmap` and no remap could reinstall entries while the token
+    was pending. -/
+def FlushMeaningAussage : Prop :=
+  ∀ (k : Katalog) (scope : MemScope) (name : Identifier)
+    (s : State k) (c : Kontext) (transfer : Transfer k),
+    (∀ pair, (s.lokal c).marken.find? (fun p => decide (p.1.val = name.val)) = some pair →
+      ∀ space, (s.lokal c).spaces[pair.2.raum]? = some space →
+        (pair.2 ∈ space.ausstehend ∧
+            (∀ pg, pair.2.seite ≤ pg ∧ pg < pair.2.seite + pair.2.seiten →
+              space.abbildung pg = none) →
+          (.flushSpace name).evaluate s c = some transfer →
+          ∃ tlb extent spaces',
+            let tok := pair.2
+            let g := k.plattform.ziel.seitengranule
+            transfer.value = .frames extent ∧
+            extent = ⟨tok.frameBasis * g, (tok.frameBasis + tok.seiten) * g⟩ ∧
+            transfer.tlb = some tlb ∧
+            (∀ co sp' pg, sp' = tok.raum ∧ tok.seite ≤ pg ∧ pg < tok.seite + tok.seiten →
+              tlb co sp' pg = none) ∧
+            (∀ co sp' pg, sp' ≠ tok.raum ∨ pg < tok.seite ∨ tok.seite + tok.seiten ≤ pg →
+              tlb co sp' pg = (s.lokal c).tlb co sp' pg) ∧
+            transfer.raeume = some spaces' ∧
+            spaces' = (s.lokal c).spaces.set tok.raum { space with ausstehend :=
+              space.ausstehend.filter (fun t => !decide (t = tok)) } ∧
+            transfer.marken = some ((s.lokal c).marken.filter
+              (fun p => !decide (p.1.val = name.val))) ∧
+            transfer.loan = none ∧ transfer.regionen = none ∧ transfer.rechte = none ∧
+            transfer.aktiv = none ∧
+            tok ∉ ({ space with ausstehend :=
+              space.ausstehend.filter (fun t => !decide (t = tok)) } : Adressraum).ausstehend ∧
+            (∃ newsp, spaces'[tok.raum]? = some newsp ∧
+              (∀ pg, tok.seite ≤ pg ∧ pg < tok.seite + tok.seiten →
+                tlb c tok.raum pg = none ∧ newsp.abbildung pg = none))) ∧
+        (¬ (pair.2 ∈ space.ausstehend ∧
+            (∀ pg, pair.2.seite ≤ pg ∧ pg < pair.2.seite + pair.2.seiten →
+              space.abbildung pg = none)) →
+          (.flushSpace name).evaluate s c = none)) ∧
+    ((s.lokal c).marken.find? (fun p => decide (p.1.val = name.val)) = none →
+      (.flushSpace name).evaluate s c = none)
+
+/-- `activate(s)` succeeds exactly when the space exists and is well-formed:
+    non-empty page-aligned tables inside the physical width and every entry
+    pointing at a present frame with a non-empty right set. A dangling or
+    malformed space never becomes active. -/
+def ActivateMeaningAussage : Prop :=
+  ∀ (k : Katalog) (scope : MemScope) (sname : Identifier)
+    (sps : Nat) (s : State k) (c : Kontext) (transfer : Transfer k),
+    MemScope.slotRaum scope sname = some sps →
+    ((s.lokal c).spaces[sps]? = none → (.activateSpace sps).evaluate s c = none) ∧
+    (∀ space, (s.lokal c).spaces[sps]? = some space →
+      (space.Wohlgeformt k.plattform.ziel →
+        (.activateSpace sps).evaluate s c = some transfer →
+        transfer.value = .activated ∧ transfer.aktiv = some sps ∧
+        transfer.loan = none ∧ transfer.regionen = none ∧ transfer.rechte = none ∧
+        transfer.raeume = none ∧ transfer.tlb = none ∧ transfer.marken = none ∧
+        ((transfer.apply c s).lokal c).aktiverRaum = some sps) ∧
+      (¬ space.Wohlgeformt k.plattform.ziel →
+        (.activateSpace sps).evaluate s c = none))
+
+/-- The unmap occurrence is reachable: creation, mapping, then the revocation
+    executes, clearing the table and recording the token at the next
+    generation while cached translations linger. -/
+def UnmapJointAussage : Prop :=
+  ∃ (k : Katalog) (scope : MemScope) (tNew : MemTree .spaceNew) (tMap : MemTree .mapSpace)
+    (tUnmap : MemTree .unmapSpace) (opNew opMap opUnmap : Instruction k) (env : Umgebung)
+    (start : AussenStart) (textNew textMap textUnmap : RawText)
+    (trNew trMap trUnmap : Transfer k)
+    (tables frames sname : Identifier) (tSlot fSlot : Nat) (virt pages : Nat)
+    (rights : List Speicherdienst),
+    KatalogWohlgeformt k ∧ (scope.regionen.map Subtype.val).Nodup ∧
+    (scope.raeume.map Subtype.val).Nodup ∧ (scope.marken.map Subtype.val).Nodup ∧
+    scope.regionen.length = start.regions.length ∧
+    (unit opNew).ZulStart env start ∧
+    MemParse textNew tNew ∧ MemParse textMap tMap ∧ MemParse textUnmap tUnmap ∧
+    elaborateMem k scope tNew = some opNew ∧ elaborateMem k scope tMap = some opMap ∧
+    elaborateMem k scope tUnmap = some opUnmap ∧
+    ElaboriertMem k scope tNew (unit opNew) ∧ ElaboriertMem k scope tMap (unit opMap) ∧
+    ElaboriertMem k scope tUnmap (unit opUnmap) ∧
+    tNew = .newSpace tables ∧ tMap = .mapSpace sname virt frames rights ∧
+    tUnmap = .unmapSpace sname virt pages ∧
+    MemScope.slotRegion scope tables = some tSlot ∧
+    MemScope.slotRegion scope frames = some fSlot ∧
+    (∃ sps, MemScope.slotRaum scope sname = some sps) ∧
+    let s₀ := (I.start (unit opNew) start).2
+    (unit opNew).system.kopf s₀ entryContext = some opNew ∧
+    opNew.evaluate s₀ entryContext = some trNew ∧
+    opNew.ideal entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    opNew.impl entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    let s₁ := trNew.apply entryContext s₀
+    opMap.evaluate s₁ entryContext = some trMap ∧
+    opMap.ideal entryContext s₁ () [plan] (trMap.apply entryContext s₁) ∧
+    opMap.impl entryContext s₁ () [plan] (trMap.apply entryContext s₁) ∧
+    let s₂ := trMap.apply entryContext s₁
+    opUnmap.evaluate s₂ entryContext = some trUnmap ∧
+    opUnmap.ideal entryContext s₂ () [plan] (trUnmap.apply entryContext s₂) ∧
+    opUnmap.impl entryContext s₂ () [plan] (trUnmap.apply entryContext s₂)
+
+/-- The flush occurrence is reachable: creation, mapping and revocation run,
+    the enclosing `let` binds the token, and the shootdown executes over it,
+    returning the frames only after every cached translation is gone. -/
+def FlushJointAussage : Prop :=
+  ∃ (k : Katalog) (scope : MemScope) (tNew : MemTree .spaceNew) (tMap : MemTree .mapSpace)
+    (tUnmap : MemTree .unmapSpace) (tFlush : MemTree .flushSpace)
+    (opNew opMap opUnmap opFlush : Instruction k) (env : Umgebung)
+    (start : AussenStart) (textNew textMap textUnmap textFlush : RawText)
+    (trNew trMap trUnmap trFlush : Transfer k)
+    (tables frames sname tokName : Identifier) (tSlot fSlot : Nat) (virt pages : Nat)
+    (rights : List Speicherdienst) (tok : Zuruecknahme) (mslot : Nat),
+    KatalogWohlgeformt k ∧ (scope.regionen.map Subtype.val).Nodup ∧
+    (scope.raeume.map Subtype.val).Nodup ∧ (scope.marken.map Subtype.val).Nodup ∧
+    scope.regionen.length = start.regions.length ∧
+    (unit opNew).ZulStart env start ∧
+    MemParse textNew tNew ∧ MemParse textMap tMap ∧ MemParse textUnmap tUnmap ∧
+    MemParse textFlush tFlush ∧
+    elaborateMem k scope tNew = some opNew ∧ elaborateMem k scope tMap = some opMap ∧
+    elaborateMem k scope tUnmap = some opUnmap ∧ elaborateMem k scope tFlush = some opFlush ∧
+    ElaboriertMem k scope tNew (unit opNew) ∧ ElaboriertMem k scope tMap (unit opMap) ∧
+    ElaboriertMem k scope tUnmap (unit opUnmap) ∧ ElaboriertMem k scope tFlush (unit opFlush) ∧
+    tNew = .newSpace tables ∧ tMap = .mapSpace sname virt frames rights ∧
+    tUnmap = .unmapSpace sname virt pages ∧ tFlush = .flushSpace tokName ∧
+    MemScope.slotRegion scope tables = some tSlot ∧
+    MemScope.slotRegion scope frames = some fSlot ∧
+    MemScope.slotMarke scope tokName = some mslot ∧
+    (∃ sps, MemScope.slotRaum scope sname = some sps) ∧
+    let s₀ := (I.start (unit opNew) start).2
+    (unit opNew).system.kopf s₀ entryContext = some opNew ∧
+    opNew.evaluate s₀ entryContext = some trNew ∧
+    opNew.ideal entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    opNew.impl entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    let s₁ := trNew.apply entryContext s₀
+    opMap.evaluate s₁ entryContext = some trMap ∧
+    opMap.ideal entryContext s₁ () [plan] (trMap.apply entryContext s₁) ∧
+    opMap.impl entryContext s₁ () [plan] (trMap.apply entryContext s₁) ∧
+    let s₂ := trMap.apply entryContext s₁
+    opUnmap.evaluate s₂ entryContext = some trUnmap ∧
+    trUnmap.value = .pending tok ∧
+    opUnmap.ideal entryContext s₂ () [plan] (trUnmap.apply entryContext s₂) ∧
+    opUnmap.impl entryContext s₂ () [plan] (trUnmap.apply entryContext s₂) ∧
+    let s₃ := bindMarke (trUnmap.apply entryContext s₂) entryContext tokName tok
+    opFlush.evaluate s₃ entryContext = some trFlush ∧
+    opFlush.ideal entryContext s₃ () [plan] (trFlush.apply entryContext s₃) ∧
+    opFlush.impl entryContext s₃ () [plan] (trFlush.apply entryContext s₃)
+
+/-- The activate occurrence is reachable: a space is created from an owned
+    table region and then installed, with both rules executing. Only the
+    well-formed space the creation yields can take this path. -/
+def ActivateJointAussage : Prop :=
+  ∃ (k : Katalog) (scope : MemScope) (tNew : MemTree .spaceNew) (tAct : MemTree .activateSpace)
+    (opNew opAct : Instruction k) (env : Umgebung) (start : AussenStart)
+    (textNew textAct : RawText) (trNew trAct : Transfer k)
+    (tables sname : Identifier) (tSlot : Nat),
+    KatalogWohlgeformt k ∧ (scope.regionen.map Subtype.val).Nodup ∧
+    (scope.raeume.map Subtype.val).Nodup ∧ (scope.marken.map Subtype.val).Nodup ∧
+    scope.regionen.length = start.regions.length ∧
+    (unit opNew).ZulStart env start ∧
+    MemParse textNew tNew ∧ MemParse textAct tAct ∧
+    elaborateMem k scope tNew = some opNew ∧ elaborateMem k scope tAct = some opAct ∧
+    ElaboriertMem k scope tNew (unit opNew) ∧ ElaboriertMem k scope tAct (unit opAct) ∧
+    tNew = .newSpace tables ∧ tAct = .activateSpace sname ∧
+    MemScope.slotRegion scope tables = some tSlot ∧
+    (∃ sps, MemScope.slotRaum scope sname = some sps) ∧
+    let s₀ := (I.start (unit opNew) start).2
+    (unit opNew).system.kopf s₀ entryContext = some opNew ∧
+    opNew.evaluate s₀ entryContext = some trNew ∧
+    opNew.ideal entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    opNew.impl entryContext s₀ () [plan] (trNew.apply entryContext s₀) ∧
+    let s₁ := trNew.apply entryContext s₀
+    opAct.evaluate s₁ entryContext = some trAct ∧
+    opAct.ideal entryContext s₁ () [plan] (trAct.apply entryContext s₁) ∧
+    opAct.impl entryContext s₁ () [plan] (trAct.apply entryContext s₁)
+
+def UnmapAussage : Prop :=
+  memObligationsKern .unmapSpace ∧ UnmapJointAussage ∧ UnmapMeaningAussage
+
+def FlushAussage : Prop :=
+  memObligationsKern .flushSpace ∧ FlushJointAussage ∧ FlushMeaningAussage
+
+def ActivateAussage : Prop :=
+  memObligationsKern .activateSpace ∧ ActivateJointAussage ∧ ActivateMeaningAussage
+
+def MeaningAussageMem : MemForm → Prop
+  | .splitAt => SplitAtMeaningAussage
+  | .splitPages => SplitPagesMeaningAussage
+  | .merge => MergeMeaningAussage
+  | .newSpace => NewSpaceMeaningAussage
+  | .mapSpace => MapMeaningAussage
+  | .protectSpace => ProtectMeaningAussage
+  | .unmapSpace => UnmapMeaningAussage
+  | .flushSpace => FlushMeaningAussage
+  | .activateSpace => ActivateMeaningAussage
+
+def JointAussageMem : MemForm → Prop
+  | .splitAt => MemErfuellbarAussage .splitAt
+  | .splitPages => MemErfuellbarAussage .splitPages
+  | .merge => MemErfuellbarAussage .merge
+  | .newSpace => MemErfuellbarAussage .newSpace
+  | .mapSpace => MapJointAussage
+  | .protectSpace => ProtectJointAussage
+  | .unmapSpace => UnmapJointAussage
+  | .flushSpace => FlushJointAussage
+  | .activateSpace => ActivateJointAussage
+
+def statementsMem (constructor : Lean.Name) (form : MemForm) : RegistryStatements constructor .surface where
+  realization := .surface (MemParseAussage form ∧ MemInversionAussage form ∧
+    MemEindeutigAussage form ∧ MemDruckAussage form)
+    (MemElaboriertAussage form) (MemRealisiertAussage form)
+  acceptanceRule := MemAnnahmeAussage form ∧ MemAussenLokalAussage form ∧ MeaningAussageMem form
+  idealRule := MemIdealAussage form
+  unitsAndCommutation := MemEinheitAussage form
+  implementationRule := MemImplAussage form
+  preservation := MemErhaltungAussage form ∧ MemFortschrittAussage form ∧
+    MemRegelSicherAussage form ∧ MemRegelAntwortSicherAussage form ∧ MemKostenAussage form ∧
+    MemSchrankenAussage ∧ MemEtikettenAussage ∧ MemFlussAussage
+  jointlySatisfiable := JointAussageMem form
+
+def schemaMem (constructor : Lean.Name) : RegistrySchema constructor :=
+  let form := if constructor == ``MemTree.splitAt then MemForm.splitAt
+    else if constructor == ``MemTree.splitPages then MemForm.splitPages
+    else if constructor == ``MemTree.merge then MemForm.merge
+    else if constructor == ``MemTree.newSpace then MemForm.newSpace
+    else if constructor == ``MemTree.mapSpace then MemForm.mapSpace
+    else if constructor == ``MemTree.protectSpace then MemForm.protectSpace
+    else if constructor == ``MemTree.unmapSpace then MemForm.unmapSpace
+    else if constructor == ``MemTree.flushSpace then MemForm.flushSpace
+    else MemForm.activateSpace
+  ⟨.surface, statementsMem constructor form⟩
+
 /-- `space.new(tables)` succeeds exactly when the caller owns the table region
     unborrowed and the extent is a non-empty, page-aligned range inside the
     physical address width. The fresh space starts with an empty page map,

@@ -15,6 +15,9 @@ public import Core.Ast.LowLevel.Proofs.Merge
 public import Core.Ast.LowLevel.Proofs.NewSpace
 public import Core.Ast.LowLevel.Proofs.MapSpace
 public import Core.Ast.LowLevel.Proofs.ProtectSpace
+public import Core.Ast.LowLevel.Proofs.UnmapSpace
+public import Core.Ast.LowLevel.Proofs.FlushSpace
+public import Core.Ast.LowLevel.Proofs.ActivateSpace
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
