@@ -94,4 +94,24 @@ theorem variantValue_impl : VariantValueImplAussage := by
   intro scope args c s w plans u
   rfl
 
+private theorem vv_case_inject (cases : List (Option (Ty .value))) (index : Fin cases.length)
+    (payload : Wert ((cases.get index).getD .productEnd)) :
+    (variantCase cases (variantInject cases index payload)).1 = index.val := by
+  induction cases with
+  | nil => exact Fin.elim0 index
+  | cons head tail ih =>
+      cases index with
+      | mk n bound =>
+        cases n with
+        | zero => rfl
+        | succ n =>
+            have h := ih ⟨n, Nat.lt_of_succ_lt_succ bound⟩ payload
+            simpa [variantCase, variantInject, h]
+
+theorem variantValue_payload : VariantValuePayloadAussage := by
+  intro scope a frame payload h
+  constructor
+  · simp [Befehl.auswerten, variantValueForm, Rahmen.schreibe, h]
+  · exact vv_case_inject a.payloads a.index payload
+
 end Gabbro.Core.Ast.Semantik

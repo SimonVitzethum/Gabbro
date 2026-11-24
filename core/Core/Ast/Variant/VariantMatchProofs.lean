@@ -110,4 +110,103 @@ theorem variantMatch_impl : VariantMatchImplAussage := by
   intro ctx args c s w plans u
   rfl
 
+private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
+    (labels : List Identifier) (payloads : List (Option (Ty .value)))
+    (arms : VariantArms result scope allowed labels payloads) :
+    (variantArms arms).branches.length = payloads.length := by
+  refine @Gabbro.Core.Ast.VariantArms.rec result
+    (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
+    (fun _ _ _ p ar => (variantArms ar).branches.length = p.length)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    scope allowed labels payloads arms
+  all_goals simp_all [variantArms, MatchCode.prepend]
+
+private theorem vm_case_lt (cases : List (Option (Ty .value))) :
+    ∀ value : Wert (variantLayout cases), (variantCase cases value).1 < cases.length := by
+  cases cases with
+  | nil => intro value; exact Empty.elim value
+  | cons head tail =>
+      intro value
+      cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
+      | inl payload => simp [variantCase, hsum]
+      | inr rest =>
+          simpa [variantCase, hsum, Nat.succ_eq_add_one] using
+            Nat.succ_lt_succ (vm_case_lt tail rest)
+
+theorem variantMatch_exhaustive : VariantMatchExhaustiveAussage := by
+  intro ctx a
+  constructor
+  · exact vm_arms_length ctx.2 ctx.1 false a.labels a.payloads a.arms
+  · intro value
+    have h := vm_case_lt a.payloads value
+    have hlen := vm_arms_length ctx.2 ctx.1 false a.labels a.payloads a.arms
+    omega
+
+private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
+    (labels : List Identifier) (payloads : List (Option (Ty .value)))
+    (arms : VariantArms result scope allowed labels payloads) :
+    ∀ (i : Nat) (hi : i < payloads.length),
+      i < (variantArms arms).branches.length →
+      ((variantArms arms).branches[i]).2 = true →
+      (payloads.get ⟨i, hi⟩).isSome = true := by
+  refine @Gabbro.Core.Ast.VariantArms.rec result
+    (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
+    (fun _ _ _ p ar => ∀ (i : Nat) (hi : i < p.length),
+      i < (variantArms ar).branches.length →
+      ((variantArms ar).branches[i]).2 = true → (p.get ⟨i, hi⟩).isSome = true)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    scope allowed labels payloads arms
+  all_goals simp_all [variantArms, MatchCode.prepend]
+
+private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
+    ∀ (value : Wert (variantLayout cases)) (i : Nat),
+      (variantCase cases value).1 = i →
+      (cases.get? i).join.isSome = true →
+      (variantCase cases value).2.isSome = true := by
+  cases cases with
+  | nil => intro value; exact Empty.elim value
+  | cons head tail =>
+      intro value i hidx hsome
+      cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
+      | inl payload =>
+          cases i with
+          | zero => cases head <;> simp [variantCase, variantPayload, hsum, hsome] at *
+          | succ j => simp [variantCase, hsum] at hidx
+      | inr rest =>
+          cases i with
+          | zero => simp [variantCase, hsum] at hidx
+          | succ j =>
+              have hidx' : (variantCase tail rest).1 = j := by
+                simpa [variantCase, hsum, Nat.succ_eq_add_one] using Nat.succ.inj hidx
+              have hsome' : (tail.get? j).join.isSome = true := by simpa using hsome
+              exact vm_case_payload_some tail rest j hidx' hsome'
+
+theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
+  intro ctx a frame value hv
+  let branches := (variantArms a.arms).branches
+  let i := (variantCase a.payloads value).1
+  let payload := (variantCase a.payloads value).2
+  have hlen : branches.length = a.payloads.length := by
+    simpa [branches] using vm_arms_length ctx.2 ctx.1 false a.labels a.payloads a.arms
+  have hi : i < a.payloads.length := by
+    simpa [i] using vm_case_lt a.payloads value
+  have hibr : i < branches.length := by omega
+  let entry := branches[i]
+  refine ⟨entry.1, entry.2, ?_, ?_⟩
+  · exact List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
+  · dsimp
+    constructor
+    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
+    constructor
+    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
+    constructor
+    · intro hb
+      have hsome_idx : (a.payloads.get ⟨i, hi⟩).isSome = true := by
+        exact vm_arms_bind ctx.2 ctx.1 false a.labels a.payloads a.arms i hi hibr
+          (by simpa [entry] using hb)
+      have hsome_get : (a.payloads.get? i).join.isSome = true := by
+        simpa using hsome_idx
+      exact vm_case_payload_some a.payloads value i rfl hsome_get
+    · simp [Befehl.auswerten, variantMatchForm, hv, i, payload, branches, entry, hibr]
+
 end Gabbro.Core.Ast.Semantik
