@@ -358,15 +358,17 @@ theorem ParamsRead.printReads (ps : List Parameter) :
       | nil =>
           simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
           apply ParamsRead.first
-          · exact p.written.printReads p.valid (rest := ([printClose].map PrintedToken.value ++ rest))
-              (by intro more h; cases h)
+          · simpa only [List.nil_append, List.flatten_nil, List.map_append, List.map_cons, List.map_nil,
+              List.singleton_append, List.append_assoc, hClose] using
+              (p.written.printReads p.valid (rest := ([printClose].map PrintedToken.value ++ rest))
+                (by intro more h; cases h))
           · exact ParamsTail.close
       | cons q qs =>
           rw [comma_cons]
           simp only [List.nil_append, List.map_append, List.append_assoc]
           apply ParamsRead.first
-          · simpa only [hClose, hComma, List.map_append, List.map_cons, List.map_nil, List.singleton_append,
-              List.append_assoc] using
+          · simpa only [hClose, hComma, List.nil_append, List.map_append, List.map_cons, List.map_nil,
+              List.singleton_append, List.append_assoc] using
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
                 (by intro more h; cases h))
@@ -474,7 +476,9 @@ theorem DirectCall.printReads (call : DirectCall scope) :
             simp only [commaSeparated, List.intersperse_nil, List.intersperse_singleton, List.flatten_nil, List.flatten_cons,
               List.map_nil, List.map_cons, List.nil_append, List.append_nil, List.singleton_append, hpClose]
             apply ArgsRead.first
-            · exact exp.2.printReads (minimum := 0) noOperatorAtClose
+            · simpa only [Expr.printTokens, List.map_append, List.map_cons, List.map_nil, List.singleton_append,
+                List.nil_append, List.append_assoc, hpClose] using
+                (exp.2.printReads (minimum := 0) noOperatorAtClose)
             · exact ArgsTail.close
         | cons e es =>
             rw [comma_cons]
