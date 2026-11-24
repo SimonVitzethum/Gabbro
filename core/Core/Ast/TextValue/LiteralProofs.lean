@@ -119,7 +119,7 @@ theorem textLiteralRegelAntwortSicher : TextLiteralRegelAntwortSicherAussage := 
   let form := textLiteralForm scope
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
-  have hspur := b.vollzug_genau impl execute
+  have hspur := b.vollzug_genau (w := choice) impl execute
   have hplan : stepPlan = plan := (List.cons.inj impl.1).1
   constructor
   · intro answer
@@ -135,7 +135,7 @@ theorem textLiteralKostenUndSpur : TextLiteralKostenUndSpurAussage := by
   let form := textLiteralForm scope
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
-  have hspur := b.vollzug_genau impl execute
+  have hspur := b.vollzug_genau (w := choice) impl execute
   rw [hspur.1]
   simp [Quellform.einheit, Fragment.einheit]
 
@@ -152,10 +152,11 @@ theorem textLiteralErfuellbarAm : TextLiteralErfuellbarAmAussage := by
   · exact .start
   · exact form.realisiert (textLiteral_am_ort []) platform decoded s rfl rfl rfl rfl
   · intro g guard
+    change (Befehl.textLiteral 0 decoded).guard (s.lokal eintritt) = some g at guard
     simp [Befehl.guard] at guard
   · dsimp only
     constructor
-    · simp [Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
-    · simp [Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    · simp [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    · simp [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
 
 end Gabbro.Core.Ast.Semantik
