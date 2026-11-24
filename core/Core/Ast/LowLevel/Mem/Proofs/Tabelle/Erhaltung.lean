@@ -73,37 +73,24 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
       refine ⟨?spaces, ?narrow⟩
       · intro sp space found
         by_cases hlt : sp < (s.lokal c).spaces.length
-        · have happ : (((s.lokal c).spaces ++
-              [{ tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] }])[sp]? =
-              (s.lokal c).spaces[sp]?) :=
-            List.getElem?_append_left hlt
-          rw [happ] at found
-          exact hspaces sp space found
+        · have appended : ((s.lokal c).spaces ++ _)[sp]? = some space := found
+          rw [List.getElem?_append_left hlt] at appended
+          exact hspaces sp space appended
         · have hlt' := (List.getElem?_eq_some_iff.mp found).1
+          simp only [List.length_append, List.length_cons, List.length_nil,
+            Nat.add_zero] at hlt'
           have hsp : sp = (s.lokal c).spaces.length := by
-            simp only [List.length_append, List.length_cons, List.length_nil,
-              Nat.add_zero] at hlt'
             omega
           have hge : (s.lokal c).spaces.length ≤ sp := by
             omega
-          have happ : (((s.lokal c).spaces ++
-              [{ tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] }])[sp]? =
-              ([{ tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] }])[sp -
-                (s.lokal c).spaces.length]?) :=
-            List.getElem?_append_right hge
-          rw [happ] at found
+          have appended : ((s.lokal c).spaces ++ _)[sp]? = some space := found
+          rw [List.getElem?_append_right hge] at appended
           have hsub : sp - (s.lokal c).spaces.length = 0 := by
             omega
-          rw [hsub] at found
-          simp only [List.getElem?_cons_zero] at found
-          have hspace : space =
-              { tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] } :=
-            Option.some.inj found
-          subst hspace
+          rw [hsub] at appended
+          simp only [List.getElem?_cons_zero] at appended
+          have heq := Option.some.inj appended
+          subst heq
           refine ⟨?frei, ?flags, ?rights⟩
           · intro entry hentry
             cases hentry
