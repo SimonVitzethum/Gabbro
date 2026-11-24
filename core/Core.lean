@@ -26,6 +26,9 @@ public import Core.Fortschritt.Verhungern
 public import Core.Fortschritt.Sackgasse
 public import Core.Fortschritt.WarteBeispiel
 public import Core.Fortschritt.WarteBundle
+public import Core.Fortschritt.SperrErhalt
+public import Core.Fortschritt.SperrGegenbeispiel
+public import Core.Fortschritt.SperrFair
 public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme
@@ -54,6 +57,8 @@ public import Core.Beobachtung.Fluss.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.SchrankenB8
 public import Core.Beobachtung.SchrankenB8Aussagen
+public import Core.Beobachtung.SchrankenB8Beweise
+public import Core.Beobachtung.SchrankenB8Zeit
 public import Core.Beobachtung.SchrankenB8Erfuellbar
 meta import Core.Waechter.Check
 
