@@ -404,12 +404,12 @@ theorem Local.visible_unique (a : Local scope type) (b : Local scope type')
   | here =>
     cases b with
     | here => rfl
-    | there b' => exact (visibleB.1 same).elim
+    | there b' => exact (visibleB.2.1 same).elim
   | there a' ih =>
     cases b with
-    | here => exact (visibleA.1 same.symm).elim
+    | here => exact (visibleA.2.1 same.symm).elim
     | there b' =>
-      have eq := ih b' visibleA.2 visibleB.2 same
+      have eq := ih b' ⟨visibleA.1, visibleA.2.2⟩ ⟨visibleB.1, visibleB.2.2⟩ same
       cases eq
       rfl
 

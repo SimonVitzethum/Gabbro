@@ -30,6 +30,15 @@ theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
   | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .arith op) (b := .compare op') h
       cases eq
+  | arrayIndex _ _ _ _ _ _ =>
+      have eq : (.arith op : Infix) = .index := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | tupleField _ _ _ _ =>
+      have eq : (.arith op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | recordField _ _ _ _ _ _ =>
+      have eq : (.arith op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
 
 -- Mirror ExprTail.arith_inversion and recover the divisor-range evidence.
 theorem ExprTail.div_inversion (allowed : minimum ≤ Infix.div.precedence)
@@ -49,6 +58,15 @@ theorem ExprTail.div_inversion (allowed : minimum ≤ Infix.div.precedence)
       exact ⟨_, _, _, _, _, rightRead, tail'⟩
   | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .div) (b := .compare op') h
+      cases eq
+  | arrayIndex _ _ _ _ _ _ =>
+      have eq : (.div : Infix) = .index := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | tupleField _ _ _ _ =>
+      have eq : (.div : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | recordField _ _ _ _ _ _ =>
+      have eq : (.div : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
       cases eq
 
 -- Mirror ExprTail.arith_inversion and recover the guard against an ungrouped comparison.
@@ -73,6 +91,15 @@ theorem ExprTail.compare_inversion (allowed : minimum ≤ (Infix.compare op).pre
       have eq := Infix.token_injective (a := .compare op) (b := .compare op') h
       cases eq
       exact ⟨_, _, _, _, rightRead, follows, tail'⟩
+  | arrayIndex _ _ _ _ _ _ =>
+      have eq : (.compare op : Infix) = .index := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | tupleField _ _ _ _ =>
+      have eq : (.compare op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | recordField _ _ _ _ _ _ =>
+      have eq : (.compare op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
 
 -- Mirror ExprTail.arith_inversion keeping both operands at Boolean type.
 theorem ExprTail.logic_inversion (allowed : minimum ≤ (Infix.logic op).precedence)
@@ -90,6 +117,24 @@ theorem ExprTail.logic_inversion (allowed : minimum ≤ (Infix.logic op).precede
       have eq := Infix.token_injective (a := .logic op) (b := .logic op') h
       cases eq
       exact ⟨_, _, rightRead, tail'⟩
+  | binary op' _ _ _ =>
+      have eq : (.logic op : Infix) = .arith op' := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | div _ _ _ _ =>
+      have eq : (.logic op : Infix) = .div := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | compare op' _ _ _ _ =>
+      have eq : (.logic op : Infix) = .compare op' := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | arrayIndex _ _ _ _ _ _ =>
+      have eq : (.logic op : Infix) = .index := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | tupleField _ _ _ _ =>
+      have eq : (.logic op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
+  | recordField _ _ _ _ _ _ =>
+      have eq : (.logic op : Infix) = .projection := Infix.token_injective (by simpa only [Infix.token] using h)
+      cases eq
 
 -- Mirror ExprReads.consumes with the atom motive of the mutual recursor.
 theorem AtomReads.consumes (read : AtomReads scope input tree rest) : rest <:+ input := by
