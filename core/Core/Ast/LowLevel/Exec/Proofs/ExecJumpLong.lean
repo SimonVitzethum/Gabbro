@@ -8,6 +8,13 @@ open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
 private theorem jlNoneSomeFalse {α : Type} (x : α) : ¬ ((none : Option α) = some x) := by
   intro h
   cases h
+private theorem jlExists2 {α β : Type} {a : α} {b : β} {P : α → β → Prop} :
+    (∃ x y, a = x ∧ b = y ∧ P x y) ↔ P a b := by
+  constructor
+  · rintro ⟨x, y, rfl, rfl, h⟩
+    exact h
+  · intro h
+    exact ⟨a, b, rfl, rfl, h⟩
 private theorem jumpLongNotHalted {b : Bool} (h : !b = true) : ¬ b := by
   cases b with
   | false =>
@@ -36,7 +43,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
               Option.isNone_none, Option.isNone_some, jlNoneSomeFalse, Option.some.injEq,
               Bool.false_eq_true, false_and, and_false, or_false, false_or, true_and,
               and_true, exists_false, exists_prop, exists_eq_left, exists_eq_right,
-              exists_eq_left', exists_eq_right', eq_comm] at ha hb
+              exists_eq_left', exists_eq_right', jlExists2] at ha hb
             rw [ha] at hb
             have hlen := congrArg List.length hb
             simp only [List.length_cons, List.length_nil] at hlen
@@ -113,7 +120,7 @@ private theorem jumpLongInversion : ExecInversionAussage .jumpLong := by
             Option.isNone_some, jlNoneSomeFalse, Option.some.injEq, Bool.false_eq_true,
             false_and, and_false, or_false, false_or, true_and, and_true, exists_false,
             exists_prop, exists_eq_left, exists_eq_right, exists_eq_left',
-            exists_eq_right', eq_comm] at hp prod
+            exists_eq_right', jlExists2] at hp prod
         all_goals exact aligned.trans (hp.trans prod.symm)
 private theorem jumpLongEindeutig : ExecEindeutigAussage .jumpLong := by
   intro a b tokens ha hb
