@@ -1,5 +1,6 @@
 module
 public meta import Lean
+meta import Lean.Elab.Task
 public meta import Core.Waechter.Dependencies
 
 open Lean Meta
@@ -86,20 +87,29 @@ private meta def decisionGoals (body : Expr) : Array Expr := runST fun world => 
     Boolean combinations of equality on small enumerations or naturals and small natural inequalities.
     The declaration audit supplies only bodies whose declaration mentions the proof constant.
     The source scan checks tactic options separately and refuses anonymous decisions whose proofs are lost. -/
-public meta def decisionErrors (bodies : Array (Name × Expr)) : MetaM (Array String) := do
-  let mut errors := #[]
+public meta def proofErrors (batches : Array (Array Name)) : MetaM (Array String) := do
+  -- Search proof bodies in parallel. Keep one ordered reduction pass so all goals share
+  -- the same cache, and the per-goal budget is applied in the same declaration order.
+  let tasks ← batches.mapM fun names => Lean.Core.CoreM.asTask' do
+    let (errors, bodies) ← declarationAudit names
+    return (errors, bodies.map fun (name, body) => (name, decisionGoals body))
+  let mut declarationErrors := #[]
+  let mut decisionErrors := #[]
   let mut tested : Std.HashMap Expr Bool := {}
-  for (name, body) in bodies do
-    for goal in decisionGoals body do
-      let allowed ← match tested[goal]? with
-        | some result => pure result
-        | none => do
-          let result ← checkGoal goal
-          tested := tested.insert goal result
-          pure result
-      unless allowed do
-        errors := errors.push s!"decision proof in {name} has a goal outside the small finite fragment"
-        break
-  return errors
+  for task in tasks do
+    let (errors, proofs) ← withoutModifyingState task.get
+    declarationErrors := declarationErrors ++ errors
+    for (name, goals) in proofs do
+      for goal in goals do
+        let allowed ← match tested[goal]? with
+          | some result => pure result
+          | none => do
+            let result ← checkGoal goal
+            tested := tested.insert goal result
+            pure result
+        unless allowed do
+          decisionErrors := decisionErrors.push s!"decision proof in {name} has a goal outside the small finite fragment"
+          break
+  return declarationErrors ++ decisionErrors
 
 end Gabbro.Core.Waechter

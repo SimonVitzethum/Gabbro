@@ -126,24 +126,32 @@ private meta def catalogueKinds : Array ClosedKinds := #[
     `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz]⟩]
 private meta def closing : Option ClosingSpec := none
 
+private meta def auditBatches (items : Array α) : Array (Array α) := Id.run do
+  let batchSize := max 1 ((items.size + 11) / 12)
+  let mut batches := #[]
+  for batch in [:12] do
+    let start := batch * batchSize
+    if start >= items.size then break
+    batches := batches.push (items.extract start (start + batchSize))
+  return batches
+
 /-- Runs the package guards after the root's model imports have been elaborated. -/
 elab "#check_core" : command => do
   let started ← IO.monoMsNow
   let root ← IO.FS.realPath (← getFileName)
   let (sources, layoutErrors) ← readCoreSources root
   let imported ← getEnv
-  let scanTask := Task.spawn fun _ => sources.map fun source => (source, auditSource imported source)
+  let scans := (auditBatches sources).map fun batch =>
+    Task.spawn fun _ => batch.map fun source => (source, auditSource imported source)
   let (hygiene, reached) := packageErrors sources
   -- An orphan need not have any compiled artifact. Check the reached modules without it.
   let reachableSources := sources.filter (reached.contains ·.moduleName)
   let env ← auditEnvironment reachableSources
-  let scanned := scanTask.get
+  let scanned := scans.flatMap (·.get)
   let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
   let elaboratedErrors ← liftTermElabM <| withEnv env do
-    let declarationTask ← Meta.MetaM.asTask' do
-      let (errors, decisionBodies) ← declarationAudit (coreDeclarations env)
-      return errors ++ (← decisionErrors decisionBodies)
+    let declarationTask ← Meta.MetaM.asTask' (proofErrors (auditBatches (coreDeclarations env)))
     let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})

@@ -143,14 +143,23 @@ public meta def acceptanceErrors (env : Environment) (index : DependencyIndex) (
   let isAcceptance := fun name =>
     spec.acceptance.any fun root =>
       root.isPrefixOf name && env.getModuleIdxFor? root == env.getModuleIdxFor? name
+  let mut violations : Std.HashMap Name (Option (Name × String)) := {}
   for root in spec.acceptance do
     for name in index.closure root do
-      if let some idx := env.getModuleIdxFor? name then
-        let mod := env.header.modules[idx.toNat]!.module
-        if spec.forbidden.any (·.isPrefixOf name) || spec.forbiddenModules.any (·.isPrefixOf mod) then
-          errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is forbidden"
-        else if !isAcceptance name && !allowedModules.any (·.isPrefixOf mod) then
-          errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is outside the whitelist"
+      let violation ← match violations[name]? with
+        | some cached => pure cached
+        | none => do
+          let violation := (env.getModuleIdxFor? name).bind fun idx =>
+            let mod := env.header.modules[idx.toNat]!.module
+            if spec.forbidden.any (·.isPrefixOf name) || spec.forbiddenModules.any (·.isPrefixOf mod) then
+              some (mod, "is forbidden")
+            else if !allowedModules.any (·.isPrefixOf mod) && !isAcceptance name then
+              some (mod, "is outside the whitelist")
+            else none
+          violations := violations.insert name violation
+          pure violation
+      if let some (mod, reason) := violation then
+        errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} {reason}"
   for root in spec.ideal do
     for name in index.closure root do
       if isAcceptance name then
