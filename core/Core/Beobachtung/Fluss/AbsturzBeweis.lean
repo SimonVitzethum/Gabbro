@@ -155,6 +155,7 @@ theorem absturzNI : AbsturzNIAussage := by
   | interrupt _ => cases formw
   | absturz =>
     let E := p.einheit plattform
+    let crashEvent : NiedrigesEreignis PUnit Int PUnit Befehl := .katalog (.persistenz .crash)
     obtain ⟨cov, st, len⟩ := kopplung
     have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t := absturz_offer_aus_tick tick
     obtain ⟨s₁, hs₁⟩ := fragment_zustand_some vergleich.links t
@@ -164,11 +165,11 @@ theorem absturzNI : AbsturzNIAussage := by
     have crash₁ := crash_schrittBeob (ρ := ρ₁) ⟨s₁, hs₁⟩ offer₁ (p := predictor)
     have crash₂ := crash_schrittBeob (ρ := ρ₂) ⟨s₂, hs₂⟩ offer₂ (p := predictor)
     have trace₁ : NiedrigeBeob E ρ₁ predictor (t + 1) =
-        NiedrigeBeob E ρ₁ predictor t ++ [.katalog (.persistenz .crash)] := by
+        NiedrigeBeob E ρ₁ predictor t ++ [crashEvent] := by
       change NiedrigeBeob E ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
       rw [crash₁]
     have trace₂ : NiedrigeBeob E ρ₂ predictor (t + 1) =
-        NiedrigeBeob E ρ₂ predictor t ++ [.katalog (.persistenz .crash)] := by
+        NiedrigeBeob E ρ₂ predictor t ++ [crashEvent] := by
       change NiedrigeBeob E ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
       rw [crash₂]
     have cov' : List.Forall₂ (EreignisAequiv E.fluss.freigabe)
@@ -179,9 +180,10 @@ theorem absturzNI : AbsturzNIAussage := by
         (NiedrigeBeob E ρ₁ predictor (t + 1))
         ((NiedrigeBeob E ρ₂ predictor (t + 1)).take (NiedrigeBeob E ρ₁ predictor (t + 1)).length) := by
       rw [trace₁, trace₂]
-      have hlen : (NiedrigeBeob E ρ₁ predictor t ++ [.katalog (.persistenz .crash)]).length =
-          (NiedrigeBeob E ρ₂ predictor t ++ [.katalog (.persistenz .crash)]).length := by
-        simp only [List.length_append, List.length_singleton, len]
+      have hlen : (NiedrigeBeob E ρ₁ predictor t ++ [crashEvent]).length =
+          (NiedrigeBeob E ρ₂ predictor t ++ [crashEvent]).length := by
+        simp only [List.length_append, List.length_singleton]
+        rw [len]
       rw [hlen, List.take_length]
       exact forall2_append_singleton cov' (.gleich _)
     obtain ⟨n₁, tick₁eq, hn₁, step₁⟩ := absturz_am_schnitt (ρ := ρ₁) hs₁ offer₁
@@ -201,6 +203,7 @@ theorem absturzNI : AbsturzNIAussage := by
       rw [step₁.genau.2, step₂.genau.2]
       exact wiederanlauf_beobachtungsgleich E datEq initEq
     · rw [trace₁, trace₂]
-      simp only [List.length_append, List.length_singleton, len]
+      simp only [List.length_append, List.length_singleton]
+      rw [len]
 
 end Gabbro.Core.Beobachtung
