@@ -75,7 +75,7 @@ private theorem hoechstens_eine_markierung (markiert : Nat → Bool)
     | succ n =>
       change zaehle markiert a (n + 1) + (if markiert ((a + n) + 1) then 1 else 0) ≤
         if markiert a then 1 else 0
-      simpa only [spaeter, Bool.false_eq_true, if_false, Nat.add_zero] using ih
+      simpa only [spaeter, Bool.false_eq_true, ite_false, Nat.add_zero] using ih
 
 /-- A single private transition can consume the last hardware opportunity
     while an ideal step is possible. Both runs remain maximal and finite.
@@ -163,7 +163,7 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
       have interval : Stotterintervall η c f 0 1 :=
         fun _ _ _ => ⟨head, fun _ _ h => Option.some_ne_none _ h.symm, fun h => Option.some_ne_none _ h.symm⟩
       have atZero : η.belegt 0 = some c := rfl
-      simpa only [zaehle, Nat.zero_add, atZero, decide_true, if_true] using bound c f 0 1 interval
+      simpa only [zaehle, Nat.zero_add, atZero, decide_true, ite_true] using bound c f 0 1 interval
     · intro allowed d g a n interval
       cases n with
       | zero => exact Nat.zero_le _
@@ -180,8 +180,8 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
           have first := (interval a (Nat.le_refl _) (Nat.lt_add_of_pos_right (Nat.succ_pos n))).1
           have form := Option.some.inj (first.symm.trans head)
           subst g
-          simpa only [mark, decide_true, if_true] using allowed
-        · simpa only [decide_eq_false mark, Bool.false_eq_true, if_false] using Nat.zero_le (E.stotterLaenge g)
+          simpa only [mark, decide_true, ite_true] using allowed
+        · simpa only [decide_eq_false mark, Bool.false_eq_true, ite_false] using Nat.zero_le (E.stotterLaenge g)
   exact ⟨ρ, η, ⟨hardware, konform, zul, loaded.symm⟩, ideal, matched, unfair,
     (matched.endlich ideal).mpr idealFinite, idealFinite, bound, rfl, rfl, fun _ => rfl, enabled⟩
 
