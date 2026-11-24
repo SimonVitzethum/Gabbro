@@ -347,7 +347,6 @@ theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : r
 theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : rest <:+ input := by
   cases read with
   | braced body => exact body.consumes.trans (List.suffix_cons openBrace _)
-end Gabbro.Core.Ast
 theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
     (right : BlockReads result scope input b rest') : a = b ∧ rest = rest' := by
   cases left with
