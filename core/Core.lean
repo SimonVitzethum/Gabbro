@@ -45,6 +45,7 @@ public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
+public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
@@ -87,6 +88,8 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
