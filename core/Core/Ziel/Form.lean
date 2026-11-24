@@ -70,8 +70,9 @@ structure Rahmen where
   Fortschritt : Klasse → Lauf → IdealLauf → Prop
   /-- Bounds on stack, memory, cost and time (§3.7). -/
   ImSchranken : Einheit → Lauf → Prop
-  /-- Noninterference (§3.8): low equality of starts and environments, the same total public-history policies
-  for the low outside choices, and the low observation (low termination and declared time included). -/
+  /-- Noninterference (§3.8): low equality of starts and environments (equal public projections, high parts
+  free, §2.1), the same total public-history policies for the low outside choices, and the low observation (low
+  termination and declared time included). -/
   NiedrigGleich : Einheit → Start → Start → Prop
   GleicheNiedrigeUmgebung : Einheit → Umgebung → Umgebung → Prop
   GleichePolitik : Einheit → Lauf → Lauf → Prop
