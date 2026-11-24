@@ -354,16 +354,25 @@ private theorem narrowF5eq : narrowOp.evaluate
     Plattform.x86_64.katalog.plattform.ziel narrowS4 entryContext = some narrowF5 :=
   Option.eq_some_iff_get_eq.mpr ⟨narrowEval4, rfl⟩
 
+private theorem narrowReach1 : narrowE.system.IErreichbar narrowS0 narrowS1 := by
+  apply System.IErreichbar.schritt entryContext () [plan]
+  · exact .start
+  · exact ⟨.newSpace 0, narrowHead0, ⟨narrowF1, narrowF1eq, rfl, rfl⟩⟩
+
+private theorem narrowReach2 : narrowE.system.IErreichbar narrowS0 narrowS2 := by
+  apply System.IErreichbar.schritt entryContext () [plan]
+  · exact narrowReach1
+  · exact ⟨.mapSpace 0 0 1 mapRightsN, narrowHead1, ⟨narrowF2, narrowF2eq, rfl, rfl⟩⟩
+
+private theorem narrowReach3 : narrowE.system.IErreichbar narrowS0 narrowS3 := by
+  apply System.IErreichbar.schritt entryContext () [plan]
+  · exact narrowReach2
+  · exact ⟨.protectSpace 0 0 1 narrowRightsN, narrowHead2, ⟨narrowF3, narrowF3eq, rfl, rfl⟩⟩
+
 private theorem narrowReach : narrowE.system.IErreichbar narrowS0 narrowS4 := by
-  exact System.IErreichbar.schritt entryContext () [plan]
-    (System.IErreichbar.schritt entryContext () [plan]
-      (System.IErreichbar.schritt entryContext () [plan]
-        (System.IErreichbar.schritt entryContext () [plan]
-          (System.IErreichbar.schritt entryContext () [plan] .start
-            ⟨.newSpace 0, narrowHead0, ⟨narrowF1, narrowF1eq, rfl, rfl⟩⟩)
-          ⟨.mapSpace 0 0 1 mapRightsN, narrowHead1, ⟨narrowF2, narrowF2eq, rfl, rfl⟩⟩)
-        ⟨.protectSpace 0 0 1 narrowRightsN, narrowHead2, ⟨narrowF3, narrowF3eq, rfl, rfl⟩⟩)
-      ⟨.bindToken narrowName, narrowHead3, ⟨narrowF4, narrowF4eq, rfl, rfl⟩⟩)
+  apply System.IErreichbar.schritt entryContext () [plan]
+  · exact narrowReach3
+  · exact ⟨.bindToken narrowName, narrowHead3, ⟨narrowF4, narrowF4eq, rfl, rfl⟩⟩
 
 private def narrowToken : Zuruecknahme := Zuruecknahme.verengung 0 0 1 0
 
@@ -391,6 +400,14 @@ private theorem narrowF5keinToken :
   rw [narrowF5verengt]
   intro t h
   cases h
+
+private theorem narrowBezeichnet : BezeichnetMem Plattform.x86_64.katalog
+    { regionen := [], raeume := [], marken := [narrowName] }
+    (MemTree.flushSpace narrowName).print
+    (memUnit Plattform.x86_64.katalog narrowOp) .flushSpace := by
+  refine ⟨MemTree.flushSpace narrowName, memParseOfPrintN _ (memFlushPrintsN narrowName), ?_⟩
+  refine ⟨narrowOp, narrowElaborate, ?_⟩
+  rfl
 
 /-- **Joint satisfiability of the completion of a narrowing.** Unlike the release of an unmapped range,
     the prefix here creates a space, maps a frame with rights, performs the staged `protect` that narrows
@@ -422,30 +439,28 @@ def FlushNarrowJointAussage : Prop :=
     E.system.ImplSchritt entryContext s () [plan] (next.advance entryContext s)
 
 theorem flushNarrowJoint : FlushNarrowJointAussage := by
+  have hprefix : ∃ tables virt frames rights pages narrowed name,
+      narrowPref = [.newSpace tables, .mapSpace 0 virt frames rights,
+        .protectSpace 0 virt pages narrowed, .bindToken name] ∧ narrowOp = .flushSpace name := by
+    refine ⟨0, 0, 1, mapRightsN, 1, narrowRightsN, narrowName, ?_, ?_⟩ <;> rfl
+  have hnodupRegion : ([] : List (List Char)).Nodup := by
+    exact List.nodup_nil
   refine ⟨Plattform.x86_64.katalog,
     { regionen := [], raeume := [], marken := [narrowName] },
     MemTree.flushSpace narrowName, narrowOp, narrowEnv, narrowStart,
-    (MemTree.flushSpace narrowName).print, narrowPref, narrowS4, narrowF5, narrowToken, ?_⟩
-  refine ⟨?_, narrowHardware, narrowZul, memProgramAkzeptiertN narrowCode, ?_, ?_, ?_, ?_, ?_, ?_,
-    memParseOfPrintN _ (memFlushPrintsN narrowName), narrowElaborate, ?_, narrowHead4,
-    narrowF5eq, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · refine ⟨0, 0, 1, mapRightsN, 1, narrowRightsN, narrowName, ?_, ?_⟩ <;> rfl
-  · change ([] : List RawText).Nodup
-    exact List.nodup_nil
-  · change ([] : List RawText).Nodup
-    exact List.nodup_nil
+    (MemTree.flushSpace narrowName).print, narrowPref, narrowS4, narrowF5, narrowToken,
+    hprefix, narrowHardware, narrowZul, memProgramAkzeptiertN narrowCode,
+    hnodupRegion, hnodupRegion, ?_, narrowBezeichnet,
+    memParseOfPrintN _ (memFlushPrintsN narrowName), narrowElaborate,
+    ?_, narrowHead4, narrowF5eq, ?_, ?_, narrowF5protected, ?_, narrowF5keinToken, ?_, ?_⟩
   · change [narrowName.val].Nodup
     exact List.nodup_singleton _
-  · refine ⟨MemTree.flushSpace narrowName, memParseOfPrintN _ (memFlushPrintsN narrowName), ?_⟩
-    refine ⟨narrowOp, narrowElaborate, ?_⟩
-    rfl
   · simpa only [narrowPrefEq, narrowE, narrowS0] using narrowReach
   · rfl
   · rfl
-  · exact narrowF5protected
   · exact (flush_abschluss_nicht_breiter Plattform.x86_64.katalog.plattform.ziel narrowName narrowS4
       entryContext narrowToken narrowedSpaceN narrowHfind narrowHspace (by rfl) narrowF5eq).2.1
-  · exact narrowF5keinToken
+  · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
 
