@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.ErhaltungLauf
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Rechte
 
 @[expose] public section
 
@@ -147,7 +148,7 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
               exact (congrArg Prod.fst (Except.ok.inj h)).symm
             have hres : frame.unreserved z.seitengranule ⟨phys, phys + 1⟩ = false :=
               Adressraum.eintrag_reserviert found0 habb hphys hmod
-            refine ⟨hres, ?rights⟩
+            refine ⟨hres, ?rightsTab⟩
             left
             exact ⟨tentry, ht, hright, hphys⟩
           · simp only [hright, ↓reduceIte] at h
