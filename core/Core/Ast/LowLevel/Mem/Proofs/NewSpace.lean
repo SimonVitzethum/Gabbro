@@ -285,7 +285,7 @@ theorem memFlussLokal (k : Katalog) (op : MemInstruction) :
       obtain ⟨locals, ends, initial, rights, loans, answers⟩ := same
       have localEq : v₁.lokal = v₂.lokal :=
         funext fun d => locals d ⟨0, Nat.zero_lt_succ _⟩ rfl
-      rw [← f.evaluate_congr _ _ (congrFun localEq c) rights loans, eval₁] at eval₂
+      rw [← f.evaluate_congr _ _ localEq rights loans, eval₁] at eval₂
       cases eval₂
       rw [(List.cons.inj plan₁).1, (List.cons.inj plan₂).1]
       refine ⟨⟨?_, ends, initial, rights, loans, answers⟩, rfl, rfl⟩

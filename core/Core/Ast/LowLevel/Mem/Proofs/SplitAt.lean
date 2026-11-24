@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
+import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 
 @[expose] public section
 
@@ -311,7 +312,7 @@ theorem memKosten (form : MemForm) : MemKostenAussage form := by
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, ⟨memAussenLokalUnit k op, memFlussLokal k op⟩⟩, ?_, ?_⟩
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
