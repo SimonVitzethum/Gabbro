@@ -376,7 +376,7 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     cases rightDeriv with
     | close => cases hEq
     | comma pr' =>
-        injection hEq with hin
+        injection hEq with hcomma hin
         exact prIH _ _ _ pr' hin
 
 -- Mirror BlockItems.consumes, including the final close parenthesis.
@@ -426,9 +426,10 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           rw [comma_cons]
           simp only [List.nil_append, List.map_append, List.append_assoc]
           apply ParamsRead.first
-          · exact p.written.printReads p.valid
-              (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-              (by simp [hComma, comma, keyword])
+          · simpa [hClose, hComma, List.map_append, List.append_assoc] using
+              (p.written.printReads p.valid
+                (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
+                (by simp [hComma, comma, keyword]))
           · exact ParamsTail.comma ih
 
 -- Mirror BlockItems.deterministic and apply ExprReads.deterministic at each argument.
@@ -532,6 +533,8 @@ theorem DirectCall.printReads (call : DirectCall scope) :
     | div => cases h
     | compare c => cases c <;> cases h
     | logic l => cases l <;> cases h
+  have hComma : printComma.value = comma := by rfl
+  have hpClose : printClose.value = closeParen := by rfl
   have argsRead : ArgsRead scope
       ((commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest)
       call.args rest := by
@@ -549,14 +552,13 @@ theorem DirectCall.printReads (call : DirectCall scope) :
         | cons e es =>
             rw [comma_cons]
             apply ArgsRead.first
-            · simpa [Expr.printTokens, List.map_append, List.append_assoc] using
+            · simpa [Expr.printTokens, hComma, hpClose, List.map_append, List.append_assoc] using
                 (exp.2.printReads
                   (rest := comma :: ((commaSeparated ((e :: es).map (fun exp => exp.2.printPieces)) ++ [printClose]).map PrintedToken.value ++ rest))
                   (noComma _))
-            · exact ArgsTail.comma ih
+            · simpa [hpClose, List.map_append, List.append_assoc] using (ArgsTail.comma ih)
   have hpName : call.name.print.value = Token.word call.name.val := by rfl
   have hpOpen : printOpen.value = openParen := by rfl
-  have hpClose : printClose.value = closeParen := by rfl
   simpa [DirectCall.printPieces, hpName, hpOpen, hpClose, List.map_append, List.append_assoc] using
     (CallReads.applied call argsRead)
 
