@@ -272,4 +272,76 @@ theorem blockEndeSicht : BlockEndeSichtAussage := by
     count r₁.lokale r₂.lokale (fun i hi => by rw [Nat.add_comm]; exact hL i hi) lokEq
   rw [sicht_blockEnde, sicht_blockEnde, h, pcEq, hTe, hLe]
 
+/-- The view after a halt: only the stop reason changes. -/
+theorem sicht_halt (β : Beschriftung) (r : Rahmen) (grund : Abschluss) :
+    (r.halt grund).sicht β = { r.sicht β with stopp := some grund } := rfl
+
+/-- The view after installing a static schema: one static entry is pushed onto the
+    locals and the always-public global table. -/
+theorem sicht_installSchema (β : Beschriftung) (r : Rahmen) (schema : Dynamisch) :
+    (r.installSchema schema).sicht β =
+      { r.sicht β with
+        pc := r.pc + 1
+        temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
+        lokale := maskiere (β.lokal (r.pc + 1)) 0 (some schema :: r.lokale)
+        globale := some schema :: r.globale } := rfl
+
+/-- A static schema push keeps the public view when the tail does. -/
+theorem installSchemaSicht (β : Beschriftung) (pc : Nat) (schema : Dynamisch)
+    (hT : ∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true)
+    (hL : ∀ i, oeffentlich (β.lokal (pc + 1) (i + 1)) = true →
+      oeffentlich (β.lokal pc i) = true)
+    (r₁ r₂ : Rahmen) (live : Nat → Bool) (hpc : r₁.pc = pc)
+    (h : r₁.sicht β = r₂.sicht β) :
+    (r₁.installSchema schema).sicht β = (r₂.installSchema schema).sicht β := by
+  subst hpc
+  obtain ⟨pcEq, tempPub, lokEq⟩ := sicht_oeffentliche_teile h
+  have hTe : (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₁.temp s else none) =
+      (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₂.temp s else none) := by
+    funext s
+    by_cases hp : oeffentlich (β.temp (r₁.pc + 1) s) = true
+    · simp only [hp, if_true]
+      exact tempPub s (hT s hp)
+    · simp only [if_neg hp]
+  have hLe := maskiere_einschieben (l₀ := β.lokal r₁.pc) (l₁ := β.lokal (r₁.pc + 1))
+    (xs := r₁.lokale) (ys := r₂.lokale) (v₁ := some schema) (v₂ := some schema)
+    hL (fun _ => rfl) lokEq
+  have hGl : (some schema :: r₁.globale) = (some schema :: r₂.globale) := by
+    have e : r₁.globale = r₂.globale :=
+      congrArg (fun r : Rahmen => (r.sicht β).globale) h
+    rw [e]
+  rw [sicht_installSchema, sicht_installSchema, h, pcEq, hTe, hLe, hGl]
+
+/-- The view after a return with an empty continuation stack: the frame ends with the
+    given result, everything else is the fall-through view. -/
+theorem sicht_rueckkehr_ohne (β : Beschriftung) (r : Rahmen) (result : Option Dynamisch) :
+    ({ r with pc := r.pc + 1, rueckgabe := result,
+      stopp := if result.isSome then (none : Option Abschluss)
+        else some .fertig }).sicht β =
+      { r.sicht β with
+        pc := r.pc + 1
+        temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
+        lokale := maskiere (β.lokal (r.pc + 1)) 0 r.lokale
+        rueckgabe := if oeffentlich β.ergebnis = true then result else none
+        stopp := if result.isSome then none else some .fertig } := rfl
+
+/-- The view after a return into a saved continuation: the saved state is restored. -/
+theorem sicht_rueckkehr_mit (β : Beschriftung) (r : Rahmen) (k : Fortsetzung)
+    (stack : List Fortsetzung) (result : Option Dynamisch) :
+    ({ r with pc := k.pc, temp := k.temp,
+      lokale := match k.eingang with
+        | none => k.lokale
+        | some target => result.bind (wertIn target) :: k.lokale,
+      zaehler := k.zaehler, obergrenzen := k.obergrenzen,
+      funktion := k.funktion, mass := k.mass, fortsetzungen := stack }).sicht β =
+      { r.sicht β with
+        pc := k.pc
+        temp := fun s => if oeffentlich (β.temp k.pc s) = true then k.temp s else none
+        lokale := maskiere (β.lokal k.pc) 0 (match k.eingang with
+          | none => k.lokale
+          | some target => result.bind (wertIn target) :: k.lokale)
+        zaehler := k.zaehler, obergrenzen := k.obergrenzen,
+        funktion := k.funktion, mass := k.mass, fortsetzungen := stack,
+        rueckgabe := if oeffentlich β.ergebnis = true then r.rueckgabe else none } := rfl
+
 end Gabbro.Core.Ast.Semantik
