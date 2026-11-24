@@ -75,10 +75,10 @@ theorem StmtReads.let_header
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
-  generalize hs : letKeyword = tok at read
+  generalize hs : spelling = word at read
   cases read with
   | letBinding name ordinary read tail =>
-      exact ⟨name, ordinary, _, _, _, rfl, read, tail⟩
+      exact ⟨name, ordinary, _, _, _, hs.symm, read, tail⟩
   | _ => exfalso; simp_all
 
 -- Mirror AtomReads.lit_inversion.
@@ -137,12 +137,14 @@ theorem StmtReads.ite_inversion
   cases read with
   | ite conditionRead yesRead noRead =>
       left
-  | letBinding name ordinary read tail => exfalso; cases hs
       exact ⟨_, _, _, _, _, conditionRead, yesRead, noRead, rfl⟩
   | assignVar ref visible writable fits read =>
       right
       exact ⟨_, rfl⟩
   | ret declared fits read =>
+      exfalso
+      cases hs
+  | letBinding name ordinary read tail =>
       exfalso
       cases hs
 
