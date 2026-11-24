@@ -45,6 +45,7 @@ public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
 public import Core.Beobachtung.Fluss.AbsturzBeweis
+public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit

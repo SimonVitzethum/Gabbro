@@ -7,7 +7,7 @@ public import Core.Beobachtung.Fluss.AufrufSchleife
 public import Core.Beobachtung.Fluss.Aggregat
 public import Core.Beobachtung.Fluss.Text
 public import Core.Beobachtung.Fluss.Variante
-public import Core.Beobachtung.Fluss.Antwort
+public import Core.Beobachtung.Fluss.Beweise.Antwort
 public import Core.Beobachtung.Fluss.Interrupt
 public import Core.Beobachtung.Fluss.Absturz
 

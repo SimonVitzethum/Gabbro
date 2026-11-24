@@ -1,7 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.AufrufSchleife
-public import Core.Beobachtung.Fluss.Antwort
+public import Core.Beobachtung.Fluss.Beweise.Antwort
 
 @[expose] public section
 
