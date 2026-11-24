@@ -213,6 +213,55 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := itemsDet (Or.inl rfl) otherItems
       cases same
       exact ⟨rfl, rfl⟩
+  case recordValue =>
+    intros
+    rename_i ref fields fits argRead argDet _ _ _ otherRead
+    generalize hname : Token.word ref.name.val = token at otherRead
+    cases otherRead with
+    | recordValue otherRef otherFields otherFits otherArgs =>
+      have sameRefs := ref.unique otherRef (Token.word.inj hname)
+      cases sameRefs
+      obtain ⟨sameArgs, rfl⟩ := argDet otherArgs
+      cases sameArgs
+      have sameFields := fields.unique otherFields (LabeledItems.lengths _)
+      cases sameFields
+      exact ⟨rfl, rfl⟩
+    | «variable» localRef visible _ =>
+      have same := Local.nameVisible_unique localRef ref.schema visible.2 ref.visible
+        ((Token.word.inj hname).symm.trans ref.spelled.symm)
+      exact (Eq.mp (congrArg Ty.valueBinding (congrArg Sigma.fst same)) visible.1 : False).elim
+    | variantValue _ _ _ _ _ available _ _ =>
+      exact (available.2 _ ref.schema.binding_mem
+        (ref.spelled.trans (Token.word.inj hname))).elim
+    | trueLit => exact (ref.ordinary.1 (Token.word.inj hname)).elim
+    | falseLit => exact (ref.ordinary.2.1 (Token.word.inj hname)).elim
+    | textLength _ => exact (ref.ordinary.2.2.1 (Token.word.inj hname)).elim
+    | _ => cases hname
+  case variantValue =>
+    intros
+    rename_i ref label index written ordinary available payload payloadRead payloadDet _ _ _ otherRead
+    generalize hname : Token.word label.val = token at otherRead
+    cases otherRead with
+    | variantValue otherRef otherLabel otherIndex otherWritten _ _ otherPayload otherPayloadRead =>
+      cases Subtype.ext (Token.word.inj hname)
+      have sameRef := ref.unique otherRef (List.mem_of_getElem? written)
+        (List.mem_of_getElem? otherWritten) available
+      cases sameRef
+      have sameIndex : index = otherIndex :=
+        Fin.ext (identifierPosition_unique ref.distinct written otherWritten)
+      cases sameIndex
+      obtain ⟨samePayload, rfl⟩ := payloadDet otherPayloadRead
+      cases samePayload
+      exact ⟨rfl, rfl⟩
+    | «variable» localRef visible _ =>
+      exact (available.2 _ localRef.binding_mem (Token.word.inj hname).symm).elim
+    | recordValue otherRef _ _ _ =>
+      exact (available.2 _ otherRef.schema.binding_mem
+        (otherRef.spelled.trans (Token.word.inj hname).symm)).elim
+    | trueLit => exact (ordinary.1 (Token.word.inj hname)).elim
+    | falseLit => exact (ordinary.2.1 (Token.word.inj hname)).elim
+    | textLength _ => exact (ordinary.2.2.1 (Token.word.inj hname)).elim
+    | _ => cases hname
   case textLiteral =>
     intros
     rename_i _ _ _ otherRead

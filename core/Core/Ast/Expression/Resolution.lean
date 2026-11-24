@@ -35,8 +35,8 @@ theorem identifierPosition_unique {names : List Identifier} {left right : Nat}
     (atLeft : names[left]? = some name) (atRight : names[right]? = some name) :
     left = right := by
   have inRange := (List.getElem?_eq_some_iff.mp atLeft).1
-  have mapped := congrArg (Option.map Subtype.val) (atLeft.trans atRight.symm)
-  rw [← List.getElem?_map, ← List.getElem?_map] at mapped
+  have mapped : (names.map Subtype.val)[left]? = (names.map Subtype.val)[right]? := by
+    simp only [List.getElem?_map, atLeft, atRight]
   exact (distinct.getElem?_inj (by simpa only [List.length_map] using inRange)).1 mapped
 
 theorem LabeledItems.lengths (items : LabeledItems scope labels types) :
@@ -95,6 +95,7 @@ private theorem Local.label_mem_scope (ref : Local scope type)
     label ∈ scope.flatMap (fun binding => binding.type.variantLabels) := by
   apply List.mem_flatMap.mpr
   have sameType : ref.binding.type = type := by
+    clear member
     induction ref with
     | here => rfl
     | there _ ih => exact ih
