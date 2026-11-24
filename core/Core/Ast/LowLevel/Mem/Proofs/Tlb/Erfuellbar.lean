@@ -196,13 +196,14 @@ private theorem tlbFlushNone :
       tlbS5 entryContext = none := by
   rfl
 
+private def tlbS5frameLeer : MemFrame := { (tlbS5.lokal entryContext) with tlb := ⟨[]⟩ }
+
 private def tlbS5verdraengt : MemState :=
-  { tlbS5 with lokal := Function.update tlbS5.lokal entryContext
-      { (tlbS5.lokal entryContext) with tlb := {} } }
+  { tlbS5 with lokal := Function.update tlbS5.lokal entryContext tlbS5frameLeer }
 
 private theorem tlbS5verdraengtzellen :
     (tlbS5verdraengt.lokal entryContext).tlb.zellen = [] := by
-  simp only [tlbS5verdraengt, Function.update_self]
+  simp only [tlbS5verdraengt, tlbS5frameLeer, Function.update_self]
 
 private theorem tlbS5verdraengtgedeckt : tlbS5verdraengt.TlbGedeckt := by
   intro c
@@ -211,7 +212,8 @@ private theorem tlbS5verdraengtgedeckt : tlbS5verdraengt.TlbGedeckt := by
     exact MemFrame.TlbGedeckt.verdraengt (tlbS5gedeckt entryContext) (by
       intro zelle mem
       rw [tlbS5verdraengtzellen] at mem
-      cases mem) rfl
+      cases mem) (by
+      simp only [tlbS5verdraengt, tlbS5frameLeer, Function.update_self])
   · have eq : (tlbS5verdraengt.lokal c) = (tlbS5.lokal c) := by
       simp only [tlbS5verdraengt, Function.update_of_ne same]
     rw [eq]
@@ -250,7 +252,7 @@ theorem tlb_nichtvakant :
           s' entryContext ≠ none := by
   refine ⟨tlbName, tlbE, tlbStart, tlbCode, tlbS5, rfl, rfl, ?_, ?_, ?_, ?_,
     tlbS5verdraengt, ?_, ?_, ?_⟩
-  · simpa only [tlbE] using tlbReach
+  · exact tlbReach
   · exact tlbS5gedeckt
   · rw [tlbS5zellen]
     exact List.cons_ne_nil _ _
