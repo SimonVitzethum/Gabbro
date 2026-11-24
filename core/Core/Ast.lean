@@ -14,6 +14,7 @@ public import Core.Ast.LowLevel.Proofs.DeviceRegisters
 public import Core.Ast.LowLevel.Proofs.DeviceTransition
 public import Core.Ast.LowLevel.Proofs.DeviceLend
 public import Core.Ast.LowLevel.Proofs.DeviceDma
+public import Core.Ast.LowLevel.Proofs.DeviceSatisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface

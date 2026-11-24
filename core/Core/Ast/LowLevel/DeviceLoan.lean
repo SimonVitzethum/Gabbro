@@ -222,5 +222,14 @@ def LendSource.elaborate (source : LendSource) (names : LoanNames k) :=
 def TakeBackSource.elaborate (source : TakeBackSource) (names : LoanNames k) :=
   names.resolve source.region source.device
 
-end Gabbro.Core.Ast.LowLevel.Device
+def LendSource.Step (source : LendSource) (names : LoanNames k) (c : Kontext)
+    (before : LoanState) (event : Ereignis) (after : LoanState) : Prop :=
+  ∃ region binding, source.elaborate names = some (region, binding) ∧
+    lend binding region c before event after
 
+def TakeBackSource.Step (source : TakeBackSource) (names : LoanNames k) (c : Kontext)
+    (before : LoanState) (result : ReclaimResult) (event : Option Ereignis) (after : LoanState) : Prop :=
+  ∃ binding session, source.elaborate names = some (session.region, binding) ∧
+    takeBack binding c session before result event after
+
+end Gabbro.Core.Ast.LowLevel.Device
