@@ -159,11 +159,11 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements optionTestForm OptionTestErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.definiereEffektgruppe then
     ⟨.core, Quellform.kernStatements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
+  else if constructor ∈ programConstructors then
+    ⟨.core, programKernStatements constructor⟩
   else if constructor = ``Befehl.waehleUmgebung then
     ⟨.core, Quellform.kernStatements (Context := PUnit) (fun _ => environmentUnitForm)
       EnvironmentUnitErfuellbarAussage constructor⟩
-  else if constructor ∈ programConstructors then
-    ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor
 
 -- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.
