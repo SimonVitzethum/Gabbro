@@ -7,7 +7,7 @@ public import Core.Ast.LowLevel.Mem.SpaceObligations
 
 namespace Gabbro.Core.Ast.LowLevel
 
-open Katalog
+open Waechter
 
 def MapJointAussage : Prop :=
   MemErfuellbarNach .mapSpace fun «prefix» op =>
