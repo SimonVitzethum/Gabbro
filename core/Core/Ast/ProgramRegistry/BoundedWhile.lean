@@ -109,13 +109,7 @@ theorem boundedWhile_erfuellbar : boundedWhileJoint := by
   let ctx : StatementContext := ([], none)
   let form := boundedWhileForm ctx.1 ctx.2
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor
-    · intro h
-      cases h
-    · intro h
-      cases h
+  have ordinaryName : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.BoundedWhileArgs [] none := ⟨Expr.trueLit, 1, 1, Expr.lit 1, trivial, by omega, name, .braces .done⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2

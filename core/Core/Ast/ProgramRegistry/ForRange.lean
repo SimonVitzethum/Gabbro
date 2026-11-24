@@ -114,9 +114,7 @@ theorem forRange_erfuellbar : forRangeJoint := by
   let ctx : StatementContext := ([], none)
   let form := forRangeForm ctx.1 ctx.2
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro h <;> cases h
+  have ordinaryName : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.ForRangeArgs [] none := ⟨name, ordinaryName, 1, 1, 3, 3, Expr.lit 1, Expr.lit 3, ⟨trivial, trivial⟩, none, .braces .done⟩
   let setup : Befehl := .forAnfang 0 1 (rangeBinding name 1 3).type ((bracedBlock a.body).code.length + 4) (BracedBlock.rangeUses name a.body).1 ((BracedBlock.rangeUses name a.body).2 && a.overflow.isNone)
   let E := form.einheit platform a

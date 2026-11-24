@@ -155,14 +155,7 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  have ordinary : ordinaryLocal name := by
-    constructor
-    · change ['x'] ≠ ['t', 'r', 'u', 'e']
-      intro same
-      cases same
-    · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-      intro same
-      cases same
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let written : WrittenType := .array .bool 1
   let value : Expr [] written.type :=
     .arrayValue (.next (.trueLit : Expr [] .bool) .empty) rfl (fun i => by
