@@ -12,18 +12,7 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Katalog Waechter
 open Lean (Name)
 
-/-- Every executing instruction of an elaborated unit came from its reference
-    tree at the acting context's indicated instruction position. -/
-def AusElaborierung : Prop :=
-  ∀ (platform : Plattform) (category : Category) (tree : category.Tree) (E : Einheit),
-    Elaboriert platform tree E → ∀ s c b, E.system.kopf s c = some b →
-      (fragment category tree).code[(s.lokal c).pc]? = some b
-
-theorem aus_elaborierung : AusElaborierung := by
-  intro platform category tree E meaning s c b head
-  have same := elab_vollstaendig meaning
-  subst E
-  change kopf (fragment category tree).code s c = some b at head
+theorem kopf_code (head : kopf code s c = some b) : code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
   split at head
   · cases status : s.status c with
@@ -44,6 +33,19 @@ theorem aus_elaborierung : AusElaborierung := by
       rw [status] at head
       cases head
   · cases head
+
+/-- Every executing instruction of an elaborated unit came from its reference
+    tree at the acting context's indicated instruction position. -/
+def AusElaborierung : Prop :=
+  ∀ (platform : Plattform) (category : Category) (tree : category.Tree) (E : Einheit),
+    Elaboriert platform tree E → ∀ s c b, E.system.kopf s c = some b →
+      (fragment category tree).code[(s.lokal c).pc]? = some b
+
+theorem aus_elaborierung : AusElaborierung := by
+  intro platform category tree E meaning s c b head
+  have same := elab_vollstaendig meaning
+  subst E
+  exact kopf_code head
 
 def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args : Context → Type}
     (forms : (scope : Context) → Quellform (cat scope) (args scope))

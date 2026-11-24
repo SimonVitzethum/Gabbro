@@ -40,23 +40,8 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
   · constructor
     · intro run conforms t op args need
       obtain ⟨c, b, head, operands⟩ := need
-      change kopf p.code (run.zeit.zustand t.val) c = some b at head
-      unfold kopf at head
-      split at head
-      · cases live : (run.zeit.zustand t.val).status c with
-        | ruht => rw [live] at head; cases head
-        | beendet _ => rw [live] at head; cases head
-        | laeuft =>
-          rw [live] at head
-          cases returned : ((run.zeit.zustand t.val).lokal c).rueckgabe with
-          | some _ => rw [returned] at head; cases head
-          | none =>
-            rw [returned] at head
-            split at head
-            · rw [guard b (List.mem_of_getElem? head)] at operands
-              cases operands
-            · cases head
-      · cases head
+      rw [guard b (List.mem_of_getElem? (kopf_code head))] at operands
+      cases operands
     · intro run conforms t waiting
       obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
       obtain ⟨_, impossible, _⟩ := blocked c member
@@ -67,7 +52,10 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
     intro c member
     obtain rfl := List.mem_singleton.mp member
     decide)
-  let entry : Decl [] [] := .function mainName (by decide) [] none
+  let entry : Decl [] [] := .function mainName (by
+    simp only [directName, ordinaryLocal, mainName, keywordName, String.reduceToList,
+      List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, List.cons.injEq,
+      Char.reduceEq, false_and, and_false, false_or, or_false, not_false_eq_true, and_true]) [] none
     (fun _ h => (List.not_mem_nil h).elim) none (.braces .done) .nil (fun h => nomatch h)
   let args : EnvironmentArgs := ⟨name, .biosInterrupt, .biosServices, [], .step entry .done⟩
   let E := environmentUnitForm.einheit .x86_64 args
@@ -92,7 +80,8 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
     refine ⟨List.nodup_singleton _, ?_⟩
     intro e present
     obtain rfl := List.mem_singleton.mp present
-    exact ⟨by decide, rfl⟩
+    refine ⟨?_, rfl⟩
+    simp [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte]
   have accepted : Akzeptiert E := by
     apply Fragment.akzeptiert_ohne_bedarf _ _ rfl
     intro b present frame
