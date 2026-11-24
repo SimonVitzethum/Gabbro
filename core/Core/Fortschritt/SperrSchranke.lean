@@ -60,6 +60,13 @@ theorem mem_getElem? {q : List Kontext} {c : Kontext} (h : c ∈ q) : ∃ i : Na
     · obtain ⟨i, hi⟩ := ih h'
       exact ⟨i + 1, by simpa only [List.getElem?_cons_succ] using hi⟩
 
+/-- A bound on a singleton list. -/
+theorem forall_mem_singleton_le {x H : Nat} (h : x ≤ H + 1) : ∀ y ∈ [x], y ≤ H + 1 := by
+  intro y hy
+  have heq : y = x := List.mem_singleton.mp hy
+  subst heq
+  exact h
+
 /-- A release hands the lock off as a queue step. -/
 theorem gibt_abgeben {s s' : SperrZustand} {h : Kontext} (hg : s.Gibt h s') :
     ∃ q, s = ⟨some h, q⟩ ∧ s' = SperrZustand.abgeben ⟨some h, q⟩ := by
@@ -240,13 +247,9 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                 hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl hnew⟩, ?_, ?_, ?_⟩
               · calc [Kontextkosten ρ h a (r + 1 - a)].length = 1 := rfl
                   _ ≤ i + 1 + 1 := by omega
-              · have hbnd1 : ∀ x ∈ [Kontextkosten ρ h a (r + 1 - a)], x ≤ H + 1 := by
-                  intro x hx
-                  have heq : x = Kontextkosten ρ h a (r + 1 - a) := List.mem_singleton.mp hx
-                  subst heq
-                  exact hcost
-                exact hbnd1
-              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r + 1 - a)] H hbnd1
+              · exact forall_mem_singleton_le hcost
+              · have hsum := halter_summe_schranke [Kontextkosten ρ h a (r + 1 - a)] H
+                  (forall_mem_singleton_le hcost)
                 calc [Kontextkosten ρ h a (r + 1 - a)].sum
                     ≤ [Kontextkosten ρ h a (r + 1 - a)].length * (H + 1) := hsum
                   _ ≤ (i + 1 + 1) * (H + 1) :=
@@ -263,7 +266,10 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                 | cons h₀ rest => exact ⟨h₀, rest, rfl⟩
               obtain ⟨h₀, rest, hqcons⟩ := hqne
               have hq1 : (s₁.sperren l).schlange = h₀ :: rest := by rw [hsq, hqcons]
-              have hq2 : (s₂.sperren l).schlange = rest := by rw [hs2q, hqcons]
+              have hq2 : (s₂.sperren l).schlange = rest := by
+                have hred : (SperrZustand.abgeben ⟨some h, h₀ :: rest⟩).schlange = rest := rfl
+                rw [hs2q, hqcons]
+                exact hred
               have hjr : (s₁.sperren l).schlange[j + 1]? = some c := by
                 rw [hq1, List.getElem?_cons_succ] at ⊢
                 rw [hq2] at hj
