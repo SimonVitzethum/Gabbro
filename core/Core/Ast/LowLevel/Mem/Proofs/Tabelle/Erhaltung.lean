@@ -26,9 +26,11 @@ private theorem frei_narrow (space : Adressraum) (base pages : Nat) (rights : Li
     | mk pg ent =>
       by_cases hc : pageRange base pages pg
       · simp only [hc, ite_true] at heq
-        simp only [heq]
+        cases heq
+        rfl
       · simp only [hc, ite_false] at heq
-        simp only [heq]
+        cases heq
+        rfl
   rw [hpage]
   exact wf old hold token tmem
 
@@ -71,27 +73,17 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
       refine ⟨?spaces, ?narrow⟩
       · intro sp space found
         by_cases hlt : sp < (s.lokal c).spaces.length
-        · have found0 : (s.lokal c).spaces[sp]? = some space := by
-            have happ := List.getElem?_append_left hlt (l₂ :=
-              [{ tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] } : Adressraum])
-            rw [happ] at found
-            exact found
-          exact hspaces sp space found0
+        · have happ := List.getElem?_append_left hlt
+          rw [happ] at found
+          exact hspaces sp space found
         · have hlt' := (List.getElem?_eq_some_iff.mp found).1
-          have hlen : ((s.lokal c).spaces ++
-              [{ tabellen := region.extent, entries := [],
-                generation := 0, ausstehend := [] } : Adressraum]).length =
-              (s.lokal c).spaces.length + 1 := by
-            simp only [List.length_append, List.length_cons, List.length_nil,
-              Nat.add_zero]
           have hsp : sp = (s.lokal c).spaces.length := by
+            simp only [List.length_append, List.length_cons, List.length_nil,
+              Nat.add_zero] at hlt'
             omega
           have hge : (s.lokal c).spaces.length ≤ sp := by
             omega
-          have happ := List.getElem?_append_right (l₁ := (s.lokal c).spaces)
-            (l₂ := [{ tabellen := region.extent, entries := [],
-              generation := 0, ausstehend := [] } : Adressraum]) hge
+          have happ := List.getElem?_append_right hge
           rw [happ] at found
           have hsub : sp - (s.lokal c).spaces.length = 0 := by
             omega
@@ -110,7 +102,8 @@ theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemSta
           · intro entry hentry
             cases hentry
       · intro token mem
-        exact hnarrow token mem
+        have hmem : token ∈ (s.lokal c).verengt := mem
+        exact hnarrow token hmem
     · cases h
 
 end Gabbro.Core.Ast.LowLevel
