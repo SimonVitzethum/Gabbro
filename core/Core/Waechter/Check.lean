@@ -55,14 +55,14 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.I.Sim, 12240687961120345458),
   (`Gabbro.Core.Maschine.I.Haengt, 15729417313371872373),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 2131622631997208645),
-  (`Gabbro.Core.Annahme.Akzeptiert, 7495189157439494818),
-  (`Gabbro.Core.Annahme.Lokal, 8358370778936020596),
-  (`Gabbro.Core.Annahme.AussenLokal, 14489867616125512278),
-  (`Gabbro.Core.Annahme.KlauselnWahr, 1746139257633975029),
-  (`Gabbro.Core.Annahme.WaechterHalten, 11266655033696341253),
-  (`Gabbro.Core.Annahme.GeschlossenWartend, 14518909303012624280),
-  (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
-  (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
+   (`Gabbro.Core.Annahme.Akzeptiert, 11395827537807588626),
+   (`Gabbro.Core.Annahme.Lokal, 2426108868279093316),
+   (`Gabbro.Core.Annahme.AussenLokal, 3430999732016139885),
+   (`Gabbro.Core.Annahme.KlauselnWahr, 12140203336809795549),
+   (`Gabbro.Core.Annahme.WaechterHalten, 6457805318942374561),
+   (`Gabbro.Core.Annahme.GeschlossenWartend, 7988894922285037720),
+   (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
+   (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
 
 private meta def safety : Array Name := #[
   `Gabbro.Core.Sicherheit.Speichersicher, `Gabbro.Core.Sicherheit.InvariantenErhalten,
