@@ -74,8 +74,7 @@ theorem b9_b21_aus_pflichten : ressourcenAbschlussAussage E := by
     | schritt label folge =>
       cases folge with
       | schritt step =>
-        rename_i vor _
-        have alt := ih vor vorEq
+        have alt := ih _ vorEq
         cases step with
         | kontext normal bereit regel aus =>
           obtain ⟨f, kopf, regelSchritt⟩ := regel

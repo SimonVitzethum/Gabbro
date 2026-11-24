@@ -51,6 +51,7 @@ public import Core.Beobachtung.SchrankenB8Beweise
 public import Core.Beobachtung.SchrankenB8Zeit
 public import Core.Beobachtung.SchrankenB8Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21
+public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 meta import Core.Waechter.Check
 
 #check_core
