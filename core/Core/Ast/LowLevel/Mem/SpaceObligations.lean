@@ -46,7 +46,7 @@ def ProtectMeaningAussage : Prop :=
         next.spaces[sp]? = some narrowed ∧ next.result = some .«protected» ∧
         (∀ pg entry, pageRange base pages pg → space.abbildung pg = some entry →
           narrowed.abbildung pg = some { entry with rights }) ∧
-        ∀ core pg, pageRange base pages pg → next.tlb core sp pg = none) ∧
+        next.tlb.Frei sp base pages) ∧
     ((∃ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
       ∃ right ∈ rights, right ∉ entry.rights) →
       (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = none)
@@ -71,21 +71,24 @@ def UnmapMeaningAussage : Prop :=
       next.tlb = (s.lokal c).tlb ∧
       ∀ extent, ¬ extent.getrennt (token.frames granule) → next.unreserved granule extent = false
 
-/-- A matching token can only be consumed after its table entries have been
-    cleared. The same transfer invalidates the full range on every core. -/
+/-- The release step of a shootdown. A matching token is consumed only after its table entries have
+    been cleared AND no core caches a translation of its pages: the invalidation on the other cores is
+    the work of their handlers, never a side effect of this step. A step that finds a cached
+    translation of the range is refused, so the frames of a stale translation stay reserved. -/
 def FlushMeaningAussage : Prop :=
   ∀ target s c name token space,
     ((s.lokal c).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token →
     (s.lokal c).spaces[token.raum]? = some space →
-    (token ∈ space.ausstehend ∧ (∀ i < token.seiten, space.abbildung (token.seite + i) = none) →
+    (token ∈ space.ausstehend ∧ (∀ i < token.seiten, space.abbildung (token.seite + i) = none) ∧
+        (s.lokal c).tlb.Frei token.raum token.seite token.seiten →
       ∃ next flushed, (MemInstruction.flushSpace name).evaluate target s c = some next ∧
         next.result = some (.frames (token.frames target.seitengranule)) ∧
         next.spaces[token.raum]? = some flushed ∧ flushed.entries = space.entries ∧
         token ∉ flushed.ausstehend ∧
         (∀ bound ∈ next.marken, bound.2 ≠ token) ∧
-        (∀ core pg, token.contains pg → next.tlb core token.raum pg = none) ∧
-        (∀ core sp pg, sp ≠ token.raum ∨ ¬ token.contains pg → next.tlb core sp pg = (s.lokal c).tlb core sp pg)) ∧
-    ((token ∉ space.ausstehend ∨ ∃ pg, token.contains pg ∧ (space.abbildung pg).isSome) →
+        next.tlb = (s.lokal c).tlb) ∧
+    ((token ∉ space.ausstehend ∨ (∃ pg, token.contains pg ∧ (space.abbildung pg).isSome) ∨
+        ¬ (s.lokal c).tlb.Frei token.raum token.seite token.seiten) →
       (MemInstruction.flushSpace name).evaluate target s c = none)
 
 def ActivateMeaningAussage : Prop :=

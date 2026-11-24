@@ -99,7 +99,8 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
       ρ.zeit.spur 0 = some (.kontext c w, ⟨[], []⟩) ∧ η.belegt 0 = some c ∧
       (∀ t, η.zeit.spur t = none) ∧
       (∃ w' spur next, Schritt E.einrichtung E.system E.katalog η.hw
-        0 (η.zeit.zustand 0) (.kontext c w', spur) next) := by
+        0 (η.zeit.zustand 0) (.kontext c w', spur) next) ∧
+      ρ.zeit.zustand 0 = some z ∧ ρ.zeit.zustand 1 = some z' := by
   let ρ : Maschine.Lauf E := ⟨s, letztesAngebot hw, {
     zustand := fun | 0 => some z | _ + 1 => some z'
     spur := fun | 0 => some (.kontext c w, ⟨[], []⟩) | _ + 1 => none
@@ -183,6 +184,6 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
           simpa only [mark, decide_true, ite_true] using allowed
         · simpa only [decide_eq_false mark, Bool.false_eq_true, ite_false] using Nat.zero_le (E.stotterLaenge g)
   exact ⟨ρ, η, ⟨hardware, konform, zul, loaded.symm⟩, ideal, matched, unfair,
-    (matched.endlich ideal).mpr idealFinite, idealFinite, bound, rfl, rfl, fun _ => rfl, enabled⟩
+    (matched.endlich ideal).mpr idealFinite, idealFinite, bound, rfl, rfl, fun _ => rfl, enabled, rfl, rfl⟩
 
 end Gabbro.Core.Maschine.I

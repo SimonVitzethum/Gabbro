@@ -84,9 +84,7 @@ theorem protect_meaning : ProtectMeaningAussage := by
       change narrowed.abbildung pg = some { entry with rights }
       rw [abbildung_narrow space base pages rights pg hcover, hmap]
       rfl
-    · intro core pg hcover
-      change (s.lokal c).tlb.invalidate sp base pages core sp pg = none
-      exact TranslationCache.invalidate_hit _ _ _ _ _ _ hcover
+    · exact TranslationCache.frei_invalidate _ _ _ _
   · intro hneg
     rcases hneg with ⟨i, hi, entry, hmap, right, hrin, hrout⟩
     have hnot : ¬ (rights ≠ [] ∧ validVirtualRange target virt pages ∧

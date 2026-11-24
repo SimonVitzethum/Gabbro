@@ -19,6 +19,10 @@ inductive MemInstruction where
   | flushSpace (name : Identifier)
   | activateSpace (space : Nat)
   | bindToken (name : Identifier)
+  /-- A core takes the present table entry of a page into its translation cache. No source form
+      elaborates to it: it stands for the translations hardware caches on its own, so that every
+      statement over the unit also covers runs with stale translations. -/
+  | tlbFuellen (core space page : Nat)
 
 def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
   | .splitAt region point => (scope.slotRegion region).map (fun slot => .splitRegion slot point)
@@ -58,20 +62,37 @@ def validVirtualRange (target : ZielDaten) (virt pages : Nat) : Bool :=
   decide (0 < pages ∧ virt % target.seitengranule = 0) &&
     (List.range pages).all fun i => decide (target.virtuell (virt + i * target.seitengranule))
 
+/-- The cells of a page range of one space, on every core. -/
+def TlbZelle.imBereich (zelle : TlbZelle) (space base pages : Nat) : Bool :=
+  decide (zelle.raum = space ∧ pageRange base pages zelle.seite)
+
+/-- Dropping the cells of a page range on every core. -/
 def TranslationCache.invalidate (cache : TranslationCache) (space base pages : Nat) : TranslationCache :=
-  fun core sp index =>
-    if sp = space ∧ pageRange base pages index then none else cache core sp index
+  ⟨cache.zellen.filter fun zelle => !zelle.imBereich space base pages⟩
 
-theorem TranslationCache.invalidate_hit (cache : TranslationCache)
-    (space base pages core index : Nat) (covered : pageRange base pages index) :
-    cache.invalidate space base pages core space index = none :=
-  if_pos ⟨rfl, covered⟩
+/-- No core caches a translation of a page of the range. -/
+def TranslationCache.Frei (cache : TranslationCache) (space base pages : Nat) : Prop :=
+  ∀ zelle ∈ cache.zellen, zelle.imBereich space base pages = false
 
-theorem TranslationCache.invalidate_miss (cache : TranslationCache)
-    (space base pages core actual index : Nat)
-    (outside : actual ≠ space ∨ ¬ pageRange base pages index) :
-    cache.invalidate space base pages core actual index = cache core actual index :=
-  if_neg fun inside => outside.elim (fun other => other inside.1) (fun uncovered => uncovered inside.2)
+def TranslationCache.frei (cache : TranslationCache) (space base pages : Nat) : Bool :=
+  cache.zellen.all fun zelle => !zelle.imBereich space base pages
+
+theorem TranslationCache.frei_eq_true {cache : TranslationCache} {space base pages : Nat} :
+    cache.frei space base pages = true ↔ cache.Frei space base pages := by
+  simp only [TranslationCache.frei, TranslationCache.Frei, List.all_eq_true, Bool.not_eq_true']
+
+theorem TranslationCache.frei_invalidate (cache : TranslationCache) (space base pages : Nat) :
+    (cache.invalidate space base pages).Frei space base pages := by
+  intro zelle mem
+  have kept := (List.mem_filter.mp mem).2
+  simpa only [Bool.not_eq_true'] using kept
+
+theorem TranslationCache.haelt_invalidate (cache : TranslationCache)
+    (space base pages core sp page : Nat) (entry : Seiteneintrag) :
+    (cache.invalidate space base pages).Haelt core sp page entry ↔
+      cache.Haelt core sp page entry ∧ ¬ (sp = space ∧ pageRange base pages page) := by
+  simp only [TranslationCache.Haelt, TranslationCache.invalidate, List.mem_filter,
+    TlbZelle.imBereich, Bool.not_eq_true', decide_eq_false_iff_not]
 
 /-- The operations use the acting frame as their authority source. Table
     updates and invalidation are reflected in a single successor frame. -/
@@ -155,11 +176,14 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
   | .flushSpace name => do
     let (_, token) ← frame.marken.find? (fun p => p.1.val == name.val)
     let space ← frame.spaces[token.raum]?
+    -- The release step of a shootdown: the frames return only when the table entries are gone AND no
+    -- core still caches a translation of them. The remote invalidations are steps of the handlers, never
+    -- implied by this step.
     if token ∈ space.ausstehend &&
-        ((List.range token.seiten).all fun i => (space.abbildung (token.seite + i)).isNone) then
+        ((List.range token.seiten).all fun i => (space.abbildung (token.seite + i)).isNone) &&
+        frame.tlb.frei token.raum token.seite token.seiten then
       pure { frame with
         result := some (.frames (token.frames granule))
-        tlb := frame.tlb.invalidate token.raum token.seite token.seiten,
         spaces := frame.spaces.set token.raum
           { space with ausstehend := space.ausstehend.filter (· != token) },
         marken := frame.marken.filter (fun p => p.1.val != name.val && p.2 != token) }
@@ -171,6 +195,10 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
   | .bindToken name => do
     let some (.pending token) := frame.result | none
     frame.bindMarke name token
+  | .tlbFuellen core sp page => do
+    let space ← frame.spaces[sp]?
+    let entry ← space.abbildung page
+    pure { frame with tlb := frame.tlb.fill ⟨core, sp, page, entry⟩ }
 
 /-- Evaluation reads only the acting frame, region rights and loans. -/
 theorem MemInstruction.evaluate_congr (op : MemInstruction) (target : ZielDaten) (c : Kontext)

@@ -8357,3 +8357,24 @@ model's certificate of §217 over the program Stage 0 lowers, and the generator.
 | `restore_restored` | `Zertifikat/Lauf.lean` | Stage 0's restoration of `old(global)` postconditions builds `restored (altVon expanded) u P` from the lowered program: only the postconditions change, each from its function's source clauses. |
 | `pflicht_oeffnen`, `logikFn_aus`, tactic `gabbrov_wp` | `Zertifikat/WP.lean` | Open a function's duty at its own lowering; the exact weakest-precondition rules of the model on its body. |
 | `einheitLeer_ziel`, `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | A function's duty proved directly over its lowered body; the premises of `nutzerA_aus_ziele` hold jointly and the lowering accepts the unit. |
+
+## 219. Multi-core shootdown: cached translations, the release step, the protocol (2026-11-24)
+
+The memory forms modelled the shootdown of a revoked mapping as ONE step that cleared every core's
+translation cache and released the frames (implementation rule = ideal rule, stutter budget 0), and the
+cache could not be filled at all (`tlb` was never populated), so no stale translation was expressible and
+the safety of reuse held only because nothing could go wrong. Now the cache is a finite list of cells
+(core, space, page, entry); `tlbFuellen` stands for any fill hardware does on its own; `protect` and
+`map` still clear their range on all cores in one step (open item P1: a staged `protect` — narrow the table, shoot down, complete once no cell with wider rights remains — and dropping `map`'s clearing, a no-op by `tlbGedeckt_erreichbar`); `flush` is the RELEASE
+step and refuses while any core caches a translation of the token's range, so the invalidation on the other
+cores is the work of their handlers (`FlushProtokoll`), never implied by the release.
+
+| Theorem | File | Statement |
+|---|---|---|
+| `FlushMeaningAussage` | `Mem/SpaceObligations.lean` | The release step: enabled exactly when the token is pending, its table entries are cleared AND `tlb.Frei` holds; the cache is untouched; refused otherwise (pinned `FlushAussage`). |
+| `MemFrame.TlbGedeckt`, `tlbGedeckt_evaluate` | `Mem/Proofs/Tlb/Deckung.lean`, `Lauf.lean` | Every cached cell is explained by an active table entry of its space or by a pending token of its space; every memory instruction keeps this, including a fill and any drop by hardware (`TlbGedeckt.verdraengt`). |
+| `tlbGedeckt_erreichbar` | `Mem/Proofs/Tlb/Lauf.lean` | Every state any Mem unit reaches, for every code and every start, satisfies it. |
+| `nicht_unreserviert` | `Mem/Proofs/Tlb/Reserviert.lean` | A frame a core still caches is never `unreserved`: no region operation can hand it out again. |
+| `flush_verweigert_gecachte_uebersetzung`, `freigabe_ohne_pflicht_unsicher` | `Mem/Proofs/Tlb/Reserviert.lean` | The guard has teeth, and it is necessary: a release that leaves the cell behind breaks the invariant. |
+| `FlushKette.ohne_abdeckung`, `FlushProtokoll` | `Verfeinerung/Abnahme/Flush.lean` | The old protocol admitted a release after a send to nobody; the protocol now also requires the send to name every existing core. |
+| `FlushProtokoll.frei_bei_freigabe` | `Verfeinerung/Abnahme/Flush.lean` | Under the protocol and the cache laws (a cell sits on an existing core, no refill of a revoked page after the send, a handler clears its core's cells of the range) no cell of the range survives the release. |
