@@ -67,14 +67,22 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
       ExprReads scope 0 indexInput args.offset (closeBracket :: rest))
     ((Expr.arrayIndex args.base args.offset args.lower args.upper).printTokens)
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
-    [closeBracket, closeParen], by rfl, ?_⟩
+    [closeBracket, closeParen], ?_, ?_⟩
+  · change openParen :: args.base.printTokens ++
+        (openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen])) =
+      openParen :: (args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
+        [closeBracket, closeParen])
+    simp only [List.append_assoc]
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · simpa only [List.singleton_append] using
-      (Expr.printReads (minimum := 8) args.base (by
-        intro cont
-        obtain ⟨op, more, same, allowed⟩ := cont
-        have prec := infixPrecLe7 op
-        omega))
+  · change ExprReads scope 8
+      (args.base.printTokens ++ (openBracket ::
+        (args.offset.printTokens ++ [closeBracket, closeParen]))) args.base
+      (openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
+    apply Expr.printReads
+    intro cont
+    obtain ⟨op, more, same, allowed⟩ := cont
+    have prec := infixPrecLe7 op
+    omega
   · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
@@ -271,6 +279,6 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
     exact (indexPosition offset lower upper).isLt
   · have boundProof : offset.wert.toNat < count := (indexPosition offset lower upper).isLt
     simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wertAls, Rahmen.zahl, alsGanzzahl,
-      if_neg (not_lt_of_ge nonneg), hc, dif_pos boundProof, indexPosition]
+      Option.bind, if_neg (not_lt_of_ge nonneg), hc, dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
