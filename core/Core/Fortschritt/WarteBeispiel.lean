@@ -104,7 +104,7 @@ theorem spurw0 : spurw 0 = some ticketA := rfl
 
 theorem spurw1 : spurw 1 = some ticketB := rfl
 
-def taktw : ∀ t, Takt (Lauffolge E_1 hw2) t (zw t) (spurw t) (zw (t + 1))
+def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t (zw t) (spurw t) (zw (t + 1))
   | 0 =>
     .schritt spurw0 (.schritt (ImplSchritt.kontext (hw2_crash 0)
       ⟨0, hw2_opp0 rfl, rfl, rfl⟩

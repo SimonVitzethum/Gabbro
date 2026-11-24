@@ -136,7 +136,8 @@ def posTakt (t : Nat) : Takt
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t)))
 
 def posTaktK (t : Nat) : Takt
-    (Lauffolge (E_w dispatch1) hw1) t (some (Z1 t)) (some posLabel) (some (Z1 (t + 1))) :=
+    (Lauffolge (E_w dispatch1) hw1) (KeinSchritt (Lauffolge (E_w dispatch1) hw1))
+    t (some (Z1 t)) (some posLabel) (some (Z1 (t + 1))) :=
   .schritt rfl (.schritt (ImplSchritt.kontext (hw1_crash t)
     ⟨0, hw1_opp0 t, by rw [z1_kerne]; exact z1_dispatch0, by rw [z1_status]; exact z1_live _⟩
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))))
@@ -337,7 +338,7 @@ def taktAB (t : Nat) : Takt
     exact .wartet rfl rfl (fun ho => Bool.false_ne_true ((hw2_crash t).symm.trans ho.2))
 
 def taktABρ (t : Nat) : Takt
-    (Lauffolge (E_w dispatch2) hw2)
+    (Lauffolge (E_w dispatch2) hw2) (KeinSchritt (Lauffolge (E_w dispatch2) hw2))
     t (some (ZAB t)) (spurABρ t) (some (ZAB (t + 1))) := by
   by_cases h : t % 2 = 0
   · rw [spurABρ_eq h]
@@ -399,7 +400,8 @@ theorem ab_starvationfrei_neg : ¬ StarvationFrei (E := E_w dispatch2) ρAB ηAB
 
 /-- … while `deadlockFree` holds: nothing ever blocks. -/
 theorem ab_deadlockfrei : DeadlockFrei (E := E_w dispatch2) ηAB := by
-  intro t C hC
+  intro t hC
+  obtain ⟨C, hC⟩ := hC
   obtain ⟨c, hc⟩ := hC.1
   obtain ⟨b, hb, _, _, _⟩ := hC.2 c hc
   cases hb
