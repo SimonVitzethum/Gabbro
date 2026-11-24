@@ -20,7 +20,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core
 
 def KorrektheitAussagen : Prop :=
-  ∀ (P : Katalog.Plattform) (B : FormBeleg) (C : Pruefer) (π : Parser) (L : LinkSchnittstelle),
+  ∀ (P : Katalog.Plattform) (B : FormBeleg) (C : Pruefer) (π : Parser),
     PrueferLokalKorrektAussage C ∧ PrueferLokalVollstaendigAussage C ∧
     PrueferKlauselnKorrektAussage C ∧ PrueferKlauselnVollstaendigAussage C ∧
     PrueferWaechterKorrektAussage C ∧ PrueferWaechterVollstaendigAussage C ∧
@@ -36,7 +36,7 @@ def KorrektheitAussagen : Prop :=
     RegelSimDiskriminiertAussage ∧ SimTrenntAussage ∧ SimRefutierbarAussage ∧
     BildGueltigAussage P ∧ FormenGedecktAussage P B ∧ SchrankenAkzeptiertAussage P ∧ NIAkzeptiertAussage P ∧
     ZielAusTeilenAussage P B ∧ SicherheitAkzeptiertAussage P ∧ SicherheitNichtLeerInstanzAussage P B ∧
-    SicherheitAusTeilenAussage P B ∧ ZielInhaltAussage P ∧ LinkerAkzeptiertAussage L ∧
-    LinkerNichtTrivialAussage L
+    SicherheitAusTeilenAussage P B ∧ ZielInhaltAussage P ∧ LinkerAkzeptiertAussage ∧
+    LinkerNichtTrivialAussage
 
 end Gabbro.Core.Ziel.Korrektheit

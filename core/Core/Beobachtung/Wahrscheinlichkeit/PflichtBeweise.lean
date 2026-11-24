@@ -5,9 +5,11 @@
   Every statement is proved from the lift bundle's own fields and the checker's
   finite verdict: cylinder rewriting by `massErhalt` (on key-`Nodup` paths, carried
   by `schluesselNodupB_nodup`), measure monotonicity for the run event, and
-  continuity of the measure from above against the geometric decay of the
-  survival family. The cost obligation is NOT provable from its pinned premises;
-  its conditional refutation lives in `PflichtWiderlegung.lean`.
+   continuity of the measure from above against the geometric decay of the
+   survival family. The expected-cost obligation is proved in
+   `KostenErwartungBeweis.lean`, where the cost premise binds the cost to the
+   first exit of the survival family.
+
 -/
 module
 

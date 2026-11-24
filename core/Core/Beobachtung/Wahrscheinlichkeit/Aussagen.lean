@@ -47,11 +47,12 @@ def prEreignisAussage : Prop :=
     ereignisPflicht B hb pfad wNum wDen pNum pDen
 
 /-- `planned.probability.cost`: every declared expected-cost bound holds.
-    Difficulty: hard (shell sum over the exit shells).
-    Sketch: unfold the obligation; monotonicity and the exit link partition the
-    bands by exit index; on shell `n` the cost is at most `n * c` and the shell
-    has measure at most `(1 - q)^n` by decay; the geometric series sums to
-    `c / q ≤ b` by the checker's certificate. -/
+    Difficulty: hard (tail sum of the survival family).
+    Sketch: unfold the obligation; the survivor intersection is null by
+    continuity from above, so off a null set every band has a first exit; the
+    cost premise bounds its cost by that first exit times `c`; the tail sum of
+    the survival measures is at most the geometric series `1 / q`, and the
+    checker's certificate gives `c / q ≤ b`. -/
 def kostenErwartungAussage : Prop :=
   ∀ (L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type) [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)

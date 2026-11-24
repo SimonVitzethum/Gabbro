@@ -23,6 +23,7 @@ module
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Katalog.Erfuellbar
+public import Core.Linken.Modul
 
 @[expose] public section
 
@@ -105,28 +106,26 @@ def ZielInhaltAussage (P : Katalog.Plattform) : Prop :=
   ∧ SimRefutierbarAussage
   ∧ (∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, ¬ Beobachtung.Nichtinterferent E)
 
-/-- A linker as an interface: a build plan names source units and links them on a platform, or refuses. The
-concrete linker is MK-22 (`core/Core/Linken/`); this interface fixes what its correctness statements say. -/
-structure LinkSchnittstelle where
-  Bauplan : Type
-  teile : Bauplan → List Ast.Unit
-  verlinke : Katalog.Plattform → Bauplan → Option Ast.Semantik.Einheit
+/-- LINKER CORRECTNESS over the real linker (`Core/Linken`): a plan that links, all of whose modules are accepted
+on the plan's platform, links to an accepted unit, so every theorem about accepted units applies to the linked
+program. Finding: `Linken.LinkAkzeptanzAussage` is `Iff.rfl` — acceptance of a plan is DEFINED as acceptance of
+its linked unit, which says nothing about the parts; this statement is the one that says something. It is false
+when linking can create a race or a deadlock between accepted modules unless `linke` refuses; that is what
+`bauplanOk` must check (rely and interface compatibility), and the statement is the test of it. Open
+(Designer: the compatibility check; Prover: this statement). -/
+def LinkerAkzeptiertAussage : Prop :=
+  ∀ (plan : Linken.Bauplan) (frag : Ast.Semantik.Fragment), Linken.linke plan = some frag →
+    (∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform)) →
+    Annahme.Akzeptiert (frag.einheit plan.plattform)
 
-/-- LINKER CORRECTNESS: a linked build plan whose parts are all accepted is itself accepted, so every theorem
-about accepted units (refinement, safety, noninterference) applies to the linked unit. The linker's own check
-(interface and rely compatibility) is what makes this true: acceptance is not compositional by itself. -/
-def LinkerAkzeptiertAussage (L : LinkSchnittstelle) : Prop :=
-  ∀ (P : Katalog.Plattform) (b : L.Bauplan) (E : Ast.Semantik.Einheit),
-    L.verlinke P b = some E → (∀ t ∈ L.teile b, Annahme.Akzeptiert (einheitVon P t)) → Annahme.Akzeptiert E
-
-/-- THE LINKER IS NOT TRIVIAL IN EITHER DIRECTION: it links some plan of at least two parts, and it refuses some
-plan whose parts are each accepted (a refuse-everything linker satisfies `LinkerAkzeptiertAussage`; an
-accept-everything linker must be refuted by the second conjunct). -/
-def LinkerNichtTrivialAussage (L : LinkSchnittstelle) : Prop :=
-    (∃ (P : Katalog.Plattform) (b : L.Bauplan) (E : Ast.Semantik.Einheit),
-      L.verlinke P b = some E ∧ 2 ≤ (L.teile b).length)
-  ∧ (∃ (P : Katalog.Plattform) (b : L.Bauplan), L.verlinke P b = none ∧
-      ∀ t ∈ L.teile b, Annahme.Akzeptiert (einheitVon P t))
+/-- THE LINKER IS NOT TRIVIAL IN EITHER DIRECTION: it links some plan of at least two modules, and it refuses some
+plan whose modules are each accepted (a refuse-everything linker satisfies `LinkerAkzeptiertAussage`; an
+accept-everything linker is refuted by the second conjunct). -/
+def LinkerNichtTrivialAussage : Prop :=
+    (∃ (plan : Linken.Bauplan) (frag : Ast.Semantik.Fragment),
+      Linken.linke plan = some frag ∧ 2 ≤ plan.module.length)
+  ∧ (∃ plan : Linken.Bauplan, Linken.linke plan = none ∧
+      ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform))
 
 end Gabbro.Core.Ziel.Korrektheit
 
