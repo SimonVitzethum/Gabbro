@@ -2,8 +2,9 @@ module
 
 public import Core.Beobachtung.Unentscheidbar.Modell
 public import Mathlib.Logic.Encodable.Basic
-import Mathlib.Tactic.DeriveCountable
+import Mathlib.Basic.Countable.Basic
 import Mathlib.Logic.Equiv.List
+import Mathlib.Tactic.DeriveCountable
 
 @[expose] public section
 
@@ -14,6 +15,18 @@ open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Katalog
 
 noncomputable section
+
+/-- Unsigned machine words are injections into the naturals; this makes the
+    character and command syntax countable without a hand-written Godel tree. -/
+instance : Countable UInt32 :=
+  (show Function.Injective (fun x : UInt32 => x.toNat) from
+    fun a b h => UInt32.toNat_inj.mp h).countable
+
+deriving instance Countable for Char
+
+instance : Countable Identifier := by
+  dsimp only [Identifier]
+  infer_instance
 
 deriving instance Countable for Arith
 deriving instance Countable for Compare
@@ -27,6 +40,7 @@ deriving instance Countable for FirmwareZeile
 deriving instance Countable for WrittenType, WrittenTypes
 deriving instance Countable for RegionInitializer
 deriving instance Countable for Rufstelle
+set_option maxHeartbeats 800000 in
 deriving instance Countable for Befehl
 
 instance : Encodable Arith := Encodable.ofCountable _
