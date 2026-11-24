@@ -161,7 +161,7 @@ theorem stummer_schritt_koppelt
     Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor (t + 1) (t + 1) := by
   classical
   obtain ⟨cov, st, len⟩ := kopplung
-  obtain ⟨w₂, zustand₂⟩ := fragment_zustand_some p plattform vergleich.rechts t
+  obtain ⟨w₂, zustand₂⟩ := fragment_zustand_some vergleich.rechts t
   obtain ⟨⟨lokGleich, _, initialGleich, rechteGleich, leihenGleich, antwortGleich⟩,
     epocheEq, geliefertEq, kerneEq, statusEq⟩ := st vor w₂ zustand zustand₂
   -- public frame: full local equality
