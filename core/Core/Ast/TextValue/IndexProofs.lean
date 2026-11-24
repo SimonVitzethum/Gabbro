@@ -210,7 +210,6 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     rfl
   · intro byte nonneg hbyte
     rw [Befehl.auswerten]
-    dsimp only
     rw [htext, hzahl]
     rw [if_neg (not_lt_of_ge nonneg)]
     simpa only [hbyte, Rahmen.schreibe, Function.update_self]
@@ -341,9 +340,8 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
     rw [Befehl.auswerten]
-    dsimp only
     rw [htext, hzahl]
-    rw [if_neg (by norm_num : ¬ (0 : Int) < 0)]
+    rw [if_neg (by omega : ¬ (0 : Int) < 0)]
     simpa only [hbyte]
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
     simp only [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
