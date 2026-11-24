@@ -193,7 +193,7 @@ theorem tabellenGedeckt_protectSpace (target : ZielDaten) (sp virt pages : Nat)
           simp only [List.getElem?_set_self hlt] at found
           have heq : space' = _ := (Option.some.inj found).symm
           subst heq
-          have hspace := hspaces sp space hs
+          have hspace := hspaces sp' space hs
           obtain ⟨hfrei, hflags, hrights⟩ := hspace
           refine ⟨?frei, ?flags, ?rights⟩
           · exact frei_narrow space (virt / target.seitengranule) pages rights hfrei
@@ -252,10 +252,10 @@ theorem tabellenGedeckt_unmapSpace (target : ZielDaten) (sp virt pages : Nat) (s
             simp only [List.getElem?_set_self hlt] at found
             have heq : space' = _ := (Option.some.inj found).symm
             subst heq
-            have hspace := hspaces sp space hs
+            have hspace := hspaces sp' space hs
             obtain ⟨hfrei, hflags, hrights⟩ := hspace
             refine ⟨?frei, ?flags, ?rights⟩
-            · exact Adressraum.unmapFreiAusstehend space sp (virt / target.seitengranule)
+            · exact Adressraum.unmapFreiAusstehend space sp' (virt / target.seitengranule)
                 pages first.frame hfrei
             · intro token tmem
               rcases List.mem_cons.mp tmem with rfl | hold
