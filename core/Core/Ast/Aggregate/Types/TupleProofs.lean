@@ -116,7 +116,7 @@ theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   let tree := WrittenType.tuple first second tail
   obtain ⟨pieces, lexed, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
   refine ⟨first, second, tail, PrintedToken.render tree.printPieces, pieces, ?_, lexed, ?_⟩
-  · simp [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid]
+  · simpa [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid]
   · rw [aligned]
     exact WrittenType.printReads tree (by simp [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid])
       (by intro more same; cases same)
