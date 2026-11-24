@@ -418,7 +418,7 @@ theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
     simpa [written, eff, scope, WrittenCarrierEffect.resolve, Scope.effectCarrier, carrierBinding, egTableName]
   let item : EffectGroupDeclaration scope := ⟨true, egName, [written], [eff], hchecked⟩
   refine ⟨scope, item, ?_, ?_⟩
-  · simp [item, eff]
+  · simpa [item, eff]
   · let form := effectGroupForm scope
     let E := form.einheit platform item
     let s := (I.start E start).2
@@ -450,7 +450,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     simpa [directName, ordinaryLocal, ordinaryAtomWord, fnName]
   let body : BracedBlock (writtenResult none) (functionScope scope []) := .braces .done
   let a : Surface.FunctionArgs scope :=
-    ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp,
+    ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp_all,
       (by intro h; cases h), some clause⟩
   let tree : Ast.Unit :=
     ⟨_, .step (.table carrier) (.step (.effectGroup group) (.step a.declaration .done))⟩
@@ -482,7 +482,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   dsimp only
   refine ⟨?_, ?_, Ast.parse_print (category := .unit) tree, rfl, reached, hhead2,
     hstep2, himpl2, ?_⟩
-  · simp [group, eff]
+  · simpa [group, eff]
   · exact ⟨clause, rfl, rfl⟩
   · let after := b.auswerten (s.lokal eintritt)
     let sig : Funktion := ⟨a.name, (s.lokal eintritt).pc + 1, [], none, scope.length,
