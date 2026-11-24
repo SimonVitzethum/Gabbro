@@ -37,18 +37,10 @@ private theorem entryExtent_valid :
 private def entryArgs : RegionEntryArgs := by
   let region := keywordName 'r' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
   let binder := keywordName 'v' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
-  refine ⟨region, ?_, binder, ?_, ?_⟩
-  · change ['r'] ≠ ['t', 'r', 'u', 'e'] ∧ ['r'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro equality <;> cases equality
+  refine ⟨region, ?_, binder, ?_, mainName_direct⟩
+  · refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> intro equality <;> cases equality
   · intro equality
     exact nomatch (List.cons.inj equality).1
-  · simp only [directName, ordinaryLocal, mainName, keywordName, String.reduceToList,
-      List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, List.cons.injEq,
-      Char.reduceEq, false_and, and_false, false_or, or_false, not_false_eq_true, and_true]
-    constructor <;> intro same
-    all_goals
-      have equal := (List.cons.inj same).1
-      simp only [Char.reduceEq] at equal
 
 private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.type)
     (allowed : Befehl.platformAllowed .x86_64 (.bindeRegion 0 init) = true)
@@ -118,9 +110,13 @@ theorem viewUnit_erfuellbar : ∃ written valid, RegionUnitErfuellbarAussage (.v
     omega
   exact ⟨written, valid, regionUnit_joint (.view written valid) ⟨0, 0, 1, false⟩ rfl rfl⟩
 
-theorem regionBindUnit : RegionBindUnitAussage :=
-  ⟨⟨regionUnit_realized, regionUnit_transfer _, regionAddressUnit_erfuellbar⟩,
-    regionUnit_realized, fun _ _ => regionUnit_transfer _, viewUnit_erfuellbar⟩
+theorem regionAddressUnit : RegionAddressUnitAussage :=
+  ⟨regionUnit_realized, regionUnit_transfer _, regionAddressUnit_erfuellbar⟩
+
+theorem viewUnit : ViewUnitAussage :=
+  ⟨regionUnit_realized, fun _ _ => regionUnit_transfer _, viewUnit_erfuellbar⟩
+
+theorem regionBindUnit : RegionBindUnitAussage := ⟨regionAddressUnit, viewUnit⟩
 
 /-- The written address type occurs in an admitted ordinary signature whose
     body actually returns the address from the checked region binding. -/
@@ -128,7 +124,7 @@ def AddressTypeUnitErfuellbarAussage : Prop :=
   ∃ (unit : Ast.Unit) (source : RawText) (E : Einheit),
     Ast.Parse (category := .unit) source unit ∧
     ZugelassenElaboriert (category := .unit) .x86_64 unit E ∧
-    Befehl.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [] ∈
+    Befehl.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [] none ∈
       (programm unit).code
 
 theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
@@ -138,8 +134,7 @@ theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
   let addressName : Binding := ⟨args.binder, .address .physical, false, false⟩
   let address : Local (addressName :: [parameter.binding]) (.address .physical) := Local.here
   have ordinary : ordinaryLocal args.binder := by
-    change ['v'] ≠ ['t', 'r', 'u', 'e'] ∧ ['v'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro impossible <;> cases impossible
+    refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> intro impossible <;> cases impossible
   let body : BracedBlock (some (.address .physical)) [parameter.binding] :=
     .braces (.step (.letRegion args.binder args.ordinary receiver True.intro args.ordinaryRegion .address)
       (.step (.ret rfl (.variable address ⟨True.intro, True.intro⟩ ordinary) rfl) .done))
@@ -147,7 +142,7 @@ theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
     (some (.address .physical)) (fun _ member => by
       have same := List.mem_singleton.mp member
       cases same
-      exact True.intro) none body (List.nodup_singleton _) (fun _ => rfl)
+      exact True.intro) none body (List.nodup_singleton _) (fun _ => rfl) none
   let unit : Ast.Unit := ⟨[], .step signature .done⟩
   refine ⟨unit, Ast.print (category := .unit) unit, elaborieren .x86_64 (category := .unit) unit,
     Ast.parse_print _, ⟨rfl, ⟨⟨.nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩⟩, ?_⟩
