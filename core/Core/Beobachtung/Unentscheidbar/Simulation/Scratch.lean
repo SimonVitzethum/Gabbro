@@ -47,10 +47,10 @@ def miniVonCode : Code → Option Mini
   | _ => none
 
 theorem miniVonCode_miniZuCode : ∀ m : Mini, miniVonCode (miniZuCode m) = some m
-  | .leaf n => by simp [miniZuCode, miniVonCode, codeZuNat_natZuCode]
+  | .leaf n => by simp [miniZuCode, miniVonCode, natZuCode, codeZuNat, codeZuNat_natZuCode]
   | .node a b => by
       have ih1 := miniVonCode_miniZuCode a
       have ih2 := miniVonCode_miniZuCode b
-      simp [miniZuCode, miniVonCode, codeZuNat_natZuCode, ih1, ih2]
+      simp [miniZuCode, miniVonCode, natZuCode, codeZuNat, codeZuNat_natZuCode, ih1, ih2]
 
 end Scratch
