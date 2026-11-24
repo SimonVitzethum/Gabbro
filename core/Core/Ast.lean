@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Grammar
+public import Core.Ast.LowLevel.Exec.Proofs.ExecStop
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Proofs.View
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
