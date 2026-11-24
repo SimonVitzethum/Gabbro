@@ -62,9 +62,8 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   | retVoid => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | letMutable => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | directCall =>
-      rename_i call toks
+      rename_i call cr
       exfalso
-      have cr : CallReads scope toks call (semicolon :: rest) := by assumption
       exact noDotCall call (by simpa only [← htok] using cr)
   | bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
