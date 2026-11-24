@@ -3,7 +3,7 @@ module
 public import Core.Ast.Semantik.Beispiele
 public import Core.Ast.Semantik.BatchRegistry
 public import Core.Ast.Semantik.LocalEffects
-public import Core.Ast.Semantik.ProgramRegistry
+public import Core.Ast.Program.KernelPremises
 
 @[expose] public section
 
@@ -53,37 +53,6 @@ def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args
     shared.acceptanceRule, shared.idealRule, shared.unitsAndCommutation,
     shared.implementationRule, shared.preservation, shared.jointlySatisfiable⟩
 
-def Befehl.programConstructor : Befehl → Option Name
-  | .bindeWert .. => some ``Befehl.bindeWert
-  | .definiere .. => some ``Befehl.definiere
-  | .rufe .. => some ``Befehl.rufe
-  | .rueckVoid .. => some ``Befehl.rueckVoid
-  | .pruefeMass .. => some ``Befehl.pruefeMass
-  | .setzePasszahl .. => some ``Befehl.setzePasszahl
-  | .whileTest .. => some ``Befehl.whileTest
-  | .forAnfang .. => some ``Befehl.forAnfang
-  | .forTest .. => some ``Befehl.forTest
-  | .forNaechster .. => some ``Befehl.forNaechster
-  | .zurueckSprung .. => some ``Befehl.zurueckSprung
-  | .starte .. => some ``Befehl.starte
-  | .ende .. => some ``Befehl.ende
-  | _ => none
-
-def programConstructors : List Name :=
-  [``Befehl.bindeWert,
-    ``Befehl.definiere,
-    ``Befehl.rufe,
-    ``Befehl.rueckVoid,
-    ``Befehl.pruefeMass,
-    ``Befehl.setzePasszahl,
-    ``Befehl.whileTest,
-    ``Befehl.forAnfang,
-    ``Befehl.forTest,
-    ``Befehl.forNaechster,
-    ``Befehl.zurueckSprung,
-    ``Befehl.starte,
-    ``Befehl.ende]
-
 def programKernStatements (constructor : Name) : RegistryStatements constructor .core where
   realization := .core AusElaborierung
   acceptanceRule := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
@@ -110,7 +79,7 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
 -- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
 theorem programKern_erfuellbar (constructor : Name) (registered : constructor ∈ programConstructors) :
     (programKernStatements constructor).jointlySatisfiable := by
-  sorry
+  exact programInstruction_erfuellbar constructor registered
 
 def programKernProofs (constructor : Name) (registered : constructor ∈ programConstructors) :
     RegistryEntry constructor ⟨.core, programKernStatements constructor⟩ where

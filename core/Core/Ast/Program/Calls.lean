@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.ProgramForms
+import Core.Ast.Semantik.Formbeweise
 
 @[expose] public section
 
