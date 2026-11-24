@@ -4,8 +4,10 @@
 
   `Lokal E` is the decidable local rules over the program's syntax interface, generic over the
   program's units and forms: the per-form authority obligation (`RegelLokal`, discharged per
-  form) and the outside rule of §4 (`AussenLokal` with `AussenGueltig`: every outside effect
-  valid at commit), over the catalogue selection (`KatalogWohlgeformt`). `stale_griff_ungueltig`
+  form), the per-form stack and memory obligation (`SchrankenLokal`, discharged per form;
+  open bounds stay admitted) and the outside rule of §4 (`AussenLokal` with `AussenGueltig`:
+  every outside effect valid at commit), over the catalogue selection (`KatalogWohlgeformt`).
+  `stale_griff_ungueltig`
   and the refusal theorems connect M10's outside provenance to validity at commit: a handle
   that records only an earlier answer's generation never establishes validity once the commit
   snapshot moved on.
@@ -16,6 +18,7 @@ public import Core.Maschine.Start
 public import Core.Aussen.Bindung
 public import Core.Aussen.Zulassung
 public import Core.Aussen.Provenienz
+public import Core.Annahme.Schranken
 public import Core.Beobachtung.Fluss.Quellregel
 
 @[expose] public section
@@ -112,10 +115,12 @@ def AussenLokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung
     Prop :=
   Aussen.ZulassungsRegel E.katalog.plattform ∧ AussenGueltig E
 
-/-- **`Lokal E`: the local rules** — catalogue, authority, outside validity and labelled
-    flow at source initialisation and at each form. -/
+/-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
+    flow and stack/memory bounds at source initialisation and at each form. The bounds row
+    is last, so units with open bounds are accepted exactly as before. -/
 def Lokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
-  KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧ Beobachtung.FlussLokal E
+  KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧
+    Beobachtung.FlussLokal E ∧ SchrankenLokal E
 
 /-- Satisfiability with both rights: a read and a write can use the same owned location. -/
 theorem befugt_erfuellbar (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)

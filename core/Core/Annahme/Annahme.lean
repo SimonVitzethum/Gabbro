@@ -91,10 +91,11 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
   exact False.elim h
 
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
-    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked. -/
+    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, and
+    no bounds to violate (open by default, so the bounds row holds unconditionally). -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
-  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_⟩,
+  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -110,6 +111,11 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
+  · refine ⟨fun η _ => ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
+      fun i _ _ _ _ _ _ _ _ kf _ _ _ _ _ => nomatch kf,
+      fun _ _ _ _ _ _ _ _ _ _ _ _ _ =>
+        ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩,
+      tiefenBezug_eq rfl⟩
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
