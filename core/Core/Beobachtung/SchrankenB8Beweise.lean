@@ -92,6 +92,7 @@ private theorem halte_leerlauf {ρ : Lauf E} {t : Nat}
 theorem kostenNull : kostenNullAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl Form inst E ρ c anfang
   simp only [Laufkosten, Kontextkosten, I.zaehle]
+  exact ⟨trivial, trivial⟩
 
 theorem kostenSchritt : kostenSchrittAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl Form inst E ρ t
@@ -217,7 +218,7 @@ theorem halteFremd : ¬ halteFremdAussage := by
         subst a
         subst n
         have cb : c' = Fortschritt.B := by
-          obtain ⟨s, hzs, hposs⟩ := own 0 (Nat.le_refl _) (by decide : 0 < 0 + 1)
+          obtain ⟨s, hzs, hposs⟩ := own 0 (Nat.le_refl _) (by omega)
           change some sB = some s at hzs
           obtain rfl := Option.some.inj hzs
           change (some Fortschritt.B : Option Kontext) = some c' at hposs
@@ -225,12 +226,13 @@ theorem halteFremd : ¬ halteFremdAussage := by
         subst c'
         have fremdB : ∀ d w spur, ρb.zeit.spur 0 = some (.kontext d w, spur) → d ≠ Fortschritt.B := by
           intro d w spur hstep
-          change some (.kontext Fortschritt.A (), (⟨[], []⟩ : SchrittSpur Unit Unit)) =
+          change some (SchrittWahl.kontext Fortschritt.A (), (⟨[], []⟩ : SchrittSpur Unit Unit)) =
             some (.kontext d w, spur) at hstep
           have hp := Option.some.inj hstep
           cases hp
           show Fortschritt.A ≠ Fortschritt.B
-          decide
+          intro hAB
+          cases hAB
         have hk : Kontextkosten ρb Fortschritt.B 0 1 = 0 := by
           have hk' := kontextkosten_fremd (ρ := ρb) (c := Fortschritt.B)
             (a := 0) (k := 0) (t := 0) rfl fremdB
@@ -242,17 +244,17 @@ theorem halteFremd : ¬ halteFremdAussage := by
         have hm0 : m = 0 := Option.some.inj hm.symm
         subst m
         rw [hk]
-        exact Nat.zero_le 0
   have fremdA : ∀ d w spur, ρb.zeit.spur 1 = some (.kontext d w, spur) → d ≠ Fortschritt.A := by
     intro d w spur hstep
-    change some (.kontext Fortschritt.B (), (⟨[], []⟩ : SchrittSpur Unit Unit)) =
+    change some (SchrittWahl.kontext Fortschritt.B (), (⟨[], []⟩ : SchrittSpur Unit Unit)) =
       some (.kontext d w, spur) at hstep
     have hp := Option.some.inj hstep
     cases hp
     show Fortschritt.B ≠ Fortschritt.A
-    decide
+    intro hBA
+    cases hBA
   have nach := H Unit Unit Unit Unit Bool Unit Unit Unit Unit
-    (inferInstance : DecidableEq Unit) Eb ρb Fortschritt.A 1 fremdA hyp1
+    Eb ρb Fortschritt.A 1 fremdA hyp1
   have verletzung := nach () Fortschritt.B 1 1 (by decide : 1 + 1 ≤ 2) ownB
   have hm0 : Kontextkosten ρb Fortschritt.B 1 1 ≤ 0 := verletzung 0 rfl
   have hk1 : Kontextkosten ρb Fortschritt.B 1 1 = 1 := by

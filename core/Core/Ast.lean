@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Proofs.View
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
@@ -19,6 +20,7 @@ public import Core.Ast.LowLevel.Proofs.Execution
 public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvTypes
 public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
 public import Core.Ast.LowLevel.Proofs.RegionUnit
 public import Core.Ast.LowLevel.Proofs.RegionSatisfiability
