@@ -191,7 +191,7 @@ private theorem leerlauf_erhaelt_kh {ρ : Lauf E} {t : Nat}
     rw [idle] at h
     cases h
   refine ⟨?_, ?_⟩
-  · unfold KostenPrefix Laufkosten at kosten ⊢
+  · unfold KostenPrefix
     rw [laufkosten_leerlauf idle]
     exact kosten
   · intro l c a n bound own
@@ -212,7 +212,7 @@ private theorem leerlauf_erhaelt_kh {ρ : Lauf E} {t : Nat}
           exact Nat.le_of_succ_le_succ b2
         have ak_ge : t ≤ a + k := by
           have h1 : ¬ Nat.succ (a + k) ≤ t := by
-            rw [Nat.add_succ]
+            rw [← Nat.add_succ]
             exact h
           exact Nat.le_of_lt_succ (lt_of_not_ge h1)
         have ak : a + k = t := Nat.le_antisymm ak_le ak_ge
