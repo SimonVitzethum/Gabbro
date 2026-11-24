@@ -44,7 +44,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
     intro code a b c hab hbc
     induction hbc with
     | start => exact hab
-    | schritt prev mid step ih => exact .schritt ih step
+    | schritt _ step ih => exact .schritt ih step
   suffices H : ∀ (slot : Nat) {type : Ty .value} (tree : Expr scope type)
       (env : Umgebung scope) (frame : Rahmen) (bound : frame.traegt env)
       (active : frame.rueckgabe = none) (pre post : List Befehl) (hpc : frame.pc = pre.length),
@@ -105,8 +105,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  case _ =>
-      rename_i ref visible ordinary
+  case _ ref visible ordinary =>
       intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
       have hb := bound ref
