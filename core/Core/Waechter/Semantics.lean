@@ -32,7 +32,7 @@ public meta def semanticsErrors (index : DependencyIndex) (roots : Array Name) (
     if seen.contains name then continue
     seen := seen.insert name
     let some idx := env.getModuleIdxFor? name | continue
-    let some (source, scan) := modules[env.header.moduleNames[idx.toNat]!]? | continue
+    let some (source, scan) := modules[env.header.modules[idx.toNat]!.module]? | continue
     if scan.wildcardArms.isEmpty then continue
     let some location ← findDeclarationRanges? name | continue
     for pos in scan.wildcardArms do

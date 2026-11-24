@@ -144,7 +144,7 @@ public meta def acceptanceErrors (env : Environment) (index : DependencyIndex) (
   for root in spec.acceptance do
     for name in index.closure root do
       if let some idx := env.getModuleIdxFor? name then
-        let mod := env.header.moduleNames[idx.toNat]!
+        let mod := env.header.modules[idx.toNat]!.module
         if spec.forbidden.any (·.isPrefixOf name) || spec.forbiddenModules.any (·.isPrefixOf mod) then
           errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is forbidden"
         else if !isAcceptance name && !allowedModules.any (·.isPrefixOf mod) then

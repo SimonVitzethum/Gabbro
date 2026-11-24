@@ -84,7 +84,7 @@ public meta def decisionErrors (names : Array Name) : MetaM (Array String) := do
   for name in names do
     let some info := env.find? name | continue
     let some body := info.value? true | continue
-    unless (body.find? (·.isAppOfArity ``of_decide_eq_true 3)).isSome do continue
+    unless (body.find? (·.isConstOf ``of_decide_eq_true)).isSome do continue
     let violation ← IO.mkRef none
     body.forEach' fun e => do
       if (← violation.get : Option Expr).isSome then return false

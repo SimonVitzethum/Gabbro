@@ -17,7 +17,7 @@ public meta def safetyErrors (env : Environment) (index : DependencyIndex) (root
       errors := errors.push s!"missing safety dependency root {root}"
     for name in index.closure root do
       if let some i := env.getModuleIdxFor? name then
-        let mod := env.header.moduleNames[i.toNat]!
+        let mod := env.header.modules[i.toNat]!.module
         if !allowed.any (·.isPrefixOf mod) || name.components.any (forbidden.contains ·) then
           errors := errors.push s!"safety dependency {root} -> {name} in {mod} is forbidden"
   return errors

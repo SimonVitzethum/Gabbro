@@ -89,7 +89,11 @@ public meta def auditEnvironment (sources : Array Source) : IO Environment := do
   let imports := sources.filterMap fun source =>
     if source.moduleName == `Core then none
     else some ({ module := source.moduleName, importAll := true } : Import)
-  importModules imports {} (level := .exported)
+  withImporting do
+    let (_, state) ← (importModulesCore imports (globalLevel := .exported)).run
+    -- The command only queries the private audit view. The original environment retains its public view.
+    finalizeImport state imports {} (leakEnv := false) (loadExts := false)
+      (level := .exported) (isModule := false)
 
 /-- Checks the direct imports serialized by each Core module. Allowed libraries manage their internal
     import graph. In particular, Mathlib's ImportGraph dependency uses Lake's own modules. -/
@@ -104,7 +108,7 @@ public meta def compiledImportErrors (env : Environment) : Array String := Id.ru
 
 public meta def isCoreConstant (env : Environment) (name : Name) : Bool :=
   match env.getModuleIdxFor? name with
-  | some index => isCoreModule env.header.moduleNames[index.toNat]!
+  | some index => isCoreModule env.header.modules[index.toNat]!.module
   | none => false
 
 end Gabbro.Core.Waechter
