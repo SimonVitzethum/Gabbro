@@ -106,15 +106,31 @@ def MemFrame.unreserved (frame : MemFrame) (granule : Nat) (extent : Strecke) : 
       decide (extent.getrennt ⟨entry.frame * granule, (entry.frame + 1) * granule⟩)) &&
     space.ausstehend.all (fun token => decide (extent.getrennt (token.frames granule)))
 
+def MemRegion.live (region : MemRegion) (s : MemState) : Bool :=
+  !region.backing.isEmpty && region.backing.all fun handle =>
+    s.rechte.lebt handle.objekt && s.rechte.gen handle.objekt == handle.gen &&
+    (match s.leihen handle.objekt with | .eigen => true | .verliehen _ => false)
+
 def heldMemRegion (z : ZielDaten) (s : MemState) (c : Kontext) (slot : Nat) : Option MemRegion := do
   let region ← (s.lokal c).regions[slot]?.join
-  if region.backing.isEmpty then none
-  else if region.backing.all (fun handle =>
-      s.rechte.lebt handle.objekt && s.rechte.gen handle.objekt == handle.gen &&
-      match s.leihen handle.objekt with | .eigen => true | .verliehen _ => false) &&
-      (s.lokal c).unreserved z.seitengranule region.extent then
-    some region
+  if region.live s && (s.lokal c).unreserved z.seitengranule region.extent then some region
   else none
+
+instance (owner extent : Strecke) : Decidable (owner.enthaelt extent) :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
+def MemFrame.covered (frame : MemFrame) (s : MemState) (extent : Strecke) : Bool :=
+  frame.regions.any fun slot =>
+    slot.any fun region => region.live s && decide (region.extent.enthaelt extent)
+
+def Adressraum.Aktivierbar (space : Adressraum) (z : ZielDaten) (s : MemState) (c : Kontext) : Prop :=
+  space.Wohlgeformt z ∧ (s.lokal c).covered s space.tabellen ∧
+  space.entries.all fun (_, entry) =>
+    (s.lokal c).covered s ⟨entry.frame * z.seitengranule, (entry.frame + 1) * z.seitengranule⟩
+
+instance (space : Adressraum) (z : ZielDaten) (s : MemState) (c : Kontext) :
+    Decidable (space.Aktivierbar z s c) :=
+  inferInstanceAs (Decidable (_ ∧ _))
 
 def MemFrame.bindMarke (frame : MemFrame) (name : Identifier) (token : Zuruecknahme) :
     Option MemFrame := do

@@ -92,10 +92,10 @@ def ActivateMeaningAussage : Prop :=
   ∀ target s c sp,
     ((s.lokal c).spaces[sp]? = none → (MemInstruction.activateSpace sp).evaluate target s c = none) ∧
     ∀ space, (s.lokal c).spaces[sp]? = some space →
-      (space.Wohlgeformt target →
+      (space.Aktivierbar target s c →
         (MemInstruction.activateSpace sp).evaluate target s c =
           some { s.lokal c with active := some sp, result := some .activated }) ∧
-      (¬ space.Wohlgeformt target → (MemInstruction.activateSpace sp).evaluate target s c = none)
+      (¬ space.Aktivierbar target s c → (MemInstruction.activateSpace sp).evaluate target s c = none)
 
 theorem activate_meaning : ActivateMeaningAussage := by
   intro target s c sp

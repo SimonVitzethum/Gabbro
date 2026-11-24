@@ -160,7 +160,7 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
     else none
   | .activateSpace sp => do
     let space ← frame.spaces[sp]?
-    if space.Wohlgeformt target then pure { frame with result := some .activated, active := some sp }
+    if space.Aktivierbar target s c then pure { frame with result := some .activated, active := some sp }
     else none
   | .bindToken name => do
     let some (.pending token) := frame.result | none
