@@ -236,7 +236,7 @@ def ProtectMeaningAussage : Prop :=
           transfer.loan = none ∧ transfer.regionen = none ∧ transfer.rechte = none ∧
           transfer.aktiv = none ∧ transfer.marken = none ∧
           (∀ i, i < pages → abbildung (base + i) =
-            (space.abbildung (base + i)).map (fun e => { e with rights := rights })) ∧
+            (space.abbildung (base + i)).map (fun e => { e with rechte := rights })) ∧
           (∀ pg, pg < base ∨ base + pages ≤ pg → abbildung pg = space.abbildung pg) ∧
           (∀ co sp' pg, sp' = sps ∧ base ≤ pg ∧ pg < base + pages → tlb co sp' pg = none) ∧
           (∀ co sp' pg, sp' ≠ sps ∨ pg < base ∨ base + pages ≤ pg →
@@ -670,7 +670,7 @@ def MapMeaningAussage : Prop :=
           transfer.loan = none ∧ transfer.regionen = none ∧ transfer.rechte = none ∧
           transfer.tlb = none ∧ transfer.aktiv = none ∧ transfer.marken = none ∧
           (∀ i, i < seiten → abbildung (base + i) =
-            some { frame := fbasis + i, rights := rights, generation := space.generation }) ∧
+            some { frame := fbasis + i, rechte := rights, generation := space.generation }) ∧
           (∀ pg, pg < base ∨ base + seiten ≤ pg → abbildung pg = space.abbildung pg)) ∧
       (¬ (rights ≠ [] ∧ fext.von < fext.bis ∧ bytes % g = 0 ∧ fext.von % g = 0 ∧
           0 < seiten ∧ virt % g = 0 ∧

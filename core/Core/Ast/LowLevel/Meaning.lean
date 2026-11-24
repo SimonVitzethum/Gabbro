@@ -284,7 +284,7 @@ def Instruction.evaluate {k : Katalog} (op : Instruction k) (s : State k) (c : K
         let fbasis := fext.von / g
         let abbildung := fun pg =>
           if base ≤ pg ∧ pg < base + seiten then
-            some { frame := fbasis + (pg - base), rights := rights, generation := space.generation }
+            some { frame := fbasis + (pg - base), rechte := rights, generation := space.generation }
           else space.abbildung pg
         pure { value := .mapped,
           raeume := some ((s.lokal c).spaces.set sp { space with abbildung := abbildung }) }
@@ -301,7 +301,7 @@ def Instruction.evaluate {k : Katalog} (op : Instruction k) (s : State k) (c : K
       let abbildung := fun pg =>
         match space.abbildung pg with
         | some e =>
-          if base ≤ pg ∧ pg < base + pages then some { e with rights := rights } else some e
+          if base ≤ pg ∧ pg < base + pages then some { e with rechte := rights } else some e
         | none => none
       let tlb := fun co sp' pg =>
         if sp' = sp ∧ base ≤ pg ∧ pg < base + pages then none
