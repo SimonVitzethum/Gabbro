@@ -235,36 +235,47 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
           .function (afterParams := afterParams) (afterResult := afterResult) (afterMeasure := afterMeasure)
             name ordinary result valid parameters measure (BracedBlock.braces items) distinct returns
             (by
-              simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append] using
+              simpa only [List.map_append, List.map_cons, List.map_nil, List.cons_append,
+                List.nil_append] using
                 (ParamsRead.printReads (ps := parameters) (rest := afterParams)))
             (by
               cases result with
               | none =>
                   refine ResultReads.absent ?_
                   intro more h
-                  simp [afterParams, afterResult, resultPieces, measurePieces, BracedBlock.printPieces,
-                    arrow, keyword, printOpenBrace, printDecreases] at h
+                  cases measure with
+                  | none =>
+                      simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName] at h
+                  | some m0 =>
+                      simp [afterParams, resultPieces, measurePieces, BracedBlock.printPieces, arrow,
+                        keyword, printPunctuation, printProgramWord, Identifier.print, keywordName] at h
               | some written =>
                   refine ResultReads.typed ?_
                   exact WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
                     intro more h
-                    simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                      printOpenBrace, printDecreases] at h))
+                    cases measure with
+                    | none =>
+                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                          printPunctuation, printProgramWord, Identifier.print, keywordName] at h
+                    | some m0 =>
+                        simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
+                          printPunctuation, printProgramWord, Identifier.print, keywordName] at h))
             (by
               cases measure with
               | none =>
                   refine MeasureReads.absent ?_
                   intro more h
                   simp [afterResult, measurePieces, BracedBlock.printPieces, arrow, keyword,
-                    printOpenBrace, printDecreases] at h
+                    printPunctuation, printProgramWord, Identifier.print, keywordName] at h
               | some m =>
                   refine MeasureReads.present m ?_
                   exact Expr.printReads (rest := afterMeasure) m.expression (by
-                    simpa [afterMeasure, BracedBlock.printPieces, List.map_append] using
+                    simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace] using
                       (noOperatorAtOpenBrace (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
             ((BracedBlock.braces items).printReads rest)
         simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
-          List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
-          List.append_assoc] using proof
+          afterParams, afterResult, afterMeasure, List.map_append, List.map_cons, List.map_nil,
+          List.cons_append, List.nil_append, List.append_assoc] using proof
 
 end Gabbro.Core.Ast
