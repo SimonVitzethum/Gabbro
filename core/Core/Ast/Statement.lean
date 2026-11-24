@@ -225,11 +225,10 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       cases firstEq
       obtain ⟨sameYes, moreEq⟩ := ihYes yesRead'
       cases sameYes
+      cases moreEq
       obtain ⟨sameNo, restEq⟩ := ihNo noRead'
       cases sameNo
       exact ⟨rfl, restEq⟩
-    · exfalso
-      cases inputEq
       cases condRead with
       | atom a t => exact AtomReads.not_assignment a
   · intros
@@ -271,7 +270,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | done => exact ⟨rfl, rfl⟩
     | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
-    rename_i _ _ ihBlock b rest' other
+    rename_i _ _ midR moreR ihBlock b rest' other
     cases other with
     | done =>
         exfalso
