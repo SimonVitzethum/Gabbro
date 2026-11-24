@@ -167,12 +167,31 @@ theorem StmtReads.let_header
       name.val = spelling ∧
       LowLevel.RegionReads region.binding.name input initializer (semicolon :: rest) ∧
       tree = ⟨_, .letRegion name ordinary region visible initializer⟩) := by
+  generalize same : letKeyword :: .word spelling :: assignment :: input = tokens at read
   cases read with
-  | letBinding name ordinary value tail => exact Or.inl ⟨name, ordinary, _, _, _, rfl, value, tail⟩
+  | letBinding name ordinary value tail =>
+    obtain ⟨spelled, more⟩ := List.cons.inj (List.cons.inj same).2
+    obtain rfl := (List.cons.inj more).2
+    exact Or.inl ⟨name, ordinary, _, _, _, (Token.word.inj spelled).symm, value, tail⟩
   | letRegion name ordinary region visible read =>
-    exact Or.inr ⟨name, ordinary, region, visible, _, rfl, read, rfl⟩
-  | directCall call => cases call
-  | tupleBind pattern _ _ => cases pattern
+    obtain ⟨spelled, more⟩ := List.cons.inj (List.cons.inj same).2
+    obtain rfl := (List.cons.inj more).2
+    exact Or.inr ⟨name, ordinary, region, visible, _, (Token.word.inj spelled).symm, read, rfl⟩
+  | directCall call =>
+    cases call
+    exact nomatch (List.cons.inj (List.cons.inj same).2).1
+  | tupleBind pattern _ _ =>
+    cases pattern
+    exact nomatch (List.cons.inj (List.cons.inj same).2).1
+  | assignVar => exact nomatch (List.cons.inj (List.cons.inj same).2).1
+  | letMutable | letMutableValue => exact nomatch (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).1
+  | assignField | bindDirect =>
+    have punctuation := (List.cons.inj (List.cons.inj (List.cons.inj same).2).2).1
+    cases punctuation
+  | _ =>
+    have prefix := (List.cons.inj same).1
+    simp only [letKeyword, keyword, returnKeyword, ifKeyword, String.reduceToList,
+      Token.word.injEq, List.cons.injEq, Char.reduceEq, false_and] at prefix
 
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by

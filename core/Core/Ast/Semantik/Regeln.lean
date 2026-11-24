@@ -91,7 +91,6 @@ structure Rahmen where
   mass : Option Nat := none
   arrivalRegions : List Katalog.Strecke := []
   platform : Katalog.Plattform := .x86_64
-  borrowedRegions : List Nat := []
   environment : List (Identifier × Katalog.DienstAbi × Katalog.FirmwareZeile) := []
 
 /-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
@@ -210,18 +209,22 @@ def Rahmen.eintrittArgumente (frame : Rahmen) (types : List (Ty .value)) : Optio
       if slot < types.length then some ⟨.ownedRegion, slot⟩ else none }
   else none
 
+def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
+  | ⟨.regionView _, view⟩ => view.slot == slot
+  | _ => false
+
+def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
+  let hasView := List.any (fun v : Option Dynamisch => v.any (Dynamisch.borrowsRegion slot))
+  hasView frame.lokale || frame.fortsetzungen.any (fun continuation => hasView continuation.lokale)
+
 def Rahmen.bindeRegion (frame : Rahmen) (receiver : Nat) (init : RegionInitializer)
     (live : Nat → Bool) : Rahmen := Id.run do
   let refused := frame.halt .ungueltigerBereich
   let some slot := frame.lokale[receiver]?.join.bind (wertAls .ownedRegion) | return refused
   let some extent := frame.arrivalRegions[slot]? | return refused
-  if !live slot || frame.borrowedRegions.contains slot then return refused
+  if !live slot || frame.borrowsRegion slot then return refused
   let some value := LowLevel.RegionInitializer.value frame.platform.ziel slot extent init | return refused
-  let borrowed := match init with
-    | .address => frame.borrowedRegions
-    | .view .. => slot :: frame.borrowedRegions
-  return { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale,
-    borrowedRegions := borrowed }
+  return { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale }
 
 abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
 abbrev Plan := SchrittPlan PUnit PUnit Int PUnit

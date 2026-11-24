@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Syntax
-public import Core.Ast.Semantik.Arithmetik
+public import Core.Ast.Aggregate.Runtime
 public import Core.Maschine.Start
 
 @[expose] public section

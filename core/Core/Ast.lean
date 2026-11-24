@@ -8,6 +8,7 @@ public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
+public import Core.Ast.LowLevel.Proofs.RegionUnit
 public import Core.Ast.Inventory.All
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
