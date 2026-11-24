@@ -67,14 +67,12 @@ theorem RecordFieldInversion : RecordFieldInversionAussage := by
     (by trivial)
     (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
     (by trivial) (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
-    (by trivial)
     (by
       intro hEq htok
       exfalso
-      exact (by
-        rename_i blocked
-        exact blocked ⟨.projection, .word field.val :: input,
-          by simpa only [Infix.token] using htok.symm, allowed⟩))
+      rename_i blocked
+      exact blocked ⟨.projection, .word field.val :: input,
+        by simpa only [Infix.token] using htok.symm, allowed⟩)
     (by intro hEq htok; cases hEq)
     (by intro hEq htok; cases hEq)
     (by intro hEq htok; cases hEq)
@@ -83,14 +81,18 @@ theorem RecordFieldInversion : RecordFieldInversionAussage := by
     (by intro hEq htok; cases hEq)
     (by
       intro hEq htok
-      rename_i base' field' index written hle tail _
+      rename_i nm' labs' tys' input' base' field' index written hle tail ih
       injection hEq with hnm hlabs hlayout
-      have htys : _ := tupleType_inj hlayout
-      have hlbs : _ := label_inj hlabs
-      have restEq : .word field.val :: input = .word field'.val :: _ := (List.cons.inj htok).2
+      have htys : tys' = types := tupleType_inj hlayout
+      have hlbs : labs' = labels := label_inj hlabs
+      have restEq : .word field.val :: input = .word field'.val :: input' := (List.cons.inj htok).2
       have fld : field = field' := Subtype.ext (List.cons.inj restEq).1
+      have inputEq : input' = input := (List.cons.inj restEq).2.symm
+      subst nm'
+      subst tys'
+      subst labs'
       subst field'
-      subst hnm
+      subst input'
       exact ⟨index, written, tail⟩) read
 
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
