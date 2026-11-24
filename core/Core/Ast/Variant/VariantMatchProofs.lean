@@ -324,8 +324,11 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
 
 theorem variantMatch_inversion : Gabbro.Core.Ast.Surface.VariantMatchInversionAussage := by
   intro scope result input tree rest read
+  generalize htoks : keyword "match" :: input = toks at read
   cases read with
   | variantMatch valueRead armsRead =>
+      injection htoks with hi
+      subst hi
       exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
 
 end Gabbro.Core.Ast.Semantik
