@@ -34,6 +34,14 @@ def DienstAbi.name : DienstAbi → String
   | .psciSmc => "psci_smc"
   | .sbiEcall => "sbi_ecall"
 
+theorem DienstAbi.name_injective : Function.Injective DienstAbi.name := by
+  intro a b same
+  cases a <;> cases b <;> simp only [DienstAbi.name, String.reduceEq] at same ⊢
+
+theorem FirmwareZeile.name_injective : Function.Injective FirmwareZeile.name := by
+  intro a b same
+  cases a <;> cases b <;> simp only [FirmwareZeile.name, String.reduceEq] at same ⊢
+
 def FirmwareZeile.zugelassen (row : FirmwareZeile) (k : Katalog) (abi : DienstAbi) : Prop :=
   k.enthaelt (.endpoint row.endpunkt) ∧ k.plattform.firmwareAbi row.endpunkt = some abi
 
