@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.ModelTypes
+public import Core.Ast.Aggregate.Types.Model
 
 @[expose] public section
 

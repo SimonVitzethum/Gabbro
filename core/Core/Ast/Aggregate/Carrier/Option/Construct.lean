@@ -71,10 +71,10 @@ def OptionPresentAussage : Prop :=
     (command.auswerten frame).temp slot = some ⟨indexOptionType count, expected⟩
 
 def OptionLetDerivationAussage : Prop :=
-  ∀ ctx, (optionLetForm ctx).produktion.Entry
+  ∀ ctx, Nonempty (OptionLetArgs ctx) → (optionLetForm ctx).produktion.Entry
 
 def OptionReturnDerivationAussage : Prop :=
-  ∀ ctx, (optionReturnForm ctx).produktion.Entry
+  ∀ ctx, Nonempty (OptionReturnArgs ctx) → (optionReturnForm ctx).produktion.Entry
 
 def OptionConstructorParseAussage : Prop :=
   (∀ ctx, (optionLetForm ctx).ParseAussage) ∧

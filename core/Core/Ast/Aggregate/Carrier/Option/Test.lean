@@ -40,7 +40,7 @@ def OptionTestCasesAussage : Prop :=
     (result = some ⟨.bool, false⟩ ↔ value = .inr (.inl PUnit.unit))
 
 def OptionTestDerivationAussage : Prop :=
-  ∀ scope, (optionTestForm scope).produktion.Entry
+  ∀ scope, Nonempty (OptionTestArgs scope) → (optionTestForm scope).produktion.Entry
 
 def OptionTestParseAussage : Prop :=
   ∀ scope, (optionTestForm scope).ParseAussage

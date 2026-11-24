@@ -21,7 +21,7 @@ def Scope.effectCarrier (scope : Scope) (name : Identifier) : Option (Nat × Boo
       match binding.type with
       | .carrierSchema _ _ _ exported => some (outer.length, exported)
       | _ => none
-    else outer.effectCarrier name
+    else Scope.effectCarrier outer name
 
 def WrittenCarrierEffect.resolve (scope : Scope) (publicUse : Bool) (written : WrittenCarrierEffect) :
     Option CarrierEffect := do

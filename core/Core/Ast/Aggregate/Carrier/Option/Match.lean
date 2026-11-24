@@ -9,10 +9,11 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Gabbro.Core.Text
 
-def optionMatchForm (ctx : OptionContext) :
-    Quellform (.statement ctx.1 ctx.2)
-      {a : Surface.VariantMatchArgs ctx // ∃ count,
-        a.name = [] ∧ a.labels = indexOptionLabels ∧ a.payloads = indexOptionPayloads count} :=
+def OptionMatchArgs (ctx : OptionContext) :=
+  {a : Surface.VariantMatchArgs ctx // ∃ count,
+    a.name = [] ∧ a.labels = indexOptionLabels ∧ a.payloads = indexOptionPayloads count}
+
+def optionMatchForm (ctx : OptionContext) : Quellform (.statement ctx.1 ctx.2) (OptionMatchArgs ctx) :=
   let matched := variantMatchForm ctx
   { produktion := ⟨fun a => matched.produktion.tree a.val,
                   fun a => matched.produktion.production a.val⟩
@@ -26,7 +27,7 @@ def OptionMatchPayloadAussage : Prop :=
     (value = .inr (.inl PUnit.unit) → actual = (1, none))
 
 def OptionMatchDerivationAussage : Prop :=
-  ∀ ctx, (optionMatchForm ctx).produktion.Entry
+  ∀ ctx, Nonempty (OptionMatchArgs ctx) → (optionMatchForm ctx).produktion.Entry
 
 def OptionMatchParseAussage : Prop :=
   ∀ ctx, (optionMatchForm ctx).ParseAussage
