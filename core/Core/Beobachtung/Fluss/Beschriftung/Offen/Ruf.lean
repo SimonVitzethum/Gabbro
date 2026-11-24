@@ -168,6 +168,8 @@ theorem pruefeMassSicht : PruefeMassSichtAussage := by
     simp only [Rahmen.zahl, tempPub quelle hq]
   have hFun : r₁.funktion = r₂.funktion := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktion) h
+  have hFunktab : r₁.funktionen = r₂.funktionen := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
   have hFort : r₁.fortsetzungen = r₂.fortsetzungen := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).fortsetzungen) h
   have hStopp : r₁.stopp = r₂.stopp := by
@@ -199,8 +201,8 @@ theorem pruefeMassSicht : PruefeMassSichtAussage := by
     maskiere_gleich_mono hL 0 _ _ lokEq
   change (r₁.setzeMass quelle).sicht β = (r₂.setzeMass quelle).sicht β
   unfold Rahmen.setzeMass
-  simp only [← hpc', ← hZahl, ← hFun, ← hFort, ← hStopp, ← hGlob, ← hZa, ← hOb,
-    ← hArr, ← hPlat, ← hEnv]
+  simp only [← hpc', ← hZahl, ← hFun, ← hFunktab, ← hFort, ← hStopp, ← hGlob, ← hZa,
+    ← hOb, ← hArr, ← hPlat, ← hEnv]
   cases hfunk : r₁.funktion with
   | none =>
       simp only [hfunk, Id.run, pure, if_true]
