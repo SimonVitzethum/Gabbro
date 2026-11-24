@@ -23,7 +23,7 @@ theorem tupleLocals_laenge : (types : List (Ty .value)) →
       congrArg Nat.succ (tupleLocals_laenge tail vtail more)
 
 /-- `liesTupel` depends only on the `types.length` consecutive temporaries it reads. -/
-theorem liesTupel_cong (types : List (Ty .value)) :
+theorem liesTupel_cong : (types : List (Ty .value)) →
     ∀ (slot : Nat) (temp₁ temp₂ : Nat → Option Dynamisch),
       (∀ k, k < types.length → temp₁ (slot + k) = temp₂ (slot + k)) →
       liesTupel temp₁ slot types = liesTupel temp₂ slot types
@@ -41,7 +41,7 @@ theorem liesTupel_cong (types : List (Ty .value)) :
       simp only [liesTupel, h0, liesTupel_cong tail (slot + 1) temp₁ temp₂ htail]
 
 /-- `liesRecord` depends only on the temporaries named in `sources`. -/
-theorem liesRecord_cong (types : List (Ty .value)) :
+theorem liesRecord_cong : (types : List (Ty .value)) →
     ∀ (sources : List Nat) (temp₁ temp₂ : Nat → Option Dynamisch),
       (∀ slot ∈ sources, temp₁ slot = temp₂ slot) →
       liesRecord temp₁ types sources = liesRecord temp₂ types sources
@@ -64,10 +64,15 @@ theorem maskiere_anhaengen {l₀ l₁ : Nat → Etikett} :
       vs.length = n →
       maskiere l₁ 0 (vs ++ xs) = maskiere l₁ 0 (vs ++ ys)
   | 0, vs, xs, ys, hL, e, hlen => by
-      have hvn : vs = [] := List.length_eq_zero.mp hlen
+      have hvn : vs = [] := by
+        cases vs with
+        | nil => rfl
+        | cons v vs' =>
+            simp only [List.length_cons] at hlen
+            omega
       subst vs
       simpa only [List.nil_append, Nat.zero_add] using
-        (maskiere_gleich_mono (fun i hi => by simpa only [Nat.zero_add] using hL i hi)
+        (maskiere_gleich_mono (fun i hi => hL i (by simpa only [Nat.zero_add] using hi))
           0 xs ys e)
   | n + 1, vs, xs, ys, hL, e, hlen => by
       cases vs with
@@ -80,7 +85,7 @@ theorem maskiere_anhaengen {l₀ l₁ : Nat → Etikett} :
             n vs' xs ys
             (fun j hj => by
               have hz : (n + j) + 1 = n + 1 + j := by omega
-              simpa only [hz] using hL j)
+              exact hL j (by simpa only [hz] using hj))
             e (by omega)
           have tailEq : maskiere l₁ 1 (vs' ++ xs) = maskiere l₁ 1 (vs' ++ ys) := by
             simpa only [Nat.zero_add, maskiere_verschoben] using ih
@@ -107,6 +112,14 @@ theorem baueArraySicht : BaueArraySichtAussage := by
       have hk := hRead (.temp (ziel + i.val)) hmem
       change r₁.temp (ziel + i.val) = r₂.temp (ziel + i.val) at hk
       rw [hk]
+    change (do
+      let values ← Vector.ofFnM (n := count) fun i =>
+        (r₁.temp (ziel + i.val)).bind (wertAls element)
+      pure ⟨.array element count, values⟩) =
+      (do
+      let values ← Vector.ofFnM (n := count) fun i =>
+        (r₂.temp (ziel + i.val)).bind (wertAls element)
+      pure ⟨.array element count, values⟩)
     rw [hFn]
 
 /-- The view after `baueTupel`: same shape, the payload comes from `liesTupel`. -/
@@ -126,6 +139,8 @@ theorem baueTupelSicht : BaueTupelSichtAussage := by
       have got := hRead (.temp (ziel + k)) hmem
       change r₁.temp (ziel + k) = r₂.temp (ziel + k) at got
       exact got
+    change (liesTupel r₁.temp ziel types).map (fun values => ⟨tupleType types, values⟩) =
+      (liesTupel r₂.temp ziel types).map (fun values => ⟨tupleType types, values⟩)
     rw [liesTupel_cong types ziel r₁.temp r₂.temp hpoint]
 
 /-- The view after `baueRecord`: the payload comes from `liesRecord` over the sources. -/
@@ -144,6 +159,10 @@ theorem baueRecordSicht : BaueRecordSichtAussage := by
       have got := hRead (.temp slot) hmem
       change r₁.temp slot = r₂.temp slot at got
       exact got
+    change (liesRecord r₁.temp types sources).map
+        (fun record => ⟨recordValueType name labels types, record⟩) =
+      (liesRecord r₂.temp types sources).map
+        (fun record => ⟨recordValueType name labels types, record⟩)
     rw [liesRecord_cong types sources r₁.temp r₂.temp hpoint]
 
 /-- The view after `bindeTupel`: the pushed block is computed from `source`, which is
@@ -184,19 +203,13 @@ theorem bindeTupelSicht_mitTemp :
   let vs₂ := (((r₂.temp quelle).bind (wertAls (tupleType types))).map fun product =>
     tupleLocals types product bind).getD []
   have vsEq : vs₁ = vs₂ := by
-    change ((((r₁.temp quelle).bind (wertAls (tupleType types))).map fun product =>
-        tupleLocals types product bind).getD []) =
-      (((r₂.temp quelle).bind (wertAls (tupleType types))).map fun product =>
-        tupleLocals types product bind).getD []
+    dsimp only [vs₁, vs₂]
     rw [tempPub quelle hQ]
   have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 (vs₁.reverse ++ r₁.lokale) =
       maskiere (β.lokal (r₁.pc + 1)) 0 (vs₂.reverse ++ r₂.lokale) := by
     rw [← vsEq]
     have hlen : vs₁.length = 0 ∨ vs₁.length = behalteneTupel types bind := by
-      change ((((r₁.temp quelle).bind (wertAls (tupleType types))).map fun product =>
-          tupleLocals types product bind).getD []).length = 0 ∨
-        (((r₁.temp quelle).bind (wertAls (tupleType types))).map fun product =>
-          tupleLocals types product bind).getD []).length = behalteneTupel types bind
+      dsimp only [vs₁]
       cases hopt : (r₁.temp quelle).bind (wertAls (tupleType types)) with
       | none =>
           left
@@ -208,7 +221,12 @@ theorem bindeTupelSicht_mitTemp :
           exact tupleLocals_laenge types product bind
     cases hlen with
     | inl h0 =>
-        have hnil : vs₁ = [] := List.length_eq_zero.mp h0
+        have hnil : vs₁ = [] := by
+          cases vs₁ with
+          | nil => rfl
+          | cons v vs' =>
+              simp only [List.length_cons] at h0
+              omega
         rw [hnil]
         change maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
           maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale
@@ -234,12 +252,12 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
     { temp := fun q s => if q = 0 then (if s = 6 then {0} else ∅) else ∅
       lokal := fun _ _ => ∅ }
   let r₁ : Rahmen := { Rahmen.start [] with temp := fun s =>
-    if s = 6 then some ⟨.bool, true⟩ else none }
+    if s = 6 then some (⟨.bool, true⟩ : Dynamisch) else none }
   let r₂ : Rahmen := Rahmen.start []
   have h56 : (5 : Nat) ≠ 6 := by omega
   have h10 : (1 : Nat) ≠ 0 := by omega
   have hQ : oeffentlich (β.temp 0 5) = true := by
-    simp only [β, h56, oeffentlich_leer, if_false]
+    simp only [β, h56, oeffentlich_leer, if_false, if_true]
   have hL : ∀ i, oeffentlich (β.lokal (0 + 1) i) = true →
       oeffentlich (β.lokal 0 i) = true := by
     intro i _
@@ -254,9 +272,9 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
     funext s
     by_cases hs : s = 6
     · subst s
-      simp only [β, r₁, r₂, Rahmen.start, hsecret, if_false]
+      simp only [β, r₁, r₂, Rahmen.start, hsecret, if_false, if_true]
     · have hpub : oeffentlich (β.temp 0 s) = true := by
-        simp only [β, hs, oeffentlich_leer, if_false]
+        simp only [β, hs, oeffentlich_leer, if_false, if_true]
       simp only [hpub, if_true, r₁, r₂, hs, if_false]
   have hview : r₁.sicht β = r₂.sicht β := by
     simp only [Rahmen.sicht]
@@ -270,7 +288,7 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
   have eqt : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).temp 6 =
       ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).temp 6 := by
     simpa only [Rahmen.sicht, β, h10, if_false, oeffentlich_leer, if_true] using eqv
-  change (some ⟨.bool, true⟩ : Option Dynamisch) = none at eqt
+  change (some (⟨.bool, true⟩ : Dynamisch) : Option Dynamisch) = none at eqt
   cases eqt
 
 /-- The view after `setzeRecordFeld`: one local is overwritten from a public source. -/
