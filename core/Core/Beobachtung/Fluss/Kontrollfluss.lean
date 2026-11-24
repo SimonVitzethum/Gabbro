@@ -14,9 +14,18 @@ def KontrollflussNIAussage : Prop :=
 
 private theorem spekulationszugriffe_leer {Ort : Type} (h : Spekulationshuelle) :
     h.zugriffe ([] : List (Option Ort)) = [] := by
+  rw [Spekulationshuelle.zugriffe]
   cases hfen : h.fenster with
   | none => rfl
   | some n => cases n <;> rfl
+
+private theorem fragment_impl_nach {p : Fragment} (plattform : Plattform)
+    {c : Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit} {i : Befehl}
+    {es : List Ast.Semantik.Plan}
+    (impl : ((p.einheit plattform).system.regel i).impl c s w es u) :
+    es = [Ast.Semantik.plan] ∧ u = Befehl.nach i c s := by
+  change es = [Ast.Semantik.plan] ∧ u = Befehl.nach i c s at impl
+  exact impl
 
 /-- Every context step of a source fragment changes only the local frame: its plan is the
     internal plan and the machine protocol contributes no event. The step is therefore
@@ -43,9 +52,8 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
               cases impl with
               | kontext keinAbsturz bereit regel aus =>
                   obtain ⟨i, kopfI, implI⟩ := regel
-                  change [plan] = [Ast.Semantik.plan] ∧ u = Befehl.nach i c vor at implI
-                  have planEq : plan = Ast.Semantik.plan := (List.cons.inj implI.1).1
-                  have uEq : u = Befehl.nach i c vor := implI.2
+                  have implFakten := fragment_impl_nach (p := p) plattform implI
+                  have planEq := (List.cons.inj implFakten.1).1
                   rw [planEq] at aus
                   rw [FuehrtSchrittAus] at aus
                   obtain ⟨rahmen, liest, sperren, v, fuehrtAus, speicherfolge, nextEq⟩ := aus
@@ -59,21 +67,15 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                     cases speicherfolge with
                     | nil => rfl
                   rw [vEq] at nextEq
-                  have uStatus : u.status = vor.status := by
-                    rw [uEq]
-                    rfl
-                  have uBuchung : u.buchung = vor.buchung := by
-                    rw [uEq]
-                    rfl
-                  have nextStatus : next.status = vor.status := by
-                    rw [nextEq]
-                    exact uStatus
-                  have nextBuchung : next.buchung = vor.buchung := by
-                    rw [nextEq]
-                    exact uBuchung
+                  have nachStatus : (Befehl.nach i c vor).status = vor.status := rfl
+                  have nachBuchung : (Befehl.nach i c vor).buchung = vor.buchung := rfl
+                  have uStatus := (congrArg (fun z => z.status) implFakten.2).trans nachStatus
+                  have uBuchung := (congrArg (fun z => z.buchung) implFakten.2).trans nachBuchung
+                  have nextStatus := (congrArg (fun z => z.status) nextEq).trans uStatus
+                  have nextBuchung := (congrArg (fun z => z.buchung) nextEq).trans uBuchung
                   have nextStatusFun : ∀ c', next.status c' = vor.status c' := by
                     intro c'
-                    rw [nextStatus]
+                    exact congrFun nextStatus c'
                   have konstantFalsch : (p.einheit plattform).fluss.konstantzeit f = false := rfl
                   have spekLeer :
                       (p.einheit plattform).fluss.spekulativ f (vor.lokal c) predictor = [] := rfl
@@ -111,5 +113,6 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                   rw [spurLeer, aussenLeer, kontextLeer]
                   simp only [keinEnde, ↓reduceIte, List.nil_append]
                   rfl
+              | antwort _ _ | interrupt _ _ | absturz _ => contradiction
 
 end Gabbro.Core.Beobachtung
