@@ -3,6 +3,7 @@ module
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.MergeObligations
 public import Core.Ast.LowLevel.Mem.Proofs.MergePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.MergeSatisfiability
 
 @[expose] public section
 
