@@ -36,6 +36,28 @@ structure CarrierEffect where
 inductive Kind where
   | value
 
+/-- Pointer rights written at the type: read, write, or both. Execute rights
+    and owner marks are refused at the surface (no `x`, no `own`); they belong
+    to the parallel owner-mark branch. -/
+inductive PtrRecht where
+  | r
+  | w
+  | rw
+  deriving DecidableEq, Repr
+
+/-- The surface spelling of pointer rights. Only `r`, `w` and `rw` exist;
+    `x` and `own@…` are refused (no grammar arm admits them). -/
+def PtrRecht.spelling : PtrRecht → List Char
+  | .r => ['r']
+  | .w => ['w']
+  | .rw => ['r', 'w']
+
+def PtrRecht.token (recht : PtrRecht) : Token := .word recht.spelling
+
+theorem PtrRecht.spelling_injective : Function.Injective PtrRecht.spelling := by
+  intro a b same
+  cases a <;> cases b <;> first | rfl | (cases same)
+
 inductive Ty : Kind → Type where
   /-- Integers with inclusive, architecture-independent bounds. -/
   | int (lo hi : Int) : Ty .value
@@ -55,6 +77,9 @@ inductive Ty : Kind → Type where
   | address (space : LowLevel.AddressSpace) : Ty .value
   | ownedRegion : Ty .value
   | regionView (element : Ty .value) : Ty .value
+  /-- A checked capability: an address in `space` with `recht` to a `referent`.
+      There is no integer-to-pointer conversion; producers name a live table. -/
+  | ptr (space : LowLevel.AddressSpace) (recht : PtrRecht) (referent : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -88,7 +113,7 @@ def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
     | .carrierSchema count .. => some count
     | .int .. | .bool | .array .. | .productEnd | .product .. | .record .. | .recordSchema ..
     | .sumEnd | .sum .. | .variant .. | .variantSchema .. | .text .. | .effectGroupSchema ..
-    | .address .. | .ownedRegion | .regionView .. => none
+    | .address .. | .ownedRegion | .regionView .. | .ptr .. => none
   | none => none
 
 /-- Finite carriers of equal count share the same checked numerical index type. -/
