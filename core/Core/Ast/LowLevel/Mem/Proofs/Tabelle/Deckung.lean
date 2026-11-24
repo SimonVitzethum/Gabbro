@@ -69,15 +69,16 @@ theorem MemFrame.tabellenSicht_hit {frame : MemFrame} {sp page : Nat} {entry : S
     simp only [h] at hit
     exact ⟨space, rfl, hit⟩
 
-/-- A table entry makes its own single-page extent reserved: the space holding it overlaps it. -/
+/-- An address inside a table entry's page keeps that page reserved: the single byte overlaps
+    the entry's frame extent, so no region operation can hand it out again. -/
 theorem Adressraum.eintrag_reserviert {frame : MemFrame} {sp : Nat} {space : Adressraum}
     (found : frame.spaces[sp]? = some space) {page : Nat} {entry : Seiteneintrag}
-    (hit : space.abbildung page = some entry) {granule : Nat} (gpos : 0 < granule) :
-    frame.unreserved granule ⟨entry.frame * granule, (entry.frame + 1) * granule⟩ = false := by
+    (hit : space.abbildung page = some entry) {granule phys off : Nat}
+    (hphys : phys = entry.frame * granule + off) (hlt : off < granule) :
+    frame.unreserved granule ⟨phys, phys + 1⟩ = false := by
   have spaceMem : space ∈ frame.spaces := List.mem_of_getElem? found
   by_contra hne
-  have htrue : frame.unreserved granule ⟨entry.frame * granule, (entry.frame + 1) * granule⟩ =
-      true := by
+  have htrue : frame.unreserved granule ⟨phys, phys + 1⟩ = true := by
     simpa only [Bool.not_eq_false] using hne
   unfold MemFrame.unreserved at htrue
   have hall := List.all_eq_true.mp htrue space spaceMem
@@ -96,17 +97,21 @@ theorem Adressraum.eintrag_reserviert {frame : MemFrame} {sp : Nat} {space : Adr
     obtain ⟨pg, ent⟩ := pair
     simp only at hit
     subst hit
-    have expand : (ent.frame + 1) * granule = ent.frame * granule + granule := by
+    have low : ent.frame * granule ≤ phys := by
+      rw [hphys]
+      exact Nat.le_add_right _ _
+    have high : phys < (ent.frame + 1) * granule := by
+      rw [hphys]
       rw [Nat.add_mul]
       simp only [Nat.one_mul]
-    have self : ¬ (⟨ent.frame * granule, (ent.frame + 1) * granule⟩ : Strecke).getrennt
+      omega
+    have notSep : ¬ (⟨phys, phys + 1⟩ : Strecke).getrennt
         ⟨ent.frame * granule, (ent.frame + 1) * granule⟩ := by
       intro h
       unfold Strecke.getrennt at h
-      rw [expand] at h
       rcases h with h | h
       · omega
       · omega
-    exact self sep
+    exact notSep sep
 
 end Gabbro.Core.Ast.LowLevel
