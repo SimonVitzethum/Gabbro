@@ -192,14 +192,19 @@ theorem mutableLocal_erfuellbar : mutableLocalJoint := by
     · intro h
       cases h
   let a : Surface.MutableLocalArgs [] none := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
-  let s := (I.start (form.einheit platform a) start).2
-  refine ⟨ctx, a, Ast.print (form.produktion.tree a), s,
-    Ast.parse_print (form.produktion.tree a), rfl, .start,
+  let E := form.einheit platform a
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  have initStep : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start initStep
+  refine ⟨ctx, a, Ast.print (form.produktion.tree a), s₁,
+    Ast.parse_print (form.produktion.tree a), rfl, reached,
     form.realisiert (fun args => by
       change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code[(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
       simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
         Nat.sub_self, List.getElem?_cons_zero])
-      platform a s rfl rfl rfl rfl, ?_⟩
+      platform a s₁ rfl rfl rfl rfl, ?_⟩
   intro g guard
   cases guard
 
