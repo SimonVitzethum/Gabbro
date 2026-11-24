@@ -91,7 +91,7 @@ theorem revalidiert_gueltig (p : Plattform) (s : AussenSicht) (q : Frage) (a : A
   | error e =>
     rw [hv] at erfolg
     simp only [Except.isOk, Except.toBool] at erfolg
-    exact False.elim erfolg
+    exact Bool.false_ne_true erfolg
 
 /-- Satisfiability: a hosted read is valid at commit. -/
 theorem gueltig_erfuellbar (p : Plattform) (bytes : List UInt8) :

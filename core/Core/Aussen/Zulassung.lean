@@ -38,7 +38,7 @@ theorem griffbindung_gilt (p : Plattform) (s : AussenSicht) (q : Frage) (a : Ant
   | error e =>
     rw [hv] at erfolg
     simp only [Except.isOk, Except.toBool] at erfolg
-    exact False.elim erfolg
+    exact Bool.false_ne_true erfolg
 
 /-- A failed same-event precondition answers through the failure channel. -/
 theorem fehlerkanal_gilt (p : Plattform) (s : AussenSicht) (q : Frage)
