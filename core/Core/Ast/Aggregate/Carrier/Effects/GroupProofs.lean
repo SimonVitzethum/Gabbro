@@ -179,20 +179,25 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
             exact effectRead
           · rfl
   | constant =>
-      cases head.exported <;> dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+      by_cases he : head.exported <;>
+        unfold EffectGroupDeclaration.header printEffects printPub printProgramWord keywordName Identifier.print PrintedToken.unquoted printOpenBrace printConst printFn printTable printCount printSlot printTypeDecl recordDeclarationPrefix taggedDeclarationPrefix TableDeclaration.header keyword at hh
         simp at hh
   | function =>
-      cases head.exported <;> dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+      by_cases he : head.exported <;>
+        unfold EffectGroupDeclaration.header printEffects printPub printProgramWord keywordName Identifier.print PrintedToken.unquoted printOpenBrace printConst printFn printTable printCount printSlot printTypeDecl recordDeclarationPrefix taggedDeclarationPrefix TableDeclaration.header keyword at hh
         simp at hh
   | record exported name valid distinct memberRead =>
       rename_i fields input'
-      cases head.exported <;> cases exported <;> dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+      by_cases he : head.exported <;> by_cases ex : exported <;>
+        unfold EffectGroupDeclaration.header printEffects printPub printProgramWord keywordName Identifier.print PrintedToken.unquoted printOpenBrace printConst printFn printTable printCount printSlot printTypeDecl recordDeclarationPrefix taggedDeclarationPrefix TableDeclaration.header keyword at hh
         simp at hh
   | tagged exported name valid distinct firstRead tailRead =>
-      cases head.exported <;> cases exported <;> dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+      by_cases he : head.exported <;> by_cases ex : exported <;>
+        unfold EffectGroupDeclaration.header printEffects printPub printProgramWord keywordName Identifier.print PrintedToken.unquoted printOpenBrace printConst printFn printTable printCount printSlot printTypeDecl recordDeclarationPrefix taggedDeclarationPrefix TableDeclaration.header keyword at hh
         simp at hh
   | table item =>
-      cases head.exported <;> cases item.exported <;> dsimp [EffectGroupDeclaration.header, printEffects, printPub, printOpenBrace, printConst, printFn, printTable, printCount, printSlot, printTypeDecl, keyword, keywordName, Identifier.print, PrintedToken.unquoted, printProgramWord, recordDeclarationPrefix, taggedDeclarationPrefix, TableDeclaration.header] at hh
+      by_cases he : head.exported <;> by_cases ex : item.exported <;>
+        unfold EffectGroupDeclaration.header printEffects printPub printProgramWord keywordName Identifier.print PrintedToken.unquoted printOpenBrace printConst printFn printTable printCount printSlot printTypeDecl recordDeclarationPrefix taggedDeclarationPrefix TableDeclaration.header keyword at hh
         simp at hh
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
