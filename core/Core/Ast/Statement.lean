@@ -282,10 +282,9 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | step stRead' blockRead' =>
         obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
         injection sameFirst with hMiddle hFirst
-    trace_state
-        subst restT
-        subst more
-        obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
+        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
+        injection sameFirst with hMiddle hFirst
+        simp_all
         cases sameNext
         exact ⟨rfl, restEq⟩
         exact ⟨rfl, restEq⟩
