@@ -65,7 +65,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, Zahl.literal, Expr.wert]
       · rfl
-      · rfl
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
@@ -141,7 +141,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       obtain ⟨mid, walk, pcMid, tmpMid, lokMid, retMid, preserveMid⟩ :=
         operandIH slot env frame bound active pre ([b] ++ post) hpc
       have boundMid : mid.traegt env := by
-        intro ref
+        intro ty ref
         rw [lokMid]
         exact bound ref
       have hpcMid : mid.pc = (pre ++ L).length := by
@@ -154,16 +154,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
           List.singleton_append] using stepAt (pre ++ L) b post mid retMid hpcMid
       refine ⟨b.auswerten mid, .schritt walk' step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
-          hpcMid]
-        rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-          Nat.add_zero]
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpMid, Expr.wert]
-      · rw [lokMid]
-      · rfl
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
+          Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+          List.length_nil, Nat.add_zero, hpcMid, L]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+          alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpMid, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokMid]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retMid]
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
-        exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
+        exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans (preserveMid i hi)
   case not operand operandIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot operand).code
@@ -171,7 +171,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       obtain ⟨mid, walk, pcMid, tmpMid, lokMid, retMid, preserveMid⟩ :=
         operandIH slot env frame bound active pre ([b] ++ post) hpc
       have boundMid : mid.traegt env := by
-        intro ref
+        intro ty ref
         rw [lokMid]
         exact bound ref
       have hpcMid : mid.pc = (pre ++ L).length := by
@@ -184,16 +184,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simpa only [b, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc,
           List.singleton_append] using stepAt (pre ++ L) b post mid retMid hpcMid
       refine ⟨b.auswerten mid, .schritt walk' step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
-          hpcMid]
-        rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
-          Nat.add_zero]
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, alsBoolean, tmpMid, Expr.wert]
-      · rw [lokMid]
-      · rfl
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
+          Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+          List.length_nil, Nat.add_zero, hpcMid, L]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, alsBoolean,
+          Option.bind_some, Option.map_some, tmpMid, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokMid]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retMid]
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
-        exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
+        exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans (preserveMid i hi)
   case div left right nonzero leftIH rightIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot left).code
@@ -323,7 +323,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
             Nat.add_zero]
         have boundAfter : (sw.auswerten mid).traegt env := by
-          intro ref
+          intro ty ref
           simp only [sw, Befehl.auswerten]
           rw [lokL]
           exact bound ref
