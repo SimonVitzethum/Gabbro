@@ -56,6 +56,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     change StmtReads result before ((Stmt.letValue name ordinary expr).printTokens ++ rest)
       ⟨⟨name, ty, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
     rw [Stmt.printTokens_let]
+    simp only [List.nil_append, List.append_assoc, List.singleton_append]
     exact .letBinding name ordinary (expr.printReads (rest := semicolon :: rest) noOperatorAtSemicolon) .plain
   · intros
     rename_i ref visible writable value fits rest
@@ -79,13 +80,14 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       refine .ite (condExpr.printReads noOperatorAtOpenBrace) ?_ ?_
       · exact .braced (yesBody.printItems_reads (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
       · exact .braced (noBody.printItems_reads rest)
-  · intro rest
+  · intros
+    rename_i rest
     exact .done
   · intros
     rename_i first next ihFirst ihNext rest
-    change BlockItems result before (first.printTokens ++ next.printItems.map PrintedToken.value ++ closeBrace :: rest)
-      ⟨after, Block.step first next⟩ rest
-    exact .step (ihFirst _) (ihNext _)
+  · intros
+    rename_i before middle first more after next ihFirst ihNext rest
+    exact .step (Stmt.printReads first (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihNext rest)
   · intros
     rename_i body ihBody rest
     simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
@@ -101,8 +103,8 @@ theorem Block.printItems_reads (tree : Block result before after) (rest : List T
       BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest)
     (motive_3 := fun before tree => ∀ rest,
       BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
-    (by intros; trivial) (by intros; trivial) (by intros; trivial) (by intros; trivial) ?_ ?_ ?_ tree) rest
-  · intro rest
+  · intros
+    rename_i rest
     exact .done
   · intros
     rename_i first next ihFirst ihNext rest
