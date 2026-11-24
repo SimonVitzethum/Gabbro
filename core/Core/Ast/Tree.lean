@@ -1,71 +1,12 @@
 module
 
-public import Core.Text.Lexeme
+public import Core.Ast.Aggregate.ModelTypes
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
-
-/-- A written name. Contextual keyword exclusions belong to the production that binds it. -/
-def Identifier := { name : RawText // ∃ c rest, name = c :: rest ∧
-  isNameStart c ∧ ∀ a ∈ rest, isNamePart a }
-
-/-- Kinds separate value types from other type-level forms as they are introduced. -/
-inductive Kind where
-  | value
-
-inductive Ty : Kind → Type where
-  /-- Integers with inclusive, architecture-independent bounds. -/
-  | int (lo hi : Int) : Ty .value
-  | bool : Ty .value
-  | array (element : Ty .value) (count : Nat) : Ty .value
-  | productEnd : Ty .value
-  | product (head tail : Ty .value) : Ty .value
-  deriving DecidableEq
-
-/-- A positional product has a right-associated, explicitly terminated representation. -/
-def tupleType : List (Ty .value) → Ty .value
-  | [] => .productEnd
-  | head :: tail => .product head (tupleType tail)
-
-/-- The principal element type of a homogeneous literal. Integer elements use their interval hull. -/
-def arrayJoin : Ty .value → Ty .value → Option (Ty .value)
-  | .int lo hi, .int lower upper => some (.int (min lo lower) (max hi upper))
-  | a, b => if a = b then some a else none
-
-def arrayElement : List (Ty .value) → Option (Ty .value)
-  | [] => some .productEnd
-  | [type] => some type
-  | head :: next :: tail => (arrayElement (next :: tail)).bind (arrayJoin head)
-
-structure Binding where
-  name : Identifier
-  type : Ty .value
-  mutable : Bool
-  constant : Bool
-
-abbrev Scope := List Binding
-
-/-- Newest binder first. Uses carry a typed de Bruijn index; resolution of a written
-    name must select the nearest binding under the applicable scope rules. -/
-inductive Local : Scope → Ty .value → Type where
-  | here : Local (binding :: outer) binding.type
-  | there : Local outer type → Local (binding :: outer) type
-
-def Local.binding : Local scope type → Binding
-  | @here binding _ => binding
-  | .there ref => ref.binding
-
-def Local.index : Local scope type → Nat
-  | .here => 0
-  | .there ref => ref.index + 1
-
-/-- A written occurrence may only refer to the nearest binding with that spelling. -/
-def Local.visible : Local scope type → Prop
-  | .here => True
-  | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.visible
 
 /-- Concrete binary operators sharing one surface production family. -/
 inductive Arith where
@@ -157,11 +98,25 @@ inductive Expr (scope : Scope) : Ty .value → Type where
   /-- A written numeric projection selects a field of the positional product. -/
   | tupleField (base : Expr scope (tupleType (first :: second :: types)))
       (index : Fin (first :: second :: types).length) : Expr scope ((first :: second :: types).get index)
+  /-- Labelled construction retains the declaration identity and evaluates actuals in source order. -/
+  | recordValue (ref : RecordRef scope labels types) (args : LabeledItems scope actualLabels actualTypes)
+      (fields : RecordArguments labels types actualLabels actualTypes)
+      (fits : ∀ i, Fits (actualTypes.get (fields.slot i)) (types.get i)) :
+      Expr scope (recordValueType ref.name.val labels types)
+  /-- A field is selected by a checked offset in the ordered nominal schema. -/
+  | recordField (base : Expr scope (recordValueType name labels types))
+      (field : Identifier) (index : Fin types.length) (written : labels[index.val]? = some field) :
+      Expr scope (types.get index)
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
   | empty : ExprItems scope []
   | next : Expr scope type → ExprItems scope types → ExprItems scope (type :: types)
+
+inductive LabeledItems (scope : Scope) : List Identifier → List (Ty .value) → Type where
+  | empty : LabeledItems scope [] []
+  | next (label : Identifier) : Expr scope type → LabeledItems scope labels types →
+      LabeledItems scope (label :: labels) (type :: types)
 
 end
 
@@ -181,11 +136,17 @@ def Expr.static : Expr scope type → Prop
   | .arrayIndex base index _ _ => base.static ∧ index.static
   | .tupleValue first second tail => first.static ∧ second.static ∧ tail.static
   | .tupleField base _ => base.static
+  | .recordValue _ items _ _ => items.static
+  | .recordField base _ _ _ => base.static
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop
   | .empty => True
   | .next head tail => head.static ∧ tail.static
+
+def LabeledItems.static : LabeledItems scope labels types → Prop
+  | .empty => True
+  | .next _ head tail => head.static ∧ tail.static
 
 end
 
@@ -337,6 +298,14 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (checked : pattern.valid annotation (first :: second :: types))
       (value : Expr scope (tupleType (first :: second :: types))) :
       Stmt result scope (pattern.bindings (first :: second :: types) ++ scope)
+  /-- Field assignment updates exactly one position of a writable record local. -/
+  | assignField (ref : Local scope (recordValueType name labels types)) (visible : ref.visible)
+      (writable : ref.binding.mutable = true) (field : Identifier) (index : Fin types.length)
+      (written : labels[index.val]? = some field) (value : Expr scope source)
+      (fits : Fits source (types.get index)) : Stmt result scope scope
+  /-- The inferred mutable binding uses the initializer's exact type. -/
+  | letMutableValue (name : Identifier) (ordinary : ordinaryLocal name)
+      (value : Expr scope type) : Stmt result scope (⟨name, type, true, false⟩ :: scope)
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -366,6 +335,18 @@ end
 /-- The return spelling determines the body's return index. -/
 def writtenResult (result : Option WrittenType) : Option (Ty .value) := result.map WrittenType.type
 
+structure RecordMember where
+  name : Identifier
+  written : WrittenType
+
+def recordLabels (fields : List RecordMember) : List Identifier := fields.map RecordMember.name
+
+def recordTypes (fields : List RecordMember) : List (Ty .value) :=
+  fields.map (fun field => field.written.type)
+
+def recordBinding (name : Identifier) (fields : List RecordMember) : Binding :=
+  ⟨name, recordSchemaType name.val (recordLabels fields) (recordTypes fields), false, true⟩
+
 /-- Constant values can enter the declaration scope. Function signatures are resolved
     across the whole unit, allowing forward calls and checked recursive cycles. -/
 inductive Decl : Scope → Scope → Type where
@@ -379,6 +360,11 @@ inductive Decl : Scope → Scope → Type where
       (distinct : (parameters.map (fun p => p.name.val)).Nodup)
       (returns : result.isSome = true → body.returns = true) :
       Decl before before
+  /-- The ordinary record declaration installs its nominal schema in the declaration scope. -/
+  | record (exported : Bool) (name : Identifier) (fields : List RecordMember)
+      (valid : ∀ member ∈ fields, member.written.valid)
+      (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
+      Decl before (recordBinding name fields :: before)
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where

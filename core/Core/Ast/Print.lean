@@ -168,6 +168,9 @@ def printDot : PrintedToken := printPunctuation "." (by decide)
 def printComma : PrintedToken := printPunctuation "," (by decide)
   (fun _ same => tokenHead (c := ',') same (punctuationHead (by decide)))
 
+def printColon : PrintedToken := printPunctuation ":" (by decide)
+  (fun _ same => tokenHead (c := ':') same (punctuationHead (by decide)))
+
 mutual
 
 /-- Parenthesise each binary node. This gives a canonical, precedence-independent
@@ -197,6 +200,9 @@ def Expr.printPieces : Expr scope type → List PrintedToken
       rest.printTail ++ [printClose]
   | .tupleField base index =>
     [printOpen] ++ base.printPieces ++ [printDot, printInteger index.val, printClose]
+  | .recordValue ref args _ _ => [ref.name.print, printOpen] ++ args.printPieces ++ [printClose]
+  | .recordField base field _ _ =>
+    [printOpen] ++ base.printPieces ++ [printDot, field.print, printClose]
 
 def ExprItems.printPieces : ExprItems scope types → List PrintedToken
   | .empty => []
@@ -205,6 +211,15 @@ def ExprItems.printPieces : ExprItems scope types → List PrintedToken
 def ExprItems.printTail : ExprItems scope types → List PrintedToken
   | .empty => []
   | .next head tail => printComma :: head.printPieces ++ tail.printTail
+
+def LabeledItems.printPieces : LabeledItems scope labels types → List PrintedToken
+  | .empty => []
+  | .next name value tail => [name.print, printColon] ++ value.printPieces ++ tail.printTail
+
+def LabeledItems.printTail : LabeledItems scope labels types → List PrintedToken
+  | .empty => []
+  | .next name value tail =>
+    [printComma, name.print, printColon] ++ value.printPieces ++ tail.printTail
 
 end
 

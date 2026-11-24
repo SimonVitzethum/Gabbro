@@ -21,6 +21,8 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .array element count => Vector (Wert element) count
   | _, .productEnd => PUnit
   | _, .product head tail => Wert head × Wert tail
+  | _, .record _ _ layout => Wert layout
+  | _, .recordSchema .. => PUnit
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
@@ -43,6 +45,18 @@ def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
   | [], index, _ => Fin.elim0 index
   | _ :: rest, ⟨0, _⟩, values => values.1
   | _ :: rest, ⟨n + 1, bound⟩, values => tupleGet rest ⟨n, Nat.lt_of_succ_lt_succ bound⟩ values.2
+
+def tupleOfFn : (types : List (Ty .value)) → ((i : Fin types.length) → Wert (types.get i)) →
+    Wert (tupleType types)
+  | [], _ => PUnit.unit
+  | _ :: tail, values => (values 0, tupleOfFn tail fun i => values i.succ)
+
+def tupleSet : (types : List (Ty .value)) → (i : Fin types.length) →
+    Wert (types.get i) → Wert (tupleType types) → Wert (tupleType types)
+  | [], i, _, _ => Fin.elim0 i
+  | _ :: _, ⟨0, _⟩, value, old => (value, old.2)
+  | _ :: tail, ⟨n + 1, bound⟩, value, old =>
+    (old.1, tupleSet tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value old.2)
 
 def indexPosition {count : Nat} (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
   have nonnegative := Int.le_trans lower i.unten
@@ -141,10 +155,19 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .tupleValue first second tail => (first.wert env, second.wert env, tail.wert env)
   | .tupleField (first := first) (second := second) (types := rest) base i =>
     tupleGet (first :: second :: rest) i (base.wert env)
+  | .recordValue (types := types) (actualTypes := actualTypes) _ args fields fits =>
+    let values := args.wert env
+    tupleOfFn types fun i => Wert.widen (actualTypes.get (fields.slot i)) (types.get i) (fits i)
+      (tupleGet actualTypes (fields.slot i) values)
+  | .recordField (types := types) base _ index _ => tupleGet types index (base.wert env)
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit
   | .next head tail => (head.wert env, tail.wert env)
+
+def LabeledItems.wert (env : Umgebung scope) : LabeledItems scope labels types → Wert (tupleType types)
+  | .empty => PUnit.unit
+  | .next _ head tail => (head.wert env, tail.wert env)
 
 end
 

@@ -50,6 +50,7 @@ def openBracket : Token := .punctuation ['[']
 def closeBracket : Token := .punctuation [']']
 def dot : Token := .punctuation ['.']
 def comma : Token := .punctuation [',']
+def colon : Token := .punctuation [':']
 
 inductive Infix where
   | arith (op : Arith)
@@ -159,6 +160,11 @@ inductive AtomReads (scope : Scope) :
       ExprReads scope 0 secondInput second more →
       ItemsTail scope closeParen more items rest →
       AtomReads scope (openParen :: input) (.tupleValue first second items) rest
+  | recordValue (ref : RecordRef scope labels types)
+      (fields : RecordArguments labels types actualLabels actualTypes)
+      (fits : ∀ i, Fits (actualTypes.get (fields.slot i)) (types.get i)) :
+      LabeledItemsRead scope input args rest →
+      AtomReads scope (.word ref.name.val :: openParen :: input) (.recordValue ref args fields fits) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
     refuses a comparison at the head of its continuation. -/
@@ -192,6 +198,11 @@ inductive ExprTail (scope : Scope) :
       minimum ≤ Infix.projection.precedence →
       ExprTail scope minimum (.tupleField base index) input tree rest →
       ExprTail scope minimum base (dot :: .natural index.val :: input) tree rest
+  | recordField (base : Expr scope (recordValueType name labels types)) (field : Identifier)
+      (index : Fin types.length) (written : labels[index.val]? = some field) :
+      minimum ≤ Infix.projection.precedence →
+      ExprTail scope minimum (.recordField base field index written) input tree rest →
+      ExprTail scope minimum base (dot :: .word field.val :: input) tree rest
 
 /-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
 inductive ItemsRead (scope : Scope) : Token →
@@ -204,6 +215,23 @@ inductive ItemsTail (scope : Scope) : Token →
     List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
   | close : ItemsTail scope close (close :: rest) .empty rest
   | comma {types : List (Ty .value)} {tail : ExprItems scope types} : (types ≠ [] ∨ close = closeBracket) → ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest
+
+/-- A record call uses only labelled actuals and consumes its closing parenthesis. -/
+inductive LabeledItemsRead (scope : Scope) :
+    List Token → {labels : List Identifier} → {types : List (Ty .value)} →
+    LabeledItems scope labels types → List Token → Prop where
+  | close : LabeledItemsRead scope (closeParen :: rest) .empty rest
+  | next (name : Identifier) : ExprReads scope 0 input value more →
+      LabeledItemsTail scope more remaining rest →
+      LabeledItemsRead scope (.word name.val :: colon :: input) (.next name value remaining) rest
+
+inductive LabeledItemsTail (scope : Scope) :
+    List Token → {labels : List Identifier} → {types : List (Ty .value)} →
+    LabeledItems scope labels types → List Token → Prop where
+  | close : LabeledItemsTail scope (closeParen :: rest) .empty rest
+  | comma (label : Identifier) (value : Expr scope type) (remaining : LabeledItems scope labels types) :
+      LabeledItemsRead scope input (.next label value remaining) rest →
+      LabeledItemsTail scope (comma :: input) (.next label value remaining) rest
 
 end
 

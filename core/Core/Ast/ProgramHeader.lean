@@ -8,15 +8,12 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-def colon : Token := .punctuation ":".toList
 def arrow : Token := .punctuation "->".toList
 def closedRange : Token := .punctuation "..".toList
 def openRange : Token := .punctuation "..<".toList
 
 def keyword (word : String) : Token := .word word.toList
 
-def printColon : PrintedToken := printPunctuation ":" (by
-  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by sorry)
 def printClosedRange : PrintedToken := printPunctuation ".." (by

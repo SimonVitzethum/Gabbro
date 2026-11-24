@@ -32,20 +32,17 @@ def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | _ => none
 
-def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
-  match type, value with
+def wertAls : (type : Ty .value) → Dynamisch → Option (Wert type)
   | .int lo hi, ⟨.int _ _, number⟩ =>
     if bounds : lo ≤ number.wert ∧ number.wert ≤ hi then
-      some ⟨.int lo hi, ⟨number.wert, bounds.1, bounds.2⟩⟩
+      some ⟨number.wert, bounds.1, bounds.2⟩
     else none
-  | .bool, ⟨.bool, value⟩ => some ⟨.bool, value⟩
-  | .array target 0, ⟨.array _ 0, _⟩ => some ⟨.array target 0, #v[]⟩
+  | .array _ 0, ⟨.array _ 0, _⟩ => some #v[]
   | target, ⟨source, value⟩ =>
-    if same : source = target then some ⟨target, same ▸ value⟩ else none
+    if same : source = target then some (same ▸ value) else none
 
-def wertAls (type : Ty .value) (value : Dynamisch) : Option (Wert type) := do
-  let ⟨actual, result⟩ ← wertIn type value
-  if same : actual = type then some (same ▸ result) else none
+def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
+  (wertAls type value).map fun checked => ⟨type, checked⟩
 
 def liesTupel (temp : Nat → Option Dynamisch) (slot : Nat) :
     (types : List (Ty .value)) → Option (Wert (tupleType types))
@@ -54,6 +51,15 @@ def liesTupel (temp : Nat → Option Dynamisch) (slot : Nat) :
     let value ← (temp slot).bind (wertAls head)
     let more ← liesTupel temp (slot + 1) tail
     pure (value, more)
+
+def liesRecord (temp : Nat → Option Dynamisch) :
+    (types : List (Ty .value)) → List Nat → Option (Wert (tupleType types))
+  | [], [] => some PUnit.unit
+  | head :: tail, slot :: sources => do
+    let value ← (temp slot).bind (wertAls head)
+    let more ← liesRecord temp tail sources
+    pure (value, more)
+  | _, _ => none
 
 def tupleLocals : (types : List (Ty .value)) → Wert (tupleType types) → List Bool → List (Option Dynamisch)
   | head :: tail, values, keep :: more =>
@@ -65,6 +71,7 @@ def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
+  | type@(.recordSchema ..) => some ⟨type, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where
@@ -264,6 +271,13 @@ inductive Befehl where
   | baueTupel (ziel : Nat) (types : List (Ty .value))
   | liesTupelfeld (basis : Nat) (types : List (Ty .value)) (index : Fin types.length)
   | bindeTupel (quelle : Nat) (types : List (Ty .value)) (bind : List Bool)
+  | definiereRecord (name : List Char) (labels : List Identifier) (types : List (Ty .value))
+  | baueRecord (ziel : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (sources : List Nat)
+  | liesRecordFeld (basis : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (index : Fin types.length)
+  | setzeRecordFeld (source local : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (index : Fin types.length)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -387,6 +401,22 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let value := (frame.temp source).bind (wertAls (tupleType types))
     let locals := (value.map fun product => tupleLocals types product bind).getD []
     { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
+  | .definiereRecord name labels types, frame =>
+    let schema : Dynamisch := ⟨recordSchemaType name labels types, PUnit.unit⟩
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale }
+  | .baueRecord dst name labels types sources, frame =>
+    frame.schreibe dst ((liesRecord frame.temp types sources).map fun record =>
+      ⟨recordValueType name labels types, record⟩)
+  | .liesRecordFeld base name labels types index, frame => frame.schreibe base (do
+    let record ← (frame.temp base).bind (wertAls (recordValueType name labels types))
+    pure ⟨types.get index, tupleGet types index record⟩)
+  | .setzeRecordFeld source local name labels types index, frame =>
+    let type := recordValueType name labels types
+    let updated : Option Dynamisch := do
+      let old ← frame.lokale[local]?.join.bind (wertAls type)
+      let value ← (frame.temp source).bind (wertAls (types.get index))
+      pure ⟨type, tupleSet types index value old⟩
+    { frame with pc := frame.pc + 1, lokale := frame.lokale.set local updated }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

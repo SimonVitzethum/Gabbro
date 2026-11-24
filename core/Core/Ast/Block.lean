@@ -41,6 +41,10 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
   | .tupleBind pattern annotation _ value =>
     [letName.print] ++ pattern.printPieces ++ tupleAnnotationPieces annotation ++
       [printAssignment] ++ value.printPieces ++ [printSemicolon]
+  | .assignField ref _ _ field _ _ value _ =>
+    [ref.binding.name.print, printDot, field.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
+  | .letMutableValue name _ value =>
+    [letName.print, printMut, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []

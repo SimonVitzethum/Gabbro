@@ -99,6 +99,16 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       TupleAnnotationReads more annotation rhs →
       ExprReads scope 0 rhs (value : Expr scope (tupleType (first :: second :: types))) (semicolon :: rest) →
       StmtReads result scope (letKeyword :: input) ⟨_, .tupleBind pattern annotation checked value⟩ rest
+  | assignField (ref : Local scope (recordValueType name labels types)) (visible : ref.visible)
+      (writable : ref.binding.mutable = true) (field : Identifier) (index : Fin types.length)
+      (checked : labels[index.val]? = some field) (fits : Fits source (types.get index)) :
+      ExprReads scope 0 input (value : Expr scope source) (semicolon :: rest) →
+      StmtReads result scope (.word ref.binding.name.val :: dot :: .word field.val :: assignment :: input)
+        ⟨scope, .assignField ref visible writable field index checked value fits⟩ rest
+  | letMutableValue (name : Identifier) (ordinary : ordinaryLocal name) :
+      ExprReads scope 0 input (value : Expr scope type) (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: keyword "mut" :: .word name.val :: assignment :: input)
+        ⟨_, .letMutableValue name ordinary value⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :

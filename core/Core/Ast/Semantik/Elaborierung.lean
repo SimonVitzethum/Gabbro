@@ -23,10 +23,10 @@ def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, []⟩
 def Fragment.anhaengen (a b : Fragment) : Fragment :=
   ⟨a.code ++ b.code, a.klauseln.anhaengen b.klauseln, a.eingang⟩
 
-/-- An expression writes its result to the requested temporary. Its right
-    operand starts above its left result, which must survive that operand. -/
 mutual
 
+/-- An expression writes its result to the requested temporary. Its right
+    operand starts above its left result, which must survive that operand. -/
 def expr (slot : Nat) : Expr scope type → Fragment
   | .lit value => .einzel (.literal slot value)
   | .binary op left right =>
@@ -55,10 +55,19 @@ def expr (slot : Nat) : Expr scope type → Fragment
       (itemCode (slot + 2) rest)).anhaengen (.einzel (.baueTupel slot (a :: b :: tail)))
   | .tupleField (first := a) (second := b) (types := tail) base index =>
     (expr slot base).anhaengen (.einzel (.liesTupelfeld slot (a :: b :: tail) index))
+  | .recordValue (labels := labels) (types := types) ref args fields _ =>
+    let sources := List.ofFn fun i : Fin types.length => slot + (fields.slot i).val
+    (labeledCode slot args).anhaengen (.einzel (.baueRecord slot ref.name.val labels types sources))
+  | .recordField (name := name) (labels := labels) (types := types) base _ index _ =>
+    (expr slot base).anhaengen (.einzel (.liesRecordFeld slot name labels types index))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer
   | .next head tail => (expr slot head).anhaengen (itemCode (slot + 1) tail)
+
+def labeledCode (slot : Nat) : LabeledItems scope labels types → Fragment
+  | .empty => .leer
+  | .next _ head tail => (expr slot head).anhaengen (labeledCode (slot + 1) tail)
 
 end
 
@@ -87,6 +96,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
+  | .letMutableValue name _ _ => (name.val == index.val, false)
   | .tupleBind pattern _ _ _ =>
     ((pattern.names.filterMap id).any (fun name => name.val == index.val), false)
   | .ite _ yes no =>
@@ -150,6 +160,10 @@ def stmt : Stmt result before after → Fragment
   | .tupleBind (first := first) (second := second) (types := tail) pattern _ _ value =>
     (expr 0 value).anhaengen (.einzel (.bindeTupel 0
       (first :: second :: tail) (pattern.names.map Option.isSome)))
+  | .assignField (name := name) (labels := labels) (types := types) ref _ _ _ index _ value _ =>
+    (expr 0 value).anhaengen (.einzel (.setzeRecordFeld 0 ref.index name labels types index))
+  | .letMutableValue (type := type) _ _ value =>
+    (expr 0 value).anhaengen (.einzel (.bindeWert 0 type false))
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -183,6 +197,8 @@ def decl : Decl before after → Fragment
     let code := functionCode result measure body
     (Fragment.einzel (functionInstruction before name parameters result measure.isSome code)).anhaengen code
 
+  | .record _ name members _ _ =>
+    .einzel (.definiereRecord name.val (recordLabels members) (recordTypes members))
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer

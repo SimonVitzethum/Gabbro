@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Block
+public import Core.Ast.Aggregate.RecordGrammar
 
 @[expose] public section
 
@@ -39,6 +40,12 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       BlockReads (writtenResult result) (functionScope before parameters) afterMeasure body rest →
       DeclReads before (keyword "fn" :: .word name.val :: openParen :: input)
         ⟨before, .function name ordinary parameters result valid measure body distinct returns⟩ rest
+  | record (exported : Bool) (name : Identifier) (valid : ∀ member ∈ fields, member.written.valid)
+      (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
+      RecordMembersRead input fields (semicolon :: rest) →
+      DeclReads before
+        (recordDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
+        ⟨_, .record exported name fields valid distinct⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
@@ -55,6 +62,9 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .function name _ parameters result _ measure body _ _ =>
     [printFn, name.print, printOpen] ++ commaSeparated (parameters.map Parameter.printPieces) ++
       [printClose] ++ resultPieces result ++ measurePieces measure ++ body.printPieces
+  | .record exported name fields _ _ =>
+    recordDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
+      fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printSemicolon]
 
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion
