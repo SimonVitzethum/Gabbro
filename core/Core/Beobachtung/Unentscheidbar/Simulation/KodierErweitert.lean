@@ -216,17 +216,17 @@ instance : Encodable WrittenTypes :=
 
 def regionInitializerCode (i : RegionInitializer) : Nat :=
   Encodable.encode <| match i with
-    | .address => none
-    | .view written _ => some (Encodable.encode written)
+    | .address => Option.none
+    | .view written _ => Option.some (Encodable.encode written)
 
 noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer := by
   classical
   let o : Option Nat ← Encodable.decode n
   match o with
-  | none => exact some .address
-  | some w =>
+  | Option.none => exact Option.some .address
+  | Option.some w =>
       let written : WrittenType ← Encodable.decode w
-      if h : written.valid [] then some (.view written h) else none
+      if h : written.valid [] then Option.some (.view written h) else Option.none
 
 instance : Encodable RegionInitializer :=
   Encodable.ofLeftInjection regionInitializerCode regionInitializerDecode (by
