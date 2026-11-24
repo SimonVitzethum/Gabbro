@@ -140,20 +140,22 @@ private theorem stopKlauselnWahr (k : Katalog) (code : List ExecInstruction) :
 
 private theorem stopWaechterHalten (k : Katalog) (code : List ExecInstruction) :
     WaechterHalten (execProgram k code) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ lauf t op args bedarf
-    change False at bedarf
-    exact False.elim bedarf
-  · intro ρ lauf t h
-    rcases h with ⟨C, nonempty, blocked⟩
+    dsimp [kanonischeVerwendung, execProgram, Quelltabellen.leer] at bedarf
+    cases bedarf
+  · intro ρ lauf t
+    rintro ⟨C, nonempty, blocked⟩
     obtain ⟨c, hc⟩ := nonempty
-    obtain ⟨b, hb, _, _⟩ := blocked c hc
-    exact hb
+    obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
+    exact hblock
+  · intro ρ lauf t l h _ hne
+    exact (hne rfl).elim
 
 private theorem stopAkzeptiertX86 (code : List ExecInstruction) :
     Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, stopKlauselnWahr _ code, stopWaechterHalten _ code⟩
-  refine ⟨by simpa [execProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩
+  refine ⟨by simpa only [execProgram] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩
   · intro i
     exact execRegelLokal Plattform.x86_64.katalog i
   · exact ⟨zulassung_m2 _, by
@@ -183,9 +185,10 @@ private theorem stopJoint : StopJointAussage := by
   let E : ExecUnit := execProgram k (pre ++ [op])
   let s0 : ExecState := (I.start E start).2
   have hardware : Hardware k env := Katalog.Umgebung.referenz_hardware k 1 sicht
-    (by simpa [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+    (by simpa only [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
   have hdeclWell : decl.wellformed := by
-    simp [ExecStateDecl.wellformed, decl]
+    change (64 = 16 ∨ 64 = 32 ∨ 64 = 64)
+    exact Or.inr (Or.inr rfl)
   have hs0status : s0.status entryContext = .laeuft := by
     simp only [s0, I.start, E, execProgram, Zustand.start, execBoot, start, entryContext, ↓reduceIte]
   have hs0pc : (s0.lokal entryContext).pc = 0 := by
@@ -215,7 +218,7 @@ private theorem stopJoint : StopJointAussage := by
   have hreach : E.system.IErreichbar (I.start E start).2 s := by
     exact System.IErreichbar.schritt entryContext () [plan] System.IErreichbar.start hstep0
   have hsstatus : s.status entryContext = .laeuft := by
-    simpa [s, ExecFrame.advance] using hs0status
+    simpa only [s, ExecFrame.advance] using hs0status
   have hspc : (s.lokal entryContext).pc = 1 := by
     simp only [s, ExecFrame.advance, Function.update_self, hs0pc]
   have hcurrent0 : (s.lokal entryContext).current = some 0 := by
