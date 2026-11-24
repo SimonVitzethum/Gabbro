@@ -44,7 +44,7 @@ theorem Adressraum.unmapFreiAusstehend (space : Adressraum) (sp base pages first
     ({ space with
         entries := space.entries.filter (fun (pg, _) => !decide (pageRange base pages pg)),
         generation := space.generation + 1,
-        ausstehend := ⟨sp, base, pages, space.generation + 1, first⟩ :: space.ausstehend }
+        ausstehend := ⟨sp, base, pages, space.generation + 1, first, false⟩ :: space.ausstehend }
       : Adressraum).FreiAusstehend := by
   intro entry hentry token' htmem
   have hentryOld : entry ∈ space.entries := (List.mem_filter.mp hentry).1
@@ -152,7 +152,7 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
           · simp only [Option.pure_def, Option.some.injEq] at step
             subst next
             intro zelle hz
-            exact (List.mem_filter.mp hz).1
+            exact hz
           · cases step
   | unmapSpace sp virt pages =>
       simp only [MemInstruction.evaluate] at step
@@ -180,12 +180,30 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
           | none => simp only [hs, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
           | some space =>
               simp only [hs, Option.bind_eq_bind, Option.bind_some] at step
-              split at step
-              · simp only [Option.pure_def, Option.some.injEq] at step
-                subst next
-                intro zelle hz
-                exact hz
-              · cases step
+              by_cases hnr : token.nurRechte = true
+              · simp only [hnr, ↓reduceIte] at step
+                split at step
+                · simp only [Option.pure_def, Option.some.injEq] at step
+                  subst next
+                  intro zelle hz
+                  exact hz
+                · cases step
+              · have hnr' : token.nurRechte = false := by
+                  cases hb : token.nurRechte with
+                  | false => rfl
+                  | true => exact (hnr hb).elim
+                simp only [hnr', Bool.false_eq_true, ↓reduceIte] at step
+                split at step
+                · simp only [Option.pure_def, Option.some.injEq] at step
+                  subst next
+                  intro zelle hz
+                  exact hz
+                · cases step
+  | tlbVerdraengen core sp page =>
+      simp only [MemInstruction.evaluate, Option.some.injEq] at step
+      subst next
+      intro zelle hz
+      exact (List.mem_filter.mp hz).1
   | activateSpace sp =>
       have keep := erhaelt_activateSpace target sp s c next step
       intro zelle hz
@@ -253,6 +271,7 @@ theorem keineFuellung_speicher (target : ZielDaten) (op : MemInstruction) (s : M
   | unmapSpace space virt pages => exact rest (by intro a b d e; cases e)
   | flushSpace name => exact rest (by intro a b d e; cases e)
   | activateSpace space => exact rest (by intro a b d e; cases e)
+  | tlbVerdraengen core sp page => exact rest (by intro a b d e; cases e)
   | bindToken name => exact rest (by intro a b d e; cases e)
 
 end Gabbro.Core.Ast.LowLevel

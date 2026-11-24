@@ -29,6 +29,9 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      native driver generates every program of the family up to the reference bounds and fails (exit 1) on a
      register member that no valid and no single-fault program contains and that is not a declared known gap
      (`bekannteLuecken`), or on a declared gap that is covered (the list is exact).
+  9. con-leche: the export of `core/` (module `Core` with its import closure) is rechecked by the external
+     checker con-leche (shipped with the toolchain) in `--verified` mode, proved never to accept a theorem
+     of type `False`; only its exit 0 with a positive count of accepted declarations passes.
 
 Exit 0 green, 1 red, 2 nothing measured. `--ohne-bau` skips stage 1 (the other stages read
 the existing build state)."""
@@ -273,10 +276,46 @@ def stufe_runner():
     return ok_ax and rc == 0
 
 
+KERN = W / "core"
+
+
+def stufe_leche():
+    """Stage 9: the export of `core/` (module `Core` and its whole import closure, Mathlib included) is
+    rechecked by con-leche in its verified mode, the external checker proved in Lean never to accept a
+    theorem of type `False`. The export streams through a FIFO, so no multi-GB file is written."""
+    if not KERN.is_dir():
+        print("  9 leche:   ROT (core/ fehlt)")
+        return False
+    rc, pre = lauf(["lean", "--print-prefix"], KERN, 120)
+    bin_ = pathlib.Path(pre.strip().splitlines()[-1]) / "bin" if rc == 0 and pre.strip() else None
+    if bin_ is None or not (bin_ / "con-leche").exists() or not (bin_ / "leanexport").exists():
+        print(f"  9 leche:   ROT (con-leche/leanexport fehlen in der Toolchain: {pre.strip()[-200:]})")
+        return False
+    kratz = KERN / ".lake" / "leche"
+    kratz.mkdir(parents=True, exist_ok=True)
+    fifo = kratz / "core.ndjson"
+    if fifo.exists() or fifo.is_fifo(): fifo.unlink()
+    os.mkfifo(fifo)
+    try:
+        with open(kratz / "export.err", "w") as err:
+            exp = subprocess.Popen(["sh", "-c", f'exec lake env "{bin_ / "leanexport"}" Core > "{fifo}"'],
+                                   cwd=KERN, env=ENV, stderr=err)
+            rc, out = lauf([str(bin_ / "con-leche"), "--verified", "--jobs=4", str(fifo)], KERN, 3600)
+            try: erc = exp.wait(timeout=600)
+            except subprocess.TimeoutExpired: exp.kill(); erc = 124
+    finally:
+        fifo.unlink(missing_ok=True)
+    n = re.findall(r"accepted (\d+) declarations \(--verified\)", out)
+    ok = rc == 0 and erc == 0 and bool(n) and int(n[-1]) > 0
+    print(f"  9 leche:   {'ok' if ok else 'ROT'} (export rc={erc}, con-leche rc={rc}, "
+          f"{n[-1] + ' Deklarationen' if n else out.strip()[-200:]})")
+    return ok
+
+
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_wurzeln, stufe_abdeckung, stufe_stage0, stufe_runner]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_wurzeln, stufe_abdeckung, stufe_stage0, stufe_runner, stufe_leche]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1

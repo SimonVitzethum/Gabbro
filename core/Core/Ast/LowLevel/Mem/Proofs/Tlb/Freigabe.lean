@@ -27,38 +27,51 @@ theorem tlbGedeckt_flush (target : ZielDaten) (name : Identifier) (s : MemState)
     | none => simp only [hs, Option.bind_none] at h <;> cases h
     | some space =>
       simp only [hs, Option.bind_some] at h
-      split at h
-      · rename_i cond
-        simp only [Bool.and_eq_true, decide_eq_true_eq] at cond
-        have frei := TranslationCache.frei_eq_true.mp cond.2
-        simp only [Option.pure_def, Option.some.injEq] at h
-        subst h
-        intro zelle mem
-        change zelle ∈ (s.lokal c).tlb.zellen at mem
-        obtain ⟨space0, found0, covered0⟩ := inv zelle mem
-        by_cases same : zelle.raum = token.raum
-        · have lt : token.raum < (s.lokal c).spaces.length := (List.getElem?_eq_some_iff.mp hs).1
-          have unique : space0 = space := by
-            rw [same] at found0
-            exact Option.some.inj (found0.symm.trans hs)
-          rw [unique] at covered0
-          refine ⟨?w, ?hw, ?hd⟩
-          case hw =>
-            rw [same]
-            exact List.getElem?_set_self lt
-          case hd =>
-            refine Adressraum.deckt_mit (space := space) (fun entry found => ⟨entry, found, rfl⟩)
-              ?_ covered0
-            intro t tmem own
-            by_cases eq : t = token
-            · subst eq
-              have outside := frei zelle mem
-              simp only [TlbZelle.imBereich, decide_eq_false_iff_not] at outside
-              exact (outside ⟨same, own.1⟩).elim
-            · exact ⟨t, List.mem_filter.mpr ⟨tmem, bne_iff_ne.mpr eq⟩, own⟩
-        · refine ⟨space0, ?_, covered0⟩
-          change ((s.lokal c).spaces.set token.raum _)[zelle.raum]? = _
-          exact MemFrame.TlbGedeckt.set_fern same found0
-      · cases h
+      by_cases hnr : token.nurRechte = true
+      · -- completion of a narrowing: neither the table nor a cache changes
+        simp only [hnr, ↓reduceIte] at h
+        split at h
+        · simp only [Option.pure_def, Option.some.injEq] at h
+          subst h
+          exact inv.aus_gleich rfl rfl
+        · cases h
+      · have hnr' : token.nurRechte = false := by
+          cases hb : token.nurRechte with
+          | false => rfl
+          | true => exact (hnr hb).elim
+        simp only [hnr', Bool.false_eq_true, ↓reduceIte] at h
+        split at h
+        · rename_i cond
+          simp only [Bool.and_eq_true, decide_eq_true_eq] at cond
+          have frei := TranslationCache.frei_eq_true.mp cond.2
+          simp only [Option.pure_def, Option.some.injEq] at h
+          subst h
+          intro zelle mem
+          change zelle ∈ (s.lokal c).tlb.zellen at mem
+          obtain ⟨space0, found0, covered0⟩ := inv zelle mem
+          by_cases same : zelle.raum = token.raum
+          · have lt : token.raum < (s.lokal c).spaces.length := (List.getElem?_eq_some_iff.mp hs).1
+            have unique : space0 = space := by
+              rw [same] at found0
+              exact Option.some.inj (found0.symm.trans hs)
+            rw [unique] at covered0
+            refine ⟨?w, ?hw, ?hd⟩
+            case hw =>
+              rw [same]
+              exact List.getElem?_set_self lt
+            case hd =>
+              refine Adressraum.deckt_mit (space := space) (fun entry found => ⟨entry, found, rfl⟩)
+                ?_ covered0
+              intro t tmem own
+              by_cases eq : t = token
+              · subst eq
+                have outside := frei zelle mem
+                simp only [TlbZelle.imBereich, decide_eq_false_iff_not] at outside
+                exact (outside ⟨same, own.1⟩).elim
+              · exact ⟨t, List.mem_filter.mpr ⟨tmem, bne_iff_ne.mpr eq⟩, own⟩
+          · refine ⟨space0, ?_, covered0⟩
+            change ((s.lokal c).spaces.set token.raum _)[zelle.raum]? = _
+            exact MemFrame.TlbGedeckt.set_fern same found0
+        · cases h
 
 end Gabbro.Core.Ast.LowLevel
