@@ -1,7 +1,7 @@
 module
 
 public import Core.Sicherheit.Lauf
-public import Core.Ast.Semantik.Sicherheit
+public import Core.Ast.Semantik.Runtime.Sicherheit
 import Core.Sicherheit.Laufkonstruktion
 
 @[expose] public section

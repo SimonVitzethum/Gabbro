@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.RecordSurface
+public import Core.Ast.Aggregate.Records.RecordSurface
 
 @[expose] public section
 

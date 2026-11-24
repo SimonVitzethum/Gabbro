@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.RecordSurface
+public import Core.Ast.Aggregate.Records.RecordSurface
 public import Core.Ast.Semantik.Quellform
 
 @[expose] public section

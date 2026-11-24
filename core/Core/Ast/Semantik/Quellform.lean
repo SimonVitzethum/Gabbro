@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Sicherheit
+public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Surface
 public import Core.Waechter.Registry
 

@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.TextValue.Concat
 public import Core.Ast.Semantik.Formbeweise
-public import Core.Ast.Semantik.Sicherheit
+public import Core.Ast.Semantik.Runtime.Sicherheit
 import Init.Omega
 
 /-!

@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Pattern
-public import Core.Ast.Aggregate.RecordGrammar
+public import Core.Ast.Aggregate.Records.RecordGrammar
 
 @[expose] public section
 

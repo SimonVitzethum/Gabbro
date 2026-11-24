@@ -5,7 +5,7 @@ public import Core.Ast.Surface
 public import Core.Ast.Grammar
 public import Core.Ast.Semantik.Formbeweise
 public import Core.Ast.Semantik.Pflichten
-public import Core.Ast.Semantik.Sicherheit
+public import Core.Ast.Semantik.Runtime.Sicherheit
 
 /-!
 # TextLength
