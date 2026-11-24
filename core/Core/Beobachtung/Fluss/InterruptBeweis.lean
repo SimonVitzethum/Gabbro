@@ -159,8 +159,11 @@ theorem interruptNI : InterruptNIAussage := by
             intro ρ spurρ vρ nρ tickρ atV atN aussenρ appendρ ruhtρ nextρ
             have speicherLeer : spurρ.speicher.filterMap (speicherBeob E.etiketten) =
                 ([] : List (NiedrigesEreignis PUnit Int PUnit Ast.Semantik.Befehl)) := by
-              have sp : spurρ.speicher = [(.aussen, label)] := by
-                cases appendρ with
+              have spAux : ∀ {es : List (SpeicherAkteur PUnit × Speicher.Etikett PUnit Int)},
+                  Speicherfolge vρ.initial .aussen vρ.graph [label] es nρ.graph →
+                  es = [(.aussen, label)] := by
+                intro es folge
+                cases folge with
                 | cons vor hsAppend nach =>
                   cases vor with
                   | ohne _ =>
@@ -168,6 +171,7 @@ theorem interruptNI : InterruptNIAussage := by
                     rfl
                   | erste mem _ _ =>
                     exact (mem rfl).elim
+              have sp := spAux appendρ
               rw [sp]
               rfl
             have keinEnde : ¬ ∃ d, (neuBeendet vρ nρ E.etiketten d).isSome = true := by
@@ -178,12 +182,11 @@ theorem interruptNI : InterruptNIAussage := by
                 · subst d
                   have statusN : nρ.status c = .laeuft := by
                     rw [nextρ]
-                    rfl
+                    simp only [Zustandseintritt, Function.update_self]
                   rw [statusN, ruhtρ]
-                  rfl
                 · have statusN : nρ.status d = vρ.status d := by
                     rw [nextρ]
-                    simp only [Function.update, hdc, Ne.symm hdc, ↓reduceIte]
+                    simp only [Zustandseintritt, Function.update, hdc, Ne.symm hdc, ↓reduceIte]
                   rw [statusN]
                   cases hst : vρ.status d <;> rfl
               rw [eqNone] at hd
@@ -218,20 +221,12 @@ theorem interruptNI : InterruptNIAussage := by
             induction sObs with
             | nil => exact .nil
             | cons e es ih => exact .cons (.gleich e) ih
-          have appendForall : ∀ {a b s : List (NiedrigesEreignis PUnit Int PUnit Ast.Semantik.Befehl)},
-              List.Forall₂ (EreignisAequiv E.fluss.freigabe) a b →
-              List.Forall₂ (EreignisAequiv E.fluss.freigabe) s s →
-              List.Forall₂ (EreignisAequiv E.fluss.freigabe) (a ++ s) (b ++ s) := by
-            intro a b s hab hs
-            induction hab with
-            | nil => exact hs
-            | cons hTail ih => exact .cons hTail ih
           refine ⟨?_, ?_, ?_⟩
           · rw [e₁, e₂, beobEq]
             have lenApp : (L₁ ++ sObs).length = (L₂ ++ sObs).length := by
               rw [List.length_append, List.length_append, len']
             rw [lenApp, List.take_length]
-            exact appendForall cov' reflS
+            exact List.Forall₂.rel_append cov' reflS
           · intro v' w' hv' hw'
             rw [zustandNach₁] at hv'
             rw [hn₂] at hw'
