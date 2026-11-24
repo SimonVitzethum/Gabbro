@@ -423,7 +423,8 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
     have hgood := hb.2.1 hw
     refine ⟨?_, ?_⟩
     · simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
-        Befehl.auswerten, Rahmen.schreibe, waechterBedarf, wertAls, TextValue.literal, I.start, cap]
+        Befehl.auswerten, Rahmen.schreibe, waechterBedarf, wertAls, TextValue.literal,
+        I.start, Zustand.start, startdaten, cap]
     · have ht := hgood.1
       have hsame : (b.nach eintritt s₃).lokal eintritt =
           (Befehl.substring 0 cap).auswerten (s₃.lokal eintritt) := by
