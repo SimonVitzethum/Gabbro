@@ -245,7 +245,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Annahme.RegelSchranken, 16983772557710325770),
   (`Gabbro.Core.Annahme.SchrankenProtokoll, 17866399719526072067),
   (`Gabbro.Core.Annahme.TiefenBezug, 315414478932478825),
-  (`Gabbro.Core.Annahme.schrankenLokal_leer, 0),
+  (`Gabbro.Core.Annahme.schrankenLokal_leer, 15117315966809320321),
   (`Gabbro.Core.Annahme.SchrankenPrefix, 9961279826536692402),
   (`Gabbro.Core.Annahme.GeschlossenWartend, 8090850508384713233),
   (`Gabbro.Core.Annahme.SperrHalterBereit, 2438561293375590578),
