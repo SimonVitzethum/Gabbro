@@ -108,6 +108,7 @@ private theorem textTailCompose {scope it it2 it3}
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailCompose tail' next)
 termination_by sizeOf tail
+decreasing_by simp_all
 
 private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
     {tree : Expr scope (.text a)} {rhs final : List Token}
@@ -146,8 +147,8 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   have hl : left.bytes.size ≤ a := left.bound
   have hr : right.bytes.size ≤ b := right.bound
   dsimp
-  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
-    left.bound, right.bound]
+  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, ByteArray.size_append,
+    hleft, hright, left.bound, right.bound]
   all_goals
     first
     | rfl
