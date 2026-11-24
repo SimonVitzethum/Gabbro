@@ -33,14 +33,16 @@ def printProgramWord (head : Char) (tail : List Char) (first : 'a' ≤ head ∧ 
 
 -- Mirror returnName and the punctuationHead lemma for each new terminal.
 def printConst : PrintedToken := printProgramWord 'c' ['o', 'n', 's', 't'] (by decide) (by sorry)
-def printFn : PrintedToken := printProgramWord 'f' ['n'] (by decide) (by sorry)
+theorem lowerNTail : ∀ c ∈ ['n'], 'a' ≤ c ∧ c ≤ 'z' :=
+  fun _ member => (List.mem_singleton.mp member).symm ▸
+    (show 'a' ≤ 'n' ∧ 'n' ≤ 'z' from by decide)
+
+def printFn : PrintedToken := printProgramWord 'f' ['n'] (by decide) lowerNTail
 def printBoolType : PrintedToken := printProgramWord 'b' ['o', 'o', 'l'] (by decide) (by
   intro c member
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl <;> decide)
-def printIn : PrintedToken := printProgramWord 'i' ['n'] (by decide)
-  (fun c member => (List.mem_singleton.mp member).symm ▸
-    (show 'a' ≤ 'n' ∧ 'n' ≤ 'z' from by decide))
+def printIn : PrintedToken := printProgramWord 'i' ['n'] (by decide) lowerNTail
 def printMut : PrintedToken := printProgramWord 'm' ['u', 't'] (by decide) (by sorry)
 def printWhile : PrintedToken := printProgramWord 'w' ['h', 'i', 'l', 'e'] (by decide) (by sorry)
 def printBounded : PrintedToken := printProgramWord 'b' ['o', 'u', 'n', 'd', 'e', 'd'] (by decide) (by sorry)
