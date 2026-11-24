@@ -117,7 +117,7 @@ theorem arrayValue {items : ExprItems scope types} (principal : arrayElement typ
   rw [arrayRead]
   rfl
 
-theorem arrayIndex {count : Nat} (lower : 0 ≤ lo) (upper : hi < (count : Int))
+theorem arrayIndex {count : Nat} {lo hi : Int} (lower : 0 ≤ lo) (upper : hi < (count : Int))
     (base : Ausdruckswert env slot (array : Expr scope (.array element count)))
     (index : Ausdruckswert env (slot + 1) (subscript : Expr scope (.int lo hi))) :
     Ausdruckswert env slot (.arrayIndex array subscript lower upper) := by
