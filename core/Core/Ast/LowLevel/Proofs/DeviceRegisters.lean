@@ -273,16 +273,16 @@ theorem registerRegelSicher_falsch :
   have rule : Rule binding access .ready none owner vor plan zwischen := by
     exact Rule.issue owns rfl
   have impl : (sys.regel ()).impl owner vor () [plan] zwischen := by
-    change ∃ p, [p] = [plan] ∧ Rule binding access .ready none owner vor p zwischen
+    dsimp [sys, registerRule, Rule.machine]
     exact ⟨plan, rfl, rule⟩
   have executed : FuehrtSchrittAus einr 0 owner vor zwischen plan spur nach := by
     refine ⟨?_, ?_, ?_⟩
     · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     · intro l inRead
-      simp at inRead
+      simp [plan, internal] at inRead
     · refine ⟨[], zwischen.frage event, ?_, ?_, ?_⟩
       · exact FuehrtAus.frage q
-      · simpa [spur, label] using folge
+      · simpa [spur, label, vor, boot, Zustand.start, plan, internal, schreibEreignisse, nach] using folge
       · rfl
   have hs := hsicher k binding access E ⟨0x70, rfl⟩ rfl rfl H ρ 0 owner () vor zwischen nach
     plan spur (by rfl) impl executed
