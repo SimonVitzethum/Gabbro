@@ -128,9 +128,9 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
     · simpa [pattern, TuplePattern.names]
     · exact List.nodup_nil
     · intro name mem
-      simpa [pattern, TuplePattern.names] at mem
+      simp only [pattern, TuplePattern.names, List.mem_cons, List.not_mem_nil, or_false] at mem
     · intro written mem
-      simpa using mem
+      cases mem
   let args : Surface.TupleBindArgs [] :=
     ⟨.bool, .bool, [], pattern, none, checked, .tupleValue .trueLit .falseLit .empty⟩
   let form := tupleBindForm ([], none)
