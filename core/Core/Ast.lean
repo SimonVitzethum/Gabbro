@@ -4,6 +4,7 @@ public import Core.Ast.Grammar
 public import Core.Ast.Inventory
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.BatchSurface
+public import Core.Ast.ExpressionBeweise
 public import Core.Ast.SemantikRezept
 public import Core.Ast.ProgramProgress
 public import Core.Ast.Aggregate.ArrayValueProofs

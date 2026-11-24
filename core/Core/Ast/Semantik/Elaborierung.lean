@@ -285,7 +285,25 @@ def unitBody : UnitBody before after → Fragment
   | .step first rest => (decl first).anhaengen (unitBody rest)
 
 -- Mirror returnName for the ordinary Stage-0 profile entry.
-def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by sorry)
+def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by
+  intro c member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  · exact ⟨by decide, by decide⟩
+  · exact ⟨by decide, by decide⟩
+  · exact ⟨by decide, by decide⟩)
+
+theorem mainName_direct : directName mainName := by
+  change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
+    ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+    ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · intro same
+    cases same
+  · intro same
+    cases same
+  · simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
+    rintro (same | same | same | same | same | same | same) <;> cases same
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)
