@@ -245,8 +245,8 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     | step stRead' blockRead' =>
         obtain ⟨sameFirst, moreEq⟩ := ihSt stRead'
         injection sameFirst with hMiddle hFirst
-        cases hMiddle
-        cases hFirst
+        cases hMiddle.symm
+        cases hFirst.symm
         cases moreEq.symm
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
         cases sameNext
