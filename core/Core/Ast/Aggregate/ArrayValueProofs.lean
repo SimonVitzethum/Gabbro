@@ -194,7 +194,9 @@ theorem arrayValueElementSound : ArrayValueElementSoundAussage := by
       | cons next rest =>
           change (arrayElement (next :: rest)).bind (arrayJoin head) = some element at principal
           cases hTail : arrayElement (next :: rest) with
-          | none => simp [hTail] at principal
+          | none =>
+              simp only [hTail] at principal
+              cases principal
           | some principalElement =>
               simp only [hTail, Option.bind] at principal
               cases i using Fin.cases with

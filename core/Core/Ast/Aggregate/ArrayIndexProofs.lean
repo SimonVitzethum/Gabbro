@@ -259,7 +259,7 @@ theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
     (form.realisiert (arrayIndex_am_ort []) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   change (Befehl.liesArray 0 (.int 0 0) 1).guard (s₃.lokal eintritt) = some g at guard
-  simp [Befehl.guard, Rahmen.zahl, alsGanzzahl] at guard
+  simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, Option.bind] at guard
   cases guard
   change (0 : Nat) < 1
   omega
