@@ -81,7 +81,7 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
   refine ⟨widened, contents, ?_⟩
   cases stackEq : (s.lokal eintritt).fortsetzungen with
   | nil =>
-    have returned : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt |>.rueckgabe =
+    have returned : (((Befehl.zurueck slot target).nach eintritt s).lokal eintritt).rueckgabe =
         some ⟨target, widened⟩ := by
       rw [afterFrame]
       simp only [Rahmen.rueckkehr, stackEq]
