@@ -25,19 +25,28 @@ open Maschine
 
 theorem elaboriert_form (form : Form) : ElaboriertAussage form := by
   intro k scope tree E
-  simp [Elaboriert]
+  constructor
+  · intro h
+    exact h
+  · intro h
+    exact h
 
 theorem realisiert_form (form : Form) : RealisiertAussage form := by
   intro k scope tree op start _ heval
   let s := (I.start (unit op) start).2
   have hs : s.status entryContext = .laeuft := by
-    simp [s, I.start, unit, bootData, entryContext, Zustand.start]
+    simp only [s, I.start, unit, bootData, entryContext, Zustand.start, ↓reduceIte]
   have hp : (s.lokal entryContext).pc = 0 := by
-    simp [s, I.start, unit, bootData, entryContext, Zustand.start]
+    simp only [s, I.start, unit, bootData, entryContext, Zustand.start, ↓reduceIte]
   have heval' : (op.evaluate s entryContext).isSome := by
     simpa [s] using heval
-  change (unit op).system.kopf s entryContext = some op
-  simp [unit, system, head, hs, hp, heval']
+  have hhead : head op s entryContext = some op := by
+    unfold head
+    rw [hs]
+    have hcond : entryContext = entryContext ∧ (s.lokal entryContext).pc = 0 ∧
+        (op.evaluate s entryContext).isSome := ⟨rfl, hp, heval'⟩
+    rw [if_pos hcond]
+  simpa only [unit, system] using hhead
 
 theorem annahme_form (form : Form) : AnnahmeAussage form := by
   intro k scope tree op _
@@ -47,7 +56,14 @@ theorem annahme_form (form : Form) : AnnahmeAussage form := by
     rcases hideal with ⟨transfer, heval, hP, hu⟩
     have hP' : P = plan := by simpa using hP
     subst P
-    simp [Annahme.Befugt, plan]
+    have hfuss : plan.fuss = [] := rfl
+    have hlesen : plan.lesen = [] := rfl
+    rw [Annahme.Befugt, hfuss, hlesen]
+    constructor
+    · intro x hx
+      exact (List.not_mem_nil x hx).elim
+    · intro l hl
+      exact (List.not_mem_nil l hl).elim
   · intro s c w plans next hideal
     rcases hideal with ⟨transfer, heval, hplans, hnext⟩
     exact hplans
