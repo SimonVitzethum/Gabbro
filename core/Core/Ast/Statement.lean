@@ -18,12 +18,12 @@ private theorem callNotReserved (call : DirectCall scope) (spelling : String)
 
 local macro "deny_statement" equality:ident : tactic =>
   `(tactic|
-    exfalso
-    first
-    | (cases (List.cons.inj $equality).1; done)
-    | (cases (List.cons.inj (List.cons.inj $equality).2).1; done)
-    | (cases (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).1; done)
-    | cases (List.cons.inj (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).2).1)
+    (exfalso
+     first
+     | (cases (List.cons.inj $equality).1; done)
+     | (cases (List.cons.inj (List.cons.inj $equality).2).1; done)
+     | (cases (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).1; done)
+     | cases (List.cons.inj (List.cons.inj (List.cons.inj (List.cons.inj $equality).2).2).2).1))
 
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
