@@ -60,11 +60,11 @@ theorem textLiteralBytes : TextLiteralBytesAussage := by
   intro decoded frame
   dsimp only
   constructor
-  · simp [Befehl.auswerten, Rahmen.schreibe]
+  · simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
   constructor
   · change (String.ofList decoded).toByteArray = decoded.utf8Encode
     rw [← String.utf8Encode_toList, String.toList_ofList]
-  · simp [Befehl.auswerten, Rahmen.schreibe]
+  · rfl
 
 theorem textLiteralParse : TextLiteralParseAussage := by
   intro scope args text pieces lexed production
@@ -122,12 +122,14 @@ theorem textLiteralRegelAntwortSicher : TextLiteralRegelAntwortSicherAussage := 
   have hspur := b.vollzug_genau (w := choice) impl execute
   have hplan : stepPlan = plan := (List.cons.inj impl.1).1
   constructor
-  · intro answer
-    rw [hplan]
-    simp [plan]
+  · intro answer eq
+    rw [hplan] at eq
+    simp only [plan] at eq
+    cases eq
   · intro answer
     rw [hspur.1]
-    simp
+    intro mem
+    cases mem
 
 theorem textLiteralKostenUndSpur : TextLiteralKostenUndSpurAussage := by
   intro scope platform args
@@ -137,7 +139,12 @@ theorem textLiteralKostenUndSpur : TextLiteralKostenUndSpurAussage := by
   intro t c s choice stepPlan u spur next head impl execute
   have hspur := b.vollzug_genau (w := choice) impl execute
   rw [hspur.1]
-  simp [Quellform.einheit, Fragment.einheit]
+  constructor
+  · rfl
+  constructor
+  · rfl
+  · change 0 + [stepPlan].length = 1
+    rfl
 
 theorem textLiteralErfuellbarAm : TextLiteralErfuellbarAmAussage := by
   intro platform start
@@ -153,11 +160,12 @@ theorem textLiteralErfuellbarAm : TextLiteralErfuellbarAmAussage := by
   · exact form.realisiert (textLiteral_am_ort []) platform decoded s rfl rfl rfl rfl
   · intro g guard
     change (Befehl.textLiteral 0 decoded).guard (s.lokal eintritt) = some g at guard
-    simp [Befehl.guard] at guard
+    simp only [Befehl.guard] at guard
+    cases guard
   · dsimp only
     constructor
     · change (s.lokal eintritt).stopp = none
       rfl
-    · simp [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    · simp only [textLiteralForm, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_self]
 
 end Gabbro.Core.Ast.Semantik
