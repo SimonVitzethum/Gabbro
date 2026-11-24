@@ -145,6 +145,23 @@ theorem fragment_kontext_schritt_still
           simp only [List.filterMap_nil, List.flatMap_nil, List.nil_append, hKontext,
             hKeinEnde, if_false]
 
+/-- A live head sits at the entry context. -/
+theorem kopf_eintritt {p : Fragment} {s : Ast.Semantik.Zustand} {f : Befehl} {c : Kontext}
+    (h : Ast.Semantik.kopf p.code s c = some f) : c = Ast.Semantik.eintritt := by
+  cases c with
+  | faden k =>
+    cases k with
+    | zero => rfl
+    | succ k =>
+      simp only [Ast.Semantik.kopf] at h
+      cases h
+  | handler _ _ _ =>
+    simp only [Ast.Semantik.kopf] at h
+    cases h
+  | nmi _ _ =>
+    simp only [Ast.Semantik.kopf] at h
+    cases h
+
 /-- A silent fragment step preserves the coupling. Same-cut offers coincide, so the
     right run provably takes the same silent step (lockstep through step kinds); both
     sides advance to publicly equal post-states with empty observations. -/
@@ -179,12 +196,8 @@ theorem stummer_schritt_koppelt
     rw [sysKopf, h, ← sysKopf]
     exact kopf
   -- a live head sits at the entry context
-  have centry : c = Ast.Semantik.eintritt := by
-    by_contra hc
-    have h : Ast.Semantik.kopf p.code vor c = some f := (sysKopf vor c).symm.trans kopf
-    unfold Ast.Semantik.kopf at h
-    rw [if_neg hc] at h
-    cases h
+  have centry : c = Ast.Semantik.eintritt :=
+    kopf_eintritt ((sysKopf vor c).symm.trans kopf)
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
@@ -272,13 +285,8 @@ theorem stummer_schritt_koppelt
                 cases impl₂' with
                 | kontext _ _ regel₂' aus₂' =>
                   obtain ⟨f₂, kopf₂', impl₂'rule⟩ := regel₂'
-                  have centry' : c₂ = Ast.Semantik.eintritt := by
-                    by_contra hc
-                    have h : Ast.Semantik.kopf p.code w₂ c₂ = some f₂ :=
-                      (sysKopf w₂ c₂).symm.trans kopf₂'
-                    unfold Ast.Semantik.kopf at h
-                    rw [if_neg hc] at h
-                    cases h
+                  have centry' : c₂ = Ast.Semantik.eintritt :=
+                    kopf_eintritt ((sysKopf w₂ c₂).symm.trans kopf₂')
                   -- both sides run at the entry context
                   have c_eq : c₂ = c := centry'.trans centry.symm
                   rw [c_eq] at kopf₂'
