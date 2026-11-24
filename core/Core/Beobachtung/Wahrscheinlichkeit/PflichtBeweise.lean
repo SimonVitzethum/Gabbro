@@ -43,7 +43,8 @@ theorem schluesselNodupB_nodup (Q : Zufallsquelle) (pfad : List (Nat × Nat))
         have htrue : (rest.any fun q : Nat × Nat => decide (q.1 = p.1)) = true := by
           rw [List.any_eq_true]
           obtain ⟨q, hqmem, hqfst⟩ := List.mem_map.mp hmem
-          exact ⟨q, hqmem, by simp only [hqfst, decide_eq_true_eq]⟩
+          have hqfst' : q.1 = p.1 := by simpa only [Function.comp_apply] using hqfst
+          exact ⟨q, hqmem, by simp only [hqfst', decide_eq_true_eq]⟩
         rw [htrue] at hfalse
         contradiction
       · exact ih h.1
@@ -70,10 +71,10 @@ theorem prEreignisAussage : prEreignisAussage := by
     measure_mono hsubset
   have hpDen0 : (pDen : ENNReal) ≠ 0 := by
     exact_mod_cast hpruefe.2.2.1
-  have hpDenTop : (pDen : ENNReal) ≠ ∞ := ENNReal.natCast_ne_top pDen
+  have hpDenTop : (pDen : ENNReal) ≠ ⊤ := ENNReal.natCast_ne_top pDen
   have hwDen0 : (wDen : ENNReal) ≠ 0 := by
     exact_mod_cast hpruefe.2.1
-  have hwDenTop : (wDen : ENNReal) ≠ ∞ := ENNReal.natCast_ne_top wDen
+  have hwDenTop : (wDen : ENNReal) ≠ ⊤ := ENNReal.natCast_ne_top wDen
   have hcross : (pNum : ENNReal) * (wDen : ENNReal) ≤
       (wNum : ENNReal) * (pDen : ENNReal) := by
     exact_mod_cast hpruefe.2.2.2.1
@@ -95,12 +96,12 @@ theorem prEreignisAussage : prEreignisAussage := by
     its complement is a contraction and the powers tend to zero. -/
 theorem rateDaten (qNum qDen : Nat)
     (hpruefe : pruefeProb (.abschluss qNum qDen) = true) :
-    let q : ENNReal := (qNum : ENNReal) / (qDen : ENNReal)
-    0 < q ∧ q ≤ 1 ∧ 1 - q < 1 := by
+    0 < (qNum : ENNReal) / (qDen : ENNReal) ∧
+      (qNum : ENNReal) / (qDen : ENNReal) ≤ 1 ∧
+      1 - (qNum : ENNReal) / (qDen : ENNReal) < 1 := by
   simp only [pruefeProb, decide_eq_true_eq] at hpruefe
-  dsimp only
   have hqDen0 : (qDen : ENNReal) ≠ 0 := by exact_mod_cast hpruefe.1
-  have hqDenTop : (qDen : ENNReal) ≠ ∞ := ENNReal.natCast_ne_top qDen
+  have hqDenTop : (qDen : ENNReal) ≠ ⊤ := ENNReal.natCast_ne_top qDen
   have hqPos : 0 < (qNum : ENNReal) / (qDen : ENNReal) := by
     apply ENNReal.div_pos
     · exact_mod_cast hpruefe.2.1
@@ -114,7 +115,8 @@ theorem rateDaten (qNum qDen : Nat)
 /-- The survivor intersection has measure zero: the measures form an antitone
     family bounded by a geometric null sequence, so continuity from above and the
     squeeze theorem pin the limit at zero. -/
-theorem schnittMassNull {α : Type*} [MeasurableSpace α] (mu : MeasureTheory.Measure α)
+theorem schnittMassNull {α : Type*} [MeasurableSpace α] {q : ENNReal}
+    (mu : MeasureTheory.Measure α)
     [MeasureTheory.IsProbabilityMeasure mu] (ueberlebt : Nat → Set α)
     (hmeas : ∀ n, MeasurableSet (ueberlebt n))
     (hanti : ∀ n, ueberlebt (n + 1) ⊆ ueberlebt n)
@@ -122,11 +124,11 @@ theorem schnittMassNull {α : Type*} [MeasurableSpace α] (mu : MeasureTheory.Me
     (hq : 0 < q ∧ q ≤ 1 ∧ 1 - q < 1) :
     mu (⋂ n, ueberlebt n) = 0 := by
   have hantito : Antitone ueberlebt := antitone_nat_of_succ_le hanti
-  have hfin : ∃ n, mu (ueberlebt n) ≠ ∞ := ⟨0, measure_ne_top mu (ueberlebt 0)⟩
+  have hfin : ∃ n, mu (ueberlebt n) ≠ ⊤ := ⟨0, measure_ne_top mu (ueberlebt 0)⟩
   have hlim : Filter.Tendsto (mu ∘ ueberlebt) Filter.atTop
-      (𝓝 (mu (⋂ n, ueberlebt n))) :=
+      (nhds (mu (⋂ n, ueberlebt n))) :=
     MeasureTheory.tendsto_measure_iInter_atTop (fun n => (hmeas n).nullMeasurableSet) hantito hfin
-  have hlimGeom : Filter.Tendsto (fun n : Nat => (1 - q) ^ n) Filter.atTop (𝓝 0) :=
+  have hlimGeom : Filter.Tendsto (fun n : Nat => (1 - q) ^ n) Filter.atTop (nhds 0) :=
     ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one hq.2.2
   have hle0 : mu (⋂ n, ueberlebt n) ≤ 0 :=
     le_of_tendsto_of_tendsto' hlim hlimGeom hdecay
@@ -142,7 +144,7 @@ theorem fastSicherAbschlussAussage : fastSicherAbschlussAussage := by
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
-  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ∞ := measure_ne_top hb.mu _
+  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := measure_ne_top hb.mu _
   have hcompl : hb.mu (⋂ n, ueberlebt n)ᶜ = 1 := by
     rw [measure_compl hAmeas hAfin, IsProbabilityMeasure.measure_univ, hnull, tsub_zero]
   have hsubset : (⋂ n, ueberlebt n)ᶜ ⊆ {band | Ziel (hb.replay band)} := by
@@ -168,7 +170,7 @@ theorem fastSicherFortschrittAussage : fastSicherFortschrittAussage := by
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
-  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ∞ := measure_ne_top hb.mu _
+  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := measure_ne_top hb.mu _
   have hcompl : hb.mu (⋂ n, ueberlebt n)ᶜ = 1 := by
     rw [measure_compl hAmeas hAfin, IsProbabilityMeasure.measure_univ, hnull, tsub_zero]
   have hsubset : (⋂ n, ueberlebt n)ᶜ ⊆ {band | Ziel (hb.replay band)} := by
