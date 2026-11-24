@@ -175,7 +175,7 @@ theorem neg_print (args : NegArgs scope) :
   change (neg scope).production args (Expr.neg args.operand).printTokens
   unfold neg
   refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, Arith.sub.print, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+  · rfl
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
@@ -210,7 +210,7 @@ theorem notValue_print (args : Expr scope .bool) :
   change (notValue scope).production args (Expr.not args).printTokens
   unfold notValue
   refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
+  · rfl
   · intro tail
     constructor <;> intro h <;> cases h
   · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
@@ -301,7 +301,7 @@ theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op 
   intro op
   let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
-  exact ⟨a, text, pieces, by dsimp [args]; rfl, lexical, production⟩
+  exact ⟨a, text, pieces, by simp [args], lexical, production⟩
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -341,7 +341,7 @@ theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op 
   intro op
   let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
-  exact ⟨a, text, pieces, by dsimp [args]; rfl, lexical, production⟩
+  exact ⟨a, text, pieces, by simp [args], lexical, production⟩
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
