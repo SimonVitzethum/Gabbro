@@ -28,11 +28,11 @@ def Transfer.apply {k : Katalog} (transfer : Transfer k) (c : Kontext) (s : Stat
       borrowed := transfer.loan.toList ++ frame.borrowed } }
 
 def Instruction.ideal {k : Katalog} (op : Instruction k) (c : Kontext) (s : State k)
-    (_ : PUnit) (plans : List Plan) (next : State k) : Prop :=
+    (_ : PUnit.{1}) (plans : List Plan) (next : State k) : Prop :=
   ∃ transfer, op.evaluate s c = some transfer ∧ plans = [plan] ∧ next = transfer.apply c s
 
 def Instruction.impl {k : Katalog} (op : Instruction k) (c : Kontext) (s : State k)
-    (_ : PUnit) (plans : List Plan) (next : State k) : Prop :=
+    (_ : PUnit.{1}) (plans : List Plan) (next : State k) : Prop :=
   match op.evaluate s c with
   | none => False
   | some transfer => plans = [plan] ∧ next = transfer.apply c s

@@ -92,7 +92,8 @@ def KostenAussage (form : Form) : Prop :=
 /-- Syntax, admission at the catalogue boundary, realization, and both transfer
     rules must hold jointly at the initial live occurrence. -/
 def ErfuellbarAussage (form : Form) : Prop :=
-  ∃ k scope (tree : Tree form) op env start text transfer,
+  ∃ (k : Katalog) (scope : RegionScope) (tree : Tree form) (op : Instruction k)
+    (env : Umgebung) (start : AussenStart) (text : RawText) (transfer : Transfer k),
     KatalogWohlgeformt k ∧ (scope.map Subtype.val).Nodup ∧ scope.length = start.regions.length ∧
     (unit op).ZulStart env start ∧ Parse text tree ∧ elaborate k scope tree = some op ∧
     Elaboriert k scope tree (unit op) ∧
