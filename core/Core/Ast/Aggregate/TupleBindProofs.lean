@@ -50,14 +50,17 @@ private theorem tupleAnnotation_consumes : (input : List Token) → (annotation 
     (rest : List Token) → TupleAnnotationReads input annotation rest → rest <:+ input
   | _, _, _, .absent => List.suffix_cons _ _
   | _, _, _, @TupleAnnotationReads.written input written rest typeRead =>
-      (List.suffix_cons colon input).trans
-        ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead))
+      ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead)).trans
+        (List.suffix_cons colon input)
 
 theorem tupleBind_suffix : TupleBindSuffixAussage := by
   intro scope result input tree rest read
+  generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
   case tupleBind =>
-      rename_i input' pattern annotation checked value more rhs patternRead annotationRead valueRead
+      rename_i input' first second tail pattern annotation checked value more rhs patternRead annotationRead valueRead
+      have eqin : input' = openParen :: input := (List.cons.inj htok).2.symm
+      rw [eqin] at patternRead
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
         ((tupleAnnotation_consumes more annotation rhs annotationRead).trans
           (tuplePattern_consumes input pattern more patternRead))
@@ -65,10 +68,14 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
 
 theorem tupleBind_inversion : TupleBindInversionAussage := by
   intro scope result input tree rest read
+  generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
   case tupleBind =>
-      rename_i input' pattern annotation checked value more rhs patternRead annotationRead valueRead
-      refine ⟨⟨_, _, _, _, _, _, _⟩, more, rhs, patternRead, annotationRead, valueRead, rfl⟩
+      rename_i input' first second tail pattern annotation checked value more rhs patternRead annotationRead valueRead
+      have eqin : input' = openParen :: input := (List.cons.inj htok).2.symm
+      rw [eqin] at patternRead
+      refine ⟨⟨first, second, tail, pattern, annotation, checked, value⟩, more, rhs,
+        patternRead, annotationRead, valueRead, rfl⟩
   all_goals contradiction
 
 end Gabbro.Core.Ast.Surface
@@ -174,10 +181,10 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   let pattern : TuplePattern := ⟨none, none, []⟩
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
-    · simp [pattern]
-    · simp [pattern]
+    · simp [pattern, TuplePattern.names]
+    · simp [pattern, TuplePattern.names]
     · intro name mem
-      simp [pattern] at mem
+      simp [pattern, TuplePattern.names] at mem
     · intro written mem
       simpa using mem
   let args : Surface.TupleBindArgs [] :=
