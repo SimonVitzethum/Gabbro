@@ -35,16 +35,17 @@ private theorem tableHeaderValue {scope : Scope} (item : TableDeclaration scope)
         [keyword "table", .word item.name.val, keyword "count", .natural item.count,
           openBrace, keyword "slot", openBrace] := by
   cases h : item.exported <;>
-    simp [TableDeclaration.header, h, printPubVal, printTableVal, identifierPrintVal,
-      printCountVal, printIntegerVal, printOpenBraceVal, printSlotVal]
+    simp only [TableDeclaration.header, h, List.map_append, List.map_cons, List.map_nil,
+      ↓reduceIte, printPubVal, printTableVal, identifierPrintVal, printCountVal,
+      printIntegerVal, printOpenBraceVal, printSlotVal]
 
 private theorem effectGroupHeaderValue {scope : Scope} (item : EffectGroupDeclaration scope) :
     item.header.map PrintedToken.value =
       (if item.exported then [keyword "pub"] else []) ++
         [keyword "effects", .word item.name.val, openBrace] := by
   cases h : item.exported <;>
-    simp [EffectGroupDeclaration.header, h, printPubVal, printEffectsVal, identifierPrintVal,
-      printOpenBraceVal]
+    simp only [EffectGroupDeclaration.header, h, List.map_append, List.map_cons, List.map_nil,
+      ↓reduceIte, printPubVal, printEffectsVal, identifierPrintVal, printOpenBraceVal]
 
 private theorem tableTok_ne_const : keyword "table" ≠ keyword "const" := by decide
 private theorem pubTok_ne_const : keyword "pub" ≠ keyword "const" := by decide
@@ -149,10 +150,11 @@ private theorem tableFields_print_reads (scope : Scope) (name : Identifier) (cou
   induction fields with
   | nil => exact TableFieldsRead.close
   | cons m ms ih =>
-      simpa [tableFieldTokenList, List.append_assoc, identifierPrintVal] using
+      simpa only [tableFieldTokenList, List.cons_append, List.append_assoc, identifierPrintVal] using
         (TableFieldsRead.next m.name
-          (WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same))
-          (ih (fun x hx => valid x (by simp [hx]))))
+          (WrittenType.printReads m.written (valid m (by simp only [List.mem_cons]))
+            (by intro more same; cases same))
+          (ih (fun x hx => valid x (by simp only [List.mem_cons, hx, or_true]))))
 
 private theorem tablePrints (scope : Scope) (item : TableDeclaration scope) :
     (tableForm scope).produktion.production item
@@ -160,14 +162,16 @@ private theorem tablePrints (scope : Scope) (item : TableDeclaration scope) :
         PrintedToken.value) := by
   refine ⟨(item.fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printCloseBrace]).map
     PrintedToken.value, ?_, ?_⟩
-  · simp [Category.printPieces, Decl.printPieces, tableForm, List.map_append]
+  · simp only [Category.printPieces, Decl.printPieces, tableForm, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · have hmap : (item.fields.flatMap RecordMember.printPieces).map PrintedToken.value =
         tableFieldTokenList item.fields := by
       induction item.fields with
       | nil => rfl
       | cons m ms ih =>
-          simp [List.flatMap_cons, List.map_append, List.cons_append, List.nil_append,
-            RecordMember.printPieces, tableFieldTokenList, printColonVal, printCommaVal, ih]
+          simp only [List.flatMap_cons, List.map_append, List.cons_append, List.nil_append,
+            List.map_cons, List.map_nil, RecordMember.printPieces, tableFieldTokenList,
+            printColonVal, printCommaVal, ih]
     rw [List.map_append, hmap]
     simpa [List.map_append, List.map_cons, List.map_nil, printCloseBraceVal] using
       (tableFields_print_reads scope item.name item.count item.fields item.valid)
@@ -196,18 +200,20 @@ theorem tableDerivation : TableDerivationAussage := by
 theorem tableScope : TableScopeAussage := by
   intro scope item
   constructor
-  · simp [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding]
+  · simp only [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding,
+      List.find?_cons, beq_iff_eq, ↓reduceIte]
   constructor
   · intro other hne
     have hne' : item.name.val ≠ other.val := fun h => hne h.symm
-    simp [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding, hne']
+    simp only [tableForm, Scope.carrierCount, TableDeclaration.binding, carrierBinding,
+      List.find?_cons, beq_iff_eq, hne', ↓reduceIte]
   · intro h
     cases h
 
 theorem tableBinding : TableBindingAussage := by
   intro scope item frame
-  simp [tableInstruction, Befehl.auswerten, Rahmen.installSchema, TableDeclaration.binding,
-    carrierBinding]
+  simp only [tableInstruction, Befehl.auswerten, Rahmen.installSchema,
+    TableDeclaration.binding, carrierBinding]
 
 theorem tableParse : TableParseAussage := by
   intro scope item text pieces lexed prod
@@ -297,7 +303,7 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     body := .braces .done
     distinct := by
       dsimp [paramIndex, paramOption, pname, qname, keywordName]
-      simp
+      decide
     returns := by
       intro h
       cases h
@@ -311,9 +317,11 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
   refine ⟨by decide, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · refine ⟨argsVal, .done, rfl, ?_, ?_⟩
     · refine ⟨paramIndex, ?_, rfl⟩
-      simp [argsVal]
+      change paramIndex ∈ [paramIndex, paramOption]
+      exact List.mem_cons_self paramIndex [paramOption]
     · refine ⟨paramOption, ?_, rfl⟩
-      simp [argsVal]
+      change paramOption ∈ [paramIndex, paramOption]
+      exact List.mem_cons_of_mem paramIndex (List.mem_singleton paramOption)
   · exact Ast.parse_print (category := .unit) tree
   · rfl
   · exact .start
