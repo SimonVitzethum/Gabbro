@@ -54,7 +54,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
                 first
                 | simpa only [hsp, hsp']
                 | (
-                  simpa only [hsp, hsp'] using congrArg some (Subtype.ext (by
+                  simpa only [hsp, hsp', Identifier] using congrArg some (Subtype.ext (by
                     have h := congrArg (fun l : List Token => l[9]?) hb
                     simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
                       Option.some.injEq, Token.word.injEq] using h))
@@ -63,13 +63,13 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
                 first
                 | simpa only [hst, hst']
                 | (
-                  simpa only [hst, hst'] using congrArg some (Subtype.ext (by
+                  simpa only [hst, hst', Identifier] using congrArg some (Subtype.ext (by
                     have h := congrArg (fun l : List Token => l[8]?) hb
                     simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
                       Option.some.injEq, Token.word.injEq] using h))
                   )
                 | (
-                  simpa only [hst, hst'] using congrArg some (Subtype.ext (by
+                  simpa only [hst, hst', Identifier] using congrArg some (Subtype.ext (by
                     have h := congrArg (fun l : List Token => l[11]?) hb
                     simpa only [List.getElem?_cons_zero, List.getElem?_cons_succ,
                       Option.some.injEq, Token.word.injEq] using h))
@@ -119,19 +119,19 @@ private theorem jumpLongMeaning : JumpLongMeaningAussage := by
   cases hcur : (s.lokal c).current with
   | none =>
       rw [hcur] at heval
-      try simp only [Option.bind_none] at heval
+      dsimp at heval
       cases heval
   | some cur =>
       rw [hcur] at heval
-      try simp only [Option.bind_some] at heval
+      dsimp at heval
       cases hdst : (s.lokal c).states[dest]? with
       | none =>
           rw [hdst] at heval
-          try simp only [Option.bind_none] at heval
+          dsimp at heval
           cases heval
       | some decl =>
           rw [hdst] at heval
-          try simp only [Option.bind_some] at heval
+          dsimp at heval
           cases htr : decl.translation with
           | off =>
               cases hsp : sp with
@@ -405,7 +405,7 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
   have hs2halted : (s2.lokal entryContext).halted = false := by
     simp only [s2, ExecFrame.advance, Function.update_self, frame2, ExecFrame.declare,
       s1, frame1, hs0lokal]
-  have hcond : (0 : Nat) != 1 && !false && stackOk [0] (some 0) &&
+  have hcond : true && !false && stackOk [0] (some 0) &&
       spaceOk .off [] none = true := by
     decide
   have heval : op.evaluate s2 entryContext = some next := by
@@ -429,21 +429,13 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     dsimp [next]
   have hhead0 : E.system.kopf s0 entryContext = some (.declareState jlFirstDecl) := by
     change execHead (pre ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
-    unfold execHead
-    simp only [↓reduceIte, hs0status, hs0lokal, List.getElem?_cons_zero]
-    exact if_pos (by rw [heval0]; rfl)
+    simp [execHead, hs0status, hs0lokal, heval0]
   have hhead1 : E.system.kopf s1 entryContext = some (.declareState jlSecondDecl) := by
     change execHead (pre ++ [op]) s1 entryContext = some (.declareState jlSecondDecl)
-    unfold execHead
-    simp only [↓reduceIte, hs1status, hs1pc, List.getElem?_cons_succ,
-      List.getElem?_cons_zero]
-    exact if_pos (by rw [heval1]; rfl)
+    simp [execHead, hs1status, hs1pc, heval1]
   have hhead2 : E.system.kopf s2 entryContext = some op := by
     change execHead (pre ++ [op]) s2 entryContext = some op
-    unfold execHead
-    simp only [↓reduceIte, hs2status, hs2pc, List.getElem?_cons_succ,
-      List.getElem?_cons_succ, List.getElem?_cons_zero]
-    exact if_pos (by rw [heval]; rfl)
+    simp [execHead, hs2status, hs2pc, heval]
   have hstep0 : (ExecInstruction.rule (.declareState jlFirstDecl)).ideal entryContext s0 ()
       [plan] (frame1.advance entryContext s0) := by
     exact ⟨frame1, heval0, rfl, rfl⟩
