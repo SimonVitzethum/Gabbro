@@ -37,7 +37,7 @@ theorem skalarNI : SkalarNIAussage := by
         obtain ⟨f', kopf', implRegel⟩ := regel
         have ff : f' = f := Option.some.inj (kopf'.symm.trans kopf)
         subst f'
-        obtain ⟨spurEq, nachGlied⟩ := Befehl.vollzug_genau f implRegel aus
+        obtain ⟨spurEq, nachGlied⟩ := Befehl.vollzug_genau (w := w) f implRegel aus
         subst spur
         have zustandNach : ρ₁.zeit.zustand (t + 1) = some (f.nach c vor) := by
           rw [nachEq, nachGlied]
