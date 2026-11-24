@@ -278,3 +278,19 @@ incorrectly described the future continuation connection as already present and 
 The report accurately names the missing markers, G8 transitions, source constructors and discarded-tail
 coverage. The requested step is incomplete and contributes no completed source-to-IR case. Future assignments
 should target one connected transition and its witness rather than another broad prerequisite checkpoint.
+
+**Rebuild in `core/`, first wave (2026-11-24).** Every delivery is checked by the M0 guards (hash pins, no large
+`decide`, heartbeat cap), so a green proof is valid whoever wrote it; the review reads statements only.
+- **GPT Sol 6.2**: M4 in three deliveries (catalogue binding, machine and `I` steps, interrupts, starts and runs,
+  linearisation, crash and recovery, determinacy and progress of `I`; about 2 000 lines), each commit green on
+  its own, statements faithful to the specification; the M2 guard repair (5 proofs, 23 lines) on the first run.
+  As goal reviewer (rounds 1–10, 12) it found a real A finding in almost every round, each with a counterexample.
+- **Muse Spark 1.3**: M10 (outside rule, 407 lines) green after four self-repaired iterations, with one weak
+  statement (a refusal shown only in a world where every object is dead). M5 (acceptance) green, but three
+  vacuous parts: two obligation classes without fields and the clause and guard tables as free instances; a
+  repair round was needed. As goal reviewer (round 11) it was thorough and well-structured, gave PASS with
+  three B findings; Sol's following round confirmed PASS with four further B findings.
+- **Mercury 3**: proof-only test on fixed statements — the same five M2 proofs Sol repaired. All five green under
+  the guards with statements unchanged (102 lines against Sol's 23, more case-by-case), but its final report was
+  degenerate (a repeated token instead of text): judge Mercury by its commits and the lead's build, never by its
+  report. Fit for proving fixed statements; never for stating them.
