@@ -39,7 +39,8 @@ theorem akzeptiert_katalog [DecidableEq L]
   h.1.1
 
 /-- The trivial rule: no implementation step, no `I` step. -/
-def trivialesRegel : Regel Unit Unit Unit :=
+def trivialesRegel
+    : Regel (Zustand Unit Unit Unit Unit Unit Unit) (SchrittPlan Unit Unit Unit Unit) Unit :=
   ⟨fun _ _ _ _ => False, fun _ _ _ _ _ => False⟩
 
 instance trivialeRegelLokal : RegelLokal trivialesRegel := ⟨⟩
@@ -48,7 +49,7 @@ instance trivialeRegelAussen : RegelAussen trivialesRegel := ⟨⟩
 
 /-- The trivial system: one form with no steps, no head anywhere, nothing finished, never
     blocked. -/
-def trivialesSystem : System (Zustand Unit Unit Unit Unit Unit Unit) Unit Unit Unit Unit :=
+def trivialesSystem : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => trivialesRegel, fun _ _ => none, fun _ _ => False, fun _ _ _ => False⟩
 
 /-- The trivial unit on the approved x86-64 rows. -/
@@ -75,22 +76,25 @@ instance trivialeVerwendung : GuardVerwendung trivialeEinheit where
     conjuncts hold jointly — no uses to guard, nothing written to violate, never blocked. -/
 theorem akzeptiert_erfuellbar
     : ∃ E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, Akzeptiert E := by
-  refine ⟨trivialeEinheit, ?_, ?_, ?_⟩
-  · refine ⟨Plattform.katalog_wohlgeformt .x86_64, fun i => ?_, Aussen.zulassung_m2 .x86_64,
+  have hL : Lokal trivialeEinheit :=
+    ⟨Plattform.katalog_wohlgeformt .x86_64, fun i => ?_, Aussen.zulassung_m2 .x86_64,
       fun i => ?_⟩
-    · show RegelLokal trivialesRegel
-      exact inferInstance
-    · show RegelAussen trivialesRegel
-      exact inferInstance
-  · intro ρ _
+  · show RegelLokal trivialesRegel
+    exact inferInstance
+  · show RegelAussen trivialesRegel
+    exact inferInstance
+  have hK : KlauselnWahr trivialeEinheit := by
+    intro ρ _
     exact ⟨trivial, fun _ => trivial, fun _ _ => trivial⟩
-  · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_⟩
+  have hW : WaechterHalten trivialeEinheit := by
+    refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_⟩
     intro h
     obtain ⟨C, hC⟩ := h
     obtain ⟨hex, hall⟩ := hC
     obtain ⟨c, hc⟩ := hex
     obtain ⟨b, hb, _⟩ := hall c hc
     exact False.elim hb
+  exact ⟨trivialeEinheit, hL, hK, hW⟩
 
 /-- **A system with a closed waiting set at an `I` cut is not accepted.** -/
 theorem geschlossen_nicht_akzeptiert [DecidableEq L]
@@ -100,7 +104,7 @@ theorem geschlossen_nicht_akzeptiert [DecidableEq L]
     (C : Kontext → Prop) (h : GeschlossenWartend E (ρ.zeit.zustand t.val) C) :
     ¬ Akzeptiert E := by
   intro ha
-  exact ha.2.2 ρ hρ t ⟨C, h⟩
+  exact ha.2.2.2 ρ hρ t ⟨C, h⟩
 
 /-- Two locks held cross-wise: each holder waits on the lock the other holds. -/
 def kreuzSperren : Bool → SperrZustand
@@ -113,10 +117,14 @@ def kreuzBlockiert : Zustand Bool Unit Unit Unit Unit Unit → Kontext → Block
   | _, .faden 1, .sperre true => True
   | _, _, _ => False
 
+/-- The cross-waiting rule: silent in both machines. -/
+def kreuzRegel
+    : Regel (Zustand Bool Unit Unit Unit Unit Unit) (SchrittPlan Bool Unit Unit Unit) Unit :=
+  ⟨fun _ _ _ _ => False, fun _ _ _ _ _ => False⟩
+
 /-- The cross-waiting system: one silent form, heads nowhere, nothing finished. -/
-def kreuzSystem : System (Zustand Bool Unit Unit Unit Unit Unit) Unit Unit
-    (Blockade Bool Unit) Unit :=
-  ⟨fun _ => trivialesRegel, fun _ _ => none, fun _ _ => False, kreuzBlockiert⟩
+def kreuzSystem : MaschinenSystem Bool Unit Unit Unit Unit Unit Unit Unit Unit :=
+  ⟨fun _ => kreuzRegel, fun _ _ => none, fun _ _ => False, kreuzBlockiert⟩
 
 /-- The cross-waiting unit on the approved x86-64 rows. -/
 def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
@@ -132,7 +140,8 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
 
 /-- The cross-waiting state: free memory, no traffic, locks held cross-wise. -/
 def kreuzZustand : Zustand Bool Unit Unit Unit Unit Unit :=
-  { (Zustand.start (fun _ => ()) (fun _ => .ruht)
+  { (Zustand.start (L := Bool) (Ort := Unit) (Wert := Unit) (Raum := Unit) (Lok := Unit)
+      (Grund := Unit) (fun _ => ()) (fun _ => .ruht)
       (fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩)
       ⟨fun _ => true, fun _ => 0⟩) with sperren := kreuzSperren }
 
