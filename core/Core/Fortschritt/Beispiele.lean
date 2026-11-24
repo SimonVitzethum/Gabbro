@@ -274,15 +274,45 @@ def ctxAB : Nat → Kontext := fun t => if t % 2 = 0 then A else B
 
 def ZAB : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => zAB0
-  | t + 1 => toggleUpdate (ctxAB t) (ZAB t)
+  | t + 1 => if t % 2 = 0 then toggleUpdate A (ZAB t) else ZAB t
+
+def ZABρ : Nat → Zustand Unit Unit Unit Unit Bool Unit
+  | 0 => zAB0
+  | t + 1 => toggleUpdate (ctxAB t) (ZABρ t)
 
 theorem zAB_kerne : ∀ t, (ZAB t).kerne = zAB0.kerne := by
   intro t
   induction t with
   | zero => rfl
-  | succ t ih => exact ih
+  | succ t ih =>
+    by_cases h : t % 2 = 0
+    · have hz : ZAB (t + 1) = toggleUpdate A (ZAB t) := by simp only [ZAB, if_pos h]
+      rw [hz]
+      exact ih
+    · have hz : ZAB (t + 1) = ZAB t := by simp only [ZAB, if_neg h]
+      rw [hz]
+      exact ih
 
 theorem zAB_status : ∀ t, (ZAB t).status = zAB0.status := by
+  intro t
+  induction t with
+  | zero => rfl
+  | succ t ih =>
+    by_cases h : t % 2 = 0
+    · have hz : ZAB (t + 1) = toggleUpdate A (ZAB t) := by simp only [ZAB, if_pos h]
+      rw [hz]
+      exact ih
+    · have hz : ZAB (t + 1) = ZAB t := by simp only [ZAB, if_neg h]
+      rw [hz]
+      exact ih
+
+theorem zABρ_kerne : ∀ t, (ZABρ t).kerne = zAB0.kerne := by
+  intro t
+  induction t with
+  | zero => rfl
+  | succ t ih => exact ih
+
+theorem zABρ_status : ∀ t, (ZABρ t).status = zAB0.status := by
   intro t
   induction t with
   | zero => rfl
@@ -330,28 +360,38 @@ def taktAB (t : Nat) : Takt
     t (ZAB t) (spurAB t) (ZAB (t + 1)) := by
   by_cases h : t % 2 = 0
   · rw [spurAB_eq h]
+    have hz : ZAB (t + 1) = toggleUpdate A (ZAB t) := by simp only [ZAB, if_pos h]
+    rw [hz]
     exact .schritt rfl (I.Schritt.kontext (hw2_crash t)
       ⟨0, hw2_opp0 h, by rw [zAB_kerne]; exact zAB0_dispatch0,
-        by rw [zAB_status]; exact zAB0_live _⟩
+        by rw [zAB_status]⟩
       ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZAB t)))
-  · rw [spurAB_ne h]
+  · have hz : ZAB (t + 1) = ZAB t := by simp only [ZAB, if_neg h]
+    rw [spurAB_ne h, hz]
     exact .wartet rfl rfl (fun ho => Bool.false_ne_true ((hw2_crash t).symm.trans ho.2))
 
 def taktABρ (t : Nat) : Takt
     (Lauffolge (E_w dispatch2) hw2) (KeinSchritt (Lauffolge (E_w dispatch2) hw2))
-    t (some (ZAB t)) (spurABρ t) (some (ZAB (t + 1))) := by
+    t (some (ZABρ t)) (spurABρ t) (some (ZABρ (t + 1))) := by
   by_cases h : t % 2 = 0
   · rw [spurABρ_eq h]
+    have hz : ZABρ (t + 1) = toggleUpdate A (ZABρ t) := by
+      have : ctxAB t = A := by simp only [ctxAB, if_pos h]
+      simp only [ZABρ, this]
+    rw [hz]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
-      ⟨0, hw2_opp0 h, by rw [zAB_kerne]; exact zAB0_dispatch0,
-        by rw [zAB_status]; exact zAB0_live _⟩
-      ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZAB t))))
+      ⟨0, hw2_opp0 h, by rw [zABρ_kerne]; exact zAB0_dispatch0,
+        by rw [zABρ_status]⟩
+      ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZABρ t))))
   · have h1 : t % 2 = 1 := by omega
-    rw [spurABρ_ne h]
+    have hz : ZABρ (t + 1) = toggleUpdate B (ZABρ t) := by
+      have : ctxAB t = B := by simp only [ctxAB, if_neg h]
+      simp only [ZABρ, this]
+    rw [spurABρ_ne h, hz]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
-      ⟨1, hw2_opp1 h1, by rw [zAB_kerne]; exact zAB0_dispatch1,
-        by rw [zAB_status]; exact zAB0_live _⟩
-      ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t B (ZAB t))))
+      ⟨1, hw2_opp1 h1, by rw [zABρ_kerne]; exact zAB0_dispatch1,
+        by rw [zABρ_status]⟩
+      ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t B (ZABρ t))))
 
 def ηAB : I.Lauf (E_w dispatch2) :=
   ⟨s0, h2, hw2, ⟨ZAB, spurAB, taktAB⟩, belegtAB⟩
@@ -359,7 +399,7 @@ def ηAB : I.Lauf (E_w dispatch2) :=
 theorem ηAB_zustand : ∀ t, ηAB.zeit.zustand t = ZAB t := fun _ => rfl
 
 def ρAB : Maschine.Lauf (E_w dispatch2) :=
-  ⟨s0, hw2, ⟨fun t => some (ZAB t), spurABρ, taktABρ⟩⟩
+  ⟨s0, hw2, ⟨fun t => some (ZABρ t), spurABρ, taktABρ⟩⟩
 
 /-- `B` is never discharged on the starvation run. -/
 theorem nie_erledigt_B : ∀ t, ¬ I.Erledigt ηAB B t := by
