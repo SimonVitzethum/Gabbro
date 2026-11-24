@@ -295,7 +295,7 @@ theorem stale_nicht_gueltig (p : Plattform) :
     ¬ Aussen.GueltigBeiCommit p AussenSicht.leer staleFrage := by
   apply fruehere_provenienz_verweigert p _ _
     ⟨staleFrage.handle, staleFrage.operation.required⟩ List.mem_cons_self
-    staleFrage.handle.origin rfl ?_ (Aussen.reihe_instabil _ _)
+    staleFrage.handle.origin rfl ?_ (Aussen.hosted_nicht_stabil _ _ rfl)
   show staleFrage.handle.origin ≠ _
   intro hcon
   exact nomatch hcon

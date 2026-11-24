@@ -53,7 +53,7 @@ theorem issue_ungueltig (history : AussenVerlauf) (bytes : List UInt8) :
     have ja := List.all_eq_true.mp all z mem
     have nein := Aussen.tot_gueltig_falsch AussenSicht.leer frage.endpoint z (fun _ => rfl)
     exact Bool.false_ne_true (nein.symm.trans ja)
-  | stabil all => exact Aussen.reihe_instabil _ _ (all z mem)
+  | stabil all => exact Aussen.hosted_nicht_stabil _ _ rfl (all z mem)
 
 theorem antwort_atomar (history : AussenVerlauf) (bytes : List UInt8) :
     atomar einheit.katalog.plattform (sicht bytes 2 history) frage = .antwort (ausgabe bytes) := rfl

@@ -79,6 +79,6 @@ theorem toctoufrei_nichtLeer :
     have no := Aussen.tot_gueltig_falsch AussenSicht.leer commit.endpoint key (fun _ => rfl)
     exact Bool.false_ne_true (no.symm.trans yes)
   | stabil alle =>
-    exact Aussen.reihe_instabil _ _ (alle ⟨commit.handle, commit.operation.required⟩ List.mem_cons_self)
+    exact Aussen.hosted_nicht_stabil _ _ rfl (alle ⟨commit.handle, commit.operation.required⟩ List.mem_cons_self)
 
 end Gabbro.Core.Sicherheit
