@@ -117,10 +117,12 @@ private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
       openBracket :: input ∧ ItemsRead scope closeBracket input args.items []
   refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket], ?_, ?_⟩
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.singleton_append]
+      List.map_nil, List.singleton_append, printOpenBracket, printCloseBracket,
+      printPunctuation, PrintedToken.unquoted]
   have atom := (Expr.arrayValue args.items args.principal args.fits).printAtom ([] : List Token)
-  obtain ⟨args', itemsRead', _⟩ := arrayValueInversion atom
-  simpa using itemsRead'
+  obtain ⟨args', itemsRead', eq⟩ := arrayValueInversion atom
+  cases eq
+  simpa [printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted] using itemsRead'
 
 theorem arrayValueDerivation : ArrayValueDerivationAussage := by
   intro scope

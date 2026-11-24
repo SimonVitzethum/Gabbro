@@ -58,7 +58,8 @@ theorem arrayTypeDerivation : ArrayTypeDerivationAussage := by
       (Expr.lit count : Expr [] (.int count count)) (closeBracket :: rest) :=
     .atom .lit (.stop noOperatorAtCloseBracket)
   simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc] using
+    List.append_assoc, printOpenBracket, printSemicolon, printCloseBracket, printInteger,
+    printPunctuation, PrintedToken.unquoted] using
     (TypeReads.array count (Expr.lit count) elementRead boundRead)
 
 theorem arrayTypeIndex : ArrayTypeIndexAussage := by
@@ -104,7 +105,7 @@ private theorem arrayType_keine_invarianten (ctx : Scope × Option (Ty .value))
 
 theorem arrayTypeParse : ArrayTypeParseAussage := by
   intro ctx args text pieces lexed production
-  exact (mutableLocal_entry ctx.1 ctx.2).parse lexed production
+  exact (Surface.mutableLocal_entry ctx.1 ctx.2).parse lexed production
 
 theorem arrayTypeElaboriert : ArrayTypeElaboriertAussage := by
   intro ctx platform args
@@ -150,10 +151,14 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  have ordinary : name.val ≠ "mut".toList := by
-    change ['x'] ≠ ['m', 'u', 't']
-    intro same
-    cases same
+  have ordinary : ordinaryLocal name := by
+    constructor
+    · change ['x'] ≠ ['t', 'r', 'u', 'e']
+      intro same
+      cases same
+    · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+      intro same
+      cases same
   let written : WrittenType := .array .bool 1
   let value : Expr [] written.type :=
     .arrayValue (.next (.trueLit : Expr [] .bool) .empty) rfl (fun i => by
@@ -166,25 +171,22 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
           change Fits .bool .bool
           trivial)
   let argsVal : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, written, by change written.valid; trivial, written.type, value, by simp [Fits]⟩
+    ⟨name, ordinary, written, by change written.valid; trivial, written.type, value, by rfl⟩
   let args : {a : Surface.MutableLocalArgs [] none // arrayTypeUse a.written} :=
-    ⟨argsVal, by simp [arrayTypeUse, written]⟩
+    ⟨argsVal, by change arrayTypeUse (WrittenType.array .bool 1); simp [arrayTypeUse]⟩
   let form := typeUseForm ([], none) arrayTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
   let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
   let s₂ := (Befehl.baueArray 0 .bool 1).nach eintritt s₁
-  let s₃ := (Befehl.bindeWert 0 written.type false).nach eintritt s₂
   have step1 : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
     ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
   have step2 : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
     ⟨.baueArray 0 .bool 1, rfl, rfl, rfl⟩
-  have step3 : E.system.ISchritt eintritt s₂ () [plan] s₃ :=
-    ⟨.bindeWert 0 written.type false, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₃ :=
-    .schritt eintritt () [plan] (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start step1) step2) step3
-  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₃ reached
-    (form.realisiert (arrayType_am_ort ([], none)) platform args s₃ rfl rfl rfl rfl) ?_⟩
+  have reached : E.system.IErreichbar s₀ s₂ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan] .start step1) step2
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₂ reached
+    (form.realisiert (arrayType_am_ort ([], none)) platform args s₂ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 

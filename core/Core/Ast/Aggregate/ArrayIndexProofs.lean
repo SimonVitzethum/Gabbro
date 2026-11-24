@@ -69,14 +69,16 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
     [closeBracket, closeParen], ?_, ?_⟩
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.singleton_append, List.append_assoc]
+      List.map_nil, List.singleton_append, List.append_assoc, printOpen, printClose,
+      printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted]
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · simpa only [List.singleton_append, List.append_assoc] using
-      (Expr.printReads (minimum := 8) args.base (by
+  · exact Expr.printReads (minimum := 8)
+      (rest := openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
+      args.base (by
         intro cont
         obtain ⟨op, more, same, allowed⟩ := cont
         have prec := infixPrecLe7 op
-        omega))
+        omega)
   · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
@@ -274,7 +276,12 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
-      · simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wertAls, Rahmen.zahl, alsGanzzahl,
+      · have wert : wertAls (.array element (count + 1))
+            (⟨.array element (count + 1), values⟩ : Dynamisch) =
+            some (values : Wert (.array element (count + 1))) := by
+          dsimp [wertAls]
+          rw [dif_pos rfl]
+        simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
