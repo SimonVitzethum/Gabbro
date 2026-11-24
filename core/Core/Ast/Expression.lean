@@ -236,8 +236,7 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
   · rename_i ref visible ordinary'
-    have htype : type = (Expr.variable ref visible ordinary').typed.1 := rfl
-    cases htype
+    cases (show tree.typed = (Expr.variable ref visible ordinary').typed from rfl)
     exact ⟨ref, visible, ordinary', rfl, rfl, rfl⟩
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
@@ -361,7 +360,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token (.arith op) = token at otherRead
     cases otherRead with
-    | stop blocked => exact (blocked ⟨.arith op, input, rfl, allowed⟩).elim
+    | stop blocked => exact (blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ rightRead tail =>
       have eq := Arith.token_injective (by simpa only [Infix.token] using h)
       subst op'
@@ -374,14 +373,11 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .arith op) (b := .compare op') h
       cases eq
-    | logic op' _ rightRead tail =>
-      have eq := Infix.token_injective (a := .arith op) (b := .logic op') h
-      cases eq
   · intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ allowed _ _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token .div = token at otherRead
     cases otherRead with
-    | stop blocked => exact (blocked ⟨.div, input, rfl, allowed⟩).elim
+    | stop blocked => exact (blocked ⟨.div, input, congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ rightRead tail =>
       have eq := Infix.token_injective (a := .div) (b := .arith op') h
       cases eq
@@ -392,14 +388,11 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .div) (b := .compare op') h
       cases eq
-    | logic op' _ rightRead tail =>
-      have eq := Infix.token_injective (a := .div) (b := .logic op') h
-      cases eq
   · intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token (.compare op) = token at otherRead
     cases otherRead with
-    | stop blocked => exact (blocked ⟨.compare op, input, rfl, allowed⟩).elim
+    | stop blocked => exact (blocked ⟨.compare op, input, congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ rightRead tail =>
       have eq := Infix.token_injective (a := .compare op) (b := .arith op') h
       cases eq
@@ -412,23 +405,11 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
-    | logic op' _ rightRead tail =>
-      have eq := Infix.token_injective (a := .compare op) (b := .logic op') h
-      cases eq
   · intros
     rename_i _ _ _ input _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token (.logic op) = token at otherRead
     cases otherRead with
-    | stop blocked => exact (blocked ⟨.logic op, input, rfl, allowed⟩).elim
-    | binary op' _ rightRead tail =>
-      have eq := Infix.token_injective (a := .logic op) (b := .arith op') h
-      cases eq
-    | div _ rightRead _ tail =>
-      have eq := Infix.token_injective (a := .logic op) (b := .div) h
-      cases eq
-    | compare op' _ rightRead _ tail =>
-      have eq := Infix.token_injective (a := .logic op) (b := .compare op') h
-      cases eq
+    | stop blocked => exact (blocked ⟨.logic op, input, congrArg (· :: input) h.symm, allowed⟩).elim
     | logic op' _ rightRead tail' =>
       have eq := Infix.token_injective (a := .logic op) (b := .logic op') h
       cases eq
@@ -463,13 +444,13 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
   · intro _ rest _ _ _
     exact List.suffix_refl rest
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons op.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons Infix.div.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.compare op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.logic op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
 
 -- Mirror AtomReads.lit_inversion at the shared arithmetic tail constructor.
 theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
@@ -481,7 +462,7 @@ theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
   cases read with
   | stop blocked =>
       exfalso
-      exact blocked ⟨.arith op, input, rfl, allowed⟩
+      exact blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩
   | binary op' _ rightRead tail =>
       have eq := Arith.token_injective (by simpa only [Infix.token] using h)
       subst op'
@@ -503,7 +484,7 @@ theorem ExprTail.div_inversion (allowed : minimum ≤ Infix.div.precedence)
   cases read with
   | stop blocked =>
       exfalso
-      exact blocked ⟨.div, input, rfl, allowed⟩
+      exact blocked ⟨.div, input, congrArg (· :: input) h.symm, allowed⟩
   | binary op' _ rightRead tail =>
       have eq := Infix.token_injective (a := .div) (b := .arith op') h
       cases eq
@@ -524,7 +505,7 @@ theorem ExprTail.compare_inversion (allowed : minimum ≤ (Infix.compare op).pre
   cases read with
   | stop blocked =>
       exfalso
-      exact blocked ⟨.compare op, input, rfl, allowed⟩
+      exact blocked ⟨.compare op, input, congrArg (· :: input) h.symm, allowed⟩
   | binary op' _ rightRead tail =>
       have eq := Infix.token_injective (a := .compare op) (b := .arith op') h
       cases eq
@@ -547,7 +528,7 @@ theorem ExprTail.logic_inversion (allowed : minimum ≤ (Infix.logic op).precede
   cases read with
   | stop blocked =>
       exfalso
-      exact blocked ⟨.logic op, input, rfl, allowed⟩
+      exact blocked ⟨.logic op, input, congrArg (· :: input) h.symm, allowed⟩
   | logic op' _ rightRead tail' =>
       have eq := Infix.token_injective (a := .logic op) (b := .logic op') h
       cases eq
@@ -581,13 +562,13 @@ theorem AtomReads.consumes (read : AtomReads scope input tree rest) : rest <:+ i
   · intro _ rest _ _ _
     exact List.suffix_refl rest
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons op.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons Infix.div.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.compare op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.logic op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
 
 -- Mirror ExprReads.consumes with the tail motive of the mutual recursor.
 theorem ExprTail.consumes (read : ExprTail scope minimum first input tree rest) : rest <:+ input := by
@@ -617,12 +598,12 @@ theorem ExprTail.consumes (read : ExprTail scope minimum first input tree rest) 
   · intro _ rest _ _ _
     exact List.suffix_refl rest
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons op.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons Infix.div.token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.compare op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
   · intro _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons (Infix.logic op).token input)
+    exact (tail.trans operand).trans (List.suffix_cons _ _)
 
 end Gabbro.Core.Ast
