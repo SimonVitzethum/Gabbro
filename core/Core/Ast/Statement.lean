@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Print
+public import Core.Ast.ProgramHeader
 
 @[expose] public section
 
@@ -32,6 +32,13 @@ theorem LetTailReads.consumes (read : LetTailReads result scope name ordinary va
   cases read
   exact List.suffix_cons _ _
 
+/-- The optional for-range handler is detected by its leading keyword. -/
+inductive OverflowReads : List Token → Option Identifier → List Token → Prop where
+  | absent (closed : ∀ more, rest ≠ keyword "on_exceeded" :: more) :
+      OverflowReads rest none rest
+  | named (name : Identifier) :
+      OverflowReads (keyword "on_exceeded" :: .word name.val :: rest) (some name) rest
+
 mutual
 
 inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
@@ -52,6 +59,41 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       BlockReads result scope first yes (elseKeyword :: more) →
       BlockReads result scope more no rest →
       StmtReads result scope (ifKeyword :: input) ⟨scope, .ite condition yes no⟩ rest
+
+
+  | retVoid (declared : result = none) :
+      StmtReads result scope (returnKeyword :: semicolon :: rest) ⟨scope, .retVoid declared⟩ rest
+  | letMutable (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType) (valid : written.valid)
+      (fits : Fits type written.type) :
+      TypeReads input written (assignment :: rhs) →
+      ExprReads scope 0 rhs (value : Expr scope type) (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: keyword "mut" :: .word name.val :: colon :: input)
+        ⟨_, .letMutable name ordinary written valid value fits⟩ rest
+  | directCall : CallReads scope input call (semicolon :: rest) →
+      StmtReads result scope input ⟨scope, .directCall call⟩ rest
+  | bindDirect (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid) :
+      TypeReads input written (assignment :: rhs) → CallReads scope rhs call (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: .word name.val :: colon :: input)
+        ⟨_, .bindDirect name ordinary written valid call⟩ rest
+  | whileBounded (nonnegative : 0 ≤ lo) (overflow : Identifier)
+      (bound : Expr scope (.int lo hi)) (staticBound : bound.static) :
+      ExprReads scope 0 input (condition : Expr scope .bool) (keyword "bounded" :: boundInput) →
+      ExprReads scope 0 boundInput bound
+        (keyword "ops" :: keyword "on_exceeded" :: .word overflow.val :: bodyInput) →
+      BlockReads result scope bodyInput body rest →
+      StmtReads result scope (keyword "while" :: input)
+        ⟨scope, .whileBounded condition bound staticBound nonnegative overflow body⟩ rest
+  | forRange (name : Identifier) (ordinary : ordinaryLocal name)
+      (body : BracedBlock result (rangeBinding name low high :: scope))
+      (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high))
+      (staticBounds : lo.static ∧ hi.static) :
+      ExprReads scope 0 input lo (openRange :: highInput) →
+      ExprReads scope 0 highInput hi tail →
+      OverflowReads tail overflow bodyInput →
+      BlockReads result (rangeBinding name low high :: scope) bodyInput body rest →
+      StmtReads result scope (keyword "for" :: .word name.val :: keyword "in" :: input)
+        ⟨scope, .forRange name ordinary lo hi staticBounds overflow body⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :
@@ -117,7 +159,8 @@ theorem BlockReads.braced_inversion
 
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
-  cases read
+  cases read with
+  | directCall callRead => cases callRead
 
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)

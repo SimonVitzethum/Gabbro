@@ -43,8 +43,51 @@ def expr (slot : Nat) : Expr scope type → Fragment
     let rhs := expr slot right
     ((expr slot left).anhaengen (.einzel (.springeWenn slot op.skips (rhs.code.length + 1)))).anhaengen rhs
 
+def argsCode (slot : Nat) : List (TypedExpr scope) → Fragment
+  | [] => .leer
+  | value :: rest => (expr slot value.2).anhaengen (argsCode (slot + 1) rest)
+
+def callInstruction (call : DirectCall scope) (bind : Option (Ty .value)) : Befehl :=
+  .rufe call.name (call.args.map Sigma.fst) bind
+
+def callCode (call : DirectCall scope) (bind : Option (Ty .value)) : Fragment :=
+  (argsCode 0 call.args).anhaengen (.einzel (callInstruction call bind))
+
+def whileInstruction (condition : Expr scope .bool) (body : Fragment) (handler : Identifier) :
+    Befehl := .whileTest 0 (body.code.length + 2) handler
+
+def forInstruction (body : Fragment) (handler : Option Identifier) : Befehl :=
+  .forTest (body.code.length + 2) handler
+
 def BracedBlock.freigabe : BracedBlock result before → Nat
   | @BracedBlock.braces _ _ after _ => after.length - before.length
+
+mutual
+/-- Record whether the range index is shadowed or written in its body. -/
+def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × Bool
+  | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
+    (name.val == index.val, false)
+  | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
+  | .ite _ yes no =>
+    let (ys, yw) := BracedBlock.rangeUses index yes
+    let (ns, nw) := BracedBlock.rangeUses index no
+    (ys || ns, yw || nw)
+  | .whileBounded _ _ _ _ _ body => BracedBlock.rangeUses index body
+  | .forRange name _ _ _ _ _ body =>
+    let (shadow, writes) := BracedBlock.rangeUses index body
+    (name.val == index.val || shadow, writes)
+  | _ => (false, false)
+
+def Block.rangeUses (index : Identifier) : Block result before after → Bool × Bool
+  | .done => (false, false)
+  | .step first rest =>
+    let (fs, fw) := Stmt.rangeUses index first
+    let (rs, rw) := Block.rangeUses index rest
+    (fs || rs, fw || rw)
+
+def BracedBlock.rangeUses (index : Identifier) : BracedBlock result before → Bool × Bool
+  | .braces body => Block.rangeUses index body
+end
 
 mutual
 
@@ -60,6 +103,29 @@ def stmt : Stmt result before after → Fragment
     let head := (expr 0 condition).anhaengen (.einzel (.springeWenn 0 false (yesCode.code.length + 2)))
     ((head.anhaengen yesCode).anhaengen (.einzel (.springe (noCode.code.length + 1)))).anhaengen noCode
 
+  | .retVoid _ => .einzel .rueckVoid
+  | .letMutable _ _ written _ value _ =>
+    (expr 0 value).anhaengen (.einzel (.bindeWert 0 written.type false))
+  | .directCall call => callCode call none
+  | .bindDirect _ _ written _ call => callCode call (some written.type)
+  | .whileBounded condition bound _ _ handler body =>
+    let test := expr 0 condition
+    let body := bracedBlock body
+    let set := Fragment.einzel (.setzePasszahl 0 (test.code.length + 1))
+    let branch := Fragment.einzel (whileInstruction condition body handler)
+    let again := Fragment.einzel (.zurueckSprung (test.code.length + body.code.length + 1))
+    (((((expr 0 bound).anhaengen set).anhaengen test).anhaengen branch).anhaengen body).anhaengen again
+  | @Stmt.forRange _ scope low _ _ high name _ lo hi _ overflow body =>
+    let index := (rangeBinding name low high).type
+    let (shadow, writes) := BracedBlock.rangeUses name body
+    let body := bracedBlock body
+    let endpoints := (expr 0 lo).anhaengen (expr 1 hi)
+    let setup := Fragment.einzel (.forAnfang 0 1 index (body.code.length + 4) shadow (writes && overflow.isNone))
+    let branch := Fragment.einzel (forInstruction body overflow)
+    let again := Fragment.einzel (.forNaechster (body.code.length + 1) index)
+    (((((endpoints.anhaengen setup).anhaengen branch).anhaengen body).anhaengen again).anhaengen
+      (.einzel (.blockEnde 1)))
+
 def block : Block result before after → Fragment
   | .done => .leer
   | .step first rest => (stmt first).anhaengen (block rest)
@@ -70,17 +136,45 @@ def bracedBlock : BracedBlock result before → Fragment
 
 end
 
-def decl (d : Decl before after) : Fragment := nomatch d
+def functionCode (result : Option WrittenType) (measure : Option (Measure scope))
+    (body : BracedBlock (writtenResult result) scope) : Fragment :=
+  let prologue := match measure with
+    | none => Fragment.leer
+    | some m => (expr 0 m.expression).anhaengen (.einzel (.pruefeMass 0))
+  (prologue.anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
+
+def functionInstruction (before : Scope) (name : Identifier) (parameters : List Parameter)
+    (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment) : Befehl :=
+  .definiere name (parameters.map (fun p => p.written.type)) (writtenResult result)
+    before.length (body.code.length + 1) hasMeasure
+    (body.code.filterMap fun
+      | .rufe target args bind => some ⟨target, args, bind⟩
+      | _ => none)
+
+def decl : Decl before after → Fragment
+  | .constant _ _ written _ value _ _ =>
+    (expr 0 value).anhaengen (.einzel (.bindeWert 0 written.type true))
+  | .function name _ parameters result _ measure body _ _ =>
+    let code := functionCode result measure body
+    (Fragment.einzel (functionInstruction before name parameters result measure.isSome code)).anhaengen code
+
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer
   | .step first rest => (decl first).anhaengen (unitBody rest)
 
+-- Mirror returnName for the ordinary Stage-0 profile entry.
+def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by sorry)
+
+def programm (tree : Ast.Unit) : Fragment :=
+  ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)
+
 def fragment : (category : Category) → category.Tree → Fragment
   | .expression scope, tree => { expr 0 tree.2 with eingang := scope }
   | .statement scope _, tree => { stmt tree.2 with eingang := scope }
   | .block scope _, tree => { bracedBlock tree with eingang := scope }
-  | .unit, tree => unitBody tree.2
+  | .unit, tree => programm tree
+  | .declaration scope, tree => { decl tree.2 with eingang := scope }
 
 abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
 

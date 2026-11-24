@@ -42,10 +42,11 @@ def Realisiert (platform : Plattform) (args : Arguments) (s : Zustand) : Prop :=
 theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     (args : Arguments) (s : Zustand) (running : s.status eintritt = .laeuft)
     (active : (s.lokal eintritt).rueckgabe = none)
+    (live : (s.lokal eintritt).stopp.isNone = true)
     (atPc : (s.lokal eintritt).pc = form.position args) :
     Realisiert form platform args s := by
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
-    simp only [kopf, ite_true, running, active, atPc, position args]
+    simp only [kopf, ite_true, running, active, live, atPc, position args]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 /-- Elaboration-independent part of the schema supplies the real raw grammar proof. -/
@@ -58,7 +59,7 @@ def Quellform.ElaboriertAussage : Prop :=
 
 def Quellform.RealisiertAussage : Prop :=
   ∀ platform args s, s.status eintritt = .laeuft →
-    (s.lokal eintritt).rueckgabe = none →
+    (s.lokal eintritt).rueckgabe = none → (s.lokal eintritt).stopp.isNone = true →
     (s.lokal eintritt).pc = form.position args → Realisiert form platform args s
 
 def Quellform.AnnahmeAussage : Prop :=

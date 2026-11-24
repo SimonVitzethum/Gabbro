@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.BatchForms
+public import Core.Ast.Semantik.ProgramForms
 
 @[expose] public section
 
@@ -77,6 +77,25 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements returnValueForm returnValueJoint constructor⟩
   else if constructor = ``Stmt.ite then
     ⟨.surface, Quellform.statements ifElseForm ifElseJoint constructor⟩
+  else if constructor = ``Stmt.retVoid then
+    ⟨.surface, Quellform.statements (Context := PUnit) (fun _ => returnVoidForm [] none) returnVoidJoint constructor⟩
+  else if constructor = ``Stmt.letMutable then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => mutableLocalForm ctx.1 ctx.2) mutableLocalJoint constructor⟩
+  else if constructor = ``Stmt.directCall then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => directCallForm ctx.1 ctx.2) directCallJoint constructor⟩
+  else if constructor = ``Stmt.bindDirect then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => bindDirectForm ctx.1 ctx.2) bindDirectJoint constructor⟩
+  else if constructor = ``Stmt.whileBounded then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => boundedWhileForm ctx.1 ctx.2) boundedWhileJoint constructor⟩
+  else if constructor = ``Stmt.forRange then
+    ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => forRangeForm ctx.1 ctx.2) forRangeJoint constructor⟩
+  else nichtSpezifiziert constructor
+
+def declSchema (constructor : Name) : RegistrySchema constructor :=
+  if constructor = ``Decl.constant then
+    ⟨.surface, Quellform.statements constantForm constantJoint constructor⟩
+  else if constructor = ``Decl.function then
+    ⟨.surface, Quellform.statements functionForm functionJoint constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

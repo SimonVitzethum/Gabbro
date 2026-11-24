@@ -8,6 +8,10 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
+def overflowPieces : Option Identifier → List PrintedToken
+  | none => []
+  | some name => [printOnExceeded, name.print]
+
 mutual
 
 def Stmt.printPieces : Stmt result before after → List PrintedToken
@@ -19,6 +23,21 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
     [returnName.print] ++ value.printPieces ++ [printSemicolon]
   | .ite condition yes no =>
     [ifName.print] ++ condition.printPieces ++ yes.printPieces ++ [elseName.print] ++ no.printPieces
+
+  | .retVoid _ => [returnName.print, printSemicolon]
+  | .letMutable name _ written _ value _ =>
+    [letName.print, printMut, name.print, printColon] ++ written.printPieces ++
+      [printAssignment] ++ value.printPieces ++ [printSemicolon]
+  | .directCall call => call.printPieces ++ [printSemicolon]
+  | .bindDirect name _ written _ call =>
+    [letName.print, name.print, printColon] ++ written.printPieces ++ [printAssignment] ++
+      call.printPieces ++ [printSemicolon]
+  | .whileBounded condition bound _ _ overflow body =>
+    [printWhile] ++ condition.printPieces ++ [printBounded] ++ bound.printPieces ++
+      [printOps, printOnExceeded, overflow.print] ++ body.printPieces
+  | .forRange name _ lo hi _ overflow body =>
+    [printFor, name.print, printIn] ++ lo.printPieces ++ [printOpenRange] ++ hi.printPieces ++
+      overflowPieces overflow ++ body.printPieces
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []

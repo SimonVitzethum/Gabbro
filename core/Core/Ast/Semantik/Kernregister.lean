@@ -3,6 +3,7 @@ module
 public import Core.Ast.Semantik.Beispiele
 public import Core.Ast.Semantik.BatchRegistry
 public import Core.Ast.Semantik.LocalEffects
+public import Core.Ast.Semantik.ProgramRegistry
 
 @[expose] public section
 
@@ -31,7 +32,11 @@ theorem aus_elaborierung : AusElaborierung := by
       cases head
     | laeuft =>
       cases returned : (s.lokal c).rueckgabe with
-      | none => simpa only [status, returned] using head
+      | none =>
+        simp only [status, returned] at head
+        split at head
+        · exact head
+        · cases head
       | some _ =>
         simp only [status, returned] at head
         cases head
@@ -47,6 +52,76 @@ def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args
   ⟨.core (AusElaborierung ∧ ∀ scope, (forms scope).RegelAmOrt),
     shared.acceptanceRule, shared.idealRule, shared.unitsAndCommutation,
     shared.implementationRule, shared.preservation, shared.jointlySatisfiable⟩
+
+def Befehl.programConstructor : Befehl → Option Name
+  | .bindeWert .. => some ``Befehl.bindeWert
+  | .definiere .. => some ``Befehl.definiere
+  | .rufe .. => some ``Befehl.rufe
+  | .rueckVoid .. => some ``Befehl.rueckVoid
+  | .pruefeMass .. => some ``Befehl.pruefeMass
+  | .setzePasszahl .. => some ``Befehl.setzePasszahl
+  | .whileTest .. => some ``Befehl.whileTest
+  | .forAnfang .. => some ``Befehl.forAnfang
+  | .forTest .. => some ``Befehl.forTest
+  | .forNaechster .. => some ``Befehl.forNaechster
+  | .zurueckSprung .. => some ``Befehl.zurueckSprung
+  | .starte .. => some ``Befehl.starte
+  | .ende .. => some ``Befehl.ende
+  | _ => none
+
+def programConstructors : List Name :=
+  [``Befehl.bindeWert,
+    ``Befehl.definiere,
+    ``Befehl.rufe,
+    ``Befehl.rueckVoid,
+    ``Befehl.pruefeMass,
+    ``Befehl.setzePasszahl,
+    ``Befehl.whileTest,
+    ``Befehl.forAnfang,
+    ``Befehl.forTest,
+    ``Befehl.forNaechster,
+    ``Befehl.zurueckSprung,
+    ``Befehl.starte,
+    ``Befehl.ende]
+
+def programKernStatements (constructor : Name) : RegistryStatements constructor .core where
+  realization := .core AusElaborierung
+  acceptanceRule := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
+    Annahme.RegelLokal (p.einheit platform) b
+  idealRule := ∀ b : Befehl, b.programConstructor = some constructor →
+    Ideal.RegelBestimmt b.regel ∧ ∀ c s w plans u, b.ideal c s w plans u ↔ plans = [plan] ∧ u = b.nach c s
+  unitsAndCommutation := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
+    (p.einheit platform).stotterLaenge b = 0 ∧ ∀ other, Kommutation b.vor b.danach other
+  implementationRule := ∀ b : Befehl, b.programConstructor = some constructor →
+    ∀ c s w plans u, b.impl c s w plans u ↔ plans = [plan] ∧ u = b.nach c s
+  preservation := ∀ (p : Fragment) platform b, b.programConstructor = some constructor →
+    p.klauseln.invariant = [] →
+    I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
+      I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
+      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+  jointlySatisfiable := ∀ platform start,
+    ∃ (category : Category) (tree : category.Tree) (text : Text.RawText) (s : Zustand) (b : Befehl),
+      b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
+      let E := elaborieren platform tree
+      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
+        E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
+        E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+
+-- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
+theorem programKern_erfuellbar (constructor : Name) (registered : constructor ∈ programConstructors) :
+    (programKernStatements constructor).jointlySatisfiable := by
+  sorry
+
+def programKernProofs (constructor : Name) (registered : constructor ∈ programConstructors) :
+    RegistryEntry constructor ⟨.core, programKernStatements constructor⟩ where
+  realization := .core aus_elaborierung
+  acceptanceRule := fun p platform b _ => b.lokal (p.einheit platform) rfl
+  idealRule := fun b _ => ⟨b.bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
+  implementationRule := fun _ _ _ _ _ _ _ => Iff.rfl
+  preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
+    b.komponierbar p platform, Befehl.sicher p platform inv b⟩
+  jointlySatisfiable := programKern_erfuellbar constructor registered
 
 def befehlSchema (constructor : Name) : RegistrySchema constructor :=
   if constructor = ``Befehl.literal then
@@ -79,7 +154,79 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements thenJumpForm thenJumpJoint constructor⟩
   else if constructor = ``Befehl.blockEnde then
     ⟨.core, Quellform.kernStatements bracedForm bracedJoint constructor⟩
+  else if constructor ∈ programConstructors then
+    ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor
+
+-- Mirror kernLiteralEntry by reducing befehlSchema after selecting an auxiliary instruction.
+theorem befehlSchema_program (constructor : Name) (registered : constructor ∈ programConstructors) :
+    befehlSchema constructor = ⟨.core, programKernStatements constructor⟩ := by
+  sorry
+
+def kern_bindeWert : RegistryEntry ``Befehl.bindeWert (befehlSchema ``Befehl.bindeWert) := by
+  have registered : ``Befehl.bindeWert ∈ programConstructors := List.Mem.head _
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_definiere : RegistryEntry ``Befehl.definiere (befehlSchema ``Befehl.definiere) := by
+  have registered : ``Befehl.definiere ∈ programConstructors := List.Mem.tail _ (List.Mem.head _)
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_rufe : RegistryEntry ``Befehl.rufe (befehlSchema ``Befehl.rufe) := by
+  have registered : ``Befehl.rufe ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_rueckVoid : RegistryEntry ``Befehl.rueckVoid (befehlSchema ``Befehl.rueckVoid) := by
+  have registered : ``Befehl.rueckVoid ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_pruefeMass : RegistryEntry ``Befehl.pruefeMass (befehlSchema ``Befehl.pruefeMass) := by
+  have registered : ``Befehl.pruefeMass ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_setzePasszahl : RegistryEntry ``Befehl.setzePasszahl (befehlSchema ``Befehl.setzePasszahl) := by
+  have registered : ``Befehl.setzePasszahl ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_whileTest : RegistryEntry ``Befehl.whileTest (befehlSchema ``Befehl.whileTest) := by
+  have registered : ``Befehl.whileTest ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_forAnfang : RegistryEntry ``Befehl.forAnfang (befehlSchema ``Befehl.forAnfang) := by
+  have registered : ``Befehl.forAnfang ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_forTest : RegistryEntry ``Befehl.forTest (befehlSchema ``Befehl.forTest) := by
+  have registered : ``Befehl.forTest ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_forNaechster : RegistryEntry ``Befehl.forNaechster (befehlSchema ``Befehl.forNaechster) := by
+  have registered : ``Befehl.forNaechster ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_zurueckSprung : RegistryEntry ``Befehl.zurueckSprung (befehlSchema ``Befehl.zurueckSprung) := by
+  have registered : ``Befehl.zurueckSprung ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_starte : RegistryEntry ``Befehl.starte (befehlSchema ``Befehl.starte) := by
+  have registered : ``Befehl.starte ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
+
+def kern_ende : RegistryEntry ``Befehl.ende (befehlSchema ``Befehl.ende) := by
+  have registered : ``Befehl.ende ∈ programConstructors := List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))))))
+  rw [befehlSchema_program _ registered]
+  exact programKernProofs _ registered
 
 def Quellform.kernEintrag {Context : Type} {cat : Context → Category} {args : Context → Type}
     {forms : (scope : Context) → Quellform (cat scope) (args scope)} {joint : Prop}

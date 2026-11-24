@@ -25,6 +25,7 @@ structure Binding where
   name : Identifier
   type : Ty .value
   mutable : Bool
+  constant : Bool
 
 abbrev Scope := List Binding
 
@@ -126,13 +127,76 @@ abbrev TypedExpr (scope : Scope) := (type : Ty .value) × Expr scope type
 
 def Expr.typed (tree : Expr scope type) : TypedExpr scope := ⟨type, tree⟩
 
+/-- Static evaluation may read only bindings introduced by const declarations. -/
+def Expr.static : Expr scope type → Prop
+  | .variable ref _ _ => ref.binding.constant = true
+  | .binary _ a b | .div a b _ | .compare _ a b => a.static ∧ b.static
+  | .logic _ a b => a.static ∧ b.static
+  | .neg a | .not a => a.static
+  | _ => True
+
+/-- The scalar type spelling retains the signedness and width selected in the source.
+    A missing explicit interval denotes the complete range of that width. -/
+inductive WrittenType where
+  | bool
+  | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
+
+def WrittenType.storage (signed : Bool) (width : Nat) : Int × Int :=
+  if signed then (-(2 ^ (width - 1) : Int), 2 ^ (width - 1) - 1)
+  else (0, 2 ^ width - 1)
+
+def WrittenType.type : WrittenType → Ty .value
+  | .bool => .bool
+  | .integer signed width range =>
+    let (lo, hi) := range.getD (storage signed width)
+    .int lo hi
+
+def WrittenType.valid : WrittenType → Prop
+  | .bool => True
+  | .integer signed width range =>
+    let (minimum, maximum) := storage signed width
+    let (lo, hi) := range.getD (minimum, maximum)
+    1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
+
+structure Parameter where
+  name : Identifier
+  written : WrittenType
+  valid : written.valid
+  ordinary : ordinaryLocal name
+
+def Parameter.binding (p : Parameter) : Binding := ⟨p.name, p.written.type, false, false⟩
+
+def functionScope (outer : Scope) (parameters : List Parameter) : Scope :=
+  (parameters.map Parameter.binding).reverse ++ outer
+
+def directName (name : Identifier) : Prop :=
+  ordinaryLocal name ∧ name.val ∉
+    ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+
+structure DirectCall (scope : Scope) where
+  name : Identifier
+  ordinary : directName name
+  args : List (TypedExpr scope)
+
+/-- A finite recursion measure evaluated at function entry in the parameter scope. -/
+structure Measure (scope : Scope) where
+  lo : Int
+  hi : Int
+  expression : Expr scope (.int lo hi)
+  lower : 0 ≤ lo
+
+def rangeType (lo hi : Int) : Ty .value := .int (min lo hi) (max lo hi)
+
+def rangeBinding (name : Identifier) (lo hi : Int) : Binding :=
+  ⟨name, rangeType lo hi, true, false⟩
+
 mutual
 
 /-- The enclosing function's result is available in each statement and branch. -/
 inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- `let name = value;`. The name enters scope after the initializer. -/
   | letValue (name : Identifier) (ordinary : name.val ≠ "mut".toList)
-      (value : Expr scope type) : Stmt result scope (⟨name, type, false⟩ :: scope)
+      (value : Expr scope type) : Stmt result scope (⟨name, type, false, false⟩ :: scope)
   /-- Assignment to a mutable range local, with SG-1 interval containment. -/
   | assignVar (ref : Local scope (.int lo hi)) (visible : ref.visible)
       (writable : ref.binding.mutable = true) (value : Expr scope (.int valueLo valueHi))
@@ -142,6 +206,28 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (fits : Fits type expected) : Stmt result scope scope
   /-- Only the selected branch runs. Its new bindings are scoped to that branch. -/
   | ite (condition : Expr scope .bool) (yes no : BracedBlock result scope) : Stmt result scope scope
+  /-- SYNTAX §6, fallthrough and the explicit void return. -/
+  | retVoid (declared : result = none) : Stmt result scope scope
+  /-- SYNTAX §7, a scalar mutable local with a written type. -/
+  | letMutable (name : Identifier) (ordinary : ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid) (value : Expr scope type)
+      (fits : Fits type written.type) : Stmt result scope (⟨name, written.type, true, false⟩ :: scope)
+  /-- SYNTAX §6, direct call whose ordinary result is discarded. -/
+  | directCall (call : DirectCall scope) : Stmt result scope scope
+  /-- SYNTAX §7, direct call with a written result-binding type. -/
+  | bindDirect (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid) (call : DirectCall scope) :
+      Stmt result scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- SYNTAX §8, O18. The operation spelling bounds passes and the condition is retested. -/
+  | whileBounded (condition : Expr scope .bool)
+      (bound : Expr scope (.int lo hi)) (staticBound : bound.static) (nonnegative : 0 ≤ lo)
+      (overflow : Identifier) (body : BracedBlock result scope) : Stmt result scope scope
+  /-- SYNTAX §8, O18. Static endpoints and a body-local mutable index. -/
+  | forRange (name : Identifier) (ordinary : ordinaryLocal name)
+      (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high))
+      (staticBounds : lo.static ∧ hi.static)
+      (overflow : Option Identifier)
+      (body : BracedBlock result (rangeBinding name low high :: scope)) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -154,8 +240,36 @@ inductive BracedBlock (result : Option (Ty .value)) : Scope → Type where
 
 end
 
-/-- Declarations add bindings to the unit's scope. Declaration forms are admitted by M6. -/
+mutual
+def Stmt.returns : Stmt result before after → Bool
+  | .ret .. | .retVoid .. => true
+  | .ite _ yes no => yes.returns && no.returns
+  | _ => false
+
+def Block.returns : Block result before after → Bool
+  | .done => false
+  | .step first rest => first.returns || rest.returns
+
+def BracedBlock.returns : BracedBlock result before → Bool
+  | .braces body => body.returns
+end
+
+/-- The return spelling determines the body's return index. -/
+def writtenResult (result : Option WrittenType) : Option (Ty .value) := result.map WrittenType.type
+
+/-- Constant values can enter the declaration scope. Function signatures are resolved
+    across the whole unit, allowing forward calls and checked recursive cycles. -/
 inductive Decl : Scope → Scope → Type where
+  | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType)
+      (valid : written.valid) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
+      Decl before (⟨name, written.type, false, true⟩ :: before)
+  | function (name : Identifier) (ordinary : directName name) (parameters : List Parameter)
+      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid t)
+      (decreases : Option (Measure (functionScope before parameters)))
+      (body : BracedBlock (writtenResult result) (functionScope before parameters))
+      (distinct : (parameters.map (fun p => p.name.val)).Nodup)
+      (returns : result.isSome = true → body.returns = true) :
+      Decl before before
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where

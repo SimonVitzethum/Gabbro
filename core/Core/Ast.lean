@@ -5,6 +5,7 @@ public import Core.Ast.Inventory
 public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
 public import Core.Ast.SemantikRezept
+public import Core.Ast.ProgramProgress
 
 /-!
 # Adding one inventory form
