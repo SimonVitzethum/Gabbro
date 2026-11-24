@@ -390,9 +390,11 @@ theorem fragment_start_ni (p : Fragment) (plattform : Plattform) :
     rw [z₂] at hw
     obtain rfl := Option.some.inj hv
     obtain rfl := Option.some.inj hw
-    have kerneEq : (I.start (p.einheit plattform) ρ₁.start).2.kerne =
-        (I.start (p.einheit plattform) ρ₂.start).2.kerne := by
-      simp only [I.start, startdatenEq]
+  have kerneEq : (I.start (p.einheit plattform) ρ₁.start).2.kerne =
+      (I.start (p.einheit plattform) ρ₂.start).2.kerne := by
+    show ((p.einheit plattform).startdaten ρ₁.start).kerne =
+      ((p.einheit plattform).startdaten ρ₂.start).kerne
+    rw [startdatenEq]
     refine ⟨q, rfl, rfl, kerneEq, rfl⟩
   · rw [anf₁, anf₂, laderEq]
 
