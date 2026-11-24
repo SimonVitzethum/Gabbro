@@ -76,7 +76,7 @@ theorem StmtReads.let_header
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
   generalize hs : (letKeyword :: .word spelling :: assignment :: input) = toks at read
-  cases read with
+  cases exprRead with
   | letBinding name ordinary read tail =>
       injection hs with h1 h2
       injection h2 with hname hmore
@@ -108,12 +108,12 @@ theorem StmtReads.assign_inversion
       ref.binding.name.val = name ∧ ExprReads scope 0 input value (semicolon :: rest) ∧
       tree = ⟨scope, .assignVar ref visible writable value fits⟩ := by
   generalize hs : name = word at read
-  cases read with
+  cases exprRead with
   | assignVar ref visible writable fits read =>
       exact ⟨_, _, _, _, ref, visible, writable, _, fits, rfl, read, rfl⟩
   | ret declared fits read =>
       exfalso
-      cases read with
+      cases exprRead with
       | atom a t => exact AtomReads.not_assignment a
   | ite conditionRead yesRead noRead =>
       exfalso
@@ -127,7 +127,7 @@ theorem StmtReads.ret_inversion
       ExprReads scope 0 input value (semicolon :: rest) ∧ tree = ⟨scope, .ret rfl value fits⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   generalize hs : returnKeyword = tok at read
-  cases read with
+  cases exprRead with
   | ret declared fits read =>
       left
       cases declared
@@ -148,7 +148,7 @@ theorem StmtReads.ite_inversion
       BlockReads result scope more no rest ∧ tree = ⟨scope, .ite condition yes no⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   generalize hs : ifKeyword = tok at read
-  cases read with
+  cases exprRead with
   | ite conditionRead yesRead noRead =>
       left
       exact ⟨_, _, _, _, _, conditionRead, yesRead, noRead, rfl⟩
@@ -193,15 +193,15 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     cases nameEq
     obtain ⟨same, rfl⟩ := ExprReads.deterministic exprRead read'
     cases same
-    exact ⟨rfl, LetTailReads.deterministic letTail tail'⟩
+    exact LetTailReads.deterministic letTail tail'
   · intros
-    rename_i ref visible writable fits exprRead tree rest other
+    rename_i s ref visible writable fits exprRead tree rest other
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
     cases treeEq
-    have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
-      Local.visible_unique ref ref' visible visible' nameEq
+    have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local s t) = ⟨_, ref'⟩ :=
+      Local.visible_unique (scope := s) ref ref' visible visible' nameEq.symm
     cases eqRef
-    obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
+    obtain ⟨same, suffix⟩ := ExprReads.deterministic exprRead read'
     cases same
     exact ⟨rfl, (List.cons.inj suffix).2⟩
   · intros
@@ -209,12 +209,12 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     cases declared
     rcases other.ret_inversion with ⟨t, value', fits', read', treeEq⟩ | ⟨tail, inputEq⟩
     · cases treeEq
-      obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
+      obtain ⟨same, suffix⟩ := ExprReads.deterministic exprRead read'
       cases same
       exact ⟨rfl, (List.cons.inj suffix).2⟩
     · exfalso
       cases inputEq
-      cases read with
+      cases exprRead with
       | atom a t => exact AtomReads.not_assignment a
   · intros
     rename_i condition yes no condRead yesRead noRead ihYes ihNo tree rest other
