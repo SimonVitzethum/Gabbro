@@ -48,19 +48,7 @@ theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   | stop blocked =>
       exact (blocked ⟨.index, input, rfl, allowed⟩).elim
   | arrayIndex _ lower upper _ indexRead tailRead =>
-      cases indexRead with
-      | atom atomRead firstTail =>
-          cases firstTail with
-          | stop =>
-              exact ⟨_, _, _, _, lower, upper,
-                .atom atomRead (.stop noOperatorAtCloseBracket), tailRead⟩
-          | binary op _ _ _ => simp_all [Infix.token, Arith.token, closeBracket]
-          | div _ _ _ _ => simp_all [Infix.token, closeBracket]
-          | compare op _ _ _ => simp_all [Infix.token, Compare.spelling, closeBracket]
-          | logic op _ _ _ => simp_all [Infix.token, Logic.spelling, closeBracket]
-          | arrayIndex _ _ _ _ _ _ => simp_all [Infix.token, closeBracket]
-          | tupleField _ _ _ _ => simp_all [Infix.token, closeBracket]
-          | recordField _ _ _ _ _ _ => simp_all [Infix.token, closeBracket]
+      exact ⟨_, _, _, _, lower, upper, indexRead, tailRead⟩
 
 theorem arrayIndexSuffix : ArrayIndexSuffixAussage := by
   intro scope element count minimum input type base tree rest allowed read
@@ -79,9 +67,9 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
       ExprReads scope 0 indexInput args.offset (closeBracket :: rest))
     ((Expr.arrayIndex args.base args.offset args.lower args.upper).printTokens)
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
-    [closeBracket, closeParen], by simp only [List.append_assoc], ?_⟩
+    [closeBracket, closeParen], by rfl, ?_⟩
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · simpa only [List.append_assoc] using
+  · simpa only [List.singleton_append] using
       (Expr.printReads (minimum := 8) args.base (by
         intro cont
         obtain ⟨op, more, same, allowed⟩ := cont
@@ -281,20 +269,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   constructor
   · change (indexPosition offset lower upper).val < count
     exact (indexPosition offset lower upper).isLt
-  · have arr : wertAls (.array element count) ⟨.array element count, values⟩ = some values := by
-      dsimp [wertAls]
-      simp [hc]
-    simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
-    rw [harr]
-    simp only [Option.bind]
-    rw [arr]
-    simp only [Option.bind]
-    simp only [Rahmen.zahl]
-    rw [hoff]
-    simp only [Option.bind, alsGanzzahl]
-    rw [if_neg (not_lt_of_ge nonneg)]
-    have boundProof : offset.wert.toNat < count := (indexPosition offset lower upper).isLt
-    rw [dif_pos boundProof]
-    rfl
+  · have boundProof : offset.wert.toNat < count := (indexPosition offset lower upper).isLt
+    simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wertAls, Rahmen.zahl, alsGanzzahl,
+      if_neg (not_lt_of_ge nonneg), hc, dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
