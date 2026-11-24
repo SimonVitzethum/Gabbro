@@ -128,7 +128,7 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
               (ItemsTail.close : ItemsTail scope closeBracket [closeBracket] ExprItems.empty []))
       | next second rest =>
           let tail := ExprItems.next second rest
-          simpa only [ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
+          simpa only [tail, ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
             List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
             printComma,
             printPunctuation, PrintedToken.unquoted,

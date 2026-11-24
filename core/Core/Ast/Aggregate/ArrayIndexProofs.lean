@@ -290,9 +290,9 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
             some (same ▸ vv) else none) = some vv
           simp
-        rw [show (⟨.array element (count + 1), values⟩ : Dynamisch) =
-          ⟨.array element (count + 1), vv⟩ by simp [vv]]
-        simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
+        have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) vv) := by
+          simpa [vv] using harr
+        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
