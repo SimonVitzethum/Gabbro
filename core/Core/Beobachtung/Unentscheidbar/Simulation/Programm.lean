@@ -164,4 +164,104 @@ theorem natAusgabeSucc (n : Nat) : NatAusgabe
   rw [if_pos (by omega : (0 : Int) ≤ ((n + 1 : Nat) : Int))]
   simp only [Int.toNat_natCast]
 
+def frameSucc3 (n : Nat) : Rahmen :=
+  let r := frameSucc2 n
+  { r with pc := 3, lokale := r.temp 0 :: r.lokale }
+
+def frameSucc4 (n : Nat) : Rahmen :=
+  let r := frameSucc3 n
+  { r with rueckgabe := r.lokale.head?.join, stopp := some .fertig }
+
+theorem schrittSucc2 (n : Nat) :
+    Schritt progSucc (some (frameSucc2 n)) = some (frameSucc3 n) := by
+  rfl
+
+theorem schrittSucc3 (n : Nat) :
+    Schritt progSucc (some (frameSucc3 n)) = some (frameSucc4 n) := by
+  rfl
+
+theorem schrittSucc4 (n : Nat) :
+    Schritt progSucc (some (frameSucc4 n)) = some (frameSucc4 n) := by
+  rfl
+
+theorem frameSucc4_rueckgabe (n : Nat) : (frameSucc4 n).rueckgabe =
+    Ganzzahl.pack ⟨_, _, Arith.auswerten .add (Zahl.literal (n : Int)) (Zahl.literal 1)⟩ := by
+  rfl
+
+theorem iterateSucc0 (n : Nat) :
+    (Schritt progSucc)^[0] (some (startVon n)) = some (startVon n) := by
+  rfl
+
+theorem iterateSucc1 (n : Nat) :
+    (Schritt progSucc)^[1] (some (startVon n)) = some (frameSucc1 n) := by
+  change Schritt progSucc (some (startVon n)) = _
+  exact schrittSucc0 n
+
+theorem iterateSucc2 (n : Nat) :
+    (Schritt progSucc)^[2] (some (startVon n)) = some (frameSucc2 n) := by
+  change Schritt progSucc (Schritt progSucc (some (startVon n))) = _
+  rw [schrittSucc0, schrittSucc1]
+
+theorem iterateSucc3 (n : Nat) :
+    (Schritt progSucc)^[3] (some (startVon n)) = some (frameSucc3 n) := by
+  change Schritt progSucc (Schritt progSucc (Schritt progSucc (some (startVon n)))) = _
+  rw [schrittSucc0, schrittSucc1, schrittSucc2]
+
+theorem iterateSucc_ge4 (n t : Nat) :
+    (Schritt progSucc)^[t] (some (frameSucc4 n)) = some (frameSucc4 n) := by
+  induction t with
+  | zero => rfl
+  | succ t ih =>
+    rw [Function.iterate_succ_apply]
+    rw [schrittSucc4, ih]
+
+theorem iterateSucc4 (n t : Nat) :
+    (Schritt progSucc)^[4 + t] (some (startVon n)) = some (frameSucc4 n) := by
+  rw [show 4 + t = t + 4 by omega, Function.iterate_add_apply]
+  rw [show (Schritt progSucc)^[4] (some (startVon n)) = some (frameSucc4 n) by
+    change Schritt progSucc (Schritt progSucc (Schritt progSucc (Schritt progSucc (some (startVon n))))) = _
+    rw [schrittSucc0, schrittSucc1, schrittSucc2, schrittSucc3]]
+  exact iterateSucc_ge4 n t
+
+theorem haeltMit_progSucc_iff (n b : Nat) :
+    HaeltMit progSucc (startVon n) b ↔ b = n + 1 := by
+  constructor
+  · rintro ⟨r, ⟨k, hk⟩, hout⟩
+    rcases k with _ | _ | _ | _ | t
+    · rw [iterateSucc0] at hk
+      injection hk with hr
+      subst r
+      cases hout
+    · rw [iterateSucc1] at hk
+      injection hk with hr
+      subst r
+      cases hout
+    · rw [iterateSucc2] at hk
+      injection hk with hr
+      subst r
+      cases hout
+    · rw [iterateSucc3] at hk
+      injection hk with hr
+      subst r
+      cases hout
+    · have hk' : (Schritt progSucc)^[4 + t] (some (startVon n)) = some r := by
+        simpa only [show t + 1 + 1 + 1 + 1 = 4 + t by omega] using hk
+      rw [iterateSucc4] at hk'
+      injection hk' with hr
+      subst r
+      rw [frameSucc4_rueckgabe] at hout
+      change NatAusgabe
+        (Ganzzahl.pack ⟨_, _, Arith.auswerten .add (Zahl.literal (n : Int)) (Zahl.literal 1)⟩) = some b at hout
+      rw [natAusgabeSucc] at hout
+      exact Option.some.inj hout.symm
+  · intro hb
+    subst b
+    refine ⟨frameSucc4 n, ⟨4, ?_⟩, ?_⟩
+    · change Schritt progSucc (Schritt progSucc (Schritt progSucc (Schritt progSucc (some (startVon n))))) = _
+      rw [schrittSucc0, schrittSucc1, schrittSucc2, schrittSucc3]
+    · rw [frameSucc4_rueckgabe n]
+      change NatAusgabe
+        (Ganzzahl.pack ⟨_, _, Arith.auswerten .add (Zahl.literal (n : Int)) (Zahl.literal 1)⟩) = some (n + 1)
+      exact natAusgabeSucc n
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
