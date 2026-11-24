@@ -167,4 +167,111 @@ theorem tabellenGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
           exact hnarrow token hmem
       · cases h
 
+theorem tabellenGedeckt_protectSpace (target : ZielDaten) (sp virt pages : Nat)
+    (rights : List Speicherdienst) (s : MemState) (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = some next)
+    (inv : (s.lokal c).TabellenGedeckt) : next.TabellenGedeckt := by
+  simp only [MemInstruction.evaluate] at h
+  cases hs : (s.lokal c).spaces[sp]? with
+  | none =>
+    simp only [hs, Option.bind_eq_bind, Option.bind_none] at h
+    cases h
+  | some space =>
+    simp only [hs, Option.bind_eq_bind, Option.bind_some] at h
+    split at h
+    · rename_i cond
+      simp only [Option.pure_def, Option.some.injEq] at h
+      subst h
+      obtain ⟨hspaces, hnarrow⟩ := inv
+      have hlt : sp < (s.lokal c).spaces.length :=
+        (List.getElem?_eq_some_iff.mp hs).1
+      have hne := cond.1
+      refine ⟨?spaces, ?narrow⟩
+      · intro sp' space' found
+        by_cases same : sp' = sp
+        · subst same
+          simp only [List.getElem?_set_self hlt] at found
+          have heq : space' = _ := (Option.some.inj found).symm
+          subst heq
+          have hspace := hspaces sp space hs
+          obtain ⟨hfrei, hflags, hrights⟩ := hspace
+          refine ⟨?frei, ?flags, ?rights⟩
+          · exact frei_narrow space (virt / target.seitengranule) pages rights hfrei
+          · exact hflags
+          · intro entry hmem
+            exact rechte_narrow space (virt / target.seitengranule) pages rights hne
+              hrights entry hmem
+        · have found0 : (s.lokal c).spaces[sp']? = some space' := by
+            have : ((s.lokal c).spaces.set sp _)[sp']? = some space' := found
+            rw [List.getElem?_set_ne (Ne.symm same)] at this
+            exact this
+          exact hspaces sp' space' found0
+      · intro token mem
+        rcases List.mem_cons.mp mem with rfl | hold
+        · rfl
+        · exact hnarrow token hold
+    · cases h
+
+private theorem rechte_filter_unmap (space : Adressraum) (base pages : Nat) (gen : Nat)
+    (hle : space.generation ≤ gen)
+    (ok : ∀ entry ∈ space.entries, entry.2.rights ≠ [] ∧ entry.2.generation ≤ space.generation)
+    (entry : Nat × Seiteneintrag)
+    (hmem : entry ∈ space.entries.filter fun (page, _) => !decide (pageRange base pages page)) :
+    entry.2.rights ≠ [] ∧ entry.2.generation ≤ gen := by
+  have hold : entry ∈ space.entries := (List.mem_filter.mp hmem).1
+  have hok := ok entry hold
+  exact ⟨hok.1, Nat.le_trans hok.2 hle⟩
+
+theorem tabellenGedeckt_unmapSpace (target : ZielDaten) (sp virt pages : Nat) (s : MemState)
+    (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.unmapSpace sp virt pages).evaluate target s c = some next)
+    (inv : (s.lokal c).TabellenGedeckt) : next.TabellenGedeckt := by
+  simp only [MemInstruction.evaluate] at h
+  cases hs : (s.lokal c).spaces[sp]? with
+  | none =>
+    simp only [hs, Option.bind_eq_bind, Option.bind_none] at h
+    cases h
+  | some space =>
+    cases hf : space.abbildung (virt / target.seitengranule) with
+    | none =>
+      simp only [hs, hf, Option.bind_eq_bind, Option.bind_some, Option.bind_none] at h
+      cases h
+    | some first =>
+      simp only [hs, hf, Option.bind_eq_bind, Option.bind_some] at h
+      split at h
+      · rename_i cond
+        simp only [Option.pure_def, Option.some.injEq] at h
+        subst h
+        obtain ⟨hspaces, hnarrow⟩ := inv
+        have hlt : sp < (s.lokal c).spaces.length :=
+          (List.getElem?_eq_some_iff.mp hs).1
+        refine ⟨?spaces, ?narrow⟩
+        · intro sp' space' found
+          by_cases same : sp' = sp
+          · subst same
+            simp only [List.getElem?_set_self hlt] at found
+            have heq : space' = _ := (Option.some.inj found).symm
+            subst heq
+            have hspace := hspaces sp space hs
+            obtain ⟨hfrei, hflags, hrights⟩ := hspace
+            refine ⟨?frei, ?flags, ?rights⟩
+            · exact Adressraum.unmapFreiAusstehend space sp (virt / target.seitengranule)
+                pages first.frame hfrei
+            · intro token tmem
+              rcases List.mem_cons.mp tmem with rfl | hold
+              · exact ⟨rfl, rfl⟩
+              · exact hflags token hold
+            · intro entry hmem
+              exact rechte_filter_unmap space (virt / target.seitengranule) pages
+                (space.generation + 1) (Nat.le_succ _) hrights entry hmem
+          · have found0 : (s.lokal c).spaces[sp']? = some space' := by
+              have : ((s.lokal c).spaces.set sp _)[sp']? = some space' := found
+              rw [List.getElem?_set_ne (Ne.symm same)] at this
+              exact this
+            exact hspaces sp' space' found0
+        · intro token mem
+          have hmem : token ∈ (s.lokal c).verengt := mem
+          exact hnarrow token hmem
+      · cases h
+
 end Gabbro.Core.Ast.LowLevel
