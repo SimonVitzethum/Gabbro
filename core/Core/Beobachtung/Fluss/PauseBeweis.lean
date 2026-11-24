@@ -70,7 +70,7 @@ theorem pauseNI : PauseNIAussage := by
   have auswahlEq : (ρ₁.hw.angebot t).interruptAuswahl = (ρ₂.hw.angebot t).interruptAuswahl := by
     simp only [Gelegenheit.interruptAuswahl, signaleEq]
   have sysKopf : ∀ s d, E.system.kopf s d = Ast.Semantik.kopf p.code s d := fun _ _ => rfl
-  obtain ⟨zustandGut₁, _⟩ := fragment_speicher_gut vergleich.links t
+  obtain ⟨_, _, zustandGut₁⟩ := fragment_speicher_gut vergleich.links t
   have takt₂ := ρ₂.zeit.takt t
   rw [zustand₂] at takt₂
   generalize nachEq₂ : ρ₂.zeit.zustand (t + 1) = nach₂ at takt₂
@@ -91,8 +91,6 @@ theorem pauseNI : PauseNIAussage := by
     · rw [beob_pause ρ₁ predictor t idle₁, beob_pause ρ₂ predictor t idle₂]
       exact len
   | schritt label₂ step₂ =>
-    rw [zustand₂] at step₂
-    generalize nachEq₂ : ρ₂.zeit.zustand (t + 1) = nach₂ at step₂
     cases step₂ with
     | schritt impl₂ =>
       cases impl₂ with
