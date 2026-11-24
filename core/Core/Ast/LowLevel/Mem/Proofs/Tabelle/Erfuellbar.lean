@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Sicher
+public import Core.Ast.LowLevel.Mem.Proofs.Tlb.RechteLauf
 
 @[expose] public section
 
