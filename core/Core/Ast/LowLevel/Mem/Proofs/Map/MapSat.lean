@@ -1,7 +1,7 @@
 module
 
-public import Core.Ast.LowLevel.Mem.Proofs.MapAux
-public import Core.Ast.LowLevel.Mem.Proofs.UnmapSat
+public import Core.Ast.LowLevel.Mem.Proofs.Map.MapAux
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
 
 @[expose] public section
 

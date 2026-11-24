@@ -1,8 +1,8 @@
 module
 
-public import Core.Ast.LowLevel.Mem.Proofs.MapAux
-public import Core.Ast.LowLevel.Mem.Proofs.MapMeaning
-public import Core.Ast.LowLevel.Mem.Proofs.MapSat
+public import Core.Ast.LowLevel.Mem.Proofs.Map.MapAux
+public import Core.Ast.LowLevel.Mem.Proofs.Map.MapMeaning
+public import Core.Ast.LowLevel.Mem.Proofs.Map.MapSat
 public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
 
 @[expose] public section

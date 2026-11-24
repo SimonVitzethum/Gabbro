@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.LowLevel.Mem.Proofs.ActivatePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivatePreservation
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 
 @[expose] public section

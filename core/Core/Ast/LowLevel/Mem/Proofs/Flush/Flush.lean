@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Registry
-public import Core.Ast.LowLevel.Mem.Proofs.FlushJoint
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushJoint
 
 @[expose] public section
 

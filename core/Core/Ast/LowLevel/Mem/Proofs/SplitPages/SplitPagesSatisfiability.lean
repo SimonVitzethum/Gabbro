@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.LowLevel.Mem.Proofs.SplitPages
+public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPages
 
 @[expose] public section
 

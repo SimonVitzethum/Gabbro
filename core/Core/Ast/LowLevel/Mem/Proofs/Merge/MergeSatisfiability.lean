@@ -2,8 +2,8 @@ module
 
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Registry
-public import Core.Ast.LowLevel.Mem.Proofs.MergeObligations
-public import Core.Ast.LowLevel.Mem.Proofs.MergePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergeObligations
+public import Core.Ast.LowLevel.Mem.Proofs.Merge.MergePreservation
 
 @[expose] public section
 

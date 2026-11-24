@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.LowLevel.Mem.Proofs.ActivateObligations
+public import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivateObligations
 
 @[expose] public section
 

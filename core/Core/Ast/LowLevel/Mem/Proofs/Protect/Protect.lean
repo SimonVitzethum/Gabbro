@@ -1,11 +1,11 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
-public import Core.Ast.LowLevel.Mem.Proofs.Unmap
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
 public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
-public import Core.Ast.LowLevel.Mem.Proofs.ProtectSyntax
-public import Core.Ast.LowLevel.Mem.Proofs.ProtectMeaning
-public import Core.Ast.LowLevel.Mem.Proofs.ProtectObligations
+public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectSyntax
+public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectMeaning
+public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectObligations
 
 @[expose] public section
 

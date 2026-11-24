@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
-public import Core.Ast.LowLevel.Mem.Proofs.Unmap
+public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
 
 @[expose] public section
 
