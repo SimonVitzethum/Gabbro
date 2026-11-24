@@ -32,7 +32,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
       | jumpLong t' d' sp' st' =>
           cases hsp : sp <;> cases hst : st <;> cases hsp' : sp' <;> cases hst' : st'
           all_goals
-            simp only [ExecTree.production, hsp, hst, hsp', hst', Identifier, Option.isNone, Option.isNone_none,
+            simp only [ExecTree.production, hsp, hst, hsp', hst', Option.isNone, Option.isNone_none,
               Option.isNone_some, jlNoneSomeFalse, Option.some.injEq, Bool.false_eq_true,
               false_and, and_false, or_false, false_or, true_and, and_true,
               exists_false, exists_prop, exists_eq_left, exists_eq_right] at ha hb
@@ -108,7 +108,7 @@ private theorem jumpLongInversion : ExecInversionAussage .jumpLong := by
       · exact lexed
       · have hp := jumpLongPrints (.jumpLong target dest space stack)
         cases space <;> cases stack <;>
-          simp only [ExecTree.production, Identifier, Option.isNone, Option.isNone_none, Option.isNone_some,
+          simp only [ExecTree.production, Option.isNone, Option.isNone_none, Option.isNone_some,
             jlNoneSomeFalse, Option.some.injEq, Bool.false_eq_true, false_and,
             and_false, or_false, false_or, true_and, and_true, exists_false,
             exists_prop, exists_eq_left, exists_eq_right] at hp prod
