@@ -295,7 +295,7 @@ private theorem satEval3 :
 theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   let E := memProgram k code
-  refine ⟨⟨hwf, ?_, ⟨⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code⟩⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, ⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hideal
     simp only [E, memProgram, MemInstruction.rule, MemInstruction.step] at hideal
     have hP : P = plan := by
@@ -318,6 +318,14 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
         obtain ⟨rfl, rfl⟩ := unmapMemGenauInternal execute
         exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
           (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro run conforms
     change (∀ pred ∈ (E.quelltabellen.klauseln).voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (E.quelltabellen.klauseln).invariant, _) ∧

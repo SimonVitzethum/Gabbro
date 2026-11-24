@@ -146,7 +146,7 @@ private theorem memProgramAussenLokal (k : Katalog) (code : List MemInstruction)
 theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   refine ⟨?_, ?_, ?_⟩
-  · refine ⟨hwf, ?_, ⟨memProgramAussenLokal k code, memProgramFlussLokal k code⟩⟩
+  · refine ⟨hwf, ?_, memProgramAussenLokal k code, memProgramFlussLokal k code, ?_⟩
     intro i c s u w plan hideal
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hideal
     obtain ⟨frame, _, hp, hu⟩ := hideal
@@ -156,6 +156,14 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     constructor
     · intro x hx; cases hx
     · intro l hl; cases hl
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro rho lauf
     refine ⟨?_, ?_, ?_⟩
     · intro p hp; cases hp

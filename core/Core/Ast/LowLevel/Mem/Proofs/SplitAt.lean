@@ -154,7 +154,15 @@ private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, ⟨memAussenLokalUnit k op, memFlussLokal k op⟩⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_⟩, ?_, ?_⟩
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro η lauf
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
+    · exact tiefenBezug_eq rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
