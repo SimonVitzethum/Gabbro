@@ -177,6 +177,7 @@ theorem division_erfuellbar : divisionJoint := by
         rfl
       have eq : g = ⟨.division, (1, 2)⟩ := (Option.some.inj (hg.symm.trans guard)).symm
       subst g
+      change (2 : Nat) ≠ 0
       omega
   · let args : Surface.DivisionArgs [] := ⟨.negativeLit 1, .lit 2, Or.inl (by omega)⟩
     let E := form.einheit platform args
@@ -207,6 +208,7 @@ theorem division_erfuellbar : divisionJoint := by
         rfl
       have eq : g = ⟨.division, (1, 2)⟩ := (Option.some.inj (hg.symm.trans guard)).symm
       subst g
+      change (2 : Nat) ≠ 0
       omega
 
 -- Mirror Rule.Entry.parse using the source production's reads lemma.
