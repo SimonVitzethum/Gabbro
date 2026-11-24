@@ -43,7 +43,7 @@ theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
   · simp only [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
       printLenof, printOpen, printClose, keywordName, Identifier.print, PrintedToken.unquoted,
       printPunctuation, lenofKeyword, openParen, closeParen, List.map_cons, List.map_append,
-      List.map_nil]
+      List.map_nil, List.append_assoc, String.reduceToList]
   · exact Expr.printReads args.base noOperatorAtClose
 
 end Gabbro.Core.Ast.Surface
@@ -94,9 +94,11 @@ theorem textLength_bytes : TextLengthBytesAussage := by
     | mk bytes bound =>
         simp only [wertAls, dif_pos bound]
         rfl
-  simp only [Befehl.auswerten, Rahmen.schreibe, Option.bind_some, Option.map_some,
-    Function.update_self, h, hval, TextValue.lengthValue]
-  rfl
+  dsimp [Befehl.auswerten]
+  rw [h]
+  simp only [Option.bind_some]
+  rw [hval]
+  exact ⟨rfl, rfl, rfl⟩
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
   intro args
@@ -164,6 +166,8 @@ theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := b
     cases h
   · intro answer
     simp only [List.not_mem_nil]
+    intro h
+    cases h
 
 theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   intro scope platform args
@@ -174,7 +178,7 @@ theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
   cases spurEq
   refine ⟨rfl, rfl, ?_⟩
-  simp only [Fragment.einheit]
+  simp only [Fragment.einheit, Nat.zero_add, List.length_cons, List.length_nil]
 
 theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   intro platform start
@@ -194,7 +198,7 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp only [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
         system, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
         Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength,
-        if_pos rfl, List.getElem?_cons_zero]
+        if_pos rfl, if_true, List.getElem?_cons_zero]
     · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
@@ -203,7 +207,8 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp only [E, form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen,
         Fragment.einzel, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start,
         Zustand.start, startdaten, Rahmen.start, Quellform.einheit, Quellform.fragment,
-        fragment, Fragment.einheit, Function.update_self, if_pos rfl]
+        fragment, Fragment.einheit, Function.update_self, if_pos rfl, Nat.zero_add,
+        List.length_cons, List.length_nil]
   · intro g guard
     have hg : ((textLengthForm []).befehl args).guard (s.lokal eintritt) = none := by
       simp only [textLengthForm, Befehl.guard]
