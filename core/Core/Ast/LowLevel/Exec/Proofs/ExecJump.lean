@@ -332,8 +332,8 @@ private theorem jumpJoint : JumpJointAussage := by
   have hhead : E.system.kopf s entryContext = some op := by
     change execHead (pre ++ [op]) s entryContext = some op
     unfold execHead
-    simp only [↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
-      List.getElem?_cons_zero, Option.bind_eq_bind, Option.bind_some]
+    simp only [↓reduceIte, hsstatus, hspc, pre, List.cons_append, List.nil_append,
+      List.getElem?_cons_succ, List.getElem?_cons_zero, Option.bind_eq_bind, Option.bind_some]
     rw [if_pos hevalSome]
   have hstep : E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
