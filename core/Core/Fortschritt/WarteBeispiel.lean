@@ -160,7 +160,8 @@ theorem spurw_ge2 (t : Nat) (h2 : 2 ≤ t) (he : t % 2 = 0) : spurw t = some tic
   | 1 => exact absurd h2 (by decide)
   | n + 2 =>
     have hn : n % 2 = 0 := by omega
-    simp only [spurw, hn, if_pos rfl]
+    simp only [spurw]
+    exact if_pos hn
 
 theorem spurw_ge2' (t : Nat) (h2 : 2 ≤ t) (ho : t % 2 = 1) : spurw t = some ticketB := by
   match t with
@@ -168,7 +169,8 @@ theorem spurw_ge2' (t : Nat) (h2 : 2 ≤ t) (ho : t % 2 = 1) : spurw t = some ti
   | 1 => exact absurd h2 (by decide)
   | n + 2 =>
     have hn : ¬ n % 2 = 0 := by omega
-    simp only [spurw, if_neg hn]
+    simp only [spurw]
+    exact if_neg hn
 
 def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t (zw t) (spurw t) (zw (t + 1))
   | 0 =>
