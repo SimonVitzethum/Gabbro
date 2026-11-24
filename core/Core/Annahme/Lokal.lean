@@ -90,6 +90,6 @@ theorem fruehere_ableitung_verweigert (p : Plattform) (s : AussenSicht) (q : Fra
     ¬ Aussen.GueltigBeiCommit p s q := by
   have _traegt := Aussen.abgeleitet_traegt u a₀ abgel
   have _gleich := eq
-  exact fruehere_provenienz_verweigert p s q t mem a₀.origin issued alt ninstabil
+  exact fruehere_provenienz_verweigert p s q t mem a₀.origin issued.symm alt ninstabil
 
 end Gabbro.Core.Annahme
