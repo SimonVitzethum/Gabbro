@@ -73,14 +73,19 @@ def zul_h : Katalog.ZulStart Plattform.x86_64.katalog h2 wBild s_h :=
 def spur_h (t : Nat) : Option (SchrittWahl Unit × SchrittSpur Unit Unit) :=
   if t % 2 = 0 then some posLabel else some bLabel
 
+theorem sH0_dispatch0 : (sH0.kerne 0).laeuft = some A := rfl
+
+theorem sH0_dispatch1 : (sH0.kerne 1).laeuft = some B := rfl
+
+theorem sH0_live : ∀ c, sH0.status c = .laeuft := fun _ => rfl
+
 def takt_h (t : Nat) : Takt (Lauffolge E_h hw2) (KeinSchritt (Lauffolge E_h hw2))
     t (some sH0) (spur_h t) (some sH0) := by
   by_cases h : t % 2 = 0
   · have hsp : spur_h t = some posLabel := by simp only [spur_h, if_pos h]
     rw [hsp]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
-      ⟨0, hw2_opp0 h, by show (sH0.kerne 0).laeuft = some A from rfl,
-        by show sH0.status A = Status.laeuft from rfl⟩
+      ⟨0, hw2_opp0 h, sH0_dispatch0, sH0_live _⟩
       ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
       (e1StotterAusfuehr t A sH0)))
   · have h1 : t % 2 = 1 := by
@@ -90,12 +95,11 @@ def takt_h (t : Nat) : Takt (Lauffolge E_h hw2) (KeinSchritt (Lauffolge E_h hw2)
     have hsp : spur_h t = some bLabel := by simp only [spur_h, if_neg h]
     rw [hsp]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
-      ⟨1, hw2_opp1 h1, by show (sH0.kerne 1).laeuft = some B from rfl,
-        by show sH0.status B = Status.laeuft from rfl⟩
+      ⟨1, hw2_opp1 h1, sH0_dispatch1, sH0_live _⟩
       ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
       (e1StotterAusfuehr t B sH0)))
 
-def ρ_h : Maschine.Lauf E_h :=
+noncomputable def ρ_h : Maschine.Lauf E_h :=
   ⟨s_h, hw2, ⟨fun _ => some sH0, spur_h, takt_h⟩⟩
 
 /-- The stuck run is admissible. -/
@@ -129,19 +133,19 @@ theorem zaehle_null (m : Nat → Bool) (a n : Nat) (hall : ∀ t, m (a + t) = fa
         I.zaehle m a n + (if m (a + n) then 1 else 0) := rfl
     have hif : (if m (a + n) then (1 : Nat) else 0) = 0 := by
       rw [hall n]
+      exact if_neg (by decide)
     rw [hrec, hif]
     omega
 
 /-- The stuck holder takes no own steps. -/
 theorem eh_kosten_null (a n : Nat) : Kontextkosten ρ_h stuckHalter a n = 0 := by
-  have hkk : Kontextkosten ρ_h stuckHalter a n =
-      I.zaehle (fun t => match ρ_h.zeit.spur t with
-        | some (.kontext d _, _) => decide (stuckHalter = d)
-        | some (.antwort _, _) | some (.interrupt _, _) | some (.absturz, _) | none =>
-          false) a n := rfl
-  rw [hkk]
+  unfold Kontextkosten
   apply zaehle_null
   intro t
+  show (match ρ_h.zeit.spur (a + t) with
+    | some (.kontext d _, _) => decide (stuckHalter = d)
+    | some (.antwort _, _) | some (.interrupt _, _) | some (.absturz, _) | none =>
+      false) = false
   have hsp : ρ_h.zeit.spur (a + t) = some posLabel ∨
       ρ_h.zeit.spur (a + t) = some bLabel := by
     by_cases h : (a + t) % 2 = 0
@@ -171,7 +175,7 @@ theorem eh_halte : HalteSchranken E_h ρ_h := by
       obtain ⟨s, hzs, hown⟩ := hcont a (Nat.le_refl _) hlt
       have hownH := eh_besitzer a s l hzs
       rw [hownH] at hown
-      exact absurd (Option.some.inj hown) hcH
+      exact absurd (Option.some.inj hown) (Ne.symm hcH)
 
 /-- No release step ever occurs on the stuck run. -/
 theorem eh_kein_gibt (r : Nat) (s₁ s₂ : Zustand Unit Unit Unit Unit Bool Unit)
