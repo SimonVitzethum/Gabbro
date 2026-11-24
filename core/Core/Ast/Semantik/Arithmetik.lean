@@ -25,18 +25,18 @@ def Wert : {kind : Kind} → Ty kind → Type
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
     Wert target := by
-  cases source <;> cases target <;>
-    first
-    | simp only [Fits] at fits; cases fits; exact value
-    | skip
+  cases source <;> cases target
   case int.int lo hi lower upper =>
     exact ⟨value.wert, Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
-  case bool.bool => exact value
   case array.array source count target other =>
     cases count <;> cases other <;>
       first
-      | simp only [Fits] at fits; cases fits; exact value
       | exact #v[]
+      | simp only [Fits] at fits; cases fits; exact value
+  all_goals
+    first
+    | exact value
+    | simp only [Fits] at fits; cases fits; exact value
 
 def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
     Wert (tupleType types) → Wert (types.get i)
@@ -44,7 +44,7 @@ def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
   | _ :: rest, ⟨0, _⟩, values => values.1
   | _ :: rest, ⟨n + 1, bound⟩, values => tupleGet rest ⟨n, Nat.lt_of_succ_lt_succ bound⟩ values.2
 
-def indexPosition (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
+def indexPosition {count : Nat} (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
   have nonnegative := Int.le_trans lower i.unten
   have bound : (i.wert.toNat : Int) < (count : Int) := by
     rw [Int.toNat_of_nonneg nonnegative]
@@ -135,8 +135,9 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
     let values := items.wert env
     Vector.ofFn fun i => Wert.widen (types.get i) element (fits i) (tupleGet types i values)
   | .arrayIndex base index lower upper =>
-    let values := base.wert env
-    values[(indexPosition (index.wert env) lower upper).val]
+    let position := indexPosition (index.wert env) lower upper
+    let values : Vector (Wert _) _ := base.wert env
+    values[position.val]'position.isLt
   | .tupleValue first second tail => (first.wert env, second.wert env, tail.wert env)
   | .tupleField (first := first) (second := second) (types := rest) base i =>
     tupleGet (first :: second :: rest) i (base.wert env)

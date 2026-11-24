@@ -182,7 +182,7 @@ inductive ExprTail (scope : Scope) :
       ExprReads scope ((Infix.logic op).precedence + 1) input right more →
       ExprTail scope minimum (.logic op left right) more tree rest →
       ExprTail scope minimum left ((Infix.logic op).token :: input) tree rest
-  | arrayIndex (base : Expr scope (.array element count)) (lower : 0 ≤ lo) (upper : hi < count) :
+  | arrayIndex (base : Expr scope (.array element count)) (lower : 0 ≤ (lo : Int)) (upper : (hi : Int) < (count : Int)) :
       minimum ≤ Infix.index.precedence →
       ExprReads scope 0 input (index : Expr scope (.int lo hi)) (closeBracket :: more) →
       ExprTail scope minimum (.arrayIndex base index lower upper) more tree rest →
