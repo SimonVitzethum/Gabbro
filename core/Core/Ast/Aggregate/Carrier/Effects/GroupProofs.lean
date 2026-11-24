@@ -336,8 +336,7 @@ theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
       rcases pair with ⟨position, exportedFlag⟩
       by_cases hflag : exportedFlag
       · exact ⟨position, by simpa [hc, hflag]⟩
-      · dsimp [WrittenCarrierEffect.resolve] at hresolve
-        simp at hresolve
+      · simp at hresolve
 theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
