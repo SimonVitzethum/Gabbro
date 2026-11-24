@@ -25,20 +25,7 @@ theorem boundedWhile_realisiert (scope : Scope) (result : Option (Ty .value)) : 
   intro platform args s running active live atPc
   exact (boundedWhileForm scope result).realisiert (fun args => by
     change ((((((expr 0 args.bound).anhaengen (.einzel (.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)))).anhaengen (expr 0 args.condition)).anhaengen (.einzel (whileInstruction args.condition (bracedBlock args.body) args.overflow))).anhaengen (bracedBlock args.body)).anhaengen (.einzel (.zurueckSprung ((expr 0 args.condition).code.length + (bracedBlock args.body).code.length + 1)))).code[(expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length]? = some (whileInstruction args.condition (bracedBlock args.body) args.overflow)
-    simp only [Fragment.anhaengen, Fragment.einzel]
-    have hlt1 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length <
-        (((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]) ++ (bracedBlock args.body).code).length := by
-      simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
-    have hlt2 : (expr 0 args.bound).code.length + 1 + (expr 0 args.condition).code.length <
-        ((((expr 0 args.bound).code ++ [Befehl.setzePasszahl 0 ((expr 0 args.condition).code.length + 1)]) ++ (expr 0 args.condition).code) ++ [whileInstruction args.condition (bracedBlock args.body) args.overflow]).length := by
-      simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
-    rw [List.getElem?_append_left hlt1, List.getElem?_append_left hlt2]
-    rw [List.getElem?_append_right]
-    · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self, List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega) platform args s running active live atPc
+; grind [Fragment.anhaengen, Fragment.einzel]) platform args s running active live atPc
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem boundedWhile_annahme (scope : Scope) (result : Option (Ty .value)) : (boundedWhileForm scope result).AnnahmeAussage := by
