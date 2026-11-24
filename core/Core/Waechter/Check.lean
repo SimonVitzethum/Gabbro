@@ -17,6 +17,7 @@ meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.AussagePins
+public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
@@ -321,6 +322,15 @@ elab "#check_core" : command => do
     errors := errors ++ (← auxiliaryRegistryErrors flowEntries pinNames closing.isSome
       #[`Gabbro.Core.Ast.Semantik.LokalFamilie])
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
+    let mut coveredNames : Std.HashSet Name := {}
+    for (root, _) in pins do
+      coveredNames := coveredNames.insert root
+      for name in index.closure root do
+        coveredNames := coveredNames.insert name
+    let binder ← binderFindings env (coveredNames.contains ·) closing.isSome
+    errors := errors ++ binder.errors
+    unless binder.infos.isEmpty do
+      logInfo m!"statement findings ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
     return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors
