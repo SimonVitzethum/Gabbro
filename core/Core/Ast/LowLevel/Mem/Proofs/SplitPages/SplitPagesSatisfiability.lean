@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPages
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -176,7 +177,7 @@ theorem splitPagesErfuellbar : MemErfuellbarAussage .splitPages := by
     exact ⟨op, (splitPagesHeadSingleton target op s entryContext).2
       ⟨rfl, rfl, rfl, by rw [hEval]; rfl⟩, ⟨next, hEval, rfl, rfl⟩⟩
 
-theorem splitPages_aussage : SplitPagesAussage := by
-  exact ⟨splitPagesObligations, splitPagesMeaning, splitPagesErfuellbar⟩
+theorem splitPages_aussage : SplitPagesAussage :=
+  ⟨memObligationsKern_alle .splitPages, splitPagesMeaning, splitPagesErfuellbar⟩
 
 end Gabbro.Core.Ast.LowLevel

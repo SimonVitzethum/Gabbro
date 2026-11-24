@@ -7,11 +7,13 @@
   `uebergabe_nach`) and M9's hold bounds (`HalteSchranken`: the owner's own steps while it
   continuously holds are bounded by the unit's declared `halten` data): a context queued at
   position `i` sees the lock within `i + 1` hand-offs; each hand-off costs its owner at most
-  `H + 1` of the owner's own steps (the release step included), for `(i + 1) * (H + 1)` owner
-  steps in total. Holder-side progress is counted on the holders' own steps and the final
-  acquisition on the waiter's next opportunity — hardware-only fairness gives every live
-  context its opportunities; no scheduler is assumed. A free lock with the waiter at the head
-  has its take enabled (`nimmt_am_kopf`); the take itself is the waiter's own step.
+   `H + 1` of the owner's own steps (the release step included), for `(i + 1) * (H + 1)` owner
+   steps in total. Holder-side progress is counted on the holders' own steps and the final
+   acquisition on the waiter's next opportunity. Hardware fairness supplies per-core
+   opportunities only — which context runs on them is dispatch, a language obligation the
+   checker carries (`SperrHalterHalten` keeps halten-holders live, dispatched and
+   geben-offering until hand-off); no scheduler is assumed. A free lock with the waiter at
+   the head has its take enabled (`nimmt_am_kopf`); the take itself is the waiter's own step.
 -/
 module
 

@@ -2,8 +2,9 @@
   File:      core/Core/Annahme/Waechter.lean
   Subject:   The generated guards of acceptance (PERFECT-MODEL §3.2, §3.4, step M5).
 
-  `WaechterHalten E` says every generated guard holds on every `I` run and no reachable `I`
-  cut contains an internal deadlock or a closed waiting set. The guards come from the pinned
+  `WaechterHalten E` says every generated guard holds on every `I` run, no reachable `I`
+  cut contains an internal deadlock or a closed waiting set, and every lock held under a
+  declared hold bound stays checker-eligible until hand-off. The guards come from the pinned
   table of `I`'s partial operations (`PartielleOperation` with `waechterBedarf`); the unit's
   uses are DATA DETERMINED BY THE UNIT: `WaechterHalten` uses the canonical value
   `kanonischeVerwendung E`, never a supplied instance — there is no free choice of tables.
@@ -77,8 +78,39 @@ def GeschlossenWartend (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (∀ l, b = Blockade.sperre l → ∃ c', C c' ∧ (s.sperren l).besitzer = some c') ∧
     (∀ k, b = Blockade.join k → C k)
 
-/-- **`WaechterHalten E`: every generated guard holds on every `I` run, and no reachable `I`
-    cut — maximal cuts included — contains an internal deadlock or a closed waiting set.**
+/-- **A lock holder with a declared hold bound stays checker-eligible until hand-off**: the
+    holder is live, it is dispatched on some core, and its own rule offers the release step
+    for the held lock (with the invariant guard the protocol step would require). This is the
+    holder half of the M8 release obligation: eligibility is what the checker carries, so no
+    scheduler assumption enters — hardware fairness supplies only the core opportunities.
+    Locks without a declared hold bound impose nothing. -/
+def SperrHalterBereit [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (s : Zustand L Ort Wert Raum Lok Grund) (l : L) (h : Kontext) : Prop :=
+  E.schranken.halten l ≠ none →
+    s.status h = Status.laeuft ∧
+    (∃ k, (s.kerne k).laeuft = some h) ∧
+    ∃ (w : Wahl) (plan : SchrittPlan L Ort Wert Bedingung)
+      (u : Zustand L Ort Wert Raum Lok Grund),
+      E.system.ISchritt h s w [plan] u ∧ plan.aktion = .sperre l .geben ∧
+      ∀ next : SperrZustand, (s.sperren l).Gibt h next →
+        ((s.sperren l).Wechsel next → E.einrichtung.invariant u l)
+
+/-- **The holder row of `WaechterHalten`**: on every `I` run, at every cut, every context that
+    holds a lock under a declared hold bound is eligible (`SperrHalterBereit`). Read
+    temporally: a holder stays live, dispatched and release-offering until it hands the lock
+    off — after the hand-off the premise no longer holds. A crash needs no clause: it wipes
+    every lock, so no holder remains. -/
+def SperrHalterHalten [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
+  ∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,
+    ∀ (l : L) (h : Kontext), ((ρ.zeit.zustand t.val).sperren l).besitzer = some h →
+      SperrHalterBereit E (ρ.zeit.zustand t.val) l h
+
+/-- **`WaechterHalten E`: every generated guard holds on every `I` run, no reachable `I`
+    cut — maximal cuts included — contains an internal deadlock or a closed waiting set, and
+    every lock held under a declared hold bound stays eligible until hand-off
+    (`SperrHalterHalten`).**
     Nobody writes the guards; the checker proves them. This is what makes "correct logic
     produces an error" impossible. Over the canonical uses determined by the unit, with no
     instance arguments. -/
@@ -86,7 +118,8 @@ def WaechterHalten [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Beding
     Prop :=
   (∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ (t : I.Schnitt E ρ) (op : PartielleOperation)
     (args : Operanden op), (kanonischeVerwendung E).bedarf ρ t op args → waechterBedarf op args) ∧
-  ∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,
-    ¬ ∃ C, GeschlossenWartend E (ρ.zeit.zustand t.val) C
+  (∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,
+    ¬ ∃ C, GeschlossenWartend E (ρ.zeit.zustand t.val) C) ∧
+  SperrHalterHalten E
 
 end Gabbro.Core.Annahme

@@ -91,8 +91,9 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
   exact False.elim h
 
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
-    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, and
-    no bounds to violate (open by default, so the bounds row holds unconditionally). -/
+    conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, the
+    holder row holds trivially (no hold bound is declared), and no bounds to violate
+    (open by default, so the bounds row holds unconditionally). -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
   refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩,
@@ -119,13 +120,87 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_⟩
+  · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_,
+      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
     intro h
     obtain ⟨C, hC⟩ := h
     obtain ⟨hex, hall⟩ := hC
     obtain ⟨c, hc⟩ := hex
     obtain ⟨b, hb, _⟩ := hall c hc
     exact False.elim hb
+
+/-- The releasing holder: owns the lock with a waiter queued behind. -/
+def gibtHalter : Kontext := .faden 7
+
+/-- The waiter queued behind the releasing holder. -/
+def gibtWarter : Kontext := .faden 8
+
+/-- The dispatch of the release witness: the holder runs on core zero. -/
+def gebenDispatch : Kern → Option Kontext
+  | 0 => some gibtHalter
+  | _ + 1 => none
+
+/-- The release plan of the witness rule. -/
+def gebenPlan : SchrittPlan Unit Unit Unit Unit :=
+  ⟨.sperre () .geben, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
+
+/-- The stutter plan of the witness rule. -/
+def stutterPlanG : SchrittPlan Unit Unit Unit Unit :=
+  ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
+
+/-- The witness rule: release the held lock, otherwise stutter. -/
+def gebenRegel (c : Kontext) (s : Zustand Unit Unit Unit Unit Unit Unit) (w : Unit)
+    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Unit Unit) :
+    Prop :=
+  (∃ next, (s.sperren ()).Gibt c next ∧ es = [gebenPlan] ∧ u = s) ∨
+  (es = [stutterPlanG] ∧ u = s)
+
+/-- The start data of the release witness: everybody live, the holder dispatched. -/
+def gebenDaten : Startdaten Unit Unit Unit Unit :=
+  ⟨fun _ => (), fun _ => .laeuft,
+    fun j => ⟨gebenDispatch j, .nutzer, (), fun _ => false, 0, false, []⟩,
+    ⟨fun _ => false, fun _ => 0⟩⟩
+
+/-- The setup of the release witness: no authority questions, a true invariant. -/
+def gebenEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
+  ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
+    ⟨0, 1⟩, ⟨gibtHalter, 0, fun _ => gebenDaten, fun _ _ => ()⟩,
+    fun _ => 0, fun _ _ _ => none⟩
+
+/-- The release-witness system: the give-or-stutter rule, nothing finished, never blocked. -/
+def gebenSystem : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
+  ⟨fun _ => ⟨gebenRegel, gebenRegel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+
+/-- The release-witness unit: hold bound three, the holder's rule offers `geben`. -/
+def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
+  katalog := Plattform.x86_64.katalog
+  bild := ⟨Bildformat.elf, fun _ => none, []⟩
+  einrichtung := gebenEinrichtung
+  system := gebenSystem
+  startdaten := fun _ => gebenDaten
+  startmedium := fun _ _ => 0
+  laden := fun _ _ => none
+  lokalerBezug := Eq
+  stotterLaenge := fun _ => 0
+  quelltabellen := .leer
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+
+/-- The release-witness state: the holder owns the lock, the waiter is queued. -/
+def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
+  { (Zustand.start (L := Unit) (fun _ => ()) (fun _ => .laeuft)
+      (fun j => ⟨gebenDispatch j, .nutzer, (), fun _ => false, 0, false, []⟩)
+      ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))) with
+    sperren := fun _ : Unit => (⟨some gibtHalter, [gibtWarter]⟩ : SperrZustand) }
+
+/-- **Non-vacuity of the holder row with a real releasing holder**: a state where a live,
+    dispatched holder owns a bound lock and its own rule offers the release step. -/
+theorem sperrhalter_bereit_erfuellbar :
+    ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit)
+      (s : Zustand Unit Unit Unit Unit Unit Unit) (l : Unit) (h : Kontext),
+      (s.sperren l).besitzer = some h ∧ SperrHalterBereit E s l h := by
+  refine ⟨E_geben, gebenZustand, (), gibtHalter, rfl, fun hne => ?_⟩
+  refine ⟨rfl, ⟨0, rfl⟩, (), gebenPlan, gebenZustand,
+    ⟨(), rfl, Or.inl ⟨_, .besitzer _ _, rfl, rfl⟩⟩, rfl, fun _ _ _ => trivial⟩
 
 /-- **A system with a closed waiting set at an `I` cut is not accepted.** -/
 theorem geschlossen_nicht_akzeptiert [DecidableEq L]
@@ -134,7 +209,7 @@ theorem geschlossen_nicht_akzeptiert [DecidableEq L]
     (C : Kontext → Prop) (h : GeschlossenWartend E (ρ.zeit.zustand t.val) C) :
     ¬ Akzeptiert E := by
   intro ha
-  exact ha.2.2.2 ρ hρ t ⟨C, h⟩
+  exact ha.2.2.2.1 ρ hρ t ⟨C, h⟩
 
 /-- Two locks held cross-wise: each holder waits on the lock the other holds. -/
 def kreuzSperren : Bool → SperrZustand

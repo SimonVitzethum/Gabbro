@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -287,7 +288,7 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     simp only [E, memProgram]
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · constructor
+  · refine ⟨?_, ?_, ?_⟩
     · intro run conforms t o args need
       change E.quelltabellen.guard (run.zeit.zustand t.val) o args at need
       simp only [E, memProgram] at need
@@ -295,6 +296,8 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       obtain ⟨C, ⟨c, hc⟩, blocked⟩ := waiting
       obtain ⟨b, hb, _, _, _⟩ := blocked c hc
       simp only [E, memProgram] at hb
+    · intro run conforms t l h _ hne
+      exact (hne rfl).elim
 
 private theorem satScopeNodup :
     (satScope.regionen.map Subtype.val).Nodup ∧ (satScope.raeume.map Subtype.val).Nodup ∧
@@ -377,29 +380,7 @@ theorem unmap_joint : UnmapJointAussage := by
   · exact ⟨satOp, satHead3, ⟨s3frame, satEval3, rfl, rfl⟩⟩
   · exact ⟨satOp, satHead3, ⟨s3frame, satEval3, rfl, rfl⟩⟩
 
-theorem unmapErhaltung : MemErhaltungAussage .unmapSpace := by
-  intro k scope tree op _
-  exact ⟨unmapMemAbgleich (k := k) op, unmapMemKomponierbar (k := k) op⟩
-
-theorem unmapRegelSicher : MemRegelSicherAussage .unmapSpace := by
-  intro k scope tree op _
-  exact unmapMemRegelSicher (k := k) op
-
-theorem unmapAussenLokal : MemAussenLokalAussage .unmapSpace := by
-  intro k scope tree op _
-  exact unmapMemAussenLokal (k := k) op
-
-theorem unmapKosten : MemKostenAussage .unmapSpace := by
-  intro k scope tree op _
-  exact unmapMemKosten (k := k) op
-
-theorem unmap_aussage : UnmapAussage := by
-  refine ⟨?_, unmap_meaning, unmap_joint⟩
-  exact ⟨unmapMemParse .unmapSpace, memInversionUnmap, memEindeutigUnmap, memDruckUnmap,
-    memElaboriert .unmapSpace, unmapMemRealisiert .unmapSpace, unmapMemAnnahme .unmapSpace,
-    unmapMemIdeal .unmapSpace, memEinheit .unmapSpace, memImpl .unmapSpace,
-    unmapMemFortschritt .unmapSpace, unmapErhaltung, unmapRegelSicher,
-    memRegelAntwortSicher .unmapSpace, unmapAussenLokal, unmapKosten,
-    memSchranken, memEtiketten, memFluss⟩
+theorem unmap_aussage : UnmapAussage :=
+  ⟨memObligationsKern_alle .unmapSpace, unmap_meaning, unmap_joint⟩
 
 end Gabbro.Core.Ast.LowLevel

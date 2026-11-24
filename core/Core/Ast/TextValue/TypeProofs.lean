@@ -59,6 +59,11 @@ private theorem stringToken_ne_region : keyword "string" ≠ keyword "region" :=
   have first : 's' = 'r' := (List.cons.inj (Token.word.inj same)).1
   cases first
 
+private theorem stringToken_ne_ptr : keyword "string" ≠ keyword "ptr" := by
+  intro same
+  have first : 's' = 'p' := (List.cons.inj (Token.word.inj same)).1
+  cases first
+
 private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "string" ≠ .word (intSpelling signed width) := by
   intro h
@@ -96,6 +101,7 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
       cases (List.cons.inj htok).1
   | address _ => exact (stringToken_ne_address (List.cons.inj htok).1).elim
   | ownedRegion => exact (stringToken_ne_region (List.cons.inj htok).1).elim
+  | ptr _ _ => exact (stringToken_ne_ptr (List.cons.inj htok).1).elim
 
 theorem TextTypeDerivation : TextTypeDerivationAussage := by
   intro scope capacity rest

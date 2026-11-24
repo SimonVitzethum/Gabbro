@@ -9,15 +9,16 @@
   whoever owns first discharges the bound with an empty cost list; otherwise the scoped lemmas
   apply on the acquisition-free prefix.
 
-  What this design does NOT close (pinned below for Hy4, with proof sketches):
+  What this design leaves for Hy4 (pinned below, with proof sketches):
   * `SperrFreigabeAussage`: `hgibt` from `Akzeptiert` + `HalteSchranken` + hardware fairness.
-    `SperrGegenbeispiel.halte_gibt_nicht_ab` proves this needs a checker rule that does not
-    exist yet (B13 remainder: holders stay live, dispatched and release-enabled). The `w_*`
-    chain below fixes the exact handover shape the guard must admit.
-  * `SperrWarteFairAussage`: the target sentence — `SperrFreigabeAussage` discharges `hgibt`
-    of `sperr_warte_schranke_bis` (fuel `i`).
+    The eligibility half of the checker row now exists (`SperrHalterHalten` in
+    `Core.Annahme.Waechter`: halten-holders stay live, dispatched and geben-offering until
+    hand-off). The `w_*` chain below fixes the exact handover shape the guard must admit.
+  * `SperrWarteFairAussage`: the target sentence — `SperrFreigabeAussage` discharges the `hgibt`
+    premise of `sperr_warte_schranke_bis` (fuel `i`).
   * `StarkeWarteLaufAussage`: joint satisfiability with a real holder in front (position
-    `1`, genuine handover) — the `E_2` witness data are fixed here, the run lifting is pinned.
+    `1`, genuine handover) under `Akzeptiert` — the `E_2` witness data are fixed here, the
+    run lifting is pinned.
 -/
 module
 
@@ -398,11 +399,18 @@ theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {
     intro hcontra
     nomatch hcontra
 
-/-- MISSING CHECKER RULE (B13 remainder), pinned for Hy4: an accepted unit hands every held
-    lock off within the declared hold bound plus the release step, on crash-free fair runs.
-    `SperrGegenbeispiel.halte_gibt_nicht_ab` proves `HalteSchranken` plus hardware fairness do
-    NOT imply this — the proof needs the release-guard row in the checker table (holders stay
-    live, dispatched and release-enabled until hand-off), which does not exist yet. -/
+/-- MISSING CHECKER DISCHARGE (B13 remainder), pinned for Hy4: an accepted unit hands every
+    held lock off within the declared hold bound plus the release step, on crash-free fair
+    runs. `SperrGegenbeispiel.halte_gibt_nicht_ab` proves `HalteSchranken` plus hardware
+    fairness do NOT imply this — the proof discharges through the holder row
+    `SperrHalterHalten` (holders stay live, dispatched and geben-offering until hand-off).
+    Difficulty: schwer. Sketch: at every cut where `h` holds `l`, the row keeps `h`
+    eligible; `FairLaeufe` supplies core opportunities on hardware only (no scheduler); the
+    holder's own steps while holding are bounded by `HalteSchranken`, so the offered `geben`
+    step lands within `H + 1` own steps. Hard part: `E_h` is `I`-identical to the good
+    witness `E_1`, so the argument must exhibit precisely which premise excludes the stuck
+    twin — if it does not go through as stated, return with a restatement proposal
+    (`I`-`Laufabgleich` premise) instead of forcing it. -/
 def SperrFreigabeAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
@@ -419,7 +427,7 @@ def SperrFreigabeAussage : Prop :=
 /-- THE TARGET SENTENCE of M8 Teil 2b, pinned for Hy4: every accepted unit with held bounds
     gives a waiter queued at `i` the lock within `(i + 1) * (H + 1)` owner steps under fair
     hardware — no run premises besides acceptance, hardware fairness and the bounds.
-    Proof sketch: `SperrFreigabeAussage` discharges the `hgibt` premise of
+    Difficulty: mittel. Proof sketch: `SperrFreigabeAussage` discharges the `hgibt` premise of
     `sperr_warte_schranke_bis` (fuel `i`); the scoped persistence and monotonicity are
     already machine theorems (`bleibt_bis_besitz`, `mono_bis_besitz`, `nodup_bleibt`). -/
 def SperrWarteFairAussage : Prop :=
@@ -438,12 +446,14 @@ def SperrWarteFairAussage : Prop :=
             ∃ s', (s.sperren l).Nimmt h₀ s'))) ∧
       e.length ≤ i + 1 ∧ (∀ x ∈ e, x ≤ H + 1) ∧ e.sum ≤ (i + 1) * (H + 1)
 
-/-- STRONG SATISFIABILITY with a real holder in front, pinned for Hy4: a run with the waiter
-    at position one, a genuine holder ahead and genuine hand-overs. The lock-level chain is
-    fixed above (`w_pos1`, `w_gibtH`, `w_uebergabe1`, `w_uebergabe2`).
-    Proof sketch: extend `E_1`'s rule with `nehmen`/`geben` alternatives
+/-- STRONG SATISFIABILITY with a real holder in front, pinned for Hy4: an ACCEPTED unit and
+    a run with the waiter at position one, a genuine holder ahead and genuine hand-overs.
+    The lock-level chain is fixed above (`w_pos1`, `w_gibtH`, `w_uebergabe1`, `w_uebergabe2`).
+    Difficulty: schwer. Proof sketch: extend `E_1`'s rule with `nehmen`/`geben` alternatives
     (`∃ next, SperrSchritt .nehmen c (s.sperren ()) next ∧ es = [nehmenPlan] ∧ u = s` and the
-    `geben` analogue, `u = toggleUpdate c s` for tickets as in `e1Regel`); run the trace
+    `geben` analogue, `u = toggleUpdate c s` for tickets as in `e1Regel`); the holder's rule
+    must offer `geben` so the unit meets `SperrHalterHalten` (holder live, dispatched,
+    geben-offering — this is the `Akzeptiert` conjunct to check); run the trace
     `frei → [H] → owner H → [H,A] → [H,A,B] → owner A → owner B` with stutter tail; the
     memory side of the owner-changing steps comes from `speicherzug_existiert`; fairness from
     `Umgebung.referenz_fair`; `HalteSchranken` by window analysis (holders own at most two
@@ -452,7 +462,7 @@ def SperrWarteFairAussage : Prop :=
 def StarkeWarteLaufAussage : Prop :=
   ∃ (E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit) (h : Umgebung)
     (ρ : Maschine.Lauf E) (c : Kontext) (H a : Nat),
-    Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ HalteSchranken E ρ ∧
+    Akzeptiert E ∧ Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ HalteSchranken E ρ ∧
     E.schranken.halten () = some H ∧
     (∃ s, ρ.zeit.zustand a = some s ∧
       (∃ h', (s.sperren ()).besitzer = some h' ∧ h' ≠ c) ∧

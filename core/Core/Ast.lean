@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Grammar
+public import Core.Ast.LowLevel.Exec.Proofs.ExecStop
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Proofs.View
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
@@ -14,6 +15,9 @@ public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPages
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages.SplitPagesSatisfiability
 public import Core.Ast.LowLevel.Mem.Proofs.Merge.Merge
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.Protect
+public import Core.Ast.LowLevel.Exec.Proofs.ExecWait
+public import Core.Ast.LowLevel.Exec.Proofs.ExecStateDecl
+public import Core.Ast.LowLevel.Exec.Proofs.ExecEntry
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution
