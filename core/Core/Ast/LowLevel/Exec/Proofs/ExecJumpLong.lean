@@ -36,9 +36,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
               Option.isNone_none, Option.isNone_some, jlNoneSomeFalse, Option.some.injEq,
               Bool.false_eq_true, false_and, and_false, or_false, false_or, true_and,
               and_true, exists_false, exists_prop, exists_eq_left, exists_eq_right,
-              exists_eq_left', exists_eq_right'] at ha hb
-            try rcases ha with ⟨_, _, _, _, ha⟩
-            try rcases hb with ⟨_, _, _, _, hb⟩
+              exists_eq_left', exists_eq_right', eq_comm] at ha hb
             rw [ha] at hb
             have hlen := congrArg List.length hb
             simp only [List.length_cons, List.length_nil] at hlen
@@ -115,8 +113,7 @@ private theorem jumpLongInversion : ExecInversionAussage .jumpLong := by
             Option.isNone_some, jlNoneSomeFalse, Option.some.injEq, Bool.false_eq_true,
             false_and, and_false, or_false, false_or, true_and, and_true, exists_false,
             exists_prop, exists_eq_left, exists_eq_right, exists_eq_left',
-            exists_eq_right'] at hp prod
-          try rcases hp with ⟨_, _, _, _, hp⟩
+            exists_eq_right', eq_comm] at hp prod
         all_goals exact aligned.trans (hp.trans prod.symm)
 private theorem jumpLongEindeutig : ExecEindeutigAussage .jumpLong := by
   intro a b tokens ha hb
