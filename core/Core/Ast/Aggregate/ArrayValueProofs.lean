@@ -129,7 +129,8 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
       | next second rest =>
           let tail := ExprItems.next second rest
           simpa [tail, Expr.printTokens, ExprItems.printPieces, ExprItems.printTail,
-            printComma, printPunctuation, PrintedToken.unquoted,
+            List.append_assoc, List.singleton_append, printComma, printPunctuation,
+            PrintedToken.unquoted,
             (show (Token.punctuation ",".toList : Token) = comma by decide)] using
             (.next (headRead (comma :: (tail.printPieces.map PrintedToken.value ++ [closeBracket]))
                 noOperatorAtComma)
