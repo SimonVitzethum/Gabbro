@@ -327,11 +327,11 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
             | mk o qq =>
               simp only [hs] at hown hq ⊢
               exact nimmt_am_kopf hown hq
-        · calc ([] : List Nat).length = 0 := rfl
-            _ ≤ i + 1 + 1 := Nat.zero_le _
-        · intro x hx
-          exact (List.not_mem_nil hx).elim
-        · calc ([] : List Nat).sum = 0 := rfl
-            _ ≤ (i + 1 + 1) * (H + 1) := Nat.zero_le _
+          · calc ([] : List Nat).length = 0 := rfl
+              _ ≤ i + 1 + 1 := Nat.zero_le _
+          · intro x hx
+            exact (List.not_mem_nil hx).elim
+          · calc ([] : List Nat).sum = 0 := rfl
+              _ ≤ (i + 1 + 1) * (H + 1) := Nat.zero_le _
 
 end Gabbro.Core.Fortschritt
