@@ -229,6 +229,7 @@ theorem activateJoint : ActivateJointAussage := by
       entryContext, ↓reduceIte, start, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLT,
       decide_true, List.isEmpty_cons, Bool.not_true, Bool.false_and,
       List.all_cons, List.all_nil, Bool.true_and, and_true]
+    rfl
   have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
     unfold heldMemRegion
     change (if (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
