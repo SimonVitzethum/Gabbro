@@ -17,7 +17,7 @@ module
 public import Core.Maschine.Sperre
 public import Core.Maschine.Griff
 public import Core.Maschine.Ergebnis
-public import Core.Speicher
+public import Core.Maschine.Speicherfolge
 
 @[expose] public section
 
@@ -40,9 +40,10 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   kerne : Kern → KernZustand Raum
   sperren : L → SperrZustand
   rechte : Rechte
-  graph : Speicher.Zustand Kontext Ort Wert
-  fragen : List (Kontext × Frage)
-  antworten : List (Kontext × Frage × Antwort)
+  graph : SpeicherGraph Ort Wert
+  fragen : List FrageEreignis
+  antworten : List AntwortEreignis
+  verlauf : AussenVerlauf
   verbraucht : Kontext → Nat
   leihen : Nat → Leihe Objekt
 
@@ -52,16 +53,17 @@ variable {L Ort Wert Raum Lok Grund : Type}
 
 /-- The answers that arrived for a context, in arrival order. -/
 def angekommen (z : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
-    List (Frage × Antwort) :=
-  (z.antworten.filter (fun x => decide (x.1 = c))).map (fun x => x.2)
+    List AntwortEreignis :=
+  z.antworten.filter (fun e => e.context == c.nummer)
 
 /-- **Arrival and consumption**: a context consumes only answers that arrived. -/
 def Verbrauch (z : Zustand L Ort Wert Raum Lok Grund) : Prop :=
   ∀ c, z.verbraucht c ≤ (z.angekommen c).length
 
-/-- Every arrived answer is one the catalogue allows at some outside snapshot. -/
-def Zulaessig (z : Zustand L Ort Wert Raum Lok Grund) (k : Katalog.Katalog) : Prop :=
-  ∀ x ∈ z.antworten, ∃ s, k.zulaessig s x.2.1 x.2.2
+/-- Every arrived answer is one the catalogue allows at its commit snapshot. -/
+def Zulaessig (z : Zustand L Ort Wert Raum Lok Grund) (k : Katalog.Katalog)
+    (sicht : Nat → AussenSicht) : Prop :=
+  ∀ e ∈ z.antworten, k.zulaessig (sicht e.cut) e.question e.reply
 
 /-- **The graph part is a consistent, complete prefix** (M3). -/
 def SpeicherGut (z : Zustand L Ort Wert Raum Lok Grund) : Prop :=
@@ -79,16 +81,17 @@ def start (lok : Kontext → Lok) (st : Kontext → Status Wert Grund) (kerne : 
   graph := Speicher.Zustand.leer
   fragen := []
   antworten := []
+  verlauf := []
   verbraucht := fun _ => 0
   leihen := fun _ => .eigen
 
 /-- **Satisfiability of the start's invariants**: a start state has a consistent complete memory,
     consumes nothing that did not arrive and holds only allowed answers. -/
 theorem start_gut (lok : Kontext → Lok) (st : Kontext → Status Wert Grund)
-    (kerne : Kern → KernZustand Raum) (r : Rechte) (k : Katalog.Katalog) :
+    (kerne : Kern → KernZustand Raum) (r : Rechte) (k : Katalog.Katalog) (sicht : Nat → AussenSicht) :
     (start (L := L) (Ort := Ort) lok st kerne r).SpeicherGut ∧
       (start (L := L) (Ort := Ort) lok st kerne r).Verbrauch ∧
-      (start (L := L) (Ort := Ort) lok st kerne r).Zulaessig k :=
+      (start (L := L) (Ort := Ort) lok st kerne r).Zulaessig k sicht :=
   ⟨⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩,
     fun _ => Nat.zero_le _, fun _ h => absurd h List.not_mem_nil⟩
 

@@ -68,6 +68,26 @@ def vorK (Z : Zustand F Ort Wert) (k : F) (i : Nat) : Prop :=
   i < Z.ev.length ∧ ((∃ h : i < Z.ev.length, (Z.ev[i]'h).kontext = k) ∨
     ∃ j, ∃ hj : j < Z.ev.length, (Z.ev[j]'hj).kontext = k ∧ Z.po i j)
 
+theorem vorK_eigen (Z : Zustand F Ort Wert) (k : F) (i : Nat) (hi : i < Z.ev.length)
+    (same : (Z.ev[i]'hi).kontext = k) : vorK Z k i :=
+  ⟨hi, Or.inl ⟨hi, same⟩⟩
+
+theorem vorK_vorher {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent) (k : F)
+    (i j : Nat) (hi : i < Z.ev.length) (hj : j < Z.ev.length) (hP : vorK Z k j)
+    (hpo : Z.po i j) : vorK Z k i := by
+  refine ⟨hi, Or.inr ?_⟩
+  rcases hP.2 with ⟨_, hjk⟩ | ⟨j', hj', hjk, hpo'⟩
+  · exact ⟨j, hj, hjk, hpo⟩
+  · exact ⟨j', hj', hjk, hk.wf.po_trans ⟨i, hi⟩ ⟨j, hj⟩ ⟨j', hj'⟩ hpo hpo'⟩
+
+/-- A non-reading label can be appended as given, including its unused read field. -/
+theorem schritt_ohne_lesen {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
+    (hv : Z.graph.Vollstaendig) (k : F) (l : Etikett Ort Wert) (hl : ¬ l.art.liest) :
+    ∃ Z', Schritt Z k l Z' := by
+  have A : Anhang Z k l (vorK Z k) 0 :=
+    ⟨vorK_eigen Z k, vorK_vorher hk k, fun h => absurd h hl⟩
+  exact ⟨_, senke_schritt A hk hv⟩
+
 /-- **A step exists for every access**: an access of context `k` of kind `a` at `x` with mode `m`
     writing `v` is a step of the graph machine; when it reads, the value it reads is that of a write
     last in `mo` at `x`. -/
@@ -77,28 +97,19 @@ theorem schritt_existiert {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
       (Z.ev[i]'h).lab.art.schreibt ∧ (Z.ev[i]'h).lab.ort = x) :
     ∃ r Z', Schritt Z k ⟨a, x, m, r, v⟩ Z' ∧
       (a.liest → ∃ w, Z.graph.MoLetzte x w ∧ (Z.graph.lab w).geschrieben = r) := by
-  have hzu : ∀ i j, i < Z.ev.length → j < Z.ev.length → vorK Z k j → Z.po i j → vorK Z k i := by
-    intro i j hi hj hP hpo
-    refine ⟨hi, Or.inr ?_⟩
-    rcases hP.2 with ⟨_, hjk⟩ | ⟨j', hj', hjk, hpo'⟩
-    · exact ⟨j, hj, hjk, hpo⟩
-    · exact ⟨j', hj', hjk, hk.wf.po_trans ⟨i, hi⟩ ⟨j, hj⟩ ⟨j', hj'⟩ hpo hpo'⟩
-  have hfa : ∀ i (h : i < Z.ev.length), (Z.ev[i]'h).kontext = k → vorK Z k i :=
-    fun i h hi => ⟨h, Or.inl ⟨h, hi⟩⟩
   by_cases hl : a.liest
   · obtain ⟨i, hi, his, hio⟩ := hw hl
     obtain ⟨w, hws, hwo, hmax⟩ := Graph.mo_letzte_existiert (G := Z.graph) hk.wf
       ⟨⟨i, hi⟩, his, hio⟩
     let l : Etikett Ort Wert := ⟨a, x, m, (Z.graph.lab w).geschrieben, v⟩
     have A : Anhang Z k l (vorK Z k) w.1 :=
-      ⟨hfa, hzu, fun _ => ⟨w.2, hws, hwo, rfl, fun u hu hus huo => by
+      ⟨vorK_eigen Z k, vorK_vorher hk k, fun _ => ⟨w.2, hws, hwo, rfl, fun u hu hus huo => by
         rcases hmax ⟨u, hu⟩ hus huo with e | e
         · exact Or.inl (congrArg Fin.val e)
         · exact Or.inr e⟩⟩
     exact ⟨_, _, senke_schritt A hk hv, fun _ => ⟨w, ⟨hws, hwo, hmax⟩, rfl⟩⟩
-  · have A : Anhang Z k ⟨a, x, m, v, v⟩ (vorK Z k) 0 :=
-      ⟨hfa, hzu, fun h => absurd h hl⟩
-    exact ⟨v, _, senke_schritt A hk hv, fun h => absurd h hl⟩
+  · obtain ⟨Z', hs⟩ := schritt_ohne_lesen hk hv k ⟨a, x, m, v, v⟩ hl
+    exact ⟨v, Z', hs, fun h => absurd h hl⟩
 
 end Zustand
 

@@ -35,11 +35,14 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.regionen, 6935289300322291742),
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
-  (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641)]
+  (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
+  (`Gabbro.Core.Maschine.I.Schritt, 3232677623887082691),
+  (`Gabbro.Core.Maschine.ImplSchritt, 4099112030944390459)]
 
-private meta def acceptance : AcceptanceSpec := {}
+private meta def acceptance : AcceptanceSpec := { ideal := #[`Gabbro.Core.Maschine.I.Schritt] }
 private meta def registry : Array RegistryFamily := #[]
-private meta def wildcardRoots : Array Name := #[]
+private meta def wildcardRoots : Array Name := #[
+  `Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.ImplSchritt]
 private meta def catalogueKinds : Array ClosedKinds := #[
   ⟨`Gabbro.Core.Maschine.Ergebnis, [`Gabbro.Core.Maschine.Ergebnis.ende, `Gabbro.Core.Maschine.Ergebnis.katalog]⟩,
   ⟨`Gabbro.Core.Katalog.Ereignis, [`Gabbro.Core.Katalog.Ereignis.frage, `Gabbro.Core.Katalog.Ereignis.antwort,

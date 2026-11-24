@@ -9,6 +9,8 @@
 -/
 module
 
+public import Mathlib.Data.Nat.Pairing
+
 @[expose] public section
 
 namespace Gabbro.Core.Maschine
@@ -23,6 +25,18 @@ inductive Kontext where
   | handler (kern : Kern) (vektor : Nat)
   | nmi (kern : Kern)
   deriving DecidableEq, Repr
+
+/-- The context identity at the catalogue boundary. -/
+def Kontext.nummer : Kontext → Nat
+  | .faden n => Nat.pair 0 n
+  | .handler k v => Nat.pair 1 (Nat.pair k v)
+  | .nmi k => Nat.pair 2 k
+
+theorem Kontext.nummer_injektiv : Function.Injective Kontext.nummer := by
+  intro c d h
+  cases c <;> cases d <;> simp only [Kontext.nummer, Nat.pair_eq_pair] at h <;>
+    rcases h with ⟨tag, args⟩ <;> cases tag
+  all_goals first | (cases args <;> rfl) | (rcases args with ⟨rfl, rfl⟩; rfl)
 
 /-- **A privilege level**: user, system (kernel), hypervisor. Which of them a core has is a
     catalogue row's statement. -/

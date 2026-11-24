@@ -26,7 +26,7 @@ variable {Ort Wert : Type}
 def sperrE (o o' : Option Kontext) (ort : Ort) (v : Wert) : List (Etikett Ort Wert) :=
   match o, o' with
   | none, none => []
-  | none, some _ => [⟨.rmw, ort, .ra, v, v⟩]
+  | none, some _neu => [⟨.rmw, ort, .ra, v, v⟩]
   | some _, none => [⟨.schreiben, ort, .ra, v, v⟩]
   | some c, some d => if c = d then [] else [⟨.rmw, ort, .ra, v, v⟩]
 
@@ -58,19 +58,19 @@ theorem nimmt_ereignis {s s' : SperrZustand} {c : Kontext} (h : SperrZustand.Nim
   rfl
 
 /-- **The write events of a step**: one per footprint location the step writes. -/
-def schreibEreignisse (fuss : List Ort) (schreibt : Ort → Bool) (modus : Ort → Modus) (v : Wert) :
+def schreibEreignisse (fuss : List Ort) (schreibt : Ort → Bool) (modus : Ort → Modus) (wert : Ort → Wert) :
     List (Etikett Ort Wert) :=
-  (fuss.filter schreibt).map fun x => ⟨.schreiben, x, modus x, v, v⟩
+  (fuss.filter schreibt).map fun x => ⟨.schreiben, x, modus x, wert x, wert x⟩
 
 /-- **Every written footprint location has its write event.** -/
-theorem schreib_deckt (fuss : List Ort) (schreibt : Ort → Bool) (modus : Ort → Modus) (v : Wert)
+theorem schreib_deckt (fuss : List Ort) (schreibt : Ort → Bool) (modus : Ort → Modus) (wert : Ort → Wert)
     {x : Ort} (hx : x ∈ fuss) (hs : schreibt x = true) :
-    ⟨.schreiben, x, modus x, v, v⟩ ∈ schreibEreignisse fuss schreibt modus v :=
+    ⟨.schreiben, x, modus x, wert x, wert x⟩ ∈ schreibEreignisse fuss schreibt modus wert :=
   List.mem_map_of_mem (List.mem_filter.mpr ⟨hx, hs⟩)
 
 /-- **Only written footprint locations have write events.** -/
-theorem schreib_nur {fuss : List Ort} {schreibt : Ort → Bool} {modus : Ort → Modus} {v : Wert}
-    {l : Etikett Ort Wert} (h : l ∈ schreibEreignisse fuss schreibt modus v) :
+theorem schreib_nur {fuss : List Ort} {schreibt : Ort → Bool} {modus : Ort → Modus} {wert : Ort → Wert}
+    {l : Etikett Ort Wert} (h : l ∈ schreibEreignisse fuss schreibt modus wert) :
     l.ort ∈ fuss ∧ schreibt l.ort = true ∧ l.art = .schreiben := by
   obtain ⟨x, hx, rfl⟩ := List.mem_map.mp h
   obtain ⟨h1, h2⟩ := List.mem_filter.mp hx

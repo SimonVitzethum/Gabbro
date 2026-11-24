@@ -8,6 +8,7 @@ public import Core.Ziel.Form
 public import Core.Text.Model
 public import Core.Speicher
 public import Core.Maschine
+public import Core.Maschine.Schritte
 public import Core.Ideal
 public import Core.Katalog.Erfuellbar
 meta import Core.Waechter.Check
