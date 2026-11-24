@@ -1,6 +1,6 @@
 module
 
-public import Core.Verfeinerung.ZielFX
+public import Core.Verfeinerung.Fortschritt
 
 @[expose] public section
 
@@ -46,14 +46,42 @@ theorem abgleich_aus_gleichen_regeln
     | interrupt normal enters => exact stuck _ _ (.schritt (.interrupt normal enters))
     | absturz crash => exact stuck _ _ (.schritt (.absturz crash))
 
-/-- A one-form unit changes a local value on a fair hardware history. Its
-    loader, authority, continuation and bounded simulation obligations hold jointly. -/
-theorem sim_erfuellbar :
+private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E} {entry : Kontext}
+    (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
+    (regeln : ∀ f, Gabbro.Core.Ideal.RegelFortschritt E.system f)
+    (komponierbar : ∀ f, RegelKomponierbar E.einrichtung E.system f)
+    (slot : ∀ t, ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some entry ∧ η.hw.gelegenheit t k)
+    (dispatch : ∀ t k c, ((η.zeit.zustand t).kerne k).laeuft = some c → c = entry)
+    (head : ∀ t, ∃ f, E.system.kopf (η.zeit.zustand t) entry = some f)
+    (ticks : ∀ t, ∃ w spur, ρ.zeit.spur t = some (.kontext entry w, spur) ∧
+      η.zeit.spur t = some (.kontext entry w, spur)) :
+    FortschrittsPflichten (.lockFree (fun _ => True)) ρ η (fun _ c => c = entry) := by
+  refine ⟨fertig, regeln, komponierbar, ?_, ?_, ?_, ?_⟩
+  · rintro t _ rfl
+    exact slot t
+  · rintro t _ rfl _
+    obtain ⟨w, spur, event, _⟩ := ticks t
+    exact ⟨w, spur, event⟩
+  · intro _ a c f opened _ _ _
+    obtain ⟨k, running⟩ := opened.1
+    cases dispatch a k c running
+    obtain ⟨w, spur, _, event⟩ := ticks a
+    exact ((opened.2 a (Nat.le_refl _)).2.2 (Or.inl ⟨w, spur, event⟩)).elim
+  · intro _ a _ absent
+    obtain ⟨f, form⟩ := head a
+    obtain ⟨w, spur, _, event⟩ := ticks a
+    exact (absent ⟨a, Nat.le_refl _, Or.inr ⟨entry, f, w, spur, trivial, form, event⟩⟩).elim
+
+/-- A one-form unit repeatedly changes a local value on a fair hardware
+    history. The concrete, simulation, safety and progress premises hold jointly. -/
+theorem fortschritt_erfuellbar :
     ∃ E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
       SimPflichten E Eq (fun _ => 1) ∧
       ∃ (h : Umgebung) (ρ : Maschine.Lauf E) (η : Lauf E),
         Maschine.Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ Laeufe E η ∧
         Laufabgleich ρ η Eq ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
+        (∃ nutzbar, FortschrittsPflichten (.lockFree (fun _ => True)) ρ η nutzbar) ∧
+        (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse (.lockFree (fun _ => True)) η ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
           before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true := by
@@ -78,11 +106,8 @@ theorem sim_erfuellbar :
       fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))⟩
-  have abgleich : AbgleichPflichten E₀ Eq (fun _ => 1) := by
-    refine abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl) ?_
-    intro _ ρ η _ matched
-    apply StotterSchranke.ohne_stottern
-    intro t
+  have frei {ρ : Maschine.Lauf E₀} {η : Lauf E₀} (matched : Laufabgleich ρ η Eq) (t : Nat) :
+      η.belegt t = none := by
     cases occupied : η.belegt t with
     | none => rfl
     | some c =>
@@ -113,6 +138,9 @@ theorem sim_erfuellbar :
             rw [Function.update_self] at impossible
             have toggles (b : Bool) : b ≠ !b := by intro eq; cases b <;> cases eq
             exact (toggles _ impossible).elim
+  have abgleich : AbgleichPflichten E₀ Eq (fun _ => 1) :=
+    abgleich_aus_gleichen_regeln (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
+      (fun _ _ _ _ matched => StotterSchranke.ohne_stottern (frei matched))
   have pflicht : SimPflichten E₀ Eq (fun _ => 1) := by
     refine ⟨abgleich, ?_, ?_⟩
     · intro _h _run _valid _t _s _next _c _w _spur _u _plan _load _after _label _normal _ready form _execute
@@ -146,35 +174,67 @@ theorem sim_erfuellbar :
   let z := (start E₀ s).2
   let z' := update entry z
   let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
-  have execute : FuehrtSchrittAus e 0 entry z z' plan label.2 z' :=
+  have execute (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Bool Unit) :
+      FuehrtSchrittAus e t c x (update c x) plan label.2 (update c x) :=
     ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ hn => (List.not_mem_nil hn).elim,
-      [], z', .intern, .nil _, rfl⟩
-  have first : Lauffolge E₀ hw 0 (some z) label (some z') := by
-    refine .schritt (.kontext rfl ⟨0, rfl, ?_, ?_⟩ ⟨(), rfl, rfl, rfl⟩ execute)
-    · change (if 0 = s.bootCore then some entry else none) = some entry
-      rw [boot, ite_eq_left rfl]
-    · change (if entry = entry then Status.laeuft else Status.ruht) = (Status.laeuft : Status Unit Unit)
-      exact ite_eq_left rfl
-  obtain ⟨tail, after⟩ := Zeitlauf.existiert (fun t => Lauffolge E₀ hw (t + 1)) (some z')
+      [], update c x, .intern, .nil _, rfl⟩
+  let zustand (t : Nat) : Zustand Unit Unit Unit Unit Bool Unit :=
+    Nat.rec z (fun _ => update entry) t
+  have protocol (t : Nat) : (zustand t).kerne = z.kerne ∧ (zustand t).status = z.status := by
+    induction t with
+    | zero => exact ⟨rfl, rfl⟩
+    | succ t ih => exact ih
+  have dispatch : (z.kerne 0).laeuft = some entry := by
+    change (if 0 = s.bootCore then some entry else none) = some entry
+    rw [boot, ite_eq_left rfl]
+  have live : z.status entry = .laeuft := by
+    change (if entry = entry then Status.laeuft else Status.ruht) = (Status.laeuft : Status Unit Unit)
+    exact ite_eq_left rfl
+  have opportunity (t : Nat) : hw.gelegenheit t 0 := congrArg some (Nat.mod_one _)
+  have step (t : Nat) : Lauffolge E₀ hw t (some (zustand t)) label (some (zustand (t + 1))) :=
+    .schritt (.kontext rfl ⟨0, opportunity t,
+      (congrArg (fun cores => (cores 0).laeuft) (protocol t).1).trans dispatch,
+      (congrFun (protocol t).2 entry).trans live⟩ ⟨(), rfl, rfl, rfl⟩ (execute t entry (zustand t)))
   let ρ : Maschine.Lauf E₀ := ⟨s, hw, {
-    zustand := fun | 0 => some z | t + 1 => tail.zustand t
-    spur := fun | 0 => some label | t + 1 => tail.spur t
-    takt := fun
-      | 0 => by
-        apply Takt.schritt rfl
-        change Lauffolge E₀ hw 0 (some z) label (tail.zustand 0)
-        rw [after]
-        exact first
-      | t + 1 => by
-        cases tail.takt t with
-        | schritt mark step => exact .schritt mark step
-        | wartet mark same stuck => exact .wartet mark same stuck }⟩
+    zustand := fun t => some (zustand t)
+    spur := fun _ => some label
+    takt := fun t => .schritt rfl (step t) }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
-  obtain ⟨η, ideal, matched⟩ := laufabgleich abgleich konkret
+  obtain ⟨η, ideal, matched, env⟩ := laufabgleich abgleich konkret
   have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
+  have idealState (t : Nat) : η.zeit.zustand t = zustand t := by
+    obtain ⟨x, state, rel⟩ := matched.zustand t
+    exact (zustandsbezug_eq rel).symm.trans ((Option.some.inj state).symm)
+  have idealEvent (t : Nat) : η.zeit.spur t = some label := by
+    have aligned : SpurAbgleich (some label) (η.zeit.spur t) := matched.spur t
+    rcases aligned.ideales_etikett with event | step
+    ·
+      rcases (matched.frei t).mp (frei matched t) with no | yes
+      · exact (Option.some_ne_none label no).elim
+      · exact (yes event).elim
+    · exact step
+  have progress : FortschrittsPflichten (.lockFree (fun _ => True)) ρ η (fun _ c => c = entry) := by
+    apply fortschritt_aus_schrittfolge
+    · exact fun _ _ h => (Option.some_ne_none () h).elim
+    · exact fun _ x c _ => Or.inl ⟨(), [plan], update c x, rfl, rfl⟩
+    · intro f t x c w plans u _ _ rule
+      obtain ⟨rfl, rfl⟩ := rule
+      exact ⟨plan, label.2, update c x, rfl, execute t c x⟩
+    · intro t
+      rw [idealState t, (protocol t).1, matched.hardware]
+      exact ⟨0, dispatch, opportunity t⟩
+    · intro t j c running
+      rw [idealState t, (protocol t).1] at running
+      change (if j = s.bootCore then some entry else none) = some c at running
+      split at running
+      · exact (Option.some.inj running).symm
+      · cases running
+    · exact fun _ => ⟨(), rfl⟩
+    · exact fun t => ⟨(), label.2, rfl, idealEvent t⟩
+  have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched) progress (env.symm ▸ fair)
   refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, pflicht.zielFX konkret,
-    label, z, z', rfl, rfl, after, rfl, ?_⟩
+    ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_⟩
   change Function.update z.lokal entry (!z.lokal entry) entry = true
   rw [Function.update_self]
   rfl

@@ -61,7 +61,7 @@ theorem Laufabgleich.sim (matched : Laufabgleich ρ η lokal) (valid : Laeufe E 
 
 theorem sim_im_lauf (pflicht : SimPflichten E lokal laenge) (run : Maschine.Laeufe E h ρ) :
     ∃ η : Lauf E, Laeufe E η ∧ Sim E ρ η := by
-  obtain ⟨η, valid, matched⟩ := laufabgleich pflicht.abgleich run
+  obtain ⟨η, valid, matched, _⟩ := laufabgleich pflicht.abgleich run
   exact ⟨η, valid, matched.sim valid (pflicht.abgleich.schranke h ρ η run matched)
     (pflicht.autoritaet h ρ run) pflicht.fortsetzung⟩
 

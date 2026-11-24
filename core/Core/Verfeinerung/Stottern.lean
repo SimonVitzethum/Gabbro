@@ -41,7 +41,7 @@ theorem StotterSchranke.ohne_stottern {laenge : F → Nat} {η : Lauf E}
   exact Nat.zero_le _
 
 omit [DecidableEq L] in
-private theorem markierungen_endlich (m : Nat → Bool) (a b : Nat)
+theorem markierungen_endlich (m : Nat → Bool) (a b : Nat)
     (bound : ∀ n, zaehle m a n ≤ b) : ∃ q, ∀ t, q ≤ t → m t = false := by
   classical
   let P (d : Nat) := ∃ n, zaehle m a n + d = b

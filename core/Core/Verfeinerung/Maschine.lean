@@ -118,7 +118,7 @@ theorem SpurAbgleich.gedeckt {konkret : Option (SchrittWahl Wahl × SchrittSpur 
     concrete run, with the canonical start and matching finite/infinite status. -/
 theorem laufabgleich (pflicht : AbgleichPflichten E lokal laenge)
     {h : Umgebung} {ρ : Maschine.Lauf E} (run : Maschine.Laeufe E h ρ) :
-    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η lokal := by
+    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η lokal ∧ η.umgebung = h := by
   classical
   let bezug := fun (z : Option (Zustand L Ort Wert Raum Lok Grund)) i =>
     ∃ s, z = some s ∧ Zustandsbezug lokal s i
@@ -202,6 +202,6 @@ theorem laufabgleich (pflicht : AbgleichPflichten E lokal laenge)
           obtain ⟨⟨_, ready⟩, _, f, _, head⟩ := occupied t c mark
           exact ⟨ready, f, head⟩) tail
       exact ⟨q, quiet⟩
-  exact ⟨η, ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, fun t c h => (occupied t c h).1⟩, matched⟩
+  exact ⟨η, ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, fun t c h => (occupied t c h).1⟩, matched, rfl⟩
 
 end Gabbro.Core.Maschine.I
