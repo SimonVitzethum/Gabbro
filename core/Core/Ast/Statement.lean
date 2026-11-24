@@ -10,8 +10,6 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-/-- The continuation after the common binding header and initializer. A new
-    continuation starts at its own discriminator, such as the word `else`. -/
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     (right : StmtReads result scope input b rest') : a = b ∧ rest = rest' := by

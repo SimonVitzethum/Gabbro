@@ -8,8 +8,6 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-/-- The continuation after the common binding header and initializer. A new
-    continuation starts at its own discriminator, such as the word `else`. -/
 namespace StatementComparison
 
 private theorem callNotReserved (call : DirectCall scope) (spelling : String)

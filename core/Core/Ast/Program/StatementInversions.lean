@@ -8,8 +8,6 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-/-- The continuation after the common binding header and initializer. A new
-    continuation starts at its own discriminator, such as the word `else`. -/
 -- The assignment tokens remain distinguishable after a contextual keyword head.
 def AssignmentStart (input : List Token) : Prop :=
   (∃ tail, input = assignment :: tail) ∨
