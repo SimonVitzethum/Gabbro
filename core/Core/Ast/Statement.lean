@@ -157,11 +157,14 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
   case armsNullary =>
     intros
     rename_i label caseName bodyRead tailRead bodyDet tailDet _ _ other
+    generalize eq : (Token.word label.val :: matchArrow :: _) = tokens at other
     cases other with
     | nullary _ _ otherBody otherTail =>
+      cases (List.cons.inj (List.cons.inj eq).2).2
       obtain ⟨rfl, rfl⟩ := bodyDet otherBody
       obtain ⟨rfl, rfl⟩ := tailDet otherTail
       exact ⟨rfl, rfl⟩
+    | wildcard _ _ _ => exact (caseName (Token.word.inj (List.cons.inj eq).1)).elim
   case armsPayload =>
     intros
     rename_i label binder ordinary body bodyRead tailRead bodyDet tailDet _ _ other
