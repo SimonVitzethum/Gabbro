@@ -167,7 +167,7 @@ theorem pauseNI : PauseNIAussage := by
               rw [signaleEqId]
               exact pending₂.2.2.1
             · intro mem
-              exact pending₂.2.2.2.1 (by rw [geliefertEq]; exact mem)
+              exact pending₂.2.2.2.1 (by rw [geliefertEq] at mem; exact mem)
             · exact auswahlEq.trans pending₂.2.2.2.2
           have nimmt₁ : NimmtUnterbrechung (v₁.kerne k) k (Nat.pair irqId.1 irqId.2) irq c₂ nmi := by
             rw [kerneEq]
@@ -175,7 +175,7 @@ theorem pauseNI : PauseNIAussage := by
           have ruht₁ : v₁.status c₂ = .ruht := by
             rw [statusEq]
             exact ruht₂
-          let label : Speicher.Etikett Ort Wert :=
+          let label : Speicher.Etikett PUnit Int :=
             aussenEtikett E.einrichtung (.interrupt k irq .handler)
           have labelNicht : ¬ label.art.liest := by
             simp only [label, aussenEtikett, Art.liest]
@@ -202,13 +202,13 @@ theorem pauseNI : PauseNIAussage := by
           have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t :=
             ⟨crash₂.1.1, by rw [crashEq]; exact crash₂.1.2⟩
           have crashStep₁ : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
-              E.katalog ρ₁.hw t v₁ absturzSpur (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+              E.katalog ρ₁.hw t v₁ absturzSpur (v₁.wiederanlauf E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
             absturz_schritt_erfuellbar _ _ offer₁ v₁
           have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-              (.absturz, absturzSpur) (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+              (.absturz, absturzSpur) (v₁.wiederanlauf E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
             .absturz crashStep₁
           exact (keinSchritt₁ (.absturz, absturzSpur)
-            (some (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)))
+            (some (v₁.wiederanlauf E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)))
             (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
 
 end Gabbro.Core.Beobachtung
