@@ -346,6 +346,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
   case logic op left right leftIH rightIH =>
       intro env frame bound active pre post hpc
+      cases op
       let L := (expr slot left).code
       let R := (expr slot right).code
       let sw : Befehl := .springeWenn slot op.skips (R.length + 1)
