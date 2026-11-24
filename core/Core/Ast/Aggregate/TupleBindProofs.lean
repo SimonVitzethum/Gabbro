@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.TupleBindings
+public import Core.Ast.Semantik.Formbeweise
 
 /-!
 # Prover checklist
@@ -22,3 +23,93 @@ public import Core.Ast.Aggregate.TupleBindings
 - `TupleBindErfuellbarAmAussage`
 - `TupleBindLocalsAussage`
 -/
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Katalog Waechter
+
+theorem tupleBind_am_ort (ctx : Scope × Option (Ty .value)) : (tupleBindForm ctx).RegelAmOrt := by
+  intro args
+  change (((expr 0 args.value).anhaengen (.einzel
+    (.bindeTupel 0 args.types (args.pattern.names.map Option.isSome)))).code[
+      (expr 0 args.value).code.length]? =
+    some (.bindeTupel 0 args.types (args.pattern.names.map Option.isSome)))
+  simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+    Nat.sub_self, List.getElem?_cons_zero]
+
+theorem tupleBind_elaboriert : TupleBindElaboriertAussage := by
+  intro ctx platform args
+  rfl
+
+theorem tupleBind_realisiert : TupleBindRealisiertAussage := by
+  intro ctx platform args s running active live atPc
+  exact (tupleBindForm ctx).realisiert (tupleBind_am_ort ctx) platform args s
+    running active live atPc
+
+theorem tupleBind_annahme : TupleBindAnnahmeAussage := by
+  intro ctx
+  exact (tupleBindForm ctx).annahme
+
+theorem tupleBind_ideal : TupleBindIdealAussage := by
+  intro ctx
+  refine ⟨tupleBind_am_ort ctx, ?_⟩
+  intro args
+  exact ⟨((tupleBindForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+
+theorem tupleBind_einheit : TupleBindEinheitAussage := by
+  intro ctx platform args
+  exact ⟨rfl, ((tupleBindForm ctx).befehl args).kommutation⟩
+
+theorem tupleBind_impl : TupleBindImplAussage := by
+  intro ctx args c s w plans u
+  rfl
+
+private theorem tupleBind_keineInvarianten (ctx : Scope × Option (Ty .value))
+    (args : Surface.TupleBindArgs ctx.1) :
+    ((tupleBindForm ctx).fragment args).klauseln.invariant = [] := by
+  change (stmt (Stmt.tupleBind args.pattern args.annotation args.checked args.value)).klauseln.invariant = []
+  exact stmt_keine_invarianten _
+
+theorem tupleBind_erhaltung : TupleBindErhaltungAussage := by
+  intro ctx
+  exact (tupleBindForm ctx).erhaltung (tupleBind_keineInvarianten ctx)
+
+theorem tupleBind_regelSicher : TupleBindRegelSicherAussage := by
+  intro ctx platform args
+  exact ((tupleBindForm ctx).befehl args).sicher ((tupleBindForm ctx).fragment args)
+    platform (tupleBind_keineInvarianten ctx args)
+
+private theorem tupleLocals_length : (types : List (Ty .value)) → (value : Wert (tupleType types)) →
+    (names : List (Option Identifier)) → names.length = types.length →
+    (tupleLocals types value (names.map Option.isSome)).length =
+      ((names.zip types).filterMap fun (name, _) => name).length
+  | [], _, [], _ => rfl
+  | _ :: _, _, [], h => by cases h
+  | [], _, _ :: _, h => by cases h
+  | t :: ts, (head, tail), name :: names, h => by
+      cases name with
+      | none =>
+          simp only [Option.map_none, List.zip_cons_cons, List.filterMap_cons, Option.filterMap_none,
+            tupleLocals, Option.isSome_none, if_false]
+          exact tupleLocals_length ts tail names (by simpa using h)
+      | some id =>
+          simp only [Option.map_some, List.zip_cons_cons, List.filterMap_cons, Option.filterMap_some,
+            tupleLocals, Option.isSome_some, if_true, List.length_cons]
+          congr 1
+          exact tupleLocals_length ts tail names (by simpa using h)
+
+theorem tupleBind_locals : TupleBindLocalsAussage := by
+  intro ctx args frame value temp
+  have got : wertAls (tupleType args.types) ⟨tupleType args.types, value⟩ = some value := by
+    simp [wertAls]
+  simp only [tupleBindForm, Quellform.befehl, Befehl.auswerten]
+  rw [temp, got]
+  simp only [Option.bind_some, Option.map_some, Option.getD_some]
+  have hlen : (args.pattern.bindings args.types).length =
+      ((args.pattern.names.zip args.types).filterMap fun (name, _) => name).length := by
+    simp [TuplePattern.bindings]
+  refine ⟨rfl, ?_, rfl, rfl⟩
+  rw [hlen]
+  exact tupleLocals_length args.types value args.pattern.names args.checked.1
+
+end Gabbro.Core.Ast.Semantik
