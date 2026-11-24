@@ -158,7 +158,7 @@ theorem variable_erfuellbar : variableJoint := by
     · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
       intro same
       cases same
-  let scope : Scope := [⟨name, .bool, false⟩]
+  let scope : Scope := [⟨name, .bool, false, false⟩]
   let ref : Local scope .bool := .here
   let args : Surface.VariableArgs scope := ⟨ref, trivial, ordinary⟩
   let form := variableForm scope
