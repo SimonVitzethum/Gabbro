@@ -136,6 +136,12 @@ Consequences:
 - **Toolchain truth, not training memory:** the pinned Lean and Mathlib decide; every lemma name is grepped from
   the tree or the toolchain before use.
 - **Forbidden:** `sorry`, `admit`, `native_decide`, `axiom` (outside the allow-list), `unsafe`.
+  Outside the guard modules, also no `syntax`, `notation`, `infix`/`prefix`/`postfix`, `macro`/`macro_rules`,
+  `elab`/`elab_rules`, `run_cmd`/`run_elab`/`run_meta`, `initialize` or `declare_syntax_cat` (owner, 2026-11-24): they
+  can change what a statement reads as without the guard noticing; only `local macro … : tactic` is allowed. The core
+  guard enforces it.
+- **Pin-table merges are unions** (2026-11-24): a pin row lost in a merge is invisible to the guard; take every row
+  of both sides, then the measured values, and compare the name sets before and after.
 - **Fast proofs only:** a module checks in well under two minutes, no declaration takes more than a few seconds. No
   kernel evaluation (`decide +kernel`, kernel `rfl`) over strings, whole programs or images on the compiler path;
   prove from general theorems with small explicit premises. A module checks in at most 2 GiB, and every build, check
