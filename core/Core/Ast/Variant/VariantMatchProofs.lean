@@ -51,18 +51,23 @@ theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
 
 private theorem vm_block_inv (result : Option (Ty .value)) (before after : Scope)
     (b : Block result before after) : (block b).klauseln.invariant = [] := by
-  cases b with
-  | done => rfl
-  | step first rest =>
-      simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-        stmt_keine_invarianten first, vm_block_inv result _ _ rest, List.nil_append]
+  have blockEmpty : ∀ {r b a} (body : Block r b a), (block body).klauseln.invariant = [] := by
+    intro r b a body
+    cases body with
+    | done => rfl
+    | step first rest =>
+        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+          stmt_keine_invarianten first, blockEmpty rest, List.nil_append]
+  exact blockEmpty b
 
 private theorem vm_braced_inv (result : Option (Ty .value)) (before : Scope)
     (b : BracedBlock result before) : (bracedBlock b).klauseln.invariant = [] := by
   cases b with
   | braces body =>
-      simpa [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
-        Quellklauseln.leer] using vm_block_inv result before _ body
+      change (block body).klauseln.invariant ++
+        (Fragment.einzel (Befehl.blockEnde _)).klauseln.invariant = []
+      rw [vm_block_inv result before _ body]
+      rfl
 
 private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
@@ -71,11 +76,13 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
   cases arms with
   | done => rfl
   | nullary label caseName body rest =>
-      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Quellklauseln.anhaengen,
-        Quellklauseln.leer, vm_braced_inv result scope body, vm_arms_inv result scope true _ _ rest]
+      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
+        Quellklauseln.anhaengen, Quellklauseln.leer,
+        vm_braced_inv result scope body, vm_arms_inv result scope true _ _ rest]
   | payload label binder ordinary body rest =>
-      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Quellklauseln.anhaengen,
-        Quellklauseln.leer, vm_braced_inv result (payloadBinding binder _ :: scope) body,
+      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
+        Quellklauseln.anhaengen, Quellklauseln.leer,
+        vm_braced_inv result (payloadBinding binder _ :: scope) body,
         vm_arms_inv result scope true _ _ rest]
   | wildcard body nonempty shape =>
       simp [variantArms, vm_braced_inv result scope body]
