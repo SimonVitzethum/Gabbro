@@ -235,7 +235,7 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   cases read
   case trueLit => exact (ordinary.1 rfl).elim
   case falseLit => exact (ordinary.2 rfl).elim
-  case _ => exact ⟨_, _, _, rfl, rfl, rfl⟩
+  case _ ref vis ord => exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
 
 
 
