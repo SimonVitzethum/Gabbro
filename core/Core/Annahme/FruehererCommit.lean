@@ -19,7 +19,7 @@ theorem unvermittelter_commit_verweigert {L Ort Wert Raum Lok Grund Bedingung Wa
     (ledger : s'.buchung.wirkungen = s.buchung.wirkungen ++ neu) (mem : Wirkung.aussen effect ∈ neu) :
     ¬ Akzeptiert E := by
   intro akzeptiert
-  obtain ⟨suffix, record, check⟩ := (akzeptiert.1.2.2.2.1 run t s (.kontext c w) spur s' step).2
+  obtain ⟨suffix, record, check⟩ := ((akzeptiert_aussen akzeptiert).1 run t s (.kontext c w) spur s' step).2
   have equal := List.append_cancel_left (ledger.symm.trans record)
   have covers := (check effect (equal ▸ mem)).2.2.2.1
   exact Aussen.reihe_instabil _ _ (covers ⟨effect.frage.handle, effect.frage.operation.required⟩ List.mem_cons_self)

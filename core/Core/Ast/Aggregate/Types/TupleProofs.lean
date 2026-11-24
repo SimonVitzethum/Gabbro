@@ -23,6 +23,8 @@ public import Core.Ast.Semantik.Formbeweise
 - `TupleTypeErfuellbarAmAussage`
 -/
 
+@[expose] public section
+
 namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text

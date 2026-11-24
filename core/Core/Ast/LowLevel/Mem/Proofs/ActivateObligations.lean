@@ -144,7 +144,7 @@ private theorem memParsePrint {form : MemForm} (tree : MemTree form) : MemParse 
   rw [aligned]
   exact memProductionPrint tree
 
-theorem memParse (form : MemForm) : MemParseAussage form := by
+theorem memParseActivate (form : MemForm) : MemParseAussage form := by
   intro text tree
   constructor
   · rintro ⟨_, pieces, lex, derives⟩
@@ -158,7 +158,7 @@ theorem memParse (form : MemForm) : MemParseAussage form := by
   · rintro ⟨pieces, lex, prod⟩
     exact memParse_of lex prod
 
-theorem memInversion (form : MemForm) : MemInversionAussage form := by
+theorem memInversionActivate (form : MemForm) : MemInversionAussage form := by
   intro tree tokens prod
   obtain ⟨pieces, lex, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
   refine ⟨pieces, lex, ?_⟩
@@ -167,7 +167,7 @@ theorem memInversion (form : MemForm) : MemInversionAussage form := by
   cases tree <;> simp only [MemTree.production] at prod pp ⊢
   all_goals exact pp.trans prod.symm
 
-theorem memEindeutig (form : MemForm) : MemEindeutigAussage form := by
+theorem memEindeutigActivate (form : MemForm) : MemEindeutigAussage form := by
   intro a b tokens ha hb
   cases a with
   | splitAt reg point =>
@@ -296,11 +296,11 @@ theorem memEindeutig (form : MemForm) : MemEindeutigAussage form := by
           subst space'
           rfl
 
-theorem memDruck (form : MemForm) : MemDruckAussage form := by
+theorem memDruckActivate (form : MemForm) : MemDruckAussage form := by
   intro tree
   exact ⟨memProductionPrint tree, memParsePrint tree⟩
 
-theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
+theorem memRealisiertActivate (form : MemForm) : MemRealisiertAussage form := by
   intro k scope tree op _ s c
   let target := k.plattform.ziel
   change (memHead target [op] s c = some op) ↔
@@ -341,7 +341,7 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
     simp only [List.getElem?_cons_zero]
     exact if_pos he
 
-theorem memRegelLokalUnit (k : Katalog) (op : MemInstruction) :
+theorem memRegelLokalActivateUnit (k : Katalog) (op : MemInstruction) :
     Annahme.RegelLokal (memUnit k op) op := by
   intro c s u w p hideal
   rcases hideal with ⟨frame, heval, hp, hu⟩
@@ -354,11 +354,11 @@ theorem memRegelLokalUnit (k : Katalog) (op : MemInstruction) :
   · intro l hl
     cases hl
 
-theorem memAnnahme (form : MemForm) : MemAnnahmeAussage form := by
+theorem memAnnahmeActivate (form : MemForm) : MemAnnahmeAussage form := by
   intro k scope tree op _
-  exact memRegelLokalUnit k op
+  exact memRegelLokalActivateUnit k op
 
-theorem memIdeal (form : MemForm) : MemIdealAussage form := by
+theorem memIdealActivate (form : MemForm) : MemIdealAussage form := by
   intro k scope tree op _
   unfold MemInstruction.rule Ideal.RegelBestimmt
   intro c s w es es' s1 s2 h1 h2
@@ -368,21 +368,21 @@ theorem memIdeal (form : MemForm) : MemIdealAussage form := by
   subst frame2
   exact ⟨heq1.trans heq2.symm, hs1.trans hs2.symm⟩
 
-theorem memFortschritt (form : MemForm) : MemFortschrittAussage form := by
+theorem memFortschrittActivate (form : MemForm) : MemFortschrittAussage form := by
   intro k scope tree op hop s c hhead
   left
-  have hcond := (memRealisiert form k scope tree op hop s c).mp hhead
+  have hcond := (memRealisiertActivate form k scope tree op hop s c).mp hhead
   have heval : (op.evaluate k.plattform.ziel s c).isSome := hcond.2.2.2
   obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mp heval
   exact ⟨(), [plan], frame.advance c s, frame, hframe, rfl, rfl⟩
 
 namespace MemInstruction
 
-theorem stepTransfer {target} {op : MemInstruction} {c : Kontext} {s : MemState}
+theorem activateStepTransfer {target} {op : MemInstruction} {c : Kontext} {s : MemState}
     {w : PUnit} {plans : List Plan} {u : MemState} (h : op.step target c s w plans u) :
     ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s := h
 
-theorem vollzug (target : ZielDaten) (op : MemInstruction) (frame : MemFrame)
+theorem activateVollzug (target : ZielDaten) (op : MemInstruction) (frame : MemFrame)
     (t : Nat) (c : Kontext) (s : MemState) :
     FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
   refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
@@ -395,7 +395,7 @@ theorem vollzug (target : ZielDaten) (op : MemInstruction) (frame : MemFrame)
   · change Speicherfolge s.initial (.kontext c) s.graph [] [] (frame.advance c s).graph
     exact Speicherfolge.nil _
 
-theorem genauInternal {t : Nat} {c : Kontext} {s u : MemState}
+theorem activateGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
     {trace : SchrittSpur Nat UInt8} {next : MemState}
     (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
     trace = ⟨[], []⟩ ∧ next = u := by
@@ -415,13 +415,13 @@ theorem genauInternal {t : Nat} {c : Kontext} {s u : MemState}
       rw [← rahmen.graph] at nextEq
       exact ⟨rfl, nextEq⟩
 
-theorem vollzugGenau {target : ZielDaten} {op : MemInstruction} {t : Nat} {c : Kontext}
+theorem activateVollzugGenau {target : ZielDaten} {op : MemInstruction} {t : Nat} {c : Kontext}
     {s u : MemState} {w : PUnit} {p : Plan} {trace : SchrittSpur Nat UInt8} {next : MemState}
     (rule : op.step target c s w [p] u) (execute : FuehrtSchrittAus memSetup t c s u p trace next) :
     trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨_, _, hp, _⟩ := stepTransfer rule
+  obtain ⟨_, _, hp, _⟩ := activateStepTransfer rule
   cases (List.cons.inj hp).1
-  exact genauInternal execute
+  exact activateGenauInternal execute
 
 end MemInstruction
 

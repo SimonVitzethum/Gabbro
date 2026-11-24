@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Mem.Proofs.ActivatePreservation
+public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 
 @[expose] public section
 
@@ -129,7 +130,7 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, memKlauselnWahr _ code, memWaechterHalten _ code⟩
-  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
+  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩
   · intro i
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
@@ -149,9 +150,10 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
       | kontext _ _ regel execute =>
           obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
           cases (List.cons.inj planEq).1
-          obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal execute
+          obtain ⟨rfl, rfl⟩ := MemInstruction.activateGenauInternal execute
           exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
             (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
+  · exact memProgramFlussLokal _ code
 
 theorem activateJoint : ActivateJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -188,7 +190,7 @@ theorem activateJoint : ActivateJointAussage := by
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
     · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
-  have hparse : MemParse text tree := (memDruck .activateSpace tree).2
+  have hparse : MemParse text tree := (memDruckActivate .activateSpace tree).2
   have hopElab : elaborateMem scope tree = some op := by
     change Option.map MemInstruction.activateSpace ([spaceName.val].idxOf? spaceName.val) =
       some (MemInstruction.activateSpace 0)
