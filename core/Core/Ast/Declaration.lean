@@ -254,7 +254,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                       cases h.1
               | some written =>
                   refine ResultReads.typed ?_
-                  have hwt := WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
+                  have hwt := WrittenType.printReads (rest := afterResult) written (valid written (by exact List.mem_singleton written)) (by
                     intro more h
                     cases measure with
                     | none =>
