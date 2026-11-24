@@ -13,10 +13,14 @@ public import Core.Ast.Aggregate.TupleFieldProofs
 public import Core.Ast.Aggregate.Types.ArrayProofs
 public import Core.Ast.Aggregate.Types.TupleProofs
 public import Core.Ast.Aggregate.TupleBindProofs
-public import Core.Ast.Aggregate.Records.DeclarationsProofs
+public import Core.Ast.Aggregate.Records.RecordDeclProofs
+public import Core.Ast.Aggregate.Records.MutableValueProofs
 public import Core.Ast.Aggregate.Records.ConstructionProofs
-public import Core.Ast.Aggregate.Records.FieldsProofs
-public import Core.Ast.Variant.Proofs
+public import Core.Ast.Aggregate.Records.RecordFieldProofs
+public import Core.Ast.Aggregate.Records.AssignFieldProofs
+public import Core.Ast.Variant.TaggedDeclProofs
+public import Core.Ast.Variant.VariantValueProofs
+public import Core.Ast.Variant.VariantMatchProofs
 
 /-!
 # M6 aggregate and tagged-form proof handoff
@@ -29,9 +33,9 @@ are assembled from those theorems.
 | --- | --- | ---: |
 | Array type, value and index | `Aggregate.Types.ArrayProofs`, `Aggregate.ArrayValueProofs`, `Aggregate.ArrayIndexProofs` | 43 |
 | Tuple type, value and binding | `Aggregate.Types.TupleProofs`, `Aggregate.TupleValueProofs`, `Aggregate.TupleBindProofs` | 42 |
-| Record declaration and construction, inferred mutable binding | `Aggregate.Records.DeclarationsProofs`, `Aggregate.Records.ConstructionProofs` | 41 |
-| Record read and update, tuple projection | `Aggregate.Records.FieldsProofs`, `Aggregate.TupleFieldProofs` | 42 |
-| Tagged declaration, construction and match | `Variant.Proofs` | 43 |
+| Record declaration and construction, inferred mutable binding | `Aggregate.Records.RecordDeclProofs`, `Aggregate.Records.MutableValueProofs`, `Aggregate.Records.ConstructionProofs` | 41 |
+| Record read and update, tuple projection | `Aggregate.Records.RecordFieldProofs`, `Aggregate.Records.AssignFieldProofs`, `Aggregate.TupleFieldProofs` | 42 |
+| Tagged declaration, construction and match | `Variant.TaggedDeclProofs`, `Variant.VariantValueProofs`, `Variant.VariantMatchProofs` | 43 |
 -/
 
 /-!

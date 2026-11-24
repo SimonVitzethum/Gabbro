@@ -3,26 +3,7 @@ module
 public import Core.Ast.Aggregate.Records.Fields
 
 /-!
-# Prover checklist
-
-## RecordField
-
-- `Surface.RecordFieldInversionAussage`
-- `Surface.RecordFieldSuffixAussage`
-- `Surface.RecordFieldDerivationAussage`
-- `RecordFieldParseAussage`
-- `RecordFieldElaboriertAussage`
-- `RecordFieldRealisiertAussage`
-- `RecordFieldAnnahmeAussage`
-- `RecordFieldIdealAussage`
-- `RecordFieldEinheitAussage`
-- `RecordFieldImplAussage`
-- `RecordFieldErhaltungAussage`
-- `RecordFieldRegelSicherAussage`
-- `RecordFieldErfuellbarAmAussage`
-- `RecordFieldValueAussage`
-
-## AssignField
+# AssignField
 
 - `Surface.AssignFieldInversionAussage`
 - `Surface.AssignFieldSuffixAussage`
