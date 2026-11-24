@@ -27,6 +27,25 @@ private theorem fragment_impl_nach {p : Fragment} (plattform : Plattform)
   change es = [Ast.Semantik.plan] ∧ u = Befehl.nach i c s at impl
   exact impl
 
+private theorem fragment_aus_leer {p : Fragment} (plattform : Plattform)
+    {t : Nat} {c : Kontext} {s u : Ast.Semantik.Zustand}
+    {spur : SchrittSpur PUnit Int} {next : Ast.Semantik.Zustand}
+    (aus : FuehrtSchrittAus (p.einheit plattform).einrichtung t c s u
+      Ast.Semantik.plan spur next) :
+    spur.speicher = [] ∧ spur.aussen = [] ∧ next = {u with graph := next.graph} := by
+  rw [FuehrtSchrittAus] at aus
+  obtain ⟨rahmen, liest, sperren, v, fuehrtAus, speicherfolge, nextEq⟩ := aus
+  have bestimmt := FuehrtAus.bestimmt fuehrtAus
+    (FuehrtAus.intern (e := (p.einheit plattform).einrichtung) (t := t) (c := c) (s := s) (u := u))
+  obtain ⟨sperrenLeer, aussenLeer, vEq⟩ := bestimmt
+  rw [sperrenLeer, aussenLeer] at speicherfolge
+  simp only [Ast.Semantik.plan, schreibEreignisse, List.nil_append, List.append_nil] at speicherfolge
+  have speicherLeer : spur.speicher = [] := by
+    cases speicherfolge with
+    | nil => rfl
+  rw [vEq] at nextEq
+  exact ⟨speicherLeer, aussenLeer, nextEq⟩
+
 /-- Every context step of a source fragment changes only the local frame: its plan is the
     internal plan and the machine protocol contributes no event. The step is therefore
     unobservable, so an already covered low prefix stays covered. Control-flow forms are
@@ -55,18 +74,7 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                   have implFakten := fragment_impl_nach (p := p) plattform implI
                   have planEq := (List.cons.inj implFakten.1).1
                   rw [planEq] at aus
-                  rw [FuehrtSchrittAus] at aus
-                  obtain ⟨rahmen, liest, sperren, v, fuehrtAus, speicherfolge, nextEq⟩ := aus
-                  change FuehrtAus (p.einheit plattform).einrichtung t c vor u .intern sperren spur.aussen v at fuehrtAus
-                  have bestimmt := FuehrtAus.bestimmt fuehrtAus
-                    (FuehrtAus.intern (e := (p.einheit plattform).einrichtung) (t := t) (c := c) (s := vor) (u := u))
-                  obtain ⟨sperrenLeer, aussenLeer, vEq⟩ := bestimmt
-                  rw [sperrenLeer, aussenLeer] at speicherfolge
-                  simp only [Ast.Semantik.plan, schreibEreignisse, List.nil_append, List.append_nil] at speicherfolge
-                  have spurLeer : spur.speicher = [] := by
-                    cases speicherfolge with
-                    | nil => rfl
-                  rw [vEq] at nextEq
+                  obtain ⟨spurLeer, aussenLeer, nextEq⟩ := fragment_aus_leer (p := p) plattform aus
                   have nachStatus : (Befehl.nach i c vor).status = vor.status := rfl
                   have nachBuchung : (Befehl.nach i c vor).buchung = vor.buchung := rfl
                   have uStatus := (congrArg (fun z => z.status) implFakten.2).trans nachStatus
@@ -113,6 +121,8 @@ theorem kontrollflussNI : KontrollflussNIAussage := by
                   rw [spurLeer, aussenLeer, kontextLeer]
                   simp only [keinEnde, ↓reduceIte, List.nil_append]
                   rfl
-              | antwort _ _ | interrupt _ _ | absturz _ => contradiction
+              | antwort _ _ | interrupt _ _ | absturz _ =>
+                  have gleich := Option.some.inj label
+                  cases gleich
 
 end Gabbro.Core.Beobachtung
