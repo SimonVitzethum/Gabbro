@@ -8,6 +8,8 @@ namespace Gabbro.Core.Ast.Semantik
 
 namespace ExpressionOperators
 
+variable {scope : Scope} {env : Umgebung scope} {slot : Nat}
+
 theorem literal (value : Nat) : Ausdruckswert env slot (.lit value) :=
   BewachterAusdruck.wert ((Expr.lit value).wert env) (fun _ _ _ _ _ _ _ _ => rfl)
 
@@ -37,6 +39,7 @@ theorem not (operand : Ausdruckswert env slot tree) : Ausdruckswert env slot (.n
   intro pre post frame position active typed checked entry
   simp only [TemporaryValue] at entry
   simp only [Expr.wert, Befehl.auswerten, entry, Option.bind_some, alsBoolean, Option.map_some]
+  rfl
 
 theorem arithmetic (op : Arith) (left : Ausdruckswert env slot a) (right : Ausdruckswert env (slot + 1) b) :
     Ausdruckswert env slot (.binary op a b) := by
@@ -46,6 +49,7 @@ theorem arithmetic (op : Arith) (left : Ausdruckswert env slot a) (right : Ausdr
   simp only [TemporaryValue] at first second
   simp only [Expr.wert, Befehl.auswerten, Rahmen.zahl, first, second, Option.bind_some, alsGanzzahl,
     bind, Option.bind, pure, Ganzzahl.pack]
+  rfl
 
 theorem divide (left : Ausdruckswert env slot a) (right : Ausdruckswert env (slot + 1) (b : Expr scope (.int lo hi)))
     (nonzero : Divisor lo hi) : Ausdruckswert env slot (.div a b nonzero) := by
@@ -81,13 +85,15 @@ theorem textConcat (left : Ausdruckswert env slot a) (right : Ausdruckswert env 
   intro pre post frame position active typed checked entry
   rcases entry with ⟨first, second⟩
   simp only [TemporaryValue] at first second
-  simp only [Expr.wert, Befehl.auswerten, first, second, Option.bind_some, text_readback, bind, Option.bind, pure]
+  simp only [Expr.wert, Befehl.auswerten, first, second, Option.bind_some, text_readback (a.wert env),
+    text_readback (b.wert env), bind, Option.bind, pure]
 
 theorem textLength (operand : Ausdruckswert env slot tree) : Ausdruckswert env slot (.textLength tree) := by
   refine BewachterAusdruck.einOperand operand ((Expr.textLength tree).wert env) ?_
   intro pre post frame position active typed checked entry
   simp only [TemporaryValue] at entry
-  simp only [Expr.wert, Befehl.auswerten, entry, Option.bind_some, text_readback, Option.map_some]
+  simp only [Expr.wert, Befehl.auswerten, entry, Option.bind_some, text_readback (tree.wert env), Option.map_some]
+  rfl
 
 theorem textIndex (left : Ausdruckswert env slot (base : Expr scope (.text capacity))) (right : Ausdruckswert env (slot + 1) offset) :
     Ausdruckswert env slot (.textIndex base offset) := by
@@ -118,7 +124,7 @@ theorem optionIsSome (ref : Local scope (indexOptionType count)) (visible : ref.
   intro pre post frame position active typed checked entry
   simp only [TemporaryValue, Expr.wert] at entry
   simp only [Expr.wert, Befehl.auswerten, entry, Option.bind_some, indexOptionType, wertAls, dif_pos rfl,
-    bind, Option.bind, pure]
+    bind, Option.bind, pure, dif_pos trivial]
 
 theorem substring
     (baseRead : Ausdruckswert env slot (base : Expr scope (.text capacity)))
@@ -167,23 +173,23 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
     frame position active typed checkedLeft trivial
   have lhsFull : Ausdrucksabschnitt full (pre.length + lhs.length) slot frame middle := by
     simpa only [full, lhs, List.append_assoc, List.singleton_append] using lhsTrace
-  let checkedHere := checkedLeft.after lhsTrace.walk
   have branchLookup : full[middle.pc]? = some branch := by
     have atBranch : middle.pc = (pre ++ lhs).length := by simpa only [List.length_append, lhs] using lhsTrace.position
     simpa only [full, List.append_assoc] using
       (codeLookup_instruction (pre := pre ++ lhs) (post := rhs ++ post) (instruction := branch) atBranch)
   let afterBranch := branch.auswerten middle
   have valueAtSlot : middle.temp slot = some ⟨.bool, left.wert env⟩ := value
+  let bit : Bool := left.wert env
   have branchShape : afterBranch =
-      { middle with pc := middle.pc + (if left.wert env = op.skips then rhs.length + 1 else 1) } := by
-    simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean, Option.some.injEq]
+      { middle with pc := middle.pc + (if bit = op.skips then rhs.length + 1 else 1) } := by
+    simp only [afterBranch, branch, Befehl.auswerten, valueAtSlot, Option.bind_some, alsBoolean, Option.some.injEq, bit]
   have midActive := lhsFull.aktiv active
   have branchStep : Rahmen.Schritt full middle afterBranch :=
     ⟨branch, midActive.1, midActive.2, branchLookup, rfl⟩
   have branchSame : afterBranch = { middle with pc := afterBranch.pc, temp := afterBranch.temp } := by
     rw [branchShape]
-  have preserves : ∀ i, afterBranch.temp i = middle.temp i := fun _ => congrArg _ branchSame
-  by_cases taken : left.wert env = op.skips
+  have preserves : ∀ i, afterBranch.temp i = middle.temp i := fun i => congrArg (fun f : Rahmen => f.temp i) branchSame
+  by_cases taken : bit = op.skips
   · have atEnd : afterBranch.pc = pre.length + (lhs ++ [branch] ++ rhs).length := by
       simp only [branchShape, if_pos taken, List.length_append, List.length_cons, List.length_nil, lhsFull.position]
       omega
@@ -192,25 +198,27 @@ theorem logic (op : Logic) (leftRead : Ausdruckswert env slot left) (rightRead :
     have trace := lhsFull.trans branchTrace (Nat.le_refl _)
     refine ⟨afterBranch, ?_, ?_⟩
     · simpa only [full, lhs, rhs, branch, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using trace
-    · simp only [TemporaryValue, Expr.wert, if_pos taken, preserves slot, valueAtSlot]
+    · have moved : (left.wert env : Bool) = op.skips := taken
+      simp only [TemporaryValue, Expr.wert, if_pos moved, preserves slot, valueAtSlot]
   · have afterPC : afterBranch.pc = (pre ++ lhs ++ [branch]).length := by
       simp only [branchShape, if_neg taken, List.length_append, List.length_cons, List.length_nil, lhsFull.position]
     have branchTrace : Ausdrucksabschnitt full _ slot middle afterBranch :=
       ⟨.schritt .start branchStep, afterPC, branchSame, fun i _ => preserves i⟩
-    have prefix : Ausdrucksabschnitt full _ slot frame afterBranch :=
+    have prefixTrace : Ausdrucksabschnitt full _ slot frame afterBranch :=
       lhsFull.trans branchTrace (Nat.le_refl _)
     have checkedRight : afterBranch.WaechterHalten ((pre ++ lhs ++ [branch]) ++ rhs ++ post) := by
       have checkedFull : frame.WaechterHalten full := by
         simpa only [full, lhs, rhs, branch, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using checked
-      simpa only [full, List.append_assoc] using checkedFull.after prefix.walk
+      simpa only [full, List.append_assoc] using checkedFull.after prefixTrace.walk
     obtain ⟨out, rhsTrace, result⟩ := rightRead (pre ++ lhs ++ [branch]) post afterBranch afterPC
-      (prefix.aktiv active) (prefix.traegt typed) checkedRight trivial
+      (prefixTrace.aktiv active) (prefixTrace.traegt typed) checkedRight trivial
     have rhsFull : Ausdrucksabschnitt full (pre.length + (lhs ++ [branch] ++ rhs).length) slot afterBranch out := by
       simpa only [full, rhs, List.append_assoc, List.length_append, Nat.add_assoc] using rhsTrace
     refine ⟨out, ?_, ?_⟩
     · simpa only [full, lhs, rhs, branch, expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
-        prefix.trans rhsFull (Nat.le_refl _)
-    · simpa only [Expr.wert, if_neg taken] using result
+        prefixTrace.trans rhsFull (Nat.le_refl _)
+    · have skipped : ¬ (left.wert env : Bool) = op.skips := taken
+      simpa only [Expr.wert, if_neg skipped] using result
 
 end ExpressionOperators
 
