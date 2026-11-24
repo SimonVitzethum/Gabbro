@@ -119,13 +119,6 @@ theorem zwSt_status : ∀ t, (zwSt t).status = zE0.status := by
 
 def zw : Nat → Option (Zustand Unit Unit Unit Unit Bool Unit) := fun t => some (zwSt t)
 
-theorem zwSt_ge2 : ∀ t, 2 ≤ t → zwSt t = S_d := by
-  intro t h
-  match t with
-  | 0 => exact absurd h (by decide)
-  | 1 => exact absurd h (by decide)
-  | _ + 2 => rfl
-
 theorem zwSt_0 : zwSt 0 = zE0 := rfl
 
 theorem zwSt_1 : zwSt 1 = S_c := rfl
