@@ -73,7 +73,7 @@ def expr (slot : Nat) : Expr scope type → Fragment
   | .textLength (capacity := capacity) base =>
     (expr slot base).anhaengen (.einzel (.textLength slot capacity))
   | .optionIsSome (count := count) ref _ _ =>
-    (.einzel (.lesen slot ref.index)).anhaengen (.einzel (.optionIstBesetzt slot count))
+    (Fragment.einzel (.lesen slot ref.index)).anhaengen (.einzel (.optionIstBesetzt slot count))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer
@@ -99,8 +99,8 @@ def callInstruction (call : DirectCall scope) (bind : Option (Ty .value)) : Befe
 def optionInstruction (slot : Nat) (value : OptionInitializer scope count) : Befehl :=
   let tag : Fin (indexOptionPayloads count).length :=
     match value with
-    | .absent => ⟨1, by decide⟩
-    | .present .. => ⟨0, by decide⟩
+    | .absent => ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩
+    | .present .. => ⟨0, Nat.zero_lt_succ _⟩
   .baueVariante slot [] indexOptionLabels (indexOptionPayloads count) tag
 
 def optionOperand (slot : Nat) : OptionInitializer scope count → Fragment
