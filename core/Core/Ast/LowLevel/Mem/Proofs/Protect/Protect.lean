@@ -324,7 +324,7 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     simp only [E, memProgram]
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · constructor
+  · refine ⟨?_, ?_, ?_⟩
     · intro run conforms t o args need
       change E.quelltabellen.guard (run.zeit.zustand t.val) o args at need
       simp only [E, memProgram] at need
@@ -332,6 +332,8 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       obtain ⟨C, ⟨c, hc⟩, blocked⟩ := waiting
       obtain ⟨b, hb, _, _, _⟩ := blocked c hc
       simp only [E, memProgram] at hb
+    · intro run conforms t l h _ hne
+      exact (hne rfl).elim
 
 private theorem satScopeNodup :
     (satScope.regionen.map Subtype.val).Nodup ∧ (satScope.raeume.map Subtype.val).Nodup ∧
