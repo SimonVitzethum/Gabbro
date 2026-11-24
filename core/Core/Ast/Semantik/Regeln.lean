@@ -403,7 +403,9 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       if bind then payload :: frame.lokale else frame.lokale }
 
   | .waehleUmgebung name abi row, frame =>
-    { frame with pc := frame.pc + 1, environment := (name, abi, row) :: frame.environment }
+    { frame with
+      pc := frame.pc + 1
+      environment := (name, abi, row) :: frame.environment }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

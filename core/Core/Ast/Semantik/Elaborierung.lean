@@ -323,7 +323,7 @@ def Fragment.environmentAllowed (p : Fragment) (k : Katalog) : Prop :=
     ∀ e ∈ p.environment, e.2.2.zugelassen k e.2.1
 
 /-- Whole-unit elaboration checks catalogue availability and name uniqueness.
-    Ordinary expression, statement, block and declaration fragments remain target-neutral. -/
+    An isolated declaration gets the same admission check as its occurrence in a unit. -/
 def zugelassen (platform : Plattform) : (category : Category) → category.Tree → Prop
   | .unit, tree => (programm tree).environmentAllowed platform.katalog
   | .declaration _, tree => (decl tree.2).environmentAllowed platform.katalog

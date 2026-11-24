@@ -48,16 +48,25 @@ theorem environmentUnit_realisiert : environmentUnitForm.RealisiertAussage :=
 /-- The declaration's denotation requires the selected row and ABI in the unit
     catalogue, including when later declarations are valid. -/
 def EnvironmentUnitAdmissionAussage : Prop :=
-  ∀ p args E, Elaboriert (category := .unit) p args.unit E →
+  ∀ (p : Plattform) (args : EnvironmentArgs) (E : Einheit),
+    Elaboriert (category := .unit) p args.unit E →
     args.row.zugelassen E.katalog args.abi ∧
     ((programm args.unit).environment.map (fun e => e.1.val)).Nodup
+
+theorem environmentUnit_admission : EnvironmentUnitAdmissionAussage := by
+  intro p args E meaning
+  obtain ⟨rfl, unique, allowed⟩ := meaning
+  have present : (args.name, args.abi, args.row) ∈ (programm args.unit).environment :=
+    List.mem_cons_self
+  exact ⟨allowed _ present, unique⟩
 
 /-- The instruction registers the selected row and advances to the ordinary
     continuation at the next declaration. No outside request is emitted. -/
 def EnvironmentUnitTransferAussage : Prop :=
   ∀ (args : EnvironmentArgs) (frame : Rahmen),
     (environmentUnitForm.befehl args).auswerten frame =
-      { frame with pc := frame.pc + 1,
+      { frame with
+        pc := frame.pc + 1
         environment := (args.name, args.abi, args.row) :: frame.environment }
 
 theorem environmentUnit_transfer : EnvironmentUnitTransferAussage :=
