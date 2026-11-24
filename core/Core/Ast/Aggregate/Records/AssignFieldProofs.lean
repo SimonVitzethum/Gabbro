@@ -64,7 +64,7 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   | directCall =>
       rename_i call cr
       exfalso
-      exact noDotCall call (by simpa only [← htok] using cr)
+      exact noDotCall call (semicolon :: rest) (by simpa only [← htok] using cr)
   | bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | forRange => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
