@@ -164,13 +164,16 @@ theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
     · subst zz
       change true = true ∧ 0 < 1
       exact ⟨rfl, Nat.zero_lt_one⟩
+  have ungleich : ((0, 0) : Nat × Nat) ≠ (1, 0) := by
+    intro h
+    exact Nat.zero_ne_one (congrArg Prod.fst h)
   have enc : ({(0, 0), (1, 0)} : Set (Nat × Nat)).encard = 2 := by
-    exact Set.encard_pair (by decide)
+    exact Set.encard_pair ungleich
   have zwei : 2 ≤ (LebendeZellen (zustand 1)).encard := by
     rw [← enc]
     exact Set.encard_le_encard subset
   have zuwenig : (2 : ℕ∞) ≤ (1 : ℕ∞) := zwei.trans (res.2 1 rfl)
-  exact (by decide : ¬ (2 : Nat) ≤ 1) (ENat.natCast_le_natCast.mp zuwenig)
+  exact (Nat.not_succ_le_self 1) (ENat.natCast_le_natCast.mp zuwenig)
 
 /-- The pinned memory-management duty places its depth premise under the finite-memory
     hypothesis. With an open ceiling the premise is vacuous, while a finite stack bound
