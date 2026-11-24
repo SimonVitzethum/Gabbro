@@ -126,13 +126,13 @@ def posTakt (t : Nat) : Takt
     (I.Schritt (E_w dispatch1).einrichtung (E_w dispatch1).system
       (E_w dispatch1).katalog hw1)
     (fun t _ => ¬ AbsturzAngeboten (E_w dispatch1).katalog hw1 t)
-    (Z1 t) (some posLabel) (Z1 (t + 1)) :=
+    t (Z1 t) (some posLabel) (Z1 (t + 1)) :=
   .schritt rfl (I.Schritt.kontext (hw1_crash t)
     ⟨0, hw1_opp0 t, by rw [z1_kerne], by rw [z1_status]⟩
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t)))
 
 def posTaktK (t : Nat) : Takt
-    (Lauffolge (E_w dispatch1) hw1) (some (Z1 t)) (some posLabel) (some (Z1 (t + 1))) :=
+    (Lauffolge (E_w dispatch1) hw1) t (some (Z1 t)) (some posLabel) (some (Z1 (t + 1))) :=
   .schritt rfl (.schritt (ImplSchritt.kontext (hw1_crash t)
     ⟨0, hw1_opp0 t, by rw [z1_kerne], by rw [z1_status]⟩
     ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))))
@@ -142,6 +142,8 @@ def ρ1 : Maschine.Lauf (E_w dispatch1) :=
 
 def η1 : I.Lauf (E_w dispatch1) :=
   ⟨s0, h1, hw1, ⟨Z1, fun _ => some posLabel, posTakt⟩, fun _ => none⟩
+
+theorem η1_zustand : ∀ t, η1.zeit.zustand t = Z1 t := fun _ => rfl
 
 /-- Counting lemma: an everywhere-true marker fills the window. -/
 theorem zaehle_all_true (m : Nat → Bool) (a n : Nat) (hall : ∀ t, m (a + t) = true) :
@@ -155,7 +157,8 @@ theorem zaehle_all_true (m : Nat → Bool) (a n : Nat) (hall : ∀ t, m (a + t) 
 
 /-- The stepping run has no closed waiting set: nothing ever blocks. -/
 theorem pos_deadlockfrei : DeadlockFrei (E := E_w dispatch1) η1 := by
-  intro t C hC
+  intro t hC
+  obtain ⟨C, hC⟩ := hC
   obtain ⟨c, hc⟩ := hC.1
   obtain ⟨b, hb, _, _, _⟩ := hC.2 c hc
   cases hb
@@ -166,7 +169,7 @@ theorem pos_starvationfrei : StarvationFrei (E := E_w dispatch1) ρ1 η1 := by
   intro c hhang
   obtain ⟨-, a, f, hopen, hen⟩ := hhang
   obtain ⟨k, hdisp⟩ := hopen.1
-  rw [z1_kerne] at hdisp
+  rw [η1_zustand, z1_kerne] at hdisp
   have hdis : dispatch1 k = some c := hdisp
   cases k with
   | zero =>
@@ -184,14 +187,14 @@ theorem pos_lockfrei : LockFrei (E := E_w dispatch1) (fun _ => True) η1 := by
   constructor
   · intro t c hlive hdisp
     obtain ⟨k, hdispk⟩ := hdisp
-    rw [z1_kerne] at hdispk
+    rw [η1_zustand, z1_kerne] at hdispk
     cases k with
     | zero =>
       have hcA : c = A := (Option.some.inj hdispk).symm
       subst hcA
       exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
         I.Schritt.kontext (hw1_crash t)
-          ⟨0, hw1_opp0 t, by rw [z1_kerne], hlive⟩
+          ⟨0, hw1_opp0 t, by rw [η1_zustand, z1_kerne], hlive⟩
           ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))⟩)))
     | succ n =>
       have hnone : dispatch1 (n + 1) = none := rfl
@@ -204,7 +207,7 @@ theorem pos_lockfrei : LockFrei (E := E_w dispatch1) (fun _ => True) η1 := by
 theorem pos_waitfrei : WaitFrei (E := E_w dispatch1) ρ1 η1 := by
   intro c f a hhead hlive hdisp hheadall hliveall hbereit n hcount
   obtain ⟨k, hdispk⟩ := hdisp
-  rw [z1_kerne] at hdispk
+  rw [η1_zustand, z1_kerne] at hdispk
   cases k with
   | succ n =>
     have hnone : dispatch1 (n + 1) = none := rfl
@@ -317,7 +320,7 @@ def taktAB (t : Nat) : Takt
     (I.Schritt (E_w dispatch2).einrichtung (E_w dispatch2).system
       (E_w dispatch2).katalog hw2)
     (fun t _ => ¬ AbsturzAngeboten (E_w dispatch2).katalog hw2 t)
-    (ZAB t) (spurAB t) (ZAB (t + 1)) := by
+    t (ZAB t) (spurAB t) (ZAB (t + 1)) := by
   by_cases h : t % 2 = 0
   · rw [spurAB_eq h]
     exact .schritt rfl (I.Schritt.kontext (hw2_crash t)
@@ -329,7 +332,7 @@ def taktAB (t : Nat) : Takt
 
 def taktABρ (t : Nat) : Takt
     (Lauffolge (E_w dispatch2) hw2)
-    (ZAB t) (spurABρ t) (ZAB (t + 1)) := by
+    t (some (ZAB t)) (spurABρ t) (some (ZAB (t + 1))) := by
   by_cases h : t % 2 = 0
   · rw [spurABρ_eq h]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash t)
@@ -345,6 +348,8 @@ def taktABρ (t : Nat) : Takt
 
 def ηAB : I.Lauf (E_w dispatch2) :=
   ⟨s0, h2, hw2, ⟨ZAB, spurAB, taktAB⟩, belegtAB⟩
+
+theorem ηAB_zustand : ∀ t, ηAB.zeit.zustand t = ZAB t := fun _ => rfl
 
 def ρAB : Maschine.Lauf (E_w dispatch2) :=
   ⟨s0, hw2, ⟨fun t => some (ZAB t), spurABρ, taktABρ⟩⟩
@@ -366,7 +371,7 @@ theorem nie_erledigt_B : ∀ t, ¬ I.Erledigt ηAB B t := by
       cases congrArg Prod.fst hcontra
     · rw [spurAB_ne h] at hcrash
       cases hcrash
-  · rw [zAB_status] at hend
+  · rw [ηAB_zustand, zAB_status] at hend
     cases hend
 
 /-- `B` is always enabled on the starvation run. -/
@@ -375,7 +380,7 @@ theorem bereit_B (t : Nat) (_ : 0 ≤ t) : I.Bereit (E := E_w dispatch2) (ZAB t)
 
 /-- `B` hangs on the fair schedule: dispatched, open, enabled, never discharged. -/
 theorem hang_B : I.Haengt (E_w dispatch2) ρAB ηAB B := by
-  refine ⟨fair2, 0, (), ⟨⟨1, rfl⟩, fun t _ => ⟨rfl, by rw [zAB_status], ?_⟩⟩, Or.inl ?_⟩
+  refine ⟨fair2, 0, (), ⟨⟨1, rfl⟩, fun t _ => ⟨rfl, by rw [ηAB_zustand, zAB_status], ?_⟩⟩, Or.inl ?_⟩
   · intro herl
     exact nie_erledigt_B t herl
   · intro t _
@@ -398,7 +403,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
   constructor
   · intro t c hlive hdisp
     obtain ⟨k, hdispk⟩ := hdisp
-    rw [zAB_kerne] at hdispk
+    rw [ηAB_zustand, zAB_kerne] at hdispk
     cases k with
     | zero =>
       have hcA : c = A := (Option.some.inj hdispk).symm
@@ -406,7 +411,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
       by_cases h : t % 2 = 0
       · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
           I.Schritt.kontext (hw2_crash t)
-            ⟨0, hw2_opp0 h, by rw [zAB_kerne]; exact zAB0_dispatch0, hlive⟩
+            ⟨0, hw2_opp0 h, by rw [ηAB_zustand, zAB_kerne]; exact zAB0_dispatch0, hlive⟩
             ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t A (ZAB t))⟩)))
       · refine Or.inr (Or.inr (Or.inr (Or.inr
           ⟨⟨(), [togglePlan], toggleUpdate A (ZAB t), (), rfl, rfl, rfl⟩, ?_⟩)))
@@ -415,7 +420,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
           cases kern with
           | zero => rfl
           | succ n =>
-            rw [zAB_kerne] at hk
+            rw [ηAB_zustand, zAB_kerne] at hk
             cases n with
             | zero =>
               have hAB : B = A := Option.some.inj (zAB0_dispatch1.symm.trans hk)
@@ -437,7 +442,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
           have hk1 : kern = 1 := by
             cases kern with
             | zero =>
-              rw [zAB_kerne] at hk
+              rw [ηAB_zustand, zAB_kerne] at hk
               have hAB : A = B := Option.some.inj (zAB0_dispatch0.symm.trans hk)
               cases hAB
             | succ m =>
@@ -450,7 +455,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
         · have h1 : t % 2 = 1 := by omega
           exact Or.inr (Or.inr (Or.inr (Or.inl ⟨(), ⟨[], []⟩, _,
             I.Schritt.kontext (hw2_crash t)
-              ⟨1, hw2_opp1 h1, by rw [zAB_kerne]; exact zAB0_dispatch1, hlive⟩
+              ⟨1, hw2_opp1 h1, by rw [ηAB_zustand, zAB_kerne]; exact zAB0_dispatch1, hlive⟩
               ⟨(), rfl, rfl, rfl⟩ (abAusfuehr t B (ZAB t))⟩)))
       | succ m =>
         have hnone : (zAB0.kerne (m + 2)).laeuft = none := rfl
@@ -468,7 +473,7 @@ theorem ab_waitfrei_neg : ¬ WaitFrei (E := E_w dispatch2) ρAB ηAB := by
   have h1 : (E_w dispatch2).stotterLaenge () = 1 := rfl
   have hcc : Kontextkosten ρAB B 0 4 = 2 := rfl
   obtain ⟨t, _, _, herl⟩ := hwf B () 0 rfl rfl ⟨1, rfl⟩
-    (fun t _ => rfl) (fun t _ => by rw [zAB_status]) (fun t _ => bereit_B t (Nat.zero_le t)) 4
+    (fun t _ => rfl) (fun t _ => by rw [ηAB_zustand, zAB_status]) (fun t _ => bereit_B t (Nat.zero_le t)) 4
     (by rw [h1, hcc]; omega)
   exact (nie_erledigt_B t herl).elim
 
