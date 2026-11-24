@@ -250,6 +250,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
       omega
     change op.evaluate s entryContext = some transfer
     simp only [op, Instruction.evaluate, hhr, hlt, transfer, k, Option.bind, Option.bind_some, ↓reduceIte]
+    rfl
 
 theorem view_erfuellbar : ErfuellbarAussage .view := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -304,6 +305,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     have hlayout : layout k.plattform.ziel written = some shape := by
       rfl
     simp only [elaborate, hslot, hlayout, op, tree, Option.bind, Option.bind_some]
+    rfl
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
@@ -315,6 +317,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
         omega
     change op.evaluate s entryContext = some transfer
     simp only [op, Instruction.evaluate, hhr, hcond, transfer, Option.bind, Option.bind_some, ↓reduceIte]
+    rfl
 
 theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -348,8 +351,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
     rfl
   · unfold elaborate
     simp only [tree, scope]
-    rw [dif_pos allowed]
-    rfl
+    exact dif_pos allowed
   · simp only [op, transfer, Instruction.evaluate]
 
 end Gabbro.Core.Ast.LowLevel
