@@ -36,45 +36,71 @@ open Maschine Katalog Waechter
 
 -- Mirror Rule.Entry.parse using the source production and lexical premises.
 theorem returnVoid_parse (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).ParseAussage := by
-  sorry
+  intro args text pieces lexed production
+  exact (Surface.returnVoid_entry scope result args.declared).parse lexed production
 
 -- Mirror elab_korrekt using the compositional fragment.
 theorem returnVoid_elaboriert (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).ElaboriertAussage := by
-  sorry
+  intro platform args
+  rfl
 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem returnVoid_realisiert (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).RealisiertAussage := by
-  sorry
+  intro platform args s running active live atPc
+  let form := returnVoidForm scope result
+  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
+    simp only [kopf, ite_true, running, active, live, atPc]
+  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem returnVoid_annahme (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).AnnahmeAussage := by
-  sorry
+  intro platform args
+  refine ⟨((returnVoidForm scope result).befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, (returnVoidForm scope result).befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := ((returnVoidForm scope result).befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem returnVoid_ideal (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).IdealAussage := by
-  sorry
+  exact ⟨fun _ => rfl, fun args => ⟨((returnVoidForm scope result).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem returnVoid_einheit (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).EinheitAussage := by
-  sorry
+  intro platform args
+  exact ⟨rfl, ((returnVoidForm scope result).befehl args).kommutation⟩
 
 -- Mirror Quellform.ImplAussage with the explicit transfer and its plan.
 theorem returnVoid_impl (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).ImplAussage := by
-  sorry
+  intro args c s w plans u
+  exact Iff.rfl
 
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem returnVoid_erhaltung (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).ErhaltungsAussage := by
-  sorry
+  intro platform args
+  exact ⟨((returnVoidForm scope result).befehl args).abgleich ((returnVoidForm scope result).fragment args) platform,
+    ((returnVoidForm scope result).befehl args).fortschritt ((returnVoidForm scope result).fragment args),
+    ((returnVoidForm scope result).befehl args).komponierbar ((returnVoidForm scope result).fragment args) platform,
+    ((returnVoidForm scope result).befehl args).sicher ((returnVoidForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem returnVoid_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((returnVoidForm scope result).fragment a).sicherheitsEinheit platform)
       ((returnVoidForm scope result).befehl a) := by
-  sorry
+  exact ((returnVoidForm scope result).befehl a).sicher ((returnVoidForm scope result).fragment a) platform rfl
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem returnVoid_erfuellbar : returnVoidJoint := by
-  sorry
+  intro platform start
+  let form := returnVoidForm [] none
+  let a : Surface.ReturnVoidArgs [] none := ⟨rfl⟩
+  let s := (I.start (form.einheit platform a) start).2
+  refine ⟨a, Ast.print (form.produktion.tree a), s,
+    Ast.parse_print (form.produktion.tree a), rfl, .start,
+    form.realisiert (fun _ => rfl) platform a s rfl rfl rfl rfl, ?_⟩
+  intro g guard
+  cases guard
 
 def returnVoidProofs : RegistryEntry ``Stmt.retVoid
     ⟨.surface, Quellform.statements (Context := PUnit) (fun _ => returnVoidForm [] none) returnVoidJoint ``Stmt.retVoid⟩ where
@@ -88,45 +114,97 @@ def returnVoidProofs : RegistryEntry ``Stmt.retVoid
 
 -- Mirror Rule.Entry.parse using the source production and lexical premises.
 theorem mutableLocal_parse (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).ParseAussage := by
-  sorry
+  intro args text pieces lexed production
+  exact (Surface.mutableLocal_entry scope result).parse lexed production
 
 -- Mirror elab_korrekt using the compositional fragment.
 theorem mutableLocal_elaboriert (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).ElaboriertAussage := by
-  sorry
+  intro platform args
+  rfl
 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem mutableLocal_realisiert (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).RealisiertAussage := by
-  sorry
+  intro platform args s running active live atPc
+  let form := mutableLocalForm scope result
+  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
+    simp only [kopf, ite_true, running, active, live, atPc]
+    change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
+      ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem mutableLocal_annahme (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).AnnahmeAussage := by
-  sorry
+  intro platform args
+  refine ⟨((mutableLocalForm scope result).befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, (mutableLocalForm scope result).befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := ((mutableLocalForm scope result).befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem mutableLocal_ideal (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).IdealAussage := by
-  sorry
+  constructor
+  · intro args
+    change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
+      ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  · intro args
+    constructor
+    · exact ((mutableLocalForm scope result).befehl args).bestimmt
+    · intro c s w plans u
+      exact Iff.rfl
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem mutableLocal_einheit (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).EinheitAussage := by
-  sorry
+  intro platform args
+  exact ⟨rfl, ((mutableLocalForm scope result).befehl args).kommutation⟩
 
 -- Mirror Quellform.ImplAussage with the explicit transfer and its plan.
 theorem mutableLocal_impl (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).ImplAussage := by
-  sorry
+  intro args c s w plans u
+  exact Iff.rfl
 
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem mutableLocal_erhaltung (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).ErhaltungsAussage := by
-  sorry
+  intro platform args
+  exact ⟨((mutableLocalForm scope result).befehl args).abgleich ((mutableLocalForm scope result).fragment args) platform,
+    ((mutableLocalForm scope result).befehl args).fortschritt ((mutableLocalForm scope result).fragment args),
+    ((mutableLocalForm scope result).befehl args).komponierbar ((mutableLocalForm scope result).fragment args) platform,
+    ((mutableLocalForm scope result).befehl args).sicher ((mutableLocalForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem mutableLocal_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((mutableLocalForm scope result).fragment a).sicherheitsEinheit platform)
       ((mutableLocalForm scope result).befehl a) := by
-  sorry
+  exact ((mutableLocalForm scope result).befehl a).sicher ((mutableLocalForm scope result).fragment a) platform rfl
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem mutableLocal_erfuellbar : mutableLocalJoint := by
-  sorry
+  intro platform start
+  let ctx : StatementContext := ([], none)
+  let form := mutableLocalForm ctx.1 ctx.2
+  let name : Identifier := ⟨['x'], 'x', [], rfl, by decide,
+    fun _ member => (List.not_mem_nil member).elim⟩
+  have ordinaryName : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor
+    · intro h
+      cases h
+    · intro h
+      cases h
+  let a : Surface.MutableLocalArgs [] none := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
+  let s := (I.start (form.einheit platform a) start).2
+  refine ⟨ctx, a, Ast.print (form.produktion.tree a), s,
+    Ast.parse_print (form.produktion.tree a), rfl, .start,
+    form.realisiert (fun args => by
+      change (List.getElem? ((expr 0 args.value).code ++ [.bindeWert 0 args.written.type false])
+        ((expr 0 args.value).code.length) = some (.bindeWert 0 args.written.type false))
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero])
+      platform a s rfl rfl rfl rfl, ?_⟩
+  intro g guard
+  cases guard
 
 def mutableLocalProofs : RegistryEntry ``Stmt.letMutable
     ⟨.surface, Quellform.statements (Context := StatementContext) (fun ctx => mutableLocalForm ctx.1 ctx.2) mutableLocalJoint ``Stmt.letMutable⟩ where
@@ -140,41 +218,71 @@ def mutableLocalProofs : RegistryEntry ``Stmt.letMutable
 
 -- Mirror Rule.Entry.parse using the source production and lexical premises.
 theorem directCall_parse (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).ParseAussage := by
-  sorry
+  intro args text pieces lexed production
+  exact (Surface.directCall_entry scope result).parse lexed production
 
 -- Mirror elab_korrekt using the compositional fragment.
 theorem directCall_elaboriert (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).ElaboriertAussage := by
-  sorry
+  intro platform args
+  rfl
 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem directCall_realisiert (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).RealisiertAussage := by
-  sorry
+  intro platform args s running active live atPc
+  let form := directCallForm scope result
+  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
+    simp only [kopf, ite_true, running, active, live, atPc]
+    change (List.getElem? ((argsCode 0 args.args).code ++ [callInstruction args none])
+      ((argsCode 0 args.args).code.length) = some (callInstruction args none))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem directCall_annahme (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).AnnahmeAussage := by
-  sorry
+  intro platform args
+  refine ⟨((directCallForm scope result).befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, (directCallForm scope result).befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := ((directCallForm scope result).befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem directCall_ideal (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).IdealAussage := by
-  sorry
+  constructor
+  · intro args
+    change (List.getElem? ((argsCode 0 args.args).code ++ [callInstruction args none])
+      ((argsCode 0 args.args).code.length) = some (callInstruction args none))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  · intro args
+    constructor
+    · exact ((directCallForm scope result).befehl args).bestimmt
+    · intro c s w plans u
+      exact Iff.rfl
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem directCall_einheit (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).EinheitAussage := by
-  sorry
+  intro platform args
+  exact ⟨rfl, ((directCallForm scope result).befehl args).kommutation⟩
 
 -- Mirror Quellform.ImplAussage with the explicit transfer and its plan.
 theorem directCall_impl (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).ImplAussage := by
-  sorry
+  intro args c s w plans u
+  exact Iff.rfl
 
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem directCall_erhaltung (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).ErhaltungsAussage := by
-  sorry
+  intro platform args
+  exact ⟨((directCallForm scope result).befehl args).abgleich ((directCallForm scope result).fragment args) platform,
+    ((directCallForm scope result).befehl args).fortschritt ((directCallForm scope result).fragment args),
+    ((directCallForm scope result).befehl args).komponierbar ((directCallForm scope result).fragment args) platform,
+    ((directCallForm scope result).befehl args).sicher ((directCallForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem directCall_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((directCallForm scope result).fragment a).sicherheitsEinheit platform)
       ((directCallForm scope result).befehl a) := by
-  sorry
+  exact ((directCallForm scope result).befehl a).sicher ((directCallForm scope result).fragment a) platform rfl
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem directCall_erfuellbar : directCallJoint := by
@@ -192,41 +300,71 @@ def directCallProofs : RegistryEntry ``Stmt.directCall
 
 -- Mirror Rule.Entry.parse using the source production and lexical premises.
 theorem bindDirect_parse (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).ParseAussage := by
-  sorry
+  intro args text pieces lexed production
+  exact (Surface.bindDirect_entry scope result).parse lexed production
 
 -- Mirror elab_korrekt using the compositional fragment.
 theorem bindDirect_elaboriert (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).ElaboriertAussage := by
-  sorry
+  intro platform args
+  rfl
 
 -- Mirror Quellform.realisiert using the concrete instruction position.
 theorem bindDirect_realisiert (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).RealisiertAussage := by
-  sorry
+  intro platform args s running active live atPc
+  let form := bindDirectForm scope result
+  have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
+    simp only [kopf, ite_true, running, active, live, atPc]
+    change (List.getElem? ((argsCode 0 args.call.args).code ++ [callInstruction args.call (some args.written.type)])
+      ((argsCode 0 args.call.args).code.length) = some (callInstruction args.call (some args.written.type)))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
 
 -- Mirror Quellform.annahme at the source head with the exact operands.
 theorem bindDirect_annahme (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).AnnahmeAussage := by
-  sorry
+  intro platform args
+  refine ⟨((bindDirectForm scope result).befehl args).lokal _ rfl, ?_, ?_⟩
+  · rintro s c ⟨op, operands⟩ head guard
+    exact ⟨c, (bindDirectForm scope result).befehl args, head, guard⟩
+  · intro t c s w stepPlan u spur next step execute ev
+    obtain ⟨rfl, _⟩ := ((bindDirectForm scope result).befehl args).vollzug_genau (w := w) step execute
+    exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem bindDirect_ideal (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).IdealAussage := by
-  sorry
+  constructor
+  · intro args
+    change (List.getElem? ((argsCode 0 args.call.args).code ++ [callInstruction args.call (some args.written.type)])
+      ((argsCode 0 args.call.args).code.length) = some (callInstruction args.call (some args.written.type)))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+  · intro args
+    constructor
+    · exact ((bindDirectForm scope result).befehl args).bestimmt
+    · intro c s w plans u
+      exact Iff.rfl
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem bindDirect_einheit (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).EinheitAussage := by
-  sorry
+  intro platform args
+  exact ⟨rfl, ((bindDirectForm scope result).befehl args).kommutation⟩
 
 -- Mirror Quellform.ImplAussage with the explicit transfer and its plan.
 theorem bindDirect_impl (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).ImplAussage := by
-  sorry
+  intro args c s w plans u
+  exact Iff.rfl
 
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem bindDirect_erhaltung (scope : Scope) (result : Option (Ty .value)) : (bindDirectForm scope result).ErhaltungsAussage := by
-  sorry
+  intro platform args
+  exact ⟨((bindDirectForm scope result).befehl args).abgleich ((bindDirectForm scope result).fragment args) platform,
+    ((bindDirectForm scope result).befehl args).fortschritt ((bindDirectForm scope result).fragment args),
+    ((bindDirectForm scope result).befehl args).komponierbar ((bindDirectForm scope result).fragment args) platform,
+    ((bindDirectForm scope result).befehl args).sicher ((bindDirectForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem bindDirect_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((bindDirectForm scope result).fragment a).sicherheitsEinheit platform)
       ((bindDirectForm scope result).befehl a) := by
-  sorry
+  exact ((bindDirectForm scope result).befehl a).sicher ((bindDirectForm scope result).fragment a) platform rfl
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem bindDirect_erfuellbar : bindDirectJoint := by
