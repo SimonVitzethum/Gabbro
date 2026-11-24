@@ -49,7 +49,7 @@ theorem liesRecord_cong : (types : List (Ty .value)) →
   | [], _ :: _, _, _, _ => rfl
   | _ :: _, [], _, _, _ => rfl
   | head :: tail, slot :: sources, temp₁, temp₂, h => by
-      have h0 : temp₁ slot = temp₂ slot := h slot (List.mem_cons_self _ _)
+      have h0 : temp₁ slot = temp₂ slot := h slot (List.mem_cons_self ..)
       have hrest : liesRecord temp₁ tail sources = liesRecord temp₂ tail sources :=
         liesRecord_cong tail sources temp₁ temp₂
           (fun s hs => h s (List.mem_cons_of_mem _ hs))
@@ -115,11 +115,11 @@ theorem baueArraySicht : BaueArraySichtAussage := by
     change (do
       let values ← Vector.ofFnM (n := count) fun i =>
         (r₁.temp (ziel + i.val)).bind (wertAls element)
-      pure ⟨.array element count, values⟩) =
+      pure (⟨.array element count, values⟩ : Dynamisch)) =
       (do
       let values ← Vector.ofFnM (n := count) fun i =>
         (r₂.temp (ziel + i.val)).bind (wertAls element)
-      pure ⟨.array element count, values⟩)
+      pure (⟨.array element count, values⟩ : Dynamisch))
     rw [hFn]
 
 /-- The view after `baueTupel`: same shape, the payload comes from `liesTupel`. -/
@@ -139,8 +139,10 @@ theorem baueTupelSicht : BaueTupelSichtAussage := by
       have got := hRead (.temp (ziel + k)) hmem
       change r₁.temp (ziel + k) = r₂.temp (ziel + k) at got
       exact got
-    change (liesTupel r₁.temp ziel types).map (fun values => ⟨tupleType types, values⟩) =
-      (liesTupel r₂.temp ziel types).map (fun values => ⟨tupleType types, values⟩)
+    change (liesTupel r₁.temp ziel types).map
+        (fun values => (⟨tupleType types, values⟩ : Dynamisch)) =
+      (liesTupel r₂.temp ziel types).map
+        (fun values => (⟨tupleType types, values⟩ : Dynamisch))
     rw [liesTupel_cong types ziel r₁.temp r₂.temp hpoint]
 
 /-- The view after `baueRecord`: the payload comes from `liesRecord` over the sources. -/
@@ -160,9 +162,9 @@ theorem baueRecordSicht : BaueRecordSichtAussage := by
       change r₁.temp slot = r₂.temp slot at got
       exact got
     change (liesRecord r₁.temp types sources).map
-        (fun record => ⟨recordValueType name labels types, record⟩) =
+        (fun record => (⟨recordValueType name labels types, record⟩ : Dynamisch)) =
       (liesRecord r₂.temp types sources).map
-        (fun record => ⟨recordValueType name labels types, record⟩)
+        (fun record => (⟨recordValueType name labels types, record⟩ : Dynamisch))
     rw [liesRecord_cong types sources r₁.temp r₂.temp hpoint]
 
 /-- The view after `bindeTupel`: the pushed block is computed from `source`, which is
@@ -213,11 +215,9 @@ theorem bindeTupelSicht_mitTemp :
       cases hopt : (r₁.temp quelle).bind (wertAls (tupleType types)) with
       | none =>
           left
-          rw [hopt]
           rfl
       | some product =>
           right
-          rw [hopt]
           exact tupleLocals_laenge types product bind
     cases hlen with
     | inl h0 =>
@@ -225,14 +225,15 @@ theorem bindeTupelSicht_mitTemp :
           cases vs₁ with
           | nil => rfl
           | cons v vs' =>
-              simp only [List.length_cons] at h0
-              omega
+              have impossible : (v :: vs').length = 0 := h0
+              cases impossible
         rw [hnil]
         change maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
           maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale
         exact maskiere_gleich_mono (fun i hi => hL i hi) 0 r₁.lokale r₂.lokale lokEq
     | inr hn =>
-        apply maskiere_anhaengen vs₁.length vs₁.reverse r₁.lokale r₂.lokale
+        apply maskiere_anhaengen (l₀ := β.lokal r₁.pc) (l₁ := β.lokal (r₁.pc + 1))
+          vs₁.length vs₁.reverse r₁.lokale r₂.lokale
         · intro j hj
           have hz : vs₁.length + j = j + behalteneTupel types bind := by
             rw [hn]
@@ -251,8 +252,9 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
   let β : Beschriftung :=
     { temp := fun q s => if q = 0 then (if s = 6 then {0} else ∅) else ∅
       lokal := fun _ _ => ∅ }
+  let w : Dynamisch := ⟨.bool, true⟩
   let r₁ : Rahmen := { Rahmen.start [] with temp := fun s =>
-    if s = 6 then some (⟨.bool, true⟩ : Dynamisch) else none }
+    if s = 6 then some w else none }
   let r₂ : Rahmen := Rahmen.start []
   have h56 : (5 : Nat) ≠ 6 := by omega
   have h10 : (1 : Nat) ≠ 0 := by omega
@@ -288,7 +290,7 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
   have eqt : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).temp 6 =
       ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).temp 6 := by
     simpa only [Rahmen.sicht, β, h10, if_false, oeffentlich_leer, if_true] using eqv
-  change (some (⟨.bool, true⟩ : Dynamisch) : Option Dynamisch) = none at eqt
+  change some w = none at eqt
   cases eqt
 
 /-- The view after `setzeRecordFeld`: one local is overwritten from a public source. -/
