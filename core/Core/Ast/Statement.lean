@@ -234,15 +234,16 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       cases condRead with
       | atom a t => exact AtomReads.not_assignment a
   · intros
-    rename_i other
-    cases other
-    exact ⟨rfl, rfl⟩
+    rename_i b rest' other
+    cases other with
+    | done => exact ⟨rfl, rfl⟩
+    | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
     rename_i _ first next stRead blockRead ihSt ihBlock b rest' other
     cases other with
     | done => exact (StmtReads.disjoint_closeBrace stRead).elim
     | step stRead' blockRead' =>
-        obtain ⟨sameFirst, moreEq⟩ := ihFirst stRead'
+        obtain ⟨sameFirst, moreEq⟩ := ihSt stRead'
         cases sameFirst
         cases moreEq
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
@@ -263,10 +264,11 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     (motive_2 := fun before input tree rest _ =>
       ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
     (motive_3 := fun before input tree rest _ => True)
-    (by intros; trivial) (by intros; trivial) (by intros; trivial) (by intros; trivial) ?_ ?_ (by trivial) left) right
-  · intro other
-    cases other
-    exact ⟨rfl, rfl⟩
+    (by intros; trivial) (by intros; trivial) (by intros; trivial) (by intros; trivial) ?_ ?_ (by intros; trivial) left) right
+    rename_i b rest' other
+    cases other with
+    | done => exact ⟨rfl, rfl⟩
+    | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
     rename_i _ first next stRead blockRead ihBlock b rest' other
     cases other with
