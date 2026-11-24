@@ -170,4 +170,34 @@ theorem TupleFieldRegelSicher : TupleFieldRegelSicherAussage := by
     (fun args => expr_keine_invarianten 0 ((Surface.tupleField scope).tree args).2)
     platform args).2.2.2
 
+theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
+  intro platform start
+  let form := tupleFieldForm []
+  let a : Ty .value := .int 1 1
+  let b : Ty .value := .int 2 2
+  let base : Expr [] (tupleType [a, b]) := .tupleValue (.lit 1) (.lit 2) .empty
+  let args : Surface.TupleFieldArgs [] := ⟨a, b, [], base, ⟨0, by simp [a, b]⟩⟩
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.literal 0 1).nach eintritt s₀
+  let s₂ := (Befehl.literal 1 2).nach eintritt s₁
+  let s₃ := (Befehl.baueTupel 0 [a, b]).nach eintritt s₂
+  let s₄ := (Befehl.liesTupelfeld 0 [a, b] ⟨0, by simp [a, b]⟩).nach eintritt s₃
+  have h₁ : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
+  have h₂ : E.system.ISchritt eintritt s₁ () [plan] s₂ := ⟨.literal 1 2, rfl, rfl, rfl⟩
+  have h₃ : E.system.ISchritt eintritt s₂ () [plan] s₃ := ⟨.baueTupel 0 [a, b], rfl, rfl, rfl⟩
+  have h₄ : E.system.ISchritt eintritt s₃ () [plan] s₄ :=
+    ⟨.liesTupelfeld 0 [a, b] ⟨0, by simp [a, b]⟩, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₄ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan]
+      (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start h₁) h₂) h₃) h₄
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₄ reached
+    (form.realisiert (fun args => by
+      change (((expr 0 args.base).code ++ [Befehl.liesTupelfeld 0 args.types args.index])[(expr 0 args.base).code.length]? =
+        some (.liesTupelfeld 0 args.types args.index))
+      simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
+    ) platform args s₄ rfl rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
+
 end Gabbro.Core.Ast.Semantik
