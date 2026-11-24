@@ -375,14 +375,9 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
             alsBoolean, Option.bind_some, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R, Expr.wert]
-          by_cases hc : some (Expr.wert (fun {type} => env) left) = some op.skips
-          · simp only [hc, if_true]
-            omega
-          · exact False.elim (hs hc)
+          omega
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
-          by_cases hc : Expr.wert (fun {type} => env) left = op.skips
-          · simp only [hc, if_true]
-          · exact False.elim (ht hc)
+          simp only [if_true]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
