@@ -16,6 +16,8 @@ and canonical printer certificates. Invert `TypeReads` for the view's operand.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 open Text Katalog Maschine Waechter
 
 lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
@@ -165,5 +167,7 @@ theorem druckAussage_environment : DruckAussage .environment := by
   cases tree with
   | environment name abi row =>
       exact ⟨environmentPrints name abi row, parseOfPrint _ (environmentPrints name abi row)⟩
+
+end
 
 end Gabbro.Core.Ast.LowLevel

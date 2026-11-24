@@ -17,6 +17,8 @@ selection, both the row membership and exact ABI matter.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 open Katalog Maschine
 
 private lemma layout_endian (target : ZielDaten) (t : WrittenType) (shape : Layout)
@@ -182,5 +184,7 @@ theorem environmentMeaning : EnvironmentMeaningAussage := by
     refine ⟨.selectEnvironment name abi row hz, ?_⟩
     simp only [elaborate]
     rw [dif_pos hz]
+
+end
 
 end Gabbro.Core.Ast.LowLevel
