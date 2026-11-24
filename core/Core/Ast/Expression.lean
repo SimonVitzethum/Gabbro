@@ -228,12 +228,10 @@ theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest)
       exact ordinary.2 hs.symm
 
 -- Mirror AtomReads.lit_inversion, leaving the lookup evidence existential.
-theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
-    (read : AtomReads scope (.word word :: rest) tree suffix) :
+theorem AtomReads.variable_inversion {type : Ty .value} (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
+    (read : @AtomReads scope (.word word :: rest) type tree suffix) :
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
-  revert read
-  intro (read : @AtomReads scope (.word word :: rest) type tree suffix)
   cases read
   case trueLit => exact (ordinary.1 rfl).elim
   case falseLit => exact (ordinary.2 rfl).elim
