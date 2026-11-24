@@ -173,8 +173,8 @@ theorem division_erfuellbar : divisionJoint := by
       have htemp1 : (s₂.lokal eintritt).temp (0 + 1) = some ⟨.int 2 2, Zahl.literal 2⟩ := rfl
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
         simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
-          Option.bind_eq_bind, Option.bind_some, Option.pure_def]
-      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.trans guard.symm)
+          Option.bind_eq_bind, Option.bind_some, Option.pure_def, Zahl.literal]
+      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.symm.trans guard)
       subst g
       omega
   · let args : Surface.DivisionArgs [] := ⟨.negativeLit 1, .lit 2, Or.inl (by omega)⟩
@@ -202,8 +202,8 @@ theorem division_erfuellbar : divisionJoint := by
       have htemp1 : (s₂.lokal eintritt).temp (0 + 1) = some ⟨.int 2 2, Zahl.literal 2⟩ := rfl
       have hg : (Befehl.teilen 0).guard (s₂.lokal eintritt) = some ⟨.division, (1, 2)⟩ := by
         simp only [Befehl.guard, Rahmen.zahl, alsGanzzahl, htemp0, htemp1,
-          Option.bind_eq_bind, Option.bind_some, Option.pure_def]
-      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.trans guard.symm)
+          Option.bind_eq_bind, Option.bind_some, Option.pure_def, Zahl.literal]
+      have eq : g = ⟨.division, (1, 2)⟩ := Option.some.inj (hg.symm.trans guard)
       subst g
       omega
 
