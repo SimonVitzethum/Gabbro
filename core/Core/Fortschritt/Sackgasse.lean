@@ -32,7 +32,7 @@ def ηstall : I.Lauf (E_w dispatch2) :=
 /-- On the stall `lockFree` fails (no system step ever happens) … -/
 theorem stall_lockfrei_neg : ¬ LockFrei (E := E_w dispatch2) (fun _ => True) ηstall := by
   intro h
-  have hactive : SystemAktiv (fun _ => True) ηstall 0 := by
+  have hactive : I.SystemAktiv (fun _ => True) ηstall 0 := by
     intro n _
     exact ⟨n, Nat.le_refl _, A, (), trivial, rfl, rfl,
       ⟨(), [togglePlan], toggleUpdate A zAB0, (), rfl, rfl, rfl⟩⟩
@@ -46,7 +46,8 @@ theorem stall_lockfrei_neg : ¬ LockFrei (E := E_w dispatch2) (fun _ => True) η
 
 /-- … while `deadlockFree` holds: nothing ever blocks. -/
 theorem stall_deadlockfrei_pos : DeadlockFrei (E := E_w dispatch2) ηstall := by
-  intro t C hC
+  intro t hC
+  obtain ⟨C, hC⟩ := hC
   obtain ⟨c, hc⟩ := hC.1
   obtain ⟨b, hb, _, _, _⟩ := hC.2 c hc
   cases hb
@@ -57,7 +58,7 @@ def deadBlockiert (s : Zustand Bool Unit Unit Unit Bool Unit) (c : Kontext)
   (c = A ∧ b = .sperre true) ∨ (c = B ∧ b = .sperre false)
 
 def deadRegel (c : Kontext) (s : Zustand Bool Unit Unit Unit Bool Unit) (w : Unit)
-    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Bool Unit Unit Unit Bool Unit) :
+    (es : List (SchrittPlan Bool Unit Unit Unit)) (u : Zustand Bool Unit Unit Unit Bool Unit) :
     Prop :=
   False
 
@@ -72,7 +73,7 @@ def deadStart : Zustand Bool Unit Unit Unit Bool Unit :=
   { (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch1 j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))) with
-    sperren := fun l => if l then ⟨some B, []⟩ else ⟨some A, []⟩ }
+    sperren := fun l : Bool => if l then ⟨some B, []⟩ else ⟨some A, []⟩ }
 
 def E_dead : Einheit Bool Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, deadEinrichtung, deadSystem,
@@ -121,6 +122,19 @@ theorem dead_starvationfrei_pos : StarvationFrei (E := E_dead) ρdead ηdead := 
   intro c hhang
   exact unfair_dead hhang.1
 
+/-- Dispatch inversion on the deadlocked unit. -/
+theorem dead_dispatch : ∀ k c, (deadStart.kerne k).laeuft = some c → c = A ∧ k = 0 := by
+  intro k c h
+  cases k with
+  | zero =>
+    have h0 : (deadStart.kerne Nat.zero).laeuft = some A := rfl
+    rw [h0] at h
+    exact ⟨(Option.some.inj h).symm, rfl⟩
+  | succ n =>
+    have hn : (deadStart.kerne (Nat.succ n)).laeuft = none := rfl
+    rw [hn] at h
+    cases h
+
 /-- … and `lockFree` holds: blocked cuts have their alternative, and nothing is enabled. -/
 theorem dead_lockfrei_pos : LockFrei (E := E_dead) (fun _ => True) ηdead := by
   constructor
@@ -128,18 +142,12 @@ theorem dead_lockfrei_pos : LockFrei (E := E_dead) (fun _ => True) ηdead := by
     obtain ⟨k, hdispk⟩ := hdisp
     have hker : (ηdead.zeit.zustand t).kerne = deadStart.kerne := rfl
     rw [hker] at hdispk
-    cases k with
-    | zero =>
-      have hcA : c = A := (Option.some.inj hdispk).symm
-      subst hcA
-      exact Or.inr (Or.inl ⟨.sperre true, Or.inl ⟨rfl, rfl⟩⟩)
-    | succ n =>
-      have hnone : (deadStart.kerne (n + 1)).laeuft = none := rfl
-      rw [hnone] at hdispk
-      cases hdispk
+    obtain ⟨hcA, _⟩ := dead_dispatch k c hdispk
+    subst hcA
+    exact Or.inr (Or.inl ⟨.sperre true, Or.inl ⟨rfl, rfl⟩⟩)
   · intro a hactive
     obtain ⟨t, hta, c, f, _, _, _, hber⟩ := hactive a (Nat.le_refl _)
-    obtain ⟨w, plans, u, i, _, himp⟩ := hber
+    obtain ⟨w, plans, u, ⟨i, _, himp⟩⟩ := hber
     cases himp
 
 end Gabbro.Core.Fortschritt

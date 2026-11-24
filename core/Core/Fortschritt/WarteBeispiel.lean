@@ -35,13 +35,16 @@ def e1Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
 def e1System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e1Regel, e1Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
+def e1Schranken : Schrankendaten Unit Bool :=
+  { Schrankendaten.leer with halten := fun _ => some 5 }
+
 def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtung dispatch2, e1System,
     fun _ => wDaten dispatch2, fun _ => 0,
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch2 j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))),
-    Eq, fun _ => 1, .leer, {Schrankendaten.leer with halten := fun _ => some 5}, .leer, .leer⟩
+    Eq, fun _ => 1, .leer, e1Schranken, .leer, .leer⟩
 
 def zE0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_1 s0).2
 
@@ -121,7 +124,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
       cases step with
       | schritt h =>
         cases h with
-        | kontext _ bereit regel _ _ =>
+        | kontext _ bereit regel _ =>
           obtain ⟨k, _, hdisp, _⟩ := bereit
           have h0 : (S_d.kerne 0).laeuft = some A := rfl
           have h1 : (S_d.kerne 1).laeuft = some B := rfl
@@ -129,8 +132,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
           cases k with
           | zero =>
             rw [h0] at hdisp
-            have hcA : ctx = A := (Option.some.inj hdisp).symm
-            subst hcA
+            cases hdisp
             obtain ⟨_, hticket, _, _⟩ := regel
             cases hticket with
             | ticket _ keinTicket =>
@@ -142,8 +144,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
             cases n with
             | zero =>
               rw [h1] at hdisp
-              have hcB : ctx = B := (Option.some.inj hdisp).symm
-              subst hcB
+              cases hdisp
               obtain ⟨_, hticket, _, _⟩ := regel
               cases hticket with
               | ticket _ keinTicket =>
