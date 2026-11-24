@@ -112,18 +112,18 @@ def SetzeRecordFeldSichtAussage : Prop :=
 
 /-- The `baueArray` premises hold jointly (shared `SchreibRegel` bundle). -/
 theorem baueArraySicht_erfuellbar (ziel : Nat) (element : Ty .value) (count : Nat) :
-    ∃ β pc, β.SchreibRegel pc ziel (tempBereich ziel count) :=
+    ∃ (β : Beschriftung) (pc : Nat), β.SchreibRegel pc ziel (tempBereich ziel count) :=
   ⟨.alleOeffentlich, 0, schreibRegel_alleOeffentlich 0 ziel _⟩
 
 /-- The `baueTupel` premises hold jointly (shared `SchreibRegel` bundle). -/
 theorem baueTupelSicht_erfuellbar (ziel : Nat) (types : List (Ty .value)) :
-    ∃ β pc, β.SchreibRegel pc ziel (tempBereich ziel types.length) :=
+    ∃ (β : Beschriftung) (pc : Nat), β.SchreibRegel pc ziel (tempBereich ziel types.length) :=
   ⟨.alleOeffentlich, 0, schreibRegel_alleOeffentlich 0 ziel _⟩
 
 /-- The `bindeTupel` premises hold jointly. -/
 theorem bindeTupelSicht_erfuellbar (quelle : Nat) (types : List (Ty .value))
     (bind : List Bool) :
-    ∃ β pc, oeffentlich (β.temp pc quelle) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
         oeffentlich (β.lokal pc i) = true) ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) (i + behalteneTupel types bind)) = true →
@@ -134,13 +134,13 @@ theorem bindeTupelSicht_erfuellbar (quelle : Nat) (types : List (Ty .value))
 /-- The `baueRecord` premises hold jointly (shared `SchreibRegel` bundle). -/
 theorem baueRecordSicht_erfuellbar (ziel : Nat) (name : List Char)
     (labels : List Identifier) (types : List (Ty .value)) (sources : List Nat) :
-    ∃ β pc, β.SchreibRegel pc ziel (sources.map Komp.temp) :=
+    ∃ (β : Beschriftung) (pc : Nat), β.SchreibRegel pc ziel (sources.map Komp.temp) :=
   ⟨.alleOeffentlich, 0, schreibRegel_alleOeffentlich 0 ziel _⟩
 
 /-- The `setzeRecordFeld` premises hold jointly. -/
 theorem setzeRecordFeldSicht_erfuellbar (source indexLocal : Nat) (name : List Char)
     (labels : List Identifier) (types : List (Ty .value)) (index : Fin types.length) :
-    ∃ β pc, (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
+    ∃ (β : Beschriftung) (pc : Nat), (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
       (∀ j, j ≠ indexLocal → oeffentlich (β.lokal (pc + 1) j) = true →
         oeffentlich (β.lokal pc j) = true) ∧

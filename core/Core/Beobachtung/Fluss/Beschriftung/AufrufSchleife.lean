@@ -152,14 +152,14 @@ def ZurueckSprungSichtAussage : Prop :=
     is public. -/
 theorem rufeSicht_erfuellbar (name : Identifier) (args : List (Ty .value))
     (bind : Option (Ty .value)) :
-    ∃ β pc, (∀ s, oeffentlich (β.temp pc s) = true) ∧
+    ∃ (β : Beschriftung) (pc : Nat), (∀ s, oeffentlich (β.temp pc s) = true) ∧
       (∀ i, oeffentlich (β.lokal pc i) = true) :=
   ⟨.alleOeffentlich, 0, fun s => alleOeffentlich_temp 0 s,
     fun i => alleOeffentlich_lokal 0 i⟩
 
 /-- The `rueckVoid` premises hold jointly. -/
 theorem rueckVoidSicht_erfuellbar :
-    ∃ β pc, (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
+    ∃ (β : Beschriftung) (pc : Nat), (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
         oeffentlich (β.lokal pc i) = true) :=
@@ -168,7 +168,7 @@ theorem rueckVoidSicht_erfuellbar :
 
 /-- The `zurueck` premises hold jointly. -/
 theorem zurueckSicht_erfuellbar (quelle : Nat) (zieltyp : Ty .value) :
-    ∃ β pc, oeffentlich (β.temp pc quelle) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
       (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
@@ -178,7 +178,7 @@ theorem zurueckSicht_erfuellbar (quelle : Nat) (zieltyp : Ty .value) :
 
 /-- The `pruefeMass` premises hold jointly. -/
 theorem pruefeMassSicht_erfuellbar (quelle : Nat) :
-    ∃ β pc, oeffentlich (β.temp pc quelle) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
       (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
       (∀ i, oeffentlich (β.lokal (pc + 1) i) = true →
@@ -188,7 +188,7 @@ theorem pruefeMassSicht_erfuellbar (quelle : Nat) :
 
 /-- The `whileTest` premises hold jointly. -/
 theorem whileTestSicht_erfuellbar (quelle ende : Nat) (handler : Identifier) :
-    ∃ β pc, oeffentlich (β.temp pc quelle) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc quelle) = true ∧
       (∀ q, q = pc + 1 ∨ q = pc + ende →
         (∀ s, oeffentlich (β.temp q s) = true → oeffentlich (β.temp pc s) = true) ∧
         (∀ i, oeffentlich (β.lokal q i) = true → oeffentlich (β.lokal pc i) = true)) :=
@@ -199,7 +199,7 @@ theorem whileTestSicht_erfuellbar (quelle ende : Nat) (handler : Identifier) :
 /-- The `forAnfang` premises hold jointly. -/
 theorem forAnfangSicht_erfuellbar (unter ober : Nat) (index : Ty .value)
     (skipEmpty : Nat) (shadowed missingHandler : Bool) :
-    ∃ β pc, oeffentlich (β.temp pc unter) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc unter) = true ∧
       oeffentlich (β.temp pc ober) = true ∧
       (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
@@ -218,7 +218,7 @@ theorem forAnfangSicht_erfuellbar (unter ober : Nat) (index : Ty .value)
 
 /-- The `forTest` premises hold jointly. -/
 theorem forTestSicht_erfuellbar (ende : Nat) (handler : Option Identifier) :
-    ∃ β pc, oeffentlich (β.lokal pc 0) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.lokal pc 0) = true ∧
       (∀ q, q = pc + 1 ∨ q = pc + ende →
         (∀ s, oeffentlich (β.temp q s) = true → oeffentlich (β.temp pc s) = true) ∧
         (∀ i, oeffentlich (β.lokal q i) = true → oeffentlich (β.lokal pc i) = true)) :=
@@ -228,7 +228,7 @@ theorem forTestSicht_erfuellbar (ende : Nat) (handler : Option Identifier) :
 
 /-- The `forNaechster` premises hold jointly. -/
 theorem forNaechsterSicht_erfuellbar (zurueck : Nat) (index : Ty .value) :
-    ∃ β pc, oeffentlich (β.lokal pc 0) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.lokal pc 0) = true ∧
       (∀ s, oeffentlich (β.temp (pc - zurueck) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
       (∀ i, i ≠ 0 → oeffentlich (β.lokal (pc - zurueck) i) = true →

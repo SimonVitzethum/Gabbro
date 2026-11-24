@@ -63,7 +63,7 @@ def TextLengthSichtAussage : Prop :=
 
 /-- The `textIndex` premises hold jointly. -/
 theorem textIndexSicht_erfuellbar (basis capacity : Nat) :
-    ∃ β pc, oeffentlich (β.temp pc basis) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc basis) = true ∧
       oeffentlich (β.temp pc (basis + 1)) = true ∧
       (∀ s, oeffentlich (β.temp (pc + 1) s) = true →
         oeffentlich (β.temp pc s) = true) ∧
@@ -75,7 +75,7 @@ theorem textIndexSicht_erfuellbar (basis capacity : Nat) :
 
 /-- The `substring` premises hold jointly. -/
 theorem substringSicht_erfuellbar (basis capacity : Nat) :
-    ∃ β pc, oeffentlich (β.temp pc basis) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc basis) = true ∧
       oeffentlich (β.temp pc (basis + 1)) = true ∧
       oeffentlich (β.temp pc (basis + 2)) = true ∧
       (∀ s, oeffentlich (β.temp (pc + 1) s) = true →

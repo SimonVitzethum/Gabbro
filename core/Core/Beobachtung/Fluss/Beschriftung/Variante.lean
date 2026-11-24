@@ -94,7 +94,7 @@ def WaehleUmgebungSichtAussage : Prop :=
 theorem waehleVarianteSicht_erfuellbar (source : Nat) (name : List Char)
     (labels : List Identifier) (cases : List (Option (Ty .value)))
     (branches : List (Nat × Bool)) :
-    ∃ β pc, oeffentlich (β.temp pc source) = true ∧
+    ∃ (β : Beschriftung) (pc : Nat), oeffentlich (β.temp pc source) = true ∧
       (∀ b ∈ branches,
         (∀ s, oeffentlich (β.temp (pc + b.1) s) = true →
           oeffentlich (β.temp pc s) = true) ∧
