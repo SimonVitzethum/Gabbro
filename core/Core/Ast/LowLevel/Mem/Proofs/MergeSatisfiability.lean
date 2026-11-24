@@ -69,8 +69,7 @@ private theorem memNameL_ne_R : memNameL.val ≠ memNameR.val := by
   have hc : ('l' : Char) = 'r' := by
     have h' := congrArg (fun l : List Char => l[0]?) h
     simpa only [memNameL, memNameR, List.getElem?_cons_zero, Option.some.injEq] using h'
-  have hv := congrArg Char.val hc
-  norm_num at hv
+  cases hc
 
 private theorem memZulStart {k : Katalog} {h : Katalog.Umgebung} {regions : List Strecke}
     (hw : Hardware k h) (img : image.gueltig k.plattform.ziel)
