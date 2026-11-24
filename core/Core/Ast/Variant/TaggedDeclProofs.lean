@@ -137,7 +137,7 @@ theorem taggedDecl_derivation : TaggedDeclDerivationAussage := by
     let member : VariantMember := ⟨label, none⟩
     have valid (m : VariantMember) (h : m ∈ [member]) : m.valid scope := by
       cases List.mem_singleton.mp h
-      exact ⟨(directName_of_singleton (name := label) rfl).1, by decide, fun _ h => (List.not_mem_nil h).elim⟩
+      exact ⟨(directName_of_singleton (name := label) rfl).1, by intro equal; cases equal, fun _ h => (List.not_mem_nil h).elim⟩
     let args : TaggedDeclArgs scope := ⟨false, name, member, [], valid, List.nodup_singleton _⟩
     exact Rule.satisfiableOfPrint args (taggedDeclPrints scope args)
 

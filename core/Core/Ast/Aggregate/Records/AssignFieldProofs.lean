@@ -194,17 +194,15 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
 
 public theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
   intro platform start
-  let field : Identifier := ⟨['x'], 'x', [], rfl,
-    by unfold Text.isNameStart Text.isLetter; exact Or.inl (Or.inl ⟨by decide, by decide⟩),
-    by intro a ha; cases ha⟩
-  let name : List Char := ['R']
+  let field := RecordExample.field
+  let name := RecordExample.name.val
   let labels : List Identifier := [field]
   let types : List (Ty .value) := [.int 1 2]
   let recTy : Ty .value := recordValueType name labels types
   let binding : Binding := ⟨field, recTy, true, false⟩
   let scope : Scope := [binding]
   let ref : Local scope recTy := .here
-  let index : Fin types.length := ⟨0, by decide⟩
+  let index : Fin types.length := ⟨0, Nat.zero_lt_succ _⟩
   let written : RecordFieldAt labels field index.val := by
     change (labels.map Subtype.val).Nodup ∧ labels[0]? = some field
     constructor
@@ -219,7 +217,7 @@ public theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
   let value : Expr scope source := .lit 1
   let fits : Fits source (types.get index) := by
     change (1 : Int) ≤ 1 ∧ (1 : Int) ≤ 2
-    exact ⟨by decide, by decide⟩
+    exact ⟨Int.le_refl _, by omega⟩
   let visible : ref.visible := by
     change recTy.valueBinding ∧ ref.nameVisible
     constructor

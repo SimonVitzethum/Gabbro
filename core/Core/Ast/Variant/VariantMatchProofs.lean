@@ -256,7 +256,8 @@ theorem variantMatch_inversion : VariantMatchInversionAussage := by
     cases callRead
     apply ordinary.2 |>.elim
     rw [← Token.word.inj (List.cons.inj tokens).1]
-    decide
+    simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
+    repeat first | exact rfl | exact Or.inl rfl | right
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable <;> cases (List.cons.inj tokens).1
   | _ => cases (List.cons.inj tokens).1
