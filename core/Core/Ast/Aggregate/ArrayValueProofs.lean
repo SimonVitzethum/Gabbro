@@ -132,14 +132,18 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
             printComma, printPunctuation, PrintedToken.unquoted,
             (show (Token.punctuation ",".toList : Token) = comma by decide)]
           change ItemsRead scope closeBracket
-            (head.printTokens ++ (comma ::
-              ((ExprItems.next second rest).printPieces.map PrintedToken.value ++ [closeBracket])))
+            (head.printPieces.map PrintedToken.value ++
+              (comma :: (second.printPieces.map PrintedToken.value ++
+                (rest.printTail.map PrintedToken.value ++ [closeBracket]))))
             (.next head (.next second rest)) []
           exact .next
-            (headRead (comma ::
-              ((ExprItems.next second rest).printPieces.map PrintedToken.value ++ [closeBracket]))
-              noOperatorAtComma)
-            (.comma (Or.inr rfl) (itemsPrintRead (ExprItems.next second rest)))
+            (Expr.printReads (rest := comma ::
+              (second.printPieces.map PrintedToken.value ++
+                (rest.printTail.map PrintedToken.value ++ [closeBracket])))
+              head noOperatorAtComma)
+            (.comma (Or.inr rfl) (by
+              simpa only [ExprItems.printPieces, List.map_append, List.append_assoc] using
+                (itemsPrintRead (ExprItems.next second rest))))
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
