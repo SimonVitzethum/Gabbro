@@ -292,7 +292,7 @@ theorem stummer_schritt_koppelt
                   rw [c_eq] at kopf₂'
                   have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                   subst ff₂
-                    obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := w₂') f impl₂'rule aus₂'
+                  obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := w₂') f impl₂'rule aus₂'
                   rw [c_eq] at nachGlied₂
                   have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                     rw [nachEq₂, nachGlied₂]
