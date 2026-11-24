@@ -263,7 +263,7 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
                 | cons h₀ rest => exact ⟨h₀, rest, rfl⟩
               obtain ⟨h₀, rest, hqcons⟩ := hqne
               have hq1 : (s₁.sperren l).schlange = h₀ :: rest := by rw [hsq, hqcons]
-              have hq2 : (s₂.sperren l).schlange = rest := by rw [hs2q]
+              have hq2 : (s₂.sperren l).schlange = rest := by rw [hs2q, hqcons]
               have hjr : (s₁.sperren l).schlange[j + 1]? = some c := by
                 rw [hq1, List.getElem?_cons_succ] at ⊢
                 rw [hq2] at hj
@@ -307,11 +307,15 @@ theorem sperr_warte_schranke {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H : N
               rw [hcontra] at hnew
               cases hnew
       | none =>
-        refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨c, r, hown, hr, ?_⟩⟩, ?_, ?_, ?_⟩
-        · cases hs : s.sperren l with
-          | mk o qq =>
-            rw [hs] at hown hr
-            exact nimmt_am_kopf hown hr
+        cases hq : (s.sperren l).schlange with
+        | nil =>
+          rw [hq] at hidx
+          simp only [List.getElem?_nil] at hidx
+        | cons h₀ rest =>
+          refine ⟨a, [], Nat.le_refl _, ⟨s, hsa, Or.inr ⟨h₀, rest, hown, hq, ?_⟩⟩, ?_, ?_, ?_⟩
+          · cases hs : s.sperren l with
+            | mk o qq =>
+              exact nimmt_am_kopf hown hq
         · calc ([] : List Nat).length = 0 := rfl
             _ ≤ i + 1 + 1 := Nat.zero_le _
         · intro x hx

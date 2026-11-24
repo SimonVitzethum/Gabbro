@@ -57,7 +57,7 @@ def deadBlockiert (s : Zustand Bool Unit Unit Unit Bool Unit) (c : Kontext)
   (c = A ∧ b = .sperre true) ∨ (c = B ∧ b = .sperre false)
 
 def deadRegel (c : Kontext) (s : Zustand Bool Unit Unit Unit Bool Unit) (w : Unit)
-    (es : List (SchrittPlan Unit Unit Unit)) (u : Zustand Bool Unit Unit Unit Bool Unit) :
+    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Bool Unit Unit Unit Bool Unit) :
     Prop :=
   False
 

@@ -23,11 +23,11 @@ open Gabbro.Core.Katalog
 open Gabbro.Core.Annahme
 open Gabbro.Core.Beobachtung
 
-def ticketPlan : SchrittPlan Unit Unit Unit :=
+def ticketPlan : SchrittPlan Unit Unit Unit Unit :=
   ⟨.sperre () .ticket, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 
 def e1Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
-    (es : List (SchrittPlan Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
+    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
     Prop :=
   ∃ next, SperrSchritt .ticket c (s.sperren ()) next ∧ es = [ticketPlan] ∧
     u = toggleUpdate c s

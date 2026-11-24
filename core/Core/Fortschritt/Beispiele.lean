@@ -33,11 +33,11 @@ def toggleUpdate (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :
     Zustand Unit Unit Unit Unit Bool Unit :=
   { s with lokal := Function.update s.lokal c (!s.lokal c) }
 
-def togglePlan : SchrittPlan Unit Unit Unit :=
+def togglePlan : SchrittPlan Unit Unit Unit Unit :=
   ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 
 def toggleRegel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
-    (es : List (SchrittPlan Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
+    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
     Prop :=
   es = [togglePlan] ∧ u = toggleUpdate c s
 
