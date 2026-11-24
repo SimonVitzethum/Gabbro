@@ -358,8 +358,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
       | nil =>
           simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
           apply ParamsRead.first
-          · change TypeReads (p.written.printPieces.map PrintedToken.value ++ closeParen :: rest) p.written
-              (closeParen :: rest)
+          · change TypeReads (p.written.printPieces.map PrintedToken.value ++ closeParen :: rest) p.written (closeParen :: rest)
             exact p.written.printReads p.valid (rest := closeParen :: rest) (by intro more h; cases h)
           · exact ParamsTail.close
       | cons q qs =>
