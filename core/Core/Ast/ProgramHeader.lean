@@ -365,14 +365,9 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           rw [comma_cons]
           simp_all [commaSeparated, hClose, hComma]
           apply ParamsRead.first
-          · change TypeReads
-              (p.written.printPieces.map PrintedToken.value ++ comma ::
-                ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-              p.written
-              (comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-            exact p.written.printReads p.valid
+          · convert (p.written.printReads p.valid
               (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
-              (by intro more h; cases h)
+              (by intro more h; cases h)) using 1 <;> simp_all [commaSeparated, hClose, hComma]
           · simpa only [List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
               hClose] using (ParamsTail.comma ih)
 
