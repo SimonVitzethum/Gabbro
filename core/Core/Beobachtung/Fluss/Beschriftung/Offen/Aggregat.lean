@@ -223,7 +223,7 @@ theorem bindeTupelSicht_mitTemp :
     | inl h0 =>
         have hnil : vs₁ = [] := by
           cases hcase : vs₁ with
-          | nil => exact hcase
+          | nil => rfl
           | cons v vs' =>
               rw [hcase] at h0
               cases h0
@@ -274,22 +274,26 @@ theorem bindeTupelSicht_gegenbeispiel : ¬ BindeTupelSichtAussage := by
     funext s
     by_cases hs : s = 6
     · subst s
-      simp only [β, r₁, r₂, Rahmen.start, hsecret, if_false, if_true]
+      simp only [β, r₁, r₂, Rahmen.start, hsecret, if_false, if_true, Bool.false_eq_true]
     · have hpub : oeffentlich (β.temp 0 s) = true := by
         simp only [β, hs, oeffentlich_leer, if_false, if_true]
-      simp only [hpub, if_true, r₁, r₂, hs, if_false]
+      simp only [hpub, if_true, r₁, r₂, Rahmen.start, hs, if_false]
+  have hp₁ : r₁.pc = 0 := rfl
+  have hp₂ : r₂.pc = 0 := rfl
   have hview : r₁.sicht β = r₂.sicht β := by
     simp only [Rahmen.sicht]
+    rw [hp₁, hp₂]
     rw [htemp]
     rfl
   have hAfter := aussage β 0 5 [] [] hQ hL hL2 r₁ r₂ (fun _ => false) rfl hview
   have e₁pc : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).pc = 1 := rfl
   have e₂pc : ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).pc = 1 := rfl
-  have eqv := congrArg (fun r : Rahmen => (r.sicht β).temp 6) hAfter
+  have eqv := congrArg (fun r : Rahmen => r.temp 6) hAfter
+  simp only [Rahmen.sicht] at eqv
   rw [e₁pc, e₂pc] at eqv
   have eqt : ((Befehl.bindeTupel 5 [] []).auswerten r₁ (fun _ => false)).temp 6 =
       ((Befehl.bindeTupel 5 [] []).auswerten r₂ (fun _ => false)).temp 6 := by
-    simpa only [Rahmen.sicht, β, h10, if_false, oeffentlich_leer, if_true] using eqv
+    simpa only [β, h10, if_false, oeffentlich_leer, if_true] using eqv
   change Option.some w = none at eqt
   cases eqt
 
