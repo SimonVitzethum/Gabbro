@@ -105,6 +105,51 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
+  case binary op left right leftIH rightIH =>
+      intro env frame bound active pre post hpc
+      let L := (expr slot left).code
+      let R := (expr (slot + 1) right).code
+      let b : Befehl := .binaer op slot
+      obtain ⟨mid, walkL, pcL, tmpL, lokL, retL, preserveL⟩ :=
+        leftIH slot env frame bound active pre (R ++ [b] ++ post) hpc
+      have boundMid : mid.traegt env := by
+        intro ty ref
+        rw [lokL]
+        exact bound ref
+      have hpcMid : mid.pc = (pre ++ L).length := by
+        rw [List.length_append]
+        exact pcL
+      obtain ⟨mid2, walkR, pcR, tmpR, lokR, retR, preserveR⟩ :=
+        rightIH (slot + 1) env mid boundMid retL (pre ++ L) ([b] ++ post) hpcMid
+      have hpcMid2 : mid2.pc = (pre ++ L ++ R).length := by
+        rw [List.length_append, List.length_append]
+        rw [List.length_append] at pcR
+        exact pcR
+      have walkL' : Rahmen.Lauf (pre ++ (expr slot (Expr.binary op left right)).code ++ post)
+          frame mid := by
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using walkL
+      have walkR' : Rahmen.Lauf (pre ++ (expr slot (Expr.binary op left right)).code ++ post)
+          mid mid2 := by
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using walkR
+      have step : Rahmen.Schritt (pre ++ (expr slot (Expr.binary op left right)).code ++ post)
+          mid2 (b.auswerten mid2) := by
+        refine ⟨b, retR, ?_, rfl⟩
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
+          (lookupSeq (pre ++ L ++ R) b post :
+            ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
+      refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
+          Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+          List.length_nil, Nat.add_zero, hpcMid2, L, R]
+        omega
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+          alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpL, tmpR, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
+      · intro i hi
+        simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
+        exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
+          ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
   case _ ref visible ordinary =>
       intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
