@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Unentscheidbar.Simulation.KodierBefehlBeweisBeweis
+public import Core.Beobachtung.Unentscheidbar.Simulation.KodierBefehlBeweis
 
 noncomputable section
 
