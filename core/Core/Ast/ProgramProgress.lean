@@ -1,8 +1,9 @@
 module
 
 public import Core.Ast.Semantik.ProgramRegistry
-public import Core.Ast.Semantik.Auswertung
+public import Core.Ast.Program.Execution
 public import Core.Ast.Program.Recursion
+import Core.Ast.Semantik.LocalEffects
 
 /-!
 The program forms' control obligations belong with the instruction semantics.
@@ -17,25 +18,12 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
 
-/-- Count semantic instructions, including a call, return or back-edge. -/
-inductive Rahmen.LaufN (code : List Befehl) : Nat → Rahmen → Rahmen → Prop where
-  | null : LaufN code 0 frame frame
-  | step : before.stopp = none → before.rueckgabe = none →
-      code[before.pc]? = some instruction →
-      LaufN code n (instruction.auswerten before) after →
-      LaufN code (n + 1) before after
-
-def Rahmen.Aktiv (frame : Rahmen) : Prop := frame.stopp = none ∧ frame.rueckgabe = none
-
 /-- Exiting a loop includes returning from its surrounding function or requesting its handler. -/
 def SchleifenAusgang (first limit : Nat) (before after : Rahmen) : Prop :=
   after.stopp.isSome = true ∨ after.rueckgabe.isSome = true ∨
     after.fortsetzungen.length < before.fortsetzungen.length ∨
     (after.fortsetzungen.length = before.fortsetzungen.length ∧
       (after.pc < first ∨ limit ≤ after.pc))
-
-def Binnen (code : List Befehl) (budget : Nat) (start : Rahmen) (goal : Rahmen → Prop) : Prop :=
-  ∃ n out, n ≤ budget ∧ Rahmen.LaufN code n start out ∧ goal out
 
 /-- A test that takes a pass consumes exactly one permit. The zero-budget
     branch requests its named handler only after the final test is true. -/
@@ -431,8 +419,29 @@ theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung 
       Binnen code code.length frame (fun out =>
         out.pc = code.length ∧ out.lokale = some value :: frame.lokale ∧
           out.globale = some value :: frame.globale) := by
-  -- Mirror expr_ergebnis_typ, then apply wertIn_widen before committing the immutable value.
-  sorry
+  let bind : Befehl := .bindeWert 0 a.written.type true
+  let body := (expr 0 a.value).code
+  change ∃ value, wertIn a.written.type ⟨a.type, a.value.wert env⟩ = some value ∧
+    Binnen (body ++ [bind]) (body ++ [bind]).length frame (fun out =>
+      out.pc = (body ++ [bind]).length ∧ out.lokale = some value :: frame.lokale ∧
+        out.globale = some value :: frame.globale)
+  obtain ⟨widened, value, _⟩ := wertIn_widen a.fits (a.value.wert env)
+  obtain ⟨n, middle, limit, counted, atEnd, tmp, preserved⟩ :=
+    expr_laufN 0 a.value env frame typed active initial [bind]
+  have live : middle.Aktiv := by
+    rw [preserved]
+    exact active
+  have lookup : (body ++ [bind])[middle.pc]? = some bind := by
+    change middle.pc = body.length at atEnd
+    rw [atEnd, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+    rfl
+  have locals : middle.lokale = frame.lokale := congrArg Rahmen.lokale preserved
+  have globals : middle.globale = frame.globale := congrArg Rahmen.globale preserved
+  refine ⟨_, value, n + 1, bind.auswerten middle, ?_, counted.trans (.step live.1 live.2 lookup .null), ?_⟩
+  · simpa only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add] using
+      Nat.add_le_add_right limit 1
+  · simp only [bind, Befehl.auswerten, tmp, Option.bind_some, value, atEnd, locals, globals,
+      List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
 
 /-- Counted transitions are public step units even when they transfer control
     backwards or across a caller boundary. A bound of zero refers to private steps. -/
