@@ -215,7 +215,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       exact ⟨rfl, rfl⟩
   case recordValue =>
     intros
-    rename_i ref fields fits argRead argDet _ _ _ otherRead
+    rename_i args _ ref fields fits argRead argDet _ _ _ otherRead
     generalize hname : Token.word ref.name.val = token at otherRead
     cases otherRead with
     | recordValue otherRef otherFields otherFits otherArgs =>
@@ -223,7 +223,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       cases sameRefs
       obtain ⟨sameArgs, rfl⟩ := argDet otherArgs
       cases sameArgs
-      have sameFields := fields.unique otherFields (LabeledItems.lengths _)
+      have sameFields := fields.unique otherFields (LabeledItems.lengths args)
       cases sameFields
       exact ⟨rfl, rfl⟩
     | «variable» localRef visible _ =>
