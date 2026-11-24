@@ -107,8 +107,11 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
       induction args.members with
       | nil => rfl
       | cons m ms ih => simpa [memberTokenList, RecordMember.printPieces] using ih
+    have hmem' : (args.members.map (fun x => (RecordMember.printPieces x).map PrintedToken.value)).flatten =
+        memberTokenList args.members := by
+      simpa [List.flatMap, Function.comp_def] using hmem
     by_cases h : args.exported <;>
-      simp [h, hmem, List.flatMap, Function.comp_def, recordDecl, Category.printPieces, Decl.printPieces,
+      simp [h, hmem', List.flatMap, Function.comp_def, recordDecl, Category.printPieces, Decl.printPieces,
         recordDeclarationHead, recordDeclarationPrefix, keyword, printPub, printTypeDecl]
   · exact recordMembers_print_reads args.members args.valid
 
