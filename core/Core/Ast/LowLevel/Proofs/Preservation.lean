@@ -31,17 +31,22 @@ theorem implTransfer {k : Katalog} {op : Instruction k} {c : Kontext} {s : State
     {w : PUnit} {plans : List Plan} {u : State k} (h : op.impl c s w plans u) :
     ∃ transfer : Transfer k, op.evaluate s c = some transfer ∧ plans = [plan] ∧
       u = transfer.apply c s := by
-  unfold Instruction.impl at h
   cases he : op.evaluate s c with
-  | none => cases h
-  | some transfer => exact ⟨transfer, he, h.1, h.2⟩
+  | none =>
+    unfold Instruction.impl at h
+    rw [he] at h
+    cases h
+  | some transfer =>
+    unfold Instruction.impl at h
+    rw [he] at h
+    exact ⟨transfer, he, h.1, h.2⟩
 
 /-- The internal plan runs through the shared protocol with an empty trace and
     a frame-only successor state. -/
 theorem vollzug {k : Katalog} (op : Instruction k) (transfer : Transfer k)
     (t : Nat) (c : Kontext) (s : State k) :
     FuehrtSchrittAus (setup k) t c s (transfer.apply c s) plan ⟨[], []⟩ (transfer.apply c s) := by
-  refine ⟨?_, ?_, [], ?_, ?_, rfl⟩
+  refine ⟨?_, ?_, [], ?_, ?_, ?_, rfl⟩
   · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
@@ -76,7 +81,7 @@ theorem vollzugGenau {k : Katalog} (op : Instruction k) {t : Nat} {c : Kontext}
     {s u : State k} {w : PUnit} {p : Plan} {trace : SchrittSpur Nat UInt8} {next : State k}
     (rule : op.impl c s w [p] u) (execute : FuehrtSchrittAus (setup k) t c s u p trace next) :
     trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨_, _, hp, _⟩ := implTransfer (op := op) rule
+  obtain ⟨_, _, hp, _⟩ := implTransfer (op := op) (w := w) rule
   cases (List.cons.inj hp).1
   exact Instruction.genauInternal execute
 
@@ -90,7 +95,7 @@ theorem Instruction.abgleich {k : Katalog} (op : Instruction k) : I.RegelAbgleic
   change { s with lokal := i.lokal } = i at protocol
   rw [← frames] at protocol
   subst i
-  obtain ⟨transfer, evaluate, planEq, hu⟩ := Instruction.implTransfer (op := op) impl
+  obtain ⟨transfer, evaluate, planEq, hu⟩ := Instruction.implTransfer (op := op) (w := w) impl
   subst u
   exact Or.inl ⟨s', .kontext normal ready ⟨op, head, ⟨transfer, evaluate, planEq, rfl⟩⟩ execute,
     I.ProtokollBezug.refl _, rfl⟩
@@ -107,7 +112,7 @@ theorem Instruction.komponierbar {k : Katalog} (op : Instruction k) :
 theorem Instruction.regelSicher {k : Katalog} (op : Instruction k) :
     Gabbro.Core.Sicherheit.RegelSicher (safetyUnit op) op := by
   intro H ρ t c w vor zwischen nach stepPlan trace head impl execute
-  obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer (op := op) impl
+  obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer (op := op) (w := w) impl
   subst zwischen
   cases (List.cons.inj planEq).1
   obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal execute
@@ -141,7 +146,7 @@ theorem Instruction.regelAntwortSicher {k : Katalog} (op : Instruction k) :
       (∀ ev : AntwortEreignis, Ereignis.antwort ev ∉ trace.aussen) ∧
       next.verbraucht = s.verbraucht := by
   intro t c s w middle next p trace impl execute
-  obtain ⟨_, _, hp, _⟩ := Instruction.implTransfer (op := op) impl
+  obtain ⟨_, _, hp, _⟩ := Instruction.implTransfer (op := op) (w := w) impl
   cases (List.cons.inj hp).1
   obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal execute
   subst trace
@@ -164,8 +169,8 @@ theorem Instruction.aussenLokal {k : Katalog} (op : Instruction k) :
     obtain ⟨transfer, _, hp, _⟩ := ideal
     cases (List.cons.inj hp).1
     obtain ⟨spurEq, _⟩ := Instruction.genauInternal execute
-    subst spur
-    exact List.not_mem_nil
+    rw [spurEq] at mem
+    cases mem
   | antwort normal h =>
     exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
   | interrupt normal h =>
@@ -181,7 +186,7 @@ theorem Instruction.kosten {k : Katalog} (op : Instruction k) :
       FuehrtSchrittAus (unit op).einrichtung t c s middle p trace next →
       trace = ⟨[], []⟩ ∧ (unit op).stotterLaenge op = 0 := by
   intro t c s w middle next p trace impl execute
-  obtain ⟨_, _, hp, _⟩ := Instruction.implTransfer (op := op) impl
+  obtain ⟨_, _, hp, _⟩ := Instruction.implTransfer (op := op) (w := w) impl
   cases (List.cons.inj hp).1
   exact ⟨(Instruction.genauInternal execute).1, rfl⟩
 
