@@ -77,116 +77,16 @@ theorem program_impl  : (programForm).ImplAussage := by
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
   intro platform args
-  let rec blockInv {res : Option (Ty .value)} {before after : Scope} (t : Block res before after) :
-      (block t).klauseln.invariant = [] :=
-    match t with
-    | .done => rfl
-    | .step first rest => by
-        change (stmt first).klauseln.invariant ++ (block rest).klauseln.invariant = []
-        rw [stmt_keine_invarianten, blockInv rest]
-        rfl
-  have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
-    intro res before t
-    rcases t with ⟨body⟩
-    change (block body).klauseln.invariant ++ [] = []
-    rw [blockInv body]
-    rfl
-  have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
-      (functionCode res measure body).klauseln.invariant = [] := by
-    intro s res measure body
-    cases measure with
-    | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact bracedInv body
-    | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        rw [expr_keine_invarianten]
-        exact bracedInv body
-  have declInv : ∀ {before after : Scope} (d : Decl before after), (decl d).klauseln.invariant = [] := by
-    intro before after d
-    cases d with
-    | constant name ord written valid value static fits =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact expr_keine_invarianten 0 value
-    | function name ord parameters res valid measure body distinct returns =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact codeInv res measure body
-    | record _ => rfl
-    | tagged _ => rfl
-    | table _ => rfl
-    | effectGroup _ => rfl
-  have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
-    intro before after u
-    induction u with
-    | done => rfl
-    | step first rest ih =>
-        simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
-        rw [declInv, ih]
-        rfl
-  have inv : (programForm.fragment args).klauseln.invariant = [] := by
-    change (programm args.unit).klauseln.invariant = []
-    simp only [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-    exact unitInv args.unit.2
   exact ⟨((programForm).befehl args).abgleich (programForm.fragment args) platform,
     ((programForm).befehl args).fortschritt (programForm.fragment args),
     ((programForm).befehl args).komponierbar (programForm.fragment args) platform,
-    ((programForm).befehl args).sicher (programForm.fragment args) platform inv⟩
+    ((programForm).befehl args).sicher (programForm.fragment args) platform (programm_keine_invarianten args.unit)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem program_sicher  platform a :
     Sicherheit.RegelSicher (((programForm).fragment a).sicherheitsEinheit platform)
       ((programForm).befehl a) := by
-  let rec blockInv {res : Option (Ty .value)} {before after : Scope} (t : Block res before after) :
-      (block t).klauseln.invariant = [] :=
-    match t with
-    | .done => rfl
-    | .step first rest => by
-        change (stmt first).klauseln.invariant ++ (block rest).klauseln.invariant = []
-        rw [stmt_keine_invarianten, blockInv rest]
-        rfl
-  have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before), (bracedBlock t).klauseln.invariant = [] := by
-    intro res before t
-    rcases t with ⟨body⟩
-    change (block body).klauseln.invariant ++ [] = []
-    rw [blockInv body]
-    rfl
-  have codeInv : ∀ {s : Scope} (res : Option WrittenType) (measure : Option (Measure s)) (body : BracedBlock (writtenResult res) s),
-      (functionCode res measure body).klauseln.invariant = [] := by
-    intro s res measure body
-    cases measure with
-    | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact bracedInv body
-    | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        rw [expr_keine_invarianten]
-        exact bracedInv body
-  have declInv : ∀ {before after : Scope} (d : Decl before after), (decl d).klauseln.invariant = [] := by
-    intro before after d
-    cases d with
-    | constant name ord written valid value static fits =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact expr_keine_invarianten 0 value
-    | function name ord parameters res valid measure body distinct returns =>
-        simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-        exact codeInv res measure body
-    | record _ => rfl
-    | tagged _ => rfl
-    | table _ => rfl
-    | effectGroup _ => rfl
-  have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
-    intro before after u
-    induction u with
-    | done => rfl
-    | step first rest ih =>
-        simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen]
-        rw [declInv, ih]
-        rfl
-  have inv : (programForm.fragment a).klauseln.invariant = [] := by
-    change (programm a.unit).klauseln.invariant = []
-    simp only [programm, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
-    exact unitInv a.unit.2
-  exact ((programForm).befehl a).sicher (programForm.fragment a) platform inv
+  exact ((programForm).befehl a).sicher (programForm.fragment a) platform (programm_keine_invarianten a.unit)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem program_erfuellbar : programJoint := by
