@@ -63,7 +63,7 @@ private theorem memProgramAkzeptiertN (code : List MemInstruction) :
     Annahme.Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   let E := memProgram Plattform.x86_64.katalog code
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code⟩, ?_, ?_⟩
+    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hstep
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hP, hu⟩
@@ -91,6 +91,7 @@ private theorem memProgramAkzeptiertN (code : List MemInstruction) :
           rw [List.append_nil]
         · intro h q hq hcut hans
           exact h q hq hcut hans
+  · exact schrankenLokal_leer rfl rfl rfl
   · intro ρ lauf
     change (∀ p ∈ ([] : List (MemState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (MemState → Prop)), p (ρ.zeit.zustand t.val)) ∧
