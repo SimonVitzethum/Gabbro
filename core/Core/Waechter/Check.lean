@@ -31,6 +31,12 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ast.Semantik.declSchema, 3607355862358563056),
   (`Gabbro.Core.Ast.Semantik.bracedSchema, 5842155439531567305),
   (`Gabbro.Core.Ast.Semantik.befehlSchema, 7232178630902299636),
+  (`Gabbro.Core.Ast.Semantik.ArrayValueProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.TupleValueProofPacket, 0),
+  (`Gabbro.Core.Ast.Semantik.TupleFieldProofPacket, 0),
+  (`Gabbro.Core.Ast.ArrayTypeProofPacket, 0),
+  (`Gabbro.Core.Ast.TupleTypeProofPacket, 0),
   (`Gabbro.Core.Sicherheit.RegelSicher, 5412488538788547367),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
@@ -135,7 +141,11 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Expr.not, `Gabbro.Core.Ast.Semantik.notValueEntry),
     (`Gabbro.Core.Ast.Expr.div, `Gabbro.Core.Ast.Semantik.divisionEntry),
     (`Gabbro.Core.Ast.Expr.compare, `Gabbro.Core.Ast.Semantik.comparisonEntry),
-    (`Gabbro.Core.Ast.Expr.logic, `Gabbro.Core.Ast.Semantik.logicEntry) ]⟩,
+    (`Gabbro.Core.Ast.Expr.logic, `Gabbro.Core.Ast.Semantik.logicEntry) ], #[
+    (`Gabbro.Core.Ast.Expr.arrayValue, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket),
+    (`Gabbro.Core.Ast.Expr.arrayIndex, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket),
+    (`Gabbro.Core.Ast.Expr.tupleValue, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket),
+    (`Gabbro.Core.Ast.Expr.tupleField, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket) ]⟩,
   ⟨`Gabbro.Core.Ast.Stmt, `Gabbro.Core.Ast.Semantik.stmtSchema, #[
     (`Gabbro.Core.Ast.Stmt.letValue, `Gabbro.Core.Ast.Semantik.letEntry),
     (`Gabbro.Core.Ast.Stmt.assignVar, `Gabbro.Core.Ast.Semantik.assignVarEntry),
@@ -146,12 +156,12 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.directCall, `Gabbro.Core.Ast.Semantik.directCallEntry),
     (`Gabbro.Core.Ast.Stmt.bindDirect, `Gabbro.Core.Ast.Semantik.bindDirectEntry),
     (`Gabbro.Core.Ast.Stmt.whileBounded, `Gabbro.Core.Ast.Semantik.boundedWhileEntry),
-    (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry) ]⟩,
+    (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry) ], #[]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
-    (`Gabbro.Core.Ast.Decl.function, `Gabbro.Core.Ast.Semantik.functionEntry) ]⟩,
+    (`Gabbro.Core.Ast.Decl.function, `Gabbro.Core.Ast.Semantik.functionEntry) ], #[]⟩,
   ⟨`Gabbro.Core.Ast.BracedBlock, `Gabbro.Core.Ast.Semantik.bracedSchema, #[
-    (`Gabbro.Core.Ast.BracedBlock.braces, `Gabbro.Core.Ast.Semantik.bracedEntry) ]⟩,
+    (`Gabbro.Core.Ast.BracedBlock.braces, `Gabbro.Core.Ast.Semantik.bracedEntry) ], #[]⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl, `Gabbro.Core.Ast.Semantik.befehlSchema, #[
     (`Gabbro.Core.Ast.Semantik.Befehl.literal, `Gabbro.Core.Ast.Semantik.kernLiteralEntry),
     (`Gabbro.Core.Ast.Semantik.Befehl.binaer, `Gabbro.Core.Ast.Semantik.kernBinaryEntry),
@@ -180,7 +190,16 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.forNaechster, `Gabbro.Core.Ast.Semantik.kern_forNaechster),
     (`Gabbro.Core.Ast.Semantik.Befehl.zurueckSprung, `Gabbro.Core.Ast.Semantik.kern_zurueckSprung),
     (`Gabbro.Core.Ast.Semantik.Befehl.starte, `Gabbro.Core.Ast.Semantik.kern_starte),
-    (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende) ], #[
+    (`Gabbro.Core.Ast.Semantik.Befehl.baueArray, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket),
+    (`Gabbro.Core.Ast.Semantik.Befehl.liesArray, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket),
+    (`Gabbro.Core.Ast.Semantik.Befehl.baueTupel, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket),
+    (`Gabbro.Core.Ast.Semantik.Befehl.liesTupelfeld, `Gabbro.Core.Ast.Semantik.TupleFieldProofPacket) ]⟩]
+
+private meta def openTypeEntries : Array (Name × Name) := #[
+  (`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.ArrayTypeProofPacket),
+  (`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.TupleTypeProofPacket)]
+
 private meta def wildcardRoots : Array Name := #[
   `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,
   `Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.ImplSchritt,
@@ -225,7 +244,9 @@ elab "#check_core" : command => do
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
     let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
       ++ safetyErrors env index safety
-    let mut errors ← registryErrors registry
+    let pinNames := pins.map (·.1)
+    let mut errors ← registryErrors registry pinNames closing.isSome
+    errors := errors ++ (← openRegistryErrors openTypeEntries pinNames closing.isSome)
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)

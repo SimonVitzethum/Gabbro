@@ -1,6 +1,8 @@
 module
 
 public import Core.Ast.Semantik.ProgramForms
+public import Core.Ast.Aggregate.Arrays
+public import Core.Ast.Aggregate.Tuples
 
 @[expose] public section
 
@@ -66,6 +68,14 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements comparisonForm comparisonJoint constructor⟩
   else if constructor = ``Expr.logic then
     ⟨.surface, Quellform.statements logicForm logicJoint constructor⟩
+  else if constructor = ``Expr.arrayValue then
+    ⟨.surface, Quellform.statements arrayValueForm ArrayValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.arrayIndex then
+    ⟨.surface, Quellform.statements arrayIndexForm ArrayIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.tupleValue then
+    ⟨.surface, Quellform.statements tupleValueForm TupleValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.tupleField then
+    ⟨.surface, Quellform.statements tupleFieldForm TupleFieldErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=

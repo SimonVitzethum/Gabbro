@@ -203,7 +203,7 @@ inductive ItemsRead (scope : Scope) : Token →
 inductive ItemsTail (scope : Scope) : Token →
     List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
   | close : ItemsTail scope close (close :: rest) .empty rest
-  | comma : (types ≠ [] ∨ close = closeBracket) → ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest
+  | comma {types : List (Ty .value)} {tail : ExprItems scope types} : (types ≠ [] ∨ close = closeBracket) → ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest
 
 end
 

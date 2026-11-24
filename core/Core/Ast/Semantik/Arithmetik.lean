@@ -32,11 +32,11 @@ def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : 
     cases count <;> cases other <;>
       first
       | exact #v[]
-      | simp only [Fits] at fits; cases fits; exact value
+      | simp only [Fits] at fits <;> (cases fits <;> exact value)
   all_goals
     first
     | exact value
-    | simp only [Fits] at fits; cases fits; exact value
+    | simp only [Fits] at fits <;> (cases fits <;> exact value)
 
 def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
     Wert (tupleType types) → Wert (types.get i)

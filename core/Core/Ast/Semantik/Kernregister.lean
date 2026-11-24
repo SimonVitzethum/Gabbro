@@ -154,6 +154,14 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements thenJumpForm thenJumpJoint constructor⟩
   else if constructor = ``Befehl.blockEnde then
     ⟨.core, Quellform.kernStatements bracedForm bracedJoint constructor⟩
+  else if constructor = ``Befehl.baueArray then
+    ⟨.core, Quellform.kernStatements arrayValueForm ArrayValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.liesArray then
+    ⟨.core, Quellform.kernStatements arrayIndexForm ArrayIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.baueTupel then
+    ⟨.core, Quellform.kernStatements tupleValueForm TupleValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.liesTupelfeld then
+    ⟨.core, Quellform.kernStatements tupleFieldForm TupleFieldErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor

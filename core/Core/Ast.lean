@@ -6,6 +6,11 @@ public import Core.Ast.Registry
 public import Core.Ast.BatchSurface
 public import Core.Ast.SemantikRezept
 public import Core.Ast.ProgramProgress
+public import Core.Ast.Aggregate.ArrayValueProofs
+public import Core.Ast.Aggregate.ArrayIndexProofs
+public import Core.Ast.Aggregate.TupleValueProofs
+public import Core.Ast.Aggregate.TupleFieldProofs
+public import Core.Ast.Aggregate.TypeProofs
 
 /-!
 # Adding one inventory form
