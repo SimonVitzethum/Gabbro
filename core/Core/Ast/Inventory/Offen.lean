@@ -107,11 +107,11 @@ def offenSofort : List OffeneForm :=
     ⟨"surface.SWeg.mk", "Mk", "Decl (device/register)", .sofort, "A `walk` declaration: SYNTAX.md section 9 `walkdecl`."⟩,
     ⟨"low.L2.2", "2", "Device / DeviceSyntax", .sofort, "device at a discovery window as a layout"⟩,
     ⟨"low.L2.6", "6", "Device / DeviceSyntax", .sofort, "copy from or to a shared device slot"⟩,
-    ⟨"low.L4.7", "7", "ExecTree / ExecForm", .sofort, "cpu.caps and cpu.has"⟩ -- skeleton (rejected),
-    ⟨"low.L4.8", "8", "ExecTree / ExecForm", .sofort, "cpu.cycles"⟩ -- skeleton (rejected),
-    ⟨"low.L4.9", "9", "ExecTree / ExecForm", .sofort, "suspend system"⟩ -- skeleton (rejected),
-    ⟨"low.L4.10", "10", "ExecTree / ExecForm", .sofort, "suspend core"⟩ -- skeleton (rejected),
-    ⟨"low.L4.11", "11", "ExecTree / ExecForm", .sofort, "Resume arrival"⟩ -- skeleton (rejected),
+    ⟨"low.L4.7", "7", "ExecTree / ExecForm", .sofort, "cpu.caps and cpu.has"⟩, -- skeleton (rejected)
+    ⟨"low.L4.8", "8", "ExecTree / ExecForm", .sofort, "cpu.cycles"⟩, -- skeleton (rejected)
+    ⟨"low.L4.9", "9", "ExecTree / ExecForm", .sofort, "suspend system"⟩, -- skeleton (rejected)
+    ⟨"low.L4.10", "10", "ExecTree / ExecForm", .sofort, "suspend core"⟩, -- skeleton (rejected)
+    ⟨"low.L4.11", "11", "ExecTree / ExecForm", .sofort, "Resume arrival"⟩, -- skeleton (rejected)
     ⟨"low.L5.7", "7", "ExecTree / Device", .sofort, "switch to a thread"⟩,
     ⟨"low.L5.8", "8", "ExecTree / Device", .sofort, "backtrace"⟩,
     ⟨"low.L7.4", "4", "ExecTree / ExecForm", .sofort, "interrupts off"⟩,
