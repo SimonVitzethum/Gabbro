@@ -46,7 +46,7 @@ theorem realisiert_form (form : Form) : RealisiertAussage form := by
     have hcond : entryContext = entryContext ∧ (s.lokal entryContext).pc = 0 ∧
         (op.evaluate s entryContext).isSome := ⟨rfl, hp, heval'⟩
     rw [if_pos hcond]
-  simpa only [unit, system] using hhead
+  simpa only [unit, system, s] using hhead
 
 theorem annahme_form (form : Form) : AnnahmeAussage form := by
   intro k scope tree op _
@@ -61,9 +61,9 @@ theorem annahme_form (form : Form) : AnnahmeAussage form := by
     rw [Annahme.Befugt, hfuss, hlesen]
     constructor
     · intro x hx
-      exact (List.not_mem_nil x hx).elim
+      cases hx
     · intro l hl
-      exact (List.not_mem_nil l hl).elim
+      cases hl
   · intro s c w plans next hideal
     rcases hideal with ⟨transfer, heval, hplans, hnext⟩
     exact hplans
