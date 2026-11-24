@@ -160,7 +160,7 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
           rw [hcs]
           apply TuplePatternReads.tuple
           · exact patternName_printReads first
-              (comma :: (patternNamePieces second).map PrintedToken.value ++ comma :: patternTailTokens (c :: cs) rest)
+              (comma :: (patternNamePieces second).map PrintedToken.value ++ patternTailTokens (c :: cs) rest)
               (fun nm h => use nm (by simp_all [TuplePattern.names]))
           · exact patternName_printReads second (patternTailTokens (c :: cs) rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
           · exact patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp_all [TuplePattern.names]))
@@ -188,7 +188,7 @@ private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : Tup
   have assignTok : printAssignment.value = assignment := by rfl
   have semiTok : printSemicolon.value = semicolon := by rfl
   simp only [letTok, assignTok, semiTok]
-  refine ⟨_, rfl, ?_, ?_, ?_⟩
+  refine ⟨_, _, _, rfl, ?_, ?_, ?_⟩
   · exact tuplePattern_printReads args.pattern _ (fun id h => args.checked.2.2.1 id h)
   · exact tupleAnnotation_printReads args.annotation _ (fun w h => (args.checked.2.2.2 w h).1)
   · exact Expr.printReads (tree := args.value) (minimum := 0) (rest := [semicolon]) noOperatorAtSemicolon
