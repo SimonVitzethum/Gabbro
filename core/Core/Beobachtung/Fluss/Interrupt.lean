@@ -7,6 +7,7 @@ public import Core.Beobachtung.Fluss.Fragment
 namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
+open Ast.Semantik (Fragment)
 
 /-- The public offer projection records the IRQ attempt, including its identity. -/
 theorem gleiche_interruptwahl {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
@@ -106,4 +107,33 @@ def InterruptNIAussage : Prop :=
     | .interrupt _ => True
     | _ => False
 
-end Gabbro.Core.Beobachtung
+/-- An actual interrupt tick supplies a readiness witness for its pre-state and successor. -/
+theorem interrupt_bereit_aus_tick {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form} {ρ : Lauf E} {t id spur} :
+    ρ.zeit.spur t = some (SchrittWahl.interrupt id, spur) →
+      ∃ z next, ρ.zeit.zustand t = some z ∧ ρ.zeit.zustand (t + 1) = some next ∧
+        UnterbrechungsSchritt E.einrichtung ρ.hw t id z spur next := by
+  intro tick
+  have takt := ρ.zeit.takt t
+  rw [tick] at takt
+  cases takt with
+  | wartet label _ _ => cases label
+  | schritt label step =>
+    rename_i event
+    have eventEq : (SchrittWahl.interrupt id, spur) = event := Option.some.inj label
+    rw [← eventEq] at step
+    cases before : ρ.zeit.zustand t with
+    | none =>
+      cases after : ρ.zeit.zustand (t + 1) with
+      | none => rw [before, after] at step; cases step
+      | some _ => rw [before, after] at step; cases step
+    | some z =>
+      cases after : ρ.zeit.zustand (t + 1) with
+      | none => rw [before, after] at step; cases step
+      | some next =>
+        rw [before, after] at step
+        cases step with
+        | schritt impl =>
+          cases impl with
+          | interrupt _ bereit => exact ⟨z, next, rfl, rfl, bereit⟩
+
