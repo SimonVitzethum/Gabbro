@@ -98,7 +98,7 @@ def KostenAussage (form : Form) : Prop :=
     rules must hold jointly at the initial live occurrence. -/
 def ErfuellbarAussage (form : Form) : Prop :=
   ∃ (k : Katalog) (scope : RegionScope) (tree : Tree form) (op : Instruction k)
-    (env : Umgebung) (start : AussenStart) (text : RawText) (transfer : Transfer k),
+    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) (transfer : Transfer k),
     KatalogWohlgeformt k ∧ (scope.map Subtype.val).Nodup ∧ scope.length = start.regions.length ∧
     (unit op).ZulStart env start ∧ Parse text tree ∧ elaborate k scope tree = some op ∧
     Elaboriert k scope tree (unit op) ∧

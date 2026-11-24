@@ -15,21 +15,14 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     Akzeptiert (p.einheit platform) := by
   let E := p.einheit platform
   refine ⟨⟨platform.katalog_wohlgeformt, fun b => b.lokal E rfl, Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩
-  · apply aussen_gueltig_ohne_fragen
-    intro run t s w spur next step ev mem
+  · apply aussen_gueltig_aus_kontext
+    intro run t s c w spur next step
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, _⟩ := b.vollzug_genau (w := ()) transfer execute
-      exact List.not_mem_nil mem
-    | antwort _ h =>
-      exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro same; cases same)
-    | interrupt _ h =>
-      obtain ⟨_, _, _, _, _, _, _, _, events, _, _⟩ := h
-      exact frage_absurd_mem (by rw [events] at mem; exact mem) (by intro same; cases same)
-    | absturz h =>
-      obtain ⟨_, events, _⟩ := h
-      exact frage_absurd_mem (by rw [events] at mem; exact mem) (by intro same; cases same)
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun pending => pending⟩
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ p.klauseln.invariant, _) ∧
