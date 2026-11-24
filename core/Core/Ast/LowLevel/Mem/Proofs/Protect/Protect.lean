@@ -4,6 +4,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
 public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectSyntax
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectMeaning
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.ProtectObligations
 
@@ -398,7 +399,7 @@ private theorem satReach : satE.system.IErreichbar satS0 satS2 := by
 
 theorem protect_joint : ProtectJointAussage := by
   let tree : MemTree .protectSpace := .protectSpace nameSpace 0 1 protRights
-  obtain ⟨_, textParse⟩ := memDruck_protect tree
+  obtain ⟨_, textParse⟩ := memDruckKern .protectSpace tree
   refine ⟨satK, satScope, tree, satOp, satEnv, satStart, tree.print, satPrefix, satS2, s3frame, ?_⟩
   refine ⟨?_, satHardware, satZul, memProgramAkzeptiert _ _ satKwf, ?_, ?_, ?_, ?_, ?_, ?_,
     satReach, ?_, satEval3, ?_, ?_⟩
@@ -413,13 +414,7 @@ theorem protect_joint : ProtectJointAussage := by
   · exact ⟨satOp, satHead3, ⟨s3frame, satEval3, rfl, rfl⟩⟩
   · exact ⟨satOp, satHead3, ⟨s3frame, satEval3, rfl, rfl⟩⟩
 
-theorem protect_aussage : ProtectAussage := by
-  refine ⟨?_, protect_meaning, protect_joint⟩
-  exact ⟨memParse_protect, memInversion_protect, memEindeutig_protect, memDruck_protect,
-    memElaboriert .protectSpace, protectRealisiert .protectSpace, memAnnahme .protectSpace,
-    protectIdeal .protectSpace, memEinheit .protectSpace, memImpl .protectSpace,
-    protectFortschritt .protectSpace, protectErhaltung .protectSpace, protectRegelSicher .protectSpace,
-    memRegelAntwortSicher .protectSpace, memAussenLokal .protectSpace, protectKosten .protectSpace,
-    memSchranken, memEtiketten, memFluss⟩
+theorem protect_aussage : ProtectAussage :=
+  ⟨memObligationsKern_alle .protectSpace, protect_meaning, protect_joint⟩
 
 end Gabbro.Core.Ast.LowLevel
