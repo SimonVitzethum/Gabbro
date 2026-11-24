@@ -231,14 +231,15 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
   exact vm_case_payload_some a.payloads value i rfl hsome
 
 private theorem vm_read_suffix {result scope allowed labels payloads input arms rest}
-    (read : Gabbro.Core.Ast.VariantArmsRead result scope allowed input arms rest) : rest <:+ input := by
+    (read : @Gabbro.Core.Ast.VariantArmsRead result scope allowed input labels payloads arms rest) :
+    rest <:+ input := by
   refine @Gabbro.Core.Ast.VariantArmsRead.rec (result := result)
     (fun _ _ _ _ _ => True)
     (fun _ _ _ _ _ => True)
     (fun _ _ _ _ _ => True)
     (fun _ _ a _ _ _ a2 _ => a2 <:+ a)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    scope allowed input arms rest
+    scope allowed input labels payloads arms rest
   all_goals simp_all [BlockReads.consumes]
 
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by

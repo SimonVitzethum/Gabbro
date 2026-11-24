@@ -88,7 +88,8 @@ private theorem td_member_suffix {input member rest}
   | nullary name closed => exact List.suffix_cons _ _
   | payload name typeRead =>
       exact (List.suffix_cons Gabbro.Core.Ast.closeParen rest).trans
-        ((TypeReads.consumes typeRead).trans (List.suffix_cons Gabbro.Core.Ast.openParen _))
+        ((TypeReads.consumes typeRead).trans
+          ((List.suffix_cons Gabbro.Core.Ast.openParen _).trans (List.suffix_cons _ _)))
 
 private theorem td_tail_suffix {input variants rest}
     (read : Gabbro.Core.Ast.VariantMembersTailRead input variants rest) : rest <:+ input := by
