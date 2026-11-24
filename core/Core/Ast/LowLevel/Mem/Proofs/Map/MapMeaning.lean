@@ -132,9 +132,8 @@ theorem mapMeaning : MapMeaningAussage := by
     let next : MemFrame :=
       { frame with
         result := some MemResult.mapped
-        spaces := frame.spaces.set sp mapped
-        tlb := TranslationCache.invalidate frame.tlb sp base pages }
-    refine ⟨next, mapped, ?_, ?_, ?_, ?_, ?_⟩
+        spaces := frame.spaces.set sp mapped }
+    refine ⟨next, mapped, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · unfold MemInstruction.evaluate
       simp only [hspace, hregion]
       rw [doSomeSomeMem]
@@ -158,6 +157,7 @@ theorem mapMeaning : MapMeaningAussage := by
       rfl
     · change (frame.spaces.set sp mapped)[sp]? = some mapped
       exact set_self_mem frame.spaces sp space mapped hspace
+    · rfl
     · rfl
     · intro i hi
       unfold mapped entries

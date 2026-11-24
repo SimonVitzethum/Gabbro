@@ -217,8 +217,10 @@ bindings are ordinary Gabbro functions.
   is staged the same way: its first step narrows the table and records a pending narrowing token without
   touching any cache, the completion step (`flush` of the token) is enabled only when no cell of the range is
   wider than the table, and the invariant `TlbRechteGedeckt` says a cached cell grants more than the table
-  only inside a pending narrowing (THEOREM-MAP §219). `map` still clears its range in one step, a no-op by
-  `tlbGedeckt_erreichbar` (open item P1b: drop it).
+  only inside a pending narrowing (THEOREM-MAP §219). `map` no longer clears its page range: it only maps
+  pages with no table entry and no pending release token, and `tlbGedeckt_erreichbar` proves no cell of
+  such a range exists, so the old clearing was the identity on every reachable state — a refinement, not a
+  lost guarantee.
 - `I` states carry lock owners, the ticket queue and hand-off, so a lock section with several units keeps
   ownership, hand-off and its protected invariant. A wait is enabled exactly when its condition holds. Lock
   acquisition is strong-fair (carried by the language's queue/ticket lock).

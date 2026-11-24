@@ -216,7 +216,7 @@ private theorem satPending0 :
     space0.ausstehend.all (fun token => (List.range 1).all (fun i => decide (¬ token.contains (0 + i)))) = true := by
   rfl
 
-private def s2frame : MemFrame := { (satS1.lokal entryContext) with result := some .mapped, spaces := [space2], tlb := (satS1.lokal entryContext).tlb.invalidate 0 0 1 }
+private def s2frame : MemFrame := { (satS1.lokal entryContext) with result := some .mapped, spaces := [space2] }
 
 private theorem frameRegion_seiten : frameRegion.extent.seiten satK.plattform.ziel := by
   change frameExtent.seiten satK.plattform.ziel
