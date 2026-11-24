@@ -44,6 +44,7 @@ public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
+public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
 public import Core.Beobachtung.Fluss.Beschriftung.Regel
