@@ -488,8 +488,8 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     let sig : Funktion := ⟨a.name, (s.lokal eintritt).pc + 1, [], none, scope.length,
       false, [], some [eff]⟩
     refine ⟨sig, ?_, ?_⟩
-    · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
+    · simpa [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
         a, scope, clause, body, functionCode, bracedBlock, Fragment.anhaengen, Fragment.einzel,
         Fragment.leer, block, writtenResult, declaredEffects]
-    · simp [sig, group, eff]
+    · simpa [sig, group, eff]
 end Gabbro.Core.Ast.Semantik
