@@ -53,15 +53,15 @@ theorem labelList_inj_aux : ∀ {a b : List Identifier}, a.map Subtype.val = b.m
       intro b h
       cases b with
       | nil => rfl
-      | cons y ys =>
-          simp only [List.map_cons, List.map_nil] at h
-          cases h
+        | cons y ys =>
+            cases h
+
   | cons x xs ih =>
       intro b h
       cases b with
-      | nil =>
-          simp only [List.map_cons, List.map_nil] at h
-          cases h
+        | nil =>
+            cases h
+
       | cons y ys =>
           simp only [List.map_cons, List.cons.injEq] at h
           subst y
@@ -86,27 +86,27 @@ theorem recordFieldInvGen {scope name labels types minimum input type}
     | binary op hle _ _ =>
         have head : dot = op.token := (List.cons.inj htok).1
         have eq : (.projection : Infix) = .arith op :=
-          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+          Infix.token_injective (by simpa only [Infix.token] using head)
         cases eq
     | div hle _ _ _ =>
         have head : dot = Infix.div.token := (List.cons.inj htok).1
         have eq : (.projection : Infix) = .div :=
-          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+          Infix.token_injective (by simpa only [Infix.token] using head)
         cases eq
     | compare op hle _ _ _ =>
         have head : dot = (Infix.compare op).token := (List.cons.inj htok).1
         have eq : (.projection : Infix) = .compare op :=
-          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+          Infix.token_injective (by simpa only [Infix.token] using head)
         cases eq
     | logic op hle _ _ =>
         have head : dot = (Infix.logic op).token := (List.cons.inj htok).1
         have eq : (.projection : Infix) = .logic op :=
-          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+          Infix.token_injective (by simpa only [Infix.token] using head)
         cases eq
     | arrayIndex _ _ _ hle _ _ =>
         have head : dot = openBracket := (List.cons.inj htok).1
         have eq : (.projection : Infix) = .index :=
-          Infix.token_injective (by simpa only [Infix.token] using head.symm)
+          Infix.token_injective (by simpa only [Infix.token] using head)
         cases eq
     | tupleField _ index' hle _ =>
         have restEq : .word word :: input = .natural index'.val :: _ := (List.cons.inj htok).2
@@ -117,7 +117,9 @@ theorem recordFieldInvGen {scope name labels types minimum input type}
         have htys : tys' = types := tupleType_inj_aux hlayout
         have hlbs : labs' = labels := labelList_inj_aux hlabs
         have restEq : .word word :: input = .word field'.val :: input' := (List.cons.inj htok).2
-        have wf : field'.val = word := (List.cons.inj restEq).1.symm
+        have wf : field'.val = word := by
+          injection (List.cons.inj restEq).1 with h
+          exact h.symm
         have inputEq : input = input' := (List.cons.inj restEq).2
         subst nm'
         subst tys'
