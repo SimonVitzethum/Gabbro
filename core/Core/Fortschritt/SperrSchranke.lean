@@ -144,11 +144,11 @@ theorem sperr_warte_basis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H a : Na
           simp only [hsq, List.getElem?_cons_zero]
         have h2 : (s₁.sperren l).schlange[(0 : Nat)]? = some c := hi0 ▸ hi_r
         have h₀eq : h₀ = c := Option.some.inj (hq0.symm.trans h2)
-        subst h₀eq
-        have hred : s₂.sperren l = ⟨some c, rest⟩ := hs2q
+        have hred : s₂.sperren l = ⟨some h₀, rest⟩ := hs2q
         refine ⟨r' + 1, [Kontextkosten ρ h a (r' + 1 - a)],
           hbr.trans (Nat.le_succ _), ⟨s₂, hr2, Or.inl ?_⟩, ?_, ?_, ?_⟩
         · simp only [hred]
+          exact h₀eq
         · calc [Kontextkosten ρ h a (r' + 1 - a)].length = 1 := rfl
             _ ≤ 0 + 1 := by omega
         · intro x hx
