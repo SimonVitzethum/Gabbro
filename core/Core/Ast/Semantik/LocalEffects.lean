@@ -133,13 +133,13 @@ theorem branch_effect (frame : Rahmen) (bit : Bool)
   · have hs : some bit = some whenValue := congrArg some h
     simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_pos hs, if_pos h,
       if_true]
-    repeat' constructor <;> rfl
+    repeat' constructor <;> trivial
   · have hs : some bit ≠ some whenValue := by
       intro same
       exact h (Option.some.inj same)
     simp only [Befehl.auswerten, value, alsBoolean, Option.bind_some, if_neg hs, if_neg h,
       if_false]
-    repeat' constructor <;> rfl
+    repeat' constructor <;> trivial
 
 -- Mirror Block.printItems_reads by following the scope extension through each statement.
 theorem block_scope_extends (body : Block result before after) : before <:+ after := by
