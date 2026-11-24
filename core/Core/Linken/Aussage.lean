@@ -70,8 +70,8 @@ theorem beispielOk : bauplanOk beispielPlan = true := by
   decide
 
 /-- Linking the example plan yields the concatenated fragments. -/
-theorem beispielLinke : linke beispielPlan = some beispielFragment := by
-  simp only [linke, beispielFragment, beispielOk]
+theorem beispielLinke : linke beispielPlan = some beispielFragment :=
+  rfl
 
 /-- The example plan has two modules. -/
 theorem beispielZwei : beispielPlan.module.length = 2 := by
