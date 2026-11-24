@@ -86,6 +86,8 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
