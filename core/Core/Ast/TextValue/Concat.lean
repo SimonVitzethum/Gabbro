@@ -14,7 +14,7 @@ def TextConcatInversionAussage : Prop :=
   ∀ {scope a minimum input type} {left : Expr scope (.text a)} {tree : Expr scope type} {rest},
     minimum ≤ Arith.add.precedence →
     ExprTail scope minimum left (Arith.add.token :: input) tree rest →
-    ∃ (b : Nat) (right : Expr scope (.text b)) suffix,
+    ∃ (b : Nat) (right : Expr scope (.text b)) (suffix : List Token),
       ExprReads scope (Arith.add.precedence + 1) input right suffix ∧
       ExprTail scope minimum (.textConcat left right) suffix tree rest
 
