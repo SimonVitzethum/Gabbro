@@ -58,6 +58,28 @@ theorem register_aussenLokal : RegisterAussenLokalAussage := by
     exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
       (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun outstanding => outstanding⟩
 
+/-- A unit using the register protocol preserves ownership from issue to
+    reply and checks successful answers at the commit cut. -/
+def RegisterUnitAussenLokalAussage : Prop :=
+  ∀ k (binding : Binding k) access required target
+    (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit),
+    E.katalog = k → (∀ form, E.system.regel form = Rule.machine binding access required target) →
+    Annahme.AussenLokal E
+
+theorem register_unit_aussenLokal : RegisterUnitAussenLokalAussage := by
+  intro k binding access required target E catalogue rules
+  refine ⟨Aussen.zulassung_m2 _, ?_⟩
+  apply aussen_gueltig_aus_kontext
+  intro run t s c w trace next step
+  cases step with
+  | kontext _ _ source executes =>
+    obtain ⟨form, _, transfer⟩ := source
+    rw [rules form] at transfer
+    obtain ⟨chosen, plans, rule⟩ := transfer
+    cases (List.cons.inj plans).1
+    exact register_aussenLokal k binding access required target E run t c s _ _
+      trace next catalogue rule executes
+
 /-- A composed implementation step records its one device question and carries
     authority at that exact step. Answer consumption adds no second access. -/
 def RegisterSafetyAussage : Prop :=
@@ -127,15 +149,15 @@ def RegisterRegelSicherAussage (kind : RegisterAccess → Prop) : Prop :=
     Sicherheit.RegelSicher E ()
 
 def RegisterReadAussage : Prop :=
-  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterCommitAussage ∧
+  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterRegelSicherAussage (fun access => ∃ offset, access = .read offset)
 
 def RegisterWriteAussage : Prop :=
-  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterCommitAussage ∧
+  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterRegelSicherAussage (fun access => ∃ offset value, access = .write offset value)
 
 def RegisterReadElseAussage : Prop :=
-  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterCommitAussage ∧
+  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterFallibleAussage ∧
   RegisterRegelSicherAussage (fun access => ∃ offset range, access = .fallibleRead offset range) ∧
   ∀ (k : Katalog) (scope : Scope) (d : Denotation k scope) destination binding offset promise handler,

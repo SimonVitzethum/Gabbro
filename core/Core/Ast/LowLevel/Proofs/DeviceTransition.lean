@@ -9,7 +9,8 @@ namespace Gabbro.Core.Ast.LowLevel.Device
 open Katalog Maschine
 
 def RegisterTransitionAussage : Prop :=
-  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterCommitAussage ∧ RegisterSafetyAussage ∧
+  RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧
+  RegisterCommitAussage ∧ RegisterSafetyAussage ∧
   ∀ k (decl : TransitionDeclaration k) c before plan next,
     let transition := decl.changes
     let binding := decl.binding
@@ -23,7 +24,7 @@ def RegisterTransitionAussage : Prop :=
           answer.question = binding.question access ∧ access.result answer.reply = .written))
 
 theorem device_transition : RegisterTransitionAussage := by
-  refine ⟨register_befugt, register_aussenLokal, register_commit, register_safety, ?_⟩
+  refine ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit, register_safety, ?_⟩
   intro k decl c before plan next
   dsimp only
   intro step

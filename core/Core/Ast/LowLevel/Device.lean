@@ -110,17 +110,17 @@ inductive Rule (binding : Binding k) (access : RegisterAccess) (required : Gerae
             | .written, some phase => Function.update (s.lokal c).phases binding.handle.origin.object (some phase)
             | _, _ => (s.lokal c).phases })
 
-def registerRule (binding : Binding k) (access : RegisterAccess) :
-    Regel State Plan PUnit :=
+def Rule.machine (binding : Binding k) (access : RegisterAccess) (required : GeraetePhase)
+    (target : Option GeraetePhase) : Regel State Plan PUnit :=
   let step := fun c s (_ : PUnit) plans next =>
-    ∃ plan, plans = [plan] ∧ Rule binding access .ready none c s plan next
+    ∃ plan, plans = [plan] ∧ Rule binding access required target c s plan next
   ⟨step, step⟩
+
+def registerRule (binding : Binding k) (access : RegisterAccess) : Regel State Plan PUnit :=
+  Rule.machine binding access .ready none
 
 def transitionRule (binding : Binding k) (offset value : Nat)
     (transition : RegisterTransition k binding) : Regel State Plan PUnit :=
-  let step := fun c s (_ : PUnit) plans next =>
-    ∃ plan, plans = [plan] ∧ Rule binding (.write offset value) transition.prior
-      (some transition.after) c s plan next
-  ⟨step, step⟩
+  Rule.machine binding (.write offset value) transition.prior (some transition.after)
 
 end Gabbro.Core.Ast.LowLevel.Device
