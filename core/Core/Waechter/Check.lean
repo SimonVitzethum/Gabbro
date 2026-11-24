@@ -13,16 +13,22 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
-  (`Gabbro.Core.Ast.Ty, 12782873945396265670),
-  (`Gabbro.Core.Ast.Local, 3790732133586003643),
-  (`Gabbro.Core.Ast.Expr, 9528347216282307943),
-  (`Gabbro.Core.Ast.Stmt, 5262650281051958971),
-  (`Gabbro.Core.Ast.Block, 554026736110315180),
-  (`Gabbro.Core.Ast.Decl, 7135683955101088422),
-  (`Gabbro.Core.Ast.UnitBody, 12910938552000479105),
-  (`Gabbro.Core.Ast.Unit, 8561659821477951161),
-  (`Gabbro.Core.Ast.Parse, 7662161646515821401),
-  (`Gabbro.Core.Ast.Bezeichnet, 17783779404160999950),
+  (`Gabbro.Core.Ast.Ty, 15487100176899724456),
+  (`Gabbro.Core.Ast.Local, 17525257410544725057),
+  (`Gabbro.Core.Ast.Expr, 8606431487102838548),
+  (`Gabbro.Core.Ast.Stmt, 4546621363431285859),
+  (`Gabbro.Core.Ast.Block, 8345591539700921648),
+  (`Gabbro.Core.Ast.Decl, 6465150350800960424),
+  (`Gabbro.Core.Ast.UnitBody, 516762930773383719),
+  (`Gabbro.Core.Ast.Unit, 364396323052472367),
+  (`Gabbro.Core.Ast.Parse, 1549730433282280622),
+  (`Gabbro.Core.Ast.Bezeichnet, 14573227002043866697),
+  (`Gabbro.Core.Ast.Semantik.Elaboriert, 5370342235049711988),
+  (`Gabbro.Core.Ast.Semantik.Bezeichnet, 6680018588030498291),
+  (`Gabbro.Core.Ast.Semantik.exprSchema, 11746493994506377644),
+  (`Gabbro.Core.Ast.Semantik.stmtSchema, 18203483774707079843),
+  (`Gabbro.Core.Ast.Semantik.befehlSchema, 13011127920741464203),
+  (`Gabbro.Core.Sicherheit.RegelSicher, 5412488538788547367),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
   (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),
@@ -31,10 +37,10 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Ziel.Sicherheit, 3609222519026224003),
   (`Gabbro.Core.Ziel.SicherheitNichtLeer, 3680087890639914969),
   (`Gabbro.Core.Ziel.GabbroSicherheitForm, 14131772821008578448),
-  (`Gabbro.Core.Sicherheit.ToctouFrei, 11381814552534556595),
-  (`Gabbro.Core.Sicherheit.Rennfrei, 12472433670687765624),
-  (`Gabbro.Core.Sicherheit.InvariantenErhalten, 7597918355407308461),
-  (`Gabbro.Core.Sicherheit.Speichersicher, 11710885866490055687),
+  (`Gabbro.Core.Sicherheit.ToctouFrei, 17480016903371052740),
+  (`Gabbro.Core.Sicherheit.Rennfrei, 6004684599932984556),
+  (`Gabbro.Core.Sicherheit.InvariantenErhalten, 5797154018978927278),
+  (`Gabbro.Core.Sicherheit.Speichersicher, 13444848169355027863),
   (`Gabbro.Core.Katalog.Hardware, 15597978166845504711),
   (`Gabbro.Core.Katalog.FairLaeufe, 8964919104053723618),
   (`Gabbro.Core.Katalog.ZulStart, 13125439710374010607),
@@ -58,24 +64,25 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.AbsturzSchritt, 13629927236173472726),
   (`Gabbro.Core.Maschine.I.Schritt, 10902251193023140292),
   (`Gabbro.Core.Maschine.ImplSchritt, 2016209155784197599),
-  (`Gabbro.Core.Maschine.Laeufe, 10295988679746434946),
-  (`Gabbro.Core.Maschine.I.Laeufe, 5038720100858755217),
+  (`Gabbro.Core.Maschine.Laeufe, 6866237668216887442),
+  (`Gabbro.Core.Maschine.I.Laeufe, 6883250086738340545),
   (`Gabbro.Core.Maschine.I.AussenBezug, 14545744460845935956),
   (`Gabbro.Core.Maschine.I.Bestimmt, 9030341408699802814),
   (`Gabbro.Core.Maschine.I.Fortschritt, 14331443440873085814),
-  (`Gabbro.Core.Maschine.I.Sim, 11481878824407565002),
-  (`Gabbro.Core.Maschine.I.Haengt, 3926075680164924931),
+  (`Gabbro.Core.Maschine.I.Sim, 2462139631059147866),
+  (`Gabbro.Core.Maschine.I.Haengt, 11530574022863258723),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 2131622631997208645),
-  (`Gabbro.Core.Annahme.Akzeptiert, 1850904904185999708),
-  (`Gabbro.Core.Annahme.Lokal, 8784920126825670562),
-  (`Gabbro.Core.Annahme.AussenLokal, 7307448124395715955),
-  (`Gabbro.Core.Annahme.KlauselnWahr, 14364699446252582715),
-  (`Gabbro.Core.Annahme.WaechterHalten, 17221166307777910703),
-  (`Gabbro.Core.Annahme.GeschlossenWartend, 7241406859196003142),
-  (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
-  (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
+  (`Gabbro.Core.Annahme.Akzeptiert, 13465274610733289005),
+  (`Gabbro.Core.Annahme.Lokal, 9959911683244945722),
+  (`Gabbro.Core.Annahme.AussenLokal, 8337180217407627555),
+  (`Gabbro.Core.Annahme.KlauselnWahr, 13585814951129526309),
+  (`Gabbro.Core.Annahme.WaechterHalten, 2133880967807063224),
+  (`Gabbro.Core.Annahme.GeschlossenWartend, 7169846444890678982),
+  (`Gabbro.Core.Maschine.PartielleOperation, 3187517857228953299),
+  (`Gabbro.Core.Annahme.waechterBedarf, 9657614452858633655)]
 
 private meta def safety : Array Name := #[
+  `Gabbro.Core.Sicherheit.RegelSicher,
   `Gabbro.Core.Sicherheit.Speichersicher, `Gabbro.Core.Sicherheit.InvariantenErhalten,
   `Gabbro.Core.Sicherheit.Rennfrei, `Gabbro.Core.Sicherheit.ToctouFrei]
 
@@ -93,8 +100,6 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.KlauselTabelle,
     `Gabbro.Core.Annahme.kanonischeKlauseln,
     `Gabbro.Core.Annahme.KlauselnWahr,
-    `Gabbro.Core.Annahme.PartielleOperation,
-    `Gabbro.Core.Annahme.Operanden,
     `Gabbro.Core.Annahme.waechterBedarf,
     `Gabbro.Core.Annahme.GuardVerwendung,
     `Gabbro.Core.Annahme.kanonischeVerwendung,
@@ -115,8 +120,18 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Maschine.Regel.impl, `Gabbro.Core.Maschine.Einheit.laden],
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
-private meta def registry : Array RegistryFamily := #[]
+private meta def registry : Array RegistryFamily := #[
+  ⟨`Gabbro.Core.Ast.Expr, `Gabbro.Core.Ast.Semantik.exprSchema, #[
+    (`Gabbro.Core.Ast.Expr.lit, `Gabbro.Core.Ast.Semantik.literalEntry),
+    (`Gabbro.Core.Ast.Expr.binary, `Gabbro.Core.Ast.Semantik.binaryEntry)]⟩,
+  ⟨`Gabbro.Core.Ast.Stmt, `Gabbro.Core.Ast.Semantik.stmtSchema, #[
+    (`Gabbro.Core.Ast.Stmt.letValue, `Gabbro.Core.Ast.Semantik.letEntry)]⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl, `Gabbro.Core.Ast.Semantik.befehlSchema, #[
+    (`Gabbro.Core.Ast.Semantik.Befehl.literal, `Gabbro.Core.Ast.Semantik.kernLiteralEntry),
+    (`Gabbro.Core.Ast.Semantik.Befehl.binaer, `Gabbro.Core.Ast.Semantik.kernBinaryEntry),
+    (`Gabbro.Core.Ast.Semantik.Befehl.binden, `Gabbro.Core.Ast.Semantik.kernLetEntry)]⟩]
 private meta def wildcardRoots : Array Name := #[
+  `Gabbro.Core.Ast.Semantik.Befehl.ideal, `Gabbro.Core.Ast.Semantik.Befehl.impl,
   `Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.ImplSchritt,
   `Gabbro.Core.Maschine.I.linearisiert_in_I, `Gabbro.Core.Maschine.I.replay_rahmen]
 private meta def catalogueKinds : Array ClosedKinds := #[

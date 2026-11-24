@@ -7,7 +7,7 @@
   table of `I`'s partial operations (`PartielleOperation` with `waechterBedarf`); the unit's
   uses are DATA DETERMINED BY THE UNIT: `WaechterHalten` uses the canonical value
   `kanonischeVerwendung E`, never a supplied instance — there is no free choice of tables.
-  M6 replaces the canonical uses with the uses computed from the reference AST. Deadlock
+  Elaboration computes the uses from the reference AST. Deadlock
   freedom is generic over the program's forms through `System.blockiert`: a closed set waits
   only on locks held inside the set and joins of members — outside questions and hardware
   delays are specified outside non-answers, never internal deadlocks.
@@ -15,6 +15,7 @@
 module
 
 public import Core.Maschine.Start
+import Init.Omega
 
 @[expose] public section
 
@@ -23,37 +24,23 @@ namespace Gabbro.Core.Annahme
 open Gabbro.Core.Maschine
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
-
-/-- **The pinned table of `I`'s partial operations** (§3.2): every partial operation without an
-    `else` path that the checker must generate a guard for. -/
-inductive PartielleOperation where
-  | division
-  | modulo
-  | index
-  | shift
-  | konvertierung
-  | entpacken
-  deriving DecidableEq, Repr
-
-/-- The operands one use of a partial operation carries. -/
-def Operanden : PartielleOperation → Type
-  | .division => Nat × Nat
-  | .modulo => Nat × Nat
-  | .index => Nat × Nat
-  | .shift => Nat × Nat
-  | .konvertierung => Nat × Nat
-  | .entpacken => Nat
-
-/-- **The pinned guard of each partial operation** over its operands: what must hold wherever
-    the operation is used. Division and modulo need a nonzero divisor; indexing and shifting
-    stay inside their bounds; conversion fits its width; unwrapping needs the success tag. -/
+/-- The pinned guard for each partial operation. -/
 def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .division, (_, b) => b ≠ 0
   | .modulo, (_, b) => b ≠ 0
   | .index, (i, n) => i < n
   | .shift, (s, w) => s < w
   | .konvertierung, (v, w) => v < 2 ^ w
-  | .entpacken, tag => tag = Nat.succ Nat.zero -- the success tag 1
+  | .entpacken, tag => tag = Nat.succ Nat.zero
+  | .ganzzahlBereich, (abstand, anzahl) => 0 ≤ abstand ∧ abstand < (anzahl : Int)
+
+/-- The pinned narrowing row is exactly membership in the declared range. -/
+theorem ganzzahlBereich_iff (wert lo hi : Int) :
+    waechterBedarf .ganzzahlBereich (ganzzahlBereichOperanden wert lo hi) ↔
+      lo ≤ wert ∧ wert ≤ hi := by
+  change (0 ≤ wert - lo ∧ wert - lo < ((hi + 1 - lo).toNat : Int)) ↔ _
+  omega
+
 
 /-- **A unit's partial-operation uses**: at each `I` cut, the partial operations the unit
     performs with their operand values. The M6 constructors supply per-program uses in this
@@ -62,12 +49,11 @@ class GuardVerwendung [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Type where
   bedarf : (ρ : I.Lauf E) → I.Schnitt E ρ → (op : PartielleOperation) → Operanden op → Prop
 
-/-- **The canonical guard uses of a unit** (M5 scaffolding): no uses, so no guard can fail. M6
-    replaces this definition with the uses computed from the reference AST. -/
+/-- The canonical guard uses are the elaborated table evaluated at the ideal cut. -/
 def kanonischeVerwendung [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
     GuardVerwendung E :=
-  ⟨fun _ _ _ _ => False⟩
+  ⟨fun ρ t => E.quelltabellen.guard (ρ.zeit.zustand t.val)⟩
 
 /-- **An internal block reason**: a lock, an `await` (its enabler is unknown at this
     genericity, so conservatively internal), or a join. An outstanding outside question and a

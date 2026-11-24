@@ -4,6 +4,7 @@ public import Core.Ast.Grammar
 public import Core.Ast.Inventory
 public import Core.Ast.Registry
 public import Core.Ast.Surface
+public import Core.Ast.SemantikRezept
 
 /-!
 # Adding one inventory form
@@ -16,11 +17,14 @@ the language's shadowing rules. Read the initializer in the incoming scope, then
 scope. A block's outgoing index describes the end of its body. A scope-delimiting statement chooses
 which bindings are visible outside it. A whole unit starts with the empty scope.
 
-A fragment reader fixes its incoming scope and, for expressions, the expected result type. An
-uncontextualized numeral belongs to the unbounded source integer domain. M6 elaboration determines
-its machine type. The current binding production implements the immutable unannotated spelling.
-The empty unit and braced blocks have complete productions. The first declared type or declaration
-will provide its concrete surface syntax using the same token grammar interface.
+A fragment reader fixes its incoming scope and returns an expression together with its inferred type.
+Every ordinary integer type is an inclusive range `Ty.int lo hi`. A literal has a singleton range.
+Addition adds corresponding endpoints and multiplication takes the minimum and maximum of the four
+endpoint products. An unannotated immutable `let` extends the scope with exactly the initializer’s
+type. Named integer types and range annotations must elaborate to the range written by the source.
+An explicit narrowing form uses the declared range guard. SG-1 widening uses the written attribute
+and containment proofs. Storage width belongs to the implementation. The empty unit and braced
+blocks have complete productions.
 
 The tree stores structural source information such as binder spellings. Exact half-open offsets are
 on the terminals of the grammar derivation. A prefix production reads through its own tokens and
@@ -41,16 +45,16 @@ grouping for the tree.
    Use `Local` when a resolved local is a child. Preserve existing constructor ordinals.
 3. Append the typed production in `Expression.lean`, `Statement.lean` or `Declaration.lean`. Keep the
    input and remaining token suffix in the relation. For an atom, add `AtomReads.NAME_inversion`
-   on its leading token and return the tree and suffix equalities. Use `cases read` and apply
+   on its leading token and return the typed tree and suffix equalities. Use `cases read` and apply
    each child's deterministic theorem in token order. Add its case to `ExprReads.deterministic`
    and `ExprReads.consumes` using the inversion and the existing suffix lemmas. For a fixed
    statement keyword, add the corresponding `StmtReads` cases. For `let` variants with the same
    header, append to `LetTailReads` and invert at the discriminator after the initializer.
    For an operator with the existing arithmetic signature, append to `Arith`, provide its
-   spelling and precedence, and extend the spelling injectivity and delimiter disjointness
+   spelling, precedence and result interval, and extend the spelling injectivity and delimiter disjointness
    proofs. The recursive right operand uses the operator precedence plus one for left
    associativity. When leading tokens overlap, use the common prefix once and dispatch at
-   the first unequal token, or prove that the competing positions have disjoint type indices.
+   the first unequal token, and prove that the resulting typed tree is unique.
 4. In `Print.lean` or the declaration module add the constructor arm of `printPieces` using
    `PrintedToken` values. Prove the corresponding case of `printAtom` or `printReads` using
    its child proofs and the same production. `PrintedToken.renderLexed` certifies whitespace
@@ -73,102 +77,78 @@ grouping for the tree.
 
 ## M6 registry completion
 
-The three `Surface.Rule.Entry` proofs cover syntax. The machine elaboration relation,
-source occurrence realization, acceptance rule, ideal rule with units and commutation,
-implementation rule, preservation, and joint satisfiability remain open for M6 for
-each constructor. For each M6 entry, define those propositions over the same typed case
-and its premises. Supply `Elaboriert` and `Realisiert` proofs for a surface form, or the
-checked elaboration or runtime origin for a core-only form. Use the syntax entry to
-supply the raw `Parse` proof for the surface case. Prove the semantic premise bundle
-jointly in `NAME_erfuellbar` and supply all fields of the strict `RegistryEntry`.
-
-In `Core/Waechter/Check.lean` the strict registry configuration takes the actual inductive
-name, its `RegistrySchema` function, and constructor-to-entry constant pairs. Activate a
-family with all its existing constructors covered. After activation each new constructor
-and its complete typed entry land together. The syntax entries here are separate from
-that strict configuration. Unfolding `Ast.Bezeichnet` shows the concrete source rules
-composed with the elaboration relation that M6 supplies.
+The semantic statement and proof recipe is in `Core.Ast.SemantikRezept`. The existing literal,
+binary and binding forms have strict entries for their source productions and semantic rules.
 
 ## Worked syntax diff for the next leaf
 
-This diff adds the inventoried `true` literal and introduces its Boolean result type.
-The syntax modules and pins in the diff were checked with the pinned Lean toolchain.
-The M6 semantic additions above are still required to admit this form to the full model.
+This syntax diff adds the inventoried `true` literal at the existing `Ty.bool` type.
+The expression category carries the inferred type alongside the tree. Complete the semantic
+entry as described in `Core.Ast.SemantikRezept`, then measure the affected pins with the Core guards.
 
 ```diff
-diff --git a/core/Core/Ast/Tree.lean b/core/Core/Ast/Tree.lean
-index 6d2db7918..e354c7fa0 100644
 --- a/core/Core/Ast/Tree.lean
 +++ b/core/Core/Ast/Tree.lean
-@@ -20,6 +20,8 @@ inductive Ty : Kind → Type where
-   /-- The unbounded integer domain of unsuffixed source numerals and their arithmetic.
-       Elaboration will supply the contextual machine type. -/
-   | integer : Ty .value
-+  /-- The type of source truth values. -/
-+  | boolean : Ty .value
+@@ -58,6 +58,9 @@
+   | binary (op : Arith) (left : Expr scope (.int lo₁ hi₁))
+       (right : Expr scope (.int lo₂ hi₂)) : Expr scope (op.result lo₁ hi₁ lo₂ hi₂)
 
- structure Binding where
-   name : Identifier
-@@ -45,6 +47,8 @@ inductive Expr : Scope → Ty .value → Type where
-   | lit (value : Nat) : Expr scope .integer
-   /-- Left-associative arithmetic. Both operands must have the operator's input type. -/
-   | binary (op : Arith) (left right : Expr scope .integer) : Expr scope .integer
 +  /-- The written Boolean literal `true`. -/
-+  | trueLit : Expr scope .boolean
++  | trueLit : Expr scope .bool
++
+ abbrev TypedExpr (scope : Scope) := (type : Ty .value) × Expr scope type
 
- inductive Stmt : Scope → Scope → Type where
-   /-- `let name = value;`. The name enters scope after the initializer. -/
-diff --git a/core/Core/Ast/Expression.lean b/core/Core/Ast/Expression.lean
-index 05fd0f14f..baeacf483 100644
+ def Expr.typed (tree : Expr scope type) : TypedExpr scope := ⟨type, tree⟩
 --- a/core/Core/Ast/Expression.lean
 +++ b/core/Core/Ast/Expression.lean
-@@ -58,6 +58,7 @@ inductive AtomReads (scope : Scope) :
-   | lit : AtomReads scope (.natural value :: rest) (.lit value) rest
+@@ -59,6 +59,8 @@
    | grouped : ExprReads scope 0 input tree (closeParen :: rest) →
        AtomReads scope (openParen :: input) tree rest
-+  | trueLit : AtomReads scope (.word ['t', 'r', 'u', 'e'] :: rest) .trueLit rest
 
++  | trueLit : AtomReads scope (.word ['t', 'r', 'u', 'e'] :: rest) .trueLit rest
++
  /-- Higher-precedence operators stay in the right operand. A same-precedence operator
      belongs to the outer continuation, giving left associativity. -/
-@@ -78,6 +79,12 @@ theorem AtomReads.lit_inversion
+ inductive ExprTail (scope : Scope) :
+@@ -79,6 +81,12 @@
    cases read
    exact ⟨rfl, rfl⟩
 
 +theorem AtomReads.trueLit_inversion
 +    (read : AtomReads scope (.word ['t', 'r', 'u', 'e'] :: rest) tree suffix) :
-+    tree = .trueLit ∧ suffix = rest := by
++    tree.typed = (Expr.trueLit (scope := scope)).typed ∧ suffix = rest := by
 +  cases read
 +  exact ⟨rfl, rfl⟩
 +
  /-- One precedence proof for all registered infix operators. Adding an operator
      only extends the token and precedence tables and the token injectivity proof. -/
  theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
-@@ -90,7 +97,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
-       ∀ {b rest'}, AtomReads scope input b rest' → a = b ∧ rest = rest')
-     (motive_3 := fun min _ first input a rest _ =>
-       ∀ {b rest'}, ExprTail scope min first input b rest' → a = b ∧ rest = rest')
+@@ -91,7 +99,7 @@
+       ∀ {otherType} {b : Expr scope otherType} {rest'}, AtomReads scope input b rest' → a.typed = b.typed ∧ rest = rest')
+     (motive_3 := fun min _ first input _ a rest _ =>
+       ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
 -    ?_ ?_ ?_ ?_ ?_ left
 +    ?_ ?_ ?_ ?_ ?_ ?_ left
-   · intro _ _ _ _ _ _ _ _ _ atomDet tailDet _ _ other
+   · intro _ _ _ _ _ _ _ _ _ _ atomDet tailDet _ _ _ other
      cases other with
      | atom atom tail =>
-@@ -104,6 +111,9 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
+@@ -106,6 +114,9 @@
      | grouped inside =>
        obtain ⟨same, suffix⟩ := insideDet inside
        exact ⟨same, (List.cons.inj suffix).2⟩
-+  · intro _ _ _ other
-+    obtain ⟨rfl, rfl⟩ := other.trueLit_inversion
-+    exact ⟨rfl, rfl⟩
-   · intro _ _ _ _ blocked _ _ other
++  · intro _ _ _ _ other
++    obtain ⟨same, suffix⟩ := other.trueLit_inversion
++    exact ⟨same.symm, suffix.symm⟩
+   · intro _ _ _ _ blocked _ _ _ other
      cases other with
      | stop => exact ⟨rfl, rfl⟩
-@@ -124,13 +134,15 @@ theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : re
+@@ -127,13 +138,15 @@
      (motive_1 := fun _ input _ _ rest _ => rest <:+ input)
      (motive_2 := fun input _ _ rest _ => rest <:+ input)
-     (motive_3 := fun _ _ _ input _ rest _ => rest <:+ input)
+     (motive_3 := fun _ _ _ input _ _ rest _ => rest <:+ input)
 -    ?_ ?_ ?_ ?_ ?_ read
 +    ?_ ?_ ?_ ?_ ?_ ?_ read
-   · intro _ _ _ _ _ _ _ _ _ atom tail
+   · intro _ _ _ _ _ _ _ _ _ _ atom tail
      exact tail.trans atom
    · intro _ _
      exact List.suffix_cons _ _
@@ -178,12 +158,10 @@ index 05fd0f14f..baeacf483 100644
 +    exact List.suffix_cons _ _
    · intro _ rest _ _ _
      exact List.suffix_refl rest
-   · intro _ input _ _ _ _ _ op _ _ _ operand tail
-diff --git a/core/Core/Ast/Print.lean b/core/Core/Ast/Print.lean
-index b460f502f..7df278539 100644
+   · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
 --- a/core/Core/Ast/Print.lean
 +++ b/core/Core/Ast/Print.lean
-@@ -94,12 +94,22 @@ def letName : Identifier := ⟨['l', 'e', 't'], 'l', ['e', 't'], rfl, by
+@@ -94,12 +94,22 @@
    · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 101; omega, by change 101 ≤ 122; omega⟩))
    · exact Or.inl (Or.inl (Or.inl ⟨by change 97 ≤ 116; omega, by change 116 ≤ 122; omega⟩))⟩
 
@@ -206,7 +184,7 @@ index b460f502f..7df278539 100644
 
  def Expr.printTokens (tree : Expr scope type) : List Token :=
    tree.printPieces.map PrintedToken.value
-@@ -121,6 +131,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
+@@ -122,6 +132,7 @@
      apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
      exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
        (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
@@ -214,22 +192,20 @@ index b460f502f..7df278539 100644
 
  theorem Expr.printReads (tree : Expr scope type) (blocked : ¬ Continues minimum rest) :
      ExprReads scope minimum (tree.printTokens ++ rest) tree rest :=
-diff --git a/core/Core/Ast/Surface.lean b/core/Core/Ast/Surface.lean
-index 298a28ffa..4426c79fd 100644
 --- a/core/Core/Ast/Surface.lean
 +++ b/core/Core/Ast/Surface.lean
-@@ -147,4 +147,26 @@ theorem letValue_entry (scope : Scope) : (letValue scope).Entry where
+@@ -149,4 +149,26 @@
    prints := letValue_print
    erfuellbar := letValue_erfuellbar scope
 
 +/-- Inventory key `surface.SExpr.tru`. -/
-+def trueLiteral (scope : Scope) : Rule (.expression scope .boolean) PUnit where
-+  tree := fun _ => .trueLit
++def trueLiteral (scope : Scope) : Rule (.expression scope) PUnit where
++  tree := fun _ => Expr.trueLit.typed
 +  production := fun _ tokens => tokens = [.word ['t', 'r', 'u', 'e']]
 +
 +theorem trueLiteral_print (scope : Scope) :
 +    (trueLiteral scope).production PUnit.unit
-+      (((Category.expression scope .boolean).printPieces .trueLit).map PrintedToken.value) :=
++      (((Category.expression scope).printPieces Expr.trueLit.typed).map PrintedToken.value) :=
 +  rfl
 +
 +theorem trueLiteral_erfuellbar (scope : Scope) : (trueLiteral scope).Satisfiable :=
@@ -245,36 +221,5 @@ index 298a28ffa..4426c79fd 100644
 +  erfuellbar := trueLiteral_erfuellbar scope
 +
  end Gabbro.Core.Ast.Surface
-diff --git a/core/Core/Waechter/Check.lean b/core/Core/Waechter/Check.lean
-index db98b8c1b..cb7599d2e 100644
---- a/core/Core/Waechter/Check.lean
-+++ b/core/Core/Waechter/Check.lean
-@@ -12,16 +12,16 @@ open Lean Elab Command
- namespace Gabbro.Core.Waechter
-
- private meta def pins : Array (Name × UInt64) := #[
--  (`Gabbro.Core.Ast.Ty, 12782873945396265670),
--  (`Gabbro.Core.Ast.Local, 3790732133586003643),
--  (`Gabbro.Core.Ast.Expr, 9528347216282307943),
--  (`Gabbro.Core.Ast.Stmt, 5262650281051958971),
--  (`Gabbro.Core.Ast.Block, 554026736110315180),
--  (`Gabbro.Core.Ast.Decl, 7135683955101088422),
--  (`Gabbro.Core.Ast.UnitBody, 12910938552000479105),
--  (`Gabbro.Core.Ast.Unit, 8561659821477951161),
--  (`Gabbro.Core.Ast.Parse, 7662161646515821401),
--  (`Gabbro.Core.Ast.Bezeichnet, 17783779404160999950),
-+  (`Gabbro.Core.Ast.Ty, 16267350856571732080),
-+  (`Gabbro.Core.Ast.Local, 2823048309132892569),
-+  (`Gabbro.Core.Ast.Expr, 15284502278999404801),
-+  (`Gabbro.Core.Ast.Stmt, 12369416387397553265),
-+  (`Gabbro.Core.Ast.Block, 14965519469628557294),
-+  (`Gabbro.Core.Ast.Decl, 8984746402279208916),
-+  (`Gabbro.Core.Ast.UnitBody, 9067649122551861143),
-+  (`Gabbro.Core.Ast.Unit, 1392324911477459259),
-+  (`Gabbro.Core.Ast.Parse, 17481635787039456365),
-+  (`Gabbro.Core.Ast.Bezeichnet, 14274575155168311886),
-   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
-   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
-   (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),
 ```
 -/

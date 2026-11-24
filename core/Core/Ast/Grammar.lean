@@ -10,28 +10,28 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-/-- A fragment entry point fixes the incoming scope and any expected type.
+/-- A fragment entry point fixes the incoming scope and infers the expression type.
     A source unit begins with an empty scope. -/
 inductive Category where
-  | expression (scope : Scope) (type : Ty .value)
+  | expression (scope : Scope)
   | statement (scope : Scope)
   | block (scope : Scope)
   | unit
 
 def Category.Tree : Category → Type
-  | .expression scope type => Expr scope type
+  | .expression scope => TypedExpr scope
   | .statement scope => Statement scope
   | .block scope => Statements scope
   | .unit => Ast.Unit
 
 def Category.reads : (category : Category) → List Token → category.Tree → Prop
-  | .expression scope _ => fun tokens tree => ExprReads scope 0 tokens tree []
+  | .expression scope => fun tokens tree => ExprReads scope 0 tokens tree.2 []
   | .statement scope => fun tokens tree => StmtReads scope tokens tree []
   | .block scope => fun tokens tree => BlockReads scope tokens tree []
   | .unit => fun tokens tree => UnitReads [] tokens tree
 
 def Category.printPieces : (category : Category) → category.Tree → List PrintedToken
-  | .expression _ _ => Expr.printPieces
+  | .expression _ => fun tree => tree.2.printPieces
   | .statement _ => fun tree => tree.2.printPieces
   | .block _ => fun tree => tree.2.printPieces
   | .unit => fun tree => tree.2.printPieces
@@ -49,7 +49,7 @@ theorem Category.reads_print (category : Category) (tree : category.Tree) :
   cases category with
   | expression =>
     simpa only [Category.printPieces, Category.reads, Expr.printTokens, List.append_nil] using
-      (Expr.printReads (minimum := 0) tree noOperatorAtEnd)
+      (Expr.printReads (minimum := 0) tree.2 noOperatorAtEnd)
   | statement =>
     rcases tree with ⟨after, tree⟩
     simpa only [Category.printPieces, Category.reads, Stmt.printTokens, List.append_nil] using

@@ -1,6 +1,7 @@
 module
 
 public import Core.Maschine.Zeitlauf
+public import Core.Maschine.Quelltabellen
 
 @[expose] public section
 
@@ -24,6 +25,7 @@ structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   laden : AussenStart → Ladung → Option (Zustand L Ort Wert Raum Lok Grund)
   lokalerBezug : (Kontext → Lok) → (Kontext → Lok) → Prop
   stotterLaenge : ι → Nat
+  quelltabellen : Quelltabellen (Zustand L Ort Wert Raum Lok Grund)
 
 variable (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 

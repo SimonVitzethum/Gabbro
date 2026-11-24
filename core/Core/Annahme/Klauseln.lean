@@ -6,8 +6,8 @@
   every `I` run. It is stated over `I.Laeufe` only: requires at the ideal start, the invariant
   at every cut, ensures at every finished cut. The clause table is DATA DETERMINED BY THE
   UNIT: `Akzeptiert` uses the canonical value `kanonischeKlauseln E`, never a supplied
-  instance — there is no free choice of tables. M6 replaces the canonical tables with the
-  tables computed from the reference AST; the shape of `KlauselnWahr` and `Akzeptiert` stays.
+  instance. Elaboration stores the clauses in source order and acceptance conjoins the
+  predicates at their designated ideal cuts.
 -/
 module
 
@@ -30,11 +30,12 @@ class KlauselTabelle (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
   sicher : Zustand L Ort Wert Raum Lok Grund → Prop
   invariant : Zustand L Ort Wert Raum Lok Grund → Prop
 
-/-- **The canonical clause table of a unit** (M5 scaffolding): the trivially true tables. M6
-    replaces this definition with the tables computed from the reference AST. -/
+/-- The canonical clause table conjoins the predicates written by the source. -/
 def kanonischeKlauseln (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
     KlauselTabelle E :=
-  ⟨fun _ => True, fun _ => True, fun _ => True⟩
+  let t := E.quelltabellen.klauseln
+  ⟨fun s => ∀ p ∈ t.voraus, p s, fun s => ∀ p ∈ t.sicher, p s,
+    fun s => ∀ p ∈ t.invariant, p s⟩
 
 /-- **`KlauselnWahr E`: every written clause holds on every `I` run** — requires at the ideal
     start, the invariant at every cut, ensures at every finished cut; over the canonical
