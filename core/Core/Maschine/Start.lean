@@ -2,6 +2,7 @@ module
 
 public import Core.Maschine.Zeitlauf
 public import Core.Maschine.Quelltabellen
+public import Core.Maschine.Messdaten
 
 @[expose] public section
 
@@ -26,6 +27,7 @@ structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   lokalerBezug : (Kontext → Lok) → (Kontext → Lok) → Prop
   stotterLaenge : ι → Nat
   quelltabellen : Quelltabellen (Zustand L Ort Wert Raum Lok Grund)
+  schranken : Beobachtung.Schrankendaten L Lok := .leer
 
 variable (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 

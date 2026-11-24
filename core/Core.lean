@@ -22,6 +22,7 @@ public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
+public import Core.Beobachtung.SchrankenErfuellbar
 meta import Core.Waechter.Check
 
 #check_core
