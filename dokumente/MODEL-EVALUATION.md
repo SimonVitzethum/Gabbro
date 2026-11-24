@@ -1,7 +1,7 @@
 # MODEL-EVALUATION — how well each model proves, errs and reviews
 
-*Kept by the lead since 2026-11-12 (owner: "halte für jedes Modell fest, wie gut es ist im Beweisen und wie oft es
-Fehler macht … auch Review-Leistung bewerten"). One row per finished task. The record decides which model gets
+*Kept by the lead since 2026-11-12 (2026-11-12: record for each model how well it proves, how often it errs,
+and also assess review performance). One row per finished task. The record decides which model gets
 which kind of task next (AGENTS.md "Team"). Numbers are counts from the lead's check, not impressions; a judgment
 is marked as one.*
 
@@ -18,9 +18,9 @@ lead's reading.
 | GPT Sol 6.2 | codex `gpt-6.2-sol`, high | yes | yes | yes (M4, M5 repair, M6 specs; misses: target-width integers, single-frame `return_effect`, existential `lokal`/`laenge`) | yes (rounds 1–10, 12: an A finding with counterexample almost every round) | yes | the designer and the fallback; at most five |
 | Muse Spark 1.3 | `opencode-go/muse-spark-1.3-contributor` | yes | open | partly (M10 good; M5 had empty obligation classes and free instances) | yes (round 11 PASS with useful B findings) | open | read its statements for vacuity; at most five |
 | Hy4 flash | `opencode-go/hy4-flash-free` (free) | yes (hundreds of obligations, ~0 statement changes; one justified statement fix it should have reported instead) | partly (4 of the 7 hardest batch-2 proofs; Sol 5 of 7; both failed loop termination) | yes for simple forms when given recipe and SYNTAX.md (test: `!`, `<`, `return` — correct types, non-chaining `<`, non-vacuity note per obligation, green); unguided it guesses (spelled `/` as `%`) | partly (finds false statements with a concrete counterexample, e.g. `DruckAussage .view`) | partly yes (M6F async plan: concrete files and lines, sound design, ten risks with examples; one stale risk) | preferred prover, many in parallel; needs many server builds (5–170 per task); ran `pkill -f` and wrote to `/tmp` once |
-| Mercury 3 | `opencode` `inception/mercury-3` | yes (M2 test, 49 of batch 2) | no (left the hard ones) | not allowed (owner) | not allowed | not allowed | occasional tool-call failure produces a garbage report: judge by commits and build only |
-| Claude Sonnet 5.5 | `claudeAgent` | open in `core/` | open | open | yes (wave 1: best review) | open | owner: at most ONE Claude agent, Sonnet only |
-| Claude Opus 5.5 | — | — | — | — | — | — | owner: no Opus agents since 2026-11-24 (lead session only) |
+| Mercury 3 | `opencode` `inception/mercury-3` | yes (M2 test, 49 of batch 2) | no (left the hard ones) | not allowed | not allowed | not allowed | occasional tool-call failure produces a garbage report: judge by commits and build only |
+| Claude Sonnet 5.5 | `claudeAgent` | open in `core/` | open | open | yes (wave 1: best review) | open | At most ONE Claude agent, Sonnet only |
+| Claude Opus 5.5 | — | — | — | — | — | — | No Opus agents since 2026-11-24 (lead session only) |
 
 ## 1. How a task is scored
 
@@ -130,7 +130,7 @@ The lead itself is Claude Fable 5.2; its own work is listed for comparison and i
 | 2026-11-13 | 8 | Muse Spark 1.3 | design W8-M1: the bridge for local bindings, assignment and statics | the bridge's translation and simulation, the `Body` model, the lowering of bindings | a design in four parts: `Body` needs no new syntax; the one proof idea (the run induction must follow `Endblock.bind`); seven steps with sizes; "no function of the front end is bridged after these steps, because the duties are per unit" | the scaffolding step was implemented from it by Sol and built; the per-unit finding led to the next design | 0 found so far | — |
 | 2026-11-13 | 8 | Muse Spark 1.3 | design W8-M2: bridge duties per function instead of per unit, decided from the proofs | premise (b), the bridge chain, every unit-wide condition | "yes, under call-closure", with the split duty and the three proofs to redo | the split and the closure constraint held up in Sol's implementation; MISSED: the start duty of an open root (found by Sol), and that both invariant duties follow unit-wide | 0 false; 1 missed premise | the start requirement |
 | 2026-11-23 | — | GPT 6.1 Sol (effort high) | review of the low-level plan after O23–O25 (LOW-LEVEL-SYNTAX-PLAN, PLAN-COMPILER-READY §0/§3/§4/§5–§8, the Spec.lean low-level list), read-only from `origin/dev`, with manual citations | two plans, one header, the tree for the LOC measurement | 25 (3 blocker, 20 major, 2 minor) | 25; spot-checked against the manuals by the lead (PL011 `TXFF`, `INVLPGA`, SMM entry and `RSM`, `misa` M-only, SBI `hart_start`), the sums recomputed, the 540-line Spec.lean measured; all folded in (`729e60f5f`) | 0 | not measured (no second review of the same material) |
-| 2026-11-23 | — | Opus 5.5 | critical review of the draft goal theorem (serial runs, no stuck runs, progress) against the owner's requirements, read-only from `origin/dev` | the draft, `Spec.lean`, machine G, plan rows | 5 fatal, 7 serious, 3 minor | 15; spot-checked by the lead (`Teil1.lean` logic stops, `seq_cst` as release/acquire, false `ensures` emptying (c), schedulers never assumed) | 0 | not measured |
+| 2026-11-23 | — | Opus 5.5 | critical review of the draft goal theorem (serial runs, no stuck runs, progress) against the stated requirements, read-only from `origin/dev` | the draft, `Spec.lean`, machine G, plan rows | 5 fatal, 7 serious, 3 minor | 15; spot-checked by the lead (`Teil1.lean` logic stops, `seq_cst` as release/acquire, false `ensures` emptying (c), schedulers never assumed) | 0 | not measured |
 | 2026-11-23 | — | Opus 5.5 | critical review of the revised design (`Ideal P`, refinement, progress, three layers), read-only | the design, `Spec.lean`, syntax and semantics files, both plans | 6 fatal, 8 serious, 6 minor, plus the status of the earlier five | all checked claims true (`Hardware.fortschritt (a : D.Annahme)`, `flagge` "never published", `exit_group(120)`, no atomic-block construct); its report had to be written to a file because it exceeded the tool output | 0 | not measured |
 
 ## 4. Standing per model

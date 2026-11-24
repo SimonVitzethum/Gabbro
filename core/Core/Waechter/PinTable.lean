@@ -66,7 +66,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.FlussLokal, 189160680377694981),
   (`Gabbro.Core.Beobachtung.LaderSicht, 1504906365714668535),
   (`Gabbro.Core.Beobachtung.LaderNIPflicht, 10195207787793080787),
-  (`Gabbro.Core.Beobachtung.ProtokollNIPflicht, 13633058145953707810),
+  (`Gabbro.Core.Beobachtung.ProtokollNIPflicht, 8500982253112384158),
   (`Gabbro.Core.Beobachtung.Nichtinterferent, 17126871897344492851),
   (`Gabbro.Core.Beobachtung.RegelNIPflicht, 12479704223017482892),
   (`Gabbro.Core.Beobachtung.FamilienNI, 16086865109995734978),
@@ -314,6 +314,10 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.RiceAussage, 7924061033844860658),
   (`Gabbro.Core.Ast.Semantik.StarteSichtAussage, 4530529991360797036),
   (`Gabbro.Core.Ast.Semantik.EndeSichtAussage, 3799476683618660502),
-  (`Gabbro.Core.Ast.Semantik.BindeRegionSichtAussage, 14879179297653489397)]
+  (`Gabbro.Core.Ast.Semantik.BindeRegionSichtAussage, 14879179297653489397),
+  (`Gabbro.Core.Beobachtung.StartNIPflicht, 2755602453748465507),
+  (`Gabbro.Core.Beobachtung.PausenNIPflicht, 408940611882611720),
+  (`Gabbro.Core.Beobachtung.Kopplung, 14183664939532648386),
+  (`Gabbro.Core.Beobachtung.PauseNIAussage, 12181397750879262235)]
 
 end Gabbro.Core.Waechter

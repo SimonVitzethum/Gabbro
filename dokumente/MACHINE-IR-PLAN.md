@@ -4,7 +4,7 @@
 Gabbro. It does not change Stage 0: `S0IR` stays the small interpreted IR of Stage 0 and its runner
 ([PLAN-SELF-HOSTING.md](PLAN-SELF-HOSTING.md) §2.1). The order of work is §12.
 
-## 1. What the owner fixed (2026-11-10)
+## 1. What was fixed (2026-11-10)
 
 1. **No refinement and no translation validation.** Nothing is checked per compilation and refused. Every pass,
    register allocation and scheduling included, has a logic proof.
