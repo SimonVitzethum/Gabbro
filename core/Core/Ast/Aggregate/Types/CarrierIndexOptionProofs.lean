@@ -43,8 +43,8 @@ private theorem optionToken_ne_intWord (signed : Bool) (width : Nat) :
   change Token.word "option".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
-  · exact (by intro same; cases same : ('o' : Char) ≠ 'u') (List.cons.inj hl).1
-  · exact (by intro same; cases same : ('o' : Char) ≠ 'i') (List.cons.inj hl).1
+  · exact (show ('o' : Char) ≠ 'u' from by intro same; cases same) (List.cons.inj hl).1
+  · exact (show ('o' : Char) ≠ 'i' from by intro same; cases same) (List.cons.inj hl).1
 
 private theorem carrier_am_ort (scope : Scope) (belongs : WrittenType → Prop) :
     (carrierTypeForm scope belongs).RegelAmOrt := by

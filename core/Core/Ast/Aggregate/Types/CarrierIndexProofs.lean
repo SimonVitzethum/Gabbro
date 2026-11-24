@@ -45,7 +45,7 @@ private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
   change Token.word "index".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
-  · exact (by intro same; cases same : ('i' : Char) ≠ 'u') (List.cons.inj hl).1
+  · exact (show ('i' : Char) ≠ 'u' from by intro same; cases same) (List.cons.inj hl).1
   · have tailEq : (toString width).toList = "ndex".toList := (List.cons.inj hl).2.symm
     have mem : ('n' : Char) ∈ Nat.toDigits 10 width := by
       have inTail : ('n' : Char) ∈ (toString width).toList := by

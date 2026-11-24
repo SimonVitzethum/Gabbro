@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Variant.Obligations
+import Core.Ast.Semantik.Runtime.ValueCoercion
 
 /-!
 # VariantMatch
@@ -34,10 +35,11 @@ private theorem vm_amOrt (ctx : Scope × Option (Ty .value)) : (variantMatchForm
   let valueCode := (expr 0 a.value).code
   let bodyCode := (variantArms a.arms).body.code
   change (((valueCode ++ [head]) ++ bodyCode)[valueCode.length]?) = some head
-  have hlt : valueCode.length < (valueCode ++ [head]).length := by simp
+  have hlt : valueCode.length < (valueCode ++ [head]).length := by
+    simpa only [List.length_append, List.length_singleton] using Nat.lt_succ_self valueCode.length
   rw [List.getElem?_append_left hlt]
   rw [List.getElem?_append_right (Nat.le_refl _)]
-  simp
+  simp only [Nat.sub_self, List.getElem?_cons_zero]
 
 theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
   intro ctx platform args
@@ -76,7 +78,7 @@ theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
         (variantArms args.arms).branches))).anhaengen
         (variantArms args.arms).body).klauseln.invariant = [])
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
-      expr_keine_invarianten, vm_arms_inv]
+      expr_keine_invarianten, vm_arms_inv, List.nil_append]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
     b.sicher p platform inv⟩
 
@@ -128,7 +130,7 @@ private theorem vm_case_lt (cases : List (Option (Ty .value))) :
   | cons head tail =>
       intro value
       cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
-      | inl payload => simp only [variantCase, hsum]
+      | inl payload => exact Nat.zero_lt_succ _
       | inr rest =>
           simpa [variantCase, hsum, Nat.succ_eq_add_one] using
             Nat.succ_lt_succ (vm_case_lt tail rest)
@@ -188,10 +190,14 @@ private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
               cases head with
               | none => simp at hsome
               | some t => rfl
-          | succ j => simp only [variantCase, hsum] at hidx
+          | succ j =>
+              have impossible : (0 : Nat) = j + 1 := by simpa only [variantCase, hsum] using hidx
+              cases impossible
       | inr rest =>
           cases i with
-          | zero => simp only [variantCase, hsum] at hidx
+          | zero =>
+              have impossible : (variantCase tail rest).1 + 1 = 0 := by simpa only [variantCase, hsum] using hidx
+              omega
           | succ j =>
               have hh : (variantCase tail rest).1 + 1 = j + 1 := by
                 simpa [variantCase, hsum] using hidx
@@ -213,13 +219,15 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
   have hget : branches[i]? = some entry := List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
   have hval : (frame.temp 0).bind
       (wertAls (variantValueType a.name a.labels a.payloads)) = some value := by
-    simp only [hv, wertAls, variantValueType]
+    rw [hv, Option.bind_some]
+    exact wertAls_selbst value
   have hnext : ((variantMatchForm ctx).befehl a).auswerten frame =
       { frame with
         pc := frame.pc + entry.1
         lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
-    simp only [Befehl.auswerten, variantMatchForm, hv, hval, i, payload, branches, entry, hget,
-      wertAls, variantValueType]
+    simp only [Befehl.auswerten, variantMatchForm, hval, Id.run]
+    rw [show (variantArms a.arms).branches[(variantCase a.payloads value).1]? = some entry from hget]
+    rfl
   refine ⟨entry.1, entry.2, hget, ?_⟩
   dsimp
   rw [hnext]

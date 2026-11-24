@@ -34,7 +34,7 @@ private theorem vv_amOrt (scope : Scope) : (variantValueForm scope).RegelAmOrt :
       (caseCode 0 a.payload).code.length]? =
     some (Befehl.baueVariante 0 a.ref.name.val a.labels a.payloads a.index)
   rw [List.getElem?_append_right (Nat.le_refl _)]
-  simp
+  simp only [Nat.sub_self, List.getElem?_cons_zero]
 
 theorem variantValue_annahme : VariantValueAnnahmeAussage := by
   intro scope platform args
