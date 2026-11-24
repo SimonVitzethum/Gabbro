@@ -25,7 +25,7 @@ private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     fun _ _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach,
     fun _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach⟩
   intro H start s _ _ h
-  change Ast.Semantik.laden start (H.lade Ast.Semantik.bild) = some s at h
+  change Ast.Semantik.laden p.eingang start (H.lade Ast.Semantik.bild) = some s at h
   unfold Ast.Semantik.laden at h
   split at h
   · cases h
@@ -54,8 +54,8 @@ theorem sicherheit_aus_regeln_erfuellbar :
       (H : Umgebung) (ρ : Lauf E),
       GrenzenSicher E ∧ (∀ f, RegelAntwortSicher E f) ∧ (∀ f, RegelSicher E f) ∧
       Maschine.Laeufe E.maschine H ρ ∧
-      ∃ s name wert, ρ.zeit.zustand 6 = some s ∧
-        (s.lokal eintritt).lokale.head? = some (name, wert) ∧ wert.zahl.wert = 7 := by
+      ∃ s (wert : Zahl 7 7), ρ.zeit.zustand 6 = some s ∧
+        (s.lokal eintritt).lokale.head? = some (some ⟨.int 7 7, wert⟩) ∧ wert.wert = 7 := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
@@ -63,7 +63,8 @@ theorem sicherheit_aus_regeln_erfuellbar :
     change ['x'] ≠ ['m', 'u', 't']
     intro eq
     cases eq
-  let tree := Stmt.letValue (scope := []) name ordinary
+  let tree := Stmt.letValue (scope := []) name
+    ⟨ordinary, (directName_of_singleton (name := name) rfl).1⟩
     (.binary .add (.lit 1) (.binary .mul (.lit 2) (.lit 3)))
   let p := stmt tree
   have keine : p.klauseln.invariant = [] := stmt_keine_invarianten tree
@@ -81,7 +82,7 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let z₀ : Ast.Semantik.Zustand := Maschine.Zustand.start d.lokal d.status d.kerne d.rechte einrichtung.initial
     (.leer (startmedium start))
   have geladen : E.maschine.laden start (H.lade E.maschine.bild) = some z₀ := by
-    change Ast.Semantik.laden start (Ast.Semantik.bild.lade) = some z₀
+    change Ast.Semantik.laden p.eingang start (Ast.Semantik.bild.lade) = some z₀
     have image : Ast.Semantik.bild.lade.starts 0 = some 0 ∧
         Ast.Semantik.bild.lade.bytes 0 = some 0 := ⟨rfl, rfl⟩
     rw [Ast.Semantik.laden, if_pos image, assignment]
@@ -108,6 +109,6 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let ρ : Lauf E := ⟨start, hw, zeit⟩
   exact ⟨E, H, ρ, arithmetik_grenzen platform keine, arithmetik_antwortrechte p platform,
     Befehl.sicher p platform keine, ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
-    z₆, name, (z₅.lokal eintritt).temp 0, ende, rfl, rfl⟩
+    z₆, ⟨7, Int.le_refl _, Int.le_refl _⟩, ende, rfl, rfl⟩
 
 end Gabbro.Core.Sicherheit
