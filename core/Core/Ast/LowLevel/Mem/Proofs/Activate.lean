@@ -118,17 +118,18 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
     WaechterHalten (memProgram k code) := by
   constructor
   · intro ρ lauf t op args bedarf
-    simp only [kanonischeVerwendung, memProgram] at bedarf
+    change False at bedarf
+    exact bedarf
   · intro ρ lauf t h
     rcases h with ⟨C, nonempty, blocked⟩
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hb, _, _⟩ := blocked c hc
     exact hb
 
-private theorem memAkzeptiert (k : Katalog) (code : List MemInstruction) :
-    Akzeptiert (memProgram k code) := by
-  refine ⟨?_, memKlauselnWahr k code, memWaechterHalten k code⟩
-  refine ⟨by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
+private theorem memAkzeptiertX86 (code : List MemInstruction) :
+    Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
+  refine ⟨?_, memKlauselnWahr _ code, memWaechterHalten _ code⟩
+  refine ⟨by simpa [Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_⟩
   · intro i
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
@@ -187,8 +188,7 @@ theorem activateJoint : ActivateJointAussage := by
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
     · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
-  have hparse : MemParse text tree := by
-    exact memParsePrint tree
+  have hparse : MemParse text tree := (memDruck .activateSpace tree).2
   have hopElab : elaborateMem scope tree = some op := by
     simp only [elaborateMem, tree, scope, MemScope.slotRaum, List.map_cons, List.map_nil,
       spaceName_slot, Option.map_some, op]
@@ -210,20 +210,38 @@ theorem activateJoint : ActivateJointAussage := by
   have hs0pc : (s0.lokal entryContext).pc = 0 := by
     rfl
   have hseiten : extent.seiten target := by
-    change 0x1000 % 4096 = 0 ∧ 0x1000 < 0x2000
-    decide
+    unfold Strecke.seiten
+    constructor
+    · change 0x1000 < 0x2000
+      omega
+    constructor
+    · change 0x2000 ≤ 2 ^ (52 : Nat)
+      omega
+    constructor
+    · change 0x1000 % 4096 = 0
+      rfl
+    · change 0x2000 % 4096 = 0
+      rfl
   have heldTable : heldMemRegion target s0 entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
     decide
-  have heval0 : ((MemInstruction.newSpace 0).evaluate target s0 entryContext).isSome := by
-    rw [Option.isSome_iff_exists]
-    refine ⟨{ (s0.lokal entryContext) with
-        result := some (.space (s0.lokal entryContext).spaces.length),
-        spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] }, ?_⟩
-    unfold MemInstruction.evaluate
+  let frame0 : MemFrame :=
+    { (s0.lokal entryContext) with
+      result := some (.space (s0.lokal entryContext).spaces.length),
+      spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] }
+  have hframe0 : (MemInstruction.newSpace 0).evaluate target s0 entryContext = some frame0 := by
+    change (do let region ← heldMemRegion target s0 entryContext 0
+               if region.extent.seiten target then
+                 (let space : Adressraum := ⟨region.extent, [], 0, []⟩
+                  some { (s0.lokal entryContext) with
+                    result := some (.space (s0.lokal entryContext).spaces.length),
+                    spaces := (s0.lokal entryContext).spaces ++ [space] })
+               else none) = some frame0
     rw [heldTable]
     dsimp
     rw [if_pos hseiten]
-  obtain ⟨frame0, hframe0⟩ := Option.isSome_iff_exists.mp heval0
+  have heval0 : ((MemInstruction.newSpace 0).evaluate target s0 entryContext).isSome := by
+    rw [Option.isSome_iff_exists]
+    exact ⟨frame0, hframe0⟩
   let s := frame0.advance entryContext s0
   have hhead0 : E.system.kopf s0 entryContext = some (.newSpace 0) := by
     change memHead target (pre ++ [op]) s0 entryContext = some (.newSpace 0)
@@ -246,18 +264,6 @@ theorem activateJoint : ActivateJointAussage := by
     rfl
   have hsspaces : (s.lokal entryContext).spaces =
       [⟨extent, [], 0, []⟩] := by
-    -- the newSpace instruction appended one space to the empty initial list
-    have h := hframe0
-    unfold MemInstruction.evaluate at h
-    rw [heldTable] at h
-    dsimp at h
-    rw [if_pos hseiten] at h
-    injection h with h
-    have hframe : frame0 = { (s0.lokal entryContext) with
-        result := some (.space (s0.lokal entryContext).spaces.length),
-        spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] } := h.symm
-    rw [show (s.lokal entryContext) = { frame0 with pc := (s0.lokal entryContext).pc + 1 } by
-      simp only [s, MemFrame.advance, Function.update_self], hframe]
     rfl
   have hAktiv : (⟨extent, [], 0, []⟩ : Adressraum).Aktivierbar target s entryContext := by
     unfold Adressraum.Aktivierbar Adressraum.Wohlgeformt
@@ -280,7 +286,7 @@ theorem activateJoint : ActivateJointAussage := by
   refine ⟨k, scope, tree, op, env, start, text, pre, s, next, ?_, hw, hzul, ?_,
     hnodupR, hnodupS, hnodupM, hbezeichnet, hparse, hopElab, hreach, ?_, hnext, ?_, ?_⟩
   · exact ⟨tablesName, rfl, rfl⟩
-  · exact memAkzeptiert k (pre ++ [op])
+  · exact memAkzeptiertX86 (pre ++ [op])
   · change memHead target (pre ++ [op]) s entryContext = some op
     unfold memHead
     simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
