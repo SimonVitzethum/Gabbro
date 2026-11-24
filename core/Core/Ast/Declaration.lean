@@ -65,9 +65,9 @@ theorem DeclReads.constant_inversion
       ExprReads before 0 rhs value (semicolon :: rest) ∧
       tree = ⟨_, .constant name ordinary written valid value staticValue fits⟩ := by
   cases read with
-  | constant (type := ty) (rhs := r) name ordinary written valid value staticValue fits typeRead exprRead =>
-      refine ⟨name, ordinary, written, valid, ty, value, staticValue, fits, r, ?_, typeRead, exprRead, rfl⟩
-      first | rfl | (subst spelling; rfl)
+  | constant name ordinary written valid value staticValue fits typeRead exprRead =>
+      refine ⟨name, ordinary, written, valid, _, value, staticValue, fits, _, ?_, typeRead, exprRead, rfl⟩
+      rfl
 
 -- Mirror BlockReads.braced_inversion and keep every header derivation in token order.
 theorem DeclReads.function_inversion
@@ -89,7 +89,7 @@ theorem DeclReads.function_inversion
       paramsRead resultRead measureRead blockRead =>
       refine ⟨name, ordinary, parameters, result, valid, measure, body, distinct, returns,
         _, _, _, ?_, paramsRead, resultRead, measureRead, blockRead, rfl⟩
-      first | rfl | (subst spelling; rfl)
+      rfl
 
 -- Mirror StmtReads.deterministic, using the header and body derivations in order.
 theorem DeclReads.deterministic (left : DeclReads before input a rest)
@@ -124,18 +124,19 @@ theorem DeclReads.deterministic (left : DeclReads before input a rest)
         cases read' with
         | absent closed => exact (closed _ rfl).elim
         | present m'' exprRead' =>
-            obtain ⟨typedEq, oeq⟩ := ExprReads.deterministic exprRead exprRead'
-            have fstEq := congrArg (fun p : TypedExpr before => p.1) typedEq
-            injection fstEq with loEq hiEq
-            cases loEq
-            cases hiEq
-            have exprEq : m.expression = m''.expression := by
-              cases typedEq
-              rfl
-            cases exprEq
-            exact ⟨rfl, oeq⟩
+            cases m with
+            | mk lo hi expression lower =>
+              cases m'' with
+              | mk lo' hi' expression' lower' =>
+                obtain ⟨typedEq, oeq⟩ := ExprReads.deterministic exprRead exprRead'
+                have fstEq := congrArg (fun p : TypedExpr before => p.1) typedEq
+                injection fstEq with loEq hiEq
+                cases loEq
+                cases hiEq
+                cases typedEq
+                exact ⟨rfl, oeq⟩
   cases left with
-  | constant (input := i) name ordinary written valid type value staticValue fits typeRead exprRead =>
+  | constant name ordinary written valid type value staticValue fits typeRead exprRead =>
       obtain ⟨name', ordinary', written', valid', type', value', staticValue', fits', rhs',
         nameEq, typeRead', exprRead', treeEq⟩ := DeclReads.constant_inversion right
       have nameFull : name' = name := Subtype.ext nameEq
@@ -149,7 +150,7 @@ theorem DeclReads.deterministic (left : DeclReads before input a rest)
       injection restEq with hrest
       subst rest'
       exact ⟨treeEq.symm, rfl⟩
-  | function (input := i) name ordinary result valid parameters measure body distinct returns
+  | function name ordinary result valid parameters measure body distinct returns
       paramsRead resultRead measureRead blockRead =>
       obtain ⟨name', ordinary', ps, result', valid', measure', body', distinct', returns',
         afterParams, afterResult, afterMeasure, nameEq, paramsRead', resultRead', measureRead',
@@ -189,10 +190,10 @@ theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ 
     | absent _ => exact List.suffix_refl _
     | present m exprRead => exact exprRead.consumes.trans (List.suffix_cons _ _)
   cases read with
-  | constant typeRead exprRead =>
+  | constant _ _ _ _ _ _ _ typeRead exprRead =>
       exact (((((exprRead.consumes.trans (List.suffix_cons _ _)).trans typeRead.consumes).trans
         (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _))
-  | function paramsRead resultRead measureRead blockRead =>
+  | function _ _ _ _ _ _ _ _ _ paramsRead resultRead measureRead blockRead =>
       exact ((((((blockRead.consumes.trans measureConsumes).trans resultConsumes).trans
         paramsRead.consumes).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
         (List.suffix_cons _ _))
@@ -204,7 +205,8 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
   | constant name ordinary written valid value staticValue fits =>
       simp only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
-      refine .constant name ordinary written valid value staticValue fits ?_ ?_
+      refine .constant (rhs := value.printPieces.map PrintedToken.value ++ semicolon :: rest)
+        name ordinary written valid value staticValue fits ?_ ?_
       · exact WrittenType.printReads written valid (by
           intro more h
           cases h)
@@ -215,7 +217,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
         simp only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
           List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
           List.append_assoc]
-        refine .function name ordinary result valid parameters measure body distinct returns ?_ ?_ ?_ ?_
+        refine .function name ordinary result valid parameters measure (.braces items) distinct returns ?_ ?_ ?_ ?_
         · exact ParamsRead.printReads parameters
         · cases result with
           | none =>

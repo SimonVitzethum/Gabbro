@@ -438,9 +438,9 @@ theorem StmtReads.mutableLocal_inversion
       ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (Surface.mutableLocal scope result).tree a := by
   cases read with
-  | letMutable (type := ty) (value := val) name ordinary written valid fits typeRead exprRead =>
-      refine ⟨⟨name, ordinary, written, valid, ty, val, fits⟩, _, ?_, typeRead, exprRead, rfl⟩
-      first | rfl | (subst spelling; rfl)
+  | letMutable name ordinary written valid fits typeRead exprRead =>
+      refine ⟨⟨name, ordinary, written, valid, _, _, fits⟩, _, ?_, typeRead, exprRead, rfl⟩
+      rfl
   | directCall callRead => cases callRead
 
 -- Mirror CallReads.inversion after disambiguating the reserved statement heads.
@@ -467,9 +467,9 @@ theorem StmtReads.bindDirect_inversion
       CallReads scope rhs a.call (semicolon :: rest) ∧
       tree = (Surface.bindDirect scope result).tree a := by
   cases read with
-  | bindDirect (type := ty) name ordinary written valid typeRead callRead =>
-      refine ⟨⟨name, ordinary, written, valid, ty, call⟩, _, ?_, typeRead, callRead, rfl⟩
-      first | rfl | (subst spelling; rfl)
+  | bindDirect name ordinary written valid typeRead callRead =>
+      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, callRead, rfl⟩
+      rfl
   | directCall callRead => cases callRead
 
 -- Mirror StmtReads.ite_inversion and retain the distinct bound and body derivations.
@@ -483,11 +483,9 @@ theorem StmtReads.boundedWhile_inversion
       tree = (Surface.boundedWhile scope result).tree a) ∨
     (∃ tail, input = assignment :: tail) := by
   cases read with
-  | whileBounded (lo := low) (hi := high) (condition := cond) (boundInput := boundIn)
-      (bodyInput := bodyIn) (body := bod)
-      nonnegative overflow bound staticBound condRead boundRead blockRead =>
-      exact Or.inl ⟨⟨cond, low, high, bound, staticBound, nonnegative, overflow, bod⟩,
-        boundIn, bodyIn, condRead, boundRead, blockRead, rfl⟩
+  | whileBounded nonnegative overflow bound staticBound condRead boundRead blockRead =>
+      refine Or.inl ⟨⟨_, _, _, bound, staticBound, nonnegative, overflow, _⟩,
+        _, _, condRead, boundRead, blockRead, rfl⟩
   | directCall callRead => cases callRead
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
@@ -500,12 +498,10 @@ theorem StmtReads.forRange_inversion
       BlockReads result (rangeBinding a.name a.lo a.hi :: scope) bodyInput a.body rest ∧
       tree = (Surface.forRange scope result).tree a := by
   cases read with
-  | forRange (low := low) (lowHi := lowHi) (high := high) (highLo := highLo)
-      (overflow := ov) (highInput := highIn) (tail := handlerIn) (bodyInput := bodyIn)
-      name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
-      refine ⟨⟨name, ordinary, low, lowHi, highLo, high, lo, hi, staticBounds, ov, body⟩,
-        highIn, handlerIn, bodyIn, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
-      first | rfl | (subst spelling; rfl)
+  | forRange name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
+      refine ⟨⟨name, ordinary, _, _, _, _, lo, hi, staticBounds, _, body⟩,
+        _, _, _, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
+      rfl
   | directCall callRead => cases callRead
 
 -- Mirror UnitBody.printReads and recover the first declaration's unconsumed suffix.
