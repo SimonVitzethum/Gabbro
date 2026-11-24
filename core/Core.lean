@@ -39,6 +39,7 @@ public import Core.Verfeinerung.Formen.Erfuellbar
 public import Core.Verfeinerung.Abnahme.StotterMass
 public import Core.Verfeinerung.Abnahme.Flush
 public import Core.Verfeinerung.Abnahme.LockFree
+public import Core.Verfeinerung.Review.Befunde
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
