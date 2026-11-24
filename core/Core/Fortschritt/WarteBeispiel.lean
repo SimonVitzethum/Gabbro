@@ -170,7 +170,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
       ⟨(), rfl, Or.inl ⟨_, .ticket (fun h => by cases h)
         (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h)), rfl, rfl⟩⟩
       e1AusfuehrB))
-  | n + 2 =>
+  | n + 2 => by
     have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ (Nat.le_add_left 2 n)
     have hcur : zw (n + 2) = some S_d := by
       have h : zw (n + 2) = some (zwSt (n + 2)) := rfl
@@ -180,7 +180,7 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
       rw [h, zwSt_ge2 _ (by omega)]
     have hker : (S_d.kerne 1).laeuft = some B := rfl
     have hlive : S_d.status B = Status.laeuft := rfl
-    simp only [hsp, hcur, hnxt]
+    rw [hsp, hcur, hnxt]
     exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash (n + 2))
       ⟨1, hw2_opp1 (by omega), hker, hlive⟩
       ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩
