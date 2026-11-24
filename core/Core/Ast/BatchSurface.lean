@@ -175,7 +175,9 @@ theorem neg_print (args : NegArgs scope) :
   change (neg scope).production args (Expr.neg args.operand).printTokens
   unfold neg
   refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp [Expr.printTokens, Expr.printPieces, Arith.print_value, String.reduceToList]
+  · simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation,
+      PrintedToken.unquoted, Arith.print_value, String.reduceToList, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
@@ -210,7 +212,9 @@ theorem notValue_print (args : Expr scope .bool) :
   change (notValue scope).production args (Expr.not args).printTokens
   unfold notValue
   refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp [Expr.printTokens, Expr.printPieces, String.reduceToList]
+  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose,
+      printPunctuation, PrintedToken.unquoted, String.reduceToList, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   · intro tail
     constructor <;> intro h <;> cases h
   · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
@@ -301,10 +305,9 @@ theorem comparison_reads (scope : Scope) (args : CompareArgs scope)
 theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (comparison scope).production a (canonicalTokens pieces) := by
   intro op
   let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
-  obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
-  have ha : a = args := rfl
-  subst a
-  exact ⟨args, text, pieces, rfl, lexical, production⟩
+  refine ⟨args, ?_, ?_, rfl, ?_, ?_⟩
+  obtain ⟨_, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
+  exact ⟨text, pieces, lexical, production⟩
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -343,10 +346,9 @@ theorem logic_reads (scope : Scope) (args : LogicArgs scope)
 theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op ∧ Lexed text pieces ∧ (logic scope).production a (canonicalTokens pieces) := by
   intro op
   let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
-  obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
-  have ha : a = args := rfl
-  subst a
-  exact ⟨args, text, pieces, rfl, lexical, production⟩
+  refine ⟨args, ?_, ?_, rfl, ?_, ?_⟩
+  obtain ⟨_, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
+  exact ⟨text, pieces, lexical, production⟩
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
@@ -367,8 +369,10 @@ theorem assignVar_print (args : AssignArgs scope) :
   change (assignVar scope result).production args
     (Stmt.assignVar args.ref args.visible args.writable args.value args.fits).printTokens
   unfold assignVar
-  simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append, List.map_cons,
-    List.map_nil, List.cons_append, List.nil_append]
+  simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, printAssignment,
+    printSemicolon, Identifier.print, printPunctuation, PrintedToken.unquoted,
+    String.reduceToList, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+    List.nil_append]
   exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
@@ -421,7 +425,9 @@ theorem ifElse_print (args : IfArgs scope result) :
   change (ifElse scope result).production args (Stmt.ite args.condition args.yes args.no).printTokens
   unfold ifElse
   simp only [Stmt.printTokens, Stmt.printPieces, BracedBlock.printPieces, Expr.printTokens,
-    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    printOpenBrace, printCloseBrace, elseName, Identifier.print, printPunctuation,
+    PrintedToken.unquoted, keywordName, String.reduceToList, List.map_append, List.map_cons,
+    List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine ⟨args.condition.printTokens ++ args.yes.printPieces.map PrintedToken.value ++
       elseKeyword :: args.no.printPieces.map PrintedToken.value,
     args.yes.printPieces.map PrintedToken.value ++ elseKeyword :: args.no.printPieces.map PrintedToken.value,
@@ -429,7 +435,9 @@ theorem ifElse_print (args : IfArgs scope result) :
   · apply args.condition.printReads
     cases args.yes with
     | braces body =>
-      simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append]
+      simp only [BracedBlock.printPieces, printOpenBrace, printPunctuation,
+        PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons,
+        List.map_nil, List.cons_append]
       exact noOperatorAtOpenBrace
   · exact args.yes.printReads _
   · exact args.no.printReads []
@@ -459,7 +467,8 @@ theorem braced_print (args : Statements result scope) :
     (braced scope result).production args (((Category.block scope result).printPieces ((braced scope result).tree args)).map PrintedToken.value) := by
   change (braced scope result).production args (.braces args.2).printPieces.map PrintedToken.value
   unfold braced
-  simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
+  simp only [BracedBlock.printPieces, printOpenBrace, printCloseBrace, printPunctuation,
+    PrintedToken.unquoted, String.reduceToList, List.map_append, List.map_cons, List.map_nil,
     List.cons_append, List.nil_append]
   exact ⟨args.2.printItems.map PrintedToken.value, rfl, Block.printItems_reads args.2 []⟩
 
@@ -500,8 +509,8 @@ theorem subtraction_reads (scope : Scope) (args : SubtractArgs scope)
 
 -- Mirror binary_erfuellbar using the token sequence 5 - 2.
 theorem subtraction_erfuellbar (scope : Scope) : (subtraction scope).Satisfiable := by
-  obtain ⟨args, text, pieces, lexical, production⟩ := binary_erfuellbar scope
-  exact ⟨⟨args, rfl⟩, text, pieces, lexical, production⟩
+  let args : BinaryArgs scope := ⟨.sub, .lit 5, .lit 2⟩
+  exact Rule.satisfiableOfPrint ⟨args, rfl⟩ (binary_print args)
 
 theorem subtraction_entry (scope : Scope) : (subtraction scope).Entry where
   reads := fun a _ => subtraction_reads scope a
