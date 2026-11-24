@@ -134,7 +134,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.binary op left right)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
@@ -154,17 +154,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       intro env frame bound active pre post hpc
       let b : Befehl := .lesen slot ref.index
       have hb := bound ref
-      have joined : frame.lokale[ref.index]?.join = some ⟨ref.binding.type, env ref⟩ := by
+      have joined : frame.lokale[ref.index]?.join = some ⟨type, env ref⟩ := by
         rw [hb]
         rfl
-      have typeEq : ref.binding.type = type := local_binding_type ref
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.variable ref visible ordinary)).code ++ post)
           frame (b.auswerten frame) := by
         simpa only [b, expr, Fragment.einzel, List.append_assoc, List.singleton_append] using
           stepAt pre b post frame active hpc
       refine ⟨b.auswerten frame, .schritt .start step, ?_, ?_, ?_, ?_, ?_⟩
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, List.length_cons, List.length_nil, Nat.add_zero, hpc]
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, joined, typeEq, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.einzel, joined, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, active]
       · intro i hi
@@ -255,7 +254,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       obtain ⟨mid, walkL, pcL, tmpL, lokL, retL, preserveL⟩ :=
         leftIH slot env frame bound active pre (R ++ [b] ++ post) hpc
       have boundMid : mid.traegt env := by
-        intro ref
+        intro ty ref
         rw [lokL]
         exact bound ref
       have hpcMid : mid.pc = (pre ++ L).length := by
@@ -276,7 +275,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.div left right nonzero)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
@@ -300,7 +299,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       obtain ⟨mid, walkL, pcL, tmpL, lokL, retL, preserveL⟩ :=
         leftIH slot env frame bound active pre (R ++ [b] ++ post) hpc
       have boundMid : mid.traegt env := by
-        intro ref
+        intro ty ref
         rw [lokL]
         exact bound ref
       have hpcMid : mid.pc = (pre ++ L).length := by
@@ -321,7 +320,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.compare op left right)).code ++ post)
           mid2 (b.auswerten mid2) := by
         refine ⟨b, retR, ?_, rfl⟩
-        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc] using
+        simpa only [expr, Fragment.anhaengen, Fragment.einzel, List.append_assoc, hpcMid2, L, R] using
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
@@ -345,7 +344,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       obtain ⟨mid, walkL, pcL, tmpL, lokL, retL, preserveL⟩ :=
         leftIH slot env frame bound active pre ([sw] ++ R ++ post) hpc
       have boundMid : mid.traegt env := by
-        intro ref
+        intro ty ref
         rw [lokL]
         exact bound ref
       have hpcMid : mid.pc = (pre ++ L).length := by
