@@ -11,33 +11,10 @@ namespace Gabbro.Core.Ast.LowLevel
 open Text Katalog Maschine Annahme Waechter
 open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
 
-private theorem memParseGeneric (form : MemForm) : MemParseAussage form := by
-  intro text tree
-  constructor
-  · intro parsed
-    rcases parsed with ⟨_, pieces, lex, derives⟩
-    refine ⟨pieces, lex, ?_⟩
-    cases derives with
-    | production production children =>
-      obtain ⟨expected, rfl, reads⟩ := production
-      simpa only [canonicalTokens, children.terminalTokens] using reads
-  · rintro ⟨pieces, lex, prod⟩
-    refine ⟨True.intro, pieces, lex, ?_⟩
-    have symbols : ∀ ts : List LocatedToken,
-        DerivesSymbols (tokenGrammar (fun tokens (t : MemTree form) => t.production tokens))
-          (ts.map Symbol.terminal) ts := by
-      intro ts
-      induction ts with
-      | nil => exact DerivesSymbols.nil
-      | cons t ts ih => exact DerivesSymbols.terminal ih
-    exact Derives.production ⟨semanticTokens pieces, rfl, by
-      have hp : tree.production (canonicalTokens pieces) := prod
-      simpa only [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
-
 theorem splitPagesParseOfPrint {form : MemForm} (tree : MemTree form)
     (prints : tree.production (tree.printPieces.map PrintedToken.value)) : MemParse tree.print tree := by
   obtain ⟨pieces, lex, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
-  apply (memParseGeneric form tree.print tree).2
+  apply (memParseKern form tree.print tree).2
   refine ⟨pieces, ?_, ?_⟩
   · simpa only [MemTree.print, Lexed] using lex
   · rw [aligned]

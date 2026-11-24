@@ -18,24 +18,11 @@ private theorem newSpacePrints (tree : MemTree .newSpace) :
       simpa [MemTree.production, MemTree.printPieces, keyword, word, Identifier.print,
         PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
         dot, openParen, closeParen, String.reduceToList]
-private theorem memEindeutig_newSpace : MemEindeutigAussage .newSpace := by
-  intro first second tokens h1 h2
-  cases first with
-  | newSpace t1 =>
-      cases second with
-      | newSpace t2 =>
-          simp only [MemTree.production] at h1 h2
-          have heq : t1.val = t2.val := by
-            have h := congrArg (fun l : List Token => l[4]?) (h1.symm.trans h2)
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at h
-            simpa only [Token.word.injEq] using h
-          exact congrArg MemTree.newSpace (Subtype.ext heq)
-
 private def newSpaceSyntax : Gabbro.Core.Text.Syntax (MemTree .newSpace) where
   reads := fun tokens tree => tree.production tokens
   unique := by
     intro tokens a b ha hb
-    exact memEindeutig_newSpace a b tokens ha hb
+    exact memEindeutigKern .newSpace a b tokens ha hb
   printPieces := MemTree.printPieces
   reads_print := newSpacePrints
 private theorem memHead_some_iff (target : ZielDaten) (op : MemInstruction)
