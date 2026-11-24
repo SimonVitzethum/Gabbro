@@ -21,6 +21,11 @@ public import Core.Ast.Aggregate.Records.AssignFieldProofs
 public import Core.Ast.Variant.TaggedDeclProofs
 public import Core.Ast.Variant.VariantValueProofs
 public import Core.Ast.Variant.VariantMatchProofs
+public import Core.Ast.TextValue.LiteralProofs
+public import Core.Ast.TextValue.ConcatProofs
+public import Core.Ast.TextValue.IndexProofs
+public import Core.Ast.TextValue.SubstringProofs
+public import Core.Ast.TextValue.TypeProofs
 
 /-!
 # M6 aggregate and tagged-form proof handoff
@@ -254,4 +259,18 @@ entry as described in `Core.Ast.SemantikRezept`, then measure the affected pins 
 +
  end Gabbro.Core.Ast.Surface
 ```
+-/
+
+/-!
+# M6 bounded text proof handoff
+
+Each group has one proof file. Fill the statements listed in that file.
+
+| Group | Target module under `Core.Ast.TextValue` | Propositions |
+| --- | --- | ---: |
+| UTF-8 literal | `LiteralProofs` | 16 |
+| Concatenation | `ConcatProofs` | 16 |
+| Byte indexing | `IndexProofs` | 16 |
+| Half-open substring | `SubstringProofs` | 16 |
+| Bounded string type and widening | `TypeProofs` | 16 |
 -/

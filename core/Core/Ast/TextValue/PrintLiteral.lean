@@ -85,7 +85,9 @@ def PrintedToken.textLiteral (decoded : List Char) : PrintedToken where
       obtain ⟨raw, value, spelling, content, _⟩ := tag
       subst other
       have closed : escapeString decoded ++ '"' :: ' ' :: rest = raw ++ '"' :: suffix := by
-        simpa only [List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] using (List.cons.inj same).2
+        have tails := (List.cons.inj same).2
+        change (escapeString decoded ++ ['"']) ++ (' ' :: rest) = (raw ++ ['"']) ++ suffix at tails
+        simpa only [List.append_assoc, List.singleton_append] using tails
       have length := (escapeString_reads decoded).closed_length content closed
       simp only [List.length_append, List.length_cons, List.length_nil, length]
       exact Nat.le_refl _

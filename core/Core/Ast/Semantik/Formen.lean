@@ -8,6 +8,10 @@ public import Core.Ast.Aggregate.Records.Declarations
 public import Core.Ast.Aggregate.Records.Construction
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Variant.Obligations
+public import Core.Ast.TextValue.Literal
+public import Core.Ast.TextValue.Concat
+public import Core.Ast.TextValue.Index
+public import Core.Ast.TextValue.Substring
 
 @[expose] public section
 
@@ -87,6 +91,14 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordFieldForm RecordFieldErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.variantValue then
     ⟨.surface, Quellform.statements variantValueForm VariantValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textLiteral then
+    ⟨.surface, Quellform.statements textLiteralForm TextLiteralErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textConcat then
+    ⟨.surface, Quellform.statements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textIndex then
+    ⟨.surface, Quellform.statements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.substring then
+    ⟨.surface, Quellform.statements substringForm SubstringErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=

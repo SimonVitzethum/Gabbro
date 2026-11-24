@@ -178,6 +178,14 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.definiereVariante then
     ⟨.core, Quellform.kernStatements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textLiteral then
+    ⟨.core, Quellform.kernStatements textLiteralForm TextLiteralErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textConcat then
+    ⟨.core, Quellform.kernStatements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textIndex then
+    ⟨.core, Quellform.kernStatements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.substring then
+    ⟨.core, Quellform.kernStatements substringForm SubstringErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor
