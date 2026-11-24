@@ -27,8 +27,8 @@ inductive Ty : Kind → Type where
   | recordSchema (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
   | sumEnd : Ty .value
   | sum (head tail : Ty .value) : Ty .value
-  | variant (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
-  | variantSchema (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
+  | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
+  | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -109,18 +109,18 @@ def variantLayout : List (Option (Ty .value)) → Ty .value
   | head :: tail => .sum (head.getD .productEnd) (variantLayout tail)
 
 def variantValueType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
-  .variant name (labels.map Subtype.val) (variantLayout payloads)
+  .variant name (labels.map Subtype.val) (payloads.map Option.isSome) (variantLayout payloads)
 
 def variantSchemaType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
-  .variantSchema name (labels.map Subtype.val) (variantLayout payloads)
+  .variantSchema name (labels.map Subtype.val) (payloads.map Option.isSome) (variantLayout payloads)
 
 def Ty.variantLabels : Ty .value → List (List Char)
-  | .variantSchema _ labels _ => labels
+  | .variantSchema _ labels _ _ => labels
   | _ => []
 
 def availableCase (scope : Scope) (label : Identifier) : Prop :=
   ((scope.flatMap fun binding => binding.type.variantLabels).count label.val = 1) ∧
-    ∀ binding ∈ scope, binding.type.valueBinding → binding.name.val ≠ label.val
+    ∀ binding ∈ scope, binding.name.val ≠ label.val
 
 structure VariantRef (scope : Scope) (labels : List Identifier) (payloads : List (Option (Ty .value))) where
   name : Identifier

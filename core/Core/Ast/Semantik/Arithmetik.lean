@@ -25,7 +25,7 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .recordSchema .. | _, .variantSchema .. => PUnit
   | _, .sumEnd => Empty
   | _, .sum head tail => Sum (Wert head) (Wert tail)
-  | _, .variant _ _ layout => Wert layout
+  | _, .variant _ _ _ layout => Wert layout
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :

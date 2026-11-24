@@ -60,6 +60,8 @@ def expr (slot : Nat) : Expr scope type → Fragment
     (labeledCode slot args).anhaengen (.einzel (.baueRecord slot ref.name.val labels types sources))
   | .recordField (name := name) (labels := labels) (types := types) base _ index _ =>
     (expr slot base).anhaengen (.einzel (.liesRecordFeld slot name labels types index))
+  | .variantValue (labels := labels) (payloads := payloads) ref _ index _ _ _ payload =>
+    (caseCode slot payload).anhaengen (.einzel (.baueVariante slot ref.name.val labels payloads index))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer
@@ -68,6 +70,10 @@ def itemCode (slot : Nat) : ExprItems scope types → Fragment
 def labeledCode (slot : Nat) : LabeledItems scope labels types → Fragment
   | .empty => .leer
   | .next _ head tail => (expr slot head).anhaengen (labeledCode (slot + 1) tail)
+
+def caseCode (slot : Nat) : CasePayload scope payload → Fragment
+  | .nullary _ => .leer
+  | .value expression => expr slot expression
 
 end
 
@@ -103,6 +109,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
     let (ys, yw) := BracedBlock.rangeUses index yes
     let (ns, nw) := BracedBlock.rangeUses index no
     (ys || ns, yw || nw)
+  | .variantMatch _ arms => arms.rangeUses index
   | .whileBounded _ _ _ _ _ body => BracedBlock.rangeUses index body
   | .forRange name _ _ _ _ _ body =>
     let (shadow, writes) := BracedBlock.rangeUses index body
@@ -118,7 +125,28 @@ def Block.rangeUses (index : Identifier) : Block result before after → Bool ×
 
 def BracedBlock.rangeUses (index : Identifier) : BracedBlock result before → Bool × Bool
   | .braces body => Block.rangeUses index body
+def VariantArms.rangeUses (index : Identifier) : VariantArms result scope labels payloads → Bool × Bool
+  | .done => (false, false)
+  | .nullary _ _ body rest =>
+    let a := BracedBlock.rangeUses index body
+    let b := rest.rangeUses index
+    (a.1 || b.1, a.2 || b.2)
+  | .payload _ binder _ body rest =>
+    let a := BracedBlock.rangeUses index body
+    let b := rest.rangeUses index
+    (a.1 || b.1 || binder.val == index.val, a.2 || b.2)
+  | .wildcard body _ _ => BracedBlock.rangeUses index body
 end
+
+structure MatchCode where
+  body : Fragment
+  branches : List (Nat × Bool)
+
+def MatchCode.prepend (rest : MatchCode) (arm : Fragment) (bind : Bool) : MatchCode :=
+  let effective := if bind then arm.anhaengen (.einzel (.blockEnde 1)) else arm
+  let length := effective.code.length + 1
+  let branch := effective.anhaengen (.einzel (.springe (rest.body.code.length + 1)))
+  ⟨branch.anhaengen rest.body, (1, bind) :: rest.branches.map (fun (offset, payload) => (length + offset, payload))⟩
 
 mutual
 
@@ -164,6 +192,10 @@ def stmt : Stmt result before after → Fragment
     (expr 0 value).anhaengen (.einzel (.setzeRecordFeld 0 ref.index name labels types index))
   | .letMutableValue (type := type) _ _ value =>
     (expr 0 value).anhaengen (.einzel (.bindeWert 0 type false))
+  | .variantMatch (name := name) (labels := labels) (payloads := payloads) value arms =>
+    let matchCode := variantArms arms
+    ((expr 0 value).anhaengen (.einzel (.waehleVariante 0 name labels payloads matchCode.branches))).anhaengen
+      matchCode.body
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -172,6 +204,12 @@ def block : Block result before after → Fragment
 def bracedBlock : BracedBlock result before → Fragment
   | @BracedBlock.braces _ _ after body =>
     (block body).anhaengen (.einzel (.blockEnde (after.length - before.length)))
+
+def variantArms : VariantArms result scope labels payloads → MatchCode
+  | .done => ⟨.leer, []⟩
+  | .nullary _ _ body rest => (variantArms rest).prepend (bracedBlock body) false
+  | .payload _ _ _ body rest => (variantArms rest).prepend (bracedBlock body) true
+  | .wildcard (labels := labels) body _ _ => ⟨bracedBlock body, List.replicate labels.length (1, false)⟩
 
 end
 
@@ -199,6 +237,9 @@ def decl : Decl before after → Fragment
 
   | .record _ name members _ _ =>
     .einzel (.definiereRecord name.val (recordLabels members) (recordTypes members))
+  | .tagged _ name first tail _ _ =>
+    let cases := first :: tail
+    .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer

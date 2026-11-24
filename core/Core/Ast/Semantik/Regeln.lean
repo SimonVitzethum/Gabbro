@@ -31,7 +31,7 @@ def anfangswert : Ty .value → Option Dynamisch
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
   | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
-  | .variantSchema name labels layout => some ⟨.variantSchema name labels layout, PUnit.unit⟩
+  | .variantSchema name labels payloads layout => some ⟨.variantSchema name labels payloads layout, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where

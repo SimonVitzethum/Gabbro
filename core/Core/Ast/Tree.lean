@@ -339,7 +339,7 @@ inductive BracedBlock (result : Option (Ty .value)) : Scope → Type where
 
 /-- Exhaustiveness is the index of an arm sequence. The optional final wildcard
     consumes every remaining declared case without binding a payload. -/
-inductive VariantArms (result : Option (Ty .value)) (scope : Scope) :
+inductive VariantArms (result : Option (Ty .value)) : Scope →
     List Identifier → List (Option (Ty .value)) → Type where
   | done : VariantArms result scope [] []
   | nullary (label : Identifier) (caseName : label.val ≠ ['_']) (body : BracedBlock result scope)
