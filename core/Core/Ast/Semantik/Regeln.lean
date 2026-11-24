@@ -71,7 +71,7 @@ def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
-  | type@(.recordSchema ..) => some ⟨type, PUnit.unit⟩
+  | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where
@@ -107,7 +107,7 @@ structure Fortsetzung where
   mass : Option Nat
   eingang : Option (Ty .value)
 
-/-- Each context has its own instruction pointer, temporary slots and local values.
+/-- Each context has its own instruction pointer, temporary slots and indexLocal values.
     Locals are stored in scope order. Temporaries are numbered by the elaborator. -/
 structure Rahmen where
   pc : Nat
@@ -276,7 +276,7 @@ inductive Befehl where
       (types : List (Ty .value)) (sources : List Nat)
   | liesRecordFeld (basis : Nat) (name : List Char) (labels : List Identifier)
       (types : List (Ty .value)) (index : Fin types.length)
-  | setzeRecordFeld (source local : Nat) (name : List Char) (labels : List Identifier)
+  | setzeRecordFeld (source indexLocal : Nat) (name : List Char) (labels : List Identifier)
       (types : List (Ty .value)) (index : Fin types.length)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
@@ -410,13 +410,13 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
   | .liesRecordFeld base name labels types index, frame => frame.schreibe base (do
     let record ← (frame.temp base).bind (wertAls (recordValueType name labels types))
     pure ⟨types.get index, tupleGet types index record⟩)
-  | .setzeRecordFeld source local name labels types index, frame =>
+  | .setzeRecordFeld source indexLocal name labels types index, frame =>
     let type := recordValueType name labels types
     let updated : Option Dynamisch := do
-      let old ← frame.lokale[local]?.join.bind (wertAls type)
+      let old ← frame.lokale[indexLocal]?.join.bind (wertAls type)
       let value ← (frame.temp source).bind (wertAls (types.get index))
       pure ⟨type, tupleSet types index value old⟩
-    { frame with pc := frame.pc + 1, lokale := frame.lokale.set local updated }
+    { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -436,13 +436,13 @@ def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
   { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c)) }
 
-/-- The context-local transition used by the ideal rule. -/
+/-- The context-indexLocal transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s
 
 /-- The concrete one-step realization uses the same mathematical transfer on
-    context-local values. Shared events go through the machine protocol. -/
+    context-indexLocal values. Shared events go through the machine protocol. -/
 def Befehl.impl (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s

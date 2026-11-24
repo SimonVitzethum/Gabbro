@@ -92,15 +92,15 @@ def AssignFieldErfuellbarAmAussage : Prop :=
 /-- An assignment in a closed source unit reaches a live record local and changes its field. -/
 def AssignFieldProgramAussage : Prop :=
   ∀ platform start, ∃ (tree : Ast.Unit) (text : Gabbro.Core.Text.RawText) (s : Zustand)
-    (src local : Nat) (name : List Char) (labels : List Identifier)
+    (src indexLocal : Nat) (name : List Char) (labels : List Identifier)
     (types : List (Ty .value)) (i : Fin types.length),
     Ast.Parse text tree ∧
     let E := elaborieren platform tree
-    let b := Befehl.setzeRecordFeld src local name labels types i
+    let b := Befehl.setzeRecordFeld src indexLocal name labels types i
     E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
     ∃ (before after : Wert (recordValueType name labels types)),
-      (s.lokal eintritt).lokale[local]? = some (some ⟨recordValueType name labels types, before⟩) ∧
-      ((b.nach eintritt s).lokal eintritt).lokale[local]? =
+      (s.lokal eintritt).lokale[indexLocal]? = some (some ⟨recordValueType name labels types, before⟩) ∧
+      ((b.nach eintritt s).lokal eintritt).lokale[indexLocal]? =
         some (some ⟨recordValueType name labels types, after⟩) ∧
       tupleGet types i before ≠ tupleGet types i after
 
