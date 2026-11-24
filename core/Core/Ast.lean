@@ -10,7 +10,7 @@ public import Core.Ast.LowLevel.Proofs.Satisfiability
 public import Core.Ast.Inventory.All
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface
-public import Core.Ast.ExpressionBeweise
+public import Core.Ast.Expression.Proofs
 public import Core.Ast.Semantik.Recipe
 public import Core.Ast.Program.Progress
 public import Core.Ast.Aggregate.ArrayValueProofs

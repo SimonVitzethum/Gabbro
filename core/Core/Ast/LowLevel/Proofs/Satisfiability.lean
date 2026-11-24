@@ -56,7 +56,7 @@ private def lowName : Identifier :=
       cases h⟩⟩
 
 private theorem lowName_slot : RegionScope.slot [lowName] lowName = some 0 := by
-  decide
+  simp only [RegionScope.slot, List.map_cons, List.map_nil, List.idxOf?_cons, beq_self_eq_true, if_true]
 
 private def lowStart (h : Umgebung) (regions : List Strecke) : AussenStart :=
   ⟨0, (fun i => if i = 0 then some 0 else none), regions, (fun _ => none), h.politik.sicht 0 []⟩
@@ -328,7 +328,9 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let scope : RegionScope := []
   let tree : Tree .environment := .environment name abi row
   let allowed : row.zugelassen k abi := by
-    decide
+    refine ⟨?_, rfl⟩
+    simp only [k, row, Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
+      FirmwareZeile.endpunkt, List.map_cons, List.mem_append, List.mem_cons, eq_self, or_true, true_or]
   let op : Instruction k := .selectEnvironment name abi row allowed
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Umgebung := Umgebung.referenz k 1 sicht
