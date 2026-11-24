@@ -107,8 +107,10 @@ private theorem textTailCompose {scope it it2 it3}
   | substring base first' last _ reads₁ reads₂ tail' =>
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailCompose tail' next)
-termination_by sizeOf tail
-decreasing_by simp_all
+termination_by input.length
+decreasing_by
+  simp_all only [List.length_cons]
+  omega
 
 private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
     {tree : Expr scope (.text a)} {rhs final : List Token}
