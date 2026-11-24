@@ -30,7 +30,7 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   generalize htok : (.word name :: dot :: .word field :: assignment :: input) = toks at read
   cases read with
   | assignField ref visible writable fld index checked fits valueRead =>
-      rename_i nm labs tys value input'
+      rename_i nm labs tys input' value
       injection htok with hName hTail
       injection hTail with hDot hTail2
       injection hTail2 with hWord hTail3
@@ -42,12 +42,24 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
         simpa only [inputEq] using valueRead
       exact ⟨⟨nm, labs, tys, ref, visible, writable, fld, index, checked, _, value, fits⟩,
         hn.symm, hf.symm, valueRead', rfl⟩
-  all_goals simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case assignVar => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case letBinding => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case ret => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case ite => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case retVoid => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case letMutable => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case directCall => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case forRange => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case tupleBind => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case letMutableValue => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
+  case variantMatch => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon]
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read
   obtain ⟨a, hname, hfield, valueRead, htree⟩ := AssignFieldInversion read
-  exact (ExprReads.consumes valueRead).trans (List.suffix_cons semicolon rest)
+  exact (List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)
 
 end Gabbro.Core.Ast.Surface
 
