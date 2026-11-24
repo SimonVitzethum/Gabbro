@@ -33,21 +33,20 @@ open Gabbro.Core.Ast
 
 namespace Gabbro.Core.Ast.Surface
 
-mutual
-private theorem itemsReadConsumes {scope close input types} {items : ExprItems scope types} {rest}
-    (read : ItemsRead scope close input items rest) : rest <:+ input := by
+private theorem itemsSuffix {scope close input types} {items : ExprItems scope types} {rest}
+    (read : ItemsRead scope close input items rest ⊕ ItemsTail scope close input items rest) :
+    rest <:+ input := by
   cases read with
-  | close => exact List.suffix_cons _ _
-  | next headRead tailRead =>
-      exact (itemsTailConsumes tailRead).trans (ExprReads.consumes headRead)
-
-private theorem itemsTailConsumes {scope close input types} {items : ExprItems scope types} {rest}
-    (read : ItemsTail scope close input items rest) : rest <:+ input := by
-  cases read with
-  | close => exact List.suffix_cons _ _
-  | comma _ tailRead =>
-      exact (itemsReadConsumes tailRead).trans (List.suffix_cons _ _)
-end
+  | inl read =>
+      cases read with
+      | close => exact List.suffix_cons _ _
+      | next headRead tailRead =>
+          exact (itemsSuffix (Sum.inr tailRead)).trans (ExprReads.consumes headRead)
+  | inr read =>
+      cases read with
+      | close => exact List.suffix_cons _ _
+      | comma _ tailRead =>
+          exact (itemsSuffix (Sum.inl tailRead)).trans (List.suffix_cons _ _)
 
 private theorem fitsSelf (type : Ty .value) : Fits type type := by
   cases type with
@@ -64,19 +63,32 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | variant name labels hasPayload layout => rfl
   | variantSchema name labels hasPayload layout => rfl
 
+private theorem fitsArrayJoin (head principal : Ty .value) {element : Ty .value}
+    (join : arrayJoin head principal = some element) : Fits head element := by
+  unfold arrayJoin at join
+  split at join
+  · cases join
+    simp only [Fits]
+    exact ⟨min_le_left _ _, le_max_left _ _⟩
+  · split at join
+    · rename_i same
+      cases join
+      subst principal
+      exact fitsSelf head
+    · cases join
+
 private theorem fitsThroughJoin (head principal : Ty .value) {element target : Ty .value}
     (fit : Fits target principal) (join : arrayJoin head principal = some element) :
     Fits target element := by
   unfold arrayJoin at join
   split at join
   · cases join
-    cases target with
-    | int tlo thi =>
-        dsimp only [Fits] at fit ⊢
-        exact ⟨le_trans (min_le_left _ _) fit.1, le_trans fit.2 (le_max_left _ _)⟩
-    | _ =>
-        dsimp only [Fits] at fit
-        cases fit
+    by_cases ht : ∃ l u : Int, target = .int l u
+    · obtain ⟨l, u, rfl⟩ := ht
+      simp only [Fits] at fit ⊢
+      exact ⟨le_trans (min_le_right _ _) fit.1, le_trans fit.2 (le_max_right _ _)⟩
+    · simp only [Fits] at fit
+      exact False.elim (ht ⟨_, _, fit⟩)
   · split at join
     · rename_i same
       cases join
@@ -93,11 +105,11 @@ theorem arrayValueInversion : ArrayValueInversionAussage := by
 theorem arrayValueSuffix : ArrayValueSuffixAussage := by
   intro scope input type tree rest read
   obtain ⟨args, itemsRead, _⟩ := arrayValueInversion read
-  exact itemsReadConsumes itemsRead
+  exact itemsSuffix (Sum.inl itemsRead)
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
-      (((Category.expression scope).printPieces (arrayValue scope).tree args).map PrintedToken.value) := by
+      (((Category.expression scope).printPieces ((arrayValue scope).tree args)).map PrintedToken.value) := by
   change ∃ input, (Expr.arrayValue args.items args.principal args.fits).printTokens =
       openBracket :: input ∧ ItemsRead scope closeBracket input args.items []
   refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket], rfl, ?_⟩
@@ -127,6 +139,7 @@ theorem arrayValueElementSound : ArrayValueElementSoundAussage := by
           change arrayElement [head] = some element at principal
           simp only [arrayElement] at principal
           cases principal
+          have bound : i.val < 1 := by simpa using i.isLt
           have ival : i.val = 0 := by omega
           cases i with
           | mk val isLt =>
@@ -143,7 +156,7 @@ theorem arrayValueElementSound : ArrayValueElementSoundAussage := by
               cases i using Fin.cases with
               | zero =>
                   change Fits head element
-                  exact fitsThroughJoin head principalElement (fitsSelf head) principal
+                  exact fitsArrayJoin head principalElement principal
               | succ j =>
                   change Fits ((next :: rest).get j) element
                   exact fitsThroughJoin head principalElement (ih hTail j) principal

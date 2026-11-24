@@ -47,8 +47,8 @@ theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   cases read with
   | stop blocked =>
       exact (blocked ⟨.index, input, rfl, allowed⟩).elim
-  | arrayIndex baseArg lower upper _ indexRead tailRead =>
-      exact ⟨_, _, baseArg, _, lower, upper, indexRead, tailRead⟩
+  | arrayIndex _ lower upper _ indexRead tailRead =>
+      exact ⟨_, _, base, _, lower, upper, indexRead, tailRead⟩
 
 theorem arrayIndexSuffix : ArrayIndexSuffixAussage := by
   intro scope element count minimum input type base tree rest allowed read
@@ -67,7 +67,7 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
       ExprReads scope 0 indexInput args.offset (closeBracket :: rest))
     ((Expr.arrayIndex args.base args.offset args.lower args.upper).printTokens)
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++ [closeBracket],
-    rfl, ?_⟩
+    by simp only [List.append_assoc], ?_⟩
   refine ⟨args.offset.printTokens ++ [closeBracket], ?_, ?_⟩
   · simpa only [List.append_assoc] using
       (Expr.printReads (minimum := 8) args.base (by
@@ -76,15 +76,6 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
         have prec := infixPrecLe7 op
         omega))
   · exact Expr.printReads args.offset noOperatorAtCloseBracket
-
-private theorem oneBoolArrayFits {scope : Scope} (i : Fin 1) : Fits (.int 0 0) (.int 0 0) := by
-  have bound : i.val < 1 := by simpa using i.isLt
-  have ival : i.val = 0 := by omega
-  cases i with
-  | mk val isLt =>
-      simp only at ival
-      subst val
-      exact ⟨le_rfl, le_rfl⟩
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
   intro scope
@@ -102,7 +93,9 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
                 (.arrayIndex args.base args.lower args.upper (by omega) offsetRead
                   (.stop noOperatorAtEnd))
           | binary op allowed _ _ =>
-              have prec := infixPrecLe7 (.arith op); omega
+              have prec : op.precedence ≤ 7 := by
+                simpa [Infix.precedence] using infixPrecLe7 (.arith op)
+              omega
           | div allowed _ _ _ =>
               have prec := infixPrecLe7 .div; omega
           | compare op allowed _ _ =>
@@ -127,7 +120,9 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
                     (.stop noOperatorAtClose))
               exact .atom (.grouped inner) (.stop noOperatorAtEnd)
           | binary op allowed _ _ =>
-              have prec := infixPrecLe7 (.arith op); omega
+              have prec : op.precedence ≤ 7 := by
+                simpa [Infix.precedence] using infixPrecLe7 (.arith op)
+              omega
           | div allowed _ _ _ =>
               have prec := infixPrecLe7 .div; omega
           | compare op allowed _ _ =>
@@ -142,7 +137,15 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
               have prec := infixPrecLe7 .projection; omega
   · exact arrayIndexPrint scope
   · let base : Expr scope (.array (.int 0 0) 1) :=
-      .arrayValue (.next (.lit 0) .empty) rfl oneBoolArrayFits
+      .arrayValue (.next (.lit 0) .empty) rfl (fun i => by
+        have bound : i.val < 1 := by simpa using i.isLt
+        have ival : i.val = 0 := by omega
+        cases i with
+        | mk val isLt =>
+            simp only at ival
+            subst val
+            change Fits (.int 0 0) (.int 0 0)
+            exact ⟨le_rfl, le_rfl⟩)
     let args : ArrayIndexArgs scope :=
       ⟨.int 0 0, 1, 0, 0, base, .lit 0, le_rfl, by omega⟩
     exact Rule.satisfiableOfPrint args (arrayIndexPrint scope args)
@@ -216,24 +219,36 @@ theorem arrayIndexRegelSicher : ArrayIndexRegelSicherAussage := by
 theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
   intro platform start
   let base : Expr [] (.array (.int 0 0) 1) :=
-    .arrayValue (.next (.lit 0) .empty) rfl Surface.oneBoolArrayFits
+    .arrayValue (.next (.lit 0) .empty) rfl (fun i => by
+      have bound : i.val < 1 := by simpa using i.isLt
+      have ival : i.val = 0 := by omega
+      cases i with
+      | mk val isLt =>
+          simp only at ival
+          subst val
+          change Fits (.int 0 0) (.int 0 0)
+          exact ⟨le_rfl, le_rfl⟩)
   let args : Surface.ArrayIndexArgs [] :=
     ⟨.int 0 0, 1, 0, 0, base, .lit 0, le_rfl, by omega⟩
   let form := arrayIndexForm []
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
-  let s₁ := (Befehl.baueArray 0 (.int 0 0) 1).nach eintritt s₀
-  let s₂ := (Befehl.literal 1 0).nach eintritt s₁
+  let s₁ := (Befehl.literal 0 0).nach eintritt s₀
+  let s₂ := (Befehl.baueArray 0 (.int 0 0) 1).nach eintritt s₁
+  let s₃ := (Befehl.literal 1 0).nach eintritt s₂
   have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
-    ⟨.baueArray 0 (.int 0 0) 1, rfl, rfl, rfl⟩
+    ⟨.literal 0 0, rfl, rfl, rfl⟩
   have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨.baueArray 0 (.int 0 0) 1, rfl, rfl, rfl⟩
+  have third : E.system.ISchritt eintritt s₂ () [plan] s₃ :=
     ⟨.literal 1 0, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₂ :=
-    .schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second
-  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₂ reached
-    (form.realisiert (arrayIndex_am_ort []) platform args s₂ rfl rfl rfl rfl) ?_⟩
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan]
+      (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second) third
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₃ reached
+    (form.realisiert (arrayIndex_am_ort []) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
-  change (Befehl.liesArray 0 (.int 0 0) 1).guard (s₂.lokal eintritt) = some g at guard
+  change (Befehl.liesArray 0 (.int 0 0) 1).guard (s₃.lokal eintritt) = some g at guard
   simp [Befehl.guard, Rahmen.zahl, alsGanzzahl] at guard
   cases guard
   decide
@@ -252,10 +267,11 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   · have arr : wertAls (.array element count) ⟨.array element count, values⟩ = some values := by
       cases count with
       | zero =>
-          cases values
-          simp_all [wertAls]
+          apply congrArg some
+          ext i
+          exact Fin.elim0 i
       | succ n =>
-          rfl
+          dsimp [wertAls]
     simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
     rw [harr]
     simp only [Option.bind]

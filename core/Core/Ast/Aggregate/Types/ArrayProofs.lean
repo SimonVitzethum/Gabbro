@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Aggregate.Types
 public import Core.Ast.Semantik.Formbeweise
+public import Core.Ast.ProgramSurface
 
 import Init.Omega
 
@@ -56,11 +57,9 @@ theorem arrayTypeDerivation : ArrayTypeDerivationAussage := by
   have boundRead : ExprReads [] 0 (.natural count :: closeBracket :: rest)
       (Expr.lit count : Expr [] (.int count count)) (closeBracket :: rest) :=
     .atom .lit (.stop noOperatorAtCloseBracket)
-  change TypeReads
-    (openBracket :: element.printPieces.map PrintedToken.value ++
-      (semicolon :: (.natural count : Token) :: closeBracket :: rest))
-    (.array element count) rest
-  exact TypeReads.array count (Expr.lit count) elementRead boundRead
+  simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
+    List.append_assoc] using
+    (TypeReads.array count (Expr.lit count) elementRead boundRead)
 
 theorem arrayTypeIndex : ArrayTypeIndexAussage := by
   intro element count
@@ -155,8 +154,17 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
     change ['x'] ≠ ['m', 'u', 't']
     intro same
     cases same
-  let written : WrittenType := .array .productEnd 0
-  let value : Expr [] written.type := .arrayValue .empty rfl (fun i => Fin.elim0 i)
+  let written : WrittenType := .array .bool 1
+  let value : Expr [] written.type :=
+    .arrayValue (.next (.trueLit : Expr [] .bool) .empty) rfl (fun i => by
+      have bound : i.val < 1 := by simpa using i.isLt
+      have ival : i.val = 0 := by omega
+      cases i with
+      | mk val isLt =>
+          simp only at ival
+          subst val
+          change Fits .bool .bool
+          trivial)
   let argsVal : Surface.MutableLocalArgs [] none :=
     ⟨name, ordinary, written, by change written.valid; trivial, written.type, value, by simp [Fits]⟩
   let args : {a : Surface.MutableLocalArgs [] none // arrayTypeUse a.written} :=
@@ -164,12 +172,19 @@ theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
   let form := typeUseForm ([], none) arrayTypeUse
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
-  let s₁ := (Befehl.baueArray 0 .productEnd 0).nach eintritt s₀
-  have step : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
-    ⟨.baueArray 0 .productEnd 0, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start step
-  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₁ reached
-    (form.realisiert (arrayType_am_ort ([], none)) platform args s₁ rfl rfl rfl rfl) ?_⟩
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  let s₂ := (Befehl.baueArray 0 .bool 1).nach eintritt s₁
+  let s₃ := (Befehl.bindeWert 0 written.type false).nach eintritt s₂
+  have step1 : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have step2 : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨.baueArray 0 .bool 1, rfl, rfl, rfl⟩
+  have step3 : E.system.ISchritt eintritt s₂ () [plan] s₃ :=
+    ⟨.bindeWert 0 written.type false, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan] (.schritt eintritt () [plan] .start step1) step2) step3
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₃ reached
+    (form.realisiert (arrayType_am_ort ([], none)) platform args s₃ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 
