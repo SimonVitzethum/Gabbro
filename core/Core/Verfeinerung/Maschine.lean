@@ -67,15 +67,17 @@ def BelegungGeprueft (η : Lauf E) : Prop :=
   ∀ t c f, η.belegt t = some c → E.system.kopf (η.zeit.zustand t) c = some f →
     0 < E.stotterLaenge f
 
-/-- Obligations for the M4 clock and trace match. If the concrete machine takes
-    no step at an opportunity, the matched ideal state has no transition there. -/
-structure AbgleichPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop where
+/-- The clock and start conditions shared by all forms of a unit. -/
+structure AbgleichBasis (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop where
   lokal_refl : ∀ l, E.lokalerBezug l l
   laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
     ∃ z, E.laden s (h.lade E.bild) = some z ∧ Zustandsbezug E z (start E s).2
-  regel : ∀ f, RegelSimSchritt E f
   pause : ∀ hw t s i, Zustandsbezug E s i → KeinSchritt (Lauffolge E hw) t (some s) →
     KeinSchritt (Schritt E.einrichtung E.system E.katalog hw) t i
+
+structure AbgleichPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    extends AbgleichBasis E : Prop where
+  regel : ∀ f, RegelSimSchritt E f
   schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → BelegungGeprueft η → StotterSchranke η
 
 theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E)
