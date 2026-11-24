@@ -221,10 +221,9 @@ def regionInitializerCode (i : RegionInitializer) : Nat :=
 
 noncomputable def regionInitializerDecode (n : Nat) : Option RegionInitializer := by
   classical
-  let o : Option Nat ← Encodable.decode n
-  match o with
+  match (Encodable.decode n : Option Nat) with
   | Option.none => exact Option.some .address
-  | Option.some w =>
+  | Option.some w => do
       let written : WrittenType ← Encodable.decode w
       if h : written.valid [] then Option.some (.view written h) else Option.none
 
