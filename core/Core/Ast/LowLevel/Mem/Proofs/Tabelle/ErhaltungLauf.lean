@@ -62,7 +62,7 @@ theorem tabellenGedeckt_flush (target : ZielDaten) (name : Identifier) (s : MemS
           obtain ⟨hspaces, hnarrow⟩ := inv
           have hlt : token.raum < (s.lokal c).spaces.length :=
             (List.getElem?_eq_some_iff.mp hs).1
-          refine ⟨?spaces, ?narrow⟩
+          refine ⟨?spacesRelease, ?narrowRelease⟩
           · intro sp' space' found
             by_cases same : sp' = token.raum
             · subst same
