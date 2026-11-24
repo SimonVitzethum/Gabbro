@@ -59,6 +59,7 @@ def Quellform.ElaboriertAussage : Prop :=
 
 def Quellform.RealisiertAussage : Prop :=
   ∀ platform args s, s.status eintritt = .laeuft →
+    (s.lokal eintritt).rueckgabe = none →
     (s.lokal eintritt).pc = form.position args → Realisiert form platform args s
 
 def Quellform.AnnahmeAussage : Prop :=
@@ -210,7 +211,7 @@ theorem literal_erfuellbar : LiteralErfuellbar := by
   let form := literalForm []
   let s := (I.start (form.einheit platform 1) start).2
   refine ⟨1, form.erfuellbar_aus_erreichbar platform start 1 s .start
-    (form.realisiert (literal_am_ort []) platform 1 s rfl rfl) ?_⟩
+    (form.realisiert (literal_am_ort []) platform 1 s rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
 

@@ -25,6 +25,7 @@ structure Binding where
   name : Identifier
   type : Ty .value
   mutable : Bool
+  constant : Bool
 
 abbrev Scope := List Binding
 
@@ -34,10 +35,24 @@ inductive Local : Scope → Ty .value → Type where
   | here : Local (binding :: outer) binding.type
   | there : Local outer type → Local (binding :: outer) type
 
+def Local.binding : Local scope type → Binding
+  | @here binding _ => binding
+  | .there ref => ref.binding
+
+def Local.index : Local scope type → Nat
+  | .here => 0
+  | .there ref => ref.index + 1
+
+/-- A written occurrence may only refer to the nearest binding with that spelling. -/
+def Local.visible : Local scope type → Prop
+  | .here => True
+  | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.visible
+
 /-- Concrete binary operators sharing one surface production family. -/
 inductive Arith where
   | add
   | mul
+  | sub
   deriving DecidableEq
 
 /-- The exact interval of addition and the four-corner hull of multiplication. -/
@@ -46,10 +61,39 @@ def Arith.bounds : Arith → Int → Int → Int → Int → Int × Int
   | .mul, lo₁, hi₁, lo₂, hi₂ =>
     (min (min (lo₁ * lo₂) (lo₁ * hi₂)) (min (hi₁ * lo₂) (hi₁ * hi₂)),
      max (max (lo₁ * lo₂) (lo₁ * hi₂)) (max (hi₁ * lo₂) (hi₁ * hi₂)))
+  | .sub, lo₁, hi₁, lo₂, hi₂ => (lo₁ - hi₂, hi₁ - lo₂)
 
 def Arith.result (op : Arith) (lo₁ hi₁ lo₂ hi₂ : Int) : Ty .value :=
   let (lo, hi) := op.bounds lo₁ hi₁ lo₂ hi₂
   .int lo hi
+
+inductive Compare where
+  | eq | ne | lt | le | gt | ge
+  deriving DecidableEq
+
+inductive Logic where
+  | and | or
+  deriving DecidableEq
+
+def Divisor (lo hi : Int) : Prop := 1 ≤ lo ∨ hi ≤ -1
+
+def quotientBounds (lo hi divisorLo : Int) : Int × Int :=
+  if 0 ≤ lo ∧ 1 ≤ divisorLo then (0, hi)
+  else
+    let magnitude : Int := max lo.natAbs hi.natAbs
+    (-magnitude, magnitude)
+
+def quotientType (lo hi divisorLo : Int) : Ty .value :=
+  .int (quotientBounds lo hi divisorLo).1 (quotientBounds lo hi divisorLo).2
+
+def ordinaryLocal (name : Identifier) : Prop :=
+  name.val ≠ "true".toList ∧ name.val ≠ "false".toList
+
+/-- The implicit widening at a typed destination is inclusion of the source interval. -/
+def Fits : Ty .value → Ty .value → Prop
+  | .int lo hi, .int lower upper => lower ≤ lo ∧ hi ≤ upper
+  | .bool, .bool => True
+  | _, _ => False
 
 inductive Expr : Scope → Ty .value → Type where
   /-- An unsigned spelling of an unsuffixed integer literal. -/
@@ -57,24 +101,185 @@ inductive Expr : Scope → Ty .value → Type where
   /-- Left-associative arithmetic computes the interval of its two operands. -/
   | binary (op : Arith) (left : Expr scope (.int lo₁ hi₁))
       (right : Expr scope (.int lo₂ hi₂)) : Expr scope (op.result lo₁ hi₁ lo₂ hi₂)
+  /-- Inventory key `surface.SExpr.tru`. -/
+  | trueLit : Expr scope .bool
+  /-- Inventory key `surface.SExpr.fls`. -/
+  | falseLit : Expr scope .bool
+  /-- Inventory key `surface.SExpr.variable`, resolved as a plain local. -/
+  | variable (ref : Local scope type) (visible : ref.visible)
+      (ordinary : ordinaryLocal ref.binding.name) : Expr scope type
+  /-- A minus directly before a numeral is a negative literal. -/
+  | negativeLit (magnitude : Nat) : Expr scope (.int (-(magnitude : Int)) (-(magnitude : Int)))
+  /-- Inventory key `surface.SExpr.un`, signed interval negation. -/
+  | neg (operand : Expr scope (.int lo hi)) : Expr scope (.int (-hi) (-lo))
+  /-- Inventory key `surface.SExpr.un`, Boolean negation. -/
+  | not (operand : Expr scope .bool) : Expr scope .bool
+  /-- Inventory key `surface.SExpr.bin`, truncating integer division. -/
+  | div (left : Expr scope (.int lo₁ hi₁)) (right : Expr scope (.int lo₂ hi₂))
+      (nonzero : Divisor lo₂ hi₂) : Expr scope (quotientType lo₁ hi₁ lo₂)
+  /-- Inventory key `surface.SExpr.bin`, integer comparison. -/
+  | compare (op : Compare) (left : Expr scope (.int lo₁ hi₁))
+      (right : Expr scope (.int lo₂ hi₂)) : Expr scope .bool
+  /-- Inventory key `surface.SExpr.bin`, left-associative Boolean operators. -/
+  | logic (op : Logic) (left right : Expr scope .bool) : Expr scope .bool
 
 abbrev TypedExpr (scope : Scope) := (type : Ty .value) × Expr scope type
 
 def Expr.typed (tree : Expr scope type) : TypedExpr scope := ⟨type, tree⟩
 
-inductive Stmt : Scope → Scope → Type where
+/-- Static evaluation may read only bindings introduced by const declarations. -/
+def Expr.static : Expr scope type → Prop
+  | .variable ref _ _ => ref.binding.constant = true
+  | .binary _ a b | .div a b _ | .compare _ a b => a.static ∧ b.static
+  | .logic _ a b => a.static ∧ b.static
+  | .neg a | .not a => a.static
+  | _ => True
+
+/-- The scalar type spelling retains the signedness and width selected in the source.
+    A missing explicit interval denotes the complete range of that width. -/
+inductive WrittenType where
+  | bool
+  | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
+
+def WrittenType.storage (signed : Bool) (width : Nat) : Int × Int :=
+  if signed then (-(2 ^ (width - 1) : Int), 2 ^ (width - 1) - 1)
+  else (0, 2 ^ width - 1)
+
+def WrittenType.type : WrittenType → Ty .value
+  | .bool => .bool
+  | .integer signed width range =>
+    let (lo, hi) := range.getD (storage signed width)
+    .int lo hi
+
+def WrittenType.valid : WrittenType → Prop
+  | .bool => True
+  | .integer signed width range =>
+    let (minimum, maximum) := storage signed width
+    let (lo, hi) := range.getD (minimum, maximum)
+    1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
+
+structure Parameter where
+  name : Identifier
+  written : WrittenType
+  valid : written.valid
+  ordinary : ordinaryLocal name
+
+def Parameter.binding (p : Parameter) : Binding := ⟨p.name, p.written.type, false, false⟩
+
+def functionScope (outer : Scope) (parameters : List Parameter) : Scope :=
+  (parameters.map Parameter.binding).reverse ++ outer
+
+def directName (name : Identifier) : Prop :=
+  ordinaryLocal name ∧ name.val ∉
+    ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+
+theorem directName_of_singleton (spelling : name.val = [c]) : directName name := by
+  simp only [directName, ordinaryLocal, spelling, List.map_cons, List.map_nil,
+    List.mem_cons, List.not_mem_nil, or_false]
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · intro same
+    cases same
+  · intro same
+    cases same
+  · rintro (same | same | same | same | same | same | same) <;> cases same
+
+structure DirectCall (scope : Scope) where
+  name : Identifier
+  ordinary : directName name
+  args : List (TypedExpr scope)
+
+/-- A finite recursion measure evaluated at function entry in the parameter scope. -/
+structure Measure (scope : Scope) where
+  lo : Int
+  hi : Int
+  expression : Expr scope (.int lo hi)
+  lower : 0 ≤ lo
+
+def rangeType (lo hi : Int) : Ty .value := .int (min lo hi) (max lo hi)
+
+def rangeBinding (name : Identifier) (lo hi : Int) : Binding :=
+  ⟨name, rangeType lo hi, true, false⟩
+
+mutual
+
+/-- The enclosing function's result is available in each statement and branch. -/
+inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- `let name = value;`. The name enters scope after the initializer. -/
   | letValue (name : Identifier) (ordinary : name.val ≠ "mut".toList)
-      (value : Expr scope type) : Stmt scope (⟨name, type, false⟩ :: scope)
+      (value : Expr scope type) : Stmt result scope (⟨name, type, false, false⟩ :: scope)
+  /-- Assignment to a mutable range local, with SG-1 interval containment. -/
+  | assignVar (ref : Local scope (.int lo hi)) (visible : ref.visible)
+      (writable : ref.binding.mutable = true) (value : Expr scope (.int valueLo valueHi))
+      (fits : Fits (.int valueLo valueHi) (.int lo hi)) : Stmt result scope scope
+  /-- The returned expression fits the declared result type of this function. -/
+  | ret (declared : result = some expected) (value : Expr scope type)
+      (fits : Fits type expected) : Stmt result scope scope
+  /-- Only the selected branch runs. Its new bindings are scoped to that branch. -/
+  | ite (condition : Expr scope .bool) (yes no : BracedBlock result scope) : Stmt result scope scope
+  /-- SYNTAX §6, fallthrough and the explicit void return. -/
+  | retVoid (declared : result = none) : Stmt result scope scope
+  /-- SYNTAX §7, a scalar mutable local with a written type. -/
+  | letMutable (name : Identifier) (ordinary : ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid) (value : Expr scope type)
+      (fits : Fits type written.type) : Stmt result scope (⟨name, written.type, true, false⟩ :: scope)
+  /-- SYNTAX §6, direct call whose ordinary result is discarded. -/
+  | directCall (call : DirectCall scope) : Stmt result scope scope
+  /-- SYNTAX §7, direct call with a written result-binding type. -/
+  | bindDirect (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid) (call : DirectCall scope) :
+      Stmt result scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- SYNTAX §8, O18. The operation spelling bounds passes and the condition is retested. -/
+  | whileBounded (condition : Expr scope .bool)
+      (bound : Expr scope (.int lo hi)) (staticBound : bound.static) (nonnegative : 0 ≤ lo)
+      (overflow : Identifier) (body : BracedBlock result scope) : Stmt result scope scope
+  /-- SYNTAX §8, O18. Static endpoints and a body-local mutable index. -/
+  | forRange (name : Identifier) (ordinary : ordinaryLocal name)
+      (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high))
+      (staticBounds : lo.static ∧ hi.static)
+      (overflow : Option Identifier)
+      (body : BracedBlock result (rangeBinding name low high :: scope)) : Stmt result scope scope
 
-/-- Sequential scope composition. The block production decides where its locals
-    leave scope. The output index is the scope at the end of the body. -/
-inductive Block : Scope → Scope → Type where
-  | done : Block scope scope
-  | step : Stmt before middle → Block middle after → Block before after
+/-- Sequential scope composition inside a pair of braces. -/
+inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
+  | done : Block result scope scope
+  | step : Stmt result before middle → Block result middle after → Block result before after
 
-/-- Declarations add bindings to the unit's scope. Declaration forms are admitted by M6. -/
+/-- Written braces delimit the lifetime and visibility of the body's new locals. -/
+inductive BracedBlock (result : Option (Ty .value)) : Scope → Type where
+  | braces (body : Block result before after) : BracedBlock result before
+
+end
+
+mutual
+def Stmt.returns : Stmt result before after → Bool
+  | .ret .. | .retVoid .. => true
+  | .ite _ yes no => yes.returns && no.returns
+  | _ => false
+
+def Block.returns : Block result before after → Bool
+  | .done => false
+  | .step first rest => first.returns || rest.returns
+
+def BracedBlock.returns : BracedBlock result before → Bool
+  | .braces body => body.returns
+end
+
+/-- The return spelling determines the body's return index. -/
+def writtenResult (result : Option WrittenType) : Option (Ty .value) := result.map WrittenType.type
+
+/-- Constant values can enter the declaration scope. Function signatures are resolved
+    across the whole unit, allowing forward calls and checked recursive cycles. -/
 inductive Decl : Scope → Scope → Type where
+  | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType)
+      (valid : written.valid) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
+      Decl before (⟨name, written.type, false, true⟩ :: before)
+  | function (name : Identifier) (ordinary : directName name) (parameters : List Parameter)
+      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid t)
+      (decreases : Option (Measure (functionScope before parameters)))
+      (body : BracedBlock (writtenResult result) (functionScope before parameters))
+      (distinct : (parameters.map (fun p => p.name.val)).Nodup)
+      (returns : result.isSome = true → body.returns = true) :
+      Decl before before
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where
@@ -83,7 +288,10 @@ inductive UnitBody : Scope → Scope → Type where
 
 abbrev Unit := (after : Scope) × UnitBody [] after
 
-abbrev Statement (before : Scope) := (after : Scope) × Stmt before after
-abbrev Statements (before : Scope) := (after : Scope) × Block before after
+abbrev Statement (result : Option (Ty .value)) (before : Scope) :=
+  (after : Scope) × Stmt result before after
+
+abbrev Statements (result : Option (Ty .value)) (before : Scope) :=
+  (after : Scope) × Block result before after
 
 end Gabbro.Core.Ast

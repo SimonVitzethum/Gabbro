@@ -5,6 +5,12 @@ public import Core.Maschine.Start
 
 @[expose] public section
 
+namespace Gabbro.Core.Ast
+
+abbrev Dynamisch := (type : Ty .value) × Wert type
+
+end Gabbro.Core.Ast
+
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
@@ -15,21 +21,185 @@ structure Ganzzahl where
   hi : Int
   zahl : Zahl lo hi
 
-def Ganzzahl.typ (value : Ganzzahl) : Ty .value := .int value.lo value.hi
+def Ganzzahl.pack (value : Ganzzahl) : Dynamisch := ⟨.int value.lo value.hi, value.zahl⟩
 
-def Ganzzahl.literal (value : Int) : Ganzzahl := ⟨value, value, Zahl.literal value⟩
+def alsGanzzahl : Dynamisch → Option Ganzzahl
+  | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
+  | ⟨.bool, _⟩ => none
 
-def Ganzzahl.binaer (op : Arith) (a b : Ganzzahl) : Ganzzahl :=
-  ⟨_, _, op.auswerten a.zahl b.zahl⟩
+def alsBoolean : Dynamisch → Option Bool
+  | ⟨.int _ _, _⟩ => none
+  | ⟨.bool, value⟩ => some value
 
-/-- Each context has its own instruction pointer, temporary slots and immutable locals.
+def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
+  match type, value with
+  | .int lo hi, ⟨.int _ _, number⟩ =>
+    if bounds : lo ≤ number.wert ∧ number.wert ≤ hi then
+      some ⟨.int lo hi, ⟨number.wert, bounds.1, bounds.2⟩⟩
+    else none
+  | .bool, ⟨.bool, value⟩ => some ⟨.bool, value⟩
+  | .int _ _, ⟨.bool, _⟩ => none
+  | .bool, ⟨.int _ _, _⟩ => none
+
+def anfangswert : Ty .value → Option Dynamisch
+  | .bool => some ⟨.bool, false⟩
+  | .int lo hi =>
+    if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
+
+inductive Abschluss where
+  | fertig
+  | ungueltigerRuf (name : Identifier)
+  | unbeschraenkteRekursion (name : Identifier)
+  | abstieg (name : Identifier)
+  | ueberlauf (handler : Option Identifier)
+  | ungueltigerBereich
+  | ungueltigerWert
+
+structure Rufstelle where
+  name : Identifier
+  args : List (Ty .value)
+  bind : Option (Ty .value)
+
+structure Funktion where
+  name : Identifier
+  adresse : Nat
+  parameter : List (Ty .value)
+  result : Option (Ty .value)
+  konstanten : Nat
+  misstAbstieg : Bool
+  ruft : List Rufstelle
+
+structure Fortsetzung where
+  pc : Nat
+  temp : Nat → Option Dynamisch
+  lokale : List (Option Dynamisch)
+  zaehler : Nat → Option Nat
+  obergrenzen : Nat → Option Ganzzahl
+  funktion : Option Identifier
+  mass : Option Nat
+  eingang : Option (Ty .value)
+
+/-- Each context has its own instruction pointer, temporary slots and local values.
     Locals are stored in scope order. Temporaries are numbered by the elaborator. -/
 structure Rahmen where
   pc : Nat
-  temp : Nat → Ganzzahl
-  lokale : List (Identifier × Ganzzahl)
+  temp : Nat → Option Dynamisch
+  lokale : List (Option Dynamisch)
+  rueckgabe : Option Dynamisch
+  stopp : Option Abschluss := none
+  zaehler : Nat → Option Nat := fun _slot => none
+  obergrenzen : Nat → Option Ganzzahl := fun _slot => none
+  globale : List (Option Dynamisch) := []
+  funktionen : List Funktion := []
+  fortsetzungen : List Fortsetzung := []
+  funktion : Option Identifier := none
+  mass : Option Nat := none
 
-def Rahmen.start : Rahmen := ⟨0, fun _ => Ganzzahl.literal 0, []⟩
+/-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
+    A source unit starts with the empty scope. -/
+def Rahmen.start (scope : Scope) : Rahmen :=
+  { pc := 0, temp := fun _slot => none,
+    lokale := scope.map (fun binding => anfangswert binding.type), rueckgabe := none }
+
+def Rahmen.schreibe (frame : Rahmen) (ziel : Nat) (value : Option Dynamisch) : Rahmen :=
+  { frame with pc := frame.pc + 1, temp := Function.update frame.temp ziel value }
+
+def Rahmen.zahl (frame : Rahmen) (slot : Nat) : Option Ganzzahl :=
+  (frame.temp slot).bind alsGanzzahl
+
+def Rahmen.halt (frame : Rahmen) (reason : Abschluss) : Rahmen :=
+  { frame with stopp := some reason }
+
+def tyFits : Ty .value → Ty .value → Bool
+  | .bool, .bool => true
+  | .int lo hi, .int lower upper => decide (lower ≤ lo ∧ hi ≤ upper)
+  | .bool, .int _lo _hi | .int _lo _hi, .bool => false
+
+def Funktion.finde (funktionen : List Funktion) (name : Identifier) : Option Funktion :=
+  funktionen.find? (fun f => f.name.val == name.val)
+
+def Funktion.erreichbar (funktionen : List Funktion) (ziel : Identifier) : Nat → Identifier → Bool
+  | 0, name => name.val == ziel.val
+  | fuel + 1, name =>
+    name.val == ziel.val ||
+      ((finde funktionen name).map (fun f => f.ruft.any (fun call =>
+        erreichbar funktionen ziel fuel call.name))).getD false
+
+def Funktion.rekursiv (funktionen : List Funktion) (f : Funktion) : Bool :=
+  f.ruft.any fun call => erreichbar funktionen f.name funktionen.length call.name
+
+def Rufstelle.passt (call : Rufstelle) (funktionen : List Funktion) : Bool :=
+  match Funktion.finde funktionen call.name with
+  | none => false
+  | some target =>
+    call.args.length == target.parameter.length &&
+      (call.args.zip target.parameter).all (fun pair => tyFits pair.1 pair.2) &&
+      match call.bind, target.result with
+      | none, none | none, some _result => true
+      | some written, some declared => tyFits declared written
+      | some _written, none => false
+
+def Rahmen.rufArgumente (frame : Rahmen) (slot : Nat) :
+    List (Ty .value) → List (Ty .value) → Option (List (Option Dynamisch))
+  | [], [] => some []
+  | source :: sources, target :: targets => do
+    if !tyFits source target then none else
+      let v ← (frame.temp slot).bind (wertIn target)
+      let rest ← frame.rufArgumente (slot + 1) sources targets
+      pure (some v :: rest)
+  | [], _target :: _targets | _source :: _sources, [] => none
+
+def Rahmen.ruf (frame : Rahmen) (name : Identifier) (sources : List (Ty .value))
+    (bind : Option (Ty .value)) : Rahmen := Id.run do
+  let bad := frame.halt (.ungueltigerRuf name)
+  let some callee := Funktion.finde frame.funktionen name | return bad
+  let some args := frame.rufArgumente 0 sources callee.parameter | return bad
+  if let some target := bind then
+    let some source := callee.result | return bad
+    if !tyFits source target then return bad
+  let kont : Fortsetzung :=
+    ⟨frame.pc + 1, frame.temp, frame.lokale, frame.zaehler, frame.obergrenzen, frame.funktion, frame.mass, bind⟩
+  let stack := kont :: frame.fortsetzungen
+  if stack.any (fun k => (k.funktion.map Subtype.val) == some name.val) && !callee.misstAbstieg then
+    return frame.halt (.abstieg name)
+  return { frame with
+    pc := callee.adresse, temp := fun _slot => none,
+    lokale := args.reverse ++ frame.globale.drop (frame.globale.length - callee.konstanten),
+    zaehler := fun _slot => none, obergrenzen := fun _slot => none, fortsetzungen := stack, funktion := some name, mass := none }
+
+def Rahmen.rueckkehr (frame : Rahmen) (result : Option Dynamisch) : Rahmen :=
+  match frame.fortsetzungen with
+  | [] => { frame with
+      pc := frame.pc + 1, rueckgabe := result,
+      stopp := if result.isSome then none else some .fertig }
+  | k :: stack =>
+    let locals := match k.eingang with
+      | none => k.lokale
+      | some target => result.bind (wertIn target) :: k.lokale
+    { frame with
+      pc := k.pc, temp := k.temp, lokale := locals, zaehler := k.zaehler,
+      obergrenzen := k.obergrenzen,
+      funktion := k.funktion, mass := k.mass, fortsetzungen := stack }
+
+def Rahmen.setzeMass (frame : Rahmen) (slot : Nat) : Rahmen := Id.run do
+  let some name := frame.funktion | return frame.halt .ungueltigerWert
+  let some value := frame.zahl slot | return frame.halt (.abstieg name)
+  let n := value.zahl.wert.toNat
+  let previous := frame.fortsetzungen.find? (fun k => (k.funktion.map Subtype.val) == some name.val)
+  if value.zahl.wert < 0 then return frame.halt (.abstieg name)
+  if let some k := previous then
+    let some old := k.mass | return frame.halt (.abstieg name)
+    if n ≥ old then return frame.halt (.abstieg name)
+  return { frame with pc := frame.pc + 1, mass := some n }
+
+def Rahmen.pass (frame : Rahmen) (takePass : Bool) (exit : Nat)
+    (handler : Option Identifier) : Rahmen :=
+  if !takePass then
+    { frame with pc := frame.pc + exit, zaehler := Function.update frame.zaehler frame.pc none }
+  else match frame.zaehler frame.pc with
+    | some (n + 1) =>
+      { frame with pc := frame.pc + 1, zaehler := Function.update frame.zaehler frame.pc (some n) }
+    | some 0 | none => frame.halt (.ueberlauf handler)
 
 abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
 abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
@@ -41,26 +211,146 @@ inductive Befehl where
   | literal (ziel : Nat) (wert : Nat)
   | binaer (op : Arith) (links : Nat)
   | binden (name : Identifier) (quelle : Nat)
+  | wahrheitswert (ziel : Nat) (wert : Bool)
+  | lesen (ziel index : Nat)
+  | negativ (ziel : Nat) (betrag : Nat)
+  | negieren (ziel : Nat)
+  | verneinen (ziel : Nat)
+  | teilen (links : Nat)
+  | vergleichen (op : Compare) (links : Nat)
+  | springeWenn (quelle : Nat) (bei : Bool) (abstand : Nat)
+  | zuweisen (quelle index : Nat) (zieltyp : Ty .value)
+  | zurueck (quelle : Nat) (zieltyp : Ty .value)
+  | springe (abstand : Nat)
+  | blockEnde (freigabe : Nat)
+  | bindeWert (quelle : Nat) (ziel : Ty .value) (global : Bool)
+  | definiere (name : Identifier) (parameter : List (Ty .value)) (result : Option (Ty .value))
+      (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle)
+  | rufe (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value))
+  | rueckVoid
+  | pruefeMass (quelle : Nat)
+  | setzePasszahl (quelle stelle : Nat)
+  | whileTest (quelle ende : Nat) (handler : Identifier)
+  | forAnfang (unter ober : Nat) (index : Ty .value) (skipEmpty : Nat) (shadowed missingHandler : Bool)
+  | forTest (ende : Nat) (handler : Option Identifier)
+  | forNaechster (zurueck : Nat) (index : Ty .value)
+  | zurueckSprung (abstand : Nat)
+  | starte (name : Identifier)
+  | ende
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
   | .literal dst val, frame =>
-    { frame with pc := frame.pc + 1, temp := Function.update frame.temp dst (Ganzzahl.literal val) }
+    frame.schreibe dst (some ⟨.int val val, Zahl.literal val⟩)
   | .binaer op left, frame =>
+    frame.schreibe left (do
+      let a ← frame.zahl left
+      let b ← frame.zahl (left + 1)
+      pure (Ganzzahl.pack ⟨_, _, op.auswerten a.zahl b.zahl⟩))
+  | .binden _ src, frame =>
+    { frame with pc := frame.pc + 1, lokale := frame.temp src :: frame.lokale }
+  | .wahrheitswert dst value, frame =>
+    frame.schreibe dst (some ⟨.bool, value⟩)
+  | .lesen dst index, frame =>
+    frame.schreibe dst (frame.lokale[index]?.join)
+  | .negativ dst magnitude, frame =>
+    let value : Int := -(magnitude : Int)
+    frame.schreibe dst (some ⟨.int value value, Zahl.literal value⟩)
+  | .negieren dst, frame =>
+    frame.schreibe dst ((frame.zahl dst).map fun a => Ganzzahl.pack ⟨_, _, a.zahl.neg⟩)
+  | .verneinen dst, frame =>
+    frame.schreibe dst (((frame.temp dst).bind alsBoolean).map fun bit => ⟨.bool, !bit⟩)
+  | .teilen left, frame =>
+    frame.schreibe left (do
+      let a ← frame.zahl left
+      let b ← frame.zahl (left + 1)
+      if h : 1 ≤ b.lo ∨ b.hi ≤ -1 then
+        pure ⟨quotientType a.lo a.hi b.lo, a.zahl.div b.zahl h⟩
+      else none)
+  | .vergleichen op left, frame =>
+    frame.schreibe left (do
+      let a ← frame.zahl left
+      let b ← frame.zahl (left + 1)
+      pure ⟨.bool, op.eval a.zahl.wert b.zahl.wert⟩)
+  | .springeWenn src whenValue distance, frame =>
+    let taken := (frame.temp src).bind alsBoolean = some whenValue
+    { frame with pc := frame.pc + (if taken then distance else 1) }
+  | .zuweisen src index target, frame =>
+    let value := (frame.temp src).bind (wertIn target)
+    { frame with pc := frame.pc + 1, lokale := frame.lokale.set index value }
+  | .zurueck src target, frame =>
+    frame.rueckkehr ((frame.temp src).bind (wertIn target))
+  | .springe distance, frame =>
+    { frame with pc := frame.pc + distance }
+  | .blockEnde count, frame =>
+    { frame with pc := frame.pc + 1, lokale := frame.lokale.drop count }
+
+  | .bindeWert src target global, frame =>
+    let value := (frame.temp src).bind (wertIn target)
     { frame with
-      pc := frame.pc + 1
-      temp := Function.update frame.temp left (Ganzzahl.binaer op (frame.temp left) (frame.temp (left + 1))) }
-  | .binden name src, frame =>
-    { frame with pc := frame.pc + 1, lokale := (name, frame.temp src) :: frame.lokale }
+      pc := frame.pc + 1, lokale := value :: frame.lokale,
+      globale := if global then value :: frame.globale else frame.globale }
+  | .definiere name ps result globals skip measure calls, frame =>
+    let f : Funktion := ⟨name, frame.pc + 1, ps, result, globals, measure, calls⟩
+    { frame with pc := frame.pc + skip, funktionen := f :: frame.funktionen }
+  | .rufe name args bind, frame => frame.ruf name args bind
+  | .rueckVoid, frame => frame.rueckkehr none
+  | .pruefeMass src, frame => frame.setzeMass src
+  | .setzePasszahl src distance, frame =>
+    match frame.zahl src with
+    | some value => { frame with
+        pc := frame.pc + 1,
+        zaehler := Function.update frame.zaehler (frame.pc + distance) (some value.zahl.wert.toNat) }
+    | none => frame.halt .ungueltigerWert
+  | .whileTest src exit handler, frame =>
+    match (frame.temp src).bind alsBoolean with
+    | some test => frame.pass test exit (some handler)
+    | none => frame.halt .ungueltigerWert
+  | .forAnfang lower upper index skipEmpty shadowed missingHandler, frame => Id.run do
+    let some a := frame.zahl lower | return frame.halt .ungueltigerWert
+    let some b := frame.zahl upper | return frame.halt .ungueltigerWert
+    if shadowed || (missingHandler && decide (a.zahl.wert < b.zahl.wert)) then
+      return frame.halt .ungueltigerBereich
+    if b.zahl.wert ≤ a.zahl.wert then return { frame with pc := frame.pc + skipEmpty }
+    let some initial := wertIn index a.pack | return frame.halt .ungueltigerWert
+    let next := frame.pc + 1
+    return { frame with
+      pc := next, lokale := some initial :: frame.lokale,
+      obergrenzen := Function.update frame.obergrenzen next (some b),
+      zaehler := Function.update frame.zaehler next (some (b.zahl.wert - a.zahl.wert).toNat) }
+  | .forTest exit handler, frame => Id.run do
+    let some current := frame.lokale.head?.join.bind alsGanzzahl | return frame.halt .ungueltigerWert
+    let some upper := frame.obergrenzen frame.pc | return frame.halt .ungueltigerWert
+    return frame.pass (decide (current.zahl.wert < upper.zahl.wert)) exit handler
+  | .forNaechster back index, frame => Id.run do
+    let some current := frame.lokale.head?.join.bind alsGanzzahl | return frame.halt .ungueltigerWert
+    let next := current.zahl.wert + 1
+    let some value := wertIn index (Ganzzahl.pack ⟨next, next, Zahl.literal next⟩)
+      | return frame.halt .ungueltigerWert
+    return { frame with pc := frame.pc - back, lokale := some value :: frame.lokale.drop 1 }
+  | .zurueckSprung distance, frame => { frame with pc := frame.pc - distance }
+  | .starte name, frame => Id.run do
+    let names := frame.funktionen.map (fun f => f.name.val)
+    if ¬ names.Nodup then return frame.halt (.ungueltigerRuf name)
+    if let some f := frame.funktionen.find? (fun f =>
+        !f.misstAbstieg && Funktion.rekursiv frame.funktionen f) then
+      return frame.halt (.unbeschraenkteRekursion f.name)
+    if let some bad := (frame.funktionen.flatMap Funktion.ruft).find? (fun call =>
+        !(call.passt frame.funktionen)) then
+      return frame.halt (.ungueltigerRuf bad.name)
+    let result := (Funktion.finde frame.funktionen name).bind Funktion.result
+    return ({ frame with lokale := [] }).ruf name [] result
+  | .ende, frame => { frame with stopp := some .fertig, rueckgabe := frame.lokale.head?.join }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
-/-- The three worked instructions are total. Explicit narrowing will contribute
-    the range guard at its own instruction. -/
+/-- Division reports both operand magnitudes at the pre-state, as required by the natural-number guard row. -/
 def Befehl.guard : Befehl → Rahmen → Option Bedarf
-  | .literal _ _, _ => none
-  | .binaer _ _, _ => none
-  | .binden _ _, _ => none
+  | .teilen left, frame => do
+    let a ← frame.zahl left
+    let b ← frame.zahl (left + 1)
+    pure ⟨.division, (a.zahl.wert.natAbs, b.zahl.wert.natAbs)⟩
+  | _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
@@ -88,7 +378,10 @@ def kopf (code : List Befehl) (s : Zustand) (c : Kontext) : Option Befehl :=
   if c = eintritt then
     match s.status c with
     | .ruht => none
-    | .laeuft => code[(s.lokal c).pc]?
+    | .laeuft =>
+      match (s.lokal c).rueckgabe with
+      | none => if (s.lokal c).stopp.isNone then code[(s.lokal c).pc]? else none
+      | some _ => none
     | .beendet _ => none
   else none
 

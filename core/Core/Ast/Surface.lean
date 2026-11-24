@@ -127,7 +127,7 @@ theorem letValue_print (args : LetArgs scope) :
     (letValue scope).production args
       (((Category.statement scope).printPieces ((letValue scope).tree args)).map PrintedToken.value) := by
   change (letValue scope).production args
-    (Stmt.letValue args.name args.ordinary args.value).printTokens
+    (Stmt.letValue (result := none) args.name args.ordinary args.value).printTokens
   unfold letValue
   simp only [Stmt.printTokens_let, List.cons_append, List.nil_append]
   exact ⟨_, rfl, args.value.printReads noOperatorAtSemicolon⟩
