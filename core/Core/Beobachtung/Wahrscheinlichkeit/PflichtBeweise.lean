@@ -12,7 +12,7 @@
 module
 
 public import Mathlib.MeasureTheory.Measure.Continuity
-public import Mathlib.MeasureTheory.Integral.Lebesgue
+public import Mathlib.MeasureTheory.Integral.Lebesgue.Basic
 public import Mathlib.Analysis.SpecificLimits.Basic
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 
