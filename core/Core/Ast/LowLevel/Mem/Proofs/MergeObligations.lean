@@ -117,7 +117,7 @@ theorem memRealisiertAussage_merge : MemRealisiertAussage .merge := by
             rw [hget, Option.bind_some] at hhead
             by_cases he : (op.evaluate k.plattform.ziel s entryContext).isSome
             · rw [if_pos he] at hhead
-              exact ⟨hs, rfl, hpc, he⟩
+              exact ⟨rfl, rfl, hpc, he⟩
             · rw [if_neg he] at hhead
               cases hhead
           · have hlen : [op].length ≤ (s.lokal entryContext).pc := by
@@ -136,10 +136,10 @@ theorem memRealisiertAussage_merge : MemRealisiertAussage .merge := by
     · simp only [hc] at hhead
       cases hhead
   · intro h
-    obtain ⟨hc, hs, hpc, he⟩ := h
+    obtain ⟨hstatus, hc, hpc, he⟩ := h
     subst c
     dsimp [memUnit, memProgram, memHead]
-    rw [hs]
+    rw [hstatus]
     have hget : [op][(s.lokal entryContext).pc]? = some op := by
       rw [hpc]
       rfl
