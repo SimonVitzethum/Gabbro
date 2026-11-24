@@ -175,14 +175,13 @@ theorem neg_print (args : NegArgs scope) :
   change (neg scope).production args (Expr.neg args.operand).printTokens
   unfold neg
   refine ⟨openParen :: args.operand.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append]
+  · simp only [Expr.printTokens, Expr.printPieces, Arith.sub.print, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Arith.print_value, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · refine ⟨?_, ?_⟩
     · intro tail
       constructor <;> intro h <;> cases h
     · intro n tail h
       cases h
-  · exact .grouped (args.operand.printReads [closeParen] noOperatorAtClose)
+  · exact .grouped (args.operand.printReads (rest := [closeParen]) noOperatorAtClose)
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem neg_reads (scope : Scope) (args : NegArgs scope)
@@ -211,11 +210,10 @@ theorem notValue_print (args : Expr scope .bool) :
   change (notValue scope).production args (Expr.not args).printTokens
   unfold notValue
   refine ⟨openParen :: args.printTokens ++ [closeParen], ?_, ?_, ?_⟩
-  · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append]
+  · simp only [Expr.printTokens, Expr.printPieces, printBang, printOpen, printClose, printPunctuation, PrintedToken.unquoted, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · intro tail
     constructor <;> intro h <;> cases h
-  · exact .grouped (args.printReads [closeParen] noOperatorAtClose)
+  · exact .grouped (args.printReads (rest := [closeParen]) noOperatorAtClose)
 
 -- Mirror literal_entry by applying the new production and its child proofs.
 theorem notValue_reads (scope : Scope) (args : Expr scope .bool)
@@ -245,7 +243,7 @@ theorem division_print (args : DivisionArgs scope) :
   simp only [Expr.printTokens, Expr.printPieces, PrintedToken.slash, List.map_append, List.map_cons,
     List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
-  refine ⟨_, ?_, ?_, trivial⟩
+  refine ⟨?_, ?_, ?_, by trivial⟩
   · exact args.left.printAtom (Infix.div.token :: args.right.printTokens ++ [closeParen])
   · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
@@ -277,9 +275,9 @@ def comparison (scope : Scope) : Rule (.expression scope) (CompareArgs scope) wh
 -- Mirror binary_print for the declared spelling.
 theorem comparison_print (args : CompareArgs scope) :
     (comparison scope).production args (((Category.expression scope).printPieces ((comparison scope).tree args)).map PrintedToken.value) := by
-  change (comparison scope).production args
-    (openParen :: args.left.printTokens ++ (Infix.compare args.op).token :: args.right.printTokens ++ [closeParen])
+  change (comparison scope).production args (Expr.compare args.op args.left args.right).printTokens
   unfold comparison infixProduction infixStep
+  simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Compare.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
   refine ⟨_, ?_, ?_, ?_⟩
   · exact args.left.printAtom ((Infix.compare args.op).token :: args.right.printTokens ++ [closeParen])
@@ -303,7 +301,7 @@ theorem comparison_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op 
   intro op
   let args : CompareArgs scope := ⟨op, .lit 1, .lit 2⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (comparison_print args)
-  exact ⟨a, text, pieces, rfl, lexical, production⟩
+  exact ⟨a, text, pieces, by dsimp [args]; rfl, lexical, production⟩
 
 theorem comparison_entry (scope : Scope) : (comparison scope).Entry where
   reads := fun a _ => comparison_reads scope a
@@ -319,11 +317,11 @@ def logic (scope : Scope) : Rule (.expression scope) (LogicArgs scope) where
 -- Mirror binary_print for the declared spelling.
 theorem logic_print (args : LogicArgs scope) :
     (logic scope).production args (((Category.expression scope).printPieces ((logic scope).tree args)).map PrintedToken.value) := by
-  change (logic scope).production args
-    (openParen :: args.left.printTokens ++ (Infix.logic args.op).token :: args.right.printTokens ++ [closeParen])
+  change (logic scope).production args (Expr.logic args.op args.left args.right).printTokens
   unfold logic infixProduction infixStep
+  simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Logic.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
-  refine ⟨_, ?_, ?_, trivial⟩
+  refine ⟨?_, ?_, ?_, by trivial⟩
   · exact args.left.printAtom ((Infix.logic args.op).token :: args.right.printTokens ++ [closeParen])
   · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
@@ -343,7 +341,7 @@ theorem logic_erfuellbar (scope : Scope) : ∀ op, ∃ a text pieces, a.op = op 
   intro op
   let args : LogicArgs scope := ⟨op, .trueLit, .falseLit⟩
   obtain ⟨a, text, pieces, lexical, production⟩ := Rule.satisfiableOfPrint args (logic_print args)
-  exact ⟨a, text, pieces, rfl, lexical, production⟩
+  exact ⟨a, text, pieces, by dsimp [args]; rfl, lexical, production⟩
 
 theorem logic_entry (scope : Scope) : (logic scope).Entry where
   reads := fun a _ => logic_reads scope a
@@ -366,7 +364,7 @@ theorem assignVar_print (args : AssignArgs scope) :
   unfold assignVar
   simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append, List.map_cons,
     List.map_nil, List.cons_append, List.nil_append]
-  exact ⟨_, rfl, args.value.printReads [semicolon] noOperatorAtSemicolon⟩
+  exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
 theorem assignVar_reads (scope : Scope) (result : Option (Ty .value)) (args : AssignArgs scope)
@@ -393,7 +391,7 @@ theorem returnValue_print (args : ReturnArgs scope expected) :
   unfold returnValue
   simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append, List.map_cons,
     List.map_nil, List.cons_append, List.nil_append]
-  exact ⟨_, rfl, args.value.printReads [semicolon] noOperatorAtSemicolon⟩
+  exact ⟨_, rfl, args.value.printReads (rest := [semicolon]) noOperatorAtSemicolon⟩
 
 -- Mirror letValue_entry by applying the new production and its child proofs.
 theorem returnValue_reads (scope : Scope) (expected : Ty .value) (args : ReturnArgs scope expected)
