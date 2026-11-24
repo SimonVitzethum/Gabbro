@@ -252,7 +252,7 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                         keyword, printPunctuation, printProgramWord, Identifier.print, keywordName, printOpenBrace, printDecreases, PrintedToken.unquoted] at h
               | some written =>
                   refine ResultReads.typed ?_
-                  simpa only [afterResult, List.append_assoc] using
+                  simpa only [afterResult, ← List.append_assoc] using
                     (WrittenType.printReads (rest := afterResult) written (valid written (by simp)) (by
                       intro more h
                       cases measure with
@@ -274,7 +274,8 @@ theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
                   exact Expr.printReads (rest := afterMeasure) m.expression (by
                     simpa [afterMeasure, BracedBlock.printPieces, List.map_append, printOpenBrace,
                       printPunctuation, PrintedToken.unquoted, openBrace] using
-                      (noOperatorAtOpenBrace (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
+                      (noOperatorAtOpenBrace (minimum := 0)
+                        (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest))))
             ((BracedBlock.braces items).printReads rest)
         simpa only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
           afterParams, afterResult, afterMeasure, List.map_append, List.map_cons, List.map_nil,
