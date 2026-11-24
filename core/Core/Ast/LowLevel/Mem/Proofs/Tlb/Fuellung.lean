@@ -136,13 +136,13 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
           | none => simp only [hs, hr, Option.bind_eq_bind, Option.bind_some, Option.bind_none] at step <;> cases step
           | some region =>
               simp only [hs, hr, Option.bind_eq_bind, Option.bind_some] at step
-              split at step
-              · simp only [Option.pure_def, Option.some.injEq] at step
-                subst next
-                intro zelle hz
-                exact (List.mem_filter.mp hz).1
-              · cases step
-  | protectSpace sp virt pages rights =>
+               split at step
+               · simp only [Option.pure_def, Option.some.injEq] at step
+                 subst next
+                 intro zelle hz
+                 exact hz
+               · cases step
+   | protectSpace sp virt pages rights =>
       simp only [MemInstruction.evaluate] at step
       cases hs : (s.lokal c).spaces[sp]? with
       | none => simp only [hs, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
