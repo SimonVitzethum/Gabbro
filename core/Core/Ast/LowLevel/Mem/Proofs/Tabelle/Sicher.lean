@@ -136,12 +136,11 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
           cases h
     | none =>
       simp only [Option.orElse_none] at h
-      generalize ht : frame.tabellenSicht space (addr / z.seitengranule) = tfound at h
-      cases tfound with
+      cases htab : frame.tabellenSicht space (addr / z.seitengranule) with
       | none =>
         cases h
       | some tentry =>
-        obtain ⟨space0, found0, habb⟩ := MemFrame.tabellenSicht_hit ht
+        obtain ⟨space0, found0, habb⟩ := MemFrame.tabellenSicht_hit htab
         by_cases hbig : tentry.frame * z.seitengranule + addr % z.seitengranule ≥
             2 ^ z.physicalBits
         · simp only [hbig, ↓reduceIte] at h
@@ -156,8 +155,9 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
               Adressraum.eintrag_reserviert found0 habb hphys hmod
             refine ⟨hres, ?rightsTab⟩
             left
-            refine ⟨tentry, ht, hright, ?hphysEq⟩
-            exact hphys.symm
+            refine ⟨tentry, ?htabEq, hright, ?hphysEq⟩
+            · rfl
+            · exact hphys.symm
           · simp only [hright, ↓reduceIte] at h
             cases h
   · simp only [hv, not_true_eq_false, not_false_eq_true, ↓reduceIte] at h
