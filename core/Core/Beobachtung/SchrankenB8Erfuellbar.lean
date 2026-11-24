@@ -54,7 +54,7 @@ theorem b8_regel_erfuellbar :
 theorem b8_protokoll_erfuellbar :
     ∃ (E : Einheit Unit Unit Unit Unit (Option Handle) Unit Unit Unit Unit)
       (h : Umgebung) (ρ : Lauf E) (t : Nat)
-      (w : AntwortEreignis) (spur : Spur) (vor nach : Zustand),
+      (w : SchrittWahl Unit) (spur : SchrittSpur Unit Unit) (vor nach : Zustand),
       Laeufe E h ρ ∧ B8Prefix E ρ t ∧ ρ.zeit.zustand t = some vor ∧
       ρ.zeit.spur t = some (.antwort w, spur) ∧ ProtokollB8Wahl (.antwort w) ∧
       ρ.zeit.zustand (t + 1) = some nach := by
