@@ -29,7 +29,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
   have lookupSeq : ∀ (pre : List Befehl) (b : Befehl) (post : List Befehl),
       (pre ++ b :: post)[pre.length]? = some b := by
     intro pre b post
-    rw [List.getElem?_append_right (by simp only [List.length_append])]
+    rw [List.getElem?_append_right (by rw [List.length_append]; omega)]
     rw [Nat.sub_self]
     rfl
   have stepAt : ∀ (pre : List Befehl) (b : Befehl) (post : List Befehl) (frame : Rahmen),
@@ -54,7 +54,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · simpa only [List.nil_append, List.append_nil, List.length_nil, Nat.zero_add] using pcEq
   intro slot type tree
   induction tree generalizing slot with
-  | lit value =>
+  case lit value =>
       intro env frame bound active pre post hpc
       let b : Befehl := .literal slot value
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.lit value)).code ++ post)
@@ -68,7 +68,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  | trueLit =>
+  case trueLit =>
       intro env frame bound active pre post hpc
       let b : Befehl := .wahrheitswert slot true
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.trueLit : Expr scope .bool)).code ++ post)
@@ -82,7 +82,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  | falseLit =>
+  case falseLit =>
       intro env frame bound active pre post hpc
       let b : Befehl := .wahrheitswert slot false
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.falseLit : Expr scope .bool)).code ++ post)
@@ -115,7 +115,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  | negativeLit magnitude =>
+  case negativeLit magnitude =>
       intro env frame bound active pre post hpc
       let b : Befehl := .negativ slot magnitude
       have step : Rahmen.Schritt (pre ++ (expr slot (Expr.negativeLit magnitude)).code ++ post)
@@ -129,7 +129,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact Function.update_of_ne (Nat.ne_of_lt hi) _ _
-  | neg operand operandIH =>
+  case neg operand operandIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot operand).code
       let b : Befehl := .negieren slot
@@ -159,7 +159,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
-  | not operand operandIH =>
+  case not operand operandIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot operand).code
       let b : Befehl := .verneinen slot
@@ -189,7 +189,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
       · intro i hi
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans preserveMid
-  | div left right nonzero leftIH rightIH =>
+  case div left right nonzero leftIH rightIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot left).code
       let R := (expr (slot + 1) right).code
@@ -233,7 +233,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
-  | compare op left right leftIH rightIH =>
+  case compare op left right leftIH rightIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot left).code
       let R := (expr (slot + 1) right).code
@@ -277,7 +277,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         simp only [b, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
           ((preserveR i (Nat.lt_trans hi (Nat.lt_succ_self slot))).trans (preserveL i hi))
-  | logic op left right leftIH rightIH =>
+  case logic op left right leftIH rightIH =>
       intro env frame bound active pre post hpc
       let L := (expr slot left).code
       let R := (expr slot right).code
