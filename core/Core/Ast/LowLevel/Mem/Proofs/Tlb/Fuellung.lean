@@ -68,7 +68,7 @@ theorem mapSpace_neue_eintraege_fern (space : Adressraum) (base pages : Nat)
   intro token' htmem e he
   obtain ⟨i, hi, rfl⟩ := List.mem_map.mp he
   have h1 := List.all_eq_true.mp hall token' htmem
-  have h2 := List.all_eq_true.mp h1 i (List.mem_range.mp hi)
+  have h2 := List.all_eq_true.mp h1 i hi
   simpa only [decide_eq_true_eq] using h2
 
 /-- Appending entries that are outside every pending range preserves the invariant. -/
@@ -103,17 +103,17 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
   | splitRegion slot point =>
       have keep := erhaelt_splitRegion target slot point s c next step
       intro zelle hz
-      rw [keep.1]
+      rw [keep.1] at hz
       exact hz
   | splitPages slot pages =>
       have keep := erhaelt_splitPages target slot pages s c next step
       intro zelle hz
-      rw [keep.1]
+      rw [keep.1] at hz
       exact hz
   | mergeRegions first second =>
       have keep := erhaelt_mergeRegions target first second s c next step
       intro zelle hz
-      rw [keep.1]
+      rw [keep.1] at hz
       exact hz
   | newSpace tables =>
       simp only [MemInstruction.evaluate] at step
@@ -189,12 +189,12 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
   | activateSpace sp =>
       have keep := erhaelt_activateSpace target sp s c next step
       intro zelle hz
-      rw [keep.1]
+      rw [keep.1] at hz
       exact hz
   | bindToken name =>
       have keep := erhaelt_bindToken target name s c next step
       intro zelle hz
-      rw [keep.1]
+      rw [keep.1] at hz
       exact hz
 
 /-- **The memory machine's `keineFuellung` law.** While a token is pending, every cell of its range
@@ -209,21 +209,22 @@ theorem keineFuellung_speicher (target : ZielDaten) (op : MemInstruction) (s : M
     (tmem : token ∈ space.ausstehend) (wf : space.FreiAusstehend) :
     ∀ zelle, zelle.raum = token.raum → token.contains zelle.seite →
       zelle ∈ next.tlb.zellen → zelle ∈ (s.lokal c).tlb.zellen := by
-  have rest : ∀ (op' : MemInstruction), (∀ core sp page, op' ≠ .tlbFuellen core sp page) →
+  have rest : (∀ core sp page, op ≠ .tlbFuellen core sp page) →
       ∀ zelle, zelle.raum = token.raum → token.contains zelle.seite →
         zelle ∈ next.tlb.zellen → zelle ∈ (s.lokal c).tlb.zellen := by
-    intro op' hne zelle _ _ hz
-    exact tlb_subset_ohne_fuellen target op' s c step hne zelle hz
+    intro hne zelle _ _ hz
+    exact tlb_subset_ohne_fuellen target op s c step hne zelle hz
   cases op with
   | tlbFuellen core sp page =>
       simp only [MemInstruction.evaluate] at step
       cases hs : (s.lokal c).spaces[sp]? with
       | none => simp only [hs, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
       | some spaceF =>
+          simp only [hs, Option.bind_eq_bind, Option.bind_some] at step
           cases hm : spaceF.abbildung page with
-          | none => simp only [hm, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
+          | none => simp only [hm, Option.bind_none] at step <;> cases step
           | some entry =>
-              simp only [Option.pure_def, Option.some.injEq] at step
+              simp only [hm, Option.bind_some, Option.pure_def, Option.some.injEq] at step
               subst next
               intro zelle hzraum hzpage hzmem
               change zelle ∈ (⟨core, sp, page, entry⟩ : TlbZelle) :: (s.lokal c).tlb.zellen at hzmem
@@ -241,17 +242,17 @@ theorem keineFuellung_speicher (target : ZielDaten) (op : MemInstruction) (s : M
                   cases hm
                 · exact same hzraum
               · exact hzold
-  | splitRegion slot point => exact rest (.splitRegion slot point) (by intro a b d e; cases e)
-  | splitPages slot pages => exact rest (.splitPages slot pages) (by intro a b d e; cases e)
-  | mergeRegions first second => exact rest (.mergeRegions first second) (by intro a b d e; cases e)
-  | newSpace tables => exact rest (.newSpace tables) (by intro a b d e; cases e)
+  | splitRegion slot point => exact rest (by intro a b d e; cases e)
+  | splitPages slot pages => exact rest (by intro a b d e; cases e)
+  | mergeRegions first second => exact rest (by intro a b d e; cases e)
+  | newSpace tables => exact rest (by intro a b d e; cases e)
   | mapSpace space virt frames rights =>
-      exact rest (.mapSpace space virt frames rights) (by intro a b d e; cases e)
+      exact rest (by intro a b d e; cases e)
   | protectSpace space virt pages rights =>
-      exact rest (.protectSpace space virt pages rights) (by intro a b d e; cases e)
-  | unmapSpace space virt pages => exact rest (.unmapSpace space virt pages) (by intro a b d e; cases e)
-  | flushSpace name => exact rest (.flushSpace name) (by intro a b d e; cases e)
-  | activateSpace space => exact rest (.activateSpace space) (by intro a b d e; cases e)
-  | bindToken name => exact rest (.bindToken name) (by intro a b d e; cases e)
+      exact rest (by intro a b d e; cases e)
+  | unmapSpace space virt pages => exact rest (by intro a b d e; cases e)
+  | flushSpace name => exact rest (by intro a b d e; cases e)
+  | activateSpace space => exact rest (by intro a b d e; cases e)
+  | bindToken name => exact rest (by intro a b d e; cases e)
 
 end Gabbro.Core.Ast.LowLevel
