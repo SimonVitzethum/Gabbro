@@ -38,7 +38,7 @@ theorem schrankenRegelAusLokal : schrankenRegelAusLokalAussage := by
 
 /-- The pinned call duty has no memory-footprint premise: a rule whose interior update
     revives two allocations satisfies its stack premise vacuously on an open stack, yet
-    breaks the memory leg. The refutation uses an admitted ideal run whose every context
+    breaks the memory leg. The refutation uses an admissible ideal run whose every context
     step takes that rule. -/
 theorem nicht_rufSchranken : ¬ rufSchrankenAussage := by
   intro getragen
