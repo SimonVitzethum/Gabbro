@@ -48,6 +48,7 @@ private theorem printSemicolonVal : printSemicolon.value = semicolon := by rfl
 private theorem printCloseBraceVal : printCloseBrace.value = closeBrace := by rfl
 private theorem printDotVal : printDot.value = dot := by rfl
 private theorem printSlotsVal : printSlots.value = Token.word ['s', 'l', 'o', 't', 's'] := by rfl
+private theorem printCommaVal : printComma.value = comma := by rfl
 
 private def egName : Identifier :=
   ⟨['g'], 'g', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
@@ -63,20 +64,20 @@ private theorem egWrittenPrintReads (effect : WrittenCarrierEffect) (rest : List
   rcases effect with ⟨access, carrier, slots⟩
   cases access <;> cases slots
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, identPrintVal, printDotVal, printSlotsVal,
-      List.map_append, List.append_assoc] using
+      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
+      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
       (CarrierEffectReads.bare CarrierAccess.read carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, identPrintVal, printDotVal, printSlotsVal,
-      List.map_append, List.append_assoc] using
+      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
+      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
       (CarrierEffectReads.slots CarrierAccess.read carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, identPrintVal, printDotVal, printSlotsVal,
-      List.map_append, List.append_assoc] using
+      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
+      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
       (CarrierEffectReads.bare CarrierAccess.write carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, identPrintVal, printDotVal, printSlotsVal,
-      List.map_append, List.append_assoc] using
+      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
+      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
       (CarrierEffectReads.slots CarrierAccess.write carrier (rest := rest))
 
 private def egTokens : List WrittenCarrierEffect → List Token
@@ -96,7 +97,8 @@ private theorem egTokens_eq (written : List WrittenCarrierEffect) :
       cases more with
       | nil => simp [egTokens, commaSeparated]
       | cons effect2 rest =>
-          simp [egTokens, commaSeparated, ih, List.map_append, List.append_assoc]
+          simp [egTokens, commaSeparated, ih, List.map_append, List.map_flatten,
+            List.append_assoc, printCommaVal]
 
 private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest : List Token),
     EffectListReads CarrierEffectReads (egTokens written ++ closeBrace :: rest) written rest := by
@@ -117,9 +119,9 @@ private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest 
           refine EffectListReads.next (read := CarrierEffectReads) (head := effect)
             (more := egTokens (effect2 :: tail) ++ closeBrace :: rest)
             (next := effect2) (tail := tail) ?_ ?_
-          · simpa [List.append_assoc] using egWrittenPrintReads effect
+          · simpa [egTokens, List.append_assoc] using egWrittenPrintReads effect
               (comma :: egTokens (effect2 :: tail) ++ closeBrace :: rest)
-          · exact ih (effect2 :: tail) rest
+          · exact ih rest
 
 private theorem egPrint (scope : Scope) (item : EffectGroupDeclaration scope) :
     (effectGroupForm scope).produktion.production item
@@ -255,7 +257,7 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
   induction xs with
   | nil =>
       intro ys h
-      simp only [List.mapM_nil, Option.some.injEq] at h
+      simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at h
       subst ys
       rfl
   | cons x xs ih =>
@@ -277,8 +279,8 @@ private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
   intro xs
   induction xs with
   | nil =>
-      intro ys i hi
-      omega
+      intro ys i hi hi' h
+      simp at hi
   | cons x xs ih =>
       intro ys i hi hi' h
       simp only [List.mapM_cons] at h
@@ -301,8 +303,9 @@ theorem effectGroup_expansion : EffectGroupExpansionAussage := by
   intro scope bound terms expanded h
   let f := EffectTerm.resolve scope bound
   rcases hm : terms.mapM f with _ | parts
-  · exfalso
-    simpa [expandEffects, hm] using h
+  · rw [expandEffects] at h
+    rw [show (terms.mapM f).map List.flatten = none by simp [hm]] at h
+    cases h
   · refine ⟨parts, ?_, ?_, ?_⟩
     · exact (mapM_option_length f terms parts hm).symm
     · intro i term part hterm hpart
@@ -316,7 +319,11 @@ theorem effectGroup_expansion : EffectGroupExpansionAussage := by
         simpa using (List.getElem?_eq_some_iff.mp hpart).2
       rw [← ht, ← hp]
       exact mapM_option_getElem f terms parts i hi hi' hm
-    · simpa [expandEffects, hm] using h.symm
+    · rw [expandEffects] at h
+      have hmapped : (terms.mapM f).map List.flatten = some parts.flatten := by simp [hm]
+      rw [hmapped] at h
+      cases h
+      rfl
 
 theorem effectGroup_scope : EffectGroupScopeAussage := by
   intro scope item
@@ -354,15 +361,15 @@ theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
 theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
+  simp only [hscope, Option.bind_some]
   by_cases hcond : name.val = "pure".toList ∨ bound.contains name.val = true
   · simp [hcond]
-  · simp [hcond, hscope]
-    rcases hcap with hb | ⟨effect, heffect, hb⟩
+  · rcases hcap with hb | ⟨effect, heffect, hb⟩
     · exfalso
       exact hcond (Or.inr hb)
     · have hany : effects.any (fun effect => bound.contains effect.carrier) = true :=
         List.any_eq_true.mpr ⟨effect, heffect, hb⟩
-      simp [hany]
+      simp [hcond, hany]
 
 private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierEffect)) :
     ∀ site ∈ code.filterMap (fun
@@ -372,17 +379,21 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
   | nil => simp
   | cons cmd cmds ih =>
       intro site hmem
-      simp only [List.filterMap_cons] at hmem
-      cases cmd with
-      | rufe target args bind =>
-          simp at hmem
-          rcases hmem with h | h
-          · subst site
-            rfl
-          · exact ih site h
-      | _ =>
-          simp at hmem
+      cases hcmd : (match cmd with
+        | .rufe target args bind => some (⟨target, args, bind, E⟩ : Rufstelle)
+        | _ => none) with
+      | none =>
+          simp [hcmd] at hmem
           exact ih site hmem
+      | some first =>
+          cases cmd with
+          | rufe target args bind =>
+              simp [hcmd] at hmem
+              rcases hmem with h | hmem
+              · subst site
+                rfl
+              · exact ih site hmem
+          | _ => simp at hcmd
 
 theorem effectGroup_signature : EffectGroupSignatureAussage := by
   intro scope a frame
