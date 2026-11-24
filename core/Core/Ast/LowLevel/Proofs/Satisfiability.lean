@@ -53,6 +53,9 @@ private def lowName : Identifier :=
     left
     constructor <;> decide, by simp⟩⟩
 
+private theorem lowName_slot : RegionScope.slot [lowName] lowName = some 0 := by
+  decide
+
 private def lowStart (h : Umgebung) (regions : List Strecke) : AussenStart :=
   ⟨0, (fun i => if i = 0 then some 0 else none), regions, (fun _ => none), h.politik.sicht 0 []⟩
 
@@ -210,7 +213,9 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
   · apply tree_parse_print tree
     dsimp [tree]
     rfl
-  · simp [elaborate, scope, RegionScope.slot, tree, op, name, lowName]
+  · have hslot : scope.slot name = some 0 := by
+      simpa [scope, name] using lowName_slot
+    simp [elaborate, hslot, op]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
@@ -258,7 +263,9 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
   · apply tree_parse_print tree
     refine ⟨written.printPieces.map PrintedToken.value, rfl, ?_⟩
     exact TypeReads.integer (by simp [WrittenType.valid, WrittenType.storage]) (by simp)
-  · simp [elaborate, scope, RegionScope.slot, tree, written, op, shape, layout, WrittenType.storage, name, lowName]
+  · have hslot : scope.slot name = some 0 := by
+      simpa [scope, name] using lowName_slot
+    simp [elaborate, hslot, written, op, shape, layout, WrittenType.storage]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
