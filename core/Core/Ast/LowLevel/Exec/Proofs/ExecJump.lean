@@ -123,7 +123,8 @@ private theorem jumpSlotCode_slot : jumpScope.slotCode jumpCodeName = some 0 := 
 
 private theorem jumpCodeState_slot : jumpScope.codeState jumpCodeName = some 0 := by
   simp only [jumpScope, ExecScope.codeState, ExecScope.slotState, List.find?_cons,
-    beq_self_eq_true, if_true, List.map_cons, List.map_nil, Option.bind_some, jumpState_slot]
+    beq_self_eq_true, if_true, List.map_cons, List.map_nil, Option.bind_eq_bind,
+    Option.bind_some, jumpState_slot]
 
 private theorem jumpElab : elaborateExec jumpScope (ExecTree.jump jumpCodeName) =
     some (ExecInstruction.jump 0 0) := by
@@ -324,7 +325,6 @@ private theorem jumpJoint : JumpJointAussage := by
     rw [hscurrent]
     dsimp
     rw [if_pos hcond]
-    rfl
   have hevalSome : (op.evaluate s entryContext).isSome = true := by
     rw [heval]
     rfl
