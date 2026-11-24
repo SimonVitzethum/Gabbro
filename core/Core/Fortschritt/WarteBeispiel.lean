@@ -173,11 +173,11 @@ def taktw : ∀ t, Takt (Lauffolge E_1 hw2) (KeinSchritt (Lauffolge E_1 hw2)) t 
   | n + 2 =>
     have hsp : spurw (n + 2) = some ticketB := spurw_ge2 _ (Nat.le_add_left 2 n)
     have hcur : zw (n + 2) = some S_d := by
-      show some (zwSt (n + 2)) = _
-      exact zwSt_ge2 _ (Nat.le_add_left 2 n)
+      have h : zw (n + 2) = some (zwSt (n + 2)) := rfl
+      rw [h, zwSt_ge2 _ (Nat.le_add_left 2 n)]
     have hnxt : zw ((n + 2) + 1) = some S_d := by
-      show some (zwSt ((n + 2) + 1)) = _
-      exact zwSt_ge2 _ (by omega)
+      have h : zw ((n + 2) + 1) = some (zwSt ((n + 2) + 1)) := rfl
+      rw [h, zwSt_ge2 _ (by omega)]
     have hker : (S_d.kerne 1).laeuft = some B := rfl
     have hlive : S_d.status B = Status.laeuft := rfl
     rw [hsp, hcur, hnxt]
@@ -318,7 +318,7 @@ theorem e1_hmono : ∀ t₁ t₂ s₁ s₂ (i₁ i₂ : Nat), 1 ≤ t₁ → t�
       exact Or.inr qd
   rcases e1 t₁ s₁ h1 hz1 with h | h <;> rcases e1 t₂ s₂ (by omega) hz2 with h' | h'
   · rw [h] at hq1
-    rw [h] at hq2
+    rw [h'] at hq2
     have i1 : i₁ = 0 := e1_index_null i₁ [A] (Or.inl rfl) hq1
     have i2 : i₂ = 0 := e1_index_null i₂ [A] (Or.inl rfl) hq2
     omega
