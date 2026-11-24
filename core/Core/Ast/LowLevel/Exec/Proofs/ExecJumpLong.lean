@@ -29,6 +29,7 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
       | jumpLong t' d' sp' st' =>
           cases hsp : sp <;> cases hst : st <;> cases hsp' : sp' <;> cases hst' : st'
           all_goals
+            unfold ExecTree.production at ha hb
             simp at ha hb
             rw [ha] at hb
             have hlen := congrArg List.length hb
@@ -102,6 +103,7 @@ private theorem jumpLongInversion : ExecInversionAussage .jumpLong := by
       · exact lexed
       · have hp := jumpLongPrints (.jumpLong target dest space stack)
         cases space <;> cases stack <;>
+          unfold ExecTree.production at hp prod
           simp at hp prod
         all_goals exact aligned.trans (hp.trans prod.symm)
 private theorem jumpLongEindeutig : ExecEindeutigAussage .jumpLong := by
