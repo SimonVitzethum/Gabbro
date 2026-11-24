@@ -153,6 +153,9 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   have hright : heldMemRegion k.plattform.ziel s entryContext 1 = some ⟨extentR, [⟨1, 0⟩]⟩ := by
     dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
     rfl
+  have hElab : elaborateMem scope tree = some op := by
+    dsimp [tree, op, elaborateMem]
+    rw [hslotL, hslotR]
   have hadj : 0 ≠ 1 ∧ extentL.von < extentL.bis ∧ extentR.von < extentR.bis ∧
       (extentL.bis = extentR.von ∨ extentR.bis = extentL.von) := by
     refine ⟨by decide, ?_, ?_, Or.inl rfl⟩
@@ -221,32 +224,33 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   · apply memProgram_akzeptiert
     simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   constructor
-  · change (memNameL.val :: memNameR.val :: []).Nodup
-    exact List.nodup_cons.mpr ⟨by simp only [List.mem_singleton, memNameL_ne_R], List.nodup_singleton _⟩
+  · dsimp [scope]
+    decide
   constructor
-  · change ([] : List (List Char)).Nodup
+  · dsimp [scope]
     exact List.nodup_nil
   constructor
-  · change ([] : List (List Char)).Nodup
+  · dsimp [scope]
     exact List.nodup_nil
   constructor
   · refine ⟨tree, ?_, ?_⟩
     · exact (memDruckAussage_merge tree).2
-    · refine ⟨op, ?_, rfl⟩
-      dsimp [elaborateMem]
-      rw [hslotL, hslotR]
+    · exact ⟨op, hElab, rfl⟩
   constructor
   · exact (memDruckAussage_merge tree).2
   constructor
-  · dsimp [elaborateMem]
-    rw [hslotL, hslotR]
+  · exact hElab
   constructor
   · exact System.IErreichbar.start
   constructor
-  · dsimp [E, s, memUnit, memProgram, memHead, I.start]
-    simp only [List.getElem?_cons_zero, Option.bind_some]
-    rw [heval]
-    rfl
+  · apply (memRealisiertAussage_merge k scope tree op hElab s entryContext).2
+    refine ⟨?_, rfl, ?_, ?_⟩
+    · dsimp [s, E, I.start, memBoot]
+      rfl
+    · dsimp [s, E, I.start, memBoot]
+      rfl
+    · rw [heval]
+      rfl
   constructor
   · exact heval
   constructor
