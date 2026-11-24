@@ -237,7 +237,8 @@ theorem stummer_schritt_koppelt
           ⟨rahmen₂, auth₂, [], _, .intern, speicher₂, rfl⟩
         have regel₂ : (p.einheit plattform).system.ImplSchritt c w₂ w [Ast.Semantik.plan] (f.nach c w₂) :=
           ⟨f, kopf₂, ⟨rfl, rfl⟩⟩
-        have step₂ : ImplSchritt (p.einheit plattform).katalog ρ₂.hw t w₂
+        have step₂ : ImplSchritt (p.einheit plattform).einrichtung (p.einheit plattform).system
+            (p.einheit plattform).katalog ρ₂.hw t w₂
             (.kontext c w, ⟨[], []⟩) (f.nach c w₂) :=
           .kontext crash₂ bereit₂ regel₂ aus₂
         -- no interrupt offer on either side: a core opportunity is present
