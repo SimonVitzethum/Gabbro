@@ -57,7 +57,47 @@ def Zahl.neg (a : Zahl lo hi) : Zahl (-hi) (-lo) :=
 theorem Zahl.div_bounds (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero : Divisor lo₂ hi₂) :
     (quotientBounds lo₁ hi₁ lo₂).1 ≤ a.wert.tdiv b.wert ∧
       a.wert.tdiv b.wert ≤ (quotientBounds lo₁ hi₁ lo₂).2 := by
-  sorry
+  by_cases hcase : 0 ≤ lo₁ ∧ 1 ≤ lo₂
+  · rw [quotientBounds, if_pos hcase]
+    constructor
+    · exact Int.tdiv_nonneg (Int.le_trans hcase.1 a.unten)
+        (Int.le_trans (by omega : (0 : Int) ≤ 1) (Int.le_trans hcase.2 b.unten))
+    · exact Int.le_trans (Int.tdiv_le_self b.wert (Int.le_trans hcase.1 a.unten)) a.oben
+  · rw [quotientBounds, if_neg hcase]
+    dsimp only
+    let m : Nat := max lo₁.natAbs hi₁.natAbs
+    have haAbs : a.wert.natAbs ≤ m := by
+      rcases Int.natAbs_eq a.wert with nonneg | nonpos
+      · have upper : (a.wert.natAbs : Int) ≤ hi₁ := by
+          rw [← nonneg]
+          exact a.oben
+        have bound : (a.wert.natAbs : Int) ≤ (m : Int) := by
+          exact Int.le_trans upper
+            (Int.le_trans Int.le_natAbs (Int.le_max_right _ _))
+        omega
+      · have upper : (a.wert.natAbs : Int) ≤ (-lo₁) := by omega
+        have upper' : (a.wert.natAbs : Int) ≤ (lo₁.natAbs : Int) := by
+          rw [← Int.natAbs_neg lo₁]
+          exact Int.le_trans upper Int.le_natAbs
+        have bound : (a.wert.natAbs : Int) ≤ (m : Int) :=
+          Int.le_trans upper' (Int.le_max_left _ _)
+        omega
+    have hbAbs : 1 ≤ b.wert.natAbs := by
+      rcases nonzero with positive | negative
+      · have lower : (1 : Int) ≤ b.wert := Int.le_trans positive b.unten
+        have eq : b.wert = (b.wert.natAbs : Int) := by
+          exact (Int.natAbs_of_nonneg (by omega : 0 ≤ b.wert)).symm
+        omega
+      · have upper : b.wert ≤ (-1 : Int) := Int.le_trans b.oben negative
+        rcases Int.natAbs_eq b.wert with eq | eq
+        · omega
+        · omega
+    have hqAbs : (a.wert.tdiv b.wert).natAbs ≤ m := by
+      rw [Int.natAbs_tdiv]
+      exact Nat.le_trans (Nat.div_le_self _ _) haAbs
+    rcases Int.natAbs_eq (a.wert.tdiv b.wert) with eq | eq
+    · constructor <;> omega
+    · constructor <;> omega
 
 def Zahl.div (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero : Divisor lo₂ hi₂) :
     Wert (quotientType lo₁ hi₁ lo₂) :=
