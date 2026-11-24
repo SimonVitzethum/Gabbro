@@ -53,12 +53,12 @@ private theorem substringNoOpAtSlice : ¬ Continues minimum (sliceRange :: more)
   rintro ⟨op, _, same, _⟩
   have htok : op.token = sliceRange := (List.cons.inj same).1.symm
   cases op with
-  | arith a => cases a <;> (have hf : False := by simpa [Infix.token, Arith.token, sliceRange] using htok; exact hf.elim)
-  | div => have hf : False := by simpa [Infix.token, sliceRange] using htok; exact hf.elim
-  | compare c => cases c <;> (have hf : False := by simpa [Infix.token, Compare.spelling, sliceRange] using htok; exact hf.elim)
-  | logic l => cases l <;> (have hf : False := by simpa [Infix.token, Logic.spelling, sliceRange] using htok; exact hf.elim)
-  | index => have hf : False := by simpa [Infix.token, openBracket, sliceRange] using htok; exact hf.elim
-  | projection => have hf : False := by simpa [Infix.token, dot, sliceRange] using htok; exact hf.elim
+  | arith a => cases a <;> simpa [Infix.token, Arith.token, sliceRange] using htok
+  | div => simpa [Infix.token, sliceRange] using htok
+  | compare c => cases c <;> simpa [Infix.token, Compare.spelling, sliceRange] using htok
+  | logic l => cases l <;> simpa [Infix.token, Logic.spelling, sliceRange] using htok
+  | index => simpa [Infix.token, openBracket, sliceRange] using htok
+  | projection => simpa [Infix.token, dot, sliceRange] using htok
 
 private theorem substringPrintTokens
     (base : Expr scope (.text capacity))
@@ -233,8 +233,7 @@ theorem substringSuffix : SubstringSuffixAussage := by
       exact (blocked ⟨.index, first, htok.symm, allowed⟩).elim
   | textConcat left right hle rightRead tail =>
       have hname : openBracket = Arith.add.token := (List.cons.inj htok).1
-      have hf : False := by simpa [Arith.token, openBracket] using hname
-      exact hf.elim
+      simpa [Arith.token, openBracket] using hname
   | textIndex tbase offset hle offsetRead tail =>
       have hfirst : first = _ := (List.cons.inj htok).2
       subst first
@@ -259,7 +258,8 @@ theorem substringBytes : SubstringBytesAussage := by
   let b : Befehl := .substring 0 capacity
   let next : Rahmen := b.auswerten frame
   have hguard : b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ := by
-    simpa [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound]
+    simp only [b, i, j, Befehl.guard, htext, hfirst, hlast, wertAls, text.bound,
+      Option.bind_some, if_pos]
   change b.guard frame = some ⟨.teilfolge, (i, j, text.bytes.size)⟩ ∧
     (waechterBedarf .teilfolge (i, j, text.bytes.size) →
       let out := text.slice i.toNat j.toNat
@@ -421,7 +421,7 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
       simpa [waechterBedarf]
     have hgood := hb.2.1 hw
     refine ⟨?_, ?_⟩
-    ·       have hstartstopp : ((E.startdaten start).lokal eintritt).stopp = none := by
+    · have hstartstopp : ((E.startdaten start).lokal eintritt).stopp = none := by
         simpa [E, form, substringForm, args, Quellform.einheit, Fragment.einheit, startdaten,
           Rahmen.start]
       simpa [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
