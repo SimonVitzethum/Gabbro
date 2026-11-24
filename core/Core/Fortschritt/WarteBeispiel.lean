@@ -80,10 +80,11 @@ theorem ticket_leer (s : Zustand Unit Unit Unit Unit Bool Unit) (c : Kontext) :
 def e1AusfuehrA :
     FuehrtSchrittAus (E_1).einrichtung 0 A zE0 (toggleUpdate A zE0) ticketPlan ⟨[], []⟩ S_c := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, S_c,
-    .sperre (.ticket (fun h => by cases h) List.not_mem_nil) (fun w => (w rfl).elim), ?_, rfl⟩
-  rw [ticket_leer]
-  exact .nil _
+    fun _ h => (List.not_mem_nil h).elim,
+    sperrEreignisse (zE0.sperren ()) ((zE0.sperren ()).anstellen A)
+      ((E_1).einrichtung.sperrOrt ()) (zE0.initial ((E_1).einrichtung.sperrOrt ())),
+    S_c,
+    .sperre (.ticket (fun h => by cases h) List.not_mem_nil) (fun w => (w rfl).elim), by exact .nil _, rfl⟩
 
 def e1StotterAusfuehr (t : Nat) (c : Kontext)
     (s : Zustand Unit Unit Unit Unit Bool Unit) :
@@ -94,11 +95,13 @@ def e1StotterAusfuehr (t : Nat) (c : Kontext)
 def e1AusfuehrB :
     FuehrtSchrittAus (E_1).einrichtung 1 B S_c (toggleUpdate B S_c) ticketPlan ⟨[], []⟩ S_d := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, S_d,
+    fun _ h => (List.not_mem_nil h).elim,
+    sperrEreignisse (S_c.sperren ()) ((S_c.sperren ()).anstellen B)
+      ((E_1).einrichtung.sperrOrt ()) (S_c.initial ((E_1).einrichtung.sperrOrt ())),
+    S_d,
     .sperre (.ticket (fun h => by cases h)
-      (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h))) (fun w => (w rfl).elim), ?_, rfl⟩
-  rw [ticket_leer]
-  exact .nil _
+      (fun h => (by decide : B ≠ A) (List.mem_singleton.mp h))) (fun w => (w rfl).elim),
+    by exact .nil _, rfl⟩
 
 def zwSt : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => zE0
