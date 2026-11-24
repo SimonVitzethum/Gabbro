@@ -247,7 +247,7 @@ theorem division_print (args : DivisionArgs scope) :
   refine Or.inr ⟨_, rfl, ?_⟩
   refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, by trivial⟩
   · exact args.left.printAtom (Infix.div.token :: args.right.printTokens ++ [closeParen])
-  · exact ExprReads.atom (args.right.printAtom (rest := [closeParen]) noOperatorAtClose) (.stop noOperatorAtClose)
+  · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
 
 -- Mirror BinaryArgs.readStep_sound by applying the new production and its child proofs.
 theorem division_reads (scope : Scope) (args : DivisionArgs scope)
@@ -281,7 +281,7 @@ theorem comparison_print (args : CompareArgs scope) :
   unfold comparison infixProduction infixStep
   simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, PrintedToken.unquoted, Compare.print, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
   refine Or.inr ⟨_, rfl, ?_⟩
-  refine ⟨_, ?_, ?_, ?_⟩
+  refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_, ?_⟩
   · exact args.left.printAtom ((Infix.compare args.op).token :: args.right.printTokens ++ [closeParen])
   · exact ExprReads.atom (args.right.printAtom [closeParen]) (.stop noOperatorAtClose)
   · intro op tail h
