@@ -41,7 +41,8 @@ theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
         PrintedToken.value) := by
   refine ⟨args.base.printTokens ++ [closeParen], ?_, ?_⟩
   · simp [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
-      printLenof, printOpen, printClose, lenofKeyword, openParen, closeParen]
+      printLenof, printOpen, printClose, keywordName, Identifier.print, PrintedToken.unquoted,
+      printPunctuation, lenofKeyword, openParen, closeParen]
   · exact Expr.printReads args.base noOperatorAtClose
 
 end Gabbro.Core.Ast.Surface
@@ -59,8 +60,8 @@ theorem textLength_derivation : TextLengthDerivationAussage := by
     change ExprReads scope 0 (lenofKeyword :: openParen :: input)
       ((Surface.textLength scope).tree args).2 []
     exact .atom (AtomReads.textLength read) (.stop noOperatorAtEnd)
-  · let args : Surface.TextLengthArgs [] := ⟨_, .textLiteral []⟩
-    exact Surface.Rule.satisfiableOfPrint args (Surface.textLength_print [] args)
+  · let args : Surface.TextLengthArgs scope := ⟨_, .textLiteral []⟩
+    exact Surface.Rule.satisfiableOfPrint args (Surface.textLength_print scope args)
 
 theorem textLength_inversion : TextLengthInversionAussage := by
   intro scope type input rest tree read
@@ -83,18 +84,17 @@ theorem textLength_inversion : TextLengthInversionAussage := by
       have same : label.val = "lenof".toList := by
         simpa [lenofKeyword] using (List.cons.inj hh).1.symm
       exact (ordinary.2.2 same).elim
-  all_goals simp [lenofKeyword, trueKeyword, falseKeyword] at hh
+  all_goals simp [lenofKeyword, trueKeyword, falseKeyword, openParen, closeParen,
+    minus, bang, openBracket, closeBracket, comma, colon, dot, semicolon, sliceRange] at hh
 
 theorem textLength_bytes : TextLengthBytesAussage := by
   intro capacity text frame h
-  cases text with
-  | mk bytes bound =>
-      have hval : wertAls (.text capacity) (⟨.text capacity, ⟨bytes, bound⟩⟩ : Dynamisch) =
-          some (⟨bytes, bound⟩ : TextValue capacity) := by
+  have hval : wertAls (.text capacity) (⟨.text capacity, text⟩ : Dynamisch) = some text := by
+    cases text with
+    | mk bytes bound =>
         simp [wertAls, bound]
-      dsimp [Befehl.auswerten]
-      rw [h, hval]
-      simp [Rahmen.schreibe]
+        rfl
+  simp [Befehl.auswerten, Rahmen.schreibe, h, hval, TextValue.lengthValue]
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
   intro args
@@ -189,22 +189,24 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   · rfl
   · apply System.IErreichbar.schritt eintritt () [plan] System.IErreichbar.start
     refine ⟨b0, ?_, ?_⟩
-    · simp [E, form, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
-        Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
+    · simp [E, form, args, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
+        system, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
         Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength]
     · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
     · rfl
     · rfl
-    · simp [form, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
-        Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
+    · simp [form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
+        Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start, Zustand.start, startdaten,
+        Rahmen.start]
   · intro g guard
     simp [b, textLengthForm, Befehl.guard] at guard
   · dsimp
     constructor
     · rfl
-    · simp [b, textLengthForm, s, s0, b0, Befehl.nach, Befehl.auswerten, Rahmen.schreibe,
-        Rahmen.start, wertAls, I.start, Zustand.start, startdaten]
+    · simp [b, textLengthForm, args, s, s0, b0, Befehl.nach, Befehl.auswerten,
+        Rahmen.schreibe, Rahmen.start, wertAls, TextValue.literal, I.start, Zustand.start,
+        startdaten]
 
 end Gabbro.Core.Ast.Semantik
