@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.Obligations
+public import Core.Annahme.AussenLauf
 
 /-!
 # Low-level preservation, safety and cost proofs
