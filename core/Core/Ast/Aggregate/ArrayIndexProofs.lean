@@ -69,16 +69,20 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
   refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
     [closeBracket, closeParen], ?_, ?_⟩
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
-      List.map_nil, List.singleton_append, List.append_assoc, printOpen, printClose,
-      printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted]
+      List.map_nil, List.singleton_append, List.append_assoc,
+      (show (Token.punctuation "(".toList : Token) = openParen by decide),
+      (show (Token.punctuation "[".toList : Token) = openBracket by decide),
+      (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
+      (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
-  · exact Expr.printReads (minimum := 8)
-      (rest := openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
-      args.base (by
-        intro cont
-        obtain ⟨op, more, same, allowed⟩ := cont
-        have prec := infixPrecLe7 op
-        omega)
+  · simpa only [List.singleton_append, List.cons_append, List.append_assoc] using
+      (Expr.printReads (minimum := 8)
+        (rest := openBracket :: (args.offset.printTokens ++ [closeBracket, closeParen]))
+        args.base (by
+          intro cont
+          obtain ⟨op, more, same, allowed⟩ := cont
+          have prec := infixPrecLe7 op
+          omega))
   · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
@@ -276,12 +280,14 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
-      · have wert : wertAls (.array element (count + 1))
-            (⟨.array element (count + 1), values⟩ : Dynamisch) =
-            some (values : Wert (.array element (count + 1))) := by
+      · let vv : Wert (.array element (count + 1)) := by
+          change Vector (Wert element) (count + 1)
+          exact values
+        have wert : wertAls (.array element (count + 1))
+            (⟨.array element (count + 1), vv⟩ : Dynamisch) = some vv := by
           dsimp [wertAls]
           rw [dif_pos rfl]
-        simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, Rahmen.zahl, alsGanzzahl,
+        simp [Befehl.auswerten, Rahmen.schreibe, harr, hoff, wert, vv, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, indexPosition]
 
 end Gabbro.Core.Ast.Semantik
