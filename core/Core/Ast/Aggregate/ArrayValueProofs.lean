@@ -54,8 +54,8 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | bool => trivial
   | array element count =>
       cases count with
-      | zero => rfl
-      | succ n => rfl
+      | zero => simp only [Fits]
+      | succ n => simp only [Fits]
   | productEnd => rfl
   | product head tail => rfl
   | record name labels layout => rfl

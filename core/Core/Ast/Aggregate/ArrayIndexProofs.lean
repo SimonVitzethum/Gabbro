@@ -314,6 +314,12 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           rw [hoff]
           rfl]
         dsimp
+        change ((wertAls (.array element (count + 1))
+            (Sigma.mk (.array element (count + 1)) val)).bind fun values =>
+          if offset.wert < 0 then none else
+            if bound : offset.wert.toNat < count + 1 then
+              some ⟨element, values[offset.wert.toNat]'bound⟩ else none) =
+          some ⟨element, values[(indexPosition offset lower upper).val]'boundProof⟩
         rw [wert]
         rw [if_neg (not_lt_of_ge nonneg)]
         rw [dif_pos boundProof]
