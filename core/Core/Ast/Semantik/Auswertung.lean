@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.Semantik.Runtime.ExpressionCode
 public import Core.Annahme.Waechter
 
 @[expose] public section
