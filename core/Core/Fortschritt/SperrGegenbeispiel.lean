@@ -153,7 +153,9 @@ theorem eh_kosten_null (a n : Nat) : Kontextkosten ρ_h stuckHalter a n = 0 := b
       simp only [spur_h, if_neg h]
   rcases hsp with hsp | hsp
   · rw [hsp]
+    rfl
   · rw [hsp]
+    rfl
 
 /-- The stuck run meets every hold bound. -/
 theorem eh_halte : HalteSchranken E_h ρ_h := by
