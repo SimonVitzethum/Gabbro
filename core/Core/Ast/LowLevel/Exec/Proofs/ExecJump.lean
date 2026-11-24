@@ -320,7 +320,7 @@ private theorem jumpJoint : JumpJointAussage := by
     constructor
     · rfl
     constructor
-    · rfl
+    · decide
     · change 0 < 1
       decide
   have heval : op.evaluate s entryContext = some next := by
