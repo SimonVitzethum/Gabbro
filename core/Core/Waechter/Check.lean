@@ -2,6 +2,7 @@ module
 public meta import Lean
 meta import Lean.Elab.Task
 meta import Core.Ast.Inventory.Entries.Arrays
+meta import Core.Ast.Inventory.Entries.CarriersAndEffects
 meta import Core.Ast.Inventory.Entries.Option
 meta import Core.Ast.Inventory.Entries.WrittenTypeStatements
 meta import Core.Verfeinerung.Formen.Registry
@@ -317,8 +318,8 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Stmt.retOption, `Gabbro.Core.Ast.Semantik.OptionConstructorProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Decl.record, `Gabbro.Core.Ast.Semantik.RecordDeclProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Decl.tagged, `Gabbro.Core.Ast.Semantik.TaggedDeclProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Decl.table, `Gabbro.Core.Ast.Semantik.TableProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Decl.effectGroup, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Decl.table, `Gabbro.Core.Ast.Semantik.TableProofPacket, some `Gabbro.Core.Ast.Semantik.tableEntry⟩,
+  ⟨`Gabbro.Core.Ast.Decl.effectGroup, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, some `Gabbro.Core.Ast.Semantik.effectGroupEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueArray, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket, some `Gabbro.Core.Ast.Semantik.buildArrayEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.liesArray, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.baueTupel, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, none⟩,
@@ -336,9 +337,9 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.textIndex, `Gabbro.Core.Ast.Semantik.TextIndexProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.textLength, `Gabbro.Core.Ast.Semantik.TextLengthProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.substring, `Gabbro.Core.Ast.Semantik.SubstringProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereTraeger, `Gabbro.Core.Ast.Semantik.TableProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereTraeger, `Gabbro.Core.Ast.Semantik.TableProofPacket, some `Gabbro.Core.Ast.Semantik.buildTableEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.optionIstBesetzt, `Gabbro.Core.Ast.Semantik.OptionTestProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, none⟩]
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, some `Gabbro.Core.Ast.Semantik.buildEffectGroupEntry⟩]
 
 private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, none⟩,
@@ -346,8 +347,8 @@ private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.tuple, `Gabbro.Core.Ast.Semantik.TupleTypeProofPacket, none⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.text, `Gabbro.Core.Ast.Semantik.TextTypeProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, none⟩,
-  ⟨`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, none⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.index, `Gabbro.Core.Ast.Semantik.CarrierIndexProofPacket, some `Gabbro.Core.Ast.Semantik.carrierIndexEntry⟩,
+  ⟨`Gabbro.Core.Ast.WrittenType.indexOption, `Gabbro.Core.Ast.Semantik.CarrierIndexOptionProofPacket, some `Gabbro.Core.Ast.Semantik.carrierIndexOptionEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.ownedRegion, `Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩,
   ⟨`Gabbro.Core.Ast.Semantik.SimFamilie.skalar, `Gabbro.Core.Ast.Semantik.SkalarSimAussage, some `Gabbro.Core.Ast.Semantik.skalarEntry⟩,
