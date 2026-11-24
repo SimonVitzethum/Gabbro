@@ -238,7 +238,7 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   case _ =>
     rename_i a ref vis ord
     change ∃ (r : Local scope _) (v : r.visible) (o : ordinaryLocal r.binding.name),
-      r.binding.name.val = word ∧ Expr.typed (Expr.variable ref vis ord) = Expr.typed (Expr.variable r v o) ∧ rest = rest
+      r.binding.name.val = ref.binding.name.val ∧ Expr.typed (Expr.variable ref vis ord) = Expr.typed (Expr.variable r v o) ∧ rest = rest
     exact ⟨ref, rfl, vis, ord, rfl⟩
 
 
