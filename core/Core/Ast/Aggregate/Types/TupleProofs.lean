@@ -118,7 +118,7 @@ theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   refine ⟨first, second, tail, PrintedToken.render tree.printPieces, pieces, ?_, lexed, ?_⟩
   · simpa [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid]
   · rw [aligned]
-    exact WrittenType.printReads tree (by simp [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid])
+    exact WrittenType.printReads tree (by simpa [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid])
       (by intro more same; cases same)
 
 end Gabbro.Core.Ast
