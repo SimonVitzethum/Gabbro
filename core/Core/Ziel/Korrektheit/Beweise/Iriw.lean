@@ -236,7 +236,7 @@ theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
   Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) irRf_po h
 
 theorem ir_kein_sc (e : IriwEv) : ¬ (irGraph .ra).sc e := by
-  cases e <;> simp only [Graph.sc, irGraph, irLab, reduceCtorEq]
+  cases e <;> simp only [Graph.sc, Graph.modus, irGraph, irLab, reduceCtorEq]
 
 theorem ir_konsistent : (irGraph .ra).Konsistent where
   wf := ir_wf .ra
@@ -258,6 +258,7 @@ theorem ir_konsistent : (irGraph .ra).Konsistent where
   ohneLB := by
     refine azyklisch_von_rang irRang ?_
     intro a b
+    show (irPo a b ∨ irRf a b) → irRang a < irRang b
     cases a <;> cases b <;> decide
 
 /-- THE SAME SHAPE IS ALLOWED BELOW `seq_cst`. Feeds: `ir_konsistent` (well-formedness, coherence,
