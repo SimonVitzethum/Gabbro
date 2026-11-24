@@ -195,8 +195,8 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     exact .lit
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
+    change AtomReads scope (openParen :: left.printTokens ++ op.token :: right.printTokens ++ closeParen :: rest)
+      (Expr.binary op left right) rest
     apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
     exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
@@ -211,35 +211,37 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     exact .negativeLit
   · intro rest
     rename_i operand operandIH
+    change AtomReads scope (minus :: openParen :: operand.printTokens ++ closeParen :: rest)
+      (Expr.neg operand) rest
     have start : NegationStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
       refine ⟨?_, ?_⟩
       · intro tail
         constructor <;> intro h <;> cases h
       · intro n tail h
         cases h
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
     exact .neg start (.grouped (operandIH (closeParen :: rest)))
   · intro rest
     rename_i operand operandIH
+    change AtomReads scope (bang :: openParen :: operand.printTokens ++ closeParen :: rest)
+      (Expr.not operand) rest
     have primary : PrimaryStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
       intro tail
       constructor <;> intro h <;> cases h
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
     exact .not primary (.grouped (operandIH (closeParen :: rest)))
   · intro rest
     rename_i left right nonzero leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, PrintedToken.slash, List.map_append, List.map_cons,
-      List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+    change AtomReads scope
+      (openParen :: left.printTokens ++ Infix.div.token :: right.printTokens ++ closeParen :: rest)
+      (Expr.div left right nonzero) rest
     apply .grouped
     apply ExprReads.atom (leftIH (Infix.div.token :: right.printTokens ++ closeParen :: rest))
     exact .div (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) nonzero (.stop noOperatorAtClose)
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
+    change AtomReads scope
+      (openParen :: left.printTokens ++ (Infix.compare op).token :: right.printTokens ++ closeParen :: rest)
+      (Expr.compare op left right) rest
     apply .grouped
     apply ExprReads.atom (leftIH ((Infix.compare op).token :: right.printTokens ++ closeParen :: rest))
     refine .compare op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
@@ -248,13 +250,16 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     cases h
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      List.cons_append, List.nil_append, List.append_assoc]
+    change AtomReads scope
+      (openParen :: left.printTokens ++ (Infix.logic op).token :: right.printTokens ++ closeParen :: rest)
+      (Expr.logic op left right) rest
     apply .grouped
     apply ExprReads.atom (leftIH ((Infix.logic op).token :: right.printTokens ++ closeParen :: rest))
     exact .logic op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
       (.stop noOperatorAtClose)) (.stop noOperatorAtClose)
 
+theorem Expr.printReads (tree : Expr scope type) (blocked : ¬ Continues minimum rest) :
+    ExprReads scope minimum (tree.printTokens ++ rest) tree rest :=
   .atom (tree.printAtom rest) (.stop blocked)
 
 end Gabbro.Core.Ast
