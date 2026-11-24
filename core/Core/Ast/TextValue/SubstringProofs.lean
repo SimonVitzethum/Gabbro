@@ -423,7 +423,8 @@ theorem substringErfuellbarAm : SubstringErfuellbarAmAussage := by
     have hgood := hb.2.1 hw
     refine ⟨?_, ?_⟩
     · have hstartstopp : ((E.startdaten start).lokal eintritt).stopp = none := by
-        simp [E, form, substringForm, args, Quellform.einheit, Fragment.einheit, startdaten]
+        simp [E, form, substringForm, args, Quellform.einheit, Fragment.einheit, startdaten,
+          Rahmen.start]
       simp [form, substringForm, args, b, s₃, s₂, s₁, s₀, Befehl.nach,
         Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, waechterBedarf,
         wertAls, TextValue.literal, Zahl.literal, I.start, Zustand.start, startdaten,
