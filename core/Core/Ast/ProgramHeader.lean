@@ -86,8 +86,9 @@ inductive TypeReads : List Token → WrittenType → List Token → Prop where
       SignedReads input lo (closedRange :: more) → SignedReads more hi rest →
       TypeReads (.word (intSpelling signed width) :: keyword "in" :: input)
         (.integer signed width (some (lo, hi))) rest
-  | array (count : Nat) : TypeReads input element (semicolon :: boundInput) →
-      ExprReads [] 0 boundInput (bound : Expr [] (.int count count)) (closeBracket :: rest) →
+  | array (count : Nat) (bound : Expr [] (.int count count)) :
+      TypeReads input element (semicolon :: boundInput) →
+      ExprReads [] 0 boundInput bound (closeBracket :: rest) →
       TypeReads (openBracket :: input) (.array element count) rest
   | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
       TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
