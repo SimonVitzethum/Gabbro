@@ -65,7 +65,12 @@ private def memNameR : Identifier :=
       cases h⟩⟩
 
 private theorem memNameL_ne_R : memNameL.val ≠ memNameR.val := by
-  decide
+  intro h
+  have hc : ('l' : Char) = 'r' := by
+    have h' := congrArg (fun l : List Char => l[0]?) h
+    simpa only [memNameL, memNameR, List.getElem?_cons_zero, Option.some.injEq] using h'
+  have hv := congrArg Char.val hc
+  norm_num at hv
 
 private theorem memZulStart {k : Katalog} {h : Katalog.Umgebung} {regions : List Strecke}
     (hw : Hardware k h) (img : image.gueltig k.plattform.ziel)
@@ -143,10 +148,12 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
       regions := (frame.regions.set 0 (some joined)).set 1 none }
   have hslotL : scope.slotRegion memNameL = some 0 := by
     change List.idxOf? memNameL.val [memNameL.val, memNameR.val] = some 0
-    decide
+    dsimp [memNameL, memNameR]
+    rfl
   have hslotR : scope.slotRegion memNameR = some 1 := by
     change List.idxOf? memNameR.val [memNameL.val, memNameR.val] = some 1
-    decide
+    dsimp [memNameL, memNameR]
+    rfl
   have hleft : heldMemRegion k.plattform.ziel s entryContext 0 = some ⟨extentL, [⟨0, 0⟩]⟩ := by
     dsimp [s, E, I.start, memProgram, heldMemRegion, memBoot]
     rfl
@@ -159,7 +166,7 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
     rfl
   have hadj : 0 ≠ 1 ∧ extentL.von < extentL.bis ∧ extentR.von < extentR.bis ∧
       (extentL.bis = extentR.von ∨ extentR.bis = extentL.von) := by
-    refine ⟨by decide, ?_, ?_, Or.inl rfl⟩
+    refine ⟨by omega, ?_, ?_, Or.inl rfl⟩
     · change 0x1000 < 0x2000
       omega
     · change 0x2000 < 0x3000
@@ -225,8 +232,9 @@ theorem merge_erfuellbar : MemErfuellbarAussage .merge := by
   · apply memProgram_akzeptiert
     simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
   constructor
-  · dsimp [scope]
-    decide
+  · change (memNameL.val :: memNameR.val :: []).Nodup
+    exact List.nodup_cons.mpr ⟨by simpa only [List.mem_singleton] using memNameL_ne_R,
+      List.nodup_singleton _⟩
   constructor
   · dsimp [scope]
     exact List.nodup_nil
