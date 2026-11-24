@@ -12,10 +12,28 @@ open Gabbro.Core.Annahme
 open Gabbro.Core.Aussen
 open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
 
+private def entryKeywordFirst (t : Token) : Nat :=
+  match t with
+  | .word (c :: _) => c.toNat
+  | _ => 0
+
+private def entryKindFirst : EntryKind → Nat
+  | .interrupt => 'i'.toNat
+  | .exception => 'e'.toNat
+  | .nonmaskable => 'n'.toNat
+  | .machineCheck => 'm'.toNat
+  | .fatal => 'f'.toNat
+
+private theorem entryKeywordFirst_kind (k : EntryKind) :
+    entryKeywordFirst (entryKindKeyword k) = entryKindFirst k := by
+  cases k <;> rfl
+
 private theorem entryKindKeyword_inj {k₁ k₂ : EntryKind}
     (h : entryKindKeyword k₁ = entryKindKeyword k₂) : k₁ = k₂ := by
-  cases k₁ <;> cases k₂ <;>
-    simp [entryKindKeyword, keyword, String.reduceToList] at h ⊢
+  have hf : entryKindFirst k₁ = entryKindFirst k₂ := by
+    rw [← entryKeywordFirst_kind k₁, ← entryKeywordFirst_kind k₂]
+    exact congrArg entryKeywordFirst h
+  cases k₁ <;> cases k₂ <;> simp only [entryKindFirst, Char.reduceToNat] at hf ⊢ <;> omega
 
 private theorem entryPrints_none (name : Identifier) (kind : EntryKind) (stack : EntryStack) :
     (ExecTree.entryDecl name kind stack none).production
@@ -278,7 +296,7 @@ private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
       cases hp
     · intro t done p hp
       cases hp
-  · constructor
+  · refine ⟨?_, ?_, ?_⟩
     · intro ρ runs t o args bedarf
       dsimp [kanonischeVerwendung, execUnit, execProgram, Quelltabellen.leer] at bedarf
       cases bedarf
@@ -287,6 +305,8 @@ private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
       obtain ⟨c, hc⟩ := nonempty
       obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
       exact hblock
+    · intro ρ runs t l h _ hne
+      exact (hne rfl).elim
 
 private def entryName : Identifier :=
   ⟨['e'], ⟨'e', [], rfl, by
@@ -346,7 +366,12 @@ private theorem entry_erfuellbar : ExecErfuellbarAussage .entryDecl := by
       (EntryKind.needsOwnStack .exception = true → EntryStack.perCore = EntryStack.own) ∧
       (EntryKind.needsPriority .exception = true ↔ false = true) := by
     rw [hentries]
-    decide
+    constructor
+    · rfl
+    · constructor
+      · intro hb
+        cases hb
+      · rfl
   have heval : op.evaluate s entryContext = some next := by
     simp only [op, ExecInstruction.evaluate]
     dsimp

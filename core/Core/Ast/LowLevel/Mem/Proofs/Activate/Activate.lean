@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivatePreservation
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+public import Core.Ast.LowLevel.Mem.Proofs.Kern
 
 @[expose] public section
 
@@ -117,7 +118,7 @@ private theorem memKlauselnWahr (k : Katalog) (code : List MemInstruction) :
 
 private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
     WaechterHalten (memProgram k code) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ lauf t op args bedarf
     change False at bedarf
     exact False.elim bedarf
@@ -126,6 +127,8 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hb, _, _⟩ := blocked c hc
     exact hb
+  · intro ρ lauf t l h _ hne
+    exact (hne rfl).elim
 
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
@@ -348,7 +351,7 @@ theorem activateJoint : ActivateJointAussage := by
         [plan] = [plan] ∧ next.advance entryContext s = frame.advance entryContext s
       exact ⟨next, hnext, rfl, rfl⟩
 
-theorem activate_aussage : ActivateAussage := by
-  exact ⟨activateObligations, activate_meaning, activateJoint⟩
+theorem activate_aussage : ActivateAussage :=
+  ⟨memObligationsKern_alle .activateSpace, activate_meaning, activateJoint⟩
 
 end Gabbro.Core.Ast.LowLevel

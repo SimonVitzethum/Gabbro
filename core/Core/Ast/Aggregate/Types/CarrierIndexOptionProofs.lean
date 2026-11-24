@@ -129,7 +129,7 @@ theorem carrierIndexOptionInversion : CarrierIndexOptionInversionAussage := by
   | index carrier resolved => exact (optionToken_ne_index (List.cons.inj htok).1).elim
   | indexOption carrier resolved =>
       exact ⟨carrier, _, (List.cons.inj htok).2, resolved, rfl⟩
-  | address _ | ownedRegion => cases (List.cons.inj htok).1
+  | address _ | ownedRegion | ptr _ _ => cases (List.cons.inj htok).1
 
 theorem carrierIndexOptionDerivation : CarrierIndexOptionDerivationAussage := by
   intro scope carrier count rest resolved

@@ -47,10 +47,11 @@ public import Core.Beobachtung.Fluss.Beschriftung.Regel
 public import Core.Beobachtung.Fluss.Beschriftung.Schreiben
 public import Core.Beobachtung.Fluss.Beschriftung.Skalar
 public import Core.Beobachtung.Fluss.Beschriftung.Sprung
+public import Core.Beobachtung.Fluss.Beschriftung.Aufgaben
+public import Core.Beobachtung.Fluss.Beschriftung.AufgabenBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
 public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
-public import Core.Beobachtung.Fluss.Beschriftung.Aufgaben
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Region
 public import Core.Beobachtung.Fluss.Speicherverwaltung
