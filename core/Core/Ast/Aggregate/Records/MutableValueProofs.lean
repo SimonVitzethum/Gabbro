@@ -36,12 +36,17 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
         injection hnval0 with h
         exact h.symm
       have hin := (List.cons.inj (List.cons.inj h2.2).2).2
-      refine ⟨⟨n, ordinary, _, _⟩, ?_, ?_, ?_⟩
-      · exact Subtype.ext hnval
-      · simpa [hin] using valueRead
-      · rfl
+      cases tree with
+      | mk after stmt =>
+          cases stmt with
+          | letMutableValue n' o' v' =>
+              refine ⟨⟨n', o', _, v'⟩, ?_, ?_, ?_⟩
+              · exact Subtype.ext hnval
+              · simpa [hin] using valueRead
+              · rfl
   | _ =>
       simp [keyword, letKeyword, returnKeyword, ifKeyword] at hh
+      contradiction
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
   intro scope result name input tree rest read

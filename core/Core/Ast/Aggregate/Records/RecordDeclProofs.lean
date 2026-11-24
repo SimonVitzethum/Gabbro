@@ -33,8 +33,12 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
   | record e n valid distinct memberRead =>
       have he : e = ex := by
         cases e <;> cases ex <;> simp [recordDeclarationPrefix] at hh ⊢
+        all_goals contradiction
       subst e
-      have htail := List.append_cancel_left hh
+      have hh' : recordDeclarationPrefix ex ++ ([Token.word name.val, assignment, openBrace] ++ input) =
+          recordDeclarationPrefix ex ++ ([Token.word n.val, assignment, openBrace] ++ _) := by
+        simpa only [List.append_assoc] using hh
+      have htail := List.append_cancel_left hh'
       have hnval0 : Token.word name.val = Token.word n.val := (List.cons.inj htail).1
       have hnval : n.val = name.val := by
         injection hnval0 with h
@@ -45,21 +49,22 @@ theorem recordDecl_inversion : RecordDeclInversionAussage := by
       · rfl
   | _ =>
       cases ex <;> simp [recordDeclarationPrefix, taggedDeclarationPrefix] at hh
+      all_goals contradiction
 
 private theorem recordMembers_consumes {input : List Token} {fields : List RecordMember} {rest : List Token}
     (read : RecordMembersRead input fields rest) : rest <:+ input := by
   induction read with
   | close => exact List.suffix_cons _ _
   | next n typeRead memberRead ih =>
-      obtain ⟨s, hs⟩ := ih
-      obtain ⟨t, ht⟩ := TypeReads.consumes typeRead
-      refine ⟨[.word n.val, colon] ++ t ++ [comma] ++ s, ?_⟩
-      rw [hs, ht]
-      simp
+      obtain ⟨u, hu⟩ := ih
+      obtain ⟨v, hv⟩ := TypeReads.consumes typeRead
+      refine ⟨[.word n.val, colon] ++ v ++ [comma] ++ u, ?_⟩
+      rw [hv, hu]
+      simp [List.append_assoc]
 
 theorem recordDecl_suffix : RecordDeclSuffixAussage := by
   intro input fields rest read
-  exact recordMembers_consumes read
+  exact (List.suffix_cons semicolon rest).trans (recordMembers_consumes read)
 
 private theorem recordMembers_print_reads (fields : List RecordMember)
     (valid : ∀ m ∈ fields, m.written.valid) :
@@ -78,15 +83,15 @@ private theorem recordMembers_print_reads (fields : List RecordMember)
           (comma :: ((ms.flatMap RecordMember.printPieces).map PrintedToken.value ++ [closeBrace, semicolon])) :=
         WrittenType.printReads m.written (valid m (by simp)) (by intro more same; cases same)
       have step := RecordMembersRead.next m.name readm (ih (fun x hx => valid x (List.mem_cons_of_mem m hx)))
-      simpa [RecordMember.printPieces, List.flatMap] using step
+      simpa [RecordMember.printPieces, List.flatMap, Function.comp_def, List.map_append] using step
 
 private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
     (recordDecl scope).production args
       (((Category.declaration scope).printPieces ((recordDecl scope).tree args)).map PrintedToken.value) := by
   refine ⟨(args.members.flatMap RecordMember.printPieces).map PrintedToken.value ++
     [closeBrace, semicolon], ?_, ?_⟩
-  · cases args.exported <;>
-      simp [recordDecl, Category.printPieces, Decl.printPieces,
+  · by_cases h : args.exported <;>
+      simp [h, recordDecl, Category.printPieces, Decl.printPieces,
         recordDeclarationHead, recordDeclarationPrefix]
   · exact recordMembers_print_reads args.members args.valid
 
@@ -102,7 +107,7 @@ theorem recordDecl_derivation : RecordDeclDerivationAussage := by
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let args : RecordDeclArgs :=
-    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by simp [recordLabels]⟩
+    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by decide⟩
   exact Rule.satisfiableOfPrint args (recordDecl_print scope args)
 
 end Gabbro.Core.Ast.Surface
@@ -162,7 +167,7 @@ theorem recordDecl_erfuellbar : RecordDeclErfuellbarAmAussage := by
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   let args : Surface.RecordDeclArgs :=
-    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by simp [recordLabels]⟩
+    ⟨false, name, [], (fun m h => (List.not_mem_nil h).elim), by decide⟩
   let form := recordDeclForm []
   let E := form.einheit platform args
   let s := (I.start E start).2
