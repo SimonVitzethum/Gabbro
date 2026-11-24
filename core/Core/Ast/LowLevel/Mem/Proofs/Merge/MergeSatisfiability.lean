@@ -40,7 +40,8 @@ private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
       obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal (k := k) execute
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer rfl rfl rfl  · intro ρ _
+  · exact schrankenLokal_leer rfl rfl rfl
+  · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
   · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,

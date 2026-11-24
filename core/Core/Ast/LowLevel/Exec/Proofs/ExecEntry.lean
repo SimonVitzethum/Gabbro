@@ -287,7 +287,8 @@ private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
   refine ⟨⟨hwf, ?_, execAussenLokalUnit k op, execFlussLokal k op, ?_⟩, ?_, ?_⟩
   · intro i
     exact execRegelLokal k i
-  · exact schrankenLokal_leer rfl rfl rfl  · intro ρ runs
+  · exact schrankenLokal_leer rfl rfl rfl
+  · intro ρ runs
     dsimp [kanonischeKlauseln, execUnit, execProgram, Quelltabellen.leer, Quellklauseln.leer]
     refine ⟨?_, ?_, ?_⟩
     · intro p hp

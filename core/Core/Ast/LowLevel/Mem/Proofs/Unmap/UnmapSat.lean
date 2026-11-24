@@ -281,7 +281,8 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
         obtain ⟨rfl, rfl⟩ := unmapMemGenauInternal execute
         exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
           (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer rfl rfl rfl  · intro run conforms
+  · exact schrankenLokal_leer rfl rfl rfl
+  · intro run conforms
     change (∀ pred ∈ (E.quelltabellen.klauseln).voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (E.quelltabellen.klauseln).invariant, _) ∧
       ∀ _ : I.Schnitt E run, _ → ∀ pred ∈ (E.quelltabellen.klauseln).sicher, _
