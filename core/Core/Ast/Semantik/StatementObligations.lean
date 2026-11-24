@@ -147,4 +147,348 @@ theorem returnValue_erfuellbar : returnValueJoint := by
   intro g guard
   cases guard
 
+-- Mirror Rule.Entry.parse using the source production's reads lemma.
+theorem ifElse_parse (ctx : StatementContext) : (ifElseForm ctx).ParseAussage := by
+  intro args text pieces lexed production
+  exact (Surface.ifElse_entry ctx.1 ctx.2).parse lexed production
+
+-- Mirror elab_korrekt with the descriptor's compositional fragment.
+theorem ifElse_elaboriert (ctx : StatementContext) : (ifElseForm ctx).ElaboriertAussage := by
+  intro platform args
+  rfl
+
+-- Mirror Quellform.realisiert using the new instruction's lookup.
+theorem ifElse_realisiert (ctx : StatementContext) : (ifElseForm ctx).RealisiertAussage := by
+  intro platform args s running active atPc
+  exact (ifElseForm ctx).realisiert (fun args => by
+    have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+        ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length]? = some sw := by
+      intro cond yes no sw spr
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero,
+          Nat.lt_succ_self])]
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+      rfl
+    exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+      (bracedBlock args.no).code
+      (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+      (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s running active atPc
+
+-- Mirror Quellform.annahme including the guard operands at the source head.
+theorem ifElse_annahme (ctx : StatementContext) : (ifElseForm ctx).AnnahmeAussage := by
+  exact Quellform.annahme (ifElseForm ctx)
+
+-- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
+theorem ifElse_ideal (ctx : StatementContext) : (ifElseForm ctx).IdealAussage := by
+  refine ⟨?_, fun args => ?_⟩
+  · intro args
+    have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+        ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length]? = some sw := by
+      intro cond yes no sw spr
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero,
+          Nat.lt_succ_self])]
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+      rfl
+    exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+      (bracedBlock args.no).code
+      (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+      (Befehl.springe ((bracedBlock args.no).code.length + 1))
+  · exact ⟨((ifElseForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+
+-- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
+theorem ifElse_einheit (ctx : StatementContext) : (ifElseForm ctx).EinheitAussage := by
+  intro platform args
+  exact ⟨rfl, ((ifElseForm ctx).befehl args).kommutation⟩
+
+-- Mirror the implementation field of Quellform.eintrag with the exact successor equation.
+theorem ifElse_impl (ctx : StatementContext) : (ifElseForm ctx).ImplAussage := by
+  intro args c s w plans u
+  rfl
+
+-- Mirror Quellform.erhaltung with the frame-only instruction transfer.
+theorem ifElse_erhaltung (ctx : StatementContext) : (ifElseForm ctx).ErhaltungsAussage := by
+  exact Quellform.erhaltung (ifElseForm ctx)
+    (fun args => stmt_keine_invarianten ((Surface.ifElse ctx.1 ctx.2).tree args).2)
+
+-- Mirror binary_erfuellbar using the actual source head and its pre-state.
+theorem ifElse_erfuellbar : ifElseJoint := by
+  intro platform start bit
+  let form := ifElseForm ([], none)
+  cases bit
+  · let args : Surface.IfArgs [] none := ⟨.falseLit, .braces .done, .braces .done⟩
+    let E := form.einheit platform args
+    let s₀ := (Maschine.I.start E start).2
+    let s₁ := (Befehl.wahrheitswert 0 false).nach eintritt s₀
+    have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+      ⟨.wahrheitswert 0 false, rfl, rfl, rfl⟩
+    have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
+    refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₁ reached
+      (form.realisiert (fun args => by
+        have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+            ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length]? = some sw := by
+          intro cond yes no sw spr
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+            omega)]
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+            omega)]
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero,
+              Nat.lt_succ_self])]
+          rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+          rfl
+        exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+          (bracedBlock args.no).code
+          (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl) ?_⟩
+    intro g guard
+    cases guard
+  · let args : Surface.IfArgs [] none := ⟨.trueLit, .braces .done, .braces .done⟩
+    let E := form.einheit platform args
+    let s₀ := (Maschine.I.start E start).2
+    let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+    have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+      ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+    have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start first
+    refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₁ reached
+      (form.realisiert (fun args => by
+        have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+            ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length]? = some sw := by
+          intro cond yes no sw spr
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+            omega)]
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+            omega)]
+          rw [List.getElem?_append_left (by
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero,
+              Nat.lt_succ_self])]
+          rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+          rfl
+        exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+          (bracedBlock args.no).code
+          (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+          (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₁ rfl rfl rfl) ?_⟩
+    intro g guard
+    cases guard
+
+-- Mirror Rule.Entry.parse using the source production's reads lemma.
+theorem braced_parse (ctx : StatementContext) : (bracedForm ctx).ParseAussage := by
+  intro args text pieces lexed production
+  exact (Surface.braced_entry ctx.1 ctx.2).parse lexed production
+
+-- Mirror elab_korrekt with the descriptor's compositional fragment.
+theorem braced_elaboriert (ctx : StatementContext) : (bracedForm ctx).ElaboriertAussage := by
+  intro platform args
+  rfl
+
+-- Mirror Quellform.realisiert using the new instruction's lookup.
+theorem braced_realisiert (ctx : StatementContext) : (bracedForm ctx).RealisiertAussage := by
+  intro platform args s running active atPc
+  exact (bracedForm ctx).realisiert (fun args => by
+    change ((block args.2).code ++ [Befehl.blockEnde (args.1.length - ctx.1.length)])[
+      (block args.2).code.length]? = some (.blockEnde (args.1.length - ctx.1.length))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+    rfl) platform args s running active atPc
+
+-- Mirror Quellform.annahme including the guard operands at the source head.
+theorem braced_annahme (ctx : StatementContext) : (bracedForm ctx).AnnahmeAussage := by
+  exact Quellform.annahme (bracedForm ctx)
+
+-- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
+theorem braced_ideal (ctx : StatementContext) : (bracedForm ctx).IdealAussage := by
+  refine ⟨?_, fun args => ?_⟩
+  · intro args
+    change ((block args.2).code ++ [Befehl.blockEnde (args.1.length - ctx.1.length)])[
+      (block args.2).code.length]? = some (.blockEnde (args.1.length - ctx.1.length))
+    rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+    rfl
+  · exact ⟨((bracedForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+
+-- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
+theorem braced_einheit (ctx : StatementContext) : (bracedForm ctx).EinheitAussage := by
+  intro platform args
+  exact ⟨rfl, ((bracedForm ctx).befehl args).kommutation⟩
+
+-- Mirror the implementation field of Quellform.eintrag with the exact successor equation.
+theorem braced_impl (ctx : StatementContext) : (bracedForm ctx).ImplAussage := by
+  intro args c s w plans u
+  rfl
+
+-- Mirror Quellform.erhaltung with the frame-only instruction transfer.
+theorem braced_erhaltung (ctx : StatementContext) : (bracedForm ctx).ErhaltungsAussage := by
+  refine Quellform.erhaltung (bracedForm ctx) ?_
+  intro args
+  change (bracedBlock args.2).klauseln.invariant = []
+  have blockEmpty : (block args.2).klauseln.invariant = [] := by
+    refine @Block.rec ctx.2
+      (fun b a t => (stmt t).klauseln.invariant = [])
+      (fun b a t => (block t).klauseln.invariant = [])
+      (fun b t => (bracedBlock t).klauseln.invariant = [])
+      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ctx.2 args.1 args.2
+    · intro scope type name ordinary value
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+    · intro scope lo hi valueLo valueHi ref visible writable value fits
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+    · intro expected scope type declared value fits
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+    · intro scope condition yes no yesIH noIH
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
+    · intro scope
+      simp only [block, Fragment.leer, Quellklauseln.leer]
+    · intro before middle after first rest firstIH restIH
+      simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+        firstIH, restIH, List.nil_append]
+    · intro before after body bodyIH
+      simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+        Quellklauseln.leer, List.nil_append, bodyIH]
+  simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+    Quellklauseln.leer, List.nil_append, blockEmpty]
+
+-- Mirror let_erfuellbar using the actual source head and its pre-state.
+theorem braced_erfuellbar : bracedJoint := by
+  intro platform start
+  let args : Statements none [] := ⟨[], .done⟩
+  let form := bracedForm ([], none)
+  let s := (Maschine.I.start (form.einheit platform args) start).2
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s .start
+    (form.realisiert (fun args => by
+      change ((block args.2).code ++ [Befehl.blockEnde (args.1.length - ([], none).1.length)])[
+        (block args.2).code.length]? = some (.blockEnde (args.1.length - ([], none).1.length))
+      rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+      rfl) platform args s rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
+
+-- Mirror Rule.Entry.parse using the source production's reads lemma.
+theorem thenJump_parse (ctx : StatementContext) : (thenJumpForm ctx).ParseAussage := by
+  intro args text pieces lexed production
+  exact (Surface.ifElse_entry ctx.1 ctx.2).parse lexed production
+
+-- Mirror elab_korrekt with the descriptor's compositional fragment.
+theorem thenJump_elaboriert (ctx : StatementContext) : (thenJumpForm ctx).ElaboriertAussage := by
+  intro platform args
+  rfl
+
+-- Mirror Quellform.realisiert using the new instruction's lookup.
+theorem thenJump_realisiert (ctx : StatementContext) : (thenJumpForm ctx).RealisiertAussage := by
+  intro platform args s running active atPc
+  exact (thenJumpForm ctx).realisiert (fun args => by
+    have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+        ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length + 1 + yes.length]? = some spr := by
+      intro cond yes no sw spr
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_right (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+        Nat.add_zero, Nat.sub_self]
+      rfl
+    exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+      (bracedBlock args.no).code
+      (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+      (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s running active atPc
+
+-- Mirror Quellform.annahme including the guard operands at the source head.
+theorem thenJump_annahme (ctx : StatementContext) : (thenJumpForm ctx).AnnahmeAussage := by
+  exact Quellform.annahme (thenJumpForm ctx)
+
+-- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
+theorem thenJump_ideal (ctx : StatementContext) : (thenJumpForm ctx).IdealAussage := by
+  refine ⟨?_, fun args => ?_⟩
+  · intro args
+    have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+        ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length + 1 + yes.length]? = some spr := by
+      intro cond yes no sw spr
+      rw [List.getElem?_append_left (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.getElem?_append_right (by
+        simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+        omega)]
+      rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+        Nat.add_zero, Nat.sub_self]
+      rfl
+    exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+      (bracedBlock args.no).code
+      (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+      (Befehl.springe ((bracedBlock args.no).code.length + 1))
+  · exact ⟨((thenJumpForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+
+-- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
+theorem thenJump_einheit (ctx : StatementContext) : (thenJumpForm ctx).EinheitAussage := by
+  intro platform args
+  exact ⟨rfl, ((thenJumpForm ctx).befehl args).kommutation⟩
+
+-- Mirror the implementation field of Quellform.eintrag with the exact successor equation.
+theorem thenJump_impl (ctx : StatementContext) : (thenJumpForm ctx).ImplAussage := by
+  intro args c s w plans u
+  rfl
+
+-- Mirror Quellform.erhaltung with the frame-only instruction transfer.
+theorem thenJump_erhaltung (ctx : StatementContext) : (thenJumpForm ctx).ErhaltungsAussage := by
+  exact Quellform.erhaltung (thenJumpForm ctx)
+    (fun args => stmt_keine_invarianten ((Surface.ifElse ctx.1 ctx.2).tree args).2)
+
+-- Mirror binary_erfuellbar using the actual source head and its pre-state.
+theorem thenJump_erfuellbar : thenJumpJoint := by
+  intro platform start
+  let form := thenJumpForm ([], none)
+  let args : Surface.IfArgs [] none := ⟨.trueLit, .braces .done, .braces .done⟩
+  let E := form.einheit platform args
+  let s₀ := (Maschine.I.start E start).2
+  let s₁ := (Befehl.wahrheitswert 0 true).nach eintritt s₀
+  let s₂ := (Befehl.springeWenn 0 false 3).nach eintritt s₁
+  let s₃ := (Befehl.blockEnde 0).nach eintritt s₂
+  have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.wahrheitswert 0 true, rfl, rfl, rfl⟩
+  have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨.springeWenn 0 false 3, rfl, rfl, rfl⟩
+  have third : E.system.ISchritt eintritt s₂ () [plan] s₃ :=
+    ⟨.blockEnde 0, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₃ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan]
+      (.schritt eintritt () [plan] .start first) second) third
+  refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₃ reached
+    (form.realisiert (fun args => by
+      have nested : ∀ (cond yes no : List Befehl) (sw spr : Befehl),
+          ((((cond ++ [sw]) ++ yes) ++ [spr]) ++ no)[cond.length + 1 + yes.length]? = some spr := by
+        intro cond yes no sw spr
+        rw [List.getElem?_append_left (by
+          simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+          omega)]
+        rw [List.getElem?_append_right (by
+          simp only [List.length_append, List.length_cons, List.length_nil, Nat.add_zero]
+          omega)]
+        rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
+          Nat.add_zero, Nat.sub_self]
+        rfl
+      exact nested (expr 0 args.condition).code (bracedBlock args.yes).code
+        (bracedBlock args.no).code
+        (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
+        (Befehl.springe ((bracedBlock args.no).code.length + 1))) platform args s₃ rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
+
 end Gabbro.Core.Ast.Semantik
