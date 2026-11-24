@@ -783,14 +783,12 @@ theorem program_erfuellbar : programJoint := by
     intro g guard
     cases guard
   · refine ⟨a.unit, Ast.print (category := .unit) a.unit, s₁, Ast.parse_print _, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · rfl
     · exact reached
     · rfl
     · exact ⟨.starte mainName, rfl, rfl, rfl⟩
     · exact ⟨.starte mainName, rfl, rfl, rfl⟩
     · rfl
     · rfl
-
 def programProofs : RegistryEntry ``UnitBody.step
     ⟨.surface, Quellform.statements (Context := PUnit) (fun _ => programForm) programJoint ``UnitBody.step⟩ where
   realization := .surface (fun _ => program_parse) (fun _ => program_elaboriert) (fun _ => program_realisiert)
