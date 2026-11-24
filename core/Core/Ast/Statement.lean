@@ -226,6 +226,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       obtain ⟨sameYes, moreEq⟩ := ihYes yesRead'
       cases sameYes
       cases moreEq
+        subst_vars
       obtain ⟨sameNo, restEq⟩ := ihNo noRead'
       cases sameNo
       exact ⟨rfl, restEq⟩
@@ -246,6 +247,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
         obtain ⟨sameFirst, moreEq⟩ := ihSt stRead'
         cases sameFirst
         cases moreEq
+        subst_vars
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
         cases sameNext
         exact ⟨rfl, restEq⟩
@@ -269,6 +271,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     rename_i b rest' other
     cases other with
     | done => exact ⟨rfl, rfl⟩
+    | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
     rename_i _ _ ihBlock b rest' other
     cases other with
@@ -280,6 +283,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
         obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
         cases sameFirst
         cases moreEq
+        subst_vars
         obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
         cases sameNext
         exact ⟨rfl, restEq⟩
