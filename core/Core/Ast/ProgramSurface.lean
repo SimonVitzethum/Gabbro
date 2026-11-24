@@ -26,8 +26,7 @@ theorem returnVoid_print {scope : Scope} {result : Option (Ty .value)} (a : Retu
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem returnVoid_reads {scope : Scope} {result : Option (Ty .value)} {a : ReturnVoidArgs scope result} {tokens : List Token}
     (read : (returnVoid scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((returnVoid scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((returnVoid scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem returnVoid_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) (void : result = none) :
@@ -62,8 +61,7 @@ theorem mutableLocal_print {scope : Scope} {result : Option (Ty .value)} (a : Mu
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : MutableLocalArgs scope result} {tokens : List Token}
     (read : (mutableLocal scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((mutableLocal scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((mutableLocal scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
@@ -71,7 +69,7 @@ theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .val
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinaryName : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro h <;> cases h
+    decide
   let a : MutableLocalArgs scope result := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
   exact Rule.satisfiableOfPrint a (mutableLocal_print a)
 
@@ -95,8 +93,7 @@ theorem directCall_print {scope : Scope} {result : Option (Ty .value)} (a : Dire
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : DirectCallArgs scope result} {tokens : List Token}
     (read : (directCall scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((directCall scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((directCall scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
@@ -105,9 +102,7 @@ theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
   have ordinaryName : directName name := by
     change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
       ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+    decide
   let a : DirectCallArgs scope result := ⟨name, ordinaryName, []⟩
   exact Rule.satisfiableOfPrint a (directCall_print a)
 
@@ -136,8 +131,7 @@ theorem bindDirect_print {scope : Scope} {result : Option (Ty .value)} (a : Bind
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem bindDirect_reads {scope : Scope} {result : Option (Ty .value)} {a : BindDirectArgs scope result} {tokens : List Token}
     (read : (bindDirect scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((bindDirect scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((bindDirect scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
@@ -145,7 +139,7 @@ theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinaryName : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro h <;> cases h
+    decide
   have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
     constructor
     · change ['x'] ≠ ['m', 'u', 't']
@@ -156,9 +150,7 @@ theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value
   have callOrdinary : directName callName := by
     change (['y'] ≠ ['t', 'r', 'u', 'e'] ∧ ['y'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
       ['y'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+    decide
   let a : BindDirectArgs scope result := ⟨name, ordinary, .bool, trivial, ⟨callName, callOrdinary, []⟩⟩
   exact Rule.satisfiableOfPrint a (bindDirect_print a)
 
@@ -190,8 +182,7 @@ theorem boundedWhile_print {scope : Scope} {result : Option (Ty .value)} (a : Bo
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem boundedWhile_reads {scope : Scope} {result : Option (Ty .value)} {a : BoundedWhileArgs scope result} {tokens : List Token}
     (read : (boundedWhile scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((boundedWhile scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((boundedWhile scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem boundedWhile_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
@@ -232,8 +223,7 @@ theorem forRange_print {scope : Scope} {result : Option (Ty .value)} (a : ForRan
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem forRange_reads {scope : Scope} {result : Option (Ty .value)} {a : ForRangeArgs scope result} {tokens : List Token}
     (read : (forRange scope result).production a tokens) :
-    (Category.statement scope result).reads tokens ((forRange scope result).tree a) := by
-  exact read
+    (Category.statement scope result).reads tokens ((forRange scope result).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
@@ -241,7 +231,7 @@ theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value))
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro h <;> cases h
+    decide
   let a : ForRangeArgs scope result :=
     ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
   exact Rule.satisfiableOfPrint a (forRange_print a)
@@ -274,8 +264,7 @@ theorem constant_print {scope : Scope} (a : ConstantArgs scope) :
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem constant_reads {scope : Scope} {a : ConstantArgs scope} {tokens : List Token}
     (read : (constant scope).production a tokens) :
-    (Category.declaration scope).reads tokens ((constant scope).tree a) := by
-  exact read
+    (Category.declaration scope).reads tokens ((constant scope).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem constant_syntax_erfuellbar (scope : Scope) :
@@ -283,7 +272,7 @@ theorem constant_syntax_erfuellbar (scope : Scope) :
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor <;> intro h <;> cases h
+    decide
   let a : ConstantArgs scope := ⟨name, ordinary, .bool, trivial, .bool, Expr.trueLit, trivial, trivial⟩
   exact Rule.satisfiableOfPrint a (constant_print a)
 
@@ -316,8 +305,7 @@ theorem function_print {scope : Scope} (a : FunctionArgs scope) :
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List Token}
     (read : (function scope).production a tokens) :
-    (Category.declaration scope).reads tokens ((function scope).tree a) := by
-  exact read
+    (Category.declaration scope).reads tokens ((function scope).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem function_syntax_erfuellbar (scope : Scope) :
@@ -326,9 +314,7 @@ theorem function_syntax_erfuellbar (scope : Scope) :
   have ordinary : directName name := by
     change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
       ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+    decide
   let a : FunctionArgs scope :=
     ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
   exact Rule.satisfiableOfPrint a (function_print a)
@@ -359,8 +345,7 @@ theorem program_print (a : ProgramArgs) :
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem program_reads {a : ProgramArgs} {tokens : List Token}
     (read : (program).production a tokens) :
-    (Category.unit).reads tokens ((program).tree a) := by
-  exact read
+    (Category.unit).reads tokens ((program).tree a) := by exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem program_syntax_erfuellbar  :
@@ -369,9 +354,7 @@ theorem program_syntax_erfuellbar  :
   have ordinary : directName name := by
     change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
       ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-    constructor
-    · constructor <;> intro h <;> cases h
-    · decide
+    decide
   let first : Decl [] [] :=
     .function name ordinary [] none (by simp) none (.braces .done) (by simp) (by intro h; cases h)
   let a : ProgramArgs := ⟨[], [], first, .done⟩
@@ -394,23 +377,21 @@ theorem StmtReads.returnVoid_inversion
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
   generalize htok : (returnKeyword :: semicolon :: input) = toks at read
   cases read with
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName] | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName] | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | ret _ _ expr =>
       cases expr with
-      | atom atomRead _ => cases atomRead <;> simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+      | atom atomRead _ => cases atomRead <;> simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | retVoid declared =>
       injection htok with _ htail
       injection htail with _ hrfl
       subst rest
       exact ⟨⟨declared⟩, rfl, rfl⟩
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
   | directCall callRead =>
       cases callRead
-      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+      all_goals simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
+  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, trueKeyword, falseKeyword, keyword, assignment, semicolon, colon, openParen, minus, bang, directName]
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
@@ -423,10 +404,8 @@ theorem StmtReads.mutableLocal_inversion
   generalize htok : (letKeyword :: keyword "mut" :: .word spelling :: colon :: input) = toks at read
   cases read with
   | letMutable name ordinary written valid fits typeRead exprRead =>
-      injection htok with _ htail
-      injection htail with _ htail
-      injection htail with hspelling htail
-      injection htail with _ htail
+      simp only [List.cons.injEq] at htok
+      obtain ⟨_, ⟨_, ⟨hspelling, ⟨_, hinput⟩⟩⟩⟩ := htok
       injection hspelling with hname
       subst input
       refine ⟨⟨name, ordinary, written, valid, _, _, fits⟩, _, ?_, typeRead, exprRead, rfl⟩
@@ -434,14 +413,7 @@ theorem StmtReads.mutableLocal_inversion
   | directCall callRead =>
       cases callRead
       all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror CallReads.inversion after disambiguating the reserved statement heads.
 theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directName name)
@@ -460,15 +432,7 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
       subst input
       refine ⟨call, Subtype.ext hval.symm, ?_, rfl⟩
       exact argsProof
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror StmtReads.let_header with the written type and the call's argument derivation.
 theorem StmtReads.bindDirect_inversion
@@ -492,14 +456,7 @@ theorem StmtReads.bindDirect_inversion
   | directCall callRead =>
       cases callRead
       all_goals simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror StmtReads.ite_inversion and retain the distinct bound and body derivations.
 theorem StmtReads.boundedWhile_inversion
@@ -527,13 +484,7 @@ theorem StmtReads.boundedWhile_inversion
       injection htok with hhead htail
       injection hhead with hval
       exact (call.ordinary.2 (by simpa [hval])).elim
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
 theorem StmtReads.forRange_inversion
@@ -561,14 +512,7 @@ theorem StmtReads.forRange_inversion
       injection htok with hhead htail
       injection htail with hspelling hargs
       cases hspelling
-  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
-  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | assignVar _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ret _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | ite _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | retVoid _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]   | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
 
 -- Mirror UnitBody.printReads and recover the first declaration's unconsumed suffix.
 theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads [] tokens a.unit) :
