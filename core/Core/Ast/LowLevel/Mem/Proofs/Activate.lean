@@ -293,7 +293,7 @@ theorem activateJoint : ActivateJointAussage := by
   obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp heval
   refine ⟨k, scope, tree, op, env, start, text, pre, s, next, ?_, hw, hzul, ?_,
     hnodupR, hnodupS, hnodupM, hbezeichnet, hparse, hopElab, hreach, ?_, hnext, ?_, ?_⟩
-  · exact ⟨tablesName, rfl, rfl⟩
+  · exact ⟨0, rfl, rfl⟩
   · exact memAkzeptiertX86 (pre ++ [op])
   · change memHead target (pre ++ [op]) s entryContext = some op
     unfold memHead
