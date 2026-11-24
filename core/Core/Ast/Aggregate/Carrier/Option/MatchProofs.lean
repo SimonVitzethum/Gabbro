@@ -130,9 +130,10 @@ private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
   refine ⟨a.val.value.printTokens ++
       (openBrace :: a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace]),
     a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace], ?_, ?_, ?_⟩
-  · simp [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
+  · simp only [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
       Expr.printTokens, printOpenBrace, printCloseBrace, printPunctuation,
-      PrintedToken.unquoted, openBrace, closeBrace]
+      PrintedToken.unquoted, openBrace, closeBrace, List.map_cons, List.map_append,
+      List.map_nil, List.cons_append, List.nil_append]
   · exact Expr.printReads a.val.value noOperatorAtOpenBrace
   · exact om_arms_printReads a.val.arms []
 
@@ -144,10 +145,10 @@ theorem optionMatchPayload : OptionMatchPayloadAussage := by
   constructor
   · intro index hvalue
     subst value
-    simp [indexOptionPayloads, variantCase, variantPayload]
+    simp only [indexOptionPayloads, variantCase, variantPayload, Nat.zero_add]
   · intro hvalue
     subst value
-    simp [indexOptionPayloads, variantCase, variantPayload]
+    simp only [indexOptionPayloads, variantCase, variantPayload, Nat.zero_add]
 
 theorem optionMatchDerivation : OptionMatchDerivationAussage := by
   intro ctx hne
@@ -218,27 +219,27 @@ theorem optionMatchRegelSicher : OptionMatchRegelSicherAussage := by
 theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
   intro platform start
   let count : Nat := 0
-  let name : Identifier := keywordName 'o' [] (by decide) (by simp)
+  let name : Identifier := keywordName 'o' [] (by decide) (by intro c hc; cases hc)
   let scope : Scope := [⟨name, indexOptionType count, false, true⟩]
   let ref : Local scope (indexOptionType count) := .here
   have visible : ref.visible := by
     constructor
-    · simp [Ty.valueBinding, indexOptionType]
+    · rfl
     · trivial
   have ordinary : ordinaryLocal name := by
-    simp [ordinaryLocal, ordinaryAtomWord, name, keywordName]
+    decide
   have refOrdinary : ordinaryLocal ref.binding.name := by
     dsimp [ref, Local.binding]
     exact ordinary
   let value : Expr scope (variantValueType [] indexOptionLabels (indexOptionPayloads count)) :=
     Expr.variable ref visible refOrdinary
-  let binder : Identifier := keywordName 'p' [] (by decide) (by simp)
+  let binder : Identifier := keywordName 'p' [] (by decide) (by intro c hc; cases hc)
   have binderOrdinary : ordinaryLocal binder := by
-    simp [ordinaryLocal, ordinaryAtomWord, binder, keywordName]
+    decide
   let bodySome : BracedBlock none (payloadBinding binder (indexType count) :: scope) := .braces .done
   let bodyNone : BracedBlock none scope := .braces .done
   have noneCase : indexNoneName.val ≠ ['_'] := by
-    simp [indexNoneName]
+    decide
   let armsNone : VariantArms none scope true [indexNoneName] [none] :=
     .nullary indexNoneName noneCase bodyNone .done
   let arms : VariantArms none scope false indexOptionLabels (indexOptionPayloads count) :=
