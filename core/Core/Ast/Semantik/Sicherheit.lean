@@ -73,21 +73,20 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun b a t => (block t).klauseln.invariant = [])
     (fun b t => (bracedBlock t).klauseln.invariant = [])
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
-  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
-  · intro condition yes no yesIH noIH
-    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
-  · rfl
-  · intro middle before after first rest firstIH restIH
-    simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-      firstIH, restIH, List.nil_append]
+  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten]
+  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten]
+  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten]
+  · intro scope condition yes no yesIH noIH
+    simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten, yesIH, noIH]
+  · simp [block]
+  · intro before middle after first rest firstIH restIH
+    simp [block, Fragment.anhaengen, Quellklauseln.anhaengen, firstIH, restIH]
   · intro before after body bodyIH
-    simp only [bracedBlock, Fragment.anhaengen, Quellklauseln.anhaengen,
-      Quellklauseln.leer, List.nil_append, bodyIH]
+    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, bodyIH]
 
 end Gabbro.Core.Ast.Semantik
