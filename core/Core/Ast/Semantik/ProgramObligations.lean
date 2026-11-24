@@ -128,8 +128,7 @@ theorem mutableLocal_realisiert (scope : Scope) (result : Option (Ty .value)) : 
   let form := mutableLocalForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
-      [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code[(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
@@ -148,8 +147,7 @@ theorem mutableLocal_annahme (scope : Scope) (result : Option (Ty .value)) : (mu
 theorem mutableLocal_ideal (scope : Scope) (result : Option (Ty .value)) : (mutableLocalForm scope result).IdealAussage := by
   constructor
   · intro args
-    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code
-      [(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
+    change ((expr 0 args.value).anhaengen (.einzel (.bindeWert 0 args.written.type false))).code[(expr 0 args.value).code.length]? = some (.bindeWert 0 args.written.type false)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
@@ -238,8 +236,7 @@ theorem directCall_realisiert (scope : Scope) (result : Option (Ty .value)) : (d
   let form := directCallForm scope result
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc]
-    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code
-      [(argsCode 0 args.args).code.length]? = some (callInstruction args none)
+    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code[(argsCode 0 args.args).code.length]? = some (callInstruction args none)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   exact ⟨atPc, head, ⟨_, head, rfl, rfl⟩, ⟨_, head, rfl, rfl⟩⟩
@@ -258,8 +255,7 @@ theorem directCall_annahme (scope : Scope) (result : Option (Ty .value)) : (dire
 theorem directCall_ideal (scope : Scope) (result : Option (Ty .value)) : (directCallForm scope result).IdealAussage := by
   constructor
   · intro args
-    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code
-      [(argsCode 0 args.args).code.length]? = some (callInstruction args none)
+    change ((argsCode 0 args.args).anhaengen (.einzel (callInstruction args none))).code[(argsCode 0 args.args).code.length]? = some (callInstruction args none)
     simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
