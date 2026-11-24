@@ -40,7 +40,6 @@ deriving instance Countable for FirmwareZeile
 deriving instance Countable for WrittenType, WrittenTypes
 deriving instance Countable for RegionInitializer
 deriving instance Countable for Rufstelle
-set_option maxHeartbeats 800000 in
 deriving instance Countable for Befehl
 
 instance : Encodable Arith := Encodable.ofCountable _

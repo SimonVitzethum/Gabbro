@@ -28,7 +28,7 @@ theorem Befehl.fortschritt (p : Fragment) (b : Befehl) :
     RegelFortschritt (system p.code) b :=
   fun s c _ => Or.inl ⟨(), [plan], b.nach c s, rfl, rfl⟩
 
-theorem Befehl.vollzug (e : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit)
+theorem Befehl.vollzug (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     (b : Befehl) (t : Nat) (c : Kontext) (s : Zustand) :
     FuehrtSchrittAus e t c s (b.nach c s) plan ⟨[], []⟩ (b.nach c s) :=
   ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
