@@ -28,22 +28,21 @@ open Gabbro.Core.Text
 
 theorem recordValue_inversion : RecordValueInversionAussage := by
   intro scope labels types input type ref tree rest read
+  generalize hh : Token.word ref.name.val :: openParen :: input = hs at read
   cases read with
-  | lit => contradiction
-  | grouped inner => contradiction
-  | trueLit => contradiction
-  | falseLit => contradiction
-  | «variable» ref' visible ordinary => contradiction
-  | negativeLit => contradiction
-  | neg => contradiction
-  | not => contradiction
-  | arrayValue => contradiction
-  | tupleValue => contradiction
   | recordValue ref' args fields fits labelRead =>
-      refine ⟨⟨_, _, ref', _, _, args, fields, fits⟩, ?_, labelRead, rfl⟩
-      apply Subtype.ext
-      rfl
-  | variantValue => contradiction
+      have h2 := List.cons.inj hh
+      have hnval0 := h2.1
+      have hnval : ref'.name.val = ref.name.val := by
+        injection hnval0 with h
+        exact h.symm
+      have hin := h2.2
+      refine ⟨⟨_, _, ref', _, _, args, fields, fits⟩, ?_, ?_, ?_⟩
+      · exact Subtype.ext hnval
+      · simpa [hin] using labelRead
+      · rfl
+  | _ =>
+      simp at hh
 
 private theorem labeledItems_consumes (scope : Scope) :
     ∀ (labels : List Identifier) (types : List (Ty .value)) (items : LabeledItems scope labels types),
@@ -57,17 +56,18 @@ private theorem labeledItems_consumes (scope : Scope) :
         intro input rest read
         cases read with
         | next n valueRead tailRead =>
-            exact (((labeledItems_consumes scope _ _ tail).2 tailRead).trans
-              (ExprReads.consumes valueRead)).trans
-              ((List.suffix_cons colon input).trans
-                (List.suffix_cons (.word n.val) (colon :: input)))),
+            obtain ⟨u, hu⟩ := (labeledItems_consumes scope _ _ tail).2 tailRead
+            obtain ⟨v, hv⟩ := ExprReads.consumes valueRead
+            refine ⟨.word n.val :: colon :: v ++ u, ?_⟩
+            rw [hv, hu]
+            simp),
       (by
         intro input rest read
         cases read with
         | comma label value' remaining itemRead =>
-            exact ((labeledItems_consumes scope _ _
-              (LabeledItems.next label value' remaining)).1 itemRead).trans
-              (List.suffix_cons comma _))⟩
+            obtain ⟨u, hu⟩ :=
+              (labeledItems_consumes scope _ _ (LabeledItems.next label value' remaining)).1 itemRead
+            exact ⟨comma :: u, by rw [hu]; rfl⟩)⟩
 
 theorem recordValue_suffix : RecordValueSuffixAussage := by
   intro scope input labels types items rest read
@@ -221,16 +221,5 @@ theorem recordValue_erfuellbar : RecordValueErfuellbarAmAussage := by
     (form.realisiert (rv_amOrt sc) platform args s rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
-
-theorem recordValue_slots : RecordValueSlotsAussage := by
-  intro scope args frame actual h
-  change ((Befehl.baueRecord 0 args.ref.name.val args.labels args.types
-    (List.ofFn fun i : Fin args.types.length => (args.fields.slot i).val)).auswerten frame).temp 0 =
-      some ⟨recordValueType args.ref.name.val args.labels args.types,
-        tupleOfFn args.types fun i =>
-          Wert.widen (args.actualTypes.get (args.fields.slot i)) (args.types.get i)
-            (args.fits i) (tupleGet args.actualTypes (args.fields.slot i) actual)⟩
-  simp [recordValueForm, Befehl.auswerten, Rahmen.schreibe, liesRecord, wertAls, h,
-    recordValueType, Wert.widen, tupleOfFn]
 
 end Gabbro.Core.Ast.Semantik

@@ -27,24 +27,21 @@ open Gabbro.Core.Text
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
-  generalize hk : letKeyword = k at read
-  generalize ht : keyword "mut" = t at read
-  generalize hn : Token.word name = w at read
+  generalize hh : letKeyword :: keyword "mut" :: Token.word name :: assignment :: input = hs at read
   cases read with
   | letMutableValue n ordinary valueRead =>
+      have h2 := List.cons.inj (List.cons.inj hh).2
+      have hnval0 := (List.cons.inj h2.2).1
       have hnval : n.val = name := by
-        injection hn with h
+        injection hnval0 with h
         exact h.symm
-      refine ⟨⟨n, ordinary, _⟩, ?_, valueRead, ?_⟩
+      have hin := (List.cons.inj (List.cons.inj h2.2).2).2
+      refine ⟨⟨n, ordinary, _, _⟩, ?_, ?_, ?_⟩
       · exact Subtype.ext hnval
+      · simpa [hin] using valueRead
       · rfl
-  | tupleBind checked patternRead annotationRead valueRead =>
-      cases patternRead
-      cases hn
-  | directCall callRead =>
-      cases callRead
-      cases ht
-  | _ => simp_all [keyword]
+  | _ =>
+      simp [keyword, letKeyword, returnKeyword, ifKeyword] at hh
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
   intro scope result name input tree rest read
@@ -55,7 +52,7 @@ private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : M
     (mutableValue ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
   refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
-  · simp [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens]
+  · simp [mutableValue]
   · simpa [Expr.printTokens] using
       (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 
