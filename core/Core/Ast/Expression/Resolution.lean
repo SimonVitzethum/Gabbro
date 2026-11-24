@@ -31,13 +31,16 @@ theorem identifierList_injective {a b : List Identifier}
       rw [Subtype.ext hhead, ih htail]
 
 theorem identifierPosition_unique {names : List Identifier} {left right : Nat}
-    (distinct : (names.map Subtype.val).Nodup)
+    (distinct : (names.map (fun id : Identifier => id.val)).Nodup)
     (atLeft : names[left]? = some name) (atRight : names[right]? = some name) :
     left = right := by
   have inRange := (List.getElem?_eq_some_iff.mp atLeft).1
-  have mapped : (names.map Subtype.val)[left]? = (names.map Subtype.val)[right]? := by
+  let values := names.map (fun id : Identifier => id.val)
+  have mapped : values[left]? = values[right]? := by
+    unfold values
     simp only [List.getElem?_map, atLeft, atRight]
-  exact (distinct.getElem?_inj (by simpa only [List.length_map] using inRange)).1 mapped
+  have inRangeMapped : left < values.length := by simpa only [values, List.length_map] using inRange
+  exact (distinct.getElem?_inj inRangeMapped).1 mapped
 
 theorem LabeledItems.lengths (items : LabeledItems scope labels types) :
     labels.length = types.length :=
