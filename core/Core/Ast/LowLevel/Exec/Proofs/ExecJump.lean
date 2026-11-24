@@ -123,8 +123,9 @@ private theorem jumpSlotCode_slot : jumpScope.slotCode jumpCodeName = some 0 := 
 
 private theorem jumpCodeState_slot : jumpScope.codeState jumpCodeName = some 0 := by
   simp only [jumpScope, ExecScope.codeState, ExecScope.slotState, List.find?_cons,
-    beq_self_eq_true, if_true, List.map_cons, List.map_nil, Option.bind_eq_bind,
-    Option.bind_some, jumpState_slot]
+    beq_self_eq_true, if_true, Option.bind_eq_bind, Option.bind_some]
+  change [jumpStateName.val].idxOf? jumpStateName.val = some 0
+  exact jumpState_slot
 
 private theorem jumpElab : elaborateExec jumpScope (ExecTree.jump jumpCodeName) =
     some (ExecInstruction.jump 0 0) := by
@@ -333,7 +334,7 @@ private theorem jumpJoint : JumpJointAussage := by
     unfold execHead
     simp only [entryContext, ↓reduceIte, hsstatus, hspc, List.getElem?_cons_succ,
       List.getElem?_cons_zero]
-    exact if_pos hevalSome
+    rw [if_pos hevalSome]
   have hstep : E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
     change ∃ frame, op.evaluate s entryContext = some frame ∧ [plan] = [plan] ∧
