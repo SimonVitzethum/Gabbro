@@ -138,7 +138,7 @@ theorem tlbRechte_protectSpace (target : ZielDaten) (sp virt pages : Nat)
           spaces_set_gleich same lt found
         by_cases inside : pageRange (virt / target.seitengranule) pages zelle.seite
         · exact Or.inr ⟨Zuruecknahme.verengung sp (virt / target.seitengranule) pages space.generation,
-            List.mem_cons_self .., same, inside⟩
+            List.mem_cons_self .., same.symm, inside⟩
         · have found0 : (s.lokal c).spaces[zelle.raum]? = some space := by
             rw [same]
             exact hs
