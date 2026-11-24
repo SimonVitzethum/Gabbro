@@ -52,7 +52,7 @@ theorem schluesselNodupB_nodup (Q : Zufallsquelle) (pfad : List (Nat × Nat))
 /-- `planned.probability.event`: a checker-accepted cylinder bound carries to the
     run event, because its preimage under the replay contains the cylinder and
     the measure is monotone. -/
-theorem prEreignisAussage : prEreignisAussage := by
+theorem prEreignis : prEreignisAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl Form _ E B S h hb
     pfad wNum wDen pNum pDen hpruefe hgew
   simp only [pruefeProb, Bool.and_eq_true, decide_eq_true_eq] at hpruefe
@@ -104,12 +104,11 @@ theorem rateDaten (qNum qDen : Nat)
   have hqDenTop : (qDen : ENNReal) ≠ ⊤ := ENNReal.natCast_ne_top qDen
   have hqPos : 0 < (qNum : ENNReal) / (qDen : ENNReal) := by
     apply ENNReal.div_pos
-    · exact_mod_cast hpruefe.2.1
+    · exact_mod_cast (Nat.ne_of_gt hpruefe.2.1)
     · exact hqDenTop
   have hqLe : (qNum : ENNReal) / (qDen : ENNReal) ≤ 1 := by
     rw [ENNReal.div_le_iff hqDen0 hqDenTop]
-    simp only [mul_one]
-    exact_mod_cast hpruefe.2.2
+    simpa only [one_mul] using (show (qNum : ENNReal) ≤ qDen from by exact_mod_cast hpruefe.2.2)
   refine ⟨hqPos, hqLe, ENNReal.sub_lt_self (by norm_num) (by norm_num) hqPos.ne'⟩
 
 /-- The survivor intersection has measure zero: the measures form an antitone
@@ -124,7 +123,7 @@ theorem schnittMassNull {α : Type*} [MeasurableSpace α] {q : ENNReal}
     (hq : 0 < q ∧ q ≤ 1 ∧ 1 - q < 1) :
     mu (⋂ n, ueberlebt n) = 0 := by
   have hantito : Antitone ueberlebt := antitone_nat_of_succ_le hanti
-  have hfin : ∃ n, mu (ueberlebt n) ≠ ⊤ := ⟨0, measure_ne_top mu (ueberlebt 0)⟩
+  have hfin : ∃ n, mu (ueberlebt n) ≠ ⊤ := ⟨0, MeasureTheory.measure_ne_top mu (ueberlebt 0)⟩
   have hlim : Filter.Tendsto (mu ∘ ueberlebt) Filter.atTop
       (nhds (mu (⋂ n, ueberlebt n))) :=
     MeasureTheory.tendsto_measure_iInter_atTop (fun n => (hmeas n).nullMeasurableSet) hantito hfin
@@ -136,7 +135,7 @@ theorem schnittMassNull {α : Type*} [MeasurableSpace α] {q : ENNReal}
 
 /-- Almost-sure termination: the complement of the survivor intersection is the
     set of bands that leave the family, hence lies in the target's preimage. -/
-theorem fastSicherAbschlussAussage : fastSicherAbschlussAussage := by
+theorem fastSicherAbschluss : fastSicherAbschlussAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl Form _ E B S h hb
     Ziel qNum qDen hpruefe ueberlebt hmeas hanti hdecay hexit
   have hdaten := rateDaten qNum qDen hpruefe
@@ -144,7 +143,7 @@ theorem fastSicherAbschlussAussage : fastSicherAbschlussAussage := by
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
-  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := measure_ne_top hb.mu _
+  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := MeasureTheory.measure_ne_top hb.mu _
   have hcompl : hb.mu (⋂ n, ueberlebt n)ᶜ = 1 := by
     rw [measure_compl hAmeas hAfin, IsProbabilityMeasure.measure_univ, hnull, tsub_zero]
   have hsubset : (⋂ n, ueberlebt n)ᶜ ⊆ {band | Ziel (hb.replay band)} := by
@@ -162,7 +161,7 @@ theorem fastSicherAbschlussAussage : fastSicherAbschlussAussage := by
 
 /-- Almost-sure progress: retry progress has the same geometric survival shape
     as termination, with the same exit link into the goal. -/
-theorem fastSicherFortschrittAussage : fastSicherFortschrittAussage := by
+theorem fastSicherFortschritt : fastSicherFortschrittAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl Form _ E B S h hb
     Ziel qNum qDen hpruefe ueberlebt hmeas hanti hdecay hexit
   have hdaten := rateDaten qNum qDen hpruefe
@@ -170,7 +169,7 @@ theorem fastSicherFortschrittAussage : fastSicherFortschrittAussage := by
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
-  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := measure_ne_top hb.mu _
+  have hAfin : hb.mu (⋂ n, ueberlebt n) ≠ ⊤ := MeasureTheory.measure_ne_top hb.mu _
   have hcompl : hb.mu (⋂ n, ueberlebt n)ᶜ = 1 := by
     rw [measure_compl hAmeas hAfin, IsProbabilityMeasure.measure_univ, hnull, tsub_zero]
   have hsubset : (⋂ n, ueberlebt n)ᶜ ⊆ {band | Ziel (hb.replay band)} := by
