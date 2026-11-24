@@ -109,6 +109,7 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
   · intro code
     unfold kopf
     rw [if_pos rfl]
+    simp only [Befehl.nach]
     cases hstatus : (s.status eintritt) with
     | ruht => rfl
     | beendet _ => rfl
