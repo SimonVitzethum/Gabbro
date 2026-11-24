@@ -39,9 +39,9 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .sumEnd => Empty
   | _, .sum head tail => Sum (Wert head) (Wert tail)
   | _, .variant _ _ _ layout => Wert layout
-  | _, .address _ => AddressValue
+  | _, .address _space => AddressValue
   | _, .ownedRegion => Nat
-  | _, .regionView _ => RegionViewValue
+  | _, .regionView _type => RegionViewValue
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :

@@ -28,11 +28,11 @@ private theorem entryExtent_valid :
       ∀ e d, Plattform.x86_64.geraet e = some d → d.bus = .mmio → r.getrennt d.window := by
   intro extent member
   obtain rfl := List.mem_singleton.mp member
-  refine ⟨by decide, by decide, ?_⟩
+  refine ⟨by change 0 < 4096; omega, by change 4096 ≤ 2 ^ (52 : Nat); omega, ?_⟩
   intro endpoint device selected mmio
   cases endpoint <;> cases selected
   · cases mmio
-  · exact Or.inl (by decide)
+  · exact Or.inl (by change 4096 ≤ 0x10000000; omega)
 
 private def entryArgs : RegionEntryArgs := by
   let region := keywordName 'r' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
@@ -108,14 +108,14 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
     rfl, congrArg Rahmen.pc frame, value, congrArg (fun out => out.lokale.head?) frame⟩
 
 theorem regionAddressUnit_erfuellbar : RegionUnitErfuellbarAussage .address := by
-  let value : AddressValue := ⟨Plattform.x86_64.ziel.physicalBits, 0, by decide⟩
+  let value : AddressValue := ⟨Plattform.x86_64.ziel.physicalBits, 0, by change 0 < 2 ^ (52 : Nat); omega⟩
   exact regionUnit_joint .address value rfl rfl
 
 theorem viewUnit_erfuellbar : ∃ written valid, RegionUnitErfuellbarAussage (.view written valid) := by
   let written := WrittenType.integer false 8 none
   have valid : written.valid := by
     change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
-    decide
+    omega
   exact ⟨written, valid, regionUnit_joint (.view written valid) ⟨0, 0, 1, false⟩ rfl rfl⟩
 
 theorem regionBindUnit : RegionBindUnitAussage :=

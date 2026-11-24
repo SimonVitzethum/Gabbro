@@ -214,7 +214,7 @@ def WrittenType.valid : WrittenType → Prop
     let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
-  | .array element _ => element.valid
+  | .array element _count => element.valid
   | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
   | .address _ | .ownedRegion => True
 

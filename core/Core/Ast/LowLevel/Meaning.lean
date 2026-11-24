@@ -65,7 +65,7 @@ def RegionInitializer.value (target : ZielDaten) (slot : Nat) (extent : Strecke)
     if h : extent.von < 2 ^ target.physicalBits then
       some ⟨.address .physical, ⟨target.physicalBits, extent.von, h⟩⟩
     else none
-  | .view written _ => do
+  | .view written _valid => do
     let shape ← layout target written
     if shape.fits extent then
       some ⟨.regionView written.type, ⟨slot, extent.von, shape.bytes, target.big⟩⟩

@@ -211,7 +211,9 @@ def Rahmen.eintrittArgumente (frame : Rahmen) (types : List (Ty .value)) : Optio
 
 def Dynamisch.borrowsRegion (slot : Nat) : Dynamisch → Bool
   | ⟨.regionView _, view⟩ => view.slot == slot
-  | _ => false
+  | ⟨.int .., _⟩ | ⟨.bool, _⟩ | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩
+  | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩ | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩
+  | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ | ⟨.address .., _⟩ | ⟨.ownedRegion, _⟩ => false
 
 def Rahmen.borrowsRegion (frame : Rahmen) (slot : Nat) : Bool :=
   let hasView := fun (values : List (Option Dynamisch)) =>
@@ -284,7 +286,7 @@ inductive Befehl where
   | bindeRegion (receiver : Nat) (init : RegionInitializer)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
-def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _ => false) : Rahmen :=
+def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _slot => false) : Rahmen :=
   match b, frame with
   | .literal dst val, frame =>
     frame.schreibe dst (some ⟨.int val val, Zahl.literal val⟩)
@@ -460,7 +462,7 @@ def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _
 
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
   let live := fun slot => c == Kontext.faden 0 && s.rechte.lebt slot &&
-    s.rechte.gen slot == 0 && (match s.leihen slot with | .eigen => true | .verliehen _ => false)
+    s.rechte.gen slot == 0 && (match s.leihen slot with | .eigen => true | .verliehen _device => false)
   { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) live) }
 
 /-- The context-local transition used by the ideal rule. -/
