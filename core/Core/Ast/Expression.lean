@@ -236,8 +236,8 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   · exact (ordinary.1 rfl).elim
   · exact (ordinary.2 rfl).elim
   · rename_i ref visible ordinary'
-    cases (show Expr.typed tree = Expr.typed (Expr.variable ref visible ordinary') from rfl)
-    exact ⟨ref, visible, ordinary', rfl, rfl, rfl⟩
+    refine ⟨ref, visible, ordinary', rfl, ?_, rfl⟩
+    rfl
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
 theorem AtomReads.negative_inversion
@@ -363,7 +363,7 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | stop blocked => exact (blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩).elim
     | binary op' _ rightRead tail =>
       have eq : op = op' := Arith.token_injective (by simpa only [Infix.token] using h)
-      subst op'
+      cases eq
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail
@@ -465,7 +465,7 @@ theorem ExprTail.arith_inversion (allowed : minimum ≤ op.precedence)
       exact blocked ⟨.arith op, input, by simpa only [Infix.token] using congrArg (· :: input) h.symm, allowed⟩
   | binary op' _ rightRead tail =>
       have eq : op = op' := Arith.token_injective (by simpa only [Infix.token] using h)
-      subst op'
+      cases eq
       exact ⟨_, _, _, _, rightRead, tail⟩
   | div _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .arith op) (b := .div) h
