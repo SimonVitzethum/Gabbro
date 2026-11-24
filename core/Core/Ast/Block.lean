@@ -12,6 +12,10 @@ def overflowPieces : Option Identifier → List PrintedToken
   | none => []
   | some name => [printOnExceeded, name.print]
 
+def OptionInitializer.printPieces : OptionInitializer scope count → List PrintedToken
+  | .absent => [indexNoneName.print]
+  | .present value _ => [indexSomeName.print, printOpen] ++ value.printPieces ++ [printClose]
+
 mutual
 
 def Stmt.printPieces : Stmt result before after → List PrintedToken
@@ -47,6 +51,12 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
     [letName.print, printMut, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
   | .variantMatch value arms =>
     printMatch :: value.printPieces ++ [printOpenBrace] ++ arms.printPieces ++ [printCloseBrace]
+  | .letOption (count := count) mutable name _ carrier _ value =>
+    [letName.print] ++ (if mutable then [printMut] else []) ++ [name.print, printColon] ++
+      (WrittenType.indexOption carrier count).printPieces ++ [printAssignment] ++
+      value.printPieces ++ [printSemicolon]
+  | .retOption _ value =>
+    [returnName.print] ++ value.printPieces ++ [printSemicolon]
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []

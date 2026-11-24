@@ -236,6 +236,8 @@ def Expr.printPieces : Expr scope type → List PrintedToken
     [printOpen] ++ base.printPieces ++ [printOpenBracket] ++ first.printPieces ++
       [printSliceRange] ++ last.printPieces ++ [printCloseBracket, printClose]
   | .textLength base => [printLenof, printOpen] ++ base.printPieces ++ [printClose]
+  | .optionIsSome ref _ _ =>
+    [printOpen, ref.binding.name.print, printDot, indexIsSomeName.print, printOpen, printClose, printClose]
 
 def ExprItems.printPieces : ExprItems scope types → List PrintedToken
   | .empty => []

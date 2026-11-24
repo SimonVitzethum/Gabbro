@@ -13,7 +13,8 @@ public import Core.Ast.TextValue.Length
 public import Core.Ast.TextValue.Concat
 public import Core.Ast.TextValue.Index
 public import Core.Ast.TextValue.Substring
-public import Core.Ast.Carrier.Table
+public import Core.Ast.Aggregate.Carrier.Table
+public import Core.Ast.Aggregate.Carrier.Option.Test
 
 @[expose] public section
 
@@ -103,6 +104,8 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements textLengthForm TextLengthErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.substring then
     ⟨.surface, Quellform.statements substringForm SubstringErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.optionIsSome then
+    ⟨.surface, Quellform.statements optionTestForm OptionTestErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=
@@ -134,6 +137,10 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements mutableValueForm MutableValueErfuellbarAmAussage constructor⟩
   else if constructor = ``Stmt.variantMatch then
     ⟨.surface, Quellform.statements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.letOption then
+    ⟨.surface, Quellform.statements optionLetForm OptionLetErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.retOption then
+    ⟨.surface, Quellform.statements optionReturnForm OptionReturnErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=

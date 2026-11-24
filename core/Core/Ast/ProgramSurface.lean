@@ -313,6 +313,15 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
+def OptionLetReadAt (result : Option (Ty .value)) (scope : Scope) (mutable : Bool)
+    (spelling : RawText) (input : List Token) (tree : Statement result scope) (rest : List Token) : Prop :=
+  ∃ (name carrier : Identifier) (count : Nat)
+    (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+    (resolved : scope.carrierCount carrier = some count) (value : OptionInitializer scope count) rhs,
+    name.val = spelling ∧ TypeReads scope input (.indexOption carrier count) (assignment :: rhs) ∧
+    OptionInitializerReads scope count rhs value (semicolon :: rest) ∧
+    tree = ⟨_, .letOption mutable name ordinary carrier resolved value⟩
+
 -- Mirror StmtReads.ret_inversion using the semicolon discriminator.
 theorem StmtReads.returnVoid_inversion
     (read : StmtReads result scope (returnKeyword :: semicolon :: input) tree rest) :
@@ -324,10 +333,11 @@ theorem StmtReads.returnVoid_inversion
 theorem StmtReads.mutableLocal_inversion
     (read : StmtReads result scope (letKeyword :: keyword "mut" :: .word spelling :: colon :: input)
       tree rest) :
-    ∃ (a : Surface.MutableLocalArgs scope result) (rhs : List Token),
+    (∃ (a : Surface.MutableLocalArgs scope result) (rhs : List Token),
       a.name.val = spelling ∧ TypeReads scope input a.written (assignment :: rhs) ∧
       ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
-      tree = (Surface.mutableLocal scope result).tree a := by
+      tree = (Surface.mutableLocal scope result).tree a) ∨
+    OptionLetReadAt result scope true spelling input tree rest := by
   sorry
 
 -- Mirror CallReads.inversion after disambiguating the reserved statement heads.
@@ -341,10 +351,11 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
 -- Mirror StmtReads.let_header with the written type and the call's argument derivation.
 theorem StmtReads.bindDirect_inversion
     (read : StmtReads result scope (letKeyword :: .word spelling :: colon :: input) tree rest) :
-    ∃ (a : Surface.BindDirectArgs scope result) (rhs : List Token),
+    (∃ (a : Surface.BindDirectArgs scope result) (rhs : List Token),
       a.name.val = spelling ∧ TypeReads scope input a.written (assignment :: rhs) ∧
       CallReads scope rhs a.call (semicolon :: rest) ∧
-      tree = (Surface.bindDirect scope result).tree a := by
+      tree = (Surface.bindDirect scope result).tree a) ∨
+    OptionLetReadAt result scope false spelling input tree rest := by
   sorry
 
 -- Mirror StmtReads.ite_inversion and retain the distinct bound and body derivations.

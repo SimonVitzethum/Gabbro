@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Grammar
-public import Core.Ast.Semantik.Regeln
+public import Core.Ast.Semantik.Runtime.Regeln
 
 @[expose] public section
 
@@ -72,6 +72,8 @@ def expr (slot : Nat) : Expr scope type → Fragment
       (.einzel (.substring slot capacity))
   | .textLength (capacity := capacity) base =>
     (expr slot base).anhaengen (.einzel (.textLength slot capacity))
+  | .optionIsSome (count := count) ref _ _ =>
+    (.einzel (.lesen slot ref.index)).anhaengen (.einzel (.optionIstBesetzt slot count))
 
 def itemCode (slot : Nat) : ExprItems scope types → Fragment
   | .empty => .leer
@@ -94,6 +96,20 @@ def argsCode (slot : Nat) : List (TypedExpr scope) → Fragment
 def callInstruction (call : DirectCall scope) (bind : Option (Ty .value)) : Befehl :=
   .rufe call.name (call.args.map Sigma.fst) bind
 
+def optionInstruction (slot : Nat) (value : OptionInitializer scope count) : Befehl :=
+  let tag : Fin (indexOptionPayloads count).length :=
+    match value with
+    | .absent => ⟨1, by decide⟩
+    | .present .. => ⟨0, by decide⟩
+  .baueVariante slot [] indexOptionLabels (indexOptionPayloads count) tag
+
+def optionOperand (slot : Nat) : OptionInitializer scope count → Fragment
+  | .absent => .leer
+  | .present value _ => expr slot value
+
+def optionCode (slot : Nat) (value : OptionInitializer scope count) : Fragment :=
+  (optionOperand slot value).anhaengen (.einzel (optionInstruction slot value))
+
 def callCode (call : DirectCall scope) (bind : Option (Ty .value)) : Fragment :=
   (argsCode 0 call.args).anhaengen (.einzel (callInstruction call bind))
 
@@ -109,7 +125,8 @@ def BracedBlock.freigabe : BracedBlock result before → Nat
 mutual
 /-- Record whether the range index is shadowed or written in its body. -/
 def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × Bool
-  | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
+  | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _
+  | .letOption _ name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
   | .letMutableValue name _ _ => (name.val == index.val, false)
@@ -206,6 +223,10 @@ def stmt : Stmt result before after → Fragment
     let matchCode := variantArms arms
     ((expr 0 value).anhaengen (.einzel (.waehleVariante 0 name labels payloads matchCode.branches))).anhaengen
       matchCode.body
+  | .letOption (count := count) _ _ _ _ _ value =>
+    (optionCode 0 value).anhaengen (.einzel (.bindeWert 0 (indexOptionType count) false))
+  | .retOption (count := count) _ value =>
+    (optionCode 0 value).anhaengen (.einzel (.zurueck 0 (indexOptionType count)))
 
 def block : Block result before after → Fragment
   | .done => .leer

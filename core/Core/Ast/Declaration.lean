@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Block
-public import Core.Ast.Carrier.Grammar
+public import Core.Ast.Aggregate.Carrier.Grammar
 
 @[expose] public section
 

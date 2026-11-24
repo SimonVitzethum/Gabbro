@@ -39,6 +39,14 @@ inductive OverflowReads : List Token → Option Identifier → List Token → Pr
   | named (name : Identifier) :
       OverflowReads (keyword "on_exceeded" :: .word name.val :: rest) (some name) rest
 
+inductive OptionInitializerReads (scope : Scope) (count : Nat) :
+    List Token → OptionInitializer scope count → List Token → Prop where
+  | absent : OptionInitializerReads scope count (.word indexNoneName.val :: rest) .absent rest
+  | present (fits : Fits (.int lo hi) (indexType count)) :
+      ExprReads scope 0 input (value : Expr scope (.int lo hi)) (closeParen :: rest) →
+      OptionInitializerReads scope count (.word indexSomeName.val :: openParen :: input)
+        (.present value fits) rest
+
 mutual
 
 inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
@@ -113,6 +121,15 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       ExprReads scope 0 input (value : Expr scope (variantValueType name labels payloads)) (openBrace :: armsInput) →
       VariantArmsRead result scope false armsInput arms rest →
       StmtReads result scope (keyword "match" :: input) ⟨_, .variantMatch value arms⟩ rest
+  | letOption (mutable : Bool) (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (carrier : Identifier) (resolved : scope.carrierCount carrier = some count) :
+      TypeReads scope input (.indexOption carrier count) (assignment :: rhs) →
+      OptionInitializerReads scope count rhs value (semicolon :: rest) →
+      StmtReads result scope (optionLetHead mutable name ++ input)
+        ⟨_, .letOption mutable name ordinary carrier resolved value⟩ rest
+  | retOption (declared : result = some (indexOptionType count)) :
+      OptionInitializerReads scope count input value (semicolon :: rest) →
+      StmtReads result scope (returnKeyword :: input) ⟨_, .retOption declared value⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :
@@ -176,6 +193,9 @@ theorem StmtReads.ret_inversion
     (read : StmtReads (some expected) scope (returnKeyword :: input) tree rest) :
     (∃ (t : Ty .value) (value : Expr scope t) (fits : Fits t expected),
       ExprReads scope 0 input value (semicolon :: rest) ∧ tree = ⟨scope, .ret rfl value fits⟩) ∨
+    (∃ count (declared : some expected = some (indexOptionType count)) (value : OptionInitializer scope count),
+      OptionInitializerReads scope count input value (semicolon :: rest) ∧
+      tree = ⟨scope, .retOption declared value⟩) ∨
     (∃ tail, input = assignment :: tail) := by
   sorry
 
@@ -199,6 +219,8 @@ theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace ::
   intro read
   cases read with
   | directCall callRead => cases callRead
+  | letOption mutable name ordinary carrier resolved typeRead valueRead =>
+    cases mutable <;> contradiction
 
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)

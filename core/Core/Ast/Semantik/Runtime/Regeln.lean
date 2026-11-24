@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Frame
+public import Core.Ast.Semantik.Runtime.Frame
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -9,6 +9,7 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
 
+/-- One linearisation point per expression node or binding. A binary instruction
     consumes the slots left by its children. A binding takes its initializer's slot. -/
 inductive Befehl where
   | literal (ziel : Nat) (wert : Nat)
@@ -63,6 +64,7 @@ inductive Befehl where
   | substring (basis capacity : Nat)
   | textLength (basis capacity : Nat)
   | definiereTraeger (count : Nat) (labels : List (List Char)) (layout : Ty .value)
+  | optionIstBesetzt (ziel count : Nat)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -246,6 +248,11 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
   | .definiereTraeger count labels layout, frame =>
     let schema : Dynamisch := ⟨.carrierSchema count labels layout, PUnit.unit⟩
     { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+
+  | .optionIstBesetzt dst count, frame =>
+    frame.schreibe dst (do
+      let value ← (frame.temp dst).bind (wertAls (indexOptionType count))
+      pure ⟨.bool, (variantCase (indexOptionPayloads count) value).1 == 0⟩)
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

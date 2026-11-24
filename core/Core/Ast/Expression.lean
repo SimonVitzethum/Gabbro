@@ -231,6 +231,12 @@ inductive ExprTail (scope : Scope) :
       ExprReads scope 0 lastInput last (closeBracket :: more) →
       ExprTail scope minimum (.substring base first last) more tree rest →
       ExprTail scope minimum base (openBracket :: input) tree rest
+  | optionIsSome (ref : Local scope (indexOptionType count)) (visible : ref.visible)
+      (ordinary : ordinaryLocal ref.binding.name) :
+      minimum ≤ Infix.projection.precedence →
+      ExprTail scope minimum (.optionIsSome ref visible ordinary) input tree rest →
+      ExprTail scope minimum (.variable ref visible ordinary)
+        (dot :: .word indexIsSomeName.val :: openParen :: closeParen :: input) tree rest
 
 /-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
 inductive ItemsRead (scope : Scope) : Token →
@@ -292,8 +298,8 @@ theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest)
 theorem AtomReads.variable_inversion (ordinary : ordinaryAtomWord word)
     (bound : ∃ (type : Ty .value) (ref : Local scope type), ref.visible ∧ ref.binding.name.val = word)
     (read : AtomReads scope (.word word :: rest) tree suffix) :
-
-    ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
+    ∃ (type : Ty .value) (ref : Local scope type) (visible : ref.visible)
+      (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
   sorry
 

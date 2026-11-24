@@ -198,6 +198,5 @@ abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
 abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
 abbrev Regel := Maschine.Regel Zustand Plan PUnit
 
-/-- One linearisation point per expression node or binding. A binary instruction
 
 end Gabbro.Core.Ast.Semantik

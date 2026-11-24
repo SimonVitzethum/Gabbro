@@ -136,6 +136,28 @@ def indexOptionType (count : Nat) : Ty .value :=
   .variant [] ["Some".toList, "None".toList] [true, false]
     (variantLayout [some (indexType count), none])
 
+def indexSomeName : Identifier :=
+  ⟨"Some".toList, 'S', ['o', 'm', 'e'], rfl, by decide, by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> decide⟩
+
+def indexNoneName : Identifier :=
+  ⟨"None".toList, 'N', ['o', 'n', 'e'], rfl, by decide, by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> decide⟩
+
+def indexIsSomeName : Identifier :=
+  ⟨"is_some".toList, 'i', ['s', '_', 's', 'o', 'm', 'e'], rfl, by decide, by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> decide⟩
+
+def indexOptionLabels : List Identifier := [indexSomeName, indexNoneName]
+
+def indexOptionPayloads (count : Nat) : List (Option (Ty .value)) := [some (indexType count), none]
+
 def variantValueType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
   .variant name (labels.map Subtype.val) (payloads.map Option.isSome) (variantLayout payloads)
 

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Carrier.Table
+public import Core.Ast.Aggregate.Carrier.Table
 
 /-!
 # Table

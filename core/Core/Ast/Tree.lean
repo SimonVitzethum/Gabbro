@@ -118,6 +118,8 @@ inductive Expr (scope : Scope) : Ty .value → Type where
   | substring (base : Expr scope (.text capacity)) (first : Expr scope (.int lo₁ hi₁))
       (last : Expr scope (.int lo₂ hi₂)) : Expr scope (.text capacity)
   | textLength (base : Expr scope (.text capacity)) : Expr scope (.int 0 capacity)
+  | optionIsSome (ref : Local scope (indexOptionType count)) (visible : ref.visible)
+      (ordinary : ordinaryLocal ref.binding.name) : Expr scope .bool
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
@@ -158,6 +160,7 @@ def Expr.static : Expr scope type → Prop
   | .textIndex base offset => base.static ∧ offset.static
   | .substring base first last => base.static ∧ first.static ∧ last.static
   | .textLength base => base.static
+  | .optionIsSome ref _ _ => ref.binding.constant = true
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop
@@ -248,7 +251,7 @@ def functionScope (outer : Scope) (parameters : List (Parameter outer)) : Scope 
 
 def directName (name : Identifier) : Prop :=
   ordinaryLocal name ∧ name.val ∉
-    ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
+    ["let", "if", "return", "while", "for", "leave", "next", "match", "Some", "None"].map String.toList
 
 structure DirectCall (scope : Scope) where
   name : Identifier
@@ -289,6 +292,15 @@ def TuplePattern.valid (pattern : TuplePattern) (scope : Scope) (annotation : Op
 
 def payloadBinding (name : Identifier) (type : Ty .value) : Binding :=
   ⟨name, type, false, false⟩
+
+/-- The destination supplies the carrier count for both option constructors. -/
+inductive OptionInitializer (scope : Scope) (count : Nat) where
+  | absent
+  | present (value : Expr scope (.int lo hi)) (fits : Fits (.int lo hi) (indexType count))
+
+def optionLetHead (mutable : Bool) (name : Identifier) : List Token :=
+  .word "let".toList :: (if mutable then [.word "mut".toList] else []) ++
+    [.word name.val, .punctuation [':']]
 
 mutual
 
@@ -344,6 +356,12 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- Each arm consumes exactly the next declared tag and payload shape. -/
   | variantMatch (value : Expr scope (variantValueType name labels payloads))
       (arms : VariantArms result scope false labels payloads) : Stmt result scope scope
+  | letOption (mutable : Bool) (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
+      (value : OptionInitializer scope count) :
+      Stmt result scope (⟨name, indexOptionType count, mutable, false⟩ :: scope)
+  | retOption (declared : result = some (indexOptionType count))
+      (value : OptionInitializer scope count) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -373,7 +391,7 @@ end
 
 mutual
 def Stmt.returns : Stmt result before after → Bool
-  | .ret .. | .retVoid .. => true
+  | .ret .. | .retVoid .. | .retOption .. => true
   | .ite _ yes no => yes.returns && no.returns
   | .variantMatch _ arms => arms.returns
   | _ => false
