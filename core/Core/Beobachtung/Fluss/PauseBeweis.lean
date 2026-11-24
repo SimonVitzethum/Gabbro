@@ -99,7 +99,7 @@ theorem pauseNI : PauseNIAussage := by
       | none =>
         rw [hlab] at label₂
         cases label₂
-      | some ev => exact ⟨ev.1, ev.2, hlab⟩
+      | some ev => exact ⟨ev.1, ev.2, by simpa using hlab⟩
     obtain ⟨wahl, spur', label'⟩ := someEv
     have evEq := Option.some.inj (label₂.symm.trans label')
     rw [evEq] at step₂
@@ -167,7 +167,7 @@ theorem pauseNI : PauseNIAussage := by
               rw [signaleEqId]
               exact pending₂.2.2.1
             · intro mem
-              exact pending₂.2.2.2 (by rw [geliefertEq]; exact mem)
+              exact pending₂.2.2.2.1 (by rw [geliefertEq]; exact mem)
             · exact auswahlEq.trans pending₂.2.2.2.2
           have nimmt₁ : NimmtUnterbrechung (v₁.kerne k) k (Nat.pair irqId.1 irqId.2) irq c₂ nmi := by
             rw [kerneEq]
@@ -185,7 +185,7 @@ theorem pauseNI : PauseNIAussage := by
           have folge₁ : Speicherfolge v₁.initial .aussen v₁.graph [label]
               [(.aussen, label)] graph' :=
             .cons (.ohne (Or.inl (by simp only [label, aussenEtikett]))) stepGraph (.nil _)
-          let spur₁ : SchrittSpur Ort Wert := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
+          let spur₁ : SchrittSpur PUnit Int := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
           let nach₁ := { Zustandseintritt v₁ k irqId c₂ nmi with graph := graph' }
           have enters₁ : UnterbrechungsSchritt E.einrichtung ρ₁.hw t irqId v₁ spur₁ nach₁ := by
             refine ⟨k, irq, c₂, nmi, intOffer₁, pending₁, nimmt₁, ruht₁, ?_, ?_, rfl⟩
@@ -202,13 +202,13 @@ theorem pauseNI : PauseNIAussage := by
           have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t :=
             ⟨crash₂.1.1, by rw [crashEq]; exact crash₂.1.2⟩
           have crashStep₁ : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
-              E.katalog ρ₁.hw t v₁ absturzSpur (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+              E.katalog ρ₁.hw t v₁ absturzSpur (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
             absturz_schritt_erfuellbar _ _ offer₁ v₁
           have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-              (.absturz, absturzSpur) (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+              (.absturz, absturzSpur) (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
             .absturz crashStep₁
           exact (keinSchritt₁ (.absturz, absturzSpur)
-            (some (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)))
+            (some (E.einrichtung.wiederanlauf t (nachAbsturz v₁.persistenz)))
             (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
 
 end Gabbro.Core.Beobachtung
