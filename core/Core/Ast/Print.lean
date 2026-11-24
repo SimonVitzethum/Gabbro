@@ -203,6 +203,7 @@ def Expr.printPieces : Expr scope type → List PrintedToken
   | .recordValue ref args _ _ => [ref.name.print, printOpen] ++ args.printPieces ++ [printClose]
   | .recordField base field _ _ =>
     [printOpen] ++ base.printPieces ++ [printDot, field.print, printClose]
+  | .variantValue _ label _ _ _ _ value => label.print :: value.printPieces
 
 def ExprItems.printPieces : ExprItems scope types → List PrintedToken
   | .empty => []
@@ -220,6 +221,11 @@ def LabeledItems.printTail : LabeledItems scope labels types → List PrintedTok
   | .empty => []
   | .next name value tail =>
     [printComma, name.print, printColon] ++ value.printPieces ++ tail.printTail
+
+def CasePayload.printPieces : CasePayload scope type → List PrintedToken
+  | .nullary false => []
+  | .nullary true => [printOpen, printClose]
+  | .value value => printOpen :: value.printPieces ++ [printClose]
 
 end
 

@@ -46,6 +46,12 @@ inductive DeclReads (before : Scope) : List Token → Declaration before → Lis
       DeclReads before
         (recordDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
         ⟨_, .record exported name fields valid distinct⟩ rest
+  | tagged (exported : Bool) (name : Identifier) (valid : ∀ member ∈ first :: tail, member.valid)
+      (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
+      VariantMemberRead input first more → VariantMembersTailRead more tail (semicolon :: rest) →
+      DeclReads before
+        (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
+        ⟨_, .tagged exported name first tail valid distinct⟩ rest
 
 def resultPieces : Option WrittenType → List PrintedToken
   | none => []
@@ -65,6 +71,9 @@ def Decl.printPieces : Decl before after → List PrintedToken
   | .record exported name fields _ _ =>
     recordDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
       fields.flatMap RecordMember.printPieces ++ [printCloseBrace, printSemicolon]
+  | .tagged exported name first tail _ _ =>
+    taggedDeclarationHead exported ++ [name.print, printAssignment, printOpenBrace] ++
+      commaSeparated ((first :: tail).map VariantMember.printPieces) ++ [printCloseBrace, printSemicolon]
 
 -- Mirror StmtReads.assign_inversion with the written type and const initializer.
 theorem DeclReads.constant_inversion

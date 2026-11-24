@@ -165,6 +165,11 @@ inductive AtomReads (scope : Scope) :
       (fits : ∀ i, Fits (actualTypes.get (fields.slot i)) (types.get i)) :
       LabeledItemsRead scope input args rest →
       AtomReads scope (.word ref.name.val :: openParen :: input) (.recordValue ref args fields fits) rest
+  | variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
+      (index : Fin payloads.length) (written : labels[index.val]? = some label)
+      (ordinary : ordinaryLocal label) (available : availableCase scope label) :
+      CasePayloadRead scope input (payload : CasePayload scope (payloads.get index)) rest →
+      AtomReads scope (.word label.val :: input) (.variantValue ref label index written ordinary available payload) rest
 
 /-- The right operand takes higher-precedence operators. A comparison also
     refuses a comparison at the head of its continuation. -/
@@ -232,6 +237,14 @@ inductive LabeledItemsTail (scope : Scope) :
   | comma (label : Identifier) (value : Expr scope type) (remaining : LabeledItems scope labels types) :
       LabeledItemsRead scope input (.next label value remaining) rest →
       LabeledItemsTail scope (comma :: input) (.next label value remaining) rest
+
+inductive CasePayloadRead (scope : Scope) :
+    List Token → {type : Option (Ty .value)} → CasePayload scope type → List Token → Prop where
+  | bare (closed : ∀ tail, rest ≠ openParen :: tail) :
+      CasePayloadRead scope rest (.nullary false) rest
+  | empty : CasePayloadRead scope (openParen :: closeParen :: rest) (.nullary true) rest
+  | value : ExprReads scope 0 input expression (closeParen :: rest) →
+      CasePayloadRead scope (openParen :: input) (.value expression) rest
 
 end
 

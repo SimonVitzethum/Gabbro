@@ -107,6 +107,12 @@ inductive Expr (scope : Scope) : Ty .value → Type where
   | recordField (base : Expr scope (recordValueType name labels types))
       (field : Identifier) (index : Fin types.length) (written : labels[index.val]? = some field) :
       Expr scope (types.get index)
+  /-- The selected tag determines whether its one payload expression is required. -/
+  | variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
+      (index : Fin payloads.length) (written : labels[index.val]? = some label)
+      (ordinary : ordinaryLocal label) (available : availableCase scope label)
+      (payload : CasePayload scope (payloads.get index)) :
+      Expr scope (variantValueType ref.name.val labels payloads)
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
@@ -117,6 +123,10 @@ inductive LabeledItems (scope : Scope) : List Identifier → List (Ty .value) �
   | empty : LabeledItems scope [] []
   | next (label : Identifier) : Expr scope type → LabeledItems scope labels types →
       LabeledItems scope (label :: labels) (type :: types)
+
+inductive CasePayload (scope : Scope) : Option (Ty .value) → Type where
+  | nullary (parenthesized : Bool) : CasePayload scope none
+  | value (expression : Expr scope type) : CasePayload scope (some type)
 
 end
 
@@ -138,6 +148,7 @@ def Expr.static : Expr scope type → Prop
   | .tupleField base _ => base.static
   | .recordValue _ items _ _ => items.static
   | .recordField base _ _ _ => base.static
+  | .variantValue _ _ _ _ _ _ payload => payload.static
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop
@@ -147,6 +158,10 @@ def ExprItems.static : ExprItems scope types → Prop
 def LabeledItems.static : LabeledItems scope labels types → Prop
   | .empty => True
   | .next _ head tail => head.static ∧ tail.static
+
+def CasePayload.static : CasePayload scope type → Prop
+  | .nullary _ => True
+  | .value expression => expression.static
 
 end
 
@@ -255,6 +270,9 @@ def TuplePattern.valid (pattern : TuplePattern) (annotation : Option WrittenType
     (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_']) ∧
     ∀ written ∈ annotation.toList, written.valid ∧ written.type = tupleType types
 
+def payloadBinding (name : Identifier) (type : Ty .value) : Binding :=
+  ⟨name, type, false, false⟩
+
 mutual
 
 /-- The enclosing function's result is available in each statement and branch. -/
@@ -306,6 +324,9 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- The inferred mutable binding uses the initializer's exact type. -/
   | letMutableValue (name : Identifier) (ordinary : ordinaryLocal name)
       (value : Expr scope type) : Stmt result scope (⟨name, type, true, false⟩ :: scope)
+  /-- Each arm consumes exactly the next declared tag and payload shape. -/
+  | variantMatch (value : Expr scope (variantValueType name labels payloads))
+      (arms : VariantArms result scope labels payloads) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -316,12 +337,28 @@ inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
 inductive BracedBlock (result : Option (Ty .value)) : Scope → Type where
   | braces (body : Block result before after) : BracedBlock result before
 
+/-- Exhaustiveness is the index of an arm sequence. The optional final wildcard
+    consumes every remaining declared case without binding a payload. -/
+inductive VariantArms (result : Option (Ty .value)) (scope : Scope) :
+    List Identifier → List (Option (Ty .value)) → Type where
+  | done : VariantArms result scope [] []
+  | nullary (label : Identifier) (caseName : label.val ≠ ['_']) (body : BracedBlock result scope)
+      (rest : VariantArms result scope labels payloads) :
+      VariantArms result scope (label :: labels) (none :: payloads)
+  | payload (label binder : Identifier) (ordinary : ordinaryLocal binder)
+      (body : BracedBlock result (payloadBinding binder type :: scope))
+      (rest : VariantArms result scope labels payloads) :
+      VariantArms result scope (label :: labels) (some type :: payloads)
+  | wildcard (body : BracedBlock result scope) (nonempty : labels ≠ [])
+      (shape : labels.length = payloads.length) : VariantArms result scope labels payloads
+
 end
 
 mutual
 def Stmt.returns : Stmt result before after → Bool
   | .ret .. | .retVoid .. => true
   | .ite _ yes no => yes.returns && no.returns
+  | .variantMatch _ arms => arms.returns
   | _ => false
 
 def Block.returns : Block result before after → Bool
@@ -330,6 +367,11 @@ def Block.returns : Block result before after → Bool
 
 def BracedBlock.returns : BracedBlock result before → Bool
   | .braces body => body.returns
+
+def VariantArms.returns : VariantArms result scope labels payloads → Bool
+  | .done => true
+  | .nullary _ _ body rest | .payload _ _ _ body rest => body.returns && rest.returns
+  | .wildcard body _ _ => body.returns
 end
 
 /-- The return spelling determines the body's return index. -/
@@ -346,6 +388,21 @@ def recordTypes (fields : List RecordMember) : List (Ty .value) :=
 
 def recordBinding (name : Identifier) (fields : List RecordMember) : Binding :=
   ⟨name, recordSchemaType name.val (recordLabels fields) (recordTypes fields), false, true⟩
+
+structure VariantMember where
+  label : Identifier
+  payload : Option WrittenType
+
+def variantLabels (cases : List VariantMember) : List Identifier := cases.map VariantMember.label
+
+def variantPayloads (cases : List VariantMember) : List (Option (Ty .value)) :=
+  cases.map (fun member => member.payload.map WrittenType.type)
+
+def variantBinding (name : Identifier) (cases : List VariantMember) : Binding :=
+  ⟨name, variantSchemaType name.val (variantLabels cases) (variantPayloads cases), false, true⟩
+
+def VariantMember.valid (member : VariantMember) : Prop :=
+  ordinaryLocal member.label ∧ member.label.val ≠ ['_'] ∧ ∀ type ∈ member.payload.toList, type.valid
 
 /-- Constant values can enter the declaration scope. Function signatures are resolved
     across the whole unit, allowing forward calls and checked recursive cycles. -/
@@ -365,6 +422,11 @@ inductive Decl : Scope → Scope → Type where
       (valid : ∀ member ∈ fields, member.written.valid)
       (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
       Decl before (recordBinding name fields :: before)
+  /-- The declared tag order determines the closed sum and its exhaustive matches. -/
+  | tagged (exported : Bool) (name : Identifier) (first : VariantMember) (tail : List VariantMember)
+      (valid : ∀ member ∈ first :: tail, member.valid)
+      (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
+      Decl before (variantBinding name (first :: tail) :: before)
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where

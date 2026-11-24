@@ -22,7 +22,10 @@ def Wert : {kind : Kind} → Ty kind → Type
   | _, .productEnd => PUnit
   | _, .product head tail => Wert head × Wert tail
   | _, .record _ _ layout => Wert layout
-  | _, .recordSchema .. => PUnit
+  | _, .recordSchema .. | _, .variantSchema .. => PUnit
+  | _, .sumEnd => Empty
+  | _, .sum head tail => Sum (Wert head) (Wert tail)
+  | _, .variant _ _ layout => Wert layout
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
@@ -57,6 +60,13 @@ def tupleSet : (types : List (Ty .value)) → (i : Fin types.length) →
   | _ :: _, ⟨0, _⟩, value, old => (value, old.2)
   | _ :: tail, ⟨n + 1, bound⟩, value, old =>
     (old.1, tupleSet tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value old.2)
+
+def variantInject : (cases : List (Option (Ty .value))) → (index : Fin cases.length) →
+    Wert ((cases.get index).getD .productEnd) → Wert (variantLayout cases)
+  | [], index, _ => Fin.elim0 index
+  | _ :: _, ⟨0, _⟩, value => .inl value
+  | _ :: tail, ⟨n + 1, bound⟩, value =>
+    .inr (variantInject tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value)
 
 def indexPosition {count : Nat} (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
   have nonnegative := Int.le_trans lower i.unten
@@ -162,6 +172,8 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .recordField (types := types) base _ index _ =>
     let record := base.wert env
     tupleGet types index record
+  | .variantValue (payloads := payloads) _ _ index _ _ _ payload =>
+    variantInject payloads index (payload.wert env)
 
 def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
   | .empty => PUnit.unit
@@ -170,6 +182,10 @@ def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupl
 def LabeledItems.wert (env : Umgebung scope) : LabeledItems scope labels types → Wert (tupleType types)
   | .empty => PUnit.unit
   | .next _ head tail => (head.wert env, tail.wert env)
+
+def CasePayload.wert (env : Umgebung scope) : CasePayload scope type → Wert (type.getD .productEnd)
+  | .nullary _ => PUnit.unit
+  | .value expression => expression.wert env
 
 end
 

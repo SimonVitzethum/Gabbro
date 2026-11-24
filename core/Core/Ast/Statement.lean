@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.Pattern
+public import Core.Ast.Variant.Grammar
 
 @[expose] public section
 
@@ -109,6 +109,10 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       ExprReads scope 0 input (value : Expr scope type) (semicolon :: rest) →
       StmtReads result scope (letKeyword :: keyword "mut" :: .word name.val :: assignment :: input)
         ⟨_, .letMutableValue name ordinary value⟩ rest
+  | variantMatch :
+      ExprReads scope 0 input (value : Expr scope (variantValueType name labels payloads)) (openBrace :: armsInput) →
+      VariantArmsRead result scope armsInput arms rest →
+      StmtReads result scope (keyword "match" :: input) ⟨_, .variantMatch value arms⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :
@@ -122,6 +126,23 @@ inductive BlockReads (result : Option (Ty .value)) : (before : Scope) →
     List Token → BracedBlock result before → List Token → Prop where
   | braced : BlockItems result before input ⟨after, body⟩ rest →
       BlockReads result before (openBrace :: input) (.braces body) rest
+
+inductive VariantArmsRead (result : Option (Ty .value)) :
+    (scope : Scope) → List Token → {labels : List Identifier} → {payloads : List (Option (Ty .value))} →
+    VariantArms result scope labels payloads → List Token → Prop where
+  | done : VariantArmsRead result scope (closeBrace :: rest) .done rest
+  | nullary (label : Identifier) (caseName : label.val ≠ ['_']) :
+      BlockReads result scope input body more → VariantArmsRead result scope more next rest →
+      VariantArmsRead result scope (.word label.val :: matchArrow :: input) (.nullary label caseName body next) rest
+  | payload (label binder : Identifier) (ordinary : ordinaryLocal binder) :
+      BlockReads result (payloadBinding binder type :: scope) input body more →
+      VariantArmsRead result scope more next rest →
+      VariantArmsRead result scope
+        (.word label.val :: openParen :: .word binder.val :: closeParen :: matchArrow :: input)
+        (.payload label binder ordinary body next) rest
+  | wildcard (nonempty : labels ≠ []) (shape : labels.length = payloads.length) :
+      BlockReads result scope input body (closeBrace :: rest) →
+      VariantArmsRead result scope (.word ['_'] :: matchArrow :: input) (.wildcard body nonempty shape) rest
 
 end
 

@@ -45,6 +45,8 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
     [ref.binding.name.print, printDot, field.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
   | .letMutableValue name _ value =>
     [letName.print, printMut, name.print, printAssignment] ++ value.printPieces ++ [printSemicolon]
+  | .variantMatch value arms =>
+    printMatch :: value.printPieces ++ [printOpenBrace] ++ arms.printPieces ++ [printCloseBrace]
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []
@@ -52,6 +54,13 @@ def Block.printItems : Block result before after → List PrintedToken
 
 def BracedBlock.printPieces : BracedBlock result before → List PrintedToken
   | .braces body => printOpenBrace :: body.printItems ++ [printCloseBrace]
+
+def VariantArms.printPieces : VariantArms result scope labels payloads → List PrintedToken
+  | .done => []
+  | .nullary label _ body rest => [label.print, printMatchArrow] ++ body.printPieces ++ rest.printPieces
+  | .payload label binder _ body rest =>
+    [label.print, printOpen, binder.print, printClose, printMatchArrow] ++ body.printPieces ++ rest.printPieces
+  | .wildcard body _ _ => [discardName.print, printMatchArrow] ++ body.printPieces
 
 end
 

@@ -1,16 +1,10 @@
 module
 
-public import Core.Ast.Semantik.Arithmetik
+public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
 import Init.Data.Vector.OfFn
 
 @[expose] public section
-
-namespace Gabbro.Core.Ast
-
-abbrev Dynamisch := (type : Ty .value) × Wert type
-
-end Gabbro.Core.Ast
 
 namespace Gabbro.Core.Ast.Semantik
 
@@ -32,46 +26,12 @@ def alsBoolean : Dynamisch → Option Bool
   | ⟨.bool, value⟩ => some value
   | _ => none
 
-def wertAls : (type : Ty .value) → Dynamisch → Option (Wert type)
-  | .int lo hi, ⟨.int _ _, number⟩ =>
-    if bounds : lo ≤ number.wert ∧ number.wert ≤ hi then
-      some ⟨number.wert, bounds.1, bounds.2⟩
-    else none
-  | .array _ 0, ⟨.array _ 0, _⟩ => some #v[]
-  | target, ⟨source, value⟩ =>
-    if same : source = target then some (same ▸ value) else none
-
-def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
-  (wertAls type value).map fun checked => ⟨type, checked⟩
-
-def liesTupel (temp : Nat → Option Dynamisch) (slot : Nat) :
-    (types : List (Ty .value)) → Option (Wert (tupleType types))
-  | [] => some PUnit.unit
-  | head :: tail => do
-    let value ← (temp slot).bind (wertAls head)
-    let more ← liesTupel temp (slot + 1) tail
-    pure (value, more)
-
-def liesRecord (temp : Nat → Option Dynamisch) :
-    (types : List (Ty .value)) → List Nat → Option (Wert (tupleType types))
-  | [], [] => some PUnit.unit
-  | head :: tail, slot :: sources => do
-    let value ← (temp slot).bind (wertAls head)
-    let more ← liesRecord temp tail sources
-    pure (value, more)
-  | _, _ => none
-
-def tupleLocals : (types : List (Ty .value)) → Wert (tupleType types) → List Bool → List (Option Dynamisch)
-  | head :: tail, values, keep :: more =>
-    let rest := tupleLocals tail values.2 more
-    if keep then some ⟨head, values.1⟩ :: rest else rest
-  | _, _, _ => []
-
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
   | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
+  | .variantSchema name labels layout => some ⟨.variantSchema name labels layout, PUnit.unit⟩
   | _ => none
 
 inductive Abschluss where
@@ -107,7 +67,7 @@ structure Fortsetzung where
   mass : Option Nat
   eingang : Option (Ty .value)
 
-/-- Each context has its own instruction pointer, temporary slots and indexLocal values.
+/-- Each context has its own instruction pointer, temporary slots and local values.
     Locals are stored in scope order. Temporaries are numbered by the elaborator. -/
 structure Rahmen where
   pc : Nat
@@ -278,6 +238,11 @@ inductive Befehl where
       (types : List (Ty .value)) (index : Fin types.length)
   | setzeRecordFeld (source indexLocal : Nat) (name : List Char) (labels : List Identifier)
       (types : List (Ty .value)) (index : Fin types.length)
+  | definiereVariante (name : List Char) (labels : List Identifier) (cases : List (Option (Ty .value)))
+  | baueVariante (ziel : Nat) (name : List Char) (labels : List Identifier)
+      (cases : List (Option (Ty .value))) (index : Fin cases.length)
+  | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
+      (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -417,6 +382,19 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       let value ← (frame.temp source).bind (wertAls (types.get index))
       pure ⟨type, tupleSet types index value old⟩
     { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
+  | .definiereVariante name labels cases, frame =>
+    let schema : Dynamisch := ⟨variantSchemaType name labels cases, PUnit.unit⟩
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale }
+  | .baueVariante dst name labels cases index, frame => frame.schreibe dst (do
+    let value ← variantActual (cases.get index) (frame.temp dst)
+    pure ⟨variantValueType name labels cases, variantInject cases index value⟩)
+  | .waehleVariante source name labels cases branches, frame => Id.run do
+    let some value := (frame.temp source).bind (wertAls (variantValueType name labels cases)) |
+      return frame.halt .ungueltigerWert
+    let (tag, payload) := variantCase cases value
+    let some (offset, bind) := branches[tag]? | return frame.halt .ungueltigerWert
+    return { frame with pc := frame.pc + offset, lokale :=
+      if bind then payload :: frame.lokale else frame.lokale }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -436,13 +414,13 @@ def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
   { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c)) }
 
-/-- The context-indexLocal transition used by the ideal rule. -/
+/-- The context-local transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s
 
 /-- The concrete one-step realization uses the same mathematical transfer on
-    context-indexLocal values. Shared events go through the machine protocol. -/
+    context-local values. Shared events go through the machine protocol. -/
 def Befehl.impl (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   plans = [plan] ∧ u = b.nach c s

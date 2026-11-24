@@ -25,6 +25,10 @@ inductive Ty : Kind → Type where
   | product (head tail : Ty .value) : Ty .value
   | record (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
   | recordSchema (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
+  | sumEnd : Ty .value
+  | sum (head tail : Ty .value) : Ty .value
+  | variant (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
+  | variantSchema (name : List Char) (labels : List (List Char)) (layout : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -70,7 +74,7 @@ def Local.nameVisible : Local scope type → Prop
   | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.nameVisible
 
 def Ty.valueBinding : Ty .value → Prop
-  | .recordSchema .. => False
+  | .recordSchema .. | .variantSchema .. => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=
@@ -99,5 +103,31 @@ structure RecordArguments (labels : List Identifier) (types : List (Ty .value))
   distinct : (actualLabels.map Subtype.val).Nodup
   slot : Fin types.length → Fin actualTypes.length
   label : ∀ i, labels[i.val]? = actualLabels[(slot i).val]?
+
+def variantLayout : List (Option (Ty .value)) → Ty .value
+  | [] => .sumEnd
+  | head :: tail => .sum (head.getD .productEnd) (variantLayout tail)
+
+def variantValueType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
+  .variant name (labels.map Subtype.val) (variantLayout payloads)
+
+def variantSchemaType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
+  .variantSchema name (labels.map Subtype.val) (variantLayout payloads)
+
+def Ty.variantLabels : Ty .value → List (List Char)
+  | .variantSchema _ labels _ => labels
+  | _ => []
+
+def availableCase (scope : Scope) (label : Identifier) : Prop :=
+  ((scope.flatMap fun binding => binding.type.variantLabels).count label.val = 1) ∧
+    ∀ binding ∈ scope, binding.type.valueBinding → binding.name.val ≠ label.val
+
+structure VariantRef (scope : Scope) (labels : List Identifier) (payloads : List (Option (Ty .value))) where
+  name : Identifier
+  schema : Local scope (variantSchemaType name.val labels payloads)
+  visible : schema.nameVisible
+  spelled : schema.binding.name.val = name.val
+  shape : labels.length = payloads.length
+  distinct : (labels.map Subtype.val).Nodup
 
 end Gabbro.Core.Ast

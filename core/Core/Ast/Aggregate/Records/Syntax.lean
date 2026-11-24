@@ -83,7 +83,7 @@ def MutableValueDerivationAussage : Prop :=
 def TupleBindInversionAussage : Prop :=
   ∀ {scope result input tree rest},
     StmtReads result scope (letKeyword :: openParen :: input) tree rest →
-    ∃ (a : TupleBindArgs scope) more rhs, TuplePatternReads (openParen :: input) a.pattern more ∧
+    ∃ (a : TupleBindArgs scope) (more rhs : List Token), TuplePatternReads (openParen :: input) a.pattern more ∧
       TupleAnnotationReads more a.annotation rhs ∧ ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (tupleBind (scope, result)).tree a
 
