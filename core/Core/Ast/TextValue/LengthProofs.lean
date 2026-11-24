@@ -95,6 +95,7 @@ theorem textLength_bytes : TextLengthBytesAussage := by
         simp [wertAls, bound]
         rfl
   simp [Befehl.auswerten, Rahmen.schreibe, h, hval, TextValue.lengthValue]
+  rfl
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
   intro args
@@ -197,9 +198,9 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · rfl
     · rfl
     · rfl
-    · simp [form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
+    · simp [E, form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
         Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start, Zustand.start, startdaten,
-        Rahmen.start]
+        Rahmen.start, Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit]
   · intro g guard
     simp [b, textLengthForm, Befehl.guard] at guard
   · dsimp
@@ -208,5 +209,6 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp [b, textLengthForm, args, s, s0, b0, Befehl.nach, Befehl.auswerten,
         Rahmen.schreibe, Rahmen.start, wertAls, TextValue.literal, I.start, Zustand.start,
         startdaten]
+      rfl
 
 end Gabbro.Core.Ast.Semantik
