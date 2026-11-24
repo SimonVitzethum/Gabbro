@@ -18,7 +18,7 @@ def AntwortNIAussage : Prop :=
 
 abbrev AntwortZustand := Ast.Semantik.Zustand
 abbrev AntwortPlan := Ast.Semantik.Plan
-abbrev AntwortSpur := SchrittWahl PUnit × SchrittSpur PUnit Int
+abbrev AntwortSpur := SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int
 
 /-- The plan of every context step of a canonical fragment is the internal plan:
     a `Befehl` never issues a question. -/
@@ -35,7 +35,7 @@ theorem antwort_kontext_intern {p : Fragment} (plattform : Plattform)
 /-- A form action other than a question leaves the pending-question ledger unchanged. -/
 theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
     {t : Nat} {c : Kontext} {s u v : AntwortZustand}
-    {aktion : Aktion PUnit PUnit} {sperren : List (Speicher.Etikett PUnit Int)}
+    {aktion : Aktion Nat PUnit} {sperren : List (Speicher.Etikett Ast.Semantik.Zelle Int)}
     {aussen : List Ereignis}
     (aktionStep : FuehrtAus (p.einheit plattform).einrichtung t c s u aktion sperren aussen v)
     (uLeer : u.fragen = []) (keinFrage : ∀ q, aktion ≠ .frage q) : v.fragen = [] := by
@@ -93,7 +93,7 @@ theorem antwort_fragen_leer (p : Fragment) (plattform : Plattform)
   | zero =>
       rw [lauf.2.2.2]
       have ladenEq : (p.einheit plattform).laden =
-          Gabbro.Core.Ast.Semantik.laden p.eingang plattform := rfl
+          Gabbro.Core.Ast.Semantik.laden p.eingang p.eintritte p.speicher plattform := rfl
       rw [ladenEq]
       unfold Gabbro.Core.Ast.Semantik.laden
       split

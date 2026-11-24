@@ -13,11 +13,13 @@
   * bridge (`schrankenStartAusLokal`, `schrankenRegelAusLokal`,
     `schrankenProtokollAusLokal`, `schrankenTransfer`): from the checker row (plus the
     simulation matching, M6 side) to the per-form implementation obligations;
-  * families (`rufSchranken`, `aggregatSchranken`, `textSchranken`,
-    `speicherverwaltungSchranken`, `regionSchranken`, `kontrollflussSkalarSchranken`):
-    the `RegelSchranken` instances for the growing forms — each states the bound premise
-    (refuse instead of exceed) its ideal rule must carry. Undecidable static bounds refuse
-    the unit; open regions stay admitted.
+  * footprint (`kontrollflussSkalarSchranken`): the `RegelSchranken` instance of an instruction
+    whose steps keep both bounds. The footprint of the other effect classes is the premise of
+    `SchrankenBeweise/Klasse` (`klassenSchranken`, `speicherverwaltungSchranken`); a duty never
+    quantifies over a free rule of the unit without the footprint of its class as a premise
+    (the earlier per-form statements for calls, aggregates, text, regions and space management
+    were refuted exactly for that reason and are gone). Undecidable static bounds refuse the
+    unit; open regions stay admitted.
 
   Blast-radius note: `Mem/Proofs/Flush` and `Mem/Execution` are untouched (the Sonnet
   flush work runs there); the flush-family statement lives here and constrains only the
@@ -166,103 +168,6 @@ def schrankenTransferAussage : Prop :=
     (∀ t, ∃ s, ρ.zeit.zustand t = some s ∧ I.Zustandsbezug E s (η.zeit.zustand t)) →
     ∀ t, RessourcenPrefix E ρ t
 
-/-- The call form meets the checker row once its ideal rule refuses over-bound calls:
-    every ideal `rufe` step either fits the pushed frame under a declared finite stack
-    bound or takes a named halt (`abstieg`, `ungueltigerRuf`) without pushing. The static
-    never-fires argument (S5 `rufTief` over finite call trees, `function_rekursionstiefe`
-    for `decreases`-measured recursion) is progress-side follow-up; for the bounds leg
-    refusal suffices. Joint satisfiability with a refusing rule is M6 elaboration work;
-    the row-level finite-bound witness is `Annahme.schrankenLokal_erfuellbar`.
-    Difficulty: schwer. Sketch: case split on the rule premise; the fit case pushes
-    exactly one continuation (`Rahmen.ruf`) so depth grows by one under the bound; the
-    halt case keeps `fortsetzungen` (`Rahmen.halt` only sets `stopp`), so
-    `stapelErhaltenAussage` applies; memory is untouched by the `intern` wrapper
-    (`FuehrtAus.intern` keeps rights and booking). -/
-def rufSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
-    (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
-    (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value)),
-    (∀ (c : Kontext) (s u : Semantik.Zustand) (w : PUnit) (plans : List Semantik.Plan),
-      (E.system.regel (Semantik.Befehl.rufe name args bind)).ideal c s w plans u →
-      ∀ n, E.schranken.stapel = some n →
-        ((s.lokal c).fortsetzungen.length + 1 ≤ n ∨ (u.lokal c).stopp.isSome) ∧
-        ((u.lokal c).stopp.isSome →
-          (u.lokal c).fortsetzungen = (s.lokal c).fortsetzungen)) →
-    RegelSchranken E (Semantik.Befehl.rufe name args bind)
-
-/-- Aggregate construction meets the checker row: `baueArray`/`baueTupel`/`baueRecord`/
-    `baueVariante` build values inside the frame's temporaries (no booking change), so
-    both legs are preserved once the depth interpretation is fixed.
-    Difficulty: mittel. Sketch: `Befehl.auswerten` for these constructors only writes
-    `temp` slots (`Rahmen.schreibe`); continuations, rights and booking are unchanged, so
-    both legs follow by `stapelErhaltenAussage`/`speicherErhaltenAussage` with reflexive
-    inclusions, through the `intern` wrapper. -/
-def aggregatSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
-    (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length),
-    (∀ (ziel : Nat) (element : Ty .value) (count : Nat),
-      RegelSchranken E (Semantik.Befehl.baueArray ziel element count)) ∧
-    (∀ (ziel : Nat) (types : List (Ty .value)),
-      RegelSchranken E (Semantik.Befehl.baueTupel ziel types)) ∧
-    (∀ (ziel : Nat) (name : List Char) (labels : List Identifier) (types : List (Ty .value))
-      (sources : List Nat),
-      RegelSchranken E (Semantik.Befehl.baueRecord ziel name labels types sources)) ∧
-    (∀ (ziel : Nat) (name : List Char) (labels : List Identifier) (cases : List (Option (Ty .value)))
-      (index : Fin cases.length),
-      RegelSchranken E (Semantik.Befehl.baueVariante ziel name labels cases index))
-
-/-- Bounded byte strings meet the checker row: `textLiteral`/`textConcat`/`substring`
-    build values in temporaries (no booking change), so both legs are preserved once the
-    depth interpretation is fixed. Slicing stays inside the checked capacities through
-    the existing `teilfolge` guard row.
-    Difficulty: mittel. Sketch: as for aggregates — temporaries only (`Rahmen.schreibe`);
-    the `substring` capacity premise is the `waechterBedarf .teilfolge` guard, already
-    part of `WaechterHalten`. -/
-def textSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
-    (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length),
-    (∀ (ziel : Nat) (decoded : List Char),
-      RegelSchranken E (Semantik.Befehl.textLiteral ziel decoded)) ∧
-    (∀ (basis a b : Nat),
-      RegelSchranken E (Semantik.Befehl.textConcat basis a b)) ∧
-    (∀ (basis capacity : Nat),
-      RegelSchranken E (Semantik.Befehl.substring basis capacity))
-
-/-- Low-level space management meets the checker row once each allocating rule carries
-    its ceiling premise: growers fit the post-state live set under a declared finite
-    memory ceiling, non-growers keep the live set included and the depth nonincreasing;
-    open (`none`) ceilings admit every step, exactly as today. `flushSpace` moves no
-    allocation (execution proofs in `Mem/Execution` untouched). DMA accounts its
-    descriptor and payload extents against the same ceiling.
-    Difficulty: mittel-schwer. Sketch: per constructor — stack via `stapelErhaltenAussage`
-    from the depth premise; memory via the fit disjunct directly or
-    `speicherErhaltenAussage` via the inclusion disjunct; the wrapper only resolves the
-    graph (`FuehrtSchrittAus`), never the booking. -/
-def speicherverwaltungSchrankenAussage : Prop :=
-  ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl : Type} [DecidableEq L]
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl LowLevel.MemInstruction)
-    (op : LowLevel.MemInstruction),
-    (∀ (c : Kontext) (s u : Zustand L Ort Wert Raum Lok Grund) (w : Wahl)
-      (plans : List (SchrittPlan L Ort Wert Bedingung)),
-      (E.system.regel op).ideal c s w plans u →
-      ∀ n, E.schranken.speicher = some n →
-        ((LebendeZellen u).encard ≤ n ∨ LebendeZellen u ⊆ LebendeZellen s) ∧
-        ∀ d, E.schranken.stapelTiefe (u.lokal d) ≤ E.schranken.stapelTiefe (s.lokal d)) →
-    RegelSchranken E op
-
-/-- Region binding meets the checker row: `bindeRegion` already refuses
-    (`Rahmen.bindeRegion` returns the named halt `ungueltigerBereich`) when the slot is
-    missing, ungranted, borrowed or the extent fails — never an unchecked bind. A bound
-    region additionally checks the extent against its ceiling; open regions admit.
-    Difficulty: mittel. Sketch: both refusal and success paths keep `fortsetzungen`
-    (`halt` only sets `stopp`; success extends `lokale` only) and change no booking, so
-    both legs follow by the preservation helpers through the `intern` wrapper. -/
-def regionSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
-    (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
-    (receiver : Nat) (init : RegionInitializer),
-    RegelSchranken E (Semantik.Befehl.bindeRegion receiver init)
-
 /-- Non-growing control and scalar forms meet the checker row once their step-level
     footprint is fixed: depth nonincreasing and live set included across the full ideal
     step. M6 discharges the footprint per form by `rfl` on `Befehl.auswerten` (temporaries,
@@ -270,7 +175,7 @@ def regionSchrankenAussage : Prop :=
     Difficulty: leicht-mittel. Sketch: `stapelErhaltenAussage` plus
     `speicherErhaltenAussage` with the two footprint facts. -/
 def kontrollflussSkalarSchrankenAussage : Prop :=
-  ∀ (E : Einheit PUnit PUnit Int PUnit Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
+  ∀ (E : Einheit Nat Semantik.Zelle Int Nat Semantik.Rahmen PUnit PUnit PUnit Semantik.Befehl)
     (tiefe : ∀ r : Semantik.Rahmen, E.schranken.stapelTiefe r = r.fortsetzungen.length)
     (b : Semantik.Befehl),
     (∀ {η : I.Lauf E}, I.Laeufe E η → ∀ t c w spur vor nach,

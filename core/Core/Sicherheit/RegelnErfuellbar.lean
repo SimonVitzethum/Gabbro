@@ -25,7 +25,7 @@ private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     fun _ _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach,
     fun _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach⟩
   intro H start s _ _ h
-  change Ast.Semantik.laden p.eingang platform start (H.lade Ast.Semantik.bild) = some s at h
+  change Ast.Semantik.laden p.eingang p.eintritte p.speicher platform start (H.lade Ast.Semantik.bild) = some s at h
   unfold Ast.Semantik.laden at h
   split at h
   · cases h
@@ -50,7 +50,7 @@ private theorem arithmetik_schritt
 /-- The rule and boundary obligations hold jointly for a loaded unit that actually
     executes literals, both binary operators and a local binding. -/
 theorem sicherheit_aus_regeln_erfuellbar :
-    ∃ (E : Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl)
+    ∃ (E : Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl)
       (H : Umgebung) (ρ : Lauf E),
       GrenzenSicher E ∧ (∀ f, RegelAntwortSicher E f) ∧ (∀ f, RegelSicher E f) ∧
       Maschine.Laeufe E.maschine H ρ ∧
@@ -77,12 +77,12 @@ theorem sicherheit_aus_regeln_erfuellbar :
   obtain ⟨kern, zugeordnet⟩ := admissible.2.2.1 0 (Nat.zero_lt_succ 0)
   have kernNull : kern = 0 := Nat.lt_one_iff.mp (admissible.2.2.2.1 0 kern zugeordnet).2
   have assignment : start.assignment 0 = some 0 := kernNull ▸ zugeordnet
-  let d := startdaten p.eingang (some 0) platform start.regions
+  let d := startdaten p.eingang p.eintritte (some 0) platform start.regions
   let z₀ : Ast.Semantik.Zustand := Maschine.Zustand.start d.lokal d.status d.kerne d.rechte
-    (Ast.Semantik.einrichtung p.eingang).initial
+    (Ast.Semantik.einrichtung p.eingang p.eintritte p.speicher).initial
     (.leer (startmedium start))
   have geladen : E.maschine.laden start (H.lade E.maschine.bild) = some z₀ := by
-    change Ast.Semantik.laden p.eingang platform start (Ast.Semantik.bild.lade) = some z₀
+    change Ast.Semantik.laden p.eingang p.eintritte p.speicher platform start (Ast.Semantik.bild.lade) = some z₀
     have image : Ast.Semantik.bild.lade.starts 0 = some 0 ∧
         Ast.Semantik.bild.lade.bytes 0 = some 0 := ⟨rfl, rfl⟩
     rw [Ast.Semantik.laden, if_pos image, assignment]
