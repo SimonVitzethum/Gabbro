@@ -30,28 +30,43 @@ open Gabbro.Core.Text
 theorem tupleType_inversion : TupleTypeInversionAussage := by
   intro input type rest read
   cases read
-  case tuple firstRead secondRead tailRead =>
-      exact ⟨_, _, _, _, _, firstRead, secondRead, tailRead, rfl⟩
+  case tuple =>
+      rename_i input' first' secondInput' second' more' tail' rest' p1 p2 p3
+      exact ⟨first', second', tail', secondInput', more', p1, p2, p3, rfl⟩
   all_goals contradiction
 
 private theorem typeItemsTail_consumes : (input : List Token) → (tail : WrittenTypes) → (rest : List Token) →
     TypeItemsTail input tail rest → rest <:+ input
   | _, _, _, .close => List.suffix_cons _ _
-  | _, _, _, .comma headRead tailRead =>
-      (typeItemsTail_consumes _ _ _ tailRead).trans (TypeReads.consumes headRead)
+  | _, _, _, @TypeItemsTail.comma i head more tail rest headRead tailRead =>
+      (typeItemsTail_consumes more tail rest tailRead).trans (TypeReads.consumes headRead)
 
 theorem tupleType_suffix : TupleTypeSuffixAussage := by
   intro input type rest read
   cases read
-  case tuple firstRead secondRead tailRead =>
-      exact (typeItemsTail_consumes _ _ _ tailRead).trans
-        ((TypeReads.consumes secondRead).trans
-          ((List.suffix_cons comma _).trans (TypeReads.consumes firstRead)))
+  case tuple =>
+      rename_i input' first' secondInput' second' more' tail' rest' p1 p2 p3
+      exact (typeItemsTail_consumes more' tail' rest' p3).trans
+        ((TypeReads.consumes p2).trans
+          ((List.suffix_cons comma secondInput').trans (TypeReads.consumes p1)))
   all_goals contradiction
 
 theorem tupleType_index : TupleTypeIndexAussage := by
   intro first second tail
   rfl
+
+private theorem tupleTypeTail_closed (tail : WrittenTypes) (rest : List Token) :
+    ∀ more, tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest ≠ keyword "in" :: more := by
+  match tail with
+  | .empty =>
+      intro more same
+      simp only [WrittenTypes.printTail, List.map_nil, List.nil_append] at same
+      cases same
+  | .next _ _ =>
+      intro more same
+      have commaTok : printComma.value = comma := by rfl
+      simp only [WrittenTypes.printTail, List.map_cons, List.map_append, List.map_nil, commaTok] at same
+      cases same
 
 private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (rest : List Token) →
     TypeItemsTail (tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest) tail rest
@@ -63,8 +78,8 @@ private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (
       rw [commaTok]
       apply TypeItemsTail.comma
       · exact WrittenType.printReads head valid.1
-          (rest := head.printPieces.map PrintedToken.value ++ tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
-          (by intro more same; cases same)
+          (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
+          (tupleTypeTail_closed tail rest)
       · exact tupleType_printTail tail valid.2 rest
 
 theorem tupleType_derivation : TupleTypeDerivationAussage := by
@@ -75,17 +90,15 @@ theorem tupleType_derivation : TupleTypeDerivationAussage := by
   have openTok : printOpen.value = openParen := by rfl
   have commaTok : printComma.value = comma := by rfl
   have closeTok : printClose.value = closeParen := by rfl
-  change TypeReads ((printOpen.value :: ft ++ [printComma.value] ++ st ++ tt ++ [printClose.value]) ++ rest)
-      (.tuple first second tail) rest
-  rw [openTok, commaTok, closeTok]
-  simp only [List.singleton_append, List.append_assoc]
+  simp only [WrittenType.printPieces, WrittenTypes.printTail, List.map_append, List.map_cons,
+    List.map_nil, openTok, commaTok, closeTok, List.singleton_append, List.append_assoc]
   refine TypeReads.tuple ?_ ?_ ?_
   · exact WrittenType.printReads first valid.1
       (rest := comma :: (st ++ tt ++ [closeParen] ++ rest))
       (by intro more same; cases same)
   · exact WrittenType.printReads second valid.2.1
       (rest := tt ++ [closeParen] ++ rest)
-      (by intro more same; cases same)
+      (tupleTypeTail_closed tail rest)
   · simpa [tt] using (tupleType_printTail tail valid.2.2 rest)
 
 theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
@@ -95,9 +108,9 @@ theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   let tree := WrittenType.tuple first second tail
   obtain ⟨pieces, lexed, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
   refine ⟨first, second, tail, PrintedToken.render tree.printPieces, pieces, ?_, lexed, ?_⟩
-  · simp [tree, first, second, tail]
+  · simp [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid]
   · rw [aligned]
-    exact WrittenType.printReads tree (by simp [tree, first, second, tail])
+    exact WrittenType.printReads tree (by simp [tree, first, second, tail, WrittenType.valid, WrittenTypes.valid])
       (by intro more same; cases same)
 
 end Gabbro.Core.Ast
@@ -115,7 +128,7 @@ theorem tupleTypeUse_am_ort (ctx : Scope × Option (Ty .value)) : (typeUseForm c
 
 theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
     (typeUseForm ctx tupleTypeUse).produktion.Entry := by
-  let base := mutableLocal_entry ctx.1 ctx.2
+  let base := Surface.mutableLocal_entry ctx.1 ctx.2
   refine ⟨?reads, ?prints, ?erfuellbar⟩
   · intro args tokens prod
     exact base.reads args.val tokens prod
@@ -128,8 +141,8 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
       simp [name, ordinaryLocal]
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
-      ⟨name, ordinary, w, by simp [w], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by simp [w]⟩
+      ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
+        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits]⟩
     exact Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
@@ -188,8 +201,8 @@ theorem tupleType_erfuellbar : TupleTypeErfuellbarAmAussage := by
     simp [name, ordinaryLocal]
   let w : WrittenType := .tuple .bool .bool .empty
   let a : Surface.MutableLocalArgs [] none :=
-    ⟨name, ordinary, w, by simp [w], tupleType [.bool, .bool],
-      .tupleValue .trueLit .falseLit .empty, by simp [w]⟩
+    ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
+      .tupleValue .trueLit .falseLit .empty, by simp [w, Fits]⟩
   let args : {a : Surface.MutableLocalArgs [] none // tupleTypeUse a.written} :=
     ⟨a, by simp [a, w, tupleTypeUse]⟩
   let form := typeUseForm ([], none) tupleTypeUse
