@@ -53,9 +53,9 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | int lo hi => exact ⟨le_rfl, le_rfl⟩
   | bool => trivial
   | array element count =>
-      by_cases h : count = 0
-      · simp only [Fits, h]
-      · simp only [Fits, h, reduceCtorEq]
+      cases count with
+      | zero => rfl
+      | succ n => rfl
   | productEnd => rfl
   | product head tail => rfl
   | record name labels layout => rfl

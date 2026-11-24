@@ -313,8 +313,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           change (frame.temp (slot + 1)).bind alsGanzzahl = some ⟨lo, hi, offset⟩
           rw [hoff]
           rfl]
-        rw [wert]
         dsimp
+        rw [wert]
         rw [if_neg (not_lt_of_ge nonneg)]
         rw [dif_pos boundProof]
         rfl
