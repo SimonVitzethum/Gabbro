@@ -156,8 +156,7 @@ instance : Encodable Identifier :=
     intro id
     rcases id with ⟨name, h⟩
     rcases h with ⟨c, rest, rfl, hs, hp⟩
-    simp_all [identifierFinv]
-    rw [dif_pos hs, dif_pos hp])
+    simp_all [identifierFinv])
 
 /-! ## CarrierEffect -/
 
