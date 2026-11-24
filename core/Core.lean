@@ -36,6 +36,9 @@ public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
 public import Core.Verfeinerung.Formen.Erfuellbar
+public import Core.Verfeinerung.Abnahme.StotterMass
+public import Core.Verfeinerung.Abnahme.Flush
+public import Core.Verfeinerung.Abnahme.LockFree
 public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
