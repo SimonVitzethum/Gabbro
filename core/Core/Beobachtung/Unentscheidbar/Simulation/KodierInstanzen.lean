@@ -219,17 +219,19 @@ def tyOfCode : Nat → Option (Ty .value)
   | n + 1 =>
     let p := n.unpair
     let payload := p.2
-    have hp : payload ≤ n := Nat.unpair_right_le n
-    have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
-    have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
-    have hb1 : payload.unpair.2.unpair.1 ≤ n :=
-      le_trans (Nat.unpair_left_le payload.unpair.2) hb
-    have hb2 : payload.unpair.2.unpair.2 ≤ n :=
-      le_trans (Nat.unpair_right_le payload.unpair.2) hb
-    have hb21 : payload.unpair.2.unpair.2.unpair.1 ≤ n :=
-      le_trans (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
-    have hb22 : payload.unpair.2.unpair.2.unpair.2 ≤ n :=
-      le_trans (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
+    have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
+    have ha : payload.unpair.1 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+    have hb : payload.unpair.2 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+    have hb1 : payload.unpair.2.unpair.1 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
+    have hb2 : payload.unpair.2.unpair.2 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
+    have hb21 : payload.unpair.2.unpair.2.unpair.1 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2.unpair.2) hb2
+    have hb22 : payload.unpair.2.unpair.2.unpair.2 < n.succ :=
+      lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2.unpair.2) hb2
     match p.1 with
     | 0 => do
         let lo : Int ← Encodable.decode payload.unpair.1
@@ -297,6 +299,8 @@ def tyOfCode : Nat → Option (Ty .value)
         let referent ← tyOfCode payload.unpair.2.unpair.2
         some (.ptr space recht referent)
     | _ => none
+termination_by x => x
+decreasing_by all_goals assumption
 
 theorem tyCode_ofCode : ∀ t : Ty .value, tyOfCode (tyCode t) = some t
   | .int lo hi => by simp [tyCode, tyOfCode]

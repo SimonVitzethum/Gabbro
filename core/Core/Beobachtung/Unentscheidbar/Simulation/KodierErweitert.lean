@@ -53,13 +53,13 @@ mutual
     | n + 1 =>
       let p := n.unpair
       let payload := p.2
-      have hp : payload ≤ n := Nat.unpair_right_le n
-      have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
-      have hb1 : payload.unpair.2.unpair.1 ≤ n :=
-        le_trans (Nat.unpair_left_le payload.unpair.2) hb
-      have hb2 : payload.unpair.2.unpair.2 ≤ n :=
-        le_trans (Nat.unpair_right_le payload.unpair.2) hb
+      have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
+      have ha : payload.unpair.1 < n.succ := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 < n.succ := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
+      have hb1 : payload.unpair.2.unpair.1 < n.succ :=
+        lt_of_le_of_lt (Nat.unpair_left_le payload.unpair.2) hb
+      have hb2 : payload.unpair.2.unpair.2 < n.succ :=
+        lt_of_le_of_lt (Nat.unpair_right_le payload.unpair.2) hb
       match p.1 with
       | 0 => some .bool
       | 1 => do
@@ -97,15 +97,17 @@ mutual
           let referent ← writtenTypeOfCode payload.unpair.2.unpair.2
           some (.ptr space recht referent)
       | _ => none
+  termination_by x => x
+  decreasing_by all_goals assumption
 
   def writtenTypesOfCode : Nat → Option WrittenTypes
     | 0 => none
     | n + 1 =>
       let p := n.unpair
       let payload := p.2
-      have hp : payload ≤ n := Nat.unpair_right_le n
-      have ha : payload.unpair.1 ≤ n := le_trans (Nat.unpair_left_le payload) hp
-      have hb : payload.unpair.2 ≤ n := le_trans (Nat.unpair_right_le payload) hp
+      have hp : payload < n.succ := Nat.lt_succ_of_le (Nat.unpair_right_le n)
+      have ha : payload.unpair.1 < n.succ := lt_of_le_of_lt (Nat.unpair_left_le payload) hp
+      have hb : payload.unpair.2 < n.succ := lt_of_le_of_lt (Nat.unpair_right_le payload) hp
       match p.1 with
       | 0 => some .empty
       | 1 => do
@@ -113,6 +115,8 @@ mutual
           let tail ← writtenTypesOfCode payload.unpair.2
           some (.next head tail)
       | _ => none
+  termination_by x => x
+  decreasing_by all_goals assumption
 end
 
 mutual
