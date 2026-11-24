@@ -179,6 +179,8 @@ theorem pauseNI : PauseNIAussage := by
             aussenEtikett E.einrichtung (.interrupt k irq .handler)
           have labelNicht : ¬ label.art.liest := by
             simp only [label, aussenEtikett, Speicher.Art.liest]
+            intro h
+            cases h
           obtain ⟨graph', stepGraph⟩ :=
             Speicher.Zustand.schritt_ohne_lesen (Z := v₁.graph) zustandGut₁.1 zustandGut₁.2
               .aussen label labelNicht
