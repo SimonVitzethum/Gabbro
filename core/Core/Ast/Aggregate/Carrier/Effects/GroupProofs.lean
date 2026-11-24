@@ -64,20 +64,24 @@ private theorem egWrittenPrintReads (effect : WrittenCarrierEffect) (rest : List
   rcases effect with ⟨access, carrier, slots⟩
   cases access <;> cases slots
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
-      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
+      printDot, dot, printPunctuation, printSlots, keywordName, Identifier.print,
+      PrintedToken.unquoted, identPrintVal, printDotVal, printSlotsVal,
+      List.map_append, List.append_assoc] using
       (CarrierEffectReads.bare CarrierAccess.read carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
-      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
+      printDot, dot, printPunctuation, printSlots, keywordName, Identifier.print,
+      PrintedToken.unquoted, identPrintVal, printDotVal, printSlotsVal,
+      List.map_append, List.append_assoc] using
       (CarrierEffectReads.slots CarrierAccess.read carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
-      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
+      printDot, dot, printPunctuation, printSlots, keywordName, Identifier.print,
+      PrintedToken.unquoted, identPrintVal, printDotVal, printSlotsVal,
+      List.map_append, List.append_assoc] using
       (CarrierEffectReads.bare CarrierAccess.write carrier (rest := rest))
   · simpa [WrittenCarrierEffect.printPieces, CarrierAccess.print, printProgramWord, keyword,
-      printDot, printSlots, keywordName, Identifier.print, PrintedToken.unquoted,
-      identPrintVal, printDotVal, printSlotsVal, List.map_append, List.append_assoc] using
+      printDot, dot, printPunctuation, printSlots, keywordName, Identifier.print,
+      PrintedToken.unquoted, identPrintVal, printDotVal, printSlotsVal,
+      List.map_append, List.append_assoc] using
       (CarrierEffectReads.slots CarrierAccess.write carrier (rest := rest))
 
 private def egTokens : List WrittenCarrierEffect → List Token
@@ -97,8 +101,12 @@ private theorem egTokens_eq (written : List WrittenCarrierEffect) :
       cases more with
       | nil => simp [egTokens, commaSeparated]
       | cons effect2 rest =>
-          simp [egTokens, commaSeparated, ih, List.map_append, List.map_flatten,
-            List.append_assoc, printCommaVal]
+          change (WrittenCarrierEffect.printPieces effect).map PrintedToken.value ++
+            comma :: egTokens (effect2 :: rest) =
+            (commaSeparated ((effect :: effect2 :: rest).map
+              WrittenCarrierEffect.printPieces)).map PrintedToken.value
+          rw [ih]
+          simp [commaSeparated, printCommaVal, List.map_append, List.append_assoc]
 
 private theorem egTokensReads : ∀ (written : List WrittenCarrierEffect) (rest : List Token),
     EffectListReads CarrierEffectReads (egTokens written ++ closeBrace :: rest) written rest := by
@@ -169,8 +177,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
-          have hhe : head.exported = false := by cases head.exported <;> simp_all
-          have hie : item.exported = false := by cases item.exported <;> simp_all
+          have hhe : head.exported = false := by simpa using he
+          have hie : item.exported = false := by simpa using ie
           refine ⟨item, Subtype.ext hnameval.symm, by rw [hhe, hie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
@@ -384,11 +392,13 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
         | _ => none) with
       | none =>
           simp [hcmd] at hmem
-          exact ih site hmem
+          exact ih site (by simpa using hmem)
       | some first =>
           cases cmd with
           | rufe target args bind =>
-              simp [hcmd] at hmem
+              injection hcmd with hfirst
+              subst first
+              simp at hmem
               rcases hmem with h | hmem
               · subst site
                 rfl
