@@ -213,9 +213,12 @@ bindings are ordinary Gabbro functions.
   The release of the frames of a revoked mapping is enabled only when no core caches a translation of the
   range; the shootdown (send, handler on every existing core, acknowledgement) is the protocol that makes it
   true (`FlushProtokoll`, which names every existing core), never a side effect of the release. No step
-  of `I` or of the implementation may clear another core's cache atomically; `protect` (rights narrowing,
-  which also needs the stale wide-rights cells gone before it completes) and `map` still do in the model
-  (open item P1 of THEOREM-MAP §219).
+  of `I` or of the implementation may clear another core's cache atomically. `protect` (rights narrowing)
+  is staged the same way: its first step narrows the table and records a pending narrowing token without
+  touching any cache, the completion step (`flush` of the token) is enabled only when no cell of the range is
+  wider than the table, and the invariant `TlbRechteGedeckt` says a cached cell grants more than the table
+  only inside a pending narrowing (THEOREM-MAP §219). `map` still clears its range in one step, a no-op by
+  `tlbGedeckt_erreichbar` (open item P1b: drop it).
 - `I` states carry lock owners, the ticket queue and hand-off, so a lock section with several units keeps
   ownership, hand-off and its protected invariant. A wait is enabled exactly when its condition holds. Lock
   acquisition is strong-fair (carried by the language's queue/ticket lock).

@@ -78,14 +78,14 @@ theorem MemFrame.TlbGedeckt.set_fern {frame : MemFrame} {zelle : TlbZelle} {sp :
 
 private theorem bindMarke_erhaelt {frame next : MemFrame} {name : Identifier} {token : Zuruecknahme}
     (h : frame.bindMarke name token = some next) :
-    next.tlb = frame.tlb ∧ next.spaces = frame.spaces := by
+    next.tlb = frame.tlb ∧ next.spaces = frame.spaces ∧ next.verengt = frame.verengt := by
   unfold MemFrame.bindMarke at h
   cases hs : frame.spaces[token.raum]? with
   | none => simp only [hs, Option.bind_eq_bind, Option.bind_none] at h <;> cases h
   | some space =>
     simp only [hs, Option.bind_eq_bind, Option.bind_some] at h
     split at h
-    · exact ⟨by rw [← Option.some.inj h], by rw [← Option.some.inj h]⟩
+    · exact ⟨by rw [← Option.some.inj h], by rw [← Option.some.inj h], by rw [← Option.some.inj h]⟩
     · cases h
 
 theorem tlbGedeckt_tlbFuellen (target : ZielDaten) (core sp page : Nat) (s : MemState) (c : Kontext)
@@ -130,14 +130,16 @@ theorem tlbGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemState) (
 theorem tlbGedeckt_ohne_raeume (target : ZielDaten) (op : MemInstruction) (s : MemState)
     (c : Kontext) {next : MemFrame}
     (keine : ∀ frame : MemFrame, op.evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces)
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt)
     (h : op.evaluate target s c = some next) (inv : (s.lokal c).TlbGedeckt) :
     next.TlbGedeckt :=
-  inv.aus_gleich (keine next h).1 (keine next h).2
+  inv.aus_gleich (keine next h).1 (keine next h).2.1
 
 theorem erhaelt_splitRegion (target : ZielDaten) (slot point : Nat) (s : MemState) (c : Kontext) :
     ∀ frame : MemFrame, (MemInstruction.splitRegion slot point).evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces := by
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt := by
   intro frame h
   simp only [MemInstruction.evaluate] at h
   cases hr : heldMemRegion target s c slot with
@@ -147,12 +149,13 @@ theorem erhaelt_splitRegion (target : ZielDaten) (slot point : Nat) (s : MemStat
     split at h
     · simp only [Option.pure_def, Option.some.injEq] at h
       subst h
-      exact ⟨rfl, rfl⟩
+      exact ⟨rfl, rfl, rfl⟩
     · cases h
 
 theorem erhaelt_splitPages (target : ZielDaten) (slot pages : Nat) (s : MemState) (c : Kontext) :
     ∀ frame : MemFrame, (MemInstruction.splitPages slot pages).evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces := by
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt := by
   intro frame h
   simp only [MemInstruction.evaluate] at h
   cases hr : heldMemRegion target s c slot with
@@ -162,13 +165,14 @@ theorem erhaelt_splitPages (target : ZielDaten) (slot pages : Nat) (s : MemState
     split at h
     · simp only [Option.pure_def, Option.some.injEq] at h
       subst h
-      exact ⟨rfl, rfl⟩
+      exact ⟨rfl, rfl, rfl⟩
     · cases h
 
 theorem erhaelt_mergeRegions (target : ZielDaten) (first second : Nat) (s : MemState)
     (c : Kontext) :
     ∀ frame : MemFrame, (MemInstruction.mergeRegions first second).evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces := by
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt := by
   intro frame h
   simp only [MemInstruction.evaluate] at h
   cases hl : heldMemRegion target s c first with
@@ -181,12 +185,13 @@ theorem erhaelt_mergeRegions (target : ZielDaten) (first second : Nat) (s : MemS
       split at h
       · simp only [Option.pure_def, Option.some.injEq] at h
         subst h
-        exact ⟨rfl, rfl⟩
+        exact ⟨rfl, rfl, rfl⟩
       · cases h
 
 theorem erhaelt_activateSpace (target : ZielDaten) (sp : Nat) (s : MemState) (c : Kontext) :
     ∀ frame : MemFrame, (MemInstruction.activateSpace sp).evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces := by
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt := by
   intro frame h
   simp only [MemInstruction.evaluate] at h
   cases hs : (s.lokal c).spaces[sp]? with
@@ -196,12 +201,13 @@ theorem erhaelt_activateSpace (target : ZielDaten) (sp : Nat) (s : MemState) (c 
     split at h
     · simp only [Option.pure_def, Option.some.injEq] at h
       subst h
-      exact ⟨rfl, rfl⟩
+      exact ⟨rfl, rfl, rfl⟩
     · cases h
 
 theorem erhaelt_bindToken (target : ZielDaten) (name : Identifier) (s : MemState) (c : Kontext) :
     ∀ frame : MemFrame, (MemInstruction.bindToken name).evaluate target s c = some frame →
-      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces := by
+      frame.tlb = (s.lokal c).tlb ∧ frame.spaces = (s.lokal c).spaces ∧
+        frame.verengt = (s.lokal c).verengt := by
   intro frame h
   simp only [MemInstruction.evaluate] at h
   cases hres : (s.lokal c).result with

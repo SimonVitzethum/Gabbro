@@ -89,7 +89,7 @@ theorem tlbGedeckt_protectSpace (target : ZielDaten) (sp virt pages : Nat)
     · simp only [Option.pure_def, Option.some.injEq] at h
       subst h
       intro zelle mem
-      have mem' := (List.mem_filter.mp mem).1
+      have mem' := mem
       obtain ⟨space0, found0, covered0⟩ := inv zelle mem'
       by_cases same : zelle.raum = sp
       · have unique : space0 = space := by
@@ -187,7 +187,7 @@ theorem tlbGedeckt_unmapSpace (target : ZielDaten) (sp virt pages : Nat) (s : Me
             rcases covered0 with ⟨entry, he, hframe⟩ | ⟨token, tmem, own⟩
             · by_cases inside : pageRange (virt / target.seitengranule) pages zelle.seite
               · refine Or.inr ⟨⟨sp, virt / target.seitengranule, pages, space.generation + 1,
-                  first.frame⟩, List.mem_cons_self .., inside, ?_⟩
+                  first.frame, false⟩, List.mem_cons_self .., inside, ?_⟩
                 have idx : ((space.abbildung (virt / target.seitengranule +
                     (zelle.seite - virt / target.seitengranule))).map Seiteneintrag.frame ==
                       some (first.frame + (zelle.seite - virt / target.seitengranule))) = true :=

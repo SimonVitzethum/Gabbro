@@ -15,6 +15,14 @@ Every instruction keeps the invariant, so every machine state a Mem unit reaches
 runs that fill cells at any moment (`tlbFuellen`) and with hardware dropping cells at any moment
 (`TlbGedeckt.verdraengt`). -/
 
+theorem tlbGedeckt_tlbVerdraengen (target : ZielDaten) (core sp page : Nat) (s : MemState)
+    (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.tlbVerdraengen core sp page).evaluate target s c = some next)
+    (inv : (s.lokal c).TlbGedeckt) : next.TlbGedeckt := by
+  simp only [MemInstruction.evaluate, Option.some.injEq] at h
+  subst h
+  exact inv.verdraengt (fun zelle mem => (List.mem_filter.mp mem).1) rfl
+
 theorem tlbGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemState)
     (c : Kontext) {next : MemFrame} (h : op.evaluate target s c = some next)
     (inv : (s.lokal c).TlbGedeckt) : next.TlbGedeckt := by
@@ -36,6 +44,7 @@ theorem tlbGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemS
   | bindToken name =>
     exact tlbGedeckt_ohne_raeume target _ s c (erhaelt_bindToken target name s c) h inv
   | tlbFuellen core space page => exact tlbGedeckt_tlbFuellen target core space page s c h inv
+  | tlbVerdraengen core space page => exact tlbGedeckt_tlbVerdraengen target core space page s c h inv
 
 /-- Every context's frame of a state satisfies the invariant. -/
 def MemState.TlbGedeckt (s : MemState) : Prop := ∀ c, (s.lokal c).TlbGedeckt
