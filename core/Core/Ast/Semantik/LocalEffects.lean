@@ -87,9 +87,9 @@ theorem assignment_effect (ref : Local scope (.int lo hi)) (visible : ref.visibl
       cases b
     simp [List.getElem?_set, hlt]
   · intro i different
-    simp [List.getElem?_set, different]
-  · rfl
-  · rfl
+    simp [List.getElem?_set, different, Ne.symm different]
+  · trivial
+  · trivial
 
 -- Mirror Quellform.realisiert's instruction lookup, using wertIn_widen to establish a return.
 theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zustand)
@@ -119,7 +119,6 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
           some ⟨target, widened⟩ := by
         simp only [Function.update_self, Befehl.auswerten, typed]
       rw [hret]
-      rfl
 
 -- Mirror the pc equality of expr_ergebnis_typ and split on the actual Boolean input.
 theorem branch_effect (frame : Rahmen) (bit : Bool)
