@@ -118,7 +118,6 @@ public import Core.Ziel.Korrektheit.Maschine
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Alle
-public import Core.Ziel.Korrektheit.Probe
 meta import Core.Waechter.Check
 
 #check_core

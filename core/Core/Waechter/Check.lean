@@ -335,7 +335,7 @@ elab "#check_core" : command => do
     let binder ← withoutModifyingState binderTask.get
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
-      logInfo m!"statement findings ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"
+      logError m!"statement findings (diagnostic run) ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
     return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors

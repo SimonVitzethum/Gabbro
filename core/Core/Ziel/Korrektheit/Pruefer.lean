@@ -126,13 +126,6 @@ def PrueferNichtTrivialAussage (C : Pruefer) : Prop :=
     (∃ P t, C.pruefe P t = true)
   ∧ (∃ P t, C.fragment P t = true ∧ C.pruefe P t = false ∧ ¬ Annahme.Akzeptiert (einheitVon P t))
 
-/-- The checker's fragment reaches every language form: for every form of the inventory there is a unit of the
-fragment that contains it and that the checker accepts (`kommtVor t f` is the registry's evidence that the
-source tree `t` contains form `f`; it is supplied by the registry, see `Instanz.lean`). A checker that accepts only
-the empty program fails this, so the soundness of `pruefe` cannot be met by refusing everything that matters. -/
-def PrueferDecktFormenAussage (C : Pruefer) {Form : Type} (kommtVor : Ast.Unit → Form → Prop) : Prop :=
-  ∀ f : Form, ∃ P t, C.fragment P t = true ∧ C.pruefe P t = true ∧ kommtVor t f
-
 /-- The checked remainder: outside its fragment no checker is complete. This is the undecidability of
 `Akzeptiert` as a whole, stated through the existing Rice transfer: every extensional, non-trivial property of
 simulated programs — functional correctness among them — is undecidable (`RiceAussage`), so everything outside

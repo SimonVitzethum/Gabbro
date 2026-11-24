@@ -129,3 +129,16 @@ def LinkerNichtTrivialAussage (L : LinkSchnittstelle) : Prop :=
       ∀ t ∈ L.teile b, Annahme.Akzeptiert (einheitVon P t))
 
 end Gabbro.Core.Ziel.Korrektheit
+
+namespace Gabbro.Core.Ziel.Korrektheit
+
+/-- THE CHECKER'S FRAGMENT REACHES EVERY LANGUAGE FORM: for every form of the registry there is a source unit of
+the fragment that contains it (the registry's evidence `B.enthaelt` for some text that parses to the unit) and that
+the checker accepts. A checker that accepts only the empty program fails this, so the soundness of `pruefe` cannot
+be met by refusing everything that matters. Open: the registry evidence and a checker (M5, M6). -/
+def PrueferDecktFormenAussage (C : Pruefer) (B : FormBeleg) : Prop :=
+  ∀ f : B.Form, ∃ (P : Katalog.Plattform) (t : Ast.Unit) (a : Text.RawText),
+    C.fragment P t = true ∧ C.pruefe P t = true ∧
+    Ast.Parse (category := Ast.Category.unit) a t ∧ B.enthaelt a f
+
+end Gabbro.Core.Ziel.Korrektheit

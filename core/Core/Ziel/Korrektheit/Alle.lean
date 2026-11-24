@@ -20,13 +20,12 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core
 
 def KorrektheitAussagen : Prop :=
-  ∀ (P : Katalog.Plattform) (B : FormBeleg) (C : Pruefer) (π : Parser) (L : LinkSchnittstelle)
-    (Form : Type) (vorkommen : Ast.Unit → Form → Prop),
+  ∀ (P : Katalog.Plattform) (B : FormBeleg) (C : Pruefer) (π : Parser) (L : LinkSchnittstelle),
     PrueferLokalKorrektAussage C ∧ PrueferLokalVollstaendigAussage C ∧
     PrueferKlauselnKorrektAussage C ∧ PrueferKlauselnVollstaendigAussage C ∧
     PrueferWaechterKorrektAussage C ∧ PrueferWaechterVollstaendigAussage C ∧
     PrueferKorrektAussage C ∧ PrueferVollstaendigAussage C ∧ PrueferNichtTrivialAussage C ∧
-    PrueferDecktFormenAussage C vorkommen ∧ PrueferRestUnentscheidbarAussage ∧
+    PrueferDecktFormenAussage C B ∧ PrueferRestUnentscheidbarAussage ∧
     ParseDruckAussage ∧ ParseEindeutigAussage ∧ ElabKorrektAussage P ∧ BezeichnetFunktionalAussage P ∧
     TextWohlgeformtAussage P ∧ RealisiertAlleFormenAussage ∧ ParserKorrektAussage π ∧
     GraphmaschineAequivalentAussage ∧ KohaerenzKatalogAussage ∧ RmwNichtDoppeltAussage ∧
