@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.ExpressionSuffix
+public import Core.Ast.Expression.Suffix
 
 @[expose] public section
 
@@ -88,13 +88,14 @@ theorem AtomReads.variable_inversion (ordinary : ordinaryAtomWord word)
     injection head with spelling
     have same := Local.nameVisible_unique localRef ref.schema localVisible.2 ref.visible
       (localSpelling.trans (spelling.trans ref.spelled.symm))
-    exact (congrArg Sigma.fst same ▸ localVisible.1 : False).elim
+    exact (Eq.mp (congrArg Ty.valueBinding (congrArg Sigma.fst same)) localVisible.1 : False).elim
   | variantValue ref label index written nameOrdinary available payload payloadRead =>
     injection head with spelling
     exact (available.2 _ (Local.binding_mem localRef) (localSpelling.trans spelling)).elim
   | textLength _ =>
     have spelling : word = "lenof".toList := Token.word.inj head
     exact (ordinary.2.2.1 spelling).elim
+  | _ => cases head
 
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
@@ -143,23 +144,26 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
     (motive_4 := fun close input _ items rest _ =>
       ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
-        ItemsRead scope close input b rest' → HEq items b ∧ rest = rest')
+        ItemsRead scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
     (motive_5 := fun close input _ items rest _ =>
       ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
-        ItemsTail scope close input b rest' → HEq items b ∧ rest = rest')
+        ItemsTail scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
     (motive_6 := fun input _ _ items rest _ =>
       ∀ {labels types} {b : LabeledItems scope labels types} {rest'},
-        LabeledItemsRead scope input b rest' → HEq items b ∧ rest = rest')
+        LabeledItemsRead scope input b rest' → ((⟨_, _, items⟩ : Σ ls ts, LabeledItems scope ls ts) = ⟨_, _, b⟩) ∧ rest = rest')
     (motive_7 := fun input _ _ items rest _ =>
       ∀ {labels types} {b : LabeledItems scope labels types} {rest'},
-        LabeledItemsTail scope input b rest' → HEq items b ∧ rest = rest')
+        LabeledItemsTail scope input b rest' → ((⟨_, _, items⟩ : Σ ls ts, LabeledItems scope ls ts) = ⟨_, _, b⟩) ∧ rest = rest')
     (motive_8 := fun input _ payload rest _ =>
       ∀ {type} {b : CasePayload scope type} {rest'},
-        CasePayloadRead scope input b rest' → HEq payload b ∧ rest = rest')
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
+        CasePayloadRead scope input b rest' → ((⟨_, payload⟩ : Σ t, CasePayload scope t) = ⟨_, b⟩) ∧ rest = rest')
+    ?atom ?lit ?grouped ?trueLit ?falseLit ?«variable» ?negativeLit ?neg ?not
+    ?arrayValue ?tupleValue ?recordValue ?variantValue ?textLiteral ?textLength
+    ?stop ?binary ?div ?compare ?logic ?arrayIndex ?tupleField ?recordField
+    ?textConcat ?textIndex ?substring ?optionIsSome
+    ?itemsClose ?itemsNext ?itemsTailClose ?itemsTailComma
+    ?labeledClose ?labeledNext ?labeledTailClose ?labeledTailComma
+    ?payloadBare ?payloadEmpty ?payloadValue left
   case atom =>
     intros
     rename_i input firstType first more minimum treeType tree rest atomRead tailRead atomDet tailDet otherType b rest' otherRead
@@ -293,4 +297,6 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
+  all_goals intros
+
 end Gabbro.Core.Ast

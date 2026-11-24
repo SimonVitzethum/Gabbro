@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.ExpressionGrammar
+public import Core.Ast.Expression.Grammar
 
 @[expose] public section
 
