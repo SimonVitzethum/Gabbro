@@ -142,8 +142,8 @@ private theorem jumpLongMeaning : JumpLongMeaningAussage := by
                     cases heval
                     have hcond' := hcond
                     simp only [Bool.and_eq_true] at hcond'
-                    refine ⟨cur, decl, hcur, bne_iff_ne.mp hcond'.1, hdst,
-                      jumpLongNotHalted hcond'.2.1, rfl, rfl, rfl, ?_, ?_⟩
+                    refine ⟨cur, decl, rfl, bne_iff_ne.mp hcond'.1.1, rfl,
+                      jumpLongNotHalted hcond'.1.2, rfl, rfl, rfl, ?_, ?_⟩
                     · intro hon
                       rw [htr] at hon
                       cases hon
@@ -165,8 +165,8 @@ private theorem jumpLongMeaning : JumpLongMeaningAussage := by
                     cases heval
                     have hcond' := hcond
                     simp only [Bool.and_eq_true] at hcond'
-                    refine ⟨cur, decl, hcur, bne_iff_ne.mp hcond'.1, hdst,
-                      jumpLongNotHalted hcond'.2.1, rfl, rfl, rfl, ?_, ?_⟩
+                    refine ⟨cur, decl, rfl, bne_iff_ne.mp hcond'.1.1.1, rfl,
+                      jumpLongNotHalted hcond'.1.1.2, rfl, rfl, rfl, ?_, ?_⟩
                     · intro _hon
                       exact ⟨id, rfl⟩
                     · intro hoff
@@ -425,17 +425,18 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.bind_some]
     rw [hs2halted, hs2stapel, hs2spaces]
     try dsimp [jlSecondDecl]
-    rw [if_pos hcond]
+    simp only [Bool.true_and, Bool.not_false, stackOk, spaceOk, List.length_cons,
+      List.length_nil, Nat.reduceLT, decide_true, if_true]
     dsimp [next]
   have hhead0 : E.system.kopf s0 entryContext = some (.declareState jlFirstDecl) := by
     change execHead (pre ++ [op]) s0 entryContext = some (.declareState jlFirstDecl)
-    simp [execHead, hs0status, hs0lokal, heval0]
+    simp [execHead, hs0status, hs0lokal, pre, List.getElem?_cons_zero, heval0]
   have hhead1 : E.system.kopf s1 entryContext = some (.declareState jlSecondDecl) := by
     change execHead (pre ++ [op]) s1 entryContext = some (.declareState jlSecondDecl)
-    simp [execHead, hs1status, hs1pc, heval1]
+    simp [execHead, hs1status, hs1pc, pre, List.getElem?_cons_succ, List.getElem?_cons_zero, heval1]
   have hhead2 : E.system.kopf s2 entryContext = some op := by
     change execHead (pre ++ [op]) s2 entryContext = some op
-    simp [execHead, hs2status, hs2pc, heval]
+    simp [execHead, hs2status, hs2pc, pre, List.getElem?_cons_succ, List.getElem?_cons_zero, heval]
   have hstep0 : (ExecInstruction.rule (.declareState jlFirstDecl)).ideal entryContext s0 ()
       [plan] (frame1.advance entryContext s0) := by
     exact ⟨frame1, heval0, rfl, rfl⟩
