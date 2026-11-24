@@ -87,27 +87,24 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     (arms : VariantArms result scope allowed labels payloads) (more : List Token) :
     VariantArmsRead result scope allowed
       (arms.printPieces.map PrintedToken.value ++ closeBrace :: more) arms more := by
-  let rec go {res : Option (Ty .value)} {s : Scope} {a : Bool} {l : List Identifier}
-      {p : List (Option (Ty .value))} (ar : VariantArms res s a l p) (rest : List Token) :
-      VariantArmsRead res s a (ar.printPieces.map PrintedToken.value ++ closeBrace :: rest) ar rest := by
-    cases ar with
-    | done =>
-        simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
-        exact .done
-    | nullary label caseName body tail =>
-        simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
-          (.nullary label caseName
-            (BracedBlock.printReads body (tail.printPieces.map PrintedToken.value ++ closeBrace :: rest))
-            (go tail rest))
-    | payload label binder ord body tail =>
-        simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
-          (.payload label binder ord body
-            (BracedBlock.printReads body (tail.printPieces.map PrintedToken.value ++ closeBrace :: rest))
-            (go tail rest))
-    | wildcard body nonempty shape =>
-        simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
-          (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: rest)))
-  exact go arms more
+  refine @Gabbro.Core.Ast.VariantArms.rec result
+    (fun s a l p ar => VariantArmsRead result s a
+      (ar.printPieces.map PrintedToken.value ++ closeBrace :: more) ar more)
+    ?_ ?_ ?_ ?_ scope allowed labels payloads arms
+  · intro s a
+    simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
+    exact .done
+  · intro s a l p label caseName body rest ih
+    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+      (.nullary label caseName
+        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih)
+  · intro s a l p label binder ord body rest ih
+    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow] using
+      (.payload label binder ord body
+        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih)
+  · intro s l p body nonempty shape
+    simpa [VariantArms.printPieces, Identifier.print, printMatchArrow, matchArrow, discardName] using
+      (.wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more)))
 
 private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
     (optionMatchForm ctx).produktion.production a
@@ -123,7 +120,8 @@ private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
       (openBrace :: a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace]),
     a.val.arms.printPieces.map PrintedToken.value ++ [closeBrace], ?_, ?_, ?_⟩
   · simp [printMatch, printProgramWord, keywordName, Identifier.print, keyword,
-      Expr.printTokens, printOpenBrace, printCloseBrace]
+      Expr.printTokens, printOpenBrace, printCloseBrace, printPunctuation,
+      PrintedToken.unquoted, openBrace, closeBrace]
   · exact Expr.printReads a.val.value noOperatorAtOpenBrace
   · exact om_arms_printReads a.val.arms []
 
