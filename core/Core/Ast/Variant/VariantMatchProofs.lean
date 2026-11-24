@@ -261,7 +261,8 @@ theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage :
   intro ctx args text pieces lexed production
   apply (Gabbro.Core.Ast.Category.statement ctx.1 ctx.2).syntax.parse_iff.mpr
   refine ⟨pieces, lexed, ?_⟩
-  rcases production with ⟨input, arms, rfl, valueRead, armsRead⟩
+  rcases production with ⟨input, arms, same, valueRead, armsRead⟩
+  rw [same]
   exact .variantMatch valueRead armsRead
 
 end Gabbro.Core.Ast.Semantik

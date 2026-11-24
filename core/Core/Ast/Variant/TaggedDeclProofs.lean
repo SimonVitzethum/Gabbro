@@ -106,7 +106,8 @@ theorem taggedDecl_parse : Gabbro.Core.Ast.Semantik.TaggedDeclParseAussage := by
   intro scope args text pieces lexed production
   apply (Gabbro.Core.Ast.Category.declaration scope).syntax.parse_iff.mpr
   refine ⟨pieces, lexed, ?_⟩
-  rcases production with ⟨input, more, rfl, firstRead, tailRead⟩
+  rcases production with ⟨input, more, same, firstRead, tailRead⟩
+  rw [same]
   exact .tagged args.exported args.name args.valid args.distinct firstRead tailRead
 
 end Gabbro.Core.Ast.Semantik
