@@ -83,9 +83,7 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
   have executed := regionUnit_realized.2.2.2 .x86_64 a s rfl rfl rfl rfl
   let next := (regionUnitForm.befehl a).nach eintritt s
   have transfer := regionUnit_transfer init (s.lokal eintritt) 0
-    (fun slot => eintritt == Kontext.faden 0 && s.rechte.lebt slot && s.rechte.gen slot == 0 &&
-      (match s.leihen slot with | .eigen => true | .verliehen _ => false))
-    0 entryExtent ⟨init.type, value⟩ rfl rfl rfl rfl yields
+    (s.regionLive eintritt) 0 entryExtent ⟨init.type, value⟩ rfl rfl rfl rfl yields
   have frame : next.lokal eintritt =
       { s.lokal eintritt with
         pc := (s.lokal eintritt).pc + 1

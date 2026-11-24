@@ -76,7 +76,8 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   let f₆ : Rahmen := { f₃ with pc := 7 }
   have returned : ret.auswerten f₅ = f₆ := rfl
   have nextFrame {s : Zustand} {b : Befehl} {before after : Rahmen}
-      (localEq : s.lokal eintritt = before) (transfer : b.auswerten before = after) :
+      (localEq : s.lokal eintritt = before)
+      (transfer : b.auswerten before (s.regionLive eintritt) = after) :
       (b.nach eintritt s).lokal eintritt = after := by
     simp only [Befehl.nach, Function.update_self, localEq, transfer]
   have local₀ : s₀.lokal eintritt = f₀ := rfl

@@ -288,10 +288,12 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
+def Zustand.regionLive (s : Zustand) (c : Kontext) (slot : Nat) : Bool :=
+  c == Kontext.faden 0 && s.rechte.lebt slot && s.rechte.gen slot == 0 &&
+    (match s.leihen slot with | .eigen => true | .verliehen _device => false)
+
 def Befehl.nach (b : Befehl) (c : Kontext) (s : Zustand) : Zustand :=
-  let live := fun slot => c == Kontext.faden 0 && s.rechte.lebt slot &&
-    s.rechte.gen slot == 0 && (match s.leihen slot with | .eigen => true | .verliehen _device => false)
-  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) live) }
+  { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) (s.regionLive c)) }
 
 /-- The context-local transition used by the ideal rule. -/
 def Befehl.ideal (b : Befehl) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
