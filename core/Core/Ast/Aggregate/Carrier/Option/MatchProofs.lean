@@ -40,7 +40,7 @@ private theorem om_amOrt (ctx : OptionContext) : (optionMatchForm ctx).RegelAmOr
     omega
   rw [List.getElem?_append_left hlt]
   rw [List.getElem?_append_right (Nat.le_refl _)]
-  rfl
+  simp only [Nat.sub_self, List.getElem?_cons_zero]
 
 private theorem om_arms_inv (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
@@ -66,13 +66,13 @@ private theorem om_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     match ar with
     | .done => rfl
     | .nullary _ _ body rest => by
-        simp only [variantArms, MatchCode.prepend, if_false, if_true, Fragment.anhaengen,
-          Fragment.einzel, bracedInv, go rest, Quellklauseln.anhaengen, Quellklauseln.leer,
-          List.append_nil, List.nil_append]
+        simp only [variantArms, MatchCode.prepend, Bool.false_eq_true, Bool.true_eq_false,
+          eq_self_iff_true, if_false, if_true, Fragment.anhaengen, Fragment.einzel, bracedInv,
+          go rest, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     | .payload _ _ _ body rest => by
-        simp only [variantArms, MatchCode.prepend, if_false, if_true, Fragment.anhaengen,
-          Fragment.einzel, bracedInv, go rest, Quellklauseln.anhaengen, Quellklauseln.leer,
-          List.append_nil, List.nil_append]
+        simp only [variantArms, MatchCode.prepend, Bool.false_eq_true, Bool.true_eq_false,
+          eq_self_iff_true, if_false, if_true, Fragment.anhaengen, Fragment.einzel, bracedInv,
+          go rest, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     | .wildcard body _ _ => by
         simp only [variantArms, bracedInv, Quellklauseln.leer]
   exact go arms
