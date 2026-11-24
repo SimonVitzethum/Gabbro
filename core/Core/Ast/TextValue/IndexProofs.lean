@@ -209,17 +209,12 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     rw [htext, hzahl]
     rfl
   · intro byte nonneg hbyte
-    rw [Befehl.auswerten]
-    rw [htext, hzahl]
-    rw [if_neg (not_lt_of_ge nonneg)]
-    simpa only [hbyte, Rahmen.schreibe, Function.update_self]
+    have hnonneg' : ¬ index.zahl.wert < 0 := not_lt_of_ge nonneg
+    simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Rahmen.schreibe,
+      Function.update_self]
   · intro hfail
     rcases hfail with hneg | hge
-    · rw [Befehl.auswerten]
-      dsimp only
-      rw [htext, hzahl]
-      rw [if_pos hneg]
-      simpa only [Rahmen.halt]
+    · simpa only [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt]
     · have hnonneg : 0 ≤ index.zahl.wert := by omega
       have hge' : (text.bytes.size : Int) ≤ (index.zahl.wert.toNat : Int) := by
         rw [Int.toNat_of_nonneg hnonneg]
@@ -228,11 +223,8 @@ theorem textIndexBytes : TextIndexBytesAussage := by
       have hout : text.bytes[index.zahl.wert.toNat]? = none := by
         simp only [getElem?_eq_none_iff]
         exact not_lt_of_ge hnat
-      rw [Befehl.auswerten]
-      rw [htext, hzahl]
-      rw [if_neg (not_lt_of_ge hnonneg)]
-      rw [hout]
-      simpa only [Rahmen.halt]
+      have hnonneg' : ¬ index.zahl.wert < 0 := not_lt_of_ge hnonneg
+      simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hout, Rahmen.halt]
 
 theorem textIndexParse : TextIndexParseAussage := by
   intro scope args text pieces lexed production
@@ -338,10 +330,8 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have hbyte0 : text.bytes[0]? = some byte := by simpa using hbyte
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
-    rw [Befehl.auswerten]
-    rw [htext, hzahl]
-    rw [if_neg (by omega : ¬ (0 : Int) < 0)]
-    simpa only [hbyte]
+    have hnonneg' : ¬ (0 : Int) < 0 := by omega
+    simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Zahl.literal]
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
     simp only [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
       startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten,
