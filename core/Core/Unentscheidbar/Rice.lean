@@ -31,7 +31,7 @@ theorem substrat_rice (s : SimulationsSubstrat) (Q : List Befehl → Prop)
   have hbeh : ∀ c₁ c₂, eval c₁ = eval c₂ →
       GleichVerhalten s (s.programm c₁) (s.programm c₂) := by
     intro c₁ c₂ h n a
-    rw [s.treue c₁ n a, s.treue c₂ n a, h]
+    rw [← s.treue c₁ n a, ← s.treue c₂ n a, h]
   let C : Set Nat.Partrec.Code := {c | Q (s.programm c)}
   have hCext : ∀ cf cg, eval cf = eval cg → (cf ∈ C ↔ cg ∈ C) :=
     fun c₁ c₂ h => hext _ _ (hbeh c₁ c₂ h)
