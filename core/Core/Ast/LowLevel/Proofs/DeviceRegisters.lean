@@ -25,7 +25,7 @@ theorem register_befugt : RegisterBefugtAussage := by
 /-- The form uses the actual M5 local predicate at its composed issue and reply steps. -/
 def RegisterAussenLokalAussage : Prop :=
   ∀ k (binding : Binding k) access required target
-    (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit)
+    (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit)
     run t c s middle plan trace next,
     E.katalog = k →
     Rule binding access required target c s plan middle →
@@ -121,7 +121,7 @@ theorem register_fallible : RegisterFallibleAussage := by
     including the recorded question's authority at its issue cut. -/
 def RegisterRegelSicherAussage (kind : RegisterAccess → Prop) : Prop :=
   ∀ k (binding : Binding k) access
-    (E : Sicherheit.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit),
+    (E : Sicherheit.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit),
     kind access → E.invarianten = [] →
     E.maschine.system.regel () = registerRule binding access →
     Sicherheit.RegelSicher E ()
@@ -138,7 +138,7 @@ def RegisterReadElseAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterFallibleAussage ∧
   RegisterRegelSicherAussage (fun access => ∃ offset range, access = .fallibleRead offset range) ∧
-  ∀ (d : Denotation k scope) destination binding offset promise handler,
+  ∀ (k : Katalog) (scope : Scope) (d : Denotation k scope) destination binding offset promise handler,
     d = .fallibleRead destination binding offset promise handler →
     (∀ err, d.resume (.refused err) = .branch handler) ∧
     ∀ value, d.resume (.readOutOfRange value) = .branch handler
