@@ -182,7 +182,7 @@ theorem Expr.printTokens_binary (op : Arith) (left : Expr scope (.int lo₁ hi�
     (right : Expr scope (.int lo₂ hi₂)) :
     (Expr.binary op left right).printTokens =
       [openParen] ++ left.printTokens ++ [op.token] ++ right.printTokens ++ [closeParen] := by
-  simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+  simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
     Arith.print_value]
   rfl
 
@@ -195,7 +195,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     exact .lit
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
     apply ExprReads.atom (leftIH (op.token :: right.printTokens ++ closeParen :: rest))
     exact .binary op (Nat.zero_le _) (.atom (rightIH (closeParen :: rest))
@@ -217,7 +217,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
         constructor <;> intro h <;> cases h
       · intro n tail h
         cases h
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
     exact .neg start (.grouped (ExprReads.atom (operandIH (closeParen :: rest))
       (.stop noOperatorAtClose)))
@@ -226,7 +226,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     have primary : PrimaryStart (openParen :: operand.printTokens ++ closeParen :: rest) := by
       intro tail
       constructor <;> intro h <;> cases h
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
     exact .not primary (.grouped (ExprReads.atom (operandIH (closeParen :: rest))
       (.stop noOperatorAtClose)))
@@ -240,7 +240,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
       (.stop noOperatorAtClose)) nonzero (.stop noOperatorAtClose)
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
     apply .grouped
     apply ExprReads.atom (leftIH ((Infix.compare op).token :: right.printTokens ++ closeParen :: rest))
@@ -250,7 +250,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     cases h
   · intro rest
     rename_i op left right leftIH rightIH
-    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+    simp only [Expr.printTokens, Expr.printPieces, printOpen, printClose, printPunctuation, Arith.print_value, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc]
     apply .grouped
     apply ExprReads.atom (leftIH ((Infix.logic op).token :: right.printTokens ++ closeParen :: rest))
