@@ -78,8 +78,8 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
         Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc]
       exact .ite (condExpr.printReads noOperatorAtOpenBrace)
-        (.braced (yesBody.printItems_reads (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest)))
-        (.braced (noBody.printItems_reads rest))
+        (ihYes (elseKeyword :: noBody.printItems.map PrintedToken.value ++ rest))
+        (ihNo rest)
   · intros
     rename_i rest
     exact .done
