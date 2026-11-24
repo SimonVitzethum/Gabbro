@@ -12,6 +12,16 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ast.Ty, 12782873945396265670),
+  (`Gabbro.Core.Ast.Local, 3790732133586003643),
+  (`Gabbro.Core.Ast.Expr, 9528347216282307943),
+  (`Gabbro.Core.Ast.Stmt, 5262650281051958971),
+  (`Gabbro.Core.Ast.Block, 554026736110315180),
+  (`Gabbro.Core.Ast.Decl, 7135683955101088422),
+  (`Gabbro.Core.Ast.UnitBody, 12910938552000479105),
+  (`Gabbro.Core.Ast.Unit, 8561659821477951161),
+  (`Gabbro.Core.Ast.Parse, 8123111766180667519),
+  (`Gabbro.Core.Ast.Bezeichnet, 8004809954632527252),
   (`Gabbro.Core.Ziel.Rahmen, 11884202126975013255),
   (`Gabbro.Core.Ziel.NichtLeer, 3734935478639616152),
   (`Gabbro.Core.Ziel.Verfeinert, 6262184474930089844),

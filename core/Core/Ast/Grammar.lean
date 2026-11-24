@@ -1,0 +1,96 @@
+module
+
+public import Core.Ast.Block
+public import Core.Ast.Unit
+public import Core.Text.Syntax
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast
+
+open Gabbro.Core.Text
+
+/-- A fragment entry point fixes the incoming scope and any expected type.
+    A source unit begins with an empty scope. -/
+inductive Category where
+  | expression (scope : Scope) (type : Ty .value)
+  | statement (scope : Scope)
+  | block (scope : Scope)
+  | unit
+
+def Category.Tree : Category → Type
+  | .expression scope type => Expr scope type
+  | .statement scope => Statement scope
+  | .block scope => Statements scope
+  | .unit => Ast.Unit
+
+def Category.reads : (category : Category) → List Token → category.Tree → Prop
+  | .expression scope _ => fun tokens tree => ExprReads scope 0 tokens tree []
+  | .statement scope => fun tokens tree => StmtReads scope tokens tree []
+  | .block scope => fun tokens tree => BlockReads scope tokens tree []
+  | .unit => fun tokens tree => UnitReads [] tokens tree
+
+def Category.printPieces : (category : Category) → category.Tree → List PrintedToken
+  | .expression _ _ => Expr.printPieces
+  | .statement _ => fun tree => tree.2.printPieces
+  | .block _ => fun tree => tree.2.printPieces
+  | .unit => fun tree => tree.2.printPieces
+
+theorem Category.unique (category : Category) {tokens : List Token} {a b : category.Tree}
+    (left : category.reads tokens a) (right : category.reads tokens b) : a = b := by
+  cases category with
+  | expression => exact (ExprReads.deterministic left right).1
+  | statement => exact (StmtReads.deterministic left right).1
+  | block => exact (BlockReads.deterministic left right).1
+  | unit => exact UnitReads.deterministic left right
+
+theorem Category.reads_print (category : Category) (tree : category.Tree) :
+    category.reads ((category.printPieces tree).map PrintedToken.value) tree := by
+  cases category with
+  | expression =>
+    simpa only [Category.printPieces, Category.reads, Expr.printTokens, List.append_nil] using
+      (Expr.printReads (minimum := 0) tree noOperatorAtEnd)
+  | statement =>
+    rcases tree with ⟨after, tree⟩
+    simpa only [Category.printPieces, Category.reads, Stmt.printTokens, List.append_nil] using
+      (Stmt.printReads tree [])
+  | block => exact Block.printReads tree.2
+  | unit => exact UnitBody.printReads tree.2
+
+def Category.syntax (category : Category) : Syntax category.Tree where
+  reads := category.reads
+  unique := category.unique
+  printPieces := category.printPieces
+  reads_print := category.reads_print
+
+def Parse {category : Category} (text : RawText) (tree : category.Tree) : Prop :=
+  Text.Parse (tokenGrammar category.reads) text tree
+
+/-- Concrete source rules composed with the elaboration relation supplied by M6. -/
+def Bezeichnet {category : Category} (elaborates : category.Tree → Meaning → Prop) :
+    RawText → Meaning → Prop := Text.Bezeichnet (tokenGrammar category.reads) elaborates
+
+def print {category : Category} (tree : category.Tree) : RawText := category.syntax.print tree
+
+def Canonicalisation (category : Category) : RawText → RawText → Prop :=
+  category.syntax.Canonicalisation
+
+theorem parse_print {category : Category} (tree : category.Tree) :
+    Parse (print tree) tree :=
+  category.syntax.parse_print tree
+
+theorem parse_deterministic {category : Category} {text : RawText} {a b : category.Tree} :
+    Parse text a → Parse text b → a = b :=
+  category.syntax.parse_deterministic
+
+theorem bezeichnet_deterministic {category : Category}
+    {elaborates : category.Tree → Meaning → Prop}
+    (elabDet : ∀ {tree a b}, elaborates tree a → elaborates tree b → a = b)
+    (left : Bezeichnet elaborates text a) (right : Bezeichnet elaborates text b) : a = b :=
+  category.syntax.bezeichnet_deterministic (elaborates := elaborates) elabDet left right
+
+theorem print_parse {category : Category} {text : RawText} {tree : category.Tree} :
+    Parse text tree → Canonicalisation category text (print tree) :=
+  category.syntax.print_parse
+
+end Gabbro.Core.Ast

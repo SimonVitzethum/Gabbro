@@ -90,4 +90,15 @@ theorem Syntax.bezeichnet_deterministic (rules : Syntax Tree)
   obtain rfl := rules.parse_deterministic parsed parsed'
   exact elabDet elaborated elaborated'
 
+/-- At every production boundary the consumed prefix and remaining suffix
+    lift back to the exact located terminals of the source. -/
+theorem locatedSplit {input : List LocatedToken} {taken rest : List Token}
+    (aligned : input.map LocatedToken.value = taken ++ rest) :
+    ∃ consumed remaining : List LocatedToken,
+      input = consumed ++ remaining ∧ consumed.map LocatedToken.value = taken ∧
+      remaining.map LocatedToken.value = rest := by
+  refine ⟨input.take taken.length, input.drop taken.length, (List.take_append_drop _ _).symm, ?_, ?_⟩
+  · rw [List.map_take, aligned, List.take_left]
+  · rw [List.map_drop, aligned, List.drop_left]
+
 end Gabbro.Core.Text
