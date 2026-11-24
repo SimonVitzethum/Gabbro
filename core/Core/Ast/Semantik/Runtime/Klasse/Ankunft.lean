@@ -26,7 +26,7 @@ def AnkunftUnveraendertAussage : Prop :=
   ∀ (b : Befehl) (frame : Rahmen) (live : Nat → Bool),
     (b.auswerten frame live).arrivalRegions = frame.arrivalRegions
 
-private theorem id_pure_arrival (frame : Rahmen) : (pure frame).arrivalRegions =
+private theorem id_pure_arrival (frame : Rahmen) : (pure frame : Rahmen).arrivalRegions =
     frame.arrivalRegions := rfl
 
 /-- A successful entry keeps the grant of the caller's frame: both arms of
@@ -81,6 +81,7 @@ private theorem ankuenftsReceiver (regions : List Katalog.Strecke) :
     (ankuenftsRahmen regions).lokale[0]?.join.bind (wertAls .ownedRegion) = some (0 : Nat) := by
   simp only [ankuenftsRahmen, List.getElem?_cons_zero, Option.join, Option.bind_some, id_eq,
     wertAls, dif_pos rfl, dif_pos True.intro]
+  rfl
 
 private theorem ankuenftsUnborrowed (regions : List Katalog.Strecke) :
     (ankuenftsRahmen regions).borrowsRegion 0 = false := by
@@ -110,9 +111,12 @@ theorem ankunft_wird_gelesen :
       List.getElem?_cons_zero, ankuenftsUnborrowed, Bool.not_true, Bool.false_or,
       Bool.false_eq_true, ite_false, hvalue]
     rfl
-  have refused : (Befehl.bindeRegion 0 .address).auswerten (ankuenftsRahmen []) (fun _ => true) =
-      (ankuenftsRahmen []).halt Abschluss.ungueltigerBereich := by
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsReceiver,
+  have refused : (Befehl.bindeRegion 0 .address).auswerten
+        { frame with arrivalRegions := [] } (fun _ => true) =
+      ({ frame with arrivalRegions := [] } : Rahmen).halt Abschluss.ungueltigerBereich := by
+    change (Befehl.bindeRegion 0 .address).auswerten (ankuenftsRahmen []) (fun _ => true) =
+      (ankuenftsRahmen []).halt Abschluss.ungueltigerBereich
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsRahmen, ankuenftsReceiver,
       List.getElem?_nil, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
   refine ⟨frame, [], ?_⟩
   intro equal
