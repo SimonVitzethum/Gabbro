@@ -103,11 +103,13 @@ theorem linearisiert_in_I [DecidableEq L] (e : Einrichtung L Ort Wert Raum Lok G
     {vor nach andere : Zustand L Ort Wert Raum Lok Grund → Zustand L Ort Wert Raum Lok Grund → Prop}
     {punkt : Zustand L Ort Wert Raum Lok Grund → SchrittSpur Ort Wert → Zustand L Ort Wert Raum Lok Grund → Prop}
     (comm : Kommutation vor nach andere)
-    (regel : ∀ s spur s', EinheitSchritt vor nach punkt s spur s' → Schritt e Sy k hw t s spur s')
+    (regel : ∀ s spur s', EinheitSchritt vor nach punkt s spur s' →
+      ∃ wahl, Schritt e Sy k hw t s (wahl, spur) s')
     {s l r s' : Zustand L Ort Wert Raum Lok Grund} {spur : SchrittSpur Ort Wert}
     (vorlauf : ReflTransGen (fun a b => vor a b ∨ andere a b) s l)
     (mitte : punkt l spur r) (nachlauf : ReflTransGen (fun a b => nach a b ∨ andere a b) r s') :
-    ∃ a b, ReflTransGen andere s a ∧ Schritt e Sy k hw t a spur b ∧ ReflTransGen andere b s' :=
-  linearisiert comm regel vorlauf mitte nachlauf
+    ∃ a b wahl, ReflTransGen andere s a ∧ Schritt e Sy k hw t a (wahl, spur) b ∧ ReflTransGen andere b s' := by
+  obtain ⟨a, b, left, ⟨wahl, step⟩, right⟩ := linearisiert comm regel vorlauf mitte nachlauf
+  exact ⟨a, b, wahl, left, step, right⟩
 
 end Gabbro.Core.Maschine.I

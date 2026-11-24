@@ -5,3 +5,4 @@
 module
 
 public import Core.Ideal.Eigenschaften
+public import Core.Ideal.Komposition

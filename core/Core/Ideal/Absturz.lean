@@ -39,13 +39,13 @@ theorem absturz_im_lauf {ρ : Maschine.Lauf E} {η : Lauf E} {t : Nat}
     (hw : ρ.hw = η.hw) (offer : AbsturzAngeboten E.katalog ρ.hw t)
     (atCut : ρ.zeit.zustand t = some s) (bezug : AussenBezug s (η.zeit.zustand t))
     (medium : nachAbsturz s.persistenz = nachAbsturz (η.zeit.zustand t).persistenz) :
-    ρ.zeit.spur t = some absturzSpur ∧ η.zeit.spur t = some absturzSpur ∧
+    ρ.zeit.spur t = some absturzSpur ∧ η.zeit.spur t = some (.absturz, absturzSpur) ∧
       ρ.zeit.zustand (t + 1) = some (η.zeit.zustand (t + 1)) := by
   obtain ⟨spur, next, label, state, konkret⟩ := Maschine.absturz_am_schnitt atCut offer
-  obtain ⟨spur', label', ideal⟩ := absturz_am_schnitt E η (hw ▸ offer)
+  obtain ⟨label', ideal⟩ := absturz_am_schnitt E η (hw ▸ offer)
   rw [hw] at konkret
   obtain ⟨_, eq⟩ := absturz_rahmen bezug medium konkret ideal
-  exact ⟨label.trans (congrArg some konkret.genau.1), label'.trans (congrArg some ideal.genau.1),
+  exact ⟨label.trans (congrArg some konkret.genau.1), label',
     state.trans (congrArg some eq)⟩
 
 end Gabbro.Core.Maschine.I

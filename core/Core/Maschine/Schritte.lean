@@ -123,17 +123,18 @@ def FuehrtSchrittAus [DecidableEq L] (t : Nat) (c : Kontext)
 
 /-- An environmental arrival is a separate transition, even while the receiving context is
     preempted or owns a lock. -/
-def AntwortSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat)
+def AntwortSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) (a : AntwortEreignis)
     (s : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert)
     (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ∃ a, s.AntwortAngeboten k run t a ∧ spur.aussen = [.antwort a] ∧
+  s.AntwortAngeboten k run t a ∧ spur.aussen = [.antwort a] ∧
     Speicherfolge s.initial .aussen s.graph [aussenEtikett e (.antwort a)] spur.speicher s'.graph ∧
     s' = { s.antwort a with graph := s'.graph }
 
 /-- Delivery runs on its own opportunity. A pending offer is consumed only when a handler enters. -/
-def UnterbrechungsSchritt (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
+def UnterbrechungsSchritt (run : HwLauf) (t : Nat) (id : Nat × Nat)
+    (s : Zustand L Ort Wert Raum Lok Grund)
     (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ∃ k id irq c nmi,
+  ∃ k irq c nmi,
     (run.angebot t).interrupt k = true ∧ UnterbrechungAusstehend s run t k id irq ∧
     NimmtUnterbrechung (s.kerne k) k (Nat.pair id.1 id.2) irq c nmi ∧ s.status c = .ruht ∧
     spur.aussen = [.interrupt k irq .handler] ∧
@@ -149,23 +150,37 @@ inductive ImplSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
   | kontext {s s' u plan spur c} (keinAbsturz : (run.angebot t).crash = false) (bereit : KannSchreiten run t c s)
       (regel : Sy.ImplSchritt c s [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
       ImplSchritt k run t s spur s'
-  | antwort {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : AntwortSchritt e k run t s spur s') : ImplSchritt k run t s spur s'
-  | interrupt {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : UnterbrechungsSchritt e run t s spur s') : ImplSchritt k run t s spur s'
+  | antwort {s s' spur a} (keinAbsturz : (run.angebot t).crash = false)
+      (h : AntwortSchritt e k run t a s spur s') : ImplSchritt k run t s spur s'
+  | interrupt {s s' spur id} (keinAbsturz : (run.angebot t).crash = false)
+      (h : UnterbrechungsSchritt e run t id s spur s') : ImplSchritt k run t s spur s'
   | absturz {s s' spur} (h : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s') :
       ImplSchritt k run t s spur s'
 
 namespace I
 
+/-- The source of the step and its named choice at the shared machine boundary. -/
+inductive SchrittWahl (Wahl : Type) where
+  | kontext (c : Kontext) (wahl : Wahl)
+  | antwort (a : AntwortEreignis)
+  | interrupt (id : Nat × Nat)
+  | absturz
+
 /-- An ideal step uses the whole unit rule at the same protocol or catalogue boundary. -/
 inductive Schritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
-    Zustand L Ort Wert Raum Lok Grund → SchrittSpur Ort Wert → Zustand L Ort Wert Raum Lok Grund → Prop
+    Zustand L Ort Wert Raum Lok Grund → (SchrittWahl Wahl × SchrittSpur Ort Wert) →
+      Zustand L Ort Wert Raum Lok Grund → Prop
   | kontext {s s' u plan spur c w} (keinAbsturz : (run.angebot t).crash = false) (bereit : KannSchreiten run t c s)
       (regel : Sy.ISchritt c s w [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
-      Schritt k run t s spur s'
-  | antwort {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : AntwortSchritt e k run t s spur s') : Schritt k run t s spur s'
-  | interrupt {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : UnterbrechungsSchritt e run t s spur s') : Schritt k run t s spur s'
+      Schritt k run t s (.kontext c w, spur) s'
+  | antwort {s s' spur a} (keinAbsturz : (run.angebot t).crash = false)
+      (h : AntwortSchritt e k run t a s spur s') :
+      Schritt k run t s (.antwort a, spur) s'
+  | interrupt {s s' spur id} (keinAbsturz : (run.angebot t).crash = false)
+      (h : UnterbrechungsSchritt e run t id s spur s') :
+      Schritt k run t s (.interrupt id, spur) s'
   | absturz {s s' spur} (h : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s') :
-      Schritt k run t s spur s'
+      Schritt k run t s (.absturz, spur) s'
 
 end I
 
@@ -174,20 +189,20 @@ theorem FuehrtSchrittAus.viele {t c s u plan spur s'} (h : FuehrtSchrittAus e t 
   obtain ⟨_, _, _, _, _, append, _⟩ := h
   exact append.viele
 
-theorem AntwortSchritt.viele {k run t s spur s'} (h : AntwortSchritt e k run t s spur s') :
+theorem AntwortSchritt.viele {k run t a s spur s'} (h : AntwortSchritt e k run t a s spur s') :
     s.graph.Viele spur.speicher s'.graph := by
-  obtain ⟨_, _, _, append, _⟩ := h
+  obtain ⟨_, _, append, _⟩ := h
   exact append.viele
 
-theorem AntwortSchritt.ankunft {k run t s spur s'} (h : AntwortSchritt e k run t s spur s') :
-    ∃ a, spur.aussen = [.antwort a] ∧ s'.antworten = s.antworten ++ [a] ∧ s'.verbraucht = s.verbraucht := by
-  obtain ⟨a, _, spurEq, _, stateEq⟩ := h
+theorem AntwortSchritt.ankunft {k run t a s spur s'} (h : AntwortSchritt e k run t a s spur s') :
+    spur.aussen = [.antwort a] ∧ s'.antworten = s.antworten ++ [a] ∧ s'.verbraucht = s.verbraucht := by
+  obtain ⟨_, spurEq, _, stateEq⟩ := h
   rw [stateEq]
-  exact ⟨a, spurEq, rfl, rfl⟩
+  exact ⟨spurEq, rfl, rfl⟩
 
-theorem UnterbrechungsSchritt.viele {run t s spur s'} (h : UnterbrechungsSchritt e run t s spur s') :
+theorem UnterbrechungsSchritt.viele {run t id s spur s'} (h : UnterbrechungsSchritt e run t id s spur s') :
     s.graph.Viele spur.speicher s'.graph := by
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, append, _⟩ := h
+  obtain ⟨_, _, _, _, _, _, _, _, _, append, _⟩ := h
   exact append.viele
 
 theorem impl_speicher_gut {k run t s spur s'} (h : ImplSchritt e Sy k run t s spur s')
@@ -214,11 +229,12 @@ theorem ImplSchritt.absturzfall {k run t s spur s'} (h : ImplSchritt e Sy k run 
   | absturz h => exact h
 
 theorem I.Schritt.absturzfall {k run t s spur s'} (h : I.Schritt e Sy k run t s spur s')
-    (offer : AbsturzAngeboten k run t) : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s' := by
+    (offer : AbsturzAngeboten k run t) :
+    spur.1 = .absturz ∧ AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur.2 s' := by
   cases h with
   | kontext normal _ _ _ | antwort normal _ | interrupt normal _ =>
     exact (Bool.false_ne_true (normal.symm.trans offer.2)).elim
-  | absturz h => exact h
+  | absturz h => exact ⟨rfl, h⟩
 
 theorem warte_genau {t c s u b} :
     FuehrtAus e t c s u (.warte b) [] [] u ↔ e.bedingung s c b :=

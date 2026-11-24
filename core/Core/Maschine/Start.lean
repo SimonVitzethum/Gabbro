@@ -165,11 +165,13 @@ def Laeufe (ρ : Lauf E) : Prop :=
 
 /-- A crash offer is mandatory even at an ideal cut where a private step could normally pause. -/
 theorem absturz_am_schnitt (ρ : Lauf E) {t : Nat} (offer : AbsturzAngeboten E.katalog ρ.hw t) :
-    ∃ spur, ρ.zeit.spur t = some spur ∧
+    ρ.zeit.spur t = some (.absturz, absturzSpur) ∧
       AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf E.katalog ρ.hw t
-        (ρ.zeit.zustand t) spur (ρ.zeit.zustand (t + 1)) := by
+        (ρ.zeit.zustand t) absturzSpur (ρ.zeit.zustand (t + 1)) := by
   cases ρ.zeit.takt t with
-  | schritt label step => exact ⟨_, label, step.absturzfall _ _ offer⟩
+  | schritt label step =>
+    obtain ⟨wahl, crash⟩ := step.absturzfall _ _ offer
+    exact ⟨label.trans (congrArg some (Prod.ext wahl crash.genau.1)), crash.genau.1 ▸ crash⟩
   | wartet _ _ pause => exact (pause offer).elim
 
 theorem anfang (ρ : Lauf E) (h : Laeufe E ρ) :
@@ -196,15 +198,15 @@ theorem absturz_laeufe_erfuellbar {h : Umgebung} {s : AussenStart} {hw : HwLauf}
     (selected : E.katalog.enthaelt .persistence) (loaded : E.laden s (h.lade E.bild) = some z) :
     ∃ ρ : Lauf E, ∃ η : I.Lauf E, Laeufe E h ρ ∧ I.Laeufe E η ∧
       ρ.start = s ∧ η.start = s ∧ ρ.hw = η.hw ∧ FairLaeufe E.katalog h ρ.hw ∧
-      ρ.zeit.spur 0 = some absturzSpur ∧ η.zeit.spur 0 = some absturzSpur := by
+      ρ.zeit.spur 0 = some absturzSpur ∧ η.zeit.spur 0 = some (.absturz, absturzSpur) := by
   obtain ⟨crashHw, fairCrash, offer⟩ := fairer_absturz_erfuellbar fair selected 0
   obtain ⟨ρ, run, startEq, hwEq⟩ := fairer_lauf E start fairCrash
   obtain ⟨η, ideal, startEq', hwEq'⟩ := I.lauf_mit_hw E fairCrash.hardware start fairCrash.konform
   have load : ρ.zeit.zustand 0 = some z := by
     rw [run.2.2.2, startEq, loaded]
   obtain ⟨_, _, label, _, crash⟩ := absturz_am_schnitt load (hwEq.symm ▸ offer)
-  obtain ⟨_, label', crash'⟩ := I.absturz_am_schnitt E η (hwEq'.symm ▸ offer)
+  obtain ⟨label', _⟩ := I.absturz_am_schnitt E η (hwEq'.symm ▸ offer)
   exact ⟨ρ, η, run, ideal, startEq, startEq', hwEq.trans hwEq'.symm, hwEq.symm ▸ fairCrash,
-    label.trans (congrArg some crash.genau.1), label'.trans (congrArg some crash'.genau.1)⟩
+    label.trans (congrArg some crash.genau.1), label'⟩
 
 end Gabbro.Core.Maschine
