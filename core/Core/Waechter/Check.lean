@@ -177,7 +177,10 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Fortschritt.StarvationFrei, 15370919905938327436),
   (`Gabbro.Core.Fortschritt.LockFrei, 2551997228544415486),
   (`Gabbro.Core.Fortschritt.WaitFrei, 807206487104895166),
-  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 9056879346766445553)]
+  (`Gabbro.Core.Fortschritt.KlassenFortschritt, 9056879346766445553),
+  (`Gabbro.Core.Fortschritt.SperrFreigabeAussage, 0),
+  (`Gabbro.Core.Fortschritt.SperrWarteFairAussage, 0),
+  (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 0)]
 
 private meta def safety : Array Name := #[
   `Gabbro.Core.Sicherheit.RegelSicher, `Gabbro.Core.Sicherheit.RegelAntwortSicher,
