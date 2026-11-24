@@ -151,7 +151,15 @@ theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
   let unit : Ast.Unit := ⟨[], .step signature .done⟩
   refine ⟨unit, Ast.print (category := .unit) unit, elaborieren .x86_64 (category := .unit) unit,
     Ast.parse_print _, ⟨rfl, ⟨⟨.nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩⟩, ?_⟩
-  · exact rfl
+  · change (programm unit).code.all (Befehl.platformAllowed .x86_64) = true
+    have code : (programm unit).code =
+        [.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [],
+          .bindeRegion 0 .address, .lesen 0 0, .zurueck 0 (.address .physical),
+          .blockEnde 1, .rueckVoid, .starte mainName, .ende] := rfl
+    rw [code]
+    simp only [List.all_cons, List.all_nil, Befehl.platformAllowed, Option.toList,
+      List.cons_append, List.nil_append, platformType, LowLevel.AddressSpace.width, Option.isSome,
+      Bool.true_and]
   · exact List.mem_cons_self
 
 end Gabbro.Core.Ast.Semantik
