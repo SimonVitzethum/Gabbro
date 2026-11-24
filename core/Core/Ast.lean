@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Grammar
 public import Core.Ast.LowLevel.Mem.Registry
+public import Core.Ast.LowLevel.Proofs.View
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
 public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.Unmap
