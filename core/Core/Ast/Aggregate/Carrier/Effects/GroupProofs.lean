@@ -144,13 +144,14 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       · by_cases ie : item.exported
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
-          have hval := hh'.1
-          have hin := hh'.2
+          have c1 := List.cons.inj hh'
+          have c2 := List.cons.inj c1.2
+          have c3 := List.cons.inj c2.2
+          have c4 := List.cons.inj c3.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
-            first
-            | injection hval with hv; exact hv.symm
-            | injection hval with hv; exact hv
+            exact (Token.word.injEq.mp c3.1).symm
+          have hin : input = input' := c4.2
           refine ⟨item, hnameval, by rw [he, ie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
@@ -164,13 +165,13 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           cases hh'
         · have hh' := hh
           simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, ifTrue, ifFalse, Bool.false_eq_true, Bool.true_eq, keywordName, List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc] at hh'
-          have hval := hh'.1
-          have hin := hh'.2
+          have c1 := List.cons.inj hh'
+          have c2 := List.cons.inj c1.2
+          have c3 := List.cons.inj c2.2
           have hnameval : item.name = head.name := by
             apply Subtype.ext
-            first
-            | injection hval with hv; exact hv.symm
-            | injection hval with hv; exact hv
+            exact (Token.word.injEq.mp c2.1).symm
+          have hin : input = input' := c3.2
           have hhe : head.exported = false := by simpa using he
           have hie : item.exported = false := by simpa using ie
           refine ⟨item, hnameval, by rw [hhe, hie], ?_, ?_⟩
