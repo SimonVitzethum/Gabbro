@@ -232,13 +232,18 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
     (read : AtomReads scope (.word word :: rest) tree suffix) :
     ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
-  exact match read with
-  | .trueLit => (ordinary.1 rfl).elim
-  | .falseLit => (ordinary.2 rfl).elim
-  | .variable (type := _) ref vis ord => ⟨ref, vis, ord, rfl, rfl, rfl⟩
+  cases h : tree with
+  | variable ref vis ord =>
+      have hty : type = ref.binding.type := by
+        cases h
+        rfl
+      cases hty
+      cases read with
+      | trueLit => exact (ordinary.1 rfl).elim
+      | falseLit => exact (ordinary.2 rfl).elim
+      | _ => exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
+  | _ => cases read
 
-
--- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
     tree.typed = (Expr.negativeLit (scope := scope) value).typed ∧ suffix = rest := by
