@@ -75,7 +75,8 @@ theorem optionInitializerPrint : OptionInitializerPrintAussage := by
           PrintedToken.value ++ rest =
         indexSomeName.print.value :: printOpen.value ::
           (operand.printTokens ++ [printClose.value] ++ rest) := by
-        simp [OptionInitializer.printPieces, Expr.printTokens, List.append_assoc]
+        simp only [OptionInitializer.printPieces, Expr.printTokens, List.map_append, List.map_cons,
+          List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
       rw [hprint]
       apply OptionInitializerReads.present fits
       have hc : printClose.value = closeParen := by rfl
@@ -95,9 +96,11 @@ private theorem wertAls_indexPresent {count : Nat} {lo hi : Int}
 theorem optionAbsent : OptionAbsentAussage := by
   intro scope count slot frame
   dsimp
-  simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
+  simp only [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, indexType,
-    indexSomeName, indexNoneName, List.map]
+    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get_cons_succ,
+    List.get_cons_zero, List.getElem?_cons_zero, List.cons_append, List.nil_append,
+    List.append_nil, Function.update_same, Option.bind_some]
   change some (⟨indexOptionType count, Sum.inr (Sum.inl PUnit.unit)⟩ : Dynamisch) =
     some ⟨indexOptionType count, (Sum.inr (Sum.inl PUnit.unit) : Wert (indexOptionType count))⟩
   rfl
@@ -106,9 +109,11 @@ theorem optionPresent : OptionPresentAussage := by
   intro scope count lo hi slot operand fits frame value htemp
   dsimp
   have hw := wertAls_indexPresent fits value
-  simp [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
+  simp only [optionInstruction, Befehl.auswerten, Rahmen.schreibe, variantActual, variantInject,
     indexOptionPayloads, indexOptionLabels, indexOptionType, variantValueType, htemp, hw,
-    indexSomeName, indexNoneName, List.map]
+    indexSomeName, indexNoneName, List.map, List.map_cons, List.map_nil, List.get_cons_succ,
+    List.get_cons_zero, List.getElem?_cons_zero, List.cons_append, List.nil_append,
+    List.append_nil, Function.update_same, Option.bind_some]
 
 private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     (optionLetForm ctx).produktion.production a
@@ -125,8 +130,9 @@ private theorem letOption_prints (ctx : OptionContext) (a : OptionLetArgs ctx) :
     have hAssign : printAssignment.value = assignment := by rfl
     have hSemi : printSemicolon.value = semicolon := by rfl
     cases a.mutable <;>
-      simp [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
-        hLet, hMut, hName, hColon, hAssign, hSemi, List.cons_append, List.append_assoc]
+      simp only [optionLetHead, Category.printPieces, Stmt.printPieces, WrittenType.printPieces,
+        hLet, hMut, hName, hColon, hAssign, hSemi, List.map_append, List.map_cons, List.map_nil,
+        List.cons_append, List.nil_append, List.append_assoc, if_true, if_false]
   · exact WrittenType.printReads (.indexOption a.carrier a.count) a.resolved (by
       intro more h
       cases h)
@@ -140,8 +146,8 @@ private theorem returnOption_prints (ctx : OptionContext) (a : OptionReturnArgs 
   refine ⟨a.value.printPieces.map PrintedToken.value ++ [semicolon], ?_, ?_⟩
   · have hRet : returnName.print.value = Token.word "return".toList := by rfl
     have hSemi : printSemicolon.value = Token.punctuation [';'] := by rfl
-    simp [Category.printPieces, Stmt.printPieces, hRet, hSemi, returnKeyword, semicolon,
-      List.cons_append]
+    simp only [Category.printPieces, Stmt.printPieces, hRet, hSemi, List.map_append,
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append]
   · exact optionInitializerPrint ctx.1 a.count a.value [semicolon]
 
 theorem optionLetDerivation : OptionLetDerivationAussage := by
