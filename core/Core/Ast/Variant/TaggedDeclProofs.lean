@@ -124,7 +124,8 @@ theorem taggedDecl_erfuellbarAm : Gabbro.Core.Ast.Semantik.TaggedDeclErfuellbarA
     simp [member, lbl, Gabbro.Core.Ast.keywordName, Gabbro.Core.Ast.VariantMember.valid,
       Gabbro.Core.Ast.ordinaryLocal]
   have distinct : ((Gabbro.Core.Ast.variantLabels [member]).map (fun x => x.val)).Nodup := by
-    simp [member, lbl, Gabbro.Core.Ast.keywordName, Gabbro.Core.Ast.variantLabels]
+    change [lbl.val].Nodup
+    exact List.nodup_singleton _
   let a : Gabbro.Core.Ast.Surface.TaggedDeclArgs := ⟨false, name, member, [], valid, distinct⟩
   refine ⟨a, ?_⟩
   let form := taggedDeclForm []
