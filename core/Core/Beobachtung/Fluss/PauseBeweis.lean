@@ -101,7 +101,6 @@ theorem pauseNI : PauseNIAussage := by
         cases label₂
       | some ev =>
         refine ⟨ev.1, ev.2, ?_⟩
-        rw [hlab]
         cases ev
         rfl
     obtain ⟨wahl, spur', label'⟩ := someEv
