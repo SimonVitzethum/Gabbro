@@ -1,15 +1,10 @@
 module
 
-public import Core.Ast.Semantik.Arithmetik
+public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
+import Init.Data.Vector.OfFn
 
 @[expose] public section
-
-namespace Gabbro.Core.Ast
-
-abbrev Dynamisch := (type : Ty .value) × Wert type
-
-end Gabbro.Core.Ast
 
 namespace Gabbro.Core.Ast.Semantik
 
@@ -26,25 +21,22 @@ def Ganzzahl.pack (value : Ganzzahl) : Dynamisch := ⟨.int value.lo value.hi, v
 def alsGanzzahl : Dynamisch → Option Ganzzahl
   | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
   | ⟨.bool, _⟩ => none
+  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
 def alsBoolean : Dynamisch → Option Bool
-  | ⟨.int _ _, _⟩ => none
   | ⟨.bool, value⟩ => some value
-
-def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
-  match type, value with
-  | .int lo hi, ⟨.int _ _, number⟩ =>
-    if bounds : lo ≤ number.wert ∧ number.wert ≤ hi then
-      some ⟨.int lo hi, ⟨number.wert, bounds.1, bounds.2⟩⟩
-    else none
-  | .bool, ⟨.bool, value⟩ => some ⟨.bool, value⟩
-  | .int _ _, ⟨.bool, _⟩ => none
-  | .bool, ⟨.int _ _, _⟩ => none
+  | ⟨.int .., _⟩ => none
+  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
+  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
 
 def anfangswert : Ty .value → Option Dynamisch
   | .bool => some ⟨.bool, false⟩
   | .int lo hi =>
     if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
+  | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
+  | .variantSchema name labels payloads layout => some ⟨.variantSchema name labels payloads layout, PUnit.unit⟩
+  | _ => none
 
 inductive Abschluss where
   | fertig
@@ -113,7 +105,8 @@ def Rahmen.halt (frame : Rahmen) (reason : Abschluss) : Rahmen :=
 def tyFits : Ty .value → Ty .value → Bool
   | .bool, .bool => true
   | .int lo hi, .int lower upper => decide (lower ≤ lo ∧ hi ≤ upper)
-  | .bool, .int _lo _hi | .int _lo _hi, .bool => false
+  | .array _ 0, .array _ 0 => true
+  | a, b => decide (a = b)
 
 def Funktion.finde (funktionen : List Funktion) (name : Identifier) : Option Funktion :=
   funktionen.find? (fun f => f.name.val == name.val)
@@ -237,6 +230,23 @@ inductive Befehl where
   | zurueckSprung (abstand : Nat)
   | starte (name : Identifier)
   | ende
+  | baueArray (ziel : Nat) (element : Ty .value) (count : Nat)
+  | liesArray (basis : Nat) (element : Ty .value) (count : Nat)
+  | baueTupel (ziel : Nat) (types : List (Ty .value))
+  | liesTupelfeld (basis : Nat) (types : List (Ty .value)) (index : Fin types.length)
+  | bindeTupel (quelle : Nat) (types : List (Ty .value)) (bind : List Bool)
+  | definiereRecord (name : List Char) (labels : List Identifier) (types : List (Ty .value))
+  | baueRecord (ziel : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (sources : List Nat)
+  | liesRecordFeld (basis : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (index : Fin types.length)
+  | setzeRecordFeld (source indexLocal : Nat) (name : List Char) (labels : List Identifier)
+      (types : List (Ty .value)) (index : Fin types.length)
+  | definiereVariante (name : List Char) (labels : List Identifier) (cases : List (Option (Ty .value)))
+  | baueVariante (ziel : Nat) (name : List Char) (labels : List Identifier)
+      (cases : List (Option (Ty .value))) (index : Fin cases.length)
+  | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
+      (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -341,6 +351,54 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let result := (Funktion.finde frame.funktionen name).bind Funktion.result
     return ({ frame with lokale := [] }).ruf name [] result
   | .ende, frame => { frame with stopp := some .fertig, rueckgabe := frame.lokale.head?.join }
+  | .baueArray dst element count, frame => frame.schreibe dst (do
+    let values ← Vector.ofFnM (n := count) fun i => (frame.temp (dst + i.val)).bind (wertAls element)
+    pure ⟨.array element count, values⟩)
+  | .liesArray base element count, frame => frame.schreibe base (do
+    let values : Vector (Wert element) count ← (frame.temp base).bind (wertAls (.array element count))
+    let index ← frame.zahl (base + 1)
+    if index.zahl.wert < 0 then none else
+      if bound : index.zahl.wert.toNat < count then
+        some ⟨element, values[index.zahl.wert.toNat]'bound⟩
+      else none)
+  | .baueTupel dst types, frame => frame.schreibe dst
+    ((liesTupel frame.temp dst types).map fun values => ⟨tupleType types, values⟩)
+  | .liesTupelfeld base types index, frame => frame.schreibe base (do
+    let values ← (frame.temp base).bind (wertAls (tupleType types))
+    pure ⟨types.get index, tupleGet types index values⟩)
+  | .bindeTupel source types bind, frame =>
+    let value := (frame.temp source).bind (wertAls (tupleType types))
+    let locals := (value.map fun product => tupleLocals types product bind).getD []
+    { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
+  | .definiereRecord name labels types, frame =>
+    let schema : Dynamisch := ⟨recordSchemaType name labels types, PUnit.unit⟩
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+  | .baueRecord dst name labels types sources, frame =>
+    frame.schreibe dst ((liesRecord frame.temp types sources).map fun record =>
+      ⟨recordValueType name labels types, record⟩)
+  | .liesRecordFeld base name labels types index, frame => frame.schreibe base (do
+    let record ← (frame.temp base).bind (wertAls (recordValueType name labels types))
+    pure ⟨types.get index, tupleGet types index record⟩)
+  | .setzeRecordFeld source indexLocal name labels types index, frame =>
+    let type := recordValueType name labels types
+    let updated : Option Dynamisch := do
+      let old ← frame.lokale[indexLocal]?.join.bind (wertAls type)
+      let value ← (frame.temp source).bind (wertAls (types.get index))
+      pure ⟨type, tupleSet types index value old⟩
+    { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
+  | .definiereVariante name labels cases, frame =>
+    let schema : Dynamisch := ⟨variantSchemaType name labels cases, PUnit.unit⟩
+    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+  | .baueVariante dst name labels cases index, frame => frame.schreibe dst (do
+    let value ← variantActual (cases.get index) (frame.temp dst)
+    pure ⟨variantValueType name labels cases, variantInject cases index value⟩)
+  | .waehleVariante source name labels cases branches, frame => Id.run do
+    let some value := (frame.temp source).bind (wertAls (variantValueType name labels cases)) |
+      return frame.halt .ungueltigerWert
+    let (tag, payload) := variantCase cases value
+    let some (offset, bind) := branches[tag]? | return frame.halt .ungueltigerWert
+    return { frame with pc := frame.pc + offset, lokale :=
+      if bind then payload :: frame.lokale else frame.lokale }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -350,6 +408,9 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
     let a ← frame.zahl left
     let b ← frame.zahl (left + 1)
     pure ⟨.division, (a.zahl.wert.natAbs, b.zahl.wert.natAbs)⟩
+  | .liesArray base _ count, frame => do
+    let i ← frame.zahl (base + 1)
+    pure ⟨.index, (if i.zahl.wert < 0 then count else i.zahl.wert.toNat, count)⟩
   | _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩

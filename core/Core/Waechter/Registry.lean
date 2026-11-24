@@ -45,12 +45,32 @@ public meta structure RegistryFamily where
   inductiveName : Name
   schema : Name
   entries : Array (Name × Name)
+  openEntries : Array (Name × Name) := #[]
+
+/-- Open proof packets have an actual proposition pinned by the guard. -/
+public meta def openRegistryErrors (packets : Array (Name × Name)) (pinNames : Array Name)
+    (closing : Bool) : MetaM (Array String) := do
+  let env ← getEnv
+  let mut errors := #[]
+  for (form, packet) in packets do
+    let valid ← match env.find? packet with
+      | some (.defnInfo info) =>
+        pure (isCoreConstant env packet && pinNames.contains packet && info.type.isProp)
+      | _ => pure false
+    if !valid then
+      errors := errors.push s!"open registry form {form} lacks a pinned proposition {packet}"
+    else if closing then
+      errors := errors.push s!"open registry form {form} still requires proofs for {packet}"
+    else
+      logInfo m!"open registry form {form} requires proofs for {packet}"
+  return errors
 
 /-- Compares configured families with Lean's actual constructor lists. Each constructor must have one
     Core declaration of type `RegistryEntry constructor (schema constructor)`. The schema selects source
     or internal origin per constructor and is fixed by the language definitions. This guard checks coverage
     and typing. The intended meaning and non-degeneracy of the propositions require review and pins. -/
-public meta def registryErrors (families : Array RegistryFamily) : MetaM (Array String) := do
+public meta def registryErrors (families : Array RegistryFamily) (pinNames : Array Name)
+    (closing : Bool) : MetaM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
   let mut registered : NameSet := {}
@@ -86,6 +106,14 @@ public meta def registryErrors (families : Array RegistryFamily) : MetaM (Array 
       let expected := mkApp2 (mkConst ``RegistryEntry) index (mkApp (mkConst family.schema) index)
       if !isCoreConstant env entry || !schemaOK || !(← isDefEq value.type expected) then
         errors := errors.push s!"registry entry {entry} lacks the required typed proofs for {ctor}"
+    for (ctor, _) in family.openEntries do
+      if !info.ctors.contains ctor then
+        errors := errors.push s!"unknown open registry constructor {ctor} for {info.name}"
+        continue
+      if supplied.contains ctor then
+        errors := errors.push s!"duplicate registry entry for {ctor}"
+      supplied := supplied.insert ctor
+    errors := errors ++ (← openRegistryErrors family.openEntries pinNames closing)
     for ctor in info.ctors do
       unless supplied.contains ctor do
         errors := errors.push s!"missing registry entry for {ctor}"

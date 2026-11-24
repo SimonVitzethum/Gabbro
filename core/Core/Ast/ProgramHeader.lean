@@ -24,15 +24,29 @@ def intTypeName (signed : Bool) (width : Nat) : Identifier :=
 def signedPieces (number : Int) : List PrintedToken :=
   if number < 0 then [Arith.sub.print, printInteger number.natAbs] else [printInteger number.natAbs]
 
+mutual
+
 def WrittenType.printPieces : WrittenType → List PrintedToken
   | .bool => [printBoolType]
   | .integer signed width none => [(intTypeName signed width).print]
   | .integer signed width (some (lo, hi)) =>
     [(intTypeName signed width).print, printIn] ++ signedPieces lo ++ [printClosedRange] ++ signedPieces hi
+  | .array element count => [printOpenBracket] ++ element.printPieces ++
+      [printSemicolon, printInteger count, printCloseBracket]
+  | .tuple first second rest => [printOpen] ++ first.printPieces ++ [printComma] ++
+      second.printPieces ++ rest.printTail ++ [printClose]
+
+def WrittenTypes.printTail : WrittenTypes → List PrintedToken
+  | .empty => []
+  | .next head tail => printComma :: head.printPieces ++ tail.printTail
+
+end
 
 inductive SignedReads : List Token → Int → List Token → Prop where
   | positive : SignedReads (.natural n :: rest) n rest
   | negative : SignedReads (minus :: .natural n :: rest) (-(n : Int)) rest
+
+mutual
 
 inductive TypeReads : List Token → WrittenType → List Token → Prop where
   | bool : TypeReads (keyword "bool" :: rest) .bool rest
@@ -43,6 +57,19 @@ inductive TypeReads : List Token → WrittenType → List Token → Prop where
       SignedReads input lo (closedRange :: more) → SignedReads more hi rest →
       TypeReads (.word (intSpelling signed width) :: keyword "in" :: input)
         (.integer signed width (some (lo, hi))) rest
+  | array (count : Nat) (bound : Expr [] (.int count count)) :
+      TypeReads input element (semicolon :: boundInput) →
+      ExprReads [] 0 boundInput bound (closeBracket :: rest) →
+      TypeReads (openBracket :: input) (.array element count) rest
+  | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
+      TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
+
+inductive TypeItemsTail : List Token → WrittenTypes → List Token → Prop where
+  | close : TypeItemsTail (closeParen :: rest) .empty rest
+  | comma : TypeReads input head more → TypeItemsTail more tail rest →
+      TypeItemsTail (comma :: input) (.next head tail) rest
+
+end
 
 def Parameter.printPieces (p : Parameter) : List PrintedToken :=
   [p.name.print, printColon] ++ p.written.printPieces

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.ProgramHeader
+public import Core.Ast.Variant.Grammar
 
 @[expose] public section
 
@@ -94,6 +94,25 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       BlockReads result (rangeBinding name low high :: scope) bodyInput body rest →
       StmtReads result scope (keyword "for" :: .word name.val :: keyword "in" :: input)
         ⟨scope, .forRange name ordinary lo hi staticBounds overflow body⟩ rest
+  | tupleBind (checked : pattern.valid annotation (first :: second :: types)) :
+      TuplePatternReads input pattern more →
+      TupleAnnotationReads more annotation rhs →
+      ExprReads scope 0 rhs (value : Expr scope (tupleType (first :: second :: types))) (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: input) ⟨_, .tupleBind pattern annotation checked value⟩ rest
+  | assignField (ref : Local scope (recordValueType name labels types)) (visible : ref.visible)
+      (writable : ref.binding.mutable = true) (field : Identifier) (index : Fin types.length)
+      (checked : RecordFieldAt labels field index.val) (fits : Fits source (types.get index)) :
+      ExprReads scope 0 input (value : Expr scope source) (semicolon :: rest) →
+      StmtReads result scope (.word ref.binding.name.val :: dot :: .word field.val :: assignment :: input)
+        ⟨scope, .assignField ref visible writable field index checked value fits⟩ rest
+  | letMutableValue (name : Identifier) (ordinary : ordinaryLocal name) :
+      ExprReads scope 0 input (value : Expr scope type) (semicolon :: rest) →
+      StmtReads result scope (letKeyword :: keyword "mut" :: .word name.val :: assignment :: input)
+        ⟨_, .letMutableValue name ordinary value⟩ rest
+  | variantMatch :
+      ExprReads scope 0 input (value : Expr scope (variantValueType name labels payloads)) (openBrace :: armsInput) →
+      VariantArmsRead result scope false armsInput arms rest →
+      StmtReads result scope (keyword "match" :: input) ⟨_, .variantMatch value arms⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :
@@ -107,6 +126,25 @@ inductive BlockReads (result : Option (Ty .value)) : (before : Scope) →
     List Token → BracedBlock result before → List Token → Prop where
   | braced : BlockItems result before input ⟨after, body⟩ rest →
       BlockReads result before (openBrace :: input) (.braces body) rest
+
+inductive VariantArmsRead (result : Option (Ty .value)) :
+    (scope : Scope) → (allowed : Bool) → List Token → {labels : List Identifier} → {payloads : List (Option (Ty .value))} →
+    VariantArms result scope allowed labels payloads → List Token → Prop where
+  | done : VariantArmsRead result scope allowed (closeBrace :: rest) .done rest
+  | nullary (label : Identifier) (caseName : label.val ≠ ['_']) :
+      BlockReads result scope input body more → VariantArmsRead result scope true more next rest →
+      VariantArmsRead result scope allowed (.word label.val :: matchArrow :: input) (.nullary label caseName body next) rest
+  | payload (label binder : Identifier) (ordinary : ordinaryLocal binder)
+      (body : BracedBlock result (payloadBinding binder type :: scope)) :
+      BlockReads result (payloadBinding binder type :: scope) input body more →
+      VariantArmsRead result scope true more next rest →
+      VariantArmsRead result scope allowed
+        (.word label.val :: openParen :: .word binder.val :: closeParen :: matchArrow :: input)
+        (.payload label binder ordinary body next) rest
+  | wildcard {labels : List Identifier} {payloads : List (Option (Ty .value))}
+      (nonempty : labels ≠ []) (shape : labels.length = payloads.length) :
+      BlockReads result scope input body (closeBrace :: rest) →
+      VariantArmsRead result scope true (.word ['_'] :: matchArrow :: input) (.wildcard body nonempty shape) rest
 
 end
 

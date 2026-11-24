@@ -15,9 +15,65 @@ structure Zahl (lo hi : Int) where
 def Zahl.literal (value : Int) : Zahl value value :=
   ⟨value, Int.le_refl _, Int.le_refl _⟩
 
-def Wert : Ty .value → Type
-  | .int lo hi => Zahl lo hi
-  | .bool => Bool
+def Wert : {kind : Kind} → Ty kind → Type
+  | _, .int lo hi => Zahl lo hi
+  | _, .bool => Bool
+  | _, .array element count => Vector (Wert element) count
+  | _, .productEnd => PUnit
+  | _, .product head tail => Wert head × Wert tail
+  | _, .record _ _ layout => Wert layout
+  | _, .recordSchema .. | _, .variantSchema .. => PUnit
+  | _, .sumEnd => Empty
+  | _, .sum head tail => Sum (Wert head) (Wert tail)
+  | _, .variant _ _ _ layout => Wert layout
+
+/-- Widening changes interval evidence and the type of a zero-length array. -/
+def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
+    Wert target := by
+  cases source <;> cases target
+  case int.int lo hi lower upper =>
+    exact ⟨value.wert, Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
+  case array.array source count target other =>
+    cases count <;> cases other <;>
+      first
+      | exact #v[]
+      | simp only [Fits] at fits <;> (cases fits <;> exact value)
+  all_goals
+    first
+    | exact value
+    | simp only [Fits] at fits <;> (cases fits <;> exact value)
+
+def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
+    Wert (tupleType types) → Wert (types.get i)
+  | [], index, _value => Fin.elim0 index
+  | _ :: rest, ⟨0, _⟩, values => values.1
+  | _ :: rest, ⟨n + 1, bound⟩, values => tupleGet rest ⟨n, Nat.lt_of_succ_lt_succ bound⟩ values.2
+
+def tupleOfFn : (types : List (Ty .value)) → ((i : Fin types.length) → Wert (types.get i)) →
+    Wert (tupleType types)
+  | [], _ => PUnit.unit
+  | _ :: tail, values => (values 0, tupleOfFn tail fun i => values i.succ)
+
+def tupleSet : (types : List (Ty .value)) → (i : Fin types.length) →
+    Wert (types.get i) → Wert (tupleType types) → Wert (tupleType types)
+  | [], i, _value, _old => Fin.elim0 i
+  | _ :: _, ⟨0, _⟩, value, old => (value, old.2)
+  | _ :: tail, ⟨n + 1, bound⟩, value, old =>
+    (old.1, tupleSet tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value old.2)
+
+def variantInject : (cases : List (Option (Ty .value))) → (index : Fin cases.length) →
+    Wert ((cases.get index).getD .productEnd) → Wert (variantLayout cases)
+  | [], index, _value => Fin.elim0 index
+  | _ :: _, ⟨0, _⟩, value => .inl value
+  | _ :: tail, ⟨n + 1, bound⟩, value =>
+    .inr (variantInject tail ⟨n, Nat.lt_of_succ_lt_succ bound⟩ value)
+
+def indexPosition {count : Nat} (i : Zahl lo hi) (lower : 0 ≤ lo) (upper : hi < (count : Int)) : Fin count :=
+  have nonnegative := Int.le_trans lower i.unten
+  have bound : (i.wert.toNat : Int) < (count : Int) := by
+    rw [Int.toNat_of_nonneg nonnegative]
+    exact Int.lt_of_le_of_lt i.oben upper
+  ⟨i.wert.toNat, Int.ofNat_lt.mp bound⟩
 
 /-- Multiplying a bounded integer by a fixed factor stays between the two
     endpoint products, in either order. -/
@@ -124,6 +180,8 @@ def leereUmgebung : Umgebung [] := by
   intro type ref
   cases ref
 
+mutual
+
 /-- Mathematical expression evaluation retains the type index of the source node. -/
 def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .lit value => Zahl.literal value
@@ -139,5 +197,38 @@ def Expr.wert (env : Umgebung scope) : Expr scope type → Wert type
   | .logic op left right =>
     let a : Bool := left.wert env
     if a = op.skips then a else right.wert env
+  | .arrayValue (types := types) (element := element) items _ fits =>
+    let values := items.wert env
+    Vector.ofFn fun i => Wert.widen (types.get i) element (fits i) (tupleGet types i values)
+  | .arrayIndex base index lower upper =>
+    let position := indexPosition (index.wert env) lower upper
+    let values : Vector (Wert _) _ := base.wert env
+    values[position.val]'position.isLt
+  | .tupleValue first second tail => (first.wert env, second.wert env, tail.wert env)
+  | .tupleField (first := first) (second := second) (types := rest) base i =>
+    tupleGet (first :: second :: rest) i (base.wert env)
+  | .recordValue (types := types) (actualTypes := actualTypes) _ args fields fits =>
+    let values := args.wert env
+    tupleOfFn types fun i => Wert.widen (actualTypes.get (fields.slot i)) (types.get i) (fits i)
+      (tupleGet actualTypes (fields.slot i) values)
+  | .recordField (types := types) base _ index _ =>
+    let record := base.wert env
+    tupleGet types index record
+  | .variantValue (payloads := payloads) _ _ index _ _ _ payload =>
+    variantInject payloads index (payload.wert env)
+
+def ExprItems.wert (env : Umgebung scope) : ExprItems scope types → Wert (tupleType types)
+  | .empty => PUnit.unit
+  | .next head tail => (head.wert env, tail.wert env)
+
+def LabeledItems.wert (env : Umgebung scope) : LabeledItems scope labels types → Wert (tupleType types)
+  | .empty => PUnit.unit
+  | .next _ head tail => (head.wert env, tail.wert env)
+
+def CasePayload.wert (env : Umgebung scope) : CasePayload scope type → Wert (type.getD .productEnd)
+  | .nullary _ => PUnit.unit
+  | .value expression => expression.wert env
+
+end
 
 end Gabbro.Core.Ast

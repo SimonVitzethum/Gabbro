@@ -39,10 +39,10 @@ theorem tokenHead (same : [c].head? = some first) (normal : UnquotedStart c) :
   (Option.some.inj same) ▸ normal
 
 theorem punctuationHead
-    (member : c ∈ ['+', '*', '(', ')', '=', ';', '{', '}', '-', '!', '<', '>', '&', '|']) :
+    (member : c ∈ ['+', '*', '(', ')', '=', ';', '{', '}', '-', '!', '<', '>', '&', '|', '[', ']', '.', ',', ':']) :
     UnquotedStart c := by
   simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     refine ⟨?_, ?_, ?_, ?_⟩ <;>
     first
     | (simp only [isSpace, List.mem_cons, List.not_mem_nil, Char.reduceEq, or_self, not_false_eq_true])
@@ -156,6 +156,33 @@ def returnName : Identifier := keywordName 'r' ['e', 't', 'u', 'r', 'n']
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl | rfl <;> decide)
 
+def printOpenBracket : PrintedToken := printPunctuation "[" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '[') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+def printCloseBracket : PrintedToken := printPunctuation "]" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ']') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+def printDot : PrintedToken := printPunctuation "." (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := '.') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+def printComma : PrintedToken := printPunctuation "," (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ',') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+def printColon : PrintedToken := printPunctuation ":" (by
+  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or])
+  (fun _ same => tokenHead (c := ':') same (punctuationHead (by
+    simp only [List.mem_cons, Char.reduceEq, true_or, false_or])))
+
+mutual
+
 /-- Parenthesise each binary node. This gives a canonical, precedence-independent
     rendering of a tree, while the grammar also admits ordinary infix spelling. -/
 def Expr.printPieces : Expr scope type → List PrintedToken
@@ -174,6 +201,43 @@ def Expr.printPieces : Expr scope type → List PrintedToken
     [printOpen] ++ left.printPieces ++ [op.print] ++ right.printPieces ++ [printClose]
   | .logic op left right =>
     [printOpen] ++ left.printPieces ++ [op.print] ++ right.printPieces ++ [printClose]
+  | .arrayValue items _ _ => printOpenBracket :: items.printPieces ++ [printCloseBracket]
+  | .arrayIndex base index _ _ =>
+    [printOpen] ++ base.printPieces ++ [printOpenBracket] ++ index.printPieces ++
+      [printCloseBracket, printClose]
+  | .tupleValue first second rest =>
+    [printOpen] ++ first.printPieces ++ [printComma] ++ second.printPieces ++
+      rest.printTail ++ [printClose]
+  | .tupleField base index =>
+    [printOpen] ++ base.printPieces ++ [printDot, printInteger index.val, printClose]
+  | .recordValue ref args _ _ => [ref.name.print, printOpen] ++ args.printPieces ++ [printClose]
+  | .recordField base field _ _ =>
+    [printOpen] ++ base.printPieces ++ [printDot, field.print, printClose]
+  | .variantValue _ label _ _ _ _ value => label.print :: value.printPieces
+
+def ExprItems.printPieces : ExprItems scope types → List PrintedToken
+  | .empty => []
+  | .next head tail => head.printPieces ++ tail.printTail
+
+def ExprItems.printTail : ExprItems scope types → List PrintedToken
+  | .empty => []
+  | .next head tail => printComma :: head.printPieces ++ tail.printTail
+
+def LabeledItems.printPieces : LabeledItems scope labels types → List PrintedToken
+  | .empty => []
+  | .next name value tail => [name.print, printColon] ++ value.printPieces ++ tail.printTail
+
+def LabeledItems.printTail : LabeledItems scope labels types → List PrintedToken
+  | .empty => []
+  | .next name value tail =>
+    [printComma, name.print, printColon] ++ value.printPieces ++ tail.printTail
+
+def CasePayload.printPieces : CasePayload scope type → List PrintedToken
+  | .nullary false => []
+  | .nullary true => [printOpen, printClose]
+  | .value value => printOpen :: value.printPieces ++ [printClose]
+
+end
 
 def Expr.printTokens (tree : Expr scope type) : List Token :=
   tree.printPieces.map PrintedToken.value
