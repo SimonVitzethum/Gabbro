@@ -235,13 +235,12 @@ theorem activateJoint : ActivateJointAussage := by
     change (if (⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
         (s0.lokal entryContext).unreserved target.seitengranule extent then
       some (⟨extent, [⟨0, 0⟩]⟩ : MemRegion) else none) = some ⟨extent, [⟨0, 0⟩]⟩
+    have hcondUnres : (s0.lokal entryContext).unreserved target.seitengranule extent = true := by
+      unfold MemFrame.unreserved
+      rfl
     have hcond : ((⟨extent, [⟨0, 0⟩]⟩ : MemRegion).live s0 &&
         (s0.lokal entryContext).unreserved target.seitengranule extent) = true := by
-      constructor
-      · exact liveTable
-      · unfold MemFrame.unreserved
-        change ([] : List Adressraum).all (fun _ => true) = true
-        rfl
+      rw [liveTable, hcondUnres]
     rw [if_pos hcond]
   let frame0 : MemFrame :=
     { (s0.lokal entryContext) with
