@@ -210,11 +210,13 @@ theorem textIndexBytes : TextIndexBytesAussage := by
     rfl
   · intro byte nonneg hbyte
     have hnonneg' : ¬ index.zahl.wert < 0 := not_lt_of_ge nonneg
-    simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Rahmen.schreibe,
+    simp only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Rahmen.schreibe,
       Function.update_self, if_false, Id.run]
+    constructor <;> rfl
   · intro hfail
     rcases hfail with hneg | hge
-    · simpa only [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt, if_true, Id.run]
+    · simp only [Befehl.auswerten, htext, hzahl, hneg, Rahmen.halt, if_true, Id.run]
+      rfl
     · have hnonneg : 0 ≤ index.zahl.wert := by omega
       have hge' : (text.bytes.size : Int) ≤ (index.zahl.wert.toNat : Int) := by
         rw [Int.toNat_of_nonneg hnonneg]
@@ -224,7 +226,8 @@ theorem textIndexBytes : TextIndexBytesAussage := by
         simp only [getElem?_eq_none_iff]
         exact not_lt_of_ge hnat
       have hnonneg' : ¬ index.zahl.wert < 0 := not_lt_of_ge hnonneg
-      simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hout, Rahmen.halt, if_false, Id.run]
+      simp only [Befehl.auswerten, htext, hzahl, hnonneg', hout, Rahmen.halt, if_false, Id.run]
+      rfl
 
 theorem textIndexParse : TextIndexParseAussage := by
   intro scope args text pieces lexed production
@@ -331,7 +334,8 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have heval : (Befehl.textIndex 0 capacity).auswerten frame₂ =
       frame₂.schreibe 0 (some ⟨.int 0 255, byteValue byte⟩) := by
     have hnonneg' : ¬ (0 : Int) < 0 := by omega
-    simpa only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Zahl.literal, if_false, Id.run]
+    simp only [Befehl.auswerten, htext, hzahl, hnonneg', hbyte, Zahl.literal, if_false, Id.run]
+    rfl
   have hstop₂ : (s₂.lokal eintritt).stopp = none := by
     simp only [s₂, s₁, s₀, E, form, I.start, Zustand.start, Quellform.einheit, Fragment.einheit,
       startdaten, Rahmen.start, Befehl.nach, Rahmen.schreibe, Befehl.auswerten,
