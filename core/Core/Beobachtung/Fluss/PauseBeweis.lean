@@ -70,7 +70,10 @@ theorem pauseNI : PauseNIAussage := by
   have auswahlEq : (ρ₁.hw.angebot t).interruptAuswahl = (ρ₂.hw.angebot t).interruptAuswahl := by
     simp only [Gelegenheit.interruptAuswahl, signaleEq]
   have sysKopf : ∀ s d, E.system.kopf s d = Ast.Semantik.kopf p.code s d := fun _ _ => rfl
-  obtain ⟨_, _, zustandGut₁⟩ := fragment_speicher_gut vergleich.links t
+  obtain ⟨wGut, atWGut, gutWGut⟩ := fragment_speicher_gut vergleich.links t
+  have zustandGut₁ : v₁.SpeicherGut := by
+    rw [Option.some.inj (zustand₁.symm.trans atWGut)]
+    exact gutWGut
   have takt₂ := ρ₂.zeit.takt t
   rw [zustand₂] at takt₂
   generalize nachEq₂ : ρ₂.zeit.zustand (t + 1) = nach₂ at takt₂
@@ -91,102 +94,121 @@ theorem pauseNI : PauseNIAussage := by
     · rw [beob_pause ρ₁ predictor t idle₁, beob_pause ρ₂ predictor t idle₂]
       exact len
   | schritt label₂ step₂ =>
+    have someEv : ∃ wahl spur', ρ₂.zeit.spur t = some (wahl, spur') := by
+      cases hlab : ρ₂.zeit.spur t with
+      | none =>
+        rw [hlab] at label₂
+        cases label₂
+      | some ev => exact ⟨ev.1, ev.2, hlab⟩
+    obtain ⟨wahl, spur', label'⟩ := someEv
+    have evEq := Option.some.inj (label₂.symm.trans label')
+    rw [evEq] at step₂
     cases step₂ with
     | schritt impl₂ =>
-      cases impl₂ with
-      | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
-        obtain ⟨f₂, kopf₂, _⟩ := regel₂
-        obtain ⟨k, geleg₂, kern₂, stat₂⟩ := bereit₂
-        have kopf₁ : E.system.kopf v₁ k = some f₂ := by
-          have h : Ast.Semantik.kopf p.code v₁ k = Ast.Semantik.kopf p.code v₂ k := by
-            simp only [Ast.Semantik.kopf, lokEqFun.symm, statusEq.symm]
-          rw [sysKopf, h, ← sysKopf]
-          exact kopf₂
-        have crash₁ : (ρ₁.hw.angebot t).crash = false := by
-          rw [crashEq]
-          exact keinAbsturz₂
-        have bereit₁ : KannSchreiten ρ₁.hw t k v₁ := by
-          refine ⟨k, ?_, ?_, ?_⟩
-          · rw [coreEq]
-            exact geleg₂
-          · rw [kerneEq]
-            exact kern₂
-          · rw [statusEq]
-            exact stat₂
-        have rahmen₁ : Zustandsrahmen v₁ (f₂.nach k v₁) :=
-          ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-        have auth₁ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := by
-          simp only [Ast.Semantik.plan, List.not_mem_nil]
-        have speicher₁ : Speicherfolge v₁.initial (.kontext k) v₁.graph _ [] v₁.graph :=
-          Speicherfolge.nil _
-        have aus₁ : FuehrtSchrittAus E.einrichtung t k v₁ (f₂.nach k v₁)
-            Ast.Semantik.plan ⟨[], []⟩ (f₂.nach k v₁) :=
-          ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
-        have regel₁ : E.system.ImplSchritt k v₁ (PUnit.unit) [Ast.Semantik.plan] (f₂.nach k v₁) :=
-          ⟨f₂, kopf₁, ⟨rfl, rfl⟩⟩
-        have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-            (.kontext k PUnit.unit, ⟨[], []⟩) (f₂.nach k v₁) :=
-          .kontext crash₁ bereit₁ regel₁ aus₁
-        exact (keinSchritt₁ (_, _) (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
-      | antwort _ _ =>
-        rename_i a spur
-        exact (antwortNI p plattform h₂ ρ₂ vergleich.rechts t a spur label₂).elim
-      | interrupt keinAbsturz₂ enters₂ =>
-        obtain ⟨k, irq, c₂, nmi, intOffer₂, pending₂, nimmt₂, ruht₂, spurAussen₂, folge₂, nach₂Eq⟩ := enters₂
-        have crash₁ : (ρ₁.hw.angebot t).crash = false := by
-          rw [crashEq]
-          exact keinAbsturz₂
-        have intOffer₁ : (ρ₁.hw.angebot t).interrupt k = true := by
-          rw [interruptEq]
-          exact intOffer₂
-        have pending₁ : UnterbrechungAusstehend v₁ ρ₁.hw t k id irq := by
-          refine ⟨?_, pending₂.2.1, ?_, ?_, ?_⟩
-          · rw [epocheEq]
-            exact pending₂.1
-          · have signaleEqId : (ρ₁.hw.angebot id.1).interrupts =
-                (ρ₂.hw.angebot id.1).interrupts :=
-              congrArg (fun pr => (pr.1 id.1).2.2.1) vergleich.politik
-            rw [signaleEqId]
-            exact pending₂.2.2.1
-          · intro mem
-            exact pending₂.2.2.2 (by rw [geliefertEq]; exact mem)
-          · exact auswahlEq.trans pending₂.2.2.2.2
-        have nimmt₁ : NimmtUnterbrechung (v₁.kerne k) k (Nat.pair id.1 id.2) irq c₂ nmi := by
-          rw [kerneEq]
-          exact nimmt₂
-        have ruht₁ : v₁.status c₂ = .ruht := by
-          rw [statusEq]
-          exact ruht₂
-        let label : Speicher.Etikett Ort Wert :=
-          aussenEtikett E.einrichtung (.interrupt k irq .handler)
-        have labelNicht : ¬ label.art.liest := by
-          simp only [label, aussenEtikett, Art.liest]
-        obtain ⟨graph', stepGraph⟩ :=
-          Speicher.Zustand.schritt_ohne_lesen (Z := v₁.graph) zustandGut₁.1 zustandGut₁.2
-            .aussen label labelNicht
-        have folge₁ : Speicherfolge v₁.initial .aussen v₁.graph [label]
-            [(.aussen, label)] graph' :=
-          .cons (.ohne (Or.inl (by simp only [label, aussenEtikett]))) stepGraph (.nil _)
-        let spur₁ : SchrittSpur Ort Wert := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
-        let nach₁ := { Zustandseintritt v₁ k id c₂ nmi with graph := graph' }
-        have enters₁ : UnterbrechungsSchritt E.einrichtung ρ₁.hw t id v₁ spur₁ nach₁ := by
-          refine ⟨k, irq, c₂, nmi, intOffer₁, pending₁, nimmt₁, ruht₁, ?_, ?_, rfl⟩
-          · rfl
-          · exact folge₁
-        have noCrash₁ : (ρ₁.hw.angebot t).crash = false := crash₁
-        have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-            (.interrupt id, spur₁) nach₁ :=
-          .interrupt noCrash₁ enters₁
-        exact (keinSchritt₁ (_, _) (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
-      | absturz crash₂ =>
-        have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t :=
-          ⟨crash₂.1.1, by rw [crashEq]; exact crash₂.1.2⟩
-        have crashStep₁ : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
-            E.katalog ρ₁.hw t v₁ absturzSpur (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
-          absturz_schritt_erfuellbar _ _ offer₁ v₁
-        have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-            (.absturz, absturzSpur) (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
-          .absturz crashStep₁
-        exact (keinSchritt₁ (_, _) (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
+      cases wahl with
+      | kontext c₂ w₂ =>
+        cases impl₂ with
+        | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
+          obtain ⟨f₂, kopf₂, _⟩ := regel₂
+          obtain ⟨k, geleg₂, kern₂, stat₂⟩ := bereit₂
+          have kopf₁ : E.system.kopf v₁ c₂ = some f₂ := by
+            have h : Ast.Semantik.kopf p.code v₁ c₂ = Ast.Semantik.kopf p.code v₂ c₂ := by
+              simp only [Ast.Semantik.kopf, lokEqFun.symm, statusEq.symm]
+            rw [sysKopf, h, ← sysKopf]
+            exact kopf₂
+          have crash₁ : (ρ₁.hw.angebot t).crash = false := by
+            rw [crashEq]
+            exact keinAbsturz₂
+          have bereit₁ : KannSchreiten ρ₁.hw t c₂ v₁ := by
+            refine ⟨k, ?_, ?_, ?_⟩
+            · show (ρ₁.hw.angebot t).core = some k
+              rw [coreEq]
+              exact geleg₂
+            · rw [kerneEq]
+              exact kern₂
+            · rw [statusEq]
+              exact stat₂
+          have rahmen₁ : Zustandsrahmen v₁ (f₂.nach c₂ v₁) :=
+            ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+          have auth₁ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := by
+            intro l hl
+            cases hl
+          have speicher₁ : Speicherfolge v₁.initial (.kontext c₂) v₁.graph _ [] v₁.graph :=
+            Speicherfolge.nil _
+          have aus₁ : FuehrtSchrittAus E.einrichtung t c₂ v₁ (f₂.nach c₂ v₁)
+              Ast.Semantik.plan ⟨[], []⟩ (f₂.nach c₂ v₁) :=
+            ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
+          have regel₁ : E.system.ImplSchritt c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁) :=
+            ⟨f₂, kopf₁, ⟨rfl, rfl⟩⟩
+          have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
+              (.kontext c₂ w₂, ⟨[], []⟩) (f₂.nach c₂ v₁) :=
+            .kontext crash₁ bereit₁ regel₁ aus₁
+          exact (keinSchritt₁ (.kontext c₂ w₂, ⟨[], []⟩) (some (f₂.nach c₂ v₁))
+            (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
+      | antwort a =>
+        exact (antwortNI p plattform h₂ ρ₂ vergleich.rechts t a spur' label').elim
+      | interrupt irqId =>
+        cases impl₂ with
+        | interrupt keinAbsturz₂ enters₂ =>
+          obtain ⟨k, irq, c₂, nmi, intOffer₂, pending₂, nimmt₂, ruht₂, _, _, _⟩ := enters₂
+          have crash₁ : (ρ₁.hw.angebot t).crash = false := by
+            rw [crashEq]
+            exact keinAbsturz₂
+          have intOffer₁ : (ρ₁.hw.angebot t).interrupt k = true := by
+            rw [interruptEq]
+            exact intOffer₂
+          have pending₁ : UnterbrechungAusstehend v₁ ρ₁.hw t k irqId irq := by
+            refine ⟨?_, pending₂.2.1, ?_, ?_, ?_⟩
+            · rw [epocheEq]
+              exact pending₂.1
+            · have signaleEqId : (ρ₁.hw.angebot irqId.1).interrupts =
+                  (ρ₂.hw.angebot irqId.1).interrupts :=
+                congrArg (fun pr => (pr.1 irqId.1).2.2.1) vergleich.politik
+              rw [signaleEqId]
+              exact pending₂.2.2.1
+            · intro mem
+              exact pending₂.2.2.2 (by rw [geliefertEq]; exact mem)
+            · exact auswahlEq.trans pending₂.2.2.2.2
+          have nimmt₁ : NimmtUnterbrechung (v₁.kerne k) k (Nat.pair irqId.1 irqId.2) irq c₂ nmi := by
+            rw [kerneEq]
+            exact nimmt₂
+          have ruht₁ : v₁.status c₂ = .ruht := by
+            rw [statusEq]
+            exact ruht₂
+          let label : Speicher.Etikett Ort Wert :=
+            aussenEtikett E.einrichtung (.interrupt k irq .handler)
+          have labelNicht : ¬ label.art.liest := by
+            simp only [label, aussenEtikett, Art.liest]
+          obtain ⟨graph', stepGraph⟩ :=
+            Speicher.Zustand.schritt_ohne_lesen (Z := v₁.graph) zustandGut₁.1 zustandGut₁.2
+              .aussen label labelNicht
+          have folge₁ : Speicherfolge v₁.initial .aussen v₁.graph [label]
+              [(.aussen, label)] graph' :=
+            .cons (.ohne (Or.inl (by simp only [label, aussenEtikett]))) stepGraph (.nil _)
+          let spur₁ : SchrittSpur Ort Wert := ⟨[(.aussen, label)], [.interrupt k irq .handler]⟩
+          let nach₁ := { Zustandseintritt v₁ k irqId c₂ nmi with graph := graph' }
+          have enters₁ : UnterbrechungsSchritt E.einrichtung ρ₁.hw t irqId v₁ spur₁ nach₁ := by
+            refine ⟨k, irq, c₂, nmi, intOffer₁, pending₁, nimmt₁, ruht₁, ?_, ?_, rfl⟩
+            · rfl
+            · exact folge₁
+          have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
+              (.interrupt irqId, spur₁) nach₁ :=
+            .interrupt crash₁ enters₁
+          exact (keinSchritt₁ (.interrupt irqId, spur₁) (some nach₁)
+            (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
+      | absturz =>
+        cases impl₂ with
+        | absturz crash₂ =>
+          have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t :=
+            ⟨crash₂.1.1, by rw [crashEq]; exact crash₂.1.2⟩
+          have crashStep₁ : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
+              E.katalog ρ₁.hw t v₁ absturzSpur (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+            absturz_schritt_erfuellbar _ _ offer₁ v₁
+          have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
+              (.absturz, absturzSpur) (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)) :=
+            .absturz crashStep₁
+          exact (keinSchritt₁ (.absturz, absturzSpur)
+            (some (v₁.wiederanlauf t (nachAbsturz v₁.persistenz)))
+            (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
 
 end Gabbro.Core.Beobachtung
