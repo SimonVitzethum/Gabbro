@@ -18,6 +18,6 @@ def smallDecode : Nat → Option Nat
     else if (n.unpair).1 = 1 then smallDecode (n.unpair).2.unpair.2
     else some (n.unpair).2
 termination_by x => x
-decreasing_by assumption
+decreasing_by all_goals assumption
 
 end Scratch
