@@ -123,7 +123,7 @@ theorem return_effect (fits : Fits source target) (value : Wert source) (s : Zus
   refine ⟨widened, contents, ?_⟩
   cases stackEq : (s.lokal eintritt).fortsetzungen with
   | nil =>
-    have returned : ((Befehl.zurueck slot target).nach eintritt s).lokal eintritt |>.rueckgabe =
+    have returned : (((Befehl.zurueck slot target).nach eintritt s).lokal eintritt).rueckgabe =
         some ⟨target, widened⟩ := by
       rw [afterFrame]
       simp only [Rahmen.rueckkehr, stackEq]
@@ -164,7 +164,7 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
     (fun b a t => b <:+ a)
     (fun b a t => b <:+ a)
     (fun b t => True)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
   · intro scope type name ordinary value
     exact List.suffix_cons _ _
   · intro scope lo hi valueLo valueHi ref visible writable value fits
@@ -173,17 +173,19 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
     exact List.suffix_refl _
   · intro scope condition yes no yesIH noIH
     exact List.suffix_refl _
+  · intros
+    exact List.suffix_refl _
+  · intros
+    exact List.suffix_cons _ _
+  · intros
+    exact List.suffix_refl _
+  · intros
+    exact List.suffix_cons _ _
+  · intros
+    exact List.suffix_refl _
+  · intros
+    exact List.suffix_refl _
   · intro scope
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_cons _ _
-  · intros
-    exact List.suffix_refl _
-  · intros
-    exact List.suffix_cons _ _
-  · intros
-    exact List.suffix_refl _
-  · intros
     exact List.suffix_refl _
   · intro before middle after first rest firstIH restIH
     exact firstIH.trans restIH
