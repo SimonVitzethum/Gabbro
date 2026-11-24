@@ -44,18 +44,34 @@ private theorem om_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
     (arms : VariantArms result scope allowed labels payloads) :
     (variantArms arms).body.klauseln.invariant = [] := by
-  refine @Gabbro.Core.Ast.VariantArms.rec result
-    (fun _ _ _ => True)
-    (fun _ _ blk => (block blk).klauseln.invariant = [])
-    (fun _ br => (bracedBlock br).klauseln.invariant = [])
-    (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    scope allowed labels payloads arms
-  all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
-    Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-    Quellklauseln.anhaengen, Quellklauseln.leer]
-  · intro before middle after a a_1 ih
-    exact stmt_keine_invarianten a
+  let rec blockInv {res : Option (Ty .value)} {before after : Scope} (t : Block res before after) :
+      (block t).klauseln.invariant = [] :=
+    match t with
+    | .done => rfl
+    | .step first rest => by
+        change (stmt first).klauseln.invariant ++ (block rest).klauseln.invariant = []
+        rw [stmt_keine_invarianten, blockInv rest]
+        rfl
+  have bracedInv : ∀ {res : Option (Ty .value)} {before : Scope} (t : BracedBlock res before),
+      (bracedBlock t).klauseln.invariant = [] := by
+    intro res before t
+    rcases t with ⟨body⟩
+    change (block body).klauseln.invariant ++ [] = []
+    rw [blockInv body]
+    rfl
+  let rec go {s : Scope} {a : Bool} {l : List Identifier} {p : List (Option (Ty .value))}
+      (ar : VariantArms result s a l p) : (variantArms ar).body.klauseln.invariant = [] :=
+    match ar with
+    | .done => rfl
+    | .nullary _ _ body rest => by
+        simp [variantArms, MatchCode.prepend, Fragment.anhaengen, bracedInv, go rest,
+          Quellklauseln.anhaengen, Quellklauseln.leer]
+    | .payload _ _ _ body rest => by
+        simp [variantArms, MatchCode.prepend, Fragment.anhaengen, bracedInv, go rest,
+          Quellklauseln.anhaengen, Quellklauseln.leer]
+    | .wildcard _ body _ _ => by
+        simp [variantArms, bracedInv, Quellklauseln.leer]
+  exact go arms
 
 private theorem om_keine_invarianten (ctx : OptionContext) (a : OptionMatchArgs ctx) :
     ((optionMatchForm ctx).fragment a).klauseln.invariant = [] := by
@@ -71,38 +87,44 @@ private theorem om_arms_printReads {result : Option (Ty .value)} {scope : Scope}
     (arms : VariantArms result scope allowed labels payloads) (more : List Token) :
     VariantArmsRead result scope allowed
       (arms.printPieces.map PrintedToken.value ++ closeBrace :: more) arms more := by
-  induction arms with
-  | done =>
-      simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
-      exact .done
-  | nullary label caseName body rest ih =>
-      change VariantArmsRead result scope allowed
-        (.word label.val :: matchArrow :: body.printPieces.map PrintedToken.value ++
-          rest.printPieces.map PrintedToken.value ++ closeBrace :: more)
-        (.nullary label caseName body rest) more
-      exact .nullary label caseName
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih
-  | payload label binder ordinary body rest ih =>
-      change VariantArmsRead result scope allowed
-        (.word label.val :: openParen :: .word binder.val :: closeParen :: matchArrow ::
-          body.printPieces.map PrintedToken.value ++
-          rest.printPieces.map PrintedToken.value ++ closeBrace :: more)
-        (.payload label binder ordinary body rest) more
-      exact .payload label binder ordinary body
-        (BracedBlock.printReads body (rest.printPieces.map PrintedToken.value ++ closeBrace :: more)) ih
-  | wildcard body nonempty shape =>
-      change VariantArmsRead result scope allowed
-        (.word ['_'] :: matchArrow :: body.printPieces.map PrintedToken.value ++ closeBrace :: more)
-        (.wildcard body nonempty shape) more
-      exact .wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: more))
+  let rec go {res : Option (Ty .value)} {s : Scope} {a : Bool} {l : List Identifier}
+      {p : List (Option (Ty .value))} (ar : VariantArms res s a l p) (rest : List Token) :
+      VariantArmsRead res s a (ar.printPieces.map PrintedToken.value ++ closeBrace :: rest) ar rest :=
+    match ar with
+    | .done => by
+        simp only [VariantArms.printPieces, List.map_nil, List.nil_append]
+        exact .done
+    | .nullary label caseName body tail => by
+        change VariantArmsRead res s a
+          (.word label.val :: matchArrow :: body.printPieces.map PrintedToken.value ++
+            tail.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+          (.nullary label caseName body tail) rest
+        exact .nullary label caseName
+          (BracedBlock.printReads body (tail.printPieces.map PrintedToken.value ++ closeBrace :: rest))
+          (go tail rest)
+    | .payload label binder ord body tail => by
+        change VariantArmsRead res s a
+          (.word label.val :: openParen :: .word binder.val :: closeParen :: matchArrow ::
+            body.printPieces.map PrintedToken.value ++
+            tail.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+          (.payload label binder ord body tail) rest
+        exact .payload label binder ord body
+          (BracedBlock.printReads body (tail.printPieces.map PrintedToken.value ++ closeBrace :: rest))
+          (go tail rest)
+    | .wildcard body nonempty shape => by
+        change VariantArmsRead res s a
+          (.word ['_'] :: matchArrow :: body.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+          (.wildcard body nonempty shape) rest
+        exact .wildcard nonempty shape (BracedBlock.printReads body (closeBrace :: rest))
+  exact go arms more
 
 private theorem om_print (ctx : OptionContext) (a : OptionMatchArgs ctx) :
     (optionMatchForm ctx).produktion.production a
       (((Category.statement ctx.1 ctx.2).printPieces ((optionMatchForm ctx).produktion.tree a)).map
         PrintedToken.value) := by
   change ∃ input arms,
-    (printMatch :: a.val.value.printPieces.map PrintedToken.value ++ [printOpenBrace] ++
-      a.val.arms.printPieces.map PrintedToken.value ++ [printCloseBrace]) =
+    (printMatch :: a.val.value.printPieces ++ [printOpenBrace] ++
+      a.val.arms.printPieces ++ [printCloseBrace]).map PrintedToken.value =
         keyword "match" :: input ∧
     ExprReads ctx.1 0 input a.val.value (openBrace :: arms) ∧
     VariantArmsRead ctx.2 ctx.1 false arms a.val.arms []
@@ -139,7 +161,7 @@ theorem optionMatchDerivation : OptionMatchDerivationAussage := by
     exact .variantMatch valueRead armsRead
   · intro a'
     exact om_print ctx a'
-  · exact Rule.satisfiableOfPrint a (om_print ctx a)
+  · exact Surface.Rule.satisfiableOfPrint a (om_print ctx a)
 
 theorem optionMatchParse : OptionMatchParseAussage := by
   intro ctx a text pieces lexed production
@@ -199,11 +221,14 @@ theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
   let scope : Scope := [⟨name, indexOptionType count, false, true⟩]
   let ref : Local scope (indexOptionType count) := .here
   have visible : ref.visible := by
-    simp [Local.visible, Ty.valueBinding, ref, indexOptionType]
+    constructor
+    · simp [Ty.valueBinding, indexOptionType]
+    · trivial
   have ordinary : ordinaryLocal name := by
     simp [ordinaryLocal, ordinaryAtomWord, name, keywordName]
   have refOrdinary : ordinaryLocal ref.binding.name := by
-    simpa [ref] using ordinary
+    dsimp [ref, Local.binding]
+    exact ordinary
   let value : Expr scope (variantValueType [] indexOptionLabels (indexOptionPayloads count)) :=
     Expr.variable ref visible refOrdinary
   let binder : Identifier := keywordName 'p' [] (by decide) (by simp)
