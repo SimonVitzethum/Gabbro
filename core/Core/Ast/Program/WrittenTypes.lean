@@ -174,7 +174,8 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         injection hEq with hword htail; injection hword with hspell
         exact (closed _ htail).elim
     case index =>
-      case text =>
+      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+    case text =>
       exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
@@ -196,7 +197,8 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
         obtain ⟨hhi, hrest⟩ := SignedReads.deterministic hiRead hiRead'
         cases hlo; cases hhi; exact ⟨rfl, hrest⟩
     case index =>
-      case text =>
+      exact (not_index _ _ (Token.word.inj (List.cons.inj hEq).1)).elim
+    case text =>
       exact (not_text _ _ (List.cons.inj hEq).1.symm).elim
     case indexOption =>
       exact (not_option _ _ (List.cons.inj hEq).1.symm).elim
