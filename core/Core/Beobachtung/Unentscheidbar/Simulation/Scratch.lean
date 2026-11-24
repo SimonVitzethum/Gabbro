@@ -16,6 +16,10 @@ def smallDecode : Nat → Option Nat
     else if (n.unpair).1 = 1 then smallDecode (n.unpair).2.unpair.2
     else some (n.unpair).2
 termination_by x => x
-decreasing_by omega
+decreasing_by
+  first
+  | exact Nat.lt_succ_of_le hp
+  | exact Nat.lt_succ_of_le ha
+  | exact Nat.lt_succ_of_le hb
 
 end Scratch
