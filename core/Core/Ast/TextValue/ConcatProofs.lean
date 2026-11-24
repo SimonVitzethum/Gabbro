@@ -35,6 +35,7 @@ namespace Gabbro.Core.Ast.Semantik
 open Maschine Annahme Katalog Waechter
 open Gabbro.Core.Text
 open Gabbro.Core.Ast
+open Gabbro.Core.Ast.Surface
 
 private theorem noAddAtPrec6 (more : List Token) :
     ¬ Continues (Arith.add.precedence + 1) (Arith.add.token :: more) := by
@@ -42,19 +43,20 @@ private theorem noAddAtPrec6 (more : List Token) :
   have opAdd : op = .arith .add :=
     Infix.token_injective (by simpa only [Infix.token] using (List.cons.inj same).1.symm)
   subst op
-  norm_num [Infix.precedence, Arith.precedence] at allowed
+  simp only [Infix.precedence, Arith.precedence] at allowed
+  omega
 
 theorem textConcatInversion : TextConcatInversionAussage := by
-  intro scope a minimum input type tree rest allowed read
+  intro scope a minimum input type left tree rest allowed read
   cases read with
   | stop blocked =>
       exact (blocked ⟨.arith .add, input, rfl, allowed⟩).elim
   | textConcat _ right _ reads tail =>
       exact ⟨_, right, _, reads, tail⟩
 
-private theorem textConcatPrint (scope : Scope) (args : Surface.TextConcatArgs scope) :
-    (Surface.textConcat scope).production args
-      (((Category.expression scope).printPieces ((Surface.textConcat scope).tree args)).map
+private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
+    (textConcat scope).production args
+      (((Category.expression scope).printPieces ((textConcat scope).tree args)).map
         PrintedToken.value) := by
   change postfixProduction (fun input rest =>
     ∃ rhs, ExprReads scope (Arith.add.precedence + 1) input args.left (Arith.add.token :: rhs) ∧
@@ -82,17 +84,29 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
     change ExprReads scope 0 tokens (Expr.textConcat args.left args.right) []
     rcases production with plain | grouped
     · rcases plain with ⟨rhs, leftRead, rightRead⟩
-      exact .atom leftRead
-        (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtEnd))
+      cases leftRead with
+      | atom atomRead highTail =>
+        cases highTail with
+        | stop =>
+            exact .atom atomRead
+              (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtEnd))
+        | textConcat =>
+            omega
     · rcases grouped with ⟨inside, rfl, body⟩
       rcases body with ⟨rhs, leftRead, rightRead⟩
-      exact .atom (.grouped (.atom leftRead
-        (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtClose))))
-        (.stop noOperatorAtEnd)
+      cases leftRead with
+      | atom atomRead highTail =>
+        cases highTail with
+        | stop =>
+            exact .atom (.grouped (.atom atomRead
+              (.textConcat args.left args.right (Nat.zero_le _) rightRead
+                (.stop noOperatorAtClose)))) (.stop noOperatorAtEnd)
+        | textConcat =>
+            omega
   · let decoded : List Char := []
     let a := (sourceUtf8 decoded).size
     let left : Expr scope (.text a) := .textLiteral decoded
-    let args : Surface.TextConcatArgs scope := ⟨a, a, left, left⟩
+    let args : TextConcatArgs scope := ⟨a, a, left, left⟩
     exact Rule.satisfiableOfPrint args (textConcatPrint scope args)
 
 theorem textConcatBytes : TextConcatBytesAussage := by
@@ -101,7 +115,9 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   rw [Befehl.auswerten, Rahmen.schreibe]
   simp only [Function.update_self]
   rw [hleft, hright]
-  simp [wertAls, TextValue.concat]
+  rw [dif_pos left.bound, dif_pos right.bound]
+  simp [TextValue.concat]
+  all_goals omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
@@ -112,17 +128,22 @@ private theorem textConcat_amOrt (scope : Scope) : (textConcatForm scope).RegelA
   intro args
   let p := (expr 0 args.left).anhaengen (expr 1 args.right)
   let b : Befehl := .textConcat 0 args.a args.b
+  have hpos : (textConcatForm scope).position args = p.code.length := by
+    dsimp [textConcatForm, p]
+    rw [List.length_append]
+  rw [hpos]
   change (p.anhaengen (.einzel b)).code[p.code.length]? = some b
   exact textConcatRootLookup p b
 
 private theorem textConcat_keine_invarianten (scope : Scope)
-    (args : Surface.TextConcatArgs scope) :
+    (args : TextConcatArgs scope) :
     ((textConcatForm scope).fragment args).klauseln.invariant = [] := by
   change ((((expr 0 args.left).anhaengen (expr 1 args.right)).anhaengen
     (.einzel (Befehl.textConcat 0 args.a args.b))).klauseln.invariant) = []
   simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
     Quellklauseln.leer, List.append_nil]
   rw [expr_keine_invarianten 0 args.left, expr_keine_invarianten 1 args.right]
+  rfl
 
 theorem textConcatParse : TextConcatParseAussage := by
   intro scope args text pieces lexed production
@@ -174,9 +195,10 @@ theorem textConcatRegelSicher : TextConcatRegelSicherAussage := by
 
 theorem textConcatRegelAntwortSicher : TextConcatRegelAntwortSicherAussage := by
   intro scope platform args
+  dsimp [RegelAntwortSicher]
+  intro t c s choice stepPlan u spur next head rule execute
   let form := textConcatForm scope
   let b := form.befehl args
-  intro t c s choice stepPlan u spur next head rule execute
   have hplan : stepPlan = plan := (List.cons.inj rule.1).1
   subst stepPlan
   obtain ⟨rfl, _⟩ := b.vollzug_genau (w := choice) rule execute
@@ -188,9 +210,10 @@ theorem textConcatRegelAntwortSicher : TextConcatRegelAntwortSicherAussage := by
 
 theorem textConcatKostenUndSpur : TextConcatKostenUndSpurAussage := by
   intro scope platform args
+  dsimp [TextInstructionCost]
+  intro t c s choice stepPlan u spur next head rule execute
   let form := textConcatForm scope
   let b := form.befehl args
-  intro t c s choice stepPlan u spur next head rule execute
   obtain ⟨rfl, _⟩ := b.vollzug_genau (w := choice) rule execute
   refine ⟨rfl, rfl, ?_⟩
   change 0 + [stepPlan].length = 1
@@ -201,7 +224,7 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
   let decoded : List Char := []
   let a := (sourceUtf8 decoded).size
   let left : Expr [] (.text a) := .textLiteral decoded
-  let args : Surface.TextConcatArgs [] := ⟨a, a, left, left⟩
+  let args : TextConcatArgs [] := ⟨a, a, left, left⟩
   let form := textConcatForm []
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
@@ -221,8 +244,7 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
   · intro g guard
     simp [Befehl.guard] at guard
     cases guard
-  · dsimp only
-    constructor
+  · constructor
     · rfl
     · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
         simp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
