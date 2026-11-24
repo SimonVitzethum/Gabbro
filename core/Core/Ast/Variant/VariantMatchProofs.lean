@@ -163,6 +163,14 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
         have hb' : ((variantArms rest).branches[j]).2 = true := by
           simpa using hb
         simpa using ih j hj hb'
+  · intro type scope labels payloads label binder ordinary body rest ih i hib hb
+    cases i with
+    | zero => simp
+    | succ j =>
+        have hj : j < (variantArms rest).branches.length := by omega
+        have hb' : ((variantArms rest).branches[j]).2 = true := by
+          simpa using hb
+        simpa using ih j hj hb'
 
 private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
     ∀ (value : Wert (variantLayout cases)) (i : Nat),
@@ -210,7 +218,7 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       { frame with
         pc := frame.pc + entry.1
         lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
-    simp [Befehl.auswerten, variantMatchForm, hval, i, payload, branches, entry, hget,
+    simp [Befehl.auswerten, variantMatchForm, hv, hval, i, payload, branches, entry, hget,
       wertAls, variantValueType]
   refine ⟨entry.1, entry.2, hget, ?_⟩
   dsimp
