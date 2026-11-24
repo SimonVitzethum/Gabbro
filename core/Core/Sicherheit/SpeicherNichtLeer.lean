@@ -69,7 +69,8 @@ def form : Formular := fun _ s plans u => plans = [schreibPlan] ∧ u = s
 def E (gen : Nat) : Modell := einheit (vor gen) form []
 
 theorem schritt₀ (gen : Nat) :
-    Lauffolge (E gen).maschine (hardware leer) 0 (some (vor gen)) spur₀ (some (nach₀ gen)) := by
+    Lauffolge (E gen).maschine (hardware leer) 0 (some (vor gen)) (.kontext (.faden 0) (), spur₀)
+      (some (nach₀ gen)) := by
   have folge : Speicherfolge (vor gen).initial (.kontext (.faden 0)) (vor gen).graph [schreibLabel] spur₀.speicher g₂ :=
     .cons (.erste (fun h => by change Art.schreiben = Art.aussen at h; cases h) (fun ⟨i, lt, _⟩ => Nat.not_lt_zero i lt) erweiterung₁)
       erweiterung₂ (.nil _)
@@ -77,7 +78,8 @@ theorem schritt₀ (gen : Nat) :
     ⟨0, rfl, rfl, rfl⟩ (show form _ (vor gen) [schreibPlan] (vor gen) from ⟨rfl, rfl⟩) (schreiben (vor gen) (buch gen) folge)
 
 theorem schritt₁ (gen : Nat) :
-    Lauffolge (E gen).maschine (hardware leer) 1 (some (nach₀ gen)) spur₁ (some (nach₁ gen)) := by
+    Lauffolge (E gen).maschine (hardware leer) 1 (some (nach₀ gen)) (.kontext (.faden 1) (), spur₁)
+      (some (nach₁ gen)) := by
   have quelle : HatQuelle g₂ () := ⟨0, Nat.zero_lt_succ 1, trivial, rfl⟩
   have folge : Speicherfolge (nach₀ gen).initial (.kontext (.faden 1)) (nach₀ gen).graph
       [schreibLabel] spur₁.speicher g₃ :=
@@ -108,7 +110,7 @@ theorem speichersicher_nichtLeer :
   obtain ⟨a, run⟩ := laeuft zeit boot
   let ρ : Lauf (E 0) := ⟨a, hardware leer, zeit⟩
   refine ⟨_, _, ρ, run, fun safe => ?_⟩
-  have h := (safe.2 0 (vor 0) spur₀ (nach₀ 0) ⟨boot, lab, after⟩).1 1 (.kontext (.faden 0))
+  have h := (safe.2 0 (vor 0) spur₀ (nach₀ 0) ⟨boot, ⟨_, lab⟩, after⟩).1 1 (.kontext (.faden 0))
     schreibLabel rfl (fun eq => by change Art.schreiben = Art.aussen at eq; cases eq)
   obtain ⟨a, ha, valid, _⟩ := h
   have stale : (⟨⟨0, 0⟩, 0⟩ : Adresse) = a := Option.some.inj ha
@@ -122,7 +124,7 @@ theorem rennfrei_nichtLeer :
   obtain ⟨a, run⟩ := laeuft zeit boot
   let ρ : Lauf (E 1) := ⟨a, hardware leer, zeit⟩
   refine ⟨_, _, ρ, run, fun safe => ?_⟩
-  let cut : Maschine.Schnitt (E 1).maschine ρ := ⟨2, Or.inr ⟨1, spur₁, rfl, lab⟩⟩
+  let cut : Maschine.Schnitt (E 1).maschine ρ := ⟨2, Or.inr ⟨1, _, rfl, lab⟩⟩
   let i : Fin g₃.ev.length := ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ 1)⟩
   let j : Fin g₃.ev.length := ⟨2, Nat.lt_succ_self 2⟩
   have conflict : Konflikt g₃ i j :=

@@ -78,35 +78,4 @@ theorem endlich_ab (t : Nat) (tail : ∀ i, t ≤ i → ρ.spur i = none) : ρ.E
           fun _ le lt => (Nat.not_lt_of_ge le lt).elim⟩
   exact ⟨k, fun i fromCut => (Nat.lt_or_ge i t).elim (noLater i fromCut) (tail i)⟩
 
-/-- A private suffix cannot continue forever at a fixed ideal state when each
-    concrete transition strictly decreases a natural-number measure. -/
-theorem endlich_iff (gedeckt : ∀ t, ρ.spur t = none → η.spur t = none)
-    (mass : Nat → Nat) (bleibt : ∀ t, ρ.spur t = none → mass (t + 1) = mass t)
-    (sinkt : ∀ t event, η.spur t = none → ρ.spur t = some event → mass (t + 1) < mass t) :
-    ρ.Endlich ↔ η.Endlich := by
-  constructor
-  · rintro ⟨k, tail⟩
-    exact endlich_ab k.val fun t after => gedeckt t (tail t after)
-  · rintro ⟨k, tail⟩
-    classical
-    let P (n : Nat) := ∃ t, k.val ≤ t ∧ mass t = n
-    have existsMass : ∃ n, P n := ⟨mass k.val, k.val, Nat.le_refl _, rfl⟩
-    obtain ⟨t₀, after₀, eq₀⟩ := Nat.find_spec existsMass
-    have quiet (t : Nat) (after : t₀ ≤ t) (eq : mass t = mass t₀) : ρ.spur t = none := by
-      cases event : ρ.spur t with
-      | none => rfl
-      | some step =>
-        have after' := Nat.le_trans after₀ after
-        have smaller := sinkt t step (tail t after') event
-        have least := Nat.find_min' existsMass
-          (show P (mass (t + 1)) from ⟨t + 1, Nat.le_succ_of_le after', rfl⟩)
-        exact (Nat.not_lt_of_ge least (smaller.trans_le (eq.trans eq₀).le)).elim
-    have constant (n : Nat) : mass (t₀ + n) = mass t₀ := by
-      induction n with
-      | zero => rfl
-      | succ n ih =>
-        exact (bleibt _ (quiet _ (Nat.le_add_right _ _) ih)).trans ih
-    exact endlich_ab t₀ fun t after => quiet t after (by
-      simpa only [Nat.add_sub_of_le after] using constant (t - t₀))
-
 end Gabbro.Core.Maschine.Zeitlauf

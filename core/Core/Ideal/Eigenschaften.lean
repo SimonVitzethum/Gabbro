@@ -87,7 +87,7 @@ theorem fortschritt_zur (Sy : System S Ev Wahl B ι) (hF : IFortschritt Sy)
     deterministically meets both, so `I.Bestimmt` and `I.Fortschritt` hold for it. -/
 theorem schnittstelle_erfuellbar :
     let Sy : System Unit Unit Unit Unit Unit :=
-      ⟨fun _ => ⟨fun _ _ _ _ => True, fun _ _ _ es _ => es = []⟩, fun _ _ => some (), fun _ _ => False,
+      ⟨fun _ => ⟨fun _ _ _ _ _ => True, fun _ _ _ es _ => es = []⟩, fun _ _ => some (), fun _ _ => False,
         fun _ _ _ => False⟩
     IBestimmt Sy ∧ IFortschritt Sy :=
   ⟨bestimmt_aus_regeln _ fun _ _ _ _ _ _ _ _ h1 h2 => ⟨h1.trans h2.symm, rfl⟩,

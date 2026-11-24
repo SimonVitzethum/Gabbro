@@ -52,7 +52,9 @@ theorem sicherheit_erfuellbar :
         cases no
   obtain ⟨a, zul⟩ := zulStart_erfuellbar (erlaubt leer) bild_gueltig
   let ρ : Lauf E := ⟨a, hw, ⟨fun _ => some start, fun _ => none, fun t => .wartet rfl rfl (stuck t)⟩⟩
-  have keine (t vor spur nach) : ¬ Uebergang E ρ t vor spur nach := fun h => nomatch h.2.1
+  have keine (t vor spur nach) : ¬ Uebergang E ρ t vor spur nach := by
+    rintro ⟨_, ⟨_, lab⟩, _⟩
+    cases lab
   have init (t : Nat) (s : Laufkonstruktion.Zustand) (hs : ρ.zeit.zustand t = some s) : start = s :=
     Option.some.inj hs
   refine ⟨E, H, ρ, ⟨erlaubt leer, conform, zul, rfl⟩, ?_, ?_, ?_, ?_⟩

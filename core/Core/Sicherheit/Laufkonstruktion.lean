@@ -25,7 +25,8 @@ def daten : Startdaten Unit Unit Unit Unit :=
 
 def einrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => ()⟩⟩
+    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => ()⟩,
+    fun _ => 0, fun _ _ _ => none⟩
 
 def start : Zustand :=
   Maschine.Zustand.start daten.lokal daten.status daten.kerne daten.rechte
@@ -33,7 +34,7 @@ def start : Zustand :=
 
 def einheit (z : Zustand) (form : Formular) (invarianten : List (Invariante Unit Zustand)) : Modell :=
   ⟨⟨katalog, bild, einrichtung,
-      ⟨fun _ => ⟨form, fun _ _ _ _ _ => False⟩, fun _ _ => some (),
+      ⟨fun _ => ⟨fun c s _ plans u => form c s plans u, fun _ _ _ _ _ => False⟩, fun _ _ => some (),
         fun _ _ => False, fun _ _ _ => False⟩,
       fun _ => daten, fun _ _ => 0, fun _ _ => some z⟩, invarianten⟩
 
@@ -81,7 +82,7 @@ theorem rahmen (z : Zustand) (b : Buchung Unit) : Zustandsrahmen z { z with buch
 theorem ausfuehren {z : Zustand} {form : Formular} {inv sicht t c vor u spur plan nach}
     (bereit : KannSchreiten (hardware sicht) t c vor)
     (regel : form c vor [plan] u) (aus : FuehrtSchrittAus einrichtung t c vor u plan spur nach) :
-    Lauffolge (einheit z form inv).maschine (hardware sicht) t (some vor) spur (some nach) :=
+    Lauffolge (einheit z form inv).maschine (hardware sicht) t (some vor) (.kontext c (), spur) (some nach) :=
   .schritt (.kontext rfl bereit ⟨(), rfl, regel⟩ aus)
 
 theorem schreiben {t c} (vor : Zustand) (b : Buchung Unit) {es g}

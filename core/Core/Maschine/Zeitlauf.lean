@@ -38,9 +38,11 @@ def Schnitt (ρ : Zeitlauf schritt pause) : Type :=
 def Endlich (ρ : Zeitlauf schritt pause) : Prop :=
   ∃ t : ρ.Schnitt, ∀ i, t.val ≤ i → ρ.spur i = none
 
-/-- Every finite tail is stuck or finished at each later opportunity. -/
-def Maximal (ρ : Zeitlauf schritt pause) : Prop :=
-  ∀ t, (∀ i, t ≤ i → ρ.spur i = none) → ∀ i, t ≤ i → KeinSchritt schritt i (ρ.zustand i)
+/-- An unused opportunity can be left idle only if no transition is possible.
+    A finite execution must eventually run out of occupied opportunities as well. -/
+def Maximal (ρ : Zeitlauf schritt pause) (frei : Nat → Prop) : Prop :=
+  (∀ t, ρ.spur t = none → frei t → KeinSchritt schritt t (ρ.zustand t)) ∧
+    (ρ.Endlich → ∃ t, ∀ i, t ≤ i → frei i)
 
 theorem wartet {ρ : Zeitlauf schritt pause} {t : Nat} (h : ρ.spur t = none) :
     ρ.zustand (t + 1) = ρ.zustand t ∧ pause t (ρ.zustand t) := by
@@ -71,8 +73,9 @@ def erlaubePausen {pause' : Nat → S → Prop} (ρ : Zeitlauf schritt pause)
     | wartet label eq hp => exact .wartet label eq (erlaubt _ _ hp)
 
 theorem erlaubePausen_maximal {pause' : Nat → S → Prop} (ρ : Zeitlauf schritt)
-    (erlaubt : ∀ t s, KeinSchritt schritt t s → pause' t s) : (ρ.erlaubePausen erlaubt).Maximal :=
-  fun _ tail i after => (ρ.wartet (tail i after)).2
+    (erlaubt : ∀ t s, KeinSchritt schritt t s → pause' t s) (frei : Nat → Prop)
+    (alle : ∀ t, frei t) : (ρ.erlaubePausen erlaubt).Maximal frei :=
+  ⟨fun _ idle _ => (ρ.wartet idle).2, fun _ => ⟨0, fun t _ => alle t⟩⟩
 
 theorem takt_existiert (schritt : Nat → S → Ev → S → Prop) (t : Nat) (s : S) :
     ∃ r : S × Option Ev, Takt schritt (KeinSchritt schritt) t s r.2 r.1 := by

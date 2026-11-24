@@ -46,7 +46,7 @@ variable [DecidableEq L]
 
 /-- Implementation failure is terminal. A working state follows the concrete step relation. -/
 inductive Lauffolge (hw : HwLauf) (t : Nat) :
-    Option (Zustand L Ort Wert Raum Lok Grund) → SchrittSpur Ort Wert →
+    Option (Zustand L Ort Wert Raum Lok Grund) → (SchrittWahl Wahl × SchrittSpur Ort Wert) →
       Option (Zustand L Ort Wert Raum Lok Grund) → Prop where
   | schritt {s s' spur} (h : ImplSchritt E.einrichtung E.system E.katalog hw t s spur s') :
       Lauffolge hw t (some s) spur (some s')
@@ -101,8 +101,8 @@ theorem lauf_erfuellbar (katalog : KatalogWohlgeformt E.katalog) (bild : E.bild.
 theorem absturz_am_schnitt {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι}
     {ρ : Lauf E} {t : Nat} {s : Zustand L Ort Wert Raum Lok Grund}
     (atCut : ρ.zeit.zustand t = some s) (offer : AbsturzAngeboten E.katalog ρ.hw t) :
-    ∃ spur next, ρ.zeit.spur t = some spur ∧ ρ.zeit.zustand (t + 1) = some next ∧
-      AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf E.katalog ρ.hw t s spur next := by
+    ∃ next, ρ.zeit.spur t = some (.absturz, absturzSpur) ∧ ρ.zeit.zustand (t + 1) = some next ∧
+      AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf E.katalog ρ.hw t s absturzSpur next := by
   have tick := ρ.zeit.takt t
   rw [atCut] at tick
   cases tick with
@@ -114,7 +114,9 @@ theorem absturz_am_schnitt {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl
     | some next =>
       rw [transition] at step
       cases step with
-      | schritt h => exact ⟨_, next, label, rfl, h.absturzfall _ _ offer⟩
+      | schritt h =>
+        obtain ⟨wahl, crash⟩ := h.absturzfall _ _ offer
+        exact ⟨next, label.trans (congrArg some (Prod.ext wahl crash.genau.1)), rfl, crash.genau.1 ▸ crash⟩
   | wartet _ _ pause =>
     exact (pause _ _ (.schritt (.absturz (absturz_schritt_erfuellbar _ _ offer s)))).elim
 
@@ -153,15 +155,22 @@ structure Lauf where
   umgebung : Umgebung
   hw : HwLauf
   zeit : Zeitlauf (Schritt E.einrichtung E.system E.katalog hw) (fun t _ => ¬ AbsturzAngeboten E.katalog hw t)
+  /-- The context using a core opportunity for a private implementation step. -/
+  belegt : Nat → Option Kontext
 
 abbrev Schnitt (ρ : Lauf E) : Type := ρ.zeit.Schnitt
 
 def ZustandAm (ρ : Lauf E) (t : Schnitt E ρ) : AussenStart × Zustand L Ort Wert Raum Lok Grund :=
   (ρ.start, ρ.zeit.zustand t.val)
 
+/-- Maximal ideal runs use the same hardware opportunities. A private core step
+    occupies its tick without adding an ideal transition. Unoccupied ticks must
+    still take a step whenever one is possible. -/
 def Laeufe (ρ : Lauf E) : Prop :=
   Hardware E.katalog ρ.umgebung ∧ ρ.hw.konform E.katalog ρ.umgebung ∧
-    E.ZulStart ρ.umgebung ρ.start ∧ ρ.zeit.zustand 0 = (start E ρ.start).2 ∧ ρ.zeit.Maximal
+    E.ZulStart ρ.umgebung ρ.start ∧ ρ.zeit.zustand 0 = (start E ρ.start).2 ∧
+    ρ.zeit.Maximal (fun t => ρ.belegt t = none) ∧
+    (∀ t c, ρ.belegt t = some c → ρ.zeit.spur t = none ∧ KannSchreiten ρ.hw t c (ρ.zeit.zustand t))
 
 /-- A crash offer is mandatory even at an ideal cut where a private step could normally pause. -/
 theorem absturz_am_schnitt (ρ : Lauf E) {t : Nat} (offer : AbsturzAngeboten E.katalog ρ.hw t) :
@@ -185,8 +194,9 @@ theorem lauf_mit_hw {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   have pause t z (stuck : KeinSchritt (Schritt E.einrichtung E.system E.katalog hw) t z) :
       ¬ AbsturzAngeboten E.katalog hw t :=
     fun offer => stuck _ _ (.absturz (absturz_schritt_erfuellbar _ _ offer z))
-  exact ⟨⟨s, h, hw, zeit.erlaubePausen pause⟩,
-    ⟨hardware, konform, start, init, zeit.erlaubePausen_maximal pause⟩, rfl, rfl⟩
+  exact ⟨⟨s, h, hw, zeit.erlaubePausen pause, fun _ => none⟩,
+    ⟨hardware, konform, start, init, zeit.erlaubePausen_maximal pause _ (fun _ => rfl),
+      fun _ _ h => nomatch h⟩, rfl, rfl⟩
 
 end I
 
@@ -198,15 +208,15 @@ theorem absturz_laeufe_erfuellbar {h : Umgebung} {s : AussenStart} {hw : HwLauf}
     (selected : E.katalog.enthaelt .persistence) (loaded : E.laden s (h.lade E.bild) = some z) :
     ∃ ρ : Lauf E, ∃ η : I.Lauf E, Laeufe E h ρ ∧ I.Laeufe E η ∧
       ρ.start = s ∧ η.start = s ∧ ρ.hw = η.hw ∧ FairLaeufe E.katalog h ρ.hw ∧
-      ρ.zeit.spur 0 = some absturzSpur ∧ η.zeit.spur 0 = some (.absturz, absturzSpur) := by
+      ρ.zeit.spur 0 = some (.absturz, absturzSpur) ∧ η.zeit.spur 0 = some (.absturz, absturzSpur) := by
   obtain ⟨crashHw, fairCrash, offer⟩ := fairer_absturz_erfuellbar fair selected 0
   obtain ⟨ρ, run, startEq, hwEq⟩ := fairer_lauf E start fairCrash
   obtain ⟨η, ideal, startEq', hwEq'⟩ := I.lauf_mit_hw E fairCrash.hardware start fairCrash.konform
   have load : ρ.zeit.zustand 0 = some z := by
     rw [run.2.2.2, startEq, loaded]
-  obtain ⟨_, _, label, _, crash⟩ := absturz_am_schnitt load (hwEq.symm ▸ offer)
+  obtain ⟨_, label, _, _⟩ := absturz_am_schnitt load (hwEq.symm ▸ offer)
   obtain ⟨label', _⟩ := I.absturz_am_schnitt E η (hwEq'.symm ▸ offer)
   exact ⟨ρ, η, run, ideal, startEq, startEq', hwEq.trans hwEq'.symm, hwEq.symm ▸ fairCrash,
-    label.trans (congrArg some crash.genau.1), label'⟩
+    label, label'⟩
 
 end Gabbro.Core.Maschine

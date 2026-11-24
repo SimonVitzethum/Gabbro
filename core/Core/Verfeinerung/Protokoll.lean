@@ -76,21 +76,20 @@ variable [DecidableEq L] {Sy : MaschinenSystem L Ort Wert Raum Lok Grund Bedingu
     RC11 order as the concrete step. -/
 theorem protokoll_schritt {k hw t spur}
     (bezug : ProtokollBezug s i) (konkret : ImplSchritt e Sy k hw t s spur s')
-    (form : ∀ c u plan, (hw.angebot t).crash = false → KannSchreiten hw t c s →
-      Sy.ImplSchritt c s [plan] u → FuehrtSchrittAus e t c s u plan spur s' →
-      ∃ w i', Schritt e Sy k hw t i (.kontext c w, spur) i' ∧ ProtokollBezug s' i') :
-    ∃ w i', Schritt e Sy k hw t i (w, spur) i' ∧ ProtokollBezug s' i' := by
+    (form : ∀ c w u plan, spur.1 = .kontext c w → (hw.angebot t).crash = false → KannSchreiten hw t c s →
+      Sy.ImplSchritt c s w [plan] u → FuehrtSchrittAus e t c s u plan spur.2 s' →
+      ∃ i', Schritt e Sy k hw t i spur i' ∧ ProtokollBezug s' i') :
+    ∃ i', Schritt e Sy k hw t i spur i' ∧ ProtokollBezug s' i' := by
   cases konkret with
   | kontext normal ready rule execute =>
-    obtain ⟨w, i', step, next⟩ := form _ _ _ normal ready rule execute
-    exact ⟨.kontext _ w, i', step, next⟩
+    exact form _ _ _ _ rfl normal ready rule execute
   | antwort normal arrives =>
     obtain ⟨i', step, next, _⟩ := bezug.antwort arrives
-    exact ⟨.antwort _, i', .antwort normal step, next⟩
+    exact ⟨i', .antwort normal step, next⟩
   | interrupt normal enters =>
     obtain ⟨i', step, next, _⟩ := bezug.interrupt enters
-    exact ⟨.interrupt _, i', .interrupt normal step, next⟩
+    exact ⟨i', .interrupt normal step, next⟩
   | absturz crash =>
-    exact ⟨.absturz, s', .absturz (bezug.absturz crash), ProtokollBezug.refl s'⟩
+    exact ⟨s', .absturz (bezug.absturz crash), ProtokollBezug.refl s'⟩
 
 end Gabbro.Core.Maschine.I

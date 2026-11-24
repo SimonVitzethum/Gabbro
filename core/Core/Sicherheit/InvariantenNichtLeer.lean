@@ -32,7 +32,7 @@ theorem invarianten_nichtLeer :
       freigegeben, ?_, append, rfl⟩
     exact FuehrtAus.sperre (e := einrichtung) (t := 0) (c := c) (s := z) (u := z) (l := ())
       (.geben (.besitzer c [])) (fun _ => trivial)
-  have first : Lauffolge E.maschine (hardware leer) 0 (some z) spur (some next) :=
+  have first : Lauffolge E.maschine (hardware leer) 0 (some z) (.kontext c (), spur) (some next) :=
     ausfuehren (c := c) (plan := plan) ⟨0, rfl, rfl, rfl⟩
       (show form c z [plan] z from ⟨rfl, rfl⟩) execute
   obtain ⟨zeit, boot, lab, after⟩ := schritt_erfuellbar first
@@ -44,6 +44,6 @@ theorem invarianten_nichtLeer :
     change some c ≠ (Function.update z.sperren () SperrZustand.frei ()).besitzer
     rw [Function.update_self]
     exact fun eq => nomatch eq
-  exact (safe.2 0 z spur next ⟨boot, lab, after⟩ nonCrash () wechselt).2 d (List.Mem.head _) rfl
+  exact (safe.2 0 z spur next ⟨boot, ⟨_, lab⟩, after⟩ nonCrash () wechselt).2 d (List.Mem.head _) rfl
 
 end Gabbro.Core.Sicherheit

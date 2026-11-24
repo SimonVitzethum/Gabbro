@@ -51,19 +51,19 @@ theorem toctoufrei_nichtLeer :
       fun _ absent => (List.not_mem_nil absent).elim⟩
     change atomar .x86_64 (sicht 0 z.verlauf) q = .antwort a
     simpa only [sicht, ↓reduceIte] using antwort
-  have first : Lauffolge E.maschine (hardware sicht) 0 (some z) spur₀ (some middle) :=
+  have first : Lauffolge E.maschine (hardware sicht) 0 (some z) (.antwort arrival, spur₀) (some middle) :=
     .schritt (.antwort rfl ⟨offered, rfl, .cons (.ohne (Or.inl rfl)) append (.nil _), rfl⟩)
   have execute : FuehrtSchrittAus einrichtung 1 c middle last ruhigerPlan spur₁ last :=
     ⟨rahmen middle last.buchung, fun _ absent => (List.not_mem_nil absent).elim, [], last,
       .intern, .nil _, rfl⟩
-  have second : Lauffolge E.maschine (hardware sicht) 1 (some middle) spur₁ (some last) :=
+  have second : Lauffolge E.maschine (hardware sicht) 1 (some middle) (.kontext c (), spur₁) (some last) :=
     ausfuehren (c := c) (plan := ruhigerPlan) ⟨1, rfl, rfl, rfl⟩
       (show form c middle [ruhigerPlan] last from ⟨rfl, rfl, rfl, rfl⟩) execute
   obtain ⟨zeit, boot, _, between, lab, after⟩ := praefix_erfuellbar first second
   obtain ⟨bootStart, run⟩ := laeuft zeit boot
   let ρ : Lauf E := ⟨bootStart, hardware sicht, zeit⟩
   refine ⟨E, _, ρ, run, fun safe => ?_⟩
-  obtain ⟨neu, journal, effects⟩ := (safe.2 1 middle spur₁ last ⟨between, lab, after⟩).2
+  obtain ⟨neu, journal, effects⟩ := (safe.2 1 middle spur₁ last ⟨between, ⟨_, lab⟩, after⟩).2
   have neuIst : [.aussen effect] = neu := by
     rcases journal with ⟨impossible, _⟩ | ⟨_, suffix⟩
     · exact (List.not_mem_nil impossible).elim

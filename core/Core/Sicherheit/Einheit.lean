@@ -27,10 +27,11 @@ variable (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
 
 abbrev Lauf := Maschine.Lauf E.maschine
 
-/-- A recorded transition with both its concrete states. A loader failure has no transitions. -/
+/-- A recorded transition with both its concrete states, projecting the recorded choice away. -/
 def Uebergang (ρ : Lauf E) (t : Nat) (vor : Zustand L Ort Wert Raum Lok Grund)
     (spur : SchrittSpur Ort Wert) (nach : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ρ.zeit.zustand t = some vor ∧ ρ.zeit.spur t = some spur ∧ ρ.zeit.zustand (t + 1) = some nach
+  ρ.zeit.zustand t = some vor ∧ (∃ w, ρ.zeit.spur t = some (w, spur)) ∧
+    ρ.zeit.zustand (t + 1) = some nach
 
 /-- A crash retires the old volatile epoch and is not a program release. -/
 def Absturz (spur : SchrittSpur Ort Wert) : Prop :=
