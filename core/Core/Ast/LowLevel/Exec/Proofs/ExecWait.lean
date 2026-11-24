@@ -116,7 +116,7 @@ private theorem waitProgramAkzeptiert (code : List ExecInstruction) :
     exact ⟨fun _ h => (List.not_mem_nil h).elim,
       fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨?_, ?_⟩
+  · refine ⟨?_, ?_, ?_⟩
     · intro ρ lauf t op args need
       exact False.elim need
     · intro ρ lauf t waiting
@@ -124,6 +124,11 @@ private theorem waitProgramAkzeptiert (code : List ExecInstruction) :
       obtain ⟨c, hc⟩ := nonEmpty
       obtain ⟨b, hb, _⟩ := blocked c hc
       simpa only [execProgram] using hb
+    · intro ρ lauf t l h holder bound
+      have hnone : E.schranken.halten l = none := by
+        rfl
+      rw [hnone] at bound
+      exact (bound rfl).elim
 
 private theorem waitErfuellbar : WaitJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
