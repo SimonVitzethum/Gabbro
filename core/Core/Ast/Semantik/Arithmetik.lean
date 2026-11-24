@@ -73,7 +73,9 @@ theorem Zahl.div_bounds (a : Zahl lo₁ hi₁) (b : Zahl lo₂ hi₂) (nonzero :
           exact a.oben
         exact Int.le_trans upper
           (Int.le_trans Int.le_natAbs (Int.le_max_right _ _))
-      · have h1 : lo₁ ≤ -(a.wert.natAbs : Int) := by simpa [nonpos] using a.unten
+      ·         have h1 : lo₁ ≤ -(a.wert.natAbs : Int) := by
+          calc lo₁ ≤ a.wert := a.unten
+            _ = -(a.wert.natAbs : Int) := nonpos
         have upper : (a.wert.natAbs : Int) ≤ (-lo₁) := by omega
         have upper' : (a.wert.natAbs : Int) ≤ (lo₁.natAbs : Int) := by
           rw [← Int.natAbs_neg lo₁]
