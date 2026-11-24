@@ -290,7 +290,6 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
             (if offset.wert < 0 then count + 1 else offset.wert.toNat, count + 1)⟩ : Bedarf) =
           some (⟨PartielleOperation.index, (offset.wert.toNat, count + 1)⟩ : Bedarf)
         rw [if_neg (not_lt_of_ge nonneg)]
-        rfl
       constructor
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
@@ -307,10 +306,17 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           rw [harr]
           rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
-        simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, harr', hoff, wert, val,
-          Rahmen.zahl, alsGanzzahl, Option.bind_some,
-          if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
-          indexPosition, Option.some.injEq, id_eq]
+        rw [Befehl.auswerten, Rahmen.schreibe]
+        simp only [Function.update_self]
+        rw [harr']
+        rw [show frame.zahl (slot + 1) = some ⟨lo, hi, offset⟩ by
+          change (frame.temp (slot + 1)).bind alsGanzzahl = some ⟨lo, hi, offset⟩
+          rw [hoff]
+          rfl]
+        rw [wert]
+        dsimp
+        rw [if_neg (not_lt_of_ge nonneg)]
+        rw [dif_pos boundProof]
         rfl
 
 end Gabbro.Core.Ast.Semantik
