@@ -159,14 +159,14 @@ private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List To
             simp [commaSeparated, List.intersperse, commaTok]
           rw [hcs]
           apply TuplePatternReads.tuple
-          · simpa only [List.append_assoc, List.cons_append, List.nil_append, closeTok, commaTok] using
+          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
               (patternName_printReads first
                 (comma :: (patternNamePieces second).map PrintedToken.value ++ patternTailTokens (c :: cs) rest)
                 (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa only [List.append_assoc, List.cons_append, List.nil_append, closeTok, commaTok] using
+          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
               (patternName_printReads second (patternTailTokens (c :: cs) rest)
                 (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa only [List.append_assoc, List.cons_append, List.nil_append, closeTok, commaTok] using
+          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
               (patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp_all [TuplePattern.names])))
 
 private theorem tupleAnnotation_printReads (annotation : Option WrittenType) (valueRest : List Token)
@@ -191,15 +191,17 @@ private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : Tup
   have letTok : letName.print.value = letKeyword := by rfl
   have assignTok : printAssignment.value = assignment := by rfl
   have semiTok : printSemicolon.value = semicolon := by rfl
-  simp only [letTok, assignTok, semiTok]
-  refine ⟨_, _, _, ?_, ?_, ?_, ?_⟩
-  · simp only [List.append_assoc, List.nil_append]
-  · simpa only [List.append_assoc] using
-      (tuplePattern_printReads args.pattern _ (fun id h => args.checked.2.2.1 id h))
-  · simpa only [List.append_assoc] using
-      (tupleAnnotation_printReads args.annotation _ (fun w h => (args.checked.2.2.2 w h).1))
-  · simpa only [List.append_assoc] using
-      (Expr.printReads (tree := args.value) (minimum := 0) (rest := [semicolon]) noOperatorAtSemicolon)
+  simp only [letTok, assignTok, semiTok, List.append_assoc]
+  let ann := (tupleAnnotationPieces args.annotation).map PrintedToken.value
+  let valToks := args.value.printTokens
+  let more := ann ++ (assignment :: (valToks ++ [semicolon]))
+  let rhs := valToks ++ [semicolon]
+  let input := (args.pattern.printPieces.map PrintedToken.value) ++ more
+  refine ⟨input, more, rhs, ?_, ?_, ?_, ?_⟩
+  · rfl
+  · exact tuplePattern_printReads args.pattern more (fun id h => args.checked.2.2.1 id h)
+  · exact tupleAnnotation_printReads args.annotation (valToks ++ [semicolon]) (fun w h => (args.checked.2.2.2 w h).1)
+  · exact Expr.printReads (tree := args.value) (minimum := 0) (rest := [semicolon]) noOperatorAtSemicolon
 
 theorem tupleBind_derivation : Surface.TupleBindDerivationAussage := by
   intro ctx
