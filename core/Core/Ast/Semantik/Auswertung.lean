@@ -379,8 +379,12 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           · rename_i hcontra
             omega
           · rename_i hcontra
-            exact False.elim (hs hcontra)
+            exact False.elim (hcontra hs)
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
+          split
+          · rfl
+          · rename_i hc
+            exact False.elim (hc ht)
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
@@ -399,6 +403,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           · rename_i hc
             rw [List.length_append, List.length_append, List.length_cons, List.length_nil,
               Nat.add_zero]
+            omega
         have boundAfter : (sw.auswerten mid).traegt env := by
           intro ty ref
           simp only [sw, Befehl.auswerten]
