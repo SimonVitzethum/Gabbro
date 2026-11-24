@@ -27,9 +27,9 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
   | jumpLong t d sp st =>
       cases b with
       | jumpLong t' d' sp' st' =>
-          cases sp <;> cases st <;> cases sp' <;> cases st'
+          cases hsp : sp <;> cases hst : st <;> cases hsp' : sp' <;> cases hst' : st'
           all_goals
-            simp [ExecTree.production] at ha hb
+            simp [ExecTree.production, hsp, hst, hsp', hst'] at ha hb
             rw [ha] at hb
             have hlen := congrArg List.length hb
             simp only [List.length_cons, List.length_nil] at hlen
@@ -51,9 +51,11 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
               subst t'
               subst d'
               have hspEq : sp = sp' := by
+                rw [hsp, hsp']
                 first
                 | rfl
                 | (
+                  apply congrArg some
                   apply Subtype.ext
                   have h := congrArg (fun l : List Token => l[9]?) hb
                   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
@@ -61,9 +63,11 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
                   exact h
                   )
               have hstEq : st = st' := by
+                rw [hst, hst']
                 first
                 | rfl
                 | (
+                  apply congrArg some
                   apply Subtype.ext
                   have h := congrArg (fun l : List Token => l[8]?) hb
                   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
@@ -71,14 +75,14 @@ private theorem jumpLongProductionUnique {tokens : List Token} {a b : ExecTree .
                   exact h
                   )
                 | (
+                  apply congrArg some
                   apply Subtype.ext
                   have h := congrArg (fun l : List Token => l[11]?) hb
                   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
                     Option.some.injEq, Token.word.injEq] at h
                   exact h
                   )
-              subst sp'
-              subst st'
+              rw [hspEq, hstEq]
               rfl
             )
 private def jumpLongSyntax : Gabbro.Core.Text.Syntax (ExecTree .jumpLong) where
@@ -117,18 +121,23 @@ private theorem jumpLongDruck : ExecDruckAussage .jumpLong := by
 private theorem jumpLongMeaning : JumpLongMeaningAussage := by
   intro code dest sp st s c frame heval
   simp only [ExecInstruction.evaluate] at heval
+  dsimp only at heval
   cases hcur : (s.lokal c).current with
   | none =>
-      simp only [hcur, Option.bind_none] at heval
+      rw [hcur] at heval
+      simp only [Option.bind_none] at heval
       cases heval
   | some cur =>
-      simp only [hcur, Option.bind_some] at heval
+      rw [hcur] at heval
+      simp only [Option.bind_some] at heval
       cases hdst : (s.lokal c).states[dest]? with
       | none =>
-          simp only [hdst, Option.bind_none] at heval
+          rw [hdst] at heval
+          simp only [Option.bind_none] at heval
           cases heval
       | some decl =>
-          simp only [hdst, Option.bind_some] at heval
+          rw [hdst] at heval
+          simp only [Option.bind_some] at heval
           cases htr : decl.translation with
           | off =>
               cases hsp : sp with
@@ -314,7 +323,7 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
       ⟨0, (fun i => if i = 0 then some 0 else none), [extent], (fun _ => none),
         env.politik.sicht 0 []⟩
     apply jlZulStart (k := k) (env := env) (regions := [extent]) hardware
-    · simpa [k] using jlImageGueltig
+    · simpa [k, Plattform.katalog] using jlImageGueltig
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
     · intro r hr
       have rext : r = extent := List.mem_singleton.mp hr
@@ -328,38 +337,37 @@ private theorem jumpLongJoint : JumpLongJointAussage := by
     change Annahme.Akzeptiert (execProgram k (pre ++ [op]))
     simpa [k] using jlAkzeptiert (pre ++ [op])
   have hnode : (scope.states.map Subtype.val).Nodup := by
-    dsimp [scope]
-    simp only [List.map_cons, List.map_nil]
-    exact List.nodup_cons.mpr ⟨by decide, List.nodup_nil _⟩
+    change [jlFirst.val, jlSecond.val].Nodup
+    exact List.nodup_cons.mpr ⟨by decide, List.nodup_nil⟩
   have hnosp : (scope.spaces.map Subtype.val).Nodup := by
-    dsimp [scope]
-    exact List.nodup_nil _
+    change ([] : List (List Char)).Nodup
+    exact List.nodup_nil
   have hnost : (scope.stapel.map Subtype.val).Nodup := by
-    dsimp [scope]
+    change [jlStack.val].Nodup
     exact List.nodup_singleton _
   have hnoen : (scope.entries.map Subtype.val).Nodup := by
-    dsimp [scope]
-    exact List.nodup_nil _
+    change ([] : List (List Char)).Nodup
+    exact List.nodup_nil
   have hslotCode : scope.slotCode jlFirst = some 0 := by
     change [jlFirst.val].idxOf? jlFirst.val = some 0
     simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
   have hslotState : scope.slotState jlSecond = some 1 := by
     change [jlFirst.val, jlSecond.val].idxOf? jlSecond.val = some 1
     simp only [List.idxOf?_cons, jlFirst_beq_second_false, if_false, beq_self_eq_true,
-      if_true, Option.map_some]
+      Bool.false_eq_true, if_true, Option.map_some, Nat.zero_add]
   have hslotStack : scope.slotStack jlStack = some 0 := by
     change [jlStack.val].idxOf? jlStack.val = some 0
     simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
   have hElab : elaborateExec scope tree = some op := by
     simp only [tree, elaborateExec, scope, op, code, dest, sp, st, hslotCode,
-      hslotState, hslotStack, Option.map_some]
+      hslotState, hslotStack, Option.map_some, Option.bind_some]
   have hparse : ExecParse text tree := by
     change Gabbro.Core.Text.Parse jumpLongSyntax.grammar (jumpLongSyntax.print tree) tree
     exact jumpLongSyntax.parse_print tree
   have hbezeichnet : BezeichnetExec k scope text (execUnit k op) .jumpLong := by
     refine ⟨tree, hparse, ?_⟩
     exact ⟨op, hElab, rfl⟩
-  have hs0lokal : s0.lokal entryContext = { pc := 0, stapel := [0] } : ExecFrame := by
+  have hs0lokal : s0.lokal entryContext = { pc := 0, stapel := [0] } := by
     simp only [s0, I.start, E, execProgram, start, execBoot, Zustand.start, entryContext,
       ↓reduceIte, List.range_one]
   have hs0status : s0.status entryContext = .laeuft := by
