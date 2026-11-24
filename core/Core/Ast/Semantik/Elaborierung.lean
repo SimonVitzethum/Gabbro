@@ -232,34 +232,52 @@ def fragment : (category : Category) → category.Tree → Fragment
   | .unit, tree => programm tree
   | .declaration scope, tree => { decl tree.2 with eingang := scope }
 
-abbrev Einheit := Maschine.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl
+abbrev Einheit := Maschine.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
 
-def startdaten (scope : Scope) (kern : Option Nat) (platform : Plattform := .x86_64)
-    (regions : List Strecke := []) : Startdaten Int PUnit Rahmen PUnit :=
+/-- **Boot data of every context.** The entry context starts at the first instruction and owns the
+    arrival regions; every other context rests, with its frame at the entry of its own body (the
+    position `eintritte` gives, `0` if it has none). -/
+def startdaten (scope : Scope) (eintritte : Kontext → Option Nat) (kern : Option Nat)
+    (platform : Plattform := .x86_64) (regions : List Strecke := []) :
+    Startdaten Int Nat Rahmen PUnit :=
   let bootFrame (c : Kontext) : Rahmen :=
     { Rahmen.start scope with
       platform := platform
+      pc := if c = eintritt then 0 else (eintritte c).getD 0
       arrivalRegions := if c = eintritt then regions else [] }
   ⟨bootFrame,
     fun c => if c = eintritt then .laeuft else .ruht,
-    fun k => ⟨if some k = kern then some eintritt else none, .nutzer, (), fun _ => false,
+    fun k => ⟨if some k = kern then some eintritt else none, .nutzer, 0, fun _ => false,
       0, false, []⟩, ⟨fun i => decide (i < regions.length), fun _ => 0⟩⟩
 
-def einrichtung (scope : Scope) : Einrichtung PUnit PUnit Int PUnit Rahmen PUnit PUnit :=
-  ⟨fun _ => 0, fun _ => (), fun _ => (), fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope (some 0), fun _ _ => 0⟩,
-    fun _ => 0, fun _ _ _ => none⟩
+/-- **The handle a context holds for a location.** A context holds the handle of the region slot it
+    lists among its arrival regions, issued in generation `0`; lock words and the event location are no
+    region and are never reached through a handle. -/
+def Zustand.griff (s : Zustand) (c : Kontext) : Zelle → Option Griff
+  | .region slot _ => if slot < (s.lokal c).arrivalRegions.length then some ⟨slot, 0⟩ else none
+  | .sperre _ => none
+  | .aussen => none
+
+/-- **The unit's interpretation of memory** from its memory plan: the declared initial cells, the
+    lock words, the one event location, the region slot as the object of a cell, and the handle a
+    context holds. -/
+def einrichtung (scope : Scope) (eintritte : Kontext → Option Nat) (plan : Speicherplan) :
+    Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit :=
+  ⟨plan.initial, Zelle.sperre, fun _ => Zelle.aussen, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
+    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0⟩,
+    Zelle.objekt, Zustand.griff⟩
 
 /-- The model's entry slot. An image compiler and its byte-level proof are later milestones. -/
 def bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
 def startmedium (_ : AussenStart) (_ : Nat) : UInt8 := 0
 
-def laden (scope : Scope) (platform : Plattform) (start : AussenStart) (image : Ladung) : Option Zustand :=
+def laden (scope : Scope) (eintritte : Kontext → Option Nat) (plan : Speicherplan)
+    (platform : Plattform) (start : AussenStart) (image : Ladung) : Option Zustand :=
   if image.starts 0 = some 0 ∧ image.bytes 0 = some 0 then
-    let d := startdaten scope (start.assignment 0) platform start.regions
-    some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope).initial
+    let d := startdaten scope eintritte (start.assignment 0) platform start.regions
+    some (Maschine.Zustand.start d.lokal d.status d.kerne d.rechte (einrichtung scope eintritte plan).initial
       (.leer (startmedium start)))
   else none
 
@@ -270,7 +288,7 @@ def Fragment.tabellen (p : Fragment) : Quelltabellen Zustand :=
 
 /-- The current source fragment has no classified local-place declarations. Its frame
     and control are public, and no instruction declares an output or release journal. -/
-def fragmentFlussdaten : Beobachtung.Flussdaten Befehl Rahmen PUnit Int :=
+def fragmentFlussdaten : Beobachtung.Flussdaten Befehl Rahmen Zelle Int :=
   { lokal := fun _ => .ganz ∅, kontrolle := fun _ => ∅ }
 
 /-- The current forms each take one concrete step at their linearisation point. State
@@ -278,11 +296,11 @@ def fragmentFlussdaten : Beobachtung.Flussdaten Befehl Rahmen PUnit Int :=
 def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
   katalog := platform.katalog
   bild := bild
-  einrichtung := einrichtung p.eingang
+  einrichtung := einrichtung p.eingang p.eintritte p.speicher
   system := system p.code
-  startdaten := fun start => startdaten p.eingang (start.assignment 0) platform start.regions
+  startdaten := fun start => startdaten p.eingang p.eintritte (start.assignment 0) platform start.regions
   startmedium := startmedium
-  laden := laden p.eingang platform
+  laden := laden p.eingang p.eintritte p.speicher platform
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := p.tabellen

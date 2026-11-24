@@ -34,12 +34,12 @@ theorem fragment_fluss_lokal (p : Fragment) (plattform : Plattform) :
       refine ⟨⟨?_, ende, initial, rechte, leihen, antwort⟩, rfl, rfl⟩
       have lokal : v₁.lokal = v₂.lokal :=
         funext fun d => lokale d ⟨0, Nat.zero_lt_succ _⟩ rfl
-      have region : Ast.Semantik.Zustand.regionLive v₁ c = Ast.Semantik.Zustand.regionLive v₂ c := by
+      have region : Ast.Semantik.Zustand.regionLive v₁ = Ast.Semantik.Zustand.regionLive v₂ := by
         funext slot
         simp only [Ast.Semantik.Zustand.regionLive, rechte, leihen]
       intro d _ _
-      change Function.update v₁.lokal c (f.auswerten (v₁.lokal c) (Ast.Semantik.Zustand.regionLive v₁ c)) d =
-        Function.update v₂.lokal c (f.auswerten (v₂.lokal c) (Ast.Semantik.Zustand.regionLive v₂ c)) d
+      change Function.update v₁.lokal c (f.auswerten (v₁.lokal c) (Ast.Semantik.Zustand.regionLive v₁)) d =
+        Function.update v₂.lokal c (f.auswerten (v₂.lokal c) (Ast.Semantik.Zustand.regionLive v₂)) d
       rw [lokal, region]
 
 end Gabbro.Core.Beobachtung

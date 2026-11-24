@@ -1,11 +1,6 @@
 module
 
-public import Core.Verfeinerung.Formen.Skalar
-public import Core.Verfeinerung.Formen.Kontrollfluss
-public import Core.Verfeinerung.Formen.AufrufSchleife
-public import Core.Verfeinerung.Formen.Aggregat
-public import Core.Verfeinerung.Formen.Variante
-public import Core.Verfeinerung.Formen.Text
+public import Core.Verfeinerung.Formen.Familie
 
 @[expose] public section
 
@@ -13,20 +8,14 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog
 
-/-- The current runtime instruction set obtains its simulation obligations
-    from the six independent proof packets. -/
-theorem sim_formen (skalar : SkalarSimAussage) (kontrolle : KontrollflussSimAussage)
-    (aufruf : AufrufSchleifeSimAussage) (aggregat : AggregatSimAussage)
-    (variante : VarianteSimAussage) (text : TextSimAussage) (p : Fragment) (platform : Plattform) :
-    ∀ b, I.RegelSimulation (p.einheit platform) b := by
+/-- The current runtime instruction set obtains its simulation obligations from the two class
+    packets: every instruction is in one class. -/
+theorem sim_formen (lokal : LokalSimAussage) (ruf : RufSimAussage) (p : Fragment)
+    (platform : Plattform) : ∀ b, I.RegelSimulation (p.einheit platform) b := by
   intro b
-  cases familie : b.simFamilie with
-  | skalar => exact skalar p platform b familie
-  | kontrollfluss => exact kontrolle p platform b familie
-  | aufrufSchleife => exact aufruf p platform b familie
-  | aggregat => exact aggregat p platform b familie
-  | variante => exact variante p platform b familie
-  | text => exact text p platform b familie
+  cases klasse : b.klasse with
+  | lokal => exact lokal p platform b klasse
+  | ruf => exact ruf p platform b klasse
 
 theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     I.SimBasisPflichten (p.einheit platform) := by
@@ -36,7 +25,7 @@ theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     have loaded := hardware.lader bild image
     have entry : (h.lade bild).starts 0 = some 0 := lader_start loaded 0
     have byte : (h.lade bild).bytes 0 = some 0 := (loaded.2.1 0 0 rfl).2
-    change laden p.eingang platform s (h.lade bild) = some _
+    change laden p.eingang p.eintritte p.speicher platform s (h.lade bild) = some _
     unfold laden
     rw [ite_eq_left ⟨entry, byte⟩]
     rfl
@@ -47,10 +36,7 @@ theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
 
 /-- Connect the form packets to the ordinary elaboration and run interfaces. -/
-theorem sim_elaborierter_lauf
-    (skalar : SkalarSimAussage) (kontrolle : KontrollflussSimAussage)
-    (aufruf : AufrufSchleifeSimAussage) (aggregat : AggregatSimAussage)
-    (variante : VarianteSimAussage) (text : TextSimAussage)
+theorem sim_elaborierter_lauf (lokal : LokalSimAussage) (ruf : RufSimAussage)
     {platform : Plattform} {category : Category} {tree : category.Tree} {E : Einheit}
     (elaboriert : Elaboriert platform tree E) (akzeptiert : Akzeptiert E)
     {h : Katalog.Umgebung} {ρ : Maschine.Lauf E} (lauf : Maschine.Laeufe E h ρ) :
@@ -58,6 +44,6 @@ theorem sim_elaborierter_lauf
   have same := elab_vollstaendig elaboriert
   subst E
   exact I.sim_akzeptierter_lauf akzeptiert (fun _ => (fragment category tree).simBasis platform)
-    (fun _ => sim_formen skalar kontrolle aufruf aggregat variante text _ platform) lauf
+    (fun _ => sim_formen lokal ruf _ platform) lauf
 
 end Gabbro.Core.Ast.Semantik
