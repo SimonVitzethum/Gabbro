@@ -26,7 +26,7 @@ def AnkunftUnveraendertAussage : Prop :=
   ∀ (b : Befehl) (frame : Rahmen) (live : Nat → Bool),
     (b.auswerten frame live).arrivalRegions = frame.arrivalRegions
 
-private theorem id_pure_arrival (frame : Rahmen) : (pure frame : Rahmen).arrivalRegions =
+private theorem pure_arrival (frame : Rahmen) : (pure frame : Id Rahmen).arrivalRegions =
     frame.arrivalRegions := rfl
 
 /-- A successful entry keeps the grant of the caller's frame: both arms of
@@ -62,7 +62,7 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
   intro b frame live
   cases b <;>
     simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.installSchema, Rahmen.halt,
-      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, id_pure_arrival, Rahmen.rueckkehr,
+      Rahmen.pass, Rahmen.setzeMass, ruf_arrival, pure_arrival, Rahmen.rueckkehr,
       Rahmen.bindeRegion, Id.run]
   all_goals
     repeat
@@ -82,6 +82,8 @@ private theorem ankuenftsReceiver (regions : List Katalog.Strecke) :
   simp only [ankuenftsRahmen, List.getElem?_cons_zero, Option.join, Option.bind_some, id_eq,
     wertAls, dif_pos rfl, dif_pos True.intro]
   rfl
+
+private theorem ankuenftsKeinExtent : (ankuenftsRahmen []).arrivalRegions[0]? = none := rfl
 
 private theorem ankuenftsUnborrowed (regions : List Katalog.Strecke) :
     (ankuenftsRahmen regions).borrowsRegion 0 = false := by
@@ -116,8 +118,8 @@ theorem ankunft_wird_gelesen :
       ({ frame with arrivalRegions := [] } : Rahmen).halt Abschluss.ungueltigerBereich := by
     change (Befehl.bindeRegion 0 .address).auswerten (ankuenftsRahmen []) (fun _ => true) =
       (ankuenftsRahmen []).halt Abschluss.ungueltigerBereich
-    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, ankuenftsRahmen, ankuenftsReceiver,
-      List.getElem?_nil, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
+    simp only [Befehl.auswerten, Rahmen.bindeRegion, Id.run, pure_arrival, ankuenftsReceiver,
+      ankuenftsKeinExtent, Bool.not_true, Bool.false_or, Bool.false_eq_true, ite_false]
   refine ⟨frame, [], ?_⟩
   intro equal
   have hs := congrArg (fun f : Rahmen => f.stopp) equal
