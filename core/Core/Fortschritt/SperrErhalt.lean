@@ -83,12 +83,8 @@ theorem fuehrtAus_sperre_inv {t c s u mem ev v} {l a}
       ∀ m, m ≠ l → v.sperren m = s.sperren m := by
   cases h with
   | sperre h' _ =>
-    refine ⟨_, h', ?_, ?_⟩
-    · show Function.update (s.sperren) l _ _ = _
-      exact Function.update_self
-    · intro m hm
-      show Function.update (s.sperren) l _ _ = _
-      exact Function.update_of_ne hm _ _
+    exact ⟨_, h', Function.update_self _ _ _,
+      fun m hm => Function.update_of_ne hm _ _⟩
 
 /-- A protocol step leaves every lock alone or moves exactly one lock by one lock rule. -/
 theorem kontextSchritt_sperren {t c s u} {plan : SchrittPlan L Ort Wert Bedingung}
