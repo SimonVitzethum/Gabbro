@@ -137,8 +137,10 @@ private theorem intSpelling_not_index : ∀ (s : Bool) (w : Nat), intSpelling s 
 local macro "different_type_head" equal:ident : tactic =>
   `(tactic|
     (have head := (List.cons.inj $equal).1
-     simp only [keyword, String.reduceToList, Token.word.injEq, List.cons.injEq,
-       Char.reduceEq, false_and, reduceCtorEq] at head))
+     first
+     | (simp only [keyword, openBracket, openParen, String.reduceToList, Token.word.injEq,
+         List.cons.injEq, Char.reduceEq, false_and, reduceCtorEq] at head; done)
+     | (cases head; done)))
 
 local macro "different_integer_head" equal:ident : tactic =>
   `(tactic|
