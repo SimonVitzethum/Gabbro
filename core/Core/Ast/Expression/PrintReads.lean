@@ -134,7 +134,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     intros
     rename_i base index loBound hiBound baseIH indexIH rest
     have baseRead := baseIH (openBracket :: index.printTokens ++ closeBracket :: closeParen :: rest)
-    have indexRead := ExprReads.atom (indexIH (closeBracket :: closeParen :: rest))
+    have indexRead := ExprReads.atom (minimum := 0) (indexIH (closeBracket :: closeParen :: rest))
       (.stop noOperatorAtCloseBracket)
     exact .grouped (.atom baseRead (.arrayIndex base loBound hiBound (Nat.zero_le _)
       indexRead (.stop noOperatorAtClose)))
@@ -146,7 +146,7 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
       cases items with
       | empty => exact noOperatorAtClose
       | next _ _ => exact noOperatorAtComma
-    have firstRead := ExprReads.atom (firstIH (comma :: second.printTokens ++ tail))
+    have firstRead := ExprReads.atom (minimum := 0) (firstIH (comma :: second.printTokens ++ tail))
       (.stop noOperatorAtComma)
     have secondRead := ExprReads.atom (secondIH tail) (.stop blocked)
     have tailRead := (itemsIH closeParen rest noOperatorAtClose).2
@@ -184,13 +184,13 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     intros
     rename_i left right leftIH rightIH rest
     have leftRead := leftIH (Arith.add.token :: right.printTokens ++ closeParen :: rest)
-    have rightRead := ExprReads.atom (rightIH (closeParen :: rest)) (.stop noOperatorAtClose)
+    have rightRead := ExprReads.atom (minimum := Arith.add.precedence + 1) (rightIH (closeParen :: rest)) (.stop noOperatorAtClose)
     exact .grouped (.atom leftRead (.textConcat left right (Nat.zero_le _) rightRead (.stop noOperatorAtClose)))
   case textIndex =>
     intros
     rename_i base offset baseIH offsetIH rest
     have baseRead := baseIH (openBracket :: offset.printTokens ++ closeBracket :: closeParen :: rest)
-    have offsetRead := ExprReads.atom (offsetIH (closeBracket :: closeParen :: rest))
+    have offsetRead := ExprReads.atom (minimum := 0) (offsetIH (closeBracket :: closeParen :: rest))
       (.stop noOperatorAtCloseBracket)
     exact .grouped (.atom baseRead (.textIndex base offset (Nat.zero_le _)
       offsetRead (.stop noOperatorAtClose)))
@@ -199,10 +199,10 @@ theorem Expr.printAtom (tree : Expr scope type) (rest : List Token) :
     rename_i base first last baseIH firstIH lastIH rest
     have baseRead := baseIH (openBracket :: first.printTokens ++ sliceRange :: last.printTokens ++
       closeBracket :: closeParen :: rest)
-    have firstRead := ExprReads.atom
+    have firstRead := ExprReads.atom (minimum := 0)
       (firstIH (sliceRange :: last.printTokens ++ closeBracket :: closeParen :: rest))
       (.stop noOperatorAtSliceRange)
-    have lastRead := ExprReads.atom (lastIH (closeBracket :: closeParen :: rest)) (.stop noOperatorAtCloseBracket)
+    have lastRead := ExprReads.atom (minimum := 0) (lastIH (closeBracket :: closeParen :: rest)) (.stop noOperatorAtCloseBracket)
     exact .grouped (.atom baseRead (.substring base first last (Nat.zero_le _)
       firstRead lastRead (.stop noOperatorAtClose)))
   case textLength =>

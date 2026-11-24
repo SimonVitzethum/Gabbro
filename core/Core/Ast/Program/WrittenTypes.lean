@@ -349,7 +349,7 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
       (TypeReads.array count (Expr.lit count) elementRead boundRead)
   · intro first second tail firstPrint secondPrint tailPrint valid rest _
     have tailRead := tailPrint valid.2.2 rest
-    have secondRead := secondPrint valid.2.1 _
+    have secondRead := secondPrint valid.2.1 (tail.printTail.map PrintedToken.value ++ closeParen :: rest)
       (by cases tail <;> intro more h <;> cases h)
     have firstRead := firstPrint valid.1
       (comma :: second.printPieces.map PrintedToken.value ++
