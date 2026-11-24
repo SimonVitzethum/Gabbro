@@ -253,9 +253,9 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
       | none => simp only [hfx, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, reduceCtorEq] at h
+          | none => simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, Option.pure_def, reduceCtorEq] at h
           | some ys' =>
-              simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, reduceCtorEq] at h
+              simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, Option.pure_def, reduceCtorEq] at h
               subst ys
               simpa [ih ys' hrest]
 private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
@@ -273,9 +273,9 @@ private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
       | none => simp only [hfx, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at h
       | some y =>
           cases hrest : xs.mapM f with
-          | none => simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, reduceCtorEq] at h
+          | none => simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, Option.pure_def, reduceCtorEq] at h
           | some ys' =>
-              simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, reduceCtorEq] at h
+              simp only [hfx, hrest, Option.bind_eq_bind, Option.bind_none, Option.bind_some, Option.pure_def, reduceCtorEq] at h
               subst ys
               cases i with
               | zero => exact hfx
