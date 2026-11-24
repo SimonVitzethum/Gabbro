@@ -24,7 +24,7 @@ theorem function_elaboriert (scope : Scope) : (functionForm scope).ElaboriertAus
 theorem function_realisiert (scope : Scope) : (functionForm scope).RealisiertAussage := by
   intro platform args s running active live atPc
   exact (functionForm scope).realisiert (fun args => by
-    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
+    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))
     simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
     ) platform args s running active live atPc
 
@@ -42,7 +42,7 @@ theorem function_annahme (scope : Scope) : (functionForm scope).AnnahmeAussage :
 theorem function_ideal (scope : Scope) : (functionForm scope).IdealAussage := by
   constructor
   · intro args
-    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
+    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))
     simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
   · intro args
     constructor
@@ -90,7 +90,7 @@ theorem function_erhaltung (scope : Scope) : (functionForm scope).ErhaltungsAuss
         exact bracedInv body
   have inv : ((functionForm scope).fragment args).klauseln.invariant = [] := by
     change (decl ((functionForm scope).produktion.tree args).2).klauseln.invariant = []
-    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).klauseln.invariant = []
+    change ((Fragment.einzel (functionInstruction scope args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))).anhaengen (functionCode args.result args.measure args.body)).klauseln.invariant = []
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact codeInv args.result args.measure args.body
   exact ⟨((functionForm scope).befehl args).abgleich ((functionForm scope).fragment args) platform,
@@ -129,7 +129,7 @@ theorem function_sicher (scope : Scope) platform a :
         exact bracedInv body
   have inv : ((functionForm scope).fragment a).klauseln.invariant = [] := by
     change (decl ((functionForm scope).produktion.tree a).2).klauseln.invariant = []
-    change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome (functionCode a.result a.measure a.body))).anhaengen (functionCode a.result a.measure a.body)).klauseln.invariant = []
+    change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen (functionCode a.result a.measure a.body)).klauseln.invariant = []
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact codeInv a.result a.measure a.body
   exact ((functionForm scope).befehl a).sicher ((functionForm scope).fragment a) platform inv
@@ -141,16 +141,16 @@ theorem function_erfuellbar : functionJoint := by
   let form := functionForm ctx
   let name : Identifier := keywordName 'f' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinaryName : directName name := directName_of_singleton rfl
-  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid [] t := by
     intro t mem
     cases mem
-  let a : Surface.FunctionArgs [] := ⟨name, ordinaryName, [], none, validNone, none, .braces .done, List.nodup_nil, by intro h; cases h⟩
+  let a : Surface.FunctionArgs [] := ⟨name, ordinaryName, [], none, validNone, none, .braces .done, List.nodup_nil, (by intro h; cases h), none⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2
   refine ⟨ctx, a, Ast.print (form.produktion.tree a), s₀,
     Ast.parse_print (form.produktion.tree a), rfl, .start,
     form.realisiert (fun args => by
-    change ((Fragment.einzel (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body))
+    change ((Fragment.einzel (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))).anhaengen (functionCode args.result args.measure args.body)).code[0]? = some (functionInstruction ctx args.name args.parameters args.result args.measure.isSome (functionCode args.result args.measure args.body) (declaredEffects args.effects))
     simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
     ) platform a s₀ rfl rfl rfl rfl, ?_⟩
   intro g guard
