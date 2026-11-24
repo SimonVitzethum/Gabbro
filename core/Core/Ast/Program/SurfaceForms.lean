@@ -300,7 +300,7 @@ theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : directName name := directName_of_singleton rfl
-  let a : FunctionArgs scope := ⟨name, ordinary, [], none, (by intro t h; cases h), none, .braces .done, (by exact List.nodup_nil), by intro h; cases h⟩
+  let a : FunctionArgs scope := ⟨name, ordinary, [], none, (by intro t h; cases h), none, .braces .done, (by exact List.nodup_nil), (by intro h; cases h), none⟩
   exact Rule.satisfiableOfPrint a (function_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
@@ -336,7 +336,7 @@ theorem program_syntax_erfuellbar  :
     (program).Satisfiable := by
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : directName name := directName_of_singleton rfl
-  let first : Decl [] [] := .function name ordinary [] none (by intro t h; cases h) none (.braces .done) (by exact List.nodup_nil) (by intro h; cases h)
+  let first : Decl [] [] := .function name ordinary [] none (by intro t h; cases h) none (.braces .done) (by exact List.nodup_nil) (by intro h; cases h) none
   let a : ProgramArgs := ⟨[], [], first, .done⟩
   exact Rule.satisfiableOfPrint a (program_print a)
 
