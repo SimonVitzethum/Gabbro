@@ -50,17 +50,7 @@ private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by
 
 private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "string" ≠ .word (intSpelling signed width) := by
-  cases signed
-  · intro h
-    have hl : "string".toList = intSpelling false width := by
-      injection h with hl
-      exact hl
-    exact (by decide : ('s' : Char) ≠ 'u') (List.cons.inj hl).1
-  · intro h
-    have hl : "string".toList = intSpelling true width := by
-      injection h with hl
-      exact hl
-    exact (by decide : ('s' : Char) ≠ 'i') (List.cons.inj hl).1
+  cases signed <;> decide
 
 theorem TextTypeInversion : TextTypeInversionAussage := by
   intro input type rest read
@@ -161,7 +151,7 @@ theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
     intro h
     cases h
   · intro answer
-    exact List.not_mem_nil _
+    exact List.not_mem_nil
 
 theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   intro ctx platform args
