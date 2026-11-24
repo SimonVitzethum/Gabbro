@@ -117,7 +117,7 @@ theorem schranken_prefix_aus_lokal (pflicht : SchrankenLokal E) {η : I.Lauf E}
           (.interrupt normal step) ih.1 ih.2
       | absturz step =>
         exact pflicht.protokoll lauf t _ _ _ _ rfl label trivial rfl (.absturz step) ih.1 ih.2
-    | wartet _ gleich _ => rw [gleich]; exact ih
+    | wartet _ gleich _ => unfold SchrankenPrefix; rw [gleich]; exact ih
 
 /-- An absent stack bound admits every local state. Units with open bounds are accepted
     exactly as before; refusal only bites where a finite bound is declared. -/
