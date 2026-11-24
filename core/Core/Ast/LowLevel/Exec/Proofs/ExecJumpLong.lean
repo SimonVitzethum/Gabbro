@@ -255,7 +255,7 @@ private theorem jlKlauseln (code : List ExecInstruction) :
     cases hp
 private theorem jlWaechter (code : List ExecInstruction) :
     WaechterHalten (execProgram Plattform.x86_64.katalog code) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ runs t o args bedarf
     dsimp [kanonischeVerwendung, execProgram, Quelltabellen.leer] at bedarf
     cases bedarf
@@ -264,6 +264,8 @@ private theorem jlWaechter (code : List ExecInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
     exact hblock
+  · intro ρ runs t l h _ hne
+    exact (hne rfl).elim
 private theorem jlAkzeptiert (code : List ExecInstruction) :
     Annahme.Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_⟩,
