@@ -72,4 +72,14 @@ theorem merge_meaning : MergeMeaningAussage := by
       simp only [MemInstruction.evaluate, hfirst, hsecond, Option.bind_eq_bind, Option.bind_some,
         if_neg nadj]
 
+theorem merge_obligations : memObligationsKern .merge :=
+  ⟨memParseAussage_merge, memInversionAussage_merge, memEindeutigAussage_merge,
+   memDruckAussage_merge, memElaboriert .merge, memRealisiertAussage_merge,
+   memAnnahmeAussage_merge, memIdealAussage_merge, memEinheit .merge, memImpl .merge,
+   memFortschrittAussage_merge, memErhaltungAussage_merge, memRegelSicherAussage_merge,
+   memRegelAntwortSicher .merge, memAussenLokalAussage_merge, memKostenAussage_merge,
+   memSchranken, memEtiketten, memFluss⟩
+
+theorem merge_aussage : MergeAussage := ⟨merge_obligations, merge_meaning, merge_erfuellbar⟩
+
 end Gabbro.Core.Ast.LowLevel
