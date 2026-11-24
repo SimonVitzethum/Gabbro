@@ -161,8 +161,8 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
       ⟨⟨name, ty, false, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
     rw [Stmt.printTokens_let]
     exact .letBinding name ordinary
-      (by simpa only [List.append_assoc, List.singleton_append] using
-        (expr.printReads (rest := semicolon :: rest) noOperatorAtSemicolon)) .plain
+      (by simpa only [List.append_assoc, List.singleton_append, List.nil_append] using
+        (expr.printReads (minimum := 0) (rest := semicolon :: rest) noOperatorAtSemicolon)) .plain
   case assignVar =>
     intros
     rename_i ref visible writable value fits rest
@@ -269,7 +269,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
           (noOperatorAtOpenBrace (minimum := 0))
       | some handler =>
         simpa only [afterUpper, overflowPieces, List.map_cons, List.map_nil, List.cons_append,
-          List.nil_append, hpOverflow, hpName] using
+          List.nil_append, hpOverflow, hpName, keyword] using
           (noOperatorAtWord (minimum := 0) (word := "on_exceeded".toList))
     have handlerRead : OverflowReads afterUpper overflow bodyInput := by
       cases overflow with
@@ -328,11 +328,17 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     have typeRead := (WrittenType.indexOption carrier _).printReads resolved
       (rest := assignment :: rhs) (by intro more h; cases h)
     have valueRead := value.printReads (semicolon :: rest)
-    cases mutable <;>
+    cases mutable with
+    | false =>
       simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
         List.cons_append, List.nil_append, List.append_assoc, hpLet, hpMut, hpName, hpColon, hpAssign, hpSemi,
-        optionLetHead, Bool.false_eq_true, if_false, if_true, rhs] using
-        (StmtReads.letOption _ name ordinary carrier resolved typeRead valueRead)
+        optionLetHead, Bool.false_eq_true, if_false, if_true, letKeyword, keyword, colon, rhs] using
+        (StmtReads.letOption (result := result) false name ordinary carrier resolved typeRead valueRead)
+    | true =>
+      simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
+        List.cons_append, List.nil_append, List.append_assoc, hpLet, hpMut, hpName, hpColon, hpAssign, hpSemi,
+        optionLetHead, Bool.false_eq_true, if_false, if_true, letKeyword, keyword, colon, rhs] using
+        (StmtReads.letOption (result := result) true name ordinary carrier resolved typeRead valueRead)
   case retOption =>
     intros
     rename_i declared value rest
