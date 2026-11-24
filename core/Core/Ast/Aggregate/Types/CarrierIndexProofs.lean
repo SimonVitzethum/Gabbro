@@ -231,12 +231,21 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem
-  let argsVal : Surface.FunctionArgs scope :=
-    ⟨fnName, fnOrdinary, [param], none, validNone, none, .braces .done, by
+  let argsVal : Surface.FunctionArgs scope := {
+    name := fnName
+    ordinary := fnOrdinary
+    parameters := [param]
+    result := none
+    valid := validNone
+    measure := none
+    body := .braces .done
+    distinct := by
       change (paramName.val :: []).Nodup
-      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true], by
+      simp only [List.nodup_cons, List.not_mem_nil, List.nodup_nil, and_true]
+    returns := by
       intro h
-      cases h⟩
+      cases h
+  }
   let args : {a : Surface.FunctionArgs scope // ∃ p ∈ a.parameters, indexTypeUse p.written} :=
     ⟨argsVal, by
       refine ⟨param, ?_, ?_⟩
