@@ -118,9 +118,10 @@ private theorem beob_konstant {ρ : Lauf einheit} {s : AussenStart} (p : Praedik
     NiedrigeBeob einheit ρ p t = [.anfangsspeicher (fun _ => some ())] := by
   induction t with
   | zero =>
-    change (match ρ.zeit.zustand 0 with
+    change ((match ρ.zeit.zustand 0 with
       | none => [.ladefehler]
-      | some z => [.anfangsspeicher (fun o => sichtbar (einheit.etiketten.ort o) (z.initial o))]) = _
+      | some z => [.anfangsspeicher (fun o => sichtbar (einheit.etiketten.ort o) (z.initial o))]) :
+        List (NiedrigesEreignis Unit Unit Unit Unit)) = _
     rw [anfang] <;> rfl
   | succ t ih =>
     change NiedrigeBeob einheit ρ p t ++ schrittBeob ρ p t = _
