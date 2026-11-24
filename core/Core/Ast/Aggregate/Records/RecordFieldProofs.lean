@@ -53,15 +53,11 @@ theorem labelList_inj_aux : ∀ {a b : List Identifier}, a.map Subtype.val = b.m
       intro b h
       cases b with
       | nil => rfl
-        | cons y ys =>
-            cases h
-
+      | cons y ys => cases h
   | cons x xs ih =>
       intro b h
       cases b with
-        | nil =>
-            cases h
-
+      | nil => cases h
       | cons y ys =>
           simp only [List.map_cons, List.cons.injEq] at h
           subst y
