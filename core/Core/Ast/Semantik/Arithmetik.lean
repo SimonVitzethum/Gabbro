@@ -15,19 +15,19 @@ structure Zahl (lo hi : Int) where
 def Zahl.literal (value : Int) : Zahl value value :=
   ⟨value, Int.le_refl _, Int.le_refl _⟩
 
-def Wert : Ty .value → Type
-  | .int lo hi => Zahl lo hi
-  | .bool => Bool
-  | .array element count => Vector (Wert element) count
-  | .productEnd => PUnit
-  | .product head tail => Wert head × Wert tail
+def Wert : {kind : Kind} → Ty kind → Type
+  | _, .int lo hi => Zahl lo hi
+  | _, .bool => Bool
+  | _, .array element count => Vector (Wert element) count
+  | _, .productEnd => PUnit
+  | _, .product head tail => Wert head × Wert tail
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
     Wert target := by
   cases source <;> cases target <;>
     first
-    | change _ = _ at fits; cases fits; exact value
+    | simp only [Fits] at fits; cases fits; exact value
     | skip
   case int.int lo hi lower upper =>
     exact ⟨value.wert, Int.le_trans fits.1 value.unten, Int.le_trans value.oben fits.2⟩
@@ -35,8 +35,8 @@ def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : 
   case array.array source count target other =>
     cases count <;> cases other <;>
       first
-      | change _ = _ at fits; cases fits; exact value
-      | exact Vector.empty
+      | simp only [Fits] at fits; cases fits; exact value
+      | exact #v[]
 
 def tupleGet : (types : List (Ty .value)) → (i : Fin types.length) →
     Wert (tupleType types) → Wert (types.get i)

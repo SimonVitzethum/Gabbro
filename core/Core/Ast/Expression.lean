@@ -110,13 +110,23 @@ def PrimaryStart (tokens : List Token) : Prop :=
 def NegationStart (tokens : List Token) : Prop :=
   PrimaryStart tokens ∧ ∀ n tail, tokens ≠ .natural n :: tail
 
+theorem Infix.token_ne_delimiter (op : Infix) :
+    op.token ≠ comma ∧ op.token ≠ closeBracket := by
+  cases op with
+  | arith operation => cases operation <;> decide
+  | div => decide
+  | compare operation => cases operation <;> decide
+  | logic operation => cases operation <;> decide
+  | index => decide
+  | projection => decide
+
 theorem noOperatorAtComma : ¬ Continues minimum (comma :: more) := by
   rintro ⟨op, _, same, _⟩
-  cases op <;> first | cases same | rename_i operation; cases operation <;> cases same
+  exact op.token_ne_delimiter.1 (List.cons.inj same).1.symm
 
 theorem noOperatorAtCloseBracket : ¬ Continues minimum (closeBracket :: more) := by
   rintro ⟨op, _, same, _⟩
-  cases op <;> first | cases same | rename_i operation; cases operation <;> cases same
+  exact op.token_ne_delimiter.2 (List.cons.inj same).1.symm
 
 mutual
 
@@ -184,13 +194,13 @@ inductive ExprTail (scope : Scope) :
       ExprTail scope minimum base (dot :: .natural index.val :: input) tree rest
 
 /-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
-inductive ItemsRead (scope : Scope) (close : Token) :
+inductive ItemsRead (scope : Scope) : Token →
     List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
   | close : ItemsRead scope close (close :: rest) .empty rest
   | next : ExprReads scope 0 input head more → ItemsTail scope close more tail rest →
       ItemsRead scope close input (.next head tail) rest
 
-inductive ItemsTail (scope : Scope) (close : Token) :
+inductive ItemsTail (scope : Scope) : Token →
     List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
   | close : ItemsTail scope close (close :: rest) .empty rest
   | comma : (types ≠ [] ∨ close = closeBracket) → ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest

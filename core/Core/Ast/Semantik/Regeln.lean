@@ -39,7 +39,7 @@ def wertIn (type : Ty .value) (value : Dynamisch) : Option Dynamisch :=
       some ⟨.int lo hi, ⟨number.wert, bounds.1, bounds.2⟩⟩
     else none
   | .bool, ⟨.bool, value⟩ => some ⟨.bool, value⟩
-  | .array target 0, ⟨.array _ 0, _⟩ => some ⟨.array target 0, Vector.empty⟩
+  | .array target 0, ⟨.array _ 0, _⟩ => some ⟨.array target 0, #v[]⟩
   | target, ⟨source, value⟩ =>
     if same : source = target then some ⟨target, same ▸ value⟩ else none
 
