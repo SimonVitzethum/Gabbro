@@ -107,8 +107,9 @@ theorem Adressraum.eintrag_reserviert {frame : MemFrame} {sp : Nat} {space : Adr
       omega
     have notSep : ¬ (⟨phys, phys + 1⟩ : Strecke).getrennt
         ⟨ent.frame * granule, (ent.frame + 1) * granule⟩ := by
+      change ¬ (phys + 1 ≤ ent.frame * granule ∨
+        (ent.frame + 1) * granule ≤ phys)
       intro h
-      unfold Strecke.getrennt at h
       rcases h with h | h
       · omega
       · omega
