@@ -19,6 +19,7 @@ public import Core.Ast.LowLevel.Proofs.Execution
 public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvTypes
 public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
 public import Core.Ast.LowLevel.Proofs.RegionUnit
 public import Core.Ast.LowLevel.Proofs.RegionSatisfiability

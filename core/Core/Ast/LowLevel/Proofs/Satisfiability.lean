@@ -17,6 +17,8 @@ granted, aligned RAM extent disjoint from the platform device windows.
 
 namespace Gabbro.Core.Ast.LowLevel
 
+public section
+
 open Text Katalog Maschine
 
 private theorem derivesSymbols {form : Form} (ts : List LocatedToken) :
@@ -357,5 +359,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
     simp only [tree, scope]
     exact dif_pos allowed
   · simp only [op, transfer, Instruction.evaluate]
+
+end
 
 end Gabbro.Core.Ast.LowLevel
