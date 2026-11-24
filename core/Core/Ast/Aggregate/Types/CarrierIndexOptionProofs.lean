@@ -40,7 +40,7 @@ private theorem optionToken_ne_index : keyword "option" ≠ keyword "index" := b
 private theorem optionToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "option" ≠ .word (intSpelling signed width) := by
   intro h
-  change .word "option".toList = .word (intSpelling signed width) at h
+  change Token.word "option".toList = Token.word (intSpelling signed width) at h
   injection h with hl
   cases signed
   · exact (by decide : ('o' : Char) ≠ 'u') (List.cons.inj hl).1
