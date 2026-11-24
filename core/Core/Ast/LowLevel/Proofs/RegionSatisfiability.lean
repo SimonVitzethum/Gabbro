@@ -146,7 +146,7 @@ theorem addressTypeUnit_erfuellbar : AddressTypeUnitErfuellbarAussage := by
     Ast.parse_print _, ⟨rfl, ⟨⟨.nil, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩⟩, ?_⟩
   · change (programm unit).code.all (Befehl.platformAllowed .x86_64) = true
     have code : (programm unit).code =
-        [.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [],
+        [.definiere mainName [.ownedRegion] (some (.address .physical)) 0 6 false [] none,
           .bindeRegion 0 .address, .lesen 0 0, .zurueck 0 (.address .physical),
           .blockEnde 1, .rueckVoid, .starte mainName, .ende] := rfl
     rw [code]
