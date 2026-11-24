@@ -126,22 +126,24 @@ private meta def catalogueKinds : Array ClosedKinds := #[
     `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz]⟩]
 private meta def closing : Option ClosingSpec := none
 
-private meta def auditBatches (items : Array α) : Array (Array α) := Id.run do
-  let batchSize := max 1 ((items.size + 11) / 12)
+private meta def sourceBatches (items : Array Source) : Array (Array Source) := Id.run do
+  let batchCount := 12
+  let batchSize := max 1 ((items.size + batchCount - 1) / batchCount)
   let mut batches := #[]
-  for batch in [:12] do
+  for batch in [:batchCount] do
     let start := batch * batchSize
     if start >= items.size then break
     batches := batches.push (items.extract start (start + batchSize))
   return batches
 
-/-- Runs the package guards after the root's model imports have been elaborated. -/
+/-- Audits the source inventory and private compiled declarations at the root, so coverage
+    does not depend on each module opting in. -/
 elab "#check_core" : command => do
   let started ← IO.monoMsNow
   let root ← IO.FS.realPath (← getFileName)
   let (sources, layoutErrors) ← readCoreSources root
   let imported ← getEnv
-  let scans := (auditBatches sources).map fun batch =>
+  let scans := (sourceBatches sources).map fun batch =>
     Task.spawn fun _ => batch.map fun source => (source, auditSource imported source)
   let (hygiene, reached) := packageErrors sources
   -- An orphan need not have any compiled artifact. Check the reached modules without it.
@@ -151,17 +153,17 @@ elab "#check_core" : command => do
   let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
   let elaboratedErrors ← liftTermElabM <| withEnv env do
-    let declarationTask ← Meta.MetaM.asTask' (proofErrors (auditBatches (coreDeclarations env)))
+    let declarationTask ← Meta.MetaM.asTask' (proofErrors (coreDeclarations env))
     let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
-    let mut errors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-    errors := errors ++ safetyErrors env index safety
-    errors := errors ++ (← registryErrors registry)
+    let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
+      ++ safetyErrors env index safety
+    let mut errors ← registryErrors registry
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
-    return errors ++ (← withoutModifyingState declarationTask.get)
+    return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors
   errors := errors ++ elaboratedErrors
   for error in errors do
     logError error

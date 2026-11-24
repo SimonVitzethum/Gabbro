@@ -83,33 +83,49 @@ private meta def decisionGoals (body : Expr) : Array Expr := runST fun world => 
     return true
   goals.get
 
-/-- Checks retained decision proofs. Their elaborated goals must reduce, within a fixed budget, to closed
-    Boolean combinations of equality on small enumerations or naturals and small natural inequalities.
-    The declaration audit supplies only bodies whose declaration mentions the proof constant.
-    The source scan checks tactic options separately and refuses anonymous decisions whose proofs are lost. -/
-public meta def proofErrors (batches : Array (Array Name)) : MetaM (Array String) := do
-  -- Search proof bodies in parallel. Keep one ordered reduction pass so all goals share
-  -- the same cache, and the per-goal budget is applied in the same declaration order.
-  let tasks ← batches.mapM fun names => Lean.Core.CoreM.asTask' do
-    let (errors, bodies) ← declarationAudit names
-    return (errors, bodies.map fun (name, body) => (name, decisionGoals body))
-  let mut declarationErrors := #[]
-  let mut decisionErrors := #[]
+private meta def decisionErrors (proofs : Array (Name × Array Expr)) : MetaM (Array String) := do
+  let mut errors := #[]
   let mut tested : Std.HashMap Expr Bool := {}
+  for (name, goals) in proofs do
+    for goal in goals do
+      let allowed ← match tested[goal]? with
+        | some result => pure result
+        | none => do
+          let result ← checkGoal goal
+          tested := tested.insert goal result
+          pure result
+      unless allowed do
+        errors := errors.push s!"decision proof in {name} has a goal outside the small finite fragment"
+        break
+  return errors
+
+/-- Checks retained decision proofs with the original per-goal reduction budget. Batches run in
+    declaration order internally and use only reductions from their own preceding goals. If a
+    batch refuses a goal, repeat the ordered check with the package-wide cache so an earlier
+    batch can supply reductions that the refusing batch could not reuse. -/
+public meta def proofErrors (names : Array Name) : MetaM (Array String) := do
+  -- Adjacent names often share a module and a proof style. Interleave the batches
+  -- to spread expensive proof families while preserving relative order within each batch.
+  let batchCount := 12
+  let mut batches : Array (Array Name) := Array.replicate batchCount #[]
+  for i in [:names.size] do
+    batches := batches.modify (i % batchCount) (·.push names[i]!)
+  let tasks ← (batches.filter (!·.isEmpty)).mapM fun names => MetaM.asTask' do
+    let (errors, bodies) ← declarationAudit names
+    let proofs := bodies.map fun (name, body) => (name, decisionGoals body)
+    let refused := !(← decisionErrors proofs).isEmpty
+    return (errors, proofs, refused)
+  let mut declarationErrors := #[]
+  let mut proofs := #[]
+  let mut refused := false
   for task in tasks do
-    let (errors, proofs) ← withoutModifyingState task.get
+    let (errors, checked, failed) ← withoutModifyingState task.get
     declarationErrors := declarationErrors ++ errors
-    for (name, goals) in proofs do
-      for goal in goals do
-        let allowed ← match tested[goal]? with
-          | some result => pure result
-          | none => do
-            let result ← checkGoal goal
-            tested := tested.insert goal result
-            pure result
-        unless allowed do
-          decisionErrors := decisionErrors.push s!"decision proof in {name} has a goal outside the small finite fragment"
-          break
-  return declarationErrors ++ decisionErrors
+    proofs := proofs ++ checked
+    refused := refused || failed
+  if refused then
+    let ordered := proofs.qsort fun (left, _) (right, _) => Name.lt left right
+    return declarationErrors ++ (← decisionErrors ordered)
+  return declarationErrors
 
 end Gabbro.Core.Waechter

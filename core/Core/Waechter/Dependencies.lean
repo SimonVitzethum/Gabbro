@@ -16,7 +16,7 @@ public meta structure DependencyIndex where
   closures : Std.HashMap Name (Array Name)
   closingErrors : Array String
 
-/-- Each body is scanned only once. Keep the direct edges and the closures of the actual guard
+/-- Index the direct edges once and keep the closures of the actual guard
     roots, so declarations deep in the graph do not each need their own transitive set. The closing
     guard uses the same edges but stops at the explicitly trusted roots, even if they are in Core. -/
 public meta def indexDependencies (env : Environment) (roots closingRoots : Array Name)
