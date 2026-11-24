@@ -168,20 +168,24 @@ theorem constant_impl (scope : Scope) : (constantForm scope).ImplAussage := by
 -- Mirror Quellform.erhaltung with the instruction-local transfer and safety.
 theorem constant_erhaltung (scope : Scope) : (constantForm scope).ErhaltungsAussage := by
   intro platform args
+  have inv : ((constantForm scope).fragment args).klauseln.invariant = [] := by
+    change (expr 0 args.value).klauseln.invariant ++ [] = []
+    rw [expr_keine_invarianten]
+    rfl
   exact ⟨((constantForm scope).befehl args).abgleich ((constantForm scope).fragment args) platform,
     ((constantForm scope).befehl args).fortschritt ((constantForm scope).fragment args),
     ((constantForm scope).befehl args).komponierbar ((constantForm scope).fragment args) platform,
-    ((constantForm scope).befehl args).sicher ((constantForm scope).fragment args) platform (by
-      change (expr 0 args.value).klauseln.invariant ++ [] = []
-      rw [expr_keine_invarianten])⟩
+    ((constantForm scope).befehl args).sicher ((constantForm scope).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem constant_sicher (scope : Scope) platform a :
     Sicherheit.RegelSicher (((constantForm scope).fragment a).sicherheitsEinheit platform)
       ((constantForm scope).befehl a) := by
-  exact ((constantForm scope).befehl a).sicher ((constantForm scope).fragment a) platform (by
+  have inv : ((constantForm scope).fragment a).klauseln.invariant = [] := by
     change (expr 0 a.value).klauseln.invariant ++ [] = []
-    rw [expr_keine_invarianten])
+    rw [expr_keine_invarianten]
+    rfl
+  exact ((constantForm scope).befehl a).sicher ((constantForm scope).fragment a) platform inv
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem constant_erfuellbar : constantJoint := by
