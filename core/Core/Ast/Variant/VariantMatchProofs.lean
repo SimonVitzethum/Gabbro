@@ -306,16 +306,20 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
     ⟨name.val, labels, payloads, valueArgs.expression, arms⟩
   refine ⟨(scope, none), a, ?_⟩
   let form := variantMatchForm (scope, none)
-  let s := (I.start (form.einheit platform a) start).2
+  let s₀ := (I.start (form.einheit platform a) start).2
+  let vb : Befehl := .baueVariante 0 name.val labels payloads index
+  let s₁ := vb.nach eintritt s₀
+  have vbhead : kopf (form.fragment a).code s₀ eintritt = some vb := by
+    rfl
+  have step : (form.einheit platform a).system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨vb, vbhead, rfl, rfl⟩
+  have reached : (form.einheit platform a).system.IErreichbar s₀ s₁ :=
+    .schritt eintritt () [plan] .start step
   dsimp [Quellform.ErfuellbarAm]
-  refine ⟨Ast.print (category := .statement scope none) (form.produktion.tree a), s,
-    Ast.parse_print _, rfl, .start, ?_, ?_⟩
-  · refine form.realisiert (vm_amOrt (scope, none)) platform a s rfl rfl rfl ?_
-    have hpc : (s.lokal eintritt).pc = 0 := by rfl
-    have hpos : form.position a = 0 := by
-      simp [expr, form, variantMatchForm, a, valueArgs, payload,
-        Gabbro.Core.Ast.Surface.VariantValueArgs.expression, caseCode, Fragment.leer]
-    omega
+  refine ⟨Ast.print (category := .statement scope none) (form.produktion.tree a), s₁,
+    Ast.parse_print _, rfl, reached, ?_, ?_⟩
+  · refine form.realisiert (vm_amOrt (scope, none)) platform a s₁ rfl rfl rfl ?_
+    rfl
   · intro g guard; cases guard
 
 end Gabbro.Core.Ast.Semantik
