@@ -371,10 +371,15 @@ theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
   simp only [hscope, Option.bind_some]
-  intro hnotpure hnotbound
-  rcases hcap with hb | ⟨effect, heffect, hb⟩
-  · exact False.elim (hnotbound (by simpa using hb))
-  · exact ⟨effect, heffect, by simpa using hb⟩
+  split
+  · rfl
+  · rename_i hcond
+    split
+    · rfl
+    · rename_i hnotany
+      rcases hcap with hb | ⟨effect, heffect, hb⟩
+      · exact (hcond (Or.inr hb)).elim
+      · exact (hnotany (List.any_eq_true.mpr ⟨effect, heffect, hb⟩)).elim
 
 private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierEffect)) :
     ∀ site ∈ code.filterMap (fun
