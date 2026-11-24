@@ -21,6 +21,7 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 namespace Gabbro.Core.Beobachtung
 
 open Katalog
+open MeasureTheory
 
 /-- A key-consistent checker path maps to a `Nodup` list of draw positions. A
     repeated position in the data denotes the empty cylinder, while the product
@@ -86,11 +87,11 @@ theorem prEreignis : prEreignisAussage := by
       simp only [div_eq_mul_inv]
       ac_rfl
     rw [hrewrite]
-    rw [ENNReal.le_div_iff_mul_le (Or.inr hwDen0) (Or.inr hwDenTop)]
+    rw [ENNReal.le_div_iff_mul_le (Or.inl hwDen0) (Or.inl hwDenTop)]
     exact hcross
   change (pNum : ENNReal) / (pDen : ENNReal) ≤
     hb.mu {band | laufZylinderEreignis B S hb pfad (hb.replay band)}
-  exact hratio.trans (hcyl.ge.trans_le hmono)
+  exact le_trans hratio (le_trans hcyl.ge hmono)
 
 /-- Geometric rates certified by the checker: the exit rate is in `(0, 1]`, hence
     its complement is a contraction and the powers tend to zero. -/
@@ -140,6 +141,7 @@ theorem fastSicherAbschluss : fastSicherAbschlussAussage := by
     Ziel qNum qDen hpruefe ueberlebt hmeas hanti hdecay hexit
   have hdaten := rateDaten qNum qDen hpruefe
   let q : ENNReal := (qNum : ENNReal) / (qDen : ENNReal)
+  letI : MeasureTheory.IsProbabilityMeasure hb.mu := hb.istWMass
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
@@ -166,6 +168,7 @@ theorem fastSicherFortschritt : fastSicherFortschrittAussage := by
     Ziel qNum qDen hpruefe ueberlebt hmeas hanti hdecay hexit
   have hdaten := rateDaten qNum qDen hpruefe
   let q : ENNReal := (qNum : ENNReal) / (qDen : ENNReal)
+  letI : MeasureTheory.IsProbabilityMeasure hb.mu := hb.istWMass
   have hnull : hb.mu (⋂ n, ueberlebt n) = 0 :=
     schnittMassNull hb.mu ueberlebt hmeas hanti hdecay hdaten
   have hAmeas : MeasurableSet (⋂ n, ueberlebt n) := MeasurableSet.iInter hmeas
