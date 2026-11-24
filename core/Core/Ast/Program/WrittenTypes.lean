@@ -94,8 +94,11 @@ inductive TypeReads (scope : Scope) : List Token → WrittenType → List Token 
       TypeReads scope (keyword "option" :: keyword "index" :: keyword "into" :: .word carrier.val :: rest)
         (.indexOption carrier count) rest
   | address (space : LowLevel.AddressSpace) :
-      TypeReads scope (space.tokens ++ rest) (.address space) rest
-  | ownedRegion : TypeReads scope (LowLevel.ownedRegionTokens ++ rest) .ownedRegion rest
+      TypeReads scope (keyword "address" :: .punctuation ['<'] ::
+        keyword space.name :: .punctuation ['>'] :: rest) (.address space) rest
+  | ownedRegion : TypeReads scope
+      (keyword "region" :: .punctuation ['<'] :: keyword "normal" :: comma ::
+        keyword "rw" :: .punctuation ['>'] :: rest) .ownedRegion rest
 
 inductive TypeItemsTail (scope : Scope) : List Token → WrittenTypes → List Token → Prop where
   | close : TypeItemsTail scope (closeParen :: rest) .empty rest
@@ -287,17 +290,20 @@ theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : T
   · intro rest space input' out rest' other equality
     cases other with
     | address otherSpace =>
-      cases space <;> cases otherSpace <;>
-        first | exact ⟨rfl, List.append_cancel_left equality⟩ | cases equality
-    | integer => rename_i signed _ _ _; cases signed <;> cases equality
-    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases equality
-    | _ => have head := (List.cons.inj equality).1; cases head
+      have operands := (List.cons.inj (List.cons.inj equality).2).2
+      have nameEq := Token.word.inj (List.cons.inj operands).1
+      cases LowLevel.AddressSpace.name_injective (String.toList_injective nameEq)
+      exact ⟨rfl, (List.cons.inj (List.cons.inj operands).2).2⟩
+    | integer => rename_i signed _ _ _; cases signed <;> cases (List.cons.inj equality).1
+    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases (List.cons.inj equality).1
+    | _ => cases (List.cons.inj equality).1
   · intro rest input' out rest' other equality
     cases other with
-    | ownedRegion => exact ⟨rfl, List.append_cancel_left equality⟩
-    | integer => rename_i signed _ _ _; cases signed <;> cases equality
-    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases equality
-    | _ => have head := (List.cons.inj equality).1; cases head
+    | ownedRegion =>
+      exact ⟨rfl, List.append_cancel_left (as := LowLevel.ownedRegionTokens) equality⟩
+    | integer => rename_i signed _ _ _; cases signed <;> cases (List.cons.inj equality).1
+    | interval => rename_i signed _ _ _ _ _ _ _; cases signed <;> cases (List.cons.inj equality).1
+    | _ => cases (List.cons.inj equality).1
   · intro rest input' out rest' other equality
     cases other with
     | close => exact ⟨rfl, (List.cons.inj equality).2⟩
@@ -437,7 +443,8 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
   · intro carrier count valid rest _
     exact .indexOption carrier valid
   · intro space _ rest _
-    simpa only [WrittenType.printPieces, LowLevel.AddressSpace.printTokens] using
+    simpa only [WrittenType.printPieces, LowLevel.AddressSpace.printTokens, LowLevel.AddressSpace.tokens,
+      List.cons_append, List.nil_append] using
       (TypeReads.address (rest := rest) space)
   · intro _ rest _
     exact .ownedRegion

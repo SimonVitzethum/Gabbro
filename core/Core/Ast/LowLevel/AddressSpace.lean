@@ -21,4 +21,8 @@ def AddressSpace.name : AddressSpace → String
   | .guestPhysical => "guest_physical"
   | .ioVirtual => "io_virtual"
 
+theorem AddressSpace.name_injective : Function.Injective AddressSpace.name := by
+  intro a b same
+  cases a <;> cases b <;> simp only [AddressSpace.name, String.reduceEq] at same ⊢
+
 end Gabbro.Core.Ast.LowLevel
