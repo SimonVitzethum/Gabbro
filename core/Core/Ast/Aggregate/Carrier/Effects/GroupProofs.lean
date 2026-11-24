@@ -141,8 +141,7 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
       by_cases he : head.exported
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
-            identPrintVal, printOpenBraceVal] at hh'
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
@@ -151,15 +150,12 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
             exact effectRead
           · rfl
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
-            identPrintVal, printOpenBraceVal] at hh'
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal] at hh'
       · by_cases ie : item.exported
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
-            identPrintVal, printOpenBraceVal] at hh'
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal] at hh'
         · have hh' := hh
-          simp only [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal,
-            identPrintVal, printOpenBraceVal] at hh'
+          simp [EffectGroupDeclaration.header, he, ie, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal] at hh'
           obtain ⟨hval, hin⟩ := hh'
           have hnameval : head.name.val = item.name.val := by
             simpa [identPrintVal] using hval
@@ -171,26 +167,20 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           · rfl
   | constant =>
       by_cases he : head.exported <;>
-        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, keyword, printConst] at hh
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, keyword, printConst] at hh
   | function =>
       by_cases he : head.exported <;>
-        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, keyword, printFn] at hh
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, keyword, printFn] at hh
   | record exported name valid distinct memberRead =>
       rename_i fields input'
       by_cases he : head.exported <;> by_cases ex : exported <;>
-        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, recordDeclarationPrefix, keyword, printTypeDecl, ex] at hh
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, recordDeclarationPrefix, keyword, printTypeDecl, ex] at hh
   | tagged exported name valid distinct firstRead tailRead =>
       by_cases he : head.exported <;> by_cases ex : exported <;>
-        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, taggedDeclarationPrefix, keyword, printTypeDecl, ex] at hh
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, taggedDeclarationPrefix, keyword, printTypeDecl, ex] at hh
   | table item =>
       by_cases he : head.exported <;> by_cases ex : item.exported <;>
-        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal,
-          printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot,
-          keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex] at hh
+        simp [EffectGroupDeclaration.header, he, printPub, printEffects, ppwVal, identPrintVal, printOpenBraceVal, TableDeclaration.header, printTable, printCount, printSlot, keywordName, Identifier.print, PrintedToken.unquoted, ppwVal, keyword, ex] at hh
 theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   intro scope
   refine ⟨?reads, egPrint scope, ?sat⟩
@@ -254,7 +244,7 @@ private theorem mapM_option_length {α β : Type} (f : α → Option β) :
           | some ys' =>
               simp [hfx, hrest] at h
               subst ys
-              simp [ih ys' hrest]
+              simpa [ih ys' hrest]
 private theorem mapM_option_getElem {α β : Type} (f : α → Option β) :
     ∀ (xs : List α) (ys : List β) (i : Nat) (hi : i < xs.length) (hi' : i < ys.length),
       xs.mapM f = some ys → f (xs[i]'hi) = some (ys[i]'hi') := by
@@ -313,8 +303,7 @@ theorem effectGroup_scope : EffectGroupScopeAussage := by
   constructor
   · simp [EffectGroupDeclaration.binding, effectGroupBinding, Ty.valueBinding]
   · intro name hne
-    simp [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding,
-      beq_iff_eq, hne, Ne.symm hne]
+    simpa [Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding, beq_iff_eq, hne, Ne.symm hne]
 theorem effectGroup_visibility : EffectGroupVisibilityAussage := by
   intro scope item hexported effect heffect
   obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp heffect
@@ -400,16 +389,14 @@ theorem effectGroup_call : EffectGroupCallAussage := by
   exact of_decide_eq_true (List.all_eq_true.mp hall effect hrequired)
 theorem effectGroup_binding : EffectGroupBindingAussage := by
   intro scope item frame
-  simp [effectGroupForm, Befehl.auswerten, EffectGroupDeclaration.binding,
-    effectGroupBinding, Rahmen.installSchema]
+  simpa [effectGroupForm, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, Rahmen.installSchema]
 theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
   intro platform start
   let scope : Scope := [carrierBinding egTableName 1 [] true]
   let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
   let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
   have hchecked : [written].mapM (WrittenCarrierEffect.resolve scope true) = some [eff] := by
-    simp [written, eff, scope, WrittenCarrierEffect.resolve, Scope.effectCarrier,
-      carrierBinding, egTableName]
+    simpa [written, eff, scope, WrittenCarrierEffect.resolve, Scope.effectCarrier, carrierBinding, egTableName]
   let item : EffectGroupDeclaration scope := ⟨true, egName, [written], [eff], hchecked⟩
   refine ⟨scope, item, ?_, ?_⟩
   · simp [item, eff]
@@ -427,8 +414,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
   let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
   have hresolve : WrittenCarrierEffect.resolve [carrier.binding] true written = some eff := by
-    simp [WrittenCarrierEffect.resolve, Scope.effectCarrier, carrier, carrierBinding,
-      TableDeclaration.binding, written, eff, egTableName]
+    simpa [WrittenCarrierEffect.resolve, Scope.effectCarrier, carrier, carrierBinding, TableDeclaration.binding, written, eff, egTableName]
   have hchecked : [written].mapM (WrittenCarrierEffect.resolve [carrier.binding] true) =
       some [eff] := by
     simpa [List.mapM_cons, List.mapM_nil, hresolve]
@@ -436,15 +422,13 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     ⟨true, egName, [written], [eff], hchecked⟩
   let scope : Scope := [group.binding, carrier.binding]
   have hclause : expandEffects scope [] [.group group.name] = some [eff] := by
-    simp [expandEffects, EffectTerm.resolve, Scope.effectGroup,
-      EffectGroupDeclaration.binding, effectGroupBinding, scope, group, eff, egName,
-      beq_iff_eq]
+    simpa [expandEffects, EffectTerm.resolve, Scope.effectGroup, EffectGroupDeclaration.binding, effectGroupBinding, scope, group, eff, egName, beq_iff_eq]
   let clause : EffectClause scope [] := ⟨[.group group.name], [eff], hclause⟩
   let fnName : Identifier :=
     ⟨['f'], 'f', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   have hdirect : directName fnName := by
-    simp [directName, ordinaryLocal, ordinaryAtomWord, fnName]
+    simpa [directName, ordinaryLocal, ordinaryAtomWord, fnName]
   let body : BracedBlock (writtenResult none) (functionScope scope []) := .braces .done
   let a : Surface.FunctionArgs scope :=
     ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp,
@@ -460,19 +444,13 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let s := bg.nach eintritt s1
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
     change kopf (programm tree).code s0 eintritt = some bt
-    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, bt]
+    simpa [E, tree, kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
     change kopf (programm tree).code s1 eintritt = some bg
-    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
-      startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach,
-      Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
+    simpa [E, tree, kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
     change kopf (programm tree).code s eintritt = some b
-    simp [E, tree, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start,
-      Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel,
-      Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
-      functionForm, functionInstruction, bt, bg, b, scope, a, Surface.FunctionArgs.declaration]
+    simpa [E, tree, kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start, Zustand.start, startdaten, Fragment.einheit, Fragment.anhaengen, Fragment.einzel, Fragment.leer, elaborieren, fragment, eintritt, Rahmen.start, Rahmen.installSchema, Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, functionForm, functionInstruction, bt, bg, b, scope, a, Surface.FunctionArgs.declaration]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
   have hstep2 : E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) :=
