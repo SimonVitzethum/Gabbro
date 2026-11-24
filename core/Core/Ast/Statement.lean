@@ -265,6 +265,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
       ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
     (motive_3 := fun before input tree rest _ => True)
     (by intros; trivial) (by intros; trivial) (by intros; trivial) (by intros; trivial) ?_ ?_ (by intros; trivial) left) right
+  · intros
     rename_i b rest' other
     cases other with
     | done => exact ⟨rfl, rfl⟩
