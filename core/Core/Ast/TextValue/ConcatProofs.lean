@@ -78,44 +78,45 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
       (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
 
+private theorem textTailCompose {scope it it2 it3}
+    {first : Expr scope it} {input : List Token} {tree : Expr scope it2} {rest : List Token}
+    {tree2 : Expr scope it3} {final : List Token}
+    (tail : ExprTail scope (Arith.add.precedence + 1) first input tree rest)
+    (next : ExprTail scope 0 tree rest tree2 final) :
+    ExprTail scope 0 first input tree2 final := by
+  cases tail with
+  | stop _ => exact next
+  | binary op _ reads tail' =>
+      exact .binary op (Nat.zero_le _) reads (textTailCompose tail' next)
+  | div _ reads nonzero tail' =>
+      exact .div (Nat.zero_le _) reads nonzero (textTailCompose tail' next)
+  | compare op _ reads follows tail' =>
+      exact .compare op (Nat.zero_le _) reads follows (textTailCompose tail' next)
+  | logic op _ reads tail' =>
+      exact .logic op (Nat.zero_le _) reads (textTailCompose tail' next)
+  | arrayIndex base lower upper _ reads tail' =>
+      exact .arrayIndex base lower upper (Nat.zero_le _) reads (textTailCompose tail' next)
+  | tupleField base index _ tail' =>
+      exact .tupleField base index (Nat.zero_le _) (textTailCompose tail' next)
+  | recordField base field index written _ tail' =>
+      exact .recordField base field index written (Nat.zero_le _) (textTailCompose tail' next)
+  | textConcat left right' _ reads tail' =>
+      exact .textConcat left right' (Nat.zero_le _) reads (textTailCompose tail' next)
+  | textIndex base offset _ reads tail' =>
+      exact .textIndex base offset (Nat.zero_le _) reads (textTailCompose tail' next)
+  | substring base first' last _ reads₁ reads₂ tail' =>
+      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
+        (textTailCompose tail' next)
+termination_by sizeOf tail
+
 private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
     {tree : Expr scope (.text a)} {rhs final : List Token}
     (tail : ExprTail scope (Arith.add.precedence + 1) first input tree (Arith.add.token :: rhs))
     (right : Expr scope (.text b))
     (rightRead : ExprReads scope (Arith.add.precedence + 1) rhs right final)
     (blocked : ¬ Continues 0 final) :
-    ExprTail scope 0 first input (Expr.textConcat tree right) final := by
-  cases tail with
-  | stop _ =>
-      exact .textConcat tree right (Nat.zero_le _) rightRead (.stop blocked)
-  | binary op _ reads tail' =>
-      exact .binary op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
-  | div _ reads nonzero tail' =>
-      exact .div (Nat.zero_le _) reads nonzero (textTailLowerConcat tail' right rightRead blocked)
-  | compare op _ reads follows tail' =>
-      exact .compare op (Nat.zero_le _) reads follows
-        (textTailLowerConcat tail' right rightRead blocked)
-  | logic op _ reads tail' =>
-      exact .logic op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
-  | arrayIndex base lower upper _ reads tail' =>
-      exact .arrayIndex base lower upper (Nat.zero_le _) reads
-        (textTailLowerConcat tail' right rightRead blocked)
-  | tupleField base index _ tail' =>
-      exact .tupleField base index (Nat.zero_le _)
-        (textTailLowerConcat tail' right rightRead blocked)
-  | recordField base field index written _ tail' =>
-      exact .recordField base field index written (Nat.zero_le _)
-        (textTailLowerConcat tail' right rightRead blocked)
-  | textConcat left right' _ reads tail' =>
-      exact .textConcat left right' (Nat.zero_le _) reads
-        (textTailLowerConcat tail' right rightRead blocked)
-  | textIndex base offset _ reads tail' =>
-      exact .textIndex base offset (Nat.zero_le _) reads
-        (textTailLowerConcat tail' right rightRead blocked)
-  | substring base first' last _ reads₁ reads₂ tail' =>
-      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
-        (textTailLowerConcat tail' right rightRead blocked)
-termination_by sizeOf tail
+    ExprTail scope 0 first input (Expr.textConcat tree right) final :=
+  textTailCompose tail (.textConcat tree right (Nat.zero_le _) rightRead (.stop blocked))
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
   intro scope
@@ -147,7 +148,10 @@ theorem textConcatBytes : TextConcatBytesAussage := by
   dsimp
   simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
     left.bound, right.bound]
-  all_goals omega
+  all_goals
+    first
+    | rfl
+    | omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
