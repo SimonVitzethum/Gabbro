@@ -1,6 +1,6 @@
 module
 
-public import Core.Annahme.AussenLauf
+public import Core.Annahme.Annahme
 public import Core.Sicherheit.Laufkonstruktion
 
 @[expose] public section
@@ -115,13 +115,13 @@ theorem akzeptiert : Akzeptiert einheit := by
       · cases (List.cons.inj eq).1
         cases aktion
         rw [ziel]
-        exact ⟨fun _ mem => (List.not_mem_nil mem).elim, binden_offen,
-          [], (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩
+        exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+          (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, binden_offen⟩
       · cases (List.cons.inj eq).1
         cases aktion
         rw [ziel]
-        refine ⟨?_, fragen_offen rechte, [], (List.append_nil _).symm,
-          fun _ mem => (List.not_mem_nil mem).elim⟩
+        refine ⟨⟨?_, [], (List.append_nil _).symm,
+          fun _ mem => (List.not_mem_nil mem).elim⟩, fragen_offen rechte⟩
         intro ev mem
         cases Ereignis.frage.inj (List.mem_singleton.mp mem)
         exact ⟨ausgewaehlt, rechte⟩

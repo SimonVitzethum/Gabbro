@@ -59,12 +59,6 @@ def RegelLokal (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) (i : ι
 def AussengriffeEigen (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (q : Frage) : Prop :=
   ∀ z ∈ q.zugriffe, s.buchung.aussengriff c z.handle z.right
 
-/-- A pending request keeps its handles until it is answered or retired with its boot epoch. -/
-def OffeneGriffeEigen (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
-  ∀ q ∈ s.fragen, s.epoche ≤ q.cut →
-    (∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance) →
-    ∃ c, c.nummer = q.context ∧ AussengriffeEigen s c q.question
-
 /-- Outside rules checked on the ideal context step. A question needs program-side rights
     at issue. An unmediated commit has no catalogue reply that can revalidate it or fail,
     so it needs pinned stability and its operation must succeed under the admitted rely. -/
@@ -74,7 +68,6 @@ def AussenKontextLokal [DecidableEq L]
     (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
   (∀ ev : FrageEreignis, Ereignis.frage ev ∈ spur.aussen →
     E.katalog.enthaelt (.endpoint ev.question.endpoint) ∧ AussengriffeEigen s c ev.question) ∧
-  (OffeneGriffeEigen s → OffeneGriffeEigen s') ∧
   ∃ neu, s'.buchung.wirkungen = s.buchung.wirkungen ++ neu ∧
     ∀ effect, Sicherheit.Wirkung.aussen effect ∈ neu →
       effect.kontext = c ∧ AussengriffeEigen s c effect.frage ∧
@@ -87,9 +80,8 @@ def AussenKontextLokal [DecidableEq L]
 /-- The outside rule at the ideal boundaries. An asynchronous effect is checked in the
     catalogue view of the successful reply, over the history before that reply. Data from
     an earlier answer may inform the choice, while the catalogue establishes current validity. -/
-def AussenGueltig [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
-    Prop :=
-  ∀ (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
+def AussenGueltig [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
+  (∀ (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
     (w : SchrittWahl Wahl) (spur : SchrittSpur Ort Wert) (s' : Zustand L Ort Wert Raum Lok Grund),
     I.Schritt E.einrichtung E.system E.katalog run t s (w, spur) s' →
     match w with
@@ -97,7 +89,10 @@ def AussenGueltig [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingu
     | .antwort a =>
       ∀ H, Hardware E.katalog H → run.konform E.katalog H → a.reply.result.isOk = true →
         Aussen.GueltigBeiCommit E.katalog.plattform (run.politik.sicht t s.verlauf) a.question
-    | .interrupt _ | .absturz => True
+    | .interrupt _ | .absturz => True) ∧
+  ∀ (η : I.Lauf E), I.Laeufe E η → ∀ t a spur,
+    η.zeit.spur t = some (.antwort a, spur) → a.reply.result.isOk = true →
+    ∃ c, c.nummer = a.context ∧ AussengriffeEigen (η.zeit.zustand t) c a.question
 
 /-- The reply boundary establishes validity in the commit view for any conformant policy. -/
 theorem antwort_gueltig [DecidableEq L]
@@ -107,21 +102,6 @@ theorem antwort_gueltig [DecidableEq L]
     (ok : a.reply.result.isOk = true) :
     Aussen.GueltigBeiCommit E.katalog.plattform (run.politik.sicht t s.verlauf) a.question :=
   Aussen.atomar_gueltig (step.1.zulaessig hardware konform).2 ok
-
-/-- To prove the outside rule for a unit, the forms only need to discharge the context
-    obligations. The catalogue discharges the answer arm independently of the unit. -/
-theorem aussen_gueltig_aus_kontext [DecidableEq L]
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    (kontext : ∀ run t s c w spur s',
-      I.Schritt E.einrichtung E.system E.katalog run t s (.kontext c w, spur) s' →
-      AussenKontextLokal E c run t s spur s') :
-    AussenGueltig E := by
-  intro run t s w spur s' step
-  cases step with
-  | kontext normal bereit regel aus =>
-    exact kontext run t s _ _ spur s' (.kontext normal bereit regel aus)
-  | antwort _ arrives => exact fun _ hw konform ok => antwort_gueltig (E := E) arrives hw konform ok
-  | interrupt _ _ | absturz _ => trivial
 
 /-- **The outside rule of §4 inside `Lokal`**: the selected platform admits only interfaces
     where every query goes through an owned handle with a failure channel (`ZulassungsRegel`),

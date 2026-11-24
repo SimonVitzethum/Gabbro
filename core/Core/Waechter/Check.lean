@@ -100,7 +100,6 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.BefugtOrt,
     `Gabbro.Core.Annahme.Befugt,
     `Gabbro.Core.Annahme.AussengriffeEigen,
-    `Gabbro.Core.Annahme.OffeneGriffeEigen,
     `Gabbro.Core.Annahme.AussenKontextLokal,
     `Gabbro.Core.Annahme.AussenGueltig,
     `Gabbro.Core.Annahme.AussenLokal,

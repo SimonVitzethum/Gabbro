@@ -232,7 +232,8 @@ theorem akzeptiert_ideal_mit_antwort :
     zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩
   exact ⟨einheit, η, gestellt s, angekommen s bytes, kontext, frageSpur s, antwortSpur s bytes,
     akzeptiert, lauf, rfl, rfl, eigene_frage _, issue_ungueltig [] bytes, rfl, rfl,
-    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, akzeptiert_antwort_commit akzeptiert η lauf reply rfl⟩
+    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl,
+    antwort_commit akzeptiert.1.2.2.2 η lauf (t := 2) (spur := antwortSpur s bytes) rfl rfl⟩
 
 /-- A concrete run shares the same issuing and answer steps as the ideal run. Its finite
     prefix is followed by genuine idle ticks. -/
