@@ -30,8 +30,8 @@ def Wert : {kind : Kind} → Ty kind → Type
 
 def indexOptionPresent (value : Wert (indexOptionType count)) : Bool :=
   match value with
-  | .inl _ => true
-  | .inr _ => false
+  | .inl _payload => true
+  | .inr _remainder => false
 
 /-- Widening changes interval evidence and the type of a zero-length array. -/
 def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : Wert source) :
