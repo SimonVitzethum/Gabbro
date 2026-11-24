@@ -67,6 +67,7 @@ inductive Befehl where
   | definiereTraeger (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool)
   | optionIstBesetzt (ziel count : Nat)
   | definiereEffektgruppe (effects : List CarrierEffect)
+  | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -254,6 +255,10 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       pure ⟨.bool, indexOptionPresent value⟩)
   | .definiereEffektgruppe effects, frame =>
     frame.installSchema ⟨.effectGroupSchema effects, PUnit.unit⟩
+  | .waehleUmgebung name abi row, frame =>
+    { frame with
+      pc := frame.pc + 1
+      environment := (name, abi, row) :: frame.environment }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

@@ -87,6 +87,10 @@ def printFirmwareAbi : DienstAbi → PrintedToken
   | .psciSmc => lowWord 'p' "sci_smc"
   | .sbiEcall => lowWord 's' "bi_ecall"
 
+def environmentTokens (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) : List Token :=
+  [keyword "environment", .word name.val, keyword "abi", keyword abi.name,
+    assignment, keyword "catalogue", keyword row.name, semicolon]
+
 def Tree.printPieces : Tree form → List PrintedToken
   | .addressType space => [lowWord 'a' "ddress", (Compare.lt).print, space.print, (Compare.gt).print]
   | .regionAddress region => [region.print, printDot, lowWord 'a' "ddress", printOpen, printClose]
@@ -106,8 +110,12 @@ def Tree.production : Tree form → List Token → Prop
       ∃ input, tokens = [.word region.val, dot, keyword "view", keyword "as"] ++ input ∧
         TypeReads [] input type []
   | .environment name abi row => fun tokens =>
-      tokens = [keyword "environment", .word name.val, keyword "abi", keyword abi.name,
-        assignment, keyword "catalogue", keyword row.name, semicolon]
+      tokens = environmentTokens name abi row
+
+theorem environment_printTokens (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) :
+    ((Tree.environment name abi row).printPieces.map PrintedToken.value) =
+      environmentTokens name abi row := by
+  cases abi <;> cases row <;> rfl
 
 def Parse (text : RawText) (tree : Tree form) : Prop :=
   Text.Parse (tokenGrammar (fun tokens (tree : Tree form) => tree.production tokens)) text tree

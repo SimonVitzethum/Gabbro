@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Carrier.Effects.Resolution
+public import Core.Katalog.FirmwareNamen
 
 @[expose] public section
 
@@ -81,6 +82,10 @@ inductive Decl : Scope → Scope → Type where
       Decl before (variantBinding name (first :: tail) :: before)
   | table (item : TableDeclaration before) : Decl before (item.binding :: before)
   | effectGroup (item : EffectGroupDeclaration before) : Decl before (item.binding :: before)
+
+  /-- A firmware interface whose contract comes from the selected catalogue. -/
+  | environment (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile) :
+      Decl before before
 
 /-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
 inductive UnitBody : Scope → Scope → Type where

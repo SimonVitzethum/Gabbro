@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Variant.Values
 public import Core.Maschine.Start
+public import Core.Katalog.FirmwareNamen
 
 @[expose] public section
 
@@ -89,6 +90,7 @@ structure Rahmen where
   fortsetzungen : List Fortsetzung := []
   funktion : Option Identifier := none
   mass : Option Nat := none
+  environment : List (Identifier × Katalog.DienstAbi × Katalog.FirmwareZeile) := []
 
 /-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
     A source unit starts with the empty scope. -/

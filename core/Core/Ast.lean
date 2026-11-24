@@ -7,6 +7,7 @@ public import Core.Ast.LowLevel.Proofs.Execution
 public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Ast.LowLevel.Proofs.Meaning
 public import Core.Ast.LowLevel.Proofs.Satisfiability
+public import Core.Ast.LowLevel.Proofs.EnvironmentPacket
 public import Core.Ast.Inventory.All
 public import Core.Ast.Inventory.Registry
 public import Core.Ast.Program.BatchSurface

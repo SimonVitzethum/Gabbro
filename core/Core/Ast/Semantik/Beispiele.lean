@@ -61,7 +61,7 @@ theorem literal_erfuellbar : LiteralErfuellbar := by
   intro platform start
   let form := literalForm []
   let s := (I.start (form.einheit platform 1) start).2
-  refine ⟨1, form.erfuellbar_aus_erreichbar platform start 1 s .start
+  refine ⟨1, form.erfuellbar_aus_erreichbar platform start 1 s True.intro .start
     (form.realisiert (literal_am_ort []) platform 1 s rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
@@ -80,7 +80,7 @@ theorem binary_erfuellbar : BinaryErfuellbar := by
     ⟨.literal 1 2, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₂ :=
     .schritt eintritt () [plan] (.schritt eintritt () [plan] .start left) right
-  refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₂ reached
+  refine ⟨args, rfl, form.erfuellbar_aus_erreichbar platform start args s₂ True.intro reached
     (form.realisiert (binary_am_ort []) platform args s₂ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard
@@ -102,7 +102,7 @@ theorem let_erfuellbar : LetErfuellbar := by
   have initializer : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
     ⟨.literal 0 1, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start initializer
-  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₁ reached
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₁ True.intro reached
     (form.realisiert (let_am_ort []) platform args s₁ rfl rfl rfl rfl) ?_⟩
   intro g guard
   cases guard

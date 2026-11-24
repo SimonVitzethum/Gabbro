@@ -195,6 +195,7 @@ def decl : Decl before after → Fragment
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
   | .table item => .einzel (tableInstruction item)
   | .effectGroup item => .einzel (.definiereEffektgruppe item.resolved)
+  | .environment name abi row => .einzel (.waehleUmgebung name abi row)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer
@@ -279,18 +280,36 @@ theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category
       (elaborieren left tree).quelltabellen = (elaborieren right tree).quelltabellen :=
   ⟨rfl, rfl⟩
 
+def Fragment.environment (p : Fragment) : List (Identifier × DienstAbi × FirmwareZeile) :=
+  p.code.filterMap fun
+    | .waehleUmgebung name abi row => some (name, abi, row)
+    | _ => none
+
+def Fragment.environmentAllowed (p : Fragment) (k : Katalog) : Prop :=
+  (p.environment.map (fun e => e.1.val)).Nodup ∧
+    ∀ e ∈ p.environment, e.2.2.zugelassen k e.2.1
+
+/-- Whole-unit elaboration checks catalogue availability and name uniqueness.
+    An isolated declaration gets the same admission check as its occurrence in a unit. -/
+def zugelassen (platform : Plattform) : (category : Category) → category.Tree → Prop
+  | .unit, tree => (programm tree).environmentAllowed platform.katalog
+  | .declaration _, tree => (decl tree.2).environmentAllowed platform.katalog
+  | .expression _, _ | .statement .., _ | .block .., _ => True
+
 def Elaboriert (platform : Plattform) {category : Category}
     (tree : category.Tree) (E : Einheit) : Prop :=
-  E = elaborieren platform tree
+  E = elaborieren platform tree ∧ zugelassen platform category tree
 
-theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree) :
-    Elaboriert platform tree (elaborieren platform tree) := rfl
+theorem elab_korrekt (platform : Plattform) {category : Category} (tree : category.Tree)
+    (allowed : zugelassen platform category tree) :
+    Elaboriert platform tree (elaborieren platform tree) := ⟨rfl, allowed⟩
 
-theorem elab_vollstaendig {category : Category} {tree : category.Tree} (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning
+theorem elab_vollstaendig {category : Category} {tree : category.Tree}
+    (meaning : Elaboriert platform tree E) : E = elaborieren platform tree := meaning.1
 
 theorem Elaboriert.deterministisch {category : Category} {tree : category.Tree}
     (a : Elaboriert platform tree E) (b : Elaboriert platform tree F) : E = F :=
-  a.trans b.symm
+  a.1.trans b.1.symm
 
 def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → Einheit → Prop :=
   Ast.Bezeichnet (@Elaboriert platform category)
@@ -298,6 +317,6 @@ def Bezeichnet (platform : Plattform) (category : Category) : Text.RawText → E
 theorem bezeichnet_deterministisch
     (a : Bezeichnet platform category text E) (b : Bezeichnet platform category text F) : E = F :=
   Ast.bezeichnet_deterministic (elaborates := @Elaboriert platform category)
-    (fun left right => left.trans right.symm) a b
+    (fun left right => left.deterministisch right) a b
 
 end Gabbro.Core.Ast.Semantik
