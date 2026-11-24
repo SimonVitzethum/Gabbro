@@ -273,7 +273,6 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     | done => exact ⟨rfl, rfl⟩
     | step stRead _ => exact (StmtReads.disjoint_closeBrace stRead).elim
   · intros
-  · intros
     rename_i s restS restT middle more after next first stRead blockRead ihBlock b rest' other
     cases other with
     | done =>
