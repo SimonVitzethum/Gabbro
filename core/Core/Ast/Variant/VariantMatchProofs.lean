@@ -132,5 +132,5 @@ theorem variantMatch_impl : VariantMatchImplAussage := by
 
 end Gabbro.Core.Ast.Semantik
 
-#check @Gabbro.Core.Ast.Block.rec
-#check @Gabbro.Core.Ast.VariantArms.rec
+#check (@Gabbro.Core.Ast.Block.rec : Nat)
+#check (@Gabbro.Core.Ast.VariantArms.rec : Nat)
