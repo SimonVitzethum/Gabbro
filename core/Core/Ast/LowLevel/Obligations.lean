@@ -109,17 +109,17 @@ def obligations (form : Form) : Prop :=
   RegelSicherAussage form ∧ RegelAntwortSicherAussage form ∧ AussenLokalAussage form ∧
   KostenAussage form ∧ ErfuellbarAussage form
 
-def AddressTypeAussage : Prop := obligations .addressType ∧
+def AddressTypeMeaningAussage : Prop :=
   ∀ k scope space op, elaborate k scope (.addressType space) = some op →
     ∃ width h, op = .denoteAddress space width h
 
-def RegionAddressAussage : Prop := obligations .regionAddress ∧
+def RegionAddressMeaningAussage : Prop :=
   ∀ k scope region op s c transfer, elaborate k scope (.regionAddress region) = some op →
     op.evaluate s c = some transfer →
     ∃ slot handle extent address, scope.slot region = some slot ∧ heldRegion s c slot = some (handle, extent) ∧
       transfer.value = .address address ∧ address.number = extent.von ∧ transfer.loan = none
 
-def ViewAussage : Prop := obligations .view ∧
+def ViewMeaningAussage : Prop :=
   ∀ k scope region type op s c transfer, elaborate k scope (.view region type) = some op →
     op.evaluate s c = some transfer →
     ∃ slot handle extent shape, scope.slot region = some slot ∧ heldRegion s c slot = some (handle, extent) ∧
@@ -128,13 +128,25 @@ def ViewAussage : Prop := obligations .view ∧
       transfer.value = .view slot handle ⟨extent.von, extent.von + shape.bytes⟩ shape ∧
       transfer.loan = some handle ∧ heldRegion (transfer.apply c s) c slot = none
 
-def EnvironmentAussage : Prop := obligations .environment ∧
+def EnvironmentMeaningAussage : Prop :=
   ∀ k scope name abi row, (∃ op, elaborate k scope (.environment name abi row) = some op) ↔
     k.enthaelt (.endpoint row.endpunkt) ∧ k.plattform.firmwareAbi row.endpunkt = some abi
 
+def MeaningAussage : Form → Prop
+  | .addressType => AddressTypeMeaningAussage
+  | .regionAddress => RegionAddressMeaningAussage
+  | .view => ViewMeaningAussage
+  | .environment => EnvironmentMeaningAussage
+
+def AddressTypeAussage : Prop := obligations .addressType ∧ MeaningAussage .addressType
+def RegionAddressAussage : Prop := obligations .regionAddress ∧ MeaningAussage .regionAddress
+def ViewAussage : Prop := obligations .view ∧ MeaningAussage .view
+def EnvironmentAussage : Prop := obligations .environment ∧ MeaningAussage .environment
+
 def statements (constructor : Lean.Name) (form : Form) : RegistryStatements constructor .surface where
-  realization := .surface (ParseAussage form) (ElaboriertAussage form) (RealisiertAussage form)
-  acceptanceRule := AnnahmeAussage form ∧ AussenLokalAussage form
+  realization := .surface (ParseAussage form ∧ InversionAussage form ∧ EindeutigAussage form ∧ DruckAussage form)
+    (ElaboriertAussage form) (RealisiertAussage form)
+  acceptanceRule := AnnahmeAussage form ∧ AussenLokalAussage form ∧ MeaningAussage form
   idealRule := IdealAussage form
   unitsAndCommutation := EinheitAussage form
   implementationRule := ImplAussage form

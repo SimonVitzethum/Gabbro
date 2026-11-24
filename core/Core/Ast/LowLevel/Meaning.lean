@@ -11,17 +11,17 @@ open Katalog Maschine
 
 /-- The target tables currently supply widths for physical, virtual and port
     addresses. Guest-physical and I/O-virtual widths need their own rows. -/
-def AddressSpace.width (target : ZielDaten) : AddressSpace → Option Nat
-  | .physical => some target.physicalBits
-  | .virtual => some target.virtualBits
-  | .port => if target.controller = .localApic then some 16 else none
+def AddressSpace.width (platform : Plattform) : AddressSpace → Option Nat
+  | .physical => some platform.ziel.physicalBits
+  | .virtual => some platform.ziel.virtualBits
+  | .port => platform.portAddressBits
   | .guestPhysical | .ioVirtual => none
 
 /-- A number with bounds and a space tag. It has no capability or destination. -/
-structure Address (space : AddressSpace) (target : ZielDaten) where
+structure Address (space : AddressSpace) (platform : Plattform) where
   width : Nat
   number : Nat
-  spaceWidth : space.width target = some width
+  spaceWidth : space.width platform = some width
   fits : number < 2 ^ width
 
 inductive ByteOrder where
@@ -58,7 +58,7 @@ def RegionScope.slot (scope : RegionScope) (name : Identifier) : Option Nat :=
   List.idxOf? name.val (scope.map Subtype.val)
 
 inductive Instruction (k : Katalog) where
-  | denoteAddress (space : AddressSpace) (width : Nat) (valid : space.width k.plattform.ziel = some width)
+  | denoteAddress (space : AddressSpace) (width : Nat) (valid : space.width k.plattform = some width)
   | projectAddress (slot : Nat)
   | borrowView (slot : Nat) (layout : Layout)
   | selectEnvironment (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile)
@@ -68,7 +68,7 @@ inductive Instruction (k : Katalog) where
     resolution of the two region operands uses the same arrival-region scope. -/
 def elaborate (k : Katalog) (scope : RegionScope) : Tree form → Option (Instruction k)
   | .addressType space =>
-    if h : (space.width k.plattform.ziel).isSome then
+    if h : (space.width k.plattform).isSome then
       some (.denoteAddress space _ (Option.some_get h).symm)
     else none
   | .regionAddress name => (scope.slot name).map .projectAddress
@@ -81,7 +81,7 @@ def elaborate (k : Katalog) (scope : RegionScope) : Tree form → Option (Instru
 
 inductive Result (k : Katalog) where
   | addressType (space : AddressSpace) (width : Nat)
-  | address (value : Address .physical k.plattform.ziel)
+  | address (value : Address .physical k.plattform)
   | view (slot : Nat) (authority : Griff) (extent : Strecke) (layout : Layout)
   | environment (name : Identifier) (row : FirmwareZeile) (abi : DienstAbi)
 

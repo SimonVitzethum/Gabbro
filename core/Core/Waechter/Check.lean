@@ -13,6 +13,7 @@ open Lean Elab Command
 namespace Gabbro.Core.Waechter
 
 private meta def pins : Array (Name × UInt64) := #[
+  (`Gabbro.Core.Ast.LowLevel.schema, 0),
   (`Gabbro.Core.Ast.LowLevel.AddressTypeAussage, 0),
   (`Gabbro.Core.Ast.LowLevel.RegionAddressAussage, 0),
   (`Gabbro.Core.Ast.LowLevel.ViewAussage, 0),
