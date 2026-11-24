@@ -178,8 +178,8 @@ theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
     | braced inner' =>
       obtain ⟨same, rfl⟩ := inner.deterministic inner'
       cases same
+      exact ⟨rfl, rfl⟩
 
-  exact ⟨after, body, rfl, read⟩
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
   cases read
