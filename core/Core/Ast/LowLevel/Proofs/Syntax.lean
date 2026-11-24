@@ -28,8 +28,11 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
           rw [ha] at hb
           have hname := congrArg (fun l : List Token => l[2]?) hb
           simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname
+          have hnameList : sa.name.toList = sb.name.toList := by
+            simpa only [keyword, Token.word.injEq] using hname
+          have hnameEq : sa.name = sb.name := String.toList_injective hnameList
           cases sa <;> cases sb <;>
-            simp [keyword, AddressSpace.name, String.reduceToList] at hname ⊢
+            simp only [AddressSpace.name, String.reduceEq] at hnameEq ⊢
   | regionAddress ra =>
       cases b with
       | regionAddress rb =>
@@ -62,12 +65,14 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
             simpa only [keyword, Token.word.injEq] using habi
           have hrowName : row.name.toList = row'.name.toList := by
             simpa only [keyword, Token.word.injEq] using hrow
+          have habiStr : abi.name = abi'.name := String.toList_injective habiName
+          have hrowStr : row.name = row'.name := String.toList_injective hrowName
           have habiEq : abi = abi' := by
             cases abi <;> cases abi' <;>
-              simp [DienstAbi.name, String.reduceToList] at habiName ⊢
+              simp only [DienstAbi.name, String.reduceEq] at habiStr ⊢
           have hrowEq : row = row' := by
             cases row <;> cases row' <;>
-              simp [FirmwareZeile.name, String.reduceToList] at hrowName ⊢
+              simp only [FirmwareZeile.name, String.reduceEq] at hrowStr ⊢
           have hnaEq : na = nb := Subtype.ext hna
           subst nb
           cases habiEq
@@ -78,14 +83,14 @@ lemma addressTypePrints (space : AddressSpace) :
     (Tree.addressType space).production
       ((Tree.addressType space).printPieces.map PrintedToken.value) := by
   cases space <;>
-    simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
+    simpa [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
       PrintedToken.unquoted, Compare.print, Compare.spelling, printPunctuation,
       AddressSpace.print, AddressSpace.name, String.reduceToList]
 
 lemma regionAddressPrints (region : Identifier) :
     (Tree.regionAddress region).production
       ((Tree.regionAddress region).printPieces.map PrintedToken.value) := by
-  simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
+  simpa [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
     PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
     dot, openParen, closeParen, String.reduceToList]
 
@@ -93,7 +98,7 @@ lemma environmentPrints (name : Identifier) (abi : DienstAbi) (row : FirmwareZei
     (Tree.environment name abi row).production
       ((Tree.environment name abi row).printPieces.map PrintedToken.value) := by
   cases abi <;> cases row <;>
-    simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
+    simpa [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
       PrintedToken.unquoted, printPunctuation, printAssignment, printSemicolon,
       assignment, semicolon, printFirmwareAbi, printFirmwareRow,
       DienstAbi.name, FirmwareZeile.name, String.reduceToList]
