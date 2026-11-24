@@ -13,9 +13,9 @@ public import Core.Beobachtung.Fluss.Beschriftung.Sprung
     (`definiere` also pushes one static entry onto the always-public function table);
     `rufe` clears the temporaries, rebuilds the locals from public temporaries and
     the visible globals, and pushes the whole frame onto the visible continuation
-    stack, so every temporary and local at `pc` must be public; `rueckVoid` and
-    `zurueck` pop the visible continuation stack (`zurueck` also publishes the
-    returned value); `pruefeMass` and `setzePasszahl` read one tested temporary and
+    stack, so every temporary and local at `pc` must be public; `rueckVoid` pops the
+    visible continuation stack (the value-returning sibling lives with the
+    control-flow duties); `pruefeMass` and `setzePasszahl` read one tested temporary and
     write the always-visible measure and counter tables; `whileTest`, `forTest` and
     `forNaechster` branch on a public test (a temporary, respectively local 0);
     `forAnfang` reads two public bound temporaries and either jumps or pushes one
