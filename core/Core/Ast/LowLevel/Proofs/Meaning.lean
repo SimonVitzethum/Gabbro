@@ -44,8 +44,13 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
     heldRegion s c slot = none := by
   unfold heldRegion
   dsimp
-  simp only [List.contains_eq_mem, h, decide_true, decide_eq_true_eq, Bool.not_true, Bool.and_false,
-    if_false, Option.bind, Option.bind_some]
+  rw [List.contains_eq_mem]
+  rw [decide_eq_true h]
+  rw [Bool.not_true]
+  rw [Bool.and_false]
+  rw [Bool.false_eq_true]
+  rw [if_false]
+  cases (s.lokal c).regions[slot]? <;> rfl
 
 theorem addressTypeMeaning : AddressTypeMeaningAussage := by
   intro k scope space op hop
@@ -69,18 +74,24 @@ theorem regionAddressMeaning : RegionAddressMeaningAussage := by
       subst op
       cases hhr : heldRegion s c slot with
       | none =>
-          simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+          unfold Instruction.evaluate at heval
+          rw [hhr] at heval
+          rw [Option.bind_none] at heval
           cases heval
       | some pair =>
           rcases pair with ⟨handleV, extent⟩
           by_cases hlt : extent.von < 2 ^ k.plattform.ziel.physicalBits
-          · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+          · unfold Instruction.evaluate at heval
+            rw [hhr] at heval
+            rw [Option.bind_some] at heval
             rw [dif_pos hlt] at heval
             injection heval with hval
             subst transfer
             exact ⟨slot, handleV, extent, ⟨k.plattform.ziel.physicalBits, extent.von, rfl, hlt⟩,
               (by first | exact hslot | rfl), hhr, rfl, rfl, rfl⟩
-          · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+          · unfold Instruction.evaluate at heval
+            rw [hhr] at heval
+            rw [Option.bind_some] at heval
             rw [dif_neg hlt] at heval
             cases heval
 
@@ -102,12 +113,16 @@ theorem viewMeaning : ViewMeaningAussage := by
           subst op
           cases hhr : heldRegion s c slot with
           | none =>
-              simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+              unfold Instruction.evaluate at heval
+              rw [hhr] at heval
+              rw [Option.bind_none] at heval
               cases heval
           | some pair =>
               rcases pair with ⟨handleV, extent⟩
               by_cases hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis
-              · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+              · unfold Instruction.evaluate at heval
+                rw [hhr] at heval
+                rw [Option.bind_some] at heval
                 rw [if_pos hcond] at heval
                 injection heval with hval
                 subst transfer
@@ -151,7 +166,9 @@ theorem viewMeaning : ViewMeaningAussage := by
                     some handleV⟩ : Transfer k).apply c s) c slot hb
                 exact ⟨slot, handleV, extent, shape, (by first | exact hslot | rfl), hhr,
                   (by first | exact hlayout | rfl), hendian, hcond.1, hcond.2, rfl, rfl, hlast⟩
-              · simp only [Instruction.evaluate, hhr, Option.bind, Option.bind_some] at heval
+              · unfold Instruction.evaluate at heval
+                rw [hhr] at heval
+                rw [Option.bind_some] at heval
                 rw [if_neg hcond] at heval
                 cases heval
 
