@@ -280,13 +280,6 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
         apply StmtReads.disjoint_closeBrace
         assumption
     | step stRead' blockRead' =>
-        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead'
-        injection sameFirst with hMiddle hFirst
-        subst_vars
-        obtain ⟨sameNext, restEq⟩ := ihBlock (by simpa [moreEq] using blockRead')
-        cases sameNext
-        exact ⟨rfl, restEq⟩
-
 theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : rest <:+ input := by
   refine StmtReads.rec
     (motive_1 := fun scope input tree rest _ => rest <:+ input)
@@ -299,14 +292,14 @@ theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : res
       (List.suffix_append [letKeyword, .word name.val, assignment] _)
   · intros
     rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead
-    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+    exact ((List.suffix_cons semicolon restS).trans exprRead.consumes).trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
   · intros
     rename_i e t s inputS val restS declared fits exprRead
-    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+    exact ((List.suffix_cons semicolon restS).trans exprRead.consumes).trans (List.suffix_cons returnKeyword _)
   · intros
     rename_i s inputS condE firstE yesB moreB noB firstS condR yesR noR ihYes ihNo
     exact (((ihNo.trans (List.suffix_cons elseKeyword _)).trans ihYes).trans
-      (ExprReads.consumes yesR)).trans (List.suffix_cons ifKeyword _)
+      (ExprReads.consumes condR)).trans (List.suffix_cons ifKeyword _)
   · exact List.suffix_cons _ _
   · intros
     rename_i first next stRead blockRead ihSt ihBlock
@@ -327,14 +320,14 @@ theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : r
       (List.suffix_append [letKeyword, .word name.val, assignment] _)
   · intros
     rename_i s lo hi vlo vhi inputS val restS ref visible writable fits exprRead
-    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+    exact ((List.suffix_cons semicolon restS).trans exprRead.consumes).trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
   · intros
     rename_i e t s inputS val restS declared fits exprRead
-    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+    exact ((List.suffix_cons semicolon restS).trans exprRead.consumes).trans (List.suffix_cons returnKeyword _)
   · intros
     rename_i s inputS condE firstE yesB moreB noB firstS condR yesR noR ihYes ihNo
     exact (((ihNo.trans (List.suffix_cons elseKeyword _)).trans ihYes).trans
-      (ExprReads.consumes yesR)).trans (List.suffix_cons ifKeyword _)
+      (ExprReads.consumes condR)).trans (List.suffix_cons ifKeyword _)
   · exact List.suffix_cons _ _
   · intros
     rename_i first next stRead blockRead ihSt ihBlock
