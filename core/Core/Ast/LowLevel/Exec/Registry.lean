@@ -11,16 +11,14 @@ open Waechter
 /-- Declaring a state appends it; the first declaration starts the core in
     the arrival state. -/
 def StateDeclMeaningAussage : Prop :=
-  ∀ scope name decl s c frame, elaborateExec scope (.stateDecl name decl) = some (.declareState decl) →
-    (.declareState decl).evaluate s c = some frame →
+  ∀ decl s c frame, (.declareState decl).evaluate s c = some frame →
     frame.states = (s.lokal c).states ++ [decl] ∧
     frame.result = some (.stateDeclared (s.lokal c).states.length) ∧
     frame.current = match (s.lokal c).states with | [] => some 0 | _ => (s.lokal c).current
 
 /-- A same-state jump keeps the current state and records both slots. -/
 def JumpMeaningAussage : Prop :=
-  ∀ scope target s c frame code state, elaborateExec scope (.jump target) = some (.jump code state) →
-    (.jump code state).evaluate s c = some frame →
+  ∀ code state s c frame, (.jump code state).evaluate s c = some frame →
     (s.lokal c).current = some state ∧ state < (s.lokal c).states.length ∧
     ¬ (s.lokal c).halted ∧ frame.current = some state ∧
     frame.result = some (.jumped code state)
@@ -28,13 +26,12 @@ def JumpMeaningAussage : Prop :=
 /-- A long transfer changes the current state abstractly: the destination
     differs, exists, and carries a space exactly when translation is on. -/
 def JumpLongMeaningAussage : Prop :=
-  ∀ scope target dest space stack s c frame code dst sp st,
-    elaborateExec scope (.jumpLong target dest space stack) = some (.jumpLong code dst sp st) →
-    (.jumpLong code dst sp st).evaluate s c = some frame →
-    ∃ cur decl, (s.lokal c).current = some cur ∧ cur ≠ dst ∧
-      (s.lokal c).states[dst]? = some decl ∧ ¬ (s.lokal c).halted ∧
-      frame.current = some dst ∧ frame.activeSpace = sp ∧
-      frame.result = some (.jumpedLong code dst) ∧
+  ∀ code dest sp st s c frame,
+    (.jumpLong code dest sp st).evaluate s c = some frame →
+    ∃ cur decl, (s.lokal c).current = some cur ∧ cur ≠ dest ∧
+      (s.lokal c).states[dest]? = some decl ∧ ¬ (s.lokal c).halted ∧
+      frame.current = some dest ∧ frame.activeSpace = sp ∧
+      frame.result = some (.jumpedLong code dest) ∧
       (decl.translation = .on → ∃ id, sp = some id) ∧
       (decl.translation = .off → sp = none)
 
@@ -52,9 +49,7 @@ def StopMeaningAussage : Prop :=
 /-- An entry installs a fresh vector name; privileged kinds need the own
     stack, and only interrupts carry a priority. -/
 def EntryMeaningAussage : Prop :=
-  ∀ scope name kind stack priority s c frame,
-    elaborateExec scope (.entryDecl name kind stack priority) =
-      some (.declareEntry name kind stack priority) →
+  ∀ name kind stack priority s c frame,
     (.declareEntry name kind stack priority).evaluate s c = some frame →
     (s.lokal c).entries.all (fun p => p.1.val != name.val) ∧
     (kind.needsOwnStack → stack = .own) ∧

@@ -42,6 +42,12 @@ theorem execHead_some_iff (op : ExecInstruction)
               | succ n =>
                   simp only [hpci, List.getElem?_cons_succ, List.getElem?_nil] at hpc
                   cases hpc
+      | ruht =>
+          simp only [hs] at h
+          cases h
+      | beendet e =>
+          simp only [hs] at h
+          cases h
     · simp only [hc, ↓reduceIte] at h
       cases h
   · rintro ⟨hs, rfl, hpci, hev⟩
