@@ -45,7 +45,7 @@ private theorem tupleItemsTail_print (scope : Scope) : (types : List (Ty .value)
       exact .close
   | _, .next head tail => by
       simp only [ExprItems.printTail, List.map_cons, List.map_append, List.map_nil]
-      apply ItemsTail.comma (by simp)
+      apply ItemsTail.comma (by simp only [List.cons_ne_nil, true_or])
       exact .next (by
         simpa [Expr.printTokens] using Expr.printReads head (tupleTailBlocked tail))
         (tupleItemsTail_print scope _ tail)
