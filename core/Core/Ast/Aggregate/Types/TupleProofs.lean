@@ -32,10 +32,7 @@ theorem tupleType_inversion : TupleTypeInversionAussage := by
   cases read
   case tuple =>
       rename_i input' first' secondInput' second' more' tail' rest'
-      have p1 : TypeReads input' _ (comma :: _) := ‹_›
-      have p2 : TypeReads secondInput' _ _ := ‹_›
-      have p3 : TypeItemsTail _ _ rest' := ‹_›
-      exact ⟨first', second', tail', secondInput', more', p1, p2, p3, rfl⟩
+      exact ⟨first', _, second', secondInput', _, more', tail', rest', rfl⟩
   all_goals contradiction
 
 private theorem typeItemsTail_consumes : (input : List Token) → (tail : WrittenTypes) → (rest : List Token) →
@@ -50,12 +47,8 @@ theorem tupleType_suffix : TupleTypeSuffixAussage := by
   cases read
   case tuple =>
       rename_i input' first' secondInput' second' more' tail' rest'
-      have p1 : TypeReads input' _ (comma :: _) := ‹_›
-      have p2 : TypeReads secondInput' _ _ := ‹_›
-      have p3 : TypeItemsTail _ _ rest' := ‹_›
-      exact (typeItemsTail_consumes _ _ rest' p3).trans
-        ((TypeReads.consumes p2).trans
-          ((List.suffix_cons comma secondInput').trans (TypeReads.consumes p1)))
+      exact (typeItemsTail_consumes secondInput' second' rest rest').trans
+        (TypeReads.consumes more')
   all_goals contradiction
 
 theorem tupleType_index : TupleTypeIndexAussage := by
@@ -87,6 +80,7 @@ private theorem tupleType_printTail : (tail : WrittenTypes) → tail.valid → (
       · simpa only [List.append_assoc] using
           (WrittenType.printReads head valid.1
             (rest := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
+            (more := tail.printTail.map PrintedToken.value ++ [closeParen] ++ rest)
             (tupleTypeTail_closed tail rest))
       · exact tupleType_printTail tail valid.2 rest
 
@@ -98,15 +92,20 @@ theorem tupleType_derivation : TupleTypeDerivationAussage := by
   have openTok : printOpen.value = openParen := by rfl
   have commaTok : printComma.value = comma := by rfl
   have closeTok : printClose.value = closeParen := by rfl
-  simp only [WrittenType.printPieces, WrittenTypes.printTail, List.map_append, List.map_cons,
-    List.map_nil, openTok, commaTok, closeTok, List.singleton_append, List.append_assoc]
-  refine TypeReads.tuple ?_ ?_ ?_
-  · exact WrittenType.printReads first valid.1
+  have printEq : (WrittenType.tuple first second tail).printPieces.map PrintedToken.value =
+      openParen :: (ft ++ [comma] ++ st ++ tt ++ [closeParen]) := by
+    simp [WrittenType.printPieces, WrittenTypes.printTail, ft, st, tt, openTok, commaTok, closeTok,
+      List.singleton_append, List.append_assoc]
+  rw [printEq]
+  simp only [List.cons_append]
+  refine TypeReads.tuple (input := ft ++ [comma] ++ st ++ tt ++ [closeParen] ++ rest)
+    (secondInput := st ++ tt ++ [closeParen] ++ rest)
+    (more := tt ++ [closeParen] ++ rest) ?_ ?_ ?_
+  · simpa [ft] using (WrittenType.printReads first valid.1
       (rest := comma :: (st ++ tt ++ [closeParen] ++ rest))
-      (by intro more same; cases same)
-  · exact WrittenType.printReads second valid.2.1
-      (rest := tt ++ [closeParen] ++ rest)
-      (tupleTypeTail_closed tail rest)
+      (by intro more same; cases same))
+  · simpa [st] using (WrittenType.printReads second valid.2.1
+      (rest := tt ++ [closeParen] ++ rest) (tupleTypeTail_closed tail rest))
   · simpa [tt] using (tupleType_printTail tail valid.2.2 rest)
 
 theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
@@ -150,7 +149,7 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
       ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by rfl⟩
+        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type]⟩
     exact Surface.Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
