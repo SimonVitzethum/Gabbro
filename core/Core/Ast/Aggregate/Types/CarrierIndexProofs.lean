@@ -50,7 +50,7 @@ private theorem indexToken_ne_intWord (signed : Bool) (width : Nat) :
     have mem : ('n' : Char) ∈ Nat.toDigits 10 width := by
       have inTail : ('n' : Char) ∈ (toString width).toList := by
         rw [tailEq]
-        decide
+        exact List.mem_cons_self
       simpa using inTail
     have digit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (by decide) (by decide) mem
     have notDigit : ('n' : Char).isDigit = false := by decide
@@ -79,10 +79,8 @@ theorem carrierIndexInversion : CarrierIndexInversionAussage := by
 
 theorem carrierIndexDerivation : CarrierIndexDerivationAussage := by
   intro scope carrier count rest resolved
-  have hIndex : printIndex.value = keyword "index" := by
-    decide
-  have hInto : printInto.value = keyword "into" := by
-    decide
+  have hIndex : printIndex.value = keyword "index" := rfl
+  have hInto : printInto.value = keyword "into" := rfl
   have hCarrier : (Identifier.print carrier).value = .word carrier.val := rfl
   change TypeReads scope (printIndex.value :: printInto.value :: (Identifier.print carrier).value :: rest)
     (.index carrier count) rest
@@ -213,18 +211,10 @@ theorem carrierIndexErfuellbarAm : CarrierIndexErfuellbarAmAussage := by
     carrierIndex_singleIdent 'f' (by change 97 ≤ 102; omega) (by change 102 ≤ 122; omega)
   let count : Nat := 1
   let scope : Scope := [⟨carrier, .carrierSchema count [] .productEnd false, false, false⟩]
-  have resolved : scope.carrierCount carrier = some count := by
-    decide
-  have paramOrdinary : ordinaryLocal paramName := by
-    dsimp [ordinaryLocal, ordinaryAtomWord, paramName, carrierIndex_singleIdent]
-    decide
+  have resolved : scope.carrierCount carrier = some count := rfl
+  have paramOrdinary : ordinaryLocal paramName := (directName_of_singleton (name := paramName) rfl).1
   let param : Parameter scope := ⟨paramName, .index carrier count, resolved, paramOrdinary⟩
-  have fnOrdinary : directName fnName := by
-    constructor
-    · dsimp [ordinaryLocal, ordinaryAtomWord, fnName, carrierIndex_singleIdent]
-      decide
-    · dsimp [fnName, carrierIndex_singleIdent]
-      decide
+  have fnOrdinary : directName fnName := directName_of_singleton (name := fnName) rfl
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem

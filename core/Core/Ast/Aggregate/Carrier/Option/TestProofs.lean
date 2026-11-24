@@ -267,8 +267,7 @@ theorem optionTestErfuellbarAm : OptionTestErfuellbarAmAussage := by
     dsimp [ref, Local.visible, Ty.valueBinding, Local.nameVisible]
     trivial
   have ordinary : ordinaryLocal ref.binding.name := by
-    dsimp [ref, name, ordinaryLocal, ordinaryAtomWord]
-    decide
+    exact (directName_of_singleton (name := name) rfl).1
   let a : OptionTestArgs scope := ⟨0, ref, visible, ordinary⟩
   refine ⟨scope, a, ?_⟩
   let form := optionTestForm scope
@@ -290,16 +289,12 @@ theorem optionTestInitialized : OptionTestInitializedAussage := by
   intro platform start
   let cname : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let scope : Scope := [⟨cname, .carrierSchema 0 [] .productEnd false, false, false⟩]
-  have resolved : scope.carrierCount cname = some 0 := by
-    dsimp [scope, cname]
-    decide
+  have resolved : scope.carrierCount cname = some 0 := rfl
   let xname : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have xOrdinary : xname.val ≠ "mut".toList ∧ ordinaryLocal xname := by
     constructor
-    · dsimp [xname]
-      decide
-    · dsimp [ordinaryLocal, ordinaryAtomWord, xname]
-      decide
+    · intro same; cases same
+    · exact (directName_of_singleton (name := xname) rfl).1
   let init : OptionInitializer scope 0 := .absent
   let letOpt : Stmt none scope (⟨xname, indexOptionType 0, false, false⟩ :: scope) :=
     .letOption false xname xOrdinary cname resolved init
@@ -309,13 +304,11 @@ theorem optionTestInitialized : OptionTestInitializedAussage := by
     dsimp [ref, Local.visible, Ty.valueBinding, Local.nameVisible]
     trivial
   have refOrdinary : ordinaryLocal ref.binding.name := by
-    dsimp [ref, xname, ordinaryLocal, ordinaryAtomWord]
-    decide
+    exact xOrdinary.2
   let optExpr : Expr extScope .bool := Expr.optionIsSome ref refVisible refOrdinary
   let yname : Identifier := keywordName 'y' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have yOrdinary : yname.val ≠ "mut".toList := by
-    dsimp [yname]
-    decide
+    intro same; cases same
   let letY : Stmt none extScope (⟨yname, .bool, false, false⟩ :: extScope) :=
     .letValue yname yOrdinary optExpr
   let tree : BracedBlock none scope :=

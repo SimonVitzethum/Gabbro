@@ -256,29 +256,25 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   let scope : Scope := [binding]
   let refSchema : Local scope schemaType := .here
   let ref : Gabbro.Core.Ast.VariantRef scope labels payloads :=
-    ⟨name, refSchema, trivial, rfl, by simp only [labels, payloads,
-      Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads],
+    ⟨name, refSchema, trivial, rfl, rfl,
       by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
-  let index : Fin payloads.length := ⟨0, by simp only [payloads, Gabbro.Core.Ast.variantPayloads]⟩
-  have written : labels[index.val]? = some lbl := by
-    simp only [member, labels, index, Gabbro.Core.Ast.variantLabels]
+  let index : Fin payloads.length := ⟨0, Nat.zero_lt_succ _⟩
+  have written : labels[index.val]? = some lbl := rfl
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
     exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
-    · simp only [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
-        Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
-        Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
-      decide
+    · exact List.count_singleton_self
     · intro b hb
-      simp only [scope] at hb
+      have same : b = binding := List.mem_singleton.mp hb
       subst b
-      simp only [binding, name, lbl, Gabbro.Core.Ast.keywordName]
+      intro same
+      cases same
   let payload : Gabbro.Core.Ast.CasePayload scope (payloads.get index) := .nullary false
   let valueArgs : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
     ⟨labels, payloads, ref, lbl, index, written, ordinary, available, payload⟩
   let arms : Gabbro.Core.Ast.VariantArms none scope false labels payloads :=
-    .nullary lbl (by simp only [lbl, Gabbro.Core.Ast.keywordName]) (.braces .done) .done
+    .nullary lbl (by intro same; cases same) (.braces .done) .done
   let a : Gabbro.Core.Ast.Surface.VariantMatchArgs (scope, none) :=
     ⟨name.val, labels, payloads, valueArgs.expression, arms⟩
   refine ⟨(scope, none), a, ?_⟩

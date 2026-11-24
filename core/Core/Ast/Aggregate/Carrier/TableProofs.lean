@@ -276,22 +276,12 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     distinct := List.nodup_nil
   }
   let scope : Scope := [item.binding]
-  have resolved : scope.carrierCount carrier = some 1 := by
-    decide
-  have pOrdinary : ordinaryLocal pname := by
-    dsimp [ordinaryLocal, ordinaryAtomWord, pname]
-    decide
-  have qOrdinary : ordinaryLocal qname := by
-    dsimp [ordinaryLocal, ordinaryAtomWord, qname]
-    decide
+  have resolved : scope.carrierCount carrier = some 1 := rfl
+  have pOrdinary : ordinaryLocal pname := (directName_of_singleton (name := pname) rfl).1
+  have qOrdinary : ordinaryLocal qname := (directName_of_singleton (name := qname) rfl).1
   let paramIndex : Parameter scope := ⟨pname, .index carrier 1, resolved, pOrdinary⟩
   let paramOption : Parameter scope := ⟨qname, .indexOption carrier 1, resolved, qOrdinary⟩
-  have fnOrdinary : directName fname := by
-    constructor
-    · dsimp [ordinaryLocal, ordinaryAtomWord, fname]
-      decide
-    · dsimp [fname, keywordName]
-      decide
+  have fnOrdinary : directName fname := directName_of_singleton (name := fname) rfl
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t h
     cases h
@@ -305,8 +295,9 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
     body := .braces .done
     distinct := by
       change ([pname.val, qname.val] : List (List Char)).Nodup
-      dsimp [pname, qname, keywordName]
-      decide
+      have different : pname.val ≠ qname.val := by intro same; cases same
+      simp only [List.nodup_cons, List.mem_singleton, List.not_mem_nil, List.nodup_nil,
+        different, not_false_eq_true, and_true]
     returns := by
       intro h
       cases h
@@ -317,7 +308,7 @@ theorem tableErfuellbarAm : TableErfuellbarAmAussage := by
   let s := (I.start E start).2
   refine ⟨item, scope, rest, Ast.print (category := .unit) tree, s, ?_⟩
   dsimp only
-  refine ⟨by decide, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨Nat.zero_lt_succ _, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · refine ⟨argsVal, .done, rfl, ?_, ?_⟩
     · refine ⟨paramIndex, ?_, rfl⟩
       change paramIndex ∈ [paramIndex, paramOption]

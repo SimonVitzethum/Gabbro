@@ -280,14 +280,14 @@ theorem optionLetErfuellbarAm : OptionLetErfuellbarAmAussage := by
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let scope : Scope := [⟨carrier, .carrierSchema 0 [] .productEnd false, false, false⟩]
-  have resolved : scope.carrierCount carrier = some 0 := by decide
+  have resolved : scope.carrierCount carrier = some 0 := rfl
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
     constructor
     · change ('x' :: []) ≠ ('m' :: 'u' :: 't' :: [])
-      decide
-    · dsimp [ordinaryLocal, ordinaryAtomWord, name]
-      decide
+      intro same
+      cases same
+    · exact (directName_of_singleton (name := name) rfl).1
   let ctx : OptionContext := (scope, none)
   let a : OptionLetArgs ctx := ⟨false, name, ordinary, carrier, 0, resolved, .absent⟩
   refine ⟨ctx, a, rfl, rfl, ?_⟩
@@ -302,11 +302,11 @@ theorem optionReturnErfuellbarAm : OptionReturnErfuellbarAmAussage := by
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let scope : Scope := [⟨carrier, .carrierSchema 1 [] .productEnd false, false, false⟩]
-  have resolved : scope.carrierCount carrier = some 1 := by decide
+  have resolved : scope.carrierCount carrier = some 1 := rfl
   let ctx : OptionContext := (scope, some (indexOptionType 1))
   have fits : Fits (.int 0 0) (indexType 1) := by
     change 0 ≤ (0 : Int) ∧ (0 : Int) ≤ (1 : Int) - 1
-    decide
+    omega
   let a : OptionReturnArgs ctx := ⟨1, rfl, .present (Expr.lit 0) fits⟩
   refine ⟨ctx, a, ?_, ?_⟩
   · exact ⟨0, 0, Expr.lit 0, fits, rfl⟩

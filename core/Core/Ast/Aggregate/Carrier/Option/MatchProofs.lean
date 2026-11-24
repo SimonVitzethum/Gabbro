@@ -230,24 +230,17 @@ theorem optionMatchErfuellbarAm : OptionMatchErfuellbarAmAussage := by
     · change True
       trivial
     · trivial
-  have ordinary : ordinaryLocal name := by
-    change ['o'] ≠ "true".toList ∧ ['o'] ≠ "false".toList ∧ ['o'] ≠ "lenof".toList ∧
-      ['o'] ≠ "Some".toList ∧ ['o'] ≠ "None".toList
-    decide
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   have refOrdinary : ordinaryLocal ref.binding.name := by
     dsimp [ref, Local.binding]
     exact ordinary
   let value : Expr scope (variantValueType [] indexOptionLabels (indexOptionPayloads count)) :=
     Expr.variable ref visible refOrdinary
   let binder : Identifier := keywordName 'p' [] (by decide) (by intro c hc; cases hc)
-  have binderOrdinary : ordinaryLocal binder := by
-    change ['p'] ≠ "true".toList ∧ ['p'] ≠ "false".toList ∧ ['p'] ≠ "lenof".toList ∧
-      ['p'] ≠ "Some".toList ∧ ['p'] ≠ "None".toList
-    decide
+  have binderOrdinary : ordinaryLocal binder := (directName_of_singleton (name := binder) rfl).1
   let bodySome : BracedBlock none (payloadBinding binder (indexType count) :: scope) := .braces .done
   let bodyNone : BracedBlock none scope := .braces .done
-  have noneCase : indexNoneName.val ≠ ['_'] := by
-    decide
+  have noneCase : indexNoneName.val ≠ ['_'] := by intro same; cases same
   let armsNone : VariantArms none scope true [indexNoneName] [none] :=
     .nullary indexNoneName noneCase bodyNone .done
   let arms : VariantArms none scope false indexOptionLabels (indexOptionPayloads count) :=

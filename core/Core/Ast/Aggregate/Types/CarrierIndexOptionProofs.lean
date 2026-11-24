@@ -215,16 +215,12 @@ theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage :
   intro platform start
   let carrier : Identifier := keywordName 'c' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let scope : Scope := [⟨carrier, .carrierSchema 1 [] .productEnd false, false, false⟩]
-  have resolved : scope.carrierCount carrier = some 1 := by decide
+  have resolved : scope.carrierCount carrier = some 1 := rfl
   let pname : Identifier := keywordName 'p' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have pOrdinary : ordinaryLocal pname := by
-    dsimp [ordinaryLocal, ordinaryAtomWord, pname]
-    decide
+  have pOrdinary : ordinaryLocal pname := (directName_of_singleton (name := pname) rfl).1
   let param : Parameter scope := ⟨pname, .indexOption carrier 1, resolved, pOrdinary⟩
   let fname : Identifier := keywordName 'f' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have fOrdinary : directName fname := by
-    dsimp [directName, ordinaryLocal, ordinaryAtomWord, fname]
-    decide
+  have fOrdinary : directName fname := directName_of_singleton (name := fname) rfl
   have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid scope t := by
     intro t mem
     cases mem

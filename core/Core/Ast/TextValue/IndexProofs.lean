@@ -325,7 +325,7 @@ theorem textIndexErfuellbarAm : TextIndexErfuellbarAmAussage := by
   have htext : (frame₂.temp 0).bind (wertAls (.text capacity)) = some text := by
     rw [htemp]
     exact textWertAls capacity text
-  have hcapPos : 0 < capacity := by decide
+  have hcapPos : 0 < capacity := Nat.zero_lt_succ _
   have hlt : (0 : Int).toNat < text.bytes.size := by
     dsimp [text, TextValue.literal, capacity]
     exact hcapPos
