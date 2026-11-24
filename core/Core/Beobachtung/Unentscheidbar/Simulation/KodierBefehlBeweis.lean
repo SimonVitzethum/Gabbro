@@ -114,6 +114,7 @@ theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = som
   | .optionIstBesetzt f0 f1 => by
       simp [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .definiereEffektgruppe f0 => by
+      set_option maxHeartbeats 1000000 in
       simp [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .waehleUmgebung f0 f1 f2 => by
       simp [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
