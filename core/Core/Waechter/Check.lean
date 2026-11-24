@@ -17,6 +17,7 @@ meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Verfeinerung.Formen.Registry
 public meta import Core.Waechter.AussagePins
+public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
@@ -311,8 +312,12 @@ elab "#check_core" : command => do
     let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
-    let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-      ++ safetyErrors env index safety ++ aussagePinErrors env index pins
+    -- The pin hashes walk the closure of every pin; run them on their own threads so that the
+    -- command's heartbeat budget does not grow with the number of pins.
+    let pinTask := Task.spawn fun _ => pinErrors env index pins
+    let aussageTask := Task.spawn fun _ => aussagePinErrors env index pins
+    let dependencyErrors := compiledImportErrors env ++ pinTask.get ++ acceptanceErrors env index acceptance
+      ++ safetyErrors env index safety ++ aussageTask.get
     let pinNames := pins.map (·.1)
     let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
@@ -321,6 +326,16 @@ elab "#check_core" : command => do
     errors := errors ++ (← auxiliaryRegistryErrors flowEntries pinNames closing.isSome
       #[`Gabbro.Core.Ast.Semantik.LokalFamilie])
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
+    let mut coveredNames : Std.HashSet Name := {}
+    for (root, _) in pins do
+      coveredNames := coveredNames.insert root
+      for name in index.closure root do
+        coveredNames := coveredNames.insert name
+    let binderTask ← Meta.MetaM.asTask' (binderFindings env (coveredNames.contains ·) closing.isSome)
+    let binder ← withoutModifyingState binderTask.get
+    errors := errors ++ binder.errors
+    unless binder.infos.isEmpty do
+      logInfo m!"statement findings ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
     return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors
