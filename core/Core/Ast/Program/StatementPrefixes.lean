@@ -95,4 +95,73 @@ theorem OverflowReads.deterministic (left : OverflowReads input a rest)
       cases Subtype.ext h
       exact ⟨rfl, rfl⟩
 
+theorem PatternNameReads.deterministic (left : PatternNameReads input a rest)
+    (right : PatternNameReads input b suffix) : a = b ∧ rest = suffix := by
+  cases left with
+  | discard =>
+    generalize eq : (['_'] : List Char) = spelling at right
+    cases right with
+    | discard => exact ⟨rfl, rfl⟩
+    | name other allowed => exact (allowed eq.symm).elim
+  | name name allowed =>
+    generalize eq : name.val = spelling at right
+    cases right with
+    | discard => exact (allowed eq).elim
+    | name other _ =>
+      cases Subtype.ext eq
+      exact ⟨rfl, rfl⟩
+
+theorem PatternTailReads.deterministic (left : PatternTailReads input a rest)
+    (right : PatternTailReads input b suffix) : a = b ∧ rest = suffix := by
+  induction left generalizing b suffix with
+  | close =>
+    cases right with
+    | close => exact ⟨rfl, rfl⟩
+  | next head tail ih =>
+    cases right with
+    | next otherHead otherTail =>
+      obtain ⟨rfl, rfl⟩ := head.deterministic otherHead
+      obtain ⟨rfl, rfl⟩ := ih otherTail
+      exact ⟨rfl, rfl⟩
+
+theorem TuplePatternReads.deterministic (left : TuplePatternReads input a rest)
+    (right : TuplePatternReads input b suffix) : a = b ∧ rest = suffix := by
+  cases left with
+  | tuple first second tail =>
+    cases right with
+    | tuple otherFirst otherSecond otherTail =>
+      obtain ⟨rfl, nextInput⟩ := first.deterministic otherFirst
+      cases (List.cons.inj nextInput).2
+      obtain ⟨rfl, rfl⟩ := second.deterministic otherSecond
+      obtain ⟨rfl, rfl⟩ := tail.deterministic otherTail
+      exact ⟨rfl, rfl⟩
+
+theorem TupleAnnotationReads.deterministic (left : TupleAnnotationReads scope input a rest)
+    (right : TupleAnnotationReads scope input b suffix) : a = b ∧ rest = suffix := by
+  cases left with
+  | absent =>
+    cases right with
+    | absent => exact ⟨rfl, rfl⟩
+  | written typeRead =>
+    cases right with
+    | written otherType =>
+      obtain ⟨rfl, tail⟩ := typeRead.deterministic otherType
+      exact ⟨rfl, (List.cons.inj tail).2⟩
+
+theorem binderHead_eq {name other : Identifier}
+    (same : lead :: .word name.val :: marker :: input = lead :: .word other.val :: marker :: more) :
+    name = other ∧ input = more := by
+  have tail := List.cons.inj (List.cons.inj same).2
+  exact ⟨Subtype.ext (Token.word.inj tail.1), (List.cons.inj tail.2).2⟩
+
+theorem optionBindingHead_eq {name other : Identifier}
+    (ordinary : name.val ≠ "mut".toList) (otherOrdinary : other.val ≠ "mut".toList)
+    (same : optionLetHead mutable name ++ input = optionLetHead otherMutable other ++ more) :
+    mutable = otherMutable ∧ name = other ∧ input = more := by
+  cases mutable <;> cases otherMutable
+  · exact ⟨rfl, binderHead_eq (lead := letKeyword) (marker := colon) same⟩
+  · exact (ordinary (Token.word.inj (List.cons.inj (List.cons.inj same).2).1)).elim
+  · exact (otherOrdinary (Token.word.inj (List.cons.inj (List.cons.inj same).2).1).symm).elim
+  · exact ⟨rfl, binderHead_eq (lead := keyword "mut") (marker := colon) (List.cons.inj same).2⟩
+
 end Gabbro.Core.Ast
