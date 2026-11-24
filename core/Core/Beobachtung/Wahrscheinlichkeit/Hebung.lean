@@ -16,6 +16,12 @@
     laws. It mentions no scheduler and no policy, so measure preservation is
     structural (`massEindeutig`, proved): any lift extending these weights preserves
     the declared laws under every scheduler and every non-random policy.
+  - Consistency by gating (Hy4): a cylinder prescribing two outcomes at one draw
+    position denotes the empty band set, while the product of the laws is
+    positive. Such inconsistent objects exist as data, but no law quantifies over
+    them: `massErhalt` requires key-`Nodup`, i.e. each position appears at most
+    once, so the path is a genuine partial function and the product is the
+    cylinder's weight.
   - `Hebebuendel` packages what the lift proof (pinned `hebeAussage`) must deliver:
     the band measure, the replay into admitted runs, and the characteristic
     properties. Every per-form statement quantifies over bundles hypothetically, so
@@ -74,7 +80,9 @@ def Ziehung (Q : Zufallsquelle) (band : Band) (k : Nat) : Fin Q.anz :=
 
 /-- A finite cylinder: finitely many draw positions with prescribed outcomes.
     Cylinders determine the band measure; every run event the forms speak about is
-    a countable combination of cylinders. -/
+    a countable combination of cylinders. A path may repeat a position as data,
+    but the lift laws below only speak about key-`Nodup` paths (partial functions:
+    each position at most once), where the product is the weight. -/
 structure Zylinder (Q : Zufallsquelle) where
   pfad : List (Nat × Fin Q.anz)
 
@@ -125,9 +133,10 @@ def KausalReplay
 
 /-- The lift bundle: the band measure with the replay into admitted runs, and the
     characteristic properties every per-form statement assumes. The measure agrees
-    with the cylinder weights (`massErhalt`); the replay lands in admitted runs,
-    is causal, follows the scheduler unless its choice is stuck, and answers every
-    random question from the band. -/
+    with the cylinder weights on key-`Nodup` cylinders (`massErhalt`); inconsistent
+    paths denote the empty set and no law mentions them. The replay lands in
+    admitted runs, is causal, follows the scheduler unless its choice is stuck,
+    and answers every random question from the band. -/
 structure Hebebuendel (B : Zufallsbindung) (S : Scheduler)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
@@ -135,7 +144,7 @@ structure Hebebuendel (B : Zufallsbindung) (S : Scheduler)
   mu : MeasureTheory.Measure Band
   replay : Band → Maschine.Lauf E
   istWMass : MeasureTheory.IsProbabilityMeasure mu
-  massErhalt : ∀ Z : Zylinder B.quelle,
+  massErhalt : ∀ Z : Zylinder B.quelle, (Z.pfad.map Prod.fst).Nodup →
     mu {band | ∀ p ∈ Z.pfad, band B.quelle.id p.1 % B.quelle.anz = p.2.val} =
       ZylinderGewicht B.quelle Z
   replayZulaessig : ∀ band, Maschine.Laeufe E h (replay band)
@@ -151,14 +160,15 @@ structure Hebebuendel (B : Zufallsbindung) (S : Scheduler)
         ∃ k : Nat, a.reply = ZiehungsAntwort a.reply.origin (Ziehung B.quelle band k).val
 
 /-- Measure preservation, proved: any two bundles for the same source agree on every
-    cylinder, since both extend the same weights. The declared laws survive the lift
-    independently of scheduler and policy. -/
+    consistent cylinder, since both extend the same weights. The declared laws
+    survive the lift independently of scheduler and policy. -/
 theorem massEindeutig (B : Zufallsbindung) (S : Scheduler)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (h : Umgebung) (hb₁ hb₂ : Hebebuendel B S E h) (Z : Zylinder B.quelle) :
+    (h : Umgebung) (hb₁ hb₂ : Hebebuendel B S E h) (Z : Zylinder B.quelle)
+    (hnodup : (Z.pfad.map Prod.fst).Nodup) :
     hb₁.mu {band | ∀ p ∈ Z.pfad, band B.quelle.id p.1 % B.quelle.anz = p.2.val} =
     hb₂.mu {band | ∀ p ∈ Z.pfad, band B.quelle.id p.1 % B.quelle.anz = p.2.val} := by
-  rw [hb₁.massErhalt, hb₂.massErhalt]
+  rw [hb₁.massErhalt Z hnodup, hb₂.massErhalt Z hnodup]
 
 end Gabbro.Core.Beobachtung
