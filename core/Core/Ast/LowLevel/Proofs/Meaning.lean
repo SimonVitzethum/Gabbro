@@ -51,6 +51,7 @@ private lemma heldRegion_borrowed_none {k : Katalog} (s : State k) (c : Kontext)
   cases (s.lokal c).regions[slot]? with
   | none => rfl
   | some extent =>
+      dsimp
       rw [if_neg (by intro h'; cases h')]
       rfl
 
@@ -157,9 +158,8 @@ theorem viewMeaning : ViewMeaningAussage := by
                     (⟨slot, 0⟩ : Griff) ∈
                       (((⟨.view slot handleV ⟨extent.von, extent.von + shape.bytes⟩ shape,
                           some handleV⟩ : Transfer k).apply c s).lokal c).borrowed := by
-                  change (⟨slot, 0⟩ : Griff) ∈ [handleV] ++ (s.lokal c).borrowed
-                  rw [hhandle]
-                  exact List.mem_append_left _ (List.mem_singleton_self (⟨slot, 0⟩ : Griff))
+                  simp only [Transfer.apply, Function.update_self, hhandle, List.mem_append,
+                    List.mem_singleton]
                 have hlast :
                     heldRegion
                       ((⟨.view slot handleV ⟨extent.von, extent.von + shape.bytes⟩ shape,
