@@ -26,18 +26,72 @@ namespace Gabbro.Core.Ast.Surface
 
 theorem RecordFieldInversion : RecordFieldInversionAussage := by
   intro scope name labels types minimum input type base tree rest field allowed read
-  generalize htok : (dot :: .word field.val :: input) = toks at read
-  induction read generalizing name labels types base with
-  | stop blocked =>
+  have tupleType_inj : ∀ {a b : List (Ty .value)}, tupleType a = tupleType b → a = b := by
+    intro a
+    induction a with
+    | nil =>
+        intro b h
+        cases b <;> simp only [tupleType] at h ⊢
+    | cons x xs ih =>
+        intro b h
+        cases b with
+        | nil => simp only [tupleType] at h
+        | cons y ys =>
+            simp only [tupleType] at h
+            have hx : x = y := by injection h with h1 _; exact h1
+            have hxy : tupleType xs = tupleType ys := by injection h with _ h2; exact h2
+            subst y
+            exact congrArg (fun l => x :: l) (ih hxy)
+  have label_inj : ∀ {a b : List Identifier}, a.map Subtype.val = b.map Subtype.val → a = b := by
+    intro a
+    induction a with
+    | nil =>
+        intro b h
+        cases b <;> simp at h ⊢
+    | cons x xs ih =>
+        intro b h
+        cases b with
+        | nil => simp at h
+        | cons y ys =>
+            simp only [List.map_cons, List.cons.injEq] at h
+            subst y
+            exact congrArg (fun l => x :: l) (ih h.2)
+  refine ExprTail.rec
+    (motive_1 := fun _ _ _ _ _ _ => True)
+    (motive_2 := fun _ _ _ _ _ => True)
+    (motive_3 := fun _ _ inputType base0 input0 _ tree0 rest0 _ =>
+      inputType = recordValueType name labels types →
+      input0 = dot :: .word field.val :: input →
+      ∃ i : Fin types.length, ∃ checked : RecordFieldAt labels field i.val,
+        ExprTail scope minimum (.recordField base0 field i checked) input tree0 rest0)
+    (by trivial)
+    (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
+    (by trivial) (by trivial) (by trivial) (by trivial) (by trivial) (by trivial)
+    (by trivial)
+    (by
+      intro hEq htok
       exfalso
-      exact blocked ⟨.projection, .word field.val :: input,
-        by simpa only [Infix.token] using htok.symm, allowed⟩
-  | recordField base' field' index written hle tail ih =>
+      exact (by
+        rename_i blocked
+        exact blocked ⟨.projection, .word field.val :: input,
+          by simpa only [Infix.token] using htok.symm, allowed⟩))
+    (by intro hEq htok; cases hEq)
+    (by intro hEq htok; cases hEq)
+    (by intro hEq htok; cases hEq)
+    (by intro hEq htok; cases hEq)
+    (by intro hEq htok; cases hEq)
+    (by intro hEq htok; cases hEq)
+    (by
+      intro hEq htok
+      rename_i base' field' index written hle tail _
+      injection hEq with hnm hlabs hlayout
+      have htys : _ := tupleType_inj hlayout
+      have hlbs : _ := label_inj hlabs
       have restEq : .word field.val :: input = .word field'.val :: _ := (List.cons.inj htok).2
-      have nameEq : field.val = field'.val := (List.cons.inj restEq).1
-      have fld : field = field' := Subtype.ext nameEq
+      have fld : field = field' := Subtype.ext (List.cons.inj restEq).1
       subst field'
-      exact ⟨index, written, tail⟩
+      subst hnm
+      exact ⟨index, written, tail⟩) read
 
 theorem RecordFieldSuffix : RecordFieldSuffixAussage := by
   intro scope name labels types minimum input type field base tree rest allowed read
@@ -99,6 +153,6 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
   intro scope args frame record h
   change ((Befehl.liesRecordFeld 0 args.name args.labels args.types args.index).auswerten frame).temp 0 =
     some ⟨args.types.get args.index, tupleGet args.types args.index record⟩
-  simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, recordValueType]
+  simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, recordValueType, Option.bind]
 
 end Gabbro.Core.Ast.Semantik
