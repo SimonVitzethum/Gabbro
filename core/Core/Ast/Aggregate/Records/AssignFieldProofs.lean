@@ -176,7 +176,7 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
           simp only [Fits] at fits
           cases fits
       | _ =>
-          cases fits <;> simp only [wertAls, Wert.widen, dif_pos]
+          cases fits <;> simp [wertAls, Wert.widen]
 
 theorem AssignFieldParse : AssignFieldParseAussage := by
   intro ctx args text pieces lex prod
