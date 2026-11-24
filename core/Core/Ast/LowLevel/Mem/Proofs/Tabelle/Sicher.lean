@@ -108,7 +108,10 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
                 rw [← hseite]
                 exact he0
               refine ⟨entry0, htab, ?hright, ?hphys⟩
-              · exact okRights entry0 he0 hframe0 right hright
+              · have hright' : right ∈ zelle.eintrag.rights := by
+                  rw [hentry]
+                  exact hright
+                exact okRights entry0 he0 hframe0 right hright'
               · rw [hphys]
                 have hframeEq : entry0.frame = centry.frame := by
                   rw [hframe0]
@@ -120,7 +123,10 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
               have htab := hspaces space space0 hfound0
               obtain ⟨_, hflags, _⟩ := htab
               have hflag := hflags token tmem
-              exact ⟨space0, token, hfound0, tmem, hdeck.1, hflag.1, hflag.2⟩
+              have hcont : token.contains (addr / z.seitengranule) := by
+                rw [← hseite]
+                exact hdeck.1
+              exact ⟨space0, token, hfound0, tmem, hcont, hflag.1, hflag.2⟩
           · right
             left
             have hpend : frame.VerengtBei zelle.raum zelle.seite := pending
@@ -150,7 +156,8 @@ theorem uebersetze_sicher_voll {frame : MemFrame}
               Adressraum.eintrag_reserviert found0 habb hphys hmod
             refine ⟨hres, ?rightsTab⟩
             left
-            exact ⟨tentry, ht, hright, hphys⟩
+            refine ⟨tentry, ht, hright, ?hphysEq⟩
+            exact hphys.symm
           · simp only [hright, ↓reduceIte] at h
             cases h
   · simp only [hv, not_true_eq_false, not_false_eq_true, ↓reduceIte] at h
