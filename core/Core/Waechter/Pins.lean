@@ -22,21 +22,32 @@ private meta def declarationHash (info : ConstantInfo) : UInt64 := Id.run do
         mixHash r (mixHash (hash rule.ctor) rule.rhs.hash)) 0)
   return mixHash (mixHash h payload.1) payload.2
 
-private meta def closureHash (env : Environment) (root : Name) : UInt64 :=
-  ((coreClosure env #[root]).toArray.qsort Name.lt).foldl (init := 0) fun h name =>
-    let declHash := (env.find? name).map declarationHash |>.getD 0
-    mixHash h declHash
 
 /-- Pins the structural type and value of each named declaration and its full Core dependency graph.
     Inductive constructor lists and constructor types are included. Lean and Mathlib are trusted interfaces.
     This hash detects structural edits under the pinned toolchain. Semantic equivalence requires a proof. -/
-public meta def pinErrors (env : Environment) (pins : Array (Name × UInt64)) : Array String := Id.run do
+public meta def pinErrors (env : Environment) (index : DependencyIndex) (pins : Array (Name × UInt64)) : Array String := Id.run do
+  let mut hashes : Std.HashMap Name UInt64 := {}
+  let mut pinHashes : Std.HashMap Name UInt64 := {}
   let mut measured := #[]
   let mut errors := #[]
   for (root, expected) in pins do
     if !isCoreConstant env root || (env.find? root).isNone then
       errors := errors.push s!"missing hash pin root {root}"
-    let actual := closureHash env root
+    let actual ← match pinHashes[root]? with
+      | some actual => pure actual
+      | none => do
+        let mut actual := 0
+        for name in index.closure root do
+          let declaration ← match hashes[name]? with
+            | some declaration => pure declaration
+            | none => do
+              let declaration := (env.find? name).map declarationHash |>.getD 0
+              hashes := hashes.insert name declaration
+              pure declaration
+          actual := mixHash actual declaration
+        pinHashes := pinHashes.insert root actual
+        pure actual
     measured := measured.push s!"(`{root}, {actual})"
     if actual != expected then
       errors := errors.push s!"hash mismatch for {root} (expected {expected}, measured {actual})"

@@ -21,7 +21,7 @@ public meta structure ClosingSpec where
     outside the explicit trusted roots. The exported theorem must use exactly the three standard axioms.
     It checks the configured bindings and roots. Approval of their intended meaning is external to Lean. -/
 public meta def closingErrors (spec : ClosingSpec) (pins : Array (Name × UInt64))
-    (exported : Environment) : CoreM (Array String) := do
+    (exported : Environment) (index : DependencyIndex) : CoreM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
   let expected := mkApp (mkConst spec.shape) (mkConst spec.frame)
@@ -40,19 +40,6 @@ public meta def closingErrors (spec : ClosingSpec) (pins : Array (Name × UInt64
   for root in #[spec.shape, spec.frame] do
     unless pins.any (fun pin => pin.1 == root) do
       errors := errors.push s!"closing root {root} lacks an approved hash pin"
-  let mut seen : NameSet := {}
-  let mut pending := [spec.shape, spec.frame]
-  while let name :: rest := pending do
-    pending := rest
-    if seen.contains name || spec.trustedRoots.contains name then continue
-    seen := seen.insert name
-    if let some info := env.find? name then
-      if isCoreConstant env name then
-        pending := info.getUsedConstantsAsSet.toArray.toList ++ pending
-      else
-        errors := errors.push s!"closing dependency {name} is outside the trusted roots"
-    else
-      errors := errors.push s!"missing closing dependency {name}"
-  return errors
+  return errors ++ index.closingErrors
 
 end Gabbro.Core.Waechter

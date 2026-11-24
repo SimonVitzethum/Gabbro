@@ -139,15 +139,18 @@ elab "#check_core" : command => do
   let env ← auditEnvironment reachableSources
   let env := withAxiomSummaries (env.setExporting false)
   let declarations := coreDeclarations env
-  errors := errors ++ compiledImportErrors env ++ pinErrors env pins ++ acceptanceErrors env acceptance
-  errors := errors ++ safetyErrors env safety
+  let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
+  let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
+  let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
+  errors := errors ++ compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
+  errors := errors ++ safetyErrors env index safety
   let semanticErrors ← liftTermElabM <| withEnv env do
     let mut errors ← declarationErrors declarations
     errors := errors ++ (← decisionErrors declarations)
     errors := errors ++ (← registryErrors registry)
-    errors := errors ++ (← semanticsErrors wildcardRoots catalogueKinds scanned)
+    errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then
-      errors := errors ++ (← closingErrors spec pins (imported.setExporting true))
+      errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
     return errors
   errors := errors ++ semanticErrors
   for error in errors do

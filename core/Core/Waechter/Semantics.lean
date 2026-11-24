@@ -15,7 +15,7 @@ public meta structure ClosedKinds where
     register each entry point. The check follows their Core dependencies and reports a literal wildcard arm
     inside each declaration's source range. Macros and generated declarations without source ranges are
     outside the lexical test. For each catalogue-governed kind type, it compares the exact constructor list. -/
-public meta def semanticsErrors (roots : Array Name) (kinds : Array ClosedKinds)
+public meta def semanticsErrors (index : DependencyIndex) (roots : Array Name) (kinds : Array ClosedKinds)
     (sources : Array (Source × SourceAudit)) : CoreM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
@@ -27,7 +27,10 @@ public meta def semanticsErrors (roots : Array Name) (kinds : Array ClosedKinds)
       errors := errors.push s!"missing wildcard guard root {root}"
     else if (← findDeclarationRanges? root).isNone then
       errors := errors.push s!"missing source range for wildcard guard root {root}"
-  for name in coreClosure env roots do
+  let mut seen : Std.HashSet Name := {}
+  for name in roots.flatMap index.closure do
+    if seen.contains name then continue
+    seen := seen.insert name
     let some idx := env.getModuleIdxFor? name | continue
     let some (source, scan) := modules[env.header.moduleNames[idx.toNat]!]? | continue
     if scan.wildcardArms.isEmpty then continue

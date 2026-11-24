@@ -7,20 +7,65 @@ open Lean
 
 namespace Gabbro.Core.Waechter
 
-/-- Enumerates the Core declarations referenced by types and bodies, including proofs, private helpers,
-    constructors of referenced inductives and owners of recursors. Foreign library interfaces are leaves. -/
-public meta def coreClosure (env : Environment) (roots : Array Name) : NameSet := Id.run do
-  let mut seen : NameSet := {}
-  let mut pending := roots.toList
-  while let name :: rest := pending do
-    pending := rest
-    if seen.contains name then continue
-    if let some info := env.find? name then
+private meta structure DirectDependencies where
+  core : Array Name
+  all : Array Name
+  isCore : Bool
+
+public meta structure DependencyIndex where
+  closures : Std.HashMap Name (Array Name)
+  closingErrors : Array String
+
+/-- Each body is scanned only once. Keep the direct edges and the closures of the actual guard
+    roots, so declarations deep in the graph do not each need their own transitive set. The closing
+    guard uses the same edges but stops at the explicitly trusted roots, even if they are in Core. -/
+public meta def indexDependencies (env : Environment) (roots closingRoots : Array Name)
+    (trusted : NameSet) : DependencyIndex := Id.run do
+  let mut direct : Std.HashMap Name (Option DirectDependencies) := {}
+  let mut closures : Std.HashMap Name (Array Name) := {}
+  let mut closingErrors := #[]
+  let rootGroups := roots.map (fun root => (some root, #[root])) ++ #[(none, closingRoots)]
+  for (root, start) in rootGroups do
+    if root.any closures.contains then continue
+    let closing := root.isNone
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := start.toList
+    let mut reachable := #[]
+    while let name :: rest := pending do
+      pending := rest
+      if seen.contains name || (closing && trusted.contains name) then continue
       seen := seen.insert name
-      for dep in info.getUsedConstantsAsSet do
-        if isCoreConstant env dep then
-          pending := dep :: pending
-  return seen
+      if !closing then
+        if let some closure := closures[name]? then
+          -- A previously checked root contributes its whole closure.
+          for dep in closure do
+            if dep == name || !seen.contains dep then
+              seen := seen.insert dep
+              reachable := reachable.push dep
+          continue
+      let edges ← match direct[name]? with
+        | some edges => pure edges
+        | none => do
+          let edges := (env.find? name).map fun info =>
+            let all := info.getUsedConstantsAsSet.toArray
+            ⟨all.filter (isCoreConstant env), all, isCoreConstant env name⟩
+          direct := direct.insert name edges
+          pure edges
+      if let some edges := edges then
+        if !closing || edges.isCore then
+          reachable := reachable.push name
+          pending := (if closing then edges.all else edges.core).toList ++ pending
+        else
+          closingErrors := closingErrors.push s!"closing dependency {name} is outside the trusted roots"
+      else if closing then
+        closingErrors := closingErrors.push s!"missing closing dependency {name}"
+    if let some root := root then
+      closures := closures.insert root (reachable.qsort Name.lt)
+  return ⟨closures, closingErrors⟩
+
+public meta def DependencyIndex.closure (index : DependencyIndex) (root : Name) : Array Name :=
+  index.closures[root]?.getD #[]
+
 
 public meta def standardAxioms : NameSet :=
   .ofList [`propext, `Classical.choice, `Quot.sound]
@@ -83,7 +128,7 @@ public meta structure AcceptanceSpec where
     module prefixes take priority over the allowed modules. The reverse traversal checks the ideal entry
     points for every acceptance definition. Review the placement and meaning of definitions in the approved
     modules. Lean cannot infer semantic layers from their expressions alone. -/
-public meta def acceptanceErrors (env : Environment) (spec : AcceptanceSpec) : Array String := Id.run do
+public meta def acceptanceErrors (env : Environment) (index : DependencyIndex) (spec : AcceptanceSpec) : Array String := Id.run do
   let mut errors := #[]
   let allowedModules := spec.syntaxModules ++ spec.idealModules ++ spec.catalogueModules
   for name in spec.acceptance ++ spec.ideal do
@@ -97,7 +142,7 @@ public meta def acceptanceErrors (env : Environment) (spec : AcceptanceSpec) : A
     spec.acceptance.any fun root =>
       root.isPrefixOf name && env.getModuleIdxFor? root == env.getModuleIdxFor? name
   for root in spec.acceptance do
-    for name in coreClosure env #[root] do
+    for name in index.closure root do
       if let some idx := env.getModuleIdxFor? name then
         let mod := env.header.moduleNames[idx.toNat]!
         if spec.forbidden.any (·.isPrefixOf name) || spec.forbiddenModules.any (·.isPrefixOf mod) then
@@ -105,7 +150,7 @@ public meta def acceptanceErrors (env : Environment) (spec : AcceptanceSpec) : A
         else if !isAcceptance name && !allowedModules.any (·.isPrefixOf mod) then
           errors := errors.push s!"acceptance dependency {root} -> {name} in {mod} is outside the whitelist"
   for root in spec.ideal do
-    for name in coreClosure env #[root] do
+    for name in index.closure root do
       if isAcceptance name then
         errors := errors.push s!"ideal dependency {root} -> {name} reaches acceptance"
   return errors
