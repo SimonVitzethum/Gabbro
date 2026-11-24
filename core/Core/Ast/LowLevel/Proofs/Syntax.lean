@@ -68,7 +68,11 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
           have hrowEq : row = row' := by
             cases row <;> cases row' <;>
               simp [FirmwareZeile.name, String.reduceToList] at hrowName ⊢
-          exact congrArg₃ Tree.environment (Subtype.ext hna) habiEq hrowEq
+          have hnaEq : na = nb := Subtype.ext hna
+          subst nb
+          cases habiEq
+          cases hrowEq
+          rfl
 
 lemma addressTypePrints (space : AddressSpace) :
     (Tree.addressType space).production
