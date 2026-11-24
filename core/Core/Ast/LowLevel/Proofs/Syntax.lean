@@ -26,91 +26,36 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
       | addressType sb =>
           simp only [Tree.production] at ha hb
           rw [ha] at hb
-          have hname := congrArg (fun l : List Token => l.get? 2) hb
+          have hname := congrArg (fun l : List Token => l[2]?) hb
           simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname
           cases sa <;> cases sb <;>
             simp [keyword, AddressSpace.name, String.reduceToList] at hname ⊢
-      | regionAddress rb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
-      | view rb tb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          rcases hb with ⟨input, eq, reads⟩
-          simp at eq
-      | environment nb abi row =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
   | regionAddress ra =>
       cases b with
-      | addressType sb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
       | regionAddress rb =>
           simp only [Tree.production] at ha hb
           rw [ha] at hb
           simp at hb
           exact congrArg Tree.regionAddress (Subtype.ext hb)
-      | view rb tb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          rcases hb with ⟨input, eq, reads⟩
-          simp at eq
-      | environment nb abi row =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
   | view ra ta =>
       cases b with
-      | addressType sb =>
-          simp only [Tree.production] at ha
-          rcases ha with ⟨input, rfl, readsA⟩
-          simp only [Tree.production] at hb
-          simp at hb
-      | regionAddress rb =>
-          simp only [Tree.production] at ha
-          rcases ha with ⟨input, rfl, readsA⟩
-          simp only [Tree.production] at hb
-          simp at hb
       | view rb tb =>
           simp only [Tree.production] at ha hb
           rcases ha with ⟨inputa, rfl, readsA⟩
           rcases hb with ⟨inputb, eqB, readsB⟩
-          simp only [Tree.production] at readsA readsB
           simp at eqB
           rcases eqB with ⟨hval, hinput⟩
           have hra : ra = rb := Subtype.ext hval
           have htype : ta = tb := (TypeReads.deterministic readsA (hinput.symm ▸ readsB)).1
           exact congrArg₂ Tree.view hra htype
-      | environment nb abi row =>
-          simp only [Tree.production] at ha
-          rcases ha with ⟨input, rfl, readsA⟩
-          simp only [Tree.production] at hb
-          simp at hb
   | environment na abi row =>
       cases b with
-      | addressType sb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
-      | regionAddress rb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          simp at hb
-      | view rb tb =>
-          simp only [Tree.production] at ha hb
-          rw [ha] at hb
-          rcases hb with ⟨input, eq, reads⟩
-          simp at eq
       | environment nb abi' row' =>
           simp only [Tree.production] at ha hb
           rw [ha] at hb
-          have hname := congrArg (fun l : List Token => l.get? 1) hb
-          have habi := congrArg (fun l : List Token => l.get? 3) hb
-          have hrow := congrArg (fun l : List Token => l.get? 6) hb
+          have hname := congrArg (fun l : List Token => l[1]?) hb
+          have habi := congrArg (fun l : List Token => l[3]?) hb
+          have hrow := congrArg (fun l : List Token => l[6]?) hb
           simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname habi hrow
           have hna : na.val = nb.val := by simpa using hname
           have habiName : abi.name.toList = abi'.name.toList := by
@@ -130,14 +75,14 @@ lemma addressTypePrints (space : AddressSpace) :
       ((Tree.addressType space).printPieces.map PrintedToken.value) := by
   cases space <;>
     simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
-      Compare.print, Compare.spelling, printPunctuation,
+      PrintedToken.unquoted, Compare.print, Compare.spelling, printPunctuation,
       AddressSpace.print, AddressSpace.name, String.reduceToList]
 
 lemma regionAddressPrints (region : Identifier) :
     (Tree.regionAddress region).production
       ((Tree.regionAddress region).printPieces.map PrintedToken.value) := by
   simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
-    printPunctuation, printDot, printOpen, printClose,
+    PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
     dot, openParen, closeParen, String.reduceToList]
 
 lemma environmentPrints (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) :
@@ -145,7 +90,7 @@ lemma environmentPrints (name : Identifier) (abi : DienstAbi) (row : FirmwareZei
       ((Tree.environment name abi row).printPieces.map PrintedToken.value) := by
   cases abi <;> cases row <;>
     simp [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
-      printPunctuation, printAssignment, printSemicolon,
+      PrintedToken.unquoted, printPunctuation, printAssignment, printSemicolon,
       assignment, semicolon, printFirmwareAbi, printFirmwareRow,
       DienstAbi.name, FirmwareZeile.name, String.reduceToList]
 
@@ -162,7 +107,10 @@ lemma parseOfPrint {form : Form} (tree : Tree form)
     | nil => exact .nil
     | cons t ts ih => exact .terminal ih
   exact .production ⟨semanticTokens pieces, rfl, by
-    simpa [canonicalTokens] using (align.symm ▸ prints)⟩ (symbols (semanticTokens pieces))
+    have hp : tree.production (canonicalTokens pieces) := by
+      rw [align]
+      exact prints
+    simpa [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
 
 theorem parseAussage (form : Form) : ParseAussage form := by
   intro tree text pieces lex prod
@@ -175,7 +123,8 @@ theorem parseAussage (form : Form) : ParseAussage form := by
     | nil => exact .nil
     | cons t ts ih => exact .terminal ih
   exact .production ⟨semanticTokens pieces, rfl, by
-    simpa [canonicalTokens] using prod⟩ (symbols (semanticTokens pieces))
+    have hp : tree.production (canonicalTokens pieces) := prod
+    simpa [canonicalTokens] using hp⟩ (symbols (semanticTokens pieces))
 
 theorem inversionAussage (form : Form) : InversionAussage form := by
   intro tree text parsed
@@ -184,9 +133,7 @@ theorem inversionAussage (form : Form) : InversionAussage form := by
   cases derives with
   | production production children =>
       obtain ⟨expected, rfl, reads⟩ := production
-      have tok : semanticTokens pieces = expected := children.terminalTokens
-      rw [tok]
-      simpa [canonicalTokens] using reads
+      simpa [canonicalTokens, children.terminalTokens] using reads
 
 theorem eindeutigAussage (form : Form) : EindeutigAussage form := by
   intro a b text pa pb
@@ -198,16 +145,12 @@ theorem eindeutigAussage (form : Form) : EindeutigAussage form := by
     cases derivesA with
     | production production children =>
         obtain ⟨expected, rfl, reads⟩ := production
-        have tok : semanticTokens pieces = expected := children.terminalTokens
-        rw [tok]
-        simpa [canonicalTokens] using reads
+        simpa [canonicalTokens, children.terminalTokens] using reads
   have readsB : b.production (canonicalTokens pieces) := by
     cases derivesB with
     | production production children =>
         obtain ⟨expected, rfl, reads⟩ := production
-        have tok : semanticTokens pieces = expected := children.terminalTokens
-        rw [tok]
-        simpa [canonicalTokens] using reads
+        simpa [canonicalTokens, children.terminalTokens] using reads
   exact productionUnique readsA readsB
 
 theorem druckAussage_addressType : DruckAussage .addressType := by
