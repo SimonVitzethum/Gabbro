@@ -84,7 +84,25 @@ structure Freigabe (Wert : Type) where
 
 inductive Ausgabe (Wert : Type) where
   | wert (kanal : Nat) (wert : Wert)
-  | freigabe (stelle : Nat) (wert : Wert)
+  | freigabe (stelle : Nat) (quelle : Etikett) (wert : Wert)
+
+/-- A place carries a label and a projection of the local store. The projections retain
+    the type of the store, and the enumeration and labels are independent of its values. -/
+structure LokaleEtiketten (Lok : Type) where
+  plaetze : Nat
+  etikett : Fin plaetze → Etikett
+  lesen : Lok → Fin plaetze → Lok
+
+def LokaleEtiketten.ganz (etikett : Etikett) : LokaleEtiketten Lok :=
+  ⟨1, fun _ => etikett, fun s _ => s⟩
+
+def LokaleEtiketten.gleich (e : LokaleEtiketten Lok) (v u : Lok) : Prop :=
+  ∀ p, oeffentlich (e.etikett p) = true → e.lesen v p = e.lesen u p
+
+/-- Only public ordinary outputs are visible. A release occurrence is always visible. -/
+def Ausgabe.niedrig (e : Etiketten Ort) : Ausgabe Wert → Bool
+  | .wert kanal _ => oeffentlich (e.ausgabe kanal)
+  | .freigabe _ _ _ => true
 
 /-- Form-owned observation data. Journals in local state are append-only within an activation.
     A speculative execution includes all instruction slots up to its first fence or resolution. -/
@@ -93,7 +111,12 @@ structure Flussdaten (Form Lok Ort Wert : Type) where
   ausgaben : Lok → List (Ausgabe Wert) := fun _ => []
   freigabe : Nat → Option (Freigabe Wert) := fun _ => none
   spekulativ : Form → Lok → Praediktor → List (Option Ort) := fun _ _ _ => []
+  lokal : Kontext → LokaleEtiketten Lok := fun _ => .ganz ∅
+  kontrolle : Form → Etikett := fun _ => ∅
 
 def Flussdaten.leer : Flussdaten Form Lok Ort Wert := {}
+
+def Flussdaten.ausgabeZuwachs (f : Flussdaten Form Lok Ort Wert) (v u : Lok) : List (Ausgabe Wert) :=
+  (f.ausgaben u).drop (f.ausgaben v).length
 
 end Gabbro.Core.Beobachtung

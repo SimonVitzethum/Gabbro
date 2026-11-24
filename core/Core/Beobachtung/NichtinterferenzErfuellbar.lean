@@ -14,12 +14,6 @@ private theorem hoch_vereinigt : hoch ∪ hoch = hoch := by
   ext n
   simp only [Finset.mem_union, or_self]
 
-private theorem hoch_verborgen : oeffentlich hoch = false := by
-  apply decide_eq_false
-  intro eq
-  have mem : 0 ∈ hoch := Finset.mem_singleton_self _
-  rw [eq] at mem
-  exact Finset.notMem_empty _ mem
 
 private theorem verdeckt (a : A) : sichtbar hoch a = none := by
   simp only [sichtbar, hoch_verborgen, Bool.false_eq_true, ite_false]
