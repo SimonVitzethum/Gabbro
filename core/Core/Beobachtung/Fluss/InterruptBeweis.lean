@@ -44,6 +44,7 @@ theorem interruptNI : InterruptNIAussage := by
     obtain ⟨cov, st, len⟩ := kopplung
     obtain ⟨⟨lokGleich, endeGleich, initialGleich, rechteGleich, leihenGleich, antwortGleich⟩,
       epocheEq, geliefertEq, kerneEq, statusEq⟩ := st v₁ v₂ zustand₁ zustand₂
+    have unter₁Original := unter₁
     obtain ⟨k, irq, c, nmi, offer₁, pending₁, enter₁, ruht₁, aussen₁, append₁, nextEq₁⟩ := unter₁
     have auswahlEq : (ρ₁.hw.angebot t).interruptAuswahl = (ρ₂.hw.angebot t).interruptAuswahl :=
       gleiche_interruptwahl (E := E) vergleich.politik t
@@ -81,13 +82,15 @@ theorem interruptNI : InterruptNIAussage := by
       refine ⟨(I.start E ρ₂.start).2, ?_, I.ProtokollBezug.refl _⟩
       rw [vergleich.rechts.2.2.2]
       exact fragment_geladen p plattform vergleich.rechts.1 vergleich.rechts.2.2.1
-    obtain ⟨_, _, gut₂, _⟩ := speicher_verbrauch_im_lauf (E := E) init₂ t
-    let label := aussenEtikett E.einrichtung (.interrupt k irq .handler)
+    obtain ⟨wGut, atW, gutW, _⟩ := speicher_verbrauch_im_lauf (E := E) init₂ t
+    have wGl : wGut = v₂ := Option.some.inj (atW.symm.trans zustand₂)
+    subst wGut
+    let label := aussenEtikett E.einrichtung (Ereignis.interrupt k irq Eintritt.handler)
     have initialisierung : Initialisierung v₂.initial label v₂.graph [] v₂.graph :=
       .ohne (Or.inl (by rfl))
-    obtain ⟨g₁, hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut₂.1 gut₂.2 .aussen label
-      (by simp only [label, aussenEtikett, Art.liest, not_false_eq_true])
-    let spur₂ : SchrittSpur Ort Wert := ⟨[label], [(.aussen, label)]⟩
+    obtain ⟨g₁, hs⟩ := Speicher.Zustand.schritt_ohne_lesen gutW.1 gutW.2 .aussen label
+      (by simp only [label, aussenEtikett, Speicher.Art.liest, not_false_eq_true])
+    let spur₂ : SchrittSpur PUnit Int := ⟨[label], [(.aussen, label)]⟩
     let next₂ := { Zustandseintritt v₂ k id c nmi with graph := g₁ }
     have folge₂ : Speicherfolge v₂.initial .aussen v₂.graph [label] spur₂.speicher next₂.graph := by
       dsimp only [spur₂, next₂]
@@ -109,23 +112,25 @@ theorem interruptNI : InterruptNIAussage := by
         cases impl₂ with
         | kontext _ bereit₂ _ _ =>
           obtain ⟨k', geleg₂, _, _⟩ := bereit₂
+          change (ρ₂.hw.angebot t).core = some k' at geleg₂
           rw [keinKern₂] at geleg₂
           cases geleg₂
         | antwort _ hAnt =>
           have delivery := hAnt.1.2.1.1
-          rw [hAnt.1.1, keineAntwort] at delivery
+          rw [hAnt.1.1, keineAntwort₂] at delivery
           cases delivery
         | absturz hCrash =>
           obtain ⟨offerCrash, _, _⟩ := hCrash
           exact (Bool.false_ne_true (crash₂.symm.trans offerCrash.2)).elim
         | interrupt _ h₂' =>
           obtain ⟨idEq, aussenEq⟩ :=
-            interruptspur_gleich (e := E.einrichtung) auswahlEq unter₁ h₂'
+            interruptspur_gleich (e := E.einrichtung) auswahlEq unter₁Original h₂'
           cases idEq
           obtain ⟨kR, irqR, cR, nmiR, offerR, pendingR, enterR, ruhtR, aussenR, appendR, nextEqR⟩ := h₂'
           have krEq : k = kR ∧ irq = irqR := by
-            have headEq : .interrupt k irq .handler = .interrupt kR irqR .handler :=
-              (List.cons.injEq.mp (aussen₁.symm.trans (aussenEq.trans aussenR))).1
+            have headEq : Ereignis.interrupt k irq Eintritt.handler =
+                Ereignis.interrupt kR irqR Eintritt.handler :=
+              (List.cons.inj (aussen₁.symm.trans (aussenEq.trans aussenR))).1
             injection headEq with hk hirq
             exact ⟨hk, hirq⟩
           obtain ⟨hkEq, hirqEq⟩ := krEq
@@ -133,18 +138,18 @@ theorem interruptNI : InterruptNIAussage := by
           cases hirqEq
           have cnEq : c = cR ∧ nmi = nmiR := by
             have enterR' : NimmtUnterbrechung (v₁.kerne k) k (Nat.pair id.1 id.2) irq cR nmiR := by
-              rw [← kerneEq]
+              rw [kerneEq]
               exact enterR
             cases enter₁ <;> cases enterR' <;> exact ⟨rfl, rfl⟩
           obtain ⟨hcEq, hnEq⟩ := cnEq
           cases hcEq
           cases hnEq
           have interruptBeob :
-              ∀ (ρ : Lauf E) (spurρ : SchrittSpur Ort Wert) (vρ nρ : Ast.Semantik.Zustand),
-                ρ.zeit.spur t = some (.interrupt id, spurρ) →
+              ∀ (ρ : Lauf E) (spurρ : SchrittSpur PUnit Int) (vρ nρ : Ast.Semantik.Zustand),
+                ρ.zeit.spur t = some (SchrittWahl.interrupt id, spurρ) →
                 ρ.zeit.zustand t = some vρ →
                 ρ.zeit.zustand (t + 1) = some nρ →
-                spurρ.aussen = [.interrupt k irq .handler] →
+                spurρ.aussen = [Ereignis.interrupt k irq Eintritt.handler] →
                 Speicherfolge vρ.initial .aussen vρ.graph [label] spurρ.speicher nρ.graph →
                 vρ.status c = .ruht →
                 nρ = { Zustandseintritt vρ k id c nmi with graph := nρ.graph } →
