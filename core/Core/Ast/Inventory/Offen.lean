@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.Inventory.All
 
-/--
+/-
   Open forms of the source inventory. Generated from the five inventory modules;
   a form is open when no constructor of `core/` realises it. Grammar nonterminals
   (`syntax.*`) are productions, not language forms, and are not listed here.
