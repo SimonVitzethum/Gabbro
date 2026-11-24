@@ -61,14 +61,14 @@ theorem Umgebung.referenz_fair (k : Katalog) (cores : Nat) (sicht : Nat → Auss
       change some (i % cores) = some c at hc
       exact (Option.some.inj hc) ▸ Nat.mod_lt i positive
     · intro c hc
-      exact of_decide_eq_true hc
+      simpa only [Umgebung.referenz, Umgebung.referenzLauf, decide_eq_true_eq] using hc
     · intro irq raised
       cases raised
     · intro e he
-      exact of_decide_eq_true he
+      simpa only [Umgebung.referenzLauf, decide_eq_true_eq] using he
     · intro h
       cases h with
-      | inl selected => exact of_decide_eq_true selected
+      | inl selected => simpa only [Umgebung.referenzLauf, decide_eq_true_eq] using selected
       | inr crash => cases crash
   kerne := kerneSchreiten_reihum positive
   interrupts := fun _ hc cut => ⟨cut, Nat.le_refl cut, decide_eq_true hc⟩

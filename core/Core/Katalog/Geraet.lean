@@ -45,7 +45,14 @@ def GeraeteDaten.gut (z : ZielDaten) (d : GeraeteDaten) : Prop :=
 
 theorem geraete_gut (p : Plattform) :
     p.uart.gut p.ziel ∧ p.virtio.gut p.ziel ∧ p.uart.window.getrennt p.virtio.window := by
-  cases p <;> unfold GeraeteDaten.gut Strecke.getrennt <;> decide
+  cases p <;> refine ⟨?_, ?_, Or.inl (by simp only [Plattform.uart, Plattform.virtio]; omega)⟩ <;>
+    simp only [GeraeteDaten.gut, Plattform.uart, Plattform.virtio, Plattform.ziel,
+      List.forall_mem_cons, reduceCtorEq, ite_true, ite_false,
+      Nat.reducePow, Nat.reduceAdd, Nat.reduceSub] <;>
+    simp only [List.map_cons, List.map_nil, List.nodup_cons, List.nodup_nil, List.mem_cons,
+      List.not_mem_nil, Nat.reduceEqDiff, false_or, not_false_eq_true, false_imp_iff, imp_true_iff,
+      true_and, and_true] <;>
+    (repeat' apply And.intro) <;> omega
 
 /-- One exclusive region lent to a device. Its identity is distinct from the physical address. -/
 structure Leihe where

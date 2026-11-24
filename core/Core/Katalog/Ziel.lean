@@ -101,7 +101,9 @@ def ZielDaten.gut (z : ZielDaten) : Prop :=
   0 < z.interruptCount ∧ .elf ∈ z.imageFormats
 
 theorem ziele_gut (p : Plattform) : p.ziel.gut := by
-  cases p <;> unfold ZielDaten.gut <;> decide
+  cases p <;>
+    simp only [ZielDaten.gut, Plattform.ziel, List.mem_cons_self, true_and, and_true] <;>
+    (repeat' apply And.intro) <;> omega
 
 inductive SystemEntry where
   | syscall
@@ -128,6 +130,10 @@ def SystemAbi.gut (abi : SystemAbi) (z : ZielDaten) : Prop :=
   ∀ r ∈ abi.arguments, r < z.registerCount
 
 theorem systemAbi_gut (p : Plattform) : p.systemAbi.gut p.ziel := by
-  cases p <;> unfold SystemAbi.gut <;> decide
+  cases p <;>
+    simp only [SystemAbi.gut, Plattform.systemAbi, Plattform.ziel, List.forall_mem_cons] <;>
+    simp only [List.nodup_cons, List.nodup_nil, List.mem_cons, List.not_mem_nil, Nat.reduceEqDiff,
+      false_or, not_false_eq_true, false_imp_iff, imp_true_iff, true_and, and_true] <;>
+    (repeat' apply And.intro) <;> omega
 
 end Gabbro.Core.Katalog

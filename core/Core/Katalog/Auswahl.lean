@@ -53,7 +53,10 @@ def KatalogWohlgeformt (k : Katalog) : Prop :=
     k.plattform.uart.window.getrennt k.plattform.virtio.window
 
 theorem Plattform.zeilen_nodup (p : Plattform) : p.zeilen.Nodup := by
-  cases p <;> decide
+  cases p <;>
+    simp only [Plattform.zeilen, ZielZeilen, Plattform.endpunkte, List.cons_append, List.nil_append,
+      List.map_cons, List.map_nil, List.nodup_cons, List.nodup_nil, List.mem_cons, List.not_mem_nil,
+      reduceCtorEq, Zeile.endpoint.injEq, false_or, not_false_eq_true, true_and]
 
 theorem Plattform.katalog_wohlgeformt (p : Plattform) : KatalogWohlgeformt p.katalog :=
   ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => h,
