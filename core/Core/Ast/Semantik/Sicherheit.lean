@@ -82,7 +82,7 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
   · intro scope condition yes no yesIH noIH
     simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
       Quellklauseln.leer, expr_keine_invarianten, yesIH, noIH]
-  · simp [block]
+  · simp [block, Fragment.leer]
   · intro before middle after first rest firstIH restIH
     simp [block, Fragment.anhaengen, Quellklauseln.anhaengen, firstIH, restIH]
   · intro before after body bodyIH
