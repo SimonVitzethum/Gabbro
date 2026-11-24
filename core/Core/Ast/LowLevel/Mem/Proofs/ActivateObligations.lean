@@ -33,12 +33,10 @@ private theorem memParse_of {form : MemForm} {text : RawText} {tree : MemTree fo
 private theorem memProductionPrint {form : MemForm} (tree : MemTree form) :
     tree.production (tree.printPieces.map PrintedToken.value) := by
   cases tree <;>
-    simp only [MemTree.production, MemTree.printPieces, rightsPrints, rightsPrint, rightsTokens,
-      rightsToken, word, keyword, Identifier.print, PrintedToken.unquoted, printPunctuation,
-      printDot, printOpen, printClose, printComma, printOpenBrace, printCloseBrace, printInteger,
-      dot, comma, openParen, closeParen, openBrace, closeBrace, String.reduceToList,
-      List.map_cons, List.map_nil, List.map_append, List.map_intersperse,
-      List.intersperse_nil, List.intersperse_singleton, List.intersperse_cons_cons]
+    simp only [MemTree.production, MemTree.printPieces, rightsPrints_value, word, keyword,
+      Identifier.print, PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
+      printComma, printOpenBrace, printCloseBrace, printInteger, dot, comma, openParen, closeParen,
+      openBrace, closeBrace, String.reduceToList, List.map_cons, List.map_nil, List.map_append]
 
 private theorem memParsePrint {form : MemForm} (tree : MemTree form) : MemParse tree.print tree := by
   obtain ⟨pieces, lex, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
@@ -65,14 +63,15 @@ theorem memInversion (form : MemForm) : MemInversionAussage form := by
   obtain ⟨pieces, lex, aligned⟩ := PrintedToken.renderLexed 0 tree.printPieces
   refine ⟨pieces, lex, ?_⟩
   rw [aligned]
-  cases tree <;> simp only [MemTree.production] at prod ⊢
-  all_goals exact prod.symm
+  have pp := memProductionPrint tree
+  cases tree <;> simp only [MemTree.production] at prod pp ⊢
+  all_goals exact pp.trans prod.symm
 
 private theorem rightsToken_inj : Function.Injective rightsToken := by
   intro a b h
   cases a <;> cases b <;>
-    simp only [rightsToken, keyword, String.reduceToList, List.cons.injEq, Char.reduceEq,
-      reduceCtorEq] at h ⊢
+    simp only [rightsToken, keyword, String.reduceToList, Token.word.injEq, List.cons.injEq,
+      Char.reduceEq, reduceCtorEq] at h ⊢
 
 private theorem rightsToken_ne_comma (r : Speicherdienst) : rightsToken r ≠ comma := by
   intro h
@@ -80,6 +79,19 @@ private theorem rightsToken_ne_comma (r : Speicherdienst) : rightsToken r ≠ co
 
 private theorem comma_ne_rightsToken (r : Speicherdienst) : comma ≠ rightsToken r :=
   fun h => rightsToken_ne_comma r h.symm
+
+private theorem rightsPrint_value (r : Speicherdienst) : (rightsPrint r).value = rightsToken r := by
+  cases r <;>
+    simp only [rightsPrint, rightsToken, word, keyword, Identifier.print, String.reduceToList]
+
+private theorem rightsPrints_value : ∀ rs, (rightsPrints rs).map PrintedToken.value = rightsTokens rs
+  | [] => rfl
+  | [r] => by
+      simp only [rightsPrints, rightsTokens, List.map_cons, List.map_nil,
+        List.intersperse_singleton, List.intersperse_nil, rightsPrint_value]
+  | r :: q :: qs => by
+      simp only [rightsPrints, rightsTokens, List.map_cons, List.intersperse_cons_cons,
+        rightsPrint_value, rightsPrints_value (q :: qs)]
 
 private def rightsKey : List Speicherdienst → List Token
   | [] => []
@@ -92,8 +104,12 @@ private theorem rightsTokens_eq_key : ∀ rs, rightsTokens rs = rightsKey rs
       simp only [rightsTokens, rightsKey, List.map_cons, List.map_nil,
         List.intersperse_singleton, List.intersperse_nil]
   | r :: q :: qs => by
-      simp only [rightsTokens, rightsKey, List.map_cons, List.intersperse_cons_cons,
-        rightsTokens_eq_key (q :: qs)]
+      rw [show rightsTokens (r :: q :: qs) =
+          rightsToken r :: comma :: rightsTokens (q :: qs) by
+        simp only [rightsTokens, List.map_cons, List.intersperse_cons_cons]]
+      rw [show rightsKey (r :: q :: qs) =
+          rightsToken r :: comma :: rightsKey (q :: qs) by rfl]
+      rw [rightsTokens_eq_key (q :: qs)]
 
 private theorem rightsKey_inj : Function.Injective rightsKey := by
   intro a b h
@@ -102,7 +118,7 @@ private theorem rightsKey_inj : Function.Injective rightsKey := by
       cases b with
       | nil => rfl
       | cons r rs =>
-          cases rs <;> simp only [rightsKey] at h <;> cases h
+          cases rs <;> cases h
   | cons r rs ih =>
       cases rs with
       | nil =>
@@ -111,30 +127,29 @@ private theorem rightsKey_inj : Function.Injective rightsKey := by
           | cons r' rs' =>
               cases rs' with
               | nil =>
-                  simp only [rightsKey] at h
-                  have : r = r' := rightsToken_inj h
+                  change [rightsToken r] = [rightsToken r'] at h
+                  injection h with h'
+                  have : r = r' := rightsToken_inj h'
                   subst r'
                   rfl
               | cons q qs =>
-                  simp only [rightsKey] at h
-                  simp only [List.cons.injEq] at h
-                  exact (comma_ne_rightsToken q h.2.1).elim
+                  change [rightsToken r] = rightsToken r' :: comma :: rightsKey (q :: qs) at h
+                  cases h
       | cons q qs =>
           cases b with
           | nil => cases h
           | cons r' rs' =>
               cases rs' with
               | nil =>
-                  simp only [rightsKey] at h
-                  simp only [List.cons.injEq] at h
-                  exact (rightsToken_ne_comma q h.2.1.symm).elim
+                  change rightsToken r :: comma :: rightsKey (q :: qs) = [rightsToken r'] at h
+                  cases h
               | cons q' qs' =>
-                  simp only [rightsKey] at h
-                  simp only [List.cons.injEq] at h
-                  rcases h with ⟨hr, _, hrest⟩
-                  have : r = r' := rightsToken_inj hr
+                  change rightsToken r :: comma :: rightsKey (q :: qs) =
+                    rightsToken r' :: comma :: rightsKey (q' :: qs') at h
+                  injection h with hhead htail
+                  have : r = r' := rightsToken_inj hhead
                   subst r'
-                  cases ih hrest
+                  cases ih htail
                   rfl
 
 private theorem rightsTokens_inj {a b : List Speicherdienst}
@@ -201,26 +216,15 @@ theorem memEindeutig (form : MemForm) : MemEindeutigAussage form := by
       | mapSpace space' virt' frames' rights' =>
           simp only [MemTree.production] at ha hb
           have h := ha.symm.trans hb
-          have hs : space = space' := by
-            have hs' := congrArg (fun l : List Token => l[2]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.word.injEq] at hs'
-            exact Subtype.ext hs'
-          have hv : virt = virt' := by
-            have hv' := congrArg (fun l : List Token => l[4]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.natural.injEq] at hv'
-            exact hv'
-          have hf : frames = frames' := by
-            have hf' := congrArg (fun l : List Token => l[6]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.word.injEq] at hf'
-            exact Subtype.ext hf'
-          have hr : rights = rights' := by
-            have h' := h
-            simp only [List.cons_append, List.nil_append, List.cons.injEq,
-              eq_self_iff_true, true_and] at h'
-            exact rightsTokens_inj (List.append_cancel_right h')
+          have h' := h
+          simp only [List.cons_append, List.nil_append, List.cons.injEq] at h'
+          rcases h' with ⟨_, _, hs, _, hv, _, hf, _, _, _, hrt⟩
+          injection hs with hs
+          injection hv with hv
+          injection hf with hf
+          have hsE : space = space' := Subtype.ext hs
+          have hfE : frames = frames' := Subtype.ext hf
+          have hrE : rights = rights' := rightsTokens_inj (List.append_cancel_right hrt)
           subst space'
           subst virt'
           subst frames'
@@ -231,26 +235,14 @@ theorem memEindeutig (form : MemForm) : MemEindeutigAussage form := by
       | protectSpace space' virt' pages' rights' =>
           simp only [MemTree.production] at ha hb
           have h := ha.symm.trans hb
-          have hs : space = space' := by
-            have hs' := congrArg (fun l : List Token => l[2]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.word.injEq] at hs'
-            exact Subtype.ext hs'
-          have hv : virt = virt' := by
-            have hv' := congrArg (fun l : List Token => l[4]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.natural.injEq] at hv'
-            exact hv'
-          have hp : pages = pages' := by
-            have hp' := congrArg (fun l : List Token => l[6]?) h
-            simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq,
-              Token.natural.injEq] at hp'
-            exact hp'
-          have hr : rights = rights' := by
-            have h' := h
-            simp only [List.cons_append, List.nil_append, List.cons.injEq,
-              eq_self_iff_true, true_and] at h'
-            exact rightsTokens_inj (List.append_cancel_right h')
+          have h' := h
+          simp only [List.cons_append, List.nil_append, List.cons.injEq] at h'
+          rcases h' with ⟨_, _, hs, _, hv, _, hp, _, _, _, hrt⟩
+          injection hs with hs
+          injection hv with hv
+          injection hp with hp
+          have hsE : space = space' := Subtype.ext hs
+          have hrE : rights = rights' := rightsTokens_inj (List.append_cancel_right hrt)
           subst space'
           subst virt'
           subst pages'
@@ -326,7 +318,8 @@ theorem memRealisiert (form : MemForm) : MemRealisiertAussage form := by
   · rintro ⟨hs, hc, hpc, he⟩
     subst c
     unfold memHead
-    simp only [↓reduceIte, hs, hpc, List.getElem?_cons_zero]
+    rw [if_pos rfl, hs, hpc]
+    simp only [List.getElem?_cons_zero]
     exact if_pos he
 
 theorem memRegelLokalUnit (k : Katalog) (op : MemInstruction) :
@@ -361,8 +354,9 @@ theorem memHead_eval_some {target} {code : List MemInstruction} {s : MemState} {
     ∃ frame, op.evaluate target s c = some frame := by
   unfold memHead at h
   by_cases hc : c = entryContext
-  · simp only [hc, ↓reduceIte] at h
-    cases hs : s.status c with
+  · subst c
+    simp only [↓reduceIte] at h
+    cases hs : s.status entryContext with
     | laeuft =>
         simp only [hs] at h
         cases hget : code[(s.lokal c).pc]? with
