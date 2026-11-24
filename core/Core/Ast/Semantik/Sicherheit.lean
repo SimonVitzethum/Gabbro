@@ -73,20 +73,25 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun b a t => (block t).klauseln.invariant = [])
     (fun b t => (bracedBlock t).klauseln.invariant = [])
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
-  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, expr_keine_invarianten]
-  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, expr_keine_invarianten]
-  · simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, expr_keine_invarianten]
+  · intro scope type name ordinary value
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · intro scope lo hi valueLo valueHi ref visible writable value fits
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+  · intro expected scope type declared value fits
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
   · intro scope condition yes no yesIH noIH
-    simp [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, expr_keine_invarianten, yesIH, noIH]
-  · simp [block, Fragment.leer, Quellklauseln.leer]
+    simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
+  · intro scope
+    simp only [block, Fragment.leer, Quellklauseln.leer]
   · intro before middle after first rest firstIH restIH
-    simp [block, Fragment.anhaengen, Quellklauseln.anhaengen, firstIH, restIH]
+    simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+      firstIH, restIH, List.nil_append]
   · intro before after body bodyIH
-    simp [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, bodyIH]
+    simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, List.nil_append, bodyIH]
 
 end Gabbro.Core.Ast.Semantik
