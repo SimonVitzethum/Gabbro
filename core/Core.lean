@@ -87,6 +87,9 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
+public import Core.Beobachtung.Unentscheidbar.Modell
+public import Core.Beobachtung.Unentscheidbar.Reduktion
+public import Core.Beobachtung.Unentscheidbar.Rice
 meta import Core.Waechter.Check
 
 #check_core

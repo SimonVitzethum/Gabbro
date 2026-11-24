@@ -55,10 +55,10 @@ Consequences:
   `SYNTAX.md`/`LANGUAGE.md`. A form the checker accepts and the model lacks is a checker bug. Where the model has no
   rule yet, refuse.
 - **Guarantees come from generic theorems only.** Nothing in the compiler, checker or printers exists for
-  particular programs. There are no per-program Lean files and no witnesses (owner, 2026-11-19).
+  particular programs. There are no per-program Lean files and no witnesses.
 - **A decidable declared property is a capability of the language**, not user logic; once the checker decides it,
   the user no longer owes it.
-- **Undecidability is proved, not assumed** (owner, 2026-11-24): a declared property that the checker does not
+- **Undecidability is proved, not assumed**: a declared property that the checker does not
   decide and that becomes a user obligation (GabbroProve) carries a Lean proof that no checker decides it
   (`¬ ComputablePred …`, by reduction from the halting problem over the model's program encoding), at least for
   every planned form; a decidable sub-fragment stays a checker rule. An unproved "undecidable" is a finding.
@@ -68,7 +68,7 @@ Consequences:
   OS-specific: a system, kernel or firmware call is a generic call to an outside interface that selects a pinned
   catalogue row by name; the selected row supplies the service contract, and a program never writes one
   (PERFECT-MODEL §3.3, §5).
-- **No assembly anywhere, and no instruction-shaped interface (owner, 2026-11-23).** Every machine-level concept is
+- **No assembly anywhere, and no instruction-shaped interface.** Every machine-level concept is
   a construct of the language with a model rule — execution states of every width with `jump`/`jump long`, address
   spaces, entries, cores, guests, devices, firmware services; GIR cells and target-table rows are the compiler's and
   the model's business, never the user's. No function per instruction, no `context<P>` threaded through such
@@ -83,7 +83,7 @@ Consequences:
 ## 3. The goal theorem
 
 - **One source:** the goal theorem `gabbro_ziel`, the model it speaks about and its construction in the package `core/`
-  are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md) (owner, 2026-11-23). Nothing else —
+  are defined in [dokumente/PERFECT-MODEL.md](dokumente/PERFECT-MODEL.md). Nothing else —
   this file, the plans, commit messages, agent briefs — restates, extends or softens it. Until its step M12, the
   statement in `grammatik/`'s `Spec.lean` is the interim one; `grammatik/` is frozen and stays green.
 - **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
@@ -91,15 +91,15 @@ Consequences:
 - **Assumptions are catalogue rows** (PERFECT-MODEL §3.3), selected by a program, never written by it; until M12 the
   header of `Spec.lean` is the interim list. Every extension of the goal changes PERFECT-MODEL.md and the
   corresponding concrete theorem in `core/`, and is described as such in the commit.
-- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff of
-  PERFECT-MODEL.md, with a recommendation, before it is merged. Strengthening the language's promise is the default
+- **A change of meaning of the goal statement is decided explicitly, never in passing**: it is shown as a concrete
+  diff of PERFECT-MODEL.md, with a recommendation, and confirmed before it is merged. Strengthening the language's promise is the default
   direction.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
-  `sorry`; `core/` builds green at every commit under the strict guards of PERFECT-MODEL §6. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
+  `sorry`; `core/` builds green at every commit under the strict guards of PERFECT-MODEL §6. **No witnesses anywhere:** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
   satisfiability is a proved lemma (`NAME_erfuellbar`: the premises hold jointly), one per premise bundle shared
   by all theorems over that bundle, checked in seconds, never a run of the compiler on a source text. **Every new
-  language form gets such a lemma** (owner, 2026-11-19): an instance in which the form occurs and the premises of
+  language form gets such a lemma**: an instance in which the form occurs and the premises of
   the theorems that cover it hold jointly.
 
 ## 4. Rules for the code
@@ -136,6 +136,12 @@ Consequences:
 - **Toolchain truth, not training memory:** the pinned Lean and Mathlib decide; every lemma name is grepped from
   the tree or the toolchain before use.
 - **Forbidden:** `sorry`, `admit`, `native_decide`, `axiom` (outside the allow-list), `unsafe`.
+  Outside the guard modules, also no `syntax`, `notation`, `infix`/`prefix`/`postfix`, `macro`/`macro_rules`,
+  `elab`/`elab_rules`, `run_cmd`/`run_elab`/`run_meta`, `initialize` or `declare_syntax_cat`: they
+  can change what a statement reads as without the guard noticing; only `local macro … : tactic` is allowed. The core
+  guard enforces it.
+- **Pin-table merges are unions** (2026-11-24): a pin row lost in a merge is invisible to the guard; take every row
+  of both sides, then the measured values, and compare the name sets before and after.
 - **Fast proofs only:** a module checks in well under two minutes, no declaration takes more than a few seconds. No
   kernel evaluation (`decide +kernel`, kernel `rfl`) over strings, whole programs or images on the compiler path;
   prove from general theorems with small explicit premises. A module checks in at most 2 GiB, and every build, check
@@ -173,7 +179,7 @@ Consequences:
 
 ## 7. Working with agents
 
-- **One lead** decides, merges, builds the integration branch and pushes; it asks the owner only about a change of
+- **One lead** decides, merges, builds the integration branch and pushes; it asks back only about a change of
   the goal's meaning, a rule of the language, or a decision a plan lists as open — with a recommendation — and
   decides everything else by the strongest variant (maximum safety and power; effort is no argument).
 - **Model choice by measured record**, not by fixed role: keep a record per finished task of how well each model
@@ -199,10 +205,10 @@ Consequences:
   tracked work list: open work and findings live in plans or in a gitignored scratch file.
 - **Commits:** Conventional Commits (`type(scope): summary`), message from a file (`git commit -F`), the model's
   `Co-Authored-By` line and no other trailers. Commit every building step. In a shared checkout commit by path.
-- **Branches:** every merge into `dev` is green (owner, 2026-11-24): `dev` advances only by fast-forward to a commit
+- **Branches:** every merge into `dev` is green: `dev` advances only by fast-forward to a commit
   on which the full build of every package the change touches, with its guards, is green — after merging the latest
   `dev`; if `dev` moved meanwhile, merge and check again. Work starts only from a green `dev`. `master` only advances
-  to a `dev` commit whose full builds of every package and both guardians are green (owner, 2026-11-19).
+  to a `dev` commit whose full builds of every package and both guardians are green.
 - **Master gate: the two guardians** (`./instrumente/abnahme.py`): `instrumente/pruefe-lean.py` (Lean model and
   Stage 0: builds, `gabbro_ziel` on the standard axioms, no forbidden tokens, layout, every Lean file reached from a
   package root) and
@@ -235,13 +241,15 @@ Consequences:
 - A theorem stated over a dependent `match` written inline twice creates two different matcher constants; name the
   function instead.
 
-## 10. Talking to the owner
+## 10. Reporting
 
-- In the owner's language; direct and concrete: what was done, what is open, what is uncertain. Never claim more
+- In the language of the conversation; direct and concrete: what was done, what is open, what is uncertain. Never claim more
   than was measured.
 - Estimates as ranges, with the critical path named.
 - Short status lines while long jobs run.
-- A decision that is the owner's is asked once, with a recommendation and the concrete diff.
+- A decision that needs confirmation is asked once, with a recommendation and the concrete diff.
+- Decisions and rules are recorded neutrally, as facts with their reason: no attribution to persons and no
+  quotations, in documents, plans, commit messages and agent briefs alike.
 
 ## 11. Files that matter
 
