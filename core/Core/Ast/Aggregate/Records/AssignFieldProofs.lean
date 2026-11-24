@@ -158,11 +158,16 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
                   simp only [Fits] at fits
                   cases fits
               | succ m =>
-                  simp only [Fits] at fits
                   cases fits
-                  simp [wertAls]
+                  simp [Wert.widen]
       | _ => simp [Fits, wertAls, Wert.widen] at fits
-  | _ => cases target <;> simp [Fits, wertAls, Wert.widen] at fits ⊢
+  | _ =>
+      cases target with
+      | int _ _ => simp [Fits] at fits
+      | array _ _ => simp [Fits] at fits
+      | _ =>
+          cases fits
+          simp [wertAls, Wert.widen]
 
 theorem AssignFieldParse : AssignFieldParseAussage := by
   intro ctx args text pieces lex prod
@@ -176,33 +181,22 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
   intro ctx args frame record value hlocal htemp
   have hwiden : wertAls (args.types.get args.index) ⟨args.source, value⟩ =
       some (Wert.widen args.source (args.types.get args.index) args.fits value) :=
-    wertAls_widen _ _ _
+    wertAls_widen _ _ _ value
   have hold : wertAls (recordValueType args.name args.labels args.types)
       ⟨recordValueType args.name args.labels args.types, record⟩ = some record := by
-    simp only [wertAls, dif_pos]
+    simp [wertAls]
   have hlt : args.ref.index < frame.lokale.length := by
     by_contra h
     have hn : frame.lokale[args.ref.index]? = none := List.getElem?_eq_none (Nat.ge_of_not_lt h)
     rw [hn] at hlocal
     cases hlocal
-  change
-    let widened : Wert (args.types.get args.index) :=
-      Wert.widen args.source (args.types.get args.index) args.fits value
-    let layout : Wert (tupleType args.types) := by simpa only [recordValueType, Wert] using record
-    let updated : Wert (recordValueType args.name args.labels args.types) := by
-      simpa only [recordValueType, Wert] using tupleSet args.types args.index widened layout
-    let next : Rahmen :=
-      (Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame
-    next.lokale[args.ref.index]? = some (some ⟨recordValueType args.name args.labels args.types, updated⟩) ∧
-      (∀ i, i ≠ args.ref.index → next.lokale[i]? = frame.lokale[i]?) ∧
-      next.pc = frame.pc + 1 ∧ next.temp = frame.temp
-  dsimp [Befehl.auswerten]
-  simp only [hlocal, htemp, hold, hwiden, Option.bind, List.getElem?_set_self hlt]
-  constructor
-  · rfl
-  constructor
+  dsimp only
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp [assignFieldForm, Befehl.auswerten, hlocal, htemp, hold, hwiden,
+      List.getElem?_set_self hlt, Option.join, recordValueType, Wert]
   · intro i hi
-    exact List.getElem?_set_ne hi.symm
-  constructor <;> rfl
+    simp [assignFieldForm, Befehl.auswerten, List.getElem?_set_ne (Ne.symm hi)]
+  · simp [assignFieldForm, Befehl.auswerten]
+  · simp [assignFieldForm, Befehl.auswerten]
 
 end Gabbro.Core.Ast.Semantik

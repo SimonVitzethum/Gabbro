@@ -130,12 +130,13 @@ theorem tupleFieldReadsLower {scope : Scope} {first second : Ty .value} {types :
     (read : ExprReads scope 8 input base (dot :: .natural n :: input')) :
     ∃ i : Fin (first :: second :: types).length, i.val = n ∧
       ExprReads scope 0 input (.tupleField (eqT ▸ base) i) input' := by
+  subst inputType
   cases read with
   | atom a tail =>
       cases tail with
       | stop _ =>
           refine ⟨⟨n, hn⟩, rfl, ?_⟩
-          exact .atom a (.tupleField (eqT ▸ base) ⟨n, hn⟩ (Nat.zero_le _) (.stop blocked))
+          exact .atom a (.tupleField base ⟨n, hn⟩ (Nat.zero_le _) (.stop blocked))
       | binary op hle _ _ =>
           cases op <;> simp only [Arith.precedence, Infix.precedence] at hle <;> omega
       | div hle _ _ _ =>
@@ -158,7 +159,7 @@ theorem tupleFieldPrintTokens {scope : Scope} {first second : Ty .value} {tailTy
       openParen :: (base.printTokens ++ [dot, .natural index.val, closeParen]) := by
   simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
     List.singleton_append, printOpen, printClose, printDot, printInteger, printPunctuation,
-    PrintedToken.unquoted, openParen, closeParen, dot]
+    PrintedToken.unquoted, openParen, closeParen, dot, String.reduceToList]
 
 theorem tupleFieldPrints (scope : Scope) (args : TupleFieldArgs scope) :
     (tupleField scope).production args
