@@ -239,13 +239,12 @@ theorem bleibt_bis_besitz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {a t : Na
             | nil => exact (List.not_mem_nil hmem).elim
             | cons h₀ rest =>
               by_cases heq' : h₀ = c
-              · subst heq'
-                have hown' : (s.sperren l).besitzer = some c := by
-                  rw [hvn, hs2q]
+              · have hown' : (s.sperren l).besitzer = some c := by
+                  rw [hvn, hs2q, heq']
                 exact (hown1 hown').elim
               · have hmem' : c = h₀ ∨ c ∈ rest := List.mem_cons.mp hmem
                 rcases hmem' with hcontra | hr
-                · exact (heq' hcontra).elim
+                · exact (heq' hcontra.symm).elim
                 · exact hr
           rw [hs2q]
           exact hgoal
