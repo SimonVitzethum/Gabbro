@@ -53,6 +53,18 @@ private theorem tupleAnnotation_consumes : (input : List Token) → (annotation 
       ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead)).trans
         (List.suffix_cons colon input)
 
+private theorem openParen_ne_word (name : List Char) : openParen ≠ Token.word name := by
+  intro h
+  cases h
+
+private theorem openParen_ne_punct (name : List Char) : openParen ≠ Token.punctuation name := by
+  intro h
+  cases h
+
+private theorem letKeyword_ne_word (name : List Char) : letKeyword ≠ Token.word name := by
+  intro h
+  cases h
+
 theorem tupleBind_suffix : TupleBindSuffixAussage := by
   intro scope result input tree rest read
   generalize htok : letKeyword :: openParen :: input = tokens at read
@@ -65,22 +77,12 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
         ((tupleAnnotation_consumes _ _ _ annotationRead).trans
           (tuplePattern_consumes input _ _ patternRead))
-  case variantMatch =>
-      have ne : letKeyword ≠ keyword "match" := by decide
-      exact (ne (List.cons.inj htok).1).elim
-  case letMutableValue =>
-      have ne : openParen ≠ keyword "mut" := by decide
-      exact (ne (List.cons.inj (List.cons.inj htok).2).1).elim
-  case assignField =>
-      have ne : openParen ≠ dot := by decide
-      exact (ne (List.cons.inj (List.cons.inj htok).2).1).elim
-  case forRange =>
-      have ne : letKeyword ≠ keyword "for" := by decide
-      exact (ne (List.cons.inj htok).1).elim
-  case whileBounded =>
-      have ne : letKeyword ≠ keyword "while" := by decide
-      exact (ne (List.cons.inj htok).1).elim
-  all_goals simp_all
+  all_goals
+    first
+    | simp_all
+    | exact (openParen_ne_word _ (List.cons.inj (List.cons.inj htok).2).1).elim
+    | exact (openParen_ne_punct _ (List.cons.inj (List.cons.inj htok).2).1).elim
+    | exact (letKeyword_ne_word _ (List.cons.inj htok).2).elim
 
 end Gabbro.Core.Ast.Surface
 
