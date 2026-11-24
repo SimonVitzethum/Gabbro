@@ -10,14 +10,18 @@ def variantActual : (type : Option (Ty .value)) → Option Dynamisch → Option 
   | none, _ => some PUnit.unit
   | some type, value => value.bind (wertAls type)
 
+def variantPayload : (type : Option (Ty .value)) → Wert (type.getD .productEnd) → Option Dynamisch
+  | none, _ => none
+  | some type, value => some ⟨type, value⟩
+
 def variantCase : (types : List (Option (Ty .value))) → Wert (variantLayout types) → Nat × Option Dynamisch
   | [], value => Empty.elim value
-  | head :: _, Sum.inl payload =>
-    (0, match head with
-      | none => none
-      | some type => some ⟨type, payload⟩)
-  | _ :: tail, Sum.inr payload =>
-    let (index, value) := variantCase tail payload
-    (index + 1, value)
+  | head :: tail, value =>
+    let sum : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail)) := value
+    match sum with
+    | .inl payload => (0, variantPayload head payload)
+    | .inr rest =>
+      let (index, payload) := variantCase tail rest
+      (index + 1, payload)
 
 end Gabbro.Core.Ast.Semantik
