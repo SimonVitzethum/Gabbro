@@ -148,8 +148,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           have hnameval : item.name = head.name := by
             apply Subtype.ext
             first
-            | simpa [identPrintVal] using hval
-            | simpa [identPrintVal] using hval.symm
+            | injection hval with hv; exact hv.symm
+            | injection hval with hv; exact hv
           refine ⟨item, hnameval, by rw [he, ie], ?_, ?_⟩
           · rw [hin]
             exact effectRead
@@ -167,8 +167,8 @@ theorem effectGroup_inversion : EffectGroupInversionAussage := by
           have hnameval : item.name = head.name := by
             apply Subtype.ext
             first
-            | simpa [identPrintVal] using hval
-            | simpa [identPrintVal] using hval.symm
+            | injection hval with hv; exact hv.symm
+            | injection hval with hv; exact hv
           have hhe : head.exported = false := by simpa using he
           have hie : item.exported = false := by simpa using ie
           refine ⟨item, hnameval, by rw [hhe, hie], ?_, ?_⟩
