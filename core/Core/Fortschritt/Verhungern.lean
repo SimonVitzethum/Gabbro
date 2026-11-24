@@ -19,39 +19,6 @@ open Gabbro.Core.Beobachtung
 
 -- The starvation run: `A` steps on even ticks, `B` waits with an enabled step. --
 
-def hw2 : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 2 sicht0
-
-def h2 : Umgebung := Umgebung.referenz Plattform.x86_64.katalog 2 sicht0
-
-theorem hw2_valid : KatalogWohlgeformt Plattform.x86_64.katalog :=
-  Plattform.x86_64.katalog_wohlgeformt
-
-theorem fair2 : FairLaeufe Plattform.x86_64.katalog h2 hw2 :=
-  Umgebung.referenz_fair _ _ _ hw2_valid (by decide)
-
-theorem hw2_core (t : Nat) : (hw2.angebot t).core = some (t % 2) := rfl
-
-theorem hw2_crash (t : Nat) : (hw2.angebot t).crash = false := rfl
-
-theorem hw2_opp0 {t : Nat} (h : t % 2 = 0) : hw2.gelegenheit t 0 := by
-  show (hw2.angebot t).core = some 0
-  rw [hw2_core, h]
-
-theorem hw2_opp1 {t : Nat} (h : t % 2 = 1) : hw2.gelegenheit t 1 := by
-  show (hw2.angebot t).core = some 1
-  rw [hw2_core, h]
-
-theorem hw2_opp0_neg {t : Nat} (h : t % 2 = 1) : ¬ hw2.gelegenheit t 0 := by
-  intro ho
-  have ho' : (hw2.angebot t).core = some 0 := ho
-  rw [hw2_core, h] at ho'
-  cases ho'
-
-theorem hw2_opp1_neg {t : Nat} (h : t % 2 = 0) : ¬ hw2.gelegenheit t 1 := by
-  intro ho
-  have ho' : (hw2.angebot t).core = some 1 := ho
-  rw [hw2_core, h] at ho'
-  cases ho'
 
 def zAB0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start (E_w dispatch2) s0).2
 
