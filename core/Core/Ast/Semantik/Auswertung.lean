@@ -375,9 +375,9 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
         · simp only [sw, Befehl.auswerten, expr, Fragment.anhaengen, Fragment.einzel, hpcMid, tmpL,
             alsBoolean, Option.bind_some, if_true, List.length_append, List.length_cons,
             List.length_nil, Nat.add_zero, L, R, Expr.wert]
+          rw [if_pos hs]
           omega
         · simp only [sw, Befehl.auswerten, tmpL, alsBoolean, Option.bind_some, Expr.wert]
-          simp only [if_true]
         · simp only [sw, Befehl.auswerten, lokL]
         · simp only [sw, Befehl.auswerten, retL]
         · intro i hi
