@@ -117,7 +117,7 @@ private theorem memKlauselnWahr (k : Katalog) (code : List MemInstruction) :
 
 private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
     WaechterHalten (memProgram k code) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ lauf t op args bedarf
     change False at bedarf
     exact False.elim bedarf
@@ -126,6 +126,8 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hb, _, _⟩ := blocked c hc
     exact hb
+  · intro ρ lauf t l h _ hne
+    exact (hne rfl).elim
 
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by

@@ -70,6 +70,8 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.kanonischeVerwendung,
     `Gabbro.Core.Annahme.InternBlockiert,
     `Gabbro.Core.Annahme.GeschlossenWartend,
+    `Gabbro.Core.Annahme.SperrHalterBereit,
+    `Gabbro.Core.Annahme.SperrHalterHalten,
     `Gabbro.Core.Annahme.WaechterHalten,
     `Gabbro.Core.Annahme.Akzeptiert,
     `Gabbro.Core.Annahme.akzeptiert_katalog],

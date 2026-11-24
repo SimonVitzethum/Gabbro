@@ -385,7 +385,7 @@ private theorem memKlauseln (k : Katalog) (op : MemInstruction) :
     cases hp
 private theorem memWaechter (k : Katalog) (op : MemInstruction) :
     WaechterHalten (memUnit k op) := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro ρ runs t o args bedarf
     dsimp [kanonischeVerwendung, memUnit, memProgram, Quelltabellen.leer] at bedarf
     cases bedarf
@@ -394,6 +394,8 @@ private theorem memWaechter (k : Katalog) (op : MemInstruction) :
     obtain ⟨c, hc⟩ := nonempty
     obtain ⟨b, hblock, _, _, _⟩ := blocked c hc
     exact hblock
+  · intro ρ runs t l h _ hne
+    exact (hne rfl).elim
 private theorem memAkzeptiertX86 (op : MemInstruction) :
     Annahme.Akzeptiert (memUnit Plattform.x86_64.katalog op) := by
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨memAussenLokal _ op, memFlussLokal _ op⟩⟩,
