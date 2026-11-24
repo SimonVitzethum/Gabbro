@@ -81,6 +81,7 @@ def MeaningAussageExec : ExecForm → Prop
   | .waitInterrupt => WaitMeaningAussage
   | .stopCore => StopMeaningAussage
   | .entryDecl => EntryMeaningAussage
+  | form => ExecErfuellbarAussage form
 
 def JointAussageExec : ExecForm → Prop
   | .jump => JumpJointAussage
