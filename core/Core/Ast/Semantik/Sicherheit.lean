@@ -49,7 +49,7 @@ theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (fun _ _ t => ∀ i, (labeledCode i t).klauseln.invariant = [])
     (fun _ t => ∀ i, (caseCode i t).klauseln.invariant = [])
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree slot
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree slot
   all_goals
     intros
     simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.leer, Fragment.anhaengen,
