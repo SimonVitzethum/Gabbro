@@ -22,8 +22,10 @@
 -/
 module
 
+public import Mathlib.MeasureTheory.Integral.Lebesgue.Basic
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
 public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
+public import Core.Beobachtung.Wahrscheinlichkeit.KostenErwartungBeweis
 public import Core.Annahme
 public import Core.Katalog.Erfuellbar
 
@@ -32,6 +34,7 @@ public import Core.Katalog.Erfuellbar
 namespace Gabbro.Core.Beobachtung
 
 open Katalog
+open MeasureTheory
 
 /-- The coin discharges `ProbNichtLeer`: its event is strictly inside `(0, 1)`. -/
 theorem muenz_nichtLeer : ProbNichtLeer muenzQuelle :=
@@ -108,6 +111,64 @@ theorem kostenErwartung_erfuellbar :
       pruefeProb (.kosten cNum cDen qNum qDen bNum bDen) = true ∧
       0 < qNum ∧ qNum < qDen ∧ 0 < bNum := by
   exact ⟨1, 1, 1, 2, 2, 1, by decide, by decide, by decide, by decide⟩
+
+/-- Joint satisfiability of the sharpened cost premises with a genuine certificate:
+    `c = 1`, `q = 1/2`, `b = 2` (so `c / q = 2`), a family that exits at tick one
+    for every band, and cost one. Unlike the refuted form, binding the cost to the
+    first exit makes the constant-cost instance obey the bound. -/
+theorem kostenPflicht_erfuellbar
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (B : Zufallsbindung) (S : Scheduler) (h : Umgebung)
+    (hb : Hebebuendel B S E h) :
+    ∃ (kosten : Maschine.Lauf E → Nat) (ueberlebt : Nat → Set Band),
+      pruefeProb (.kosten 1 1 1 2 2 1) = true ∧
+      (∀ n, MeasurableSet (ueberlebt n)) ∧
+      (∀ n, ueberlebt (n + 1) ⊆ ueberlebt n) ∧
+      (∀ n, hb.mu (ueberlebt n) ≤ (1 - ((1 : ENNReal) / 2)) ^ n) ∧
+      (∀ band n, band ∉ ueberlebt n → (∀ m < n, band ∈ ueberlebt m) →
+        (kosten (hb.replay band) : ENNReal) ≤ (n : ENNReal) * ((1 : ENNReal) / 1)) ∧
+      (∃ band : Band, (kosten (hb.replay band) : ENNReal) = 1) ∧
+      kostenPflicht B hb kosten 1 1 1 2 2 1 ∧
+      KostenForm B hb kosten (2 : ENNReal) := by
+  letI : MeasureTheory.IsProbabilityMeasure hb.mu := hb.istWMass
+  let ueberlebt : Nat → Set Band := fun n => if n = 0 then Set.univ else ∅
+  refine ⟨fun _ => 1, ueberlebt, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · decide
+  · intro n
+    by_cases hn : n = 0
+    · subst n
+      exact (by simp only [ueberlebt, if_pos rfl, MeasurableSet.univ])
+    · exact (by simp only [ueberlebt, hn, if_false, MeasurableSet.empty])
+  · intro n band hmem
+    have hmemEmpty : band ∈ (∅ : Set Band) := by
+      simpa only [ueberlebt, Nat.add_one, Nat.succ_ne_zero, if_false] using hmem
+    exact False.elim hmemEmpty
+  · intro n
+    by_cases hn : n = 0
+    · subst n
+      rw [show ueberlebt 0 = Set.univ by simp only [ueberlebt, if_pos rfl]]
+      rw [IsProbabilityMeasure.measure_univ, pow_zero]
+    · rw [show ueberlebt n = ∅ by simp only [ueberlebt, hn, if_false]]
+      rw [measure_empty]
+      exact zero_le
+  · intro band n hnout hmin
+    have hn0 : n ≠ 0 := by
+      intro hn
+      subst n
+      exact hnout (by simp only [ueberlebt, if_pos rfl, Set.mem_univ])
+    have hnOne : 1 ≤ n := Nat.succ_le_iff.mpr (Nat.pos_of_ne_zero hn0)
+    have hnOneE : (1 : ENNReal) ≤ (n : ENNReal) := by exact_mod_cast hnOne
+    simpa only [Nat.cast_one, div_one, mul_one] using hnOneE
+  · exact ⟨fun _ _ => 0, by simp only [Nat.cast_one]⟩
+  · intro hpruefe ueb hmeas hanti hdecay hkosten
+    exact kostenErwartung L Ort Wert Raum Lok Grund Bedingung Wahl Form E B S h hb
+      (fun _ => 1) 1 1 1 2 2 1 hpruefe ueb hmeas hanti hdecay hkosten
+  · unfold KostenForm
+    simp only [Nat.cast_one]
+    change (∫⁻ band, (1 : ENNReal) ∂hb.mu) ≤ (2 : ENNReal)
+    rw [lintegral_const, IsProbabilityMeasure.measure_univ, one_mul]
+    norm_num
 
 /-- Satisfiability of the termination obligation's checker side: the checker
     accepts a nontrivial geometric exit rate. -/

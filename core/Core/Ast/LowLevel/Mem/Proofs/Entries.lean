@@ -10,6 +10,8 @@ public import Core.Ast.LowLevel.Mem.Proofs.Map.Map
 public import Core.Ast.LowLevel.Mem.Proofs.Protect.Protect
 public import Core.Ast.LowLevel.Mem.Proofs.Unmap.UnmapSat
 public import Core.Ast.LowLevel.Mem.Proofs.Flush.Flush
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowJoint
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushNarrowWide
 public import Core.Ast.LowLevel.Mem.Proofs.Activate.Activate
 
 namespace Gabbro.Core.Ast.LowLevel
@@ -127,7 +129,7 @@ public def flushEntry : RegistryEntry ``MemTree.flushSpace (schemaMem ``MemTree.
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
     ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
-      hEtiketten, hFluss⟩, hJoint⟩
+      hEtiketten, hFluss⟩, ⟨hJoint, flushNarrowJoint, flushNarrowWideJoint⟩⟩
 
 public def activateEntry : RegistryEntry ``MemTree.activateSpace (schemaMem ``MemTree.activateSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
