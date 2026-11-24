@@ -340,29 +340,29 @@ theorem braced_erhaltung (ctx : StatementContext) : (bracedForm ctx).ErhaltungsA
       (fun b a t => (stmt t).klauseln.invariant = [])
       (fun b a t => (block t).klauseln.invariant = [])
       (fun b t => (bracedBlock t).klauseln.invariant = [])
-      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ctx.2 args.1 args.2
+      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ctx.1 args.1 args.2
     · intro scope type name ordinary value
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
     · intro scope lo hi valueLo valueHi ref visible writable value fits
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
     · intro expected scope type declared value fits
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten]
     · intro scope condition yes no yesIH noIH
-      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
+      simp only [stmt, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+        Maschine.Quellklauseln.leer, List.nil_append, expr_keine_invarianten, yesIH, noIH]
     · intro scope
-      simp only [block, Fragment.leer, Quellklauseln.leer]
+      simp only [block, Fragment.leer, Maschine.Quellklauseln.leer]
     · intro before middle after first rest firstIH restIH
-      simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
+      simp only [block, Fragment.anhaengen, Maschine.Quellklauseln.anhaengen,
         firstIH, restIH, List.nil_append]
     · intro before after body bodyIH
-      simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-        Quellklauseln.leer, List.nil_append, bodyIH]
-  simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-    Quellklauseln.leer, List.nil_append, blockEmpty]
+      simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+        Maschine.Quellklauseln.leer, List.nil_append, bodyIH]
+  simp only [bracedBlock, Fragment.anhaengen, Fragment.einzel, Maschine.Quellklauseln.anhaengen,
+    Maschine.Quellklauseln.leer, List.nil_append, blockEmpty]
 
 -- Mirror let_erfuellbar using the actual source head and its pre-state.
 theorem braced_erfuellbar : bracedJoint := by
