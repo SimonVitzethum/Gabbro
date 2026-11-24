@@ -47,48 +47,70 @@ theorem LabeledItemsRead.consumes (read : LabeledItemsRead scope input items res
 theorem ExprTail.follow (derivation : ExprTail scope minimum first input tree rest) :
     ∀ {lower resultType} {result : Expr scope resultType} {final}, lower ≤ minimum →
       ExprTail scope lower tree rest result final → ExprTail scope lower first input result final := by
-  induction derivation using ExprTail.rec
+  refine ExprTail.rec
     (motive_1 := fun _ _ _ _ _ _ => True)
     (motive_2 := fun _ _ _ _ _ => True)
+    (motive_3 := fun minimum _ first input _ tree rest _ =>
+      ∀ {lower resultType} {result : Expr scope resultType} {final}, lower ≤ minimum →
+        ExprTail scope lower tree rest result final → ExprTail scope lower first input result final)
     (motive_4 := fun _ _ _ _ _ _ => True)
     (motive_5 := fun _ _ _ _ _ _ => True)
     (motive_6 := fun _ _ _ _ _ _ => True)
     (motive_7 := fun _ _ _ _ _ _ => True)
-    (motive_8 := fun _ _ _ _ _ => True) with
-  | stop _ => intro _ _ _ _ _ next; exact next
-  | binary op allowed operand _ _ ih =>
-    intro _ _ _ _ lower next
+    (motive_8 := fun _ _ _ _ _ => True)
+    ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?stop ?binary ?div ?compare ?logic ?arrayIndex ?tupleField ?recordField
+    ?textConcat ?textIndex ?substring ?optionIsSome
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ derivation
+  case stop =>
+    intros
+    assumption
+  case binary =>
+    intros
+    rename_i op allowed operand _ _ ih _ _ _ _ lower next
     exact .binary op (Nat.le_trans lower allowed) operand (ih lower next)
-  | div allowed operand nonzero _ _ ih =>
-    intro _ _ _ _ lower next
+  case div =>
+    intros
+    rename_i allowed operand nonzero _ _ ih _ _ _ _ lower next
     exact .div (Nat.le_trans lower allowed) operand nonzero (ih lower next)
-  | compare op allowed operand follows _ _ ih =>
-    intro _ _ _ _ lower next
+  case compare =>
+    intros
+    rename_i op allowed operand follows _ _ ih _ _ _ _ lower next
     exact .compare op (Nat.le_trans lower allowed) operand follows (ih lower next)
-  | logic op allowed operand _ _ ih =>
-    intro _ _ _ _ lower next
+  case logic =>
+    intros
+    rename_i op allowed operand _ _ ih _ _ _ _ lower next
     exact .logic op (Nat.le_trans lower allowed) operand (ih lower next)
-  | arrayIndex base bounded below allowed operand _ _ ih =>
-    intro _ _ _ _ lower next
+  case arrayIndex =>
+    intros
+    rename_i base bounded below allowed operand _ _ ih _ _ _ _ lower next
     exact .arrayIndex base bounded below (Nat.le_trans lower allowed) operand (ih lower next)
-  | tupleField base index allowed _ ih =>
-    intro _ _ _ _ lower next
+  case tupleField =>
+    intros
+    rename_i base index allowed _ ih _ _ _ _ lower next
     exact .tupleField base index (Nat.le_trans lower allowed) (ih lower next)
-  | recordField base field index written allowed _ ih =>
-    intro _ _ _ _ lower next
+  case recordField =>
+    intros
+    rename_i base field index written allowed _ ih _ _ _ _ lower next
     exact .recordField base field index written (Nat.le_trans lower allowed) (ih lower next)
-  | textConcat left right allowed operand _ _ ih =>
-    intro _ _ _ _ lower next
+  case textConcat =>
+    intros
+    rename_i left right allowed operand _ _ ih _ _ _ _ lower next
     exact .textConcat left right (Nat.le_trans lower allowed) operand (ih lower next)
-  | textIndex base offset allowed operand _ _ ih =>
-    intro _ _ _ _ lower next
+  case textIndex =>
+    intros
+    rename_i base offset allowed operand _ _ ih _ _ _ _ lower next
     exact .textIndex base offset (Nat.le_trans lower allowed) operand (ih lower next)
-  | substring base lo hi allowed first last _ _ _ ih =>
-    intro _ _ _ _ lower next
+  case substring =>
+    intros
+    rename_i base lo hi allowed first last _ _ _ ih _ _ _ _ lower next
     exact .substring base lo hi (Nat.le_trans lower allowed) first last (ih lower next)
-  | optionIsSome ref visible ordinary allowed _ ih =>
-    intro _ _ _ _ lower next
+  case optionIsSome =>
+    intros
+    rename_i ref visible ordinary allowed _ ih _ _ _ _ lower next
     exact .optionIsSome ref visible ordinary (Nat.le_trans lower allowed) (ih lower next)
-  | _ => exact True.intro
+  all_goals intros; exact True.intro
+
 
 end Gabbro.Core.Ast
