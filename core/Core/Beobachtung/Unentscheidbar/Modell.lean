@@ -5,7 +5,7 @@ public import Mathlib.Computability.PartrecCode
 
 @[expose] public section
 
-namespace Gabbro.Core.Unentscheidbar
+namespace Gabbro.Core.Beobachtung.Unentscheidbar
 
 open Ast.Semantik
 
@@ -129,4 +129,4 @@ theorem haeltMit_erreicht {prog : List Befehl} {r₀ r₁ : Rahmen} {a : Nat}
     als ein Unentscheidbarkeitsbeweis. Ob und in welcher Form eine solche
     Aussage pinniert wird, entscheiden Lead mit Owner. -/
 
-end Gabbro.Core.Unentscheidbar
+end Gabbro.Core.Beobachtung.Unentscheidbar

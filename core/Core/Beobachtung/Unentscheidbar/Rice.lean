@@ -1,12 +1,12 @@
 module
 
-public import Core.Unentscheidbar.Modell
+public import Core.Beobachtung.Unentscheidbar.Modell
 public import Mathlib.Computability.Halting
 public import Mathlib.Computability.Reduce
 
 @[expose] public section
 
-namespace Gabbro.Core.Unentscheidbar
+namespace Gabbro.Core.Beobachtung.Unentscheidbar
 
 open Ast.Semantik
 open Nat.Partrec.Code
@@ -78,4 +78,4 @@ def RiceAussage : Prop :=
     ((∃ c, Q (s.programm c)) ∧ (∃ c, ¬ Q (s.programm c))) →
     ¬ ComputablePred (fun i => ∃ p, s.dekodiere i = some p ∧ Q p)
 
-end Gabbro.Core.Unentscheidbar
+end Gabbro.Core.Beobachtung.Unentscheidbar
