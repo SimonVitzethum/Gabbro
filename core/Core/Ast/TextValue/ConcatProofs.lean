@@ -74,9 +74,33 @@ private theorem textConcatPrint (scope : Scope) (args : TextConcatArgs scope) :
   rw [tokens]
   refine Or.inr ⟨_, rfl, ?_⟩
   refine ⟨args.right.printTokens ++ [closeParen], ?_, ?_⟩
-  · simpa only [List.singleton_append, List.cons_append, List.append_assoc] using
+  · simpa only [List.nil_append, List.singleton_append, List.cons_append, List.append_assoc] using
       (Expr.printReads args.left (noAddAtPrec6 (args.right.printTokens ++ [closeParen])))
   · exact Expr.printReads args.right noOperatorAtClose
+
+private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {input : List Token}
+    {tree : Expr scope (.text a)} {rhs final : List Token}
+    (tail : ExprTail scope (Arith.add.precedence + 1) first input tree (Arith.add.token :: rhs))
+    (right : Expr scope (.text b))
+    (rightRead : ExprReads scope (Arith.add.precedence + 1) rhs right final)
+    (blocked : ¬ Continues 0 final) :
+    ExprTail scope 0 first input (Expr.textConcat tree right) final := by
+  induction tail with
+  | stop _ =>
+      exact .textConcat tree right (Nat.zero_le _) rightRead (.stop blocked)
+  | binary op _ reads ih => exact .binary op (Nat.zero_le _) reads ih
+  | div _ reads nonzero ih => exact .div (Nat.zero_le _) reads nonzero ih
+  | compare op _ reads follows ih => exact .compare op (Nat.zero_le _) reads follows ih
+  | logic op _ reads ih => exact .logic op (Nat.zero_le _) reads ih
+  | arrayIndex base lower upper _ reads ih =>
+      exact .arrayIndex base lower upper (Nat.zero_le _) reads ih
+  | tupleField base index _ ih => exact .tupleField base index (Nat.zero_le _) ih
+  | recordField base field index written _ ih =>
+      exact .recordField base field index written (Nat.zero_le _) ih
+  | textConcat left right' _ reads ih => exact .textConcat left right' (Nat.zero_le _) reads ih
+  | textIndex base offset _ reads ih => exact .textIndex base offset (Nat.zero_le _) reads ih
+  | substring base first' last _ reads₁ reads₂ ih =>
+      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂ ih
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
   intro scope
@@ -86,44 +110,15 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
     rcases production with plain | grouped
     · rcases plain with ⟨rhs, leftRead, rightRead⟩
       cases leftRead with
-      | atom atomRead highTail =>
-        cases highTail with
-        | stop =>
-            exact .atom atomRead
-              (.textConcat args.left args.right (Nat.zero_le _) rightRead (.stop noOperatorAtEnd))
-        | binary _ _ _ tail => cases tail
-        | div _ _ _ tail => cases tail
-        | compare _ _ _ _ tail => cases tail
-        | logic _ _ _ tail => cases tail
-        | arrayIndex _ _ _ _ _ tail => cases tail
-        | tupleField _ _ _ tail => cases tail
-        | recordField _ _ _ _ _ tail => cases tail
-        | textConcat _ _ allowed _ _ =>
-            change 6 ≤ 5 at allowed
-            omega
-        | textIndex _ _ _ _ tail => cases tail
-        | substring _ _ _ _ _ _ tail => cases tail
+      | atom atomRead tail =>
+          exact .atom atomRead (textTailLowerConcat tail args.right rightRead noOperatorAtEnd)
     · rcases grouped with ⟨inside, rfl, body⟩
       rcases body with ⟨rhs, leftRead, rightRead⟩
       cases leftRead with
-      | atom atomRead highTail =>
-        cases highTail with
-        | stop =>
-            exact .atom (.grouped (.atom atomRead
-              (.textConcat args.left args.right (Nat.zero_le _) rightRead
-                (.stop noOperatorAtClose)))) (.stop noOperatorAtEnd)
-        | binary _ _ _ tail => cases tail
-        | div _ _ _ tail => cases tail
-        | compare _ _ _ _ tail => cases tail
-        | logic _ _ _ tail => cases tail
-        | arrayIndex _ _ _ _ _ tail => cases tail
-        | tupleField _ _ _ tail => cases tail
-        | recordField _ _ _ _ _ tail => cases tail
-        | textConcat _ _ allowed _ _ =>
-            change 6 ≤ 5 at allowed
-            omega
-        | textIndex _ _ _ _ tail => cases tail
-        | substring _ _ _ _ _ _ tail => cases tail
+      | atom atomRead tail =>
+          exact .atom (.grouped (.atom atomRead
+            (textTailLowerConcat tail args.right rightRead noOperatorAtClose)))
+            (.stop noOperatorAtEnd)
   · let decoded : List Char := []
     let a := (sourceUtf8 decoded).size
     let left : Expr scope (.text a) := .textLiteral decoded
