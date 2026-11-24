@@ -88,15 +88,15 @@ theorem protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) : Protoko
           rw [atCut] at tick
           cases tick with
           | schritt _ step =>
+              rename_i event
               cases step with
               | schritt impl =>
                   have pres := h _ _ _ _ _ _ _ _ _
                     (einheitVon P t).einrichtung (einheitVon P t).system
-                    (einheitVon P t).katalog ρ.hw n s z _ vorher
+                    (einheitVon P t).katalog ρ.hw n s z event vorher
                   exact pres.1 impl
           | wartet _ eq _pause =>
-              rw [eq] at atCut
-              exact ih z atCut
+              exact ih z (current.trans eq.symm)
 
 /-- THE INVARIANTS HOLD AT EVERY CUT OF EVERY IDEAL RUN (`IdealProtokollGutImLaufAussage`), given the same step
     preservation statement. Feeds: `zustand_start_protokoll_gut`, `Maschine.I.start`,
@@ -114,9 +114,10 @@ theorem ideal_protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) :
   | succ n ih =>
       cases η.zeit.takt n with
       | schritt _ step =>
+          rename_i event
           have pres := h _ _ _ _ _ _ _ _ _
             (einheitVon P t).einrichtung (einheitVon P t).system
-            (einheitVon P t).katalog η.hw n (η.zeit.zustand n) (η.zeit.zustand (n + 1)) _ ih
+            (einheitVon P t).katalog η.hw n (η.zeit.zustand n) (η.zeit.zustand (n + 1)) event ih
           exact pres.2 step
       | wartet _ eq _pause =>
           rw [eq]
