@@ -322,6 +322,6 @@ theorem unbefugt_nicht_regel_lokal : ¬ RegelLokal staleEinheit () := by
       (fun _ => ⟨some (.faden 0), .nutzer, (), fun _ => true, 0, false, []⟩)
       toteRechte (fun _ => ()) (.leer (fun _ => 0))
   have hI := h.1 (.faden 0) s s unbefugtPlan trivial
-  exact befugt_verweigert _ s (.faden 0) unbefugtPlan (fun _ => rfl) (Or.inl (by decide)) hI
+  exact befugt_verweigert _ s (.faden 0) unbefugtPlan (fun _ => rfl) (Or.inl (fun h => nomatch h)) hI
 
 end Gabbro.Core.Annahme

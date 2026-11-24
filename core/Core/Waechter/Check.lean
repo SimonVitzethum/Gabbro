@@ -45,12 +45,12 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Maschine.I.Bestimmt, 11443836326703950274),
   (`Gabbro.Core.Maschine.I.Fortschritt, 7949663685199510761),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 17498789594400322395),
-  (`Gabbro.Core.Annahme.Akzeptiert, 7656796702632048153),
-  (`Gabbro.Core.Annahme.Lokal, 13941319200589123999),
-  (`Gabbro.Core.Annahme.AussenLokal, 5999667796273295615),
-  (`Gabbro.Core.Annahme.KlauselnWahr, 16098598929874850224),
-  (`Gabbro.Core.Annahme.WaechterHalten, 5969727609675182989),
-  (`Gabbro.Core.Annahme.GeschlossenWartend, 2041060277665423756),
+  (`Gabbro.Core.Annahme.Akzeptiert, 7495189157439494818),
+  (`Gabbro.Core.Annahme.Lokal, 8358370778936020596),
+  (`Gabbro.Core.Annahme.AussenLokal, 14489867616125512278),
+  (`Gabbro.Core.Annahme.KlauselnWahr, 1746139257633975029),
+  (`Gabbro.Core.Annahme.WaechterHalten, 11266655033696341253),
+  (`Gabbro.Core.Annahme.GeschlossenWartend, 14518909303012624280),
   (`Gabbro.Core.Annahme.PartielleOperation, 2295140537526814431),
   (`Gabbro.Core.Annahme.waechterBedarf, 9908614701891846494)]
 
