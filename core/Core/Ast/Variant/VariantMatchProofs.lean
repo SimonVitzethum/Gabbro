@@ -251,12 +251,12 @@ theorem variantMatch_inversion : VariantMatchInversionAussage := by
   | assignVar _ _ _ _ _ => exact ((starts _).1 (List.cons.inj tokens).2).elim
   | assignField _ _ _ _ _ _ _ _ => exact ((starts _).2 (List.cons.inj tokens).2).elim
   | directCall callRead =>
-    cases callRead with
-    | applied call _ =>
-      exact (call.ordinary.2 (by
-        rw [← Token.word.inj (List.cons.inj tokens).1]
-        simp only [keyword, List.map_cons, List.map_nil, List.mem_cons]
-        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))))).elim
+    rename_i call
+    have ordinary := call.ordinary
+    cases callRead
+    apply ordinary.2 |>.elim
+    rw [← Token.word.inj (List.cons.inj tokens).1]
+    decide
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable <;> cases (List.cons.inj tokens).1
   | _ => cases (List.cons.inj tokens).1
@@ -274,11 +274,14 @@ private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : V
       List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
     rfl
   refine ⟨input, armsInput, tokens, valueRead, ?_⟩
-  have parsed : StmtReads ctx.2 ctx.1 (keyword "match" :: input) ((variantMatch ctx).tree args) [] := by
+  have parsed : StmtReads ctx.2 ctx.1 (keyword "match" :: input)
+      ⟨ctx.1, Stmt.variantMatch args.value args.arms⟩ [] := by
     have printed := (Stmt.variantMatch args.value args.arms).printReads []
     simpa only [Stmt.printTokens, List.append_nil, tokens] using printed
+  generalize tokenEq : keyword "match" :: input = printedTokens at parsed
   cases parsed with
   | variantMatch read arms =>
+    cases (List.cons.inj tokenEq).2
     cases (ExprReads.deterministic read valueRead).2
     exact arms
 

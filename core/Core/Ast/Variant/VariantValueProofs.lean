@@ -137,24 +137,26 @@ theorem variantValue_inversion : VariantValueInversionAussage := by
     exact ⟨⟨_, _, ref, label, index, written, ordinary, available, payload⟩,
       Subtype.ext spelling.symm, payloadRead, rfl⟩
 
+private theorem casePayloadPrints (payload : CasePayload scope type) :
+    CasePayloadRead scope (payload.printPieces.map PrintedToken.value ++ [closeParen]) payload [closeParen] := by
+  cases payload with
+  | nullary parens =>
+    cases parens
+    · exact .bare (fun _ impossible => by cases impossible)
+    · exact .empty
+  | value expr =>
+    simpa only [CasePayload.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, show printOpen.value = openParen from rfl,
+      show printClose.value = closeParen from rfl] using
+        (CasePayloadRead.value (expr.printReads (rest := [closeParen, closeParen]) noOperatorAtClose))
+
 private theorem variantValuePrints (scope : Scope) (args : VariantValueArgs scope) :
     (variantValue scope).production args
       (((Category.expression scope).printPieces ((variantValue scope).tree args)).map PrintedToken.value) := by
-  refine Or.inr ⟨args.payload.printPieces.map PrintedToken.value ++ [closeParen], ?_, ?_⟩
-  · simp only [Category.printPieces, variantValue, VariantValueArgs.expression, Expr.typed, Expr.printPieces,
-      List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
-    rfl
-  · generalize args.payload = payload
-    cases payload with
-    | nullary parens =>
-      cases parens
-      · exact .bare (fun _ impossible => by cases impossible)
-      · exact .empty
-    | value expr =>
-      simpa only [CasePayload.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
-        List.cons_append, List.nil_append, List.append_assoc, show printOpen.value = openParen from rfl,
-        show printClose.value = closeParen from rfl] using
-          (CasePayloadRead.value (expr.printReads (rest := [closeParen, closeParen]) noOperatorAtClose))
+  refine Or.inr ⟨args.payload.printPieces.map PrintedToken.value ++ [closeParen], ?_, casePayloadPrints args.payload⟩
+  simp only [Category.printPieces, variantValue, VariantValueArgs.expression, Expr.typed, Expr.printPieces,
+    List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.append_assoc]
+  rfl
 
 theorem variantValue_derivation : VariantValueDerivationAussage := by
   rintro scope ⟨witness⟩

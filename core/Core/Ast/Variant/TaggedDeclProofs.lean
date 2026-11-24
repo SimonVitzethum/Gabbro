@@ -87,6 +87,9 @@ theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage :
 open Gabbro.Core.Text
 open Surface
 
+private theorem programWordValue (head : Char) (tail : List Char) (h1 h2) :
+    (printProgramWord head tail h1 h2).value = .word (head :: tail) := rfl
+
 theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
   intro scope input tree rest exported name read
   generalize tokens : taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input = ts at read
@@ -96,7 +99,7 @@ theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
       cases actual <;> cases exported <;> simp_all [taggedDeclarationPrefix, keyword]
     subst actual
     have same := List.append_cancel_left (by
-      simpa only [List.append_assoc] using tokens :
+      simpa only [List.append_assoc, List.cons_append, List.nil_append] using tokens :
       taggedDeclarationPrefix exported ++ (_ :: _ :: _ :: input) =
         taggedDeclarationPrefix exported ++ (.word n.val :: _ :: _ :: _))
     have sameName := Token.word.inj (List.cons.inj same).1
@@ -107,10 +110,10 @@ theorem taggedDecl_inversion : TaggedDeclInversionAussage := by
     cases other <;> cases exported <;> simp_all [taggedDeclarationPrefix, recordDeclarationPrefix, keyword]
   | table item _ =>
     cases visibility : item.exported <;> cases exported <;>
-      simp_all [taggedDeclarationPrefix, TableDeclaration.header, printPub, printTable, printProgramWord, keyword]
+      simp_all [taggedDeclarationPrefix, TableDeclaration.header, printPub, printTable, programWordValue, keyword]
   | effectGroup item _ =>
     cases visibility : item.exported <;> cases exported <;>
-      simp_all [taggedDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, printProgramWord, keyword]
+      simp_all [taggedDeclarationPrefix, EffectGroupDeclaration.header, printPub, printEffects, programWordValue, keyword]
   | _ => cases exported <;> simp_all [taggedDeclarationPrefix, keyword, assignment, colon, openBrace, openParen, semicolon]
 
 private theorem taggedDeclPrints (scope : Scope) (args : TaggedDeclArgs scope) :
