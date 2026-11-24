@@ -512,10 +512,10 @@ theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {
       E.katalog ρ.hw k sk absturzSpur s') :
     False := by
   have hq := hbleibt (k + 1) s' (Nat.le_succ_of_le hle) hz1 ?_
-  · have hempty := (absturz_leert_schlange hcrash).1
+  · have hempty := (absturz_leert_schlange (l := l) hcrash).1
     rw [hempty] at hq
     exact (List.not_mem_nil hq).elim
-  · have hfree := (absturz_leert_schlange hcrash).2
+  · have hfree := (absturz_leert_schlange (l := l) hcrash).2
     rw [hfree]
     intro hcontra
     nomatch hcontra
