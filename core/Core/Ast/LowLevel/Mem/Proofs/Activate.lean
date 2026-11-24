@@ -285,7 +285,10 @@ theorem activateJoint : ActivateJointAussage := by
                else none) =
       some { (s.lokal entryContext) with result := some .activated, active := some 0 }
     rw [hsspaces]
-    simp only [List.getElem?_cons_zero, Option.bind_some]
+    change (if (⟨extent, [], 0, []⟩ : Adressraum).Aktivierbar target s entryContext then
+      some { (s.lokal entryContext) with result := some .activated, active := some 0 }
+      else none) =
+      some { (s.lokal entryContext) with result := some .activated, active := some 0 }
     rw [if_pos hAktiv]
   obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp heval
   refine ⟨k, scope, tree, op, env, start, text, pre, s, next, ?_, hw, hzul, ?_,
