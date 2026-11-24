@@ -28,8 +28,7 @@ local macro "expression_suffix" recursor:ident read:term : tactic =>
      | assumption
      | apply List.suffix_rfl
      | apply List.suffix_cons
-     | match goal with
-       | h : _ <:+ ?tokens ⊢ _ <:+ ?tokens => apply h.trans
+     | apply List.IsSuffix.trans ?_ (by assumption)
      | apply List.IsSuffix.trans (l₂ := _) ?_ (List.suffix_cons _ _)))
 
 theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : rest <:+ input := by
