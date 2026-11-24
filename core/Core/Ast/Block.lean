@@ -157,12 +157,9 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
   case letValue =>
     intros
     rename_i before ty name ordinary expr rest
-    change StmtReads result before ((Stmt.letValue name ordinary expr).printTokens ++ rest)
-      ⟨⟨name, ty, false, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
-    rw [Stmt.printTokens_let]
-    exact .letBinding name ordinary
-      (by simpa only [List.append_assoc, List.singleton_append, List.nil_append] using
-        (expr.printReads (minimum := 0) (rest := semicolon :: rest) noOperatorAtSemicolon)) .plain
+    have valueRead := expr.printReads (minimum := 0) (rest := semicolon :: rest) noOperatorAtSemicolon
+    simpa only [Stmt.printTokens_let, List.append_assoc, List.cons_append, List.nil_append] using
+      (StmtReads.letBinding (result := result) name ordinary valueRead .plain)
   case assignVar =>
     intros
     rename_i ref visible writable value fits rest
