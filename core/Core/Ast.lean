@@ -9,6 +9,7 @@ public import Core.Ast.LowLevel.Mem.Proofs.SplitAt
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPages
 public import Core.Ast.LowLevel.Mem.Proofs.SplitPagesSatisfiability
 public import Core.Ast.LowLevel.Mem.Proofs.Merge
+public import Core.Ast.LowLevel.Mem.Proofs.Protect
 public import Core.Ast.LowLevel.Proofs.Syntax
 public import Core.Ast.LowLevel.Proofs.Elaboration
 public import Core.Ast.LowLevel.Proofs.Execution
