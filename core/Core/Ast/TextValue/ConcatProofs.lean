@@ -115,6 +115,7 @@ private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {inpu
   | substring base first' last _ reads₁ reads₂ tail' =>
       exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
         (textTailLowerConcat tail' right rightRead blocked)
+termination_by tail
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
   intro scope
@@ -142,17 +143,9 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   dsimp
-  dsimp [Wert]
-  rw [Befehl.auswerten, Rahmen.schreibe]
-  simp only [Function.update_self]
-  rw [hleft, hright]
-  dsimp [wertAls]
-  rw [dif_pos left.bound, dif_pos right.bound]
-  simp [TextValue.concat]
-  all_goals
-    first
-    | exact Nat.add_le_add left.bound right.bound
-    | rfl
+  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
+    left.bound, right.bound]
+  all_goals omega
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
@@ -290,8 +283,8 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
       have htmp := (textConcatBytes a a (TextValue.literal decoded) (TextValue.literal decoded)
           (s₂.lokal eintritt) h0 h1).1
       change (((((textConcatForm []).befehl args).nach eintritt s₂).lokal eintritt).temp 0).isSome = true
+      dsimp [textConcatForm, args]
       rw [Befehl.nach]
-      dsimp [textConcatForm]
       rw [htmp]
       rfl
 
