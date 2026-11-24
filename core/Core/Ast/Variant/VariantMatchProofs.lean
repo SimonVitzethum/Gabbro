@@ -49,42 +49,20 @@ theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
     obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau (w := w) step execute
     exact List.not_mem_nil
 
-private theorem vm_block_inv (result : Option (Ty .value)) (before after : Scope)
-    (b : Block result before after) : (block b).klauseln.invariant = [] := by
-  let rec blockEmpty {r b a} (body : Block r b a) : (block body).klauseln.invariant = [] := by
-    cases body with
-    | done => rfl
-    | step first rest =>
-        simp only [block, Fragment.anhaengen, Quellklauseln.anhaengen,
-          stmt_keine_invarianten first, blockEmpty rest, List.nil_append]
-  exact blockEmpty b
-
-private theorem vm_braced_inv (result : Option (Ty .value)) (before : Scope)
-    (b : BracedBlock result before) : (bracedBlock b).klauseln.invariant = [] := by
-  cases b with
-  | braces body =>
-      change (block body).klauseln.invariant ++
-        (Fragment.einzel (Befehl.blockEnde _)).klauseln.invariant = []
-      rw [vm_block_inv result before _ body]
-      rfl
-
 private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allowed : Bool)
     (labels : List Identifier) (payloads : List (Option (Ty .value)))
     (arms : VariantArms result scope allowed labels payloads) :
     (variantArms arms).body.klauseln.invariant = [] := by
-  cases arms with
-  | done => rfl
-  | nullary label caseName body rest =>
-      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
-        Quellklauseln.anhaengen, Quellklauseln.leer,
-        vm_braced_inv result scope body, vm_arms_inv rest]
-  | payload label binder ordinary body rest =>
-      simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
-        Quellklauseln.anhaengen, Quellklauseln.leer,
-        vm_braced_inv result (payloadBinding binder _ :: scope) body,
-        vm_arms_inv rest]
-  | wildcard body nonempty shape =>
-      simp [variantArms, vm_braced_inv result scope body]
+  refine @Gabbro.Core.Ast.VariantArms.rec result
+    (fun _ _ _ => True)
+    (fun _ _ blk => (block blk).klauseln.invariant = [])
+    (fun _ br => (bracedBlock br).klauseln.invariant = [])
+    (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    scope allowed labels payloads arms
+  all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
+    Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+    Quellklauseln.anhaengen, Quellklauseln.leer]
 
 theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
   intro ctx platform args
@@ -131,6 +109,3 @@ theorem variantMatch_impl : VariantMatchImplAussage := by
   rfl
 
 end Gabbro.Core.Ast.Semantik
-
-#check (@Gabbro.Core.Ast.Block.rec : Nat)
-#check (@Gabbro.Core.Ast.VariantArms.rec : Nat)
