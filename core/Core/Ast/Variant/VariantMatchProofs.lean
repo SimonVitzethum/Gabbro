@@ -120,14 +120,6 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
-  · intro scope labels payloads label caseName body rest ih i hib hb
-    cases i with
-    | zero => simp at hb
-    | succ j =>
-        have hj : j < (variantArms rest).branches.length := by omega
-        have hb' : ((variantArms rest).branches[j]).2 = true := by
-          simpa using hb
-        simpa using ih j hj hb'
 
 private theorem vm_case_lt (cases : List (Option (Ty .value))) :
     ∀ value : Wert (variantLayout cases), (variantCase cases value).1 < cases.length := by
@@ -163,6 +155,14 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
+  · intro scope labels payloads label caseName body rest ih i hib hb
+    cases i with
+    | zero => simp at hb
+    | succ j =>
+        have hj : j < (variantArms rest).branches.length := by omega
+        have hb' : ((variantArms rest).branches[j]).2 = true := by
+          simpa using hb
+        simpa using ih j hj hb'
 
 private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
     ∀ (value : Wert (variantLayout cases)) (i : Nat),
