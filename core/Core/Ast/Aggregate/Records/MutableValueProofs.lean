@@ -27,22 +27,23 @@ open Gabbro.Core.Text
 
 theorem mutableValue_inversion : MutableValueInversionAussage := by
   intro scope result name input tree rest read
+  generalize hk : letKeyword = k at read
   generalize ht : keyword "mut" = t at read
-  generalize hn : Token.word name.val = w at read
+  generalize hn : Token.word name = w at read
   cases read with
-  | letMutableValue n ordinary value valueRead =>
-      have hnval : n.val = name.val := by
+  | letMutableValue n ordinary valueRead =>
+      have hnval : n.val = name := by
         injection hn with h
         exact h.symm
-      refine ⟨⟨n, ordinary, value⟩, ?_, valueRead, ?_⟩
+      refine ⟨⟨n, ordinary, _⟩, ?_, valueRead, ?_⟩
       · exact Subtype.ext hnval
       · rfl
   | tupleBind checked patternRead annotationRead valueRead =>
       cases patternRead
-      simp_all [keyword]
+      cases hn
   | directCall callRead =>
       cases callRead
-      simp_all [keyword]
+      cases ht
   | _ => simp_all [keyword]
 
 theorem mutableValue_suffix : MutableValueSuffixAussage := by
@@ -54,7 +55,7 @@ private theorem mutableValue_print (ctx : Scope × Option (Ty .value)) (args : M
     (mutableValue ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((mutableValue ctx).tree args)).map PrintedToken.value) := by
   refine ⟨args.value.printTokens ++ [semicolon], ?_, ?_⟩
-  · simp [Category.printPieces, Stmt.printPieces, Expr.printTokens]
+  · simp [mutableValue, Category.printPieces, Stmt.printPieces, Expr.printTokens]
   · simpa [Expr.printTokens] using
       (Expr.printReads (scope := ctx.1) (minimum := 0) args.value noOperatorAtSemicolon)
 
@@ -67,7 +68,7 @@ theorem mutableValue_derivation : MutableValueDerivationAussage := by
     mutableValue_print ctx,
     ?_⟩
   let name : Identifier :=
-    ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
+    ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   have ordinary : ordinaryLocal name := by
     constructor
@@ -88,14 +89,13 @@ open Maschine Annahme Katalog Waechter
 
 private theorem mv_amOrt (ctx : Scope × Option (Ty .value)) : (mutableValueForm ctx).RegelAmOrt := by
   intro args
-  change (((expr 0 args.value).anhaengen (Fragment.einzel (.bindeWert 0 args.type false))).code[
+  change (((expr 0 args.value).code ++ [Befehl.bindeWert 0 args.type false])[
     (expr 0 args.value).code.length]? = some (.bindeWert 0 args.type false))
-  simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
-    Nat.sub_self, List.getElem?_cons_zero]
+  simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
 
 theorem mutableValue_parse : MutableValueParseAussage := by
-  intro ctx args text pieces lexed prod
-  exact (Surface.mutableValue_derivation ctx).parse lexed prod
+  intro scope args text pieces lexed prod
+  exact (Surface.mutableValue_derivation scope).parse lexed prod
 
 theorem mutableValue_elaboriert : MutableValueElaboriertAussage := by
   intro ctx platform args
@@ -136,7 +136,7 @@ theorem mutableValue_regelSicher : MutableValueRegelSicherAussage := by
 theorem mutableValue_erfuellbar : MutableValueErfuellbarAmAussage := by
   intro platform start
   let name : Identifier :=
-    ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
+    ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   have ordinary : ordinaryLocal name := by
     constructor
