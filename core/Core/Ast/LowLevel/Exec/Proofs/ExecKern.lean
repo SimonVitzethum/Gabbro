@@ -85,7 +85,7 @@ theorem execAnnahme (form : ExecForm) : ExecAnnahmeAussage form := by
   exact execRegelLokal k op
 
 theorem execIdeal (form : ExecForm) : ExecIdealAussage form := by
-  intro k scope tree op _
+  intro scope tree op _
   change Ideal.RegelBestimmt (ExecInstruction.rule op)
   intro c s w es es' s1 s2 h1 h2
   change ∃ frame, op.evaluate s c = some frame ∧ es = [plan] ∧
