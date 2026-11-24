@@ -126,6 +126,7 @@ public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher
 public import Core.Ziel.Korrektheit.Maschine
+public import Core.Ziel.Korrektheit.Beweise.ImplBestimmt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Alle
