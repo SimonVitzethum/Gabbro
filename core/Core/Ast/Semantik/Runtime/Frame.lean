@@ -267,10 +267,4 @@ def Rahmen.bindeRegion (frame : Rahmen) (receiver : Nat) (init : RegionInitializ
   let some value := LowLevel.RegionInitializer.value frame.platform.ziel slot extent init | return refused
   return { frame with pc := frame.pc + 1, lokale := some value :: frame.lokale }
 
-abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
-abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
-abbrev Regel := Maschine.Regel Zustand Plan PUnit
-
-/-- One linearisation point per expression node or binding. A binary instruction
-    consumes the slots left by its children. A binding takes its initializer's slot. -/
 end Gabbro.Core.Ast.Semantik
