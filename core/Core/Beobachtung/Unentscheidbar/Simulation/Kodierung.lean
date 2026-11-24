@@ -1,7 +1,8 @@
 module
 
 public import Core.Beobachtung.Unentscheidbar.Modell
-import Mathlib.Tactic.DeriveEncodable
+public import Mathlib.Logic.Encodable.Basic
+import Mathlib.Tactic.DeriveCountable
 import Mathlib.Logic.Equiv.List
 
 @[expose] public section
@@ -11,55 +12,44 @@ namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Katalog
-open Gabbro.Core.Text
 
 noncomputable section
 
-deriving instance Encodable for Arith
-deriving instance Encodable for Compare
-deriving instance Encodable for LowLevel.AddressSpace
-deriving instance Encodable for PtrRecht
-deriving instance Encodable for CarrierAccess
-deriving instance Encodable for CarrierEffect
-deriving instance Encodable for Ty
-deriving instance Encodable for DienstAbi
-deriving instance Encodable for FirmwareZeile
-deriving instance Encodable for WrittenType, WrittenTypes
-deriving instance Encodable for RegionInitializer
-deriving instance Encodable for Rufstelle
-deriving instance Encodable for Befehl
+deriving instance Countable for Arith
+deriving instance Countable for Compare
+deriving instance Countable for LowLevel.AddressSpace
+deriving instance Countable for PtrRecht
+deriving instance Countable for CarrierAccess
+deriving instance Countable for CarrierEffect
+deriving instance Countable for Ty
+deriving instance Countable for DienstAbi
+deriving instance Countable for FirmwareZeile
+deriving instance Countable for WrittenType, WrittenTypes
+deriving instance Countable for RegionInitializer
+deriving instance Countable for Rufstelle
+deriving instance Countable for Befehl
 
-/-- Names carry a proof of well-spelling; proof irrelevance makes the spelling
-    the only data. Decoding re-establishes the proof by classical choice. -/
-noncomputable instance encodableIdentifier : Encodable Identifier where
-  encode name := Encodable.encode name.val
-  decode n :=
-    match (Encodable.decode n : Option (List Char)) with
-    | none => none
-    | some s =>
-      if h : ∃ c rest, s = c :: rest ∧ isNameStart c ∧ ∀ a ∈ rest, isNamePart a
-        then some ⟨s, h⟩ else none
-  encodek := by
-    intro name
-    change (match (Encodable.decode (Encodable.encode name.val) : Option (List Char)) with
-      | none => none
-      | some s =>
-        if h : ∃ c rest, s = c :: rest ∧ isNameStart c ∧ ∀ a ∈ rest, isNamePart a
-          then some ⟨s, h⟩ else none) = some name
-    rw [Encodable.encodek]
-    change (if h : ∃ c rest, name.val = c :: rest ∧ isNameStart c ∧ ∀ a ∈ rest, isNamePart a
-      then some ⟨name.val, h⟩ else none) = some name
-    by_cases h : ∃ c rest, name.val = c :: rest ∧ isNameStart c ∧ ∀ a ∈ rest, isNamePart a
-    · rw [dif_pos h]
-      exact congrArg some (Subtype.ext rfl)
-    · rw [dif_neg h]
-      exact (h name.property).elim
+instance : Encodable Arith := Encodable.ofCountable _
+instance : Encodable Compare := Encodable.ofCountable _
+instance : Encodable LowLevel.AddressSpace := Encodable.ofCountable _
+instance : Encodable PtrRecht := Encodable.ofCountable _
+instance : Encodable CarrierAccess := Encodable.ofCountable _
+instance : Encodable CarrierEffect := Encodable.ofCountable _
+instance : Encodable (Ty .value) := Encodable.ofCountable _
+instance : Encodable DienstAbi := Encodable.ofCountable _
+instance : Encodable FirmwareZeile := Encodable.ofCountable _
+instance : Encodable WrittenType := Encodable.ofCountable _
+instance : Encodable WrittenTypes := Encodable.ofCountable _
+instance : Encodable RegionInitializer := Encodable.ofCountable _
+instance : Encodable Rufstelle := Encodable.ofCountable _
+instance : Encodable Identifier := Encodable.ofCountable _
+instance : Encodable Befehl := Encodable.ofCountable _
 
 end
 
 /-- The Godel numbering of a command program is the Encodable numbering of the
     first-order syntax. No predicate ever inspects a micro-recursive code here. -/
-def kodiere (p : List Befehl) : ℕ :=
+noncomputable def kodiere (p : List Befehl) : ℕ :=
   Encodable.encode p
 
 /-- Decoding is the Encodable inverse; the left inverse is `Encodable.encodek`. -/
