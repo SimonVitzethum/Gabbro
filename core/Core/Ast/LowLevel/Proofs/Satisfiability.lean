@@ -19,16 +19,20 @@ namespace Gabbro.Core.Ast.LowLevel
 
 open Text Katalog Maschine
 
-private theorem lowParse_of {form : Form} {text : RawText} {tree : Tree form}
-    {pieces : List Piece} (lex : Lexed text pieces)
-    (prod : tree.production (canonicalTokens pieces)) : Parse text tree := by
-  refine ⟨True.intro, pieces, lex, ?_⟩
-  let ts := semanticTokens pieces
+private theorem derivesTerminals {form : Form} {tree : Tree form} (ts : List LocatedToken)
+    (prod : tree.production (ts.map LocatedToken.value)) :
+    Derives (tokenGrammar (fun tokens (t : Tree form) => t.production tokens)) tree ts := by
   refine Derives.production (symbols := ts.map Symbol.terminal) ?_ ?_
   · exact ⟨ts, rfl, prod⟩
   · induction ts with
     | nil => exact DerivesSymbols.nil
     | cons t ts ih => exact DerivesSymbols.terminal ih
+
+private theorem lowParse_of {form : Form} {text : RawText} {tree : Tree form}
+    {pieces : List Piece} (lex : Lexed text pieces)
+    (prod : tree.production (canonicalTokens pieces)) : Parse text tree := by
+  refine ⟨True.intro, pieces, lex, ?_⟩
+  exact derivesTerminals (semanticTokens pieces) prod
 
 private theorem tree_parse_print {form : Form} (tree : Tree form)
     (prod : tree.production (tree.printPieces.map PrintedToken.value)) : Parse tree.print tree := by
@@ -129,9 +133,10 @@ private theorem erfuellbar_von {form : Form} {k : Katalog} {scope : RegionScope}
     change (unit op).system.kopf s entryContext = some op
     simp [unit, system, head, hs, hp, hEvalS]
   · exact hEvalS
-  · exact ⟨transfer, hEvalS, rfl, rfl⟩
-  · rw [hEvalS]
-    exact ⟨rfl, rfl⟩
+  · change op.ideal entryContext s () [plan] (transfer.apply entryContext s)
+    exact ⟨transfer, hEvalS, rfl, rfl⟩
+  · change op.impl entryContext s () [plan] (transfer.apply entryContext s)
+    simp [Instruction.impl, hEvalS]
 
 theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
   let k : Katalog := Plattform.x86_64.katalog
@@ -139,7 +144,7 @@ theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
   let space : AddressSpace := .physical
   let tree : Tree .addressType := .addressType space
   let op : Instruction k := .denoteAddress space k.plattform.ziel.physicalBits (by
-    simp [AddressSpace.width])
+    simp [space, AddressSpace.width])
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Umgebung := Umgebung.referenz k 1 sicht
   let start := lowStart env []
@@ -147,18 +152,20 @@ theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
   let transfer : Transfer k := ⟨.addressType space k.plattform.ziel.physicalBits, none⟩
   apply erfuellbar_von (k := k) (scope := scope) (tree := tree) (op := op) (env := env)
     (start := start) (text := text) (transfer := transfer)
-  · simpa [k] using Plattform.katalog_wohlgeformt .x86_64
-  · simp [scope]
+  · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
+  · change ([] : List (List Char)).Nodup
+    exact List.nodup_nil
   · simp [scope, start, lowStart]
   · apply lowZulStart (k := k) (h := env) (regions := [])
     · exact Umgebung.referenz_hardware k 1 sicht
-        (by simpa [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
-    · simpa [k] using imageGueltigX86
+        (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+    · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.nil
     · intro r hr; cases hr
   · apply tree_parse_print tree
+    dsimp [tree, space]
     rfl
-  · simp [elaborate, k, scope, tree, space, op, AddressSpace.width]
+  · simp [elaborate, k, Plattform.katalog, scope, tree, space, op, AddressSpace.width]
   · simp [op, transfer, Instruction.evaluate]
 
 theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
@@ -185,18 +192,20 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
     simp [extent, Plattform.virtio, Strecke.getrennt]
   apply erfuellbar_von (k := k) (scope := scope) (tree := tree) (op := op) (env := env)
     (start := start) (text := text) (transfer := transfer)
-  · simpa [k] using Plattform.katalog_wohlgeformt .x86_64
-  · simp [scope]
+  · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
+  · change [name.val].Nodup
+    exact List.nodup_cons.mpr ⟨by simp, List.nodup_nil⟩
   · simp [scope, start, lowStart]
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
     · exact Umgebung.referenz_hardware k 1 sicht
-        (by simpa [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
-    · simpa [k] using imageGueltigX86
-    · exact ⟨by intro a ha; cases ha, List.Pairwise.nil⟩
-    · simpa [k] using x86RegionsOk extent hbounds hsep
+        (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+    · simpa [k, Plattform.katalog] using imageGueltigX86
+    · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
+    · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
   · apply tree_parse_print tree
+    dsimp [tree]
     rfl
-  · simp [elaborate, scope, RegionScope.slot, tree, op]
+  · simp [elaborate, scope, RegionScope.slot, tree, op, name]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
@@ -231,25 +240,26 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     simp [extent, Plattform.virtio, Strecke.getrennt]
   apply erfuellbar_von (k := k) (scope := scope) (tree := tree) (op := op) (env := env)
     (start := start) (text := text) (transfer := transfer)
-  · simpa [k] using Plattform.katalog_wohlgeformt .x86_64
-  · simp [scope]
+  · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
+  · change [name.val].Nodup
+    exact List.nodup_cons.mpr ⟨by simp, List.nodup_nil⟩
   · simp [scope, start, lowStart]
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
     · exact Umgebung.referenz_hardware k 1 sicht
-        (by simpa [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
-    · simpa [k] using imageGueltigX86
-    · exact ⟨by intro a ha; cases ha, List.Pairwise.nil⟩
-    · simpa [k] using x86RegionsOk extent hbounds hsep
+        (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+    · simpa [k, Plattform.katalog] using imageGueltigX86
+    · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
+    · simpa [k, Plattform.katalog] using x86RegionsOk extent hbounds hsep
   · apply tree_parse_print tree
     refine ⟨written.printPieces.map PrintedToken.value, rfl, ?_⟩
     exact TypeReads.integer (by simp [WrittenType.valid, WrittenType.storage]) (by simp)
-  · simp [elaborate, scope, RegionScope.slot, tree, written, op, shape, layout, WrittenType.storage]
+  · simp [elaborate, scope, RegionScope.slot, tree, written, op, shape, layout, WrittenType.storage, name]
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       simp [s, I.start, unit, bootData, Zustand.start, heldRegion, start, lowStart, extent, Option.bind]
     have hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis := by
       constructor
-      · simp [shape]
+      · simp [shape, extent]
       · change 0x1000 + 1 ≤ 0x2000
         omega
     change op.evaluate s entryContext = some transfer
@@ -263,8 +273,8 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let scope : RegionScope := []
   let tree : Tree .environment := .environment name abi row
   let allowed : row.zugelassen k abi := by
-    simp [row, abi, k, FirmwareZeile.zugelassen, Plattform.firmwareAbi, Katalog.enthaelt,
-      Plattform.zeilen, Plattform.endpunkte]
+    simp [row, abi, k, Plattform.katalog, FirmwareZeile.zugelassen, Plattform.firmwareAbi,
+      Katalog.enthaelt, Plattform.zeilen, Plattform.endpunkte]
   let op : Instruction k := .selectEnvironment name abi row allowed
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Umgebung := Umgebung.referenz k 1 sicht
@@ -273,18 +283,20 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
   let transfer : Transfer k := ⟨.environment name row abi, none⟩
   apply erfuellbar_von (k := k) (scope := scope) (tree := tree) (op := op) (env := env)
     (start := start) (text := text) (transfer := transfer)
-  · simpa [k] using Plattform.katalog_wohlgeformt .x86_64
-  · simp [scope]
+  · simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64
+  · change ([] : List (List Char)).Nodup
+    exact List.nodup_nil
   · simp [scope, start, lowStart]
   · apply lowZulStart (k := k) (h := env) (regions := [])
     · exact Umgebung.referenz_hardware k 1 sicht
-        (by simpa [k] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
-    · simpa [k] using imageGueltigX86
+        (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
+    · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.nil
     · intro r hr; cases hr
   · apply tree_parse_print tree
+    dsimp [tree, abi, row]
     rfl
-  · simp [elaborate, k, scope, tree, op, allowed, row, abi]
+  · simp [elaborate, k, Plattform.katalog, scope, tree, op, allowed, row, abi]
   · simp [op, transfer, Instruction.evaluate]
 
 end Gabbro.Core.Ast.LowLevel
