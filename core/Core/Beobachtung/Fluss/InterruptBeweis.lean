@@ -189,7 +189,7 @@ theorem interruptNI : InterruptNIAussage := by
                     simp only [Zustandseintritt, Function.update]
                     split
                     · rename_i hcd
-                      exact (hdc hcd.symm).elim
+                      exact (hdc hcd).elim
                     · rfl
                   rw [statusN]
                   cases hst : vρ.status d <;> rfl
