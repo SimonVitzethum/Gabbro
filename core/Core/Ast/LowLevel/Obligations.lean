@@ -21,8 +21,13 @@ def InversionAussage (form : Form) : Prop :=
 def EindeutigAussage (form : Form) : Prop :=
   ∀ (a b : Tree form) text, Parse text a → Parse text b → a = b
 
+def Tree.printable : Tree form → Prop
+  | .view _ type => type.valid []
+  | _ => True
+
 def DruckAussage (form : Form) : Prop :=
-  ∀ tree : Tree form, tree.production (tree.printPieces.map PrintedToken.value) ∧ Parse tree.print tree
+  ∀ tree : Tree form, tree.printable →
+    tree.production (tree.printPieces.map PrintedToken.value) ∧ Parse tree.print tree
 
 def ElaboriertAussage (form : Form) : Prop :=
   ∀ k scope (tree : Tree form) E,
@@ -93,7 +98,7 @@ def KostenAussage (form : Form) : Prop :=
     rules must hold jointly at the initial live occurrence. -/
 def ErfuellbarAussage (form : Form) : Prop :=
   ∃ (k : Katalog) (scope : RegionScope) (tree : Tree form) (op : Instruction k)
-    (env : Umgebung) (start : AussenStart) (text : RawText) (transfer : Transfer k),
+    (env : Katalog.Umgebung) (start : AussenStart) (text : RawText) (transfer : Transfer k),
     KatalogWohlgeformt k ∧ (scope.map Subtype.val).Nodup ∧ scope.length = start.regions.length ∧
     (unit op).ZulStart env start ∧ Parse text tree ∧ elaborate k scope tree = some op ∧
     Elaboriert k scope tree (unit op) ∧

@@ -27,12 +27,11 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
           simp only [Tree.production] at ha hb
           rw [ha] at hb
           have hname := congrArg (fun l : List Token => l[2]?) hb
-          simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname
+          simp only [AddressSpace.tokens, List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname
           have hnameList : sa.name.toList = sb.name.toList := by
             simpa only [keyword, Token.word.injEq] using hname
-          have hnameEq : sa.name = sb.name := String.toList_injective hnameList
-          cases sa <;> cases sb <;>
-            simp only [AddressSpace.name, String.reduceEq] at hnameEq ⊢
+          cases AddressSpace.name_injective (String.toList_injective hnameList)
+          rfl
   | regionAddress ra =>
       cases b with
       | regionAddress rb =>
@@ -75,11 +74,8 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
 
 lemma addressTypePrints (space : AddressSpace) :
     (Tree.addressType space).production
-      ((Tree.addressType space).printPieces.map PrintedToken.value) := by
-  cases space <;>
-    simpa [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
-      PrintedToken.unquoted, Compare.print, Compare.spelling, printPunctuation,
-      AddressSpace.print, AddressSpace.name, String.reduceToList]
+      ((Tree.addressType space).printPieces.map PrintedToken.value) :=
+  space.printTokens
 
 lemma regionAddressPrints (region : Identifier) :
     (Tree.regionAddress region).production
@@ -153,19 +149,19 @@ theorem eindeutigAussage (form : Form) : EindeutigAussage form := by
   exact productionUnique readsA readsB
 
 theorem druckAussage_addressType : DruckAussage .addressType := by
-  intro tree
+  intro tree printable
   cases tree with
   | addressType space =>
       exact ⟨addressTypePrints space, parseOfPrint _ (addressTypePrints space)⟩
 
 theorem druckAussage_regionAddress : DruckAussage .regionAddress := by
-  intro tree
+  intro tree _
   cases tree with
   | regionAddress region =>
       exact ⟨regionAddressPrints region, parseOfPrint _ (regionAddressPrints region)⟩
 
 theorem druckAussage_environment : DruckAussage .environment := by
-  intro tree
+  intro tree _
   cases tree with
   | environment name abi row =>
       exact ⟨environmentPrints name abi row, parseOfPrint _ (environmentPrints name abi row)⟩

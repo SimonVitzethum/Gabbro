@@ -1,6 +1,7 @@
 module
 
 public import Core.Text.Lexeme
+public import Core.Ast.LowLevel.AddressSpace
 public import Core.Ast.TextValue.Bytes
 
 @[expose] public section
@@ -51,6 +52,9 @@ inductive Ty : Kind → Type where
   | text (capacity : Nat) : Ty .value
   | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool) : Ty .value
   | effectGroupSchema (effects : List CarrierEffect) : Ty .value
+  | address (space : LowLevel.AddressSpace) : Ty .value
+  | ownedRegion : Ty .value
+  | regionView (element : Ty .value) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -106,6 +110,7 @@ def Local.nameVisible : Local scope type → Prop
 
 def Ty.valueBinding : Ty .value → Prop
   | .recordSchema .. | .variantSchema .. | .carrierSchema .. | .effectGroupSchema .. => False
+  | .ownedRegion | .regionView _ => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=

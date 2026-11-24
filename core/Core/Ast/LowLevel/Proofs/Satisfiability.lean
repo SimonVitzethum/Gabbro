@@ -59,7 +59,7 @@ private theorem lowName_slot : RegionScope.slot [lowName] lowName = some 0 := by
   change [lowName.val].idxOf? lowName.val = some 0
   simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
 
-private def lowStart (h : Umgebung) (regions : List Strecke) : AussenStart :=
+private def lowStart (h : Katalog.Umgebung) (regions : List Strecke) : AussenStart :=
   ⟨0, (fun i => if i = 0 then some 0 else none), regions, (fun _ => none), h.politik.sicht 0 []⟩
 
 private theorem imageGueltigX86 : image.gueltig (Plattform.x86_64).ziel := by
@@ -76,7 +76,7 @@ private theorem imageGueltigX86 : image.gueltig (Plattform.x86_64).ziel := by
     subst a
     exact ⟨0, rfl⟩
 
-private theorem lowZulStart {k : Katalog} {h : Umgebung} {regions : List Strecke}
+private theorem lowZulStart {k : Katalog} {h : Katalog.Umgebung} {regions : List Strecke}
     (hw : Hardware k h) (img : image.gueltig k.plattform.ziel)
     (pairwise : regions.Pairwise Strecke.getrennt)
     (ok : ∀ r ∈ regions, r.von < r.bis ∧ r.bis ≤ 2 ^ k.plattform.ziel.physicalBits ∧
@@ -130,7 +130,7 @@ private theorem x86RegionsOk (extent : Strecke)
       cases hdev
 
 private theorem erfuellbar_von {form : Form} {k : Katalog} {scope : RegionScope}
-    {tree : Tree form} {op : Instruction k} {env : Umgebung} {start : AussenStart}
+    {tree : Tree form} {op : Instruction k} {env : Katalog.Umgebung} {start : AussenStart}
     {text : RawText} {transfer : Transfer k}
     (hWF : KatalogWohlgeformt k)
     (hNodup : (scope.map Subtype.val).Nodup)
@@ -169,7 +169,7 @@ theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
   let op : Instruction k := .denoteAddress space k.plattform.ziel.physicalBits (by
     simp only [space, AddressSpace.width])
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
-  let env : Umgebung := Umgebung.referenz k 1 sicht
+  let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start := lowStart env []
   let text : RawText := tree.print
   let transfer : Transfer k := ⟨.addressType space k.plattform.ziel.physicalBits, none⟩
@@ -180,7 +180,7 @@ theorem addressType_erfuellbar : ErfuellbarAussage .addressType := by
     exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [])
-    · exact Umgebung.referenz_hardware k 1 sicht
+    · exact Katalog.Umgebung.referenz_hardware k 1 sicht
         (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.nil
@@ -205,7 +205,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
   let tree : Tree .regionAddress := .regionAddress name
   let op : Instruction k := .projectAddress 0
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
-  let env : Umgebung := Umgebung.referenz k 1 sicht
+  let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start := lowStart env [extent]
   let text : RawText := tree.print
   let transfer : Transfer k := ⟨.address ⟨k.plattform.ziel.physicalBits, extent.von, rfl, by
@@ -232,7 +232,7 @@ theorem regionAddress_erfuellbar : ErfuellbarAussage .regionAddress := by
     · exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
-    · exact Umgebung.referenz_hardware k 1 sicht
+    · exact Katalog.Umgebung.referenz_hardware k 1 sicht
         (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
@@ -263,7 +263,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
   let shape : Layout := ⟨written, 1, 1, ByteOrder.ofTarget k.plattform.ziel⟩
   let op : Instruction k := .borrowView 0 shape
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
-  let env : Umgebung := Umgebung.referenz k 1 sicht
+  let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start := lowStart env [extent]
   let text : RawText := tree.print
   let transfer : Transfer k := ⟨.view 0 (⟨0, 0⟩ : Griff) ⟨extent.von, extent.von + shape.bytes⟩ shape,
@@ -289,7 +289,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
     · exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [extent])
-    · exact Umgebung.referenz_hardware k 1 sicht
+    · exact Katalog.Umgebung.referenz_hardware k 1 sicht
         (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
@@ -310,7 +310,7 @@ theorem view_erfuellbar : ErfuellbarAussage .view := by
   · let s := (I.start (unit op) start).2
     have hhr : heldRegion s entryContext 0 = some ((⟨0, 0⟩ : Griff), extent) := by
       rfl
-    have hcond : extent.von % shape.alignment = 0 ∧ extent.von + shape.bytes ≤ extent.bis := by
+    have hcond : shape.fits extent := by
       constructor
       · change 0x1000 % 1 = 0
         rfl
@@ -334,7 +334,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
       FirmwareZeile.endpunkt, List.map_cons, List.mem_append, List.mem_cons, eq_self, or_true, true_or]
   let op : Instruction k := .selectEnvironment name abi row allowed
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
-  let env : Umgebung := Umgebung.referenz k 1 sicht
+  let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start := lowStart env []
   let text : RawText := tree.print
   let transfer : Transfer k := ⟨.environment name row abi, none⟩
@@ -345,7 +345,7 @@ theorem environment_erfuellbar : ErfuellbarAussage .environment := by
     exact List.nodup_nil
   · rfl
   · apply lowZulStart (k := k) (h := env) (regions := [])
-    · exact Umgebung.referenz_hardware k 1 sicht
+    · exact Katalog.Umgebung.referenz_hardware k 1 sicht
         (by simpa [k, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64) (by omega)
     · simpa [k, Plattform.katalog] using imageGueltigX86
     · exact List.Pairwise.nil

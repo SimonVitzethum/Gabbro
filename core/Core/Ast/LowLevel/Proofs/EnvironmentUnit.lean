@@ -65,7 +65,7 @@ def EnvironmentUnitAdmissionAussage : Prop :=
 
 theorem environmentUnit_admission : EnvironmentUnitAdmissionAussage := by
   intro p args E meaning
-  obtain ⟨rfl, unique, allowed⟩ := meaning
+  obtain ⟨rfl, ⟨unique, allowed⟩, _⟩ := meaning
   have present : (args.name, args.abi, args.row) ∈ (programm args.unit).environment :=
     List.mem_cons_self
   exact ⟨allowed _ present, unique⟩
