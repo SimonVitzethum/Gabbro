@@ -1,5 +1,6 @@
 module
 public meta import Lean
+meta import Lean.Elab.Task
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
@@ -139,22 +140,21 @@ elab "#check_core" : command => do
   let scanned := scanTask.get
   let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
-  let declarations := coreDeclarations env
-  let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
-  let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
-  let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
-  errors := errors ++ compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-  errors := errors ++ safetyErrors env index safety
-  let semanticErrors ← liftTermElabM <| withEnv env do
-    let (declarationErrors, decisionBodies) ← declarationAudit declarations
-    let mut errors := declarationErrors
-    errors := errors ++ (← decisionErrors decisionBodies)
+  let elaboratedErrors ← liftTermElabM <| withEnv env do
+    let declarationTask ← Meta.MetaM.asTask' do
+      let (errors, decisionBodies) ← declarationAudit (coreDeclarations env)
+      return errors ++ (← decisionErrors decisionBodies)
+    let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
+    let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
+    let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
+    let mut errors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
+    errors := errors ++ safetyErrors env index safety
     errors := errors ++ (← registryErrors registry)
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
-    return errors
-  errors := errors ++ semanticErrors
+    return errors ++ (← withoutModifyingState declarationTask.get)
+  errors := errors ++ elaboratedErrors
   for error in errors do
     logError error
   logInfo m!"Core guards ran in {(← IO.monoMsNow) - started} ms"
