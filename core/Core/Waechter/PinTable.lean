@@ -270,7 +270,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.LowLevel.Device.TakeBackErfuellbarAussage, 10616024588335787325),
   (`Gabbro.Core.Ast.LowLevel.Device.TransitionErfuellbarAussage, 15316100297566631120),
   (`Gabbro.Core.Ast.LowLevel.FlushNarrowJointAussage, 2360522067266695793),
-  (`Gabbro.Core.Ast.LowLevel.FlushNarrowWideJointAussage, 13237997050584933894),
+  (`Gabbro.Core.Ast.LowLevel.FlushNarrowWideJointAussage, 11371893430700964617),
   (`Gabbro.Core.Ast.Semantik.BaueArraySichtAussage, 11256319820550370324),
   (`Gabbro.Core.Ast.Semantik.BaueRecordSichtAussage, 14128368628368643236),
   (`Gabbro.Core.Ast.Semantik.BaueTupelSichtAussage, 17368313068749549884),
@@ -321,7 +321,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Kopplung, 14183664939532648386),
   (`Gabbro.Core.Beobachtung.PauseNIAussage, 12687164116333805720),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 7571697784290166693),
-  (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 9968801672193308971),
-  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 10491544744868465494)]
+  (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 16653168268689081076),
+  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 3245136883888960737)]
 
 end Gabbro.Core.Waechter
