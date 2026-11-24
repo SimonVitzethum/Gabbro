@@ -42,8 +42,10 @@ def Instruction.rule {k : Katalog} (op : Instruction k) :
   ⟨op.impl, op.ideal⟩
 
 def head {k : Katalog} (op : Instruction k) (s : State k) (c : Kontext) : Option (Instruction k) :=
-  if c = entryContext ∧ s.status c = .laeuft ∧ (s.lokal c).pc = 0 ∧ (op.evaluate s c).isSome then
-    some op else none
+  match s.status c with
+  | .laeuft =>
+    if c = entryContext ∧ (s.lokal c).pc = 0 ∧ (op.evaluate s c).isSome then some op else none
+  | .ruht | .beendet _ => none
 
 def system {k : Katalog} (op : Instruction k) :
     MaschinenSystem PUnit Nat UInt8 PUnit (Frame k) PUnit PUnit PUnit (Instruction k) :=
@@ -94,7 +96,7 @@ def safetyUnit {k : Katalog} (op : Instruction k) :
 def Elaboriert (k : Katalog) (scope : RegionScope) (tree : Tree form) (E : Unit k) : Prop :=
   ∃ op, elaborate k scope tree = some op ∧ E = unit op
 
-def Bezeichnet (k : Katalog) (scope : RegionScope) (text : Text.RawText) (E : Unit k) : Prop :=
+def Bezeichnet {form : Form} (k : Katalog) (scope : RegionScope) (text : Text.RawText) (E : Unit k) : Prop :=
   ∃ tree : Tree form, Parse text tree ∧ Elaboriert k scope tree E
 
 end Gabbro.Core.Ast.LowLevel
