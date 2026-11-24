@@ -93,7 +93,7 @@ private theorem recordMembers_print_reads (fields : List RecordMember)
       simp_all [memberTokenList]
       exact .close
   | cons m ms ih =>
-      simpa [memberTokenList] using
+      simpa [memberTokenList, identPrintVal] using
         (RecordMembersRead.next m.name
           (WrittenType.printReads m.written (valid m (by simp_all)) (by intro more same; cases same))
           (ih (fun x hx => valid x (List.mem_cons_of_mem m hx))))
@@ -106,7 +106,8 @@ private theorem recordDecl_print (scope : Scope) (args : RecordDeclArgs) :
         memberTokenList args.members := by
       induction args.members with
       | nil => rfl
-      | cons m ms ih => simpa [memberTokenList, RecordMember.printPieces] using ih
+      | cons m ms ih => simpa [memberTokenList, RecordMember.printPieces,
+          printColonVal, printCommaVal] using ih
     have hmem' : (args.members.map (fun x => (RecordMember.printPieces x).map PrintedToken.value)).flatten =
         memberTokenList args.members := by
       simpa [List.flatMap, Function.comp_def] using hmem
