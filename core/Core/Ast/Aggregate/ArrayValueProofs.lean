@@ -2,6 +2,8 @@ module
 
 public import Core.Ast.Aggregate.Arrays
 
+import Init.Omega
+
 /-!
 # ArrayValue
 
@@ -22,3 +24,229 @@ Prove the pinned statements in this file.
 - `ArrayValueRegelSicherAussage`
 - `ArrayValueErfuellbarAmAussage`
 -/
+
+@[expose] public section
+
+open Gabbro.Core.Text
+open Gabbro.Core.Ast
+
+namespace Gabbro.Core.Ast.Surface
+
+private theorem itemsReadConsumes {scope close input types} {items : ExprItems scope types} {rest}
+    (read : ItemsRead scope close input items rest) : rest <:+ input := by
+  induction read with
+  | close => exact List.suffix_cons _ _
+  | next headRead _ ih => exact ih.trans (ExprReads.consumes headRead)
+
+private theorem itemsTailConsumes {scope close input types} {items : ExprItems scope types} {rest}
+    (read : ItemsTail scope close input items rest) : rest <:+ input := by
+  induction read with
+  | close => exact List.suffix_cons _ _
+  | comma _ tailRead ih => exact ih.trans (List.suffix_cons _ _)
+
+private theorem fitsSelf (type : Ty .value) : Fits type type := by
+  cases type with
+  | int lo hi => exact ⟨le_rfl, le_rfl⟩
+  | bool => trivial
+  | array element count =>
+      by_cases h : count = 0 <;> simp [Fits, h]
+  | productEnd => rfl
+  | product head tail => rfl
+  | record name labels layout => rfl
+  | recordSchema name labels layout => rfl
+  | sumEnd => rfl
+  | sum head tail => rfl
+  | variant name labels hasPayload layout => rfl
+  | variantSchema name labels hasPayload layout => rfl
+
+private theorem fitsArrayJoin (head principal : Ty .value) {element : Ty .value}
+    (join : arrayJoin head principal = some element) : Fits head element := by
+  cases head with
+  | int lo hi =>
+      cases principal with
+      | int lower upper =>
+          simp only [arrayJoin] at join
+          cases join
+          exact ⟨min_le_left _ _, le_max_left _ _⟩
+      | _ => simp [arrayJoin] at join
+  | _ =>
+      cases principal with
+      | int _ _ => simp [arrayJoin] at join
+      | _ =>
+          by_cases same : head = principal
+          · subst principal
+            simp only [arrayJoin] at join
+            cases join
+            exact fitsSelf head
+          · simp [arrayJoin, same] at join
+
+private theorem fitsThroughJoin (head principal : Ty .value) {element target : Ty .value}
+    (fit : Fits target principal) (join : arrayJoin head principal = some element) :
+    Fits target element := by
+  cases head with
+  | int lo hi =>
+      cases principal with
+      | int lower upper =>
+          simp only [arrayJoin] at join
+          cases join
+          cases target with
+          | int tlo thi =>
+              simp only [Fits] at fit ⊢
+              exact ⟨le_trans (min_le_left _ _) fit.1, le_trans fit.2 (le_max_left _ _)⟩
+          | _ =>
+              simp only [Fits] at fit
+              cases fit
+      | _ => simp [arrayJoin] at join
+  | _ =>
+      cases principal with
+      | int _ _ => simp [arrayJoin] at join
+      | _ =>
+          by_cases same : head = principal
+          · subst principal
+            simp only [arrayJoin] at join
+            cases join
+            exact fit
+          · simp [arrayJoin, same] at join
+
+theorem arrayValueInversion : ArrayValueInversionAussage := by
+  intro scope input type tree rest read
+  cases read with
+  | arrayValue principal fits itemsRead =>
+      exact ⟨⟨_, _, _, principal, fits⟩, itemsRead, rfl⟩
+
+theorem arrayValueSuffix : ArrayValueSuffixAussage := by
+  intro scope input type tree rest read
+  obtain ⟨args, itemsRead, _⟩ := arrayValueInversion read
+  exact itemsReadConsumes itemsRead
+
+private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
+    (arrayValue scope).production args
+      (((Category.expression scope).printPieces (arrayValue scope).tree args).map PrintedToken.value) := by
+  change ∃ input, (Expr.arrayValue args.items args.principal args.fits).printTokens =
+      openBracket :: input ∧ ItemsRead scope closeBracket input args.items []
+  refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket], rfl, ?_⟩
+  have atom := (Expr.arrayValue args.items args.principal args.fits).printAtom ([] : List Token)
+  cases atom with
+  | arrayValue _ _ itemsRead => exact itemsRead
+
+theorem arrayValueDerivation : ArrayValueDerivationAussage := by
+  intro scope
+  refine ⟨?_, ?_, ?_⟩
+  · intro args tokens production
+    rcases production with ⟨input, rfl, itemsRead⟩
+    change ExprReads scope 0 (openBracket :: input)
+      (Expr.arrayValue args.items args.principal args.fits) []
+    exact .atom (.arrayValue args.principal args.fits itemsRead) (.stop noOperatorAtEnd)
+  · exact arrayValuePrint scope
+  · let args : ArrayValueArgs scope := ⟨[], .productEnd, .empty, rfl, fun i => Fin.elim0 i⟩
+    exact Rule.satisfiableOfPrint args (arrayValuePrint scope args)
+
+theorem arrayValueElementSound : ArrayValueElementSoundAussage := by
+  intro types element principal i
+  induction types generalizing element with
+  | nil => exact Fin.elim0 i
+  | cons head tail ih =>
+      cases tail with
+      | nil =>
+          change arrayElement [head] = some element at principal
+          simp only [arrayElement] at principal
+          cases principal
+          have ival : i.val = 0 := by omega
+          cases i with
+          | mk val isLt =>
+              simp only at ival
+              subst val
+              change Fits head head
+              exact fitsSelf head
+      | cons next rest =>
+          change (arrayElement (next :: rest)).bind (arrayJoin head) = some element at principal
+          cases hTail : arrayElement (next :: rest) with
+          | none => simp [hTail] at principal
+          | some principalElement =>
+              simp only [hTail, Option.bind] at principal
+              cases i using Fin.cases with
+              | zero =>
+                  change Fits head element
+                  exact fitsArrayJoin head principalElement principal
+              | succ j =>
+                  change Fits ((next :: rest).get j) element
+                  exact fitsThroughJoin head principalElement (ih hTail j) principal
+
+end Gabbro.Core.Ast.Surface
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Annahme Katalog Waechter
+
+private theorem arrayValueRootLookup (p : Fragment) (b : Befehl) :
+    (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
+  simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+    Nat.sub_self, List.getElem?_cons_zero]
+
+private theorem arrayValue_am_ort (scope : Scope) : (arrayValueForm scope).RegelAmOrt := by
+  intro args
+  change (((itemCode 0 args.items).anhaengen
+    (.einzel (.baueArray 0 args.element args.types.length))).code)[(itemCode 0 args.items).code.length]? =
+      some (.baueArray 0 args.element args.types.length)
+  exact arrayValueRootLookup _ _
+
+private theorem arrayValue_keine_invarianten (scope : Scope) (args : Surface.ArrayValueArgs scope) :
+    ((arrayValueForm scope).fragment args).klauseln.invariant = [] := by
+  change (expr 0 (Surface.ArrayValueArgs.expression args)).klauseln.invariant = []
+  exact expr_keine_invarianten 0 _
+
+theorem arrayValueParse : ArrayValueParseAussage := by
+  intro scope args text pieces lexed production
+  exact (Surface.arrayValueDerivation scope).parse lexed production
+
+theorem arrayValueElaboriert : ArrayValueElaboriertAussage := by
+  intro scope platform args
+  rfl
+
+theorem arrayValueRealisiert : ArrayValueRealisiertAussage := by
+  intro scope platform args s running active live atPc
+  exact Quellform.realisiert (arrayValue_am_ort scope) platform args s running active live atPc
+
+theorem arrayValueAnnahme : ArrayValueAnnahmeAussage := by
+  intro scope
+  exact Quellform.annahme (arrayValueForm scope)
+
+theorem arrayValueIdeal : ArrayValueIdealAussage := by
+  intro scope
+  refine ⟨arrayValue_am_ort scope, ?_⟩
+  intro args
+  refine ⟨Befehl.bestimmt _, ?_⟩
+  intro c s w plans u
+  rfl
+
+theorem arrayValueEinheit : ArrayValueEinheitAussage := by
+  intro scope platform args
+  exact ⟨rfl, Befehl.kommutation _ _⟩
+
+theorem arrayValueImpl : ArrayValueImplAussage := by
+  intro scope args c s w plans u
+  rfl
+
+theorem arrayValueErhaltung : ArrayValueErhaltungAussage := by
+  intro scope
+  apply Quellform.erhaltung
+  intro args
+  exact arrayValue_keine_invarianten scope args
+
+theorem arrayValueRegelSicher : ArrayValueRegelSicherAussage := by
+  intro scope platform args
+  exact Befehl.sicher ((arrayValueForm scope).fragment args) platform
+    (arrayValue_keine_invarianten scope args) ((arrayValueForm scope).befehl args)
+
+theorem arrayValueErfuellbarAm : ArrayValueErfuellbarAmAussage := by
+  intro platform start
+  let form := arrayValueForm []
+  let args : Surface.ArrayValueArgs [] := ⟨[], .productEnd, .empty, rfl, fun i => Fin.elim0 i⟩
+  let E := form.einheit platform args
+  let s := (I.start E start).2
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s .start
+    (form.realisiert (arrayValue_am_ort []) platform args s rfl rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
+
+end Gabbro.Core.Ast.Semantik
