@@ -212,8 +212,8 @@ theorem effectGroup_derivation : EffectGroupDerivationAussage := by
   · intro item tokens production
     rcases production with ⟨input, rfl, effectRead⟩
     exact DeclReads.effectGroup item effectRead
-  · exact Surface.Rule.satisfiableOfPrint egName (egPrint scope
-      ⟨false, egName, [], [], rfl⟩)
+  · exact Surface.Rule.satisfiableOfPrint ⟨false, egName, [], [], rfl⟩
+      (egPrint scope ⟨false, egName, [], [], rfl⟩)
 
 private theorem eg_amOrt (scope : Scope) : (effectGroupForm scope).RegelAmOrt := by
   intro item
@@ -371,18 +371,10 @@ theorem effectGroup_capture : EffectGroupCaptureAussage := by
   intro scope bound name effects hscope hcap
   dsimp [EffectTerm.resolve]
   simp only [hscope, Option.bind_some]
-  by_cases hcond : name.val = "pure".toList ∨ bound.contains name.val = true
-  · simp [hcond]
-  · rcases hcap with hb | ⟨effect, heffect, hb⟩
-    · exfalso
-      exact hcond (Or.inr hb)
-    · have hnA : name.val ≠ "pure".toList := fun h => hcond (Or.inl h)
-      have hnB : name.val ∉ bound := by
-        intro hmem
-        exact hcond (Or.inr (by simpa using hmem))
-      have hany : effects.any (fun effect => bound.contains effect.carrier) = true :=
-        List.any_eq_true.mpr ⟨effect, heffect, hb⟩
-      simp [hnA, hnB, hany]
+  intro hnotpure hnotbound
+  rcases hcap with hb | ⟨effect, heffect, hb⟩
+  · exact False.elim (hnotbound (by simpa using hb))
+  · exact ⟨effect, heffect, by simpa using hb⟩
 
 private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierEffect)) :
     ∀ site ∈ code.filterMap (fun
@@ -407,7 +399,7 @@ private theorem codeRufe_effects (code : List Befehl) (E : Option (List CarrierE
               rcases hmem with h | hmem
               · subst site
                 rfl
-              · exact ih site hmem
+              · exact ih site (List.mem_filterMap.mpr hmem)
           | _ => simp at hcmd
 
 theorem effectGroup_signature : EffectGroupSignatureAussage := by
@@ -433,7 +425,7 @@ theorem effectGroup_call : EffectGroupCallAussage := by
   simp only [Rufstelle.passt, hfind, heff] at hp
   simp only [Bool.and_eq_true] at hp
   have hall : (Funktion.requiredEffects functions target).all
-      (fun effect => decide (effect ∈ provided)) = true := hp.1.2.2
+      (fun effect => decide (effect ∈ provided)) = true := hp.left.right
   exact of_decide_eq_true (List.all_eq_true.mp hall effect hrequired)
 
 theorem effectGroup_binding : EffectGroupBindingAussage := by
