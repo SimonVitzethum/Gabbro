@@ -317,7 +317,12 @@ private theorem jumpJoint : JumpJointAussage := by
   have hcond : true = true ∧ ¬ (s.lokal entryContext).halted ∧
       0 < (s.lokal entryContext).states.length := by
     rw [hshalted, hsstates]
-    decide
+    constructor
+    · rfl
+    constructor
+    · rfl
+    · change 0 < 1
+      decide
   have heval : op.evaluate s entryContext = some next := by
     change (do
       let cur ← (s.lokal entryContext).current
