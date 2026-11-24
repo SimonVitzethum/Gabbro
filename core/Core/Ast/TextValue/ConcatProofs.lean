@@ -123,7 +123,7 @@ private theorem textTailCompose {scope it it2 it3}
         (textTailCompose tail' next)
 termination_by input.length
 decreasing_by
-  subst input
+  rw [‹input = _ :: _›]
   simp_all
   omega
 
