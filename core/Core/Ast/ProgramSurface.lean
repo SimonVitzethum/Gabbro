@@ -506,10 +506,9 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
   generalize htok : (.word name.val :: openParen :: input) = toks at read
   cases read with
   | directCall callRead =>
-      cases callRead with
-      | applied argsRead =>
-          rename_i input0 call
-          injection htok with hhead htail
+      cases callRead
+      rename_i input0 argsRead call
+      injection htok with hhead htail
           injection hhead with hval
           injection htail with hargs
           subst input
@@ -540,10 +539,9 @@ theorem StmtReads.bindDirect_inversion
       injection htail with _ htail
       injection hspelling with hname
       subst input
-      cases callRead with
-      | applied argsRead =>
-          rename_i input0 call
-          refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsRead, rfl⟩
+      cases callRead
+      rename_i input0 argsRead call
+      refine ⟨⟨name, ordinary, written, valid, call⟩, _, ?_, typeRead, .applied argsRead, rfl⟩
           exact hname.symm
   | directCall callRead =>
       cases callRead
@@ -579,10 +577,9 @@ theorem StmtReads.boundedWhile_inversion
       injection htok with _ htail
       exact Or.inr ⟨_, htail⟩
   | directCall callRead =>
-      cases callRead with
-      | applied argsRead =>
-          rename_i input0 call
-          injection htok with hhead _
+      cases callRead
+      rename_i input0 argsRead call
+      injection htok with hhead _
           injection hhead with hval
           exact (call.ordinary.2 (by simpa [hval])).elim
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
@@ -614,10 +611,9 @@ theorem StmtReads.forRange_inversion
         _, _, _, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
       exact hname.symm
   | directCall callRead =>
-      cases callRead with
-      | applied argsRead =>
-          rename_i input0 call
-          injection htok with _ htail
+      cases callRead
+      rename_i input0 argsRead call
+      injection htok with _ htail
           injection htail with hspelling _
           cases hspelling
   | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, ifKeyword, keyword, assignment, semicolon, colon, openParen, directName]
@@ -636,8 +632,6 @@ theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads 
   cases a with
   | mk middle after first rest =>
     cases read with
-    | done =>
-        simp [ProgramArgs.unit] at *
     | step firstDecl nextRead =>
         exact ⟨_, firstDecl, nextRead⟩
 
