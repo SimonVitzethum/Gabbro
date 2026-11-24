@@ -16,6 +16,7 @@ meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Verfeinerung.Formen.Registry
+public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
 public meta import Core.Waechter.Pins
@@ -149,7 +150,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.directCall, `Gabbro.Core.Ast.Semantik.directCallEntry),
     (`Gabbro.Core.Ast.Stmt.bindDirect, `Gabbro.Core.Ast.Semantik.bindDirectEntry),
     (`Gabbro.Core.Ast.Stmt.whileBounded, `Gabbro.Core.Ast.Semantik.boundedWhileEntry),
-    (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry) ], #[
+    (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry),
+    (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry) ], #[
     (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
@@ -314,7 +316,7 @@ elab "#check_core" : command => do
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
     let dependencyErrors := compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
-      ++ safetyErrors env index safety
+      ++ safetyErrors env index safety ++ aussagePinErrors env index pins
     let pinNames := pins.map (·.1)
     let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)

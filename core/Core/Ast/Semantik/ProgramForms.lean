@@ -72,6 +72,14 @@ def forRangeForm (scope : Scope) (result : Option (Ty .value)) : Quellform (.sta
 def forRangeJoint : Prop :=
   ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => forRangeForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a
 
+def foreverForm (scope : Scope) (result : Option (Ty .value)) : Quellform (.statement scope result) (Surface.ForeverArgs scope result) where
+  produktion := Surface.forever scope result
+  befehl := fun a => .zurueckSprung (bracedBlock a.body).code.length
+  position := fun a => (bracedBlock a.body).code.length
+
+def foreverJoint : Prop :=
+  ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => foreverForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a
+
 def constantForm (scope : Scope) : Quellform (.declaration scope) (Surface.ConstantArgs scope) where
   produktion := Surface.constant scope
   befehl := fun a => .bindeWert 0 a.written.type true

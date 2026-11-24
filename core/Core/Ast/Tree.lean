@@ -271,14 +271,14 @@ def functionScope (outer : Scope) (parameters : List (Parameter outer)) : Scope 
 
 def directName (name : Identifier) : Prop :=
   ordinaryLocal name ∧ name.val ∉
-    ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
+    ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"].map String.toList
 
 theorem directName_of_singleton (spelling : name.val = [c]) : directName name := by
   simp only [directName, ordinaryLocal, ordinaryAtomWord, spelling, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false]
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   all_goals first | (intro same; cases same; done) | skip
-  · rintro (same | same | same | same | same | same | same | same) <;> cases same
+  · rintro (same | same | same | same | same | same | same | same | same) <;> cases same
 
 structure DirectCall (scope : Scope) where
   name : Identifier
@@ -396,6 +396,12 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (receiverOrdinary : ordinaryLocal region.binding.name)
       (initializer : RegionInitializer) :
       Stmt result scope (⟨name, initializer.type, false, false⟩ :: scope)
+  /-- Inventory keys `surface.SAnw.loop` and `syntax.forever`, SYNTAX §8: the unbounded service loop
+      `forever [label] { body }`. The body repeats without end; every pass starts in the loop's own
+      scope and drops the body's locals before the next pass. No `progress` assumption exists (PERFECT-MODEL
+      §5): that the loop is endless is the language's meaning, never an environment promise. The per-pass
+      cost, the loop frame and the invariant are written clauses of the loop, not part of this node. -/
+  | forever (label : Option Identifier) (body : BracedBlock result scope) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -428,6 +434,8 @@ def Stmt.returns : Stmt result before after → Bool
   | .ret .. | .retVoid .. | .retOption .. => true
   | .ite _ yes no => yes.returns && no.returns
   | .variantMatch _ arms => arms.returns
+  -- No form leaves the loop yet, so control never falls through it.
+  | .forever _ _ => true
   | _ => false
 
 def Block.returns : Block result before after → Bool

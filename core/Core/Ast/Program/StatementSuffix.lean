@@ -51,7 +51,7 @@ local macro "statement_suffix" recursor:ident read:term : tactic =>
       (motive_3 := fun _ input _ rest _ => rest <:+ input)
       (motive_4 := fun _ _ input _ _ _ rest _ => rest <:+ input)
       ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ $read <;>
+      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ $read <;>
     (intros
      repeat first
      | assumption
@@ -67,6 +67,7 @@ local macro "statement_suffix" recursor:ident read:term : tactic =>
      | apply List.IsSuffix.trans ?_ (TupleAnnotationReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (OptionInitializerReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (LowLevel.RegionReads.consumes (by assumption))
+     | apply List.IsSuffix.trans ?_ (LoopLabelReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (List.suffix_append (optionLetHead _ _) _)
      | apply List.IsSuffix.trans ?_ (List.suffix_cons _ _)))
 

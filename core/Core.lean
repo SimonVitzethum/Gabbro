@@ -44,6 +44,7 @@ public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
+public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
 public import Core.Beobachtung.Fluss.Beschriftung.Regel
@@ -63,6 +64,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
 public import Core.Beobachtung.Fluss.Beschriftung.Flussregel
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
 public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
@@ -70,7 +72,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Region
-public import Core.Beobachtung.Fluss.Speicherverwaltung
+public import Core.Beobachtung.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.SchrankenB8
 public import Core.Beobachtung.SchrankenB8Aussagen
@@ -89,6 +91,10 @@ public import Core.Beobachtung.SchrankenB9B21Pflichten
 public import Core.Beobachtung.Unentscheidbar.Modell
 public import Core.Beobachtung.Unentscheidbar.Reduktion
 public import Core.Beobachtung.Unentscheidbar.Rice
+public import Core.Beobachtung.SchrankenBeweise.Leicht
+public import Core.Beobachtung.SchrankenBeweise.Mittel
+public import Core.Beobachtung.SchrankenBeweise.Gegenbeispiel
+public import Core.Beobachtung.SchrankenBeweise.Schwer
 meta import Core.Waechter.Check
 
 #check_core
