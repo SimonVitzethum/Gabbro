@@ -234,40 +234,40 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
       ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
   cases tree
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · rename_i ref vis ord
     cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
-    case _ => exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
+    · exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
   · cases read
-    case trueLit => exact (ordinary.1 rfl).elim
-    case falseLit => exact (ordinary.2 rfl).elim
+    · exact (ordinary.1 rfl).elim
+    · exact (ordinary.2 rfl).elim
 
 
 
