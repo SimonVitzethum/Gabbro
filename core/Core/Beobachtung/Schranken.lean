@@ -70,7 +70,9 @@ def ImSchranken (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (∀ c m, m ∈ E.schranken.zeitstand (s.lokal c) →
       ∃ d, E.schranken.zeit m.block = some d ∧
         ZeitInSchranken (E.katalog.dauerMaximum d.zeile) d m.phase m.anfang t
-          (fun i => (ρ.hw.angebot i).cycles) (fun i => Kontextkosten ρ c i (t - i)))
+          (fun i => (ρ.hw.angebot i).cycles)
+          -- The outgoing step may finish the fallback and remove its mark.
+          (fun i => Kontextkosten ρ c i (t + 1 - i)))
 
 theorem zeit_rechtzeitig_erfuellbar :
     ZeitInSchranken (some 2) ⟨0, 2, 1⟩ (.rechtzeitig 2) 0 2 id (fun _ => 0) ∧

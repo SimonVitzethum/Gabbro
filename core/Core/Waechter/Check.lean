@@ -19,7 +19,7 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Beobachtung.NiedrigGleich, 16919241328388536377),
   (`Gabbro.Core.Beobachtung.GleicheNiedrigeUmgebung, 6607959031745576137),
   (`Gabbro.Core.Beobachtung.GleichePolitik, 3220320945647612124),
-  (`Gabbro.Core.Beobachtung.ImSchranken, 7210709226841829165),
+  (`Gabbro.Core.Beobachtung.ImSchranken, 13725880095518530639),
   (`Gabbro.Core.Katalog.Katalog.dauerMaximum, 16990558230020595847),
   (`Gabbro.Core.Ast.Ty, 15487100176899724456),
   (`Gabbro.Core.Ast.Local, 17525257410544725057),
