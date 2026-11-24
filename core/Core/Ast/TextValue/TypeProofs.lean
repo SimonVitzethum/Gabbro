@@ -50,7 +50,8 @@ private theorem stringToken_ne_bool : keyword "string" ≠ keyword "bool" := by
 
 private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     keyword "string" ≠ .word (intSpelling signed width) := by
-  cases signed <;> decide
+  intro h
+  cases signed <;> injection h
 
 theorem TextTypeInversion : TextTypeInversionAussage := by
   intro input type rest read
