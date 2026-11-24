@@ -181,7 +181,8 @@ private theorem tupleAnnotation_printReads (annotation : Option WrittenType) (va
       exact WrittenType.printReads written (valid written List.mem_cons_self) (by
         intro more h
         have eq : assignment = keyword "in" := (List.cons.inj h).1
-        simp [assignment, keyword] at eq)
+        unfold assignment keyword at eq
+        cases eq)
 
 private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : TupleBindArgs ctx.1) :
     (tupleBind ctx).production args
