@@ -56,7 +56,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     change StmtReads result before ((Stmt.letValue name ordinary expr).printTokens ++ rest)
       ⟨⟨name, ty, false⟩ :: before, Stmt.letValue name ordinary expr⟩ rest
     rw [Stmt.printTokens_let]
-    exact .letBinding name ordinary (expr.printReads noOperatorAtSemicolon) .plain
+    exact .letBinding name ordinary (by simpa only [List.nil_append, List.append_assoc, List.singleton_append] using (expr.printReads (rest := [semicolon]) noOperatorAtSemicolon)) .plain
   · intros
     rename_i ref visible writable value fits rest
     simp only [Stmt.printTokens, Stmt.printPieces, Expr.printTokens, List.map_append,
@@ -96,25 +96,24 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
 theorem Block.printItems_reads (tree : Block result before after) (rest : List Token) :
     BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest := by
   refine (Block.rec
-    (motive_1 := fun before input tree rest => True)
-    (motive_2 := fun before input tree rest =>
-      ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
-    (motive_3 := fun before input tree rest => True)
-    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ (by trivial) tree) rest
+    (motive_1 := fun before after tree => True)
+    (motive_2 := fun before after tree => ∀ rest,
+      BlockItems result before (tree.printItems.map PrintedToken.value ++ closeBrace :: rest) ⟨after, tree⟩ rest)
+    (motive_3 := fun before tree => ∀ rest,
+      BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest)
+    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ ?_ tree) rest
+  · intro rest
+    exact .done
   · intros
-    rename_i before input middle first more after next rest other
-    cases other with
-    | done => exfalso; exact (StmtReads.disjoint_closeBrace (by assumption)).elim
-    | step stRead blockRead =>
-        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic (by assumption) stRead
-        cases sameFirst
-        cases moreEq
-        obtain ⟨sameNext, restEq⟩ := (by rename_i h; exact h) blockRead
-        cases sameNext
-        exact ⟨rfl, restEq⟩
+    rename_i first next ihFirst ihNext rest
+    change BlockItems result before (first.printTokens ++ next.printItems.map PrintedToken.value ++ closeBrace :: rest)
+      ⟨after, Block.step first next⟩ rest
+    exact .step (Stmt.printReads first (next.printItems.map PrintedToken.value ++ closeBrace :: rest)) (ihNext rest)
   · intros
-    rename_i before input tree rest other
-    exact ⟨rfl, rfl⟩
+    rename_i body ihBody rest
+    simp only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc]
+    exact .braced (ihBody rest)
 
 theorem BracedBlock.printReads (tree : BracedBlock result before) (rest : List Token) :
     BlockReads result before (tree.printPieces.map PrintedToken.value ++ rest) tree rest := by
