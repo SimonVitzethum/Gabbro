@@ -77,6 +77,9 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
   case forRange =>
       have ne : letKeyword ≠ keyword "for" := by decide
       exact (ne (List.cons.inj htok).1).elim
+  case whileBounded =>
+      have ne : letKeyword ≠ keyword "while" := by decide
+      exact (ne (List.cons.inj htok).1).elim
   all_goals simp_all
 
 end Gabbro.Core.Ast.Surface
@@ -183,8 +186,7 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simp [pattern, TuplePattern.names]
-    · simp only [List.map_nil]
-      exact List.nodup_nil
+    · exact List.nodup_nil
     · intro name mem
       simp [pattern, TuplePattern.names] at mem
     · intro written mem
