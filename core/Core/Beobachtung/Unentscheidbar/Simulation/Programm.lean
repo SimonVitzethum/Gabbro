@@ -133,4 +133,35 @@ theorem haeltMit_progZahl_iff (a n b : Nat) :
       change NatAusgabe (⟨.int (a : Int) (a : Int), Zahl.literal (a : Int)⟩ : Dynamisch) = some a
       exact natAusgabeZahl a
 
+/-- Successor adds one to the input in place, then finishes as above. -/
+def progSucc : List Befehl :=
+  [.literal 1 1, .binaer .add 0, .binden nameX 0, .ende]
+
+def frameSucc1 (n : Nat) : Rahmen :=
+  let r := startVon n
+  let v : Option Dynamisch := some ⟨.int (1 : Int) (1 : Int), Zahl.literal 1⟩
+  { r with pc := 1, temp := Function.update r.temp 1 v }
+
+theorem schrittSucc0 (n : Nat) :
+    Schritt progSucc (some (startVon n)) = some (frameSucc1 n) := by
+  rfl
+
+def frameSucc2 (n : Nat) : Rahmen :=
+  let r := frameSucc1 n
+  let v : Option Dynamisch := some
+    (Ganzzahl.pack ⟨_, _, Arith.auswerten .add (Zahl.literal (n : Int)) (Zahl.literal 1)⟩)
+  { r with pc := 2, temp := Function.update r.temp 0 v }
+
+theorem schrittSucc1 (n : Nat) :
+    Schritt progSucc (some (frameSucc1 n)) = some (frameSucc2 n) := by
+  rfl
+
+theorem natAusgabeSucc (n : Nat) : NatAusgabe
+    (Ganzzahl.pack ⟨_, _, Arith.auswerten .add (Zahl.literal (n : Int)) (Zahl.literal 1)⟩) =
+      some (n + 1) := by
+  simp only [NatAusgabe, alsGanzzahl, Ganzzahl.pack, Arith.auswerten, Zahl.literal]
+  rw [show (n : Int) + 1 = ((n + 1 : Nat) : Int) by omega]
+  rw [if_pos (by omega : (0 : Int) ≤ ((n + 1 : Nat) : Int))]
+  simp only [Int.toNat_natCast]
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
