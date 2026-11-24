@@ -66,16 +66,16 @@ def LinkErfuellbarAussage : Prop :=
     Akzeptiert (frag.einheit plan.plattform)
 
 /-- The link check holds for the example plan. -/
-theorem beispielOk : bauplanOk beispielPlan = true := by
-  decide
+theorem beispielOk : bauplanOk beispielPlan = true :=
+  rfl
 
 /-- Linking the example plan yields the concatenated fragments. -/
 theorem beispielLinke : linke beispielPlan = some beispielFragment :=
   rfl
 
 /-- The example plan has two modules. -/
-theorem beispielZwei : beispielPlan.module.length = 2 := by
-  decide
+theorem beispielZwei : beispielPlan.module.length = 2 :=
+  rfl
 
 /-- The example code is the three instructions. -/
 theorem beispielCode : beispielFragment.code =
