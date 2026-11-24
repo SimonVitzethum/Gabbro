@@ -112,6 +112,7 @@ private theorem tupleValue_print (scope : Scope) (args : TupleValueArgs scope) :
     simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
       firstTokens, secondTokens, tailTokens, openTok, commaTok, closeTok, List.singleton_append,
       List.append_assoc]
+    rfl
   · simpa [firstTokens] using
       (Expr.printReads (tree := args.first) (minimum := 0)
         (rest := comma :: (secondTokens ++ tailTokens ++ [closeParen])) noOperatorAtComma)
