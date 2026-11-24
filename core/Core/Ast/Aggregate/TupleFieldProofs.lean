@@ -109,6 +109,9 @@ theorem tupleFieldInvGen {scope first second types minimum input type}
     | recordField _ field' _ _ hle _ =>
         have restEq : .natural n :: input = .word field'.val :: _ := (List.cons.inj htok).2
         cases (List.cons.inj restEq).1
+    | textConcat _ _ _ _ _ => cases (List.cons.inj htok).1
+    | textIndex _ _ _ _ _ | substring _ _ _ _ _ _ _ => cases (List.cons.inj htok).1
+    | optionIsSome _ _ _ _ _ => cases (List.cons.inj (List.cons.inj htok).2).1
 
 theorem TupleFieldInversion : TupleFieldInversionAussage := by
   intro scope first second types minimum n input type base tree rest allowed read
@@ -150,6 +153,10 @@ theorem tupleFieldReadsLower {scope : Scope} {first second : Ty .value} {types :
       | tupleField _ _ hle _ =>
           simp only [Infix.precedence] at hle <;> omega
       | recordField _ _ _ _ hle _ =>
+          simp only [Infix.precedence] at hle <;> omega
+      | textConcat _ _ hle _ _ =>
+          simp only [Arith.precedence] at hle <;> omega
+      | textIndex _ _ hle _ _ | substring _ _ _ hle _ _ _ | optionIsSome _ _ _ hle _ =>
           simp only [Infix.precedence] at hle <;> omega
 
 theorem tupleFieldPrintTokens {scope : Scope} {first second : Ty .value} {tailTypes : List (Ty .value)}
