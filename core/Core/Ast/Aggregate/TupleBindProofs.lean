@@ -58,25 +58,26 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
   generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
   case tupleBind =>
-      rename_i input' first second tail pattern annotation checked value more rhs patternRead annotationRead valueRead
-      have eqin : input' = openParen :: input := (List.cons.inj htok).2.symm
-      rw [eqin] at patternRead
+      have patternRead : TuplePatternReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
+      rw [← (List.cons.inj htok).2] at patternRead
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
-        ((tupleAnnotation_consumes more annotation rhs annotationRead).trans
-          (tuplePattern_consumes input pattern more patternRead))
-  all_goals contradiction
+        ((tupleAnnotation_consumes _ _ _ annotationRead).trans
+          (tuplePattern_consumes input _ _ patternRead))
+  all_goals simp at htok
 
 theorem tupleBind_inversion : TupleBindInversionAussage := by
   intro scope result input tree rest read
   generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
   case tupleBind =>
-      rename_i input' first second tail pattern annotation checked value more rhs patternRead annotationRead valueRead
-      have eqin : input' = openParen :: input := (List.cons.inj htok).2.symm
-      rw [eqin] at patternRead
-      refine ⟨⟨first, second, tail, pattern, annotation, checked, value⟩, more, rhs,
-        patternRead, annotationRead, valueRead, rfl⟩
-  all_goals contradiction
+      have patternRead : TuplePatternReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
+      rw [← (List.cons.inj htok).2] at patternRead
+      refine ⟨⟨_, _, _, _, _, _, _⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
+  all_goals simp at htok
 
 end Gabbro.Core.Ast.Surface
 
