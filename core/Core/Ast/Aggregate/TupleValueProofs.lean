@@ -106,9 +106,11 @@ private theorem tupleValue_print (scope : Scope) (args : TupleValueArgs scope) :
   let tailTokens := args.tail.printTail.map PrintedToken.value
   refine ⟨firstTokens ++ [comma] ++ secondTokens ++ tailTokens ++ [closeParen],
     secondTokens ++ tailTokens ++ [closeParen], tailTokens ++ [closeParen], ?_, ?_, ?_, ?_⟩
-  ·     simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
-      firstTokens, secondTokens, tailTokens]
-    rfl
+  · have openTok : printOpen.value = openParen := by rfl
+    have commaTok : printComma.value = comma := by rfl
+    have closeTok : printClose.value = closeParen := by rfl
+    simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons, List.map_nil,
+      firstTokens, secondTokens, tailTokens, openTok, commaTok, closeTok]
   · simpa [firstTokens] using
       (Expr.printReads (tree := args.first) (minimum := 0)
         (rest := comma :: (secondTokens ++ tailTokens ++ [closeParen])) noOperatorAtComma)
