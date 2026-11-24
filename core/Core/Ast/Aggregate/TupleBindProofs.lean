@@ -54,16 +54,10 @@ private theorem tupleAnnotation_consumes : (input : List Token) → (annotation 
         (List.suffix_cons colon input)
 
 private theorem openParen_ne_word (name : List Char) : openParen ≠ Token.word name := by
-  intro h
-  cases h
-
-private theorem openParen_ne_punct (name : List Char) : openParen ≠ Token.punctuation name := by
-  intro h
-  cases h
+  decide
 
 private theorem letKeyword_ne_word (name : List Char) : letKeyword ≠ Token.word name := by
-  intro h
-  cases h
+  decide
 
 theorem tupleBind_suffix : TupleBindSuffixAussage := by
   intro scope result input tree rest read
@@ -81,8 +75,7 @@ theorem tupleBind_suffix : TupleBindSuffixAussage := by
     first
     | simp_all
     | exact (openParen_ne_word _ (List.cons.inj (List.cons.inj htok).2).1).elim
-    | exact (openParen_ne_punct _ (List.cons.inj (List.cons.inj htok).2).1).elim
-    | exact (letKeyword_ne_word _ (List.cons.inj htok).2).elim
+    | exact (letKeyword_ne_word _ (List.cons.inj htok).1).elim
 
 end Gabbro.Core.Ast.Surface
 
