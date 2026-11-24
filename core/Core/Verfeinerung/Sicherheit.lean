@@ -92,4 +92,27 @@ def BerechtigungAmTakt (ρ : Lauf E) (t : Nat) : Prop :=
     E.system.ImplSchritt c s w [plan] u → FuehrtSchrittAus E.einrichtung t c s u plan spur s' →
     plan.Autorisiert E.einrichtung s c
 
+omit [DecidableEq L] in
+/-- An actual write is authorised with a live handle to its owned object.
+    The same concrete plan is refused after that handle is revoked. -/
+theorem autoritaet_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
+    (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (x : Ort) :
+    let g := s.rechte.ausgeben (e.speicherObjekt x)
+    let gebunden := { e with speicherGriff := fun _ _ _ => some g }
+    let lebend := { s with rechte := s.rechte.beleben g.objekt, leihen := fun _ => .eigen }
+    let plan : SchrittPlan L Ort Wert Bedingung :=
+      ⟨.intern, [], [x], fun _ => true, fun _ => .na, e.initial⟩
+    plan.Autorisiert gebunden lebend c ∧
+      ¬ plan.Autorisiert gebunden { lebend with rechte := lebend.rechte.widerrufen g.objekt } c := by
+  dsimp only
+  constructor
+  · refine ⟨fun _ h => (List.not_mem_nil h).elim, ?_⟩
+    intro y member _
+    cases List.mem_singleton.mp member
+    exact ⟨_, rfl, rfl, s.rechte.ausgeben_gueltig _, trivial⟩
+  · intro authority
+    obtain ⟨g, bound, _, old, _⟩ := authority.2 x (List.Mem.head _) rfl
+    cases Option.some.inj bound
+    exact Rechte.widerrufen_ungueltig _ _ old
+
 end Gabbro.Core.Maschine
