@@ -191,6 +191,7 @@ theorem RecordFieldValue : RecordFieldValueAussage := by
   intro scope args frame record h
   change ((Befehl.liesRecordFeld 0 args.name args.labels args.types args.index).auswerten frame).temp 0 =
     some ⟨args.types.get args.index, tupleGet args.types args.index record⟩
-  simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, recordValueType, Option.bind]
+  simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, Option.bind,
+    Function.update_self, h, dif_pos]
 
 end Gabbro.Core.Ast.Semantik
