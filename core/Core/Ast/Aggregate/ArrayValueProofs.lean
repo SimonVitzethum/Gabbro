@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Arrays
+public import Core.Ast.Semantik.Formbeweise
 
 import Init.Omega
 
@@ -32,17 +33,21 @@ open Gabbro.Core.Ast
 
 namespace Gabbro.Core.Ast.Surface
 
+mutual
 private theorem itemsReadConsumes {scope close input types} {items : ExprItems scope types} {rest}
     (read : ItemsRead scope close input items rest) : rest <:+ input := by
-  induction read with
+  cases read with
   | close => exact List.suffix_cons _ _
-  | next headRead _ ih => exact ih.trans (ExprReads.consumes headRead)
+  | next headRead tailRead =>
+      exact (itemsTailConsumes tailRead).trans (ExprReads.consumes headRead)
 
 private theorem itemsTailConsumes {scope close input types} {items : ExprItems scope types} {rest}
     (read : ItemsTail scope close input items rest) : rest <:+ input := by
-  induction read with
+  cases read with
   | close => exact List.suffix_cons _ _
-  | comma _ tailRead ih => exact ih.trans (List.suffix_cons _ _)
+  | comma _ tailRead =>
+      exact (itemsReadConsumes tailRead).trans (List.suffix_cons _ _)
+end
 
 private theorem fitsSelf (type : Ty .value) : Fits type type := by
   cases type with
@@ -59,54 +64,25 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | variant name labels hasPayload layout => rfl
   | variantSchema name labels hasPayload layout => rfl
 
-private theorem fitsArrayJoin (head principal : Ty .value) {element : Ty .value}
-    (join : arrayJoin head principal = some element) : Fits head element := by
-  cases head with
-  | int lo hi =>
-      cases principal with
-      | int lower upper =>
-          simp only [arrayJoin] at join
-          cases join
-          exact ⟨min_le_left _ _, le_max_left _ _⟩
-      | _ => simp [arrayJoin] at join
-  | _ =>
-      cases principal with
-      | int _ _ => simp [arrayJoin] at join
-      | _ =>
-          by_cases same : head = principal
-          · subst principal
-            simp only [arrayJoin] at join
-            cases join
-            exact fitsSelf head
-          · simp [arrayJoin, same] at join
-
 private theorem fitsThroughJoin (head principal : Ty .value) {element target : Ty .value}
     (fit : Fits target principal) (join : arrayJoin head principal = some element) :
     Fits target element := by
-  cases head with
-  | int lo hi =>
-      cases principal with
-      | int lower upper =>
-          simp only [arrayJoin] at join
-          cases join
-          cases target with
-          | int tlo thi =>
-              simp only [Fits] at fit ⊢
-              exact ⟨le_trans (min_le_left _ _) fit.1, le_trans fit.2 (le_max_left _ _)⟩
-          | _ =>
-              simp only [Fits] at fit
-              cases fit
-      | _ => simp [arrayJoin] at join
-  | _ =>
-      cases principal with
-      | int _ _ => simp [arrayJoin] at join
-      | _ =>
-          by_cases same : head = principal
-          · subst principal
-            simp only [arrayJoin] at join
-            cases join
-            exact fit
-          · simp [arrayJoin, same] at join
+  unfold arrayJoin at join
+  split at join
+  · cases join
+    cases target with
+    | int tlo thi =>
+        dsimp only [Fits] at fit ⊢
+        exact ⟨le_trans (min_le_left _ _) fit.1, le_trans fit.2 (le_max_left _ _)⟩
+    | _ =>
+        dsimp only [Fits] at fit
+        cases fit
+  · split at join
+    · rename_i same
+      cases join
+      subst principal
+      exact fit
+    · cases join
 
 theorem arrayValueInversion : ArrayValueInversionAussage := by
   intro scope input type tree rest read
@@ -167,7 +143,7 @@ theorem arrayValueElementSound : ArrayValueElementSoundAussage := by
               cases i using Fin.cases with
               | zero =>
                   change Fits head element
-                  exact fitsArrayJoin head principalElement principal
+                  exact fitsThroughJoin head principalElement (fitsSelf head) principal
               | succ j =>
                   change Fits ((next :: rest).get j) element
                   exact fitsThroughJoin head principalElement (ih hTail j) principal
@@ -205,7 +181,7 @@ theorem arrayValueElaboriert : ArrayValueElaboriertAussage := by
 
 theorem arrayValueRealisiert : ArrayValueRealisiertAussage := by
   intro scope platform args s running active live atPc
-  exact Quellform.realisiert (arrayValue_am_ort scope) platform args s running active live atPc
+  exact (arrayValueForm scope).realisiert (arrayValue_am_ort scope) platform args s running active live atPc
 
 theorem arrayValueAnnahme : ArrayValueAnnahmeAussage := by
   intro scope
@@ -221,7 +197,7 @@ theorem arrayValueIdeal : ArrayValueIdealAussage := by
 
 theorem arrayValueEinheit : ArrayValueEinheitAussage := by
   intro scope platform args
-  exact ⟨rfl, Befehl.kommutation _ _⟩
+  exact ⟨rfl, ((arrayValueForm scope).befehl args).kommutation⟩
 
 theorem arrayValueImpl : ArrayValueImplAussage := by
   intro scope args c s w plans u

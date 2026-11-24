@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Arrays
+public import Core.Ast.Semantik.Formbeweise
 
 import Init.Omega
 
@@ -41,44 +42,17 @@ private theorem infixPrecLe7 (op : Infix) : op.precedence ≤ 7 := by
   | index => simp [Infix.precedence]
   | projection => simp [Infix.precedence]
 
-private theorem exprTail_high_stop {scope minimum first input tree rest}
-    (high : 8 ≤ minimum) (read : ExprTail scope minimum first input tree rest) :
-    tree = first ∧ rest = input := by
-  cases read with
-  | stop => exact ⟨rfl, rfl⟩
-  | binary op allowed _ _ =>
-      have prec := infixPrecLe7 (.arith op)
-      omega
-  | div allowed _ _ _ =>
-      have prec := infixPrecLe7 .div
-      omega
-  | compare op allowed _ _ =>
-      have prec := infixPrecLe7 (.compare op)
-      omega
-  | logic op allowed _ _ =>
-      have prec := infixPrecLe7 (.logic op)
-      omega
-  | arrayIndex _ _ _ allowed _ _ =>
-      have prec := infixPrecLe7 .index
-      omega
-  | tupleField _ _ allowed _ =>
-      have prec := infixPrecLe7 .projection
-      omega
-  | recordField _ _ _ _ allowed _ =>
-      have prec := infixPrecLe7 .projection
-      omega
-
 theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   intro scope element count minimum input type base tree rest allowed read
   cases read with
   | stop blocked =>
       exact (blocked ⟨.index, input, rfl, allowed⟩).elim
-  | arrayIndex index lower upper _ indexRead tailRead =>
-      exact ⟨_, _, index, _, lower, upper, indexRead, tailRead⟩
+  | arrayIndex baseArg lower upper _ indexRead tailRead =>
+      exact ⟨_, _, baseArg, _, lower, upper, indexRead, tailRead⟩
 
 theorem arrayIndexSuffix : ArrayIndexSuffixAussage := by
   intro scope element count minimum input type base tree rest allowed read
-  obtain ⟨lo, hi, i, more, lower, upper, indexRead, tailRead⟩ =
+  obtain ⟨lo, hi, i, more, lower, upper, indexRead, tailRead⟩ :=
     arrayIndexInversion allowed read
   have closeSuffix : closeBracket :: more <:+ input := ExprReads.consumes indexRead
   have moreSuffix : more <:+ input := (List.suffix_cons closeBracket more).trans closeSuffix
@@ -87,7 +61,7 @@ theorem arrayIndexSuffix : ArrayIndexSuffixAussage := by
 
 private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
     (arrayIndex scope).production args
-      (((Category.expression scope).printPieces (arrayIndex scope).tree args).map PrintedToken.value) := by
+      (((Category.expression scope).printPieces ((arrayIndex scope).tree args)).map PrintedToken.value) := by
   change postfixProduction (fun input rest =>
     ∃ indexInput, ExprReads scope 8 input args.base (openBracket :: indexInput) ∧
       ExprReads scope 0 indexInput args.offset (closeBracket :: rest))
@@ -103,6 +77,15 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
         omega))
   · exact Expr.printReads args.offset noOperatorAtCloseBracket
 
+private theorem oneBoolArrayFits {scope : Scope} (i : Fin 1) : Fits (.int 0 0) (.int 0 0) := by
+  have bound : i.val < 1 := by simpa using i.isLt
+  have ival : i.val = 0 := by omega
+  cases i with
+  | mk val isLt =>
+      simp only at ival
+      subst val
+      exact ⟨le_rfl, le_rfl⟩
+
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
   intro scope
   refine ⟨?_, ?_, ?_⟩
@@ -113,31 +96,53 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
     · rcases plain with ⟨indexInput, baseRead, offsetRead⟩
       cases baseRead with
       | atom atomRead highTail =>
-          obtain ⟨treeEq, suffixEq⟩ := exprTail_high_stop (by omega : 8 ≤ 8) highTail
-          rw [← treeEq, ← suffixEq] at atomRead
-          exact .atom atomRead
-            (.arrayIndex args.base args.lower args.upper (by omega) offsetRead
-              (.stop noOperatorAtEnd))
+          cases highTail with
+          | stop =>
+              exact .atom atomRead
+                (.arrayIndex args.base args.lower args.upper (by omega) offsetRead
+                  (.stop noOperatorAtEnd))
+          | binary op allowed _ _ =>
+              have prec := infixPrecLe7 (.arith op); omega
+          | div allowed _ _ _ =>
+              have prec := infixPrecLe7 .div; omega
+          | compare op allowed _ _ =>
+              have prec := infixPrecLe7 (.compare op); omega
+          | logic op allowed _ _ =>
+              have prec := infixPrecLe7 (.logic op); omega
+          | arrayIndex _ _ _ allowed _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | tupleField _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
+          | recordField _ _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
     · rcases grouped with ⟨inside, rfl, indexInput, baseRead, offsetRead⟩
       cases baseRead with
       | atom atomRead highTail =>
-          obtain ⟨treeEq, suffixEq⟩ := exprTail_high_stop (by omega : 8 ≤ 8) highTail
-          rw [← treeEq, ← suffixEq] at atomRead
-          have inner : ExprReads scope 0 inside
-              (Expr.arrayIndex args.base args.offset args.lower args.upper) [closeParen] :=
-            .atom atomRead
-              (.arrayIndex args.base args.lower args.upper (by omega) offsetRead
-                (.stop noOperatorAtClose))
-          exact .atom (.grouped inner) (.stop noOperatorAtEnd)
+          cases highTail with
+          | stop =>
+              have inner : ExprReads scope 0 inside
+                  (Expr.arrayIndex args.base args.offset args.lower args.upper) [closeParen] :=
+                .atom atomRead
+                  (.arrayIndex args.base args.lower args.upper (by omega) offsetRead
+                    (.stop noOperatorAtClose))
+              exact .atom (.grouped inner) (.stop noOperatorAtEnd)
+          | binary op allowed _ _ =>
+              have prec := infixPrecLe7 (.arith op); omega
+          | div allowed _ _ _ =>
+              have prec := infixPrecLe7 .div; omega
+          | compare op allowed _ _ =>
+              have prec := infixPrecLe7 (.compare op); omega
+          | logic op allowed _ _ =>
+              have prec := infixPrecLe7 (.logic op); omega
+          | arrayIndex _ _ _ allowed _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | tupleField _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
+          | recordField _ _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
   · exact arrayIndexPrint scope
   · let base : Expr scope (.array (.int 0 0) 1) :=
-      .arrayValue (.next (.lit 0) .empty) rfl (fun i =>
-        have ival : i.val = 0 := by omega
-        cases i with
-        | mk val isLt =>
-            simp only at ival
-            subst val
-            exact ⟨le_rfl, le_rfl⟩)
+      .arrayValue (.next (.lit 0) .empty) rfl oneBoolArrayFits
     let args : ArrayIndexArgs scope :=
       ⟨.int 0 0, 1, 0, 0, base, .lit 0, le_rfl, by omega⟩
     exact Rule.satisfiableOfPrint args (arrayIndexPrint scope args)
@@ -155,11 +160,10 @@ private theorem arrayIndexRootLookup (p : Fragment) (b : Befehl) :
 
 private theorem arrayIndex_am_ort (scope : Scope) : (arrayIndexForm scope).RegelAmOrt := by
   intro args
-  change (((expr 0 args.base).anhaengen (expr 1 args.offset)).anhaengen
-    (.einzel (.liesArray 0 args.element args.count)).code)
-    [((expr 0 args.base).anhaengen (expr 1 args.offset)).code.length]? =
-      some (.liesArray 0 args.element args.count)
-  exact arrayIndexRootLookup _ _
+  let p := (expr 0 args.base).anhaengen (expr 1 args.offset)
+  let b : Befehl := .liesArray 0 args.element args.count
+  change (p.anhaengen (.einzel b)).code[p.code.length]? = some b
+  exact arrayIndexRootLookup p b
 
 private theorem arrayIndex_keine_invarianten (scope : Scope) (args : Surface.ArrayIndexArgs scope) :
     ((arrayIndexForm scope).fragment args).klauseln.invariant = [] := by
@@ -176,7 +180,7 @@ theorem arrayIndexElaboriert : ArrayIndexElaboriertAussage := by
 
 theorem arrayIndexRealisiert : ArrayIndexRealisiertAussage := by
   intro scope platform args s running active live atPc
-  exact Quellform.realisiert (arrayIndex_am_ort scope) platform args s running active live atPc
+  exact (arrayIndexForm scope).realisiert (arrayIndex_am_ort scope) platform args s running active live atPc
 
 theorem arrayIndexAnnahme : ArrayIndexAnnahmeAussage := by
   intro scope
@@ -192,7 +196,7 @@ theorem arrayIndexIdeal : ArrayIndexIdealAussage := by
 
 theorem arrayIndexEinheit : ArrayIndexEinheitAussage := by
   intro scope platform args
-  exact ⟨rfl, Befehl.kommutation _ _⟩
+  exact ⟨rfl, ((arrayIndexForm scope).befehl args).kommutation⟩
 
 theorem arrayIndexImpl : ArrayIndexImplAussage := by
   intro scope args c s w plans u
@@ -212,15 +216,9 @@ theorem arrayIndexRegelSicher : ArrayIndexRegelSicherAussage := by
 theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
   intro platform start
   let base : Expr [] (.array (.int 0 0) 1) :=
-    .arrayValue (.next (.lit 0) .empty) rfl (fun i =>
-      have ival : i.val = 0 := by omega
-      cases i with
-      | mk val isLt =>
-          simp only at ival
-          subst val
-          exact ⟨le_rfl, le_rfl⟩)
+    .arrayValue (.next (.lit 0) .empty) rfl Surface.oneBoolArrayFits
   let args : Surface.ArrayIndexArgs [] :=
-    ⟨.int 0 0, 1, 0, 0, base, .lit 0, le_rfl, by norm_num⟩
+    ⟨.int 0 0, 1, 0, 0, base, .lit 0, le_rfl, by omega⟩
   let form := arrayIndexForm []
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
@@ -235,7 +233,8 @@ theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
   refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₂ reached
     (form.realisiert (arrayIndex_am_ort []) platform args s₂ rfl rfl rfl rfl) ?_⟩
   intro g guard
-  simp at guard
+  change (Befehl.liesArray 0 (.int 0 0) 1).guard (s₂.lokal eintritt) = some g at guard
+  simp [Befehl.guard, Rahmen.zahl, alsGanzzahl] at guard
   cases guard
   decide
 
@@ -245,8 +244,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   have nonneg : 0 ≤ offset.wert := Int.le_trans lower offset.unten
   have posval : (indexPosition offset lower upper).val = offset.wert.toNat := rfl
   constructor
-  · simp only [Befehl.guard, Rahmen.zahl, hoff, Option.bind, alsGanzzahl, Option.some.injEq]
-    rw [if_neg (not_lt_of_ge nonneg), posval]
+  · simp [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl,
+      if_neg (not_lt_of_ge nonneg), posval]
   constructor
   · change (indexPosition offset lower upper).val < count
     exact (indexPosition offset lower upper).isLt
@@ -254,9 +253,9 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       cases count with
       | zero =>
           cases values
-          simp [wertAls]
+          simp_all [wertAls]
       | succ n =>
-          simp [wertAls]
+          rfl
     simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
     rw [harr]
     simp only [Option.bind]

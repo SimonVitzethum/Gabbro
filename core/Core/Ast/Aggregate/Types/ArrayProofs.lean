@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Types
+public import Core.Ast.Semantik.Formbeweise
 
 import Init.Omega
 
@@ -112,7 +113,7 @@ theorem arrayTypeElaboriert : ArrayTypeElaboriertAussage := by
 
 theorem arrayTypeRealisiert : ArrayTypeRealisiertAussage := by
   intro ctx platform args s running active live atPc
-  exact Quellform.realisiert (arrayType_am_ort ctx) platform args s running active live atPc
+  exact (typeUseForm ctx arrayTypeUse).realisiert (arrayType_am_ort ctx) platform args s running active live atPc
 
 theorem arrayTypeAnnahme : ArrayTypeAnnahmeAussage := by
   intro ctx
@@ -128,7 +129,7 @@ theorem arrayTypeIdeal : ArrayTypeIdealAussage := by
 
 theorem arrayTypeEinheit : ArrayTypeEinheitAussage := by
   intro ctx platform args
-  exact ⟨rfl, Befehl.kommutation _ _⟩
+  exact ⟨rfl, ((typeUseForm ctx arrayTypeUse).befehl args).kommutation⟩
 
 theorem arrayTypeImpl : ArrayTypeImplAussage := by
   intro ctx args c s w plans u
