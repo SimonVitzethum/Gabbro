@@ -64,6 +64,8 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   | directCall =>
       rename_i call cr
       cases cr
+      have hdot : dot = openParen := (List.cons.inj (List.cons.inj htok).2).1
+      cases hdot
   | bindDirect => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | whileBounded => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | forRange => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
