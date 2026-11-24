@@ -45,6 +45,8 @@ public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Beobachtung.Fluss.Abschluss
 public import Core.Beobachtung.Fluss.InterruptBeweis
+public import Core.Beobachtung.Fluss.AbsturzBeweis
+public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
 public import Core.Beobachtung.Fluss.Beschriftung.Regel
@@ -72,7 +74,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
-public import Core.Beobachtung.Fluss.Speicherverwaltung
+public import Core.Beobachtung.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.SchrankenB8
 public import Core.Beobachtung.SchrankenB8Aussagen
