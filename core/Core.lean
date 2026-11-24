@@ -20,7 +20,7 @@ public import Core.Katalog.Erfuellbar
 public import Core.Aussen
 public import Core.Annahme
 public import Core.Sicherheit.Erfuellbar
-public import Core.Sicherheit.Grenzen
+public import Core.Sicherheit.Lauf
 public import Core.Verfeinerung.Erfuellbar
 meta import Core.Waechter.Check
 
