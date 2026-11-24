@@ -59,7 +59,7 @@ lemma productionUnique {form : Form} {tokens : List Token} {a b : Tree form}
           have hname := congrArg (fun l : List Token => l[1]?) hb
           have habi := congrArg (fun l : List Token => l[3]?) hb
           have hrow := congrArg (fun l : List Token => l[6]?) hb
-          simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname habi hrow
+          simp only [environmentTokens, List.getElem?_cons_zero, List.getElem?_cons_succ, Option.some.injEq] at hname habi hrow
           have hna : na.val = nb.val := by simpa using hname
           have habiName : abi.name.toList = abi'.name.toList := by
             simpa only [keyword, Token.word.injEq] using habi
@@ -96,12 +96,8 @@ lemma regionAddressPrints (region : Identifier) :
 
 lemma environmentPrints (name : Identifier) (abi : DienstAbi) (row : FirmwareZeile) :
     (Tree.environment name abi row).production
-      ((Tree.environment name abi row).printPieces.map PrintedToken.value) := by
-  cases abi <;> cases row <;>
-    simpa [Tree.production, Tree.printPieces, keyword, word, Identifier.print,
-      PrintedToken.unquoted, printPunctuation, printAssignment, printSemicolon,
-      assignment, semicolon, printFirmwareAbi, printFirmwareRow,
-      DienstAbi.name, FirmwareZeile.name, String.reduceToList]
+      ((Tree.environment name abi row).printPieces.map PrintedToken.value) :=
+  environment_printTokens name abi row
 
 lemma parseOfPrint {form : Form} (tree : Tree form)
     (prints : tree.production (tree.printPieces.map PrintedToken.value)) :
