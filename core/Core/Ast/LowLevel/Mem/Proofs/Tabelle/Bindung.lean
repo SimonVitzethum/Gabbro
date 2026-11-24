@@ -104,4 +104,29 @@ theorem gebundene_plattform_erfuellbar :
   obtain ⟨E, start, code, s, _, _, _, _, _, _, _, _, hok⟩ := tabelle_nichtvakant
   exact ⟨s.lokal entryContext, (s.lokal entryContext).mmuSicht, rfl, hok⟩
 
+/-- **Bound hardware keeps admissible runs.** The reference environment and its fair run satisfy
+    `Hardware`/`FairLaeufe`, and the bound step on the reachable frame succeeds: the sharpening is
+    satisfiable (`Katalog.plattform_erfuellbar` still holds, now with a bound translation). -/
+theorem gebundene_hardware_erfuellbar :
+    ∃ (h : Katalog.Umgebung) (run : HwLauf) (frame : MemFrame),
+      Hardware Plattform.x86_64.katalog h ∧ FairLaeufe Plattform.x86_64.katalog h run ∧
+      GebundeneUebersetzung h frame 0 0 0 .read = .ok (4096, 0) := by
+  let h : Katalog.Umgebung :=
+    Umgebung.referenz Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
+  let run : HwLauf :=
+    Umgebung.referenzLauf Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
+  have hw : Hardware Plattform.x86_64.katalog h :=
+    Umgebung.referenz_hardware _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide)
+  have fair : FairLaeufe Plattform.x86_64.katalog h run :=
+    Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide)
+  obtain ⟨E, start, code, s, _, _, _, _, _, _, _, _, hok⟩ := tabelle_nichtvakant
+  have hbound : GebundeneUebersetzung h (s.lokal entryContext) 0 0 0 .read =
+      uebersetze h.ziel (s.lokal entryContext).mmuSicht 0 0 0 .read :=
+    gebundeneUebersetzung_eq hw (s.lokal entryContext) 0 0 0 .read
+  have hziel : h.ziel = Plattform.x86_64.katalog.plattform.ziel := rfl
+  rw [hziel] at hbound
+  refine ⟨h, run, s.lokal entryContext, hw, fair, ?_⟩
+  rw [hbound]
+  exact hok
+
 end Gabbro.Core.Ast.LowLevel
