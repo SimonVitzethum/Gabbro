@@ -63,7 +63,7 @@ theorem execution_fortschritt (form : Form) : FortschrittAussage form := by
   cases hEval : op.evaluate s c with
   | none =>
       exfalso
-      have hnone : (system op).kopf s c = none := by
+      have hnone : (unit op).system.kopf s c = none := by
         change head op s c = none
         rw [head]
         cases hs : s.status c <;> simp [hs, hEval]
