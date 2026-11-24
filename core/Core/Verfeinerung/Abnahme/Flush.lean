@@ -51,6 +51,15 @@ def FlushSimAussage (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
       FlushProtokoll (fun t => sicht.lesen (η.zeit.spur t))
         (fun t => η.zeit.spur t = some (.absturz, absturzSpur))
 
+private theorem absturzGleich
+    {konkret ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    (matched : SpurAbgleich konkret ideal) :
+    (konkret = some (.absturz, absturzSpur)) ↔ (ideal = some (.absturz, absturzSpur)) := by
+  cases matched with
+  | pause => exact Iff.rfl
+  | privat c w => exact ⟨fun h => by cases h, fun h => by cases h⟩
+  | schritt event => exact Iff.rfl
+
 theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
     {sicht : FlushSicht Ort Wert Wahl Id} (pflicht : FlushSimAussage E phase sicht)
     {ρ : Maschine.Lauf E} {η : Lauf E} (valid : Laeufe E η) (matched : Laufabgleich ρ η) :
@@ -61,11 +70,7 @@ theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
     funext fun t => matched.effekte sicht t
   have crash : (fun t => ρ.zeit.spur t = some (.absturz, absturzSpur)) =
       (fun t => η.zeit.spur t = some (.absturz, absturzSpur)) := by
-    funext t
-    cases matched.spur t with
-    | pause => rfl
-    | privat c w => exact propext ⟨fun h => by cases h, fun h => by cases h⟩
-    | schritt event => rfl
+    funext fun t => propext (absturzGleich (matched.spur t))
   rw [phases, crash]
   exact pflicht.2 η valid
 

@@ -61,7 +61,7 @@ theorem LockFreeTakte.linearisiert {spur : Nat → Option (LockFreeTakt Id Arg E
   obtain ⟨v, ab, invoke⟩ := takte.aufgerufen jd y s q next
   have first := takte.punktEinmal id x z r r p u punkt commit
   have second := takte.aufrufEinmal jd y y b v aufruf invoke
-  exact (first ▸ bis).trans_lt (vorher.trans_le (second ▸ ab))
+  omega
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}

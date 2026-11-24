@@ -17,12 +17,17 @@ structure EffektSicht (Ort Wert Wahl Ereignis : Type) where
   leer : lesen none = none
   privat : ∀ c w, lesen (some (.kontext c w, ⟨[], []⟩)) = lesen none
 
-theorem Laufabgleich.effekte {ρ : Maschine.Lauf E} {η : Lauf E}
-    (matched : Laufabgleich ρ η) {Ev : Type} (sicht : EffektSicht Ort Wert Wahl Ev) (t : Nat) :
-    sicht.lesen (ρ.zeit.spur t) = sicht.lesen (η.zeit.spur t) := by
-  cases matched.spur t with
+theorem SpurAbgleich.effekte {Ev : Type} (sicht : EffektSicht Ort Wert Wahl Ev)
+    {konkret ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    (matched : SpurAbgleich konkret ideal) : sicht.lesen konkret = sicht.lesen ideal := by
+  cases matched with
   | pause => rfl
   | privat c w => exact sicht.privat c w
   | schritt event => rfl
+
+theorem Laufabgleich.effekte {ρ : Maschine.Lauf E} {η : Lauf E}
+    (matched : Laufabgleich ρ η) {Ev : Type} (sicht : EffektSicht Ort Wert Wahl Ev) (t : Nat) :
+    sicht.lesen (ρ.zeit.spur t) = sicht.lesen (η.zeit.spur t) :=
+  (matched.spur t).effekte sicht
 
 end Gabbro.Core.Maschine.I

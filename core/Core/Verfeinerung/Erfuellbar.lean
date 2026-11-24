@@ -59,7 +59,12 @@ theorem fortschritt_erfuellbar :
             ∃ (ρ' : Maschine.Lauf E') (η' : Lauf E'),
               Maschine.Laeufe E' h ρ' ∧ Laeufe E' η' ∧ Laufabgleich ρ' η' ∧
               ¬ FairLaeufe E'.katalog h ρ'.hw ∧ ρ'.zeit.Endlich ∧ η'.zeit.Endlich ∧
-              (StotterSchranke η' ↔ 1 ≤ laenge) ∧ (laenge = 0 → ¬ Sim E' ρ' η') ∧
+              (StotterSchranke η' ↔ 1 ≤ laenge) ∧
+              (laenge = 0 → ¬ Sim E' ρ' η') ∧ (0 < laenge → Sim E' ρ' η') ∧
+              (∃ before after p, ρ'.zeit.zustand 0 = some before ∧ ρ'.zeit.zustand 1 = some after ∧
+                before ≠ after ∧
+                (E'.system.regel ()).impl (.faden 0) before () [p] after ∧
+                ¬ (E'.system.regel ()).ideal (.faden 0) before () [p] after) ∧
               ρ'.zeit.spur 0 = some (.kontext (.faden 0) (), ⟨[], []⟩) ∧
               η'.belegt 0 = some (.faden 0) ∧ (∀ t, η'.zeit.spur t = none) ∧
               (∃ w spur next, Schritt E'.einrichtung E'.system E'.katalog η'.hw 0 (η'.zeit.zustand 0)
@@ -214,26 +219,48 @@ theorem fortschritt_erfuellbar :
   have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched checked) progress (env.symm ▸ fair)
   have lastReady : KannSchreiten (letztesAngebot hw) 0 entry z :=
     ⟨0, opportunity 0, dispatch, live⟩
-  have privateStep : ImplSchritt e sy k (letztesAngebot hw) 0 z label z' :=
-    .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
-  have idealStep : Schritt e sy k (letztesAngebot hw) 0 z label z' :=
-    .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
   refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, pflicht.zielFX konkret,
     ⟨_, progress⟩, result.1, result.2, label, z, z', rfl, rfl, rfl, rfl, ?_, ?_⟩
   · change Function.update z.lokal entry (!z.lokal entry) entry = true
     rw [Function.update_self]
     rfl
   · intro laenge
+    let sy' : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit :=
+      { sy with regel := fun _ => ⟨impl, fun _ x _ plans u => plans = [plan] ∧ u = x⟩ }
     let E' := { E₀ with
+      system := sy'
       lokalerBezug := fun l i => ∀ c, c ≠ entry → l c = i c
       stotterLaenge := fun _ => laenge }
-    obtain ⟨ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, step, mark, pause, possible⟩ :=
+    have privateStep : ImplSchritt e sy' k (letztesAngebot hw) 0 z label z' :=
+      .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
+    have idealStep : Schritt e sy' k (letztesAngebot hw) 0 z label z :=
+      .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩
+        ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+          fun _ hn => (List.not_mem_nil hn).elim, [], z, .intern, .nil _, rfl⟩
+    obtain ⟨ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, step, mark, pause, possible, atZero, atOne⟩ :=
       lauf_mit_letztem_privattakt (E := E') (z := z) (z' := z')
         fair.hardware admissible fair.konform rfl ⟨ProtokollBezug.refl z, fun _ _ => rfl⟩
         ⟨(show ProtokollBezug z' z from rfl), fun c h => Function.update_of_ne h _ _⟩ privateStep rfl
-        lastReady (f := ()) rfl ⟨(), label.2, z', idealStep⟩
-    refine ⟨E', rfl, ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, ?_, step, mark, pause, possible⟩
-    rintro rfl ⟨_, _, stutter, _⟩
-    exact Nat.not_succ_le_zero _ (bound.mp stutter)
+        lastReady (f := ()) rfl ⟨(), label.2, z, idealStep⟩
+    refine ⟨E', rfl, ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, ?_, ?_,
+      ?_, step, mark, pause, possible⟩
+    · rintro rfl ⟨_, _, stutter, _⟩
+      exact Nat.not_succ_le_zero _ (bound.mp stutter)
+    · intro positive
+      refine aligned.sim valid (bound.mpr positive) ?_ ?_
+      · intro t x y c w spur u p load after event normal ready rule exec
+        obtain ⟨_, _, plans, _⟩ := rule
+        cases (List.cons.inj plans).1
+        exact ⟨fun _ hn => (List.not_mem_nil hn).elim, fun _ hn => (List.not_mem_nil hn).elim⟩
+      · intro x i rel c
+        exact ⟨congrFun (congrArg Zustand.status rel.1) c, Iff.rfl, fun _ => Iff.rfl⟩
+    · have different : z ≠ z' := by
+        intro same
+        have eq := congrFun (congrArg (fun x : Zustand Unit Unit Unit Unit Bool Unit => x.lokal) same) entry
+        change z.lokal entry = Function.update z.lokal entry (!z.lokal entry) entry at eq
+        rw [Function.update_self] at eq
+        revert eq
+        cases z.lokal entry <;> intro impossible <;> cases impossible
+      exact ⟨z, z', plan, atZero, atOne, different, ⟨rfl, rfl⟩, fun h => different h.2.symm⟩
 
 end Gabbro.Core.Maschine.I
