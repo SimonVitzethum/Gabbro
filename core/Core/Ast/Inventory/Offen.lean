@@ -1,5 +1,7 @@
 module
 
+public import Core.Ast.Inventory.All
+
 /--
   Open forms of the source inventory. Generated from the five inventory modules;
   a form is open when no constructor of `core/` realises it. Grammar nonterminals
@@ -23,7 +25,6 @@ module
   No form here has a grammar or parser production in `grammatik/`; enabling a
   form adds its spelling, meaning and duties in separate modules.
 -/
-public import Core.Ast.Inventory.All
 
 @[expose] public section
 
