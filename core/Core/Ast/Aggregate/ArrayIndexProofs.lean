@@ -293,9 +293,11 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
           simp
         have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) val) := by
           rw [harr]
+          rfl
         have leCount : offset.wert ≤ (count : Int) := by omega
         simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, val, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
           indexPosition]
+        rfl
 
 end Gabbro.Core.Ast.Semantik
