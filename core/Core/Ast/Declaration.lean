@@ -64,7 +64,10 @@ theorem DeclReads.constant_inversion
       name.val = spelling ∧ TypeReads input written (assignment :: rhs) ∧
       ExprReads before 0 rhs value (semicolon :: rest) ∧
       tree = ⟨_, .constant name ordinary written valid value staticValue fits⟩ := by
-  sorry
+  cases read with
+  | constant (type := ty) (rhs := r) name ordinary written valid value staticValue fits typeRead exprRead =>
+      refine ⟨name, ordinary, written, valid, ty, value, staticValue, fits, r, ?_, typeRead, exprRead, rfl⟩
+      first | rfl | (subst spelling; rfl)
 
 -- Mirror BlockReads.braced_inversion and keep every header derivation in token order.
 theorem DeclReads.function_inversion
@@ -81,24 +84,166 @@ theorem DeclReads.function_inversion
       MeasureReads (functionScope before ps) afterResult measure afterMeasure ∧
       BlockReads (writtenResult result) (functionScope before ps) afterMeasure body rest ∧
       tree = ⟨before, .function name ordinary ps result valid measure body distinct returns⟩ := by
-  sorry
+  cases read with
+  | function name ordinary result valid parameters measure body distinct returns
+      paramsRead resultRead measureRead blockRead =>
+      refine ⟨name, ordinary, parameters, result, valid, measure, body, distinct, returns,
+        _, _, _, ?_, paramsRead, resultRead, measureRead, blockRead, rfl⟩
+      first | rfl | (subst spelling; rfl)
 
 -- Mirror StmtReads.deterministic, using the header and body derivations in order.
 theorem DeclReads.deterministic (left : DeclReads before input a rest)
     (right : DeclReads before input b rest') : a = b ∧ rest = rest' := by
-  sorry
+  have resultDet : ∀ {i : List Token} {r : Option WrittenType} {o : List Token},
+      ResultReads i r o → ∀ {r' o'}, ResultReads i r' o' → r = r' ∧ o = o' := by
+    intro i r o read
+    cases read with
+    | absent closed =>
+        intro r' o' read'
+        cases read' with
+        | absent _ => exact ⟨rfl, rfl⟩
+        | typed _ => exact (closed _ rfl).elim
+    | typed tr =>
+        intro r' o' read'
+        cases read' with
+        | absent closed => exact (closed _ rfl).elim
+        | typed tr' =>
+            obtain ⟨weq, oeq⟩ := TypeReads.deterministic tr tr'
+            exact ⟨congrArg some weq, oeq⟩
+  have measureDet : ∀ {i : List Token} {m : Option (Measure before)} {o : List Token},
+      MeasureReads before i m o → ∀ {m' o'}, MeasureReads before i m' o' → m = m' ∧ o = o' := by
+    intro i m o read
+    cases read with
+    | absent closed =>
+        intro m' o' read'
+        cases read' with
+        | absent _ => exact ⟨rfl, rfl⟩
+        | present _ _ => exact (closed _ rfl).elim
+    | present m exprRead =>
+        intro m' o' read'
+        cases read' with
+        | absent closed => exact (closed _ rfl).elim
+        | present m'' exprRead' =>
+            obtain ⟨typedEq, oeq⟩ := ExprReads.deterministic exprRead exprRead'
+            have fstEq := congrArg (fun p : TypedExpr before => p.1) typedEq
+            injection fstEq with loEq hiEq
+            cases loEq
+            cases hiEq
+            have exprEq : m.expression = m''.expression := by
+              cases typedEq
+              rfl
+            cases exprEq
+            exact ⟨rfl, oeq⟩
+  cases left with
+  | constant (input := i) name ordinary written valid type value staticValue fits typeRead exprRead =>
+      obtain ⟨name', ordinary', written', valid', type', value', staticValue', fits', rhs',
+        nameEq, typeRead', exprRead', treeEq⟩ := DeclReads.constant_inversion right
+      have nameFull : name' = name := Subtype.ext nameEq
+      subst name'
+      obtain ⟨wEq, tailEq⟩ := TypeReads.deterministic typeRead typeRead'
+      cases wEq
+      injection tailEq with rhsEq
+      subst rhs'
+      obtain ⟨vEq, restEq⟩ := ExprReads.deterministic exprRead exprRead'
+      cases vEq
+      injection restEq with hrest
+      subst rest'
+      exact ⟨treeEq.symm, rfl⟩
+  | function (input := i) name ordinary result valid parameters measure body distinct returns
+      paramsRead resultRead measureRead blockRead =>
+      obtain ⟨name', ordinary', ps, result', valid', measure', body', distinct', returns',
+        afterParams, afterResult, afterMeasure, nameEq, paramsRead', resultRead', measureRead',
+        blockRead', treeEq⟩ := DeclReads.function_inversion right
+      have nameFull : name' = name := Subtype.ext nameEq
+      subst name'
+      obtain ⟨paramsEq, afterParamsEq⟩ := ParamsRead.deterministic paramsRead paramsRead'
+      cases paramsEq
+      subst afterParams
+      obtain ⟨resultEq, afterResultEq⟩ := resultDet resultRead resultRead'
+      cases resultEq
+      subst afterResult
+      obtain ⟨measureEq, afterMeasureEq⟩ := measureDet measureRead measureRead'
+      cases measureEq
+      subst afterMeasure
+      obtain ⟨bodyEq, restEq⟩ := BlockReads.deterministic blockRead blockRead'
+      cases bodyEq
+      exact ⟨treeEq.symm, restEq⟩
 
 -- Mirror StmtReads.disjoint_closeBrace using the nonempty declaration prefix.
 theorem DeclReads.disjoint_end : ¬ DeclReads before [] tree rest := by
-  sorry
+  intro read
+  cases read
 
 -- Mirror StmtReads.consumes using the type, expression and block suffixes.
 theorem DeclReads.consumes (read : DeclReads before input tree rest) : rest <:+ input := by
-  sorry
+  have resultConsumes : ∀ {i : List Token} {r : Option WrittenType} {o : List Token},
+      ResultReads i r o → o <:+ i := by
+    intro i r o h
+    cases h with
+    | absent _ => exact List.suffix_refl _
+    | typed tr => exact tr.consumes.trans (List.suffix_cons _ _)
+  have measureConsumes : ∀ {i : List Token} {m : Option (Measure before)} {o : List Token},
+      MeasureReads before i m o → o <:+ i := by
+    intro i m o h
+    cases h with
+    | absent _ => exact List.suffix_refl _
+    | present m exprRead => exact exprRead.consumes.trans (List.suffix_cons _ _)
+  cases read with
+  | constant typeRead exprRead =>
+      exact (((((exprRead.consumes.trans (List.suffix_cons _ _)).trans typeRead.consumes).trans
+        (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _))
+  | function paramsRead resultRead measureRead blockRead =>
+      exact ((((((blockRead.consumes.trans measureConsumes).trans resultConsumes).trans
+        paramsRead.consumes).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        (List.suffix_cons _ _))
 
 -- Mirror BracedBlock.printReads using ParamsRead.printReads for the function header.
 theorem Decl.printReads (tree : Decl before after) (rest : List Token) :
     DeclReads before (tree.printPieces.map PrintedToken.value ++ rest) ⟨after, tree⟩ rest := by
-  sorry
+  cases tree with
+  | constant name ordinary written valid value staticValue fits =>
+      simp only [Decl.printPieces, List.map_append, List.map_cons, List.map_nil,
+        List.cons_append, List.nil_append, List.append_assoc]
+      refine .constant name ordinary written valid value staticValue fits ?_ ?_
+      · exact WrittenType.printReads written valid (by
+          intro more h
+          cases h)
+      · exact Expr.printReads value noOperatorAtSemicolon
+  | function name ordinary parameters result valid measure body distinct returns =>
+      cases body with
+      | braces items =>
+        simp only [Decl.printPieces, resultPieces, measurePieces, BracedBlock.printPieces,
+          List.map_append, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
+          List.append_assoc]
+        refine .function name ordinary result valid parameters measure body distinct returns ?_ ?_ ?_ ?_
+        · exact ParamsRead.printReads parameters
+        · cases result with
+          | none =>
+              apply ResultReads.absent
+              intro more h
+              cases measure with
+              | none => cases h
+              | some m => cases h
+          | some written =>
+              apply ResultReads.typed
+              exact WrittenType.printReads written (valid written (by simp)) (by
+                intro more h
+                cases measure with
+                | none => cases h
+                | some m => cases h)
+        · cases measure with
+          | none =>
+              apply MeasureReads.absent
+              intro more h
+              cases h
+          | some m =>
+              apply MeasureReads.present
+              exact Expr.printReads m.expression (by
+                simpa only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
+                  List.cons_append, List.nil_append, List.append_assoc] using
+                  (noOperatorAtOpenBrace (minimum := 0)
+                    (more := items.printItems.map PrintedToken.value ++ printCloseBrace.value :: rest)))
+        · simpa only [BracedBlock.printPieces, List.map_append, List.map_cons, List.map_nil,
+            List.cons_append, List.nil_append, List.append_assoc] using (.braces items).printReads rest
 
 end Gabbro.Core.Ast

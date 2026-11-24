@@ -20,18 +20,24 @@ def returnVoid (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem returnVoid_print {scope : Scope} {result : Option (Ty .value)} (a : ReturnVoidArgs scope result) :
     (returnVoid scope result).production a (((Category.statement scope result).printPieces ((returnVoid scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((returnVoid scope result).tree a)).map PrintedToken.value)
+    ((returnVoid scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((returnVoid scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem returnVoid_reads {scope : Scope} {result : Option (Ty .value)} {a : ReturnVoidArgs scope result} {tokens : List Token}
     (read : (returnVoid scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((returnVoid scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((returnVoid scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem returnVoid_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) (void : result = none) :
     (returnVoid scope result).Satisfiable := by
-  sorry
+  let a : ReturnVoidArgs scope result := ⟨void⟩
+  exact Rule.satisfiableOfPrint a (returnVoid_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem returnVoid_entry (scope : Scope) (result : Option (Ty .value)) (void : result = none) : (returnVoid scope result).Entry :=
@@ -54,18 +60,28 @@ def mutableLocal (scope : Scope) (result : Option (Ty .value)) : Rule (.statemen
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem mutableLocal_print {scope : Scope} {result : Option (Ty .value)} (a : MutableLocalArgs scope result) :
     (mutableLocal scope result).production a (((Category.statement scope result).printPieces ((mutableLocal scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((mutableLocal scope result).tree a)).map PrintedToken.value)
+    ((mutableLocal scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((mutableLocal scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem mutableLocal_reads {scope : Scope} {result : Option (Ty .value)} {a : MutableLocalArgs scope result} {tokens : List Token}
     (read : (mutableLocal scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((mutableLocal scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((mutableLocal scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem mutableLocal_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (mutableLocal scope result).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryName : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  let a : MutableLocalArgs scope result := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
+  exact Rule.satisfiableOfPrint a (mutableLocal_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem mutableLocal_entry (scope : Scope) (result : Option (Ty .value)) : (mutableLocal scope result).Entry :=
@@ -81,18 +97,31 @@ def directCall (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem directCall_print {scope : Scope} {result : Option (Ty .value)} (a : DirectCallArgs scope result) :
     (directCall scope result).production a (((Category.statement scope result).printPieces ((directCall scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((directCall scope result).tree a)).map PrintedToken.value)
+    ((directCall scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((directCall scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem directCall_reads {scope : Scope} {result : Option (Ty .value)} {a : DirectCallArgs scope result} {tokens : List Token}
     (read : (directCall scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((directCall scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((directCall scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem directCall_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (directCall scope result).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryName : directName name := by
+    change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+      ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+    constructor
+    · constructor <;> intro h <;> cases h
+    · decide
+  let a : DirectCallArgs scope result := ⟨name, ordinaryName, []⟩
+  exact Rule.satisfiableOfPrint a (directCall_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem directCall_entry (scope : Scope) (result : Option (Ty .value)) : (directCall scope result).Entry :=
@@ -113,18 +142,41 @@ def bindDirect (scope : Scope) (result : Option (Ty .value)) : Rule (.statement 
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem bindDirect_print {scope : Scope} {result : Option (Ty .value)} (a : BindDirectArgs scope result) :
     (bindDirect scope result).production a (((Category.statement scope result).printPieces ((bindDirect scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((bindDirect scope result).tree a)).map PrintedToken.value)
+    ((bindDirect scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((bindDirect scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem bindDirect_reads {scope : Scope} {result : Option (Ty .value)} {a : BindDirectArgs scope result} {tokens : List Token}
     (read : (bindDirect scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((bindDirect scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((bindDirect scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem bindDirect_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (bindDirect scope result).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryName : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  have ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name := by
+    constructor
+    · change ['x'] ≠ ['m', 'u', 't']
+      intro h
+      cases h
+    · exact ordinaryName
+  let callName : Identifier := keywordName 'y' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have callOrdinary : directName callName := by
+    change (['y'] ≠ ['t', 'r', 'u', 'e'] ∧ ['y'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+      ['y'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+    constructor
+    · constructor <;> intro h <;> cases h
+    · decide
+  let a : BindDirectArgs scope result := ⟨name, ordinary, .bool, trivial, ⟨callName, callOrdinary, []⟩⟩
+  exact Rule.satisfiableOfPrint a (bindDirect_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem bindDirect_entry (scope : Scope) (result : Option (Ty .value)) : (bindDirect scope result).Entry :=
@@ -148,18 +200,26 @@ def boundedWhile (scope : Scope) (result : Option (Ty .value)) : Rule (.statemen
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem boundedWhile_print {scope : Scope} {result : Option (Ty .value)} (a : BoundedWhileArgs scope result) :
     (boundedWhile scope result).production a (((Category.statement scope result).printPieces ((boundedWhile scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((boundedWhile scope result).tree a)).map PrintedToken.value)
+    ((boundedWhile scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((boundedWhile scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem boundedWhile_reads {scope : Scope} {result : Option (Ty .value)} {a : BoundedWhileArgs scope result} {tokens : List Token}
     (read : (boundedWhile scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((boundedWhile scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((boundedWhile scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem boundedWhile_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (boundedWhile scope result).Satisfiable := by
-  sorry
+  let overflow : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  let a : BoundedWhileArgs scope result :=
+    ⟨Expr.trueLit, 0, 0, Expr.lit 0, trivial, by omega, overflow, .braces .done⟩
+  exact Rule.satisfiableOfPrint a (boundedWhile_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem boundedWhile_entry (scope : Scope) (result : Option (Ty .value)) : (boundedWhile scope result).Entry :=
@@ -186,18 +246,29 @@ def forRange (scope : Scope) (result : Option (Ty .value)) : Rule (.statement sc
 -- Mirror Stmt.printReads for the canonical derivation.
 theorem forRange_print {scope : Scope} {result : Option (Ty .value)} (a : ForRangeArgs scope result) :
     (forRange scope result).production a (((Category.statement scope result).printPieces ((forRange scope result).tree a)).map PrintedToken.value) := by
-  sorry
+  change StmtReads result scope
+    (((Category.statement scope result).printPieces ((forRange scope result).tree a)).map PrintedToken.value)
+    ((forRange scope result).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.statement scope result) ((forRange scope result).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem forRange_reads {scope : Scope} {result : Option (Ty .value)} {a : ForRangeArgs scope result} {tokens : List Token}
     (read : (forRange scope result).production a tokens) :
     (Category.statement scope result).reads tokens ((forRange scope result).tree a) := by
-  sorry
+  change StmtReads result scope tokens ((forRange scope result).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem forRange_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) :
     (forRange scope result).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinary : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  let a : ForRangeArgs scope result :=
+    ⟨name, ordinary, 0, 0, 1, 1, Expr.lit 0, Expr.lit 1, ⟨trivial, trivial⟩, none, .braces .done⟩
+  exact Rule.satisfiableOfPrint a (forRange_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem forRange_entry (scope : Scope) (result : Option (Ty .value)) : (forRange scope result).Entry :=
@@ -221,18 +292,28 @@ def constant (scope : Scope) : Rule (.declaration scope) (ConstantArgs scope) wh
 -- Mirror Decl.printReads for the canonical derivation.
 theorem constant_print {scope : Scope} (a : ConstantArgs scope) :
     (constant scope).production a (((Category.declaration scope).printPieces ((constant scope).tree a)).map PrintedToken.value) := by
-  sorry
+  change DeclReads scope
+    (((Category.declaration scope).printPieces ((constant scope).tree a)).map PrintedToken.value)
+    ((constant scope).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.declaration scope) ((constant scope).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem constant_reads {scope : Scope} {a : ConstantArgs scope} {tokens : List Token}
     (read : (constant scope).production a tokens) :
     (Category.declaration scope).reads tokens ((constant scope).tree a) := by
-  sorry
+  change DeclReads scope tokens ((constant scope).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem constant_syntax_erfuellbar (scope : Scope) :
     (constant scope).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinary : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  let a : ConstantArgs scope := ⟨name, ordinary, .bool, trivial, .bool, Expr.trueLit, trivial, trivial⟩
+  exact Rule.satisfiableOfPrint a (constant_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem constant_entry (scope : Scope) : (constant scope).Entry :=
@@ -257,18 +338,32 @@ def function (scope : Scope) : Rule (.declaration scope) (FunctionArgs scope) wh
 -- Mirror Decl.printReads for the canonical derivation.
 theorem function_print {scope : Scope} (a : FunctionArgs scope) :
     (function scope).production a (((Category.declaration scope).printPieces ((function scope).tree a)).map PrintedToken.value) := by
-  sorry
+  change DeclReads scope
+    (((Category.declaration scope).printPieces ((function scope).tree a)).map PrintedToken.value)
+    ((function scope).tree a) []
+  simpa [Category.reads] using
+    (Category.reads_print (Category.declaration scope) ((function scope).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem function_reads {scope : Scope} {a : FunctionArgs scope} {tokens : List Token}
     (read : (function scope).production a tokens) :
     (Category.declaration scope).reads tokens ((function scope).tree a) := by
-  sorry
+  change DeclReads scope tokens ((function scope).tree a) []
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem function_syntax_erfuellbar (scope : Scope) :
     (function scope).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinary : directName name := by
+    change (['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+      ['x'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+    constructor
+    · constructor <;> intro h <;> cases h
+    · decide
+  let a : FunctionArgs scope :=
+    ⟨name, ordinary, [], none, by simp, none, .braces .done, by simp, by intro h; cases h⟩
+  exact Rule.satisfiableOfPrint a (function_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem function_entry (scope : Scope) : (function scope).Entry :=
@@ -290,18 +385,27 @@ def program  : Rule (.unit) (ProgramArgs) where
 -- Mirror UnitBody.printReads for the canonical derivation.
 theorem program_print (a : ProgramArgs) :
     (program).production a (((Category.unit).printPieces ((program).tree a)).map PrintedToken.value) := by
-  sorry
+  change UnitReads []
+    (((Category.unit).printPieces ((program).tree a)).map PrintedToken.value) ((program).tree a)
+  simpa [Category.reads] using (Category.reads_print (Category.unit) ((program).tree a))
 
 -- Mirror Rule.Entry.reads using the corresponding production constructor.
 theorem program_reads {a : ProgramArgs} {tokens : List Token}
     (read : (program).production a tokens) :
     (Category.unit).reads tokens ((program).tree a) := by
-  sorry
+  change UnitReads [] tokens ((program).tree a)
+  exact read
 
 -- Mirror Rule.satisfiableOfPrint with concrete arguments for this production.
 theorem program_syntax_erfuellbar  :
     (program).Satisfiable := by
-  sorry
+  let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinary : ordinaryLocal name := by
+    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
+    constructor <;> intro h <;> cases h
+  let first : Decl [] [] := .constant name ordinary .bool trivial Expr.trueLit trivial trivial
+  let a : ProgramArgs := ⟨[], [], first, .done⟩
+  exact Rule.satisfiableOfPrint a (program_print a)
 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem program_entry  : (program).Entry :=
@@ -318,7 +422,12 @@ theorem StmtReads.returnVoid_inversion
     (read : StmtReads result scope (returnKeyword :: semicolon :: input) tree rest) :
     ∃ (a : Surface.ReturnVoidArgs scope result),
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
-  sorry
+  cases read with
+  | retVoid declared => exact ⟨⟨declared⟩, rfl, rfl⟩
+  | ret _ _ expr =>
+      cases expr with
+      | atom atomRead _ => cases atomRead
+  | directCall callRead => cases callRead
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
@@ -328,7 +437,11 @@ theorem StmtReads.mutableLocal_inversion
       a.name.val = spelling ∧ TypeReads input a.written (assignment :: rhs) ∧
       ExprReads scope 0 rhs a.value (semicolon :: rest) ∧
       tree = (Surface.mutableLocal scope result).tree a := by
-  sorry
+  cases read with
+  | letMutable (type := ty) (value := val) name ordinary written valid fits typeRead exprRead =>
+      refine ⟨⟨name, ordinary, written, valid, ty, val, fits⟩, _, ?_, typeRead, exprRead, rfl⟩
+      first | rfl | (subst spelling; rfl)
+  | directCall callRead => cases callRead
 
 -- Mirror CallReads.inversion after disambiguating the reserved statement heads.
 theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directName name)
@@ -336,7 +449,15 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
     ∃ (a : Surface.DirectCallArgs scope result),
       a.name = name ∧ ArgsRead scope input a.args (semicolon :: rest) ∧
       tree = (Surface.directCall scope result).tree a := by
-  sorry
+  cases read with
+  | directCall callRead =>
+      obtain ⟨args, head, argsRead⟩ := CallReads.inversion callRead
+      injection head with htoken htail
+      injection htoken with hval
+      injection htail with hargs
+      subst args
+      refine ⟨call, (Subtype.ext hval).symm, ?_, rfl⟩
+      exact argsRead
 
 -- Mirror StmtReads.let_header with the written type and the call's argument derivation.
 theorem StmtReads.bindDirect_inversion
@@ -345,7 +466,11 @@ theorem StmtReads.bindDirect_inversion
       a.name.val = spelling ∧ TypeReads input a.written (assignment :: rhs) ∧
       CallReads scope rhs a.call (semicolon :: rest) ∧
       tree = (Surface.bindDirect scope result).tree a := by
-  sorry
+  cases read with
+  | bindDirect (type := ty) name ordinary written valid typeRead callRead =>
+      refine ⟨⟨name, ordinary, written, valid, ty, call⟩, _, ?_, typeRead, callRead, rfl⟩
+      first | rfl | (subst spelling; rfl)
+  | directCall callRead => cases callRead
 
 -- Mirror StmtReads.ite_inversion and retain the distinct bound and body derivations.
 theorem StmtReads.boundedWhile_inversion
@@ -357,7 +482,13 @@ theorem StmtReads.boundedWhile_inversion
       BlockReads result scope bodyInput a.body rest ∧
       tree = (Surface.boundedWhile scope result).tree a) ∨
     (∃ tail, input = assignment :: tail) := by
-  sorry
+  cases read with
+  | whileBounded (lo := low) (hi := high) (condition := cond) (boundInput := boundIn)
+      (bodyInput := bodyIn) (body := bod)
+      nonnegative overflow bound staticBound condRead boundRead blockRead =>
+      exact Or.inl ⟨⟨cond, low, high, bound, staticBound, nonnegative, overflow, bod⟩,
+        boundIn, bodyIn, condRead, boundRead, blockRead, rfl⟩
+  | directCall callRead => cases callRead
 
 -- Mirror StmtReads.boundedWhile_inversion, using the distinct range separator.
 theorem StmtReads.forRange_inversion
@@ -368,12 +499,23 @@ theorem StmtReads.forRange_inversion
       OverflowReads handlerInput a.overflow bodyInput ∧
       BlockReads result (rangeBinding a.name a.lo a.hi :: scope) bodyInput a.body rest ∧
       tree = (Surface.forRange scope result).tree a := by
-  sorry
+  cases read with
+  | forRange (low := low) (lowHi := lowHi) (high := high) (highLo := highLo)
+      (overflow := ov) (highInput := highIn) (tail := handlerIn) (bodyInput := bodyIn)
+      name ordinary body lo hi staticBounds lowerRead upperRead ovRead blockRead =>
+      refine ⟨⟨name, ordinary, low, lowHi, highLo, high, lo, hi, staticBounds, ov, body⟩,
+        highIn, handlerIn, bodyIn, ?_, lowerRead, upperRead, ovRead, blockRead, rfl⟩
+      first | rfl | (subst spelling; rfl)
+  | directCall callRead => cases callRead
 
 -- Mirror UnitBody.printReads and recover the first declaration's unconsumed suffix.
 theorem UnitReads.program_inversion (a : Surface.ProgramArgs) (read : UnitReads [] tokens a.unit) :
     ∃ rest, DeclReads [] tokens ⟨a.middle, a.first⟩ rest ∧
       UnitReads a.middle rest ⟨a.after, a.rest⟩ := by
-  sorry
+  cases read with
+  | done =>
+      simp [ProgramArgs.unit] at *
+  | step firstDecl nextRead =>
+      exact ⟨_, firstDecl, nextRead⟩
 
 end Gabbro.Core.Ast
