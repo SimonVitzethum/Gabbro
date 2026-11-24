@@ -52,7 +52,7 @@ theorem protokoll_start_gut : ProtokollStartGutAussage := by
   unfold Ast.Semantik.laden at loaded
   split at loaded
   · cases loaded
-    exact zustand_start_protokoll_gut _ _ _ _ _ _ _ (einheitVon P t).katalog
+    exact zustand_start_protokoll_gut _ _ _ _ _ _ (einheitVon P t).katalog
       (fun n => H.politik.sicht n [])
   · cases loaded
 
@@ -62,14 +62,16 @@ theorem protokoll_start_gut : ProtokollStartGutAussage := by
     the loader equation of `Laeufe`; at a step, cases of `Lauffolge` give a loaded predecessor and an
     `ImplSchritt`, to which the step premise applies; at a pause the state is unchanged. -/
 theorem protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) : ProtokollGutImLaufAussage := by
-  intro P t H ρ lauf n z atCut
+  intro P t H ρ lauf n
   induction n with
   | zero =>
+      intro z atCut
       have loaded : (einheitVon P t).laden ρ.start (H.lade (einheitVon P t).bild) = some z := by
         rw [← atCut]
         exact lauf.2.2.2.symm
       exact protokoll_start_gut P t H ρ.start z loaded
   | succ n ih =>
+      intro z atCut
       cases current : ρ.zeit.zustand n with
       | none =>
           have tick := ρ.zeit.takt n
@@ -107,7 +109,7 @@ theorem ideal_protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) :
   | zero =>
       rw [lauf.2.2.2.1]
       change ProtokollGut (Zustand.start _ _ _ _ _ _)
-      exact zustand_start_protokoll_gut _ _ _ _ _ _ _ (einheitVon P t).katalog
+      exact zustand_start_protokoll_gut _ _ _ _ _ _ (einheitVon P t).katalog
         (fun m => η.umgebung.politik.sicht m [])
   | succ n ih =>
       cases η.zeit.takt n with
