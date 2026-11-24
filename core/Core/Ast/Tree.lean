@@ -214,7 +214,7 @@ mutual
 def WrittenType.type : WrittenType → Ty .value
   | .bool => .bool
   | .integer signed width range =>
-    let (lo, hi) := range.getD (storage signed width)
+    let (lo, hi) := range.getD (WrittenType.storage signed width)
     .int lo hi
   | .array element count => .array element.type count
   | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
@@ -230,7 +230,7 @@ mutual
 def WrittenType.valid : WrittenType → Prop
   | .bool => True
   | .integer signed width range =>
-    let (minimum, maximum) := storage signed width
+    let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
   | .array element _ => element.valid
