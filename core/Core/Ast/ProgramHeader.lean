@@ -408,6 +408,8 @@ theorem DirectCall.printReads (call : DirectCall scope) :
     | div => cases h
     | compare c => cases c <;> cases h
     | logic l => cases l <;> cases h
+    | index => cases h
+    | projection => cases h
   have hComma : printComma.value = comma := by rfl
   have hpClose : printClose.value = closeParen := by rfl
   have argsRead : ArgsRead scope
