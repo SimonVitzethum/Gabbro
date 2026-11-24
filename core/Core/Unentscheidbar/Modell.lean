@@ -74,17 +74,17 @@ theorem erreicht1 {prog : List Befehl} {r r' : Rahmen}
     (hs : Schritt prog (some r) = some r') : Erreicht prog r r' :=
   ⟨1, by simpa using hs⟩
 
-theorem erreicht_schritt {prog : List Befehl} {r₀ r r' : Rahmen}
-    (h : Erreicht prog r₀ r) (hs : Schritt prog (some r) = some r') :
-    Erreicht prog r₀ r' :=
-  erreicht_trans h (erreicht1 hs)
-
 theorem erreicht_trans {prog : List Befehl} {r₀ r₁ r₂ : Rahmen}
     (h₁ : Erreicht prog r₀ r₁) (h₂ : Erreicht prog r₁ r₂) :
     Erreicht prog r₀ r₂ := by
   obtain ⟨k₁, hk₁⟩ := h₁
   obtain ⟨k₂, hk₂⟩ := h₂
   exact ⟨k₁ + k₂, by rw [Nat.add_comm k₁ k₂, Function.iterate_add_apply, hk₁, hk₂]⟩
+
+theorem erreicht_schritt {prog : List Befehl} {r₀ r r' : Rahmen}
+    (h : Erreicht prog r₀ r) (hs : Schritt prog (some r) = some r') :
+    Erreicht prog r₀ r' :=
+  erreicht_trans h (erreicht1 hs)
 
 theorem haeltMit_erreicht {prog : List Befehl} {r₀ r₁ : Rahmen} {a : Nat}
     (h : Erreicht prog r₀ r₁) (hh : HaeltMit prog r₁ a) : HaeltMit prog r₀ a := by
@@ -99,7 +99,7 @@ theorem haeltMit_erreicht {prog : List Befehl} {r₀ r₁ : Rahmen} {a : Nat}
     macht, wiederholt einen Zustand und läuft wegen deterministischem `Schritt`
     nie mehr in einen haltenden Zustand, den er nicht schon erreicht hätte).
     Für dieses Fragment gilt also KEIN Unentscheidbarkeitssatz; was dort die
-    Nutzerpflicht (Terminierungs-/Schrankenargument) rechtfertigt, wäre eher
+    Nutzerpflicht (Terminierungs- oder Schrankenargument) rechtfertigt, wäre eher
     eine Härte-Aussage (z. B. PSPACE-Härte des beschränkten Halteproblems)
     als ein Unentscheidbarkeitsbeweis. Ob und in welcher Form eine solche
     Aussage pinniert wird, entscheiden Lead mit Owner. -/
