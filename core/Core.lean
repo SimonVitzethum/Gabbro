@@ -94,6 +94,10 @@ public import Core.Beobachtung.Wahrscheinlichkeit.PflichtWiderlegung
 public import Core.Beobachtung.Wahrscheinlichkeit.Erfuellbar
 public import Core.Beobachtung.Wahrscheinlichkeit.Unentscheidbar
 public import Core.Beobachtung.Wahrscheinlichkeit.UnentscheidbarBeweise
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Gegenbeispiel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.BuendelUnterZulStart
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
