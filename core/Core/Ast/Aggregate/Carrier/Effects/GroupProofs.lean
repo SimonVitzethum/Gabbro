@@ -463,10 +463,12 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     ⟨true, egTableName, 1, [], (by intro f h; cases h), by exact List.nodup_nil⟩
   let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
   let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
+  have hresolve : WrittenCarrierEffect.resolve [carrier.binding] true written = some eff := by
+    simp [WrittenCarrierEffect.resolve, Scope.effectCarrier, carrier, carrierBinding,
+      TableDeclaration.binding, written, eff, egTableName]
   have hchecked : [written].mapM (WrittenCarrierEffect.resolve [carrier.binding] true) =
       some [eff] := by
-    simp [List.mapM, WrittenCarrierEffect.resolve, Scope.effectCarrier, written, eff,
-      carrierBinding, TableDeclaration.binding, carrier, egTableName]
+    simpa [List.mapM_cons, List.mapM_nil, hresolve]
   let group : EffectGroupDeclaration [carrier.binding] :=
     ⟨true, egName, [written], [eff], hchecked⟩
   let scope : Scope := [group.binding, carrier.binding]
@@ -479,7 +481,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     ⟨['f'], 'f', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
   have hdirect : directName fnName := by
-    simp [directName, ordinaryLocal, fnName]
+    simp [directName, ordinaryLocal, ordinaryAtomWord, fnName]
   let body : BracedBlock (writtenResult none) (functionScope scope []) := .braces .done
   let a : Surface.FunctionArgs scope :=
     ⟨fnName, hdirect, [], none, (by intro t h; cases h), none, body, by simp,
@@ -494,16 +496,19 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let s1 := bt.nach eintritt s0
   let s := bg.nach eintritt s1
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
-    simp [E, tree, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
-      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt, bt]
+    change kopf (programm tree).code s0 eintritt = some bt
+    simp [kopf, programm, unitBody, decl, tableInstruction, s0, I.start, Zustand.start,
+      startdaten, Fragment.einheit, elaborieren, fragment, eintritt, bt]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
-    simp [E, tree, s1, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
-      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt,
-      Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
+    change kopf (programm tree).code s1 eintritt = some bg
+    simp [kopf, programm, unitBody, decl, tableInstruction, s1, s0, I.start, Zustand.start,
+      startdaten, Fragment.einheit, elaborieren, fragment, eintritt, Befehl.nach,
+      Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding, bt, bg]
   have hhead2 : E.system.kopf s eintritt = some b := by
-    simp [E, tree, s, s1, s0, elaborieren, fragment, programm, unitBody, decl, tableInstruction,
-      Fragment.einheit, system, kopf, I.start, Zustand.start, startdaten, eintritt,
-      Befehl.nach, Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
+    change kopf (programm tree).code s eintritt = some b
+    simp [kopf, programm, unitBody, decl, tableInstruction, s, s1, s0, I.start, Zustand.start,
+      startdaten, Fragment.einheit, elaborieren, fragment, eintritt, Befehl.nach,
+      Befehl.auswerten, EffectGroupDeclaration.binding, effectGroupBinding,
       functionForm, functionInstruction, bt, bg, b, scope]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
