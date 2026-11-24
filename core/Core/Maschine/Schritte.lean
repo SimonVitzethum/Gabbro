@@ -56,6 +56,23 @@ structure Einrichtung (L Ort Wert Raum Lok Grund Bedingung : Type) where
   invariant : Zustand L Ort Wert Raum Lok Grund → L → Prop
   persistenzRegion : Strecke
   wiederanlauf : Wiederanlauf Ort Wert Raum Lok Grund
+  speicherObjekt : Ort → Nat
+  speicherGriff : Zustand L Ort Wert Raum Lok Grund → Kontext → Ort → Option Griff
+
+/-- A concrete access must use a handle held by its context, for the object of
+    that location and its current generation, while the object is owned. -/
+def Einrichtung.Zugriff (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
+    (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (x : Ort) : Prop :=
+  ∃ g, e.speicherGriff s c x = some g ∧ g.objekt = e.speicherObjekt x ∧
+    s.rechte.Gueltig g ∧ (s.leihen g.objekt).Zugriff
+
+/-- Check the accesses of the concrete plan before erasing any implementation
+    work. Only actual writes in the declared footprint use write authority. -/
+def SchrittPlan.Autorisiert (plan : SchrittPlan L Ort Wert Bedingung)
+    (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
+    (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) : Prop :=
+  (∀ l ∈ plan.lesen, e.Zugriff s c l.ort) ∧
+    (∀ x ∈ plan.fuss, plan.schreibt x = true → e.Zugriff s c x)
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
@@ -250,7 +267,7 @@ theorem warte_erfuellbar
     (s : Zustand L Ort Wert Raum Lok Grund) (t : Nat) (c : Kontext) :
     let enabled : Einrichtung L Ort Wert Raum Lok Grund Unit :=
       ⟨e.initial, e.sperrOrt, e.ereignisOrt, e.ereignisWert,
-        fun _ _ _ => True, e.invariant, e.persistenzRegion, e.wiederanlauf⟩
+        fun _ _ _ => True, e.invariant, e.persistenzRegion, e.wiederanlauf, e.speicherObjekt, e.speicherGriff⟩
     FuehrtAus enabled t c s s (.warte ()) [] [] s :=
   .warte trivial
 

@@ -37,14 +37,15 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
   (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
-  (`Gabbro.Core.Maschine.I.Schritt, 14151434032004698387),
-  (`Gabbro.Core.Maschine.ImplSchritt, 15943044553270713957),
-  (`Gabbro.Core.Maschine.Laeufe, 8177209107770278793),
-  (`Gabbro.Core.Maschine.I.Laeufe, 16162192231473975173),
+  (`Gabbro.Core.Maschine.I.Schritt, 9118145494927144915),
+  (`Gabbro.Core.Maschine.ImplSchritt, 7095923970874404009),
+  (`Gabbro.Core.Maschine.Laeufe, 15494763569079421481),
+  (`Gabbro.Core.Maschine.I.Laeufe, 5549697140691820065),
   (`Gabbro.Core.Maschine.I.AussenBezug, 14721192888943763921),
-  (`Gabbro.Core.Maschine.I.Bestimmt, 14914196100496038554),
-  (`Gabbro.Core.Maschine.I.Fortschritt, 3573843142675553985),
-  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 18203029128940835155)]
+  (`Gabbro.Core.Maschine.I.Bestimmt, 18045759927346415682),
+  (`Gabbro.Core.Maschine.I.Fortschritt, 8293601312876751613),
+  (`Gabbro.Core.Maschine.I.Sim, 17244020617291974792),
+  (`Gabbro.Core.Maschine.I.RegelKomponierbar, 3222038947297158479)]
 
 private meta def acceptance : AcceptanceSpec := {
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }

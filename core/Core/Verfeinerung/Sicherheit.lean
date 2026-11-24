@@ -82,4 +82,14 @@ theorem speicher_verbrauch_im_lauf {ρ : Lauf E}
         | schritt step => exact ⟨_, rfl, impl_speicher_gut _ _ step memory, step.verbrauch answers⟩
     | wartet _ same _ => exact ⟨z, same, memory, answers⟩
 
+/-- Authority for every concrete context transition compatible with the recorded
+    tick. This uses the unprojected execution plan and the pre-state handles. -/
+def BerechtigungAmTakt (ρ : Lauf E) (t : Nat) : Prop :=
+  ∀ s s' c w spur u plan,
+    ρ.zeit.zustand t = some s → ρ.zeit.zustand (t + 1) = some s' →
+    ρ.zeit.spur t = some (I.SchrittWahl.kontext c w, spur) →
+    (ρ.hw.angebot t).crash = false → KannSchreiten ρ.hw t c s →
+    E.system.ImplSchritt c s w [plan] u → FuehrtSchrittAus E.einrichtung t c s u plan spur s' →
+    plan.Autorisiert E.einrichtung s c
+
 end Gabbro.Core.Maschine

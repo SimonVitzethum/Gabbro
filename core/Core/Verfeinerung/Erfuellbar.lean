@@ -1,6 +1,6 @@
 module
 
-public import Core.Verfeinerung.Folgen
+public import Core.Verfeinerung.Simulation
 
 @[expose] public section
 
@@ -46,14 +46,14 @@ theorem abgleich_aus_gleichen_regeln
     | interrupt normal enters => exact stuck _ _ (.schritt (.interrupt normal enters))
     | absturz crash => exact stuck _ _ (.schritt (.absturz crash))
 
-/-- A one-form unit changes a local value on a fair hardware history. Its loader,
-    per-form simulation, and maximality obligations hold jointly. -/
-theorem abgleich_erfuellbar :
+/-- A one-form unit changes a local value on a fair hardware history. Its
+    loader, authority, continuation and bounded simulation obligations hold jointly. -/
+theorem sim_erfuellbar :
     ∃ E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
-      AbgleichPflichten E Eq (fun _ => 1) ∧
+      SimPflichten E Eq (fun _ => 1) ∧
       ∃ (h : Umgebung) (ρ : Maschine.Lauf E) (η : Lauf E),
         Maschine.Laeufe E h ρ ∧ FairLaeufe E.katalog h ρ.hw ∧ Laeufe E η ∧
-        Laufabgleich ρ η Eq ∧
+        Laufabgleich ρ η Eq ∧ Sim E ρ η ∧
         ∃ label before after, ρ.zeit.spur 0 = some label ∧
           ρ.zeit.zustand 0 = some before ∧ ρ.zeit.zustand 1 = some after ∧
           before.lokal (.faden 0) = false ∧ after.lokal (.faden 0) = true := by
@@ -66,7 +66,7 @@ theorem abgleich_erfuellbar :
       ⟨fun _ => false, fun _ => 0⟩⟩
   let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
     ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩⟩
+      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
   let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
     { s with lokal := Function.update s.lokal c (!s.lokal c) }
@@ -113,6 +113,15 @@ theorem abgleich_erfuellbar :
             rw [Function.update_self] at impossible
             have toggles (b : Bool) : b ≠ !b := by intro eq; cases b <;> cases eq
             exact (toggles _ impossible).elim
+  have pflicht : SimPflichten E₀ Eq (fun _ => 1) := by
+    refine ⟨abgleich, ?_, ?_⟩
+    · intro _h _run _valid _t _s _next _c _w _spur _u _plan _load _after _label _normal _ready form _execute
+      obtain ⟨_, _, planEq, _⟩ := form
+      cases (List.cons.inj planEq).1
+      exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
+    · intro s i rel
+      cases zustandsbezug_eq rel
+      exact fun _ => ⟨rfl, Iff.rfl, fun _ => Iff.rfl⟩
   let sicht : Nat → AussenVerlauf → AussenSicht :=
     fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let hw := Umgebung.referenzLauf k 1 sicht
@@ -162,7 +171,9 @@ theorem abgleich_erfuellbar :
         | wartet mark same stuck => exact .wartet mark same stuck }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
   obtain ⟨η, ideal, matched⟩ := laufabgleich abgleich konkret
-  refine ⟨E₀, abgleich, h, ρ, η, konkret, fair, ideal, matched, label, z, z', rfl, rfl, after, rfl, ?_⟩
+  have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched)
+    (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
+  refine ⟨E₀, pflicht, h, ρ, η, konkret, fair, ideal, matched, sim, label, z, z', rfl, rfl, after, rfl, ?_⟩
   change Function.update z.lokal entry (!z.lokal entry) entry = true
   rw [Function.update_self]
   rfl
