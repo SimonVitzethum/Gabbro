@@ -335,7 +335,7 @@ theorem program_eintritt (frame : Rahmen) (entry : Identifier) (target : Funktio
     | none => simpa [Rufstelle.passt, lookup, parameters, hr]
     | some declared =>
       have hfit : tyFits declared declared = true := by
-        cases declared <;> try simp only [tyFits, le_refl, decide_true, Bool.and_self]
+        cases declared <;> try simp only [tyFits, le_refl, true_and, decide_true]
         case array _ count => cases count <;> simp only [tyFits, decide_true, eq_self]
       simpa [Rufstelle.passt, lookup, parameters, hr, hfit]
   have hrec : target.misstAbstieg = true ∨
