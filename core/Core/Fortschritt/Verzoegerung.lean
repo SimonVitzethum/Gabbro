@@ -55,7 +55,7 @@ theorem impl_schritt_braucht_gelegenheit {ρ : Maschine.Lauf E} {t c w spur}
             have label' := label
             rw [hstep] at label'
             cases label'
-            exact ⟨s, hz, bereit⟩
+            refine ⟨_, rfl, bereit⟩
           | antwort _ _ =>
             have hcontra := Option.some.inj (label.symm.trans hstep)
             cases congrArg Prod.fst hcontra
