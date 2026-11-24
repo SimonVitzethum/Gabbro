@@ -287,9 +287,80 @@ theorem directCall_sicher (scope : Scope) (result : Option (Ty .value)) platform
     change (stmt ((directCallForm scope result).produktion.tree a).2).klauseln.invariant = []
     exact stmt_keine_invarianten _)
 
+/-- One unit exercises both a discarded result and a typed result binding. -/
+private theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
+    ∃ (call : DirectCall []) (binding : Surface.BindDirectArgs [] none),
+      ((directCallForm [] none).ErfuellbarAm platform start call ∧
+        LaufenderRuf platform start ((directCallForm [] none).befehl call)) ∧
+      ((bindDirectForm [] none).ErfuellbarAm platform start binding ∧
+        LaufenderRuf platform start ((bindDirectForm [] none).befehl binding)) := by
+  let name : Identifier := keywordName 'f' [] (by decide) (fun _ h => (List.not_mem_nil h).elim)
+  have ordinary : directName name := ⟨⟨by decide, by decide⟩, by decide⟩
+  have ordinaryMain : directName mainName := by
+    change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
+      ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
+      ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
+    exact ⟨⟨by decide, by decide⟩, by decide⟩
+  let call : DirectCall [] := ⟨name, ordinary, []⟩
+  let binding : Surface.BindDirectArgs [] none := ⟨name, ⟨by decide, ordinary.1⟩, .bool, trivial, call⟩
+  let target : Decl [] [] := .function name ordinary [] (some .bool)
+    (by intro t mem; have h : t = WrittenType.bool := List.mem_singleton.mp mem; subst t; trivial)
+    none (.braces (.step (.ret rfl .trueLit trivial) .done)) List.nodup_nil (fun _ => rfl)
+  let main : Decl [] [] := .function mainName ordinaryMain [] none (by intro _ h; cases h)
+    none (.braces (.step (.directCall call)
+      (.step (.bindDirect binding.name binding.ordinary binding.written binding.valid binding.call) .done)))
+    List.nodup_nil (by intro h; cases h)
+  let unit : Ast.Unit := ⟨[], .step target (.step main .done)⟩
+  let E := elaborieren platform (category := .unit) unit
+  let s₀ := (I.start E start).2
+  let defTarget : Befehl := .definiere name [] (some .bool) 0 5 false []
+  let defMain : Befehl := .definiere mainName [] none 0 5 false
+    [⟨name, [], none⟩, ⟨name, [], some .bool⟩]
+  let launch : Befehl := .starte mainName
+  let discard := (directCallForm [] none).befehl call
+  let bind := (bindDirectForm [] none).befehl binding
+  let truth : Befehl := .wahrheitswert 0 true
+  let ret : Befehl := .zurueck 0 .bool
+  let s₁ := defTarget.nach eintritt s₀
+  let s₂ := defMain.nach eintritt s₁
+  let s₃ := launch.nach eintritt s₂
+  let s₄ := discard.nach eintritt s₃
+  let s₅ := truth.nach eintritt s₄
+  let s₆ := ret.nach eintritt s₅
+  have extend {s : Zustand} {b : Befehl} (reach : E.system.IErreichbar s₀ s)
+      (head : E.system.kopf s eintritt = some b) :
+      E.system.IErreichbar s₀ (b.nach eintritt s) :=
+    .schritt eintritt () [plan] reach ⟨b, head, rfl, rfl⟩
+  have r₁ : E.system.IErreichbar s₀ s₁ := extend .start rfl
+  have r₂ : E.system.IErreichbar s₀ s₂ := extend r₁ rfl
+  have r₃ : E.system.IErreichbar s₀ s₃ := extend r₂ rfl
+  have r₄ : E.system.IErreichbar s₀ s₄ := extend r₃ rfl
+  have r₅ : E.system.IErreichbar s₀ s₅ := extend r₄ rfl
+  have r₆ : E.system.IErreichbar s₀ s₆ := extend r₅ rfl
+  have runs {b : Befehl} {s : Zustand} (reach : E.system.IErreichbar s₀ s)
+      (head : E.system.kopf s eintritt = some b) (live : ((b.nach eintritt s).lokal eintritt).stopp = none)
+      (pushes : ((b.nach eintritt s).lokal eintritt).fortsetzungen.length =
+        (s.lokal eintritt).fortsetzungen.length + 1) : LaufenderRuf platform start b :=
+    ⟨unit, Ast.print (category := .unit) unit, s, Ast.parse_print _, reach, head,
+      ⟨b, head, rfl, rfl⟩, ⟨b, head, rfl, rfl⟩, live, pushes⟩
+  refine ⟨call, binding, ⟨?_, runs r₃ rfl rfl rfl⟩, ⟨?_, runs r₆ rfl rfl rfl⟩⟩
+  · exact (directCallForm [] none).erfuellbar_aus_erreichbar platform start call _ .start
+      (directCall_realisiert [] none platform call _ rfl rfl rfl rfl) (by intro _ h; cases h)
+  · exact (bindDirectForm [] none).erfuellbar_aus_erreichbar platform start binding _ .start
+      ((bindDirectForm [] none).realisiert (fun args => by
+        change ((argsCode 0 args.call.args).anhaengen
+          (.einzel (callInstruction args.call (some args.written.type)))).code[
+            (argsCode 0 args.call.args).code.length]? =
+          some (callInstruction args.call (some args.written.type))
+        simp only [Fragment.anhaengen, Fragment.einzel, List.getElem?_append_right (Nat.le_refl _),
+          Nat.sub_self, List.getElem?_cons_zero])
+        platform binding _ rfl rfl rfl rfl) (by intro _ h; cases h)
+
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem directCall_erfuellbar : directCallJoint := by
-  sorry
+  intro platform start
+  obtain ⟨call, _, proves, _⟩ := callForms_erfuellbar platform start
+  exact ⟨⟨[], none⟩, call, proves⟩
 
 def directCallProofs : RegistryEntry ``Stmt.directCall
     ⟨.surface, Quellform.statements (Context := StatementContext) (fun ctx => directCallForm ctx.1 ctx.2) directCallJoint ``Stmt.directCall⟩ where
@@ -372,7 +443,9 @@ theorem bindDirect_sicher (scope : Scope) (result : Option (Ty .value)) platform
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem bindDirect_erfuellbar : bindDirectJoint := by
-  sorry
+  intro platform start
+  obtain ⟨_, binding, _, proves⟩ := callForms_erfuellbar platform start
+  exact ⟨⟨[], none⟩, binding, proves⟩
 
 def bindDirectProofs : RegistryEntry ``Stmt.bindDirect
     ⟨.surface, Quellform.statements (Context := StatementContext) (fun ctx => bindDirectForm ctx.1 ctx.2) bindDirectJoint ``Stmt.bindDirect⟩ where
