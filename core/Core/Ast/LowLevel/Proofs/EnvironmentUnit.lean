@@ -99,7 +99,7 @@ def EnvironmentUnitErfuellbarAussage : Prop :=
     let E := environmentUnitForm.einheit p args
     environmentInUnit.production args (args.unit.2.printPieces.map PrintedToken.value) ∧
     Ast.Parse (category := .unit) text args.unit ∧ Bezeichnet p .unit text E ∧
-    Annahme.Akzeptiert E ∧ E.ZulStart env start ∧
+    Annahme.Akzeptiert E ∧ Hardware E.katalog env ∧ E.ZulStart env start ∧
     E.system.IErreichbar (I.start E start).2 s ∧ Realisiert environmentUnitForm p args s
 
 def EnvironmentUnitAussage : Prop :=
