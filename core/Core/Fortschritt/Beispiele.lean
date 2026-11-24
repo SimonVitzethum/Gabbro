@@ -86,6 +86,8 @@ theorem z1_dispatch0 : (z1.kerne 0).laeuft = some A := rfl
 
 theorem z1_live : ∀ c, z1.status c = .laeuft := fun _ => rfl
 
+theorem z1_dispatchN (n : Nat) : (z1.kerne (n + 1)).laeuft = none := rfl
+
 def Z1 : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => z1
   | t + 1 => toggleUpdate A (Z1 t)
@@ -202,7 +204,7 @@ theorem pos_lockfrei : LockFrei (E := E_w dispatch1) (fun _ => True) η1 := by
           ⟨0, hw1_opp0 t, by rw [η1_zustand, z1_kerne]; exact z1_dispatch0, hlive⟩
           ⟨(), rfl, rfl, rfl⟩ (posAusfuehr t A (Z1 t))⟩)))
     | succ n =>
-      have hnone : dispatch1 (n + 1) = none := rfl
+      have hnone : (z1.kerne n.succ).laeuft = none := rfl
       rw [hnone] at hdispk
       cases hdispk
   · intro a _
@@ -215,7 +217,7 @@ theorem pos_waitfrei : WaitFrei (E := E_w dispatch1) ρ1 η1 := by
   rw [η1_zustand, z1_kerne] at hdispk
   cases k with
   | succ n =>
-    have hnone : dispatch1 (n + 1) = none := rfl
+    have hnone : (z1.kerne n.succ).laeuft = none := rfl
     rw [hnone] at hdispk
     cases hdispk
   | zero =>
@@ -229,7 +231,7 @@ theorem pos_waitfrei : WaitFrei (E := E_w dispatch1) ρ1 η1 := by
       rw [hkk]
       apply zaehle_all_true
       intro t
-      simp only [decide_eq_true_eq]
+      rfl
     refine ⟨a, Nat.le_refl _, by omega, Or.inl ⟨(), ⟨[], []⟩, rfl⟩⟩
 
 -- The starvation run: `A` steps on even ticks, `B` waits with an enabled step. --
@@ -398,6 +400,10 @@ def ηAB : I.Lauf (E_w dispatch2) :=
 
 theorem ηAB_zustand : ∀ t, ηAB.zeit.zustand t = ZAB t := fun _ => rfl
 
+theorem ηAB_spur : ∀ t, ηAB.zeit.spur t = spurAB t := fun _ => rfl
+
+theorem ρAB_spur : ∀ t, ρAB.zeit.spur t = spurABρ t := fun _ => rfl
+
 def ρAB : Maschine.Lauf (E_w dispatch2) :=
   ⟨s0, hw2, ⟨fun t => some (ZABρ t), spurABρ, taktABρ⟩⟩
 
@@ -406,17 +412,17 @@ theorem nie_erledigt_B : ∀ t, ¬ I.Erledigt ηAB B t := by
   intro t herl
   rcases herl with ⟨w, spur, heq⟩ | hcrash | ⟨e, hend⟩
   · by_cases h : t % 2 = 0
-    · rw [spurAB_eq h] at heq
+    · rw [ηAB_spur, spurAB_eq h] at heq
       have hctx := congrArg Prod.fst (Option.some.inj heq)
       have hAB : A = B := SchrittWahl.kontext.inj hctx |>.1
       cases hAB
-    · rw [spurAB_ne h] at heq
+    · rw [ηAB_spur, spurAB_ne h] at heq
       cases heq
   · by_cases h : t % 2 = 0
-    · rw [spurAB_eq h] at hcrash
+    · rw [ηAB_spur, spurAB_eq h] at hcrash
       have hcontra := Option.some.inj hcrash
       cases congrArg Prod.fst hcontra
-    · rw [spurAB_ne h] at hcrash
+    · rw [ηAB_spur, spurAB_ne h] at hcrash
       cases hcrash
   · rw [ηAB_zustand, zAB_status] at hend
     cases hend
@@ -497,7 +503,7 @@ theorem ab_lockfrei : LockFrei (E := E_w dispatch2) (fun _ => True) ηAB := by
               cases m with
               | zero => rfl
               | succ m =>
-                rw [zAB_kerne, zAB0_dispatchN m] at hk
+                rw [ηAB_zustand, zAB_kerne, zAB0_dispatchN m] at hk
                 cases hk
           exact hw2_opp1_neg h (hk1 ▸ hk)
         · have h1 : t % 2 = 1 := by omega
