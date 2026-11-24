@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.Tuples
+public import Core.Ast.Semantik.Formbeweise
 
 /-!
 # TupleValue
@@ -21,6 +22,99 @@ Prove the pinned statements in this file.
 - `TupleValueRegelSicherAussage`
 - `TupleValueErfuellbarAmAussage`
 -/
+
+namespace Gabbro.Core.Ast.Surface
+
+open Gabbro.Core.Text
+
+private theorem tupleItemsTail_print {scope : Scope} {types : List (Ty .value)}
+    (items : ExprItems scope types) :
+    ItemsTail scope closeParen (items.printTail.map PrintedToken.value ++ [closeParen]) items [] := by
+  induction items with
+  | empty =>
+      simp [ExprItems.printTail]
+      exact .close
+  | @next type' types' head tail ih =>
+      simp only [ExprItems.printTail, List.map_cons, List.map_append, List.map_nil]
+      apply ItemsTail.comma (by simp)
+      exact .next (Expr.printReads head (by
+        cases tail with
+        | empty =>
+            simpa [ExprItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
+        | next _ _ =>
+            simpa [ExprItems.printTail] using (noOperatorAtComma (minimum := 0)))) ih
+
+theorem tupleValue_inversion : TupleValueInversionAussage := by
+  intro scope input type firstType secondInput tree rest first firstRead read
+  cases read with
+  | lit => contradiction
+  | grouped inner =>
+      have same := ExprReads.deterministic firstRead inner
+      have bad : comma = closeParen := (List.cons.inj same.2).1
+      simp [comma, closeParen] at bad
+  | trueLit => contradiction
+  | falseLit => contradiction
+  | variable => contradiction
+  | negativeLit => contradiction
+  | neg => contradiction
+  | not => contradiction
+  | arrayValue => contradiction
+  | tupleValue fRead sRead tRead =>
+      have same := ExprReads.deterministic firstRead fRead
+      have listsEq := List.cons.inj same.2
+      rw [← listsEq.2] at sRead
+      refine ⟨⟨_, _, _, _, _, _⟩, _, same.1, sRead, tRead, rfl⟩
+  | recordValue => contradiction
+  | variantValue => contradiction
+
+private theorem itemsTail_consumes {scope close : Token} {input : List Token}
+    {types : List (Ty .value)} {items : ExprItems scope types} {rest : List Token}
+    (read : ItemsTail scope close input items rest) : rest <:+ input := by
+  induction read with
+  | close => exact List.suffix_cons _ _
+  | comma _ itemRead ih => exact ih.trans (List.suffix_cons _ _)
+
+theorem tupleValue_suffix : TupleValueSuffixAussage := by
+  intro scope input types items rest read
+  exact itemsTail_consumes read
+
+private theorem tupleValue_reads (scope : Scope) (args : TupleValueArgs scope) {tokens : List Token}
+    (prod : (tupleValue scope).production args tokens) :
+    (Category.expression scope).reads tokens ((tupleValue scope).tree args) := by
+  rcases prod with ⟨input, secondInput, more, rfl, firstRead, secondRead, tailRead⟩
+  change ExprReads scope 0 (openParen :: input) (.tupleValue args.first args.second args.tail) []
+  exact .atom (.tupleValue firstRead secondRead tailRead) (.stop noOperatorAtEnd)
+
+private theorem tupleValue_print (scope : Scope) (args : TupleValueArgs scope) :
+    (tupleValue scope).production args
+      (((Category.expression scope).printPieces ((tupleValue scope).tree args)).map PrintedToken.value) := by
+  change ∃ input secondInput more,
+      Expr.printTokens (Expr.tupleValue args.first args.second args.tail) = openParen :: input ∧
+      ExprReads scope 0 input args.first (comma :: secondInput) ∧
+      ExprReads scope 0 secondInput args.second more ∧
+      ItemsTail scope closeParen more args.tail []
+  let firstTokens := args.first.printTokens
+  let secondTokens := args.second.printTokens
+  let tailTokens := args.tail.printTail.map PrintedToken.value
+  refine ⟨firstTokens ++ [comma] ++ secondTokens ++ tailTokens ++ [closeParen],
+    secondTokens ++ tailTokens ++ [closeParen], tailTokens ++ [closeParen], ?_, ?_, ?_, ?_⟩
+  · simp [Expr.printTokens, Expr.printPieces, firstTokens, secondTokens, tailTokens]
+  · exact Expr.printReads args.first noOperatorAtComma
+  · exact Expr.printReads args.second (by
+      cases args.tail with
+      | empty =>
+          simpa [tailTokens, ExprItems.printTail] using (noOperatorAtClose (minimum := 0) (more := []))
+      | next _ _ =>
+          simpa [tailTokens, ExprItems.printTail] using (noOperatorAtComma (minimum := 0)))
+  · simpa [tailTokens] using (tupleItemsTail_print (scope := scope) args.tail)
+
+theorem tupleValue_derivation : TupleValueDerivationAussage := by
+  intro scope
+  refine ⟨fun args tokens prod => tupleValue_reads scope args prod, tupleValue_print scope, ?_⟩
+  let args : TupleValueArgs scope := ⟨.int 1 1, .int 2 2, [], .lit 1, .lit 2, .empty⟩
+  exact Rule.satisfiableOfPrint args (tupleValue_print scope args)
+
+end Gabbro.Core.Ast.Surface
 
 namespace Gabbro.Core.Ast.Semantik
 
@@ -64,11 +158,38 @@ theorem tupleValue_impl : TupleValueImplAussage := by
 
 theorem tupleValue_erhaltung : TupleValueErhaltungAussage := by
   intro scope
-  exact (tupleValueForm scope).erhaltung (fun _ _ => rfl)
+  exact (tupleValueForm scope).erhaltung (fun args => by
+    simpa [Quellform.fragment, Semantik.fragment] using
+      (expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail)))
 
 theorem tupleValue_regelSicher : TupleValueRegelSicherAussage := by
   intro scope platform args
   exact ((tupleValueForm scope).befehl args).sicher ((tupleValueForm scope).fragment args)
-    platform (by rfl)
+    platform (by
+      simpa [Quellform.fragment, Semantik.fragment] using
+        (expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail)))
+
+theorem tupleValue_parse : TupleValueParseAussage := by
+  intro scope args text pieces lexed prod
+  exact (Surface.tupleValue_derivation scope).parse lexed prod
+
+theorem tupleValue_erfuellbar : TupleValueErfuellbarAmAussage := by
+  intro platform start
+  let args : Surface.TupleValueArgs [] := ⟨.int 1 1, .int 2 2, [], .lit 1, .lit 2, .empty⟩
+  let form := tupleValueForm []
+  let E := form.einheit platform args
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.literal 0 1).nach eintritt s₀
+  let s₂ := (Befehl.literal 1 2).nach eintritt s₁
+  have first : E.system.ISchritt eintritt s₀ () [plan] s₁ :=
+    ⟨.literal 0 1, rfl, rfl, rfl⟩
+  have second : E.system.ISchritt eintritt s₁ () [plan] s₂ :=
+    ⟨.literal 1 2, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₂ :=
+    .schritt eintritt () [plan] (.schritt eintritt () [plan] .start first) second
+  refine ⟨args, form.erfuellbar_aus_erreichbar platform start args s₂ reached
+    (form.realisiert (tupleValue_am_ort []) platform args s₂ rfl rfl rfl rfl) ?_⟩
+  intro g guard
+  cases guard
 
 end Gabbro.Core.Ast.Semantik
