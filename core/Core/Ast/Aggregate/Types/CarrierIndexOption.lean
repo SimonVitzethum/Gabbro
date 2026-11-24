@@ -27,8 +27,9 @@ def CarrierIndexOptionCasesAussage : Prop :=
       observed = (1, none)
 
 def CarrierIndexOptionZeroAussage : Prop :=
-  ∀ value : Wert (indexOptionType 0),
-    variantCase [some (indexType 0), none] value = (1, none)
+  Nonempty (Wert (indexOptionType 0)) ∧
+    ∀ value : Wert (indexOptionType 0),
+      variantCase [some (indexType 0), none] value = (1, none)
 
 def CarrierIndexOptionParseAussage : Prop :=
   ∀ scope, (carrierTypeForm scope indexOptionTypeUse).ParseAussage
@@ -66,8 +67,7 @@ def CarrierIndexOptionRegelSicherAussage : Prop :=
 
 def CarrierIndexOptionErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ scope args,
-    (carrierTypeForm scope indexOptionTypeUse).ErfuellbarAm platform start args ∧
-      CarrierParameterEffect scope args.val (Rahmen.start scope)
+    CarrierParameterErfuellbar scope indexOptionTypeUse platform start args
 
 def CarrierIndexOptionProofPacket : Prop :=
   CarrierIndexOptionInversionAussage ∧

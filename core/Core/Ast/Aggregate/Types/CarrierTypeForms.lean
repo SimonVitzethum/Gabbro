@@ -6,6 +6,8 @@ public import Core.Ast.Semantik.ProgramForms
 
 namespace Gabbro.Core.Ast.Semantik
 
+open Annahme Maschine Katalog Gabbro.Core.Text
+
 /-- A carrier type can occur in a signature even when its set of values is empty. -/
 def carrierTypeForm (scope : Scope) (belongs : WrittenType → Prop) :
     Quellform (.declaration scope)
@@ -30,5 +32,17 @@ def CarrierParameterEffect (scope : Scope) (args : Surface.FunctionArgs scope)
   let after := ((functionForm scope).befehl args).auswerten frame
   ∃ signature, after.funktionen = signature :: frame.funktionen ∧
     signature.name = args.name ∧ signature.parameter = args.parameters.map (·.written.type)
+
+/-- The registered signature is observed at the reachable source occurrence. -/
+def CarrierParameterErfuellbar (scope : Scope) (belongs : WrittenType → Prop)
+    (platform : Plattform) (start : AussenStart)
+    (args : {args : Surface.FunctionArgs scope // ∃ p ∈ args.parameters, belongs p.written}) : Prop :=
+  let form := carrierTypeForm scope belongs
+  let E := form.einheit platform args
+  ∃ (text : RawText) (s : Zustand),
+    Ast.Parse text (form.produktion.tree args) ∧ Elaboriert platform (form.produktion.tree args) E ∧
+    E.system.IErreichbar (I.start E start).2 s ∧ Realisiert form platform args s ∧
+    (∀ g : Bedarf, (form.befehl args).guard (s.lokal eintritt) = some g → waechterBedarf g.1 g.2) ∧
+    CarrierParameterEffect scope args.val (s.lokal eintritt)
 
 end Gabbro.Core.Ast.Semantik

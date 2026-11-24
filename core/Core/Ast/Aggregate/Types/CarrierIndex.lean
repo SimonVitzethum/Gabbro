@@ -58,8 +58,7 @@ def CarrierIndexRegelSicherAussage : Prop :=
 
 def CarrierIndexErfuellbarAmAussage : Prop :=
   ∀ platform start, ∃ scope args,
-    (carrierTypeForm scope indexTypeUse).ErfuellbarAm platform start args ∧
-      CarrierParameterEffect scope args.val (Rahmen.start scope)
+    CarrierParameterErfuellbar scope indexTypeUse platform start args
 
 def CarrierIndexProofPacket : Prop :=
   CarrierIndexInversionAussage ∧
