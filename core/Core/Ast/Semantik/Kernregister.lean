@@ -53,6 +53,13 @@ def Quellform.kernStatements {Context : Type} {cat : Context → Category} {args
     shared.acceptanceRule, shared.idealRule, shared.unitsAndCommutation,
     shared.implementationRule, shared.preservation, shared.jointlySatisfiable⟩
 
+/-- The instruction's proof applies in the enclosing fragment, at any occurrence of
+    this constructor in the current fragment language without invariant declarations. -/
+def ProgramKernSicherheitsAussage (constructor : Name) : Prop :=
+  ∀ (p : Fragment) platform b, b.programConstructor = some constructor →
+    p.klauseln.invariant = [] →
+    Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
+
 def programKernStatements (constructor : Name) : RegistryStatements constructor .core where
   realization := .core AusElaborierung
   acceptanceRule := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
@@ -67,7 +74,7 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
     p.klauseln.invariant = [] →
     I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
       I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b ∧
-      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+      Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
   jointlySatisfiable := ∀ platform start, ProgramInstructionPremises constructor platform start
 
 -- Mirror binary_erfuellbar, selecting a source occurrence of each auxiliary program instruction.
@@ -83,8 +90,13 @@ def programKernProofs (constructor : Name) (registered : constructor ∈ program
   unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
   implementationRule := fun _ _ _ _ _ _ _ => Iff.rfl
   preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
-    b.komponierbar p platform, Befehl.sicher p platform inv b⟩
+    b.komponierbar p platform, Befehl.sicherheitsPflichten p platform inv b⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered
+
+theorem programKern_sicherheit (constructor : Name)
+    (entry : RegistryEntry constructor ⟨.core, programKernStatements constructor⟩) :
+    ProgramKernSicherheitsAussage constructor :=
+  fun p platform b form invariant => (entry.preservation p platform b form invariant).2.2.2
 
 def befehlSchema (constructor : Name) : RegistrySchema constructor :=
   if constructor = ``Befehl.literal then
@@ -141,6 +153,22 @@ def befehlSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.core, Quellform.kernStatements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
   else if constructor = ``Befehl.definiereVariante then
     ⟨.core, Quellform.kernStatements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textLiteral then
+    ⟨.core, Quellform.kernStatements textLiteralForm TextLiteralErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textConcat then
+    ⟨.core, Quellform.kernStatements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textIndex then
+    ⟨.core, Quellform.kernStatements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.textLength then
+    ⟨.core, Quellform.kernStatements textLengthForm TextLengthErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.substring then
+    ⟨.core, Quellform.kernStatements substringForm SubstringErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.definiereTraeger then
+    ⟨.core, Quellform.kernStatements tableForm TableErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.optionIstBesetzt then
+    ⟨.core, Quellform.kernStatements optionTestForm OptionTestErfuellbarAmAussage constructor⟩
+  else if constructor = ``Befehl.definiereEffektgruppe then
+    ⟨.core, Quellform.kernStatements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
   else if constructor ∈ programConstructors then
     ⟨.core, programKernStatements constructor⟩
   else nichtSpezifiziert constructor
@@ -167,6 +195,26 @@ theorem befehlSchema_program (constructor : Name) (registered : constructor ∈ 
     ite_eq_right (hne ``Befehl.zurueck (by simpa [programConstructors])),
     ite_eq_right (hne ``Befehl.springe (by simpa [programConstructors])),
     ite_eq_right (hne ``Befehl.blockEnde (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.baueArray (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.liesArray (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.baueTupel (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.liesTupelfeld (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.baueRecord (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.liesRecordFeld (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.bindeTupel (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.setzeRecordFeld (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.definiereRecord (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.baueVariante (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.waehleVariante (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.definiereVariante (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.textLiteral (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.textConcat (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.textIndex (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.textLength (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.substring (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.definiereTraeger (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.optionIstBesetzt (by simpa [programConstructors])),
+    ite_eq_right (hne ``Befehl.definiereEffektgruppe (by simpa [programConstructors])),
     if_pos registered]
 
 def kern_bindeWert : RegistryEntry ``Befehl.bindeWert (befehlSchema ``Befehl.bindeWert) := by

@@ -111,7 +111,7 @@ private theorem loop_round
     (shape : ∀ pc b, test + 1 ≤ pc → pc ≠ back → code[pc]? = some b → b.rueckweite ≤ pc - (test + 1))
     (head : LoopHead code origin entry test count frame)
     (evaluate : Binnen code evalBudget frame (fun out =>
-      out.Aktiv ∧ out.pc = test ∧ out.fortsetzungen = frame.fortsetzungen ∧
+      ¬ out.Aktiv ∨ out.Aktiv ∧ out.pc = test ∧ out.fortsetzungen = frame.fortsetzungen ∧
         out.zaehler test = some count))
     (testAt : code[test]? = some instruction)
     (classify : ∀ atTest, atTest.Aktiv → atTest.zaehler atTest.pc = some count →
@@ -129,7 +129,8 @@ private theorem loop_round
       ∃ next, count = next + 1 ∧
         Binnen code (evalBudget + 1 + bodyBudget + 1) frame
           (fun out => SchleifenAusgang 0 code.length origin out ∨ LoopHead code origin entry test next out) := by
-  obtain ⟨n, atTest, cost, eval, live, pc, stack, counter⟩ := evaluate
+  obtain ⟨n, atTest, cost, eval, stopped | ⟨live, pc, stack, counter⟩⟩ := evaluate
+  · exact .inl ⟨n, atTest, by omega, eval, SchleifenAusgang.stopped stopped⟩
   have testStep := Rahmen.LaufN.eins (first := atTest) live (pc.symm ▸ testAt)
   have through := eval.trans testStep
   let tested := instruction.auswerten atTest
@@ -161,6 +162,7 @@ private theorem code_lookup_middle (pre : List Befehl) (b : Befehl) (post : List
 theorem boundedWhile_terminiert (a : Surface.BoundedWhileArgs scope result) (frame : Rahmen)
     (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
     (typed : frame.traegt env) (bodyBudget : Nat)
+    (checked : frame.WaechterHalten ((boundedWhileForm scope result).fragment a).code)
     (body : let f := (boundedWhileForm scope result).fragment a
       let test := (boundedWhileForm scope result).position a
       SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 1) bodyBudget)
@@ -206,8 +208,11 @@ theorem boundedWhile_terminiert (a : Surface.BoundedWhileArgs scope result) (fra
     rw [← bodyLen]
     simpa only [List.append_nil] using
       body_shape bodyPre inner [] jump (braced_rueckkanten a.body) .nil
+  change frame.WaechterHalten code at checked
+  have lowerChecked : frame.WaechterHalten (lower ++ ([set] ++ condition ++ [test] ++ inner ++ [jump])) := by
+    simpa only [code, bodyPre, pre, setup, List.append_assoc] using checked
   obtain ⟨k, atSet, cost, walk, setPC, value, preserved⟩ :=
-    expr_laufN 0 a.bound env frame typed active initial ([set] ++ condition ++ [test] ++ inner ++ [jump])
+    expr_laufN 0 a.bound env frame typed active initial ([set] ++ condition ++ [test] ++ inner ++ [jump]) lowerChecked
   change atSet.pc = lower.length at setPC
   change k ≤ lower.length at cost
   have walk' : Rahmen.LaufN code k frame atSet := by
@@ -242,16 +247,19 @@ theorem boundedWhile_terminiert (a : Surface.BoundedWhileArgs scope result) (fra
     intro count start h
     apply loop_round closedBody shape h (evalBudget := condition.length) (leaveBudget := 0)
       (skip := inner.length + 2) (instruction := test)
-    · obtain ⟨n, out, budget, run, endPC, same⟩ := (expr_ausdruckscode 0 a.condition).laufN
+    · obtain ⟨n, out, budget, run, outcome⟩ := (expr_ausdruckscode 0 a.condition).laufN
         setup ([test] ++ inner ++ [jump]) start h.2.1 (by rw [h.2.2.1]) (by rw [h.2.2.1]; omega)
-      refine ⟨n, out, ?_, ?_, h.2.1.ausdruck same, endPC.trans preLen.symm, ?_, ?_⟩
+      refine ⟨n, out, ?_, ?_, ?_⟩
       · change n ≤ setup.length + condition.length - start.pc at budget
         rw [h.2.2.1] at budget
         omega
       · simpa only [code, bodyPre, pre, List.append_assoc] using run
-      · rw [same]
-      · rw [same]
-        exact h.2.2.2.2
+      · rcases outcome with ⟨endPC, same⟩ | stopped
+        · refine .inr ⟨h.2.1.ausdruck same, endPC.trans preLen.symm, ?_, ?_⟩
+          · rw [same]
+          · rw [same]
+            exact h.2.2.2.2
+        · exact .inl fun active => by rw [active.1] at stopped; cases stopped
     · simpa only [code, bodyPre, List.append_assoc] using
         code_lookup_middle pre test (inner ++ [jump]) rfl
     · exact fun atTest live count => while_cut atTest live count _ _
@@ -307,6 +315,7 @@ private theorem for_back_cut (frame : Rahmen) (active : frame.Aktiv) (jump : Nat
 theorem forRange_terminiert (a : Surface.ForRangeArgs scope result) (frame : Rahmen)
     (env : Umgebung scope) (initial : frame.pc = 0) (active : frame.Aktiv)
     (typed : frame.traegt env) (bodyBudget : Nat)
+    (checked : frame.WaechterHalten ((forRangeForm scope result).fragment a).code)
     (body : let f := (forRangeForm scope result).fragment a
       let test := (forRangeForm scope result).position a
       SchleifenKoerper f.code frame 0 f.code.length (test + 1) (f.code.length - 2) bodyBudget)
@@ -354,11 +363,16 @@ theorem forRange_terminiert (a : Surface.ForRangeArgs scope result) (frame : Rah
     rw [← bodyLen]
     exact body_shape bodyPre inner [pop] jump (braced_rueckkanten a.body) (.single rfl)
   let rest := [set] ++ [test] ++ inner ++ [jump] ++ [pop]
+  change frame.WaechterHalten code at checked
+  have lowChecked : frame.WaechterHalten (low ++ (high ++ rest)) := by
+    simpa only [code, bodyPre, pre, endpoints, rest, List.append_assoc] using checked
   obtain ⟨l, mid, lCost, lowRun, midPC, lowValue, midSame⟩ :=
-    expr_laufN 0 a.lower env frame typed active initial (high ++ rest)
+    expr_laufN 0 a.lower env frame typed active initial (high ++ rest) lowChecked
+  have highChecked : mid.WaechterHalten (low ++ high ++ rest) := by
+    simpa only [List.append_assoc] using lowChecked.after lowRun.lauf
   obtain ⟨h, atSet, hCost, highRun, setPC, highValue, setSame, earlier⟩ :=
     expr_laufN_am 1 a.upper env mid (Rahmen.traegt_ausdruck typed midSame)
-      (active.ausdruck midSame) low rest midPC
+      (active.ausdruck midSame) low rest midPC highChecked
   change l ≤ low.length at lCost
   change h ≤ high.length at hCost
   have atEndpoints : atSet.pc = endpoints.length := setPC.trans endLen.symm
@@ -399,7 +413,7 @@ theorem forRange_terminiert (a : Surface.ForRangeArgs scope result) (frame : Rah
         (fun out => SchleifenAusgang 0 code.length frame out ∨ LoopHead code frame pre.length pre.length next out) := by
     intro count start head
     apply loop_round closedBody shape head (evalBudget := 0) (leaveBudget := 1) (skip := inner.length + 2) (instruction := test)
-    · exact ⟨0, start, Nat.le_refl _, .null, head.2.1, head.2.2.1, rfl, head.2.2.2.2⟩
+    · exact ⟨0, start, Nat.le_refl _, .null, .inr ⟨head.2.1, head.2.2.1, rfl, head.2.2.2.2⟩⟩
     · simpa only [code, bodyPre, List.append_assoc] using
         code_lookup_middle pre test (inner ++ [jump] ++ [pop]) rfl
     · exact fun atTest live count => for_cut atTest live count _ _

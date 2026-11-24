@@ -71,10 +71,10 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, List.append_assoc, printOpen, printClose,
       printOpenBracket, printCloseBracket, printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "(".toList : Token) = openParen by decide),
-      (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-      (show (Token.punctuation "]".toList : Token) = closeBracket by decide),
-      (show (Token.punctuation ")".toList : Token) = closeParen by decide)]
+      (show (Token.punctuation "(".toList : Token) = openParen by rfl),
+      (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+      (show (Token.punctuation "]".toList : Token) = closeBracket by rfl),
+      (show (Token.punctuation ")".toList : Token) = closeParen by rfl)]
     rfl
   refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
   · simpa only [List.singleton_append, List.cons_append, List.append_assoc, List.nil_append] using
@@ -118,6 +118,14 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
               have prec := infixPrecLe7 .projection; omega
           | recordField _ _ _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
+          | textConcat _ _ allowed _ _ =>
+              have prec := infixPrecLe7 (.arith .add)
+              simp only [Infix.precedence] at prec
+              omega
+          | textIndex _ _ allowed _ _ | substring _ _ _ allowed _ _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
     · rcases grouped with ⟨inside, rfl, indexInput, baseRead, offsetRead⟩
       cases baseRead with
       | atom atomRead highTail =>
@@ -144,6 +152,14 @@ theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
           | tupleField _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
           | recordField _ _ _ _ allowed _ =>
+              have prec := infixPrecLe7 .projection; omega
+          | textConcat _ _ allowed _ _ =>
+              have prec := infixPrecLe7 (.arith .add)
+              simp only [Infix.precedence] at prec
+              omega
+          | textIndex _ _ allowed _ _ | substring _ _ _ allowed _ _ _ =>
+              have prec := infixPrecLe7 .index; omega
+          | optionIsSome _ _ _ allowed _ =>
               have prec := infixPrecLe7 .projection; omega
   · exact arrayIndexPrint scope
   · let base : Expr scope (.array (.int 0 0) 1) :=

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.RecordForms
+public import Core.Ast.Aggregate.Records.RecordForms
 public import Core.Ast.Aggregate.Records.Syntax
 
 @[expose] public section

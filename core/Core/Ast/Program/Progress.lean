@@ -70,11 +70,8 @@ theorem directCall_fortschritt (frame : Rahmen) (site : Rufstelle) (target : Fun
       exact this.elim
     | some declared =>
       have hfit : tyFits declared written = true := by
-        have ht' : (site.args.length = target.parameter.length ∧
-            ∀ (a b : Ty .value), (a, b) ∈ site.args.zip target.parameter → tyFits a b = true) ∧
-            tyFits declared written = true := by
-          simpa [Rufstelle.passt, lookup, hb, hr] using typecheck
-        exact ht'.2
+        simp only [Rufstelle.passt, lookup, hb, hr, Bool.and_eq_true] at typecheck
+        exact typecheck.2
       by_cases hm : target.misstAbstieg = true
       · simpa [Rahmen.ruf, lookup, bind, hb, hr, hfit, hm]
       · have hrec := recursive.resolve_left hm
@@ -333,11 +330,13 @@ theorem program_eintritt (frame : Rahmen) (entry : Identifier) (target : Funktio
       ({ frame with lokale := [] } : Rahmen).ruf entry [] target.result := by
     simpa [Befehl.auswerten, unique, noRec, noBad, lookup, parameters]
   rw [hstep]
-  have typecheck : (⟨entry, [], target.result⟩ : Rufstelle).passt frame.funktionen = true := by
+  have typecheck : (⟨entry, [], target.result, none⟩ : Rufstelle).passt frame.funktionen = true := by
     cases hr : target.result with
     | none => simpa [Rufstelle.passt, lookup, parameters, hr]
     | some declared =>
-      have hfit : tyFits declared declared = true := by cases declared <;> simpa [tyFits]
+      have hfit : tyFits declared declared = true := by
+        cases declared <;> try simp only [tyFits, le_refl, true_and, decide_true]
+        case array _ count => cases count <;> simp only [tyFits, decide_true, eq_self]
       simpa [Rufstelle.passt, lookup, parameters, hr, hfit]
   have hrec : target.misstAbstieg = true ∨
       ∀ saved ∈ ({ frame with lokale := [] } : Rahmen).fortsetzungen,
@@ -353,12 +352,13 @@ theorem program_eintritt (frame : Rahmen) (entry : Identifier) (target : Funktio
     change ¬ (none : Option Text.RawText) = some entry.val
     simpa
   obtain ⟨hpc, hstack, hfun, _hmass, hloc⟩ := directCall_fortschritt
-    ({ frame with lokale := [] } : Rahmen) ⟨entry, [], target.result⟩ target
+    ({ frame with lokale := [] } : Rahmen) ⟨entry, [], target.result, none⟩ target
     lookup typecheck [] (by simpa [Rahmen.rufArgumente, parameters]) hrec hself
   exact ⟨hpc, hfun, by simpa using hloc, by simpa [initial.2] using hstack⟩
 
 theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung scope)
-    (frame : Rahmen) (active : frame.Aktiv) (typed : frame.traegt env) (initial : frame.pc = 0) :
+    (frame : Rahmen) (active : frame.Aktiv) (typed : frame.traegt env) (initial : frame.pc = 0)
+    (checked : frame.WaechterHalten ((constantForm scope).fragment a).code) :
     let code := ((constantForm scope).fragment a).code
     ∃ value, wertIn a.written.type ⟨a.type, a.value.wert env⟩ = some value ∧
       Binnen code code.length frame (fun out =>
@@ -372,7 +372,7 @@ theorem constant_initialisiert (a : Surface.ConstantArgs scope) (env : Umgebung 
         out.globale = some value :: frame.globale)
   obtain ⟨widened, value, _⟩ := wertIn_widen a.fits (a.value.wert env)
   obtain ⟨n, middle, limit, counted, atEnd, tmp, preserved⟩ :=
-    expr_laufN 0 a.value env frame typed active initial [bind]
+    expr_laufN 0 a.value env frame typed active initial [bind] checked
   have live : middle.Aktiv := by
     rw [preserved]
     exact active

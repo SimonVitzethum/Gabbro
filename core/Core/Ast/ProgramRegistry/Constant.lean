@@ -71,7 +71,7 @@ theorem constant_erhaltung (scope : Scope) : (constantForm scope).ErhaltungsAuss
   exact ⟨((constantForm scope).befehl args).abgleich ((constantForm scope).fragment args) platform,
     ((constantForm scope).befehl args).fortschritt ((constantForm scope).fragment args),
     ((constantForm scope).befehl args).komponierbar ((constantForm scope).fragment args) platform,
-    ((constantForm scope).befehl args).sicher ((constantForm scope).fragment args) platform inv⟩
+    ((constantForm scope).befehl args).sicherheitsPflichten ((constantForm scope).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem constant_sicher (scope : Scope) platform a :
@@ -89,13 +89,7 @@ theorem constant_erfuellbar : constantJoint := by
   let ctx : Scope := []
   let form := constantForm ctx
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor
-    · intro h
-      cases h
-    · intro h
-      cases h
+  have ordinaryName : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.ConstantArgs [] := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial, trivial⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2

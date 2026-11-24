@@ -1,417 +1,13 @@
 module
 
-public import Core.Ast.Tree
+public import Core.Ast.Expression.Projections
+public import Core.Ast.Expression.Suffix
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
-
-def Arith.token : Arith → Token
-  | .add => .punctuation ['+']
-  | .mul => .punctuation ['*']
-  | .sub => .punctuation ['-']
-
-def Arith.precedence : Arith → Nat
-  | .add | .sub => 5
-  | .mul => 6
-
-theorem Arith.token_injective {a b : Arith} (same : a.token = b.token) : a = b := by
-  cases a <;> cases b <;> first | rfl | cases same
-
-def Compare.spelling : Compare → String
-  | .eq => "=="
-  | .ne => "!="
-  | .lt => "<"
-  | .le => "<="
-  | .gt => ">"
-  | .ge => ">="
-
-def Logic.spelling : Logic → String
-  | .and => "&&"
-  | .or => "||"
-
-def openParen : Token := .punctuation ['(']
-def closeParen : Token := .punctuation [')']
-def semicolon : Token := .punctuation [';']
-def openBrace : Token := .punctuation ['{']
-def closeBrace : Token := .punctuation ['}']
-def assignment : Token := .punctuation ['=']
-def letKeyword : Token := .word "let".toList
-def trueKeyword : Token := .word "true".toList
-def falseKeyword : Token := .word "false".toList
-def ifKeyword : Token := .word "if".toList
-def elseKeyword : Token := .word "else".toList
-def returnKeyword : Token := .word "return".toList
-def minus : Token := .punctuation ['-']
-def bang : Token := .punctuation ['!']
-def openBracket : Token := .punctuation ['[']
-def closeBracket : Token := .punctuation [']']
-def dot : Token := .punctuation ['.']
-def comma : Token := .punctuation [',']
-def colon : Token := .punctuation [':']
-
-inductive Infix where
-  | arith (op : Arith)
-  | div
-  | compare (op : Compare)
-  | logic (op : Logic)
-  | index
-  | projection
-
-def Infix.token : Infix → Token
-  | .arith op => op.token
-  | .div => .punctuation ['/']
-  | .compare op => .punctuation op.spelling.toList
-  | .logic op => .punctuation op.spelling.toList
-  | .index => openBracket
-  | .projection => dot
-
-def Infix.precedence : Infix → Nat
-  | .arith op => op.precedence
-  | .div => 6
-  | .compare _ => 3
-  | .logic .and => 2
-  | .index | .projection => 7
-  | .logic .or => 1
-
-def Infix.follows : Infix → List Token → Prop
-  | .compare _, rest => ∀ op tail, rest ≠ Infix.token (.compare op) :: tail
-  | _, _ => True
-
--- Mirror Arith.token_injective across the four operator families.
-theorem Infix.token_injective {a b : Infix} (same : a.token = b.token) : a = b := by
-  cases a with
-  | arith op =>
-    cases b with
-    | arith op' => exact congrArg Infix.arith (Arith.token_injective (by simpa only [Infix.token] using same))
-    | div => cases op <;> cases same
-    | compare op' => cases op <;> cases op' <;> cases same
-    | logic op' => cases op <;> cases op' <;> cases same
-    | index => cases op <;> cases same
-    | projection => cases op <;> cases same
-  | div =>
-    cases b with
-    | arith op => cases op <;> cases same
-    | div => rfl
-    | compare op' => cases op' <;> cases same
-    | logic op' => cases op' <;> cases same
-    | index => cases same
-    | projection => cases same
-  | compare op =>
-    cases b with
-    | arith op' => cases op <;> cases op' <;> cases same
-    | div => cases op <;> cases same
-    | compare op' => exact congrArg Infix.compare (by
-        cases op <;> cases op' <;> first | rfl | cases same)
-    | logic op' => cases op <;> cases op' <;> cases same
-    | index => cases op <;> cases same
-    | projection => cases op <;> cases same
-  | logic op =>
-    cases b with
-    | arith op' => cases op <;> cases op' <;> cases same
-    | div => cases op <;> cases same
-    | compare op' => cases op <;> cases op' <;> cases same
-    | logic op' => exact congrArg Infix.logic (by
-        cases op <;> cases op' <;> first | rfl | cases same)
-    | index => cases op <;> cases same
-    | projection => cases op <;> cases same
-  | index =>
-    cases b with
-    | arith op => cases op <;> cases same
-    | div => cases same
-    | compare op' => cases op' <;> cases same
-    | logic op' => cases op' <;> cases same
-    | index => rfl
-    | projection => cases same
-  | projection =>
-    cases b with
-    | arith op => cases op <;> cases same
-    | div => cases same
-    | compare op' => cases op' <;> cases same
-    | logic op' => cases op' <;> cases same
-    | index => cases same
-    | projection => rfl
-
-def Continues (minimum : Nat) (input : List Token) : Prop :=
-  ∃ op : Infix, ∃ more, input = op.token :: more ∧ minimum ≤ op.precedence
-
-theorem noOperatorAtEnd : ¬ Continues minimum [] := by
-  rintro ⟨op, more, equality, _⟩
-  cases equality
-
--- Mirror the arithmetic case of noOperatorAtClose for the new token families.
-theorem noOperatorAtClose : ¬ Continues minimum (closeParen :: more) := by
-  rintro ⟨op, tail, equality, _⟩
-  have head := (List.cons.inj equality).1
-  cases op with
-  | arith a => cases a <;> cases head
-  | div => cases head
-  | compare c => cases c <;> cases head
-  | logic l => cases l <;> cases head
-  | index => cases head
-  | projection => cases head
-
--- Mirror noOperatorAtClose.
-theorem noOperatorAtSemicolon : ¬ Continues minimum (semicolon :: more) := by
-  rintro ⟨op, tail, equality, _⟩
-  have head := (List.cons.inj equality).1
-  cases op with
-  | arith a => cases a <;> cases head
-  | div => cases head
-  | compare c => cases c <;> cases head
-  | logic l => cases l <;> cases head
-  | index => cases head
-  | projection => cases head
-
--- Mirror noOperatorAtClose.
-theorem noOperatorAtOpenBrace : ¬ Continues minimum (openBrace :: more) := by
-  rintro ⟨op, tail, equality, _⟩
-  have head := (List.cons.inj equality).1
-  cases op with
-  | arith a => cases a <;> cases head
-  | div => cases head
-  | compare c => cases c <;> cases head
-  | logic l => cases l <;> cases head
-  | index => cases head
-  | projection => cases head
-
-/-- The operand of a single unary prefix starts at a primary. -/
-def PrimaryStart (tokens : List Token) : Prop :=
-  ∀ tail, tokens ≠ minus :: tail ∧ tokens ≠ bang :: tail
-
-/-- Minus followed by a numeral belongs to the negative-literal production. -/
-def NegationStart (tokens : List Token) : Prop :=
-  PrimaryStart tokens ∧ ∀ n tail, tokens ≠ .natural n :: tail
-
-theorem Infix.token_ne_delimiter (op : Infix) :
-    op.token ≠ comma ∧ op.token ≠ closeBracket := by
-  cases op <;> (try (rename_i operation; cases operation)) <;>
-    constructor <;> intro same <;>
-      simp only [Infix.token, Arith.token, Compare.spelling, Logic.spelling, comma, closeBracket,
-        openBracket, dot, Token.punctuation.injEq, String.reduceToList, List.cons.injEq,
-        Char.reduceEq, false_and, and_false] at same
-
-theorem noOperatorAtComma : ¬ Continues minimum (comma :: more) := by
-  rintro ⟨op, _, same, _⟩
-  exact op.token_ne_delimiter.1 (List.cons.inj same).1.symm
-
-theorem noOperatorAtCloseBracket : ¬ Continues minimum (closeBracket :: more) := by
-  rintro ⟨op, _, same, _⟩
-  exact op.token_ne_delimiter.2 (List.cons.inj same).1.symm
-
-mutual
-
-/-- An expression consumes an atom and its maximal continuation at the given precedence. -/
-inductive ExprReads (scope : Scope) :
-    Nat → List Token → {type : Ty .value} → Expr scope type → List Token → Prop where
-  | atom : AtomReads scope input first more → ExprTail scope minimum first more tree rest →
-      ExprReads scope minimum input tree rest
-
-/-- Parentheses group an expression without adding an AST node. -/
-inductive AtomReads (scope : Scope) :
-    List Token → {type : Ty .value} → Expr scope type → List Token → Prop where
-  | lit : AtomReads scope (.natural value :: rest) (.lit value) rest
-  | grouped : ExprReads scope 0 input tree (closeParen :: rest) →
-      AtomReads scope (openParen :: input) tree rest
-  | trueLit : AtomReads scope (trueKeyword :: rest) .trueLit rest
-  | falseLit : AtomReads scope (falseKeyword :: rest) .falseLit rest
-  | variable (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name) :
-      AtomReads scope (.word ref.binding.name.val :: rest) (.variable ref visible ordinary) rest
-  | negativeLit : AtomReads scope (minus :: .natural value :: rest) (.negativeLit value) rest
-  | neg : NegationStart input → AtomReads scope input operand rest →
-      AtomReads scope (minus :: input) (.neg operand) rest
-  | not : PrimaryStart input → AtomReads scope input operand rest →
-      AtomReads scope (bang :: input) (.not operand) rest
-  | arrayValue (principal : arrayElement types = some element)
-      (fits : ∀ i : Fin types.length, Fits (types.get i) element) :
-      ItemsRead scope closeBracket input items rest →
-      AtomReads scope (openBracket :: input) (.arrayValue items principal fits) rest
-  | tupleValue : ExprReads scope 0 input first (comma :: secondInput) →
-      ExprReads scope 0 secondInput second more →
-      ItemsTail scope closeParen more items rest →
-      AtomReads scope (openParen :: input) (.tupleValue first second items) rest
-  | recordValue (ref : RecordRef scope labels types)
-      (fields : RecordArguments labels types actualLabels actualTypes)
-      (fits : ∀ i, Fits (actualTypes.get (fields.slot i)) (types.get i)) :
-      LabeledItemsRead scope input args rest →
-      AtomReads scope (.word ref.name.val :: openParen :: input) (.recordValue ref args fields fits) rest
-  | variantValue (ref : VariantRef scope labels payloads) (label : Identifier)
-      (index : Fin payloads.length) (written : labels[index.val]? = some label)
-      (ordinary : ordinaryLocal label) (available : availableCase scope label)
-      (payload : CasePayload scope (payloads.get index)) :
-      CasePayloadRead scope input payload rest →
-      AtomReads scope (.word label.val :: input) (.variantValue ref label index written ordinary available payload) rest
-
-/-- The right operand takes higher-precedence operators. A comparison also
-    refuses a comparison at the head of its continuation. -/
-inductive ExprTail (scope : Scope) :
-    Nat → {inputType : Ty .value} → Expr scope inputType → List Token →
-      {resultType : Ty .value} → Expr scope resultType → List Token → Prop where
-  | stop : ¬ Continues minimum rest → ExprTail scope minimum left rest left rest
-  | binary (op : Arith) : minimum ≤ op.precedence →
-      ExprReads scope (op.precedence + 1) input right more →
-      ExprTail scope minimum (.binary op left right) more tree rest →
-      ExprTail scope minimum left (op.token :: input) tree rest
-  | div : minimum ≤ Infix.div.precedence →
-      ExprReads scope (Infix.div.precedence + 1) input (right : Expr scope (.int lo hi)) more →
-      (nonzero : Divisor lo hi) → ExprTail scope minimum (.div left right nonzero) more tree rest →
-      ExprTail scope minimum left (Infix.div.token :: input) tree rest
-  | compare (op : Compare) : minimum ≤ (Infix.compare op).precedence →
-      ExprReads scope ((Infix.compare op).precedence + 1) input right more →
-      (Infix.compare op).follows more → ExprTail scope minimum (.compare op left right) more tree rest →
-      ExprTail scope minimum left ((Infix.compare op).token :: input) tree rest
-  | logic (op : Logic) : minimum ≤ (Infix.logic op).precedence →
-      ExprReads scope ((Infix.logic op).precedence + 1) input right more →
-      ExprTail scope minimum (.logic op left right) more tree rest →
-      ExprTail scope minimum left ((Infix.logic op).token :: input) tree rest
-  | arrayIndex (base : Expr scope (.array element count)) (lower : 0 ≤ (lo : Int)) (upper : (hi : Int) < (count : Int)) :
-      minimum ≤ Infix.index.precedence →
-      ExprReads scope 0 input (index : Expr scope (.int lo hi)) (closeBracket :: more) →
-      ExprTail scope minimum (.arrayIndex base index lower upper) more tree rest →
-      ExprTail scope minimum base (openBracket :: input) tree rest
-  | tupleField (base : Expr scope (tupleType (first :: second :: types)))
-      (index : Fin (first :: second :: types).length) :
-      minimum ≤ Infix.projection.precedence →
-      ExprTail scope minimum (.tupleField base index) input tree rest →
-      ExprTail scope minimum base (dot :: .natural index.val :: input) tree rest
-  | recordField (base : Expr scope (recordValueType name labels types)) (field : Identifier)
-      (index : Fin types.length) (written : RecordFieldAt labels field index.val) :
-      minimum ≤ Infix.projection.precedence →
-      ExprTail scope minimum (.recordField base field index written) input tree rest →
-      ExprTail scope minimum base (dot :: .word field.val :: input) tree rest
-
-/-- A comma-delimited expression sequence consumes the caller's closing delimiter. -/
-inductive ItemsRead (scope : Scope) : Token →
-    List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
-  | close : ItemsRead scope close (close :: rest) .empty rest
-  | next : ExprReads scope 0 input head more → ItemsTail scope close more tail rest →
-      ItemsRead scope close input (.next head tail) rest
-
-inductive ItemsTail (scope : Scope) : Token →
-    List Token → {types : List (Ty .value)} → ExprItems scope types → List Token → Prop where
-  | close : ItemsTail scope close (close :: rest) .empty rest
-  | comma {types : List (Ty .value)} {tail : ExprItems scope types} : (types ≠ [] ∨ close = closeBracket) → ItemsRead scope close input tail rest → ItemsTail scope close (comma :: input) tail rest
-
-/-- A record call uses only labelled actuals and consumes its closing parenthesis. -/
-inductive LabeledItemsRead (scope : Scope) :
-    List Token → {labels : List Identifier} → {types : List (Ty .value)} →
-    LabeledItems scope labels types → List Token → Prop where
-  | close : LabeledItemsRead scope (closeParen :: rest) .empty rest
-  | next (name : Identifier) : ExprReads scope 0 input value more →
-      LabeledItemsTail scope more remaining rest →
-      LabeledItemsRead scope (.word name.val :: colon :: input) (.next name value remaining) rest
-
-inductive LabeledItemsTail (scope : Scope) :
-    List Token → {labels : List Identifier} → {types : List (Ty .value)} →
-    LabeledItems scope labels types → List Token → Prop where
-  | close : LabeledItemsTail scope (closeParen :: rest) .empty rest
-  | comma (label : Identifier) (value : Expr scope type) (remaining : LabeledItems scope labels types) :
-      LabeledItemsRead scope input (.next label value remaining) rest →
-      LabeledItemsTail scope (comma :: input) (.next label value remaining) rest
-
-inductive CasePayloadRead (scope : Scope) :
-    List Token → {type : Option (Ty .value)} → CasePayload scope type → List Token → Prop where
-  | bare (closed : ∀ tail, rest ≠ openParen :: tail) :
-      CasePayloadRead scope rest (.nullary false) rest
-  | empty : CasePayloadRead scope (openParen :: closeParen :: rest) (.nullary true) rest
-  | value : ExprReads scope 0 input expression (closeParen :: rest) →
-      CasePayloadRead scope (openParen :: input) (.value expression) rest
-
-end
-
-/-- Inverting the atom production recovers both the literal and its complete suffix. -/
-theorem AtomReads.lit_inversion
-    (read : AtomReads scope (.natural value :: rest) tree suffix) :
-    tree.typed = (Expr.lit (scope := scope) value).typed ∧ suffix = rest := by
-  cases read
-  exact ⟨rfl, rfl⟩
-
--- Mirror AtomReads.lit_inversion and eliminate the ordinaryLocal exclusion.
-theorem AtomReads.true_inversion (read : AtomReads scope (trueKeyword :: rest) tree suffix) :
-    tree.typed = (Expr.trueLit (scope := scope)).typed ∧ suffix = rest := by
-  change AtomReads scope (.word "true".toList :: rest) tree suffix at read
-  generalize hs : "true".toList = word at read
-  cases read with
-  | trueLit => exact ⟨rfl, rfl⟩
-  | falseLit => exfalso; cases hs
-  | _ =>
-      exfalso
-      rename_i ref visible ordinary
-      exact ordinary.1 hs.symm
-
--- Mirror AtomReads.true_inversion.
-theorem AtomReads.false_inversion (read : AtomReads scope (falseKeyword :: rest) tree suffix) :
-    tree.typed = (Expr.falseLit (scope := scope)).typed ∧ suffix = rest := by
-  change AtomReads scope (.word "false".toList :: rest) tree suffix at read
-  generalize hs : "false".toList = word at read
-  cases read with
-  | falseLit => exact ⟨rfl, rfl⟩
-  | trueLit => exfalso; cases hs
-  | _ =>
-      exfalso
-      rename_i ref visible ordinary
-      exact ordinary.2 hs.symm
-
--- Mirror AtomReads.lit_inversion, leaving the lookup evidence existential.
-theorem AtomReads.variable_inversion {scope : Scope} {word : List Char} {rest suffix : List Token}
-    {type : Ty .value} {tree : Expr scope type}
-    (ordinary : word ≠ "true".toList ∧ word ≠ "false".toList)
-    (read : @AtomReads scope (.word word :: rest) type tree suffix) :
-    ∃ (ref : Local scope type) (visible : ref.visible) (ordinary : ordinaryLocal ref.binding.name),
-      ref.binding.name.val = word ∧ tree.typed = (Expr.variable ref visible ordinary).typed ∧ suffix = rest := by
-  cases read
-  case trueLit => exact (ordinary.1 rfl).elim
-  case falseLit => exact (ordinary.2 rfl).elim
-  case _ =>
-    rename_i ref vis ord
-    exact ⟨ref, vis, ord, rfl, rfl, rfl⟩
-
-theorem AtomReads.negative_inversion
-    (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
-    tree.typed = (Expr.negativeLit (scope := scope) value).typed ∧ suffix = rest := by
-  cases read with
-  | negativeLit => exact ⟨rfl, rfl⟩
-  | _ =>
-      exfalso
-      rename_i start child
-      exact start.2 _ _ rfl
-
--- Mirror AtomReads.lit_inversion, retaining the operand derivation.
-theorem AtomReads.neg_inversion (start : NegationStart input)
-    (read : AtomReads scope (minus :: input) tree rest) :
-    ∃ (lo hi : Int) (operand : Expr scope (.int lo hi)),
-      AtomReads scope input operand rest ∧ tree.typed = (Expr.neg operand).typed := by
-  cases read with
-  | neg start' child => exact ⟨_, _, _, child, rfl⟩
-  | _ =>
-      exfalso
-      exact start.2 _ _ rfl
-
--- Mirror AtomReads.neg_inversion and keep the Boolean type.
-theorem AtomReads.not_inversion (read : AtomReads scope (bang :: input) tree rest) :
-    ∃ operand : Expr scope .bool, PrimaryStart input ∧
-      AtomReads scope input operand rest ∧ tree.typed = (Expr.not operand).typed := by
-  cases read with
-  | not primary child => exact ⟨_, primary, child, rfl⟩
-
--- Mirror Arith.token_injective by inducting on the two typed indices.
-theorem Local.visible_unique (a : Local scope type) (b : Local scope type')
-    (visibleA : a.visible) (visibleB : b.visible) (same : a.binding.name.val = b.binding.name.val) :
-    (⟨type, a⟩ : (t : Ty .value) × Local scope t) = ⟨type', b⟩ := by
-  induction a with
-  | here =>
-    cases b with
-    | here => rfl
-    | there b' => exact (visibleB.2.1 same).elim
-  | there a' ih =>
-    cases b with
-    | here => exact (visibleA.2.1 same.symm).elim
-    | there b' =>
-      have eq := ih b' ⟨visibleA.1, visibleA.2.2⟩ ⟨visibleB.1, visibleB.2.2⟩ same
-      cases eq
-      rfl
 
 -- Extend the original mutual ExprReads.deterministic recursor with the new atom and tail branches.
 theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
@@ -424,59 +20,94 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       ∀ {otherType} {b : Expr scope otherType} {rest'}, AtomReads scope input b rest' → a.typed = b.typed ∧ rest = rest')
     (motive_3 := fun min _ first input _ a rest _ =>
       ∀ {otherType} {b : Expr scope otherType} {rest'}, ExprTail scope min first input b rest' → a.typed = b.typed ∧ rest = rest')
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
-  · intros
+    (motive_4 := fun close input _ items rest _ =>
+      ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
+        (close = closeParen ∨ close = closeBracket) →
+      ItemsRead scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
+    (motive_5 := fun close input _ items rest _ =>
+      ∀ {otherTypes} {b : ExprItems scope otherTypes} {rest'},
+        (close = closeParen ∨ close = closeBracket) →
+      ItemsTail scope close input b rest' → ((⟨_, items⟩ : Σ ts, ExprItems scope ts) = ⟨_, b⟩) ∧ rest = rest')
+    (motive_6 := fun input _ _ items rest _ =>
+      ∀ {labels types} {b : LabeledItems scope labels types} {rest'},
+        LabeledItemsRead scope input b rest' → ((⟨_, _, items⟩ : Σ ls ts, LabeledItems scope ls ts) = ⟨_, _, b⟩) ∧ rest = rest')
+    (motive_7 := fun input _ _ items rest _ =>
+      ∀ {labels types} {b : LabeledItems scope labels types} {rest'},
+        LabeledItemsTail scope input b rest' → ((⟨_, _, items⟩ : Σ ls ts, LabeledItems scope ls ts) = ⟨_, _, b⟩) ∧ rest = rest')
+    (motive_8 := fun input _ payload rest _ =>
+      ∀ {type} {b : CasePayload scope type} {rest'},
+        CasePayloadRead scope input b rest' → ((⟨_, payload⟩ : Σ t, CasePayload scope t) = ⟨_, b⟩) ∧ rest = rest')
+    ?atom ?lit ?grouped ?trueLit ?falseLit ?«variable» ?negativeLit ?neg ?not
+    ?arrayValue ?tupleValue ?recordValue ?variantValue ?textLiteral ?textLength
+    ?stop ?binary ?div ?compare ?logic ?arrayIndex ?tupleField ?recordField
+    ?textConcat ?textIndex ?substring ?optionIsSome
+    ?itemsClose ?itemsNext ?itemsTailClose ?itemsTailComma
+    ?labeledClose ?labeledNext ?labeledTailClose ?labeledTailComma
+    ?payloadBare ?payloadEmpty ?payloadValue left
+  case atom =>
+    intros
     rename_i input firstType first more minimum treeType tree rest atomRead tailRead atomDet tailDet otherType b rest' otherRead
     cases otherRead with
     | atom atom tail =>
       obtain ⟨same, rfl⟩ := atomDet atom
       cases same
       exact tailDet tail
-  · intros
+  case lit =>
+    intros
     rename_i _ _ value rest _ _ _ otherRead
     obtain ⟨same, suffix⟩ := otherRead.lit_inversion
     exact ⟨same.symm, suffix.symm⟩
-  · intros
+  case grouped =>
+    intros
     rename_i _ _ input _ tree rest insideRead insideDet _ _ _ otherRead
     cases otherRead with
     | grouped inside =>
       obtain ⟨same, suffix⟩ := insideDet inside
       exact ⟨same, (List.cons.inj suffix).2⟩
-  · intros
+    | tupleValue firstRead _ _ =>
+      exact (by obtain ⟨_, suffix⟩ := insideDet firstRead; cases suffix)
+  case trueLit =>
+    intros
     rename_i _ _ rest _ _ _ otherRead
     obtain ⟨same, suffix⟩ := otherRead.true_inversion
     exact ⟨same.symm, suffix.symm⟩
-  · intros
+  case falseLit =>
+    intros
     rename_i _ _ rest _ _ _ otherRead
     obtain ⟨same, suffix⟩ := otherRead.false_inversion
     exact ⟨same.symm, suffix.symm⟩
-  · intros
+  case «variable» =>
+    intros
     rename_i _ _ _ rest ref vis ord _ _ _ otherRead
-    obtain ⟨ref', vis', ord', nameEq, sameTree, suffix⟩ := otherRead.variable_inversion ord
+    obtain ⟨_, ref', vis', ord', nameEq, sameTree, suffix⟩ := otherRead.variable_inversion ord ⟨_, ref, vis, rfl⟩
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
       Local.visible_unique ref ref' vis vis' nameEq.symm
     cases eqRef
     cases sameTree
     exact ⟨rfl, suffix.symm⟩
-  · intros
+  case negativeLit =>
+    intros
     rename_i _ _ value rest _ _ _ otherRead
     obtain ⟨same, suffix⟩ := otherRead.negative_inversion
     exact ⟨same.symm, suffix.symm⟩
-  · intros
+  case neg =>
+    intros
     rename_i _ _ input _ _ operand rest start child childDet _ _ _ otherRead
     obtain ⟨_, _, operand', read', sameTree⟩ := otherRead.neg_inversion start
     cases sameTree
     obtain ⟨same, suffix⟩ := childDet read'
     cases same
     exact ⟨rfl, suffix⟩
-  · intros
+  case not =>
+    intros
     rename_i _ _ input operand rest _ child childDet _ _ _ otherRead
     obtain ⟨operand', primary, read', sameTree⟩ := otherRead.not_inversion
     cases sameTree
     obtain ⟨same, suffix⟩ := childDet read'
     cases same
     exact ⟨rfl, suffix⟩
-  · intros
+  case stop =>
+    intros
     rename_i _ _ _ rest _ left blocked _ _ _ otherRead
     cases otherRead with
     | stop => exact ⟨rfl, rfl⟩
@@ -484,7 +115,16 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | div allowed => exact (blocked ⟨.div, _, rfl, allowed⟩).elim
     | compare op allowed => exact (blocked ⟨.compare op, _, rfl, allowed⟩).elim
     | logic op allowed => exact (blocked ⟨.logic op, _, rfl, allowed⟩).elim
-  · intros
+    | arrayIndex _ _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | tupleField _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+    | recordField _ _ _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+    | textConcat _ _ allowed => exact (blocked ⟨.arith .add, _, rfl, allowed⟩).elim
+    | textIndex _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | substring _ _ _ allowed => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | optionIsSome _ _ _ allowed => exact (blocked ⟨.projection, _, rfl, allowed⟩).elim
+  case binary =>
+
+    intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
     generalize h : op.token = token at otherRead
     cases otherRead with
@@ -501,7 +141,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .arith op) (b := .compare op') h
       cases eq
-  · intros
+  case div =>
+    intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ allowed _ _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token .div = token at otherRead
     cases otherRead with
@@ -516,7 +157,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
     | compare op' _ rightRead _ tail =>
       have eq := Infix.token_injective (a := .div) (b := .compare op') h
       cases eq
-  · intros
+  case compare =>
+    intros
     rename_i _ _ _ input _ _ _ _ _ _ _ _ _ _ op allowed _ _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token (.compare op) = token at otherRead
     cases otherRead with
@@ -533,7 +175,8 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
-  · intros
+  case logic =>
+    intros
     rename_i _ _ _ input _ _ _ _ _ _ op allowed _ _ rightDet tailDet _ _ _ otherRead
     generalize h : Infix.token (.logic op) = token at otherRead
     cases otherRead with
@@ -544,83 +187,257 @@ theorem ExprReads.deterministic (left : ExprReads scope minimum input a rest)
       obtain ⟨same, rfl⟩ := rightDet rightRead
       cases same
       exact tailDet tail'
--- The mutual recursor covers every constructor of all eight readers; each minor
--- composes the children's suffix proofs with the token prefix it consumes.
-theorem ExprReads.consumes (read : ExprReads scope minimum input tree rest) : rest <:+ input := by
-  refine ExprReads.rec
-    (motive_1 := fun _ input _ _ rest _ => rest <:+ input)
-    (motive_2 := fun input _ _ rest _ => rest <:+ input)
-    (motive_3 := fun _ _ _ input _ _ rest _ => rest <:+ input)
-    (motive_4 := fun _ input _ _ rest _ => rest <:+ input)
-    (motive_5 := fun _ input _ _ rest _ => rest <:+ input)
-    (motive_6 := fun input _ _ _ rest _ => rest <:+ input)
-    (motive_7 := fun input _ _ _ rest _ => rest <:+ input)
-    (motive_8 := fun input _ _ rest _ => rest <:+ input)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
-  · intro _ _ _ _ _ _ _ _ _ _ atom tail
-    exact tail.trans atom
-  · intro _ _
-    exact List.suffix_cons _ _
-  · intro input _ _ rest _ child
-    exact ((List.suffix_cons closeParen rest).trans child).trans (List.suffix_cons openParen input)
-  · intro _
-    exact List.suffix_cons _ _
-  · intro _
-    exact List.suffix_cons _ _
-  · intro _ _ _ _ _
-    exact List.suffix_cons _ _
-  · intro _ _
-    exact (List.suffix_cons _ _).trans (List.suffix_cons _ _)
-  · intro _ _ _ _ _ start child ihChild
-    exact ihChild.trans (List.suffix_cons _ _)
-  · intro _ _ _ _ _ ihChild
-    exact ihChild.trans (List.suffix_cons _ _)
-  · intro _ _ input _ rest _ _ _ ih
-    exact ih.trans (List.suffix_cons openBracket input)
-  · intro input _ _ secondInput _ _ more _ _ rest _ _ _ ihFirst ihSecond ihItems
-    exact (((ihItems.trans ihSecond).trans ((List.suffix_cons comma secondInput).trans ihFirst)).trans
-      (List.suffix_cons openParen input))
-  · intro _ _ _ _ input _ rest _ _ _ _ ih
-    exact (ih.trans (List.suffix_cons openParen input)).trans (List.suffix_cons _ _)
-  · intro _ _ input rest _ _ _ _ _ _ _ _ ih
-    exact ih.trans (List.suffix_cons _ _)
-  · intro _ rest _ _ _
-    exact List.suffix_refl rest
-  · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons _ _)
-  · intro _ input _ _ _ _ _ _ _ _ _ _ _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons _ _)
-  · intro _ input _ _ _ _ _ _ _ _ _ _ op _ _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons _ _)
-  · intro _ _ _ _ _ _ _ _ op _ _ _ operand tail
-    exact (tail.trans operand).trans (List.suffix_cons _ _)
-  · intro _ _ _ _ _ input _ _ _ _ _ _ _ _ _ _ _ ihIndex ihTail
-    exact ((ihTail.trans (List.suffix_cons closeBracket _)).trans ihIndex).trans (List.suffix_cons openBracket input)
-  · intro _ _ _ _ _ _ _ _ _ _ _ _ tail
-    exact tail.trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))
-  · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ tail
-    exact tail.trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))
-  · intro _ rest
-    exact List.suffix_cons _ _
-  · intro input _ _ more _ _ _ rest _ _ ihHead ihTail
-    exact ihTail.trans ihHead
-  · intro _ rest
-    exact List.suffix_cons _ _
-  · intro _ input rest _ _ _ _ ih
-    exact ih.trans (List.suffix_cons _ _)
-  · intro rest
-    exact List.suffix_cons _ _
-  · intro input _ _ more _ _ _ rest _ _ _ ihHead ihTail
-    exact ((ihTail.trans ihHead).trans (List.suffix_cons colon input)).trans (List.suffix_cons _ _)
-  · intro rest
-    exact List.suffix_cons _ _
-  · intro _ _ _ input rest _ _ _ _ ih
-    exact ih.trans (List.suffix_cons _ _)
-  · intro _ _
-    exact List.suffix_refl _
-  · intro rest
-    exact (List.suffix_cons closeParen rest).trans (List.suffix_cons openParen (closeParen :: rest))
-  · intro input _ _ rest _ ih
-    exact ((List.suffix_cons closeParen rest).trans ih).trans (List.suffix_cons openParen input)
+  case arrayValue =>
+    intros
+    rename_i principal fits itemsRead itemsDet _ _ _ otherRead
+    cases otherRead with
+    | arrayValue otherPrincipal otherFits otherItems =>
+      obtain ⟨same, rfl⟩ := itemsDet (Or.inr rfl) otherItems
+      cases same
+      cases principal.symm.trans otherPrincipal
+      exact ⟨rfl, rfl⟩
+  case tupleValue =>
+    intros
+    rename_i firstRead secondRead tailRead firstDet secondDet itemsDet _ _ _ otherRead
+    cases otherRead with
+    | grouped inside =>
+      exact (by
+        obtain ⟨_, delim⟩ := firstDet inside
+        cases delim)
+    | tupleValue otherFirst otherSecond otherItems =>
+      obtain ⟨same, hfirst⟩ := firstDet otherFirst
+      cases same
+      cases (List.cons.inj hfirst).2
+      obtain ⟨same, rfl⟩ := secondDet otherSecond
+      cases same
+      obtain ⟨same, rfl⟩ := itemsDet (Or.inl rfl) otherItems
+      cases same
+      exact ⟨rfl, rfl⟩
+  case recordValue =>
+    intros
+    rename_i args _ ref fields fits argRead argDet _ _ _ otherRead
+    generalize hname : Token.word ref.name.val = token at otherRead
+    cases otherRead with
+    | recordValue otherRef otherFields otherFits otherArgs =>
+      have sameRefs := ref.unique otherRef (Token.word.inj hname)
+      cases sameRefs
+      obtain ⟨sameArgs, rfl⟩ := argDet otherArgs
+      cases sameArgs
+      have sameFields := fields.unique otherFields (LabeledItems.lengths args)
+      cases sameFields
+      exact ⟨rfl, rfl⟩
+    | «variable» localRef visible _ =>
+      have same := Local.nameVisible_unique localRef ref.schema visible.2 ref.visible
+        ((Token.word.inj hname).symm.trans ref.spelled.symm)
+      exact (Eq.mp (congrArg Ty.valueBinding (congrArg Sigma.fst same)) visible.1 : False).elim
+    | variantValue _ _ _ _ _ available _ _ =>
+      exact (available.2 _ ref.schema.binding_mem
+        (ref.spelled.trans (Token.word.inj hname))).elim
+    | trueLit => exact (ref.ordinary.1 (Token.word.inj hname)).elim
+    | falseLit => exact (ref.ordinary.2.1 (Token.word.inj hname)).elim
+    | textLength _ => exact (ref.ordinary.2.2.1 (Token.word.inj hname)).elim
+    | _ => cases hname
+  case variantValue =>
+    intros
+    rename_i ref label index written ordinary available payload payloadRead payloadDet _ _ _ otherRead
+    generalize hname : Token.word label.val = token at otherRead
+    cases otherRead with
+    | variantValue otherRef otherLabel otherIndex otherWritten _ _ otherPayload otherPayloadRead =>
+      cases Subtype.ext (Token.word.inj hname)
+      have sameRef := ref.unique otherRef (List.mem_of_getElem? written)
+        (List.mem_of_getElem? otherWritten) available
+      cases sameRef
+      have sameIndex : index = otherIndex :=
+        Fin.ext (identifierPosition_unique ref.distinct written otherWritten)
+      cases sameIndex
+      obtain ⟨samePayload, rfl⟩ := payloadDet otherPayloadRead
+      cases samePayload
+      exact ⟨rfl, rfl⟩
+    | «variable» localRef visible _ =>
+      exact (available.2 _ localRef.binding_mem (Token.word.inj hname).symm).elim
+    | recordValue otherRef _ _ _ =>
+      exact (available.2 _ otherRef.schema.binding_mem
+        (otherRef.spelled.trans (Token.word.inj hname).symm)).elim
+    | trueLit => exact (ordinary.1 (Token.word.inj hname)).elim
+    | falseLit => exact (ordinary.2.1 (Token.word.inj hname)).elim
+    | textLength _ => exact (ordinary.2.2.1 (Token.word.inj hname)).elim
+    | _ => cases hname
+  case textLiteral =>
+    intros
+    rename_i _ _ _ otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case textLength =>
+    intros
+    rename_i innerRead innerDet _ _ _ otherRead
+    generalize h : lenofKeyword = token at otherRead
+    cases otherRead with
+    | textLength inner =>
+      obtain ⟨same, suffix⟩ := innerDet inner
+      cases same
+      exact ⟨rfl, (List.cons.inj suffix).2⟩
+    | «variable» ref visible ordinary =>
+      exact (ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | recordValue ref _ _ _ =>
+      exact (ref.ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | variantValue _ _ _ _ ordinary _ _ _ =>
+      exact (ordinary.2.2.1 (Token.word.inj h).symm).elim
+    | _ => cases h
+  case arrayIndex =>
+    intros
+    rename_i allowed indexRead tailRead indexDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | arrayIndex _ _ _ _ otherIndex otherTail =>
+      obtain ⟨same, suffix⟩ := indexDet otherIndex
+      cases same
+      cases (List.cons.inj suffix).2
+      exact tailDet otherTail
+  case tupleField =>
+    intros
+    rename_i index allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.tupleProjection index allowed rfl)
+  case recordField =>
+    intros
+    rename_i field index written allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.recordProjection field index written allowed rfl)
+  case textConcat =>
+    intros
+    rename_i allowed rightRead tailRead rightDet tailDet _ _ _ otherRead
+    generalize h : Arith.add.token = token at otherRead
+    cases otherRead with
+    | stop blocked =>
+      exact (blocked ⟨.arith .add, _, congrArg (· :: _) h.symm, allowed⟩).elim
+    | textConcat _ _ _ otherRight otherTail =>
+      obtain ⟨same, rfl⟩ := rightDet otherRight
+      cases same
+      exact tailDet otherTail
+    | _ => cases h
+  case textIndex =>
+    intros
+    rename_i allowed indexRead tailRead indexDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | textIndex _ _ _ otherIndex otherTail =>
+      obtain ⟨same, suffix⟩ := indexDet otherIndex
+      cases same
+      cases (List.cons.inj suffix).2
+      exact tailDet otherTail
+    | substring _ _ _ _ otherFirst _ _ =>
+      exact (by obtain ⟨_, suffix⟩ := indexDet otherFirst; cases suffix)
+  case substring =>
+    intros
+    rename_i allowed firstRead lastRead tailRead firstDet lastDet tailDet _ _ _ otherRead
+    cases otherRead with
+    | stop blocked => exact (blocked ⟨.index, _, rfl, allowed⟩).elim
+    | textIndex _ _ _ otherIndex _ =>
+      exact (by obtain ⟨_, suffix⟩ := firstDet otherIndex; cases suffix)
+    | substring _ _ _ _ otherFirst otherLast otherTail =>
+      obtain ⟨same, firstSuffix⟩ := firstDet otherFirst
+      cases same
+      cases (List.cons.inj firstSuffix).2
+      obtain ⟨same, lastSuffix⟩ := lastDet otherLast
+      cases same
+      cases (List.cons.inj lastSuffix).2
+      exact tailDet otherTail
+  case optionIsSome =>
+    intros
+    rename_i ref visible ordinary allowed tailRead tailDet _ _ _ otherRead
+    exact tailDet (otherRead.optionProjection ref visible ordinary allowed rfl)
+  case itemsClose =>
+    intros
+    rename_i _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl
+    all_goals
+      cases otherRead with
+      | close => exact ⟨rfl, rfl⟩
+      | next exprRead _ =>
+        cases exprRead with
+        | atom atomRead _ => cases atomRead
+  case itemsNext =>
+    intros
+    rename_i exprRead tailRead exprDet tailDet _ _ _ delimiter otherRead
+    cases otherRead with
+    | close =>
+      rcases delimiter with rfl | rfl
+      all_goals
+        cases exprRead with
+        | atom atomRead _ => cases atomRead
+    | next otherExpr otherTail =>
+      obtain ⟨same, rfl⟩ := exprDet otherExpr
+      cases same
+      obtain ⟨same, rfl⟩ := tailDet delimiter otherTail
+      cases same
+      exact ⟨rfl, rfl⟩
+  case itemsTailClose =>
+    intros
+    rename_i _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl <;> cases otherRead <;> exact ⟨rfl, rfl⟩
+  case itemsTailComma =>
+    intros
+    rename_i itemsDet _ _ _ delimiter otherRead
+    rcases delimiter with rfl | rfl
+    all_goals
+      cases otherRead with
+      | comma _ otherItems =>
+        obtain ⟨same, rfl⟩ := itemsDet (by first | exact Or.inl rfl | exact Or.inr rfl) otherItems
+        cases same
+        exact ⟨rfl, rfl⟩
+  case labeledClose =>
+    intros
+    rename_i otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case labeledNext =>
+    intros
+    rename_i name exprRead tailRead exprDet tailDet _ _ _ _ otherRead
+    generalize hname : name.val = spelling at otherRead
+    cases otherRead with
+    | next otherName otherExpr otherTail =>
+      cases Subtype.ext hname
+      obtain ⟨same, rfl⟩ := exprDet otherExpr
+      cases same
+      obtain ⟨same, rfl⟩ := tailDet otherTail
+      cases same
+      exact ⟨rfl, rfl⟩
+  case labeledTailClose =>
+    intros
+    rename_i otherRead
+    cases otherRead
+    exact ⟨rfl, rfl⟩
+  case labeledTailComma =>
+    intros
+    rename_i itemsDet _ _ _ _ otherRead
+    cases otherRead with
+    | comma _ _ _ otherItems => exact itemsDet otherItems
+  case payloadBare =>
+    intros
+    rename_i closed _ _ _ otherRead
+    cases otherRead with
+    | bare => exact ⟨rfl, rfl⟩
+    | empty => exact (closed _ rfl).elim
+    | value _ => exact (closed _ rfl).elim
+  case payloadEmpty =>
+    intros
+    rename_i otherRead
+    cases otherRead with
+    | bare closed => exact (closed _ rfl).elim
+    | empty => exact ⟨rfl, rfl⟩
+    | value valueRead =>
+      cases valueRead with
+      | atom atomRead _ => cases atomRead
+  case payloadValue =>
+    intros
+    rename_i valueRead valueDet _ _ _ otherRead
+    cases otherRead with
+    | bare closed => exact (closed _ rfl).elim
+    | empty =>
+      cases valueRead with
+      | atom atomRead _ => cases atomRead
+    | value otherValue =>
+      obtain ⟨same, suffix⟩ := valueDet otherValue
+      cases same
+      exact ⟨rfl, (List.cons.inj suffix).2⟩
+  all_goals intros
 
 end Gabbro.Core.Ast

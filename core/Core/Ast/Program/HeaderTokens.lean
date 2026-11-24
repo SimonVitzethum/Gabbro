@@ -8,8 +8,6 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-def colon : Token := .punctuation ":".toList
-def comma : Token := .punctuation ",".toList
 def arrow : Token := .punctuation "->".toList
 def closedRange : Token := .punctuation "..".toList
 def openRange : Token := .punctuation "..<".toList
@@ -25,16 +23,6 @@ theorem programPunctuationHead (member : c ∈ [':', ',', '-', '.']) : UnquotedS
     | intro h
       cases h
 
-def printColon : PrintedToken := printPunctuation ":" (by
-  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
-  intro c same; obtain rfl : ':' = c := Option.some.inj (by simpa using same)
-  exact programPunctuationHead (by
-    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
-def printComma : PrintedToken := printPunctuation "," (by
-  simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
-  intro c same; obtain rfl : ',' = c := Option.some.inj (by simpa using same)
-  exact programPunctuationHead (by
-    simp only [List.mem_cons, List.not_mem_nil, Char.reduceEq, true_or, false_or]))
 def printArrow : PrintedToken := printPunctuation "->" (by
   simp only [punctuation, List.mem_cons, String.reduceEq, true_or, false_or]) (by
   intro c same; obtain rfl : '-' = c := Option.some.inj (by simpa using same)

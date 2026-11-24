@@ -1,6 +1,7 @@
 module
 
 public import Core.Text.Lexeme
+public import Core.Ast.TextValue.Bytes
 
 @[expose] public section
 
@@ -11,6 +12,24 @@ open Gabbro.Core.Text
 /-- A written name. Contextual keyword exclusions belong to the production that binds it. -/
 def Identifier := { name : RawText // ∃ c rest, name = c :: rest ∧
   isNameStart c ∧ ∀ a ∈ rest, isNamePart a }
+
+def ordinaryAtomWord (word : RawText) : Prop :=
+  word ≠ "true".toList ∧ word ≠ "false".toList ∧ word ≠ "lenof".toList ∧
+    word ≠ "Some".toList ∧ word ≠ "None".toList
+
+def ordinaryLocal (name : Identifier) : Prop := ordinaryAtomWord name.val
+
+inductive CarrierAccess where
+  | read
+  | write
+  deriving DecidableEq
+
+/-- The position from the end of a declaration scope is stable when later declarations extend it. -/
+structure CarrierEffect where
+  declaration : Nat
+  carrier : RawText
+  access : CarrierAccess
+  deriving DecidableEq
 
 /-- Kinds separate value types from other type-level forms as they are introduced. -/
 inductive Kind where
@@ -29,6 +48,9 @@ inductive Ty : Kind → Type where
   | sum (head tail : Ty .value) : Ty .value
   | variant (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
   | variantSchema (name : List Char) (labels : List (List Char)) (hasPayload : List Bool) (layout : Ty .value) : Ty .value
+  | text (capacity : Nat) : Ty .value
+  | carrierSchema (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool) : Ty .value
+  | effectGroupSchema (effects : List CarrierEffect) : Ty .value
   deriving DecidableEq
 
 /-- A positional product has a right-associated, explicitly terminated representation. -/
@@ -54,6 +76,15 @@ structure Binding where
 
 abbrev Scope := List Binding
 
+/-- The nearest declaration of a written carrier name fixes its index bound. -/
+def Scope.carrierCount (scope : Scope) (name : Identifier) : Option Nat :=
+  match scope.find? (fun binding => binding.name.val == name.val) with
+  | some ⟨_, .carrierSchema count _ _ _, _, _⟩ => some count
+  | _ => none
+
+/-- Finite carriers of equal count share the same checked numerical index type. -/
+def indexType (count : Nat) : Ty .value := .int 0 ((count : Int) - 1)
+
 /-- Newest binder first. Uses carry a typed de Bruijn index; resolution of a written
     name must select the nearest binding under the applicable scope rules. -/
 inductive Local : Scope → Ty .value → Type where
@@ -74,7 +105,7 @@ def Local.nameVisible : Local scope type → Prop
   | @there _ _ binding ref => binding.name.val ≠ ref.binding.name.val ∧ ref.nameVisible
 
 def Ty.valueBinding : Ty .value → Prop
-  | .recordSchema .. | .variantSchema .. => False
+  | .recordSchema .. | .variantSchema .. | .carrierSchema .. | .effectGroupSchema .. => False
   | _ => True
 
 def Local.visible (ref : Local scope type) : Prop :=
@@ -94,6 +125,7 @@ def RecordFieldAt (labels : List Identifier) (field : Identifier) (index : Nat) 
 
 structure RecordRef (scope : Scope) (labels : List Identifier) (types : List (Ty .value)) where
   name : Identifier
+  ordinary : ordinaryLocal name
   schema : Local scope (recordSchemaType name.val labels types)
   visible : schema.nameVisible
   spelled : schema.binding.name.val = name.val
@@ -111,6 +143,35 @@ structure RecordArguments (labels : List Identifier) (types : List (Ty .value))
 def variantLayout : List (Option (Ty .value)) → Ty .value
   | [] => .sumEnd
   | head :: tail => .sum (head.getD .productEnd) (variantLayout tail)
+
+/-- The two cases of the carrier index option use the ordinary tagged layout.
+    The empty identity is reserved for generated types and cannot name a declaration. -/
+def indexOptionType (count : Nat) : Ty .value :=
+  .variant [] ["Some".toList, "None".toList] [true, false]
+    (variantLayout [some (indexType count), none])
+
+def indexSomeName : Identifier :=
+  ⟨"Some".toList, 'S', ['o', 'm', 'e'], rfl, .inl (.inr (.inl (by decide))), by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> exact .inl (.inl (.inl (by decide)))⟩
+
+def indexNoneName : Identifier :=
+  ⟨"None".toList, 'N', ['o', 'n', 'e'], rfl, .inl (.inr (.inl (by decide))), by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl <;> exact .inl (.inl (.inl (by decide)))⟩
+
+def indexIsSomeName : Identifier :=
+  ⟨"is_some".toList, 'i', ['s', '_', 's', 'o', 'm', 'e'], rfl, .inl (.inl (by decide)), by
+    intro c member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals first | exact .inl (.inl (.inl (by decide))) | exact .inl (.inr rfl)⟩
+
+def indexOptionLabels : List Identifier := [indexSomeName, indexNoneName]
+
+def indexOptionPayloads (count : Nat) : List (Option (Ty .value)) := [some (indexType count), none]
 
 def variantValueType (name : List Char) (labels : List Identifier) (payloads : List (Option (Ty .value))) : Ty .value :=
   .variant name (labels.map Subtype.val) (payloads.map Option.isSome) (variantLayout payloads)

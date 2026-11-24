@@ -111,6 +111,10 @@ theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
     | function name ord parameters res valid measure body distinct returns =>
         simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact codeInv res measure body
+    | record _ => rfl
+    | tagged _ => rfl
+    | table _ => rfl
+    | effectGroup _ => rfl
   have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
     intro before after u
     induction u with
@@ -126,7 +130,7 @@ theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
   exact ⟨((programForm).befehl args).abgleich (programForm.fragment args) platform,
     ((programForm).befehl args).fortschritt (programForm.fragment args),
     ((programForm).befehl args).komponierbar (programForm.fragment args) platform,
-    ((programForm).befehl args).sicher (programForm.fragment args) platform inv⟩
+    ((programForm).befehl args).sicherheitsPflichten (programForm.fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem program_sicher  platform a :
@@ -166,6 +170,10 @@ theorem program_sicher  platform a :
     | function name ord parameters res valid measure body distinct returns =>
         simp only [decl, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact codeInv res measure body
+    | record _ => rfl
+    | tagged _ => rfl
+    | table _ => rfl
+    | effectGroup _ => rfl
   have unitInv : ∀ {before after : Scope} (u : UnitBody before after), (unitBody u).klauseln.invariant = [] := by
     intro before after u
     induction u with
@@ -186,12 +194,12 @@ theorem program_erfuellbar : programJoint := by
   let form := programForm
   let name : Identifier := mainName
   have ord : directName name := mainName_direct
-  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid t := by
+  have validNone : ∀ t ∈ (none : Option WrittenType).toList, WrittenType.valid [] t := by
     intro t mem
     cases mem
-  let first : Decl [] [] := .function name ord [] none validNone none (.braces .done) List.nodup_nil (by intro h; cases h)
+  let first : Decl [] [] := .function name ord [] none validNone none (.braces .done) List.nodup_nil (by intro h; cases h) none
   let a : Surface.ProgramArgs := ⟨[], [], first, .done⟩
-  let defIns : Befehl := .definiere name [] none 0 3 false []
+  let defIns : Befehl := .definiere name [] none 0 3 false [] none
   let E := form.einheit platform a
   let s₀ := (I.start E start).2
   let s₁ := defIns.nach eintritt s₀

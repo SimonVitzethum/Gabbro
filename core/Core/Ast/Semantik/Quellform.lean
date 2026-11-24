@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Sicherheit
+public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Surface
 public import Core.Waechter.Registry
 
@@ -88,6 +88,11 @@ def Quellform.ImplAussage : Prop :=
   ∀ args c s w plans u, (form.befehl args).impl c s w plans u ↔
     plans = [plan] ∧ u = (form.befehl args).nach c s
 
+/-- Both implementation safety obligations travel with each source form's preservation proof. -/
+def Quellform.SicherheitsAussage : Prop :=
+  ∀ platform args,
+    Sicherheit.RegelPflichten ((form.fragment args).sicherheitsEinheit platform) (form.befehl args)
+
 def Quellform.ErhaltungsAussage : Prop :=
   ∀ platform args,
     let p := form.fragment args
@@ -95,7 +100,12 @@ def Quellform.ErhaltungsAussage : Prop :=
     let b := form.befehl args
     I.RegelAbgleich E b ∧ Ideal.RegelFortschritt E.system b ∧
       I.RegelKomponierbar E.einrichtung E.system b ∧
-      Sicherheit.RegelSicher (p.sicherheitsEinheit platform) b
+      Sicherheit.RegelPflichten (p.sicherheitsEinheit platform) b
+
+/-- Recover the safety statement from the typed registry preservation proof. -/
+theorem Quellform.sicherheit_aus_erhaltung (erhaltung : form.ErhaltungsAussage) :
+    form.SicherheitsAussage :=
+  fun platform args => (erhaltung platform args).2.2.2
 
 /-- The common joint premise includes a real typed source, reachability
     of its occurrence from canonical initialisation and every guard at that occurrence. -/

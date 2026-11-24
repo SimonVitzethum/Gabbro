@@ -1,7 +1,6 @@
 module
 
-public import Core.Ast.Variant.Values
-public import Core.Maschine.Start
+public import Core.Ast.Semantik.Runtime.Frame
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -9,194 +8,6 @@ import Init.Data.Vector.OfFn
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
-
-/-- The runtime integer package retains its two bounds and their proofs. -/
-structure Ganzzahl where
-  lo : Int
-  hi : Int
-  zahl : Zahl lo hi
-
-def Ganzzahl.pack (value : Ganzzahl) : Dynamisch := ⟨.int value.lo value.hi, value.zahl⟩
-
-def alsGanzzahl : Dynamisch → Option Ganzzahl
-  | ⟨.int lo hi, value⟩ => some ⟨lo, hi, value⟩
-  | ⟨.bool, _⟩ => none
-  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
-
-def alsBoolean : Dynamisch → Option Bool
-  | ⟨.bool, value⟩ => some value
-  | ⟨.int .., _⟩ => none
-  | ⟨.array .., _⟩ | ⟨.productEnd, _⟩ | ⟨.product .., _⟩ | ⟨.record .., _⟩ | ⟨.recordSchema .., _⟩
-  | ⟨.sumEnd, _⟩ | ⟨.sum .., _⟩ | ⟨.variant .., _⟩ | ⟨.variantSchema .., _⟩ => none
-
-def anfangswert : Ty .value → Option Dynamisch
-  | .bool => some ⟨.bool, false⟩
-  | .int lo hi =>
-    if ordered : lo ≤ hi then some ⟨.int lo hi, ⟨lo, Int.le_refl _, ordered⟩⟩ else none
-  | .recordSchema name labels layout => some ⟨.recordSchema name labels layout, PUnit.unit⟩
-  | .variantSchema name labels payloads layout => some ⟨.variantSchema name labels payloads layout, PUnit.unit⟩
-  | _ => none
-
-inductive Abschluss where
-  | fertig
-  | ungueltigerRuf (name : Identifier)
-  | unbeschraenkteRekursion (name : Identifier)
-  | abstieg (name : Identifier)
-  | ueberlauf (handler : Option Identifier)
-  | ungueltigerBereich
-  | ungueltigerWert
-
-structure Rufstelle where
-  name : Identifier
-  args : List (Ty .value)
-  bind : Option (Ty .value)
-
-structure Funktion where
-  name : Identifier
-  adresse : Nat
-  parameter : List (Ty .value)
-  result : Option (Ty .value)
-  konstanten : Nat
-  misstAbstieg : Bool
-  ruft : List Rufstelle
-
-structure Fortsetzung where
-  pc : Nat
-  temp : Nat → Option Dynamisch
-  lokale : List (Option Dynamisch)
-  zaehler : Nat → Option Nat
-  obergrenzen : Nat → Option Ganzzahl
-  funktion : Option Identifier
-  mass : Option Nat
-  eingang : Option (Ty .value)
-
-/-- Each context has its own instruction pointer, temporary slots and local values.
-    Locals are stored in scope order. Temporaries are numbered by the elaborator. -/
-structure Rahmen where
-  pc : Nat
-  temp : Nat → Option Dynamisch
-  lokale : List (Option Dynamisch)
-  rueckgabe : Option Dynamisch
-  stopp : Option Abschluss := none
-  zaehler : Nat → Option Nat := fun _slot => none
-  obergrenzen : Nat → Option Ganzzahl := fun _slot => none
-  globale : List (Option Dynamisch) := []
-  funktionen : List Funktion := []
-  fortsetzungen : List Fortsetzung := []
-  funktion : Option Identifier := none
-  mass : Option Nat := none
-
-/-- Fragment entry chooses the lower endpoint of each nonempty incoming interval.
-    A source unit starts with the empty scope. -/
-def Rahmen.start (scope : Scope) : Rahmen :=
-  { pc := 0, temp := fun _slot => none,
-    lokale := scope.map (fun binding => anfangswert binding.type), rueckgabe := none }
-
-def Rahmen.schreibe (frame : Rahmen) (ziel : Nat) (value : Option Dynamisch) : Rahmen :=
-  { frame with pc := frame.pc + 1, temp := Function.update frame.temp ziel value }
-
-def Rahmen.zahl (frame : Rahmen) (slot : Nat) : Option Ganzzahl :=
-  (frame.temp slot).bind alsGanzzahl
-
-def Rahmen.halt (frame : Rahmen) (reason : Abschluss) : Rahmen :=
-  { frame with stopp := some reason }
-
-def tyFits : Ty .value → Ty .value → Bool
-  | .bool, .bool => true
-  | .int lo hi, .int lower upper => decide (lower ≤ lo ∧ hi ≤ upper)
-  | .array _ 0, .array _ 0 => true
-  | a, b => decide (a = b)
-
-def Funktion.finde (funktionen : List Funktion) (name : Identifier) : Option Funktion :=
-  funktionen.find? (fun f => f.name.val == name.val)
-
-def Funktion.erreichbar (funktionen : List Funktion) (ziel : Identifier) : Nat → Identifier → Bool
-  | 0, name => name.val == ziel.val
-  | fuel + 1, name =>
-    name.val == ziel.val ||
-      ((finde funktionen name).map (fun f => f.ruft.any (fun call =>
-        erreichbar funktionen ziel fuel call.name))).getD false
-
-def Funktion.rekursiv (funktionen : List Funktion) (f : Funktion) : Bool :=
-  f.ruft.any fun call => erreichbar funktionen f.name funktionen.length call.name
-
-def Rufstelle.passt (call : Rufstelle) (funktionen : List Funktion) : Bool :=
-  match Funktion.finde funktionen call.name with
-  | none => false
-  | some target =>
-    call.args.length == target.parameter.length &&
-      (call.args.zip target.parameter).all (fun pair => tyFits pair.1 pair.2) &&
-      match call.bind, target.result with
-      | none, none | none, some _result => true
-      | some written, some declared => tyFits declared written
-      | some _written, none => false
-
-def Rahmen.rufArgumente (frame : Rahmen) (slot : Nat) :
-    List (Ty .value) → List (Ty .value) → Option (List (Option Dynamisch))
-  | [], [] => some []
-  | source :: sources, target :: targets => do
-    if !tyFits source target then none else
-      let v ← (frame.temp slot).bind (wertIn target)
-      let rest ← frame.rufArgumente (slot + 1) sources targets
-      pure (some v :: rest)
-  | [], _target :: _targets | _source :: _sources, [] => none
-
-def Rahmen.ruf (frame : Rahmen) (name : Identifier) (sources : List (Ty .value))
-    (bind : Option (Ty .value)) : Rahmen := Id.run do
-  let bad := frame.halt (.ungueltigerRuf name)
-  let some callee := Funktion.finde frame.funktionen name | return bad
-  let some args := frame.rufArgumente 0 sources callee.parameter | return bad
-  if let some target := bind then
-    let some source := callee.result | return bad
-    if !tyFits source target then return bad
-  let kont : Fortsetzung :=
-    ⟨frame.pc + 1, frame.temp, frame.lokale, frame.zaehler, frame.obergrenzen, frame.funktion, frame.mass, bind⟩
-  let stack := kont :: frame.fortsetzungen
-  if stack.any (fun k => (k.funktion.map Subtype.val) == some name.val) && !callee.misstAbstieg then
-    return frame.halt (.abstieg name)
-  return { frame with
-    pc := callee.adresse, temp := fun _slot => none,
-    lokale := args.reverse ++ frame.globale.drop (frame.globale.length - callee.konstanten),
-    zaehler := fun _slot => none, obergrenzen := fun _slot => none, fortsetzungen := stack, funktion := some name, mass := none }
-
-def Rahmen.rueckkehr (frame : Rahmen) (result : Option Dynamisch) : Rahmen :=
-  match frame.fortsetzungen with
-  | [] => { frame with
-      pc := frame.pc + 1, rueckgabe := result,
-      stopp := if result.isSome then none else some .fertig }
-  | k :: stack =>
-    let locals := match k.eingang with
-      | none => k.lokale
-      | some target => result.bind (wertIn target) :: k.lokale
-    { frame with
-      pc := k.pc, temp := k.temp, lokale := locals, zaehler := k.zaehler,
-      obergrenzen := k.obergrenzen,
-      funktion := k.funktion, mass := k.mass, fortsetzungen := stack }
-
-def Rahmen.setzeMass (frame : Rahmen) (slot : Nat) : Rahmen := Id.run do
-  let some name := frame.funktion | return frame.halt .ungueltigerWert
-  let some value := frame.zahl slot | return frame.halt (.abstieg name)
-  let n := value.zahl.wert.toNat
-  let previous := frame.fortsetzungen.find? (fun k => (k.funktion.map Subtype.val) == some name.val)
-  if value.zahl.wert < 0 then return frame.halt (.abstieg name)
-  if let some k := previous then
-    let some old := k.mass | return frame.halt (.abstieg name)
-    if n ≥ old then return frame.halt (.abstieg name)
-  return { frame with pc := frame.pc + 1, mass := some n }
-
-def Rahmen.pass (frame : Rahmen) (takePass : Bool) (exit : Nat)
-    (handler : Option Identifier) : Rahmen :=
-  if !takePass then
-    { frame with pc := frame.pc + exit, zaehler := Function.update frame.zaehler frame.pc none }
-  else match frame.zaehler frame.pc with
-    | some (n + 1) =>
-      { frame with pc := frame.pc + 1, zaehler := Function.update frame.zaehler frame.pc (some n) }
-    | some 0 | none => frame.halt (.ueberlauf handler)
-
-abbrev Zustand := Maschine.Zustand PUnit PUnit Int PUnit Rahmen PUnit
-abbrev Plan := SchrittPlan PUnit PUnit Int PUnit
-abbrev Regel := Maschine.Regel Zustand Plan PUnit
 
 /-- One linearisation point per expression node or binding. A binary instruction
     consumes the slots left by its children. A binding takes its initializer's slot. -/
@@ -219,6 +30,7 @@ inductive Befehl where
   | bindeWert (quelle : Nat) (ziel : Ty .value) (global : Bool)
   | definiere (name : Identifier) (parameter : List (Ty .value)) (result : Option (Ty .value))
       (globale ueberspringe : Nat) (misstAbstieg : Bool) (ruft : List Rufstelle)
+      (effects : Option (List CarrierEffect))
   | rufe (name : Identifier) (args : List (Ty .value)) (bind : Option (Ty .value))
   | rueckVoid
   | pruefeMass (quelle : Nat)
@@ -247,6 +59,14 @@ inductive Befehl where
       (cases : List (Option (Ty .value))) (index : Fin cases.length)
   | waehleVariante (source : Nat) (name : List Char) (labels : List Identifier)
       (cases : List (Option (Ty .value))) (branches : List (Nat × Bool))
+  | textLiteral (ziel : Nat) (decoded : List Char)
+  | textConcat (basis a b : Nat)
+  | textIndex (basis capacity : Nat)
+  | substring (basis capacity : Nat)
+  | textLength (basis capacity : Nat)
+  | definiereTraeger (count : Nat) (labels : List (List Char)) (layout : Ty .value) (exported : Bool)
+  | optionIstBesetzt (ziel count : Nat)
+  | definiereEffektgruppe (effects : List CarrierEffect)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten : Befehl → Rahmen → Rahmen
@@ -300,8 +120,8 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     { frame with
       pc := frame.pc + 1, lokale := value :: frame.lokale,
       globale := if global then value :: frame.globale else frame.globale }
-  | .definiere name ps result globals skip measure calls, frame =>
-    let f : Funktion := ⟨name, frame.pc + 1, ps, result, globals, measure, calls⟩
+  | .definiere name ps result globals skip measure calls effects, frame =>
+    let f : Funktion := ⟨name, frame.pc + 1, ps, result, globals, measure, calls, effects⟩
     { frame with pc := frame.pc + skip, funktionen := f :: frame.funktionen }
   | .rufe name args bind, frame => frame.ruf name args bind
   | .rueckVoid, frame => frame.rueckkehr none
@@ -371,8 +191,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let locals := (value.map fun product => tupleLocals types product bind).getD []
     { frame with pc := frame.pc + 1, lokale := locals.reverse ++ frame.lokale }
   | .definiereRecord name labels types, frame =>
-    let schema : Dynamisch := ⟨recordSchemaType name labels types, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+    frame.installSchema ⟨recordSchemaType name labels types, PUnit.unit⟩
   | .baueRecord dst name labels types sources, frame =>
     frame.schreibe dst ((liesRecord frame.temp types sources).map fun record =>
       ⟨recordValueType name labels types, record⟩)
@@ -387,8 +206,7 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
       pure ⟨type, tupleSet types index value old⟩
     { frame with pc := frame.pc + 1, lokale := frame.lokale.set indexLocal updated }
   | .definiereVariante name labels cases, frame =>
-    let schema : Dynamisch := ⟨variantSchemaType name labels cases, PUnit.unit⟩
-    { frame with pc := frame.pc + 1, lokale := some schema :: frame.lokale, globale := some schema :: frame.globale }
+    frame.installSchema ⟨variantSchemaType name labels cases, PUnit.unit⟩
   | .baueVariante dst name labels cases index, frame => frame.schreibe dst (do
     let value ← variantActual (cases.get index) (frame.temp dst)
     pure ⟨variantValueType name labels cases, variantInject cases index value⟩)
@@ -399,6 +217,43 @@ def Befehl.auswerten : Befehl → Rahmen → Rahmen
     let some (offset, bind) := branches[tag]? | return frame.halt .ungueltigerWert
     return { frame with pc := frame.pc + offset, lokale :=
       if bind then payload :: frame.lokale else frame.lokale }
+
+  | .textLiteral dst decoded, frame =>
+    frame.schreibe dst (some ⟨.text (sourceUtf8 decoded).size, TextValue.literal decoded⟩)
+  | .textConcat base a b, frame =>
+    frame.schreibe base (do
+      let left ← (frame.temp base).bind (wertAls (.text a))
+      let right ← (frame.temp (base + 1)).bind (wertAls (.text b))
+      pure ⟨.text (a + b), left.concat right⟩)
+  | .textIndex base capacity, frame => Id.run do
+    let some text := (frame.temp base).bind (wertAls (.text capacity)) |
+      return frame.halt .ungueltigerWert
+    let some offset := frame.zahl (base + 1) | return frame.halt .ungueltigerWert
+    if offset.zahl.wert < 0 then return frame.halt .ungueltigerWert
+    let some byte := text.bytes[offset.zahl.wert.toNat]? | return frame.halt .ungueltigerWert
+    return frame.schreibe base (some ⟨.int 0 255, byteValue byte⟩)
+  | .substring base capacity, frame => Id.run do
+    let some text := (frame.temp base).bind (wertAls (.text capacity)) |
+      return frame.halt .ungueltigerWert
+    let some first := frame.zahl (base + 1) | return frame.halt .ungueltigerWert
+    let some last := frame.zahl (base + 2) | return frame.halt .ungueltigerWert
+    if 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧ last.zahl.wert ≤ (text.bytes.size : Int) then
+      return frame.schreibe base (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩)
+    return frame.halt .ungueltigerWert
+
+  | .textLength base capacity, frame =>
+    frame.schreibe base ((frame.temp base).bind (wertAls (.text capacity)) |>.map
+      fun text => ⟨.int 0 capacity, text.lengthValue⟩)
+
+  | .definiereTraeger count labels layout exported, frame =>
+    frame.installSchema ⟨.carrierSchema count labels layout exported, PUnit.unit⟩
+
+  | .optionIstBesetzt dst count, frame =>
+    frame.schreibe dst (do
+      let value ← (frame.temp dst).bind (wertAls (indexOptionType count))
+      pure ⟨.bool, indexOptionPresent value⟩)
+  | .definiereEffektgruppe effects, frame =>
+    frame.installSchema ⟨.effectGroupSchema effects, PUnit.unit⟩
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
@@ -411,6 +266,15 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
   | .liesArray base _ count, frame => do
     let i ← frame.zahl (base + 1)
     pure ⟨.index, (if i.zahl.wert < 0 then count else i.zahl.wert.toNat, count)⟩
+  | .textIndex base capacity, frame => do
+    let text ← (frame.temp base).bind (wertAls (.text capacity))
+    let offset ← frame.zahl (base + 1)
+    pure ⟨.index, (if offset.zahl.wert < 0 then text.bytes.size else offset.zahl.wert.toNat, text.bytes.size)⟩
+  | .substring base capacity, frame => do
+    let text ← (frame.temp base).bind (wertAls (.text capacity))
+    let first ← frame.zahl (base + 1)
+    let last ← frame.zahl (base + 2)
+    pure ⟨.teilfolge, (first.zahl.wert, last.zahl.wert, text.bytes.size)⟩
   | _, _ => none
 
 def plan : Plan := ⟨.intern, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩

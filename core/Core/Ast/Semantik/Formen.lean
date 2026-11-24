@@ -8,6 +8,14 @@ public import Core.Ast.Aggregate.Records.Declarations
 public import Core.Ast.Aggregate.Records.Construction
 public import Core.Ast.Aggregate.Records.Fields
 public import Core.Ast.Variant.Obligations
+public import Core.Ast.TextValue.Literal
+public import Core.Ast.TextValue.Length
+public import Core.Ast.TextValue.Concat
+public import Core.Ast.TextValue.Index
+public import Core.Ast.TextValue.Substring
+public import Core.Ast.Aggregate.Carrier.Table
+public import Core.Ast.Aggregate.Carrier.Option.Test
+public import Core.Ast.Aggregate.Carrier.Effects.Group
 
 @[expose] public section
 
@@ -87,6 +95,18 @@ def exprSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordFieldForm RecordFieldErfuellbarAmAussage constructor⟩
   else if constructor = ``Expr.variantValue then
     ⟨.surface, Quellform.statements variantValueForm VariantValueErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textLiteral then
+    ⟨.surface, Quellform.statements textLiteralForm TextLiteralErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textConcat then
+    ⟨.surface, Quellform.statements textConcatForm TextConcatErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textIndex then
+    ⟨.surface, Quellform.statements textIndexForm TextIndexErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.textLength then
+    ⟨.surface, Quellform.statements textLengthForm TextLengthErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.substring then
+    ⟨.surface, Quellform.statements substringForm SubstringErfuellbarAmAussage constructor⟩
+  else if constructor = ``Expr.optionIsSome then
+    ⟨.surface, Quellform.statements optionTestForm OptionTestErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def stmtSchema (constructor : Name) : RegistrySchema constructor :=
@@ -118,6 +138,10 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements mutableValueForm MutableValueErfuellbarAmAussage constructor⟩
   else if constructor = ``Stmt.variantMatch then
     ⟨.surface, Quellform.statements variantMatchForm VariantMatchErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.letOption then
+    ⟨.surface, Quellform.statements optionLetForm OptionLetErfuellbarAmAussage constructor⟩
+  else if constructor = ``Stmt.retOption then
+    ⟨.surface, Quellform.statements optionReturnForm OptionReturnErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=
@@ -129,6 +153,10 @@ def declSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements recordDeclForm RecordDeclErfuellbarAmAussage constructor⟩
   else if constructor = ``Decl.tagged then
     ⟨.surface, Quellform.statements taggedDeclForm TaggedDeclErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.table then
+    ⟨.surface, Quellform.statements tableForm TableErfuellbarAmAussage constructor⟩
+  else if constructor = ``Decl.effectGroup then
+    ⟨.surface, Quellform.statements effectGroupForm EffectGroupErfuellbarAmAussage constructor⟩
   else nichtSpezifiziert constructor
 
 def bracedSchema (constructor : Name) : RegistrySchema constructor :=

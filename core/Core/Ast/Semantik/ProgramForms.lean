@@ -83,7 +83,7 @@ def constantJoint : Prop :=
 def functionForm (scope : Scope) : Quellform (.declaration scope) (Surface.FunctionArgs scope) where
   produktion := Surface.function scope
   befehl := fun a => functionInstruction scope a.name a.parameters a.result a.measure.isSome
-    (functionCode a.result a.measure a.body)
+    (functionCode a.result a.measure a.body) (declaredEffects a.effects)
   position := fun _ => 0
 
 def functionJoint : Prop :=

@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Grammar
-public import Core.Ast.Semantik.Regeln
+public import Core.Ast.Semantik.Runtime.ExpressionCode
 
 @[expose] public section
 
@@ -9,80 +9,22 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
 
-/-- Elaborating a fragment records both its executable instructions and its written clauses.
-    Sequencing preserves the order of the instructions and of each kind of clause. -/
-structure Fragment where
-  code : List Befehl
-  klauseln : Quellklauseln Zustand
-  eingang : Scope
-
-def Fragment.leer : Fragment := ⟨[], .leer, []⟩
-
-def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, []⟩
-
-def Fragment.anhaengen (a b : Fragment) : Fragment :=
-  ⟨a.code ++ b.code, a.klauseln.anhaengen b.klauseln, a.eingang⟩
-
-mutual
-
-/-- An expression writes its result to the requested temporary. Its right
-    operand starts above its left result, which must survive that operand. -/
-def expr (slot : Nat) : Expr scope type → Fragment
-  | .lit value => .einzel (.literal slot value)
-  | .binary op left right =>
-    ((expr slot left).anhaengen (expr (slot + 1) right)).anhaengen (.einzel (.binaer op slot))
-  | .trueLit => .einzel (.wahrheitswert slot true)
-  | .falseLit => .einzel (.wahrheitswert slot false)
-  | .variable ref _ _ => .einzel (.lesen slot ref.index)
-  | .negativeLit value => .einzel (.negativ slot value)
-  | .neg operand => (expr slot operand).anhaengen (.einzel (.negieren slot))
-  | .not operand => (expr slot operand).anhaengen (.einzel (.verneinen slot))
-  | .div left right _ =>
-    ((expr slot left).anhaengen (expr (slot + 1) right)).anhaengen (.einzel (.teilen slot))
-  | .compare op left right =>
-    ((expr slot left).anhaengen (expr (slot + 1) right)).anhaengen (.einzel (.vergleichen op slot))
-  | .logic op left right =>
-    let rhs := expr slot right
-    ((expr slot left).anhaengen (.einzel (.springeWenn slot op.skips (rhs.code.length + 1)))).anhaengen rhs
-
-  | .arrayValue (types := types) (element := element) items _ _ =>
-    (itemCode slot items).anhaengen (.einzel (.baueArray slot element types.length))
-  | .arrayIndex (element := element) (count := count) base index _ _ =>
-    ((expr slot base).anhaengen (expr (slot + 1) index)).anhaengen
-      (.einzel (.liesArray slot element count))
-  | .tupleValue (firstType := a) (secondType := b) (types := tail) first second rest =>
-    (((expr slot first).anhaengen (expr (slot + 1) second)).anhaengen
-      (itemCode (slot + 2) rest)).anhaengen (.einzel (.baueTupel slot (a :: b :: tail)))
-  | .tupleField (first := a) (second := b) (types := tail) base index =>
-    (expr slot base).anhaengen (.einzel (.liesTupelfeld slot (a :: b :: tail) index))
-  | .recordValue (labels := labels) (types := types) ref args fields _ =>
-    let sources := List.ofFn fun i : Fin types.length => slot + (fields.slot i).val
-    (labeledCode slot args).anhaengen (.einzel (.baueRecord slot ref.name.val labels types sources))
-  | .recordField (name := name) (labels := labels) (types := types) base _ index _ =>
-    (expr slot base).anhaengen (.einzel (.liesRecordFeld slot name labels types index))
-  | .variantValue (labels := labels) (payloads := payloads) ref _ index _ _ _ payload =>
-    (caseCode slot payload).anhaengen (.einzel (.baueVariante slot ref.name.val labels payloads index))
-
-def itemCode (slot : Nat) : ExprItems scope types → Fragment
-  | .empty => .leer
-  | .next head tail => (expr slot head).anhaengen (itemCode (slot + 1) tail)
-
-def labeledCode (slot : Nat) : LabeledItems scope labels types → Fragment
-  | .empty => .leer
-  | .next _ head tail => (expr slot head).anhaengen (labeledCode (slot + 1) tail)
-
-def caseCode (slot : Nat) : CasePayload scope payload → Fragment
-  | .nullary _ => .leer
-  | .value expression => expr slot expression
-
-end
-
-def argsCode (slot : Nat) : List (TypedExpr scope) → Fragment
-  | [] => .leer
-  | value :: rest => (expr slot value.2).anhaengen (argsCode (slot + 1) rest)
-
 def callInstruction (call : DirectCall scope) (bind : Option (Ty .value)) : Befehl :=
   .rufe call.name (call.args.map Sigma.fst) bind
+
+def optionInstruction (slot : Nat) (value : OptionInitializer scope count) : Befehl :=
+  let tag : Fin (indexOptionPayloads count).length :=
+    match value with
+    | .absent => ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩
+    | .present .. => ⟨0, Nat.zero_lt_succ _⟩
+  .baueVariante slot [] indexOptionLabels (indexOptionPayloads count) tag
+
+def optionOperand (slot : Nat) : OptionInitializer scope count → Fragment
+  | .absent => .leer
+  | .present value _ => expr slot value
+
+def optionCode (slot : Nat) (value : OptionInitializer scope count) : Fragment :=
+  (optionOperand slot value).anhaengen (.einzel (optionInstruction slot value))
 
 def callCode (call : DirectCall scope) (bind : Option (Ty .value)) : Fragment :=
   (argsCode 0 call.args).anhaengen (.einzel (callInstruction call bind))
@@ -99,7 +41,8 @@ def BracedBlock.freigabe : BracedBlock result before → Nat
 mutual
 /-- Record whether the range index is shadowed or written in its body. -/
 def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × Bool
-  | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _ =>
+  | .letValue name _ _ | .letMutable name _ _ _ _ _ | .bindDirect name _ _ _ _
+  | .letOption _ name _ _ _ _ =>
     (name.val == index.val, false)
   | .assignVar ref _ _ _ _ => (false, ref.binding.name.val == index.val)
   | .letMutableValue name _ _ => (name.val == index.val, false)
@@ -196,6 +139,10 @@ def stmt : Stmt result before after → Fragment
     let matchCode := variantArms arms
     ((expr 0 value).anhaengen (.einzel (.waehleVariante 0 name labels payloads matchCode.branches))).anhaengen
       matchCode.body
+  | .letOption (count := count) _ _ _ _ _ value =>
+    (optionCode 0 value).anhaengen (.einzel (.bindeWert 0 (indexOptionType count) false))
+  | .retOption (count := count) _ value =>
+    (optionCode 0 value).anhaengen (.einzel (.zurueck 0 (indexOptionType count)))
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -220,26 +167,34 @@ def functionCode (result : Option WrittenType) (measure : Option (Measure scope)
     | some m => (expr 0 m.expression).anhaengen (.einzel (.pruefeMass 0))
   (prologue.anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
 
-def functionInstruction (before : Scope) (name : Identifier) (parameters : List Parameter)
-    (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment) : Befehl :=
+def functionInstruction (before : Scope) (name : Identifier) (parameters : List (Parameter before))
+    (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment)
+    (effects : Option (List CarrierEffect)) : Befehl :=
   .definiere name (parameters.map (fun p => p.written.type)) (writtenResult result)
     before.length (body.code.length + 1) hasMeasure
     (body.code.filterMap fun
-      | .rufe target args bind => some ⟨target, args, bind⟩
-      | _ => none)
+      | .rufe target args bind => some ⟨target, args, bind, effects⟩
+      | _ => none) effects
+
+def tableInstruction (item : TableDeclaration before) : Befehl :=
+  .definiereTraeger item.count ((recordLabels item.fields).map Subtype.val)
+    (tupleType (recordTypes item.fields)) item.exported
 
 def decl : Decl before after → Fragment
   | .constant _ _ written _ value _ _ =>
     (expr 0 value).anhaengen (.einzel (.bindeWert 0 written.type true))
-  | .function name _ parameters result _ measure body _ _ =>
+  | .function name _ parameters result _ measure body _ _ effects =>
     let code := functionCode result measure body
-    (Fragment.einzel (functionInstruction before name parameters result measure.isSome code)).anhaengen code
+    (Fragment.einzel (functionInstruction before name parameters result measure.isSome code
+      (declaredEffects effects))).anhaengen code
 
   | .record _ name members _ _ =>
     .einzel (.definiereRecord name.val (recordLabels members) (recordTypes members))
   | .tagged _ name first tail _ _ =>
     let cases := first :: tail
     .einzel (.definiereVariante name.val (variantLabels cases) (variantPayloads cases))
+  | .table item => .einzel (tableInstruction item)
+  | .effectGroup item => .einzel (.definiereEffektgruppe item.resolved)
 
 def unitBody : UnitBody before after → Fragment
   | .done => .leer
@@ -255,16 +210,10 @@ def mainName : Identifier := keywordName 'm' ['a', 'i', 'n'] (by decide) (by
   · exact ⟨by decide, by decide⟩)
 
 theorem mainName_direct : directName mainName := by
-  change (['m', 'a', 'i', 'n'] ≠ ['t', 'r', 'u', 'e'] ∧
-    ['m', 'a', 'i', 'n'] ≠ ['f', 'a', 'l', 's', 'e']) ∧
-    ['m', 'a', 'i', 'n'] ∉ ["let", "if", "return", "while", "for", "leave", "next"].map String.toList
-  refine ⟨⟨?_, ?_⟩, ?_⟩
-  · intro same
-    cases same
-  · intro same
-    cases same
-  · simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
-    rintro (same | same | same | same | same | same | same) <;> cases same
+  refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+  all_goals first | (intro same; cases same; done) | skip
+  simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
+  rintro (same | same | same | same | same | same | same | same) <;> cases same
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)

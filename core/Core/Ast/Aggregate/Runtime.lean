@@ -18,6 +18,8 @@ def wertAls : (type : Ty .value) → Dynamisch → Option (Wert type)
       some ⟨number.wert, bounds.1, bounds.2⟩
     else none
   | .array _ 0, ⟨.array _ 0, _⟩ => some #v[]
+  | .text target, ⟨.text _, value⟩ =>
+    if fits : value.bytes.size ≤ target then some ⟨value.bytes, fits⟩ else none
   | target, ⟨source, value⟩ =>
     if same : source = target then some (same ▸ value) else none
 

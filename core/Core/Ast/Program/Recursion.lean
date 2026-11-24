@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Semantik.Regeln
+public import Core.Ast.Semantik.Runtime.Regeln
 import Mathlib.Data.List.Nodup
 
 @[expose] public section

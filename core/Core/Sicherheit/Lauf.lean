@@ -17,7 +17,7 @@ private def SchnittSicher (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl 
   InvariantenAmSchnitt E s ∧ RennenImGraph s.graph ∧ FragenVor t s ∧ OffeneFragenBefugt s
 
 private theorem impl_sicher (grenzen : GrenzenSicher E)
-    (regeln : ∀ f, RegelSicher E f) (antwortrechte : ∀ f, RegelAntwortSicher E f)
+    (regeln : ∀ f, RegelPflichten E f)
     (lauf : Maschine.Laeufe E.maschine H ρ)
     {t wspur vor nach}
     (h : ImplSchritt E.maschine.einrichtung E.maschine.system E.maschine.katalog ρ.hw t vor wspur nach)
@@ -28,8 +28,9 @@ private theorem impl_sicher (grenzen : GrenzenSicher E)
     cases h with
     | kontext _ _ regel aus =>
       obtain ⟨f, kopf, impl⟩ := regel
-      exact ⟨regeln f H ρ _ _ _ _ _ _ _ _ kopf impl aus, kontext_fragen_vor aus vorher.2.2.1,
-        antwortrechte f _ _ _ _ _ _ _ _ kopf impl aus vorher.2.2.2⟩
+      obtain ⟨schritt, antwort⟩ := regeln f
+      exact ⟨schritt H ρ _ _ _ _ _ _ _ _ kopf impl aus, kontext_fragen_vor aus vorher.2.2.1,
+        antwort _ _ _ _ _ _ _ _ kopf impl aus vorher.2.2.2⟩
     | antwort _ schritt =>
       exact antwort_sicher grenzen lauf.1 lauf.2.1.1 schritt vorher.2.2.1 vorher.2.2.2
     | interrupt _ schritt => exact interrupt_sicher grenzen schritt vorher.2.2.1 vorher.2.2.2
@@ -38,9 +39,8 @@ private theorem impl_sicher (grenzen : GrenzenSicher E)
 
 /-- The safety induction runs over hardware ticks. Pauses preserve the state, and the
     recorded label at an active tick selects its concrete rule or protocol transition. -/
-theorem sicherheit_aus_regeln (grenzen : GrenzenSicher E)
-    (antwortrechte : ∀ f, RegelAntwortSicher E f) :
-    (∀ f, RegelSicher E f) → ∀ H ρ, Maschine.Laeufe E.maschine H ρ →
+theorem sicherheit_aus_regeln (grenzen : GrenzenSicher E) :
+    (∀ f, RegelPflichten E f) → ∀ H ρ, Maschine.Laeufe E.maschine H ρ →
       Speichersicher E H ρ ∧ InvariantenErhalten E H ρ ∧ Rennfrei E H ρ ∧ ToctouFrei E H ρ := by
   intro regeln H ρ lauf
   have geladen {s} (anfang : ρ.zeit.zustand 0 = some s) :=
@@ -66,7 +66,7 @@ theorem sicherheit_aus_regeln (grenzen : GrenzenSicher E)
         | some vor =>
           rw [vorher] at step
           cases step with
-          | schritt h => exact (impl_sicher grenzen regeln antwortrechte lauf h (ih vor vorher)).2
+          | schritt h => exact (impl_sicher grenzen regeln lauf h (ih vor vorher)).2
   have uebergaenge (t vor spur nach) (h : Uebergang E ρ t vor spur nach) :
       SchrittSicherheit E H ρ t vor nach spur := by
     obtain ⟨vorher, ⟨w, label⟩, nachher⟩ := h
@@ -77,7 +77,7 @@ theorem sicherheit_aus_regeln (grenzen : GrenzenSicher E)
     | schritt gleich step =>
       cases Option.some.inj gleich
       cases step with
-      | schritt h => exact (impl_sicher grenzen regeln antwortrechte lauf h (schnitte t vor vorher)).1
+      | schritt h => exact (impl_sicher grenzen regeln lauf h (schnitte t vor vorher)).1
   exact ⟨⟨fun _ h => ⟨(geladen h).1, (geladen h).2.1⟩, fun t vor spur nach h => (uebergaenge t vor spur nach h).speicher⟩,
     ⟨fun t s h => (schnitte t.val s h).1, fun t vor spur nach h => (uebergaenge t vor spur nach h).sperrwechsel⟩,
     ⟨fun t s h => (schnitte t.val s h).2.1, fun t vor spur nach h => (uebergaenge t vor spur nach h).register⟩,

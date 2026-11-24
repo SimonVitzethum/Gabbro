@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Variant.Obligations
+import Core.Ast.Semantik.Runtime.ValueCoercion
 
 /-!
 # VariantMatch
@@ -34,10 +35,11 @@ private theorem vm_amOrt (ctx : Scope × Option (Ty .value)) : (variantMatchForm
   let valueCode := (expr 0 a.value).code
   let bodyCode := (variantArms a.arms).body.code
   change (((valueCode ++ [head]) ++ bodyCode)[valueCode.length]?) = some head
-  have hlt : valueCode.length < (valueCode ++ [head]).length := by simp
+  have hlt : valueCode.length < (valueCode ++ [head]).length := by
+    simpa only [List.length_append, List.length_singleton] using Nat.lt_succ_self valueCode.length
   rw [List.getElem?_append_left hlt]
   rw [List.getElem?_append_right (Nat.le_refl _)]
-  simp
+  simp only [Nat.sub_self, List.getElem?_cons_zero]
 
 theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
   intro ctx platform args
@@ -58,7 +60,7 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
     (fun _ _ blk => (block blk).klauseln.invariant = [])
     (fun _ br => (bracedBlock br).klauseln.invariant = [])
     (fun _ _ _ _ ar => (variantArms ar).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [stmt, block, bracedBlock, variantArms, MatchCode.prepend,
     Fragment.anhaengen, Fragment.einzel, Fragment.leer,
@@ -75,14 +77,14 @@ theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
       (Fragment.einzel (Befehl.waehleVariante 0 args.name args.labels args.payloads
         (variantArms args.arms).branches))).anhaengen
         (variantArms args.arms).body).klauseln.invariant = [])
-    simp [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
-      expr_keine_invarianten, vm_arms_inv]
+    simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
+      expr_keine_invarianten, vm_arms_inv, List.nil_append]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicher p platform inv⟩
+    b.sicherheitsPflichten p platform inv⟩
 
 theorem variantMatch_regelSicher : VariantMatchRegelSicherAussage := by
   intro ctx platform args
-  exact (variantMatch_erhaltung ctx platform args).2.2.2
+  exact (variantMatch_erhaltung ctx platform args).2.2.2.1
 
 theorem variantMatch_elaboriert : VariantMatchElaboriertAussage := by
   intro ctx platform args
@@ -117,7 +119,7 @@ private theorem vm_arms_length (result : Option (Ty .value)) (scope : Scope) (al
   refine @Gabbro.Core.Ast.VariantArms.rec result
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => (variantArms ar).branches.length = p.length)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
 
@@ -128,7 +130,7 @@ private theorem vm_case_lt (cases : List (Option (Ty .value))) :
   | cons head tail =>
       intro value
       cases hsum : (value : Sum (Wert (head.getD .productEnd)) (Wert (variantLayout tail))) with
-      | inl payload => simp [variantCase, hsum]
+      | inl payload => exact Nat.zero_lt_succ _
       | inr rest =>
           simpa [variantCase, hsum, Nat.succ_eq_add_one] using
             Nat.succ_lt_succ (vm_case_lt tail rest)
@@ -152,7 +154,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
     (fun _ _ _ => True) (fun _ _ _ => True) (fun _ _ => True)
     (fun _ _ _ p ar => ∀ (i : Nat) (hib : i < (variantArms ar).branches.length),
       ((variantArms ar).branches[i]).2 = true → (p[i]?).join.isSome = true)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     scope allowed labels payloads arms
   all_goals simp_all [variantArms, MatchCode.prepend]
   · intro scope labels payloads label caseName body rest ih i hib hb
@@ -165,7 +167,7 @@ private theorem vm_arms_bind (result : Option (Ty .value)) (scope : Scope) (allo
         simpa using ih j hj hb'
   · intro type scope labels payloads label binder ordinary body rest ih i hib hb
     cases i with
-    | zero => simp
+    | zero => rfl
     | succ j =>
         have hj : j < (variantArms rest).branches.length := by omega
         have hb' : ((variantArms rest).branches[j]).2 = true := by
@@ -188,10 +190,14 @@ private theorem vm_case_payload_some (cases : List (Option (Ty .value))) :
               cases head with
               | none => simp at hsome
               | some t => rfl
-          | succ j => simp [variantCase, hsum] at hidx
+          | succ j =>
+              have impossible : (0 : Nat) = j + 1 := by simpa only [variantCase, hsum] using hidx
+              cases impossible
       | inr rest =>
           cases i with
-          | zero => simp [variantCase, hsum] at hidx
+          | zero =>
+              have impossible : (variantCase tail rest).1 + 1 = 0 := by simpa only [variantCase, hsum] using hidx
+              omega
           | succ j =>
               have hh : (variantCase tail rest).1 + 1 = j + 1 := by
                 simpa [variantCase, hsum] using hidx
@@ -213,13 +219,15 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
   have hget : branches[i]? = some entry := List.getElem?_eq_some_iff.mpr ⟨hibr, rfl⟩
   have hval : (frame.temp 0).bind
       (wertAls (variantValueType a.name a.labels a.payloads)) = some value := by
-    simp [hv, wertAls, variantValueType]
+    rw [hv, Option.bind_some]
+    exact wertAls_selbst value
   have hnext : ((variantMatchForm ctx).befehl a).auswerten frame =
       { frame with
         pc := frame.pc + entry.1
         lokale := if entry.2 = true then payload :: frame.lokale else frame.lokale } := by
-    simp [Befehl.auswerten, variantMatchForm, hv, hval, i, payload, branches, entry, hget,
-      wertAls, variantValueType]
+    simp only [Befehl.auswerten, variantMatchForm, hval, Id.run]
+    rw [show (variantArms a.arms).branches[(variantCase a.payloads value).1]? = some entry from hget]
+    rfl
   refine ⟨entry.1, entry.2, hget, ?_⟩
   dsimp
   rw [hnext]
@@ -230,32 +238,78 @@ theorem variantMatch_dispatch : VariantMatchDispatchAussage := by
       (by simpa [entry] using hb)
   exact vm_case_payload_some a.payloads value i rfl hsome
 
-private theorem vm_read_suffix {result scope allowed labels payloads input arms rest}
-    (read : @Gabbro.Core.Ast.VariantArmsRead result scope allowed input labels payloads arms rest) :
-    rest <:+ input := by
-  refine @Gabbro.Core.Ast.VariantArmsRead.rec (result := result)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ _ _ _ => True)
-    (fun _ _ a _ _ _ a2 _ => a2 <:+ a)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    scope allowed input labels payloads arms rest read
-  all_goals simp_all [BlockReads.consumes]
-  · intro scope input body more x x1 next rest label caseName blockRead restRead ih
-    exact ih.trans ((BlockReads.consumes blockRead).trans
-      ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
-  · intro type scope input more x x1 next rest label binder ordinary body blockRead restRead ih
-    exact ih.trans ((BlockReads.consumes blockRead).trans
-      ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans
-        ((List.suffix_cons _ _).trans ((List.suffix_cons _ _).trans (List.suffix_cons _ _))))))
-  · intro scope input body rest labels payloads nonempty shape blockRead
-    exact (List.suffix_cons Gabbro.Core.Ast.closeBrace rest).trans
-      ((BlockReads.consumes blockRead).trans
-        ((List.suffix_cons Gabbro.Core.Ast.matchArrow _).trans (List.suffix_cons _ _)))
+open Gabbro.Core.Text
+open Surface
+
+theorem variantMatch_inversion : VariantMatchInversionAussage := by
+  intro scope result input tree rest starts read
+  generalize tokens : keyword "match" :: input = ts at read
+  cases read with
+  | variantMatch valueRead armsRead =>
+    cases (List.cons.inj tokens).2
+    exact ⟨⟨_, _, _, _, _⟩, _, valueRead, armsRead, rfl⟩
+  | assignVar _ _ _ _ _ => exact ((starts _).1 (List.cons.inj tokens).2).elim
+  | assignField _ _ _ _ _ _ _ _ => exact ((starts _).2 (List.cons.inj tokens).2).elim
+  | directCall callRead =>
+    rename_i call
+    have ordinary := call.ordinary
+    cases callRead
+    apply ordinary.2 |>.elim
+    rw [← Token.word.inj (List.cons.inj tokens).1]
+    have present : "match" ∈ ["let", "if", "return", "while", "for", "leave", "next"] ++ ["match"] :=
+      List.mem_append_right _ List.mem_cons_self
+    exact List.mem_map.mpr ⟨"match", present, rfl⟩
+  | letOption mutable _ _ _ _ _ _ =>
+    cases mutable <;> cases (List.cons.inj tokens).1
+  | _ => cases (List.cons.inj tokens).1
+
+private theorem variantArmsPrints (arms : VariantArms result scope allowed labels payloads) :
+    VariantArmsRead result scope allowed (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest := by
+  have nameToken (name : Identifier) : name.print.value = .word name.val := rfl
+  have arrowToken : printMatchArrow.value = matchArrow := rfl
+  induction labels generalizing payloads allowed with
+  | nil =>
+    cases arms with
+    | done => exact .done
+    | wildcard _ nonempty _ => exact (nonempty rfl).elim
+  | cons head tail ih =>
+    cases arms with
+    | nullary label ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken] using
+        (VariantArmsRead.nullary (allowed := allowed) head ordinary bodyRead (ih next))
+    | payload label binder ordinary body next =>
+      have bodyRead := body.printReads (next.printPieces.map PrintedToken.value ++ closeBrace :: rest)
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, List.append_assoc, nameToken, arrowToken,
+        show printOpen.value = openParen from rfl, show printClose.value = closeParen from rfl] using
+        (VariantArmsRead.payload (allowed := allowed) head binder ordinary body bodyRead (ih next))
+    | wildcard body nonempty shape =>
+      simpa only [VariantArms.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+        List.nil_append, arrowToken, show discardName.print.value = Token.word ['_'] from rfl] using
+        (VariantArmsRead.wildcard nonempty shape (body.printReads (closeBrace :: rest)))
+
+private theorem variantMatchPrints (ctx : Scope × Option (Ty .value)) (args : VariantMatchArgs ctx) :
+    (variantMatch ctx).production args
+      (((Category.statement ctx.1 ctx.2).printPieces ((variantMatch ctx).tree args)).map PrintedToken.value) := by
+  let armsInput := args.arms.printPieces.map PrintedToken.value ++ [closeBrace]
+  let input := args.value.printTokens ++ openBrace :: armsInput
+  refine ⟨input, armsInput, ?_, args.value.printReads noOperatorAtOpenBrace, variantArmsPrints args.arms⟩
+  change ((Stmt.variantMatch args.value args.arms).printPieces.map PrintedToken.value) = _
+  simp only [Stmt.printPieces, List.map_append, List.map_cons, List.map_nil, List.cons_append,
+    List.nil_append, List.append_assoc, input, armsInput, Expr.printTokens]
+  rfl
+
+theorem variantMatch_derivation : VariantMatchDerivationAussage := by
+  rintro ctx ⟨witness⟩
+  refine ⟨?_, variantMatchPrints ctx, Rule.satisfiableOfPrint witness (variantMatchPrints ctx witness)⟩
+  rintro args tokens ⟨input, arms, rfl, valueRead, armsRead⟩
+  exact .variantMatch valueRead armsRead
 
 theorem variantMatch_suffix : Gabbro.Core.Ast.Surface.VariantMatchSuffixAussage := by
   intro scope result allowed labels payloads input rest arms read
-  exact vm_read_suffix read
+  exact read.consumes
 
 theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage := by
   intro ctx args text pieces lexed production
@@ -268,9 +322,9 @@ theorem variantMatch_parse : Gabbro.Core.Ast.Semantik.VariantMatchParseAussage :
 theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   intro platform start
   let name : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'v' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let lbl : Gabbro.Core.Ast.Identifier :=
-    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
+    Gabbro.Core.Ast.keywordName 'a' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
   let labels : List Gabbro.Core.Ast.Identifier := Gabbro.Core.Ast.variantLabels [member]
   let payloads : List (Option (Ty .value)) := Gabbro.Core.Ast.variantPayloads [member]
@@ -279,29 +333,25 @@ theorem variantMatch_erfuellbarAm : VariantMatchErfuellbarAmAussage := by
   let scope : Scope := [binding]
   let refSchema : Local scope schemaType := .here
   let ref : Gabbro.Core.Ast.VariantRef scope labels payloads :=
-    ⟨name, refSchema, trivial, rfl, by simp [labels, payloads,
-      Gabbro.Core.Ast.variantLabels, Gabbro.Core.Ast.variantPayloads],
+    ⟨name, refSchema, trivial, rfl, rfl,
       by change [lbl.val].Nodup; exact List.nodup_singleton _⟩
-  let index : Fin payloads.length := ⟨0, by simp [payloads, Gabbro.Core.Ast.variantPayloads]⟩
-  have written : labels[index.val]? = some lbl := by
-    simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
+  let index : Fin payloads.length := ⟨0, Nat.zero_lt_succ _⟩
+  have written : labels[index.val]? = some lbl := rfl
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
-    simp [Gabbro.Core.Ast.ordinaryLocal, lbl, Gabbro.Core.Ast.keywordName]
+    exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
-    · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,
-        Gabbro.Core.Ast.Ty.variantLabels, Gabbro.Core.Ast.variantLabels,
-        Gabbro.Core.Ast.variantPayloads, Gabbro.Core.Ast.keywordName]
-      decide
+    · exact List.count_singleton_self
     · intro b hb
-      simp [scope] at hb
+      have same : b = binding := List.mem_singleton.mp hb
       subst b
-      simp [binding, name, lbl, Gabbro.Core.Ast.keywordName]
+      intro same
+      cases same
   let payload : Gabbro.Core.Ast.CasePayload scope (payloads.get index) := .nullary false
   let valueArgs : Gabbro.Core.Ast.Surface.VariantValueArgs scope :=
     ⟨labels, payloads, ref, lbl, index, written, ordinary, available, payload⟩
   let arms : Gabbro.Core.Ast.VariantArms none scope false labels payloads :=
-    .nullary lbl (by simp [lbl, Gabbro.Core.Ast.keywordName]) (.braces .done) .done
+    .nullary lbl (by intro same; cases same) (.braces .done) .done
   let a : Gabbro.Core.Ast.Surface.VariantMatchArgs (scope, none) :=
     ⟨name.val, labels, payloads, valueArgs.expression, arms⟩
   refine ⟨(scope, none), a, ?_⟩

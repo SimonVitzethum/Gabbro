@@ -64,6 +64,9 @@ private theorem fitsSelf (type : Ty .value) : Fits type type := by
   | sum head tail => rfl
   | variant name labels hasPayload layout => rfl
   | variantSchema name labels hasPayload layout => rfl
+  | text capacity => exact Nat.le_refl _
+  | carrierSchema _ _ _ _ => rfl
+  | effectGroupSchema _ => rfl
 
 private theorem fitsArrayJoin (head principal : Ty .value) {element : Ty .value}
     (join : arrayJoin head principal = some element) : Fits head element := by
@@ -132,7 +135,7 @@ private theorem itemsPrintRead {scope : Scope} {types : List (Ty .value)}
           simp only [ExprItems.printPieces, ExprItems.printTail, Expr.printTokens,
             List.map_append, List.map_cons, List.map_nil, List.singleton_append, List.append_assoc,
             printComma, printPunctuation, PrintedToken.unquoted,
-            (show (Token.punctuation ",".toList : Token) = comma by decide)]
+            (show (Token.punctuation ",".toList : Token) = comma by rfl)]
           change ItemsRead scope closeBracket
             (head.printPieces.map PrintedToken.value ++
               (comma :: (second.printPieces.map PrintedToken.value ++
@@ -156,8 +159,8 @@ private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
   · simp only [Expr.printTokens, Expr.printPieces, List.map_append, List.map_cons,
       List.map_nil, List.singleton_append, printOpenBracket, printCloseBracket,
       printPunctuation, PrintedToken.unquoted,
-      (show (Token.punctuation "[".toList : Token) = openBracket by decide),
-      (show (Token.punctuation "]".toList : Token) = closeBracket by decide)]
+      (show (Token.punctuation "[".toList : Token) = openBracket by rfl),
+      (show (Token.punctuation "]".toList : Token) = closeBracket by rfl)]
     rfl
   exact itemsPrintRead args.items
 

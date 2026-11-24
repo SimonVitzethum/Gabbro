@@ -1,17 +1,25 @@
 module
 
 public import Core.Ast.Grammar
-public import Core.Ast.Inventory
-public import Core.Ast.Registry
-public import Core.Ast.BatchSurface
+public import Core.Ast.Inventory.All
+public import Core.Ast.Inventory.Registry
+public import Core.Ast.Program.BatchSurface
 public import Core.Ast.ExpressionBeweise
-public import Core.Ast.SemantikRezept
-public import Core.Ast.ProgramProgress
+public import Core.Ast.Semantik.Recipe
+public import Core.Ast.Program.Progress
 public import Core.Ast.Aggregate.ArrayValueProofs
 public import Core.Ast.Aggregate.ArrayIndexProofs
 public import Core.Ast.Aggregate.TupleValueProofs
 public import Core.Ast.Aggregate.TupleFieldProofs
 public import Core.Ast.Aggregate.Types.ArrayProofs
+public import Core.Ast.Aggregate.Types.CarrierIndexProofs
+public import Core.Ast.Aggregate.Types.CarrierIndexOptionProofs
+public import Core.Ast.Aggregate.Carrier.TableProofs
+public import Core.Ast.Aggregate.Carrier.Option.ConstructProofs
+public import Core.Ast.Aggregate.Carrier.Option.TestProofs
+public import Core.Ast.Aggregate.Carrier.Option.MatchProofs
+public import Core.Ast.Aggregate.Carrier.Effects.GroupProofs
+public import Core.Ast.Aggregate.Carrier.Effects.InferenceProofs
 public import Core.Ast.Aggregate.Types.TupleProofs
 public import Core.Ast.Aggregate.TupleBindProofs
 public import Core.Ast.Aggregate.Records.RecordDeclProofs
@@ -22,6 +30,12 @@ public import Core.Ast.Aggregate.Records.AssignFieldProofs
 public import Core.Ast.Variant.TaggedDeclProofs
 public import Core.Ast.Variant.VariantValueProofs
 public import Core.Ast.Variant.VariantMatchProofs
+public import Core.Ast.TextValue.LiteralProofs
+public import Core.Ast.TextValue.LengthProofs
+public import Core.Ast.TextValue.ConcatProofs
+public import Core.Ast.TextValue.IndexProofs
+public import Core.Ast.TextValue.SubstringProofs
+public import Core.Ast.TextValue.TypeProofs
 
 /-!
 # M6 aggregate and tagged-form proof handoff
@@ -110,14 +124,14 @@ grouping for the tree.
 
 ## M6 registry completion
 
-The semantic statement and proof recipe is in `Core.Ast.SemantikRezept`. The existing literal,
+The semantic statement and proof recipe is in `Core.Ast.Semantik.Recipe`. The existing literal,
 binary and binding forms have strict entries for their source productions and semantic rules.
 
 ## Worked syntax diff for the next leaf
 
 This syntax diff adds the inventoried `true` literal at the existing `Ty.bool` type.
 The expression category carries the inferred type alongside the tree. Complete the semantic
-entry as described in `Core.Ast.SemantikRezept`, then measure the affected pins with the Core guards.
+entry as described in `Core.Ast.Semantik.Recipe`, then measure the affected pins with the Core guards.
 
 ```diff
 --- a/core/Core/Ast/Tree.lean
@@ -255,4 +269,19 @@ entry as described in `Core.Ast.SemantikRezept`, then measure the affected pins 
 +
  end Gabbro.Core.Ast.Surface
 ```
+-/
+
+/-!
+# M6 bounded text proof handoff
+
+Each group has one proof file. Fill the statements listed in that file.
+
+| Group | Target module under `Core.Ast.TextValue` | Propositions |
+| --- | --- | ---: |
+| UTF-8 literal | `LiteralProofs` | 16 |
+| Concatenation | `ConcatProofs` | 16 |
+| Byte indexing | `IndexProofs` | 16 |
+| Half-open substring | `SubstringProofs` | 16 |
+| Current byte length | `LengthProofs` | 16 |
+| Bounded string type and widening | `TypeProofs` | 16 |
 -/

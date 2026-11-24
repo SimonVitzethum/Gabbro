@@ -58,6 +58,8 @@ theorem mutableValue_inversion : MutableValueInversionAussage := by
   | tupleBind checked patternRead annotationRead valueRead =>
       cases patternRead
       simp_all [keyword, letKeyword, openParen]
+  | letOption mutable _ _ _ _ _ _ =>
+      cases mutable <;> simp_all [optionLetHead, keyword, letKeyword, assignment]
   | _ =>
       simp_all [keyword, letKeyword, returnKeyword, ifKeyword, assignment, colon, dot,
         openParen, openBrace, semicolon]
@@ -89,14 +91,7 @@ theorem mutableValue_derivation : MutableValueDerivationAussage := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  have ordinary : ordinaryLocal name := by
-    constructor
-    · change ['x'] ≠ ['t', 'r', 'u', 'e']
-      intro same
-      cases same
-    · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-      intro same
-      cases same
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let args : MutableValueArgs ctx.1 := ⟨name, ordinary, .bool, .trueLit⟩
   exact Rule.satisfiableOfPrint args (mutableValue_print ctx args)
 
@@ -150,21 +145,14 @@ theorem mutableValue_erhaltung : MutableValueErhaltungAussage := by
 theorem mutableValue_regelSicher : MutableValueRegelSicherAussage := by
   intro ctx platform args
   exact (Quellform.erhaltung (mutableValueForm ctx) (fun a =>
-    stmt_keine_invarianten ((Surface.mutableValue ctx).tree a).2) platform args).2.2.2
+    stmt_keine_invarianten ((Surface.mutableValue ctx).tree a).2) platform args).2.2.2.1
 
 theorem mutableValue_erfuellbar : MutableValueErfuellbarAmAussage := by
   intro platform start
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by decide, by decide⟩),
       fun _ member => (List.not_mem_nil member).elim⟩
-  have ordinary : ordinaryLocal name := by
-    constructor
-    · change ['x'] ≠ ['t', 'r', 'u', 'e']
-      intro same
-      cases same
-    · change ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-      intro same
-      cases same
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let args : Surface.MutableValueArgs [] := ⟨name, ordinary, .int 1 1, .lit 1⟩
   let form := mutableValueForm ([], none)
   let E := form.einheit platform args

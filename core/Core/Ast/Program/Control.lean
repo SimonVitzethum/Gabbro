@@ -6,12 +6,18 @@ public import Core.Ast.Semantik.Elaborierung
 
 namespace Gabbro.Core.Ast.Semantik
 
-/-- An expression instruction advances within its remaining code and changes only
-    the program counter and temporary slots. -/
+/-- Only back-edge instructions can decrease the program counter of a running
+    activation. The distance is measured from the instruction itself. -/
+def Befehl.rueckweite : Befehl → Nat
+  | .zurueckSprung distance | .forNaechster distance _ => distance
+  | _ => 0
+
+/-- An expression instruction advances within its remaining code, changing only
+    the program counter and temporary slots, or stops on an invalid operand. -/
 def Befehl.Ausdrucksschritt (b : Befehl) (room : Nat) : Prop :=
-  ∀ frame, let out := b.auswerten frame
-    frame.pc < out.pc ∧ out.pc ≤ frame.pc + room ∧
-      out = { frame with pc := out.pc, temp := out.temp }
+  b.rueckweite = 0 ∧ ∀ frame, let out := b.auswerten frame
+    (frame.pc < out.pc ∧ out.pc ≤ frame.pc + room ∧
+      out = { frame with pc := out.pc, temp := out.temp }) ∨ out = frame.halt .ungueltigerWert
 
 def Ausdruckscode (code : List Befehl) : Prop :=
   ∀ i (b : Befehl), code[i]? = some b → b.Ausdrucksschritt (code.length - i)
@@ -34,25 +40,31 @@ theorem Ausdruckscode.cons (head : b.Ausdrucksschritt (1 + tail.length))
 
 theorem Ausdruckscode.append (left : Ausdruckscode a) (right : Ausdruckscode b) :
     Ausdruckscode (a ++ b) := by
-  intro i instruction lookup frame
+  intro i instruction lookup
   by_cases before : i < a.length
   · rw [List.getElem?_append_left before] at lookup
-    obtain ⟨advances, within, preserves⟩ := left i instruction lookup frame
-    refine ⟨advances, ?_, preserves⟩
-    simp only [List.length_append]
-    omega
+    obtain ⟨forward, step⟩ := left i instruction lookup
+    refine ⟨forward, fun frame => ?_⟩
+    rcases step frame with ⟨advances, within, preserves⟩ | stopped
+    · refine .inl ⟨advances, ?_, preserves⟩
+      simp only [List.length_append]
+      omega
+    · exact .inr stopped
   · rw [List.getElem?_append_right (Nat.le_of_not_gt before)] at lookup
-    obtain ⟨advances, within, preserves⟩ := right _ instruction lookup frame
-    refine ⟨advances, ?_, preserves⟩
-    simp only [List.length_append]
-    omega
+    obtain ⟨forward, step⟩ := right _ instruction lookup
+    refine ⟨forward, fun frame => ?_⟩
+    rcases step frame with ⟨advances, within, preserves⟩ | stopped
+    · refine .inl ⟨advances, ?_, preserves⟩
+      simp only [List.length_append]
+      omega
+    · exact .inr stopped
 
 private theorem expression_singleton (h : b.Ausdrucksschritt 1) : Ausdruckscode [b] :=
   .cons h .nil
 
 private theorem expression_branch (slot : Nat) (bit : Bool) (tail : List Befehl)
     (right : Ausdruckscode tail) : Ausdruckscode (.springeWenn slot bit (tail.length + 1) :: tail) := by
-  refine .cons (fun frame => ?_) right
+  refine .cons ⟨rfl, fun frame => .inl ?_⟩ right
   change frame.pc < frame.pc + (if (frame.temp slot).bind alsBoolean = some bit then tail.length + 1 else 1) ∧ _
   constructor
   · split <;> omega
@@ -70,7 +82,7 @@ private theorem expression_at_slot (tree : Expr scope type) : ∀ slot,
     (fun _ _ t => ∀ slot, Ausdruckscode (labeledCode slot t).code)
     (fun _ t => ∀ slot, Ausdruckscode (caseCode slot t).code)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-    ?_ ?_ ?_ ?_ ?_ ?_ type tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree
   all_goals
     intros
     simp only [expr, itemCode, labeledCode, caseCode, Fragment.anhaengen, Fragment.einzel]
@@ -84,18 +96,18 @@ private theorem expression_at_slot (tree : Expr scope type) : ∀ slot,
         solve_by_elim
     | apply_rules [Ausdruckscode.append, expression_singleton]
       all_goals
-        intro frame
-        exact ⟨Nat.lt_succ_self _, Nat.le_refl _, by cases frame; rfl⟩
+        refine ⟨rfl, fun frame => ?_⟩
+        first
+        | exact .inl ⟨Nat.lt_succ_self _, Nat.le_refl _, by cases frame; rfl⟩
+        | simp only [Befehl.auswerten, Id.run]
+          repeat' first
+            | exact .inr rfl
+            | exact .inl ⟨Nat.lt_succ_self _, Nat.le_refl _, by cases frame; rfl⟩
+            | split
 
 theorem expr_ausdruckscode (slot : Nat) (tree : Expr scope type) :
     Ausdruckscode (expr slot tree).code :=
   expression_at_slot tree slot
-
-/-- Only back-edge instructions can decrease the program counter of a running
-    activation. The distance is measured from the instruction itself. -/
-def Befehl.rueckweite : Befehl → Nat
-  | .zurueckSprung distance | .forNaechster distance _ => distance
-  | _ => 0
 
 def RueckkantenImCode (code : List Befehl) : Prop :=
   ∀ i (b : Befehl), code[i]? = some b → b.rueckweite ≤ i
@@ -130,14 +142,8 @@ theorem RueckkantenImCode.append (left : RueckkantenImCode a) (right : Rueckkant
 
 theorem Ausdruckscode.rueckkanten (code : Ausdruckscode a) : RueckkantenImCode a := by
   intro i b lookup
-  have advance := (code i b lookup (Rahmen.start [])).1
-  cases b <;> try exact Nat.zero_le _
-  case forNaechster =>
-    change 0 < (0 : Nat) at advance
-    exact (Nat.lt_irrefl 0 advance).elim
-  case zurueckSprung =>
-    change 0 < 0 - _ at advance
-    omega
+  rw [(code i b lookup).1]
+  exact Nat.zero_le _
 
 private theorem argsCode_rueckkanten (slot : Nat) (args : List (TypedExpr scope)) :
     RueckkantenImCode (argsCode slot args).code := by
@@ -149,6 +155,12 @@ private theorem expr_no_back (slot : Nat) (tree : Expr scope type) :
     RueckkantenImCode (expr slot tree).code :=
   (expr_ausdruckscode slot tree).rueckkanten
 
+private theorem optionCode_rueckkanten (slot : Nat) (value : OptionInitializer scope count) :
+    RueckkantenImCode (optionCode slot value).code := by
+  cases value with
+  | absent => exact .single rfl
+  | present value _ => exact .snoc (expr_no_back slot value) (Nat.zero_le _)
+
 theorem braced_rueckkanten (tree : BracedBlock result before) :
     RueckkantenImCode (bracedBlock tree).code := by
   refine @BracedBlock.rec result
@@ -156,7 +168,7 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
     (fun _ _ t => RueckkantenImCode (block t).code)
     (fun _ t => RueckkantenImCode (bracedBlock t).code)
     (fun _ _ _ _ t => RueckkantenImCode (variantArms t).body.code)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before tree
   · intros
     exact .snoc (expr_no_back 0 _) (Nat.zero_le _)
   · intros
@@ -192,6 +204,10 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
     exact .snoc (expr_no_back 0 _) (Nat.zero_le _)
   · intros
     exact .append (.snoc (expr_no_back 0 _) (Nat.zero_le _)) ‹RueckkantenImCode _›
+  · intros
+    exact .snoc (optionCode_rueckkanten 0 _) (Nat.zero_le _)
+  · intros
+    exact .snoc (optionCode_rueckkanten 0 _) (Nat.zero_le _)
   · intros
     exact .nil
   · intro before middle after head rest headOK restOK

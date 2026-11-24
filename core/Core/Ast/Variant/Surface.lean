@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.RecordSurface
+public import Core.Ast.Aggregate.Records.RecordSurface
 
 @[expose] public section
 
@@ -8,21 +8,21 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-structure TaggedDeclArgs where
+structure TaggedDeclArgs (scope : Scope) where
   exported : Bool
   name : Identifier
   first : VariantMember
   tail : List VariantMember
-  valid : ∀ member ∈ first :: tail, member.valid
+  valid : ∀ member ∈ first :: tail, member.valid scope
   distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup
 
-def TaggedDeclArgs.cases (a : TaggedDeclArgs) : List VariantMember := a.first :: a.tail
+def TaggedDeclArgs.cases (a : TaggedDeclArgs scope) : List VariantMember := a.first :: a.tail
 
-def taggedDecl (scope : Scope) : Rule (.declaration scope) TaggedDeclArgs where
+def taggedDecl (scope : Scope) : Rule (.declaration scope) (TaggedDeclArgs scope) where
   tree := fun a => ⟨_, .tagged a.exported a.name a.first a.tail a.valid a.distinct⟩
   production := fun a tokens =>
     ∃ input more, tokens = taggedDeclarationPrefix a.exported ++ [.word a.name.val, assignment, openBrace] ++ input ∧
-      VariantMemberRead input a.first more ∧ VariantMembersTailRead more a.tail [semicolon]
+      VariantMemberRead scope input a.first more ∧ VariantMembersTailRead scope more a.tail [semicolon]
 
 structure VariantValueArgs (scope : Scope) where
   labels : List Identifier
@@ -42,7 +42,9 @@ def VariantValueArgs.expression (a : VariantValueArgs scope) :
 def variantValue (scope : Scope) : Rule (.expression scope) (VariantValueArgs scope) where
   tree := fun a => a.expression.typed
   production := fun a tokens =>
-    ∃ input, tokens = .word a.label.val :: input ∧ CasePayloadRead scope input a.payload []
+    (∃ input, tokens = .word a.label.val :: input ∧ CasePayloadRead scope input a.payload []) ∨
+    (∃ input, tokens = openParen :: .word a.label.val :: input ∧
+      CasePayloadRead scope input a.payload [closeParen])
 
 structure VariantMatchArgs (ctx : Scope × Option (Ty .value)) where
   name : List Char
@@ -62,12 +64,12 @@ def TaggedDeclInversionAussage : Prop :=
   ∀ {scope input tree rest} (exported : Bool) (name : Identifier),
     DeclReads scope (taggedDeclarationPrefix exported ++ [.word name.val, assignment, openBrace] ++ input)
       tree rest →
-    ∃ (a : TaggedDeclArgs) (more : List Token), a.exported = exported ∧ a.name = name ∧
-      VariantMemberRead input a.first more ∧ VariantMembersTailRead more a.tail (semicolon :: rest) ∧
+    ∃ (a : TaggedDeclArgs scope) (more : List Token), a.exported = exported ∧ a.name = name ∧
+      VariantMemberRead scope input a.first more ∧ VariantMembersTailRead scope more a.tail (semicolon :: rest) ∧
       tree = (taggedDecl scope).tree a
 
 def TaggedDeclSuffixAussage : Prop :=
-  ∀ {input variants rest}, VariantMembersTailRead input variants (semicolon :: rest) → rest <:+ input
+  ∀ {scope input variants rest}, VariantMembersTailRead scope input variants (semicolon :: rest) → rest <:+ input
 
 def TaggedDeclDerivationAussage : Prop :=
   ∀ scope, (taggedDecl scope).Entry
@@ -84,10 +86,12 @@ def VariantValueSuffixAussage : Prop :=
     CasePayloadRead scope input payload rest → rest <:+ input
 
 def VariantValueDerivationAussage : Prop :=
-  ∀ scope, (variantValue scope).Entry
+  ∀ scope, Nonempty (VariantValueArgs scope) → (variantValue scope).Entry
 
 def VariantMatchInversionAussage : Prop :=
-  ∀ {scope result input tree rest}, StmtReads result scope (keyword "match" :: input) tree rest →
+  ∀ {scope result input tree rest},
+    (∀ tail, input ≠ assignment :: tail ∧ input ≠ dot :: tail) →
+    StmtReads result scope (keyword "match" :: input) tree rest →
     ∃ (a : VariantMatchArgs (scope, result)) (arms : List Token),
       ExprReads scope 0 input a.value (openBrace :: arms) ∧ VariantArmsRead result scope false arms a.arms rest ∧
       tree = (variantMatch (scope, result)).tree a
@@ -97,6 +101,6 @@ def VariantMatchSuffixAussage : Prop :=
     VariantArmsRead result scope allowed input arms rest → rest <:+ input
 
 def VariantMatchDerivationAussage : Prop :=
-  ∀ ctx, (variantMatch ctx).Entry
+  ∀ ctx, Nonempty (VariantMatchArgs ctx) → (variantMatch ctx).Entry
 
 end Gabbro.Core.Ast.Surface

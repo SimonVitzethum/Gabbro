@@ -8,18 +8,18 @@ namespace Gabbro.Core.Ast.Surface
 
 open Gabbro.Core.Text
 
-structure RecordDeclArgs where
+structure RecordDeclArgs (scope : Scope) where
   exported : Bool
   name : Identifier
   members : List RecordMember
-  valid : ∀ member ∈ members, member.written.valid
+  valid : ∀ member ∈ members, member.written.valid scope
   distinct : ((recordLabels members).map Subtype.val).Nodup
 
-def recordDecl (scope : Scope) : Rule (.declaration scope) RecordDeclArgs where
+def recordDecl (scope : Scope) : Rule (.declaration scope) (RecordDeclArgs scope) where
   tree := fun a => ⟨_, .record a.exported a.name a.members a.valid a.distinct⟩
   production := fun a tokens =>
     ∃ input, tokens = recordDeclarationPrefix a.exported ++ [.word a.name.val, assignment, openBrace] ++ input ∧
-      RecordMembersRead input a.members [semicolon]
+      RecordMembersRead scope input a.members [semicolon]
 
 structure RecordValueArgs (scope : Scope) where
   labels : List Identifier
@@ -95,7 +95,7 @@ structure TupleBindArgs (scope : Scope) where
   tail : List (Ty .value)
   pattern : TuplePattern
   annotation : Option WrittenType
-  checked : pattern.valid annotation (first :: second :: tail)
+  checked : pattern.valid scope annotation (first :: second :: tail)
   value : Expr scope (tupleType (first :: second :: tail))
 
 def TupleBindArgs.types (a : TupleBindArgs scope) : List (Ty .value) :=
@@ -105,6 +105,6 @@ def tupleBind (ctx : Scope × Option (Ty .value)) : Rule (.statement ctx.1 ctx.2
   tree := fun a => ⟨_, .tupleBind a.pattern a.annotation a.checked a.value⟩
   production := fun a tokens => ∃ input more rhs,
     tokens = letKeyword :: input ∧ TuplePatternReads input a.pattern more ∧
-      TupleAnnotationReads more a.annotation rhs ∧ ExprReads ctx.1 0 rhs a.value [semicolon]
+      TupleAnnotationReads ctx.1 more a.annotation rhs ∧ ExprReads ctx.1 0 rhs a.value [semicolon]
 
 end Gabbro.Core.Ast.Surface

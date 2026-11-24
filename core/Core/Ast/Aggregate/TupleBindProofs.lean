@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Aggregate.TupleBindings
+import Core.Ast.Aggregate.PatternPrint
 public import Core.Ast.Semantik.Formbeweise
 
 /-!
@@ -47,9 +48,9 @@ private theorem tuplePattern_consumes : (input : List Token) → (pattern : Tupl
           ((List.suffix_cons comma next).trans (patternName_consumes firstRead)))
 
 private theorem tupleAnnotation_consumes : (input : List Token) → (annotation : Option WrittenType) →
-    (rest : List Token) → TupleAnnotationReads input annotation rest → rest <:+ input
+    (rest : List Token) → TupleAnnotationReads scope input annotation rest → rest <:+ input
   | _, _, _, .absent => List.suffix_cons _ _
-  | _, _, _, @TupleAnnotationReads.written input written rest typeRead =>
+  | _, _, _, @TupleAnnotationReads.written _ input written rest typeRead =>
       ((List.suffix_cons assignment rest).trans (TypeReads.consumes typeRead)).trans
         (List.suffix_cons colon input)
 
@@ -67,18 +68,24 @@ private theorem directCall_not_tupleBind {scope : Scope} {input : List Token}
     exact List.mem_map.2 ⟨"let", List.mem_cons_self, rfl⟩
   exact (call.ordinary.2 inList).elim
 
-theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
+private theorem optionLet_not_tupleBind (mutable : Bool) (name : Identifier) {input tail : List Token}
+    (same : letKeyword :: openParen :: input = optionLetHead mutable name ++ tail) : False := by
+  cases mutable <;> cases (List.cons.inj (List.cons.inj same).2).1
+
+private theorem tupleBind_inversion : Surface.TupleBindInversionAussage := by
   intro scope result input tree rest read
   generalize htok : letKeyword :: openParen :: input = tokens at read
   cases read
   case tupleBind =>
       have patternRead : TuplePatternReads _ _ _ := ‹_›
-      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads scope _ _ _ := ‹_›
       have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
       rw [← (List.cons.inj htok).2] at patternRead
       refine ⟨⟨_,_,_,_,_,‹_›,_⟩, _, _, patternRead, annotationRead, valueRead, rfl⟩
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
+  case letOption =>
+      exact (optionLet_not_tupleBind _ _ htok).elim
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
@@ -90,7 +97,7 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
   cases read
   case tupleBind =>
       have patternRead : TuplePatternReads _ _ _ := ‹_›
-      have annotationRead : TupleAnnotationReads _ _ _ := ‹_›
+      have annotationRead : TupleAnnotationReads scope _ _ _ := ‹_›
       have valueRead : ExprReads scope 0 _ _ (semicolon :: rest) := ‹_›
       rw [← (List.cons.inj htok).2] at patternRead
       exact ((List.suffix_cons semicolon rest).trans (ExprReads.consumes valueRead)).trans
@@ -98,93 +105,14 @@ theorem tupleBind_suffix : Surface.TupleBindSuffixAussage := by
           (tuplePattern_consumes input _ _ patternRead))
   case directCall callRead =>
       exact (directCall_not_tupleBind callRead htok).elim
+  case letOption =>
+      exact (optionLet_not_tupleBind _ _ htok).elim
   all_goals
     exfalso
     simpa [letKeyword, returnKeyword, ifKeyword, openParen, closeParen, semicolon,
       assignment, colon, comma, dot, keyword] using htok
 
-private theorem patternName_printReads (name : Option Identifier) (rest : List Token)
-    (use : ∀ id, name = some id → id.val ≠ ['_']) :
-    PatternNameReads ((patternNamePieces name).map PrintedToken.value ++ rest) name rest := by
-  cases name with
-  | none => exact .discard
-  | some id => exact .name id (use id rfl)
-
-private def patternTailTokens : List (Option Identifier) → List Token → List Token
-  | [], rest => closeParen :: rest
-  | name :: names, rest =>
-      comma :: (commaSeparated ((name :: names).map patternNamePieces) ++ [printClose]).map PrintedToken.value ++ rest
-
-private theorem patternTail_printReads : (names : List (Option Identifier)) → (rest : List Token) →
-    (∀ nm, nm ∈ names.filterMap (fun x => x) → nm.val ≠ ['_']) →
-    PatternTailReads (patternTailTokens names rest) names rest
-  | [], rest, use => .close
-  | name :: names, rest, use => by
-      have closeTok : printClose.value = closeParen := by rfl
-      have commaTok : printComma.value = comma := by rfl
-      have htokens : patternTailTokens (name :: names) rest =
-          comma :: (patternNamePieces name).map PrintedToken.value ++ patternTailTokens names rest := by
-        cases names <;> rfl
-      rw [htokens]
-      apply PatternTailReads.next
-      · exact patternName_printReads name (patternTailTokens names rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
-      · exact patternTail_printReads names rest (fun nm h => use nm (by simp_all [TuplePattern.names]))
-
-private theorem tuplePattern_printReads (pattern : TuplePattern) (rest : List Token)
-    (use : ∀ nm, nm ∈ pattern.names.filterMap (fun x => x) → nm.val ≠ ['_']) :
-    TuplePatternReads (pattern.printPieces.map PrintedToken.value ++ rest) pattern rest := by
-  have openTok : printOpen.value = openParen := by rfl
-  have closeTok : printClose.value = closeParen := by rfl
-  have commaTok : printComma.value = comma := by rfl
-  unfold TuplePattern.printPieces
-  cases pattern with
-  | mk first second tail =>
-      simp only [TuplePattern.names, List.map_cons, List.map_append, List.map_nil, openTok, closeTok]
-      cases tail with
-      | nil =>
-          simp only [commaSeparated, List.intersperse, List.flatten, List.map_append,
-            List.map_cons, List.map_nil, commaTok]
-          apply TuplePatternReads.tuple
-          · exact patternName_printReads first
-              (comma :: (patternNamePieces second).map PrintedToken.value ++ closeParen :: rest)
-              (fun nm h => use nm (by simp_all [TuplePattern.names]))
-          · exact patternName_printReads second (closeParen :: rest) (fun nm h => use nm (by simp_all [TuplePattern.names]))
-          · exact .close
-      | cons c cs =>
-          have hcs : (commaSeparated (patternNamePieces first :: patternNamePieces second :: (c :: cs).map patternNamePieces)).map PrintedToken.value =
-              (patternNamePieces first).map PrintedToken.value ++ comma ::
-                (patternNamePieces second).map PrintedToken.value ++ comma ::
-                  (commaSeparated ((c :: cs).map patternNamePieces)).map PrintedToken.value := by
-            rfl
-          rw [hcs]
-          apply TuplePatternReads.tuple
-          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternName_printReads first
-                (comma :: (patternNamePieces second).map PrintedToken.value ++ patternTailTokens (c :: cs) rest)
-                (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternName_printReads second (patternTailTokens (c :: cs) rest)
-                (fun nm h => use nm (by simp_all [TuplePattern.names])))
-          · simpa [patternTailTokens, closeTok, commaTok, List.append_assoc] using
-              (patternTail_printReads (c :: cs) rest (fun nm h => use nm (by simp_all [TuplePattern.names])))
-
-private theorem tupleAnnotation_printReads (annotation : Option WrittenType) (valueRest : List Token)
-    (valid : ∀ written ∈ annotation.toList, written.valid) :
-    TupleAnnotationReads ((tupleAnnotationPieces annotation).map PrintedToken.value ++ assignment :: valueRest)
-      annotation valueRest := by
-  cases annotation with
-  | none => exact .absent
-  | some written =>
-      have colonTok : printColon.value = colon := by rfl
-      simp only [tupleAnnotationPieces, List.map_cons, colonTok]
-      apply TupleAnnotationReads.written
-      exact WrittenType.printReads written (valid written List.mem_cons_self) (by
-        intro more h
-        have eq : assignment = keyword "in" := (List.cons.inj h).1
-        unfold assignment keyword at eq
-        cases eq)
-
-private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : TupleBindArgs ctx.1) :
+theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : TupleBindArgs ctx.1) :
     (tupleBind ctx).production args
       (((Category.statement ctx.1 ctx.2).printPieces ((tupleBind ctx).tree args)).map PrintedToken.value) := by
   dsimp [tupleBind, Category.printPieces]
@@ -200,8 +128,8 @@ private theorem tupleBind_prints (ctx : Scope × Option (Ty .value)) (args : Tup
   let input := (args.pattern.printPieces.map PrintedToken.value) ++ more
   refine ⟨input, more, rhs, ?_, ?_, ?_, ?_⟩
   · rfl
-  · exact tuplePattern_printReads args.pattern more (fun id h => (args.checked.2.2.1 id h).1)
-  · exact tupleAnnotation_printReads args.annotation (valToks ++ [semicolon]) (fun w h => (args.checked.2.2.2 w h).1)
+  · exact TuplePattern.printReads args.pattern more (fun id h => (args.checked.2.2.1 id h).1)
+  · exact TupleAnnotationReads.printReads args.annotation (valToks ++ [semicolon]) (fun w h => (args.checked.2.2.2 w h).1)
   · exact Expr.printReads (tree := args.value) (minimum := 0) (rest := [semicolon]) noOperatorAtSemicolon
 
 theorem tupleBind_derivation : Surface.TupleBindDerivationAussage := by
@@ -210,7 +138,7 @@ theorem tupleBind_derivation : Surface.TupleBindDerivationAussage := by
   · rcases prod with ⟨input, more, rhs, rfl, pRead, aRead, eRead⟩
     exact StmtReads.tupleBind args.checked pRead aRead eRead
   · let pattern : TuplePattern := ⟨none, none, []⟩
-    have checked : pattern.valid none [.bool, .bool] := by
+    have checked : pattern.valid ctx.1 none [.bool, .bool] := by
       refine ⟨?_, ?_, ?_, ?_⟩
       · simpa [pattern, TuplePattern.names]
       · exact List.nodup_nil
@@ -323,7 +251,7 @@ theorem tupleBind_locals : TupleBindLocalsAussage := by
 theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   intro platform start
   let pattern : TuplePattern := ⟨none, none, []⟩
-  have checked : pattern.valid none [.bool, .bool] := by
+  have checked : pattern.valid [] none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
     · simpa [pattern, TuplePattern.names]
     · exact List.nodup_nil

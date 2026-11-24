@@ -109,6 +109,9 @@ theorem tupleFieldInvGen {scope first second types minimum input type}
     | recordField _ field' _ _ hle _ =>
         have restEq : .natural n :: input = .word field'.val :: _ := (List.cons.inj htok).2
         cases (List.cons.inj restEq).1
+    | textConcat _ _ _ _ _ => cases (List.cons.inj htok).1
+    | textIndex _ _ _ _ _ | substring _ _ _ _ _ _ _ => cases (List.cons.inj htok).1
+    | optionIsSome _ _ _ _ _ => cases (List.cons.inj (List.cons.inj htok).2).1
 
 theorem TupleFieldInversion : TupleFieldInversionAussage := by
   intro scope first second types minimum n input type base tree rest allowed read
@@ -150,6 +153,10 @@ theorem tupleFieldReadsLower {scope : Scope} {first second : Ty .value} {types :
       | tupleField _ _ hle _ =>
           simp only [Infix.precedence] at hle <;> omega
       | recordField _ _ _ _ hle _ =>
+          simp only [Infix.precedence] at hle <;> omega
+      | textConcat _ _ hle _ _ =>
+          simp only [Arith.precedence] at hle <;> omega
+      | textIndex _ _ hle _ _ | substring _ _ _ hle _ _ _ | optionIsSome _ _ _ hle _ =>
           simp only [Infix.precedence] at hle <;> omega
 
 theorem tupleFieldPrintTokens {scope : Scope} {first second : Ty .value} {tailTypes : List (Ty .value)}
@@ -205,7 +212,7 @@ theorem tupleFieldErfuellbar (scope : Scope) : (tupleField scope).Satisfiable :=
   let a : Ty .value := .int 1 1
   let b : Ty .value := .int 2 2
   let base : Expr scope (tupleType [a, b]) := .tupleValue (.lit 1) (.lit 2) .empty
-  let args : TupleFieldArgs scope := ⟨a, b, [], base, ⟨0, by decide⟩⟩
+  let args : TupleFieldArgs scope := ⟨a, b, [], base, ⟨0, Nat.zero_lt_succ _⟩⟩
   exact Rule.satisfiableOfPrint args (tupleFieldPrints scope args)
 
 theorem TupleFieldDerivation : TupleFieldDerivationAussage := by
@@ -261,7 +268,7 @@ theorem TupleFieldRegelSicher : TupleFieldRegelSicherAussage := by
   intro scope platform args
   exact (Quellform.erhaltung (tupleFieldForm scope)
     (fun args => expr_keine_invarianten 0 ((Surface.tupleField scope).tree args).2)
-    platform args).2.2.2
+    platform args).2.2.2.1
 
 theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
   intro platform start
@@ -269,18 +276,18 @@ theorem TupleFieldErfuellbarAm : TupleFieldErfuellbarAmAussage := by
   let a : Ty .value := .int 1 1
   let b : Ty .value := .int 2 2
   let base : Expr [] (tupleType [a, b]) := .tupleValue (.lit 1) (.lit 2) .empty
-  let args : Surface.TupleFieldArgs [] := ⟨a, b, [], base, ⟨0, by decide⟩⟩
+  let args : Surface.TupleFieldArgs [] := ⟨a, b, [], base, ⟨0, Nat.zero_lt_succ _⟩⟩
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
   let s₁ := (Befehl.literal 0 1).nach eintritt s₀
   let s₂ := (Befehl.literal 1 2).nach eintritt s₁
   let s₃ := (Befehl.baueTupel 0 [a, b]).nach eintritt s₂
-  let s₄ := (Befehl.liesTupelfeld 0 [a, b] ⟨0, by decide⟩).nach eintritt s₃
+  let s₄ := (Befehl.liesTupelfeld 0 [a, b] ⟨0, Nat.zero_lt_succ _⟩).nach eintritt s₃
   have h₁ : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
   have h₂ : E.system.ISchritt eintritt s₁ () [plan] s₂ := ⟨.literal 1 2, rfl, rfl, rfl⟩
   have h₃ : E.system.ISchritt eintritt s₂ () [plan] s₃ := ⟨.baueTupel 0 [a, b], rfl, rfl, rfl⟩
   have h₄ : E.system.ISchritt eintritt s₃ () [plan] s₄ :=
-    ⟨.liesTupelfeld 0 [a, b] ⟨0, by decide⟩, rfl, rfl, rfl⟩
+    ⟨.liesTupelfeld 0 [a, b] ⟨0, Nat.zero_lt_succ _⟩, rfl, rfl, rfl⟩
   have reached : E.system.IErreichbar s₀ s₃ :=
     .schritt eintritt () [plan]
       (.schritt eintritt () [plan]

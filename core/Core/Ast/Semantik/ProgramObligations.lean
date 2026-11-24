@@ -80,7 +80,7 @@ theorem returnVoid_erhaltung (scope : Scope) (result : Option (Ty .value)) : (re
   exact ⟨((returnVoidForm scope result).befehl args).abgleich ((returnVoidForm scope result).fragment args) platform,
     ((returnVoidForm scope result).befehl args).fortschritt ((returnVoidForm scope result).fragment args),
     ((returnVoidForm scope result).befehl args).komponierbar ((returnVoidForm scope result).fragment args) platform,
-    ((returnVoidForm scope result).befehl args).sicher ((returnVoidForm scope result).fragment args) platform rfl⟩
+    ((returnVoidForm scope result).befehl args).sicherheitsPflichten ((returnVoidForm scope result).fragment args) platform rfl⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem returnVoid_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
@@ -167,7 +167,7 @@ theorem mutableLocal_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((mutableLocalForm scope result).befehl args).abgleich ((mutableLocalForm scope result).fragment args) platform,
     ((mutableLocalForm scope result).befehl args).fortschritt ((mutableLocalForm scope result).fragment args),
     ((mutableLocalForm scope result).befehl args).komponierbar ((mutableLocalForm scope result).fragment args) platform,
-    ((mutableLocalForm scope result).befehl args).sicher ((mutableLocalForm scope result).fragment args) platform (by
+    ((mutableLocalForm scope result).befehl args).sicherheitsPflichten ((mutableLocalForm scope result).fragment args) platform (by
       change (stmt ((mutableLocalForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 
@@ -185,13 +185,7 @@ theorem mutableLocal_erfuellbar : mutableLocalJoint := by
   let ctx : StatementContext := ([], none)
   let form := mutableLocalForm ctx.1 ctx.2
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor
-    · intro h
-      cases h
-    · intro h
-      cases h
+  have ordinaryName : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.MutableLocalArgs [] none := ⟨name, ordinaryName, .bool, trivial, .bool, Expr.trueLit, trivial⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2
@@ -276,7 +270,7 @@ theorem directCall_erhaltung (scope : Scope) (result : Option (Ty .value)) : (di
   exact ⟨((directCallForm scope result).befehl args).abgleich ((directCallForm scope result).fragment args) platform,
     ((directCallForm scope result).befehl args).fortschritt ((directCallForm scope result).fragment args),
     ((directCallForm scope result).befehl args).komponierbar ((directCallForm scope result).fragment args) platform,
-    ((directCallForm scope result).befehl args).sicher ((directCallForm scope result).fragment args) platform (by
+    ((directCallForm scope result).befehl args).sicherheitsPflichten ((directCallForm scope result).fragment args) platform (by
       change (stmt ((directCallForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 
@@ -361,7 +355,7 @@ theorem bindDirect_erhaltung (scope : Scope) (result : Option (Ty .value)) : (bi
   exact ⟨((bindDirectForm scope result).befehl args).abgleich ((bindDirectForm scope result).fragment args) platform,
     ((bindDirectForm scope result).befehl args).fortschritt ((bindDirectForm scope result).fragment args),
     ((bindDirectForm scope result).befehl args).komponierbar ((bindDirectForm scope result).fragment args) platform,
-    ((bindDirectForm scope result).befehl args).sicher ((bindDirectForm scope result).fragment args) platform (by
+    ((bindDirectForm scope result).befehl args).sicherheitsPflichten ((bindDirectForm scope result).fragment args) platform (by
       change (stmt ((bindDirectForm scope result).produktion.tree args).2).klauseln.invariant = []
       exact stmt_keine_invarianten _)⟩
 

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.RecordSurface
+public import Core.Ast.Aggregate.Records.RecordSurface
 public import Core.Ast.Semantik.Quellform
 
 @[expose] public section
@@ -9,7 +9,7 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog Gabbro.Core.Text
 
-def recordDeclForm (scope : Scope) : Quellform (.declaration scope) Surface.RecordDeclArgs where
+def recordDeclForm (scope : Scope) : Quellform (.declaration scope) (Surface.RecordDeclArgs scope) where
   produktion := Surface.recordDecl scope
   befehl := fun a => .definiereRecord a.name.val (recordLabels a.members) (recordTypes a.members)
   position := fun _ => 0
@@ -45,7 +45,7 @@ def tupleBindForm (ctx : Scope × Option (Ty .value)) :
 
 /-- The schema marker occupies the same declaration position in the local and global stacks. -/
 def RecordDeclBindingAussage : Prop :=
-  ∀ scope (args : Surface.RecordDeclArgs) (frame : Rahmen),
+  ∀ scope (args : Surface.RecordDeclArgs scope) (frame : Rahmen),
     let next := ((recordDeclForm scope).befehl args).auswerten frame
     let marker : Dynamisch := ⟨(recordBinding args.name args.members).type, PUnit.unit⟩
     next.lokale = some marker :: frame.lokale ∧ next.globale = some marker :: frame.globale ∧

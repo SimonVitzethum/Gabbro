@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Program.HeaderTokens
+public import Core.Ast.Program.WrittenTypes
 
 @[expose] public section
 
@@ -8,81 +8,18 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
-def intSpelling (signed : Bool) (width : Nat) : List Char :=
-  (if signed then 'i' else 'u') :: (toString width).toList
-
--- Mirror printInteger.lexeme using the decimal digit tail of the width.
-def intTypeName (signed : Bool) (width : Nat) : Identifier :=
-  ⟨intSpelling signed width, (if signed then 'i' else 'u'), (toString width).toList, rfl, by
-    cases signed <;> exact .inl (.inl ⟨by decide, by decide⟩), by
-    intro c member
-    right; change IsDecimalDigit c
-    have member' : c ∈ Nat.toDigits 10 width := by simpa only [Nat.toString_eq_ofList_toDigits, String.toList_ofList] using member
-    have digit : c.isDigit := Nat.isDigit_of_mem_toDigits (n := width) (b := 10) (Nat.zero_lt_succ _) (Nat.le_refl _) (c := c) member'
-    simpa only [IsDecimalDigit, Char.le_def, Char.isDigit, Bool.and_eq_true, decide_eq_true_eq] using digit⟩
-
-def signedPieces (number : Int) : List PrintedToken :=
-  if number < 0 then [Arith.sub.print, printInteger number.natAbs] else [printInteger number.natAbs]
-
-mutual
-
-def WrittenType.printPieces : WrittenType → List PrintedToken
-  | .bool => [printBoolType]
-  | .integer signed width none => [(intTypeName signed width).print]
-  | .integer signed width (some (lo, hi)) =>
-    [(intTypeName signed width).print, printIn] ++ signedPieces lo ++ [printClosedRange] ++ signedPieces hi
-  | .array element count => [printOpenBracket] ++ element.printPieces ++
-      [printSemicolon, printInteger count, printCloseBracket]
-  | .tuple first second rest => [printOpen] ++ first.printPieces ++ [printComma] ++
-      second.printPieces ++ rest.printTail ++ [printClose]
-
-def WrittenTypes.printTail : WrittenTypes → List PrintedToken
-  | .empty => []
-  | .next head tail => printComma :: head.printPieces ++ tail.printTail
-
-end
-
-inductive SignedReads : List Token → Int → List Token → Prop where
-  | positive : SignedReads (.natural n :: rest) n rest
-  | negative : SignedReads (minus :: .natural n :: rest) (-(n : Int)) rest
-
-mutual
-
-inductive TypeReads : List Token → WrittenType → List Token → Prop where
-  | bool : TypeReads (keyword "bool" :: rest) .bool rest
-  | integer (valid : (WrittenType.integer signed width none).valid)
-      (closed : ∀ more, rest ≠ keyword "in" :: more) :
-      TypeReads (.word (intSpelling signed width) :: rest) (.integer signed width none) rest
-  | interval (valid : (WrittenType.integer signed width (some (lo, hi))).valid) :
-      SignedReads input lo (closedRange :: more) → SignedReads more hi rest →
-      TypeReads (.word (intSpelling signed width) :: keyword "in" :: input)
-        (.integer signed width (some (lo, hi))) rest
-  | array (count : Nat) (bound : Expr [] (.int count count)) :
-      TypeReads input element (semicolon :: boundInput) →
-      ExprReads [] 0 boundInput bound (closeBracket :: rest) →
-      TypeReads (openBracket :: input) (.array element count) rest
-  | tuple : TypeReads input first (comma :: secondInput) → TypeReads secondInput second more →
-      TypeItemsTail more tail rest → TypeReads (openParen :: input) (.tuple first second tail) rest
-
-inductive TypeItemsTail : List Token → WrittenTypes → List Token → Prop where
-  | close : TypeItemsTail (closeParen :: rest) .empty rest
-  | comma : TypeReads input head more → TypeItemsTail more tail rest →
-      TypeItemsTail (comma :: input) (.next head tail) rest
-
-end
-
-def Parameter.printPieces (p : Parameter) : List PrintedToken :=
+def Parameter.printPieces (p : Parameter scope) : List PrintedToken :=
   [p.name.print, printColon] ++ p.written.printPieces
 
 mutual
-inductive ParamsRead : List Token → List Parameter → List Token → Prop where
-  | empty : ParamsRead (closeParen :: rest) [] rest
-  | first (p : Parameter) : TypeReads input p.written more → ParamsTail more ps rest →
-      ParamsRead (.word p.name.val :: colon :: input) (p :: ps) rest
+inductive ParamsRead (scope : Scope) : List Token → List (Parameter scope) → List Token → Prop where
+  | empty : ParamsRead scope (closeParen :: rest) [] rest
+  | first (p : Parameter scope) : TypeReads scope input p.written more → ParamsTail scope more ps rest →
+      ParamsRead scope (.word p.name.val :: colon :: input) (p :: ps) rest
 
-inductive ParamsTail : List Token → List Parameter → List Token → Prop where
-  | close : ParamsTail (closeParen :: rest) [] rest
-  | comma : ParamsRead input ps rest → ParamsTail (comma :: input) ps rest
+inductive ParamsTail (scope : Scope) : List Token → List (Parameter scope) → List Token → Prop where
+  | close : ParamsTail scope (closeParen :: rest) [] rest
+  | comma : ParamsRead scope input ps rest → ParamsTail scope (comma :: input) ps rest
 end
 
 mutual
@@ -99,6 +36,10 @@ end
 def commaSeparated (pieces : List (List PrintedToken)) : List PrintedToken :=
   (pieces.intersperse [printComma]).flatten
 
+theorem commaSeparated_cons_cons (head next : List PrintedToken) (tail : List (List PrintedToken)) :
+    commaSeparated (head :: next :: tail) = head ++ [printComma] ++ commaSeparated (next :: tail) := by
+  simp only [commaSeparated, List.intersperse_cons_cons, List.flatten_cons, List.append_assoc]
+
 def DirectCall.printPieces (call : DirectCall scope) : List PrintedToken :=
   [call.name.print, printOpen] ++ commaSeparated (call.args.map (fun exp => exp.2.printPieces)) ++ [printClose]
 
@@ -106,136 +47,10 @@ inductive CallReads (scope : Scope) : List Token → DirectCall scope → List T
   | applied (call : DirectCall scope) : ArgsRead scope input call.args rest →
       CallReads scope (.word call.name.val :: openParen :: input) call rest
 
--- Mirror AtomReads.lit_inversion and exclude the signed arm by token kind.
-theorem SignedReads.deterministic (left : SignedReads input a rest) (right : SignedReads input b more) :
-    a = b ∧ rest = more := by
-  cases left with
-  | positive => cases right with | positive => exact ⟨rfl, rfl⟩
-  | negative => cases right with | negative => exact ⟨rfl, rfl⟩
-
--- Mirror ExprReads.deterministic, dispatch on the width spelling and then on in.
-theorem TypeReads.deterministic (left : TypeReads input a rest) (right : TypeReads input b more) :
-    a = b ∧ rest = more := by
-  have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
-    intro s w h
-    cases s <;> cases h
-  have spelling_inj : ∀ {s w s' w'}, intSpelling s w = intSpelling s' w' → s = s' ∧ w = w' := by
-    intro s w s' w' h
-    have hh := congrArg List.head? h; have ht := congrArg List.tail h
-    have hc : (if s then 'i' else 'u') = (if s' then 'i' else 'u') := Option.some.inj hh
-    have hs : s = s' := by cases s <;> cases s' <;> first | rfl | cases hc
-    cases hs
-    have ht' : (toString w).toList = (toString w').toList := by simpa only [intSpelling, List.tail_cons] using ht
-    have hdigits : Nat.toDigits 10 w = Nat.toDigits 10 w' := by
-      simpa only [Nat.toString_eq_ofList_toDigits, String.toList_ofList] using ht'
-    have hv : w = w' := by
-      have hv' := congrArg (fun l => Nat.ofDigitChars 10 l 0) hdigits
-      simpa only [Nat.ofDigitChars_ten_toDigits] using hv'
-    exact ⟨rfl, hv⟩
-  refine (TypeReads.rec
-    (motive := fun input tree rest _deriv => ∀ (input' : List Token) (b' : WrittenType) (more' : List Token),
-      TypeReads input' b' more' → input = input' → tree = b' ∧ rest = more')
-    ?_ ?_ ?_ left) input b more right rfl
-  · intro rest input' b' more' rightDeriv hEq
-    cases rightDeriv with
-    | bool => injection hEq with hword htail; exact ⟨rfl, htail⟩
-    | integer valid' closed' =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (not_bool _ _ hspell.symm).elim
-    | interval valid' loRead' hiRead' =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (not_bool _ _ hspell.symm).elim
-  · intro signed width rest valid closed input' b' more' rightDeriv hEq
-    cases rightDeriv with
-    | bool =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (not_bool _ _ hspell).elim
-    | integer valid' closed' =>
-        injection hEq with hword htail; injection hword with hspell
-        obtain ⟨hs, hw⟩ := spelling_inj hspell
-        cases hs; cases hw; exact ⟨rfl, htail⟩
-    | interval valid' loRead' hiRead' =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (closed _ htail).elim
-  · intro signed width lo hi input more rest valid loRead hiRead input' b' more' rightDeriv hEq
-    cases rightDeriv with
-    | bool =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (not_bool _ _ hspell).elim
-    | integer valid' closed' =>
-        injection hEq with hword htail; injection hword with hspell
-        exact (closed' _ htail.symm).elim
-    | interval valid' loRead' hiRead' =>
-        injection hEq with hword htail; injection hword with hspell
-        obtain ⟨hs, hw⟩ := spelling_inj hspell
-        cases hs; cases hw; cases htail
-        obtain ⟨hlo, hmore⟩ := SignedReads.deterministic loRead loRead'
-        cases hmore
-        obtain ⟨hhi, hrest⟩ := SignedReads.deterministic hiRead hiRead'
-        cases hlo; cases hhi; exact ⟨rfl, hrest⟩
-
--- Mirror ExprReads.consumes for the signed interval endpoints.
-theorem TypeReads.consumes (read : TypeReads input a rest) : rest <:+ input := by
-  have signed_suffix : ∀ {inp n out}, SignedReads inp n out → out <:+ inp := by
-    intro inp n out r
-    cases r with
-    | positive => exact List.suffix_cons _ _
-    | negative => exact (List.suffix_cons _ _).trans (List.suffix_cons _ _)
-  refine TypeReads.rec (motive := fun input tree rest _deriv => rest <:+ input) ?_ ?_ ?_ read
-  · intro rest; exact List.suffix_cons _ _
-  · intro signed width rest valid closed; exact List.suffix_cons _ _
-  · intro signed width lo hi input more rest valid loRead hiRead
-    have hiS : rest <:+ more := signed_suffix hiRead; have loS : closedRange :: more <:+ input := signed_suffix loRead
-    have moreS : more <:+ input := (List.suffix_cons closedRange more).trans loS
-    exact ((hiS.trans moreS).trans (List.suffix_cons (keyword "in") input)).trans
-      (List.suffix_cons (Token.word (intSpelling signed width)) (keyword "in" :: input))
-
--- Mirror Expr.printReads with the range suffix discriminator.
-theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid)
-    (closed : ∀ more, rest ≠ keyword "in" :: more) :
-    TypeReads (tree.printPieces.map PrintedToken.value ++ rest) tree rest := by
-  have signed_printReads : ∀ (number : Int) (tail : List Token),
-      SignedReads ((signedPieces number).map PrintedToken.value ++ tail) number tail := by
-    intro number tail
-    unfold signedPieces
-    by_cases hneg : number < 0
-    · simp only [if_pos hneg, List.map_cons, List.map_nil]
-      rw [Arith.print_value]
-      let n := number.natAbs
-      change SignedReads (minus :: .natural n :: tail) number tail
-      have hnum : number = -(n : Int) := by
-        have hnat : (n : Int) = -number := by dsimp [n]; exact Int.ofNat_natAbs_of_nonpos (Int.le_of_lt hneg)
-        omega
-      rw [hnum]; exact SignedReads.negative (n := n) (rest := tail)
-    · simp only [if_neg hneg, List.map_cons, List.map_nil]
-      let n := number.natAbs
-      change SignedReads (.natural n :: tail) number tail
-      have hnum : number = (n : Int) := by dsimp [n]; exact Int.eq_natAbs_of_nonneg (by omega)
-      rw [hnum]; exact SignedReads.positive (n := n) (rest := tail)
-  have hpInt : ∀ (s : Bool) (w : Nat), (intTypeName s w).print.value = Token.word (intSpelling s w) := by
-    intro s w; rfl
-  have hpIn : printIn.value = keyword "in" := by rfl
-  have hpRange : printClosedRange.value = closedRange := by rfl
-  cases tree with
-  | bool =>
-      have hp : printBoolType.value = keyword "bool" := by rfl
-      simpa only [WrittenType.printPieces, hp, List.map_cons, List.map_nil, List.singleton_append] using
-        (TypeReads.bool (rest := rest))
-  | integer signed width interval =>
-      cases interval with
-      | none =>
-          simpa only [WrittenType.printPieces, hpInt, List.map_cons, List.map_nil, List.singleton_append] using
-            (TypeReads.integer (signed := signed) (width := width) valid closed)
-      | some bounds =>
-          have loRead := signed_printReads bounds.1 (closedRange :: (signedPieces bounds.2).map PrintedToken.value ++ rest); have hiRead := signed_printReads bounds.2 rest
-          simpa only [WrittenType.printPieces, hpInt, hpIn, hpRange, List.map_append, List.map_cons, List.map_nil,
-            List.singleton_append, List.append_assoc, List.cons_append, List.nil_append] using
-            (TypeReads.interval (signed := signed) (width := width) valid loRead hiRead)
-
 -- Mirror BlockItems.deterministic, applying TypeReads.deterministic to each parameter.
-theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : ParamsRead input b more) :
+theorem ParamsRead.deterministic (left : ParamsRead scope input a rest) (right : ParamsRead scope input b more) :
     a = b ∧ rest = more := by
-  have param_eq : ∀ (p q : Parameter), p.name.val = q.name.val → p.written = q.written → p = q := by
+  have param_eq : ∀ (p q : Parameter scope), p.name.val = q.name.val → p.written = q.written → p = q := by
     intro p q hname hwritten
     cases p with | mk n w v o =>
     cases q with | mk n' w' v' o' =>
@@ -243,10 +58,10 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     have hn : n = n' := Subtype.ext hname
     subst n'; subst w'; rfl
   refine (ParamsRead.rec
-    (motive_1 := fun input params rest _deriv => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
-      ParamsRead input' b more → input = input' → params = b ∧ rest = more)
-    (motive_2 := fun input params rest _deriv => ∀ (input' : List Token) (b : List Parameter) (more : List Token),
-      ParamsTail input' b more → input = input' → params = b ∧ rest = more)
+    (motive_1 := fun input params rest _deriv => ∀ (input' : List Token) (b : List (Parameter scope)) (more : List Token),
+      ParamsRead scope input' b more → input = input' → params = b ∧ rest = more)
+    (motive_2 := fun input params rest _deriv => ∀ (input' : List Token) (b : List (Parameter scope)) (more : List Token),
+      ParamsTail scope input' b more → input = input' → params = b ∧ rest = more)
     ?_ ?_ ?_ ?_ left) input b more right rfl
   · intro rest input' b' more' rightDeriv hEq
     cases rightDeriv with
@@ -274,7 +89,7 @@ theorem ParamsRead.deterministic (left : ParamsRead input a rest) (right : Param
     | comma pr' => injection hEq with hcomma hin; exact prIH _ _ _ pr' hin
 
 -- Mirror BlockItems.consumes, including the final close parenthesis.
-theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input := by
+theorem ParamsRead.consumes (read : ParamsRead scope input ps rest) : rest <:+ input := by
   refine ParamsRead.rec
     (motive_1 := fun input params rest _deriv => rest <:+ input)
     (motive_2 := fun input params rest _deriv => rest <:+ input)
@@ -288,10 +103,10 @@ theorem ParamsRead.consumes (read : ParamsRead input ps rest) : rest <:+ input :
     exact prIH.trans (List.suffix_cons comma inputL)
 
 -- Mirror Block.printItems_reads with commas between the ordered parameters.
-theorem ParamsRead.printReads (ps : List Parameter) :
-    ParamsRead ((commaSeparated (ps.map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest)
+theorem ParamsRead.printReads (ps : List (Parameter scope)) :
+    ParamsRead scope ((commaSeparated (ps.map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest)
       ps rest := by
-  have comma_cons : ∀ (p : Parameter) (ps : List Parameter),
+  have comma_cons : ∀ (p : Parameter scope) (ps : List (Parameter scope)),
       commaSeparated ((p :: ps).map Parameter.printPieces) =
         Parameter.printPieces p ++
           (match ps with | [] => [] | _ => [printComma] ++ commaSeparated (ps.map Parameter.printPieces)) := by
@@ -310,7 +125,7 @@ theorem ParamsRead.printReads (ps : List Parameter) :
       | nil =>
           simp_all [commaSeparated, hClose]
           apply ParamsRead.first
-          · change TypeReads (p.written.printPieces.map PrintedToken.value ++ closeParen :: rest) p.written (closeParen :: rest)
+          · change TypeReads scope (p.written.printPieces.map PrintedToken.value ++ closeParen :: rest) p.written (closeParen :: rest)
             exact p.written.printReads p.valid (rest := closeParen :: rest) (by intro more h; cases h)
           · exact ParamsTail.close
       | cons q qs =>

@@ -1,6 +1,6 @@
 module
 
-public import Core.Ast.Aggregate.ModelTypes
+public import Core.Ast.Aggregate.Types.Model
 
 @[expose] public section
 
@@ -46,13 +46,11 @@ def quotientBounds (lo hi divisorLo : Int) : Int × Int :=
 def quotientType (lo hi divisorLo : Int) : Ty .value :=
   .int (quotientBounds lo hi divisorLo).1 (quotientBounds lo hi divisorLo).2
 
-def ordinaryLocal (name : Identifier) : Prop :=
-  name.val ≠ "true".toList ∧ name.val ≠ "false".toList
-
 /-- The implicit widening at a typed destination is inclusion of the source interval. -/
 def Fits : Ty .value → Ty .value → Prop
   | .int lo hi, .int lower upper => lower ≤ lo ∧ hi ≤ upper
   | .bool, .bool => True
+  | .text source, .text target => source ≤ target
   | .array _ 0, .array _ 0 => True
   | a, b => a = b
 
@@ -113,6 +111,15 @@ inductive Expr (scope : Scope) : Ty .value → Type where
       (ordinary : ordinaryLocal label) (available : availableCase scope label)
       (payload : CasePayload scope (payloads.get index)) :
       Expr scope (variantValueType ref.name.val labels payloads)
+  | textLiteral (decoded : List Char) : Expr scope (.text (sourceUtf8 decoded).size)
+  | textConcat (left : Expr scope (.text a)) (right : Expr scope (.text b)) : Expr scope (.text (a + b))
+  | textIndex (base : Expr scope (.text capacity)) (offset : Expr scope (.int lo hi)) :
+      Expr scope (.int 0 255)
+  | substring (base : Expr scope (.text capacity)) (first : Expr scope (.int lo₁ hi₁))
+      (last : Expr scope (.int lo₂ hi₂)) : Expr scope (.text capacity)
+  | textLength (base : Expr scope (.text capacity)) : Expr scope (.int 0 capacity)
+  | optionIsSome (ref : Local scope (indexOptionType count)) (visible : ref.visible)
+      (ordinary : ordinaryLocal ref.binding.name) : Expr scope .bool
 
 /-- A sequence of expressions with the exact sequence of inferred operand types. -/
 inductive ExprItems (scope : Scope) : List (Ty .value) → Type where
@@ -149,6 +156,11 @@ def Expr.static : Expr scope type → Prop
   | .recordValue _ items _ _ => items.static
   | .recordField base _ _ _ => base.static
   | .variantValue _ _ _ _ _ _ payload => payload.static
+  | .textConcat left right => left.static ∧ right.static
+  | .textIndex base offset => base.static ∧ offset.static
+  | .substring base first last => base.static ∧ first.static ∧ last.static
+  | .textLength base => base.static
+  | .optionIsSome ref _ _ => ref.binding.constant = true
   | _ => True
 
 def ExprItems.static : ExprItems scope types → Prop
@@ -174,6 +186,9 @@ inductive WrittenType where
   | integer (signed : Bool) (width : Nat) (interval : Option (Int × Int))
   | array (element : WrittenType) (count : Nat)
   | tuple (first second : WrittenType) (rest : WrittenTypes)
+  | text (capacity : Nat)
+  | index (carrier : Identifier) (count : Nat)
+  | indexOption (carrier : Identifier) (count : Nat)
 
 inductive WrittenTypes where
   | empty
@@ -194,6 +209,9 @@ def WrittenType.type : WrittenType → Ty .value
     .int lo hi
   | .array element count => .array element.type count
   | .tuple first second rest => tupleType (first.type :: second.type :: rest.types)
+  | .text capacity => .text capacity
+  | .index _ count => indexType count
+  | .indexOption _ count => indexOptionType count
 
 def WrittenTypes.types : WrittenTypes → List (Ty .value)
   | .empty => []
@@ -203,30 +221,32 @@ end
 
 mutual
 
-def WrittenType.valid : WrittenType → Prop
+def WrittenType.valid (scope : Scope) : WrittenType → Prop
   | .bool => True
   | .integer signed width range =>
     let (minimum, maximum) := WrittenType.storage signed width
     let (lo, hi) := range.getD (minimum, maximum)
     1 ≤ width ∧ width ≤ 64 ∧ minimum ≤ lo ∧ lo ≤ hi ∧ hi ≤ maximum
-  | .array element _ => element.valid
-  | .tuple first second rest => first.valid ∧ second.valid ∧ rest.valid
+  | .array element _ => element.valid scope
+  | .tuple first second rest => first.valid scope ∧ second.valid scope ∧ rest.valid scope
+  | .text _ => True
+  | .index carrier count | .indexOption carrier count => scope.carrierCount carrier = some count
 
-def WrittenTypes.valid : WrittenTypes → Prop
+def WrittenTypes.valid (scope : Scope) : WrittenTypes → Prop
   | .empty => True
-  | .next head tail => head.valid ∧ tail.valid
+  | .next head tail => head.valid scope ∧ tail.valid scope
 
 end
 
-structure Parameter where
+structure Parameter (scope : Scope) where
   name : Identifier
   written : WrittenType
-  valid : written.valid
+  valid : written.valid scope
   ordinary : ordinaryLocal name
 
-def Parameter.binding (p : Parameter) : Binding := ⟨p.name, p.written.type, false, false⟩
+def Parameter.binding (p : Parameter scope) : Binding := ⟨p.name, p.written.type, false, false⟩
 
-def functionScope (outer : Scope) (parameters : List Parameter) : Scope :=
+def functionScope (outer : Scope) (parameters : List (Parameter outer)) : Scope :=
   (parameters.map Parameter.binding).reverse ++ outer
 
 def directName (name : Identifier) : Prop :=
@@ -234,13 +254,10 @@ def directName (name : Identifier) : Prop :=
     ["let", "if", "return", "while", "for", "leave", "next", "match"].map String.toList
 
 theorem directName_of_singleton (spelling : name.val = [c]) : directName name := by
-  simp only [directName, ordinaryLocal, spelling, List.map_cons, List.map_nil,
+  simp only [directName, ordinaryLocal, ordinaryAtomWord, spelling, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false]
-  refine ⟨⟨?_, ?_⟩, ?_⟩
-  · intro same
-    cases same
-  · intro same
-    cases same
+  refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+  all_goals first | (intro same; cases same; done) | skip
   · rintro (same | same | same | same | same | same | same | same) <;> cases same
 
 structure DirectCall (scope : Scope) where
@@ -273,15 +290,24 @@ def TuplePattern.bindings (pattern : TuplePattern) (types : List (Ty .value)) : 
   ((pattern.names.zip types).filterMap fun (name, type) =>
     name.map fun id => ⟨id, type, false, false⟩).reverse
 
-def TuplePattern.valid (pattern : TuplePattern) (annotation : Option WrittenType)
+def TuplePattern.valid (pattern : TuplePattern) (scope : Scope) (annotation : Option WrittenType)
     (types : List (Ty .value)) : Prop :=
   pattern.names.length = types.length ∧
     ((pattern.names.filterMap id).map Subtype.val).Nodup ∧
     (∀ name ∈ pattern.names.filterMap id, name.val ≠ ['_'] ∧ ordinaryLocal name) ∧
-    ∀ written ∈ annotation.toList, written.valid ∧ written.type = tupleType types
+    ∀ written ∈ annotation.toList, written.valid scope ∧ written.type = tupleType types
 
 def payloadBinding (name : Identifier) (type : Ty .value) : Binding :=
   ⟨name, type, false, false⟩
+
+/-- The destination supplies the carrier count for both option constructors. -/
+inductive OptionInitializer (scope : Scope) (count : Nat) where
+  | absent
+  | present (value : Expr scope (.int lo hi)) (fits : Fits (.int lo hi) (indexType count))
+
+def optionLetHead (mutable : Bool) (name : Identifier) : List Token :=
+  .word "let".toList :: (if mutable then [.word "mut".toList] else []) ++
+    [.word name.val, .punctuation [':']]
 
 mutual
 
@@ -303,13 +329,13 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   | retVoid (declared : result = none) : Stmt result scope scope
   /-- SYNTAX §7, a scalar mutable local with a written type. -/
   | letMutable (name : Identifier) (ordinary : ordinaryLocal name)
-      (written : WrittenType) (valid : written.valid) (value : Expr scope type)
+      (written : WrittenType) (valid : written.valid scope) (value : Expr scope type)
       (fits : Fits type written.type) : Stmt result scope (⟨name, written.type, true, false⟩ :: scope)
   /-- SYNTAX §6, direct call whose ordinary result is discarded. -/
   | directCall (call : DirectCall scope) : Stmt result scope scope
   /-- SYNTAX §7, direct call with a written result-binding type. -/
   | bindDirect (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
-      (written : WrittenType) (valid : written.valid) (call : DirectCall scope) :
+      (written : WrittenType) (valid : written.valid scope) (call : DirectCall scope) :
       Stmt result scope (⟨name, written.type, false, false⟩ :: scope)
   /-- SYNTAX §8, O18. The operation spelling bounds passes and the condition is retested. -/
   | whileBounded (condition : Expr scope .bool)
@@ -323,7 +349,7 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       (body : BracedBlock result (rangeBinding name low high :: scope)) : Stmt result scope scope
   /-- SYNTAX §7, bind a positional product once, in left-to-right pattern order. -/
   | tupleBind (pattern : TuplePattern) (annotation : Option WrittenType)
-      (checked : pattern.valid annotation (first :: second :: types))
+      (checked : pattern.valid scope annotation (first :: second :: types))
       (value : Expr scope (tupleType (first :: second :: types))) :
       Stmt result scope (pattern.bindings (first :: second :: types) ++ scope)
   /-- Field assignment updates exactly one position of a writable record local. -/
@@ -337,6 +363,12 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
   /-- Each arm consumes exactly the next declared tag and payload shape. -/
   | variantMatch (value : Expr scope (variantValueType name labels payloads))
       (arms : VariantArms result scope false labels payloads) : Stmt result scope scope
+  | letOption (mutable : Bool) (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (carrier : Identifier) (resolved : scope.carrierCount carrier = some count)
+      (value : OptionInitializer scope count) :
+      Stmt result scope (⟨name, indexOptionType count, mutable, false⟩ :: scope)
+  | retOption (declared : result = some (indexOptionType count))
+      (value : OptionInitializer scope count) : Stmt result scope scope
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
@@ -366,7 +398,7 @@ end
 
 mutual
 def Stmt.returns : Stmt result before after → Bool
-  | .ret .. | .retVoid .. => true
+  | .ret .. | .retVoid .. | .retOption .. => true
   | .ite _ yes no => yes.returns && no.returns
   | .variantMatch _ arms => arms.returns
   | _ => false
@@ -383,72 +415,5 @@ def VariantArms.returns : VariantArms result scope allowed labels payloads → B
   | .nullary _ _ body rest | .payload _ _ _ body rest => body.returns && rest.returns
   | .wildcard body _ _ => body.returns
 end
-
-/-- The return spelling determines the body's return index. -/
-def writtenResult (result : Option WrittenType) : Option (Ty .value) := result.map WrittenType.type
-
-structure RecordMember where
-  name : Identifier
-  written : WrittenType
-
-def recordLabels (fields : List RecordMember) : List Identifier := fields.map RecordMember.name
-
-def recordTypes (fields : List RecordMember) : List (Ty .value) :=
-  fields.map (fun field => field.written.type)
-
-def recordBinding (name : Identifier) (fields : List RecordMember) : Binding :=
-  ⟨name, recordSchemaType name.val (recordLabels fields) (recordTypes fields), false, true⟩
-
-structure VariantMember where
-  label : Identifier
-  payload : Option WrittenType
-
-def variantLabels (cases : List VariantMember) : List Identifier := cases.map VariantMember.label
-
-def variantPayloads (cases : List VariantMember) : List (Option (Ty .value)) :=
-  cases.map (fun member => member.payload.map WrittenType.type)
-
-def variantBinding (name : Identifier) (cases : List VariantMember) : Binding :=
-  ⟨name, variantSchemaType name.val (variantLabels cases) (variantPayloads cases), false, true⟩
-
-def VariantMember.valid (member : VariantMember) : Prop :=
-  ordinaryLocal member.label ∧ member.label.val ≠ ['_'] ∧ ∀ type ∈ member.payload.toList, type.valid
-
-/-- Constant values can enter the declaration scope. Function signatures are resolved
-    across the whole unit, allowing forward calls and checked recursive cycles. -/
-inductive Decl : Scope → Scope → Type where
-  | constant (name : Identifier) (ordinary : ordinaryLocal name) (written : WrittenType)
-      (valid : written.valid) (value : Expr before type) (staticValue : value.static) (fits : Fits type written.type) :
-      Decl before (⟨name, written.type, false, true⟩ :: before)
-  | function (name : Identifier) (ordinary : directName name) (parameters : List Parameter)
-      (result : Option WrittenType) (valid : ∀ t ∈ result.toList, WrittenType.valid t)
-      (decreases : Option (Measure (functionScope before parameters)))
-      (body : BracedBlock (writtenResult result) (functionScope before parameters))
-      (distinct : (parameters.map (fun p => p.name.val)).Nodup)
-      (returns : result.isSome = true → body.returns = true) :
-      Decl before before
-  /-- The ordinary record declaration installs its nominal schema in the declaration scope. -/
-  | record (exported : Bool) (name : Identifier) (fields : List RecordMember)
-      (valid : ∀ member ∈ fields, member.written.valid)
-      (distinct : ((recordLabels fields).map Subtype.val).Nodup) :
-      Decl before (recordBinding name fields :: before)
-  /-- The declared tag order determines the closed sum and its exhaustive matches. -/
-  | tagged (exported : Bool) (name : Identifier) (first : VariantMember) (tail : List VariantMember)
-      (valid : ∀ member ∈ first :: tail, member.valid)
-      (distinct : ((variantLabels (first :: tail)).map Subtype.val).Nodup) :
-      Decl before (variantBinding name (first :: tail) :: before)
-
-/-- A source unit is an ordered sequence of declarations, initially in the empty scope. -/
-inductive UnitBody : Scope → Scope → Type where
-  | done : UnitBody scope scope
-  | step : Decl before middle → UnitBody middle after → UnitBody before after
-
-abbrev Unit := (after : Scope) × UnitBody [] after
-
-abbrev Statement (result : Option (Ty .value)) (before : Scope) :=
-  (after : Scope) × Stmt result before after
-
-abbrev Statements (result : Option (Ty .value)) (before : Scope) :=
-  (after : Scope) × Block result before after
 
 end Gabbro.Core.Ast

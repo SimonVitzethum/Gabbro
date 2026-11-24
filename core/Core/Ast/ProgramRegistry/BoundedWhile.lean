@@ -92,7 +92,7 @@ theorem boundedWhile_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((boundedWhileForm scope result).befehl args).abgleich ((boundedWhileForm scope result).fragment args) platform,
     ((boundedWhileForm scope result).befehl args).fortschritt ((boundedWhileForm scope result).fragment args),
     ((boundedWhileForm scope result).befehl args).komponierbar ((boundedWhileForm scope result).fragment args) platform,
-    ((boundedWhileForm scope result).befehl args).sicher ((boundedWhileForm scope result).fragment args) platform inv⟩
+    ((boundedWhileForm scope result).befehl args).sicherheitsPflichten ((boundedWhileForm scope result).fragment args) platform inv⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem boundedWhile_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
@@ -109,13 +109,7 @@ theorem boundedWhile_erfuellbar : boundedWhileJoint := by
   let ctx : StatementContext := ([], none)
   let form := boundedWhileForm ctx.1 ctx.2
   let name : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
-  have ordinaryName : ordinaryLocal name := by
-    change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
-    constructor
-    · intro h
-      cases h
-    · intro h
-      cases h
+  have ordinaryName : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let a : Surface.BoundedWhileArgs [] none := ⟨Expr.trueLit, 1, 1, Expr.lit 1, trivial, by omega, name, .braces .done⟩
   let E := form.einheit platform a
   let s₀ := (I.start E start).2

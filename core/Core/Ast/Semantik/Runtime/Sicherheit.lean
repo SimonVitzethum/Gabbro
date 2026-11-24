@@ -1,0 +1,106 @@
+module
+
+public import Core.Ast.Semantik.Pflichten
+public import Core.Sicherheit.Regel
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Annahme Sicherheit Katalog
+
+def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
+    Sicherheit.Einheit PUnit PUnit Int PUnit Rahmen PUnit PUnit PUnit Befehl :=
+  ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
+
+theorem Befehl.sicher (p : Fragment) (platform : Plattform)
+    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    RegelSicher (p.sicherheitsEinheit platform) b := by
+  intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
+  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur PUnit Int) := List.not_mem_nil
+  have wirkungen :
+      NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur PUnit Int) [] :=
+    Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
+  refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
+  · intro i actor access recorded _
+    cases recorded
+  · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
+    intro _ obj alive lost
+    exact nomatch alive.symm.trans lost
+  · intro _
+    refine ⟨fun _ _ => trivial, ?_⟩
+    intro i d declared _
+    change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at declared
+    rw [keine] at declared
+    cases declared
+  · intro _ l changeOwner
+    exact (changeOwner rfl).elim
+  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
+      fun _ mem => (List.not_mem_nil mem).elim⟩
+  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
+      fun _ mem => (List.not_mem_nil mem).elim⟩
+
+/-- The local value transfer leaves the question ledger and its authority unchanged. -/
+theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) :
+    Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
+  intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
+  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  exact befugt
+
+theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
+    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    RegelPflichten (p.sicherheitsEinheit platform) b :=
+  ⟨b.sicher p platform keine, b.antwortSicher p platform⟩
+
+theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
+    (expr slot tree).klauseln.invariant = [] := by
+  refine @Expr.rec scope
+    (fun _ t => ∀ i, (expr i t).klauseln.invariant = [])
+    (fun _ t => ∀ i, (itemCode i t).klauseln.invariant = [])
+    (fun _ _ t => ∀ i, (labeledCode i t).klauseln.invariant = [])
+    (fun _ t => ∀ i, (caseCode i t).klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree slot
+  all_goals
+    intros
+    simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.leer, Fragment.anhaengen,
+      Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append]
+
+private theorem argsCode_keine_invarianten (slot : Nat) (args : List (TypedExpr scope)) :
+    (argsCode slot args).klauseln.invariant = [] := by
+  induction args generalizing slot with
+  | nil => rfl
+  | cons value rest ih =>
+    simp only [argsCode, Fragment.anhaengen, Quellklauseln.anhaengen,
+      expr_keine_invarianten, ih, List.nil_append]
+
+private theorem optionCode_keine_invarianten (slot : Nat) (value : OptionInitializer scope count) :
+    (optionCode slot value).klauseln.invariant = [] := by
+  cases value <;>
+    simp only [optionCode, optionOperand, Fragment.leer, Fragment.anhaengen, Fragment.einzel,
+      Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten, List.nil_append]
+
+theorem stmt_keine_invarianten (tree : Stmt result before after) :
+    (stmt tree).klauseln.invariant = [] := by
+  refine @Stmt.rec result
+    (fun _ _ t => (stmt t).klauseln.invariant = [])
+    (fun _ _ t => (block t).klauseln.invariant = [])
+    (fun _ t => (bracedBlock t).klauseln.invariant = [])
+    (fun _ _ _ _ t => (variantArms t).body.klauseln.invariant = [])
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+  all_goals
+    intros
+    simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
+      ↓reduceIte, Fragment.leer, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      Quellklauseln.leer, expr_keine_invarianten, argsCode_keine_invarianten,
+      optionCode_keine_invarianten, List.nil_append]
+
+theorem bracedBlock_keine_invarianten (tree : BracedBlock result scope) :
+    (bracedBlock tree).klauseln.invariant = [] := by
+  have both := stmt_keine_invarianten (Stmt.ite .trueLit tree tree)
+  simp only [stmt, expr, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+    Quellklauseln.leer, List.nil_append, List.append_nil] at both
+  exact (List.eq_nil_of_append_eq_nil both).1
+
+end Gabbro.Core.Ast.Semantik
