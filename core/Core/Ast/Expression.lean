@@ -237,8 +237,8 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   case falseLit => exact (ordinary.2 rfl).elim
   case _ =>
     simp_all
-    refine ⟨?_, rfl, ?_, ?_, rfl⟩
-    all_goals subst_vars <;> rfl
+    rename_i ref vis ord
+    exact ⟨ref, rfl, vis, ord, rfl⟩
 
 theorem AtomReads.negative_inversion
     (read : AtomReads scope (minus :: .natural value :: rest) tree suffix) :
