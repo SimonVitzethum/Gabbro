@@ -403,7 +403,8 @@ theorem program_syntax_erfuellbar  :
   have ordinary : ordinaryLocal name := by
     change ['x'] ≠ ['t', 'r', 'u', 'e'] ∧ ['x'] ≠ ['f', 'a', 'l', 's', 'e']
     constructor <;> intro h <;> cases h
-  let first : Decl [] [] := .constant name ordinary .bool trivial Expr.trueLit trivial trivial
+  let first : Decl [] [] :=
+    .constant name ordinary .bool trivial Expr.trueLit (by simp [Expr.static]) trivial
   let a : ProgramArgs := ⟨[], [], first, .done⟩
   exact Rule.satisfiableOfPrint a (program_print a)
 
@@ -422,12 +423,28 @@ theorem StmtReads.returnVoid_inversion
     (read : StmtReads result scope (returnKeyword :: semicolon :: input) tree rest) :
     ∃ (a : Surface.ReturnVoidArgs scope result),
       tree = (Surface.returnVoid scope result).tree a ∧ rest = input := by
+  generalize htok : (returnKeyword :: semicolon :: input) = toks at read
   cases read with
-  | retVoid declared => exact ⟨⟨declared⟩, rfl, rfl⟩
+  | letBinding _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
+  | assignVar _ _ _ _ _ => simp_all [returnKeyword, semicolon, assignment] at *
   | ret _ _ expr =>
       cases expr with
       | atom atomRead _ => cases atomRead
-  | directCall callRead => cases callRead
+  | ite _ _ _ => simp_all [returnKeyword, ifKeyword, keyword] at *
+  | retVoid declared =>
+      simp only [List.cons.injEq] at htok
+      obtain ⟨_, htail⟩ := htok
+      simp only [List.cons.injEq] at htail
+      obtain ⟨_, hrfl⟩ := htail
+      subst rest
+      exact ⟨⟨declared⟩, rfl, rfl⟩
+  | letMutable _ _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
+  | directCall callRead =>
+      cases callRead with
+      | applied _ => simp_all [returnKeyword, semicolon, openParen] at *
+  | bindDirect _ _ _ _ _ _ => simp_all [returnKeyword, letKeyword, keyword] at *
+  | whileBounded _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword] at *
+  | forRange _ _ _ _ _ _ _ _ _ => simp_all [returnKeyword, keyword] at *
 
 -- Mirror StmtReads.let_header using the mutable annotated header.
 theorem StmtReads.mutableLocal_inversion
