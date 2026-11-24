@@ -54,7 +54,7 @@ theorem sicherheit_aus_regeln_erfuellbar :
       (H : Umgebung) (ρ : Lauf E),
       GrenzenSicher E ∧ (∀ f, RegelAntwortSicher E f) ∧ (∀ f, RegelSicher E f) ∧
       Maschine.Laeufe E.maschine H ρ ∧
-      ∃ s (wert : Zahl 7 7), ρ.zeit.zustand 6 = some s ∧
+      ∃ (s : Ast.Semantik.Zustand) (wert : Zahl 7 7), ρ.zeit.zustand 6 = some s ∧
         (s.lokal eintritt).lokale.head? = some (some ⟨.int 7 7, wert⟩) ∧ wert.wert = 7 := by
   let name : Identifier :=
     ⟨['x'], 'x', [], rfl, Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),

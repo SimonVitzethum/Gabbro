@@ -60,7 +60,7 @@ private theorem stringToken_ne_intWord (signed : Bool) (width : Nat) :
     exact (by decide : ('s' : Char) ≠ 'i') (List.cons.inj hl).1
 
 theorem TextTypeInversion : TextTypeInversionAussage := by
-  intro input type rest read
+  intro scope input type rest read
   generalize htok : keyword "string" :: input = toks at read
   cases read with
   | text =>
@@ -81,10 +81,12 @@ theorem TextTypeInversion : TextTypeInversionAussage := by
       rename_i first second more tail more'
       have h : keyword "string" = openParen := (List.cons.inj htok).1
       cases h
+  | index _ _ | indexOption _ _ =>
+      cases (List.cons.inj htok).1
 
 theorem TextTypeDerivation : TextTypeDerivationAussage := by
-  intro capacity rest
-  change TypeReads (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
+  intro scope capacity rest
+  change TypeReads scope (keyword "string" :: keyword "max" :: .natural capacity :: rest) (.text capacity) rest
   exact .text
 
 theorem TextTypeWiden : TextTypeWidenAussage := by
@@ -179,13 +181,7 @@ theorem TextTypeErfuellbarAm : TextTypeErfuellbarAmAussage := by
     ⟨['x'], ⟨'x', [], rfl,
       Or.inl (Or.inl ⟨by change 97 ≤ 120; omega, by change 120 ≤ 122; omega⟩),
       by intro a m; cases m⟩⟩
-  have ordinary : ordinaryLocal name := by
-    change ['x'] ≠ "true".toList ∧ ['x'] ≠ "false".toList ∧ ['x'] ≠ "lenof".toList
-    constructor
-    · intro h; cases h
-    · constructor
-      · intro h; cases h
-      · intro h; cases h
+  have ordinary : ordinaryLocal name := (directName_of_singleton (name := name) rfl).1
   let capacity := (sourceUtf8 []).size
   let written : WrittenType := .text capacity
   let value : Expr [] (.text capacity) := .textLiteral []
