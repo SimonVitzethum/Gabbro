@@ -210,7 +210,7 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · simp only [E, form, args, s, s0, b0, textLengthForm, expr, Fragment.anhaengen,
         Fragment.einzel, Befehl.nach, Befehl.auswerten, Rahmen.schreibe, I.start,
         Zustand.start, startdaten, Rahmen.start, Quellform.einheit, Quellform.fragment,
-        fragment, Fragment.einheit, Function.update_self, if_pos rfl, Nat.zero_add,
+        fragment, Fragment.einheit, Function.update_self, if_pos rfl, if_true, Nat.zero_add,
         List.length_cons, List.length_nil]
   · intro g guard
     have hg : ((textLengthForm []).befehl args).guard (s.lokal eintritt) = none := by
@@ -222,7 +222,7 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
     · rfl
     · simp only [b, textLengthForm, args, s, s0, b0, Befehl.nach, Befehl.auswerten,
         Rahmen.schreibe, Rahmen.start, wertAls, TextValue.literal, I.start, Zustand.start,
-        startdaten, Function.update_self, if_pos rfl]
+        startdaten, Function.update_self, if_pos rfl, if_true]
       rfl
 
 end Gabbro.Core.Ast.Semantik
