@@ -13,7 +13,7 @@ structure Ausdrucksabschnitt (code : List Befehl) (endPC firstSlot : Nat) (befor
   frame : after = { before with pc := after.pc, temp := after.temp }
   lower : ∀ i, i < firstSlot → after.temp i = before.temp i
 
-theorem Ausdrucksabschnitt.start (position : frame.pc = endPC) :
+theorem Ausdrucksabschnitt.start {frame : Rahmen} (position : frame.pc = endPC) :
     Ausdrucksabschnitt code endPC firstSlot frame frame :=
   ⟨.start, position, by cases frame; rfl, fun _ _ => rfl⟩
 

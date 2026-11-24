@@ -88,11 +88,10 @@ theorem StmtReads.directCall_inversion (name : Identifier) (ordinary : directNam
   generalize h : (Token.word name.val :: openParen :: input) = tokens at read
   cases read with
   | directCall callRead =>
-    cases callRead with
-    | applied call argsRead =>
-      have nameEq := Token.word.inj (List.cons.inj h).1
-      cases (List.cons.inj (List.cons.inj h).2).2
-      exact ⟨call, Subtype.ext nameEq.symm, argsRead, rfl⟩
+    cases callRead
+    have nameEq := Token.word.inj (List.cons.inj h).1
+    cases (List.cons.inj (List.cons.inj h).2).2
+    exact ⟨_, Subtype.ext nameEq.symm, by assumption, rfl⟩
   | ret _ _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
   | retVoid _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
   | retOption _ _ => exact (directHead_not_reserved ordinary "return" (by decide) h).elim
@@ -148,8 +147,9 @@ theorem StmtReads.boundedWhile_inversion
   | assignVar _ _ _ _ _ => exact .inr (.inl ⟨_, (List.cons.inj h).2⟩)
   | assignField _ _ _ _ _ _ _ _ => exact .inr (.inr ⟨_, _, (List.cons.inj h).2⟩)
   | directCall callRead =>
-    cases callRead with
-    | applied call argsRead => exact (directHead_not_reserved call.ordinary "while" (by decide) h.symm).elim
+    cases callRead
+    rename_i call _ _
+    exact (directHead_not_reserved call.ordinary "while" (by decide) h.symm).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> reject_statement_prefix h
   | _ => reject_statement_prefix h
 
