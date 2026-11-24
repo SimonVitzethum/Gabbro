@@ -35,20 +35,29 @@ def MapMeaningAussage : Prop :=
     ((∃ token ∈ space.ausstehend, ∃ i < pages, token.contains (base + i)) →
       (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = none)
 
+/-- The first step of a staged narrowing. The table is narrowed in one step and a token of the range is
+    pending; the translation caches of the cores are NOT touched (no step clears the cache of another
+    core), so a core may still cache a wider translation until the completion step (`flush` of the token,
+    `FlushMeaningAussage`) finds none. A narrowing over a range with a pending narrowing is refused. -/
 def ProtectMeaningAussage : Prop :=
   ∀ target s c sp virt pages rights space,
     (s.lokal c).spaces[sp]? = some space →
     let base := virt / target.seitengranule
     (rights ≠ [] ∧ validVirtualRange target virt pages ∧
       (∀ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
-        ∀ right ∈ rights, right ∈ entry.rights) →
-      ∃ next narrowed, (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = some next ∧
-        next.spaces[sp]? = some narrowed ∧ next.result = some .«protected» ∧
+        ∀ right ∈ rights, right ∈ entry.rights) ∧
+      (∀ token ∈ (s.lokal c).verengt, token.raum = sp → ∀ i < pages, ¬ token.contains (base + i)) →
+      ∃ next narrowed token, (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = some next ∧
+        next.spaces[sp]? = some narrowed ∧ token = Zuruecknahme.verengung sp base pages space.generation ∧
+        next.result = some (.pending token) ∧
         (∀ pg entry, pageRange base pages pg → space.abbildung pg = some entry →
           narrowed.abbildung pg = some { entry with rights }) ∧
-        next.tlb.Frei sp base pages) ∧
-    ((∃ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
-      ∃ right ∈ rights, right ∉ entry.rights) →
+        (∀ pg, ¬ pageRange base pages pg → narrowed.abbildung pg = space.abbildung pg) ∧
+        narrowed.ausstehend = space.ausstehend ∧ narrowed.generation = space.generation ∧
+        next.tlb = (s.lokal c).tlb ∧ next.verengt = token :: (s.lokal c).verengt) ∧
+    (((∃ i < pages, ∃ entry, space.abbildung (base + i) = some entry ∧
+        ∃ right ∈ rights, right ∉ entry.rights) ∨
+      (∃ token ∈ (s.lokal c).verengt, token.raum = sp ∧ ∃ i < pages, token.contains (base + i))) →
       (MemInstruction.protectSpace sp virt pages rights).evaluate target s c = none)
 
 /-- Clearing a mapping retains the old translations and reserves the physical
@@ -64,32 +73,47 @@ def UnmapMeaningAussage : Prop :=
     ∃ next cleared token,
       (MemInstruction.unmapSpace sp virt pages).evaluate target s c = some next ∧
       next.result = some (.pending token) ∧ next.spaces[sp]? = some cleared ∧
-      token = ⟨sp, base, pages, space.generation + 1, first.frame⟩ ∧
+      token = ⟨sp, base, pages, space.generation + 1, first.frame, false⟩ ∧
       cleared.generation = token.generation ∧ cleared.ausstehend = token :: space.ausstehend ∧
       (∀ pg, pageRange base pages pg → cleared.abbildung pg = none) ∧
       (∀ pg, ¬ pageRange base pages pg → cleared.abbildung pg = space.abbildung pg) ∧
       next.tlb = (s.lokal c).tlb ∧
       ∀ extent, ¬ extent.getrennt (token.frames granule) → next.unreserved granule extent = false
 
-/-- The release step of a shootdown. A matching token is consumed only after its table entries have
-    been cleared AND no core caches a translation of its pages: the invalidation on the other cores is
-    the work of their handlers, never a side effect of this step. A step that finds a cached
-    translation of the range is refused, so the frames of a stale translation stay reserved. -/
+/-- The step that ends a shootdown, for a token of either kind.
+    * Release of an unmapped range (`nurRechte = false`): a matching token is consumed only after its table
+      entries have been cleared AND no core caches a translation of its pages. The invalidation on the other
+      cores is the work of their handlers, never a side effect of this step; a step that finds a cached
+      translation of the range is refused, so the frames of a stale translation stay reserved.
+    * Completion of a narrowing (`nurRechte = true`): the token is consumed only when no core caches a
+      translation of its range that is wider than the table (`NichtBreiter`); the step changes neither the
+      table nor any cache. A step that finds a wider cell is refused. -/
 def FlushMeaningAussage : Prop :=
   ∀ target s c name token space,
     ((s.lokal c).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token →
     (s.lokal c).spaces[token.raum]? = some space →
-    (token ∈ space.ausstehend ∧ (∀ i < token.seiten, space.abbildung (token.seite + i) = none) ∧
-        (s.lokal c).tlb.Frei token.raum token.seite token.seiten →
-      ∃ next flushed, (MemInstruction.flushSpace name).evaluate target s c = some next ∧
-        next.result = some (.frames (token.frames target.seitengranule)) ∧
-        next.spaces[token.raum]? = some flushed ∧ flushed.entries = space.entries ∧
-        token ∉ flushed.ausstehend ∧
-        (∀ bound ∈ next.marken, bound.2 ≠ token) ∧
-        next.tlb = (s.lokal c).tlb) ∧
-    ((token ∉ space.ausstehend ∨ (∃ pg, token.contains pg ∧ (space.abbildung pg).isSome) ∨
-        ¬ (s.lokal c).tlb.Frei token.raum token.seite token.seiten) →
-      (MemInstruction.flushSpace name).evaluate target s c = none)
+    (token.nurRechte = false →
+      (token ∈ space.ausstehend ∧ (∀ i < token.seiten, space.abbildung (token.seite + i) = none) ∧
+          (s.lokal c).tlb.Frei token.raum token.seite token.seiten →
+        ∃ next flushed, (MemInstruction.flushSpace name).evaluate target s c = some next ∧
+          next.result = some (.frames (token.frames target.seitengranule)) ∧
+          next.spaces[token.raum]? = some flushed ∧ flushed.entries = space.entries ∧
+          token ∉ flushed.ausstehend ∧
+          (∀ bound ∈ next.marken, bound.2 ≠ token) ∧
+          next.tlb = (s.lokal c).tlb) ∧
+      ((token ∉ space.ausstehend ∨ (∃ pg, token.contains pg ∧ (space.abbildung pg).isSome) ∨
+          ¬ (s.lokal c).tlb.Frei token.raum token.seite token.seiten) →
+        (MemInstruction.flushSpace name).evaluate target s c = none)) ∧
+    (token.nurRechte = true →
+      (token ∈ (s.lokal c).verengt ∧
+          (s.lokal c).tlb.NichtBreiter space token.raum token.seite token.seiten →
+        ∃ next, (MemInstruction.flushSpace name).evaluate target s c = some next ∧
+          next.result = some .«protected» ∧ next.spaces = (s.lokal c).spaces ∧
+          next.tlb = (s.lokal c).tlb ∧ token ∉ next.verengt ∧
+          (∀ bound ∈ next.marken, bound.2 ≠ token)) ∧
+      ((token ∉ (s.lokal c).verengt ∨
+          ¬ (s.lokal c).tlb.NichtBreiter space token.raum token.seite token.seiten) →
+        (MemInstruction.flushSpace name).evaluate target s c = none))
 
 def ActivateMeaningAussage : Prop :=
   ∀ target s c sp,

@@ -16,13 +16,22 @@ structure MemRegion where
   backing : List Griff
   deriving DecidableEq
 
+/-- The token of a pending shootdown of one page range of one space. `nurRechte = false`: the mapping was
+    removed (`unmap`) and the token owns the frames until the release step. `nurRechte = true`: only the
+    rights of a still mapped range were narrowed (`protect`); the token owns no frame and ends when no
+    core caches a translation wider than the table (`flush`, the completion step). -/
 structure Zuruecknahme where
   raum : Nat
   seite : Nat
   seiten : Nat
   generation : Nat
   frameBasis : Nat
+  nurRechte : Bool
   deriving DecidableEq, Repr
+
+/-- The token of a narrowing of rights: nothing is unmapped, so it owns no frames. -/
+def Zuruecknahme.verengung (raum seite seiten generation : Nat) : Zuruecknahme :=
+  ⟨raum, seite, seiten, generation, 0, true⟩
 
 def Zuruecknahme.contains (token : Zuruecknahme) (page : Nat) : Prop :=
   token.seite ≤ page ∧ page < token.seite + token.seiten
@@ -111,6 +120,9 @@ structure MemFrame where
   tlb : TranslationCache := {}
   active : Option Nat := none
   marken : List (Identifier × Zuruecknahme) := []
+  /-- The narrowings of rights whose shootdown is still running: the table is already narrow, cores may
+      still cache a wider translation. At most one token covers a page. -/
+  verengt : List Zuruecknahme := []
 
 abbrev MemState := Zustand PUnit Nat UInt8 PUnit MemFrame PUnit
 
@@ -156,7 +168,7 @@ instance (space : Adressraum) (z : ZielDaten) (s : MemState) (c : Kontext) :
 def MemFrame.bindMarke (frame : MemFrame) (name : Identifier) (token : Zuruecknahme) :
     Option MemFrame := do
   let space ← frame.spaces[token.raum]?
-  if token ∈ space.ausstehend ∧
+  if (token ∈ space.ausstehend ∨ token ∈ frame.verengt) ∧
       (frame.marken.all fun (other, bound) => decide (other.val ≠ name.val ∧ bound ≠ token)) then
     some { frame with marken := frame.marken ++ [(name, token)] }
   else none

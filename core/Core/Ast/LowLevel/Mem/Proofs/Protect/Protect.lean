@@ -270,11 +270,14 @@ private theorem satAny :
 private theorem satSpaces2 : (satS2.lokal entryContext).spaces = [space2] := by
   rfl
 
+private theorem satVerengt : (satS2.lokal entryContext).verengtFrei 0 0 1 = true := by
+  rfl
+
 private def s3frame : MemFrame :=
   { (satS2.lokal entryContext) with
-    result := some .«protected»
+    result := some (.pending (Zuruecknahme.verengung 0 0 1 space2.generation))
     spaces := [narrowRights space2 0 1 protRights]
-    tlb := (satS2.lokal entryContext).tlb.invalidate 0 0 1 }
+    verengt := [Zuruecknahme.verengung 0 0 1 space2.generation] }
 
 private theorem satEval3 :
     satOp.evaluate satK.plattform.ziel satS2 entryContext = some s3frame := by
@@ -282,15 +285,17 @@ private theorem satEval3 :
   change
     (if protRights ≠ [] ∧ validVirtualRange satK.plattform.ziel 0 1 ∧
         (List.range 1).all (fun i => (space2.abbildung (0 + i)).any fun entry =>
-          protRights.all (fun right => right ∈ entry.rights)) then
+          protRights.all (fun right => right ∈ entry.rights)) ∧
+        (satS2.lokal entryContext).verengtFrei 0 0 1 then
       some { (satS2.lokal entryContext) with
-        result := some .«protected»
+        result := some (.pending (Zuruecknahme.verengung 0 0 1 space2.generation))
         spaces := (satS2.lokal entryContext).spaces.set 0 (narrowRights space2 0 1 protRights)
-        tlb := (satS2.lokal entryContext).tlb.invalidate 0 0 1 }
+        verengt := Zuruecknahme.verengung 0 0 1 space2.generation :: (satS2.lokal entryContext).verengt }
     else none) = some s3frame
-  rw [if_pos ⟨protRights_ne, satValid, satCovered⟩]
+  rw [if_pos ⟨protRights_ne, satValid, satCovered, satVerengt⟩]
   simp only [satSpaces2, List.set_cons_zero]
   dsimp [s3frame]
+  rfl
 
 theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
