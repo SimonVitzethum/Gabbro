@@ -90,7 +90,9 @@ theorem befugt_erfuellbar (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl 
     let o := E.einrichtung.speicherObjekt x
     let g := s.rechte.ausgeben o
     let gebunden := { E with einrichtung := { E.einrichtung with speicherGriff := fun _ _ _ => some g } }
-    let lebend := { s with rechte := s.rechte.beleben o, leihen := fun _ => .eigen,
+    let lebend := { s with
+      rechte := s.rechte.beleben o
+      leihen := fun _ => .eigen
       buchung := { s.buchung with umfang := fun _ => [x], haelt := fun d h _ => d = c ∧ h = g } }
     let plan : SchrittPlan L Ort Wert Bedingung :=
       ⟨.intern, [⟨.lesen, x, .na, s.initial x, s.initial x⟩], [x],
