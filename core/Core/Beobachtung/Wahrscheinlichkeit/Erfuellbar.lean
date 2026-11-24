@@ -24,6 +24,7 @@ module
 
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Basic
 public import Core.Beobachtung.Wahrscheinlichkeit.Form
+public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Beobachtung.Wahrscheinlichkeit.Quelle
 public import Core.Beobachtung.Wahrscheinlichkeit.KostenErwartungBeweis
 public import Core.Annahme
@@ -198,5 +199,98 @@ theorem hebeAussage_erfuellbar :
   rw [hB]
   change Katalog.Zeile.zufall 0 ∈ Plattform.x86_64.zeilen
   exact beispielPlattformZufall
+
+/-- Two declared adversaries that are genuinely different: their answer results
+    differ, so a singleton adversary class is a real restriction. -/
+def beispielAntwort0 : Antwort :=
+  ⟨⟨⟨.hosted, 0⟩, 0⟩, [], .ok (.register 0)⟩
+
+def beispielAntwort1 : Antwort :=
+  ⟨⟨⟨.hosted, 0⟩, 0⟩, [], .error .unsupported⟩
+
+def beispielGegner0 : Gegner := fun _ _ _ => beispielAntwort0
+
+def beispielGegner1 : Gegner := fun _ _ _ => beispielAntwort1
+
+def beispielFrage : Frage :=
+  ⟨.hosted, ⟨0, ⟨⟨.hosted, 0⟩, 0⟩, []⟩, [], .read⟩
+
+theorem beispielGegner1_ne_0 : beispielGegner1 ≠ beispielGegner0 := by
+  intro h
+  have happ := congrFun (congrFun (congrFun h (fun _ _ => 0)) ([] : AussenVerlauf)) beispielFrage
+  have hdiff : beispielAntwort0.result ≠ beispielAntwort1.result := by
+    intro hr
+    cases hr
+  exact hdiff (congrArg Antwort.result happ).symm
+
+/-- Satisfiability of the information-theoretic duty with a nontrivial declaration:
+    a singleton budget class, the positive bound `1` and a game that holds only at
+    the declared run. Every event has measure at most one, so the duty holds. -/
+theorem infoTheoretischPflicht_erfuellbar
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (B : Zufallsbindung) (S : Scheduler) (h : Umgebung)
+    (hb : Hebebuendel B S E h) :
+    ∃ deklaration : InfoDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E,
+      deklaration.eps = 1 ∧
+      (∃ A : Gegner, deklaration.imBudget A) ∧
+      (∃ A : Gegner, ¬ deklaration.imBudget A) ∧
+      (¬ ∀ A : Gegner, ∀ ρ : Maschine.Lauf E, deklaration.spiel A ρ) ∧
+      (∃ band : Band, deklaration.spiel beispielGegner0 (hb.replay band)) ∧
+      InfoTheoretischPflicht B hb deklaration := by
+  letI : MeasureTheory.IsProbabilityMeasure hb.mu := hb.istWMass
+  let band0 : Band := fun _ _ => 0
+  let deklaration : InfoDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E :=
+    { imBudget := fun A => A = beispielGegner0
+      eps := 1
+      spiel := fun A ρ => A = beispielGegner0 ∧ ρ = hb.replay band0 }
+  refine ⟨deklaration, rfl, ⟨beispielGegner0, rfl⟩, ⟨beispielGegner1, ?_⟩, ?_, ⟨band0, ?_⟩, ?_⟩
+  · exact beispielGegner1_ne_0
+  · intro hall
+    exact beispielGegner1_ne_0 (hall beispielGegner1 (hb.replay band0)).1
+  · exact ⟨rfl, rfl⟩
+  · intro A hA
+    calc
+      hb.mu {band | deklaration.spiel A (hb.replay band)} ≤ hb.mu Set.univ :=
+        measure_mono (Set.subset_univ _)
+      _ = 1 := IsProbabilityMeasure.measure_univ
+
+/-- Satisfiability of the reduction duty with a nontrivial declaration: singleton
+    scheme and primitive classes carrying the named hardness assumption, factor
+    `1`, identity reduction and a game held by the declared run. The reduction
+    lands in the primitive class and both games coincide, so the inequality is
+    reflexive. -/
+theorem reduktionPflicht_erfuellbar
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (B : Zufallsbindung) (S : Scheduler) (h : Umgebung)
+    (hb : Hebebuendel B S E h) :
+    ∃ deklaration : ReduktionDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E,
+      deklaration.c = 1 ∧
+      (∃ A : Gegner, deklaration.schemaGegner A) ∧
+      (∃ A : Gegner, ¬ deklaration.schemaGegner A) ∧
+      (∀ A : Gegner, deklaration.schemaGegner A →
+        deklaration.primitivGegner (deklaration.reduktion A)) ∧
+      ReduktionPflicht B hb deklaration := by
+  let band0 : Band := fun _ _ => 0
+  let spiel0 : Gegner → Maschine.Lauf E → Prop :=
+    fun A ρ => A = beispielGegner0 ∧ ρ = hb.replay band0
+  let deklaration : ReduktionDeklaration L Ort Wert Raum Lok Grund Bedingung Wahl Form E :=
+    { schemaGegner := fun A => A = beispielGegner0
+      reduktion := fun A => A
+      primitivGegner := fun A => A = beispielGegner0
+      c := 1
+      spiel := spiel0
+      ziel := spiel0 }
+  refine ⟨deklaration, rfl, ⟨beispielGegner0, rfl⟩, ⟨beispielGegner1, ?_⟩, ?_, ?_⟩
+  · exact beispielGegner1_ne_0
+  · intro A hA
+    exact hA
+  · intro A hA
+    constructor
+    · exact hA
+    · change hb.mu {band | spiel0 A (hb.replay band)} ≤
+        (1 : ENNReal) * hb.mu {band | spiel0 A (hb.replay band)}
+      rw [one_mul]
 
 end Gabbro.Core.Beobachtung
