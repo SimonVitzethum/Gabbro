@@ -125,10 +125,10 @@ theorem tupleBind_erfuellbar : TupleBindErfuellbarAmAussage := by
   let pattern : TuplePattern := ⟨none, none, []⟩
   have checked : pattern.valid none [.bool, .bool] := by
     refine ⟨?_, ?_, ?_, ?_⟩
-    · simp [pattern, TuplePattern.names]
+    · simpa [pattern, TuplePattern.names]
     · exact List.nodup_nil
     · intro name mem
-      simp [pattern, TuplePattern.names] at mem
+      simpa [pattern, TuplePattern.names] at mem
     · intro written mem
       simpa using mem
   let args : Surface.TupleBindArgs [] :=
