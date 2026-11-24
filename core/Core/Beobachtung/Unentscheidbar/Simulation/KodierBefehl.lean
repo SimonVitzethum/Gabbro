@@ -2,9 +2,6 @@ module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.KodierErweitert
 
-
-noncomputable section
-
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
@@ -14,245 +11,306 @@ open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast.LowLevel
 open Gabbro.Core.Katalog
 open Gabbro.Core.Text
+open Nat.Partrec
 
-/-! ## Befehl
 
-A command is a first-order tuple: a constructor tag followed by the encodings
-of its fields. Dependent `Fin` fields are encoded through their own
-`Encodable` instance, so no constructor is changed and no per-program data is
-needed. -/
+/-! ## Befehl as a first-order `Code` tree -/
 
-def befehlCode (b : Befehl) : Nat :=
-  Encodable.encode <| match b with
-  | .literal ziel wert => [0, ziel, wert]
-  | .binaer op links => [1, Encodable.encode op, links]
-  | .binden name quelle => [2, Encodable.encode name, quelle]
-  | .wahrheitswert ziel wert => [3, ziel, Encodable.encode wert]
-  | .lesen ziel index => [4, ziel, index]
-  | .negativ ziel betrag => [5, ziel, betrag]
-  | .negieren ziel => [6, ziel]
-  | .verneinen ziel => [7, ziel]
-  | .teilen links => [8, links]
-  | .vergleichen op links => [9, Encodable.encode op, links]
-  | .springeWenn quelle bei abstand => [10, quelle, Encodable.encode bei, abstand]
-  | .zuweisen quelle index zieltyp => [11, quelle, index, Encodable.encode zieltyp]
-  | .zurueck quelle zieltyp => [12, quelle, Encodable.encode zieltyp]
-  | .springe abstand => [13, abstand]
-  | .blockEnde freigabe => [14, freigabe]
-  | .bindeWert quelle ziel global => [15, quelle, Encodable.encode ziel, Encodable.encode global]
-  | .definiere name parameter result globale ueberspringe misstAbstieg ruft effects =>
-      [16, Encodable.encode name, Encodable.encode parameter, Encodable.encode result,
-        globale, ueberspringe, Encodable.encode misstAbstieg, Encodable.encode ruft,
-        Encodable.encode effects]
-  | .rufe name args bind =>
-      [17, Encodable.encode name, Encodable.encode args, Encodable.encode bind]
-  | .rueckVoid => [18]
-  | .pruefeMass quelle => [19, quelle]
-  | .setzePasszahl quelle stelle => [20, quelle, stelle]
-  | .whileTest quelle ende handler => [21, quelle, ende, Encodable.encode handler]
-  | .forAnfang unter ober index skipEmpty shadowed missingHandler =>
-      [22, unter, ober, Encodable.encode index, skipEmpty,
-        Encodable.encode shadowed, Encodable.encode missingHandler]
-  | .forTest ende handler => [23, ende, Encodable.encode handler]
-  | .forNaechster zurueck index => [24, zurueck, Encodable.encode index]
-  | .zurueckSprung abstand => [25, abstand]
-  | .starte name => [26, Encodable.encode name]
-  | .ende => [27]
-  | .baueArray ziel element count => [28, ziel, Encodable.encode element, count]
-  | .liesArray basis element count => [29, basis, Encodable.encode element, count]
-  | .baueTupel ziel types => [30, ziel, Encodable.encode types]
-  | .liesTupelfeld basis types index => [31, basis, Encodable.encode types, Encodable.encode index]
-  | .bindeTupel quelle types bind =>
-      [32, quelle, Encodable.encode types, Encodable.encode bind]
-  | .definiereRecord name labels types =>
-      [33, Encodable.encode name, Encodable.encode labels, Encodable.encode types]
-  | .baueRecord ziel name labels types sources =>
-      [34, ziel, Encodable.encode name, Encodable.encode labels, Encodable.encode types,
-        Encodable.encode sources]
-  | .liesRecordFeld basis name labels types index =>
-      [35, basis, Encodable.encode name, Encodable.encode labels, Encodable.encode types,
-        Encodable.encode index]
-  | .setzeRecordFeld source indexLocal name labels types index =>
-      [36, source, indexLocal, Encodable.encode name, Encodable.encode labels,
-        Encodable.encode types, Encodable.encode index]
-  | .definiereVariante name labels cases =>
-      [37, Encodable.encode name, Encodable.encode labels, Encodable.encode cases]
-  | .baueVariante ziel name labels cases index =>
-      [38, ziel, Encodable.encode name, Encodable.encode labels, Encodable.encode cases,
-        Encodable.encode index]
-  | .waehleVariante source name labels cases branches =>
-      [39, source, Encodable.encode name, Encodable.encode labels, Encodable.encode cases,
-        Encodable.encode branches]
-  | .textLiteral ziel decoded => [40, ziel, Encodable.encode decoded]
-  | .textConcat basis a b => [41, basis, a, b]
-  | .textIndex basis capacity => [42, basis, capacity]
-  | .substring basis capacity => [43, basis, capacity]
-  | .textLength basis capacity => [44, basis, capacity]
-  | .definiereTraeger count labels layout exported =>
-      [45, count, Encodable.encode labels, Encodable.encode layout, Encodable.encode exported]
-  | .optionIstBesetzt ziel count => [46, ziel, count]
-  | .definiereEffektgruppe effects => [47, Encodable.encode effects]
-  | .waehleUmgebung name abi row =>
-      [48, Encodable.encode name, Encodable.encode abi, Encodable.encode row]
-  | .bindeRegion receiver init => [49, receiver, Encodable.encode init]
+def befehlZuCode : Befehl → Code
+  | .literal f0 f1 => Code.pair (natZuCode 0) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .binaer f0 f1 => Code.pair (natZuCode 1) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .binden f0 f1 => Code.pair (natZuCode 2) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .wahrheitswert f0 f1 => Code.pair (natZuCode 3) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .lesen f0 f1 => Code.pair (natZuCode 4) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .negativ f0 f1 => Code.pair (natZuCode 5) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .negieren f0 => Code.pair (natZuCode 6) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .verneinen f0 => Code.pair (natZuCode 7) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .teilen f0 => Code.pair (natZuCode 8) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .vergleichen f0 f1 => Code.pair (natZuCode 9) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .springeWenn f0 f1 f2 => Code.pair (natZuCode 10) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .zuweisen f0 f1 f2 => Code.pair (natZuCode 11) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .zurueck f0 f1 => Code.pair (natZuCode 12) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .springe f0 => Code.pair (natZuCode 13) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .blockEnde f0 => Code.pair (natZuCode 14) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .bindeWert f0 f1 f2 => Code.pair (natZuCode 15) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .definiere f0 f1 f2 f3 f4 f5 f6 f7 => Code.pair (natZuCode 16) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.pair (natZuCode (Encodable.encode f5)) (Code.pair (natZuCode (Encodable.encode f6)) (Code.pair (natZuCode (Encodable.encode f7)) (Code.zero)))))))))
+  | .rufe f0 f1 f2 => Code.pair (natZuCode 17) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .rueckVoid => Code.pair (natZuCode 18) Code.zero
+  | .pruefeMass f0 => Code.pair (natZuCode 19) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .setzePasszahl f0 f1 => Code.pair (natZuCode 20) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .whileTest f0 f1 f2 => Code.pair (natZuCode 21) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .forAnfang f0 f1 f2 f3 f4 f5 => Code.pair (natZuCode 22) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.pair (natZuCode (Encodable.encode f5)) (Code.zero)))))))
+  | .forTest f0 f1 => Code.pair (natZuCode 23) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .forNaechster f0 f1 => Code.pair (natZuCode 24) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .zurueckSprung f0 => Code.pair (natZuCode 25) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .starte f0 => Code.pair (natZuCode 26) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .ende => Code.pair (natZuCode 27) Code.zero
+  | .baueArray f0 f1 f2 => Code.pair (natZuCode 28) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .liesArray f0 f1 f2 => Code.pair (natZuCode 29) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .baueTupel f0 f1 => Code.pair (natZuCode 30) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .liesTupelfeld f0 f1 f2 => Code.pair (natZuCode 31) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .bindeTupel f0 f1 f2 => Code.pair (natZuCode 32) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .definiereRecord f0 f1 f2 => Code.pair (natZuCode 33) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .baueRecord f0 f1 f2 f3 f4 => Code.pair (natZuCode 34) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.zero))))))
+  | .liesRecordFeld f0 f1 f2 f3 f4 => Code.pair (natZuCode 35) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.zero))))))
+  | .setzeRecordFeld f0 f1 f2 f3 f4 f5 => Code.pair (natZuCode 36) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.pair (natZuCode (Encodable.encode f5)) (Code.zero)))))))
+  | .definiereVariante f0 f1 f2 => Code.pair (natZuCode 37) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .baueVariante f0 f1 f2 f3 f4 => Code.pair (natZuCode 38) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.zero))))))
+  | .waehleVariante f0 f1 f2 f3 f4 => Code.pair (natZuCode 39) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.pair (natZuCode (Encodable.encode f4)) (Code.zero))))))
+  | .textLiteral f0 f1 => Code.pair (natZuCode 40) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .textConcat f0 f1 f2 => Code.pair (natZuCode 41) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .textIndex f0 f1 => Code.pair (natZuCode 42) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .substring f0 f1 => Code.pair (natZuCode 43) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .textLength f0 f1 => Code.pair (natZuCode 44) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .definiereTraeger f0 f1 f2 f3 => Code.pair (natZuCode 45) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.pair (natZuCode (Encodable.encode f3)) (Code.zero)))))
+  | .optionIstBesetzt f0 f1 => Code.pair (natZuCode 46) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .definiereEffektgruppe f0 => Code.pair (natZuCode 47) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .waehleUmgebung f0 f1 f2 => Code.pair (natZuCode 48) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .bindeRegion f0 f1 => Code.pair (natZuCode 49) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
 
-def befehlDecode (n : Nat) : Option Befehl := do
-  let fs : List Nat ← Encodable.decode n
-  match fs with
-  | [0, z, w] => some (.literal z w)
-  | [1, op, l] =>
-      let o : Arith ← Encodable.decode op
-      some (.binaer o l)
-  | [2, name, q] =>
-      let nm : Identifier ← Encodable.decode name
-      some (.binden nm q)
-  | [3, z, w] =>
-      let v : Bool ← Encodable.decode w
-      some (.wahrheitswert z v)
-  | [4, z, i] => some (.lesen z i)
-  | [5, z, b] => some (.negativ z b)
-  | [6, z] => some (.negieren z)
-  | [7, z] => some (.verneinen z)
-  | [8, l] => some (.teilen l)
-  | [9, op, l] =>
-      let o : Compare ← Encodable.decode op
-      some (.vergleichen o l)
-  | [10, q, bei, ab] =>
-      let b : Bool ← Encodable.decode bei
-      some (.springeWenn q b ab)
-  | [11, q, i, t] =>
-      let ty : Ty .value ← Encodable.decode t
-      some (.zuweisen q i ty)
-  | [12, q, t] =>
-      let ty : Ty .value ← Encodable.decode t
-      some (.zurueck q ty)
-  | [13, ab] => some (.springe ab)
-  | [14, f] => some (.blockEnde f)
-  | [15, q, z, g] =>
-      let ty : Ty .value ← Encodable.decode z
-      let gl : Bool ← Encodable.decode g
-      some (.bindeWert q ty gl)
-  | [16, name, ps, res, glob, skip, meas, ruft, eff] => do
-      let nm : Identifier ← Encodable.decode name
-      let ps' : List (Ty .value) ← Encodable.decode ps
-      let res' : Option (Ty .value) ← Encodable.decode res
-      let meas' : Bool ← Encodable.decode meas
-      let ruft' : List Rufstelle ← Encodable.decode ruft
-      let eff' : Option (List CarrierEffect) ← Encodable.decode eff
-      some (.definiere nm ps' res' glob skip meas' ruft' eff')
-  | [17, name, args, bind] => do
-      let nm : Identifier ← Encodable.decode name
-      let args' : List (Ty .value) ← Encodable.decode args
-      let bind' : Option (Ty .value) ← Encodable.decode bind
-      some (.rufe nm args' bind')
-  | [18] => some .rueckVoid
-  | [19, q] => some (.pruefeMass q)
-  | [20, q, st] => some (.setzePasszahl q st)
-  | [21, q, ende, handler] =>
-      let h : Identifier ← Encodable.decode handler
-      some (.whileTest q ende h)
-  | [22, unt, ob, idx, skip, sh, miss] => do
-      let idx' : Ty .value ← Encodable.decode idx
-      let sh' : Bool ← Encodable.decode sh
-      let miss' : Bool ← Encodable.decode miss
-      some (.forAnfang unt ob idx' skip sh' miss')
-  | [23, ende, handler] =>
-      let h : Option Identifier ← Encodable.decode handler
-      some (.forTest ende h)
-  | [24, back, idx] =>
-      let idx' : Ty .value ← Encodable.decode idx
-      some (.forNaechster back idx')
-  | [25, ab] => some (.zurueckSprung ab)
-  | [26, name] =>
-      let nm : Identifier ← Encodable.decode name
-      some (.starte nm)
-  | [27] => some .ende
-  | [28, z, el, cnt] =>
-      let el' : Ty .value ← Encodable.decode el
-      some (.baueArray z el' cnt)
-  | [29, basis, el, cnt] =>
-      let el' : Ty .value ← Encodable.decode el
-      some (.liesArray basis el' cnt)
-  | [30, z, types] =>
-      let types' : List (Ty .value) ← Encodable.decode types
-      some (.baueTupel z types')
-  | [31, basis, types, index] => do
-      let types' : List (Ty .value) ← Encodable.decode types
-      let index' : Fin types'.length ← Encodable.decode index
-      some (.liesTupelfeld basis types' index')
-  | [32, q, types, bind] => do
-      let types' : List (Ty .value) ← Encodable.decode types
-      let bind' : List Bool ← Encodable.decode bind
-      some (.bindeTupel q types' bind')
-  | [33, name, labels, types] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let types' : List (Ty .value) ← Encodable.decode types
-      some (.definiereRecord name' labels' types')
-  | [34, z, name, labels, types, sources] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let types' : List (Ty .value) ← Encodable.decode types
-      let sources' : List Nat ← Encodable.decode sources
-      some (.baueRecord z name' labels' types' sources')
-  | [35, basis, name, labels, types, index] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let types' : List (Ty .value) ← Encodable.decode types
-      let index' : Fin types'.length ← Encodable.decode index
-      some (.liesRecordFeld basis name' labels' types' index')
-  | [36, source, indexLocal, name, labels, types, index] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let types' : List (Ty .value) ← Encodable.decode types
-      let index' : Fin types'.length ← Encodable.decode index
-      some (.setzeRecordFeld source indexLocal name' labels' types' index')
-  | [37, name, labels, cases] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let cases' : List (Option (Ty .value)) ← Encodable.decode cases
-      some (.definiereVariante name' labels' cases')
-  | [38, z, name, labels, cases, index] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let cases' : List (Option (Ty .value)) ← Encodable.decode cases
-      let index' : Fin cases'.length ← Encodable.decode index
-      some (.baueVariante z name' labels' cases' index')
-  | [39, source, name, labels, cases, branches] => do
-      let name' : List Char ← Encodable.decode name
-      let labels' : List Identifier ← Encodable.decode labels
-      let cases' : List (Option (Ty .value)) ← Encodable.decode cases
-      let branches' : List (Nat × Bool) ← Encodable.decode branches
-      some (.waehleVariante source name' labels' cases' branches')
-  | [40, z, decoded] =>
-      let d : List Char ← Encodable.decode decoded
-      some (.textLiteral z d)
-  | [41, basis, a, b] => some (.textConcat basis a b)
-  | [42, basis, cap] => some (.textIndex basis cap)
-  | [43, basis, cap] => some (.substring basis cap)
-  | [44, basis, cap] => some (.textLength basis cap)
-  | [45, count, labels, layout, exported] => do
-      let labels' : List (List Char) ← Encodable.decode labels
-      let layout' : Ty .value ← Encodable.decode layout
-      let exported' : Bool ← Encodable.decode exported
-      some (.definiereTraeger count labels' layout' exported')
-  | [46, z, count] => some (.optionIstBesetzt z count)
-  | [47, effects] =>
-      let e : List CarrierEffect ← Encodable.decode effects
-      some (.definiereEffektgruppe e)
-  | [48, name, abi, row] => do
-      let nm : Identifier ← Encodable.decode name
-      let abi' : DienstAbi ← Encodable.decode abi
-      let row' : FirmwareZeile ← Encodable.decode row
-      some (.waehleUmgebung nm abi' row')
-  | [49, receiver, init] =>
-      let init' : RegionInitializer ← Encodable.decode init
-      some (.bindeRegion receiver init')
-  | _ => none
+def befehlVonCodeA : Code → Option Befehl
+  | Code.pair tag kids =>
+    match codeZuNat tag with
+    | some 0 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.literal f0' f1')
+      | _ => Option.none
+    | some 1 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Arith ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.binaer f0' f1')
+      | _ => Option.none
+    | some 2 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Identifier ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.binden f0' f1')
+      | _ => Option.none
+    | some 3 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Bool ← Encodable.decode f1n
+          Option.some (.wahrheitswert f0' f1')
+      | _ => Option.none
+    | some 4 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.lesen f0' f1')
+      | _ => Option.none
+    | some 5 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.negativ f0' f1')
+      | _ => Option.none
+    | some 6 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.negieren f0')
+      | _ => Option.none
+    | some 7 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.verneinen f0')
+      | _ => Option.none
+    | some 8 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.teilen f0')
+      | _ => Option.none
+    | some 9 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Compare ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.vergleichen f0' f1')
+      | _ => Option.none
+    | some 10 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (f2)) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Bool ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : ℕ ← Encodable.decode f2n
+          Option.some (.springeWenn f0' f1' f2')
+      | _ => Option.none
+    | some 11 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (f2)) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Ty .value ← Encodable.decode f2n
+          Option.some (.zuweisen f0' f1' f2')
+      | _ => Option.none
+    | some 12 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Ty .value ← Encodable.decode f1n
+          Option.some (.zurueck f0' f1')
+      | _ => Option.none
+    | some 13 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.springe f0')
+      | _ => Option.none
+    | some 14 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.blockEnde f0')
+      | _ => Option.none
+    | some 15 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (f2)) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Ty .value ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Bool ← Encodable.decode f2n
+          Option.some (.bindeWert f0' f1' f2')
+      | _ => Option.none
+    | some 16 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (Code.pair f5 (Code.pair f6 (f7))))))) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Identifier ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : List (Ty .value) ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Option (Ty .value) ← Encodable.decode f2n
+          let f3n : ℕ ← codeZuNat f3
+          let f3' : ℕ ← Encodable.decode f3n
+          let f4n : ℕ ← codeZuNat f4
+          let f4' : ℕ ← Encodable.decode f4n
+          let f5n : ℕ ← codeZuNat f5
+          let f5' : Bool ← Encodable.decode f5n
+          let f6n : ℕ ← codeZuNat f6
+          let f6' : List Rufstelle ← Encodable.decode f6n
+          let f7n : ℕ ← codeZuNat f7
+          let f7' : Option (List CarrierEffect) ← Encodable.decode f7n
+          Option.some (.definiere f0' f1' f2' f3' f4' f5' f6' f7')
+      | _ => Option.none
+    | some 17 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (f2)) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Identifier ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : List (Ty .value) ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Option (Ty .value) ← Encodable.decode f2n
+          Option.some (.rufe f0' f1' f2')
+      | _ => Option.none
+    | some 18 =>
+      match kids with
+      | Code.zero => Option.some .rueckVoid
+      | _ => Option.none
+    | some 19 =>
+      match kids with
+      | f0 => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          Option.some (.pruefeMass f0')
+      | _ => Option.none
+    | some 20 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          Option.some (.setzePasszahl f0' f1')
+      | _ => Option.none
+    | some 21 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (f2)) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Identifier ← Encodable.decode f2n
+          Option.some (.whileTest f0' f1' f2')
+      | _ => Option.none
+    | some 22 =>
+      match kids with
+      | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.pair f3 (Code.pair f4 (f5))))) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : ℕ ← Encodable.decode f1n
+          let f2n : ℕ ← codeZuNat f2
+          let f2' : Ty .value ← Encodable.decode f2n
+          let f3n : ℕ ← codeZuNat f3
+          let f3' : ℕ ← Encodable.decode f3n
+          let f4n : ℕ ← codeZuNat f4
+          let f4' : Bool ← Encodable.decode f4n
+          let f5n : ℕ ← codeZuNat f5
+          let f5' : Bool ← Encodable.decode f5n
+          Option.some (.forAnfang f0' f1' f2' f3' f4' f5')
+      | _ => Option.none
+    | some 23 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Option Identifier ← Encodable.decode f1n
+          Option.some (.forTest f0' f1')
+      | _ => Option.none
+    | some 24 =>
+      match kids with
+      | Code.pair f0 (f1) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : ℕ ← Encodable.decode f0n
+          let f1n : ℕ ← codeZuNat f1
+          let f1' : Ty .value ← Encodable.decode f1n
+          Option.some (.forNaechster f0' f1')
+      | _ => Option.none
+    | _ => Option.none
+  | _ => Option.none
 
-instance : Encodable Befehl :=
-  Encodable.ofLeftInjection befehlCode befehlDecode (by
-    intro b
-    unfold befehlCode befehlDecode
-    rw [Encodable.encodek]
-    cases b <;> repeat rw [Encodable.encodek])
+end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
+
