@@ -283,22 +283,19 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
       · change (indexPosition offset lower upper).val < Nat.succ count
         exact (indexPosition offset lower upper).isLt
       ·
-        let vv : Wert (.array element (count + 1)) := by
+        let val : Wert (.array element (count + 1)) := by
           change Vector (Wert element) (count + 1)
           exact values
-        have vvEq : (vv : Vector (Wert element) (count + 1)) = values := by rfl
         have wert : wertAls (.array element (count + 1))
-            (Sigma.mk (.array element (count + 1)) vv) = some vv := by
+            (Sigma.mk (.array element (count + 1)) val) = some val := by
           change (if same : (element.array (count + 1) : Ty .value) = element.array (count + 1) then
-            some (same ▸ vv) else none) = some vv
+            some (same ▸ val) else none) = some val
           simp
-        have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) vv) := by
+        have harr' : frame.temp slot = some (Sigma.mk (.array element (count + 1)) val) := by
           rw [harr]
-          simp [vvEq]
         have leCount : offset.wert ≤ (count : Int) := by omega
-        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, vvEq, Rahmen.zahl, alsGanzzahl,
+        simp [Befehl.auswerten, Rahmen.schreibe, harr', hoff, wert, val, Rahmen.zahl, alsGanzzahl,
           Option.bind, if_neg (not_lt_of_ge nonneg), dif_pos boundProof, dif_pos leCount,
           indexPosition]
-        rfl
 
 end Gabbro.Core.Ast.Semantik
