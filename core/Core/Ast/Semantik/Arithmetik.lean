@@ -39,7 +39,7 @@ def Wert.widen (source target : Ty .value) (fits : Fits source target) (value : 
       first
       | exact #v[]
       | simp only [Fits] at fits <;> (cases fits <;> exact value)
-  case text.text source target => exact value.widen fits
+  case text.text source target => exact TextValue.widen value fits
   all_goals
     first
     | exact value
