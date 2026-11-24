@@ -57,7 +57,7 @@ private theorem absturzGleich
     (konkret = some (.absturz, absturzSpur)) ↔ (ideal = some (.absturz, absturzSpur)) := by
   cases matched with
   | pause => exact Iff.rfl
-  | privat c w => exact ⟨fun h => by cases h, fun h => by cases h⟩
+  | privat c w => exact ⟨(fun h => by cases h), (fun h => by cases h)⟩
   | schritt event => exact Iff.rfl
 
 theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
@@ -70,7 +70,7 @@ theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
     funext fun t => matched.effekte sicht t
   have crash : (fun t => ρ.zeit.spur t = some (.absturz, absturzSpur)) =
       (fun t => η.zeit.spur t = some (.absturz, absturzSpur)) := by
-    funext fun t => propext (absturzGleich (matched.spur t))
+    exact funext fun t => propext (absturzGleich (matched.spur t))
   rw [phases, crash]
   exact pflicht.2 η valid
 

@@ -30,16 +30,16 @@ theorem StotterMassAussage.schranke {f : F}
   have budget (n : Nat) (int : Stotterintervall η c f a n) :
       zaehle (fun t => decide (η.belegt t = some c)) a n + mass ρ η c (a + n) ≤ mass ρ η c a := by
     induction n with
-    | zero => exact Nat.le_refl _
+    | zero => simpa only [zaehle, Nat.add_zero, Nat.zero_add] using Nat.le_refl (mass ρ η c a)
     | succ n ih =>
       have prev := ih (fun t lo hi => int t lo (by omega))
       obtain ⟨head, noStep, noCrash⟩ := int (a + n) (by omega) (by omega)
       have spend := (pflicht h ρ η run matched checked c (a + n) head).2 noStep noCrash
       by_cases mark : η.belegt (a + n) = some c
-      · simp only [if_pos mark] at spend
+      · simp only [if_pos mark, Nat.add_assoc] at spend
         simp only [zaehle, decide_eq_true mark, if_true]
         omega
-      · simp only [if_neg mark, Nat.add_zero] at spend
+      · simp only [if_neg mark, Nat.add_zero, Nat.add_assoc] at spend
         simp only [zaehle, decide_eq_false mark, Bool.false_eq_true, if_false, Nat.add_zero]
         omega
   cases n with
