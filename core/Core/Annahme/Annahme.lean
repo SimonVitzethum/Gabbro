@@ -78,13 +78,16 @@ instance trivialeVerwendung : GuardVerwendung trivialeEinheit where
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit)
     (K : KlauselTabelle E) (G : GuardVerwendung E),
     @Akzeptiert Unit Unit Unit Unit Unit Unit Unit Unit Unit inferInstance E K G := by
+  have hRL : ∀ i, RegelLokal (trivialeEinheit.system.regel i) := by
+    intro i
+    show RegelLokal trivialesRegel
+    exact inferInstance
+  have hRA : ∀ i, RegelAussen (trivialeEinheit.system.regel i) := by
+    intro i
+    show RegelAussen trivialesRegel
+    exact inferInstance
   have hL : Lokal trivialeEinheit :=
-    ⟨Plattform.katalog_wohlgeformt .x86_64, fun i => ?_, Aussen.zulassung_m2 .x86_64,
-      fun i => ?_⟩
-  · show RegelLokal trivialesRegel
-    exact inferInstance
-  · show RegelAussen trivialesRegel
-    exact inferInstance
+    ⟨Plattform.katalog_wohlgeformt .x86_64, hRL, Aussen.zulassung_m2 .x86_64, hRA⟩
   have hK : KlauselnWahr trivialeEinheit := by
     intro ρ _
     exact ⟨trivial, fun _ => trivial, fun _ _ => trivial⟩
