@@ -46,7 +46,7 @@ def graph (Z : Zustand F Ort Wert) : Graph (Fin Z.ev.length) Ort Wert where
   mo a b := Z.mo a.1 b.1
 
 /-- The empty state: no event. -/
-def leer : Zustand F Ort Wert := ⟨[], fun _ _ => False, fun _ _ => False, fun _ _ => False⟩
+def leer : Zustand F Ort Wert := ⟨[], fun _from _to => False, fun _from _to => False, fun _from _to => False⟩
 
 /-- A state with one more event at the end and the given relations. -/
 def anhaengen (Z : Zustand F Ort Wert) (x : Ereignis F Ort Wert) (po rf mo : Nat → Nat → Prop) :

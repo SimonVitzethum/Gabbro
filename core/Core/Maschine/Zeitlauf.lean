@@ -61,15 +61,17 @@ theorem schnitt_deckt (ρ : Zeitlauf schritt pause) (t : Nat) :
     | some e => exact ⟨⟨t + 1, Or.inr ⟨t, e, rfl, event⟩⟩, Nat.le_refl _, rfl⟩
 
 /-- Private implementation steps may occupy hardware ticks at which the ideal run pauses. -/
-def erlaubePausen (ρ : Zeitlauf schritt pause) : Zeitlauf schritt (fun _ _ => True) where
+def erlaubePausen {pause' : Nat → S → Prop} (ρ : Zeitlauf schritt pause)
+    (erlaubt : ∀ t s, pause t s → pause' t s) : Zeitlauf schritt pause' where
   zustand := ρ.zustand
   spur := ρ.spur
   takt t := by
     cases ρ.takt t with
     | schritt label step => exact .schritt label step
-    | wartet label eq _pause => exact .wartet label eq trivial
+    | wartet label eq hp => exact .wartet label eq (erlaubt _ _ hp)
 
-theorem erlaubePausen_maximal (ρ : Zeitlauf schritt) : ρ.erlaubePausen.Maximal :=
+theorem erlaubePausen_maximal {pause' : Nat → S → Prop} (ρ : Zeitlauf schritt)
+    (erlaubt : ∀ t s, KeinSchritt schritt t s → pause' t s) : (ρ.erlaubePausen erlaubt).Maximal :=
   fun _ tail i after => (ρ.wartet (tail i after)).2
 
 theorem takt_existiert (schritt : Nat → S → Ev → S → Prop) (t : Nat) (s : S) :

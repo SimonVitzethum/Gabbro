@@ -1,6 +1,6 @@
 module
 
-public import Core.Maschine.Aussen
+public import Core.Maschine.Absturz
 public import Core.Maschine.Ereignisse
 public import Core.Maschine.Regel
 public import Core.Maschine.Unterbrechung
@@ -54,6 +54,8 @@ structure Einrichtung (L Ort Wert Raum Lok Grund Bedingung : Type) where
   ereignisWert : Ereignis → Wert
   bedingung : Zustand L Ort Wert Raum Lok Grund → Kontext → Bedingung → Prop
   invariant : Zustand L Ort Wert Raum Lok Grund → L → Prop
+  persistenzRegion : Strecke
+  wiederanlauf : Wiederanlauf Ort Wert Raum Lok Grund
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
@@ -72,11 +74,10 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   verlauf : s'.verlauf = s.verlauf
   geliefert : s'.geliefert = s.geliefert
 
-abbrev SpeicherSpur (Ort Wert : Type) := List (SpeicherAkteur Ort × Etikett Ort Wert)
-
-structure SchrittSpur (Ort Wert : Type) where
-  speicher : SpeicherSpur Ort Wert
-  aussen : List Ereignis
+  initial : s'.initial = s.initial
+  persistenz : s'.persistenz = s.persistenz
+  epoche : s'.epoche = s.epoche
+  verworfen : s'.verworfen = s.verworfen
 
 variable (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
 
@@ -94,7 +95,7 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
   | sperre {l a next} (h : SperrSchritt a c (s.sperren l) next)
       (geschuetzt : (s.sperren l).Wechsel next → e.invariant u l) :
       FuehrtAus t c s u (.sperre l a)
-        (sperrEreignisse (s.sperren l) next (e.sperrOrt l) (e.initial (e.sperrOrt l))) []
+        (sperrEreignisse (s.sperren l) next (e.sperrOrt l) (s.initial (e.sperrOrt l))) []
         { u with sperren := Function.update s.sperren l next }
   | frage (q : Frage) :
       FuehrtAus t c s u (.frage q) [] [.frage (s.stelleFrage t c q)] (u.frage (s.stelleFrage t c q))
@@ -115,7 +116,7 @@ def FuehrtSchrittAus [DecidableEq L] (t : Nat) (c : Kontext)
   Zustandsrahmen s u ∧ (∀ l ∈ plan.lesen, l.art.liest) ∧
     ∃ sperren v,
       FuehrtAus e t c s u plan.aktion sperren spur.aussen v ∧
-      Speicherfolge e.initial (.kontext c) s.graph
+      Speicherfolge s.initial (.kontext c) s.graph
         (sperren ++ plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
           spur.aussen.map (aussenEtikett e)) spur.speicher s'.graph ∧
       s' = { v with graph := s'.graph }
@@ -126,7 +127,7 @@ def AntwortSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat)
     (s : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert)
     (s' : Zustand L Ort Wert Raum Lok Grund) : Prop :=
   ∃ a, s.AntwortAngeboten k run t a ∧ spur.aussen = [.antwort a] ∧
-    Speicherfolge e.initial .aussen s.graph [aussenEtikett e (.antwort a)] spur.speicher s'.graph ∧
+    Speicherfolge s.initial .aussen s.graph [aussenEtikett e (.antwort a)] spur.speicher s'.graph ∧
     s' = { s.antwort a with graph := s'.graph }
 
 /-- Delivery runs on its own opportunity. A pending offer is consumed only when a handler enters. -/
@@ -136,7 +137,7 @@ def UnterbrechungsSchritt (run : HwLauf) (t : Nat) (s : Zustand L Ort Wert Raum 
     (run.angebot t).interrupt k = true ∧ UnterbrechungAusstehend s run t k id irq ∧
     NimmtUnterbrechung (s.kerne k) k (Nat.pair id.1 id.2) irq c nmi ∧ s.status c = .ruht ∧
     spur.aussen = [.interrupt k irq .handler] ∧
-    Speicherfolge e.initial .aussen s.graph [aussenEtikett e (.interrupt k irq .handler)]
+    Speicherfolge s.initial .aussen s.graph [aussenEtikett e (.interrupt k irq .handler)]
       spur.speicher s'.graph ∧ s' = { Zustandseintritt s k id c nmi with graph := s'.graph }
 
 variable [DecidableEq L]
@@ -145,22 +146,26 @@ variable (Sy : MaschinenSystem L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 /-- A concrete implementation step. Context steps interleave at core opportunities. -/
 inductive ImplSchritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
     Zustand L Ort Wert Raum Lok Grund → SchrittSpur Ort Wert → Zustand L Ort Wert Raum Lok Grund → Prop
-  | kontext {s s' u plan spur c} (bereit : KannSchreiten run t c s)
+  | kontext {s s' u plan spur c} (keinAbsturz : (run.angebot t).crash = false) (bereit : KannSchreiten run t c s)
       (regel : Sy.ImplSchritt c s [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
       ImplSchritt k run t s spur s'
-  | antwort {s s' spur} (h : AntwortSchritt e k run t s spur s') : ImplSchritt k run t s spur s'
-  | interrupt {s s' spur} (h : UnterbrechungsSchritt e run t s spur s') : ImplSchritt k run t s spur s'
+  | antwort {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : AntwortSchritt e k run t s spur s') : ImplSchritt k run t s spur s'
+  | interrupt {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : UnterbrechungsSchritt e run t s spur s') : ImplSchritt k run t s spur s'
+  | absturz {s s' spur} (h : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s') :
+      ImplSchritt k run t s spur s'
 
 namespace I
 
 /-- An ideal step uses the whole unit rule at the same protocol or catalogue boundary. -/
 inductive Schritt (k : Katalog.Katalog) (run : HwLauf) (t : Nat) :
     Zustand L Ort Wert Raum Lok Grund → SchrittSpur Ort Wert → Zustand L Ort Wert Raum Lok Grund → Prop
-  | kontext {s s' u plan spur c w} (bereit : KannSchreiten run t c s)
+  | kontext {s s' u plan spur c w} (keinAbsturz : (run.angebot t).crash = false) (bereit : KannSchreiten run t c s)
       (regel : Sy.ISchritt c s w [plan] u) (aus : FuehrtSchrittAus e t c s u plan spur s') :
       Schritt k run t s spur s'
-  | antwort {s s' spur} (h : AntwortSchritt e k run t s spur s') : Schritt k run t s spur s'
-  | interrupt {s s' spur} (h : UnterbrechungsSchritt e run t s spur s') : Schritt k run t s spur s'
+  | antwort {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : AntwortSchritt e k run t s spur s') : Schritt k run t s spur s'
+  | interrupt {s s' spur} (keinAbsturz : (run.angebot t).crash = false) (h : UnterbrechungsSchritt e run t s spur s') : Schritt k run t s spur s'
+  | absturz {s s' spur} (h : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s') :
+      Schritt k run t s spur s'
 
 end I
 
@@ -188,16 +193,32 @@ theorem UnterbrechungsSchritt.viele {run t s spur s'} (h : UnterbrechungsSchritt
 theorem impl_speicher_gut {k run t s spur s'} (h : ImplSchritt e Sy k run t s spur s')
     (gut : s.SpeicherGut) : s'.SpeicherGut := by
   cases h with
-  | kontext _ _ aus => exact (aus.viele e).gut gut.1 gut.2
-  | antwort h => exact (h.viele e).gut gut.1 gut.2
-  | interrupt h => exact (h.viele e).gut gut.1 gut.2
+  | kontext _ _ _ aus => exact (aus.viele e).gut gut.1 gut.2
+  | antwort _ h => exact (h.viele e).gut gut.1 gut.2
+  | interrupt _ h => exact (h.viele e).gut gut.1 gut.2
+  | absturz h => exact h.neustart.2.2.2.2.2.2.2
 
 theorem ideal_speicher_gut {k run t s spur s'} (h : I.Schritt e Sy k run t s spur s')
     (gut : s.SpeicherGut) : s'.SpeicherGut := by
   cases h with
-  | kontext _ _ aus => exact (aus.viele e).gut gut.1 gut.2
-  | antwort h => exact (h.viele e).gut gut.1 gut.2
-  | interrupt h => exact (h.viele e).gut gut.1 gut.2
+  | kontext _ _ _ aus => exact (aus.viele e).gut gut.1 gut.2
+  | antwort _ h => exact (h.viele e).gut gut.1 gut.2
+  | interrupt _ h => exact (h.viele e).gut gut.1 gut.2
+  | absturz h => exact h.neustart.2.2.2.2.2.2.2
+
+theorem ImplSchritt.absturzfall {k run t s spur s'} (h : ImplSchritt e Sy k run t s spur s')
+    (offer : AbsturzAngeboten k run t) : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s' := by
+  cases h with
+  | kontext normal _ _ _ | antwort normal _ | interrupt normal _ =>
+    exact (Bool.false_ne_true (normal.symm.trans offer.2)).elim
+  | absturz h => exact h
+
+theorem I.Schritt.absturzfall {k run t s spur s'} (h : I.Schritt e Sy k run t s spur s')
+    (offer : AbsturzAngeboten k run t) : AbsturzSchritt e.persistenzRegion e.wiederanlauf k run t s spur s' := by
+  cases h with
+  | kontext normal _ _ _ | antwort normal _ | interrupt normal _ =>
+    exact (Bool.false_ne_true (normal.symm.trans offer.2)).elim
+  | absturz h => exact h
 
 theorem warte_genau {t c s u b} :
     FuehrtAus e t c s u (.warte b) [] [] u ↔ e.bedingung s c b :=
@@ -207,7 +228,7 @@ theorem warte_erfuellbar
     (s : Zustand L Ort Wert Raum Lok Grund) (t : Nat) (c : Kontext) :
     let enabled : Einrichtung L Ort Wert Raum Lok Grund Unit :=
       ⟨e.initial, e.sperrOrt, e.ereignisOrt, e.ereignisWert,
-        fun _ _ _ => True, e.invariant⟩
+        fun _ _ _ => True, e.invariant, e.persistenzRegion, e.wiederanlauf⟩
     FuehrtAus enabled t c s s (.warte ()) [] [] s :=
   .warte trivial
 

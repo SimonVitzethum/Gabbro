@@ -25,7 +25,7 @@ def AntwortAngeboten (z : Zustand L Ort Wert Raum Lok Grund) (k : Katalog.Katalo
     (run : HwLauf) (t : Nat) (a : AntwortEreignis) : Prop :=
   a.cut = t ∧ a.erlaubt run z.verlauf ∧
     k.enthaelt (.endpoint a.question.endpoint) ∧
-    (∃ q ∈ z.fragen, a.zu q) ∧ ∀ e ∈ z.antworten, e.questionInstance ≠ a.questionInstance
+    (∃ q ∈ z.fragen, z.epoche ≤ q.cut ∧ a.zu q) ∧ ∀ e ∈ z.antworten, e.questionInstance ≠ a.questionInstance
 
 /-- The conformant outside policy revalidates the answer at arrival. -/
 theorem AntwortAngeboten.zulaessig {z : Zustand L Ort Wert Raum Lok Grund} {k h run t a}
@@ -43,7 +43,7 @@ def antwort (z : Zustand L Ort Wert Raum Lok Grund) (a : AntwortEreignis) :
 
 /-- The context can take its first unconsumed reply, across all outside objects it has contacted. -/
 def naechsteAntwort (z : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) : Option AntwortEreignis :=
-  (z.angekommen c)[z.verbraucht c]?
+  (z.angekommen c)[z.verworfen c + z.verbraucht c]?
 
 def verbrauche (z : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
     Zustand L Ort Wert Raum Lok Grund :=
@@ -72,7 +72,9 @@ theorem verbrauche_verbrauch {z : Zustand L Ort Wert Raum Lok Grund} (h : z.Verb
   intro d
   by_cases same : d = c
   · subst d
-    exact (verbrauch_lokal z c).2.1 ▸ Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp ready).1
-  · exact (verbrauch_lokal z c).2.2 d same ▸ h d
+    have lt := (List.getElem?_eq_some_iff.mp ready).1
+    change z.verworfen c + z.verbraucht c < (z.angekommen c).length at lt
+    simpa only [verbrauche, angekommen, Function.update_self, ← Nat.add_assoc] using Nat.succ_le_of_lt lt
+  · simpa only [verbrauche, angekommen, Function.update_of_ne same] using h d
 
 end Gabbro.Core.Maschine.Zustand

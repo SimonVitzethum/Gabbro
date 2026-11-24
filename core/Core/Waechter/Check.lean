@@ -36,10 +36,11 @@ private meta def pins : Array (Name × UInt64) := #[
   (`Gabbro.Core.Katalog.uebersetze, 3754628535707676002),
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
-  (`Gabbro.Core.Maschine.I.Schritt, 8264302221316684132),
-  (`Gabbro.Core.Maschine.ImplSchritt, 11039588729123112511),
-  (`Gabbro.Core.Maschine.Laeufe, 14862217329025593899),
-  (`Gabbro.Core.Maschine.I.Laeufe, 17628005016946070159)]
+  (`Gabbro.Core.Maschine.AbsturzSchritt, 17039850444646100923),
+  (`Gabbro.Core.Maschine.I.Schritt, 2688138910628211793),
+  (`Gabbro.Core.Maschine.ImplSchritt, 1927085426567253066),
+  (`Gabbro.Core.Maschine.Laeufe, 589248988461026046),
+  (`Gabbro.Core.Maschine.I.Laeufe, 7859311021272205615)]
 
 private meta def acceptance : AcceptanceSpec := {
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }

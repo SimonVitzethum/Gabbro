@@ -14,7 +14,7 @@ variable {L Ort Wert Raum Lok Grund : Type}
     It remains pending across masks and cuts until the composition records its delivery. -/
 def UnterbrechungAusstehend (s : Zustand L Ort Wert Raum Lok Grund) (run : HwLauf)
     (t kern : Nat) (id : Nat × Nat) (irq : Unterbrechung) : Prop :=
-  id.1 ≤ t ∧ (run.angebot id.1).raised[id.2]? = some (kern, irq) ∧ id ∉ s.geliefert
+  s.epoche ≤ id.1 ∧ id.1 ≤ t ∧ (run.angebot id.1).raised[id.2]? = some (kern, irq) ∧ id ∉ s.geliefert
 
 /-- Enter a normal handler or an NMI handler. The same mask translation supplies the pinned
     catalogue row, including the suppression of normal interrupts while an NMI is active. -/
