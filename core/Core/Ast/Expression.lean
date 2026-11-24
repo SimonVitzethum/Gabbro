@@ -235,7 +235,7 @@ theorem AtomReads.variable_inversion (ordinary : word ≠ "true".toList ∧ word
   exact match read with
   | .trueLit => (ordinary.1 rfl).elim
   | .falseLit => (ordinary.2 rfl).elim
-  | .variable (type := type) ref vis ord => ⟨ref, vis, ord, rfl, rfl, rfl⟩
+  | .variable (type := _) ref vis ord => ⟨ref, vis, ord, rfl, rfl, rfl⟩
 
 
 -- Mirror AtomReads.lit_inversion and exclude the unary minus via NegationStart.
