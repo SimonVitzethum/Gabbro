@@ -131,12 +131,13 @@ elab "#check_core" : command => do
   let root ← IO.FS.realPath (← getFileName)
   let (sources, layoutErrors) ← readCoreSources root
   let imported ← getEnv
-  let scanned := sources.map fun source => (source, auditSource imported source)
+  let scanTask := Task.spawn fun _ => sources.map fun source => (source, auditSource imported source)
   let (hygiene, reached) := packageErrors sources
-  let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   -- An orphan need not have any compiled artifact. Check the reached modules without it.
   let reachableSources := sources.filter (reached.contains ·.moduleName)
   let env ← auditEnvironment reachableSources
+  let scanned := scanTask.get
+  let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
   let declarations := coreDeclarations env
   let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
@@ -145,8 +146,9 @@ elab "#check_core" : command => do
   errors := errors ++ compiledImportErrors env ++ pinErrors env index pins ++ acceptanceErrors env index acceptance
   errors := errors ++ safetyErrors env index safety
   let semanticErrors ← liftTermElabM <| withEnv env do
-    let mut errors ← declarationErrors declarations
-    errors := errors ++ (← decisionErrors declarations)
+    let (declarationErrors, decisionBodies) ← declarationAudit declarations
+    let mut errors := declarationErrors
+    errors := errors ++ (← decisionErrors decisionBodies)
     errors := errors ++ (← registryErrors registry)
     errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
     if let some spec := closing then

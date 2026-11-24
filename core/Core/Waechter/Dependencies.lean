@@ -76,9 +76,6 @@ public meta def withAxiomSummaries (env : Environment) : Environment :=
   let entries := env.header.modules.mapIdx fun i _ => exportedAxiomsExt.getModuleEntries env i
   exportedAxiomsExt.setState env { importedModuleEntries := entries }
 
-private meta def isNativeReduction (name : Name) : Bool :=
-  name == `Lean.ofReduceBool
-
 private meta def hasCheckedRecursion (env : Environment) (info : ConstantInfo) : Bool :=
   (Compiler.isUnsafeRecName? info.name).any fun original =>
     env.isSafeDefinition original &&
@@ -96,9 +93,10 @@ public meta def coreDeclarations (env : Environment) : Array Name := Id.run do
     forbidden names, direct native reduction references and all transitive axioms. Lean records transitive
     axiom information for imported library interfaces. Lean's generated recursion code is checked against its
     safe original. The source guard covers tokens erased by elaboration. -/
-public meta def declarationErrors (names : Array Name) : CoreM (Array String) := do
+public meta def declarationAudit (names : Array Name) : CoreM (Array String × Array (Name × Expr)) := do
   let env ← getEnv
   let mut errors := #[]
+  let mut decisionBodies := #[]
   for name in names do
     let some info := env.find? name | continue
     let shortName := name.toString
@@ -106,12 +104,16 @@ public meta def declarationErrors (names : Array Name) : CoreM (Array String) :=
       errors := errors.push s!"{name} has a forbidden declaration suffix"
     if (info.isPartial || info.isUnsafe) && !hasCheckedRecursion env info then
       errors := errors.push s!"{name} has forbidden declaration safety"
-    if info.getUsedConstantsAsSet.toArray.any isNativeReduction then
+    let used := info.getUsedConstantsAsSet
+    if used.contains `Lean.ofReduceBool then
       errors := errors.push s!"{name} depends on Lean.ofReduceBool"
+    if used.contains ``of_decide_eq_true then
+      if let some body := info.value? true then
+        decisionBodies := decisionBodies.push (name, body)
     for ax in ← collectAxioms name do
       unless standardAxioms.contains ax do
         errors := errors.push s!"{name} depends on forbidden axiom {ax}"
-  return errors
+  return (errors, decisionBodies)
 
 public meta structure AcceptanceSpec where
   acceptance : Array Name := #[]

@@ -73,33 +73,33 @@ private meta def checkGoal (goal : Expr) : MetaM Bool := do
     catch _ => pure false
   return small && (← IO.getNumHeartbeats) - start ≤ 20000
 
+private meta def decisionGoals (body : Expr) : Array Expr := runST fun world => do
+  let goals ← ST.mkRef (σ := world) (#[] : Array Expr)
+  body.forEach' (ω := world) fun expr => do
+    if let .app (.app (.app (.const name _) goal) _) _ := expr then
+      if name == ``of_decide_eq_true then
+        goals.modify (·.push goal)
+    return true
+  goals.get
+
 /-- Checks retained decision proofs. Their elaborated goals must reduce, within a fixed budget, to closed
     Boolean combinations of equality on small enumerations or naturals and small natural inequalities.
-    The source scan checks decision tactic options separately. Discarded tactic alternatives have no
-    retained proof to inspect and run within the package's elaboration budget. -/
-public meta def decisionErrors (names : Array Name) : MetaM (Array String) := do
-  let env ← getEnv
+    The declaration audit supplies only bodies whose declaration mentions the proof constant.
+    The source scan checks tactic options separately and refuses anonymous decisions whose proofs are lost. -/
+public meta def decisionErrors (bodies : Array (Name × Expr)) : MetaM (Array String) := do
   let mut errors := #[]
-  let tested ← IO.mkRef ({} : Std.HashMap Expr Bool)
-  for name in names do
-    let some info := env.find? name | continue
-    let some body := info.value? true | continue
-    unless (body.find? (·.isConstOf ``of_decide_eq_true)).isSome do continue
-    let violation ← IO.mkRef none
-    body.forEach' fun e => do
-      if (← violation.get : Option Expr).isSome then return false
-      if e.isAppOfArity ``of_decide_eq_true 3 then
-        let goal := e.getAppArgs[0]!
-        let allowed ← match (← tested.get)[goal]? with
-          | some result => pure result
-          | none => do
-            let result ← checkGoal goal
-            tested.modify (·.insert goal result)
-            pure result
-        unless allowed do violation.set (some goal)
-      return true
-    if let some _ ← violation.get then
-      errors := errors.push s!"decision proof in {name} has a goal outside the small finite fragment"
+  let mut tested : Std.HashMap Expr Bool := {}
+  for (name, body) in bodies do
+    for goal in decisionGoals body do
+      let allowed ← match tested[goal]? with
+        | some result => pure result
+        | none => do
+          let result ← checkGoal goal
+          tested := tested.insert goal result
+          pure result
+      unless allowed do
+        errors := errors.push s!"decision proof in {name} has a goal outside the small finite fragment"
+        break
   return errors
 
 end Gabbro.Core.Waechter
