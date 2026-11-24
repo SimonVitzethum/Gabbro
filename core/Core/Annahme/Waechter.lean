@@ -4,10 +4,13 @@
 
   `WaechterHalten E` says every generated guard holds on every `I` run and no reachable `I`
   cut contains an internal deadlock or a closed waiting set. The guards come from the pinned
-  table of `I`'s partial operations (`PartielleOperation` with `waechterBedarf`); a unit's uses
-  of them are supplied per program by the M6 constructors. Deadlock freedom is generic over the
-  program's forms through `System.blockiert`: a closed set waits only on locks held inside the
-  set and joins of members — outside questions and hardware delays never count as internal.
+  table of `I`'s partial operations (`PartielleOperation` with `waechterBedarf`); the unit's
+  uses are DATA DETERMINED BY THE UNIT: `WaechterHalten` uses the canonical value
+  `kanonischeVerwendung E`, never a supplied instance — there is no free choice of tables.
+  M6 replaces the canonical uses with the uses computed from the reference AST. Deadlock
+  freedom is generic over the program's forms through `System.blockiert`: a closed set waits
+  only on locks held inside the set and joins of members — outside questions and hardware
+  delays are specified outside non-answers, never internal deadlocks.
 -/
 module
 
@@ -53,10 +56,18 @@ def waechterBedarf : (op : PartielleOperation) → Operanden op → Prop
   | .entpacken, tag => tag = Nat.succ Nat.zero -- the success tag 1
 
 /-- **A unit's partial-operation uses**: at each `I` cut, the partial operations the unit
-    performs with their operand values. The M6 constructors supply it per program. -/
+    performs with their operand values. The M6 constructors supply per-program uses in this
+    shape when the syntax enters. -/
 class GuardVerwendung [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Type where
   bedarf : (ρ : I.Lauf E) → I.Schnitt E ρ → (op : PartielleOperation) → Operanden op → Prop
+
+/-- **The canonical guard uses of a unit** (M5 scaffolding): no uses, so no guard can fail. M6
+    replaces this definition with the uses computed from the reference AST. -/
+def kanonischeVerwendung [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
+    GuardVerwendung E :=
+  ⟨fun _ _ _ _ => False⟩
 
 /-- **An internal block reason**: a lock, an `await` (its enabler is unknown at this
     genericity, so conservatively internal), or a join. An outstanding outside question and a
@@ -82,11 +93,12 @@ def GeschlossenWartend (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
 /-- **`WaechterHalten E`: every generated guard holds on every `I` run, and no reachable `I`
     cut — maximal cuts included — contains an internal deadlock or a closed waiting set.**
     Nobody writes the guards; the checker proves them. This is what makes "correct logic
-    produces an error" impossible. -/
-def WaechterHalten [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    [G : GuardVerwendung E] : Prop :=
+    produces an error" impossible. Over the canonical uses determined by the unit, with no
+    instance arguments. -/
+def WaechterHalten [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
+    Prop :=
   (∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ (t : I.Schnitt E ρ) (op : PartielleOperation)
-    (args : Operanden op), G.bedarf ρ t op args → waechterBedarf op args) ∧
+    (args : Operanden op), (kanonischeVerwendung E).bedarf ρ t op args → waechterBedarf op args) ∧
   ∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,
     ¬ ∃ C, GeschlossenWartend E (ρ.zeit.zustand t.val) C
 
