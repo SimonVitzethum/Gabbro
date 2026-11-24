@@ -34,19 +34,19 @@ open Gabbro.Core.Ast
 namespace Gabbro.Core.Ast.Surface
 
 private theorem itemsSuffix {scope close input types} {items : ExprItems scope types} {rest}
-    (read : ItemsRead scope close input items rest ⊕ ItemsTail scope close input items rest) :
+    (read : ItemsRead scope close input items rest ∨ ItemsTail scope close input items rest) :
     rest <:+ input := by
   cases read with
   | inl read =>
       cases read with
       | close => exact List.suffix_cons _ _
       | next headRead tailRead =>
-          exact (itemsSuffix (Sum.inr tailRead)).trans (ExprReads.consumes headRead)
+          exact (itemsSuffix (Or.inr tailRead)).trans (ExprReads.consumes headRead)
   | inr read =>
       cases read with
       | close => exact List.suffix_cons _ _
       | comma _ tailRead =>
-          exact (itemsSuffix (Sum.inl tailRead)).trans (List.suffix_cons _ _)
+          exact (itemsSuffix (Or.inl tailRead)).trans (List.suffix_cons _ _)
 
 private theorem fitsSelf (type : Ty .value) : Fits type type := by
   cases type with
@@ -87,8 +87,11 @@ private theorem fitsThroughJoin (head principal : Ty .value) {element target : T
     · obtain ⟨l, u, rfl⟩ := ht
       simp only [Fits] at fit ⊢
       exact ⟨le_trans (min_le_right _ _) fit.1, le_trans fit.2 (le_max_right _ _)⟩
-    · simp only [Fits] at fit
-      exact False.elim (ht ⟨_, _, fit⟩)
+    · cases target with
+      | int l u => exact False.elim (ht ⟨l, u, rfl⟩)
+      | _ =>
+          simp only [Fits] at fit
+          exact False.elim (ht ⟨_, _, fit⟩)
   · split at join
     · rename_i same
       cases join
@@ -105,14 +108,15 @@ theorem arrayValueInversion : ArrayValueInversionAussage := by
 theorem arrayValueSuffix : ArrayValueSuffixAussage := by
   intro scope input type tree rest read
   obtain ⟨args, itemsRead, _⟩ := arrayValueInversion read
-  exact itemsSuffix (Sum.inl itemsRead)
+  exact itemsSuffix (Or.inl itemsRead)
 
 private theorem arrayValuePrint (scope : Scope) (args : ArrayValueArgs scope) :
     (arrayValue scope).production args
       (((Category.expression scope).printPieces ((arrayValue scope).tree args)).map PrintedToken.value) := by
   change ∃ input, (Expr.arrayValue args.items args.principal args.fits).printTokens =
       openBracket :: input ∧ ItemsRead scope closeBracket input args.items []
-  refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket], rfl, ?_⟩
+  refine ⟨args.items.printPieces.map PrintedToken.value ++ [closeBracket],
+    by simp only [List.append_assoc], ?_⟩
   have atom := (Expr.arrayValue args.items args.principal args.fits).printAtom ([] : List Token)
   cases atom with
   | arrayValue _ _ itemsRead => exact itemsRead

@@ -48,7 +48,19 @@ theorem arrayIndexInversion : ArrayIndexInversionAussage := by
   | stop blocked =>
       exact (blocked ⟨.index, input, rfl, allowed⟩).elim
   | arrayIndex _ lower upper _ indexRead tailRead =>
-      exact ⟨_, _, base, _, lower, upper, indexRead, tailRead⟩
+      cases indexRead with
+      | atom atomRead firstTail =>
+          cases firstTail with
+          | stop =>
+              exact ⟨_, _, _, _, lower, upper,
+                .atom atomRead (.stop noOperatorAtCloseBracket), tailRead⟩
+          | binary op _ _ _ => simp_all [Infix.token, Arith.token, closeBracket]
+          | div _ _ _ _ => simp_all [Infix.token, closeBracket]
+          | compare op _ _ _ => simp_all [Infix.token, Compare.spelling, closeBracket]
+          | logic op _ _ _ => simp_all [Infix.token, Logic.spelling, closeBracket]
+          | arrayIndex _ _ _ _ _ _ => simp_all [Infix.token, closeBracket]
+          | tupleField _ _ _ _ => simp_all [Infix.token, closeBracket]
+          | recordField _ _ _ _ _ _ => simp_all [Infix.token, closeBracket]
 
 theorem arrayIndexSuffix : ArrayIndexSuffixAussage := by
   intro scope element count minimum input type base tree rest allowed read
@@ -66,16 +78,16 @@ private theorem arrayIndexPrint (scope : Scope) (args : ArrayIndexArgs scope) :
     ∃ indexInput, ExprReads scope 8 input args.base (openBracket :: indexInput) ∧
       ExprReads scope 0 indexInput args.offset (closeBracket :: rest))
     ((Expr.arrayIndex args.base args.offset args.lower args.upper).printTokens)
-  refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++ [closeBracket],
-    by simp only [List.append_assoc], ?_⟩
-  refine ⟨args.offset.printTokens ++ [closeBracket], ?_, ?_⟩
+  refine Or.inr ⟨args.base.printTokens ++ [openBracket] ++ args.offset.printTokens ++
+    [closeBracket, closeParen], by simp only [List.append_assoc], ?_⟩
+  refine ⟨args.offset.printTokens ++ [closeBracket, closeParen], ?_, ?_⟩
   · simpa only [List.append_assoc] using
       (Expr.printReads (minimum := 8) args.base (by
         intro cont
         obtain ⟨op, more, same, allowed⟩ := cont
         have prec := infixPrecLe7 op
         omega))
-  · exact Expr.printReads args.offset noOperatorAtCloseBracket
+  · exact Expr.printReads (rest := [closeBracket, closeParen]) args.offset noOperatorAtCloseBracket
 
 theorem arrayIndexDerivation : ArrayIndexDerivationAussage := by
   intro scope
@@ -251,13 +263,18 @@ theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
   change (Befehl.liesArray 0 (.int 0 0) 1).guard (s₃.lokal eintritt) = some g at guard
   simp [Befehl.guard, Rahmen.zahl, alsGanzzahl] at guard
   cases guard
-  decide
+  change (0 : Nat) < 1
+  omega
 
 theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   intro frame slot element count values lo hi offset lower upper harr hoff
   dsimp only
   have nonneg : 0 ≤ offset.wert := Int.le_trans lower offset.unten
   have posval : (indexPosition offset lower upper).val = offset.wert.toNat := rfl
+  by_cases hc : count = 0
+  · subst count
+    have above : offset.wert < (0 : Int) := Int.lt_of_le_of_lt offset.oben upper
+    omega
   constructor
   · simp [Befehl.guard, Rahmen.zahl, hoff, alsGanzzahl,
       if_neg (not_lt_of_ge nonneg), posval]
@@ -265,13 +282,8 @@ theorem arrayIndexGuard : ArrayIndexGuardAussage := by
   · change (indexPosition offset lower upper).val < count
     exact (indexPosition offset lower upper).isLt
   · have arr : wertAls (.array element count) ⟨.array element count, values⟩ = some values := by
-      cases count with
-      | zero =>
-          apply congrArg some
-          ext i
-          exact Fin.elim0 i
-      | succ n =>
-          dsimp [wertAls]
+      dsimp [wertAls]
+      simp [hc]
     simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
     rw [harr]
     simp only [Option.bind]
