@@ -75,11 +75,13 @@ theorem StmtReads.let_header
       (value : Expr scope type) (more : List Token),
       name.val = spelling ∧ ExprReads scope 0 input value more ∧
       LetTailReads result scope name ordinary value more tree rest := by
-  sorry
+  cases read with
+  | letBinding name ordinary value more read tail =>
+      exact ⟨name, ordinary, _, value, more, rfl, read, tail⟩
 
 -- Mirror AtomReads.lit_inversion.
 theorem AtomReads.not_assignment (read : AtomReads scope (assignment :: input) tree rest) : False := by
-  sorry
+  cases read
 
 -- Mirror StmtReads.let_header and exclude keyword cases with AtomReads.not_assignment.
 theorem StmtReads.assign_inversion
@@ -89,7 +91,17 @@ theorem StmtReads.assign_inversion
       (fits : Fits (.int valueLo valueHi) (.int lo hi)),
       ref.binding.name.val = name ∧ ExprReads scope 0 input value (semicolon :: rest) ∧
       tree = ⟨scope, .assignVar ref visible writable value fits⟩ := by
-  sorry
+  cases read with
+  | assignVar ref visible writable fits read =>
+      exact ⟨_, _, _, _, ref, visible, writable, _, fits, rfl, read, rfl⟩
+  | ret declared fits read =>
+      exfalso
+      cases read with
+      | atom a t => exact AtomReads.not_assignment a
+  | ite condition yes no =>
+      exfalso
+      cases condition with
+      | atom a t => exact AtomReads.not_assignment a
 
 -- Mirror StmtReads.let_header and exclude assignment with AtomReads.not_assignment.
 theorem StmtReads.ret_inversion
@@ -97,7 +109,13 @@ theorem StmtReads.ret_inversion
     (∃ (t : Ty .value) (value : Expr scope t) (fits : Fits t expected),
       ExprReads scope 0 input value (semicolon :: rest) ∧ tree = ⟨scope, .ret rfl value fits⟩) ∨
     (∃ tail, input = assignment :: tail) := by
-  sorry
+  cases read with
+  | ret declared fits read =>
+      left
+      exact ⟨_, _, fits, read, rfl⟩
+  | assignVar ref visible writable fits read =>
+      right
+      exact ⟨_, rfl⟩
 
 -- Mirror StmtReads.ret_inversion and retain both block derivations.
 theorem StmtReads.ite_inversion
@@ -106,14 +124,21 @@ theorem StmtReads.ite_inversion
       ExprReads scope 0 input condition first ∧ BlockReads result scope first yes (elseKeyword :: more) ∧
       BlockReads result scope more no rest ∧ tree = ⟨scope, .ite condition yes no⟩) ∨
     (∃ tail, input = assignment :: tail) := by
-  sorry
+  cases read with
+  | ite condition yes no conditionRead yesRead noRead =>
+      left
+      exact ⟨condition, _, yes, _, no, conditionRead, yesRead, noRead, rfl⟩
+  | assignVar ref visible writable fits read =>
+      right
+      exact ⟨_, rfl⟩
 
 -- Mirror the original BlockReads.deterministic inversion on braced.
 theorem BlockReads.braced_inversion
     (read : BlockReads result scope (openBrace :: input) tree rest) :
     ∃ (after : Scope) (body : Block result scope after),
       tree = .braces body ∧ BlockItems result scope input ⟨after, body⟩ rest := by
-  sorry
+  cases read
+  exact ⟨_, _, rfl, rfl⟩
 
 theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace :: input) tree rest := by
   intro read
@@ -122,12 +147,107 @@ theorem StmtReads.disjoint_closeBrace : ¬ StmtReads result scope (closeBrace ::
 -- Combine the original StmtReads.deterministic and BlockItems.deterministic using the mutual recursor.
 theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     (right : StmtReads result scope input b rest') : a = b ∧ rest = rest' := by
-  sorry
+  revert b rest'
+  refine StmtReads.rec
+    (motive_1 := fun scope input tree rest =>
+      ∀ {b rest'}, StmtReads result scope input b rest' → tree = b ∧ rest = rest')
+    (motive_2 := fun before input tree rest =>
+      ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
+    (motive_3 := fun before input tree rest =>
+      ∀ {b rest'}, BlockReads result before input b rest' → tree = b ∧ rest = rest')
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
+  · intros
+    rename_i name ordinary value more read tail other
+    obtain ⟨name', ordinary', _, value', more', sameName, read', tail'⟩ := other.let_header
+    have eqName : name' = name := Subtype.ext sameName
+    subst name'
+    obtain ⟨same, rfl⟩ := ExprReads.deterministic read read'
+    cases same
+    exact ⟨rfl, LetTailReads.deterministic tail tail'⟩
+  · intros
+    rename_i ref visible writable fits read other
+    obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
+    subst treeEq
+    have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
+      Local.visible_unique ref ref' visible visible' nameEq
+    cases eqRef
+    obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
+    cases same
+    exact ⟨rfl, (List.cons.inj suffix).2⟩
+  · intros
+    rename_i declared fits read other
+    rcases other.ret_inversion with ⟨t, value', fits', read', treeEq⟩ | ⟨tail, inputEq⟩
+    · subst treeEq
+      obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
+      cases same
+      exact ⟨rfl, (List.cons.inj suffix).2⟩
+    · exfalso
+      subst inputEq
+      cases read with
+      | atom a t => exact AtomReads.not_assignment a
+  · intros
+    rename_i condition yes no condRead yesRead noRead ihYes ihNo other
+    rcases other.ite_inversion with ⟨cond', first', yes', more', no', condRead', yesRead', noRead', treeEq⟩ | ⟨tail, inputEq⟩
+    · subst treeEq
+      obtain ⟨same, firstEq⟩ := ExprReads.deterministic condRead condRead'
+      cases same
+      subst firstEq
+      obtain ⟨sameYes, moreEq⟩ := ihYes yesRead'
+      cases sameYes
+      subst moreEq
+      obtain ⟨sameNo, restEq⟩ := ihNo noRead'
+      cases sameNo
+      exact ⟨rfl, restEq⟩
+    · exfalso
+      subst inputEq
+      cases condRead with
+      | atom a t => exact AtomReads.not_assignment a
+  · intros
+    rename_i other
+    cases other
+    exact ⟨rfl, rfl⟩
+  · intros
+    rename_i first next stRead blockRead ihFirst ihBlock other
+    cases other with
+    | done => exact (StmtReads.disjoint_closeBrace stRead).elim
+    | step first' next' stRead' blockRead' =>
+        obtain ⟨sameFirst, moreEq⟩ := ihFirst stRead'
+        cases sameFirst
+        subst moreEq
+        obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
+        cases sameNext
+        exact ⟨rfl, restEq⟩
+  · intros
+    rename_i body inner ih other
+    cases other with
+    | braced inner' =>
+        obtain ⟨same, rfl⟩ := ih inner'
+        cases same
+        exact ⟨rfl, rfl⟩
 
 -- Mirror the original BlockItems.deterministic by the same mutual recursor.
 theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
     (right : BlockItems result scope input b rest') : a = b ∧ rest = rest' := by
-  sorry
+  refine (BlockItems.rec
+    (motive_1 := fun before input tree rest => True)
+    (motive_2 := fun before input tree rest =>
+      ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
+    (motive_3 := fun before input tree rest => True)
+    (by trivial) (by trivial) (by trivial) (by trivial) ?_ ?_ (by trivial) left) right
+  · intro other
+    cases other
+    exact ⟨rfl, rfl⟩
+  · intros
+    rename_i first next stRead blockRead ihBlock other
+    cases other with
+    | done => exact (StmtReads.disjoint_closeBrace stRead).elim
+    | step first' next' stRead' blockRead' =>
+        obtain ⟨sameFirst, moreEq⟩ := StmtReads.deterministic stRead stRead'
+        cases sameFirst
+        subst moreEq
+        obtain ⟨sameNext, restEq⟩ := ihBlock blockRead'
+        cases sameNext
+        exact ⟨rfl, restEq⟩
 
 theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
     (right : BlockReads result scope input b rest') : a = b ∧ rest = rest' := by
@@ -141,11 +261,61 @@ theorem BlockReads.deterministic (left : BlockReads result scope input a rest)
 
 -- Extend the original StmtReads.consumes through expressions and block premises.
 theorem StmtReads.consumes (read : StmtReads result scope input tree rest) : rest <:+ input := by
-  sorry
+  refine StmtReads.rec
+    (motive_1 := fun scope input tree rest => rest <:+ input)
+    (motive_2 := fun before input tree rest => rest <:+ input)
+    (motive_3 := fun before input tree rest => rest <:+ input)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+  · intros
+    rename_i name ordinary value more exprRead tail
+    exact (tail.consumes.trans exprRead.consumes).trans
+      (List.suffix_append [letKeyword, .word name.val, assignment] _)
+  · intros
+    rename_i ref visible writable fits exprRead
+    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+  · intros
+    rename_i declared fits exprRead
+    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+  · intros
+    rename_i condition yes no condRead yesRead noRead ihYes ihNo
+    exact (((ihNo.trans (List.suffix_cons elseKeyword _)).trans ihYes).trans
+      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+  · exact List.suffix_cons _ _
+  · intros
+    rename_i first next stRead blockRead ihSt ihBlock
+    exact ihBlock.trans ihSt
+  · intros
+    rename_i body inner ih
+    exact ih.trans (List.suffix_cons openBrace _)
 
 -- Mirror StmtReads.consumes, then compose the statement and block suffixes.
 theorem BlockItems.consumes (read : BlockItems result scope input tree rest) : rest <:+ input := by
-  sorry
+  refine BlockItems.rec
+    (motive_1 := fun before input tree rest => rest <:+ input)
+    (motive_2 := fun before input tree rest => rest <:+ input)
+    (motive_3 := fun before input tree rest => rest <:+ input)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ read
+  · intros
+    rename_i name ordinary value more exprRead tail
+    exact (tail.consumes.trans exprRead.consumes).trans
+      (List.suffix_append [letKeyword, .word name.val, assignment] _)
+  · intros
+    rename_i ref visible writable fits exprRead
+    exact exprRead.consumes.trans (List.suffix_append [.word ref.binding.name.val, assignment] _)
+  · intros
+    rename_i declared fits exprRead
+    exact exprRead.consumes.trans (List.suffix_cons returnKeyword _)
+  · intros
+    rename_i condition yes no condRead yesRead noRead
+    exact (((noRead.consumes.trans (List.suffix_cons elseKeyword _)).trans yesRead.consumes).trans
+      (ExprReads.consumes condRead)).trans (List.suffix_cons ifKeyword _)
+  · exact List.suffix_cons _ _
+  · intros
+    rename_i first next stRead blockRead ihSt ihBlock
+    exact ihBlock.trans ihSt
+  · intros
+    rename_i body inner ih
+    exact ih.trans (List.suffix_cons openBrace _)
 
 theorem BlockReads.consumes (read : BlockReads result scope input tree rest) : rest <:+ input := by
   cases read with
