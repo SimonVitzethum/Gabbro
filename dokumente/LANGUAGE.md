@@ -418,7 +418,7 @@ at zero, and several tables may deliberately share one name. `ptr<Data, r> T`
 retains both that space and the particular table target. `owner Mark` is an
 independent linear mark and is never interpreted as a space declaration.
 Fresh nominal names imply no physical isolation, device behavior or protection;
-all existing target, hardware, owner and guard obligations remain explicit.
+all existing target, hardware, ownership and guard obligations remain explicit.
 
 ```gabbro
 module sprache::zeiger {
@@ -452,7 +452,7 @@ impl fn nur_lesend(k : ptr<normal, r> Kopf) -> u32
 rights are `r w rw x own[@ident]`. **A pointer names a declared carrier and nothing else** —
 its only producer is `&T`; there is no address of an expression and no arithmetic on a pointer.
 An access `p->f`, `p[i].f` is the same access as `T.slots[i].f` with the same guards: a pointer
-is not a way past a lock or an owner mark. A write needs `rw` **and** the write right of the
+is not a way past a lock or an ownership mark. A write needs `rw` **and** the write right of the
 enclosing contract (`R002`/`R003`). The barrier follows from the **space**: an `mmio` access is
 volatile and unreorderable, a store to `dma` carries the target's publication barrier, and a
 carrier with generated `ops` is not placed in `dma` (`R001`).
@@ -542,8 +542,8 @@ bytes are thread-private memory.
 
 *Machine G has no byte pointers yet* (`LG002`): programs using one stay `UNCERTIFIED`. The
 design is a `Ty.bytes` place (a declared byte field from slot `k` on, or region `r` from byte `k`
-on), a `regionen` store with an owner per region, a logic stop `Logik.ausdehnung`, and one race
-leg ("every region access is made by the region's owner"); slices S1–S5 move `Spec.lean` and are
+on), a `regionen` store with an ownership mark per region, a logic stop `Logik.ausdehnung`, and one race
+leg ("every region access is made by the region's owning thread"); slices S1–S5 move `Spec.lean` and are
 waiting for a coordinated freeze of the model's core inductives. **OFFEN O37** also names the
 missing release of a region and the passing of an extent by a Gabbro body.
 
@@ -680,7 +680,7 @@ fndecl = [ "pub" ] [ "spec" | "impl" | "divergent" | "extern" ]
          ( block | "=" pred ";" | ";" )
 ```
 
-**A contract holds only where the checker proves it (owner, 2026-11-22).** `requires`, `ensures`
+**A contract holds only where the checker proves it (2026-11-22).** `requires`, `ensures`
 and invariants are accepted only when the checker (`checkUnitLogic`) proves them, at every call,
 every return and every owed place; a contract it cannot prove is refused by name, never weakened to
 a warning and never left to the user. A condition the checker cannot prove is written as a
@@ -1035,7 +1035,7 @@ inside one is refused (no clause bounds its base inside sixteen bits).
 ## 11. Concurrency
 
 **Race freedom is a shape.** Every access to a carrier derives its guard (`Held(L)`,
-owner mark, or atomic), every `locks` derives its rank, every publication its pairing — and
+ownership mark, or atomic), every `locks` derives its rank, every publication its pairing — and
 `Wettlauf.lean` proves over *any interleaving* of such traces that two accesses of different
 threads to one carrier are ordered by happens-before, **or the carrier is `atomic`**, whose order
 is the memory model, a named hardware assumption. There is no third case.
@@ -1356,14 +1356,14 @@ against the CAS version. Output is deterministic: same source, same bytes.
 **`extern fn` is the edge.** A foreign body whose contract is an `assume` per declaration,
 counted into the axiom layer — the edge is visible and ratchetable instead of silent. It takes
 no function pointer (`N574`) and a buffer parameter needs its length clause (`N506`).
-**Warning (owner, 2026-11-14):** C code in the same address space is neither checked nor
+**Warning (2026-11-14):** C code in the same address space is neither checked nor
 restricted by anything in the language. Using even ONE `extern fn` (or letting C call an `entry`
 function, plan item A6) can in theory destroy EVERY guarantee of the goal theorem — memory safety,
 race freedom, invariants, contracts: the guarantees then hold only as far as that one named
 environment assumption holds. The contract of the foreign function must therefore name, beside
 `requires`/`ensures`, its frame (only its declared `effects`), its extents, that it keeps no
 Gabbro pointer beyond the call and starts no thread that touches Gabbro memory.
-**Bounds at every C call (owner, 2026-11-14):** every buffer handed to C is proved inside its
+**Bounds at every C call (2026-11-14):** every buffer handed to C is proved inside its
 region before the call; every length, index, count or region C hands back (result, out-parameter,
 or argument of an `entry` call from C) is checked once at run time against the handed-over
 capacity before Gabbro uses it; a failed check is a named stop or the declared `or` reason. The
