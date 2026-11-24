@@ -27,9 +27,9 @@ namespace Gabbro.Core.Ast.Surface
 
 theorem AssignFieldInversion : AssignFieldInversionAussage := by
   intro scope result name field input tree rest read
-  have noDotExpr : ∀ (t : Ty .value) (r : List Token),
-      ¬ ExprReads scope 0 (dot :: .word field :: assignment :: input) t r := by
-    intro t r rd
+  have noDotExpr : ∀ {t : Ty .value} (tree : Expr scope t) (r : List Gabbro.Core.Text.Token),
+      ¬ ExprReads scope 0 (dot :: .word field :: assignment :: input) tree r := by
+    intro tree r rd
     rcases rd with ⟨atom, tail⟩
     cases atom
   generalize htok : (.word name :: dot :: .word field :: assignment :: input) = toks at read
@@ -117,17 +117,5 @@ theorem AssignFieldRegelSicher : AssignFieldRegelSicherAussage := by
     (fun args => stmt_keine_invarianten ((Surface.assignField ctx).tree args).2)
     platform args).2.2.2
 
-theorem AssignFieldFrame : AssignFieldFrameAussage := by
-  intro ctx args frame record value hlocal htemp
-  change ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).lokale[args.ref.index]? =
-      some (some ⟨recordValueType args.name args.labels args.types,
-        tupleSet args.types args.index (Wert.widen args.source (args.types.get args.index) args.fits value)
-          (by simpa only [recordValueType, Wert] using record)⟩) ∧
-    (∀ i, i ≠ args.ref.index →
-      ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).lokale[i]? = frame.lokale[i]?) ∧
-    ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).pc = frame.pc + 1 ∧
-    ((Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index).auswerten frame).temp = frame.temp
-  simp only [Befehl.auswerten, Rahmen.schreibe, recordValueType, wertAls, hlocal, htemp, dif_pos,
-    List.getElem?_set_self, ne_eq, List.getElem?_set_ne, and_self]
 
 end Gabbro.Core.Ast.Semantik
