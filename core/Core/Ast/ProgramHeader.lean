@@ -358,8 +358,8 @@ theorem ParamsRead.printReads (ps : List Parameter) :
       | nil =>
           simp only [commaSeparated, List.intersperse_nil, List.flatten_nil, List.map_nil, List.nil_append, hClose]
           apply ParamsRead.first
-          · simpa only [List.nil_append, List.flatten_nil, List.map_append, List.map_cons, List.map_nil,
-              List.singleton_append, List.append_assoc, hClose] using
+          · simpa only [List.nil_append, List.append_nil, List.flatten_nil, List.map_append, List.map_cons,
+              List.map_nil, List.singleton_append, List.append_assoc, hClose] using
               (p.written.printReads p.valid (rest := ([printClose].map PrintedToken.value ++ rest))
                 (by intro more h; cases h))
           · exact ParamsTail.close
@@ -367,8 +367,8 @@ theorem ParamsRead.printReads (ps : List Parameter) :
           rw [comma_cons]
           simp only [List.nil_append, List.map_append, List.append_assoc]
           apply ParamsRead.first
-          · simpa only [hClose, hComma, List.nil_append, List.map_append, List.map_cons, List.map_nil,
-              List.singleton_append, List.append_assoc] using
+          · simpa only [hClose, hComma, List.nil_append, List.append_nil, List.map_append, List.map_cons,
+              List.map_nil, List.singleton_append, List.append_assoc] using
               (p.written.printReads p.valid
                 (rest := comma :: ((commaSeparated ((q :: qs).map Parameter.printPieces) ++ [printClose]).map PrintedToken.value ++ rest))
                 (by intro more h; cases h))
