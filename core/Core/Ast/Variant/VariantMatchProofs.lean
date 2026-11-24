@@ -51,8 +51,7 @@ theorem variantMatch_annahme : VariantMatchAnnahmeAussage := by
 
 private theorem vm_block_inv (result : Option (Ty .value)) (before after : Scope)
     (b : Block result before after) : (block b).klauseln.invariant = [] := by
-  have blockEmpty : ∀ {r b a} (body : Block r b a), (block body).klauseln.invariant = [] := by
-    intro r b a body
+  let rec blockEmpty {r b a} (body : Block r b a) : (block body).klauseln.invariant = [] := by
     cases body with
     | done => rfl
     | step first rest =>
@@ -78,12 +77,12 @@ private theorem vm_arms_inv (result : Option (Ty .value)) (scope : Scope) (allow
   | nullary label caseName body rest =>
       simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
         Quellklauseln.anhaengen, Quellklauseln.leer,
-        vm_braced_inv result scope body, vm_arms_inv result scope true _ _ rest]
+        vm_braced_inv result scope body, vm_arms_inv rest]
   | payload label binder ordinary body rest =>
       simp [variantArms, MatchCode.prepend, Fragment.anhaengen, Fragment.einzel,
         Quellklauseln.anhaengen, Quellklauseln.leer,
         vm_braced_inv result (payloadBinding binder _ :: scope) body,
-        vm_arms_inv result scope true _ _ rest]
+        vm_arms_inv rest]
   | wildcard body nonempty shape =>
       simp [variantArms, vm_braced_inv result scope body]
 
