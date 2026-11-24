@@ -50,8 +50,8 @@ private theorem Rufspur.registriert (path : Rufspur table target source names) :
   | ende => exact (List.not_mem_nil member).elim
   | @schritt source function call rest found _ _ ih =>
     rcases List.mem_cons.mp member with rfl | h
-    · have named : function.name.val = source.val :=
-        beq_iff_eq.mp (List.find?_some found)
+    · have named : function.name.val = name.val :=
+        beq_iff_eq.mp (List.find?_some (p := fun (f : Funktion) => f.name.val == name.val) found)
       have present : function ∈ table :=
         List.mem_of_find?_eq_some found
       exact List.mem_map.mpr ⟨function, present, Subtype.ext named⟩
@@ -106,7 +106,7 @@ private theorem funktion_find_member (unique : (table.map (fun f => f.name.val))
   | nil => exact (List.not_mem_nil member).elim
   | cons first rest ih =>
     rcases List.mem_cons.mp member with rfl | member
-    · exact List.find?_cons_of_pos (p := fun f => f.name.val == function.name.val)
+    · exact List.find?_cons_of_pos (p := fun (f : Funktion) => f.name.val == function.name.val)
         (beq_self_eq_true _)
     · have properties := List.nodup_cons.mp unique
       have different : first.name.val ≠ function.name.val := by
