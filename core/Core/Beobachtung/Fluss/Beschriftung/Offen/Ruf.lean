@@ -26,12 +26,12 @@ theorem maskiere_allesOeffentlich {l : Nat → Etikett}
       simp only [maskiere, h i, if_true, maskiere_allesOeffentlich (l := l) h (i + 1) xs]
 
 /-- `rufArgumente` reads only the temporary slots, so equal temporaries give equal arguments. -/
-theorem rufArgumente_gleich (r₁ r₂ : Rahmen) (slot : Nat)
+theorem rufArgumente_gleich (r₁ r₂ : Rahmen)
     (hTemp : ∀ s, r₁.temp s = r₂.temp s) :
-    ∀ (sources targets : List (Ty .value)),
+    ∀ (slot : Nat) (sources targets : List (Ty .value)),
       r₁.rufArgumente slot sources targets = r₂.rufArgumente slot sources targets := by
-  intro sources
-  induction sources with
+  intro slot sources
+  induction sources generalizing slot with
   | nil =>
       intro targets
       cases targets <;> rfl
@@ -48,7 +48,8 @@ theorem sicht_rueckgabe_gleich {β : Beschriftung} {r₁ r₂ : Rahmen}
     (h : r₁.sicht β = r₂.sicht β) :
     (if oeffentlich β.ergebnis = true then r₁.rueckgabe else none) =
       (if oeffentlich β.ergebnis = true then r₂.rueckgabe else none) := by
-  exact congrArg (fun r : Rahmen => (r.sicht β).rueckgabe) h
+  have e := congrArg (fun r : Rahmen => (r.sicht β).rueckgabe) h
+  simpa only [Rahmen.sicht] using e
 
 theorem rueckVoidSicht : RueckVoidSichtAussage := by
   intro β pc hT hL r₁ r₂ live hpc h
@@ -56,30 +57,51 @@ theorem rueckVoidSicht : RueckVoidSichtAussage := by
   obtain ⟨pcEq, tempPub, lokEq⟩ := sicht_oeffentliche_teile h
   have hFort : r₁.fortsetzungen = r₂.fortsetzungen := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).fortsetzungen) h
+  have hStopp : r₁.stopp = r₂.stopp := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).stopp) h
+  have hZa : r₁.zaehler = r₂.zaehler := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
+  have hOb : r₁.obergrenzen = r₂.obergrenzen := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).obergrenzen) h
+  have hGlob : r₁.globale = r₂.globale := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).globale) h
+  have hFun : r₁.funktionen = r₂.funktionen := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
+  have hFunk : r₁.funktion = r₂.funktion := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktion) h
+  have hMass : r₁.mass = r₂.mass := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).mass) h
+  have hArr : r₁.arrivalRegions = r₂.arrivalRegions := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).arrivalRegions) h
+  have hPlat : r₁.platform = r₂.platform := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).platform) h
+  have hEnv : r₁.environment = r₂.environment := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).environment) h
+  have hRueck := sicht_rueckgabe_gleich (β := β) h
+  have hTe :
+      (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₁.temp s else none) =
+      (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₂.temp s else none) := by
+    funext s
+    by_cases hp : oeffentlich (β.temp (r₁.pc + 1) s) = true
+    · simp only [hp, if_true]
+      exact tempPub s (hT s hp)
+    · simp only [if_neg hp]
+  have hLe :
+      maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+        maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiere_gleich_mono hL 0 _ _ lokEq
   change (r₁.rueckkehr none).sicht β = (r₂.rueckkehr none).sicht β
   unfold Rahmen.rueckkehr
   rw [← hFort]
   cases hstack : r₁.fortsetzungen with
   | nil =>
       simp only [hstack]
-      rw [sicht_rueckkehr_ohne, sicht_rueckkehr_ohne]
-      have hTe :
-          (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₁.temp s else none) =
-          (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₂.temp s else none) := by
-        funext s
-        by_cases hp : oeffentlich (β.temp (r₁.pc + 1) s) = true
-        · simp only [hp, if_true]
-          exact tempPub s (hT s hp)
-        · simp only [if_neg hp]
-      have hLe :
-          maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-            maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-        maskiere_gleich_mono hL 0 _ _ lokEq
-      rw [h, pcEq, hTe, hLe]
+      unfold Rahmen.sicht
+      rw [pcEq, hTe, hLe, hZa, hOb, hGlob, hFun, hFunk, hMass, hArr, hPlat, hEnv]
   | cons k stack =>
       simp only [hstack]
-      rw [sicht_rueckkehr_mit, sicht_rueckkehr_mit]
-      rw [h]
+      unfold Rahmen.sicht
+      rw [hRueck, hStopp, hGlob, hFun, hArr, hPlat, hEnv]
 
 theorem zurueckSicht : ZurueckSichtAussage := by
   intro β pc quelle zieltyp hq hT hL r₁ r₂ live hpc h
@@ -87,9 +109,42 @@ theorem zurueckSicht : ZurueckSichtAussage := by
   obtain ⟨pcEq, tempPub, lokEq⟩ := sicht_oeffentliche_teile h
   have hFort : r₁.fortsetzungen = r₂.fortsetzungen := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).fortsetzungen) h
+  have hStopp : r₁.stopp = r₂.stopp := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).stopp) h
+  have hZa : r₁.zaehler = r₂.zaehler := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
+  have hOb : r₁.obergrenzen = r₂.obergrenzen := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).obergrenzen) h
+  have hGlob : r₁.globale = r₂.globale := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).globale) h
+  have hFun : r₁.funktionen = r₂.funktionen := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
+  have hFunk : r₁.funktion = r₂.funktion := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktion) h
+  have hMass : r₁.mass = r₂.mass := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).mass) h
+  have hArr : r₁.arrivalRegions = r₂.arrivalRegions := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).arrivalRegions) h
+  have hPlat : r₁.platform = r₂.platform := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).platform) h
+  have hEnv : r₁.environment = r₂.environment := by
+    simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).environment) h
+  have hRueck := sicht_rueckgabe_gleich (β := β) h
   have hResult : (r₁.temp quelle).bind (wertIn zieltyp) =
       (r₂.temp quelle).bind (wertIn zieltyp) := by
     rw [tempPub quelle hq]
+  have hTe :
+      (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₁.temp s else none) =
+      (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₂.temp s else none) := by
+    funext s
+    by_cases hp : oeffentlich (β.temp (r₁.pc + 1) s) = true
+    · simp only [hp, if_true]
+      exact tempPub s (hT s hp)
+    · simp only [if_neg hp]
+  have hLe :
+      maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+        maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiere_gleich_mono hL 0 _ _ lokEq
   change (r₁.rueckkehr ((r₁.temp quelle).bind (wertIn zieltyp))).sicht β =
     (r₂.rueckkehr ((r₂.temp quelle).bind (wertIn zieltyp))).sicht β
   unfold Rahmen.rueckkehr
@@ -97,24 +152,12 @@ theorem zurueckSicht : ZurueckSichtAussage := by
   cases hstack : r₁.fortsetzungen with
   | nil =>
       simp only [hstack]
-      rw [sicht_rueckkehr_ohne, sicht_rueckkehr_ohne]
-      have hTe :
-          (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₁.temp s else none) =
-          (fun s => if oeffentlich (β.temp (r₁.pc + 1) s) = true then r₂.temp s else none) := by
-        funext s
-        by_cases hp : oeffentlich (β.temp (r₁.pc + 1) s) = true
-        · simp only [hp, if_true]
-          exact tempPub s (hT s hp)
-        · simp only [if_neg hp]
-      have hLe :
-          maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-            maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-        maskiere_gleich_mono hL 0 _ _ lokEq
-      rw [h, pcEq, hTe, hLe]
+      unfold Rahmen.sicht
+      rw [pcEq, hTe, hLe, hZa, hOb, hGlob, hFun, hFunk, hMass, hArr, hPlat, hEnv]
   | cons k stack =>
       simp only [hstack]
-      rw [sicht_rueckkehr_mit, sicht_rueckkehr_mit]
-      rw [h]
+      unfold Rahmen.sicht
+      rw [hRueck, hStopp, hGlob, hFun, hArr, hPlat, hEnv]
 
 theorem pruefeMassSicht : PruefeMassSichtAussage := by
   intro β pc quelle hq hT hL r₁ r₂ live hpc h
@@ -160,33 +203,33 @@ theorem pruefeMassSicht : PruefeMassSichtAussage := by
     ← hArr, ← hPlat, ← hEnv]
   cases hfunk : r₁.funktion with
   | none =>
-      simp only [hfunk, Id.run]
+      simp only [hfunk, Id.run, if_true]
       exact sicht_halt_gleich .ungueltigerWert h
   | some name =>
       cases hzahl : r₁.zahl quelle with
       | none =>
-          simp only [hfunk, hzahl, Id.run]
+          simp only [hfunk, hzahl, Id.run, if_true]
           exact sicht_halt_gleich (.abstieg name) h
       | some value =>
           by_cases hneg : value.zahl.wert < 0
-          · simp only [hfunk, hzahl, hneg, Id.run]
+          · simp only [hfunk, hzahl, hneg, Id.run, if_true, if_false]
             exact sicht_halt_gleich (.abstieg name) h
           · cases hprev : r₁.fortsetzungen.find?
                 (fun k => (k.funktion.map Subtype.val) == some name.val) with
             | none =>
-                simp only [hfunk, hzahl, hneg, hprev, Id.run]
+                simp only [hfunk, hzahl, hneg, hprev, Id.run, if_true, if_false]
                 unfold Rahmen.sicht
                 rw [hTe, hLe, hRueck]
             | some k =>
                 cases hmass : k.mass with
                 | none =>
-                    simp only [hfunk, hzahl, hneg, hprev, hmass, Id.run]
+                    simp only [hfunk, hzahl, hneg, hprev, hmass, Id.run, if_true, if_false]
                     exact sicht_halt_gleich (.abstieg name) h
                 | some old =>
                     by_cases hge : value.zahl.wert.toNat ≥ old
-                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run]
+                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, if_true, if_false]
                       exact sicht_halt_gleich (.abstieg name) h
-                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run]
+                    · simp only [hfunk, hzahl, hneg, hprev, hmass, hge, Id.run, if_true, if_false]
                       unfold Rahmen.sicht
                       rw [hTe, hLe, hRueck]
 
@@ -229,46 +272,46 @@ theorem rufeSicht : RufeSichtAussage := by
     ← hFort, ← hStopp, ← hArr, ← hPlat, ← hEnv]
   cases hfind : Funktion.finde r₁.funktionen name with
   | none =>
-      simp only [hfind, Id.run]
+      simp only [hfind, Id.run, if_true]
       exact sicht_halt_gleich (.ungueltigerRuf name) h
   | some callee =>
-      simp only [← rufArgumente_gleich r₁ r₂ 0 hTemp args callee.parameter]
+      simp only [← rufArgumente_gleich r₁ r₂ hTemp 0 args callee.parameter]
       cases hargs : r₁.rufArgumente 0 args callee.parameter with
       | none =>
-          simp only [hfind, hargs, Id.run]
+          simp only [hfind, hargs, Id.run, if_true]
           exact sicht_halt_gleich (.ungueltigerRuf name) h
       | some callArgs =>
           cases hbind : bind with
           | none =>
-              simp only [hfind, hargs, hbind, Id.run]
+              simp only [hfind, hargs, hbind, Id.run, if_true]
               by_cases habstieg :
                 ((⟨r₁.pc + 1, r₁.temp, r₁.lokale, r₁.zaehler, r₁.obergrenzen,
                     r₁.funktion, r₁.mass, none⟩ : Fortsetzung) :: r₁.fortsetzungen).any
                     (fun k => (k.funktion.map Subtype.val) == some name.val) &&
                   !callee.misstAbstieg
-              · simp only [habstieg]
+              · simp only [habstieg, if_true]
                 exact sicht_halt_gleich (.abstieg name) h
-              · simp only [habstieg]
+              · simp only [habstieg, if_false]
                 unfold Rahmen.sicht
                 rw [hRueck]
           | some target =>
               cases hres : callee.result with
               | none =>
-                  simp only [hfind, hargs, hbind, hres, Id.run]
+                  simp only [hfind, hargs, hbind, hres, Id.run, if_true]
                   exact sicht_halt_gleich (.ungueltigerRuf name) h
               | some source =>
                   by_cases hfit : !tyFits source target
-                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run]
+                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, if_true, if_false]
                     exact sicht_halt_gleich (.ungueltigerRuf name) h
-                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run]
+                  · simp only [hfind, hargs, hbind, hres, hfit, Id.run, if_true, if_false]
                     by_cases habstieg :
                       ((⟨r₁.pc + 1, r₁.temp, r₁.lokale, r₁.zaehler, r₁.obergrenzen,
                           r₁.funktion, r₁.mass, some target⟩ : Fortsetzung) :: r₁.fortsetzungen).any
                           (fun k => (k.funktion.map Subtype.val) == some name.val) &&
                         !callee.misstAbstieg
-                    · simp only [habstieg]
+                    · simp only [habstieg, if_true]
                       exact sicht_halt_gleich (.abstieg name) h
-                    · simp only [habstieg]
+                    · simp only [habstieg, if_false]
                       unfold Rahmen.sicht
                       rw [hRueck]
 
