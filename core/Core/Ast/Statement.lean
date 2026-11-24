@@ -187,17 +187,17 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       ∀ {b rest'}, BlockReads result before input b rest' → tree = b ∧ rest = rest')
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ left
   · intros
-    rename_i name ordinary value more read tail other
+    rename_i name ordinary exprRead letTail tree rest other
     obtain ⟨name', ordinary', _, value', more', sameName, read', tail'⟩ := other.let_header
     have eqName : name' = name := Subtype.ext sameName
     subst name'
-    obtain ⟨same, rfl⟩ := ExprReads.deterministic read read'
+    obtain ⟨same, rfl⟩ := ExprReads.deterministic exprRead read'
     cases same
-    exact ⟨rfl, LetTailReads.deterministic tail tail'⟩
+    exact ⟨rfl, LetTailReads.deterministic letTail tail'⟩
   · intros
-    rename_i ref visible writable fits read other
+    rename_i ref visible writable fits exprRead tree rest other
     obtain ⟨_, _, _, _, ref', visible', writable', value', fits', nameEq, read', treeEq⟩ := other.assign_inversion
-    subst treeEq
+    cases treeEq
     have eqRef : (⟨_, ref⟩ : (t : Ty .value) × Local scope t) = ⟨_, ref'⟩ :=
       Local.visible_unique ref ref' visible visible' nameEq
     cases eqRef
@@ -205,20 +205,20 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     cases same
     exact ⟨rfl, (List.cons.inj suffix).2⟩
   · intros
-    rename_i declared fits read other
+    rename_i declared fits exprRead tree rest other
     rcases other.ret_inversion with ⟨t, value', fits', read', treeEq⟩ | ⟨tail, inputEq⟩
-    · subst treeEq
+    · cases treeEq
       obtain ⟨same, suffix⟩ := ExprReads.deterministic read read'
       cases same
       exact ⟨rfl, (List.cons.inj suffix).2⟩
     · exfalso
-      subst inputEq
+      cases inputEq
       cases read with
       | atom a t => exact AtomReads.not_assignment a
   · intros
-    rename_i condition yes no condRead yesRead noRead ihYes ihNo other
+    rename_i condition yes no condRead yesRead noRead ihYes ihNo tree rest other
     rcases other.ite_inversion with ⟨cond', first', yes', more', no', condRead', yesRead', noRead', treeEq⟩ | ⟨tail, inputEq⟩
-    · subst treeEq
+    · cases treeEq
       obtain ⟨same, firstEq⟩ := ExprReads.deterministic condRead condRead'
       cases same
       subst firstEq
