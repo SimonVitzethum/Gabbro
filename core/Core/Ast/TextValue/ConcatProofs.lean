@@ -85,22 +85,36 @@ private theorem textTailLowerConcat {scope a b it} {first : Expr scope it} {inpu
     (rightRead : ExprReads scope (Arith.add.precedence + 1) rhs right final)
     (blocked : ¬ Continues 0 final) :
     ExprTail scope 0 first input (Expr.textConcat tree right) final := by
-  induction tail with
-  | stop _ =>
+  match tail with
+  | .stop _ =>
       exact .textConcat tree right (Nat.zero_le _) rightRead (.stop blocked)
-  | binary op _ reads ih => exact .binary op (Nat.zero_le _) reads ih
-  | div _ reads nonzero ih => exact .div (Nat.zero_le _) reads nonzero ih
-  | compare op _ reads follows ih => exact .compare op (Nat.zero_le _) reads follows ih
-  | logic op _ reads ih => exact .logic op (Nat.zero_le _) reads ih
-  | arrayIndex base lower upper _ reads ih =>
-      exact .arrayIndex base lower upper (Nat.zero_le _) reads ih
-  | tupleField base index _ ih => exact .tupleField base index (Nat.zero_le _) ih
-  | recordField base field index written _ ih =>
-      exact .recordField base field index written (Nat.zero_le _) ih
-  | textConcat left right' _ reads ih => exact .textConcat left right' (Nat.zero_le _) reads ih
-  | textIndex base offset _ reads ih => exact .textIndex base offset (Nat.zero_le _) reads ih
-  | substring base first' last _ reads₁ reads₂ ih =>
-      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂ ih
+  | .binary op _ reads tail' =>
+      exact .binary op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
+  | .div _ reads nonzero tail' =>
+      exact .div (Nat.zero_le _) reads nonzero (textTailLowerConcat tail' right rightRead blocked)
+  | .compare op _ reads follows tail' =>
+      exact .compare op (Nat.zero_le _) reads follows
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .logic op _ reads tail' =>
+      exact .logic op (Nat.zero_le _) reads (textTailLowerConcat tail' right rightRead blocked)
+  | .arrayIndex base lower upper _ reads tail' =>
+      exact .arrayIndex base lower upper (Nat.zero_le _) reads
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .tupleField base index _ tail' =>
+      exact .tupleField base index (Nat.zero_le _)
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .recordField base field index written _ tail' =>
+      exact .recordField base field index written (Nat.zero_le _)
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .textConcat left right' _ reads tail' =>
+      exact .textConcat left right' (Nat.zero_le _) reads
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .textIndex base offset _ reads tail' =>
+      exact .textIndex base offset (Nat.zero_le _) reads
+        (textTailLowerConcat tail' right rightRead blocked)
+  | .substring base first' last _ reads₁ reads₂ tail' =>
+      exact .substring base first' last (Nat.zero_le _) reads₁ reads₂
+        (textTailLowerConcat tail' right rightRead blocked)
 
 theorem textConcatDerivation : TextConcatDerivationAussage := by
   intro scope
@@ -128,9 +142,16 @@ theorem textConcatDerivation : TextConcatDerivationAussage := by
 theorem textConcatBytes : TextConcatBytesAussage := by
   intro a b left right frame hleft hright
   dsimp
-  simp [Befehl.auswerten, Rahmen.schreibe, wertAls, TextValue.concat, hleft, hright,
-    left.bound, right.bound]
-  all_goals omega
+  rw [Befehl.auswerten, Rahmen.schreibe]
+  simp only [Function.update_self]
+  rw [hleft, hright]
+  simp only [wertAls]
+  rw [dif_pos left.bound, dif_pos right.bound]
+  simp [TextValue.concat]
+  all_goals
+    first
+    | exact Nat.add_le_add left.bound right.bound
+    | rfl
 
 private theorem textConcatRootLookup (p : Fragment) (b : Befehl) :
     (p.anhaengen (.einzel b)).code[p.code.length]? = some b := by
@@ -259,7 +280,7 @@ theorem textConcatErfuellbarAm : TextConcatErfuellbarAmAussage := by
     cases guard
   · constructor
     · rfl
-    ·       have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
+    · have h0 : (s₂.lokal eintritt).temp 0 = some ⟨.text a, TextValue.literal decoded⟩ := by
         dsimp [s₂, s₁, Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
         simp [a]
       have h1 : (s₂.lokal eintritt).temp 1 = some ⟨.text a, TextValue.literal decoded⟩ := by
