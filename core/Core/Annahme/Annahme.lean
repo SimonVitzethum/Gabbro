@@ -93,7 +93,7 @@ theorem triviale_impl_stumm (run : HwLauf) (t : Nat)
   | antwort _ h =>
     exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
   | interrupt _ h =>
-    obtain ⟨_, _, _, _, hEq, _, _⟩ := h
+    obtain ⟨_, _, _, _, _, _, _, _, hEq, _, _⟩ := h
     exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
   | absturz h =>
     obtain ⟨_, hEq, _⟩ := h
@@ -114,7 +114,7 @@ theorem triviale_ideal_stumm (run : HwLauf) (t : Nat)
   | antwort _ h =>
     exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
   | interrupt _ h =>
-    obtain ⟨_, _, _, _, hEq, _, _⟩ := h
+    obtain ⟨_, _, _, _, _, _, _, _, hEq, _, _⟩ := h
     exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
   | absturz h =>
     obtain ⟨_, hEq, _⟩ := h
@@ -282,12 +282,12 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
     ⟨.frage staleFrage, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
   let ev := s.stelleFrage 0 c staleFrage
   obtain ⟨g₁, hstep⟩ := Speicher.Zustand.schritt_ohne_lesen
-    Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig (.kontext c)
+    Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig (SpeicherAkteur.kontext c)
     (aussenEtikett staleEinheit.einrichtung (.frage ev)) (fun h => h)
   let spur : SchrittSpur Unit Unit :=
-    ⟨[((.kontext c), aussenEtikett staleEinheit.einrichtung (.frage ev))], [.frage ev]⟩
+    ⟨[((SpeicherAkteur.kontext c), aussenEtikett staleEinheit.einrichtung (.frage ev))], [.frage ev]⟩
   let s' : Zustand Unit Unit Unit Unit Unit Unit := { s.frage ev with graph := g₁ }
-  have hmem : Speicherfolge s.initial (.kontext c) s.graph
+  have hmem : Speicherfolge s.initial (SpeicherAkteur.kontext c) s.graph
       [aussenEtikett staleEinheit.einrichtung (.frage ev)] spur.speicher s'.graph :=
     .cons (.ohne (Or.inl rfl)) hstep (.nil _)
   have hrahmen : Zustandsrahmen s s :=
