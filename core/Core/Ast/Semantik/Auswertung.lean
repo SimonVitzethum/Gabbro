@@ -144,7 +144,7 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           List.length_nil, Nat.add_zero, hpcMid2, L, R]
         omega
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
-          alsGanzzahl, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpL, tmpR,
+          alsGanzzahl, Option.bind_eq_bind, Option.bind_some, Option.map_some, Ganzzahl.pack, tmpL, tmpR,
           preserveR slot (Nat.lt_succ_self slot), Arith.result, Expr.wert]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
       · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
@@ -282,14 +282,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
-          hpcMid2]
-        rw [List.length_append, List.length_append, List.length_append, List.length_cons,
-          List.length_nil, Nat.add_zero]
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
-          Expr.wert]
-      · rw [lokR, lokL]
-      · rfl
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
+          Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+          List.length_nil, Nat.add_zero, hpcMid2, L, R]
+        omega
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+          alsGanzzahl, Option.bind_eq_bind, Option.bind_some, Option.map_some, Ganzzahl.pack,
+          tmpL, tmpR, preserveR slot (Nat.lt_succ_self slot), Arith.result,
+          Zahl.div, dif_pos nonzero, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
@@ -328,14 +330,16 @@ theorem expr_ergebnis_typ (slot : Nat) (tree : Expr scope type) (env : Umgebung 
           (lookupSeq (pre ++ L ++ R) b post :
             ((pre ++ L ++ R) ++ b :: post)[(pre ++ L ++ R).length]? = some b)
       refine ⟨b.auswerten mid2, .schritt (laufTrans _ walkL' walkR') step, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr, Fragment.anhaengen, Fragment.einzel,
-          hpcMid2]
-        rw [List.length_append, List.length_append, List.length_append, List.length_cons,
-          List.length_nil, Nat.add_zero]
-      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, alsGanzzahl, tmpL, tmpR,
-          Expr.wert]
-      · rw [lokR, lokL]
-      · rfl
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, expr,
+          Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+          List.length_nil, Nat.add_zero, hpcMid2, L, R]
+        omega
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl,
+          alsGanzzahl, Option.bind_eq_bind, Option.bind_some, Option.map_some, Ganzzahl.pack,
+          tmpL, tmpR, preserveR slot (Nat.lt_succ_self slot), Arith.result,
+          Zahl.div, dif_pos nonzero, Expr.wert]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, lokR, lokL]
+      · simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe, retR]
       · intro i hi
         simp only [b, Function.update_self, Befehl.auswerten, Rahmen.schreibe]
         exact (Function.update_of_ne (Nat.ne_of_lt hi) _ _).trans
