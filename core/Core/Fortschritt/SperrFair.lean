@@ -234,8 +234,7 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
                     subst hkr
                     have hss : s' = s₂ := Option.some.inj (hzs.symm.trans hr2)
                     subst hss
-                    rw [hnew]
-                    exact fun hcontra => heq' (Option.some.inj hcontra)
+                    exact hcon
                 have hmem2 : c ∈ (s₂.sperren l).schlange :=
                   bleibt_bis_besitz ⟨s, hsa, hmemq⟩ (fun k h1 _ => hcrash k h1)
                     hnie1 (by omega) hr2
@@ -271,7 +270,11 @@ theorem sperr_warte_schranke_bis {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {H
                   rw [hs2q]
                   exact abgeben_nodup hqq
                 obtain ⟨b, e', hb, hreach, hlen', hbound', hsum'⟩ :=
-                  ih j (r + 1) hjfuel halte hhalte ⟨s₂, hr2, hj⟩ hnd2
+                  ih j (r + 1) hjfuel halte hhalte ⟨s₂, hr2, hj⟩
+                    (fun s hzs => by
+                      have hss : s = s₂ := Option.some.inj (hzs.symm.trans hr2)
+                      subst hss
+                      exact hnd2)
                     (fun k hk => hcrash k (by omega))
                     (fun h b s hb2 hzs hbs => hgibt h b s (by omega) hzs hbs)
                 have hbnd : ∀ x ∈ Kontextkosten ρ h a (r + 1 - a) :: e', x ≤ H + 1 := by
