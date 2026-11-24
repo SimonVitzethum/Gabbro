@@ -104,7 +104,7 @@ def SperrHalterBereit [DecidableEq L]
 def SperrHalterHalten [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
   ∀ (ρ : I.Lauf E), I.Laeufe E ρ → ∀ t : I.Schnitt E ρ,
-    ∀ (l : L) (h : Kontext), (ρ.zeit.zustand t.val).sperren l |>.besitzer = some h →
+    ∀ (l : L) (h : Kontext), ((ρ.zeit.zustand t.val).sperren l).besitzer = some h →
       SperrHalterBereit E (ρ.zeit.zustand t.val) l h
 
 /-- **`WaechterHalten E`: every generated guard holds on every `I` run, no reachable `I`
