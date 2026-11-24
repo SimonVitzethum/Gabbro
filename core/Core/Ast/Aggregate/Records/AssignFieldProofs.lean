@@ -176,7 +176,11 @@ theorem wertAls_widen (source target : Ty .value) (fits : Fits source target) (v
           simp only [Fits] at fits
           cases fits
       | _ =>
-          cases fits <;> simp [wertAls, Wert.widen]
+          cases fits <;>
+            simp only [wertAls, Wert.widen, dif_pos] <;>
+            dsimp [Ty.noConfusion, Ty.product.noConfusion, Ty.record.noConfusion,
+              Ty.recordSchema.noConfusion, Ty.sum.noConfusion, Ty.variant.noConfusion,
+              Ty.variantSchema.noConfusion]
 
 theorem AssignFieldParse : AssignFieldParseAussage := by
   intro ctx args text pieces lex prod
@@ -193,7 +197,7 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     wertAls_widen _ _ _ value
   have hold : wertAls (recordValueType args.name args.labels args.types)
       ⟨recordValueType args.name args.labels args.types, record⟩ = some record := by
-    simp [wertAls, recordValueType]
+    simp only [wertAls, recordValueType, dif_pos]
   have hlt : args.ref.index < frame.lokale.length := by
     by_contra h
     have hn : frame.lokale[args.ref.index]? = none := List.getElem?_eq_none (Nat.ge_of_not_lt h)
@@ -209,8 +213,9 @@ theorem AssignFieldFrame : AssignFieldFrameAussage := by
     rw [List.getElem?_set_self hlt]
     rfl
   · intro i hi
-    simp [assignFieldForm, Befehl.auswerten, List.getElem?_set_ne (Ne.symm hi)]
-  · simp [assignFieldForm, Befehl.auswerten]
-  · simp [assignFieldForm, Befehl.auswerten]
+    simp only [assignFieldForm, Befehl.auswerten]
+    exact List.getElem?_set_ne (Ne.symm hi)
+  · simp only [assignFieldForm, Befehl.auswerten]
+  · simp only [assignFieldForm, Befehl.auswerten]
 
 end Gabbro.Core.Ast.Semantik
