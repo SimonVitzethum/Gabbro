@@ -73,6 +73,9 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
   | tupleBind => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | letMutableValue => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
   | variantMatch => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern]
+  | letOption mutable _ _ _ _ _ _ =>
+      cases mutable <;> cases (List.cons.inj (List.cons.inj htok).2).1
+  | retOption => simp_all [returnKeyword, dot, keyword]
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read

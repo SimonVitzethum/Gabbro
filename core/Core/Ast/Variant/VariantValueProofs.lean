@@ -133,10 +133,14 @@ theorem variantValue_parse : Gabbro.Core.Ast.Semantik.VariantValueParseAussage :
   intro scope args text pieces lexed production
   apply (Gabbro.Core.Ast.Category.expression scope).syntax.parse_iff.mpr
   refine ⟨pieces, lexed, ?_⟩
-  rcases production with ⟨input, same, payloadRead⟩
-  rw [same]
-  exact .atom (.variantValue args.ref args.label args.index args.written
-    args.ordinary args.available args.payload payloadRead) (.stop Gabbro.Core.Ast.noOperatorAtEnd)
+  rcases production with ⟨input, same, payloadRead⟩ | ⟨input, same, payloadRead⟩
+  · rw [same]
+    exact .atom (.variantValue args.ref args.label args.index args.written
+      args.ordinary args.available args.payload payloadRead) (.stop Gabbro.Core.Ast.noOperatorAtEnd)
+  · rw [same]
+    exact .atom (.grouped (.atom (.variantValue args.ref args.label args.index args.written
+      args.ordinary args.available args.payload payloadRead) (.stop Gabbro.Core.Ast.noOperatorAtClose)))
+      (.stop Gabbro.Core.Ast.noOperatorAtEnd)
 
 theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
   intro platform start
@@ -159,7 +163,7 @@ theorem variantValue_erfuellbarAm : VariantValueErfuellbarAmAussage := by
   have written : labels[index.val]? = some lbl := by
     simp [member, labels, index, Gabbro.Core.Ast.variantLabels]
   have ordinary : Gabbro.Core.Ast.ordinaryLocal lbl := by
-    simp [Gabbro.Core.Ast.ordinaryLocal, lbl, Gabbro.Core.Ast.keywordName]
+    exact (directName_of_singleton (name := lbl) rfl).1
   have available : availableCase scope lbl := by
     constructor
     · simp [scope, binding, schemaType, variantSchemaType, member, labels, lbl, payloads,

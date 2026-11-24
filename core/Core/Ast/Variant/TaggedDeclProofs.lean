@@ -21,6 +21,8 @@ public import Core.Ast.Variant.Obligations
 - `TaggedDeclBindingAussage`
 -/
 
+import Core.Ast.Declaration.Members
+
 @[expose] public section
 
 namespace Gabbro.Core.Ast.Semantik
@@ -80,27 +82,11 @@ theorem taggedDecl_impl : TaggedDeclImplAussage := by
 
 theorem taggedDecl_binding : Gabbro.Core.Ast.Semantik.TaggedDeclBindingAussage := by
   intro scope a frame
-  simp [Befehl.auswerten, taggedDeclForm]
-
-private theorem td_member_suffix {input member rest}
-    (read : Gabbro.Core.Ast.VariantMemberRead input member rest) : rest <:+ input := by
-  cases read with
-  | nullary name closed => exact List.suffix_cons _ _
-  | payload name typeRead =>
-      exact (List.suffix_cons Gabbro.Core.Ast.closeParen rest).trans
-        ((TypeReads.consumes typeRead).trans
-          ((List.suffix_cons Gabbro.Core.Ast.openParen _).trans (List.suffix_cons _ _)))
-
-private theorem td_tail_suffix {input variants rest}
-    (read : Gabbro.Core.Ast.VariantMembersTailRead input variants rest) : rest <:+ input := by
-  induction read with
-  | done => exact List.suffix_cons _ _
-  | next memberRead tailRead ih =>
-      exact ih.trans ((td_member_suffix memberRead).trans (List.suffix_cons _ _))
+  simp [Befehl.auswerten, Rahmen.installSchema, taggedDeclForm]
 
 theorem taggedDecl_suffix : Gabbro.Core.Ast.Surface.TaggedDeclSuffixAussage := by
-  intro input variants rest read
-  exact (List.suffix_cons Gabbro.Core.Ast.semicolon rest).trans (td_tail_suffix read)
+  intro scope input variants rest read
+  exact (List.suffix_cons Gabbro.Core.Ast.semicolon rest).trans read.consumes
 
 theorem taggedDecl_parse : Gabbro.Core.Ast.Semantik.TaggedDeclParseAussage := by
   intro scope args text pieces lexed production
@@ -117,16 +103,17 @@ theorem taggedDecl_erfuellbarAm : Gabbro.Core.Ast.Semantik.TaggedDeclErfuellbarA
   let lbl : Gabbro.Core.Ast.Identifier :=
     Gabbro.Core.Ast.keywordName 'a' [] (by decide) (by simp)
   let member : Gabbro.Core.Ast.VariantMember := ⟨lbl, none⟩
-  have valid : ∀ m ∈ member :: [], m.valid := by
+  have valid : ∀ m ∈ member :: [], m.valid [] := by
     intro m hm
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst m
-    simp [member, lbl, Gabbro.Core.Ast.keywordName, Gabbro.Core.Ast.VariantMember.valid,
-      Gabbro.Core.Ast.ordinaryLocal]
+    refine ⟨(directName_of_singleton (name := lbl) rfl).1, by decide, ?_⟩
+    intro type memberType
+    cases memberType
   have distinct : ((Gabbro.Core.Ast.variantLabels [member]).map (fun x => x.val)).Nodup := by
     change [lbl.val].Nodup
     exact List.nodup_singleton _
-  let a : Gabbro.Core.Ast.Surface.TaggedDeclArgs := ⟨false, name, member, [], valid, distinct⟩
+  let a : Gabbro.Core.Ast.Surface.TaggedDeclArgs [] := ⟨false, name, member, [], valid, distinct⟩
   refine ⟨a, ?_⟩
   let form := taggedDeclForm []
   let s := (I.start (form.einheit platform a) start).2
