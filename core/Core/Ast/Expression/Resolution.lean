@@ -30,7 +30,7 @@ theorem identifierList_injective {a b : List Identifier}
       injection same with hhead htail
       rw [Subtype.ext hhead, ih htail]
 
-theorem identifierPosition_unique {names : List Identifier}
+theorem identifierPosition_unique {names : List Identifier} {left right : Nat}
     (distinct : (names.map Subtype.val).Nodup)
     (atLeft : names[left]? = some name) (atRight : names[right]? = some name) :
     left = right := by
@@ -40,10 +40,10 @@ theorem identifierPosition_unique {names : List Identifier}
   exact (distinct.getElem?_inj (by simpa only [List.length_map] using inRange)).1 mapped
 
 theorem LabeledItems.lengths (items : LabeledItems scope labels types) :
-    labels.length = types.length := by
-  induction items with
-  | empty => rfl
-  | next _ _ _ ih => simp only [List.length_cons, ih]
+    labels.length = types.length :=
+  match items with
+  | .empty => rfl
+  | .next _ _ tail => congrArg Nat.succ tail.lengths
 
 theorem RecordArguments.unique (a b : RecordArguments labels types actualLabels actualTypes)
     (lengths : actualLabels.length = actualTypes.length) : a = b := by
@@ -87,14 +87,18 @@ private theorem variantLayout_injective {a b : List (Option (Ty .value))}
       injection shape with htag htags
       injection layout with hvalue hvalues
       have hhead : head = other := by
-        cases head <;> cases other <;> first | rfl | cases htag | exact congrArg some hvalue
+        cases head <;> cases other <;> first | rfl | exact congrArg some hvalue | cases htag
       rw [hhead, ih htags hvalues]
 
 private theorem Local.label_mem_scope (ref : Local scope type)
     (member : label ∈ type.variantLabels) :
     label ∈ scope.flatMap (fun binding => binding.type.variantLabels) := by
   apply List.mem_flatMap.mpr
-  exact ⟨ref.binding, ref.binding_mem, member⟩
+  have sameType : ref.binding.type = type := by
+    induction ref with
+    | here => rfl
+    | there _ ih => exact ih
+  exact ⟨ref.binding, ref.binding_mem, sameType.symm ▸ member⟩
 
 private theorem Local.unique_label (a : Local scope type) (b : Local scope type')
     (left : label ∈ type.variantLabels) (right : label ∈ type'.variantLabels)
@@ -118,7 +122,7 @@ private theorem Local.unique_label (a : Local scope type) (b : Local scope type'
       omega
     | there b =>
       simp only [List.flatMap_cons, List.count_append] at occurrences
-      cases ih b left right (by omega)
+      cases ih b left (by omega)
       rfl
 
 theorem VariantRef.unique (a : VariantRef scope labels payloads)
