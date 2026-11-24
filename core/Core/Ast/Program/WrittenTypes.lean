@@ -107,6 +107,7 @@ theorem SignedReads.deterministic (left : SignedReads input a rest) (right : Sig
   | negative => cases right with | negative => exact ⟨rfl, rfl⟩
 
 -- Mirror ExprReads.deterministic, dispatch on the width spelling and then on in.
+set_option maxHeartbeats 180000 in
 theorem TypeReads.deterministic (left : TypeReads scope input a rest) (right : TypeReads scope input b more) :
     a = b ∧ rest = more := by
   have not_bool : ∀ (s : Bool) (w : Nat), intSpelling s w ≠ "bool".toList := by
@@ -379,7 +380,10 @@ theorem WrittenType.printReads (tree : WrittenType) (valid : tree.valid scope)
     let afterSecond := tail.printTail.map PrintedToken.value ++ (closeParen :: rest)
     let secondInput := second.printPieces.map PrintedToken.value ++ afterSecond
     have secondRead := secondPrint valid.2.1 afterSecond
-      (by cases tail <;> intro more h <;> cases h)
+      (by
+        intro more h
+        cases tail <;> simp only [afterSecond, WrittenTypes.printTail, List.map_nil,
+          List.nil_append, List.map_cons, List.cons_append, hpComma] at h <;> cases h)
     have firstRead := firstPrint valid.1 (comma :: secondInput)
       (by intro more impossible; cases impossible)
     simpa only [WrittenType.printPieces, List.map_append, List.map_cons, List.map_nil,
