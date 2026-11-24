@@ -176,7 +176,7 @@ def carrierEffectDecode (n : Nat) : Option CarrierEffect := do
 instance : Encodable CarrierEffect :=
   Encodable.ofLeftInjection carrierEffectCode carrierEffectDecode (by
     rintro ⟨d, c, a⟩
-    simp [carrierEffectCode, carrierEffectDecode, Encodable.encodek])
+    simp only [carrierEffectCode, carrierEffectDecode, Encodable.encodek])
 
 /-! ## First-order tree codes
 
@@ -197,8 +197,8 @@ def codeZuNat : Code → Option Nat
 
 theorem codeZuNat_natZuCode (n : Nat) : codeZuNat (natZuCode n) = some n := by
   induction n with
-  | zero => simp [natZuCode, codeZuNat]
-  | succ n ih => simp [natZuCode, codeZuNat, ih]
+  | zero => simp only [natZuCode, codeZuNat]
+  | succ n ih => simp only [natZuCode, codeZuNat, ih]
 
 lemma intRueck (z : Int) : Equiv.intEquivNat.symm (Encodable.encode z) = z := by
   simpa [Encodable.encode, Encodable.decode] using (Encodable.encodek z)
@@ -383,77 +383,77 @@ def tyVonCode : Code → Option (Ty .value)
 theorem tyCode_ofCode : ∀ t : Ty .value, tyVonCode (tyZuCode t) = some t
   | .int lo hi => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .bool => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .array el cnt => by
       have ih := tyCode_ofCode el
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .productEnd => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .product h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih1, ih2]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih1, ih2]
   | .record nm ls lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .recordSchema nm ls lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .sumEnd => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .sum h t => by
       have ih1 := tyCode_ofCode h
       have ih2 := tyCode_ofCode t
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih1, ih2]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih1, ih2]
   | .variant nm ls hp lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .variantSchema nm ls hp lay => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .text cap => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .carrierSchema cnt ls lay ex => by
       have ih := tyCode_ofCode lay
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .effectGroupSchema eff => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .address space => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .ownedRegion => by
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck]
   | .regionView el => by
       have ih := tyCode_ofCode el
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
   | .ptr space recht referent => by
       have ih := tyCode_ofCode referent
       unfold tyVonCode tyZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, ih]
 
 instance instEncodableTy (k : Kind) : Encodable (Ty k) := by
   cases k
   exact Encodable.ofLeftInjection (β := Ty .value)
     (fun t => Encodable.encode (tyZuCode t))
     (fun n => (Encodable.decode n).bind tyVonCode)
-    (by intro t; simp [Encodable.encodek, tyCode_ofCode])
+    (by intro t; simp only [Encodable.encodek, tyCode_ofCode])
 
 /-! ## Rufstelle -/
 
@@ -475,6 +475,6 @@ def rufstelleDecode (n : Nat) : Option Rufstelle := do
 instance : Encodable Rufstelle :=
   Encodable.ofLeftInjection rufstelleCode rufstelleDecode (by
     rintro ⟨name, args, bind, effects⟩
-    simp [rufstelleCode, rufstelleDecode, Encodable.encodek])
+    simp only [rufstelleCode, rufstelleDecode, Encodable.encodek])
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation

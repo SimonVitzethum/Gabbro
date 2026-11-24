@@ -152,51 +152,51 @@ mutual
     writtenTypeVonCode (writtenTypeZuCode w) = some w
   | .bool => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .integer signed width interval => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .array element count => by
       have ih := writtenTypeCode_ofCode element
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
   | .tuple first second rest => by
       have ih1 := writtenTypeCode_ofCode first
       have ih2 := writtenTypeCode_ofCode second
       have ih3 := writtenTypesCode_ofCode rest
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2, ih3,
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2, ih3,
         writtenTypesVonCode, writtenTypesZuCode]
   | .text capacity => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .index carrier count => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .indexOption carrier count => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .address space => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .ownedRegion => by
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .ptr space recht referent => by
       have ih := writtenTypeCode_ofCode referent
       unfold writtenTypeVonCode writtenTypeZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih]
 
   theorem writtenTypesCode_ofCode : ∀ w : WrittenTypes,
     writtenTypesVonCode (writtenTypesZuCode w) = some w
   | .empty => by
       unfold writtenTypesVonCode writtenTypesZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek]
   | .next head tail => by
       have ih1 := writtenTypeCode_ofCode head
       have ih2 := writtenTypesCode_ofCode tail
       unfold writtenTypesVonCode writtenTypesZuCode
-      simp [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2,
+      simp only [natZuCode, codeZuNat, codeZuNat_natZuCode, Encodable.encodek, ih1, ih2,
         writtenTypeVonCode, writtenTypeZuCode]
 end
 
@@ -204,13 +204,13 @@ instance : Encodable WrittenType :=
   Encodable.ofLeftInjection
     (fun w => Encodable.encode (writtenTypeZuCode w))
     (fun n => (Encodable.decode n).bind writtenTypeVonCode)
-    (by intro w; simp [Encodable.encodek, writtenTypeCode_ofCode])
+    (by intro w; simp only [Encodable.encodek, writtenTypeCode_ofCode])
 
 instance : Encodable WrittenTypes :=
   Encodable.ofLeftInjection
     (fun w => Encodable.encode (writtenTypesZuCode w))
     (fun n => (Encodable.decode n).bind writtenTypesVonCode)
-    (by intro w; simp [Encodable.encodek, writtenTypesCode_ofCode])
+    (by intro w; simp only [Encodable.encodek, writtenTypesCode_ofCode])
 
 /-! ## RegionInitializer -/
 
@@ -237,6 +237,6 @@ instance : Encodable RegionInitializer :=
     | address => rfl
     | view written valid =>
         classical
-        simp [regionInitializerCode, regionInitializerDecode, Encodable.encodek, viewRegion, valid])
+        simp only [regionInitializerCode, regionInitializerDecode, Encodable.encodek, viewRegion, valid])
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
