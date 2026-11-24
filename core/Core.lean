@@ -26,6 +26,9 @@ public import Core.Beobachtung.SchrankenErfuellbar
 public import Core.Beobachtung.Projektion
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.NichtinterferenzErfuellbar
+public import Core.Beobachtung.SchrankenB8
+public import Core.Beobachtung.SchrankenB8Aussagen
+public import Core.Beobachtung.SchrankenB8Erfuellbar
 meta import Core.Waechter.Check
 
 #check_core
