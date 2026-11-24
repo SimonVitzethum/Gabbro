@@ -460,7 +460,7 @@ theorem effectGroup_erfuellbarAm : EffectGroupErfuellbarAmAussage := by
 theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   intro platform start
   let carrier : TableDeclaration [] :=
-    ⟨true, egTableName, 1, [], (by intro f h; cases h), by simp⟩
+    ⟨true, egTableName, 1, [], (by intro f h; cases h), by simp [recordLabels]⟩
   let written : WrittenCarrierEffect := ⟨.read, egTableName, false⟩
   let eff : CarrierEffect := ⟨0, egTableName.val, .read⟩
   have hchecked : [written].mapM (WrittenCarrierEffect.resolve [carrier.binding] true) =
@@ -492,13 +492,21 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
   let s0 := (I.start E start).2
   let s1 := bt.nach eintritt s0
   let s := bg.nach eintritt s1
+  have hcode : E.system.kopf = kopf (programm tree.2).code := by
+    rfl
   have hhead0 : E.system.kopf s0 eintritt = some bt := by
-    simp [E, tree, s0, bt, unitBody, decl, tableInstruction]
+    rw [hcode]
+    simp [programm, unitBody, decl, tableInstruction, kopf, s0, bt, I.start,
+      Zustand.start, startdaten, eintritt, Fragment.einheit]
   have hhead1 : E.system.kopf s1 eintritt = some bg := by
-    simp [E, tree, s1, s0, bt, bg, unitBody, decl, tableInstruction,
+    rw [hcode]
+    simp [programm, unitBody, decl, tableInstruction, kopf, s1, s0, bt, bg,
+      I.start, Zustand.start, startdaten, eintritt, Befehl.nach, Befehl.auswerten,
       EffectGroupDeclaration.binding, effectGroupBinding]
   have hhead2 : E.system.kopf s eintritt = some b := by
-    simp [E, tree, s, s1, s0, bt, bg, b, scope, unitBody, decl, tableInstruction,
+    rw [hcode]
+    simp [programm, unitBody, decl, tableInstruction, kopf, s, s1, s0, bt, bg, b,
+      scope, I.start, Zustand.start, startdaten, eintritt, Befehl.nach, Befehl.auswerten,
       EffectGroupDeclaration.binding, effectGroupBinding, functionForm, functionInstruction]
   have hstep0 : E.system.ISchritt eintritt s0 () [plan] s1 := ⟨bt, hhead0, rfl, rfl⟩
   have hstep1 : E.system.ISchritt eintritt s1 () [plan] s := ⟨bg, hhead1, rfl, rfl⟩
@@ -510,14 +518,16 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
     .schritt eintritt () [plan] (.schritt eintritt () [plan] .start hstep0) hstep1
   refine ⟨carrier, group, a, Ast.print (category := .unit) tree, s, ?_⟩
   dsimp only
-  refine ⟨?_, ?_, Ast.parse_print tree, rfl, reached, hhead2, hstep2, himpl2, ?_⟩
+  refine ⟨?_, ?_, Ast.parse_print (category := .unit) tree, rfl, reached, hhead2,
+    hstep2, himpl2, ?_⟩
   · simp [group, eff]
   · exact ⟨clause, rfl, rfl⟩
   · let after := b.auswerten (s.lokal eintritt)
     let sig : Funktion := ⟨a.name, (s.lokal eintritt).pc + 1, [], none, scope.length,
       false, [], some [eff]⟩
     refine ⟨sig, ?_, ?_⟩
-    · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten]
+    · simp [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
+        a, scope, clause, body, functionCode, bracedBlock]
     · simp [sig, group, eff]
 
 end Gabbro.Core.Ast.Semantik
