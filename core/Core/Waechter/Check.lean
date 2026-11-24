@@ -327,7 +327,8 @@ elab "#check_core" : command => do
       coveredNames := coveredNames.insert root
       for name in index.closure root do
         coveredNames := coveredNames.insert name
-    let binder ← binderFindings env (coveredNames.contains ·) closing.isSome
+    let binderTask ← Meta.MetaM.asTask' (binderFindings env (coveredNames.contains ·) closing.isSome)
+    let binder ← withoutModifyingState binderTask.get
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
       logInfo m!"statement findings ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"

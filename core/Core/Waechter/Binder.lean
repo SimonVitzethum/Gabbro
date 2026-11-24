@@ -74,10 +74,17 @@ public meta def binderFindings (env : Environment) (pinned : Name → Bool) (clo
     unless (← isStatement info.type) do continue
     let strict := correctnessNamespace.isPrefixOf name
     let mut here : Array String := #[]
-    for n in (← unusedBinders (info.value.approxDepth.toNat + 2) info.value) do
-      here := here.push s!"statement {name} has the unused data binder {n}"
-    for n in (← functionParameters info.type) do
-      here := here.push s!"statement {name} takes the free function parameter {n} that nothing binds to the model"
+    let scanned ← try
+        Core.withCurrHeartbeats do
+          let mut found : Array String := #[]
+          for n in (← unusedBinders (info.value.approxDepth.toNat + 2) info.value) do
+            found := found.push s!"statement {name} has the unused data binder {n}"
+          for n in (← functionParameters info.type) do
+            found := found.push
+              s!"statement {name} takes the free function parameter {n} that nothing binds to the model"
+          pure found
+      catch _ => pure #[s!"statement {name} could not be scanned within the heartbeat budget"]
+    here := here ++ scanned
     unless pinned name do
       if strict then
         here := here.push s!"statement {name} is not pinned (parameterised statements are not covered by the pin check)"
