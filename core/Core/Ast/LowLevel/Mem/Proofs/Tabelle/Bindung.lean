@@ -30,11 +30,16 @@ premise `sicht = (s.lokal c).mmuSicht` at every memory access of the composed ma
 /-- On a hardware-conformant environment, translating over a frame's view is the catalogue decode
     of that view. This is the binding point: use `(frame.mmuSicht)` wherever `translate` is called
     with the acting frame. -/
-theorem translate_mmuSicht {k : Katalog} {h : Umgebung} (hw : Hardware k h)
+theorem translate_mmuSicht {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k h)
     (frame : MemFrame) (core space addr : Nat) (right : Speicherdienst) :
     h.translate frame.mmuSicht core space addr right =
       uebersetze h.ziel frame.mmuSicht core space addr right := by
   rw [hw.mmu]
+
+private def leerFrame : MemFrame := {}
+
+private def fremdSicht : MmuSicht :=
+  { tables := fun _ _ => some ⟨1, [.read], 0⟩, tlb := fun _ _ _ => none }
 
 /-- **Hauptbefund: the view is unconstrained.** An empty frame coexists with a view that serves a
     table entry: nothing in `Katalog.Lauf` forces `sicht.tables` to equal any frame's
@@ -44,8 +49,7 @@ theorem hauptbefund_gegenbeispiel :
     ∃ (frame : MemFrame) (sicht : MmuSicht),
       sicht.tables 0 0 = some ⟨1, [.read], 0⟩ ∧
       frame.tabellenSicht 0 0 = none := by
-  refine ⟨{}, { tables := fun _ _ => some ⟨1, [.read], 0⟩,
-    tlb := fun _ _ _ => none }, rfl, ?_⟩
+  refine ⟨leerFrame, fremdSicht, rfl, ?_⟩
   apply MemFrame.tabellenSicht_none
   rfl
 
