@@ -285,8 +285,8 @@ theorem DeclReads.deterministic (left : DeclReads before input a rest)
         Token.word.injEq, true_and] at same
       obtain ⟨nameEq, abiEq, rowEq, rfl⟩ := same
       cases Subtype.ext nameEq
-      cases Katalog.DienstAbi.name_injective (String.toList_injective abiEq)
-      cases Katalog.FirmwareZeile.name_injective (String.toList_injective rowEq)
+      cases Katalog.DienstAbi.name_injective (String.toList_injective (Token.word.inj abiEq))
+      cases Katalog.FirmwareZeile.name_injective (String.toList_injective (Token.word.inj rowEq))
       exact ⟨rfl, rfl⟩
     | record exported => cases exported <;> deny_declaration same
     | tagged exported => cases exported <;> deny_declaration same
