@@ -25,7 +25,7 @@ def Erreicht (prog : List Befehl) (start : Rahmen) (r : Rahmen) : Prop :=
 
 /-- Nat-Ausgabe eines Laufzeitwerts: ganze Zahl, nichtnegativ, als Nat gelesen.
     Negative oder nicht-ganze Werte sind keine Nat-Ausgabe. -/
-def NatAusgabe (d : Dynamisch) : Option Nat :=
+def NatAusgabe (d : Ast.Dynamisch) : Option Nat :=
   match alsGanzzahl d with
   | none => none
   | some g => if 0 ≤ g.zahl.wert then some g.zahl.wert.toNat else none
@@ -70,18 +70,21 @@ def SimulationstreueAussage : Prop :=
 theorem erreicht_refl (prog : List Befehl) (r : Rahmen) : Erreicht prog r r :=
   ⟨0, rfl⟩
 
+theorem erreicht1 {prog : List Befehl} {r r' : Rahmen}
+    (hs : Schritt prog (some r) = some r') : Erreicht prog r r' :=
+  ⟨1, by simpa using hs⟩
+
 theorem erreicht_schritt {prog : List Befehl} {r₀ r r' : Rahmen}
     (h : Erreicht prog r₀ r) (hs : Schritt prog (some r) = some r') :
-    Erreicht prog r₀ r' := by
-  obtain ⟨k, hk⟩ := h
-  exact ⟨k + 1, by rw [Function.iterate_succ_apply, hk, hs]⟩
+    Erreicht prog r₀ r' :=
+  erreicht_trans h (erreicht1 hs)
 
 theorem erreicht_trans {prog : List Befehl} {r₀ r₁ r₂ : Rahmen}
     (h₁ : Erreicht prog r₀ r₁) (h₂ : Erreicht prog r₁ r₂) :
     Erreicht prog r₀ r₂ := by
   obtain ⟨k₁, hk₁⟩ := h₁
   obtain ⟨k₂, hk₂⟩ := h₂
-  exact ⟨k₁ + k₂, by rw [Function.iterate_add_apply, hk₁, hk₂]⟩
+  exact ⟨k₁ + k₂, by rw [Nat.add_comm k₁ k₂, Function.iterate_add_apply, hk₁, hk₂]⟩
 
 theorem haeltMit_erreicht {prog : List Befehl} {r₀ r₁ : Rahmen} {a : Nat}
     (h : Erreicht prog r₀ r₁) (hh : HaeltMit prog r₁ a) : HaeltMit prog r₀ a := by
