@@ -172,4 +172,18 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
     let some (.pending token) := frame.result | none
     frame.bindMarke name token
 
+/-- Evaluation reads only the acting frame, region rights and loans. -/
+theorem MemInstruction.evaluate_congr (op : MemInstruction) (target : ZielDaten) (c : Kontext)
+    {s₁ s₂ : MemState} (frame : s₁.lokal c = s₂.lokal c)
+    (rights : s₁.rechte = s₂.rechte) (loans : s₁.leihen = s₂.leihen) :
+    op.evaluate target s₁ c = op.evaluate target s₂ c := by
+  have live (r : MemRegion) : r.live s₁ = r.live s₂ := by
+    simp only [MemRegion.live, rights, loans]
+  have held (slot : Nat) : heldMemRegion target s₁ c slot = heldMemRegion target s₂ c slot := by
+    simp only [heldMemRegion, frame, live]
+  have covered (f : MemFrame) (extent : Strecke) :
+      f.covered s₁ extent = f.covered s₂ extent := by
+    simp only [MemFrame.covered, live]
+  cases op <;> simp only [evaluate, frame, held, Adressraum.Aktivierbar, covered]
+
 end Gabbro.Core.Ast.LowLevel
