@@ -40,7 +40,8 @@ theorem textLength_print (scope : Scope) (args : TextLengthArgs scope) :
       (((Category.expression scope).printPieces ((Expr.textLength args.base).typed)).map
         PrintedToken.value) := by
   refine ⟨args.base.printTokens ++ [closeParen], ?_, ?_⟩
-  · rfl
+  · simp [Category.printPieces, Expr.typed, Expr.printTokens, Expr.printPieces,
+      printLenof, printOpen, printClose, lenofKeyword, openParen, closeParen]
   · exact Expr.printReads args.base noOperatorAtClose
 
 end Gabbro.Core.Ast.Surface
@@ -59,20 +60,41 @@ theorem textLength_derivation : TextLengthDerivationAussage := by
       ((Surface.textLength scope).tree args).2 []
     exact .atom (AtomReads.textLength read) (.stop noOperatorAtEnd)
   · let args : Surface.TextLengthArgs [] := ⟨_, .textLiteral []⟩
-    exact Rule.satisfiableOfPrint args (Surface.textLength_print [] args)
+    exact Surface.Rule.satisfiableOfPrint args (Surface.textLength_print [] args)
 
 theorem textLength_inversion : TextLengthInversionAussage := by
   intro scope type input rest tree read
-  cases read with
-  | textLength baseRead =>
+  generalize hh : lenofKeyword :: openParen :: input = hs at read
+  cases read
+  case textLength baseRead =>
       rename_i capacity base
-      exact ⟨capacity, base, baseRead, rfl⟩
+      have h2 := List.cons.inj hh
+      have h3 := List.cons.inj h2.2
+      exact ⟨capacity, base, (by simpa [h3.2] using baseRead), rfl⟩
+  case «variable» ref visible ordinary =>
+      have same : ref.binding.name.val = "lenof".toList := by
+        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
+      exact (ordinary.2.2 same).elim
+  case recordValue ref fields fits fieldsRead =>
+      have same : ref.name.val = "lenof".toList := by
+        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
+      exact (ref.ordinary.2.2 same).elim
+  case variantValue ref label index written ordinary available payload payloadRead =>
+      have same : label.val = "lenof".toList := by
+        simpa [lenofKeyword] using (List.cons.inj hh).1.symm
+      exact (ordinary.2.2 same).elim
+  all_goals simp [lenofKeyword, trueKeyword, falseKeyword] at hh
 
 theorem textLength_bytes : TextLengthBytesAussage := by
   intro capacity text frame h
   cases text with
   | mk bytes bound =>
-      simp [Befehl.auswerten, Rahmen.schreibe, h, wertAls, bound]
+      have hval : wertAls (.text capacity) (⟨.text capacity, ⟨bytes, bound⟩⟩ : Dynamisch) =
+          some (⟨bytes, bound⟩ : TextValue capacity) := by
+        simp [wertAls, bound]
+      dsimp [Befehl.auswerten]
+      rw [h, hval]
+      simp [Rahmen.schreibe]
 
 private theorem textLength_amOrt (scope : Scope) : (textLengthForm scope).RegelAmOrt := by
   intro args
@@ -150,8 +172,7 @@ theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
   cases spurEq
   refine ⟨rfl, rfl, ?_⟩
-  have hst : (form.einheit platform args).stotterLaenge b = 0 := rfl
-  simp [hst]
+  simp [Fragment.einheit]
 
 theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   intro platform start
@@ -167,21 +188,23 @@ theorem textLength_erfuellbarAm : TextLengthErfuellbarAmAussage := by
   · exact Ast.parse_print _
   · rfl
   · apply System.IErreichbar.schritt eintritt () [plan] System.IErreichbar.start
-    refine ⟨b0, ?_, rfl⟩
-    simp [E, form, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
-      Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
-      Fragment.anhaengen, Fragment.einzel, textLengthForm]
+    refine ⟨b0, ?_, ?_⟩
+    · simp [E, form, s0, b0, I.start, Zustand.start, startdaten, Rahmen.start, kopf,
+        Quellform.einheit, Quellform.fragment, fragment, Fragment.einheit, expr,
+        Fragment.anhaengen, Fragment.einzel, textLengthForm, Expr.typed, Surface.textLength]
+    · exact ⟨rfl, rfl⟩
   · apply form.realisiert (textLength_amOrt []) platform args s
     · rfl
     · rfl
     · rfl
-    · rfl
+    · simp [form, s, s0, b0, textLengthForm, expr, Fragment.anhaengen, Fragment.einzel,
+        Befehl.nach, Befehl.auswerten, Rahmen.schreibe]
   · intro g guard
-    simp [b, Befehl.guard] at guard
+    simp [b, textLengthForm, Befehl.guard] at guard
   · dsimp
     constructor
     · rfl
-    · simp [b, s, s0, b0, Befehl.nach, Befehl.auswerten, Rahmen.schreibe,
-        Rahmen.start, wertAls, TextValue.literal, I.start, Zustand.start, startdaten]
+    · simp [b, textLengthForm, s, s0, b0, Befehl.nach, Befehl.auswerten, Rahmen.schreibe,
+        Rahmen.start, wertAls, I.start, Zustand.start, startdaten]
 
 end Gabbro.Core.Ast.Semantik
