@@ -39,6 +39,18 @@ def RegelAbgleich (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (f : 
       Zustandsbezug E s' i') ∨
     (spur = ⟨[], []⟩ ∧ Zustandsbezug E s' i ∧ ∃ g, E.system.kopf i c = some g)
 
+/-- The checked step match. A private tick spends budget from the acting
+    context's current ideal head, which can differ from its concrete head. -/
+def RegelSimSchritt (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (f : F) : Prop :=
+  ∀ hw t c w s u s' i plan spur, Zustandsbezug E s i →
+    (hw.angebot t).crash = false → KannSchreiten hw t c s →
+    E.system.kopf s c = some f → (E.system.regel f).impl c s w [plan] u →
+    FuehrtSchrittAus E.einrichtung t c s u plan spur s' →
+    (∃ i', Schritt E.einrichtung E.system E.katalog hw t i (.kontext c w, spur) i' ∧
+      Zustandsbezug E s' i') ∨
+    (spur = ⟨[], []⟩ ∧ Zustandsbezug E s' i ∧
+      ∃ g, E.system.kopf i c = some g ∧ 0 < E.stotterLaenge g)
+
 /-- One ideal run replays the concrete choices, with related states at every
     tick and silent private work charged to its actual source context and unit. -/
 structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) : Prop where
@@ -50,16 +62,21 @@ structure Laufabgleich (ρ : Maschine.Lauf E) (η : Lauf E) : Prop where
   belegt : ∀ t c, η.belegt t = some c →
     ∃ w f, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧ E.system.kopf (η.zeit.zustand t) c = some f
 
+/-- The run constructor only marks private ticks certified by a form rule. -/
+def BelegungGeprueft (η : Lauf E) : Prop :=
+  ∀ t c f, η.belegt t = some c → E.system.kopf (η.zeit.zustand t) c = some f →
+    0 < E.stotterLaenge f
+
 /-- Obligations for the M4 clock and trace match. If the concrete machine takes
     no step at an opportunity, the matched ideal state has no transition there. -/
 structure AbgleichPflichten (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop where
   lokal_refl : ∀ l, E.lokalerBezug l l
   laden : ∀ h s, Hardware E.katalog h → E.ZulStart h s →
     ∃ z, E.laden s (h.lade E.bild) = some z ∧ Zustandsbezug E z (start E s).2
-  regel : ∀ f, RegelAbgleich E f
+  regel : ∀ f, RegelSimSchritt E f
   pause : ∀ hw t s i, Zustandsbezug E s i → KeinSchritt (Lauffolge E hw) t (some s) →
     KeinSchritt (Schritt E.einrichtung E.system E.katalog hw) t i
-  schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → StotterSchranke η
+  schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → BelegungGeprueft η → StotterSchranke η
 
 theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E)
     {hw t s s' i spur} (bezug : Zustandsbezug E s i)
@@ -69,21 +86,21 @@ theorem AbgleichPflichten.schritt (pflicht : AbgleichPflichten E)
       Takt (Schritt E.einrichtung E.system E.katalog hw) (fun n _ => ¬ AbsturzAngeboten E.katalog hw n)
         t i r.2 r.1 ∧ SpurAbgleich (some spur) r.2 ∧
       (r.2 = none → ∃ c w f, spur = (.kontext c w, ⟨[], []⟩) ∧
-        KannSchreiten hw t c i ∧ E.system.kopf i c = some f) := by
+        KannSchreiten hw t c i ∧ E.system.kopf i c = some f ∧ 0 < E.stotterLaenge f) := by
   cases konkret with
   | kontext normal ready rule execute =>
     obtain ⟨f, kopf, impl⟩ := rule
     rcases pflicht.regel f _ _ _ _ _ _ _ _ _ _ bezug normal ready kopf impl execute with step | privateStep
     · obtain ⟨i', step, related⟩ := step
       exact ⟨(i', some _), related, .schritt rfl step, .schritt _, fun h => nomatch h⟩
-    · obtain ⟨rfl, related, f, head⟩ := privateStep
+    · obtain ⟨rfl, related, f, head, budget⟩ := privateStep
       have shared := bezug.1
       change { s with lokal := i.lokal } = i at shared
       have idealReady {c} (h : KannSchreiten hw t c s) : KannSchreiten hw t c i := by
         rw [← shared]
         exact h
       exact ⟨(i, none), related, .wartet rfl rfl (fun offer => Bool.noConfusion (normal.symm.trans offer.2)),
-        .privat _ _, fun _ => ⟨_, _, f, rfl, idealReady ready, head⟩⟩
+        .privat _ _, fun _ => ⟨_, _, f, rfl, idealReady ready, head, budget⟩⟩
   | antwort normal arrives =>
     obtain ⟨i', step, publicEq, sameLocal⟩ := bezug.1.antwort arrives
     refine ⟨(i', some (.antwort _, _)), ⟨publicEq, ?_⟩, .schritt rfl (.antwort normal step), .schritt _,
@@ -113,7 +130,7 @@ theorem SpurAbgleich.gedeckt {konkret : Option (SchrittWahl Wahl × SchrittSpur 
     concrete run, with the canonical start and matching finite/infinite status. -/
 theorem laufabgleich (pflicht : AbgleichPflichten E)
     {h : Umgebung} {ρ : Maschine.Lauf E} (run : Maschine.Laeufe E h ρ) :
-    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η ∧ η.umgebung = h := by
+    ∃ η : Lauf E, Laeufe E η ∧ Laufabgleich ρ η ∧ BelegungGeprueft η ∧ η.umgebung = h := by
   classical
   let bezug := fun (z : Option (Zustand L Ort Wert Raum Lok Grund)) i =>
     ∃ s, z = some s ∧ Zustandsbezug E s i
@@ -122,7 +139,7 @@ theorem laufabgleich (pflicht : AbgleichPflichten E)
     SpurAbgleich (ρ.zeit.spur t) label ∧
       (ρ.zeit.spur t ≠ none → label = none →
         ∃ c w f, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧
-          KannSchreiten ρ.hw t c i ∧ E.system.kopf i c = some f)
+          KannSchreiten ρ.hw t c i ∧ E.system.kopf i c = some f ∧ 0 < E.stotterLaenge f)
   obtain ⟨z, loaded, init⟩ := pflicht.laden h ρ.start run.1 run.2.2.1
   have folgt : Zeitlauf.Fortsetzung ρ.zeit bezug lokalTakt
       (Schritt E.einrichtung E.system E.katalog ρ.hw) (fun n _ => ¬ AbsturzAngeboten E.katalog ρ.hw n) := by
@@ -145,8 +162,8 @@ theorem laufabgleich (pflicht : AbgleichPflichten E)
           · constructor
             · exact mark.symm ▸ aligned
             · intro _ idle
-              obtain ⟨c, w, f, named, ready, head⟩ := privateTick idle
-              exact ⟨c, w, f, mark.trans (congrArg some named), ready, head⟩
+              obtain ⟨c, w, f, named, ready, head, budget⟩ := privateTick idle
+              exact ⟨c, w, f, mark.trans (congrArg some named), ready, head, budget⟩
     | wartet mark after stuck =>
       have idealStuck := pflicht.pause _ _ _ _ related stuck
       have noCrash : ¬ AbsturzAngeboten E.katalog ρ.hw t :=
@@ -176,27 +193,35 @@ theorem laufabgleich (pflicht : AbgleichPflichten E)
       · exact Or.inr (fun idle => priv ⟨pause, idle⟩)
   have occupied (t c) (marked : belegt t = some c) :
       (ideal.spur t = none ∧ KannSchreiten ρ.hw t c (ideal.zustand t)) ∧
-      ∃ w f, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧ E.system.kopf (ideal.zustand t) c = some f := by
+      ∃ w f, ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧
+        E.system.kopf (ideal.zustand t) c = some f ∧ 0 < E.stotterLaenge f := by
     by_cases priv : ρ.zeit.spur t ≠ none ∧ ideal.spur t = none
     · rw [show belegt t = some (Classical.choose ((ticks t).2.2 priv.1 priv.2)) from dif_pos priv] at marked
-      obtain ⟨w, f, named, ready, head⟩ :=
+      obtain ⟨w, f, named, ready, head, budget⟩ :=
         Option.some.inj marked ▸ Classical.choose_spec ((ticks t).2.2 priv.1 priv.2)
-      exact ⟨⟨priv.2, ready⟩, w, f, named, head⟩
+      exact ⟨⟨priv.2, ready⟩, w, f, named, head, budget⟩
     · rw [show belegt t = none from dif_neg priv] at marked
       cases marked
   let η : Lauf E := ⟨ρ.start, h, ρ.hw, ideal, belegt⟩
   have matched : Laufabgleich ρ η :=
-    ⟨rfl, rfl, related, fun t => (ticks t).2.1, frei, fun t c h => (occupied t c h).2⟩
+    ⟨rfl, rfl, related, fun t => (ticks t).2.1, frei, fun t c h => by
+      obtain ⟨_, w, f, event, head, _⟩ := occupied t c h
+      exact ⟨w, f, event, head⟩⟩
+  have checked : BelegungGeprueft η := by
+    intro t c f mark head
+    obtain ⟨_, _, g, _, form, budget⟩ := occupied t c mark
+    exact Option.some.inj (form.symm.trans head) ▸ budget
   have maximal : ideal.Maximal (fun t => belegt t = none) := by
     refine ⟨fun t idle vacant => ?_, fun ⟨k, tail⟩ => ?_⟩
     · rcases (frei t).mp vacant with pause | step
       · exact ((ticks t).1.pause pause).2
       · exact (step idle).elim
-    · obtain ⟨q, _, quiet⟩ := (pflicht.schranke h ρ η run matched).endet run.2.1
+    · obtain ⟨q, _, quiet⟩ := (pflicht.schranke h ρ η run matched checked).endet run.2.1
         (fun t c mark => by
-          obtain ⟨⟨_, ready⟩, _, f, _, head⟩ := occupied t c mark
+          obtain ⟨⟨_, ready⟩, _, f, _, head, _⟩ := occupied t c mark
           exact ⟨ready, f, head⟩) tail
       exact ⟨q, quiet⟩
-  exact ⟨η, ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, fun t c h => (occupied t c h).1⟩, matched, rfl⟩
+  exact ⟨η, ⟨run.1, run.2.1, run.2.2.1, idealStart, maximal, fun t c h => (occupied t c h).1⟩,
+    matched, checked, rfl⟩
 
 end Gabbro.Core.Maschine.I

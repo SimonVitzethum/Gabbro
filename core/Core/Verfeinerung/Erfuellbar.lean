@@ -28,7 +28,7 @@ theorem abgleich_aus_gleichen_regeln
       E.laden s (h.lade E.bild) = some (start E s).2)
     (regeln : ∀ f c s w plans u, (E.system.regel f).impl c s w plans u ↔
       (E.system.regel f).ideal c s w plans u)
-    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → StotterSchranke η) :
+    (schranke : ∀ h ρ η, Maschine.Laeufe E h ρ → Laufabgleich ρ η → BelegungGeprueft η → StotterSchranke η) :
     AbgleichPflichten E := by
   have reflexiv l : E.lokalerBezug l l := gleich.symm ▸ rfl
   refine ⟨reflexiv, fun h s hw zul => ⟨_, laden h s hw zul, ProtokollBezug.refl _, reflexiv _⟩, ?_, ?_, schranke⟩
@@ -156,7 +156,7 @@ theorem fortschritt_erfuellbar :
             exact (toggles _ impossible).elim
   have abgleich : AbgleichPflichten E₀ :=
     abgleich_aus_gleichen_regeln rfl (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ => Iff.rfl)
-      (fun _ _ _ _ matched => StotterSchranke.ohne_stottern (frei matched))
+      (fun _ _ _ _ matched _ => StotterSchranke.ohne_stottern (frei matched))
   have pflicht : SimPflichten E₀ := by
     refine ⟨abgleich, ?_, ?_⟩
     · intro _h _run _valid _t _s _next _c _w _spur _u _plan _load _after _label _normal _ready form _execute
@@ -216,8 +216,8 @@ theorem fortschritt_erfuellbar :
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
-  obtain ⟨η, ideal, matched, env⟩ := laufabgleich abgleich konkret
-  have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched)
+  obtain ⟨η, ideal, matched, checked, env⟩ := laufabgleich abgleich konkret
+  have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched checked)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung
   have idealState (t : Nat) : η.zeit.zustand t = zustand t := by
     obtain ⟨x, state, rel⟩ := matched.zustand t
@@ -249,7 +249,7 @@ theorem fortschritt_erfuellbar :
       · cases running
     · exact fun _ => ⟨(), rfl⟩
     · exact fun t => ⟨(), label.2, rfl, idealEvent t⟩
-  have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched) progress (env.symm ▸ fair)
+  have result := matched.fortschritt ideal (abgleich.schranke h ρ η konkret matched checked) progress (env.symm ▸ fair)
   have lastReady : KannSchreiten (letztesAngebot hw) 0 entry z :=
     ⟨0, opportunity 0, dispatch, live⟩
   have privateStep : ImplSchritt e sy k (letztesAngebot hw) 0 z label z' :=
