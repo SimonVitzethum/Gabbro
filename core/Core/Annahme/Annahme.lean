@@ -48,7 +48,7 @@ theorem akzeptiert_katalog [DecidableEq L]
 /-- The trivial rule: no implementation step, no `I` step. -/
 def trivialesRegel
     : Regel (Zustand Unit Unit Unit Unit Unit Unit) (SchrittPlan Unit Unit Unit Unit) Unit :=
-  ⟨fun _ _ _ _ => False, fun _ _ _ _ _ => False⟩
+  ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩
 
 /-- The trivial system: one form with no steps, no head anywhere, nothing finished, never
     blocked. -/
@@ -65,7 +65,7 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩⟩
+      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := trivialesSystem
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
@@ -75,33 +75,13 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
 
 /-- The trivial form meets the authority obligation: it never steps. -/
 theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
-  refine ⟨fun c s u plan h => False.elim h, fun c s u w plan h => False.elim h⟩
+  intro c s u w plan h
+  exact False.elim h
 
-/-- The trivial implementation machine emits no outside question: the only rule never fires,
+/-- The trivial ideal machine emits no outside question: the only rule never fires,
     and arrivals, deliveries and crashes carry no question event. -/
-theorem triviale_impl_stumm (run : HwLauf) (t : Nat)
-    (s : Zustand Unit Unit Unit Unit Unit Unit) (spur : SchrittSpur Unit Unit)
-    (s' : Zustand Unit Unit Unit Unit Unit Unit)
-    (step : ImplSchritt trivialeEinheit.einrichtung trivialeEinheit.system
-      trivialeEinheit.katalog run t s spur s')
-    (ev : FrageEreignis) : Ereignis.frage ev ∉ spur.aussen := by
-  intro mem
-  cases step with
-  | kontext _ _ regel _ =>
-    obtain ⟨i, hi, _⟩ := regel
-    exact nomatch hi
-  | antwort _ h =>
-    exact frage_absurd_mem (by rw [h.2.1] at mem; exact mem) (by intro hcon; cases hcon)
-  | interrupt _ h =>
-    obtain ⟨_, _, _, _, _, _, _, _, hEq, _, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
-  | absturz h =>
-    obtain ⟨_, hEq, _⟩ := h
-    exact frage_absurd_mem (by rw [hEq] at mem; exact mem) (by intro hcon; cases hcon)
-
-/-- The trivial ideal machine emits no outside question either. -/
 theorem triviale_ideal_stumm (run : HwLauf) (t : Nat)
-    (s : Zustand Unit Unit Unit Unit Unit Unit) (w : I.SchrittWahl Unit)
+    (s : Zustand Unit Unit Unit Unit Unit Unit) (w : SchrittWahl Unit)
     (spur : SchrittSpur Unit Unit) (s' : Zustand Unit Unit Unit Unit Unit Unit)
     (step : I.Schritt trivialeEinheit.einrichtung trivialeEinheit.system
       trivialeEinheit.katalog run t s (w, spur) s')
@@ -128,7 +108,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
-  · exact aussen_gueltig_ohne_fragen _ triviale_impl_stumm triviale_ideal_stumm
+  · exact aussen_gueltig_ohne_fragen _ triviale_ideal_stumm
   · intro ρ _
     exact ⟨trivial, fun _ => trivial, fun _ _ => trivial⟩
   · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_⟩
@@ -162,7 +142,7 @@ def kreuzBlockiert : Zustand Bool Unit Unit Unit Unit Unit → Kontext → Block
 /-- The cross-waiting rule: silent in both machines. -/
 def kreuzRegel
     : Regel (Zustand Bool Unit Unit Unit Unit Unit) (SchrittPlan Bool Unit Unit Unit) Unit :=
-  ⟨fun _ _ _ _ => False, fun _ _ _ _ _ => False⟩
+  ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩
 
 /-- The cross-waiting system: one silent form, heads nowhere, nothing finished. -/
 def kreuzSystem : MaschinenSystem Bool Unit Unit Unit Unit Unit Unit Unit Unit :=
@@ -178,7 +158,7 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩⟩
+      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := kreuzSystem
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
@@ -238,12 +218,12 @@ theorem stale_nicht_gueltig (p : Plattform) :
   intro hcon
   exact nomatch hcon
 
-/-- A rule that always fires: it emits the stale question in every state. -/
+/-- An ideal rule that allows the stale question plan. -/
 def staleRegel
     : Regel (Zustand Unit Unit Unit Unit Unit Unit) (SchrittPlan Unit Unit Unit Unit) Unit :=
-  ⟨fun _ _ _ _ => True, fun _ _ _ _ _ => True⟩
+  ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => True⟩
 
-/-- A system with one always-firing form at every head. -/
+/-- A system with one permissive ideal form at every head. -/
 def staleSystem : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => staleRegel, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
@@ -257,7 +237,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩⟩
+      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
   system := staleSystem
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
     fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
@@ -266,7 +246,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   laden := fun _ _ => none
 
 /-- **A system that emits a question with a stale handle does NOT satisfy the outside rule**:
-    the composed implementation step emits the stale question while the commit snapshot moved
+    the composed ideal step emits the stale question while the commit snapshot moved
     on, so validity at commit fails. -/
 theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
   intro h
@@ -297,23 +277,23 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
     FuehrtAus.frage staleFrage
   have haus : FuehrtSchrittAus staleEinheit.einrichtung 0 c s s plan spur s' :=
     ⟨hrahmen, hlesen, [], _, hfrage, hmem, rfl⟩
-  have hregel : staleSystem.ImplSchritt c s [plan] s :=
+  have hregel : staleSystem.ISchritt c s () [plan] s :=
     ⟨(), rfl, trivial⟩
   have hbereit : KannSchreiten run 0 c s := ⟨0, rfl, rfl, rfl⟩
-  have hschritt : ImplSchritt staleEinheit.einrichtung staleSystem staleEinheit.katalog
-      run 0 s spur s' :=
+  have hschritt : I.Schritt staleEinheit.einrichtung staleSystem staleEinheit.katalog
+      run 0 s (.kontext c (), spur) s' :=
     .kontext rfl hbereit hregel haus
   have hfrage_mem : Ereignis.frage ev ∈ spur.aussen := List.mem_cons_self
-  exact stale_nicht_gueltig _ (h.1 run 0 s spur s' hschritt ev hfrage_mem)
+  exact stale_nicht_gueltig _ (h run 0 s (.kontext c ()) spur s' hschritt ev hfrage_mem)
 
 /-- A plan that writes a location. -/
 def unbefugtPlan : SchrittPlan Unit Unit Unit Unit :=
-  ⟨.intern, [], [()], fun _ => false, fun _ => .na, fun _ => ()⟩
+  ⟨.intern, [], [()], fun _ => true, fun _ => .na, fun _ => ()⟩
 
 /-- A state with entirely dead authority: nothing lives anywhere. -/
 def toteRechte : Rechte := ⟨fun _ => false, fun _ => 0⟩
 
-/-- **A step touching an unowned location is not `RegelLokal`**: the always-firing rule takes
+/-- **A step touching an unowned location is not `RegelLokal`**: the ideal rule permits
     a footprint step in a state with dead authority, so no live handle covers it. -/
 theorem unbefugt_nicht_regel_lokal : ¬ RegelLokal staleEinheit () := by
   intro h
@@ -321,7 +301,7 @@ theorem unbefugt_nicht_regel_lokal : ¬ RegelLokal staleEinheit () := by
     Zustand.start (fun _ => ()) (fun _ => .laeuft)
       (fun _ => ⟨some (.faden 0), .nutzer, (), fun _ => true, 0, false, []⟩)
       toteRechte (fun _ => ()) (.leer (fun _ => 0))
-  have hI := h.1 (.faden 0) s s unbefugtPlan trivial
+  have hI := h (.faden 0) s s () unbefugtPlan trivial
   exact befugt_verweigert _ s (.faden 0) unbefugtPlan (fun _ => rfl) (Or.inl (fun h => nomatch h)) hI
 
 end Gabbro.Core.Annahme

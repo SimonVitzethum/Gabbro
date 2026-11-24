@@ -18,7 +18,7 @@ public import Core.Maschine.Sperre
 public import Core.Maschine.Griff
 public import Core.Maschine.Ergebnis
 public import Core.Maschine.Speicherfolge
-public import Core.Sicherheit.Buchung
+public import Core.Maschine.Buchung
 
 @[expose] public section
 

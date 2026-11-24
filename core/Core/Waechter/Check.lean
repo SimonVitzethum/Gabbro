@@ -71,6 +71,7 @@ private meta def safety : Array Name := #[
 private meta def acceptance : AcceptanceSpec := {
   acceptance := #[
     `Gabbro.Core.Annahme.RegelLokal,
+    `Gabbro.Core.Annahme.BefugtOrt,
     `Gabbro.Core.Annahme.Befugt,
     `Gabbro.Core.Annahme.AussenGueltig,
     `Gabbro.Core.Annahme.AussenLokal,
@@ -96,6 +97,12 @@ private meta def acceptance : AcceptanceSpec := {
   -- quantify over `Zustand`, so the ideal layer includes it.
   idealModules := #[`Core.Maschine, `Core.Ideal, `Core.Speicher],
   catalogueModules := #[`Core.Katalog, `Core.Aussen],
+  forbidden := #[
+    `Gabbro.Core.Maschine.ImplSchritt, `Gabbro.Core.Maschine.Lauffolge,
+    `Gabbro.Core.Maschine.Lauf, `Gabbro.Core.Maschine.Laeufe, `Gabbro.Core.Maschine.Schnitt,
+    `Gabbro.Core.Maschine.System.ImplSchritt, `Gabbro.Core.Maschine.System.ImplErreichbar,
+    `Gabbro.Core.Maschine.Regel.impl, `Gabbro.Core.Maschine.Einheit.laden],
+  forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[]
 private meta def wildcardRoots : Array Name := #[
