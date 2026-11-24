@@ -106,7 +106,7 @@ theorem tupleType_derivation : TupleTypeDerivationAussage := by
       (by intro more same; cases same))
   · simpa [st] using (WrittenType.printReads second valid.2.1
       (rest := tt ++ [closeParen] ++ rest) (tupleTypeTail_closed tail rest))
-  · simpa [tt] using (tupleType_printTail tail valid.2.2 rest)
+  · simpa [tt, List.singleton_append] using (tupleType_printTail tail valid.2.2 rest)
 
 theorem tupleType_syntax_erfuellbar : TupleTypeSyntaxErfuellbarAussage := by
   let first : WrittenType := .bool
@@ -149,7 +149,7 @@ theorem tupleTypeUse_entry (ctx : Scope × Option (Ty .value)) :
     let w : WrittenType := .tuple .bool .bool .empty
     let a : Surface.MutableLocalArgs ctx.1 ctx.2 :=
       ⟨name, ordinary, w, by simp [w, WrittenType.valid, WrittenTypes.valid], tupleType [.bool, .bool],
-        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type, WrittenTypes.types]⟩
+        .tupleValue .trueLit .falseLit .empty, by simp [w, Fits, WrittenType.type, WrittenTypes.types, tupleType]⟩
     exact Surface.Rule.satisfiableOfPrint ⟨a, by simp [a, w, tupleTypeUse]⟩ (base.prints a)
 
 theorem tupleType_parse : TupleTypeParseAussage := by
