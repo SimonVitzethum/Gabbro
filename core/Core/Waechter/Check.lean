@@ -34,6 +34,16 @@ open Lean Elab Command
 
 namespace Gabbro.Core.Waechter
 
+/-- One guard phase on its own heartbeat budget. A phase that runs out reports itself by name as an
+    finding (through `fallback`: an error, information only for the information-only Regel S); it never
+    aborts the other phases. -/
+private meta def phaseWith {α : Type} (label : String) (fallback : String → α) (x : MetaM α) : MetaM α :=
+  tryCatchRuntimeEx (Core.withCurrHeartbeats x) fun e => do
+    return fallback s!"guard phase {label} exceeded its heartbeat budget: {← e.toMessageData.toString}"
+
+private meta def phase (label : String) (x : MetaM (Array String)) : MetaM (Array String) :=
+  phaseWith label (fun m => #[m]) x
+
 private meta def pins : Array (Name × UInt64) := pinTable
 
 private meta def safety : Array Name := #[
@@ -334,7 +344,7 @@ elab "#check_core" : command => do
   let mut errors := layoutErrors ++ hygiene ++ (scanned.flatMap (·.2.errors))
   let env := withAxiomSummaries (env.setExporting false)
   let elaboratedErrors ← liftTermElabM <| withEnv env do
-    let declarationTask ← Meta.MetaM.asTask' (proofErrors (coreDeclarations env))
+    let declarationTask ← Meta.MetaM.asTask' (phase "decision proofs" (proofErrors (coreDeclarations env)))
     let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots ++ zielRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
@@ -345,19 +355,20 @@ elab "#check_core" : command => do
     let dependencyErrors := compiledImportErrors env ++ pinTask.get ++ acceptanceErrors env index acceptance
       ++ safetyErrors env index safety ++ aussageTask.get
     let pinNames := pins.map (·.1)
-    let mut errors ← registryErrors registry scopedEntries pinNames closing.isSome
+    let mut errors ← phase "registry" (registryErrors registry scopedEntries pinNames closing.isSome)
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
     let covered := #[`Gabbro.Core.Ast.Semantik.Wirkungsklasse, `Gabbro.Core.Ast.WrittenType]
-    errors := errors ++ (← auxiliaryRegistryErrors auxiliary pinNames closing.isSome covered)
-    errors := errors ++ (← auxiliaryRegistryErrors flowEntries pinNames closing.isSome
-      #[`Gabbro.Core.Ast.Semantik.LokalFamilie])
-    errors := errors ++ (← semanticsErrors index wildcardRoots catalogueKinds scanned)
+    errors := errors ++ (← phase "auxiliary registry" (auxiliaryRegistryErrors auxiliary pinNames closing.isSome covered))
+    errors := errors ++ (← phase "flow registry" (auxiliaryRegistryErrors flowEntries pinNames closing.isSome
+      #[`Gabbro.Core.Ast.Semantik.LokalFamilie]))
+    errors := errors ++ (← phase "semantics" (semanticsErrors index wildcardRoots catalogueKinds scanned))
     let mut coveredNames : Std.HashSet Name := {}
     for (root, _) in pins do
       coveredNames := coveredNames.insert root
       for name in index.closure root do
         coveredNames := coveredNames.insert name
-    let binderTask ← Meta.MetaM.asTask' (binderFindings env (coveredNames.contains ·) closing.isSome)
+    let binderTask ← Meta.MetaM.asTask' (phaseWith "binder" (fun m => (⟨#[m], #[]⟩ : BinderFindings))
+      (binderFindings env (coveredNames.contains ·) closing.isSome))
     let binder ← withoutModifyingState binderTask.get
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
@@ -365,10 +376,10 @@ elab "#check_core" : command => do
     -- Regel S and Regel N share one task and the already computed closures, so the heartbeat
     -- budget does not grow with the number of rules.
     let erweitertTask ← Meta.MetaM.asTask' do
-      let struktur ← strukturPropInfos env index (pins.map (·.1))
-      let waisen ← strukturPropWaisenInfos env (coveredNames.contains ·)
-      let (namenlosFehler, namenlosInfos) ← namenloseAussageFehlerUndInfos env index zielRoots
-        (coveredNames.contains ·)
+      let struktur ← phase "Regel S (pins)" (strukturPropInfos env index (pins.map (·.1)))
+      let waisen ← phase "Regel S (orphans)" (strukturPropWaisenInfos env (coveredNames.contains ·))
+      let (namenlosFehler, namenlosInfos) ← phaseWith "Regel N" (fun m => (#[m], #[]))
+        (namenloseAussageFehlerUndInfos env index zielRoots (coveredNames.contains ·))
       return (struktur ++ waisen, namenlosFehler, namenlosInfos)
     let (strukturInfos, namenlosFehler, namenlosInfos) ← withoutModifyingState erweitertTask.get
     errors := errors ++ namenlosFehler
@@ -377,7 +388,7 @@ elab "#check_core" : command => do
     unless namenlosInfos.isEmpty do
       logInfo m!"unnamed statement findings ({namenlosInfos.size}):\n{String.intercalate "\n" namenlosInfos.toList}"
     if let some spec := closing then
-      errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
+      errors := errors ++ (← phase "closing" (closingErrors spec pins (imported.setExporting true) index))
     return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors
   errors := errors ++ elaboratedErrors
   for error in errors do
