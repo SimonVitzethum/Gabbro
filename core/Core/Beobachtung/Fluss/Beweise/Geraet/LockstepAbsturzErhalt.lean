@@ -21,7 +21,7 @@ private theorem geraete_absturz_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     (hlabel : ρ.zeit.spur t = some (.absturz, absturzSpur))
     (atS : ρ.zeit.zustand t = some s) (atN : ρ.zeit.zustand (t + 1) = some n)
     (hneu : ∀ c, ¬ ∃ e, n.status c = .beendet e) :
-    schrittBeob ρ predictor t = [.katalog (.persistenz .crash)] := by
+    schrittBeob ρ predictor t = [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))] := by
   have habschluss : ¬ ∃ c, (neuBeendet s n (d.unit locals).etiketten c).isSome = true := by
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
@@ -132,14 +132,14 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      change List.Forall₂ _ (NiedrigeBeob E ρ₁ predictor t ++ [.katalog (.persistenz .crash)])
-                        ((NiedrigeBeob E ρ₂ predictor t ++ [.katalog (.persistenz .crash)]).take
+                      change List.Forall₂ _ (NiedrigeBeob E ρ₁ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))])
+                        ((NiedrigeBeob E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
                           ((NiedrigeBeob E ρ₁ predictor t).length + 1))
-                      have htake : (NiedrigeBeob E ρ₂ predictor t ++ [.katalog (.persistenz .crash)]).take
+                      have htake : (NiedrigeBeob E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
                           ((NiedrigeBeob E ρ₁ predictor t).length + 1) =
                           (NiedrigeBeob E ρ₂ predictor t).take
                             ((NiedrigeBeob E ρ₁ predictor t).length) ++
-                            [.katalog (.persistenz .crash)] := by
+                            [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))] := by
                         rw [List.take_append]
                         simp only [hlen, List.take_succ_eq_append_getElem, List.getElem?_eq_none,
                           List.length_take, Nat.sub_self, List.take_zero, List.append_nil]
@@ -147,8 +147,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       exact List.rel_append (geraeteKopplung_kopplung hkopp).1
                         (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
                     · intro v w hv hw
-                      obtain rfl : v = n₁ := Option.some.inj hv
-                      obtain rfl : w = n₂ := Option.some.inj hw
+                      obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
+                      obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                       rw [n₁Eq, n₂Eq]
                       have hEP : (s₁.wiederanlauf E.einrichtung.wiederanlauf t
                           (nachAbsturz s₁.persistenz)).epoche =
@@ -184,9 +184,10 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             rw [hantworten, hverbraucht, hverworfen]
                           have hn2 : (s₂.wiederanlauf E.einrichtung.wiederanlauf t
                               (nachAbsturz s₂.persistenz)).naechsteAntwort c = s₂.naechsteAntwort c := by
+                            dsimp only [Zustand.naechsteAntwort, Zustand.wiederanlauf, Zustand.angekommen]
                             rfl
                           rw [hn1, hn2]
-                          exact geraete_antwort_gleich (d := d) hq₁
+                          rw [geraete_antwort_gleich (d := d) hq₁]
                       · dsimp only [Zustand.wiederanlauf, Denotation.unit,
                           Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                         rfl
@@ -195,8 +196,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         · rw [if_pos hc]; rfl
                         · rw [if_neg hc]; rfl
                     · intro v w hv hw
-                      obtain rfl : v = n₁ := Option.some.inj hv
-                      obtain rfl : w = n₂ := Option.some.inj hw
+                      obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
+                      obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                       rw [n₁Eq, n₂Eq]
                       refine ⟨hfragen, hverlauf, hantworten, hverbraucht, ?_, rfl⟩
                       funext c
