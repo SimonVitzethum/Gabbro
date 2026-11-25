@@ -250,6 +250,7 @@ public import Core.Linken.Gegenbeispiel
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Linken.Abgeschottet
 public import Core.Linken.GuardTransfer
+public import Core.Linken.DeckungsZustand
 meta import Core.Waechter.Check
 
 #check_core
