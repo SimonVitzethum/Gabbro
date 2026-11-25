@@ -348,8 +348,8 @@ def aussenOperationZuSumme : AussenOperation → AussenOperationSummeTyp
   | .firmware service bytes => .inr (.inr (.inr (.inl (service, bytes))))
   | .exchange message => .inr (.inr (.inr (.inr (.inl message))))
   | .registerRead offset => .inr (.inr (.inr (.inr (.inr (.inl offset)))))
-  | .registerWrite offset value => .inr (.inr (.inr (.inr (.inr (.inr (.inl (offset, value))))))))
-  | .waitRegister offset expected => .inr (.inr (.inr (.inr (.inr (.inr (.inr (offset, expected))))))))
+  | .registerWrite offset value => .inr (.inr (.inr (.inr (.inr (.inr (.inl (offset, value)))))))
+  | .waitRegister offset expected => .inr (.inr (.inr (.inr (.inr (.inr (.inr ((offset, expected))))))))
 
 def aussenOperationVonSumme : AussenOperationSummeTyp → Option AussenOperation
   | .inl () => Option.some .read
@@ -360,7 +360,7 @@ def aussenOperationVonSumme : AussenOperationSummeTyp → Option AussenOperation
   | .inr (.inr (.inr (.inr (.inr (.inl offset))))) => Option.some (.registerRead offset)
   | .inr (.inr (.inr (.inr (.inr (.inr (.inl (offset, value))))))) =>
     Option.some (.registerWrite offset value)
-  | .inr (.inr (.inr (.inr (.inr (.inr (.inr (offset, expected))))))) =>
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inr ((offset, expected)))))))) =>
     Option.some (.waitRegister offset expected)
 
 instance : Encodable AussenOperation :=
