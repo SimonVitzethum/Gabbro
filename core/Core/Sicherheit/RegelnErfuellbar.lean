@@ -50,7 +50,7 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
       rw [hstatus]
       exact hc
     have hcon' : nach.buchung.schreibt c i := by
-      rw [← hbuch]
+      rw [hbuch]
       exact hcon
     exact writersNach c hc' hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
@@ -81,14 +81,14 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
     by_cases heq : c' = c
     · subst heq
       have hcon' : nach.buchung.schreibt c i := by
-        rw [← hbuch]
+        rw [hbuch]
         exact hcon
       exact writersNach c hnach hcon'
     · have hcNach : nach.status c' = .laeuft := by
         rw [hstatus c' heq]
         exact hc'
       have hcon' : nach.buchung.schreibt c' i := by
-        rw [← hbuch]
+        rw [hbuch]
         exact hcon
       exact writersNach c' hcNach hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
