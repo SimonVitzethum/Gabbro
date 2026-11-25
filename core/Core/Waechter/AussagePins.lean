@@ -6,6 +6,12 @@ open Lean
 
 namespace Gabbro.Core.Waechter
 
+/-- True when `type` is `Prop` or a family whose conclusion after all Pi binders is `Prop` (shape
+    only, no elaboration). Mirrors `istAussagenTypSyn` in `AussagenErweitert`. -/
+private meta def istAussagenTypPin : Expr → Bool
+  | .forallE _ _ b _ => istAussagenTypPin b
+  | e => e.isProp
+
 /-- Every Core proposition whose name ends in `Aussage` and that lives outside the guard namespace must
     be a pin root or reachable from one through Core dependencies. Otherwise an edit to its statement can
     pass unnoticed because no hash pin covers it. Report each uncovered declaration by its full name. -/
@@ -24,7 +30,7 @@ public meta def aussagePinErrors (env : Environment) (index : DependencyIndex)
     if !name.toString.endsWith "Aussage" then
       continue
     let some info := env.find? name | continue
-    if !info.type.isProp then
+    if !istAussagenTypPin info.type then
       continue
     unless covered.contains name do
       errors := errors.push s!"unpinned Aussage declaration {name}"
