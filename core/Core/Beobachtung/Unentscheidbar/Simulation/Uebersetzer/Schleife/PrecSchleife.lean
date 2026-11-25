@@ -28,7 +28,7 @@ theorem verschiebbarKopie (ziel quelle : Nat) :
   intro j hj
   simp only [List.length_cons, List.length_nil] at hj
   interval_cases j <;>
-    simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil] ⊢
+    simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil]
   all_goals
     refine ⟨_, rfl, ?_, ?_⟩
     · simp only [Verschiebbar]
@@ -60,6 +60,20 @@ def precCheck (frei : Nat) : List Befehl :=
 
 theorem precCheckLaenge (frei : Nat) : (precCheck frei).length = 7 := by
   simp only [precCheck, kopieLaenge, List.length_append, List.length_cons, List.length_nil]
+
+theorem verschiebbarPrecCheck (frei : Nat) : VerschiebbaresProgramm (precCheck frei) := by
+  unfold VerschiebbaresProgramm precCheck
+  intro j hj
+  rw [precCheckLaenge] at hj
+  interval_cases j <;>
+    simp only [kopie, List.append_assoc, List.nil_append, List.append_nil,
+      List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ,
+      List.getElem?_nil, List.length_cons, List.length_nil]
+  all_goals
+    refine ⟨_, rfl, ?_, ?_⟩
+    · simp only [Verschiebbar]
+    · intro d hd
+      cases hd
 
 /-- One primitive-recursion step: form `pair y i`, then `pair a (pair y i)`,
     and run the step block on that input into the accumulator slot `aus`. -/
@@ -107,100 +121,108 @@ theorem verschiebbarPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
   intro j hj
   rw [precSchleifeLaenge] at hj
   by_cases h7 : j < 7
-  · have hb : ∃ b, (precCheck frei)[j]? = some b ∧ Verschiebbar b ∧
-        (∀ d, b = .zurueckSprung d → d ≤ j) := by
-      obtain ⟨b, hb, hvb, hzd⟩ := (by
-        unfold VerschiebbaresProgramm
-        intro j hj
-        simp only [precCheck, kopie, List.append_assoc, List.nil_append,
-          List.append_nil, List.cons_append, List.getElem?_cons_zero,
-          List.getElem?_cons_succ, List.getElem?_nil, List.length_cons,
-          List.length_nil] at hj ⊢
-        interval_cases j <;>
-          simp only [List.getElem?_cons_zero, List.getElem?_cons_succ,
-            List.getElem?_nil] ⊢ <;>
-          refine ⟨_, rfl, ?_, ?_⟩ <;> simp only [Verschiebbar] <;>
-          intro d hd <;> cases hd) j h7
-      exact ⟨b, hb, hvb, hzd⟩
-    obtain ⟨b, hb, hvb, hzd⟩ := hb
+  · obtain ⟨b, hb, hvb, hzd⟩ := verschiebbarPrecCheck frei j h7
     refine ⟨b, ?_, hvb, hzd⟩
-    rw [show (precSchleife cgBlk aus frei)[j]? = (precCheck frei)[j]? by
-      simp only [precSchleife]
-      rw [getAnhangLinks]
-      omega]
-    exact hb
+    change (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+      precRumpf cgBlk aus frei ++ precEnde cgBlk frei)[j]? = some b
+    rw [getAnhangLinks]
+    · exact hb
+    · simp only [precCheckLaenge]
+      omega
   · have hj7 : 7 ≤ j := by omega
     by_cases h8 : j < 8
     · have hjEq : j = 7 := by omega
       subst j
       refine ⟨.springeWenn (frei + 6) false (cgBlk.length + 92), ?_, ?_, ?_⟩
-      · simp only [precSchleife, precCheckLaenge, List.append_assoc]
-        rw [getNachPrefix (precCheck frei) [.springeWenn (frei + 6) false (cgBlk.length + 92)] 0 (by omega)]
-        simp only [List.getElem?_cons_zero]
+      · change (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+          precRumpf cgBlk aus frei ++ precEnde cgBlk frei)[7]? =
+          some (.springeWenn (frei + 6) false (cgBlk.length + 92))
+        rw [getAnhangLinks]
+        · rw [getNachPrefix]
+          · rfl
+          · rw [precCheckLaenge]; omega
+        · rw [precCheckLaenge]; simp only [List.length_cons, List.length_nil]; omega
       · simp only [Verschiebbar]
       · intro d hd
         cases hd
     · have hj8 : 8 ≤ j := by omega
       by_cases h52 : j < 52
-      · exact verschiebbarBei (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)])
+      · obtain ⟨b, hb, hvb, hzd⟩ := verschiebbarBei
+          (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)])
           (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
-          (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk ++ precEnde cgBlk frei)
+          (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++
+            cgBlk ++ precEnde cgBlk frei)
           (verschiebbarPaarBerechnung _ _ _ _) (j - 8) (by omega)
+        refine ⟨b, ?_, hvb, hzd⟩
+        change (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+          precRumpf cgBlk aus frei ++ precEnde cgBlk frei)[j]? = some b
+        simpa only [precRumpf, List.append_assoc, precCheckLaenge,
+          Nat.add_sub_cancel_left] using hb
       · have hj52 : 52 ≤ j := by omega
         by_cases h96 : j < 96
-        · have hlocal : j - 52 < 44 := by omega
-          obtain ⟨b, hb, hvb, hzd⟩ :=
-            (verschiebbarBei (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
-                paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
-              (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
-              (cgBlk ++ precEnde cgBlk frei)
-              (verschiebbarPaarBerechnung _ _ _ _) (j - 52) hlocal)
+        · obtain ⟨b, hb, hvb, hzd⟩ := verschiebbarBei
+            (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+              paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
+            (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
+            (cgBlk ++ precEnde cgBlk frei)
+            (verschiebbarPaarBerechnung _ _ _ _) (j - 52) (by omega)
           refine ⟨b, ?_, hvb, hzd⟩
-          simpa only [precSchleife, precRumpf, List.append_assoc,
-            Nat.add_sub_cancel_left] using hb
+          change (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+            precRumpf cgBlk aus frei ++ precEnde cgBlk frei)[j]? = some b
+          simpa only [precRumpf, List.append_assoc, precCheckLaenge,
+            paarBerechnungLaenge, Nat.add_sub_cancel_left] using hb
         · have hj96 : 96 ≤ j := by omega
           by_cases hCg : j < 96 + cgBlk.length
-          · obtain ⟨b, hb, hvb, hzd⟩ :=
-              (verschiebbarBei (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
-                  paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
-                  paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
-                cgBlk (precEnde cgBlk frei) hv (j - 96) (by omega))
+          · obtain ⟨b, hb, hvb, hzd⟩ := verschiebbarBei
+              (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+                paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+                paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
+              cgBlk (precEnde cgBlk frei) hv (j - 96) (by omega)
             refine ⟨b, ?_, hvb, hzd⟩
-            simpa only [precSchleife, precRumpf, List.append_assoc,
-              Nat.add_sub_cancel_left] using hb
+            change (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+              precRumpf cgBlk aus frei ++ precEnde cgBlk frei)[j]? = some b
+            simpa only [precRumpf, List.append_assoc, precCheckLaenge,
+              paarBerechnungLaenge, Nat.add_sub_cancel_left] using hb
           · have hjCg : 96 + cgBlk.length ≤ j := by omega
-            have hjLe : j ≤ cgBlk.length + 98 := by omega
-            have hjCases : j = cgBlk.length + 96 ∨ j = cgBlk.length + 97 ∨
-                j = cgBlk.length + 98 := by omega
-            rcases hjCases with rfl | rfl | rfl
-            · refine ⟨.literal (frei + 3) 1, ?_, ?_, ?_⟩
-              · simp only [precSchleife, precEnde, List.append_assoc]
-                rw [getNachPrefix (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
-                    paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
-                    paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk)
-                  (.literal (frei + 3) 1 :: .binaer .add (frei + 2) ::
-                    [.zurueckSprung (cgBlk.length + 98)]) 0 (by omega)]
-                simp only [List.getElem?_cons_zero]
+            have hjCases : j = 96 + cgBlk.length ∨ j = 97 + cgBlk.length ∨
+                j = 98 + cgBlk.length := by omega
+            let pre := precCheck frei ++
+              [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+              precRumpf cgBlk aus frei
+            have hprelen : pre.length = 96 + cgBlk.length := by
+              simp only [pre, precCheckLaenge, precRumpfLaenge,
+                List.length_append, List.length_cons, List.length_nil]
+              omega
+            have hget := getNachPrefix pre (precEnde cgBlk frei) (j - (96 + cgBlk.length))
+            rcases hjCases with hjEq | hjEq | hjEq
+            · subst j
+              have hr0 : j - (96 + cgBlk.length) = 0 := by
+                rw [hprelen]; omega
+              refine ⟨.literal (frei + 3) 1, ?_, ?_, ?_⟩
+              · change (pre ++ precEnde cgBlk frei)[96 + cgBlk.length]? =
+                  some (.literal (frei + 3) 1)
+                rw [show 96 + cgBlk.length = pre.length by omega, hprelen]
+                simpa only [hr0, precEnde, List.getElem?_cons_zero] using hget (by omega)
               · simp only [Verschiebbar]
               · intro d hd; cases hd
-            · refine ⟨.binaer .add (frei + 2), ?_, ?_, ?_⟩
-              · simp only [precSchleife, precEnde, List.append_assoc]
-                rw [getNachPrefix (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
-                    paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
-                    paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk)
-                  (.literal (frei + 3) 1 :: .binaer .add (frei + 2) ::
-                    [.zurueckSprung (cgBlk.length + 98)]) 1 (by omega)]
-                simp only [List.getElem?_cons_succ, List.getElem?_cons_zero]
+            · subst j
+              have hr1 : 97 + cgBlk.length - (96 + cgBlk.length) = 1 := by omega
+              refine ⟨.binaer .add (frei + 2), ?_, ?_, ?_⟩
+              · change (pre ++ precEnde cgBlk frei)[97 + cgBlk.length]? =
+                  some (.binaer .add (frei + 2))
+                rw [hprelen]
+                simpa only [hr1, precEnde, List.getElem?_cons_succ,
+                  List.getElem?_cons_zero] using hget (by omega)
               · simp only [Verschiebbar]
               · intro d hd; cases hd
-            · refine ⟨.zurueckSprung (cgBlk.length + 98), ?_, ?_, ?_⟩
-              · simp only [precSchleife, precEnde, List.append_assoc]
-                rw [getNachPrefix (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
-                    paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
-                    paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk)
-                  (.literal (frei + 3) 1 :: .binaer .add (frei + 2) ::
-                    [.zurueckSprung (cgBlk.length + 98)]) 2 (by omega)]
-                simp only [List.getElem?_cons_succ, List.getElem?_cons_zero]
+            · subst j
+              have hr2 : 98 + cgBlk.length - (96 + cgBlk.length) = 2 := by omega
+              refine ⟨.zurueckSprung (cgBlk.length + 98), ?_, ?_, ?_⟩
+              · change (pre ++ precEnde cgBlk frei)[98 + cgBlk.length]? =
+                  some (.zurueckSprung (cgBlk.length + 98))
+                rw [hprelen]
+                simpa only [hr2, precEnde, List.getElem?_cons_succ,
+                  List.getElem?_cons_zero] using hget (by omega)
               · simp only [Verschiebbar]
               · intro d hd
                 omega
