@@ -71,7 +71,8 @@ public import Core.Beobachtung.Fluss.Beschriftung.Beweise.AggregatBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Lies
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
 public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
-public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Text
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
@@ -125,6 +126,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
