@@ -180,17 +180,18 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     {spur : SchrittWahl PUnit × SchrittSpur Nat UInt8}
     (step : ImplSchritt memSetup (memProgram k code).system k hw t s spur n)
     (leer : s.fragen = []) : n.fragen = [] := by
+  have spurPair := spur
   cases step with
   | kontext _ _ regel aus =>
     obtain ⟨_, _, _, _, planEq, uEq⟩ := mem_regel_aus k code regel
     rw [uEq] at aus
     rw [planEq] at aus
     unfold FuehrtSchrittAus at aus
-    rcases aus with ⟨_, _, _, _, fuehrtAus, _, nEqState⟩
+    rcases aus with ⟨rahmen, _, _, _, fuehrtAus, _, nEqState⟩
+    generalize hAussen : spurPair.2.aussen = aussen at fuehrtAus
     cases fuehrtAus
     rw [nEqState]
-    change s.fragen = []
-    exact leer
+    exact rahmen.fragen.trans leer
   | antwort _ h =>
     obtain ⟨_, _, _, nEqState⟩ := h
     rw [nEqState]
@@ -315,7 +316,6 @@ private theorem memHead_congr {s₁ s₂ : MemState} {c : Kontext}
       cases hidx : code[(s₂.lokal c).pc]? with
       | none => rfl
       | some op =>
-        simp only [hidx]
         rw [MemInstruction.evaluate_congr op k.plattform.ziel c (congrFun lok c) rechte leihen]
     | ruht | beendet _ => rfl
   · rw [if_neg hc, if_neg hc]
@@ -448,10 +448,9 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                     cases kern₂
                   | some cR =>
                     rw [hkern] at kern₂
-                    injection kern₂ with hcc
                     have hcR : cR = c := Option.some.inj (hkern.symm.trans gleich)
                     subst cR
-                    cases hcc
+                    injection kern₂
                     obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
                     have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                     subst f₂
