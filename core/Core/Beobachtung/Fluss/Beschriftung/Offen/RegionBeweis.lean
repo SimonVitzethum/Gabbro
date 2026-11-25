@@ -46,22 +46,23 @@ private theorem qsg_initial {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
 private theorem frage_leer {Ort : Type} (e : Etiketten Ort)
     (ho : ∀ o, e.objekt o = ∅) (hp : ∀ p, e.endpunkt p = ∅) (q : Frage) : e.frage q = ∅ := by
   unfold Etiketten.frage
+  rw [hp q.endpoint]
   induction q.zugriffe with
-  | nil => simpa only [List.map_nil, List.foldl_nil] using hp q.endpoint
+  | nil => rfl
   | cons t ts ih =>
       simp only [List.map_cons, List.foldl_cons, ho, Finset.empty_union]
       exact ih
+
+private theorem etiketten_leer_frage {Ort : Type} (q : Frage) : (Etiketten.leer : Etiketten Ort).frage q = ∅ := by
+  exact frage_leer (Etiketten.leer : Etiketten Ort) (fun _ => rfl) (fun _ => rfl) q
 
 /-- A pending answer is public in the low-level unit. -/
 private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k}
     (h : QuellzustandGleich (unit op) v u) (c : Kontext) : v.naechsteAntwort c = u.naechsteAntwort c := by
   unfold QuellzustandGleich at h
   have hx := h.2.2.2.2.2 c
-  have hf : ∀ q : Frage, (unit op).etiketten.frage q = ∅ := by
-    intro q
-    exact frage_leer (unit op).etiketten (fun _ => rfl) (fun _ => rfl) q
   simpa only [unit, Flussdaten.leer, AntwortSicht, sichtbar, oeffentlich,
-    decide_true, if_true, hf] using hx
+    decide_true, if_true, etiketten_leer_frage] using hx
 
 /-- A failed state stays failed at the next cut. -/
 private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
