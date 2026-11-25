@@ -21,6 +21,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
+public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Maschine.Schritte
 
 @[expose] public section
