@@ -34,11 +34,12 @@ theorem precFolgeVonSchritt (cg : Nat.Partrec.Code) (a j m v : Nat) :
     simp only [precFolgeVon]
     rw [ih]
     rw [Part.bind_assoc]
-    apply Part.ext
-    intro w
-    simp only [Part.mem_bind_iff]
-    have hidx : j + (m + 1) = (j + 1) + m := by omega
-    rw [hidx]
+    congr 1
+    funext v'
+    simp only [precFolgeVon]
+    congr 1
+    funext u
+    rw [show j + (m + 1) = (j + 1) + m by omega]
 
 /-- Mathlib's primitive-recursion evaluation is exactly the step sequence
     starting from the base value computed by `cf`. -/
@@ -50,7 +51,9 @@ theorem evalPrecAlsFolge (cf cg : Nat.Partrec.Code) (a k : Nat) :
     rw [Nat.Partrec.Code.eval_prec_zero]
     simp only [precFolgeVon, Part.bind_some_right]
   | succ k ih =>
-    rw [Nat.Partrec.Code.eval_prec_succ, ih, Part.bind_assoc]
+    rw [Nat.Partrec.Code.eval_prec_succ, ih]
+    rw [Part.bind_eq_bind]
+    rw [Part.bind_assoc]
     rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
