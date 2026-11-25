@@ -72,6 +72,11 @@ structure Frame where
   pending : Option Frage := none
   last : Option Result := none
 
+/-- The pending question is volatile context state: a restart drops it for every context before
+    recovery code steps, so no pre-crash question can be answered after the crash. -/
+instance fluechtigFrame : Fluechtig Frame where
+  verwerfen frame := { frame with pending := none }
+
 abbrev State := Zustand PUnit Nat UInt8 PUnit Frame PUnit
 abbrev Plan := SchrittPlan PUnit Nat UInt8 PUnit
 
