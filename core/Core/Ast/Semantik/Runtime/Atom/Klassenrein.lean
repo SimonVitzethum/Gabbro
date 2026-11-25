@@ -3,9 +3,9 @@
   Subject:   FRAGMENTS WITH ACCESS INSTRUCTIONS (MK-04b). A fragment is FRAME-ONLY (`Fragment.Rein`) when every instruction
              of its code is frame-only. A source form that elaborates to an access instruction
              (`Zugriffsquelle`) makes a fragment that is not. `Fragment.KlassenRein` is the next predicate: every
-             instruction is frame-only or an access instruction. The two classes `lesen`/`schreiben`/`rmw`
-             of the access instructions are the only non-frame classes the source reaches (the lifecycle instructions
-             of MK-07 have no source form), so `KlassenRein` is the predicate the generic proofs of the units of the
+              instruction is frame-only or an access instruction. The access classes the source reaches are `lesen`,
+              `schreiben` and `rmw` (the lifecycle instructions of MK-07 and the interrupt-control instructions of
+              MK-20 have no source form), so `KlassenRein` is the predicate the generic proofs of the units of the
              source take once an access form is in the grammar. `Fragment.MitZugriff` is the part that is not
              frame-only: exactly the fragments whose statements rest on the duties of the access classes
              (`KlassenAussagen`, `ZugriffBefehlAussage`, `AtomAussagen`) and on the pinned statements of
@@ -103,7 +103,7 @@ private theorem optionCode_klassenrein (slot : Nat) (value : OptionInitializer s
     | present value _ => exact expr_klassenrein _ _
   · first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr rfl)
+      | exact Or.inl (Or.inr (Or.inl rfl))
 
 theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).KlassenRein := by
   refine @Stmt.rec result
@@ -120,7 +120,7 @@ theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).Klassen
   all_goals
     repeat' first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr rfl)
+      | exact Or.inl (Or.inr (Or.inl rfl))
       | refine ⟨?_, ?_⟩
 
 theorem bracedBlock_klassenrein (tree : BracedBlock result scope) : (bracedBlock tree).KlassenRein := by
@@ -141,7 +141,7 @@ private theorem functionCode_klassenrein {result : Option WrittenType} {scope : 
       bracedBlock_klassenrein, true_and]
     repeat' first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr rfl)
+      | exact Or.inl (Or.inr (Or.inl rfl))
       | exact trivial
       | refine ⟨?_, ?_⟩
 
@@ -178,7 +178,7 @@ private theorem unitBody_klassenrein {before after : Scope} (body : UnitBody bef
 
 theorem programm_klassenrein (tree : Ast.Unit) : (programm tree).KlassenRein := by
   simp only [programm, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, unitBody_klassenrein, true_and]
-  exact ⟨Or.inl (Or.inr rfl), Or.inl (Or.inl rfl)⟩
+  exact ⟨Or.inl (Or.inr (Or.inl rfl)), Or.inl (Or.inl rfl)⟩
 
 /-- **Every elaborated fragment of every category is frame-only.** -/
 theorem fragment_klassenrein (category : Category) (tree : category.Tree) : (fragment category tree).KlassenRein := by
