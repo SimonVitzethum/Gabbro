@@ -146,7 +146,7 @@ theorem geraete_angebot_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.uni
     a1.crash, a1.cycles⟩ := rfl
   have eta2 : a2 = ⟨a2.core, a2.interrupt, a2.interrupts, a2.delivery, a2.medium,
     a2.crash, a2.cycles⟩ := rfl
-  rw [ha1, ha2, eta1, eta2, ecore, einterrupt, einterrupts, hdel, emedium, ecrash, ecycles]
+  rw [eta1, eta2, ecore, einterrupt, einterrupts, hdel, emedium, ecrash, ecycles]
 
 theorem geraete_delivery_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
     (vergleich : Vergleich (d.unit locals) h₁ h₂ ρ₁ ρ₂) (t : Nat) (e : Endpunkt) :
