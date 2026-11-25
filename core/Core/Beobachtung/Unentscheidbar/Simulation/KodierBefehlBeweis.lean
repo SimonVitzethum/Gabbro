@@ -296,6 +296,8 @@ theorem inv_leiteLeitung (f0 : _) (f1 : _) (f2 : _) :
     befehlVonCode (befehlZuCode (.leiteLeitung f0 f1 f2)) = some (.leiteLeitung f0 f1 f2) := by
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
+theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = some b
   | .literal f0 f1 => inv_literal f0 f1
   | .binaer f0 f1 => inv_binaer f0 f1
   | .binden f0 f1 => inv_binden f0 f1
