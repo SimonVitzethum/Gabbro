@@ -395,22 +395,24 @@ theorem zf_psc_rang {a b : ZfEv} (h : zfGraph.psc a b) : zfRang a < zfRang b := 
     have ha : zfRang a ≤ zfRang c := by
       cases hl with
       | inl hsc =>
-          obtain ⟨_, rfl⟩ := hsc
+          obtain ⟨_, heq⟩ := hsc
+          subst c
           exact Nat.le_refl _
       | inr hz =>
           obtain ⟨_, heq⟩ := hz
           cases heq with
-          | inl rfl => exact Nat.le_refl _
+          | inl heq => subst c; exact Nat.le_refl _
           | inr hac => exact Nat.le_of_lt (zf_hb_rang hac)
     have hb : zfRang d ≤ zfRang b := by
       cases hr with
       | inl hsc =>
-          obtain ⟨_, rfl⟩ := hsc
+          obtain ⟨_, heq⟩ := hsc
+          subst b
           exact Nat.le_refl _
       | inr hz =>
           obtain ⟨_, heq⟩ := hz
           cases heq with
-          | inl rfl => exact Nat.le_refl _
+          | inl heq => subst b; exact Nat.le_refl _
           | inr hdb => exact Nat.le_of_lt (zf_hb_rang hdb)
     exact Nat.lt_of_le_of_lt ha (Nat.lt_of_lt_of_le hcd hb)
   · have hfa : a = zfz := zf_zaun hza
