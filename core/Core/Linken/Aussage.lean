@@ -114,16 +114,16 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
 theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
     bauplanOk plan = true ∧ frag = verknuepfteFragmente plan := by
   cases hb : bauplanOk plan with
-  | false => simp [linke, hb] at h
+  | false => simp only [linke, hb, if_false] at h
   | true =>
-    simp [linke, hb] at h
+    simp only [linke, hb, if_true] at h
     exact ⟨rfl, h.symm⟩
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
   cases l with
   | nil => rfl
-  | cons _ _ => simp [List.isEmpty] at h
+  | cons _ _ => simp only [List.isEmpty] at h
 
 /-- An empty clause check means no written clauses. -/
 theorem leer_of_klauselnLeer {frag : Fragment} (h : klauselnLeer frag = true) :
@@ -173,7 +173,7 @@ theorem verknuepfte_code_aux (ms : List Modul) (acc : Fragment) :
     (ms.foldl (fun a m => a.anhaengen m.fragment) acc).code =
       acc.code ++ ms.flatMap (fun m => m.fragment.code) := by
   induction ms generalizing acc with
-  | nil => simp
+  | nil => simp only [List.foldl_nil, List.flatMap_nil, List.append_nil]
   | cons m rest ih =>
     simp only [List.foldl_cons, List.flatMap_cons]
     rw [ih]
@@ -223,7 +223,7 @@ theorem doppelBauplan : bauplanOk doppelPlan = false :=
 
 /-- Linking the duplicate-name plan fails. -/
 theorem doppelLinke : linke doppelPlan = none := by
-  simp [linke, doppelBauplan]
+  simp only [linke, doppelBauplan, if_false]
 
 /-- Both parts of the refused plan are accepted. -/
 theorem doppelTeile :
