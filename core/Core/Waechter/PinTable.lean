@@ -333,6 +333,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.AtomAussagen, 10018845777804343364),
   (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 15230201805166795792),
   (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799),
+  (`Gabbro.Core.Katalog.FremdKanalAussage, 11803130512646602255),
   (`Gabbro.Core.Annahme.DomaenenAussage, 1835172027373159084),
   (`Gabbro.Core.Speicher.MpLitmusAussage, 13796261553310205886),
   (`Gabbro.Core.Speicher.LbLitmusAussage, 8829005192830706516),
