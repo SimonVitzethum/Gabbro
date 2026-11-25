@@ -36,8 +36,7 @@ private meta def istAussagenTypSyn : Expr → Bool
 private meta def istPropTyp (type : Expr) : MetaM Bool := do
   if istAussagenTypSyn type then return true
   if type.approxDepth.toNat > 200 then return false
-  try isProp type
-  catch _ => return false
+  tryCatchRuntimeEx (isProp type) fun _ => return false
 
 /-- Every constant any Core proof (`theorem`) refers to. A Prop-valued field or an unnamed
     proposition that a proof mentions carries statement content, even when no pin or goal closure
@@ -71,17 +70,17 @@ private meta def strukturFeldTypen (env : Environment) (s : Name) :
     the structure is in scope. -/
 private meta def strukturScan (env : Environment) (erlaubt : Std.HashSet (Name × Name))
     (s : Name) (grund : String) : MetaM (Array String) := do
-  try
-    Core.withCurrHeartbeats do
-      let mut found : Array String := #[]
-      for (f, t) in (← strukturFeldTypen env s) do
-        let propWertig ← if enthaeltPropFunktion t then pure true else istPropTyp t
-        if propWertig then
-          if !erlaubt.contains (s, f) then
-            found := found.push
-              s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
-      return found
-  catch _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
+  tryCatchRuntimeEx
+    (Core.withCurrHeartbeats do
+        let mut found : Array String := #[]
+        for (f, t) in (← strukturFeldTypen env s) do
+          let propWertig ← if enthaeltPropFunktion t then pure true else istPropTyp t
+          if propWertig then
+            if !erlaubt.contains (s, f) then
+              found := found.push
+                s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
+        return found)
+    fun _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
 
 /-- Regel S: every structure in the closure of the pin roots whose fields are Prop-valued or functions
     into `Prop` is reported as information (name, module, reason), unless the field is allow-listed.
