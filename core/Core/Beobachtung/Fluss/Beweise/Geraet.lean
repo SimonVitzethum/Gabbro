@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.LowLevel.DeviceUnit
+public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.Satz
 
