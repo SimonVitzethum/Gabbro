@@ -222,7 +222,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Maschine.I.Bestimmt, 7364677072489848468),
   (`Gabbro.Core.Maschine.I.Fortschritt, 15831867177839957670),
   (`Gabbro.Core.Maschine.I.Sim, 4003783696440285705),
-  (`Gabbro.Core.Ast.Semantik.KlassenAussagen, 875975415564553402),
+  (`Gabbro.Core.Ast.Semantik.KlassenAussagen, 16841329571024636807),
   (`Gabbro.Core.Ast.Semantik.KlassenStapelAussage, 16938077355249515695),
   (`Gabbro.Core.Maschine.I.Haengt, 2121491499351378413),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 5575662477350292693),
