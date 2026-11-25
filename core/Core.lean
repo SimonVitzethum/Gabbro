@@ -70,7 +70,8 @@ public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.AggregatBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Lies
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
-public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Variante
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Text
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
@@ -116,6 +117,7 @@ public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
