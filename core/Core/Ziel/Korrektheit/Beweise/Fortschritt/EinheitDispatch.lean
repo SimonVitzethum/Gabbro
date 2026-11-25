@@ -97,22 +97,13 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
         cases hzn : ρ.zeit.zustand n with
         | none =>
           rw [hzn] at step
-          cases step with
-          | schritt _ h => cases h
-          | wartet _ heq _ =>
-            rw [hzn] at heq
-            have hcon := hsucc.symm.trans heq
-            cases hcon
+          cases step
         | some z =>
           rw [hzn] at step
           cases hsucc' : ρ.zeit.zustand (n + 1) with
           | none =>
             rw [hsucc'] at step
-            cases step with
-            | schritt _ h => cases h
-            | wartet _ _ _ =>
-              have hcon := hsucc.symm.trans hsucc'
-              cases hcon
+            cases step
           | some s' =>
             rw [hsucc'] at step
             cases step with

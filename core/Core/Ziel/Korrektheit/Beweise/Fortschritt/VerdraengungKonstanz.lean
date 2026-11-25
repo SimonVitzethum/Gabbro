@@ -262,23 +262,14 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
         cases hzn : ρ.zeit.zustand (a + d) with
         | none =>
           rw [hzn] at step
-          cases step with
-          | schritt _ h => cases h
-          | wartet _ heq _ =>
-            rw [hzn] at heq
-            have hcon := hs'.symm.trans heq
-            cases hcon
+          cases step
         | some z =>
           rw [hzn] at step
           have ihz : (z.kerne k₀).laeuft = some c := ih z hzn
           cases hsuc : ρ.zeit.zustand ((a + d) + 1) with
           | none =>
             rw [hsuc] at step
-            cases step with
-            | schritt _ h => cases h
-            | wartet _ _ _ =>
-              have hcon := hs'.symm.trans hsuc
-              cases hcon
+            cases step
           | some s'' =>
             rw [hsuc] at step
             have hseq : s' = s'' := Option.some.inj (hs'.symm.trans hsuc)
