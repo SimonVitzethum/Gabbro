@@ -189,6 +189,7 @@ public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
+public import Core.Durchstich.Klein
 meta import Core.Waechter.Check
 
 #check_core
