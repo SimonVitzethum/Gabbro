@@ -76,6 +76,7 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetFluss
 public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
+public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
@@ -233,12 +234,14 @@ public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
+public import Core.Ziel.Korrektheit.SicherheitAusTeilen
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Modell
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Speicher
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Invarianten
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Aussen
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Alle
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise2.ZielAusTeilen
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 public import Core.Ziel.Review.Slice.Fragment
