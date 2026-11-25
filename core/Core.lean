@@ -67,6 +67,8 @@ public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetFluss
+public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
@@ -139,6 +141,7 @@ public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen
+public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
@@ -162,6 +165,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Atom.Beine
+public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
@@ -199,6 +203,10 @@ public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
+public import Core.Ziel.Review.Slice.Fragment
+public import Core.Ziel.Review.Slice.Surface
+public import Core.Ziel.Review.Slice.Goal
+public import Core.Ziel.Review.Slice.NonTrivial
 meta import Core.Waechter.Check
 
 #check_core
