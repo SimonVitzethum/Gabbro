@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueKontext
 
 @[expose] public section
@@ -71,7 +72,6 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
     have hsrechte : s'.rechte = v.rechte := by rw [nEqState]
     have hsleihen : s'.leihen = v.leihen := by rw [nEqState]
     have hspersistenz : s'.persistenz = v.persistenz := by rw [nEqState]
-    clear rahmen auth sperren speicherfolge nEqState
     cases fuehrtAus with
     | verbrauche ready' =>
       refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -95,7 +95,8 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
 /-- A consume tick is silent: no memory label, no outside event, no commit and no
     new end is recorded. -/
 theorem geraete_consume_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praediktor}
-    {t : Nat} {binding : Binding k} {c : Kontext} {s s' : State} {w : PUnit}
+    {t : Nat} {binding : Binding k} {access : RegisterAccess} {required : GeraetePhase}
+    {target : Option GeraetePhase} {c : Kontext} {s s' : State} {w : PUnit}
     {spur : SchrittSpur Nat UInt8}
     (tick : ρ.zeit.spur t = some ((.kontext c w), spur))
     (atS : ρ.zeit.zustand t = some s) (atN : ρ.zeit.zustand (t + 1) = some s')
