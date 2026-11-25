@@ -3,11 +3,12 @@
   Subject:   A SECOND, non-vacuous refutation of `LockFreeFamilienAussage`: the lost-value
              implementation of a real MK-04 rmw instruction (`Befehl.zugriff` with
              `Zugriffsform.tausche`). The concrete machine represents the error: the false rule
-             performs an rmw event at a state where the instruction's guarded ideal rule refuses
-             the access, and binds a different value than the event records. The family statement
-             excludes the error through its simulation leg (`RegelSimulation`), hence through
-             `LockFreeFamilienAussage.1`. The existing `nichtTrivial`, which changes only the
-             declared start abstraction, is not reused here.
+             commits an rmw event at a state where the instruction's guarded ideal rule -- its
+             specification -- refuses the access, binding `0` independently of the value the event
+             records. The family statement excludes that error through its simulation leg
+             (`RegelSimulation`), hence through `LockFreeFamilienAussage.1`, whatever abstraction
+             or specification the family declares. The existing `nichtTrivial`, which changes only
+             the declared start abstraction, is not reused here.
 -/
 module
 
