@@ -12,6 +12,8 @@ public import Core.Ast
 public import Core.Speicher
 public import Core.Speicher.Litmus.Iriw
 public import Core.Speicher.Litmus.ScFences
+public import Core.Speicher.Litmus.Wrc
+public import Core.Speicher.Litmus.Isa2
 public import Core.Speicher.Litmus.Mp
 public import Core.Speicher.Litmus.Lb
 public import Core.Speicher.Review.Befunde
@@ -38,6 +40,7 @@ public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
 public import Core.Fortschritt.SperrFreigabe
 public import Core.Katalog.Erfuellbar
+public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
