@@ -218,6 +218,8 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
       exact .snoc (.snoc (expr_no_back 0 index) (Nat.zero_le _)) (Nat.zero_le _)
     | store _ _ _ index value _ =>
       exact .snoc (.append (expr_no_back 0 index) (expr_no_back 1 value)) (Nat.zero_le _)
+    | swap _ _ _ _ _ _ _ index value _ =>
+      exact .snoc (.snoc (.append (expr_no_back 0 index) (expr_no_back 1 value)) (Nat.zero_le _)) (Nat.zero_le _)
   · intros
     exact .nil
   · intro before middle after head rest headOK restOK

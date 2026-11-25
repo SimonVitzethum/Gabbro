@@ -448,10 +448,9 @@ theorem AccessReads.deterministic (left : AccessReads scope input a rest)
       obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
       cases (List.cons.inj modeRest).2
       exact ⟨rfl, rfl⟩
-    | store _ _ _ _ _ _ => cases (List.cons.inj eq).1
+    | _ => cases (List.cons.inj eq).1
   | store region visible receiverOrdinary indexRead valueRead modeRead =>
     cases right with
-    | load _ _ _ _ _ _ _ _ _ _ => cases (List.cons.inj eq).1
     | store otherRegion otherVisible otherReceiver otherIndex otherValue otherMode =>
       have regionName : region.binding.name.val = otherRegion.binding.name.val :=
         Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
@@ -466,5 +465,28 @@ theorem AccessReads.deterministic (left : AccessReads scope input a rest)
       obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
       cases (List.cons.inj modeRest).2
       exact ⟨rfl, rfl⟩
+    | _ => cases (List.cons.inj eq).1
+  | swap name ordinary written valid region visible receiverOrdinary typeRead indexRead valueRead modeRead =>
+    cases right with
+    | swap otherName otherOrdinary otherWritten otherValid otherRegion otherVisible otherReceiver
+        otherType otherIndex otherValue otherMode =>
+      have nameEq : name.val = otherName.val := Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
+      cases Subtype.ext nameEq
+      cases (List.cons.inj (List.cons.inj (List.cons.inj eq).2).2).2
+      obtain ⟨rfl, rhsEq⟩ := typeRead.deterministic otherType
+      have regionName : region.binding.name.val = otherRegion.binding.name.val :=
+        Token.word.inj (List.cons.inj (List.cons.inj rhsEq).2).1
+      cases Local.nameVisible_unique region otherRegion visible otherVisible regionName
+      cases (List.cons.inj (List.cons.inj (List.cons.inj rhsEq).2).2).2
+      obtain ⟨sameIndex, indexRest⟩ := indexRead.deterministic otherIndex
+      cases sameIndex
+      cases (List.cons.inj indexRest).2
+      obtain ⟨sameValue, valueRest⟩ := valueRead.deterministic otherValue
+      cases sameValue
+      cases (List.cons.inj valueRest).2
+      obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
+      cases (List.cons.inj modeRest).2
+      exact ⟨rfl, rfl⟩
+    | _ => cases (List.cons.inj eq).1
 
 end Gabbro.Core.Ast

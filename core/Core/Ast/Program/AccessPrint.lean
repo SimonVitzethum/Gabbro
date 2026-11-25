@@ -24,6 +24,10 @@ def Access.printPieces : Access before after → List PrintedToken
   | .store region _ _ index value mode =>
     [printStoreWord, region.binding.name.print, printComma] ++ index.printPieces ++ [printComma] ++
       value.printPieces ++ [printComma, mode.print, printSemicolon]
+  | .swap name _ written _ region _ _ index value mode =>
+    [printSwapWord, name.print, printColon] ++ written.printPieces ++
+      [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
+      [printComma] ++ value.printPieces ++ [printComma, mode.print, printSemicolon]
 
 theorem ModeReads.print (mode : AccessMode) (more : List Token) :
     ModeReads (mode.print.value :: more) mode more := by
@@ -42,6 +46,7 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
   have hpSemi : printSemicolon.value = semicolon := rfl
   have hpLoad : printLoadWord.value = keyword "load" := rfl
   have hpStore : printStoreWord.value = keyword "store" := rfl
+  have hpSwap : printSwapWord.value = keyword "swap" := rfl
   cases tree with
   | load name ordinary written valid region visible receiverOrdinary index mode =>
     have modeRead := ModeReads.print mode (semicolon :: rest)
@@ -64,5 +69,19 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
     simpa only [Access.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc, hpStore, hpName, hpComma, hpSemi] using
       (AccessReads.store region visible receiverOrdinary indexRead valueRead modeRead)
+  | swap name ordinary written valid region visible receiverOrdinary index value mode =>
+    have modeRead := ModeReads.print mode (semicolon :: rest)
+    have valueRead := value.printReads (minimum := 0)
+      (rest := comma :: mode.print.value :: semicolon :: rest) noOperatorAtComma
+    have indexRead := index.printReads (minimum := 0)
+      (rest := comma :: (value.printTokens ++ comma :: mode.print.value :: semicolon :: rest)) noOperatorAtComma
+    have typeRead := written.printReads valid
+      (rest := assignment :: .word region.binding.name.val :: comma ::
+        (index.printTokens ++ (comma :: (value.printTokens ++ comma :: mode.print.value :: semicolon :: rest))))
+      (by intro more h; cases h)
+    simpa only [Access.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpSwap, hpName, hpColon, hpAssign, hpComma,
+      hpSemi] using
+      (AccessReads.swap name ordinary written valid region visible receiverOrdinary typeRead indexRead valueRead modeRead)
 
 end Gabbro.Core.Ast

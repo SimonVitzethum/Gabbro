@@ -91,9 +91,11 @@ def accessForm (scope : Scope) (result : Option (Ty .value)) :
   form := fun ⟨_, form⟩ => match form with
     | .load _ _ written _ region _ _ _ mode => .lade 0 region.index 0 written.type mode.modus
     | .store region _ _ _ _ mode => .speichere region.index 0 1 mode.modus
+    | .swap _ _ written _ region _ _ _ _ mode => .tausche 0 region.index 0 1 written.type mode.modus
   position := fun ⟨_, form⟩ => match form with
     | .load _ _ _ _ _ _ _ index _ => (expr 0 index).code.length
     | .store _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
+    | .swap _ _ _ _ _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
 
 def accessJoint : Prop :=
   ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => accessForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a

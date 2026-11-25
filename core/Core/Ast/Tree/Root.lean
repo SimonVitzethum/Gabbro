@@ -356,5 +356,12 @@ inductive Access : Scope → Scope → Type where
       (receiverOrdinary : ordinaryLocal region.binding.name)
       (index : Expr scope (.int lo hi)) (value : Expr scope (.int valueLo valueHi)) (mode : AccessMode) :
       Access scope scope
+  /-- `mem swap name : T = region, index, value, mode;` binds the value read and writes the operand. -/
+  | swap (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (value : Expr scope (.int valueLo valueHi)) (mode : AccessMode) :
+      Access scope (⟨name, written.type, false, false⟩ :: scope)
 
 end Gabbro.Core.Ast
