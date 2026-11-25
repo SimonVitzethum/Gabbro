@@ -24,6 +24,7 @@ structure FragmentNIBeweise : Prop where
   aufrufSchleife : AufrufSchleifeNIAussage
   aggregat : AggregatNIAussage
   text : TextNIAussage
+  zugriff : ZugriffNIAussage
   variante : VarianteNIAussage
   antwort : AntwortNIAussage
   interrupt : InterruptNIAussage
@@ -44,6 +45,7 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     | aufrufSchleife => exact beweise.aufrufSchleife p plattform f familie quelle
     | aggregat => exact beweise.aggregat p plattform f familie quelle
     | text => exact beweise.text p plattform f familie quelle
+    | zugriff => exact beweise.zugriff p plattform f familie quelle
     | variante => exact beweise.variante p plattform f familie quelle
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with

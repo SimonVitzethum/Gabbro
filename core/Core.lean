@@ -124,6 +124,8 @@ public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
+public import Core.Ast.Semantik.Runtime.Atom.Aussagen
+public import Core.Ast.Semantik.Runtime.Atom.Beine
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start

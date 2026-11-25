@@ -15,6 +15,17 @@ def FamilienNI (familie : LokalFamilie) : Prop :=
   ∀ (p : Fragment) (plattform : Plattform) (f : Befehl), f.familie = familie →
     RegelFluss (p.einheit plattform) f → RegelNIPflicht (p.einheit plattform) f
 
+/-- **Information flow of the access instructions** (MK-04, open): a load, a store and an atomic update keep the
+    coupling of two runs when the unit's flow rule holds for them. The flow rule of the labelled unit refuses an
+    access instruction (`Befehl.FlussRegel`: the label rule of a memory event is MK-13), so this statement is
+    about the unit that labels nothing; a load whose cell label the observer sees is covered only through that
+    premise. Difficulty: schwer. Sketch: the step of a store records its written cell in the plan, which
+    `PlanSicht` shows for a public cell, and the successor frame is `uebertrag` of publicly equal frames; a load
+    puts the value of its reads-from source into the frame, which the coupled runs choose equal for a public
+    cell (the graph-level coupling of MK-13). -/
+def ZugriffNIAussage : Prop :=
+  FamilienNI .zugriff
+
 def ProtokollwahlNI (form : SchrittWahl PUnit → Prop) : Prop :=
   ∀ (p : Fragment) (plattform : Plattform),
     let E := p.einheit plattform
@@ -67,9 +78,23 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
 
 /-- A context step of a source form takes the internal plan, which records no memory access
     and no outside action, and changes only the local frame. Such a step emits no low event. -/
+/-- The head a run steps at time `t` is frame-only, when the head of the stepping state is. -/
+theorem privat_am_kopf {p : Fragment} {plattform : Plattform} {ρ : Lauf (p.einheit plattform)} {t : Nat}
+    {c : Kontext} {s0 : Ast.Semantik.Zustand} {f : Befehl}
+    (zustand : ρ.zeit.zustand t = some s0) (kopf : (p.einheit plattform).system.kopf s0 c = some f)
+    (privat : f.Privat) :
+    ∀ s b, ρ.zeit.zustand t = some s → (p.einheit plattform).system.kopf s c = some b → b.Privat := by
+  intro s b hs hb
+  rw [zustand] at hs
+  have gleich := Option.some.inj hs
+  subst gleich
+  rw [kopf] at hb
+  exact (Option.some.inj hb) ▸ privat
+
 theorem fragment_kontext_schritt_still
     (p : Fragment) (plattform : Plattform)
     {ρ : Lauf (p.einheit plattform)} {predictor t c w spur}
+    (privat : ∀ s b, ρ.zeit.zustand t = some s → (p.einheit plattform).system.kopf s c = some b → b.Privat)
     (tick : ρ.zeit.spur t = some (.kontext c w, spur)) :
     schrittBeob ρ predictor t = [] := by
   classical
@@ -93,7 +118,7 @@ theorem fragment_kontext_schritt_still
           unfold System.ImplSchritt at regel
           rcases regel with ⟨b, kopfB, implB⟩
           change Befehl.impl b c s0 w _ _ at implB
-          rcases (b.impl_privat c s0 w _ _).1 implB with ⟨planEq, frameEq⟩
+          rcases (b.impl_privat (privat s0 b hS kopfB) c s0 w _ _).1 implB with ⟨planEq, frameEq⟩
           injection planEq with hplan
           subst hplan
           subst frameEq
@@ -156,6 +181,7 @@ theorem stummer_schritt_koppelt
     (kopf : (p.einheit plattform).system.kopf vor c = some f)
     (spurGlied : ρ₁.zeit.spur t = some (.kontext c w, spur))
     (keineAntwort₂ : ∀ a sp, ρ₂.zeit.spur t ≠ some (.antwort a, sp))
+    (privat : f.Privat)
     (kopplung : Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor t t) :
     Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor (t + 1) (t + 1) := by
   classical
@@ -193,10 +219,10 @@ theorem stummer_schritt_koppelt
         obtain ⟨f₁, kopf₁, impl₁rule⟩ := regel₁
         have ff : f = f₁ := Option.some.inj (kopf.symm.trans kopf₁)
         subst ff
-        obtain ⟨_, nachGlied₁⟩ := Befehl.vollzug_genau (w := w) f impl₁rule aus₁
+        obtain ⟨_, nachGlied₁⟩ := Befehl.vollzug_genau (w := w) f impl₁rule aus₁ privat
         have zustandNach₁ : ρ₁.zeit.zustand (t + 1) = some (f.nach c vor) := by
           rw [nachEq₁, nachGlied₁]
-        have transfer₁ := (f.impl_privat c vor w _ _).1 impl₁rule
+        have transfer₁ := (f.impl_privat privat c vor w _ _).1 impl₁rule
         have planEq₁ : _ := (List.cons.inj transfer₁.1).1
         obtain ⟨_, auth₁, _, _, _, _, _⟩ := aus₁
         have auth₂ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := planEq₁ ▸ auth₁
@@ -230,7 +256,7 @@ theorem stummer_schritt_koppelt
             Ast.Semantik.plan ⟨[], []⟩ (f.nach c w₂) :=
           ⟨rahmen₂, auth₂, [], _, .intern, speicher₂, rfl⟩
         have regel₂ : (p.einheit plattform).system.ImplSchritt c w₂ w [Ast.Semantik.plan] (f.nach c w₂) :=
-          ⟨f, kopf₂, (f.impl_privat c w₂ w [Ast.Semantik.plan] (f.nach c w₂)).2 ⟨rfl, rfl⟩⟩
+          ⟨f, kopf₂, (f.impl_privat privat c w₂ w [Ast.Semantik.plan] (f.nach c w₂)).2 ⟨rfl, rfl⟩⟩
         have step₂ : ImplSchritt (p.einheit plattform).einrichtung (p.einheit plattform).system
             (p.einheit plattform).katalog ρ₂.hw t w₂
             (.kontext c w, ⟨[], []⟩) (f.nach c w₂) :=
@@ -279,16 +305,16 @@ theorem stummer_schritt_koppelt
                   rw [c_eq] at kopf₂'
                   have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                   subst ff₂
-                  obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := w₂') f impl₂'rule aus₂'
+                  obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := w₂') f impl₂'rule aus₂' privat
                   rw [c_eq] at nachGlied₂
                   have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                     rw [nachEq₂, nachGlied₂]
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
-                    fragment_kontext_schritt_still p plattform label₂
+                    fragment_kontext_schritt_still p plattform (privat_am_kopf zustand₂ kopf₂ privat) label₂
                   have e₁ : NiedrigeBeob (p.einheit plattform) ρ₁ predictor (t + 1) =
                       NiedrigeBeob (p.einheit plattform) ρ₁ predictor t := by
                     change NiedrigeBeob _ ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
-                    rw [fragment_kontext_schritt_still p plattform spurGlied, List.append_nil]
+                    rw [fragment_kontext_schritt_still p plattform (privat_am_kopf zustand kopf privat) spurGlied, List.append_nil]
                   have e₂ : NiedrigeBeob (p.einheit plattform) ρ₂ predictor (t + 1) =
                       NiedrigeBeob (p.einheit plattform) ρ₂ predictor t := by
                     change NiedrigeBeob _ ρ₂ predictor t ++ schrittBeob ρ₂ predictor t = _
