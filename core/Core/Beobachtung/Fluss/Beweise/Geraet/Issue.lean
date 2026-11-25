@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueKontext
 
 @[expose] public section
@@ -248,7 +249,7 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
             List.mem_map_of_mem ha
           have htakeq : s.fragen.take s.antworten.length = s.fragen := by
             rw [← hnm]
-            exact List.take_length _
+            exact List.take_length
           have htakeq_map : List.map (fun q : FrageEreignis => q.questionInstance)
               (s.fragen.take s.antworten.length) =
               List.range (s.fragen.take s.antworten.length).length := by
