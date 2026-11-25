@@ -148,7 +148,7 @@ theorem RegelStotterSchranke.nichtTrivial :
     subst hss
     exact keinAb2 m ev next step
   have run' : Maschine.Laeufe E falsifizierbareUmgebung ρ' := by
-    refine ⟨hardware, hw2konform, admissible, ?_, SchedulerFair_aus_stillstand_ab ρ' 2 still2⟩
+    refine ⟨hardware, hw2konform, admissible, ?_, SchedulerFair_aus_stillstand_ab E ρ' 2 still2⟩
     have init := konkret.2.2.2.1
     rw [ρstart, ρz0] at init
     change some z = E.laden s (falsifizierbareUmgebung.lade E.bild)

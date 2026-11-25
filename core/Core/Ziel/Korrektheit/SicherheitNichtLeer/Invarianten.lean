@@ -52,7 +52,7 @@ theorem invarianten_nichtLeerInstanz :
   let ρ : Lauf E := ⟨a, hw, ⟨fun _ => some start, fun _ => none, fun t => .wartet rfl rfl (stuck t)⟩⟩
   have run : Maschine.Laeufe E H ρ :=
     ⟨erlaubt leer, conform, zul, rfl,
-      SchedulerFair_aus_stillstand_ab ρ 0 (fun t _ s hs ev next step => by
+      SchedulerFair_aus_stillstand_ab E.maschine ρ 0 (fun t _ s hs ev next step => by
         have hss : s = start := (Option.some.inj hs).symm
         rw [hss] at step
         exact stuck t ev next step)⟩

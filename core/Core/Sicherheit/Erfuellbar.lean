@@ -58,7 +58,7 @@ theorem sicherheit_erfuellbar :
   have init (t : Nat) (s : Laufkonstruktion.Zustand) (hs : ρ.zeit.zustand t = some s) : start = s :=
     Option.some.inj hs
   have fair : SchedulerFair E.maschine ρ :=
-    SchedulerFair_aus_stillstand_ab ρ 0 (fun t _ s hs ev next step => by
+    SchedulerFair_aus_stillstand_ab E.maschine ρ 0 (fun t _ s hs ev next step => by
       have hss : s = start := (Option.some.inj hs).symm
       rw [hss] at step
       exact stuck t ev next step)

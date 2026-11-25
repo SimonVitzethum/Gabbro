@@ -127,7 +127,7 @@ theorem simTrennt : SimTrenntAussage := by
   have runT : Maschine.Laeufe ETrenn falsifizierbareUmgebung ρT :=
     ⟨konkret.1, konformLetztes, zul, by
       change some z = ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild)
-      exact loaded.symm, SchedulerFair_aus_stillstand_ab ρT 1 stillT⟩
+      exact loaded.symm, SchedulerFair_aus_stillstand_ab ETrenn ρT 1 stillT⟩
   let η₂ : I.Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => z
     spur := fun _ => none
