@@ -65,7 +65,7 @@ def InvariantenSicherheitAussage (P : Plattform) : Prop :=
   ∀ (u : UnitMitInvarianten),
     pruefeEinheit (programmMitInvarianten u) u.invarianten = true →
     ∀ (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf ((programmMitInvarianten u).sicherheitsEinheit P)),
-      Laeufe (elaborierenMitInvarianten P u).maschine H ρ →
+      Laeufe (elaborierenMitInvarianten P u) H ρ →
         Speichersicher ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
         InvariantenErhalten ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
         Rennfrei ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
@@ -99,8 +99,9 @@ theorem InvariantenSicherheitAussage.nichtTrivial :
     have h0 : (((programmMitInvarianten
       ⟨⟨[], .done⟩, [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩).sicherheitsEinheit
         .x86_64)).invarianten[0]? =
-      some ⟨none, Praedikat.gilt
-        (Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5))⟩ := rfl
+      some (⟨none, Praedikat.gilt
+        (Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5))⟩ :
+        Invariante Nat Zustand) := rfl
     have w : ∀ c, Leerzustand.status c = .laeuft → ¬ Leerzustand.buchung.schreibt c 0 :=
       fun _ _ schreibt => schreibt
     have hg := h 0 _ h0 w
