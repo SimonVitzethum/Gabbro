@@ -126,8 +126,9 @@ public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name �
 /-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
     not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
     its name. The same holds outside the goal closure for a definition that is used as a statement:
-    one with `…erfuellbar`, `…nichtTrivial` or `…beweis` companions, or one a proof refers to (measured
-    example: `PegelNISatz`, reached by no closure, whose proof still uses it as a statement). Everything is
+    one with `…erfuellbar`, `…nichtTrivial` or `…beweis` companions, or one a proof refers to (at task
+    time `PegelNISatz` was such a case: reached by no closure, its proof still used it as a statement;
+    since renamed to the pinned `PegelNIAussage`). Everything is
     reported as information (name, module, reason); no existing statement is changed. -/
 public meta def namenloseAussageInfos (env : Environment) (index : DependencyIndex)
     (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String) := do
