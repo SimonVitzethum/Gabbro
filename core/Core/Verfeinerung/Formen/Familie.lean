@@ -53,6 +53,7 @@ theorem Befehl.simulation (p : Fragment) (platform : Plattform) (b : Befehl) :
 /-- An instruction that is not in the family of access instructions is frame-only. -/
 theorem Befehl.privat_von_familie {b : Befehl} (h : b.familie ≠ .zugriff) : b.Privat :=
   b.privat_von_kein_zugriff (fun form eq => h (by subst eq; rfl)) (fun form eq => h (by subst eq; rfl))
+    (fun form eq => h (by subst eq; rfl))
 
 /-- A frame-only instruction is not in the family of the access instructions. -/
 theorem Befehl.privat_ne_zugriff {b : Befehl} (h : b.Privat) : b.familie ≠ .zugriff := by
