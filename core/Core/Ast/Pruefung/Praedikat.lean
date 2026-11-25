@@ -19,6 +19,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
+public import Core.Ast.Semantik.Runtime.Befehl
 
 @[expose] public section
 
@@ -219,5 +220,19 @@ def Praedikat.gilt (q : Praedikat) (s : Zustand) : Prop :=
 theorem Praedikat.gilt_of_initial (q : Praedikat) (s₁ s₂ : Zustand)
     (h : s₁.initial = s₂.initial) : q.gilt s₁ → q.gilt s₂ :=
   q.haelt_stabil _ _ (fun z _ => congrFun h z)
+
+/-- The checker decides preservation per command: accept iff the command writes no observed
+    cell of any declared predicate. -/
+def pruefeBefehlErhalt (ps : List Praedikat) (b : Befehl) : Bool :=
+  ps.all fun q => q.beobachtet.all fun z => decide (z ∉ b.schreibFussabdruck)
+
+/-- An accepted command writes no cell observed by the checked predicates. -/
+theorem pruefeBefehlErhalt_richtig (ps : List Praedikat) (b : Befehl) (q : Praedikat)
+    (hmem : q ∈ ps) (ok : pruefeBefehlErhalt ps b = true) (z : Zelle)
+    (hm : z ∈ q.beobachtet) : z ∉ b.schreibFussabdruck := by
+  simp only [pruefeBefehlErhalt, List.all_eq_true] at ok
+  have hq := ok q hmem
+  simp only [List.all_eq_true] at hq
+  exact of_decide_eq_true (hq z hm)
 
 end Gabbro.Core.Ast.Pruefung

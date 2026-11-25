@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.Pflichten
 public import Core.Sicherheit.Regel
+public import Core.Ast.Pruefung.Praedikat
 
 @[expose] public section
 
@@ -13,11 +14,13 @@ def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
     Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
   ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
 
-theorem Befehl.sicher (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.Praedikat)
+    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, Pruefung.pruefeBefehlErhalt ps b = true) (b : Befehl) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
-  intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
+  intro H ρ t c w vor zwischen nach plan spur head impl execute
   obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  have okB := ok b (kopf_mem p.code vor c b head)
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
   have wirkungen :
       NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
@@ -28,14 +31,23 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
   · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
     intro _ obj alive lost
     exact nomatch alive.symm.trans lost
-  · intro _
+  · intro vorSicher
     refine ⟨fun _ _ => trivial, ?_⟩
-    intro i d declared _
-    change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at declared
-    rw [keine] at declared
-    cases declared
+    intro i d declared writersNach
+    rw [tab, List.getElem?_map] at declared
+    obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp declared
+    have htab : p.klauseln.invariant[i]? = some q.gilt := by
+      rw [tab, List.getElem?_map, hsome]
+    have hok := Pruefung.pruefeBefehlErhalt_richtig ps b q
+      (List.mem_of_getElem? hsome) okB
+    have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
+      writersNach
+    have vorGilt : q.gilt vor := vorSicher.2 i _ htab writersVor
+    exact q.gilt_nach b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
+  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
+      fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
@@ -49,9 +61,11 @@ theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) 
   exact befugt
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    (ps : List Pruefung.Praedikat)
+    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, Pruefung.pruefeBefehlErhalt ps b = true) (b : Befehl) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
-  ⟨b.sicher p platform keine, b.antwortSicher p platform⟩
+  ⟨b.sicher p platform ps tab ok, b.antwortSicher p platform⟩
 
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
@@ -140,10 +154,5 @@ private theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBo
   | step first rest ih =>
       simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
         List.nil_append, decl_keine_invarianten, ih]
-
-theorem programm_keine_invarianten (tree : Ast.Unit) :
-    (programm tree).klauseln.invariant = [] := by
-  simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-    Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append, unitBody_keine_invarianten]
 
 end Gabbro.Core.Ast.Semantik

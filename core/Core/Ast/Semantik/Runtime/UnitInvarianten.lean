@@ -1,72 +1,63 @@
 /-
   File:      core/Core/Ast/Semantik/Runtime/UnitInvarianten.lean
-  Subject:   DECLARED UNIT INVARIANTS (MK-19 design step 1): a source unit together with the
-             invariants it declares, elaborated into the fragment's clause table, plus the
-             checker's first decidable preservation fragment.
+  Subject:   DECLARED UNIT INVARIANTS (MK-19 design step 2): a source unit with the invariants it
+             declares as expressions of the decidable predicate language, the checker's footprint
+             rule, and the safety of checker-accepted elaborated units with invariants.
 
-  A unit carries a list of declared invariants — predicates over the observable unit state
-  (`Zustand`), shaped like `Sicherheit.Invariante.gilt` and stored like
-  `Quellklauseln.invariant`. Elaboration (`programmMitInvarianten`) keeps the code, entries
-  and memory plan of `programm` and fills only the clause table, so
-  `Fragment.sicherheitsEinheit` (and through it `sicherheitVon`) carries them with no lock
-  scope, exactly as `KlauselnWahr` and `InvariantenErhalten` read them.
+  `UnitMitInvarianten` and `programmMitInvarianten` live in `Elaborierung` (below the checker);
+  the clause table of an elaborated unit is exactly the denotations of its declared predicates
+  (`programmMitInvarianten_klauseln`, `rfl`), so `programm_keine_invarianten` is gone: plain
+  units elaborate with the empty list and safety is proved for tables of predicate denotations
+  accepted by the checker.
 
-  `programm_keine_invarianten` is untouched: it speaks about `programm`, not about
-  `programmMitInvarianten`. Removing it (with the migration of its use sites to
-  `programmMitInvarianten_klauseln`) and the syntax-level change (the grammar must parse
-  the declarations into `UnitMitInvarianten`) are the documented follow-ups MK-19/2 and
-  MK-19/3 below.
-
-  The checker decides preservation per command on the trivial fragment only
-  (`pruefeBefehlErhalt`: every declared invariant is certified `True`, hence preserved by
-  every step). Assignment preservation outside a footprint is the documented next case
-  (MK-19/4): footprint-indexed invariants with a stability certificate plus a per-command
-  write set (`Befehl.schreibFussabdruck`) proved against `Befehl.nach`. Anything the
-  checker does not decide stays user duty (GabbroProve over `RegelSicher`).
+  The checker decides preservation per command in the decidable fragment
+  (`Pruefung.pruefeBefehlErhalt`: disjointness of observed cells and write footprint) and the
+  loader and crash-recovery premises on the memory plan (`pruefeStart`, `pruefeNeustart`);
+  `pruefeEinheit` conjoins the three. `InvariantenSicherheitAussage` is the safety of
+  checker-accepted elaborated units with invariants; anything the checker does not decide stays
+  user duty (GabbroProve over `RegelSicher`).
 
   Open units:
-  * MK-19/2 (Prover): drop `programm_keine_invarianten` (no legacy); migrate its use
-    sites (`Runtime/Sicherheit.lean`, `ProgramObligations.lean`, `Function.lean`,
-    `TextValue/*Proofs.lean`, batch/form proofs) to `programmMitInvarianten_klauseln`;
-    generalise `fragment_sicher` (`GrenzenSicher` + `RegelPflichten`) to non-empty
-    tables and re-prove `sicherheitAkzeptiert` over elaborated units with invariants.
   * MK-19/3 (Designer): surface syntax for unit-level invariant declarations with
-    `UnitReads`/`printPieces`/`Category` round-trip (`reads_print`, `unique`), so the
-    parser denotes `UnitMitInvarianten` instead of `Ast.Unit`.
-  * MK-19/4 (Designer + Prover): footprint fragment (`beobachtet : List Zelle`,
-    `stabil`, `Befehl.schreibFussabdruck` with soundness against `Befehl.nach`) and its
-    per-command preservation proof feeding `RegelSicher`.
-  * MK-19/5 (Prover): run-level refutation `∃ H ρ, Laeufe ∧ ¬ InvariantenErhalten` at an
-    elaborated unit with a declared invariant (feeders: `Plattform.katalog_wohlgeformt`,
-    `Laufkonstruktion.bild_gueltig`, `lauf_erfuellbar`, as in
-    `sicherheit_aus_regeln_erfuellbar`); this is the `InvariantenErhalten` conjunct of
-    `SicherheitNichtLeer` over `R₀`.
+    `UnitReads`/`printPieces`/`Category` round-trip (`reads_print`, `unique`), so the parser
+    denotes `UnitMitInvarianten` instead of `Ast.Unit`.
+  * MK-19/4 (Designer + Prover): memory commands (MK-04) populate `Befehl.schreibFussabdruck`
+    and prove the conditional `fussabdruck_treu`; the stability certificate
+    `Praedikat.haelt_stabil` already carries the rule.
+  * MK-19/5 (Prover): the four falsifications at `Ast.Semantik.Einheit` for
+    `SicherheitNichtLeerInstanzAussage` (the `InvariantenErhalten` conjunct over `R₀`).
 -/
 module
 
 public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.Pruefung.Praedikat
+public import Core.Sicherheit.RegelnErfuellbar
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast.Semantik
 
-open Maschine Sicherheit Katalog
+open Maschine Sicherheit Katalog Pruefung
 
-/-- A source unit together with the invariants it declares. The observable state is the
-    unit state `Zustand`; the shape follows `Sicherheit.Invariante.gilt`. Units carry no
-    lock scope (cf. `sicherheitVon`, which maps every clause predicate to `⟨none, ·⟩`). -/
-structure UnitMitInvarianten where
-  baum : Ast.Unit
-  invarianten : List (Zustand → Prop)
+/-- The frame transfer preserves memory content: it touches only the acting frame. -/
+theorem Befehl.nach_initial (b : Befehl) (c : Kontext) (s : Zustand) :
+    (b.nach c s).initial = s.initial := rfl
 
-/-- Elaboration carries the declared invariants into the fragment's clause table. Code,
-    entries and memory plan are those of `programm`. -/
-def programmMitInvarianten (u : UnitMitInvarianten) : Fragment :=
-  { programm u.baum with klauseln := ⟨[], [], u.invarianten⟩ }
+/-- The write footprint is sound against the frame transfer: outside it, memory content is
+    unchanged. Vacuous today (every footprint is empty); MK-04 proves the conditional from
+    the memory rules. -/
+theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Zelle)
+    (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
+  congrFun (b.nach_initial c s) z
 
-theorem programmMitInvarianten_klauseln (u : UnitMitInvarianten) :
-    (programmMitInvarianten u).klauseln.invariant = u.invarianten := rfl
+/-- Preservation across the frame transfer for predicates whose observed cells the command
+    does not write. -/
+theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
+    (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
+  intro hq
+  exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
 
 def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
   (programmMitInvarianten u).einheit platform
@@ -76,69 +67,63 @@ theorem sicherheitsEinheit_invarianten (u : UnitMitInvarianten) (platform : Plat
       u.invarianten.map fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand) := rfl
 
 /-- The declared part of `InvariantenAmSchnitt`: every tabled invariant holds outside its
-    writers. Follows from `InvariantenAmSchnitt` by projection (`deklariertHalten_aus_schnitt`). -/
+    writers. -/
 def DeklariertHalten
     (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl) (s : Zustand) : Prop :=
   ∀ i d, E.invarianten[i]? = some d →
     (∀ c, s.status c = .laeuft → ¬ s.buchung.schreibt c i) → d.gilt s
 
-theorem deklariertHalten_aus_schnitt
-    (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl) (s : Zustand)
-    (h : InvariantenAmSchnitt E s) : DeklariertHalten E s :=
-  fun i d get w => h.2 i d get w
+/-- EVERY RUN OF A CHECKER-ACCEPTED ELABORATED UNIT WITH INVARIANTS IS SAFE (the pinned
+    `InvariantenSicherheitAussage` of MK-19 step 2): memory safety, preservation of the
+    declared predicate invariants, race freedom and TOCTOU freedom hold on every run. The
+    checker verdict `pruefeEinheit` supplies the loader, crash-recovery and per-command
+    premises of `fragment_sicher`; anything it does not decide stays user duty. -/
+def InvariantenSicherheitAussage (P : Plattform) : Prop :=
+  ∀ (u : UnitMitInvarianten),
+    pruefeEinheit (programmMitInvarianten u) u.invarianten = true →
+    ∀ (H : Umgebung) (ρ : Sicherheit.Lauf ((programmMitInvarianten u).sicherheitsEinheit P)),
+      Laeufe (elaborierenMitInvarianten P u).maschine H ρ →
+        Speichersicher ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
+        InvariantenErhalten ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
+        Rennfrei ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
+        ToctouFrei ((programmMitInvarianten u).sicherheitsEinheit P) H ρ
 
-/-- A declared invariant in the checker's decidable fragment. The flag names the trivial
-    case; `treu` ties the flag to the predicate. Invariants with `trivial = false` are
-    user proof duty; the checker refuses them. -/
-structure PruefInvariante where
-  gilt : Zustand → Prop
-  trivial : Bool
-  treu : trivial = true → gilt = fun _ => True
+/-- Checker-accepted units with invariants elaborate to safe units. -/
+theorem invariantenSicherheit (P : Plattform) : InvariantenSicherheitAussage P := by
+  intro u ok H ρ lauf
+  exact fragment_sicher (programmMitInvarianten u) P u.invarianten
+    (programmMitInvarianten_klauseln u) ok H ρ lauf
 
-/-- The checker decides preservation per command on the trivial fragment: accept iff every
-    declared invariant is certified trivial (hence preserved by every step, including the
-    loader, answer, interrupt and crash boundaries). -/
-def pruefeBefehlErhalt (invs : List PruefInvariante) (_ : Befehl) : Bool :=
-  invs.all fun inv => inv.trivial
+/-- The checker premises hold jointly: the empty unit with a satisfied predicate passes. -/
+theorem InvariantenSicherheitAussage.erfuellbar :
+    ∃ (P : Plattform) (u : UnitMitInvarianten),
+      pruefeEinheit (programmMitInvarianten u) u.invarianten = true := by
+  refine ⟨.x86_64, ⟨⟨[], .done⟩,
+    [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 0)]⟩, ?_⟩
+  decide
 
-theorem pruefInvariante_hält (inv : PruefInvariante) (ok : inv.trivial = true) (s : Zustand) :
-    inv.gilt s := by
-  have h := inv.treu ok
-  simp only [h]
-
-theorem pruefeBefehlErhalt_richtig (u : UnitMitInvarianten) (invs : List PruefInvariante)
-    (b : Befehl) (abbild : u.invarianten = invs.map PruefInvariante.gilt)
-    (ok : pruefeBefehlErhalt invs b = true) (platform : Plattform) (s : Zustand) :
-    DeklariertHalten ((programmMitInvarianten u).sicherheitsEinheit platform) s := by
-  intro i d get w
-  rw [sicherheitsEinheit_invarianten, abbild, List.getElem?_map] at get
-  obtain ⟨a, hsome, heq⟩ := Option.map_eq_some_iff.mp get
-  rw [List.getElem?_map] at hsome
-  obtain ⟨inv, hsome2, heq2⟩ := Option.map_eq_some_iff.mp hsome
-  have hmem : inv ∈ invs := List.mem_of_getElem? hsome2
-  have htrivial : inv.trivial = true := List.all_eq_true.mp ok inv hmem
-  subst d
-  subst a
-  exact pruefInvariante_hält inv htrivial s
-
-/-- The refusal witness: an invariant the checker rejects (flag `false`). -/
-def falschInvariante : PruefInvariante :=
-  ⟨fun _ => False, false, fun h => (Bool.false_ne_true h).elim⟩
-
-theorem nichtTrivial_ablehnung :
-    pruefeBefehlErhalt [falschInvariante] .ende = false := rfl
-
-/-- The violation the model can represent: the empty state breaks the false invariant of
-    an elaborated unit that declares it. Together with `nichtTrivial_ablehnung` this is
-    the `_nichtTrivial` leg: violation and refusal for the same declared invariant. -/
-theorem nichtTrivial_verletzbar :
-    ∃ s : Zustand, ¬ DeklariertHalten
-      ((programmMitInvarianten ⟨⟨[], .done⟩, [fun _ => False]⟩).sicherheitsEinheit .x86_64) s := by
-  refine ⟨Leerzustand, fun h => ?_⟩
-  have h0 : ((programmMitInvarianten ⟨⟨[], .done⟩, [fun _ => False]⟩).sicherheitsEinheit
-      .x86_64).invarianten[0]? = some (⟨none, fun _ => False⟩ : Invariante Nat Zustand) := rfl
-  have w : ∀ c, Leerzustand.status c = .laeuft → ¬ Leerzustand.buchung.schreibt c 0 :=
-    fun _ _ schreibt => schreibt
-  exact h 0 _ h0 w
+/-- The checker refuses a unit whose plan breaks its invariant, and the model exhibits the
+    violating state: safety with invariants is not trivially true. -/
+theorem InvariantenSicherheitAussage.nichtTrivial :
+    ∃ (u : UnitMitInvarianten),
+      pruefeEinheit (programmMitInvarianten u) u.invarianten = false ∧
+      ∃ (s : Zustand),
+        ¬ DeklariertHalten ((programmMitInvarianten u).sicherheitsEinheit .x86_64) s := by
+  refine ⟨⟨⟨[], .done⟩,
+    [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩, ?_, _⟩
+  · decide
+  · refine ⟨Leerzustand, fun h => ?_⟩
+    have h0 : (((programmMitInvarianten
+      ⟨⟨[], .done⟩, [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩).sicherheitsEinheit
+        .x86_64)).invarianten[0]? =
+      some (⟨none, (Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)).gilt⟩ :
+        Invariante Nat Zustand)) := rfl
+    have w : ∀ c, Leerzustand.status c = .laeuft → ¬ Leerzustand.buchung.schreibt c 0 :=
+      fun _ _ schreibt => schreibt
+    have hg := h 0 _ h0 w
+    simp only [Praedikat.gilt, Praedikat.haelt, Vergleich.haelt, Ausdruck.wert] at hg
+    have hzero : Leerzustand.initial (.region 0 0) = 0 := rfl
+    rw [hzero] at hg
+    omega
 
 end Gabbro.Core.Ast.Semantik

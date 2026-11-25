@@ -86,6 +86,27 @@ def kopf (code : List Befehl) (s : Zustand) (c : Kontext) : Option Befehl :=
     | some _ => none
   | .beendet _ => none
 
+/-- A head comes from the code: the rule at the head is one of the fragment's commands. -/
+theorem kopf_mem (code : List Befehl) (s : Zustand) (c : Kontext) (b : Befehl)
+    (h : kopf code s c = some b) : b ∈ code := by
+  cases hst : s.status c with
+  | ruht =>
+    simp only [kopf, hst] at h
+    cases h
+  | laeuft =>
+    cases hret : (s.lokal c).rueckgabe with
+    | some _ =>
+      simp only [kopf, hst, hret] at h
+      cases h
+    | none =>
+      simp only [kopf, hst, hret] at h
+      split at h
+      · exact List.mem_of_getElem? h
+      · cases h
+  | beendet _ =>
+    simp only [kopf, hst] at h
+    cases h
+
 def system (code : List Befehl) : LokalSystem :=
   ⟨Befehl.regel, kopf code, fun s c => kopf code s c = none, fun _ _ _ => False⟩
 
