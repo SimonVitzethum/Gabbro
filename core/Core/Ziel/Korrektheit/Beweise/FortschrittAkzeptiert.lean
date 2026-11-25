@@ -128,7 +128,7 @@ theorem einheitVon_impl_aus_ideal (P : Katalog.Plattform) (t : Ast.Unit)
     Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
   have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
   obtain ⟨rfl, rfl⟩ := same
-  exact ⟨i, kopf, (Ast.Semantik.Befehl.impl_privat i c s w [Ast.Semantik.plan]
+  exact ⟨i, kopf, (Ast.Semantik.Befehl.impl_privat i hpriv c s w [Ast.Semantik.plan]
     (i.nach c s)).mpr ⟨rfl, rfl⟩⟩
 
 /-- No lock-taking step exists for elaborated units: every plan is the private one. -/
@@ -267,6 +267,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   have hpriv : b.Privat :=
                     Ast.Semantik.fragment_rein Ast.Category.unit t b
                       (Ast.Semantik.kopf_mem kopfB)
+                  change (b.regel).impl _ _ _ [plan] _ at implB
                   exact (List.cons.inj
                     ((Ast.Semantik.Befehl.impl_privat b hpriv _ _ _ [plan] _).1 implB).1).1
                 have hakt_intern : plan.aktion = .intern := by rw [hplanEq]; rfl
