@@ -128,25 +128,25 @@ theorem geraete_angebot_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.uni
   simp only [hwPolitikProjektion] at ht
   generalize ha1 : (ρ₁.hw.angebot t) = a1 at ht
   generalize ha2 : (ρ₂.hw.angebot t) = a2 at ht
-  cases a1 with
-  | mk c1 i1 s1 d1 m1 cr1 cy1 =>
-  cases a2 with
-  | mk c2 i2 s2 d2 m2 cr2 cy2 =>
   simp only [angebotProjektion, hetik] at ht
   have hend : ∀ e : Endpunkt, (Etiketten.leer (Ort := Nat)).endpunkt e = ∅ :=
     fun _ => rfl
   simp only [hend, geraete_sichtbar_leer] at ht
-  obtain ⟨hcore, hinterrupt, hinterrupts, hdelivery, hmedium, hcrash, hcycles⟩ := ht
-  have hdel : d1 = d2 :=
+  have ecore : a1.core = a2.core := congrArg Prod.fst ht
+  have einterrupt : a1.interrupt = a2.interrupt := congrArg (fun t => t.2.1) ht
+  have einterrupts : a1.interrupts = a2.interrupts := congrArg (fun t => t.2.2.1) ht
+  have hdelivery : (fun e => some (a1.delivery e)) = (fun e => some (a2.delivery e)) :=
+    congrArg (fun t => t.2.2.2.1) ht
+  have emedium : a1.medium = a2.medium := congrArg (fun t => t.2.2.2.2.1) ht
+  have ecrash : a1.crash = a2.crash := congrArg (fun t => t.2.2.2.2.2.1) ht
+  have ecycles : a1.cycles = a2.cycles := congrArg (fun t => t.2.2.2.2.2.2) ht
+  have hdel : a1.delivery = a2.delivery :=
     funext fun e => Option.some.inj (congrFun hdelivery e)
-  subst hcore
-  subst hinterrupt
-  subst hinterrupts
-  subst hdel
-  subst hmedium
-  subst hcrash
-  subst hcycles
-  rfl
+  have eta1 : a1 = ⟨a1.core, a1.interrupt, a1.interrupts, a1.delivery, a1.medium,
+    a1.crash, a1.cycles⟩ := rfl
+  have eta2 : a2 = ⟨a2.core, a2.interrupt, a2.interrupts, a2.delivery, a2.medium,
+    a2.crash, a2.cycles⟩ := rfl
+  rw [ha1, ha2, eta1, eta2, ecore, einterrupt, einterrupts, hdel, emedium, ecrash, ecycles]
 
 theorem geraete_delivery_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
     (vergleich : Vergleich (d.unit locals) h₁ h₂ ρ₁ ρ₂) (t : Nat) (e : Endpunkt) :
