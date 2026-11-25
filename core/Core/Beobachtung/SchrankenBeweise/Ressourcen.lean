@@ -31,10 +31,11 @@ theorem ressourcenRegelAussage_falsch :
     schranken := { Schrankendaten.leer with
       stapel := some 0,
       stapelTiefe := fun h => if h.isNone then 1 else 0 } }
-  have laufE : Laeufe E (umgebung []) ρ := by
+  let ρE : Lauf E := ⟨ρ.start, ρ.hw, ρ.zeit⟩
+  have laufE : Laeufe E (umgebung []) ρE := by
     change Laeufe einheit (umgebung []) ρ
     exact lauf
-  have takt := ρ.zeit.takt 0
+  have takt := ρE.zeit.takt 0
   rw [cut0, spur0, cut1] at takt
   have impf : ImplSchritt einheit.einrichtung einheit.system einheit.katalog ρ.hw 0
       (startZustand start) (.kontext kontext (), ⟨[], []⟩) (binde (startZustand start)) := by
