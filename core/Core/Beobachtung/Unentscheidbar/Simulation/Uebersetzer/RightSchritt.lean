@@ -49,19 +49,9 @@ def diffSubPack (n s : Nat) : Dynamisch :=
 theorem packDiffSub (s n : Nat) (h : s * s ≤ n) (h2 : s ≤ n - s * s) :
     diffSubPack n s = natVal (n - s * s - s) := by
   let d := n - s * s
-  have hmulLo : (Arith.mul.bounds (s : Int) (s : Int) (s : Int) (s : Int)).1 = ((s * s : Nat) : Int) := by
-    show min (min ((s : Int) * (s : Int)) ((s : Int) * (s : Int)))
-      (min ((s : Int) * (s : Int)) ((s : Int) * (s : Int))) = _
-    rw [hmul_lo s]
-    exact (Nat.cast_mul s s).symm
-  have hmulHi : (Arith.mul.bounds (s : Int) (s : Int) (s : Int) (s : Int)).2 = ((s * s : Nat) : Int) := by
-    show max (max ((s : Int) * (s : Int)) ((s : Int) * (s : Int)))
-      (max ((s : Int) * (s : Int)) ((s : Int) * (s : Int))) = _
-    rw [hmul_hi s]
-    exact (Nat.cast_mul s s).symm
   have hcast1 : (n : Int) - ((s * s : Nat) : Int) = ((d : Nat) : Int) := by
     dsimp only [d]
-    rw [← Nat.cast_mul]
+    rw [Nat.cast_mul]
     exact intSubNat s n h
   have hcast2 : ((d : Nat) : Int) - (s : Int) = (((d - s : Nat)) : Int) := (Nat.cast_sub h2).symm
   have hbounds1 : (Arith.sub.bounds (n : Int) (n : Int)
@@ -69,7 +59,7 @@ theorem packDiffSub (s n : Nat) (h : s * s ≤ n) (h2 : s ≤ n - s * s) :
       ((Arith.mul.bounds (s : Int) (s : Int) (s : Int) (s : Int)).2)) =
       (((d : Nat) : Int), ((d : Nat) : Int)) := by
     simp only [Arith.bounds]
-    rw [hmulLo, hmulHi, hcast1]
+    rw [hmul_lo s, hmul_hi s, ← Nat.cast_mul, hcast1]
   have hlo : (Arith.sub.bounds ((Arith.sub.bounds (n : Int) (n : Int)
       ((Arith.mul.bounds (s : Int) (s : Int) (s : Int) (s : Int)).1)
       ((Arith.mul.bounds (s : Int) (s : Int) (s : Int) (s : Int)).2)).1)
