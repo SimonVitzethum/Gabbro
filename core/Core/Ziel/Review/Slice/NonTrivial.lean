@@ -1,5 +1,5 @@
 /-
-  File:      Core/Durchstich/NichtTrivial.lean
+  File:      Core/Ziel/Review/Slice/NonTrivial.lean
   Subject:   NON-TRIVIALITY of the slice goal (Durchstich step 4): outside F_klein, and
              without acceptance, the legs fail — the slice goal says something.
 
@@ -16,7 +16,7 @@
 -/
 module
 
-public import Core.Durchstich.Klein
+public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Annahme.Annahme
@@ -24,7 +24,7 @@ public import Core.Annahme.Lokal
 
 @[expose] public section
 
-namespace Gabbro.Core.Durchstich
+namespace Gabbro.Core.Ziel.Review.Slice
 
 open Gabbro.Core
 open Gabbro.Core.Ast.Semantik
@@ -51,4 +51,4 @@ theorem klein_regel_verletzt_ohne_akzeptanz :
 theorem klein_nicht_akzeptiert : ¬ Annahme.Akzeptiert Annahme.staleEinheit :=
   Annahme.stale_nicht_akzeptiert
 
-end Gabbro.Core.Durchstich
+end Gabbro.Core.Ziel.Review.Slice

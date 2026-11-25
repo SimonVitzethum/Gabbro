@@ -1,5 +1,5 @@
 /-
-  File:      Core/Durchstich/Ziel.lean
+  File:      Core/Ziel/Review/Slice/Goal.lean
   Subject:   THE SLICE GOAL FOR F_klein (Durchstich step 3): the goal legs over the concrete
              instance R₀ for every accepted slice unit, with each gap named exactly.
 
@@ -34,7 +34,7 @@
 -/
 module
 
-public import Core.Durchstich.Klein
+public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
@@ -48,7 +48,7 @@ public import Core.Annahme.Lokal
 
 @[expose] public section
 
-namespace Gabbro.Core.Durchstich
+namespace Gabbro.Core.Ziel.Review.Slice
 
 open Gabbro.Core
 open Gabbro.Core.Maschine
@@ -128,4 +128,4 @@ theorem klein_luecke_nicht_privat :
   simp only [Befehl.Privat, Befehl.klasse, Zugriffsform.klasse, reduceCtorEq, or_false,
     not_false_eq_true]
 
-end Gabbro.Core.Durchstich
+end Gabbro.Core.Ziel.Review.Slice

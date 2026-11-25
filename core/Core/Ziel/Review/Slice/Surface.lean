@@ -1,5 +1,5 @@
 /-
-  File:      Core/Durchstich/Oberflaeche.lean
+  File:      Core/Ziel/Review/Slice/Surface.lean
   Subject:   SURFACE COVERAGE of F_klein (Durchstich step 2): for every form of the slice,
              parsing, printing and elaboration exist — except the two findings below,
              which are MELDUNG, not built here (a parallel task owns them).
@@ -25,7 +25,7 @@
 -/
 module
 
-public import Core.Durchstich.Klein
+public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ast.Surface
 public import Core.Ast.Program.BatchSurface
 public import Core.Ast.Program.SurfaceForms
@@ -37,7 +37,7 @@ public import Core.Ast.Semantik.Runtime.Atom.Rein
 
 @[expose] public section
 
-namespace Gabbro.Core.Durchstich
+namespace Gabbro.Core.Ziel.Review.Slice
 
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
@@ -88,4 +88,4 @@ theorem sperre_ohne_befehl (b : Befehl) (a : Maschine.SperrAktion) :
   cases form <;> simp only [Befehl.klasse, Zugriffsform.klasse, ne_eq, reduceCtorEq,
     not_false_eq_true]
 
-end Gabbro.Core.Durchstich
+end Gabbro.Core.Ziel.Review.Slice

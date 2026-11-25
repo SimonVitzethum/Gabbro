@@ -1,5 +1,5 @@
 /-
-  File:      Core/Durchstich/Klein.lean
+  File:      Core/Ziel/Review/Slice/Fragment.lean
   Subject:   THE SLICE FRAGMENT F_klein (Durchstich step 1): integers with arithmetic,
              condition, statically bounded loops, cell read/write, lock section.
 
@@ -35,7 +35,7 @@ public import Core.Ast.Semantik.Elaborierung
 
 @[expose] public section
 
-namespace Gabbro.Core.Durchstich
+namespace Gabbro.Core.Ziel.Review.Slice
 
 open Gabbro.Core.Ast.Semantik
 
@@ -90,4 +90,4 @@ theorem klein_leer : F_klein ⟨[], Ast.UnitBody.done⟩ := by
 theorem klein_nichtTrivial : ∃ b : Befehl, ¬ KleinBefehl b := by
   exact ⟨.rufe mainName [] none, by simp only [KleinBefehl, not_false_eq_true]⟩
 
-end Gabbro.Core.Durchstich
+end Gabbro.Core.Ziel.Review.Slice

@@ -342,6 +342,6 @@ public meta def pinTable : Array (Name × UInt64) :=
    (`Gabbro.Core.Speicher.WrcLitmusAussage, 14128650416748295131),
    (`Gabbro.Core.Speicher.Isa2LitmusAussage, 9404969472844494484),
    (`Gabbro.Core.Annahme.DomaenenPrueferAussage, 9582556275137869418),
-   (`Gabbro.Core.Durchstich.DurchstichKleinAussage, 14833053433867122977)]
+   (`Gabbro.Core.Ziel.Review.Slice.DurchstichKleinAussage, 480560874819612133)]
 
 end Gabbro.Core.Waechter
