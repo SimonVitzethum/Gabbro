@@ -137,6 +137,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
