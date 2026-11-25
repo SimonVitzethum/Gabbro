@@ -116,11 +116,9 @@ theorem tabGeraet_kohaerent (tab : DomaenenTabelle) (h : tabKohaerent tab)
     have hlt := hg e hmem
     exact hlt
 
-/-- The embedding `tabellePlan` lives with the checker row in `Core/Annahme/Lokal.lean`
-    (MK-17d: the row is stated over it). -/
-
-/-- A coherent table passes both the old line (on the embedded plan) and the new
-    line: the checker verdicts agree on coherent tables. -/
+/-- A coherent table passes both the old line (on the embedded plan, which lives with
+    the checker row in `Core/Annahme/Lokal.lean`) and the new line: the checker
+    verdicts agree on coherent tables. -/
 theorem tabellePlan_wohlgeformt (tab : DomaenenTabelle) (h : tabKohaerent tab) :
     (tabellePlan tab).wohlgeformt ∧ pruefeDomaenenTab tab = true := by
   have h0 : 0 < (tabellePlan tab).domaenen := h.1
@@ -142,16 +140,14 @@ theorem tabellePlan_kohaerent (E : Einheit L Ort Wert Raum Lok Grund Bedingung W
     fun x => tabObjekt_kohaerent tab h (E.einrichtung.speicherObjekt x),
     fun o => tabGeraet_kohaerent tab h o⟩
 
-/-- The single-domain table passes the line and is coherent
-    (`Maschine.eineTabelle_akzeptiert`, `Maschine.eineTabelle_kohaerent`). -/
-
-/-- Satisfiability of the table checker: line and coherence hold jointly. -/
+/-- Satisfiability of the table checker: line and coherence hold jointly (single-domain
+    table: `Maschine.eineTabelle_akzeptiert`, `Maschine.eineTabelle_kohaerent`). -/
 theorem domaenenTabellen_erfuellbar :
     ∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = true ∧ tabKohaerent tab :=
   ⟨eineTabelle, eineTabelle_akzeptiert, eineTabelle_kohaerent⟩
 
-/-- Non-triviality of the table checker: it accepts and it refuses
-    (`Maschine.leereTabelle_verweigert` for the refusal leg). -/
+/-- Non-triviality of the table checker: it accepts and it refuses (refusal leg:
+    `Maschine.leereTabelle_verweigert`). -/
 theorem domaenenTabellen_nichtTrivial :
     (∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = false) ∧
       (∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = true) :=
