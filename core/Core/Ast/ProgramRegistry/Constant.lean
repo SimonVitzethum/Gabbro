@@ -47,7 +47,7 @@ theorem constant_ideal (scope : Scope) : (constantForm scope).IdealAussage := by
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((constantForm scope).befehl args).bestimmt
+    · exact (constantForm scope).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

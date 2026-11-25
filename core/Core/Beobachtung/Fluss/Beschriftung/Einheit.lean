@@ -34,6 +34,7 @@ theorem kopf_code {code : List Befehl} {s : Zustand} {c : Kontext} {f : Befehl}
     `FlussLokal`. The start rule needs nothing: the entry frame does not read the start's
     inputs yet, and the unit has no journal. -/
 theorem Fragment.beschriftet_fluss_lokal (p : Fragment) (platform : Plattform) (β : Beschriftung)
+    (rein : ∀ f ∈ p.code, f.Privat)
     (form : ∀ (pc : Nat) (f : Befehl), p.code[pc]? = some f → f.SichtErhaltendBei β pc) :
     FlussLokal (p.beschriftet platform β) := by
   constructor
@@ -49,9 +50,9 @@ theorem Fragment.beschriftet_fluss_lokal (p : Fragment) (platform : Plattform) (
       refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun privat => ?_⟩
       exact (Bool.false_ne_true privat.symm).elim
     · intro _ c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ gleich links rechts
-      have transfer₁ : [p₁] = [Ast.Semantik.plan] ∧ u₁ = f.nach c v₁ := (f.ideal_privat c v₁ w₁ [p₁] u₁).1 links.2
+      have transfer₁ : [p₁] = [Ast.Semantik.plan] ∧ u₁ = f.nach c v₁ := (f.ideal_privat (rein f (kopf_mem (code := p.code) links.1)) c v₁ w₁ [p₁] u₁).1 links.2
       have transfer₂ : [p₂] = [Ast.Semantik.plan] ∧ u₂ = f.nach c v₂ :=
-        (f.ideal_privat c v₂ w₂ [p₂] u₂).1 rechts.2
+        (f.ideal_privat (rein f (kopf_mem (code := p.code) rechts.1)) c v₂ w₂ [p₂] u₂).1 rechts.2
       rw [(List.cons.inj transfer₁.1).1, (List.cons.inj transfer₂.1).1, transfer₁.2, transfer₂.2]
       obtain ⟨lokale, ende, initial, rechte, leihen, antwort⟩ := gleich
       refine ⟨⟨?_, ende, initial, rechte, leihen, antwort⟩, rfl, rfl⟩

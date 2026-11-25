@@ -169,7 +169,7 @@ theorem tupleType_ideal : TupleTypeIdealAussage := by
   intro ctx
   refine ⟨tupleTypeUse_am_ort ctx, ?_⟩
   intro args
-  exact ⟨((typeUseForm ctx tupleTypeUse).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(typeUseForm ctx tupleTypeUse).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleType_einheit : TupleTypeEinheitAussage := by
   intro ctx platform args
