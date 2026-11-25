@@ -36,7 +36,6 @@ theorem presRS (ein aus frei n : Nat) (e : Rahmen) (haus : aus < frei) :
   rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 2))]
   show Function.update _ (frei + 1) _ (frei + 0) = _
   rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
-  rfl
 
 /-- Preservation of user slots through the whole selection prefix. -/
 theorem presRPrefix (ein aus frei n : Nat) (e : Rahmen) (t : Nat)
@@ -66,7 +65,6 @@ theorem presRPrefix (ein aus frei n : Nat) (e : Rahmen) (t : Nat)
   rw [updateMiss _ _ _ _ (ltNeAdd ht)]
   show Function.update _ (frei + 1) _ t = _
   rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  rfl
 
 /-- Preservation through the then-branch. -/
 theorem presThen (ein aus frei n : Nat) (e : Rahmen) (t : Nat)
@@ -118,7 +116,7 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
       simp only [cmpBoolLeft, Compare.eval, decideDlt _ _ (Nat.sqrt_le n)]
     rw [e1]
     exact decide_eq_true h
-  have hjne : cmpBoolLeft (Nat.sqrt n) n ≠ false := by rw [hbool]; exact Bool.true_ne_false
+  have hjne : cmpBoolLeft (Nat.sqrt n) n ≠ false := by rw [hbool]; decide
   have gjump : (rightBlk ein aus frei)[53]? = some (.springeWenn (frei + 1) false 4) := by rfl
   have hj : (Schritt (rightBlk ein aus frei))^[1] (some (frameR12 e ein aus frei n)) =
       some ({ frameR12 e ein aus frei n with pc := 54 }) :=
@@ -134,7 +132,7 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
     exact hes
   have hc := laufKopie _ _ 54 aus (frei + 0) _ (by rfl) hq g0 g1 g2
   rw [show (32 : Nat) = 4 + 28 from rfl, Function.iterate_add_apply, hpre]
-  rw [show (4 : Nat) = 1 + 3 from rfl, Function.iterate_add_apply, hj]
+  rw [show (4 : Nat) = 3 + 1 from rfl, Function.iterate_add_apply, hj]
   exact hc
 
 /-- Then-branch arrival: loop exit composed with the root overwrite. -/
