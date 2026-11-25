@@ -400,8 +400,9 @@ theorem regionNI : RegionNIAussage := by
                     refine .kontext (plan := Ast.LowLevel.plan) (u := transfer₂.apply c v₂)
                       crash₂ bereit₂ ?_ ?_
                     · refine ⟨op, kopf₂, ?_⟩
-                      change op.impl c v₂ wahl [Ast.LowLevel.plan] (transfer₂.apply c v₂)
-                      simp only [Instruction.impl, eval₂]
+                      unfold Instruction.impl
+                      rw [eval₂]
+                      exact ⟨rfl, rfl⟩
                     · simpa only [unit] using Instruction.vollzug op transfer₂ t c v₂
                   -- right step kind
                   have hspur₂ : ρ₂.zeit.spur t ≠ none := by
@@ -419,7 +420,7 @@ theorem regionNI : RegionNIAussage := by
                       | mk wahl₂ spur₂ =>
                           cases wahl₂ with
                           | antwort a =>
-                              exact (unit_keine_antwort vergleich.rechts t a spur₂ hspurWahl).elim
+                              exact (unit_keine_antwort op vergleich.rechts t a spur₂ hspurWahl).elim
                           | interrupt id =>
                               have tak₂ := ρ₂.zeit.takt t
                               rw [hz₂, hspurWahl] at tak₂
@@ -431,30 +432,30 @@ theorem regionNI : RegionNIAussage := by
                                   | schritt impl =>
                                       cases impl with
                                       | kontext _ _ _ _ => cases label
-                                      | interrupt _ hinterrupt =>
-                                          obtain ⟨k, irq, _, _, _, _, _, _, _, _, _⟩ := hinterrupt
-                                          have aws : (ρ₂.hw.angebot t).interruptAuswahl =
-                                              some (k, id, irq) := by
-                                            obtain ⟨_, _, _, haws, _, _, _⟩ := hinterrupt
-                                            exact haws
-                                          rw [auswahl₂none] at aws
-                                          cases aws
+                                       | interrupt _ hinterrupt =>
+                                           obtain ⟨k, irq, ch, nmi, hoff, hpending, hnimmt,
+                                             hstat, hspurAus, hmem, haws⟩ := hinterrupt
+                                           rw [auswahl₂none] at haws
+                                           cases haws
                                       | antwort _ _ => cases label
                                       | absturz _ => cases label
                           | absturz =>
-                              rw [crash₂] at (show (ρ₂.hw.angebot t).crash = true from by
-                                have tak₂ := ρ₂.zeit.takt t
-                                rw [hz₂, hspurWahl] at tak₂
-                                cases tak₂ with
-                                | wartet label _ _ => cases label
-                                | schritt label laufstep =>
-                                    cases laufstep with
-                                    | schritt impl =>
-                                        cases impl with
-                                        | absturz habs =>
-                                            obtain ⟨angebot, _, _⟩ := habs
-                                            exact angebot.2)
-                              cases (by rfl : false = true)
+                              have tak₂ := ρ₂.zeit.takt t
+                              rw [hz₂, hspurWahl] at tak₂
+                              cases tak₂ with
+                              | wartet label _ _ => cases label
+                              | schritt label laufstep =>
+                                  cases laufstep with
+                                  | schritt impl =>
+                                      cases impl with
+                                      | absturz habs =>
+                                          obtain ⟨angebot, _, _⟩ := habs
+                                          have hc : (ρ₂.hw.angebot t).crash = true := angebot.2
+                                          rw [crash₂] at hc
+                                          cases hc
+                                      | kontext _ _ _ _ => cases label
+                                      | antwort _ _ => cases label
+                                      | interrupt _ _ => cases label
                           | kontext c₂ w₂ =>
                               have tak₂ := ρ₂.zeit.takt t
                               rw [hz₂, hspurWahl] at tak₂
@@ -465,15 +466,29 @@ theorem regionNI : RegionNIAussage := by
                                   cases laufstep with
                                   | schritt impl =>
                                       cases impl with
-                                      | kontext _ _ regel₂ aus₂ =>
-                                          cases label
+                                      | kontext _ bereit₂' regel₂ aus₂ =>
+                                          have c_eq : c₂ = c := by
+                                            obtain ⟨k₁, geleg₁, kern₁, _⟩ := bereit₁
+                                            obtain ⟨k₂, geleg₂, kern₂, _⟩ := bereit₂'
+                                            unfold HwLauf.gelegenheit at geleg₁ geleg₂
+                                            have core₁ : (ρ₁.hw.angebot t).core = some k₁ := geleg₁
+                                            have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
+                                            have kk : k₁ = k₂ :=
+                                              Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
+                                            have gleich : (v₂.kerne k₂).laeuft = some c := by
+                                              rw [← kk, ← kerneEq]
+                                              exact kern₁
+                                            exact Option.some.inj (kern₂.symm.trans gleich)
                                           obtain ⟨j, kopf_j, implI₂⟩ := regel₂
-                                          have jop : j = op := Option.some.inj (kopf₂.symm.trans kopf_j)
+                                          rw [c_eq] at kopf_j
+                                          have jop : j = op := (Option.some.inj (kopf₂.symm.trans kopf_j)).symm
                                           subst j
                                           obtain ⟨transfer₂', eval₂', planEq₂, hu₂⟩ :=
                                             Instruction.implTransfer (w := w₂) implI₂
+                                          rw [c_eq] at eval₂' hu₂ hspurWahl
                                           cases (List.cons.inj planEq₂).1
                                           simp only [unit] at aus₂
+                                          rw [c_eq] at aus₂
                                           obtain ⟨traceEq₂, nextEq₂⟩ := Instruction.genauInternal aus₂
                                           have rightNext : ρ₂.zeit.zustand (t + 1) =
                                               some (transfer₂'.apply c v₂) := by
