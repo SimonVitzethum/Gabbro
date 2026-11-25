@@ -71,7 +71,7 @@ theorem getNachPrefix (pre mid : List Befehl) (j : Nat) (hj : j < mid.length) :
   | cons x xs ih =>
     simp only [List.length_cons, List.cons_append, List.getElem?_cons_succ]
     rw [show List.length xs + 1 + j = (List.length xs + j) + 1 by omega]
-    exact ih j hj
+    exact ih
 
 /-- One step of a relocated block inside a concatenation agrees with the step
     of the block at base zero, lifted by the prefix length. -/
@@ -95,7 +95,7 @@ theorem schrittMitPcBei (pre mid post : List Befehl) (hv : VerschiebbaresProgram
   have hgetConcat' : (pre ++ mid ++ post)[(mitPc pre.length r).pc]? = some b := by
     simpa only [mitPc] using hgetConcat
   have e2 : b.auswerten (mitPc pre.length r) = mitPc pre.length (b.auswerten r) :=
-    auswertenMitPc pre.length b r hvb hzb
+    auswertenMitPc pre.length b r hvb hzd
   simp only [Schritt, hgetConcat', hb]
   rw [e2]
 
