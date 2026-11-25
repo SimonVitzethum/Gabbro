@@ -218,6 +218,7 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
       | schritt impl =>
           cases impl with
           | kontext _ _ regel aus =>
+              cases label
               obtain ⟨i, kopfI, implI⟩ := regel
               obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := wahl) implI
               cases (List.cons.inj planEq).1
@@ -257,5 +258,8 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
               rw [schrittBeob, spurGlied, hS, hN]
               simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
                 List.nil_append]
+          | antwort _ _ => cases label
+          | interrupt _ _ => cases label
+          | absturz _ => cases label
 
 end Gabbro.Core.Beobachtung
