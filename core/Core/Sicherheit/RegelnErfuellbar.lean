@@ -111,22 +111,32 @@ private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     · cases h
   · intro hw t a vor spur nach step vorSicher
     obtain ⟨_, _, _, heq⟩ := step
-    have hinit : nach.initial = vor.initial := by rw [heq]
-    have hbuch : nach.buchung = vor.buchung := by rw [heq]
+    have hinit : nach.initial = vor.initial := by
+      rw [heq]
+      try rfl
+    have hbuch : nach.buchung = vor.buchung := by
+      rw [heq]
+      try rfl
     have hstatus : nach.status = vor.status := by
       rw [heq]
-      rfl
+      try rfl
     exact invariantenErhaltenInitial platform tab vor nach hinit hbuch hstatus vorSicher
   · intro hw t id vor spur nach step vorSicher
     obtain ⟨k, irq, c, nmi, _, _, _, _, _, _, heq⟩ := step
-    have hinit : nach.initial = vor.initial := by rw [heq]
-    have hbuch : nach.buchung = vor.buchung := by rw [heq]
+    have hinit : nach.initial = vor.initial := by
+      rw [heq]
+      try rfl
+    have hbuch : nach.buchung = vor.buchung := by
+      rw [heq]
+      try rfl
     have hstatus : ∀ c', c' ≠ c → nach.status c' = vor.status c' := by
       intro c' hne
       rw [heq]
+      try rfl
       exact Function.update_of_ne hne _ _
     have hnach : nach.status c = .laeuft := by
       rw [heq]
+      try rfl
       exact Function.update_self c .laeuft vor.status
     exact invariantenErhaltenInterrupt platform tab vor nach c hinit hbuch hstatus hnach
       vorSicher
