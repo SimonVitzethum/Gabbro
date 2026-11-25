@@ -20,7 +20,7 @@ theorem qsg_lokal {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k
   unfold QuellzustandGleich LokaleGleich at h
   dsimp [unit, Flussdaten.leer, LokaleEtiketten.ganz, LokaleEtiketten.gleich, Etiketten.leer] at h
   funext c
-  exact h.1 c ⟨0, Nat.zero_lt_one⟩ (by decide)
+  exact h.1 c ⟨0, Nat.zero_lt_one⟩ rfl
 
 theorem qsg_rechte {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k}
     (h : QuellzustandGleich (unit op) v u) : v.rechte = u.rechte := by
