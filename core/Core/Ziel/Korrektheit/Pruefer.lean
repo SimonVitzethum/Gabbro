@@ -7,6 +7,7 @@
   tied to it by two statements: soundness (`pruefe = true → Akzeptiert`) and completeness on a named decidable
   fragment (`Fragment → Akzeptiert → pruefe = true`). Soundness alone holds for a checker that refuses everything,
   so completeness and the non-triviality statements below are part of the same package. Meaning change (MK-17):
+  the isolation row of `Lokal` constrains the recorded implementation steps, so acceptance reaches them. Meaning change (MK-17):
   the isolation row of `Lokal` constrains the recorded implementation steps, so acceptance reaches them.
 
   The checker is a TOTAL BOOLEAN function over source units (`Pruefer`), never a `Prop` with a `Decidable`
