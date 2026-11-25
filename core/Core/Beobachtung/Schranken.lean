@@ -58,12 +58,27 @@ def HalteSchranken (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     ∃ s, ρ.zeit.zustand t = some s ∧ (s.sperren l).besitzer = some c) →
     UnterGrenze (E.schranken.halten l) (Kontextkosten ρ c a n)
 
+/-- The per-pass cost leg of `ImSchranken` at one cut: every open cost mark visible in the
+    acting context's local state meets its declared ceiling. The counted cost is the context's
+    own cost since the mark opened (`per_pass`, `costs`), over the executed ticks only
+    (`t' - m.2`, never the pending tick `t'` itself, so the leg composes over prefixes like
+    `KostenPrefix`): an unbounded loop with a bounded pass is admissible while an overrunning
+    pass is refused. Open marks impose nothing. D-1 writes `t' + 1 - m.2` here; that window
+    includes the not-yet-executed tick `t'` and no prefix induction closes over it (the step
+    at `t` cannot discharge a window ending past `t`), so the bound counts executed ticks. -/
+def DurchlaufPrefix (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (ρ : Lauf E) (t : Nat) : Prop :=
+  ∀ t' s, t' ≤ t → ρ.zeit.zustand t' = some s →
+    ∀ c m, m ∈ E.schranken.durchlaufstand (s.lokal c) →
+      UnterGrenze (E.schranken.durchlauf m.1) (Kontextkosten ρ c m.2 (t' - m.2))
+
 /-- All finite prefixes of the same concrete run meet the unit's declarations, on unfair runs
     as well. Bounds cannot be chosen after seeing the run. A failed load has no live resources. -/
 def ImSchranken (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) : Prop :=
   HalteSchranken E ρ ∧
   (∀ t, UnterGrenze E.schranken.kosten (Laufkosten ρ 0 t)) ∧
+  (∀ t, DurchlaufPrefix E ρ t) ∧
   ∀ t s, ρ.zeit.zustand t = some s →
     (∀ n, E.schranken.speicher = some n → (LebendeZellen s).encard ≤ n) ∧
     (∀ c, UnterGrenze E.schranken.stapel (E.schranken.stapelTiefe (s.lokal c))) ∧

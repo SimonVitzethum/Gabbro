@@ -181,7 +181,8 @@ def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
 
 /-- The release-witness state: the holder owns the lock, the waiter is queued. -/
 def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
@@ -232,7 +233,8 @@ def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit wher
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
 
 /-- The section-witness state: the holder owns `false`, queues at the head of `true`. -/
 def wartefreiZustand : Zustand Bool Unit Unit Unit Unit Unit :=
