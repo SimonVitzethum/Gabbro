@@ -59,6 +59,12 @@ public meta def endsWithAussage (name : Name) : Bool :=
 public meta def isStatement (type : Expr) : MetaM Bool :=
   forallTelescope type fun _ result => pure result.isProp
 
+/-- The Core module that declares `name`, for reports that list name, file and reason. -/
+public meta def modulName (env : Environment) (name : Name) : String :=
+  match env.getModuleIdxFor? name with
+  | some idx => (env.header.modules[idx.toNat]!.module).toString
+  | none => "unknown module"
+
 /-- Scan one statement (`…Aussage` or an unnamed proposition used as one): unused data binders and
     free function parameters. `force` scans even deep values; every scan runs on its own heartbeat
     budget and reports instead of failing when the budget runs out. -/
@@ -79,12 +85,6 @@ public meta def statementScan (env : Environment) (name : Name) (info : Definiti
   catch _ => return #[s!"statement {name} in module {modulName env name} could not be scanned within the heartbeat budget"]
 
 private meta def correctnessNamespace : Name := `Gabbro.Core.Ziel.Korrektheit
-
-/-- The Core module that declares `name`, for reports that list name, file and reason. -/
-public meta def modulName (env : Environment) (name : Name) : String :=
-  match env.getModuleIdxFor? name with
-  | some idx => (env.header.modules[idx.toNat]!.module).toString
-  | none => "unknown module"
 
 /-- Scan every statement (`…Aussage` returning a proposition, parameters included). Reports unused data binders
     and function parameters, and, for the correctness statements, a missing pin and the missing companions
