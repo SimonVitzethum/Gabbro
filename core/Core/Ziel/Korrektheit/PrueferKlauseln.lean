@@ -109,7 +109,7 @@ theorem kontextSchritt_erhaelt (P : Katalog.Plattform) (u : UnitMitInvarianten)
   · exact q.gilt_of_initial _ _ hvu.symm hq
 
 /-- An arriving answer keeps the memory plan, hence every declared predicate. -/
-theorem antwortSchritt_erhaelt
+theorem klauselnAntwortSchritt_erhaelt
     {e : Maschine.Einrichtung Nat Zelle Int Nat Rahmen PUnit.{1} PUnit.{1}}
     {k : Katalog.Katalog} {run : Katalog.HwLauf} {t : Nat}
     {a : Katalog.AntwortEreignis}
@@ -122,7 +122,7 @@ theorem antwortSchritt_erhaelt
   exact q.gilt_of_initial s _ rfl hq
 
 /-- An interrupt delivery keeps the memory plan, hence every declared predicate. -/
-theorem interruptSchritt_erhaelt
+theorem klauselnInterruptSchritt_erhaelt
     {e : Maschine.Einrichtung Nat Zelle Int Nat Rahmen PUnit.{1} PUnit.{1}}
     {run : Katalog.HwLauf} {t : Nat} {id : Nat × Nat}
     {s s' : Maschine.Zustand Nat Zelle Int Nat Rahmen PUnit.{1}}
@@ -177,9 +177,9 @@ theorem deklariert_gilt_immer (P : Katalog.Plattform) (u : UnitMitInvarianten)
         obtain ⟨b, hb_head, hb_ideal⟩ := hregel
         exact kontextSchritt_erhaelt _ _ ok hb_head hb_ideal haus q hmem ih
       | antwort _ h =>
-        exact antwortSchritt_erhaelt h q ih
+        exact klauselnAntwortSchritt_erhaelt h q ih
       | interrupt _ h =>
-        exact interruptSchritt_erhaelt h q ih
+        exact klauselnInterruptSchritt_erhaelt h q ih
       | absturz h =>
         have hw0 : (elaborierenMitInvarianten P u).einrichtung.wiederanlauf.initial =
             fun _ _ => 0 := rfl
