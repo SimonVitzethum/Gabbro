@@ -390,7 +390,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
             | none => cases _gleich
             | some _ =>
               have rahmen₂ : Zustandsrahmen w₂ (frame₁.advance c w₂) :=
-                ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+                ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
               have eval₂neu : MemInstruction.evaluate k.plattform.ziel f w₂ c = some frame₁ := by
                 rw [(MemInstruction.evaluate_congr f k.plattform.ziel c lokEqFun rechteEq leihenEq).symm]
                 exact eval₁

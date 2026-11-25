@@ -29,9 +29,10 @@ variable {E Ort Wert : Type} {G : Graph E Ort Wert}
 theorem sb_sc_verboten (hk : G.Konsistent) {a₁ b₁ a₂ b₂ : E}
     (s₁ : G.sc a₁) (s₂ : G.sc b₁) (s₃ : G.sc a₂) (s₄ : G.sc b₂)
     (p₁ : G.po a₁ b₁) (p₂ : G.po a₂ b₂) (r₁ : G.rb b₁ a₂) (r₂ : G.rb b₂ a₁) : False :=
-  hk.psc a₁ (.tail (.tail (.tail (.single ⟨s₁, s₂, Or.inl p₁⟩)
-    ⟨s₂, s₃, Or.inr (Or.inr (Or.inr (Or.inr r₁)))⟩) ⟨s₃, s₄, Or.inl p₂⟩)
-    ⟨s₄, s₁, Or.inr (Or.inr (Or.inr (Or.inr r₂)))⟩)
+  hk.psc a₁ (.tail (.tail (.tail (.single (psc_von_klassisch ⟨s₁, s₂, Or.inl p₁⟩))
+    (psc_von_klassisch ⟨s₂, s₃, Or.inr (Or.inr (Or.inr (Or.inr r₁)))⟩))
+    (psc_von_klassisch ⟨s₃, s₄, Or.inl p₂⟩))
+    (psc_von_klassisch ⟨s₄, s₁, Or.inr (Or.inr (Or.inr (Or.inr r₂)))⟩))
 
 /-- **Message passing is forbidden through a synchronising flag.** `wd` (data) precedes `wf`
     (flag) in program order; `rf'` reads the flag from `wf` with release/acquire strength

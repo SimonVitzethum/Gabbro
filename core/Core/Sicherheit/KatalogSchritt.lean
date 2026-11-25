@@ -75,17 +75,26 @@ theorem katalog_speicher {initial : Ort → Wert} {vor nach : SpeicherGraph Ort 
     spur = [(.aussen, label)] ∧ (RennenImGraph vor → RennenImGraph nach) :=
   aussen_label_speicher istAussen folge
 
-theorem wirkungsloser_schritt {vor nach : Zustand L Ort Wert Raum Lok Grund}
+/-- A step that adds no effect to the ledger and leaves the authority state alone releases nothing. The holdings of the
+    ledger may change (a hand-over of authority moves them): only the effects ledger and the rights are read. -/
+theorem wirkungsloser_schritt_wirkungen {vor nach : Zustand L Ort Wert Raum Lok Grund}
     {spur : SchrittSpur Ort Wert} {hw t}
-    (keinAbsturz : ¬ Absturz spur) (buchung : nach.buchung = vor.buchung)
+    (keinAbsturz : ¬ Absturz spur) (wirkungen : nach.buchung.wirkungen = vor.buchung.wirkungen)
     (rechte : nach.rechte = vor.rechte) :
     NeueWirkungen vor nach spur [] ∧ FreigabenGueltig vor nach hw t spur [] := by
   refine ⟨Or.inr ⟨keinAbsturz, ?_⟩,
     List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
-  · rw [buchung, List.append_nil]
+  · rw [wirkungen, List.append_nil]
   · intro _ obj alive lost
     rw [rechte] at lost
     exact (Bool.false_ne_true (lost.symm.trans alive)).elim
+
+theorem wirkungsloser_schritt {vor nach : Zustand L Ort Wert Raum Lok Grund}
+    {spur : SchrittSpur Ort Wert} {hw t}
+    (keinAbsturz : ¬ Absturz spur) (buchung : nach.buchung = vor.buchung)
+    (rechte : nach.rechte = vor.rechte) :
+    NeueWirkungen vor nach spur [] ∧ FreigabenGueltig vor nach hw t spur [] :=
+  wirkungsloser_schritt_wirkungen keinAbsturz (congrArg Buchung.wirkungen buchung) rechte
 
 theorem kein_sperrwechsel {vor nach : Zustand L Ort Wert Raum Lok Grund}
     {Bedingung Wahl Form : Type}

@@ -159,7 +159,7 @@ theorem fortschritt_erfuellbar :
   let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
   have execute (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Bool Unit) :
       FuehrtSchrittAus e t c x (update c x) plan label.2 (update c x) :=
-    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ hn => (List.not_mem_nil hn).elim,
+    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ hn => (List.not_mem_nil hn).elim,
       [], update c x, .intern, .nil _, rfl⟩
   let zustand (t : Nat) : Zustand Unit Unit Unit Unit Bool Unit :=
     Nat.rec z (fun _ => update entry) t
@@ -235,7 +235,7 @@ theorem fortschritt_erfuellbar :
       .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ (execute 0 entry z)
     have idealStep : Schritt e sy' k (letztesAngebot hw) 0 z label z :=
       .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩
-        ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+        ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
           fun _ hn => (List.not_mem_nil hn).elim, [], z, .intern, .nil _, rfl⟩
     obtain ⟨ρ', η', run, valid, aligned, unfair, finite, idealFinite, bound, step, mark, pause, possible, atZero, atOne⟩ :=
       lauf_mit_letztem_privattakt (E := E') (z := z) (z' := z')

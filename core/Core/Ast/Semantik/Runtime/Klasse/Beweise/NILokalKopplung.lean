@@ -134,7 +134,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                   rw [← statusEq]
                   exact stat₁
               have rahmen₂ : Zustandsrahmen w₂ (F.nach c w₂ 0) := by
-                refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+                refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
               have speicher₂ : Speicherfolge w₂.initial (.kontext c) w₂.graph _ [] w₂.graph :=
                 Speicherfolge.nil _
               have aus₂ : FuehrtSchrittAus E.einrichtung t c w₂ (F.nach c w₂ 0)

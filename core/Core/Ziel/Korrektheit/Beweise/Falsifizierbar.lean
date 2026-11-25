@@ -104,7 +104,7 @@ theorem simTrennt : SimTrenntAussage := by
     .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ exec
   have execKeep : FuehrtSchrittAus falsifizierbareEinrichtung 0 falsifizierbarerEintrag z z
       falsifizierbarerPlan ⟨[], []⟩ z := by
-    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
       fun _ h => (List.not_mem_nil h).elim, [], z, .intern, .nil _, rfl⟩
   have idealStepKeep : Schritt falsifizierbareEinrichtung syTrenn ETrenn.katalog
       (letztesAngebot falsifizierbarerHw) 0 z

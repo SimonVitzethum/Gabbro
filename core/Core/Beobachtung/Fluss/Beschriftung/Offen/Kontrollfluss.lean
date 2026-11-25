@@ -322,7 +322,7 @@ theorem endeSicht : EndeSichtAussage := by
     by_cases hpub : oeffentlich β.ergebnis = true
     · simp only [hpub, if_true]
       have hp0 : oeffentlich (β.lokal r₁.pc 0) = true := hergebnis hpub
-      have e := maskiere_eintrag (l := β.lokal r₁.pc) 0 r₁.lokale r₂.lokale 0 lokEq hp0
+      have e := maskiereLokal_eintrag (l := β.lokal r₁.pc) 0 r₁.lokale r₂.lokale 0 lokEq hp0
       simpa only [List.head?_eq_getElem?] using e
     · simp only [hpub, if_false, Bool.false_eq_true]
   have hs (r : Rahmen) :
@@ -340,8 +340,8 @@ theorem bindeRegionSicht : BindeRegionSichtAussage := by
   obtain ⟨pcEq, tempPub, lokEq⟩ := sicht_oeffentliche_teile h
   have hpc' : r₁.pc = r₂.pc := pcEq.symm
   have hLok : r₁.lokale = r₂.lokale := by
-    rw [← maskiere_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₁.lokale,
-      ← maskiere_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₂.lokale]
+    rw [← maskiereLokal_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₁.lokale,
+      ← maskiereLokal_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₂.lokale]
     exact lokEq
   have hArr : r₁.arrivalRegions = r₂.arrivalRegions := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).arrivalRegions) h
@@ -364,7 +364,7 @@ theorem bindeRegionSicht : BindeRegionSichtAussage := by
         { r.sicht β with
           pc := r.pc + 1
           temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-          lokale := maskiere (β.lokal (r.pc + 1)) 0 (some value :: r.lokale) } := by
+          lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 (some value :: r.lokale) } := by
     rfl
   cases hslot : r₁.lokale[receiver]?.join.bind (wertAls .ownedRegion) with
   | none =>

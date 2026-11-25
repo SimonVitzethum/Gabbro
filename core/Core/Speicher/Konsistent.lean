@@ -16,12 +16,12 @@ namespace Graph
 
 variable {E Ort Wert : Type} (G : Graph E Ort Wert)
 
-/-- **RC11 consistency without load buffering** (Lahav et al., PLDI 2017, Def. 1, fence-free, with
-    NO-THIN-AIR strengthened to `po ∪ rf` acyclic as RC11 itself does):
+/-- **RC11 consistency with `po ∪ rf` acyclic** (Lahav et al., PLDI 2017, Def. 1, with fences
+    and with NO-THIN-AIR strengthened to `po ∪ rf` acyclic as RC11 itself does):
     * `hb_irrefl`, `kohaerent` -- COHERENCE: `hb ; eco?` is irreflexive;
     * `atomar` -- ATOMICITY (no write between): no write sits in `mo` between an update and the write it reads;
     * `liest_vorher` -- ATOMICITY (source before update): the write an update reads precedes the update in `mo`;
-    * `psc` -- SC: `psc` is acyclic;
+    * `psc` -- SC: `psc` (with `seq_cst` fences) is acyclic;
     * `ohneLB` -- NO-THIN-AIR: `po ∪ rf` is acyclic (no load buffering). -/
 structure Konsistent : Prop where
   wf : G.Wohlgeformt

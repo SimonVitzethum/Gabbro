@@ -12,6 +12,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Sicherheit.KatalogSchritt
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 
 @[expose] public section
 
@@ -24,47 +25,71 @@ open Maschine Katalog Sicherheit
     question, and its guard is `Zustand.fragenBefugt`. -/
 private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {plan : Plan}
     (step : F.impl c s () [plan] u) :
-    plan.aktion = .intern ∨ (∃ l a, plan.aktion = .sperre l a) ∨
+    plan.aktion.Still ∨ (∃ l a, plan.aktion = .sperre l a) ∨
       (∃ q : Frage, plan.aktion = .frage q ∧ s.fragenBefugt c q) := by
   obtain ⟨k, o, tr⟩ := F
   cases k with
   | lokal =>
       have hp : plan = Semantik.plan := (List.cons.inj step.1).1
       subst plan
-      exact Or.inl rfl
+      exact Or.inl trivial
   | ruf =>
       have hp : plan = Semantik.plan := (List.cons.inj step.1).1
       subst plan
-      exact Or.inl rfl
+      exact Or.inl trivial
+  | maskiere =>
+      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      subst plan
+      exact Or.inl trivial
+  | prioritaet =>
+      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      subst plan
+      exact Or.inl trivial
+  | sendeUnterbrechung =>
+      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      subst plan
+      exact Or.inl trivial
+  | leiteLeitung =>
+      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      subst plan
+      exact Or.inl trivial
   | lesen m =>
       rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
       · have hp : plan = Wirkungsklasse.plan (.lesen m) (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
   | schreiben m =>
       rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
       · have hp : plan = Wirkungsklasse.plan (.schreiben m) (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
   | rmw m =>
       rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
       · have hp : plan = Wirkungsklasse.plan (.rmw m) (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
+  | zaun m =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+      · have hp : plan = Wirkungsklasse.plan (.zaun m) (o (s.lokal c)) v := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
   | sperre a =>
       rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
       · have hp : plan = Wirkungsklasse.plan (.sperre a) (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
         exact Or.inr (Or.inl ⟨(o (s.lokal c)).sperre, a, rfl⟩)
@@ -72,20 +97,52 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
       rcases step with ⟨_, same, _⟩ | ⟨befugt, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
-        exact Or.inl rfl
+        exact Or.inl trivial
       · change ∃ q : Frage, (o (s.lokal c)).frage = some q ∧ s.fragenBefugt c q at befugt
         obtain ⟨q, hoq, hbefugt⟩ := befugt
         have hp : plan = Wirkungsklasse.plan .frage (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
         exact Or.inr (Or.inr ⟨q, by simp only [Wirkungsklasse.plan, Operand.fragePlan, hoq], hbefugt⟩)
+  | starte =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+      · have hp : plan = Wirkungsklasse.plan .starte (o (s.lokal c)) 0 := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+  | beende =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+      · have hp : plan = Wirkungsklasse.plan .beende (o (s.lokal c)) 0 := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+  | verbinde =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+      · have hp : plan = Wirkungsklasse.plan .verbinde (o (s.lokal c)) 0 := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+  | wechsle =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
+      · have hp : plan = Wirkungsklasse.plan .wechsle (o (s.lokal c)) 0 := (List.cons.inj same).1
+        subst plan
+        exact Or.inl trivial
 
 /-- Only an authorised question plan has a `.frage` action; its guard carries the device authority. -/
 private theorem frage_aktion_befugt {F : Schrittform} {c : Kontext} {s u : Zustand} {plan : Plan}
     (step : F.impl c s () [plan] u) {q : Frage} (hq : plan.aktion = .frage q) :
     s.fragenBefugt c q := by
   rcases klassen_aktion step with still | sperre | frage
-  · rw [still] at hq
-    cases hq
+  · rw [hq] at still
+    exact False.elim still
   · obtain ⟨l, a, hs⟩ := sperre
     rw [hs] at hq
     cases hq
@@ -106,16 +163,54 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
   | ruf =>
       rw [step.2]
       rfl
+  | maskiere =>
+      rw [step.2]
+      rfl
+  | prioritaet =>
+      rw [step.2]
+      rfl
+  | sendeUnterbrechung =>
+      rw [step.2]
+      rfl
+  | leiteLeitung =>
+      rw [step.2]
+      rfl
   | lesen m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | schreiben m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | rmw m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
+  | zaun m =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | sperre a =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | frage =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
+  | starte =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, hu⟩
+      · rw [hu]
+        rfl
+      · rw [hu]
+        exact (Schrittform.faedenNach_nurFaden ⟨.starte, o, tr⟩ c s).wirkungen
+  | beende =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, hu⟩
+      · rw [hu]
+        rfl
+      · rw [hu]
+        exact (Schrittform.faedenNach_nurFaden ⟨.beende, o, tr⟩ c s).wirkungen
+  | verbinde =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, hu⟩
+      · rw [hu]
+        rfl
+      · rw [hu]
+        exact (Schrittform.faedenNach_nurFaden ⟨.verbinde, o, tr⟩ c s).wirkungen
+  | wechsle =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, hu⟩
+      · rw [hu]
+        rfl
+      · rw [hu]
+        exact (Schrittform.faedenNach_nurFaden ⟨.wechsle, o, tr⟩ c s).wirkungen
 
 private theorem fuehrtAus_buchung {L Ort Wert Raum Lok Grund Bedingung : Type} [DecidableEq L]
     {t : Nat} {c : Kontext} {s u : Maschine.Zustand L Ort Wert Raum Lok Grund}

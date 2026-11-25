@@ -28,7 +28,7 @@ def Befehl.programConstructor : Befehl → Option Name
 /-- A program-level instruction is frame-only: only the access instructions are not, and they have no program constructor. -/
 theorem Befehl.privat_von_programConstructor {b : Befehl} {n : Name}
     (h : b.programConstructor = some n) : b.Privat :=
-  b.privat_von_kein_zugriff fun form eq => by subst eq; cases h
+  b.privat_von_kein_zugriff (fun form eq => by subst eq; cases h) (fun form eq => by subst eq; cases h)
 
 def programConstructors : List Name :=
   [``Befehl.bindeWert,
@@ -76,7 +76,7 @@ private theorem Quellform.program_occurrence {category : Category} {args : Type}
 private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustand} {s : Zustand} {b : Befehl}
     (reach : (p.einheit platform).system.IErreichbar start s)
     (head : (p.einheit platform).system.kopf s eintritt = some b)
-    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
   .schritt eintritt () [plan] reach
       ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩

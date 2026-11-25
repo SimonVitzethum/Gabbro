@@ -163,7 +163,7 @@ theorem komposition_erfuellbar (k : Katalog.Katalog) (hw : HwLauf) (t : Nat) (c 
     ⟨fun _ => form, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
   have execute (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) :
       FuehrtSchrittAus e t c s s plan ⟨[], []⟩ s :=
-    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ h => (List.not_mem_nil h).elim,
+    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ h => (List.not_mem_nil h).elim,
       [], s, .intern, .nil _, rfl⟩
   refine ⟨system, ?_, ?_, ?_, .kontext normal bereit ⟨(), rfl, rfl, rfl⟩ (execute t c s)⟩
   · intro _ _ _ _ _ _ _ _ a b

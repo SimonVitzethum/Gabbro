@@ -236,7 +236,7 @@ theorem effectGroup_erhaltung : EffectGroupErhaltungAussage := by
   let p := (effectGroupForm scope).fragment args
   let b := (effectGroupForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ (by rfl)) (fun b _ => rfl)⟩
 theorem effectGroup_regelSicher : EffectGroupRegelSicherAussage := by
   intro scope platform args
   exact (effectGroup_erhaltung scope platform args).2.2.2.1

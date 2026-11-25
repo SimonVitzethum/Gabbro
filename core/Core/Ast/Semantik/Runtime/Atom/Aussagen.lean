@@ -47,14 +47,17 @@ def Zugriffsform.modus : Zugriffsform → Modus
   | .holeUndAddiere _ _ _ _ _ m => m
   | .erwarte _ _ _ _ _ m => m
   | .veroeffentliche _ _ _ m => m
+  | .zaun m => m
 
 /-- The class of an access instruction carries its mode. -/
 theorem Zugriffsform.klasse_modus (z : Zugriffsform) :
-    z.klasse = .lesen z.modus ∨ z.klasse = .schreiben z.modus ∨ z.klasse = .rmw z.modus := by
+    z.klasse = .lesen z.modus ∨ z.klasse = .schreiben z.modus ∨ z.klasse = .rmw z.modus ∨
+      z.klasse = .zaun z.modus := by
   cases z <;> first
     | exact Or.inl rfl
     | exact Or.inr (Or.inl rfl)
-    | exact Or.inr (Or.inr rfl)
+    | exact Or.inr (Or.inr (Or.inl rfl))
+    | exact Or.inr (Or.inr (Or.inr rfl))
 
 /-- **The publication writes the flag cell in its mode**: the footprint of the step of `veroeffentliche` is the
     flag cell and the mode of the write is the mode of the instruction. This is the link between the instruction
@@ -111,8 +114,17 @@ theorem Schrittform.zugriffsschritt_treu (F : Schrittform) (hl : F.klasse.liest 
     | lokal => cases hl
     | ruf => cases hl
     | schreiben _ => cases hl
+    | zaun _ => cases hl
     | sperre _ => cases hl
     | frage => cases hl
+    | starte => cases hl
+    | beende => cases hl
+    | verbinde => cases hl
+    | wechsle => cases hl
+    | maskiere => cases hl
+    | prioritaet => cases hl
+    | sendeUnterbrechung => cases hl
+    | leiteLeitung => cases hl
 
 /-- The class rule of a reading form is faithful to the class step. -/
 theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : AtomarTreu F F.regel := by
@@ -124,8 +136,17 @@ theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : 
   | lokal => cases hl
   | ruf => cases hl
   | schreiben _ => cases hl
+  | zaun _ => cases hl
   | sperre _ => cases hl
   | frage => cases hl
+  | starte => cases hl
+  | beende => cases hl
+  | verbinde => cases hl
+  | wechsle => cases hl
+  | maskiere => cases hl
+  | prioritaet => cases hl
+  | sendeUnterbrechung => cases hl
+  | leiteLeitung => cases hl
 
 /-- **Atomic simulation** (the proof of `AtomarSimAussage`). -/
 theorem atomarSim : AtomarSimAussage := by

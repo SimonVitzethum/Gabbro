@@ -2,6 +2,7 @@ module
 
 public import Core.Sicherheit.Lauf
 public import Core.Ast.Semantik.Runtime.Sicherheit
+public import Core.Ast.Semantik.Runtime.Praedikat
 public import Core.Ast.Semantik.Runtime.Atom.Rein
 import Core.Sicherheit.Laufkonstruktion
 
@@ -11,34 +12,152 @@ namespace Gabbro.Core.Sicherheit
 
 open Maschine Katalog Ast Ast.Semantik
 
-private theorem ohneDeklarationen {p : Fragment} (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (s : Ast.Semantik.Zustand) :
+/-- The declared invariants of a checker-accepted table hold at a state whose memory content
+    satisfies every declared predicate. -/
+private theorem invariantenAusPruefung {p : Fragment} (platform : Plattform)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (s : Ast.Semantik.Zustand) (haelt : ∀ q ∈ ps, q.haelt s.initial) :
     InvariantenAmSchnitt (p.sicherheitsEinheit platform) s := by
   refine ⟨fun _ _ => trivial, ?_⟩
   intro i d vorhanden _
   change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
-  rw [keine] at vorhanden
-  cases vorhanden
+  rw [tab, List.getElem?_map] at vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
+  exact haelt q (List.mem_of_getElem? hsome)
+
+/-- Invariants transport across a step that preserves memory content, lock bookings and
+    running contexts: from the declared part at `vor` to the declared part at `nach`. -/
+private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (vor nach : Ast.Semantik.Zustand) (hinit : nach.initial = vor.initial)
+    (hbuch : nach.buchung = vor.buchung) (hstatus : nach.status = vor.status)
+    (vorSicher : InvariantenAmSchnitt (p.sicherheitsEinheit platform) vor) :
+    InvariantenAmSchnitt (p.sicherheitsEinheit platform) nach := by
+  obtain ⟨_, deklariert⟩ := vorSicher
+  refine ⟨fun _ _ => trivial, ?_⟩
+  intro i d vorhanden writersNach
+  change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
+  rw [tab, List.getElem?_map] at vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
+  rw [← tab, ← List.getElem?_map] at vorhanden
+  have writersVor : ∀ c, vor.status c = .laeuft → ¬ vor.buchung.schreibt c i := by
+    intro c hc hcon
+    have hc' : nach.status c = .laeuft := by
+      rw [hstatus]
+      exact hc
+    have hcon' : nach.buchung.schreibt c i := by
+      rw [hbuch]
+      exact hcon
+    exact writersNach c hc' hcon'
+  have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
+  exact Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
+
+/-- Invariants transport across an interrupt arrival: the fresh handler context was at rest,
+    so its writer scope comes from the post-state alone. -/
+private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattform)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (vor nach : Ast.Semantik.Zustand) (c : Kontext)
+    (hinit : nach.initial = vor.initial) (hbuch : nach.buchung = vor.buchung)
+    (hstatus : ∀ c', c' ≠ c → nach.status c' = vor.status c')
+    (hnach : nach.status c = .laeuft)
+    (vorSicher : InvariantenAmSchnitt (p.sicherheitsEinheit platform) vor) :
+    InvariantenAmSchnitt (p.sicherheitsEinheit platform) nach := by
+  obtain ⟨_, deklariert⟩ := vorSicher
+  refine ⟨fun _ _ => trivial, ?_⟩
+  intro i d vorhanden writersNach
+  change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
+  rw [tab, List.getElem?_map] at vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
+  rw [← tab, ← List.getElem?_map] at vorhanden
+  have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by
+    intro c' hc' hcon
+    by_cases heq : c' = c
+    · subst c'
+      have hcon' : nach.buchung.schreibt c i := by
+        rw [hbuch]
+        exact hcon
+      exact writersNach c hnach hcon'
+    · have hcNach : nach.status c' = .laeuft := by
+        rw [hstatus c' heq]
+        exact hc'
+      have hcon' : nach.buchung.schreibt c' i := by
+        rw [hbuch]
+        exact hcon
+      exact writersNach c' hcNach hcon'
+  have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
+  exact Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
 
 private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
-    (keine : p.klauseln.invariant = []) : GrenzenSicher (p.sicherheitsEinheit platform) := by
-  refine ⟨?_, fun _ _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach,
-    fun _ _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach,
-    fun _ _ _ _ nach _ _ => ohneDeklarationen platform keine nach⟩
-  intro H start s _ _ h
-  change Ast.Semantik.laden p.eingang p.eintritte p.speicher platform start (H.lade Ast.Semantik.bild) = some s at h
-  unfold Ast.Semantik.laden at h
-  split at h
-  · cases h
-    exact ⟨rfl, rfl, rfl, ohneDeklarationen platform keine _⟩
-  · cases h
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (startOk : ∀ q ∈ ps, q.haelt p.speicher.initial)
+    (restartOk : ∀ q ∈ ps, q.haelt (fun _ => 0)) :
+    GrenzenSicher (p.sicherheitsEinheit platform) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro H start s _ _ h
+    change Ast.Semantik.laden p.eingang p.eintritte p.speicher platform start (H.lade Ast.Semantik.bild) = some s at h
+    unfold Ast.Semantik.laden at h
+    split at h
+    · cases h
+      refine ⟨rfl, rfl, rfl, ?_⟩
+      exact invariantenAusPruefung platform tab _ (fun q hq => startOk q hq)
+    · cases h
+  · intro hw t a vor spur nach step vorSicher
+    obtain ⟨_, _, _, heq⟩ := step
+    have hinit : nach.initial = vor.initial := by
+      rw [heq]
+      try rfl
+    have hbuch : nach.buchung = vor.buchung := by
+      rw [heq]
+      try rfl
+    have hstatus : nach.status = vor.status := by
+      rw [heq]
+      try rfl
+    exact invariantenErhaltenInitial platform tab vor nach hinit hbuch hstatus vorSicher
+  · intro hw t id vor spur nach step vorSicher
+    obtain ⟨k, irq, c, nmi, _, _, _, _, _, _, heq⟩ := step
+    have hinit : nach.initial = vor.initial := by
+      rw [heq]
+      try rfl
+    have hbuch : nach.buchung = vor.buchung := by
+      rw [heq]
+      try rfl
+    have hstatus : ∀ c', c' ≠ c → nach.status c' = vor.status c' := by
+      intro c' hne
+      rw [heq]
+      try rfl
+      exact Function.update_of_ne hne _ _
+    have hnach : nach.status c = .laeuft := by
+      rw [heq]
+      try rfl
+      exact Function.update_self c .laeuft vor.status
+    exact invariantenErhaltenInterrupt platform tab vor nach c hinit hbuch hstatus hnach
+      vorSicher
+  · intro hw t vor spur nach step vorSicher
+    have hcrash := (AbsturzSchritt.neustart step).2.2.2.1
+    have hwieder : (p.sicherheitsEinheit platform).maschine.einrichtung.wiederanlauf.initial =
+        (fun _ _ => 0) := rfl
+    have hinit : nach.initial = (fun _ => 0) := by
+      rw [hcrash, hwieder]
+    exact invariantenAusPruefung platform tab nach (fun q hq => by
+      rw [hinit]
+      exact restartOk q hq)
 
 private theorem arithmetik_schritt
     (p : Fragment) (platform : Plattform) (hw : HwLauf) (t : Nat)
     (s : Ast.Semantik.Zustand) (b : Befehl)
     (normal : (hw.angebot t).crash = false) (bereit : KannSchreiten hw t eintritt s)
     (kopf : (p.einheit platform).system.kopf s eintritt = some b)
-    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl) :
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)) :
     Lauffolge (p.einheit platform) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
       (some (b.nach eintritt s)) :=
   .schritt (.kontext normal bereit
@@ -65,6 +184,22 @@ theorem sicherheit_aus_regeln_erfuellbar :
     (.binary .add (.lit 1) (.binary .mul (.lit 2) (.lit 3)))
   let p := stmt tree
   have keine : p.klauseln.invariant = [] := stmt_keine_invarianten tree
+  have tab : p.klauseln.invariant = [].map Praedikat.gilt := by
+    simp only [keine, List.map_nil]
+  have leer : ∀ q ∈ ([] : List Praedikat), q.haelt p.speicher.initial :=
+    fun q hq => (List.not_mem_nil hq).elim
+  have leerStart : ∀ q ∈ ([] : List Praedikat), q.haelt (fun _ => 0) :=
+    fun q hq => (List.not_mem_nil hq).elim
+  have okAll : ∀ b ∈ p.code, pruefeBefehlErhalt [] b = true := by
+    intro b _
+    rfl
+  have okStart : pruefeStart p.speicher.initial [] = true := rfl
+  have okRestart : pruefeNeustart [] = true := rfl
+  have okCode : p.code.all (pruefeBefehlErhalt []) = true :=
+    List.all_eq_true.mpr (fun b _ => rfl)
+  have ok : pruefeEinheit p [] = true := by
+    simp only [pruefeEinheit, Bool.and_eq_true]
+    exact ⟨⟨okStart, okRestart⟩, okCode⟩
   let platform := Plattform.x86_64
   let E := p.sicherheitsEinheit platform
   let H := Umgebung.referenz platform.katalog 1 Laufkonstruktion.leer
@@ -106,15 +241,18 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let zeit := voran (schritt := schritt) abEins (some z₀) _ s₀
   let ρ : Lauf E := ⟨start, hw, zeit⟩
   have rein : ∀ b ∈ p.code, b.Privat := stmt_rein tree
-  exact ⟨E, H, ρ, arithmetik_grenzen platform keine,
-    fun f => (Fragment.sicherheitsPflichten_alle p platform keine rein f).2,
-    fun f => (Fragment.sicherheitsPflichten_alle p platform keine rein f).1,
+  exact ⟨E, H, ρ, arithmetik_grenzen platform tab leer leerStart,
+    fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).2,
+    fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).1,
     ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
     z₆, ⟨7, Int.le_refl _, Int.le_refl _⟩, ende, rfl, rfl⟩
 
-/-- Every concrete run of a frame-only fragment without invariant declarations is
-    safe. The instruction proof is applied in the enclosing machine. -/
-theorem fragment_sicher (p : Fragment) (platform : Plattform) (keine : p.klauseln.invariant = [])
+/-- Every concrete run of a checker-accepted frame-only fragment with predicate invariants
+    is safe. The checker verdict supplies the loader, crash-recovery and per-command premises;
+    purity supplies the frame-only step. -/
+theorem fragment_sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : pruefeEinheit p ps = true)
     (rein : ∀ b ∈ p.code, b.Privat) :
     ∀ H (ρ : Lauf (p.sicherheitsEinheit platform)),
       Maschine.Laeufe (p.einheit platform) H ρ →
@@ -122,7 +260,9 @@ theorem fragment_sicher (p : Fragment) (platform : Plattform) (keine : p.klausel
         InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
         Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
         ToctouFrei (p.sicherheitsEinheit platform) H ρ :=
-  sicherheit_aus_regeln (arithmetik_grenzen platform keine)
-    (Fragment.sicherheitsPflichten_alle p platform keine rein)
+  sicherheit_aus_regeln (arithmetik_grenzen platform tab
+    (pruefeEinheit_start p ps ok) (pruefeEinheit_neustart p ps ok))
+    (Fragment.sicherheitsPflichten_alle p platform ps tab
+      (fun b hmem => pruefeEinheit_befehl p ps b hmem ok) rein)
 
 end Gabbro.Core.Sicherheit
