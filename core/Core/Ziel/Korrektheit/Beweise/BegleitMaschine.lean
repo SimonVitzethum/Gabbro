@@ -178,6 +178,7 @@ theorem IdealProtokollGutImLaufAussage.nichtTrivial :
   refine ⟨E, ⟨s, H, hw, zeit.erlaubePausen pause, fun _ => none⟩, ?_⟩
   intro h
   have h0 := h.2.2.2.1
+  change zeit.zustand 0 = (I.start E s).2 at h0
   rw [init] at h0
   have hst := congrArg
     (fun z : Zustand Unit Unit Unit Unit Unit Unit => z.status (.faden 0)) h0
