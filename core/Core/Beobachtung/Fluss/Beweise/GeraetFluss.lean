@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Ast.LowLevel.DeviceUnit
 
 @[expose] public section
@@ -227,5 +228,30 @@ theorem geraeteRegelFlussAussage {k scope} (locals : Ast.Umgebung scope)
                   (quellgleich_antwort locals d (c := d') qg)
             dsimp only [PlanSicht, Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit,
               Einheit.fluss, Flussdaten.leer, internal]
+
+/-- Acceptance of a device unit binds the decidable checker row to its elaborated rule:
+    `Akzeptiert` supplies `FlussLokal`, whose form rule is `geraeteRegelFlussAussage`; the
+    elaborated rule's access and phase target are exactly the shapes the row accepts. -/
+theorem geraeteEinheitAkzeptanzPruefer {k scope} (locals : Ast.Umgebung scope)
+    (d : Denotation k scope) (akzeptiert : Annahme.Akzeptiert (d.unit locals)) :
+    ∃ (binding : Binding k) (access : RegisterAccess) (required : GeraetePhase)
+      (target : Option GeraetePhase),
+      d.rule locals = Rule.machine binding access required target ∧
+        geraetProtokollRegelBool access target = true := by
+  have _fluss := Annahme.akzeptiert_fluss akzeptiert
+  have _regelFluss := _fluss.2 ()
+  cases d with
+  | read destination binding offset =>
+      exact ⟨binding, .read offset, .ready, none, rfl, rfl⟩
+  | fallibleRead destination binding offset promise handler =>
+      exact ⟨binding, .fallibleRead offset promise, .ready, none, rfl, rfl⟩
+  | write binding offset value =>
+      exact ⟨binding, .write offset (value.wert locals).wert.toNat, .ready, none, rfl, rfl⟩
+  | transition decl =>
+      refine ⟨decl.binding, .write decl.row.offset decl.data, decl.changes.prior,
+        some decl.changes.after, rfl, ?_⟩
+      cases decl.changes.freeAfter with
+      | inl h => rw [h]; rfl
+      | inr h => rw [h]; rfl
 
 end Gabbro.Core.Beobachtung
