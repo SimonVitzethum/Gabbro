@@ -103,6 +103,9 @@ theorem mp_wf : mpGraph.Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, mpGraph, mpLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, mpGraph, mpLab, reduceCtorEq] at h
 
 theorem mp_kein_rmw (u : MpEv) : ¬ mpGraph.istRmw u := by
   intro hu

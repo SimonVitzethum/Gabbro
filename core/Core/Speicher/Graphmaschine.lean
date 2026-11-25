@@ -133,7 +133,8 @@ theorem leer_konsistent : (leer : Zustand F Ort Wert).graph.Konsistent where
     mo_ort := fun a => (leer_elim a).elim
     mo_trans := fun a => (leer_elim a).elim
     mo_irrefl := fun a => (leer_elim a).elim
-    mo_total := fun a => (leer_elim a).elim }
+    mo_total := fun a => (leer_elim a).elim
+    rmw_nicht_na := fun a => (leer_elim a).elim }
   hb_irrefl := fun a => (leer_elim a).elim
   kohaerent := fun a => (leer_elim a).elim
   atomar := fun a => (leer_elim a).elim

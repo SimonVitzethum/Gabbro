@@ -211,6 +211,9 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
   mo_total := by
     intro a b ha hb ho hne
     exact irMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, irGraph, irLab, reduceCtorEq] at h
 
 theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
   intro hu

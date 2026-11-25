@@ -121,6 +121,9 @@ theorem lb_wf (m : Modus) : (lbGraph m).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, lbGraph, lbLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, lbGraph, lbLab, reduceCtorEq] at h
 
 theorem lb_kein_rmw (m : Modus) (u : LbEv) : ¬ (lbGraph m).istRmw u := by
   intro hu

@@ -34,7 +34,8 @@ def istRmw (a : E) : Prop := (G.lab a).art = .rmw
 
 /-- **The shape of an execution graph.** `po` a strict order; `rf` from a write to a read of the
     same location carrying the written value, at most one source per read; `mo` a strict total
-    order on the writes of each location. -/
+    order on the writes of each location. An update is atomic by definition (RC11's `U`), so it
+    never carries the plain mode `na`. -/
 structure Wohlgeformt : Prop where
   po_trans : ∀ a b c, G.po a b → G.po b c → G.po a c
   po_irrefl : ∀ a, ¬ G.po a a
@@ -48,6 +49,13 @@ structure Wohlgeformt : Prop where
   mo_trans : ∀ a b c, G.mo a b → G.mo b c → G.mo a c
   mo_irrefl : ∀ a, ¬ G.mo a a
   mo_total : ∀ a b, G.schreibt a → G.schreibt b → G.ort a = G.ort b → a ≠ b → G.mo a b ∨ G.mo b a
+  rmw_nicht_na : ∀ a, G.istRmw a → G.modus a ≠ .na
+
+/-- An update of a well-formed graph has an atomic mode. -/
+theorem Wohlgeformt.rmw_atomar (hw : G.Wohlgeformt) {a : E} (h : G.istRmw a) : (G.modus a).atomar := by
+  cases m : G.modus a with
+  | na => exact False.elim ((hw.rmw_nicht_na a h) m)
+  | rlx | ra | sc => exact trivial
 
 /-- **Reads-before** (RC11's `rb = rf⁻¹ ; mo \ id`): `r` reads a write that `w` follows in `mo`. -/
 def rb (r w : E) : Prop := ∃ w', G.rf w' r ∧ G.mo w' w ∧ r ≠ w

@@ -95,6 +95,11 @@ theorem wf (h : Einbettung H G g) (hw : G.Wohlgeformt) : H.Wohlgeformt where
         (fun e => hne (h.inj _ _ e)) with m | m
     · exact Or.inl ((h.mo a b).2 m)
     · exact Or.inr ((h.mo b a).2 m)
+  rmw_nicht_na := fun a ha hna => by
+    have hna' : G.modus (g a) = .na := by
+      rw [← h.modus a]
+      exact hna
+    exact (hw.rmw_nicht_na (g a) ((h.istRmw a).1 ha)) hna'
 
 theorem rs (h : Einbettung H G g) {a b : F} (hr : H.Rs a b) : G.Rs (g a) (g b) := by
   induction hr with

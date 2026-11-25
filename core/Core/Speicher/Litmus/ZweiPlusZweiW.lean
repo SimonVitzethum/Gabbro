@@ -207,6 +207,9 @@ theorem zp2w_wf (m : Modus) : (zp2wGraph m).Wohlgeformt where
   mo_total := by
     intro a b ha hb ho hne
     exact zp2wMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, zp2wGraph, zp2wLab, reduceCtorEq] at h
 
 theorem zp2w_rb {m : Modus} {r w : Zp2wEv} (h : (zp2wGraph m).rb r w) : False := by
   obtain ⟨w', h1, h2, -⟩ := h

@@ -49,6 +49,9 @@ theorem rennGraph_wf : rennGraph.Wohlgeformt where
     intro a b _ _ _ hne
     show (a = false ∧ b = true) ∨ (b = false ∧ a = true)
     cases a <;> cases b <;> first | decide | exact absurd rfl hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, rennGraph, reduceCtorEq] at h
 
 /-- Nothing in this graph synchronises, so nothing happens before anything. -/
 theorem rennGraph_hb (a b : Bool) : ¬ rennGraph.hb a b := by

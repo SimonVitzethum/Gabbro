@@ -176,6 +176,9 @@ theorem isa2_wf (m : Modus) : (isa2Graph m).Wohlgeformt where
     show ¬ isa2Mo a a
     cases a <;> decide
   mo_total := by intro a b ha hb ho hne; exact isa2Mo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, isa2Graph, isa2Lab, reduceCtorEq] at h
 
 theorem isa2_kein_rmw (m : Modus) (u : Isa2Ev) : ¬ (isa2Graph m).istRmw u := by
   intro hu

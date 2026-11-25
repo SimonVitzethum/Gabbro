@@ -3,8 +3,9 @@
   Subject:   THE ONE-EVENT APPEND (`senke_schritt`): appending one event of context `k` with label
              `l` -- program order from a set `P` of earlier events that contains the context's own
              events and is closed under program order, reads-from from a write `q` last in `mo` at
-             its location (when it reads), modification order after every write of its location
-             (when it writes) -- to a consistent and complete state is a step of the graph machine.
+              its location (when it reads), modification order after every write of its location
+              (when it writes), and an atomic mode when it is an update -- to a consistent and complete
+              state is a step of the graph machine.
              The new event is a sink (`Senke.lean`), so consistency follows from the old graph's.
              Every machine of M4 takes this step for a memory access, an outside event (it neither
              reads nor writes) included; `mo_letzte_existiert` supplies `q`.
@@ -32,6 +33,7 @@ structure Anhang (Z : Zustand F Ort Wert) (k : F) (l : Etikett Ort Wert) (P : Na
     (Z.ev[q]'hq).lab.ort = l.ort ∧ (Z.ev[q]'hq).lab.geschrieben = l.gelesen ∧
     ∀ v (hv : v < Z.ev.length), (Z.ev[v]'hv).lab.art.schreibt → (Z.ev[v]'hv).lab.ort = l.ort →
       v = q ∨ Z.mo v q
+  rmw_nicht_na : l.art = .rmw → l.modus ≠ .na
 
 /-- **The state with the event appended as a sink.** -/
 def senke (Z : Zustand F Ort Wert) (k : F) (l : Etikett Ort Wert) (P : Nat → Prop) (q : Nat) :
@@ -183,7 +185,15 @@ theorem senke_wf (A : Anhang Z k l P q) (hk : Z.graph.Konsistent) :
         exact Or.inl (Or.inr ⟨hb', (schN b hb').1 hb, ha', (sch a ha').1 ha, ho⟩)
       · rw [ortN a ha', ort b hb'] at ho
         exact Or.inr (Or.inr ⟨ha', (schN a ha').1 ha, hb', (sch b hb').1 hb, ho.symm⟩)
-      · exact absurd (Fin.ext (ha'.trans hb'.symm)) hne }
+      · exact absurd (Fin.ext (ha'.trans hb'.symm)) hne
+    rmw_nicht_na := fun a hrmw hna => by
+      rcases senke_idx a with ha | ha
+      · unfold Graph.istRmw Graph.modus at hrmw hna
+        rw [senke_lab_alt a ha] at hrmw hna
+        exact (hw.rmw_nicht_na ⟨a.1, ha⟩ hrmw) hna
+      · unfold Graph.istRmw Graph.modus at hrmw hna
+        rw [senke_lab_neu a ha] at hrmw hna
+        exact (A.rmw_nicht_na hrmw) hna }
 
 /-- The index of the new event. -/
 def neuIdx (Z : Zustand F Ort Wert) (k : F) (l : Etikett Ort Wert) (P : Nat → Prop) (q : Nat) :
