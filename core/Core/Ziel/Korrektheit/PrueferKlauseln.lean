@@ -354,10 +354,9 @@ theorem verletzteInvariante_verletzt (P : Katalog.Plattform) :
       ⟨Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5), List.mem_cons.mpr (Or.inl rfl), rfl⟩
   have hq := hcut _ hmem
   rw [hρ.2.2.2.1] at hq
-  have hq2 : ((Maschine.I.start _ ρ.start).2).initial (Zelle.region 0 0) = 5 := hq
+  simp only [Praedikat.gilt, Praedikat.haelt, Vergleich.haelt, Ausdruck.wert] at hq
   have hzero : ((Maschine.I.start (elaborierenMitInvarianten P verletzteInvariante)
       ρ.start).2).initial (Zelle.region 0 0) = 0 := rfl
-  rw [hzero] at hq2
   omega
 
 /-- The checker refuses a unit whose invariant is violated. -/
