@@ -128,16 +128,18 @@ theorem sw (h : Einbettung H G g) {a b : F} (hs : H.sw a b) : G.sw (g a) (g b) :
   have hatom' : (G.modus (g r)).atomar := by
     rw [← h.modus r]
     exact hatom
-  unfold Graph.sw
-  refine ⟨g w, g x, g r, ?_, h.rs hrs, (h.rf _ _).1 hrf, hatom', (h.liest r).1 hliest, ?_⟩
-  · rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
+  have hkopf' : G.FreigabeKopf (g a) (g w) := by
+    unfold Graph.FreigabeKopf at hkopf ⊢
+    rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
     · refine Or.inl ⟨rfl, (h.schreibt _).1 hsa, ?_⟩
       have hmg : (G.modus _).stark := by
         rw [← h.modus _]
         exact hma
       exact hmg
     · exact Or.inr ⟨(h.istSyncZaun _).1 hza, (h.po _ _).1 hpo, (h.schreibt _).1 hsw⟩
-  · rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
+  have hschwanz' : G.ErwerbSchwanz (g r) (g b) := by
+    unfold Graph.ErwerbSchwanz at hschwanz ⊢
+    rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
     · refine Or.inl ⟨rfl, (h.liest _).1 hlb, ?_⟩
       have hmg : (G.modus _).stark := by
         rw [← h.modus _]
@@ -147,6 +149,9 @@ theorem sw (h : Einbettung H G g) {a b : F} (hs : H.sw a b) : G.sw (g a) (g b) :
         rw [← h.modus r]
         exact hat
       exact Or.inr ⟨(h.liest _).1 hrl, hat', (h.po _ _).1 hpo, (h.istSyncZaun _).1 hzb⟩
+  unfold Graph.sw
+  exact ⟨g w, g x, g r, hkopf', h.rs hrs, (h.rf _ _).1 hrf, hatom', (h.liest r).1 hliest,
+    hschwanz'⟩
 
 theorem hb (h : Einbettung H G g) {a b : F} (hh : H.hb a b) : G.hb (g a) (g b) := by
   refine transGen_abbild g (fun x y hxy => ?_) hh

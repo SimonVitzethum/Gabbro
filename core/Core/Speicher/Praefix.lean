@@ -52,14 +52,18 @@ theorem einschraenken_rs {a b : {e // P e}} (h : (G.einschraenken P).Rs a b) : G
 
 theorem einschraenken_sw {a b : {e // P e}} (h : (G.einschraenken P).sw a b) : G.sw a.1 b.1 := by
   obtain ⟨w, x, r, hkopf, hrs, hrf, hatom, hliest, hschwanz⟩ := h
-  unfold Graph.sw
-  exact ⟨w.1, x.1, r.1, ?_, einschraenken_rs hrs, hrf, hatom, hliest, ?_⟩
-  · rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
+  have hkopf' : G.FreigabeKopf a.1 w.1 := by
+    unfold Graph.FreigabeKopf at hkopf ⊢
+    rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
     · exact Or.inl ⟨rfl, hsa, hma⟩
     · exact Or.inr ⟨hza, hpo, hsw⟩
-  · rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
+  have hschwanz' : G.ErwerbSchwanz r.1 b.1 := by
+    unfold Graph.ErwerbSchwanz at hschwanz ⊢
+    rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
     · exact Or.inl ⟨rfl, hlb, hmb⟩
     · exact Or.inr ⟨hrl, hat, hpo, hzb⟩
+  unfold Graph.sw
+  exact ⟨w.1, x.1, r.1, hkopf', einschraenken_rs hrs, hrf, hatom, hliest, hschwanz'⟩
 
 theorem einschraenken_hb {a b : {e // P e}} (h : (G.einschraenken P).hb a b) : G.hb a.1 b.1 := by
   refine transGen_abbild Subtype.val (fun x y hxy => ?_) h
