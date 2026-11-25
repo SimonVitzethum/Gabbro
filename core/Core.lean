@@ -168,6 +168,8 @@ public import Core.Ziel.Review.Befunde
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
+public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
+public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
