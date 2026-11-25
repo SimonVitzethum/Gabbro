@@ -1,6 +1,6 @@
 /-
   File:      core/Core/Speicher/Erfuellbar.lean
-  Subject:   SATISFIABILITY of the premise bundle of `drf_sc` (AGENTS.md §3): a consistent graph with
+  Subject:   SATISFIABILITY of the premise bundle of `drf_sc` (AGENTS.md §3): a consistent fence-free graph with
              only `seq_cst` atomics and no race in which both premises bite -- a plain carrier with
              conflicting accesses and a `seq_cst` carrier (`drf_sc_erfuellbar`). The graph is
              message passing: thread 1 writes the plain `x := 1`, then the `seq_cst` flag
@@ -111,6 +111,13 @@ theorem mp_kein_rmw (u : MpEv) : ¬ mpGraph.istRmw u := by
   intro hu
   cases u <;> simp only [Graph.istRmw, mpGraph, mpLab, reduceCtorEq] at hu
 
+/-- The message-passing graph has no fences. -/
+theorem mp_kein_zaun (a : MpEv) : ¬ mpGraph.istZaun a := by
+  intro hu
+  cases a <;> simp only [Graph.istZaun, mpGraph, mpLab, reduceCtorEq] at hu
+
+theorem mp_ohne_zaun : mpGraph.OhneZaun := fun a hu => mp_kein_zaun a hu
+
 theorem mp_hb {a b : MpEv} (h : mpGraph.hb a b) : mpHb a b := by
   have htr : ∀ x y z, mpHb x y → mpHb y z → mpHb x z := by
     intro x y z
@@ -118,7 +125,7 @@ theorem mp_hb {a b : MpEv} (h : mpGraph.hb a b) : mpHb a b := by
   refine transGen_von_trans htr (transGen_mono (fun x y hxy => ?_) h)
   rcases hxy with hpo | hsw
   · exact Or.inl hpo
-  · obtain ⟨z, hz, hzy⟩ := Graph.sw_ohne_rmw mp_kein_rmw hsw
+  · obtain ⟨z, hz, hzy⟩ := Graph.sw_ohne_rmw mp_kein_zaun mp_kein_rmw hsw
     revert hz hzy
     show (x = z ∨ mpPo x z) → mpRf z y → mpHb x y
     cases x <;> cases z <;> cases y <;> decide
@@ -162,16 +169,23 @@ theorem mp_konsistent : mpGraph.Konsistent where
   liest_vorher := fun _ u _ hu => absurd hu (mp_kein_rmw u)
   psc := by
     refine azyklisch_von_rang mpRang (fun a b h => ?_)
-    obtain ⟨-, -, h⟩ := h
-    rcases h with h | ⟨c, d, h1, -, h3, h4, -⟩ | ⟨h1, -⟩ | h | h
-    · exact mp_hb_rang (Or.inl h)
-    · exact Nat.lt_trans (mp_hb_rang (Or.inl h1))
-        (Nat.lt_trans (mp_hb_rang (mp_hb h3)) (mp_hb_rang (Or.inl h4)))
-    · exact mp_hb_rang (mp_hb h1)
-    · revert h
-      show mpMo a b → mpRang a < mpRang b
-      cases a <;> cases b <;> decide
-    · exact (mp_rb_leer h).elim
+    rcases h with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, _, _⟩
+    · rcases hl with ⟨_, hac⟩ | ⟨hza, _⟩
+      · rcases hr with ⟨_, hdb⟩ | ⟨hzb, _⟩
+        · subst hac
+          subst hdb
+          rcases hscb with h | ⟨x, y, h1, -, h3, h4, -⟩ | ⟨h1, -⟩ | h | h
+          · exact mp_hb_rang (Or.inl h)
+          · exact Nat.lt_trans (mp_hb_rang (Or.inl h1))
+              (Nat.lt_trans (mp_hb_rang (mp_hb h3)) (mp_hb_rang (Or.inl h4)))
+          · exact mp_hb_rang (mp_hb h1)
+          · revert h
+            show mpMo a d → mpRang a < mpRang d
+            cases a <;> cases d <;> decide
+          · exact (mp_rb_leer h).elim
+        · exact absurd hzb.1 (mp_kein_zaun _)
+      · exact absurd hza.1 (mp_kein_zaun _)
+    · exact absurd hza.1 (mp_kein_zaun _)
   ohneLB := by
     refine azyklisch_von_rang mpRang ?_
     intro a b
@@ -193,8 +207,8 @@ theorem mp_hb_wx_rx : mpGraph.hb wx rx :=
   mpGraph.hb_trans
     (mpGraph.hb_trans (mpGraph.hb_von_po (show mpPo wx wy by decide))
       (mpGraph.hb_von_sw (a := wy) (b := ry)
-        ⟨trivial, trivial, trivial, trivial, wy, .selbst trivial,
-        show mpRf wy ry by decide⟩))
+        ⟨wy, wy, ry, Or.inl ⟨rfl, trivial, trivial⟩, .selbst trivial trivial,
+        show mpRf wy ry by decide, trivial, trivial, Or.inl ⟨rfl, trivial, trivial⟩⟩))
     (mpGraph.hb_von_po (show mpPo ry rx by decide))
 
 theorem mp_rennfrei : mpGraph.Rennfrei := by
@@ -210,13 +224,13 @@ theorem mp_rennfrei : mpGraph.Rennfrei := by
       | (simp only [Graph.na, Graph.modus, mpGraph, mpLab, reduceCtorEq, or_self] at hna; done)
       | (simp only [Graph.schreibt, mpGraph, mpLab, Art.schreibt, or_self] at hw; done)
 
-/-- **Satisfiability of the premises of `drf_sc`**: a consistent graph with only `seq_cst`
-    atomics and no race, containing a `seq_cst` access and a conflicting pair on a plain
-    carrier. -/
+/-- **Satisfiability of the premises of `drf_sc`**: a consistent fence-free graph with only
+    `seq_cst` atomics and no race, containing a `seq_cst` access and a conflicting pair on a
+    plain carrier. -/
 theorem drf_sc_erfuellbar :
-    ∃ G : Graph MpEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.Rennfrei ∧ (∃ a, G.sc a) ∧
-      ∃ a b, G.Konflikt a b ∧ G.na a ∧ G.na b :=
-  ⟨mpGraph, mp_konsistent, mp_nur_sc, mp_rennfrei, ⟨wy, rfl⟩,
+    ∃ G : Graph MpEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.OhneZaun ∧ G.Rennfrei ∧ (∃ a, G.sc a) ∧
+    ∃ a b, G.Konflikt a b ∧ G.na a ∧ G.na b :=
+  ⟨mpGraph, mp_konsistent, mp_nur_sc, mp_ohne_zaun, mp_rennfrei, ⟨wy, rfl⟩,
     wx, rx, ⟨by decide, rfl, Or.inl trivial⟩, rfl, rfl⟩
 
 end Gabbro.Core.Speicher

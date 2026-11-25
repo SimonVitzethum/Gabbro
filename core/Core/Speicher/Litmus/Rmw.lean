@@ -128,7 +128,7 @@ theorem rmHbSchrittFalsch (a b : RmwLitEv) : ¬ rmGraph.hbSchritt a b := by
   intro h
   rcases h with hpo | hsw
   · exact False.elim hpo
-  · rcases hsw with ⟨_, hstark, _, _, _⟩
+  · have hstark : (rmGraph.modus a).stark := Graph.sw_stark_links hsw
     cases a <;> simp only [Graph.modus, rmGraph, rmLab, Modus.stark] at hstark <;>
       exact False.elim hstark
 
@@ -140,7 +140,7 @@ theorem rmHbFalsch (a b : RmwLitEv) : ¬ rmGraph.hb a b := by
 
 theorem rmPscFalsch (a b : RmwLitEv) : ¬ rmGraph.psc a b := by
   intro h
-  obtain ⟨hsc, _⟩ := h
+  have hsc : rmGraph.sc a := Graph.psc_sc_links h
   cases a <;> simp only [Graph.sc, Graph.modus, rmGraph, rmLab, reduceCtorEq] at hsc
 
 theorem rmKonsistent : rmGraph.Konsistent where

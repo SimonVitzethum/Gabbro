@@ -21,24 +21,26 @@ variable {E Ort Wert : Type} {G : Graph E Ort Wert}
 /-- Without updates a release sequence is its head or a `po` successor. -/
 theorem Rs.ohne_rmw (hr : ∀ u, ¬ G.istRmw u) {a x : E} (h : G.Rs a x) : a = x ∨ G.po a x := by
   induction h with
-  | selbst _ => exact Or.inl rfl
+  | selbst _ _ => exact Or.inl rfl
   | po _ hpo _ _ _ => exact Or.inr hpo
   | rmw _ _ hu _ => exact absurd hu (hr _)
 
-/-- Without updates, `sw` ends at an `rf` edge from the head or a `po` successor of it. -/
-theorem sw_ohne_rmw (hr : ∀ u, ¬ G.istRmw u) {a b : E} (h : G.sw a b) :
+/-- Without updates and fences, `sw` ends at an `rf` edge from the head or a `po` successor of
+    it. -/
+theorem sw_ohne_rmw (hz : ∀ a, ¬ G.istZaun a) (hr : ∀ u, ¬ G.istRmw u) {a b : E} (h : G.sw a b) :
     ∃ x, (a = x ∨ G.po a x) ∧ G.rf x b := by
-  obtain ⟨_, _, _, _, x, hrs, hrf⟩ := h
+  obtain ⟨_, _, _, _, x, hrs, hrf⟩ := sw_klassisch (hz a) (hz b) h
   exact ⟨x, Rs.ohne_rmw hr hrs, hrf⟩
 
-/-- Without updates and with every `rf` edge inside `po`, happens-before is program order. -/
-theorem hb_in_po (hw : G.Wohlgeformt) (hr : ∀ u, ¬ G.istRmw u)
+/-- Without updates, fences, and with every `rf` edge inside `po`, happens-before is program
+    order. -/
+theorem hb_in_po (hw : G.Wohlgeformt) (hz : ∀ a, ¬ G.istZaun a) (hr : ∀ u, ¬ G.istRmw u)
     (hrf : ∀ x b, G.rf x b → G.po x b) {a b : E} (h : G.hb a b) : G.po a b := by
   have schritt : ∀ x y, G.hbSchritt x y → G.po x y := by
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨z, hz, hzy⟩ := sw_ohne_rmw hr hsw
+    · obtain ⟨z, hz, hzy⟩ := sw_ohne_rmw hz hr hsw
       rcases hz with rfl | hz
       · exact hrf _ _ hzy
       · exact hw.po_trans _ _ _ hz (hrf _ _ hzy)
@@ -165,8 +167,13 @@ theorem sb_kein_rmw (m : Modus) (u : SbEv) : ¬ (sbGraph m).istRmw u := by
   intro hu
   cases u <;> simp only [Graph.istRmw, sbGraph, sbLab, reduceCtorEq] at hu
 
+/-- The store-buffering graph has no fences. -/
+theorem sb_kein_zaun (m : Modus) (u : SbEv) : ¬ (sbGraph m).istZaun u := by
+  intro hu
+  cases u <;> simp only [Graph.istZaun, sbGraph, sbLab, reduceCtorEq] at hu
+
 theorem sb_hb {m : Modus} {a b : SbEv} (h : (sbGraph m).hb a b) : sbPo a b :=
-  Graph.hb_in_po (sb_wf m) (sb_kein_rmw m)
+  Graph.hb_in_po (sb_wf m) (sb_kein_zaun m) (sb_kein_rmw m)
     (by
       intro x y
       show sbRf x y → sbPo x y
@@ -190,7 +197,7 @@ theorem sb_ohne_sc_erlaubt (m : Modus) (hm : m ≠ .sc) :
     exact absurd hu (sb_kein_rmw m u)
   · intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    have hs := hc.1
+    have hs := Graph.psc_sc_links hc
     cases a <;> exact hm hs
   · refine azyklisch_von_rang sbRang ?_
     intro a b

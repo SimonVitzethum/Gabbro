@@ -12,13 +12,13 @@
              * `veroeffentliche`: the release publication of `A = e publishes { p, q }` -- a store of the flag
                cell. The payload `{ p, q }` is the set of cells written before it in program order; which cells
                are declared is the checker's rule (SG-13), the machine carries no list.
-             The mode is a field of the instruction, NOT a constant of the carrier: the model must be able to
-             represent the instruction with a mode that is too weak for its purpose (a relaxed publication), so
-             that the checker's refusal of it is a refusal of something real (`PayloadSichtbarNichtTrivialAussage`).
-             THERE IS NO FENCE FORM. The memory model W is fence-free (`Core/Speicher/Basis.lean`: "fences are
-             added together with a fence form"); a `zaun` instruction without a fence rule in W would be an
-             accepted form the model lacks. It is refused until W has its fence events (finding for the owner:
-             `Art.zaun` at the end of `Art`, the fence clauses of `sw` and `psc`).
+  The mode is a field of the instruction, NOT a constant of the carrier: the model must be able to
+              represent the instruction with a mode that is too weak for its purpose (a relaxed publication), so
+              that the checker's refusal of it is a refusal of something real (`PayloadSichtbarNichtTrivialAussage`).
+              A fence (`zaun`) orders but accesses nothing: its mode decides whether it synchronises
+              (at least release/acquire, through the fence clauses of `sw` and `psc` in the memory
+              model W). The fence event reaches the graph when plans carry fence labels; until then the
+              instruction steps as a private step.
 -/
 module
 
@@ -63,9 +63,20 @@ theorem Aenderung.art_ne_aussen (a : Aenderung) (gelesen : Int) : a.art gelesen 
     · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
     · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
 
+/-- An update never records a fence event. -/
+theorem Aenderung.art_ne_zaun (a : Aenderung) (gelesen : Int) : a.art gelesen ≠ .zaun := by
+  cases a with
+  | tausche => intro h; cases h
+  | addiere => intro h; cases h
+  | vergleiche erwartet =>
+    by_cases hg : gelesen = erwartet
+    · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
+    · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
+
 /-- **The instructions that access shared memory.** The cell is the `index`-th cell of the region with the
     number `region`; `index`, `quelle`, `betrag`, `erwartet` (as a slot) and `neu` name temporaries of the frame;
-    `ziel` is the temporary that receives the value read, at the type `typ`. -/
+    `ziel` is the temporary that receives the value read, at the type `typ`. A fence (`zaun`) names no cell:
+    it only orders, in its mode. -/
 inductive Zugriffsform where
   | lade (ziel region index : Nat) (typ : Ty .value) (modus : Modus)
   | speichere (region index quelle : Nat) (modus : Modus)
@@ -74,6 +85,7 @@ inductive Zugriffsform where
   | holeUndAddiere (ziel region index betrag : Nat) (typ : Ty .value) (modus : Modus)
   | erwarte (ziel region index : Nat) (erwartet : Int) (typ : Ty .value) (modus : Modus)
   | veroeffentliche (region index quelle : Nat) (modus : Modus)
+  | zaun (modus : Modus)
 
 /-- **The static checker line for access forms.** An update reads and writes ONE event, so RC11 requires an
     atomic mode. `tausche`, `vergleicheTausche` and `holeUndAddiere` are refused when they name `na`;
@@ -153,6 +165,7 @@ def Zugriffsform.uebertrag (z : Zugriffsform) (r : Rahmen) (gelesen : Int) : Rah
   | .erwarte (ziel := ziel) (erwartet := erwartet) (typ := typ) .. =>
     if gelesen = erwartet then r.bindeGelesen ziel typ gelesen else r
   | .veroeffentliche .. => r.weiter
+  | .zaun .. => r.weiter
 
 /-- Binding the value read changes only the program counter, the temporaries or the stop reason of the frame: the
     stack and the loop counters stay, and the program counter never moves back. -/
@@ -178,13 +191,14 @@ theorem Zugriffsform.uebertrag_lokal (z : Zugriffsform) (r : Rahmen) (gelesen : 
     · exact ⟨rfl, Nat.le_refl _, rfl⟩
   | speichere _ _ _ _ => exact ⟨rfl, Nat.le_succ _, rfl⟩
   | veroeffentliche _ _ _ _ => exact ⟨rfl, Nat.le_succ _, rfl⟩
+  | zaun _ => exact ⟨rfl, Nat.le_succ _, rfl⟩
   | lade _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
   | tausche _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
   | vergleicheTausche _ _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
   | holeUndAddiere _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
 
-/-- **The frame transfer of an access instruction keeps the arrival regions of the frame**: the grant of the acting
-    context never changes quietly. -/
+/-- **The frame transfer of an access instruction keeps the arrival regions of the frame**: the grant of the
+    acting context never changes quietly. -/
 theorem Zugriffsform.uebertrag_arrival (z : Zugriffsform) (r : Rahmen) (gelesen : Int) :
     (z.uebertrag r gelesen).arrivalRegions = r.arrivalRegions := by
   have gebunden (ziel : Nat) (typ : Ty .value) :
@@ -199,6 +213,7 @@ theorem Zugriffsform.uebertrag_arrival (z : Zugriffsform) (r : Rahmen) (gelesen 
     · rfl
   | speichere _ _ _ _ => rfl
   | veroeffentliche _ _ _ _ => rfl
+  | zaun _ => rfl
   | lade ziel _ _ typ _ => exact gebunden ziel typ
   | tausche ziel _ _ _ typ _ => exact gebunden ziel typ
   | vergleicheTausche ziel _ _ _ _ typ _ => exact gebunden ziel typ

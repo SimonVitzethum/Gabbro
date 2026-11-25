@@ -47,13 +47,24 @@ theorem einschraenken_wf (hw : G.Wohlgeformt) : (G.einschraenken P).Wohlgeformt 
 
 theorem einschraenken_rs {a b : {e // P e}} (h : (G.einschraenken P).Rs a b) : G.Rs a.1 b.1 := by
   induction h with
-  | selbst hs => exact .selbst hs
+  | selbst h1 h2 => exact .selbst h1 h2
   | po h1 h2 h3 h4 h5 => exact .po h1 h2 h3 h4 h5
   | rmw _ h2 h3 ih => exact .rmw ih h2 h3
 
 theorem einschraenken_sw {a b : {e // P e}} (h : (G.einschraenken P).sw a b) : G.sw a.1 b.1 := by
-  obtain ⟨h1, h2, h3, h4, x, hrs, hrf⟩ := h
-  exact ⟨h1, h2, h3, h4, x.1, einschraenken_rs hrs, hrf⟩
+  obtain ⟨w, x, r, hkopf, hrs, hrf, hatom, hliest, hschwanz⟩ := h
+  have hkopf' : G.FreigabeKopf a.1 w.1 := by
+    unfold Graph.FreigabeKopf at hkopf ⊢
+    rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
+    · exact Or.inl ⟨rfl, hsa, hma⟩
+    · exact Or.inr ⟨hza, hpo, hsw⟩
+  have hschwanz' : G.ErwerbSchwanz r.1 b.1 := by
+    unfold Graph.ErwerbSchwanz at hschwanz ⊢
+    rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
+    · exact Or.inl ⟨rfl, hlb, hmb⟩
+    · exact Or.inr ⟨hrl, hat, hpo, hzb⟩
+  unfold Graph.sw
+  exact ⟨w.1, x.1, r.1, hkopf', einschraenken_rs hrs, hrf, hatom, hliest, hschwanz'⟩
 
 theorem einschraenken_hb {a b : {e // P e}} (h : (G.einschraenken P).hb a b) : G.hb a.1 b.1 := by
   refine transGen_abbild Subtype.val (fun x y hxy => ?_) h
@@ -73,16 +84,39 @@ theorem einschraenken_eco {a b : {e // P e}} (h : (G.einschraenken P).eco a b) :
   · exact Or.inr (Or.inl h1)
   · exact Or.inr (Or.inr (einschraenken_rb h1))
 
-theorem einschraenken_psc {a b : {e // P e}} (h : (G.einschraenken P).psc a b) :
-    G.psc a.1 b.1 := by
-  obtain ⟨ha, hb, h⟩ := h
-  refine ⟨ha, hb, ?_⟩
-  rcases h with h | ⟨c, d, h1, h2, h3, h4, h5⟩ | ⟨h1, h2⟩ | h | h
-  · exact Or.inl h
+theorem einschraenken_scb {a b : {e // P e}} (h : (G.einschraenken P).scb a b) :
+    G.scb a.1 b.1 := by
+  rcases h with hpo | ⟨c, d, h1, h2, h3, h4, h5⟩ | ⟨h1, h2⟩ | h | h
+  · exact Or.inl hpo
   · exact Or.inr (Or.inl ⟨c.1, d.1, h1, h2, einschraenken_hb h3, h4, h5⟩)
   · exact Or.inr (Or.inr (Or.inl ⟨einschraenken_hb h1, h2⟩))
   · exact Or.inr (Or.inr (Or.inr (Or.inl h)))
   · exact Or.inr (Or.inr (Or.inr (Or.inr (einschraenken_rb h))))
+
+theorem einschraenken_psc {a b : {e // P e}} (h : (G.einschraenken P).psc a b) :
+    G.psc a.1 b.1 := by
+  rcases h with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, hzb, h⟩
+  · refine Or.inl ⟨c.1, d.1, einschraenken_scb hscb, ?_, ?_⟩
+    · rcases hl with hl | hr
+      · obtain ⟨hsc, rfl⟩ := hl
+        exact Or.inl ⟨hsc, rfl⟩
+      · obtain ⟨hza, hcc⟩ := hr
+        refine Or.inr ⟨hza, ?_⟩
+        rcases hcc with rfl | hhb
+        · exact Or.inl rfl
+        · exact Or.inr (einschraenken_hb hhb)
+    · rcases hr with hl | hr
+      · obtain ⟨hsc, rfl⟩ := hl
+        exact Or.inl ⟨hsc, rfl⟩
+      · obtain ⟨hzb, hcc⟩ := hr
+        refine Or.inr ⟨hzb, ?_⟩
+        rcases hcc with rfl | hhb
+        · exact Or.inl rfl
+        · exact Or.inr (einschraenken_hb hhb)
+  · refine Or.inr ⟨hza, hzb, ?_⟩
+    rcases h with hhb | ⟨c, d, h1, h2, h3⟩
+    · exact Or.inl (einschraenken_hb hhb)
+    · exact Or.inr ⟨c.1, d.1, einschraenken_hb h1, einschraenken_eco h2, einschraenken_hb h3⟩
 
 /-- **Consistency survives restriction** to any set of events. -/
 theorem einschraenken_konsistent (hk : G.Konsistent) (P : E → Prop) :

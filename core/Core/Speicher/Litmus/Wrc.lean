@@ -37,11 +37,13 @@ theorem wrc_stark_verboten (hk : G.Konsistent) {wx r1 wy r2 r3 : E}
     (f1 : G.rf wx r1) (p1 : G.po r1 wy) (f2 : G.rf wy r2) (p2 : G.po r2 r3)
     (rb : G.rb r3 wx) : False := by
   have hs1 : G.sw wx r1 := by
+    apply Graph.sw_von_klassisch
     refine ⟨hk.wf.rf_schreibt _ _ f1, hs wx, hk.wf.rf_liest _ _ f1, hs r1, wx, ?_, f1⟩
-    exact Rs.selbst (hk.wf.rf_schreibt _ _ f1)
+    exact Rs.selbst (hk.wf.rf_schreibt _ _ f1) (Modus.stark_atomar (hs wx))
   have hs2 : G.sw wy r2 := by
+    apply Graph.sw_von_klassisch
     refine ⟨hk.wf.rf_schreibt _ _ f2, hs wy, hk.wf.rf_liest _ _ f2, hs r2, wy, ?_, f2⟩
-    exact Rs.selbst (hk.wf.rf_schreibt _ _ f2)
+    exact Rs.selbst (hk.wf.rf_schreibt _ _ f2) (Modus.stark_atomar (hs wy))
   have hb : G.hb wx r3 :=
     G.hb_trans (G.hb_trans (G.hb_trans (G.hb_von_sw hs1) (G.hb_von_po p1))
       (G.hb_von_sw hs2)) (G.hb_von_po p2)
@@ -205,7 +207,7 @@ theorem wrc_hb (m : Modus) (hm : ¬ m.stark) {a b : WrcEv} (h : (wrcGraph m).hb 
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hst, _, _, _⟩ := hsw
+    · have hst : ((wrcGraph m).modus x).stark := Graph.sw_stark_links hsw
       rw [wrc_modus m x] at hst
       exact False.elim (hm hst)
   exact transGen_von_trans (fun x y z hxy hyz => wrcPo_trans x y z ⟨hxy, hyz⟩)
@@ -248,7 +250,7 @@ theorem wrc_ohne_stark_erlaubt (m : Modus) (hm : ¬ m.stark) :
     exact absurd hu (wrc_kein_rmw m u)
   · intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact wrc_kein_sc m hm a hc.1
+    exact wrc_kein_sc m hm a (Graph.psc_sc_links hc)
   · refine azyklisch_von_rang wrcRang ?_
     intro a b
     show wrcPo a b ∨ wrcRf a b → wrcRang a < wrcRang b

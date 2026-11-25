@@ -36,11 +36,13 @@ theorem isa2_stark_verboten (hk : G.Konsistent) {wx wy r1 wz r2 r3 : E}
     (p0 : G.po wx wy) (f1 : G.rf wy r1) (p1 : G.po r1 wz)
     (f2 : G.rf wz r2) (p2 : G.po r2 r3) (rb : G.rb r3 wx) : False := by
   have hs1 : G.sw wy r1 := by
+    apply Graph.sw_von_klassisch
     refine ⟨hk.wf.rf_schreibt _ _ f1, hs wy, hk.wf.rf_liest _ _ f1, hs r1, wy, ?_, f1⟩
-    exact Rs.selbst (hk.wf.rf_schreibt _ _ f1)
+    exact Rs.selbst (hk.wf.rf_schreibt _ _ f1) (Modus.stark_atomar (hs wy))
   have hs2 : G.sw wz r2 := by
+    apply Graph.sw_von_klassisch
     refine ⟨hk.wf.rf_schreibt _ _ f2, hs wz, hk.wf.rf_liest _ _ f2, hs r2, wz, ?_, f2⟩
-    exact Rs.selbst (hk.wf.rf_schreibt _ _ f2)
+    exact Rs.selbst (hk.wf.rf_schreibt _ _ f2) (Modus.stark_atomar (hs wz))
   have hb : G.hb wx r3 :=
     G.hb_trans (G.hb_trans (G.hb_trans (G.hb_trans (G.hb_von_po p0) (G.hb_von_sw hs1))
       (G.hb_von_po p1)) (G.hb_von_sw hs2)) (G.hb_von_po p2)
@@ -213,7 +215,7 @@ theorem isa2_hb (m : Modus) (hm : ¬ m.stark) {a b : Isa2Ev} (h : (isa2Graph m).
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hst, _, _, _⟩ := hsw
+    · have hst : ((isa2Graph m).modus x).stark := Graph.sw_stark_links hsw
       rw [isa2_modus m x] at hst
       exact False.elim (hm hst)
   exact transGen_von_trans (fun x y z hxy hyz => isa2Po_trans x y z ⟨hxy, hyz⟩)
@@ -258,7 +260,7 @@ theorem isa2_ohne_stark_erlaubt (m : Modus) (hm : ¬ m.stark) :
     exact absurd hu (isa2_kein_rmw m u)
   · intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact isa2_kein_sc m hm a hc.1
+    exact isa2_kein_sc m hm a (Graph.psc_sc_links hc)
   · refine azyklisch_von_rang isa2Rang ?_
     intro a b
     show isa2Po a b ∨ isa2Rf a b → isa2Rang a < isa2Rang b

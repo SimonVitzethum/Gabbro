@@ -51,8 +51,11 @@ theorem mp_ra_verboten_nichtTrivial :
   refine ⟨MpEv, Bool, Nat, mpGraph, mp_konsistent, wx, wy, ry, rx, ?_, ?_, ?_⟩
   · show mpPo wx wy
     decide
-  · exact ⟨trivial, trivial, trivial, trivial, wy, .selbst trivial,
-      show mpRf wy ry by decide⟩
+  · apply Graph.sw_von_klassisch
+    refine ⟨trivial, trivial, trivial, trivial, wy, ?_, ?_⟩
+    · exact Graph.Rs.selbst trivial trivial
+    · show mpRf wy ry
+      decide
   · show mpPo ry rx
     decide
 
@@ -152,7 +155,7 @@ theorem mpRlx_kein_rmw (m : Modus) (u : MpRlxEv) : ¬ (mpRlxGraph m).istRmw u :=
 /-- With `.rlx` no event is strong, so there is no `sw` edge. -/
 theorem mpRlx_kein_sw (a b : MpRlxEv) : ¬ (mpRlxGraph .rlx).sw a b := by
   intro h
-  rcases h with ⟨_, hs, _, _, _⟩
+  have hs : ((mpRlxGraph .rlx).modus a).stark := Graph.sw_stark_links h
   cases a <;> exact hs
 
 /-- Without `sw`, happens-before is program order. -/
@@ -212,7 +215,7 @@ theorem mpRlx_konsistent : (mpRlxGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (mpRlx_kein_sc a) hc.1
+    exact (mpRlx_kein_sc a) (Graph.psc_sc_links hc)
   ohneLB := by
     refine azyklisch_von_rang mpRlxRang ?_
     intro a b

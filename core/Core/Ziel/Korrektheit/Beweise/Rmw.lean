@@ -109,9 +109,12 @@ theorem rmwHbSchrittFalsch (a b : RmwEv) : ¬ rmwGraph.hbSchritt a b := by
   intro h
   rcases h with hpo | hsw
   · exact False.elim hpo
-  · rcases hsw with ⟨_, hstark, _, _, _⟩
-    cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, Modus.stark] at hstark <;>
-      exact False.elim hstark
+  · obtain ⟨w, x, r, hkopf, _, _, _, _, _⟩ := hsw
+    rcases hkopf with ⟨rfl, _, hstark⟩ | ⟨hza, _, _⟩
+    · cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, Modus.stark] at hstark <;>
+        exact False.elim hstark
+    · obtain ⟨hza, _⟩ := hza
+      cases a <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hza
 
 /-- Happens-before is empty in this graph. -/
 theorem rmwHbFalsch (a b : RmwEv) : ¬ rmwGraph.hb a b := by
@@ -120,12 +123,20 @@ theorem rmwHbFalsch (a b : RmwEv) : ¬ rmwGraph.hb a b := by
   | single hs => exact rmwHbSchrittFalsch _ _ hs
   | tail _ _ ih => exact ih
 
-/-- The `psc` relation is empty: no access is `seq_cst`. -/
+/-- The `rmw` graph has no fences. -/
+theorem rmw_kein_zaun (u : RmwEv) : ¬ rmwGraph.istZaun u := by
+  intro hu
+  cases u <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hu
+
+/-- The `psc` relation is empty: no access is `seq_cst` and there is no `seq_cst` fence. -/
 theorem rmwPscFalsch (a b : RmwEv) : ¬ rmwGraph.psc a b := by
   intro h
-  obtain ⟨hsc, _⟩ := h
-  cases a <;> simp only [Graph.sc, Graph.modus, rmwGraph, rmwLab, reduceCtorEq] at hsc <;>
-    exact False.elim hsc
+  rcases h with ⟨_, _, _, hl, _⟩ | ⟨hza, _, _⟩
+  · rcases hl with ⟨hsc, _⟩ | ⟨hza, _⟩
+    · cases a <;> simp only [Graph.sc, Graph.modus, rmwGraph, rmwLab, reduceCtorEq] at hsc <;>
+        exact False.elim hsc
+    · exact absurd hza.1 (rmw_kein_zaun a)
+  · exact absurd hza.1 (rmw_kein_zaun a)
 
 /-- The empty relation is acyclic. -/
 theorem azyklischLeer : Azyklisch (fun _ _ : RmwEv => False) := by

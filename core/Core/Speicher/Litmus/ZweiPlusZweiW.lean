@@ -38,10 +38,13 @@ theorem zwei_plus_zwei_w_sc_verboten : ZweiPlusZweiWScVerbotenAussage := by
   rintro ⟨E, Ort, Wert, G, hk, wx₁, wy₂, ry, wy₁, wx₂, rx,
     s₁, s₂, s₃, s₄, p₁, p₂, p₃, p₄, f₁, f₂, m₁, m₂⟩
   exact hk.psc wx₁
-    ( (.tail (.tail (.tail (.single ⟨s₁, s₂, Or.inl p₁⟩)
-        ⟨s₂, s₃, Or.inr (Or.inr (Or.inr (Or.inl m₁)))⟩)
-        ⟨s₃, s₄, Or.inl p₃⟩)
-        ⟨s₄, s₁, Or.inr (Or.inr (Or.inr (Or.inl m₂)))⟩))
+    (.tail
+      (.tail
+        (.tail
+          (.single (Graph.psc_von_klassisch ⟨s₁, s₂, Or.inl p₁⟩))
+          (Graph.psc_von_klassisch ⟨s₂, s₃, Or.inr (Or.inr (Or.inr (Or.inl m₁)))⟩))
+        (Graph.psc_von_klassisch ⟨s₃, s₄, Or.inl p₃⟩))
+      (Graph.psc_von_klassisch ⟨s₄, s₁, Or.inr (Or.inr (Or.inr (Or.inl m₂)))⟩))
 
 /-- The eight events: the initial writes and, in thread 0, `wx₁; wy₂; ry`, in thread 1,
     `wy₁; wx₂; rx`. -/
@@ -235,7 +238,7 @@ theorem zp2w_hb_rlx {a b : Zp2wEv} (h : (zp2wGraph .rlx).hb a b) : zp2wPo a b :=
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hmw, _, _, _, _, _⟩ := hsw
+    · have hmw : ((zp2wGraph .rlx).modus x).stark := Graph.sw_stark_links hsw
       cases x <;> cases hmw
   exact transGen_von_trans zp2wPo_trans (transGen_mono schritt h)
 
@@ -264,7 +267,7 @@ theorem zp2w_konsistent : (zp2wGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (zp2w_kein_sc a) hc.1
+    exact (zp2w_kein_sc a) (Graph.psc_sc_links hc)
   ohneLB := azyklisch_von_rang zp2wRang (zp2wRang_porf)
   liest_vorher := by
     intro w u _ hu

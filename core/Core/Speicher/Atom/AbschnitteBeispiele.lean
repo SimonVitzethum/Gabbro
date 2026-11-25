@@ -57,9 +57,10 @@ theorem rennGraph_wf : rennGraph.Wohlgeformt where
 theorem rennGraph_hb (a b : Bool) : ¬ rennGraph.hb a b := by
   intro h
   obtain ⟨c, hc⟩ := transGen_kopf h
-  rcases hc with hpo | ⟨_, ha, _⟩
+  rcases hc with hpo | hsw
   · exact hpo
-  · exact False.elim ha
+  · obtain ⟨w, x, r, _, _, hrf, _⟩ := hsw
+    exact False.elim hrf
 
 theorem rennGraph_konsistent : rennGraph.Konsistent where
   wf := rennGraph_wf
@@ -69,7 +70,7 @@ theorem rennGraph_konsistent : rennGraph.Konsistent where
   liest_vorher := fun _ _ h => False.elim h
   psc := fun a h => by
     obtain ⟨_, hk⟩ := transGen_kopf h
-    have na : Modus.na = Modus.sc := hk.1
+    have na : Modus.na = Modus.sc := Graph.psc_sc_links hk
     cases na
   ohneLB := fun a h => by
     obtain ⟨_, hk⟩ := transGen_kopf h
@@ -139,7 +140,7 @@ def abSchloss : Bool → Option Bool
 
 /-- The first release hands over to the second acquire. -/
 theorem abUebergabe : abGraph.Uebergabe b1 a2 :=
-  ⟨b1, .selbst trivial, ⟨rfl, rfl⟩⟩
+  ⟨b1, .selbst trivial (Modus.stark_atomar trivial), ⟨rfl, rfl⟩⟩
 
 theorem abAbschnitte : abGraph.Abschnitte abSchloss (fun _ => True) where
   geschuetzt := by
