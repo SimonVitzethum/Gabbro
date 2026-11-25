@@ -1,17 +1,19 @@
 /-
-  File:      core/Core/Ziel/Korrektheit/Beweise/BegleitPruefer.lean
-  Subject:   COMPANION LEMMAS for the pinned statements of `Core/Ziel/Korrektheit/Pruefer.lean`
-             (checker correctness): for every `…Aussage` an `X.erfuellbar` (a checker satisfying
-             the statement, with the decision premises realised) and an `X.nichtTrivial`
-             (a non-accepted object or a degenerate checker violates the statement). No pinned
-             statement is changed. The soundness companions use `staleEinheit`; the completeness
-             companions use `akzeptiert_erfuellbar`. The checker that decides each conjunct by
-             a classical `if` makes the soundness and completeness statements true non-vacuously
-             without a `decide` proof on a large proposition.
+   File:      core/Core/Ziel/Korrektheit/Beweise/BegleitPruefer.lean
+   Subject:   COMPANION LEMMAS for the pinned statements of `Core/Ziel/Korrektheit/Pruefer.lean`
+              (checker correctness): for every `…Aussage` an `X.erfuellbar` (a checker satisfying
+              the statement, with the decision premises realised) and an `X.nichtTrivial`
+              (a non-accepted object or a degenerate checker violates the statement). No pinned
+              statement is changed. The soundness companions use `staleEinheit`; the completeness
+              companions use `akzeptiert_erfuellbar`. The checker that decides each conjunct by
+              a classical `if` makes the local, guard and whole statements true non-vacuously
+              without a `decide` proof on a large proposition; the clause statements use the
+              decidable checker of `PrueferKlauseln.lean` with its real proofs.
 -/
 module
 
 public import Core.Ziel.Korrektheit.Pruefer
+public import Core.Ziel.Korrektheit.PrueferKlauseln
 public import Core.Annahme.Annahme
 public import Core.Beobachtung.Unentscheidbar.Modell
 
@@ -27,7 +29,8 @@ open Classical
     holds for this checker with a real decision. -/
 noncomputable def prueferEntscheidet : Pruefer where
   pruefeLokal := fun P t => if Annahme.Lokal (einheitVon P t) then true else false
-  pruefeKlauseln := fun P t => if Annahme.KlauselnWahr (einheitVon P t) then true else false
+  pruefeKlauseln := fun P u =>
+    if Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u) then true else false
   pruefeWaechter := fun P t => if Annahme.WaechterHalten (einheitVon P t) then true else false
   fragmentLokal := fun _ _ => true
   fragmentKlauseln := fun _ _ => true
@@ -74,18 +77,16 @@ theorem PrueferLokalKorrektAussage.nichtTrivial :
   lokalNichtTrivial
 
 theorem PrueferKlauselnKorrektAussage.erfuellbar :
-    ∃ C : Pruefer, PrueferKlauselnKorrektAussage C := by
-  refine ⟨prueferEntscheidet, ?_⟩
-  intro P t accepted
-  change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true at accepted
-  split at accepted
-  · assumption
-  · cases accepted
+    ∃ C : Pruefer, PrueferKlauselnKorrektAussage C :=
+  ⟨prueferKlauselnDecidierbar, prueferKlauselnKorrekt_fuerDecidierbar⟩
 
+/-- Soundness over units with declared invariants is not vacuous in the other direction: the
+    accept-everything checker violates it on the unit whose invariant is violated. -/
 theorem PrueferKlauselnKorrektAussage.nichtTrivial :
-    ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
-      ¬ Annahme.Akzeptiert E :=
-  akzeptiertNichtTrivial
+    ∃ C : Pruefer, ¬ PrueferKlauselnKorrektAussage C := by
+  refine ⟨prueferNimmtAlles, ?_⟩
+  intro h
+  exact verletzteInvariante_verletzt _ (h _ _ rfl)
 
 theorem PrueferWaechterKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferWaechterKorrektAussage C := by
@@ -109,8 +110,9 @@ theorem PrueferKorrektAussage.erfuellbar : ∃ C : Pruefer, PrueferKorrektAussag
     split at accepted
     · assumption
     · cases accepted
-  · intro P t accepted
-    change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true at accepted
+  · intro P u accepted
+    change (if Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u) then true
+      else false) = true at accepted
     split at accepted
     · assumption
     · cases accepted
@@ -143,14 +145,8 @@ theorem PrueferLokalVollstaendigAussage.nichtTrivial :
   Annahme.akzeptiert_erfuellbar
 
 theorem PrueferKlauselnVollstaendigAussage.erfuellbar :
-    ∃ C : Pruefer, PrueferKlauselnVollstaendigAussage C := by
-  refine ⟨prueferEntscheidet, ?_⟩
-  intro P t _ clauses
-  change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true
-  split
-  · rfl
-  · rename_i notClauses
-    exact (notClauses clauses).elim
+    ∃ C : Pruefer, PrueferKlauselnVollstaendigAussage C :=
+  ⟨prueferKlauselnDecidierbar, prueferKlauselnVollstaendig_fuerDecidierbar⟩
 
 theorem PrueferKlauselnVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -181,8 +177,9 @@ theorem PrueferVollstaendigAussage.erfuellbar : ∃ C : Pruefer, PrueferVollstae
     · rfl
     · rename_i notLocal
       exact (notLocal hLocal).elim
-  · intro P t _ clauses
-    change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true
+  · intro P u _ clauses
+    change (if Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u) then true
+      else false) = true
     split
     · rfl
     · rename_i notClauses

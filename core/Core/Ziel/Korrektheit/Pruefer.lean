@@ -21,6 +21,7 @@
 module
 
 public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Annahme.Annahme
 public import Core.Beobachtung.Unentscheidbar.Rice
 
@@ -36,22 +37,30 @@ def einheitVon (P : Katalog.Plattform) (t : Ast.Unit) : Ast.Semantik.Einheit :=
   Ast.Semantik.elaborieren P (category := Ast.Category.unit) t
 
 /-- A computable checker: one total Boolean decision per conjunct of `Akzeptiert`, and one total Boolean
-membership test per conjunct for the decidable fragment on which that decision is complete. -/
+membership test per conjunct for the decidable fragment on which that decision is complete. The clause
+component decides units WITH the invariants they declare (`UnitMitInvarianten`): a plain source unit
+carries the empty predicate list, so the whole checker embeds it as `⟨t, []⟩`. -/
 structure Pruefer where
   pruefeLokal : Katalog.Plattform → Ast.Unit → Bool
-  pruefeKlauseln : Katalog.Plattform → Ast.Unit → Bool
+  pruefeKlauseln : Katalog.Plattform → Ast.Semantik.UnitMitInvarianten → Bool
   pruefeWaechter : Katalog.Plattform → Ast.Unit → Bool
   fragmentLokal : Katalog.Plattform → Ast.Unit → Bool
-  fragmentKlauseln : Katalog.Plattform → Ast.Unit → Bool
+  fragmentKlauseln : Katalog.Plattform → Ast.Semantik.UnitMitInvarianten → Bool
   fragmentWaechter : Katalog.Plattform → Ast.Unit → Bool
 
-/-- The checker's verdict on a unit: the three components agree. -/
+/-- The checker's verdict on a unit: the three components agree. The clause component sees the unit
+with the invariants it declares; a plain source unit declares none. -/
 def Pruefer.pruefe (C : Pruefer) (P : Katalog.Plattform) (t : Ast.Unit) : Bool :=
-  C.pruefeLokal P t && C.pruefeKlauseln P t && C.pruefeWaechter P t
+  C.pruefeLokal P t && C.pruefeKlauseln P ⟨t, []⟩ && C.pruefeWaechter P t
 
 /-- The decidable fragment of the checker: every component's fragment holds. -/
 def Pruefer.fragment (C : Pruefer) (P : Katalog.Plattform) (t : Ast.Unit) : Bool :=
-  C.fragmentLokal P t && C.fragmentKlauseln P t && C.fragmentWaechter P t
+  C.fragmentLokal P t && C.fragmentKlauseln P ⟨t, []⟩ && C.fragmentWaechter P t
+
+/-- A plain source unit is the invariant-carrying unit with the empty predicate list: elaboration
+stores no invariant and the two elaborations coincide. -/
+theorem einheitVon_mitInvarianten (P : Katalog.Plattform) (t : Ast.Unit) :
+    einheitVon P t = Ast.Semantik.elaborierenMitInvarianten P ⟨t, []⟩ := rfl
 
 /-- SOUNDNESS of the local component: acceptance by the checker gives `Lokal` (types, ownership, lock ranks,
 units, provenance of outside answers, guards or `else` paths, waits, stack and length bounds, row selection,
@@ -66,18 +75,25 @@ accepted by the component. The fragment is the set of units on which the local r
 def PrueferLokalVollstaendigAussage (C : Pruefer) : Prop :=
   ∀ P t, C.fragmentLokal P t = true → Annahme.Lokal (einheitVon P t) → C.pruefeLokal P t = true
 
-/-- SOUNDNESS of the clause component: acceptance by the checker gives `KlauselnWahr` — every written clause
-holds over every `I` run — for clauses in the decidable fragment (finite-state or bounded forms). Feeds:
-`Annahme.KlauselnWahr`, `kanonischeKlauseln`, `I.Laeufe`. Proof sketch: the checker decides the clause over a
-finite abstraction and the abstraction is sound (`Ideal` rules are deterministic). Open: the decision procedure
-and the abstraction lemma (Designer: fragment; Prover: lemma). -/
+/-- SOUNDNESS of the clause component over units WITH declared invariants: acceptance by the checker
+gives `KlauselnWahr` — every declared invariant holds at every `I` cut of every `I` run. The statement is
+not vacuous: the invariant table of an elaborated unit is the denotation list of its declared predicates,
+so a checker that accepts a unit whose invariant is violated refutes it. Feeds: `Annahme.KlauselnWahr`,
+`kanonischeKlauseln`, `I.Laeufe`. Proved in `PrueferKlauseln.lean` by induction over `I.Laeufe` from the
+decidable loader, crash-recovery and per-command premises. -/
 def PrueferKlauselnKorrektAussage (C : Pruefer) : Prop :=
-  ∀ P t, C.pruefeKlauseln P t = true → Annahme.KlauselnWahr (einheitVon P t)
+  ∀ P u, C.pruefeKlauseln P u = true →
+    Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u)
 
-/-- COMPLETENESS of the clause component on its fragment. -/
+/-- COMPLETENESS of the clause component on its footprint-stable fragment: a unit whose clauses hold
+over every `I` run and whose code preserves every declared predicate across each command is accepted.
+The statement is not universal: a checker that refuses everything refutes it on any accepted unit.
+Proved in `PrueferKlauseln.lean` for the decidable checker, whose fragment is exactly the footprint
+check. -/
 def PrueferKlauselnVollstaendigAussage (C : Pruefer) : Prop :=
-  ∀ P t, C.fragmentKlauseln P t = true → Annahme.KlauselnWahr (einheitVon P t) →
-    C.pruefeKlauseln P t = true
+  ∀ P u, C.fragmentKlauseln P u = true →
+    Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u) →
+    C.pruefeKlauseln P u = true
 
 /-- SOUNDNESS of the guard component: acceptance by the checker gives `WaechterHalten` — every guard of a
 partial operation holds in every reachable `I` state, and no reachable cut has a closed waiting set. Feeds:
@@ -99,13 +115,17 @@ accepted unit. -/
 def PrueferVollstaendigAussage (C : Pruefer) : Prop :=
   ∀ P t, C.fragment P t = true → Annahme.Akzeptiert (einheitVon P t) → C.pruefe P t = true
 
-/-- Soundness of the three components gives soundness of the checker. -/
+/-- Soundness of the three components gives soundness of the checker. The clause component is asked
+about the plain unit with the empty predicate list. -/
 theorem pruefer_korrekt_aus_teilen (C : Pruefer) (lokal : PrueferLokalKorrektAussage C)
     (klauseln : PrueferKlauselnKorrektAussage C) (waechter : PrueferWaechterKorrektAussage C) :
     PrueferKorrektAussage C := by
   intro P t h
   simp only [Pruefer.pruefe, Bool.and_eq_true] at h
-  exact ⟨lokal P t h.1.1, klauseln P t h.1.2, waechter P t h.2⟩
+  have hk : Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P ⟨t, []⟩) :=
+    klauseln P ⟨t, []⟩ h.1.2
+  rw [← einheitVon_mitInvarianten] at hk
+  exact ⟨lokal P t h.1.1, hk, waechter P t h.2⟩
 
 /-- Completeness of the three components gives completeness of the checker on the joint fragment. -/
 theorem pruefer_vollstaendig_aus_teilen (C : Pruefer) (lokal : PrueferLokalVollstaendigAussage C)
@@ -115,7 +135,10 @@ theorem pruefer_vollstaendig_aus_teilen (C : Pruefer) (lokal : PrueferLokalVolls
   obtain ⟨hl, hk, hw⟩ := hA
   simp only [Pruefer.fragment, Bool.and_eq_true] at hf
   simp only [Pruefer.pruefe, Bool.and_eq_true]
-  exact ⟨⟨lokal P t hf.1.1 hl, klauseln P t hf.1.2 hk⟩, waechter P t hf.2 hw⟩
+  have hk' : Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P ⟨t, []⟩) := by
+    rw [← einheitVon_mitInvarianten]
+    exact hk
+  exact ⟨⟨lokal P t hf.1.1 hl, klauseln P ⟨t, []⟩ hf.1.2 hk'⟩, waechter P t hf.2 hw⟩
 
 /-- The checker is not trivial in either direction: it accepts some unit (it is not a refuse-everything
 checker, for which soundness is empty) and it refuses some unit of its own fragment that is not accepted (it is
