@@ -36,7 +36,7 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
     hAfwd b hbA
   have hbleibA := laufBleibtVorEnde blkA r kA rA hrunA hpcA
   have hprefixA : (Schritt (blkA ++ blkB))^[kA] (some r) = some rA :=
-    laufAnhang blkA blkB r kA hbleibA
+    (laufAnhang blkA blkB r kA hbleibA).trans hrunA
   let rA0 : Rahmen := { rA with pc := 0 }
   have hrA0pc : rA0.pc = 0 := rfl
   have hrA0temp : rA0.temp mit = some (natVal b) := htempA
