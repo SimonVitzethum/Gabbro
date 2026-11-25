@@ -92,21 +92,26 @@ theorem durchlaufProtokollMarken : ProtokollMarkenErhaltend E := by
   rw [vorEq, spurEq, nachEq] at takt
   cases takt with
   | wartet label _ _ => cases label
-  | schritt _ step =>
+  | schritt label step =>
       cases step with
       | schritt impl =>
           cases impl with
-          | kontext _ _ _ _ => exact False.elim wahl
+          | kontext _ _ _ _ =>
+              cases w with
+              | kontext _ _ => exact False.elim (by simpa only [ProtokollB8Wahl] using wahl)
+              | antwort _ | interrupt _ | absturz => cases label
           | antwort _ hA =>
               have hlocal : nach.lokal = vor.lokal := by
                 obtain ⟨_, _, _, stateEq⟩ := hA
                 rw [stateEq]
+                rfl
               rw [hlocal] at hmem
               exact Or.inl hmem
           | interrupt _ hI =>
               have hlocal : nach.lokal = vor.lokal := by
                 obtain ⟨_, _, _, _, _, _, _, _, _, _, stateEq⟩ := hI
                 rw [stateEq]
+                rfl
               rw [hlocal] at hmem
               exact Or.inl hmem
           | absturz hA =>
