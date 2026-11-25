@@ -124,8 +124,7 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
 def Wirkungsklasse.liest : Wirkungsklasse → Bool
   | .lesen .. | .rmw .. => true
   | .lokal | .ruf | .schreiben .. | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde
-  | .wechsle | .verbrauche => false
-  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
+  | .wechsle | .verbrauche | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- The value a step of the class may take from the memory model: any value for a class that reads, and
     the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
@@ -186,9 +185,7 @@ noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Z
         if e = s.zugriffsereignis (F.operand (s.lokal c)).ort then s.adresse c (F.operand (s.lokal c)).ort
         else s.buchung.adresse e }
   | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .verbrauche | .starte | .beende | .verbinde
-  | .wechsle => s.buchung
-  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle
-  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => s.buchung
+  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => s.buchung
 
 /-- The state after the step of an access class: the frame transfer and the booked ledger. -/
 noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
@@ -239,10 +236,7 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
       { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerWert) }
     | .ruht | .laeuft => s
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .verbrauche
-  | .wechsle => F.nach c s 0
-  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .wechsle
-  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung =>
-    F.nach c s 0
+  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => F.nach c s 0
 
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
@@ -325,7 +319,6 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
-  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
   | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
@@ -346,7 +339,6 @@ def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : 
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
-  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
   | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => b.auswerten r live
 
 /-- **The step form of an instruction**: its class, operand and transfer. -/
