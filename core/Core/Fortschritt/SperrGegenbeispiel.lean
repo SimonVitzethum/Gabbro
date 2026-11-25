@@ -106,9 +106,53 @@ def takt_h (t : Nat) : Takt (Lauffolge E_h hw2) (KeinSchritt (Lauffolge E_h hw2)
 noncomputable def ρ_h : Maschine.Lauf E_h :=
   ⟨s_h, hw2, ⟨fun _ => some sH0, spur_h, takt_h⟩⟩
 
+/-- Only the two stutterers are ever dispatched: core zero runs `A`, core one
+    runs `B`, every higher core idles. -/
+theorem sH0_dispatchN (m : Nat) : (sH0.kerne (Nat.succ (Nat.succ m))).laeuft = none := rfl
+
+/-- The alternating run is scheduler-fair: a context ready on a whole suffix is
+    dispatched, hence `A` or `B`, and each of them steps on every other tick. -/
+theorem fairH : SchedulerFair E_h ρ_h := by
+  intro a c ready _opp n _hn
+  obtain ⟨s, hs, dispJ, _, _, _, _, _, _, _, _, _⟩ := ready (max n a) (Nat.le_max_right _ _)
+  have hseq : s = sH0 := (Option.some.inj hs).symm
+  obtain ⟨j, hj⟩ := dispJ
+  rw [hseq] at hj
+  cases j with
+  | zero =>
+    have hcA : c = A := (Option.some.inj (sH0_dispatch0.symm.trans hj)).symm
+    subst hcA
+    match hm : (max n a) % 2 with
+    | 0 =>
+      have hsp : spur_h (max n a) = some posLabel := by simp only [spur_h, if_pos hm]
+      exact ⟨max n a, Nat.le_max_left _ _, (), ⟨[], []⟩, hsp⟩
+    | m + 1 =>
+      have heven : (max n a + 1) % 2 = 0 := by omega
+      have hsp : spur_h (max n a + 1) = some posLabel := by simp only [spur_h, if_pos heven]
+      exact ⟨max n a + 1, Nat.le_succ_of_le (Nat.le_max_left _ _), (), ⟨[], []⟩, hsp⟩
+  | succ j =>
+    cases j with
+    | zero =>
+      have hcB : c = B := (Option.some.inj (sH0_dispatch1.symm.trans hj)).symm
+      subst hcB
+      match hm : (max n a) % 2 with
+      | 0 =>
+        have hodd : (max n a + 1) % 2 = 1 := by omega
+        have hn : ¬ (max n a + 1) % 2 = 0 := by omega
+        have hsp : spur_h (max n a + 1) = some bLabel := by simp only [spur_h, if_neg hn]
+        exact ⟨max n a + 1, Nat.le_succ_of_le (Nat.le_max_left _ _), (), ⟨[], []⟩, hsp⟩
+      | m + 1 =>
+        have h1 : (max n a) % 2 = 1 := by omega
+        have hn : ¬ (max n a) % 2 = 0 := by omega
+        have hsp : spur_h (max n a) = some bLabel := by simp only [spur_h, if_neg hn]
+        exact ⟨max n a, Nat.le_max_left _ _, (), ⟨[], []⟩, hsp⟩
+    | succ m =>
+      rw [sH0_dispatchN m] at hj
+      cases hj
+
 /-- The stuck run is admissible. -/
 theorem lauf_h : Laeufe E_h h2 ρ_h :=
-  ⟨fair2.hardware, fair2.konform, zul_h, rfl⟩
+  ⟨fair2.hardware, fair2.konform, zul_h, rfl, fairH⟩
 
 /-- The lock stays with the stuck holder at every cut. -/
 theorem eh_besitzer (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit) (l : Unit)
@@ -350,8 +394,25 @@ noncomputable def ρ_w : Maschine.Lauf E_wait :=
   ⟨s_w, hw2, ⟨fun _ => some sW0, spur_w, takt_w⟩⟩
 
 /-- The waiting run is admissible. -/
+/-- The waiting run is scheduler-fair: only the waiter has an implementation
+    step, so every suffix-ready context is `A`, served on every odd tick. -/
+theorem fairW : SchedulerFair E_wait ρ_w := by
+  intro a c ready _opp n _hn
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, regel, _⟩ := ready (max n a) (Nat.le_max_right _ _)
+  obtain ⟨i, _, himpl⟩ := regel
+  have hcA : c = A := himpl.1
+  subst hcA
+  match hm : (max n a) % 2 with
+  | 0 =>
+    have h1 : (max n a + 1) % 2 = 1 := by omega
+    exact ⟨max n a + 1, Nat.le_succ_of_le (Nat.le_max_left _ _), (),
+      ⟨[], []⟩, spur_w_odd h1⟩
+  | m + 1 =>
+    have h1 : (max n a) % 2 = 1 := by omega
+    exact ⟨max n a, Nat.le_max_left _ _, (), ⟨[], []⟩, spur_w_odd h1⟩
+
 theorem lauf_w : Laeufe E_wait h2 ρ_w :=
-  ⟨fair2.hardware, fair2.konform, zul_w, rfl⟩
+  ⟨fair2.hardware, fair2.konform, zul_w, rfl, fairW⟩
 
 /-- The lock stays with the waiting holder at every cut. -/
 theorem ew_besitzer (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
