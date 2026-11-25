@@ -46,14 +46,11 @@ public theorem pointerTypeEntry :
   ⟨pointerTypeRegistry⟩
 
 /-- A pointer-typed binding runs the same local-type recipe as the other
-    written types. The simulation and preservation arguments over the
+    written types: the universal `LocalTypeUseAussage` covers the pointer
+    case. The simulation and preservation arguments over the
     capability (no integer-to-pointer conversion, access only through the
     named target with the written rights) are open work for the provers. -/
-def pointerTypeUse : WrittenType → Prop
-  | .ptr .. => True
-  | _ => False
-
 def PointerTypeUseAussage : Prop :=
-  LocalTypeUseAussage pointerTypeUse
+  LocalTypeUseAussage
 
 end Gabbro.Core.Ast.Semantik

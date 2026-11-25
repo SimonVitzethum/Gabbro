@@ -17,19 +17,23 @@ def integerTypeUse : WrittenType → Prop
   | .integer .. => True
   | _ => False
 
-/-- A written scalar type takes effect at the binding instruction of a typed local.
-    The selector must admit at least one written type, so the obligations below
-    quantify over a real use and not over the empty subtype. -/
-def LocalTypeUseAussage (select : WrittenType → Prop) : Prop :=
-  (∃ w, select w) ∧
-  (∀ ctx, (typeUseForm ctx select).ParseAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).ElaboriertAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).RealisiertAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).AnnahmeAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).IdealAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).EinheitAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).ImplAussage) ∧
-  (∀ ctx, (typeUseForm ctx select).ErhaltungsAussage)
+/-- The universal type-use selector: every written type takes effect at the
+    binding instruction of a typed local. -/
+def anyTypeUse : WrittenType → Prop := fun _ => True
+
+/-- Every written type takes effect at the binding instruction of a typed local.
+    The selector is the model definition `anyTypeUse`, so the obligations below
+    quantify over real uses and never over an empty subtype. -/
+def LocalTypeUseAussage : Prop :=
+  (∃ w, anyTypeUse w) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).ParseAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).ElaboriertAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).RealisiertAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).AnnahmeAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).IdealAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).EinheitAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).ImplAussage) ∧
+  (∀ ctx, (typeUseForm ctx anyTypeUse).ErhaltungsAussage)
 
 def BoolTypeErfuellbarAussage : Prop :=
   ∀ platform start, ∃ args, (typeUseForm ([], none) boolTypeUse).ErfuellbarAm platform start args
@@ -44,14 +48,14 @@ def IntegerTypeErfuellbarAussage : Prop :=
 
 def BoolTypeRegistryAussage : Prop :=
   (∀ scope rest, TypeReads scope (WrittenType.bool.printPieces.map PrintedToken.value ++ rest) .bool rest) ∧
-  LocalTypeUseAussage boolTypeUse ∧ BoolTypeErfuellbarAussage
+  LocalTypeUseAussage ∧ BoolTypeErfuellbarAussage
 
 def IntegerTypeRegistryAussage : Prop :=
   (∀ scope signed width interval rest, (WrittenType.integer signed width interval).valid scope →
     (∀ more, rest ≠ keyword "in" :: more) →
     TypeReads scope ((WrittenType.integer signed width interval).printPieces.map PrintedToken.value ++ rest)
       (.integer signed width interval) rest) ∧
-  LocalTypeUseAussage integerTypeUse ∧ IntegerTypeErfuellbarAussage
+  LocalTypeUseAussage ∧ IntegerTypeErfuellbarAussage
 
 /-- The written region type is realized in the owned parameter of the checked region unit. -/
 def OwnedRegionTypeRegistryAussage : Prop :=
