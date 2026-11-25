@@ -72,15 +72,26 @@ private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Ty
   | wartet _ eq _ => exact eq
   | schritt _ step => cases step
 
-/-- Instruction evaluation reads only the public frame, rights and loans. -/
-private theorem evaluate_gleich {k : Katalog} (op : Instruction k)
+private theorem held_gleich {k : Katalog} {v u : Ast.LowLevel.State k} {c : Kontext} {slot : Nat}
+    (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
+    Ast.LowLevel.heldRegion v c slot = Ast.LowLevel.heldRegion u c slot := by
+  unfold Ast.LowLevel.heldRegion
+  rw [hl, hre, hle]
+
+/-- Whether evaluation succeeds is decided by the public frame, rights and loans. -/
+private theorem evaluate_isSome_gleich {k : Katalog} (op : Instruction k)
     {v u : Ast.LowLevel.State k} {c : Kontext}
     (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
-    op.evaluate v c = op.evaluate u c := by
-  cases hl
-  cases hre
-  cases hle
-  rfl
+    (op.evaluate v c).isSome = (op.evaluate u c).isSome := by
+  cases op with
+  | denoteAddress _ _ _ => rfl
+  | selectEnvironment _ _ _ _ => rfl
+  | projectAddress slot =>
+      unfold Instruction.evaluate
+      rw [held_gleich hl hre hle]
+  | borrowView slot shape =>
+      unfold Instruction.evaluate
+      rw [held_gleich hl hre hle]
 
 /-- Inverting the low-level head: only the instruction itself runs at the entry, once. -/
 private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel.State k}
@@ -128,7 +139,7 @@ private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umge
           | wartet _ eq _ => rw [eq] at hs; cases hs
           | schritt _ laufstep => cases laufstep
       | some s0 =>
-          have ihs := ih s0 rfl
+          have ihs := ih (s := s0) rfl
           rw [hv, hs] at tak
           cases tak with
           | wartet label eq _ =>
@@ -174,6 +185,7 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
       | schritt _ laufstep => cases laufstep
   | some s0 =>
       rw [hv, heq] at tak
+      generalize hN : ρ.zeit.zustand (t + 1) = nOpt at tak
       cases tak with
       | wartet label _ _ => cases label
       | schritt _ laufstep =>
