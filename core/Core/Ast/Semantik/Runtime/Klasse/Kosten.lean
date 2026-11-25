@@ -22,6 +22,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
+public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Maschine.Schritte
 
 @[expose] public section
@@ -57,7 +58,7 @@ theorem Wirkungsklasse.kostenZeile_halten_ohneSperrwort (k : Wirkungsklasse)
     (hne : k.beruehrtSperrwort = false) : (k.kostenZeile).halten = none := by
   cases k with
   | sperre a =>
-      simp only [Wirkungsklasse.beruehrtSperrwort] at hne
+      change true = false at hne
       cases hne
   | lokal | ruf | lesen _ | schreiben _ | rmw _ | zaun _ | frage | starte | beende | verbinde
   | wechsle | maskiere | prioritaet | sendeUnterbrechung | leiteLeitung => rfl
