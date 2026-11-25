@@ -130,7 +130,6 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     (hstate : spost = {Maschine.Zustandseintritt s kstep id cstep nmi with
       graph := spost.graph}) :
     False := by
-  subst kstep
   have live : s.status c = .laeuft := by
     have hlive : (η.zeit.zustand d).status c = .laeuft := (opened.2 d hd).2.1
     have heq : s = η.zeit.zustand d :=
@@ -169,7 +168,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
       exact hne (Option.some.inj hk'')
     · simp only [if_neg heq] at hk''
       have hkk'' : k'' = k := hsingleρ d s c k'' k hs hk'' hdis
-      exact heq (hkk''.trans rfl)
+      exact heq (hkk''.trans hkk.symm)
   -- The return premise fires on the displacement and gives a first return.
   obtain ⟨r, hr, kret, zret, hzret, hret⟩ :=
     ret c k d ⟨s, hs, hdis, live⟩ ⟨id, spur, hspur⟩
