@@ -69,7 +69,7 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
         subst plan
         exact Or.inr (Or.inl ⟨(o (s.lokal c)).sperre, a, rfl⟩)
   | frage =>
-      rcases step with ⟨_, same, _⟩ | ⟨_, v, befugt, same, _⟩
+      rcases step with ⟨_, same, _⟩ | ⟨befugt, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
         exact Or.inl rfl
@@ -118,13 +118,25 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
 
 private theorem fuehrtAus_buchung {L Ort Wert Raum Lok Grund Bedingung : Type} [DecidableEq L]
-    {t : Nat} {c : Kontext} {s u : Zustand L Ort Wert Raum Lok Grund}
-    {p : SchrittPlan L Ort Wert Bedingung} {sperren : List (Etikett Ort Wert)}
-    {ereignisse : List Ereignis} {v : Zustand L Ort Wert Raum Lok Grund}
+    {t : Nat} {c : Kontext} {s u : Maschine.Zustand L Ort Wert Raum Lok Grund}
+    {p : SchrittPlan L Ort Wert Bedingung} {sperren : List (Speicher.Etikett Ort Wert)}
+    {ereignisse : List Ereignis} {v : Maschine.Zustand L Ort Wert Raum Lok Grund}
     (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
     (action : FuehrtAus e t c s u p.aktion sperren ereignisse v) :
     v.buchung.wirkungen = u.buchung.wirkungen := by
   cases action <;> rfl
+
+private theorem fuehrtAus_aussen {L Ort Wert Raum Lok Grund Bedingung : Type} [DecidableEq L]
+    {t : Nat} {c : Kontext} {s u : Maschine.Zustand L Ort Wert Raum Lok Grund}
+    {p : SchrittPlan L Ort Wert Bedingung} {sperren : List (Speicher.Etikett Ort Wert)}
+    {ereignisse : List Ereignis} {v : Maschine.Zustand L Ort Wert Raum Lok Grund}
+    (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
+    (action : FuehrtAus e t c s u p.aktion sperren ereignisse v) :
+    ereignisse = [] ∨ ∃ q : Frage, ereignisse = [.frage (s.stelleFrage t c q)] ∧ p.aktion = .frage q := by
+  generalize hA : p.aktion = a at action
+  cases action with
+  | frage q => exact Or.inr ⟨q, rfl, hA⟩
+  | _ => exact Or.inl rfl
 
 /-- The outside record and the new effects of one class step. The record is empty, or one question with
     its device authority; the ledger gains nothing. -/
@@ -143,17 +155,16 @@ private theorem klassen_spur {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
     change v.buchung.wirkungen = vor.buchung.wirkungen
     rw [fuehrtAus_buchung E.einrichtung action, wirkungen_gleich F c vor zwischen plan step]
   constructor
-  · cases action with
-    | frage q =>
-        exact Or.inr ⟨q, rfl, (frage_aktion_befugt step rfl).2⟩
-    | _ => exact Or.inl rfl
+  · rcases fuehrtAus_aussen E.einrichtung action with leer | ⟨q, geformt, hA⟩
+    · exact Or.inl leer
+    · exact Or.inr ⟨q, geformt, (frage_aktion_befugt step hA).2⟩
   · exact wirkungen
 
 /-- **The register leg of every class** (`KlassenRegisterbeinAussage`). The only outside event a class
     step records is a question, and its guard carries the device authority. No new effect is emitted. -/
 theorem klassenRegisterbein (k : Wirkungsklasse) : KlassenRegisterbeinAussage k := by
   intro ι E f F _ emb _ t c _ vor zwischen nach plan spur _ regel aus
-  rcases klassen_spur E.maschine f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
+  rcases klassen_spur E.maschine f F emb t c vor zwischen nach plan spur regel aus with ⟨ spurform, wirkungen ⟩
   constructor
   · intro e mem
     rcases spurform with leer | ⟨q, geformt, erlaubt⟩
@@ -182,7 +193,7 @@ theorem klassenRegisterbein (k : Wirkungsklasse) : KlassenRegisterbeinAussage k 
     outside record; the record of a class step is empty or holds one question. The ledger gains nothing. -/
 theorem klassenCommitbein (k : Wirkungsklasse) : KlassenCommitbeinAussage k := by
   intro ι E f F _ emb _ _ t c _ vor zwischen nach plan spur _ regel aus
-  rcases klassen_spur E.maschine f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
+  rcases klassen_spur E.maschine f F emb t c vor zwischen nach plan spur regel aus with ⟨ spurform, wirkungen ⟩
   constructor
   · intro e mem a commit
     rcases spurform with leer | ⟨q, geformt, _⟩
