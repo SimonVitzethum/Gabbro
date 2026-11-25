@@ -151,10 +151,20 @@ theorem execGenauInternal {t : Nat} {c : Kontext} {s u : ExecState}
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-      obtain ⟨rfl, graph⟩ := unchanged memory
-      rw [graph] at nextEq
-      rw [← rahmen.graph] at nextEq
-      exact ⟨rfl, nextEq⟩
+    obtain ⟨rfl, graph⟩ := unchanged memory
+    rw [graph] at next
+    rw [← rahmen.graph] at next
+    exact ⟨rfl, nextEq⟩
+
+/-- Every execution of an exec instruction records the empty cut, so every head form meets
+    the isolation duty under every domain plan. -/
+theorem execDomaenenLokal (k : Katalog) (code : List ExecInstruction) :
+    DomaenenLokal (execProgram k code) := by
+  intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+  obtain ⟨_, _, planEq, _⟩ := himpl
+  cases (List.cons.inj planEq).1
+  obtain ⟨rfl, _⟩ := execGenauInternal haus
+  exact spurRespektiert_leer _ _ _
 
 theorem execAbgleich (k : Katalog) (op : ExecInstruction) :
     I.RegelAbgleich (execUnit k op) op := by

@@ -289,11 +289,7 @@ private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
     exact execRegelLokal k i
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := execGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · exact execDomaenenLokal _ _
   · intro ρ runs
     dsimp [kanonischeKlauseln, execUnit, execProgram, Quelltabellen.leer, Quellklauseln.leer]
     refine ⟨?_, ?_, ?_⟩

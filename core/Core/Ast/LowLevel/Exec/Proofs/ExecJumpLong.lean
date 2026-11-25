@@ -308,11 +308,7 @@ private theorem jlAkzeptiert (code : List ExecInstruction) :
   · exact execProgramFlussLokal Plattform.x86_64.katalog code
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := execGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · exact execDomaenenLokal _ _
 private theorem jumpLongJoint : JumpLongJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
   let extent : Strecke := ⟨0, 4096⟩
