@@ -174,6 +174,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Offen
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
