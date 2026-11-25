@@ -208,7 +208,7 @@ theorem falsifizierbar_konfiguration :
     change Function.update z.lokal entry (!z.lokal entry) entry = true
     rw [Function.update_self, zFalsch]
     rfl
-  refine ⟨s, z, z', z', plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+  refine ⟨s, z, z', z', plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl, rfl,
     konkret, rfl, rfl, rfl, rfl, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩
 
 end Gabbro.Core.Ziel.Korrektheit
