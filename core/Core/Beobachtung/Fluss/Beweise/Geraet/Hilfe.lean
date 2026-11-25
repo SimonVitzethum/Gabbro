@@ -154,16 +154,19 @@ theorem geraete_delivery_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
 /-- The low history projection is the identity under empty labels. -/
 theorem geraete_verlauf_leer {Ort : Type} (h : AussenVerlauf) :
     niedrigerVerlauf (Etiketten.leer (Ort := Ort)) h = h := by
+  have key : ∀ e : Nat × AussenEreignis,
+      (match e.2 with
+        | .frage q | .antwort q _ => oeffentlich ((Etiketten.leer (Ort := Ort)).frage q)) = true := by
+    intro e
+    obtain ⟨_, ev⟩ := e
+    cases ev with
+    | frage q => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
+    | antwort q _ => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
   unfold niedrigerVerlauf
   induction h with
   | nil => rfl
   | cons e tail ih =>
-    have hp : ((fun entry => match entry.2 with
-      | .frage q | .antwort q _ => oeffentlich ((Etiketten.leer (Ort := Ort)).frage q)) e) = true := by
-      cases e.2 with
-      | frage q => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
-      | antwort q _ => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
-    rw [List.filter_cons_of_pos hp, ih]
+    rw [List.filter_cons_of_pos (key e), ih]
 
 /-- Compared runs answer every question identically: empty labels expose the policy. -/
 theorem geraete_politik_antwort_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
