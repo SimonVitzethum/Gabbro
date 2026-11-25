@@ -159,13 +159,70 @@ theorem NISichtbar.quellzustand_gleich (m : Modus) :
   · intro c
     rfl
 
+/-- The flow rule of the embedded form holds: the step changes only hidden local data, and every
+    label it could release is secret. -/
+theorem NISichtbar.regelFluss (m : Modus) :
+    Beobachtung.RegelFluss (NISichtbar.einheit m) true := by
+  constructor
+  · intro c v w p u step
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_, ?_⟩
+      · rfl
+      · intro id quelle val mem
+        exact (List.not_mem_nil mem).elim
+    · intro pubf
+      have ide : (NISichtbar.schreibform m).ideal c v w [p] u := by
+        simpa only [NISichtbar.einheit] using step.2
+      unfold Schrittform.ideal Schrittform.zugriffsschritt at ide
+      rcases ide with ⟨_, peq, ueq⟩ | ⟨_, val, _, peq, ueq⟩
+      · have pEq : p = Semantik.plan := (List.cons.inj peq).1
+        subst p
+        subst ueq
+        refine ⟨?_, ?_, ?_⟩
+        · exact NISichtbar.quellzustand_nur_lokal m v _ rfl rfl rfl rfl (fun _ => rfl)
+        · rfl
+        · rfl
+      · have pEq : p = (NISichtbar.schreibform m).plan (v.lokal c) val := (List.cons.inj peq).1
+        subst p
+        subst ueq
+        refine ⟨?_, ?_, ?_⟩
+        · exact NISichtbar.quellzustand_nur_lokal m v _ rfl rfl rfl rfl (fun _ => rfl)
+        · simp only [Beobachtung.PlanSicht, NISichtbar.einheit, NISichtbar.etikettOrt,
+            NISichtbar.geheim, Schrittform.plan, Wirkungsklasse.plan, List.filter_nil,
+            List.filterMap_nil]
+          rw [NISichtbar.geheim_verborgen]
+          rfl
+        · rfl
+
+/-- A step that changes only local data preserves the public state in the countermodel. -/
+theorem NISichtbar.quellzustand_nur_lokal (m : Modus) (v u : Zustand)
+    (hstatus : u.status = v.status) (hinitial : u.initial = v.initial)
+    (hrechte : u.rechte = v.rechte) (hleihen : u.leihen = v.leihen)
+    (hantwort : ∀ c, AntwortSicht (NISichtbar.einheit m) u c =
+      AntwortSicht (NISichtbar.einheit m) v c) :
+    Beobachtung.QuellzustandGleich (NISichtbar.einheit m) v u := by
+  refine ⟨?_, ?_, ?_, hrechte, hleihen, ?_⟩
+  · intro c p hp
+    exfalso
+    have hp' : oeffentlich NISichtbar.geheim = true := by
+      simpa only [NISichtbar.einheit, NISichtbar.lokalEtikett,
+        Beobachtung.LokaleEtiketten.ganz] using hp
+    exact Bool.false_ne_true (NISichtbar.geheim_verborgen.symm.trans hp')
+  · intro c
+    rw [hstatus]
+  · intro x
+    rw [hinitial]
+  · intro c
+    exact (hantwort c).symm
+
 /-- The embedded form, its visibility premise and `liest = false` all hold. -/
 theorem NISichtbar.premissen (m : Modus) :
     (NISichtbar.schreibform m).klasse = .schreiben m ∧
       (NISichtbar.schreibform m).Eingebettet (NISichtbar.einheit m) true ∧
       (.schreiben m : Wirkungsklasse).liest = false ∧
+      Beobachtung.RegelFluss (NISichtbar.einheit m) true ∧
       (NISichtbar.schreibform m).Operandensicht (NISichtbar.einheit m) := by
-  refine ⟨rfl, ⟨rfl, rfl, rfl⟩, rfl, ?_⟩
+  refine ⟨rfl, ⟨rfl, rfl, rfl⟩, rfl, NISichtbar.regelFluss m, ?_⟩
   intro c v₁ v₂ gleich
   rfl
 
