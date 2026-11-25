@@ -117,8 +117,8 @@ theorem gueltigV (i : Nat) :
         subst hmem
         refine ⟨by decide, hsupV, rfl, auswahlV0, ?_, rfl, ?_⟩
         · exact ⟨rfl, pendingV0⟩
-        · intro e he
-          exact (List.not_mem_nil he).elim
+        · intro e
+          rfl
     · intro e he
       cases he
     · intro h
@@ -126,8 +126,10 @@ theorem gueltigV (i : Nat) :
   | succ t =>
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro c hc
-      have hc0 : c = 0 := of_decide_eq_true hc
+      simp only [angebotV] at hc
+      have hc0 : c = 0 := (Option.some.inj hc).symm
       subst hc0
+      rw [HV1]
       exact Nat.zero_lt_succ 0
     · intro c hc
       have hc0 : c = 0 := of_decide_eq_true hc
