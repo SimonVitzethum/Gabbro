@@ -250,9 +250,9 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
     have z2 := vergleich.rechts.2.2.2
     cases h : (d.unit locals).laden ρ₁.start (h₁.lade (d.unit locals).bild) with
     | none =>
-      exact Or.inl ⟨z1.trans h, z2.trans (ladenEq.trans h)⟩
+      exact Or.inl ⟨z1.trans h, z2.trans (ladenEq.symm.trans h)⟩
     | some v =>
-      exact Or.inr ⟨v, _, z1.trans h, z2.trans (ladenEq.trans h)⟩
+      exact Or.inr ⟨v, _, z1.trans h, z2.trans (ladenEq.symm.trans h)⟩
   | succ t ih =>
     cases ih with
     | inl hnone =>
@@ -269,8 +269,7 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
         cases tick2 with
         | schritt _ step2 => cases step2
         | wartet _ eq2 _ =>
-          rw [← hN1, ← hN2]
-          exact Or.inl ⟨eq1, eq2⟩
+          exact Or.inl ⟨hN1.trans eq1, hN2.trans eq2⟩
     | inr hsome =>
       obtain ⟨v1, v2, s1, s2⟩ := hsome
       have tick1 := ρ₁.zeit.takt t
