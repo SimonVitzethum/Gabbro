@@ -34,7 +34,7 @@ theorem laufStirbtNicht_iff (prog : List Befehl) (r : Rahmen) :
     | none =>
       exact False.elim (hnot ⟨k, hk⟩)
     | some r' =>
-      exact ⟨r', hk⟩
+      exact ⟨r', rfl⟩
 
 /-- A run that never dies reaches a frame at every step, hence every state it
     reaches is itself the start of a never-dying run. -/
@@ -45,7 +45,8 @@ theorem laufStirbtNichtVon (prog : List Befehl) (r : Rahmen) (k : Nat) (rk : Rah
   intro t
   obtain ⟨r', ht⟩ := hlive (k + t)
   refine ⟨r', ?_⟩
-  rw [show k + t = t + k by omega, Function.iterate_add_apply, hrk]
+  rw [← hrk, ← Function.iterate_add_apply]
+  rw [show t + k = k + t by omega]
   exact ht
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
