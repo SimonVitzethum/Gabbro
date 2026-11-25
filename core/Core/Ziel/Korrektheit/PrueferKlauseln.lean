@@ -101,7 +101,7 @@ theorem kontextSchritt_erhaelt (P : Katalog.Plattform) (u : UnitMitInvarianten)
   have hvu : _ := FuehrtAus_initial rahmen hfa
   rcases Classical.em b.Privat with hpriv | hpriv
   · have hu : si = b.nach c s := ((b.ideal_privat hpriv c s w [plan] si).mp hideal').2
-    have hfoot : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck :=
+    have hfoot : ∀ z ∈ q.beobachtet, b.schreibtMoeglich z = false :=
       fun z hz => pruefeBefehlErhalt_richtig u.invarianten b q hmem hbef z hz
     have hnach : q.gilt (b.nach c s) := Praedikat.gilt_nach q b c s hfoot hq
     rw [← hu] at hnach
