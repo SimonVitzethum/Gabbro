@@ -99,7 +99,9 @@ def LockFreeAbsTreue (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wa
 theorem absTreue_gibt_sequenziell (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (η : Lauf U.einheit) (treue : LockFreeAbsTreue U η) :
     LockFreeSequenziell (fun t => U.sicht.lesen (η.zeit.spur t)) U.start U.spezifikation := by
-  exact ⟨fun t => U.abs (η.zeit.zustand t), treue.1, treue.2⟩
+  refine ⟨fun t => U.abs (η.zeit.zustand t), treue.1, ?_⟩
+  intro t
+  simpa only using treue.2 t
 
 /-- A lock-free family discharges the simulation duties of its member rules and declares, on
     every ideal run of its unit, a well-formed operation history together with a faithful
