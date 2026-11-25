@@ -190,6 +190,7 @@ public import Core.Ast.Semantik.Runtime.ZugriffSicher.InvariantenBein
 public import Core.Ast.Semantik.Runtime.ZugriffSicher.KlassenBein
 public import Core.Ast.Semantik.Runtime.ZugriffSicher.RennenBein
 public import Core.Ast.Semantik.Runtime.ZugriffSicher.Grenzen
+public import Core.Ast.Semantik.Runtime.ZugriffSicher.RennenLauf
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
