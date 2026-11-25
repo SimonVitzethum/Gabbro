@@ -21,7 +21,7 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Sicherheit
 open Gabbro.Core.Sicherheit (Konflikt AusgefuehrterZugriff RennenImGraph)
-open Gabbro.Core.Speicher (Zustand Erreichbar)
+open Gabbro.Core.Speicher (Zustand)
 
 /-- A context without arrival regions holds no handle, so it is authorised for no cell. -/
 theorem keineBefugnisOhneAnkunft {s : Zustand} {c : Kontext}
@@ -46,37 +46,37 @@ theorem zugriffBefugtBrauchtAnkunft (z : Zugriffsform)
   cases z with
   | zaun m => exact False.elim (hz m rfl)
   | lade ziel region index typ mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.lade ziel region index typ mode) (s.lokal c)).ort) .lesen)
   | erwarte ziel region index erwartet typ mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.erwarte ziel region index erwartet typ mode) (s.lokal c)).ort) .lesen)
   | speichere region index quelle mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.speichere region index quelle mode) (s.lokal c)).ort) .schreiben)
   | veroeffentliche region index quelle mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.veroeffentliche region index quelle mode) (s.lokal c)).ort) .schreiben)
   | tausche ziel region index quelle typ mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.tausche ziel region index quelle typ mode) (s.lokal c)).ort) .lesen)
   | vergleicheTausche ziel region index erwartet neu typ mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ mode) (s.lokal c)).ort) .lesen)
   | holeUndAddiere ziel region index betrag typ mode =>
-    simpa [Befehl.form, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.holeUndAddiere ziel region index betrag typ mode) (s.lokal c)).ort) .lesen)
@@ -91,7 +91,7 @@ theorem quellSchrittPlanPrivat (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
     plan = Semantik.plan := by
   change f.impl c s w [plan] u at impl
   rcases hgut with hpriv | ⟨z, rfl⟩
-  · exact (List.cons.inj ((Befehl.impl_privat f hpriv c s w [plan] u).1 impl)).1
+  · exact ((Befehl.impl_privat f hpriv c s w [plan] u).1 impl).1
   · have step := (Zugriffsform.ideal_iff z c s w [plan] u).1 impl
     rcases step with ⟨_, eq, _⟩ | ⟨bef, v, _, eq, _⟩
     · exact (List.cons.inj eq).1
@@ -99,7 +99,7 @@ theorem quellSchrittPlanPrivat (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
       · rcases hz with ⟨m, rfl⟩
         have hp : plan = (Befehl.zugriff (Zugriffsform.zaun m)).form.plan (s.lokal c) v :=
           (List.cons.inj eq).1
-        simpa [Befehl.form, Zugriffsform.klasse, Schrittform.plan, Wirkungsklasse.plan] using hp
+        simpa [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan, Wirkungsklasse.plan] using hp
       · have hf : ∀ m, z ≠ .zaun m := by
           intro m hzaun
           exact hz ⟨m, hzaun⟩
