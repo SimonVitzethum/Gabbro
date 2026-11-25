@@ -170,7 +170,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
       spur.aussen.map (aussenEtikett (p.einheit platform).einrichtung) = [] := by
     simp [planEq, hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse]
   have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] spur.speicher s'.graph := by
-    simpa [hlabels] using folge
+    simpa [List.append_assoc, hlabels] using folge
   obtain ⟨_, gEq⟩ := speicherfolgeLeer folgeLeer
   rw [gEq]
 
