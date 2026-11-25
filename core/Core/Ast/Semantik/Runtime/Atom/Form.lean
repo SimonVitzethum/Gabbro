@@ -170,7 +170,7 @@ theorem Zugriffsform.uebertrag_arrival (z : Zugriffsform) (r : Rahmen) (gelesen 
   | speichere _ _ _ _ => rfl
   | veroeffentliche _ _ _ _ => rfl
   | zaun _ => rfl
-  | lade ziel _ _ _ typ _ => exact gebunden ziel typ
+  | lade ziel _ _ typ _ => exact gebunden ziel typ
   | tausche ziel _ _ _ typ _ => exact gebunden ziel typ
   | vergleicheTausche ziel _ _ _ _ typ _ => exact gebunden ziel typ
   | holeUndAddiere ziel _ _ _ typ _ => exact gebunden ziel typ
