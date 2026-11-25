@@ -20,23 +20,26 @@ private theorem geraete_absturz_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     {t : Nat} {s n : State}
     (hlabel : ρ.zeit.spur t = some (.absturz, absturzSpur))
     (atS : ρ.zeit.zustand t = some s) (atN : ρ.zeit.zustand (t + 1) = some n)
-    (hneu : ∀ c, match n.status c with | .beendet _ => False | _ => True) :
+    (hneu : ∀ c, ¬ ∃ e, n.status c = .beendet e) :
     schrittBeob ρ predictor t = [.katalog (.persistenz .crash)] := by
   have habschluss : ¬ ∃ c, (neuBeendet s n (d.unit locals).etiketten c).isSome = true := by
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
-      cases hst : n.status c <;> simp only [neuBeendet, hst]
+      cases hst : n.status c with
+      | beendet e => exact (hneu c ⟨e, hst⟩).elim
+      | ruht | laeuft => simp only [neuBeendet, hst]
     rw [hnone] at hc
     cases hc
   rw [schrittBeob, hlabel, atS, atN]
-  simp only [absturzSpur, List.nil_filterMap, List.nil_flatMap, aussenBeob,
+  simp only [absturzSpur, List.filterMap_nil, List.flatMap_nil, aussenBeob,
     List.flatMap_cons, List.flatMap_nil, List.nil_append, List.append_nil,
     habschluss, if_false]
 
 /-- A left crash keeps the strengthened coupling: the crash offer is the same on both runs, so
     both reset through the device unit's fixed recovery; every carried ledger is equal and the
     new epoch, booking and machine fields agree. -/
-theorem geraete_absturz_erhalt : GeraeteAbsturzErhaltAussage := by
+theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope) :
+    GeraeteAbsturzErhaltAussage (d := d) (locals := locals) := by
   intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t spur hkopp hlabel
   let E := d.unit locals
   have tick₁ := ρ₁.zeit.takt t
@@ -98,16 +101,18 @@ theorem geraete_absturz_erhalt : GeraeteAbsturzErhaltAussage := by
                 have hbuch := geraeteKopplung_buchung hkopp hz₁ hz₂
                 obtain ⟨hq₁, hepoche, hgeliefert, hkerne, hstatus⟩ :=
                   (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
-                have hneu₁ : ∀ c, match n₁.status c with | .beendet _ => False | _ => True := by
-                  intro c
-                  rw [n₁Eq]
-                  dsimp only [Zustand.wiederanlauf]
-                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc]
-                have hneu₂ : ∀ c, match n₂.status c with | .beendet _ => False | _ => True := by
-                  intro c
-                  rw [n₂Eq]
-                  dsimp only [Zustand.wiederanlauf]
-                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc]
+                have hneu₁ : ∀ c, ¬ ∃ e, n₁.status c = .beendet e := by
+                  intro c h
+                  obtain ⟨e, he⟩ := h
+                  rw [n₁Eq] at he
+                  dsimp only [Zustand.wiederanlauf] at he
+                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc] at he <;> cases he
+                have hneu₂ : ∀ c, ¬ ∃ e, n₂.status c = .beendet e := by
+                  intro c h
+                  obtain ⟨e, he⟩ := h
+                  rw [n₂Eq] at he
+                  dsimp only [Zustand.wiederanlauf] at he
+                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc] at he <;> cases he
                 have hbeob₁ := geraete_absturz_beob_tick hlabel hz₁ hn₁ hneu₁
                 have hbeob₂ := geraete_absturz_beob_tick labEq hz₂ hn₂ hneu₂
                 have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
