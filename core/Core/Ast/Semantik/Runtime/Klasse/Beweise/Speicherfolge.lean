@@ -65,10 +65,10 @@ theorem speicherfolge_zugriffsindex {anfang : Zelle → Int} {f : SpeicherAkteur
 
 /-- An internal protocol action records no lock events, no outside events and leaves the intermediate
     state unchanged. -/
-theorem fuehrtAus_intern_nil {t : Nat} {s u : Zustand Nat Zelle Int Nat Rahmen PUnit PUnit PUnit}
+theorem fuehrtAus_intern_nil {t : Nat} {s u : Zustand}
     {sperren : List (Etikett Zelle Int)} {aussen : List Katalog.Ereignis}
-    {v : Zustand Nat Zelle Int Nat Rahmen PUnit PUnit PUnit} (c : Kontext)
-    (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit PUnit)
+    {v : Zustand} (c : Kontext)
+    (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     (h : FuehrtAus e t c s u .intern sperren aussen v) :
     sperren = [] ∧ aussen = [] ∧ v = u := by
   cases h
