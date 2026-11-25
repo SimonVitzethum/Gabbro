@@ -229,10 +229,11 @@ theorem sicherheit_aus_regeln_erfuellbar :
     intro c
     by_cases hc : c = Ast.Semantik.eintritt
     · subst hc
-      decide
+      rfl
     · have hst : z₆.status c = .ruht := by
         show (if c = Ast.Semantik.eintritt then Status.laeuft else Status.ruht) = _
         rw [if_neg hc]
+      change Ast.Semantik.kopf _ z₆ c = none
       simp only [Ast.Semantik.kopf, hst]
   have z6fragen : z₆.fragen = [] := by rfl
   have hwRuhig (t : Nat) : (hw.angebot t).interrupts = [] := rfl
