@@ -196,7 +196,8 @@ theorem verdraengung_ohne_meldung (hw : HwLauf) (leer : ∀ i, (hw.angebot i).in
             simp at hfst
           | interrupt _ h =>
             have hev := Option.some.inj (label.symm.trans hspur)
-            obtain ⟨rfl, rfl⟩ := Prod.mk.inj hev
+            rw [Prod.mk.injEq] at hev
+            obtain ⟨rfl, rfl⟩ := hev
             obtain ⟨_, _, _, _, _, haus, _, _, _, _, _⟩ := h
             have hang := haus.2.2.1
             rw [hρ, leer id.1] at hang
