@@ -1,21 +1,15 @@
 module
-
 public import Core.Beobachtung.Speicherverwaltung
-
 @[expose] public section
-
 namespace Gabbro.Core.Beobachtung
 open Katalog Maschine
 open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame memProgram memHead)
-
 variable (k : Katalog) (code : List MemInstruction)
-
 private theorem speicherfolge_leer {Ort Wert : Type} {anfang : Ort → Wert}
     {f : SpeicherAkteur Ort} {g g' : SpeicherGraph Ort Wert} {es : SpeicherSpur Ort Wert}
     (h : Speicherfolge anfang f g [] es g') : es = [] ∧ g' = g := by
   cases h
   exact ⟨rfl, rfl⟩
-
 /-- The selected loader row yields the canonical initial state of a memory program. -/
 private theorem mem_geladen {h : Umgebung} {s : AussenStart}
     (hardware : Hardware (memProgram k code).katalog h)
@@ -29,7 +23,6 @@ private theorem mem_geladen {h : Umgebung} {s : AussenStart}
       some (Zustand.start _ _ _ _ memSetup.initial (.leer (medium s))) else none) = _
   rw [if_pos ⟨start, byte⟩]
   rfl
-
 /-- Admitted memory-program runs always have a state. -/
 private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
     (lauf : Laeufe (memProgram k code) h ρ) (t : Nat) : ∃ s, ρ.zeit.zustand t = some s := by
@@ -50,7 +43,6 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
       cases step with
       | schritt impl =>
         exact ⟨_, rfl⟩
-
 /-- The rule of a memory form determines one frame and the fixed private plan. -/
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
     (regel : (memProgram k code).system.ImplSchritt c s w [p] u) :
@@ -62,7 +54,6 @@ private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : As
   rcases impl with ⟨frame, eval, planEq, uEq⟩
   refine ⟨f, frame, kopf, eval, ?_, uEq⟩
   exact (List.cons.inj planEq).1
-
 /-- A memory-program context step appends no low event: the fixed private plan has no
     accesses, no outside action and no journal or time declaration, and the acting frame
     only advances its local state. -/
@@ -146,7 +137,6 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
             rw [schrittBeob, tick, hS, hN]
             simp only [hSpur, hAussen, spurEq, List.filterMap_nil, List.flatMap_nil,
               hKontext, hKeinEnde, if_false, List.nil_append]
-
 /-- The observed post-state of a memory context step is the advanced frame. -/
 private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     {c : Kontext} {w : PUnit} {spur : SchrittSpur Nat UInt8}
@@ -173,13 +163,11 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     refine ⟨f, frame, kopf, eval, ?_⟩
     rw [nEqState, hGraph]
     rfl
-
 private theorem fuehrtAus_intern_fragen {t : Nat} {c : Kontext} {s u : MemState}
     {a : List (Speicher.Etikett Nat UInt8)} {b : List Ereignis} {v : MemState}
     (h : FuehrtAus memSetup t c s u .intern a b v) : a = [] ∧ b = [] ∧ v = u := by
   cases h
   exact ⟨rfl, rfl, rfl⟩
-
 /-- No memory form issues a question, so no cut of an admitted run has a pending question. -/
 private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     {spur : SchrittWahl PUnit × SchrittSpur Nat UInt8}
