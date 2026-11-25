@@ -175,6 +175,7 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
       · rw [hplanF]
         exact FuehrtAus.frage (binding.question access)
       · rw [hplanF]
+        dsimp only [spur₂, n₂]
         simpa only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
           List.nil_append, List.append_nil, List.map_cons] using folge₂
   obtain ⟨spurEq₁, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁, hbuchung₁,
@@ -188,14 +189,45 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
   have heq : (s₁.stelleFrage t c (binding.question access)) =
       (s₂.stelleFrage t c (binding.question access)) := by
     simp only [Zustand.stelleFrage, hfragen]
+  have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () [plan] u₁ := by
+    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+    rw [ruleEq]
+    dsimp only [Rule.machine]
+    exact impl₁
+  have impl₂Ideal : ((d.unit locals).system.regel ()).ideal c s₂ () [plan] u₂ := by
+    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+    rw [ruleEq]
+    dsimp only [Rule.machine]
+    exact impl₂
   have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-    have hform₁ : FormSchritt (d.unit locals) () c s₁ () plan u₁ := ⟨kopf₁, impl₁⟩
-    have hform₂ : FormSchritt (d.unit locals) () c s₂ () plan u₂ := ⟨kopf₂, impl₂⟩
+    have hform₁ : FormSchritt (d.unit locals) () c s₁ () plan u₁ := ⟨kopf₁, impl₁Ideal⟩
+    have hform₂ : FormSchritt (d.unit locals) () c s₂ () plan u₂ := ⟨kopf₂, impl₂Ideal⟩
     have hq := (geraeteSchrittNI locals d c s₁ s₂ () plan plan u₁ u₂ quell hform₁ hform₂).1
-    simpa only [Zustand.frage] using hq
+    have n1lokal : n₁.lokal = u₁.lokal := by rw [hlokal₁, hu]; rfl
+    have n2lokal : n₂.lokal = u₂.lokal := by rw [hlokal₂]; rfl
+    have n1status : n₁.status = u₁.status := by rw [hstatus₁, hu]; rfl
+    have n2status : n₂.status = u₂.status := by rw [hstatus₂]; rfl
+    have n1initial : n₁.initial = u₁.initial := by rw [hinitial₁, hu]; rfl
+    have n2initial : n₂.initial = u₂.initial := by rw [hinitial₂]; rfl
+    have n1rechte : n₁.rechte = u₁.rechte := by rw [hrechte₁, hu]; rfl
+    have n2rechte : n₂.rechte = u₂.rechte := by rw [hrechte₂]; rfl
+    have n1leihen : n₁.leihen = u₁.leihen := by rw [hleihen₁, hu]; rfl
+    have n2leihen : n₂.leihen = u₂.leihen := by rw [hleihen₂]; rfl
+    have n1antwort : n₁.naechsteAntwort = u₁.naechsteAntwort := by
+      funext c'
+      rw [hu]
+      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁, hverbraucht₁,
+        hverworfen₁, Zustand.frage, setFrame]
+    have n2antwort : n₂.naechsteAntwort = u₂.naechsteAntwort := by
+      funext c'
+      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂, hverbraucht₂,
+        hverworfen₂, Zustand.frage]
+    unfold QuellzustandGleich at hq ⊢
+    simpa only [n1lokal, n2lokal, n1status, n2status, n1initial, n2initial, n1rechte,
+      n2rechte, n1leihen, n2leihen, n1antwort, n2antwort] using hq
   refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
   · rw [spurEq₁, spurEq₂, heq]
-  · exact ⟨by rw [hfragen₁, hfragen₂, heq], by rw [hverlauf₁, hverlauf₂, hfragen, heq],
+  · exact ⟨by rw [hfragen₁, hfragen₂, heq, hfragen], by rw [hverlauf₁, hverlauf₂, heq, hverlauf],
       by rw [hantworten₁, hantworten₂, hantworten],
       by rw [hverbraucht₁, hverbraucht₂, hverbraucht],
       by rw [hverworfen₁, hverworfen₂, hverworfen]⟩
