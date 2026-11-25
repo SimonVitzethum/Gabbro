@@ -387,6 +387,7 @@ theorem geraete_interrupt_schliesst_kontext_aus
     (bereit : KannSchreiten run t c s) : False := by
   have hres := AngebotGueltig.interrupt_reserviert gueltig wahl
   obtain ⟨core, geleg, _, _⟩ := bereit
-  exact Option.some_ne_none core (hres.2.1.trans geleg.symm)
+  rw [hres.2.1] at geleg
+  cases geleg
 
 end Gabbro.Core.Beobachtung
