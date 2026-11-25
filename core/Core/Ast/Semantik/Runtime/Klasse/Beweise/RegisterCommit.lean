@@ -124,6 +124,7 @@ private theorem fuehrtAus_buchung {L Ort Wert Raum Lok Grund Bedingung : Type} [
     (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
     (action : FuehrtAus e t c s u p.aktion sperren ereignisse v) :
     v.buchung.wirkungen = u.buchung.wirkungen := by
+  generalize hA : p.aktion = a at action
   cases action <;> rfl
 
 private theorem fuehrtAus_aussen {L Ort Wert Raum Lok Grund Bedingung : Type} [DecidableEq L]
@@ -135,7 +136,7 @@ private theorem fuehrtAus_aussen {L Ort Wert Raum Lok Grund Bedingung : Type} [D
     ereignisse = [] ∨ ∃ q : Frage, ereignisse = [.frage (s.stelleFrage t c q)] ∧ p.aktion = .frage q := by
   generalize hA : p.aktion = a at action
   cases action with
-  | frage q => exact Or.inr ⟨q, rfl, hA⟩
+  | frage q => exact Or.inr ⟨q, rfl, by simpa using hA⟩
   | _ => exact Or.inl rfl
 
 /-- The outside record and the new effects of one class step. The record is empty, or one question with
@@ -180,12 +181,12 @@ theorem klassenRegisterbein (k : Wirkungsklasse) : KlassenRegisterbeinAussage k 
         cases commit.1
   · refine ⟨[], Or.inr ⟨?_, ?_⟩, ?_⟩
     · rcases spurform with leer | ⟨q, geformt, _⟩
-      · rw [leer]
+      · rw [Absturz, leer]
         exact List.not_mem_nil
-      · rw [geformt]
+      · rw [Absturz, geformt]
         intro crash
         cases List.mem_singleton.mp crash
-    · exact wirkungen
+    · simpa only [List.append_nil] using wirkungen
     · intro e mem
       exact (List.not_mem_nil mem).elim
 
@@ -202,13 +203,14 @@ theorem klassenCommitbein (k : Wirkungsklasse) : KlassenCommitbeinAussage k := b
     · rw [geformt] at mem
       obtain rfl := List.mem_singleton.mp mem
       cases commit.1
-  · refine ⟨[], Or.inr ⟨?_, wirkungen⟩, ?_⟩
+  · refine ⟨[], Or.inr ⟨?_, ?_⟩, ?_⟩
     · rcases spurform with leer | ⟨q, geformt, _⟩
-      · rw [leer]
+      · rw [Absturz, leer]
         exact List.not_mem_nil
-      · rw [geformt]
+      · rw [Absturz, geformt]
         intro crash
         cases List.mem_singleton.mp crash
+    · simpa only [List.append_nil] using wirkungen
     · intro e mem
       exact (List.not_mem_nil mem).elim
 
