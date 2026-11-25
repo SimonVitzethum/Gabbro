@@ -88,12 +88,10 @@ structure LockFreeEinheit (L Ort Wert Raum Lok Grund Bedingung Wahl F : Type) [D
 def LockFreeAbsTreue (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (η : Lauf U.einheit) : Prop :=
   U.abs (η.zeit.zustand 0) = U.start ∧
-    ∀ t, match U.sicht.lesen (η.zeit.spur t) with
+    ∀ t, match (U.sicht.lesen (η.zeit.spur t)).bind LockFreeTakt.punkt with
       | none => U.abs (η.zeit.zustand (t + 1)) = U.abs (η.zeit.zustand t)
-      | some takt => match takt.punkt with
-          | none => U.abs (η.zeit.zustand (t + 1)) = U.abs (η.zeit.zustand t)
-          | some (_, x, r) => U.spezifikation (U.abs (η.zeit.zustand t)) x r
-              (U.abs (η.zeit.zustand (t + 1)))
+      | some (_, x, r) => U.spezifikation (U.abs (η.zeit.zustand t)) x r
+          (U.abs (η.zeit.zustand (t + 1)))
 
 /-- The declared abstraction correspondence is a sequential history of the ideal run. At a
     silent tick the ideal state is unchanged (`Zeitlauf.wartet`), in line with the maximal-run
@@ -101,9 +99,7 @@ def LockFreeAbsTreue (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wa
 theorem absTreue_gibt_sequenziell (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     (η : Lauf U.einheit) (treue : LockFreeAbsTreue U η) :
     LockFreeSequenziell (fun t => U.sicht.lesen (η.zeit.spur t)) U.start U.spezifikation := by
-  refine ⟨fun t => U.abs (η.zeit.zustand t), treue.1, ?_⟩
-  intro t
-  simpa only [Option.bind] using treue.2 t
+  exact ⟨fun t => U.abs (η.zeit.zustand t), treue.1, treue.2⟩
 
 /-- A lock-free family discharges the simulation duties of its member rules and declares, on
     every ideal run of its unit, a well-formed operation history together with a faithful
@@ -130,9 +126,9 @@ theorem LockFreeFamilienAussage.konkret
     constant abstraction, every unit admits the empty operation history and the trivial spec. -/
 theorem LockFreeFamilienAussage.erfuellbar
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) :
-    ∃ U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F PUnit PUnit PUnit PUnit,
+    ∃ U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F,
       LockFreeFamilienAussage U := by
-  let U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F PUnit PUnit PUnit PUnit :=
+  let U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F :=
     ⟨E, PUnit, PUnit, PUnit, PUnit, fun _ => False,
       ⟨fun _ => none, rfl, fun _ _ => rfl⟩, fun _ => PUnit.unit, PUnit.unit,
       fun _ _ _ _ => True⟩
@@ -168,10 +164,10 @@ theorem LockFreeFamilienAussage.erfuellbar
     of the unit's initial state breaks the faithfulness duty on every ideal run. The unit and run
     come from `fortschritt_erfuellbar`. -/
 theorem LockFreeFamilienAussage.nichtTrivial :
-    ∃ U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit PUnit PUnit PUnit Bool,
+    ∃ U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
       ¬ LockFreeFamilienAussage U := by
   obtain ⟨E, _, _, _, η, _, _, valid, _⟩ := fortschritt_erfuellbar
-  let U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit PUnit PUnit PUnit Bool :=
+  let U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     ⟨E, PUnit, PUnit, PUnit, Bool, fun _ => False,
       ⟨fun _ => none, rfl, fun _ _ => rfl⟩, fun _ => false, true, fun _ _ _ _ => True⟩
   refine ⟨U, ?_⟩
