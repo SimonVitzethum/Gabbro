@@ -348,15 +348,17 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs k w n hmem c h
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).laeuft =
                           (u.kerne k).laeuft := by
-                          unfold Maschine.Zustandsrueckkehr
-                          rw [Function.update_of_ne heq]
+                        show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).laeuft = _
+                        rw [Function.update_of_ne heq]
                         rw [hsame, ukerne] at h
                         exact ihd k c h
                     · rw [sstack] at h
                       by_cases heq : k = kr
                       · subst heq
                         have hkk : ((Maschine.Zustandsrueckkehr u k).kerne k).stapel =
-                            ((u.kerne k).zurueck).stapel := rfl
+                            ((u.kerne k).zurueck).stapel := by
+                          show ((Function.update u.kerne k ((u.kerne k).zurueck)) k).stapel = _
+                          rw [Function.update_self]
                         rw [hkk] at h
                         cases hst : (u.kerne k).stapel with
                         | nil =>
@@ -384,8 +386,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  have h1 : s.kerne = ((z.antwort _).kerne) :=
-                    congrArg (fun z => z.kerne) hstate
+                  have h1 : s.kerne = ((z.antwort _).kerne) := by rw [hstate]
                   have h2 : ((z.antwort _).kerne) = z.kerne := rfl
                   exact h1.trans h2
                 rw [skerne]
