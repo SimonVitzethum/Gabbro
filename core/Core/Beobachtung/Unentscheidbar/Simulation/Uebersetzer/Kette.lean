@@ -27,8 +27,10 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
       r'.pc = (blkA ++ blkB).length ∧ r'.temp aus = some (natVal a) ∧
       (∀ t, t < frei → t ≠ aus → r'.temp t = r.temp t) ∧
       r'.lokale = r.lokale ∧ r'.rueckgabe = r.rueckgabe ∧ r'.stopp = r.stopp := by
-  rcases hA with ⟨hAein, hAmit, hAun, hAfwd, hAbwd⟩
-  rcases hB with ⟨hBein, hBaus, hBun, hBfwd, hBbwd⟩
+  rcases hA with ⟨hAein, hAmit, hAun, hArest⟩
+  rcases hArest with ⟨hAfwd, hAbwd⟩
+  rcases hB with ⟨hBein, hBaus, hBun, hBrest⟩
+  rcases hBrest with ⟨hBfwd, hBbwd⟩
   have ha' : (Nat.Partrec.Code.eval cA n).bind Nat.Partrec.Code.eval cB = Part.some a := ha
   obtain ⟨b, hbA, hbB⟩ := (Part.bind_eq_some_iff.mp ha')
   obtain ⟨kA, rA, hrunA, hpcA, htempA, hpresA, hlokA, hrueckA, hstoppA⟩ :=
