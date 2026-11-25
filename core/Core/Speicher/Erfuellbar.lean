@@ -156,6 +156,7 @@ theorem mp_konsistent : mpGraph.Konsistent where
     revert hp he
     cases a <;> cases b <;> decide
   atomar := fun _ u _ _ hu _ => absurd hu (mp_kein_rmw u)
+  liest_vorher := fun _ u _ hu => absurd hu (mp_kein_rmw u)
   psc := by
     refine azyklisch_von_rang mpRang (fun a b h => ?_)
     obtain ⟨-, -, h⟩ := h

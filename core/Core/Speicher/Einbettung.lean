@@ -157,6 +157,8 @@ theorem konsistent (h : Einbettung H G g) (hk : G.Konsistent) : H.Konsistent whe
     hk.atomar _ _ _ ((h.rf _ _).1 h1) ((h.istRmw _).1 h2) ((h.mo _ _).1 h3) ((h.mo _ _).1 h4)
   psc := azyklisch_abbild g (fun _ _ hp => h.psc hp) hk.psc
   ohneLB := azyklisch_abbild g (fun _ _ hp => h.porf hp) hk.ohneLB
+  liest_vorher := fun _ _ h1 h2 =>
+    (h.mo _ _).2 (hk.liest_vorher _ _ ((h.rf _ _).1 h1) ((h.istRmw _).1 h2))
 
 /-- **Completeness is carried back along a surjective embedding.** -/
 theorem vollstaendig (h : Einbettung H G g) (hs : ∀ x, ∃ a, g a = x) (hv : G.Vollstaendig) :

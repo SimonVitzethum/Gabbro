@@ -1,29 +1,16 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise/Rmw.lean
-  Subject:   The pinned `RmwNichtDoppeltAussage` is FALSE over the consistency predicate as it stands.
-             Its proof sketch in `Core/Ziel/Korrektheit/Speicher.lean` invokes the `atomar` field of
-             `Konsistent`, `liest_mo_max` and `Wohlgeformt.mo_total`; none of them puts the write an update
-             reads BEFORE that update in `mo`. `atomar` only forbids a write strictly between the source and
-             the update. The three-event graph built below has both updates mo-before their common source,
-             discharges every field of `Konsistent` and gives two distinct updates reading one write.
+  Subject:   THE PROOF of the pinned `RmwNichtDoppeltAussage`: over the strengthened consistency
+             predicate two updates never read the same write. Its proof uses both halves of RC11
+             atomicity: `liest_vorher` puts each update `mo`-after the write it reads,
+             `Wohlgeformt.mo_total` orders the two updates, and the later one then reads a write
+             that the earlier one precedes, contradicting `atomar`.
 
-  Feeding statements and what they do / do not give:
-    * `Core/Speicher/Konsistent.lean`, `Konsistent.atomar`:
-        `rf w u → istRmw u → mo w w' → ¬ mo w' u`. Vacuous when `mo u w`, which the field does not exclude.
-    * `Core/Speicher/Relationen.lean`, `Wohlgeformt.mo_total`: orders the two updates, but only relative to
-        each other, never relative to the source they read.
-    * `Core/Speicher/Kohaerenz.lean`, `liest_mo_max` and `hb_mo`: need `hb` from a write to the reader. In the
-        graph below `hb` is empty (no `po`, every mode relaxed), so both are inert.
-    * `Core/Speicher/Relationen.lean`, `hb_von_po`, `eco_von_rf`, `eco_von_mo`, `eco_von_rb` and the
-      `azyklisch_von_rang` / `azyklisch_mono` helpers of `Core/Speicher/Basis.lean` discharge the remaining
-      fields.
-
-  Proof sketch of the refutation: take `E = RmwEv` with a plain write `w` and two updates `u₁`, `u₂` reading
-  `w`, `po` empty, every access relaxed, and `mo` the chain `u₁ < u₂ < w`. Then `mo w x` holds for no `x`, so
-  `atomar` is vacuous; `hb` and `psc` are empty; `rf` strictly increases the rank `w ↦ 0, uᵢ ↦ 1`, so
-  `ohneLB` holds. Instantiating the pinned statement at this graph at `w, u₁, u₂` forces `u₁ = u₂`, which is
-  false by construction. The missing consistency premise is `rf w u → istRmw u → mo w u` (RC11's
-  `irreflexiv (rf ; mo)` half of RMW atomicity); with it, the mo-later update contradicts `atomar`.
+  The three-event graph below (an initial write `w` and two updates `u₁`, `u₂` reading `w`,
+  with `mo` the chain `u₁ < u₂ < w`) satisfies every OLD field -- `atomar` is vacuous because
+  no write is `mo`-after the source, `hb` and `psc` are empty, `rf` strictly increases the
+  rank -- and violates the new `liest_vorher` field. It stays as the non-triviality witness
+  `liest_vorher_nichtTrivial`: the new field is not implied by the old ones.
 -/
 module
 
@@ -143,33 +130,48 @@ theorem azyklischLeer : Azyklisch (fun _ _ : RmwEv => False) := by
 theorem rmwMoKeinVonW (b : RmwEv) : ¬ rmwMo RmwEv.w b := by
   rintro (⟨h, _⟩ | ⟨h, _⟩) <;> cases h
 
-/-- The counterexample graph is RC11-consistent as the model defines it: the `atomar` field is vacuous
-    because the source is `mo`-maximal, `hb` and `psc` are empty, and `rf` strictly increases `rmwRang`. -/
-theorem rmwKonsistent : rmwGraph.Konsistent where
-  wf := rmwWf
-  hb_irrefl := fun a h => rmwHbFalsch a a h
-  kohaerent := by
-    intro a b h _
-    exact False.elim (rmwHbFalsch a b h)
-  atomar := by
-    intro w _ w' hrf _ hmo _
+/-- **ATOMICITY OF READ-MODIFY-WRITE over every consistent graph**: two distinct updates never
+    read the same write. Feeds: the `liest_vorher` and `atomar` fields of `Konsistent`,
+    `Wohlgeformt.mo_total`. Proof sketch: both updates are `mo`-after the write they read; `mo`
+    orders the updates; the later one reads a write that the earlier one precedes, contradicting
+    `atomar`. -/
+theorem rmw_nicht_doppelt : RmwNichtDoppeltAussage := by
+  intro E Ort Wert G hk w u₁ u₂ h1 h2 hrmw1 hrmw2
+  have sch : ∀ a, G.istRmw a → G.schreibt a := by
+    intro a h
+    unfold Graph.schreibt Graph.istRmw at *
+    rw [h]
+    exact trivial
+  have o1 := hk.wf.rf_ort w u₁ h1
+  have o2 := hk.wf.rf_ort w u₂ h2
+  have ho : G.ort u₁ = G.ort u₂ := o1.symm.trans o2
+  have m1 := hk.liest_vorher w u₁ h1 hrmw1
+  have m2 := hk.liest_vorher w u₂ h2 hrmw2
+  by_cases e : u₁ = u₂
+  · exact e
+  · rcases hk.wf.mo_total u₁ u₂ (sch u₁ hrmw1) (sch u₂ hrmw2) ho e with h | h
+    · exact absurd h (hk.atomar w u₂ u₁ h2 hrmw2 m1)
+    · exact absurd h (hk.atomar w u₁ u₂ h1 hrmw1 m2)
+
+/-- **The new field is non-trivial**: the counterexample graph satisfies every old field
+    (well-formedness, irreflexive `hb`, coherence, `atomar`, acyclic `psc` and `po ∪ rf`) and
+    violates `liest_vorher`: both updates read `w`, but `w` is `mo`-last. -/
+theorem liest_vorher_nichtTrivial :
+    rmwGraph.Wohlgeformt ∧ (∀ a, ¬ rmwGraph.hb a a) ∧
+      (∀ a b, rmwGraph.hb a b → ¬ rmwGraph.eco b a) ∧
+      (∀ w u w', rmwGraph.rf w u → rmwGraph.istRmw u → rmwGraph.mo w w' → ¬ rmwGraph.mo w' u) ∧
+      Azyklisch rmwGraph.psc ∧ Azyklisch rmwGraph.porf ∧
+      ∃ w u, rmwGraph.rf w u ∧ rmwGraph.istRmw u ∧ ¬ rmwGraph.mo w u := by
+  refine ⟨rmwWf, fun a h => rmwHbFalsch a a h, fun a b h _ => absurd h (rmwHbFalsch a b),
+    ?_, ?_, ?_, RmwEv.w, RmwEv.u1, ⟨rfl, Or.inl rfl⟩, rfl, rmwMoKeinVonW RmwEv.u1⟩
+  · intro w _ w' hrf _ hmo _
     rcases hrf with ⟨rfl, _⟩
     exact False.elim (rmwMoKeinVonW w' hmo)
-  psc := azyklisch_mono (fun a b h => False.elim (rmwPscFalsch a b h)) azyklischLeer
-  ohneLB := by
-    refine azyklisch_von_rang rmwRang ?_
+  · exact azyklisch_mono (fun a b h => False.elim (rmwPscFalsch a b h)) azyklischLeer
+  · refine azyklisch_von_rang rmwRang ?_
     intro a b h
     rcases h with hpo | hrf
     · exact False.elim hpo
     · rcases hrf with ⟨rfl, (rfl | rfl)⟩ <;> decide
-
-/-- `RmwNichtDoppeltAussage` is false: two distinct updates read the same write in a consistent graph.
-    The missing premise is `rf w u → istRmw u → mo w u` (equivalently `irreflexiv (rf ; mo)`), the first
-    half of RC11's atomicity axiom; the pinned statement's proof sketch silently assumes it. -/
-theorem rmwNichtDoppelt_falsch : ¬ RmwNichtDoppeltAussage := by
-  intro h
-  have heq := h RmwEv Bool Nat rmwGraph rmwKonsistent RmwEv.w RmwEv.u1 RmwEv.u2
-    ⟨rfl, Or.inl rfl⟩ ⟨rfl, Or.inr rfl⟩ rfl rfl
-  cases heq
 
 end Gabbro.Core.Ziel.Korrektheit

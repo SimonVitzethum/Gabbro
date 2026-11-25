@@ -2,12 +2,13 @@
   File:      core/Core/Speicher/Senke.lean
   Subject:   A SINK keeps consistency (`senke_konsistent`): if no program-order, reads-from,
              modification-order or reads-before edge leaves the event `e`, and `e`, if it is an
-             update, has no write between its source and itself, then the graph is consistent as
-             soon as it is well formed and the graph without `e` is consistent. Every relation
-             path that ends elsewhere avoids `e` (`pfad_ohne`), so the axioms over the other events
-             are those of the smaller graph. This is the step a machine of M4 takes when it
-             appends an event that reads the last write of its location in `mo` and writes at the
-             end of `mo` (the non-vacuity of its memory).
+             update, has no write between its source and itself and its source precedes it in
+             `mo`, then the graph is consistent as soon as it is well formed and the graph
+             without `e` is consistent. Every relation path that ends elsewhere avoids `e`
+             (`pfad_ohne`), so the axioms over the other events are those of the smaller graph.
+             This is the step a machine of M4 takes when it appends an event that reads the last
+             write of its location in `mo` and writes at the end of `mo` (the non-vacuity of its
+             memory).
 -/
 module
 
@@ -141,7 +142,8 @@ end Senke
 /-- **A sink keeps consistency.** -/
 theorem senke_konsistent {G : Graph E Ort Wert} {e : E} (hs : G.Senke e) (hw : G.Wohlgeformt)
     (hk : (Senke.ohne G e).Konsistent)
-    (hat : ∀ w w', G.rf w e → G.istRmw e → G.mo w w' → ¬ G.mo w' e) : G.Konsistent where
+    (hat : ∀ w w', G.rf w e → G.istRmw e → G.mo w w' → ¬ G.mo w' e)
+    (hvor : ∀ w, G.rf w e → G.istRmw e → G.mo w e) : G.Konsistent where
   wf := hw
   hb_irrefl := fun a h => by
     have hae : a ≠ e := fun h0 => hs.hb _ (h0 ▸ h)
@@ -177,6 +179,15 @@ theorem senke_konsistent {G : Graph E Ort Wert} {e : E} (hs : G.Senke e) (hw : G
       exact hs.porf _ (h0 ▸ hc)
     obtain ⟨_, hp⟩ := pfad_ohne hs.porf h hae
     exact hk.ohneLB ⟨a, hae⟩ (hp hae)
+  liest_vorher := fun w u h1 h2 => by
+    by_cases hu : u = e
+    · rw [hu] at h1 h2 ⊢
+      by_cases hw : w = e
+      · rw [hw] at h1
+        exact absurd h1 (hs.rf _)
+      · exact hvor w h1 h2
+    · have hwe : w ≠ e := fun h0 => hs.rf _ (h0 ▸ h1)
+      exact hk.liest_vorher ⟨w, hwe⟩ ⟨u, hu⟩ h1 h2
 
 end Graph
 

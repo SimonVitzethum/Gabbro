@@ -251,18 +251,36 @@ theorem senke_ohne_einbettung :
       · exact absurd hb' (Nat.ne_of_lt hb)
     · exact fun h => Or.inl ⟨(ohneAbb Z k l P q a).2, hb, h⟩
 
-/-- **The appended state is consistent.** -/
+/-- **The appended state is consistent.** The new event reads the write last in `mo` at its
+    location and writes after every write there, so both halves of update atomicity hold for it. -/
 theorem senke_konsistent_zustand (A : Anhang Z k l P q) (hk : Z.graph.Konsistent) :
     (senke Z k l P q).graph.Konsistent := by
   refine Graph.senke_konsistent (senke_ist_senke A hk) (senke_wf A hk)
-    (senke_ohne_einbettung.konsistent hk) (fun w w' h1 _ h3 h4 => ?_)
-  rcases h1 with ⟨_, h, _⟩ | ⟨_, hl, hq⟩
-  · exact Nat.lt_irrefl _ h
-  · obtain ⟨hqn, _⟩ := A.quelle hl
-    rcases h3 with ⟨_, hw', h3⟩ | ⟨hw', _⟩
-    · rw [hq] at h3
-      exact A.nicht_nach hk hl hqn hw' h3
-    · rcases h4 with ⟨h4, _, _⟩ | ⟨_, _, h4, _⟩ <;> omega
+    (senke_ohne_einbettung.konsistent hk) (fun w w' h1 _ h3 h4 => ?_) (fun w h1 h2 => ?_)
+  · rcases h1 with ⟨_, h, _⟩ | ⟨_, hl, hq⟩
+    · exact Nat.lt_irrefl _ h
+    · obtain ⟨hqn, _⟩ := A.quelle hl
+      rcases h3 with ⟨_, hw', h3⟩ | ⟨hw', _⟩
+      · rw [hq] at h3
+        exact A.nicht_nach hk hl hqn hw' h3
+      · rcases h4 with ⟨h4, _, _⟩ | ⟨_, _, h4, _⟩ <;> omega
+  · have hlrmw : l.art = .rmw := by
+      have h := h2
+      unfold Graph.istRmw at h
+      rw [senke_lab_neu _ rfl] at h
+      exact h
+    have hll : l.art.liest := by
+      rw [hlrmw]
+      exact trivial
+    have hlschreibt : l.art.schreibt := by
+      rw [hlrmw]
+      exact trivial
+    rcases h1 with ⟨_, h, _⟩ | ⟨hj, _, hq⟩
+    · exact (Nat.lt_irrefl _ h).elim
+    · obtain ⟨hqn, _, _, _⟩ := A.quelle hll
+      have hwn : w.1 < Z.ev.length := hq ▸ hqn
+      obtain ⟨hqw, hqo, _, _⟩ := A.q_lab hll hwn hq
+      exact Or.inr ⟨hj, hlschreibt, hwn, hqw, hqo⟩
 
 /-- **The appended state is complete.** -/
 theorem senke_vollstaendig (A : Anhang Z k l P q) (hv : Z.graph.Vollstaendig) :

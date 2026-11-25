@@ -92,6 +92,7 @@ theorem einschraenken_konsistent (hk : G.Konsistent) (P : E → Prop) :
   atomar := fun w u w' h1 h2 h3 => hk.atomar w.1 u.1 w'.1 h1 h2 h3
   psc := azyklisch_abbild Subtype.val (fun _ _ h => einschraenken_psc h) hk.psc
   ohneLB := azyklisch_abbild Subtype.val (fun _ _ h => h) hk.ohneLB
+  liest_vorher := fun w u h1 h2 => hk.liest_vorher w.1 u.1 h1 h2
 
 /-- **In-order execution.** A consistent graph is executed in ONE strict total order `T` of its
     events that extends program order and in which every read comes after the write it reads;

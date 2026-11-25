@@ -139,6 +139,7 @@ theorem leer_konsistent : (leer : Zustand F Ort Wert).graph.Konsistent where
   atomar := fun a => (leer_elim a).elim
   psc := fun a => (leer_elim a).elim
   ohneLB := fun a => (leer_elim a).elim
+  liest_vorher := fun a => (leer_elim a).elim
 
 theorem leer_vollstaendig : (leer : Zustand F Ort Wert).graph.Vollstaendig :=
   fun a => (leer_elim a).elim
