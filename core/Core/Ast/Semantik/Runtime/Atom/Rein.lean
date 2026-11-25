@@ -81,53 +81,53 @@ private theorem optionCode_rein (slot : Nat) (value : OptionInitializer scope co
       | exact Or.inl rfl
       | exact Or.inr (Or.inl rfl)
 
-/-- **A statement tree whose elaborated code has no access or lifecycle instruction is frame-only.**
+/-- **A statement tree whose elaborated code has no access, lifecycle or outside-question instruction is frame-only.**
     The access form is the only source form with an access class; lifecycle instructions come from
     outside the source trees. -/
 theorem stmt_rein (tree : Stmt result before after)
-    (h : ∀ b ∈ (stmt tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (h : ∀ b ∈ (stmt tree).code, (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (stmt tree).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 theorem bracedBlock_rein (tree : BracedBlock result scope)
-    (h : ∀ b ∈ (bracedBlock tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (h : ∀ b ∈ (bracedBlock tree).code, (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (bracedBlock tree).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 private theorem functionCode_rein {result : Option WrittenType} {scope : Scope}
     (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope)
     (h : ∀ b ∈ (functionCode result measure body).code,
-      (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+      (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (functionCode result measure body).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 private theorem decl_rein {before after : Scope} (d : Decl before after)
-    (h : ∀ b ∈ (decl d).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (h : ∀ b ∈ (decl d).code, (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (decl d).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 private theorem unitBody_rein {before after : Scope} (body : UnitBody before after)
-    (h : ∀ b ∈ (unitBody body).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (h : ∀ b ∈ (unitBody body).code, (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (unitBody body).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 theorem programm_rein (tree : Ast.Unit)
-    (h : ∀ b ∈ (programm tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (h : ∀ b ∈ (programm tree).code, (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (programm tree).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
-/-- **Every elaborated fragment whose code has no access or lifecycle instruction is frame-only.** -/
+/-- **Every elaborated fragment whose code has no access, lifecycle or outside-question instruction is frame-only.** -/
 theorem fragment_rein (category : Category) (tree : category.Tree)
     (h : ∀ b ∈ (fragment category tree).code,
-      (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+      (∀ form, b ≠ .zugriff form) ∧ (∀ form, b ≠ .faden form) ∧ ∀ form, b ≠ .aussen form) :
     (fragment category tree).Rein := by
   intro b hb
-  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2.1 (h b hb).2.2
 
 end Gabbro.Core.Ast.Semantik

@@ -110,7 +110,7 @@ theorem ziel_klein (P : Katalog.Plattform) : DurchstichKleinAussage P := by
     exact schranken t hacc H ρ lauf
   · intro fortschritt H ρ lauf fair
     exact fortschritt P t hacc H ρ lauf fair
-  · exact hacc.1.2.2.2.2.2
+  · exact hacc.1.2.2.2.2.2.1
   · exact klassenAussagen
   · exact atomAussagen
 

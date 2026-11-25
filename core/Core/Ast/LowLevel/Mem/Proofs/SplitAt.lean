@@ -70,16 +70,16 @@ private theorem memGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
   cases trace with
   | mk events outside =>
       cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
       have unchanged : ∀ {recorded graph},
           Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
             recorded = [] ∧ graph = s.graph := by
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-      obtain ⟨rfl, graph⟩ := unchanged memory
-      rw [graph] at nextEq
-      rw [← rahmen.graph] at nextEq
+      have hmem := unchanged memory
+      rw [hmem.1]
+      rw [hmem.2, ← rahmen.graph] at nextEq
       exact ⟨rfl, nextEq⟩
 
 private theorem memHeadSingle {target : ZielDaten} {op : MemInstruction} {s : MemState}
@@ -154,9 +154,14 @@ private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_, ?_⟩, ?_, ?_⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := memGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

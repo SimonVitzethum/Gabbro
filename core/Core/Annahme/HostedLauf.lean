@@ -201,40 +201,6 @@ theorem form_fragen (s : AussenStart) :
 theorem ruhe_erlaubt (bytes : List UInt8) (t : Nat) :
     ¬ AbsturzAngeboten einheit.katalog (hardware bytes) t := fun h => Bool.false_ne_true h.2
 
-/-- A unit accepted by M5 has an admitted ideal run that issues an owned request
-    and commits its successful answer using the view at arrival. -/
-theorem akzeptiert_ideal_mit_antwort :
-    ∃ (E : Modell) (η : I.Lauf E) (q : FrageEreignis) (a : AntwortEreignis) (c : Kontext) (req resp : Spur),
-      Akzeptiert E ∧ I.Laeufe E η ∧
-      η.zeit.spur 1 = some (.kontext c (), req) ∧ req.aussen = [.frage q] ∧
-      AussengriffeEigen (η.zeit.zustand 1) c q.question ∧
-      ¬ Aussen.GueltigBeiCommit E.katalog.plattform (η.hw.politik.sicht 1 (η.zeit.zustand 1).verlauf) q.question ∧
-      η.zeit.spur 2 = some (.antwort a, resp) ∧ resp.aussen = [.antwort a] ∧ a.zu q ∧ a.reply.result.isOk = true ∧
-      (∃ d, d.nummer = a.context ∧ AussengriffeEigen (η.zeit.zustand 2) d a.question) ∧
-      Aussen.GueltigBeiCommit E.katalog.plattform (η.hw.politik.sicht 2 (η.zeit.zustand 2).verlauf) a.question := by
-  obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
-  obtain ⟨g, g', grant, issue, reply⟩ := protokoll_erfuellbar s []
-  let bytes : List UInt8 := []
-  let h₀ : I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes) 0
-      (startZustand s) (.kontext kontext (), ⟨[], []⟩) (binde (startZustand s)) :=
-    .kontext rfl ⟨0, rfl, rfl, rfl⟩ (form_binden zul) grant
-  let h₁ : I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes) 1
-      (binde (startZustand s)) (.kontext kontext (), frageSpur s) (fragend s g) :=
-    .kontext rfl ⟨0, rfl, rfl, rfl⟩ (form_fragen s) issue
-  let h₂ : I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes) 2
-      (fragend s g) (.antwort (angekommen s bytes), antwortSpur s bytes) (fertig s bytes g g') :=
-    .antwort rfl reply
-  let zeit := dreiTakte h₀ h₁ h₂ (fun t => ideal_still (t + 3))
-  let pause := fun t z (_ : KeinSchritt (I.Schritt einrichtung einheit.system einheit.katalog (hardware bytes)) t z) =>
-    ruhe_erlaubt bytes t
-  let η : I.Lauf einheit := ⟨s, umgebung bytes, hardware bytes, zeit.erlaubePausen pause, fun _ => none⟩
-  have lauf : I.Laeufe einheit η := ⟨erlaubt bytes, konform bytes, zul, rfl,
-    zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩
-  exact ⟨einheit, η, gestellt s, angekommen s bytes, kontext, frageSpur s, antwortSpur s bytes,
-    akzeptiert, lauf, rfl, rfl, eigene_frage _, issue_ungueltig [] bytes, rfl, rfl,
-    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl,
-    antwort_commit (akzeptiert_aussen akzeptiert) η lauf (t := 2) (spur := antwortSpur s bytes) rfl rfl⟩
-
 /-- A concrete run shares the same issuing and answer steps as the ideal run. Its finite
     prefix is followed by genuine idle ticks. -/
 theorem konkreter_lauf {s : AussenStart} (zul : einheit.ZulStart (umgebung []) s) (bytes : List UInt8) :

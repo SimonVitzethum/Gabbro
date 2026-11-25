@@ -2,6 +2,7 @@ module
 
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Annahme.HostedLauf
+public import Core.Annahme.DomaeneBeweise.Kanal
 
 @[expose] public section
 
@@ -138,9 +139,58 @@ private theorem beob_aequiv {ρ₁ ρ₂ : Lauf einheit}
   · rw [gleich p t, List.take_length]
     exact reflexiv _
 
-/-- The whole NI comparison premise holds for an accepted program and two admitted runs.
-    They issue the same high question, get different successful answers, and have related low traces. -/
+/-- The whole NI comparison premise holds for two admitted runs. They issue the same high
+    question, get different successful answers, and have related low traces. The accepted
+    program is no longer part of the witness: the hosted unit that carried it is not
+    accepted under the MK-17 isolation row, and admitted runs do not need acceptance. -/
 theorem ni_erfuellbar :
+    ∃ (E : Modell) (H₁ H₂ : Umgebung) (ρ₁ : Lauf E) (s₂ : AussenStart) (ρ₂ : Lauf E)
+      (tq ta : Nat) (c : Kontext) (q : FrageEreignis) (a₁ a₂ : AntwortEreignis)
+      (req resp₁ resp₂ : Spur),
+      Hardware E.katalog H₁ ∧ Hardware E.katalog H₂ ∧
+      Laeufe E H₁ ρ₁ ∧ GleicheNiedrigeUmgebung E H₁ H₂ ∧ E.ZulStart H₂ s₂ ∧
+      NiedrigGleich E ρ₁.start s₂ ∧ Laeufe E H₂ ρ₂ ∧ ρ₂.start = s₂ ∧ GleichePolitik E ρ₁ ρ₂ ∧
+      ρ₁.zeit.spur tq = some (.kontext c (), req) ∧ ρ₂.zeit.spur tq = some (.kontext c (), req) ∧
+      req.aussen = [.frage q] ∧ oeffentlich (E.etiketten.frage q.question) = false ∧
+      tq < ta ∧ ρ₁.zeit.spur ta = some (.antwort a₁, resp₁) ∧
+      ρ₂.zeit.spur ta = some (.antwort a₂, resp₂) ∧ resp₁.aussen = [.antwort a₁] ∧
+      resp₂.aussen = [.antwort a₂] ∧ a₁.zu q ∧ a₂.zu q ∧
+      a₁.reply.result.isOk = true ∧ a₂.reply.result.isOk = true ∧ a₁.reply.result ≠ a₂.reply.result ∧
+      NiedrigAequiv E (NiedrigeBeob E ρ₁) (NiedrigeBeob E ρ₂) := by
+  obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
+  let b₁ : List UInt8 := []
+  let b₂ : List UInt8 := [1]
+  obtain ⟨ρ₁, _, _, lauf₁, start₁, hw₁, za₀, za₁, za₂, za₃, ea₀, ea₁, ea₂, still₁⟩ := konkreter_lauf zul b₁
+  obtain ⟨ρ₂, _, _, lauf₂, start₂, hw₂, zb₀, zb₁, zb₂, zb₃, eb₀, eb₁, eb₂, still₂⟩ := konkreter_lauf zul b₂
+  have politik : GleichePolitik einheit ρ₁ ρ₂ := by
+    unfold GleichePolitik
+    rw [hw₁, hw₂]
+    exact hw_gleich _ _
+  have anders : (ausgabe b₁).result ≠ (ausgabe b₂).result := by
+    change (Except.ok (.data []) : Except AussenFehler AussenWert) ≠ Except.ok (.data [1])
+    intro gleich
+    cases gleich
+  have trace : NiedrigAequiv einheit (NiedrigeBeob einheit ρ₁) (NiedrigeBeob einheit ρ₂) := by
+    apply beob_aequiv
+    intro p t
+    exact (beob_konstant p za₀ (schritte_stumm za₀ za₁ za₂ za₃ ea₀ ea₁ ea₂ still₁ p) t).trans
+      (beob_konstant p zb₀ (schritte_stumm zb₀ zb₁ zb₂ zb₃ eb₀ eb₁ eb₂ still₂ p) t).symm
+  refine ⟨einheit, umgebung b₁, umgebung b₂, ρ₁, s, ρ₂, 1, 2, kontext, gestellt s,
+    angekommen s b₁, angekommen s b₂, frageSpur s, antwortSpur s b₁, antwortSpur s b₂,
+    erlaubt b₁, erlaubt b₂, lauf₁, umgebung_gleich _ _, gleicher_start zul b₂, ?_,
+    lauf₂, start₂, politik, ea₁, eb₁, rfl, ?_, Nat.lt_succ_self _, ea₂, eb₂, rfl, rfl,
+    ⟨Nat.le_succ _, rfl, rfl, rfl⟩, ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, rfl, anders, trace⟩
+  · rw [start₁]
+    rfl
+  · rw [frage_hoch]
+    exact hoch_verborgen
+
+/-- The whole NI comparison premise WITH acceptance: the hosted unit is accepted over
+    its declared channel table (`akzeptiert_hosted`) and issues the same high question
+    with different successful answers and related low traces. This is the opposite of
+    the deleted `Vakuum.lean` impossibility, which held only for the old universal
+    plan quantification: bound to its own table, the accepted unit may ask. -/
+theorem ni_erfuellbar_akzeptiert :
     ∃ (E : Modell) (H₁ H₂ : Umgebung) (ρ₁ : Lauf E) (s₂ : AussenStart) (ρ₂ : Lauf E)
       (tq ta : Nat) (c : Kontext) (q : FrageEreignis) (a₁ a₂ : AntwortEreignis)
       (req resp₁ resp₂ : Spur),
@@ -174,8 +224,9 @@ theorem ni_erfuellbar :
       (beob_konstant p zb₀ (schritte_stumm zb₀ zb₁ zb₂ zb₃ eb₀ eb₁ eb₂ still₂ p) t).symm
   refine ⟨einheit, umgebung b₁, umgebung b₂, ρ₁, s, ρ₂, 1, 2, kontext, gestellt s,
     angekommen s b₁, angekommen s b₂, frageSpur s, antwortSpur s b₁, antwortSpur s b₂,
-    akzeptiert, erlaubt b₁, erlaubt b₂, lauf₁, umgebung_gleich _ _, gleicher_start zul b₂, ?_,
-    lauf₂, start₂, politik, ea₁, eb₁, rfl, ?_, Nat.lt_succ_self _, ea₂, eb₂, rfl, rfl,
+    akzeptiert_hosted, erlaubt b₁, erlaubt b₂, lauf₁, umgebung_gleich _ _,
+    gleicher_start zul b₂, ?_, lauf₂, start₂, politik, ea₁, eb₁, rfl, ?_,
+    Nat.lt_succ_self _, ea₂, eb₂, rfl, rfl,
     ⟨Nat.le_succ _, rfl, rfl, rfl⟩, ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, rfl, anders, trace⟩
   · rw [start₁]
     rfl

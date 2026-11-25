@@ -55,7 +55,7 @@ def einheit (z : Zustand) (form : Formular) (quelltabellen : Quelltabellen Zusta
   ⟨katalog, bild, einrichtung,
     ⟨fun _ => ⟨fun c s _ plans u => form c s plans u, fun _ _ _ _ _ => False⟩,
       fun _ _ => some Gabbro.Core.Ast.Semantik.Befehl.ende, fun _ _ => False, fun _ _ _ => False⟩,
-    fun _ => daten, fun _ => 0, fun _ _ => some z, Eq, (fun _ => 0), quelltabellen, .leer, .leer, .leer⟩
+    fun _ => daten, fun _ => 0, fun _ _ => some z, Eq, (fun _ => 0), quelltabellen, eineTabelle, .leer, .leer, .leer⟩
 
 def umgebung (sicht : Sicht) := Umgebung.referenz katalog 2 sicht
 def hardware (sicht : Sicht) := Umgebung.referenzLauf katalog 2 sicht

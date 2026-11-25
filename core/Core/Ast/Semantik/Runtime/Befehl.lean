@@ -3,6 +3,7 @@ module
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Ast.Semantik.Runtime.Atom.Form
 public import Core.Ast.Semantik.Runtime.Faden.Form
+public import Core.Aussen.Frage.Form
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -10,6 +11,7 @@ import Init.Data.Vector.OfFn
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
+open Gabbro.Core.Aussenfrage
 
 /-- One linearisation point per expression node or binding. A binary instruction
     consumes the slots left by its children. A binding takes its initializer's slot. -/
@@ -73,6 +75,7 @@ inductive Befehl where
   | bindeRegion (receiver : Nat) (init : RegionInitializer)
   | zugriff (form : Zugriffsform)
   | faden (form : Fadenform)
+  | aussen (form : Aussenfrageform)
   | maskiere (vektor : Nat) (aus : Bool)
   | prioritaet (grenze : Nat)
   | sendeUnterbrechung (vektor kern : Nat)
@@ -273,6 +276,7 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
   | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
   | .zugriff form, frame => form.uebertrag frame 0
   | .faden form, frame => form.uebertrag frame 0
+  | .aussen _form, frame => frame
   | .maskiere .., frame => { frame with pc := frame.pc + 1 }
   | .prioritaet .., frame => { frame with pc := frame.pc + 1 }
   | .sendeUnterbrechung .., frame => { frame with pc := frame.pc + 1 }

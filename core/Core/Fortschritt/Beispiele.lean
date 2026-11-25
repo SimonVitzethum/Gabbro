@@ -73,7 +73,7 @@ def E_w (Dispatch : Kern → Option Kontext) : Einheit Unit Unit Unit Unit Bool 
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨Dispatch j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))),
-    Eq, fun _ => 1, .leer, .leer, .leer, .leer⟩
+    Eq, fun _ => 1, .leer, eineTabelle, .leer, .leer, .leer⟩
 
 def sicht0 : Nat → AussenVerlauf → AussenSicht :=
   fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
