@@ -72,26 +72,15 @@ private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Ty
   | wartet _ eq _ => exact eq
   | schritt _ step => cases step
 
-private theorem held_gleich {k : Katalog} {v u : Ast.LowLevel.State k} {c : Kontext} {slot : Nat}
-    (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
-    Ast.LowLevel.heldRegion v c slot = Ast.LowLevel.heldRegion u c slot := by
-  unfold Ast.LowLevel.heldRegion
-  rw [hl, hre, hle]
-
 /-- Instruction evaluation reads only the public frame, rights and loans. -/
 private theorem evaluate_gleich {k : Katalog} (op : Instruction k)
     {v u : Ast.LowLevel.State k} {c : Kontext}
     (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
     op.evaluate v c = op.evaluate u c := by
-  cases op with
-  | denoteAddress _ _ _ => rfl
-  | selectEnvironment _ _ _ _ => rfl
-  | projectAddress slot =>
-      unfold Instruction.evaluate
-      rw [held_gleich hl hre hle]
-  | borrowView slot shape =>
-      unfold Instruction.evaluate
-      rw [held_gleich hl hre hle]
+  cases hl
+  cases hre
+  cases hle
+  rfl
 
 /-- Inverting the low-level head: only the instruction itself runs at the entry, once. -/
 private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel.State k}
@@ -116,86 +105,86 @@ private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel
       · rw [if_neg hcond] at hv
         cases hv
 
-/-- The low-level unit never issues a question, so no state carries a pending one. -/
-private theorem unit_fragen_leer {k : Katalog} (op : Instruction k) {h : Umgebung}
-    {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ) :
-    ∀ t, ρ.zeit.zustand t = none ∨ ∃ s : Ast.LowLevel.State k, ρ.zeit.zustand t = some s ∧ s.fragen = [] := by
-  intro t
+/-- The low-level unit never issues a question, so no reached state carries a pending one. -/
+private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
+    {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
+    (t : Nat) {s : Ast.LowLevel.State k} (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
   induction t with
   | zero =>
-      rw [lauf.2.2.2]
-      simp only [unit]
-      unfold Ast.LowLevel.loaded
-      split
-      · right
-        refine ⟨_, rfl, ?_⟩
+      rw [lauf.2.2.2] at hs
+      simp only [unit] at hs
+      unfold Ast.LowLevel.loaded at hs
+      split at hs
+      · have eqs := Option.some.inj hs
+        rw [← eqs]
         rfl
-      · left
-        rfl
+      · cases hs
   | succ t ih =>
-      rcases ih with hn | ⟨s, hs, leer⟩
-      · left
-        exact zustand_nach hn
-      · have tak := ρ.zeit.takt t
-        rw [hs] at tak
-        cases tak with
-        | wartet _ eq _ => right; exact ⟨s, eq, leer⟩
-        | schritt _ laufstep =>
-            cases laufstep with
-            | schritt impl =>
-                cases impl with
-                | kontext _ _ regel aus =>
-                    obtain ⟨_, _, implI⟩ := regel
-                    obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer implI
-                    cases (List.cons.inj planEq).1
-                    simp only [unit] at aus
-                    obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
-                    right
-                    refine ⟨_, nextEq, ?_⟩
-                    rw [nextEq]
-                    rfl
-                | antwort _ hantwort =>
-                    obtain ⟨_, _, _, nextEq⟩ := hantwort
-                    right
-                    refine ⟨_, nextEq, ?_⟩
-                    rw [nextEq]
-                    rfl
-                | interrupt _ hinterrupt =>
-                    obtain ⟨_, _, _, _, _, _, _, _, _, _, nextEq⟩ := hinterrupt
-                    right
-                    refine ⟨_, nextEq, ?_⟩
-                    rw [nextEq]
-                    rfl
-                | absturz habsturz =>
-                    obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
-                    right
-                    refine ⟨_, nextEq, ?_⟩
-                    rw [nextEq, leer]
+      have tak := ρ.zeit.takt t
+      cases hv : ρ.zeit.zustand t with
+      | none =>
+          rw [hv] at tak
+          cases tak with
+          | wartet _ eq _ => rw [eq] at hs; cases hs
+          | schritt _ laufstep => cases laufstep
+      | some s0 =>
+          have ihs := ih s0 rfl
+          rw [hv, hs] at tak
+          cases tak with
+          | wartet label eq _ =>
+              have ss : s = s0 := Option.some.inj eq
+              subst s
+              exact ihs
+          | schritt _ laufstep =>
+              cases laufstep with
+              | schritt impl =>
+                  cases impl with
+                  | kontext _ _ regel aus =>
+                      obtain ⟨_, _, implI⟩ := regel
+                      obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer implI
+                      cases (List.cons.inj planEq).1
+                      simp only [unit] at aus
+                      obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
+                      rw [nextEq]
+                      rw [ihs]
+                      rfl
+                  | antwort _ hantwort =>
+                      obtain ⟨_, _, _, nextEq⟩ := hantwort
+                      rw [nextEq]
+                      exact ihs
+                  | interrupt _ hinterrupt =>
+                      obtain ⟨_, _, _, _, _, _, _, _, _, _, nextEq⟩ := hinterrupt
+                      rw [nextEq]
+                      exact ihs
+                  | absturz habsturz =>
+                      obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
+                      rw [nextEq, ihs]
 
 private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgebung}
     {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
     (t : Nat) (a : AntwortEreignis) (spur : SchrittSpur Nat UInt8) :
     ρ.zeit.spur t ≠ some (.antwort a, spur) := by
   intro heq
-  have w := unit_fragen_leer op lauf t
-  rcases w with hn | ⟨s, hs, leer⟩
-  · have tak := ρ.zeit.takt t
-    rw [hn] at tak
-    cases tak with
-    | wartet label _ _ => cases label.symm.trans heq
-    | schritt _ laufstep => cases laufstep
-  · have tak := ρ.zeit.takt t
-    rw [hs, heq] at tak
-    cases tak with
-    | wartet label _ _ => cases label
-    | schritt _ laufstep =>
-        cases laufstep with
-        | schritt impl =>
-            cases impl with
-            | antwort _ hantwort =>
-                obtain ⟨angebot, _, _, _⟩ := hantwort
-                obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
-                rw [leer] at hqmem
-                cases hqmem
+  have tak := ρ.zeit.takt t
+  cases hv : ρ.zeit.zustand t with
+  | none =>
+      rw [hv] at tak
+      cases tak with
+      | wartet label _ _ => cases label.symm.trans heq
+      | schritt _ laufstep => cases laufstep
+  | some s0 =>
+      rw [hv, heq] at tak
+      cases tak with
+      | wartet label _ _ => cases label
+      | schritt _ laufstep =>
+          cases laufstep with
+          | schritt impl =>
+              cases impl with
+              | antwort _ hantwort =>
+                  obtain ⟨angebot, _, _, _⟩ := hantwort
+                  obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
+                  have leer := unit_fragen_leer_an op lauf t hv
+                  rw [leer] at hqmem
+                  cases hqmem
 
 end Gabbro.Core.Beobachtung
