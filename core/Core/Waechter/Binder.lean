@@ -81,7 +81,9 @@ public meta def statementScan (env : Environment) (name : Name) (info : Definiti
         for n in (← functionParameters info.type) do
           found := found.push
             s!"statement {name} in module {modul} takes the free function parameter {n} that nothing binds to the model"
-      return found
+      -- A binder unused in both the type and the value position (or shadowed) would print
+      -- byte-identical lines; report each finding once.
+      return found.toList.eraseDups.toArray
   catch _ => return #[s!"statement {name} in module {modulName env name} could not be scanned within the heartbeat budget"]
 
 private meta def correctnessNamespace : Name := `Gabbro.Core.Ziel.Korrektheit
