@@ -69,8 +69,9 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
           rw [live] at dormant
           cases dormant
         have skerne : zplus.kerne =
-            (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne :=
-          congrArg _ hstate
+            (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne := by
+          have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+          exact h
         have einkern : ∀ k, (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne k =
             if k = k' then (zminus.kerne k').unterbrechen c' nmi else zminus.kerne k := by
           intro k
@@ -146,10 +147,8 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
   have nowhere : ∀ k'', (spost.kerne k'').laeuft ≠ some c := by
     have skerne : spost.kerne =
         (Maschine.Zustandseintritt s kstep id cstep nmi).kerne := by
-      have hkerne : ({Maschine.Zustandseintritt s kstep id cstep nmi with
-          graph := spost.graph} : Ast.Semantik.Zustand).kerne =
-          (Maschine.Zustandseintritt s kstep id cstep nmi).kerne := rfl
-      rw [hstate, hkerne]
+      have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+      exact h
     have einkern : ∀ k, (Maschine.Zustandseintritt s kstep id cstep nmi).kerne k =
         if k = kstep then (s.kerne kstep).unterbrechen cstep nmi else s.kerne k := by
       intro k
@@ -288,8 +287,9 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
                     opened crashfrei ret (a + d) hm k₀ z hzn ihz hs'
                     hspur k₀ rfl irq c' nmi dormant hstate).elim
                 · have skerne : s'.kerne =
-                      (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne :=
-                    congrArg _ hstate
+                      (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
+                    have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+                    exact h
                   have einkern : ∀ k, (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne k =
                       if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                     intro k
