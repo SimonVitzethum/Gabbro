@@ -104,7 +104,8 @@ theorem rmwHbSchrittFalsch (a b : RmwEv) : ¬ rmwGraph.hbSchritt a b := by
     rcases hkopf with ⟨rfl, _, hstark⟩ | ⟨hza, _, _⟩
     · cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, Modus.stark] at hstark <;>
         exact False.elim hstark
-    · cases a <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hza
+    · obtain ⟨hza, _⟩ := hza
+      cases a <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hza
 
 /-- Happens-before is empty in this graph. -/
 theorem rmwHbFalsch (a b : RmwEv) : ¬ rmwGraph.hb a b := by
