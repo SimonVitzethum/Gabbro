@@ -24,13 +24,14 @@ theorem zustandsBedarfBei_nach_anderer (p : Fragment) (c c' : Kontext) (b : Befe
     (s : Zustand) (hne : c' ≠ c) (op : PartielleOperation) (args : Operanden op)
     (need : zustandsBedarfBei p c s op args) :
     zustandsBedarfBei p c (b.nach c' s) op args := by
+  have hcc' : c ≠ c' := fun h => hne h.symm
   rcases need with ⟨cmd, head, guard⟩
   refine ⟨cmd, ?_, ?_⟩
   · unfold kopf at head ⊢
-    rw [Befehl.nach_lokal_anderer b hne s]
+    rw [Befehl.nach_lokal_anderer b (c := c') (d := c) hcc' s]
     rw [show (b.nach c' s).status c = s.status c from rfl]
     exact head
-  · rw [Befehl.nach_lokal_anderer b hne s]
+  · rw [Befehl.nach_lokal_anderer b (c := c') (d := c) hcc' s]
     exact guard
 
 /-- Projection of a whole state onto a module commutes with a frame-only step of a context other
@@ -41,9 +42,8 @@ theorem zustandImModul_nach_anderer (off : Nat) (c c' : Kontext) (b : Befehl)
     (s : Zustand) (hne : c' ≠ c) :
     zustandImModul off c (b.nach c' s) = b.nach c' (zustandImModul off c s) := by
   have hcc' : c ≠ c' := fun h => hne h.symm
-  simp only [zustandImModul, Befehl.nach, frameZurueck,
+  simp only [zustandImModul, Befehl.nach, frameZurueck, Zustand.regionLive,
     Function.update_of_ne hcc', Function.update_of_ne hne]
-  dsimp [Zustand.regionLive]
   rw [Function.update_comm hne]
 
 /-- The acting frame's head and guard survive the projection and a frame-only step of another
