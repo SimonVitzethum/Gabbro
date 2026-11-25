@@ -18,16 +18,22 @@ open Gabbro.Core.Ast.LowLevel (entryContext)
     length link is only required while the initial booking still holds.
     Pre-crash the epoch is zero, nothing is discarded and consumption counts
     the arrived answers (all arrived when idle, all but the last when a fresh
-    answer waits). -/
+    answer waits). All questions and answers belong to the entry context, and
+    recent questions are answered exactly when no fresh question waits. -/
 def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Prop :=
   (∀ c, c ≠ entryContext → (s.lokal c).pending = none ∧ s.verbraucht c = 0 ∧ s.verworfen c = 0) ∧
+    (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
+    (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
     (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
       s.epoche = 0 ∧ (∀ c, s.verworfen c = 0) ∧
       ((s.lokal entryContext).pending = none →
-        s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext = s.antworten.length) ∧
+        s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext = s.antworten.length ∧
+        ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∧
       ((s.lokal entryContext).pending ≠ none →
-        (s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext + 1 = s.antworten.length) ∨
-        (s.fragen.length = s.antworten.length + 1 ∧ s.verbraucht entryContext = s.antworten.length)))
+        (s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext + 1 = s.antworten.length ∧
+          ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∨
+        (s.fragen.length = s.antworten.length + 1 ∧ s.verbraucht entryContext = s.antworten.length ∧
+          ∃ q ∈ s.fragen, s.epoche ≤ q.cut ∧ ∀ a ∈ s.antworten, ¬ a.zu q)))
 
 /-- The invariant holds for every loaded device state: other contexts are
     empty, the entry pending slot is empty and both ledgers are empty. -/
@@ -40,15 +46,21 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   dsimp only at geladen
   split at geladen
   · obtain rfl := Option.some.inj geladen
-    refine ⟨?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
     · intro c hc
       dsimp only [bootFor, Zustand.start] at ⊢
       rw [if_neg hc]
       exact ⟨rfl, rfl, rfl⟩
+    · intro q hq
+      cases hq
+    · intro a ha
+      cases ha
     · intro _
       refine ⟨rfl, fun _ => rfl, ?_, ?_⟩
       · intro _
-        exact ⟨rfl, rfl⟩
+        refine ⟨rfl, rfl, ?_⟩
+        intro q hq _
+        cases hq
       · intro hne
         dsimp only [bootFor, Zustand.start] at hne
         rw [if_pos rfl] at hne
