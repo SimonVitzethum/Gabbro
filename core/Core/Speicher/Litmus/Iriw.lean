@@ -24,6 +24,7 @@ public import Core.Ziel.Korrektheit.Beweise.Iriw
 namespace Gabbro.Core.Speicher
 
 open Gabbro.Core.Ziel.Korrektheit
+open Gabbro.Core.Ziel.Korrektheit.IriwEv
 
 /-- The release/acquire IRIW witness is complete: each of its four reads has a reads-from source. -/
 theorem ir_vollstaendig : (irGraph .ra).Vollstaendig := by

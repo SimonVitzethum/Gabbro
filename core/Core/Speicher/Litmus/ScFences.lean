@@ -30,7 +30,7 @@ namespace Gabbro.Core.Speicher
     barriers `f1`/`f2`. With `mp = false` the graph is SB, with `mp = true` it is MP. -/
 inductive FenceEv where
   | ix | iy | a1 | b1 | a2 | b2 | f1 | f2
-  deriving DecidableEq, Repr, Fintype
+  deriving DecidableEq, Repr
 
 open FenceEv
 
@@ -76,9 +76,11 @@ def fGraph (mp : Bool) : Graph FenceEv Bool Nat := ⟨fLab mp, fPo, fRf mp, fMo 
 theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
   po_trans := by
     intro a b c
+    show fPo a b → fPo b c → fPo a c
     cases a <;> cases b <;> cases c <;> decide
   po_irrefl := by
     intro a
+    show ¬ fPo a a
     cases a <;> decide
   rf_schreibt := by
     intro w r h
@@ -110,10 +112,12 @@ theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
     cases mp <;> cases a <;> cases b <;> decide
   mo_trans := by
     intro a b c
-    cases a <;> cases b <;> cases c <;> decide
+    show fMo mp a b → fMo mp b c → fMo mp a c
+    cases mp <;> cases a <;> cases b <;> cases c <;> decide
   mo_irrefl := by
     intro a
-    cases a <;> decide
+    show ¬ fMo mp a a
+    cases mp <;> cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
     cases mp <;> cases a <;> cases b <;>
@@ -217,6 +221,7 @@ theorem f_konsistent (mp : Bool) : (fGraph mp).Konsistent where
   ohneLB := by
     refine azyklisch_von_rang fRang ?_
     intro a b h
+    revert h
     cases mp <;> cases a <;> cases b <;> decide
   liest_vorher := by
     intro w u hrf hu
@@ -229,6 +234,12 @@ theorem f_vollstaendig (mp : Bool) : (fGraph mp).Vollstaendig := by
   · exact ⟨ix, by decide⟩
   · exact ⟨b1, by decide⟩
   · exact ⟨ix, by decide⟩
+
+theorem f_rb_b1_a2 : (fGraph false).rb b1 a2 :=
+  ⟨iy, (by show fRf false iy b1; decide), (by show fMo false iy a2; decide), by decide⟩
+
+theorem f_rb_b2_a1 (mp : Bool) : (fGraph mp).rb b2 a1 :=
+  ⟨ix, (by show fRf mp ix b2; decide), (by show fMo mp ix a1; decide), by decide⟩
 
 /-- **Literature statement, FALSE in this model:** SB with an `sc` fence between each relaxed
     write and its read cannot have both reads miss the other thread's write. Feeds: its negation
@@ -247,7 +258,11 @@ theorem sc_fences_sb_nicht_verboten : ¬ ScFencesSbVerbotenAussage := by
   apply h
   refine ⟨FenceEv, Bool, Nat, fGraph false, f_konsistent false,
     a1, f1, b1, a2, f2, b2, ix, iy, ?_⟩
-  decide
+  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+    (by decide : (fGraph false).po a1 f1), (by decide : (fGraph false).po f1 b1),
+    (by decide : (fGraph false).po a2 f2), (by decide : (fGraph false).po f2 b2),
+    (by decide : (fGraph false).rf iy b1), (by decide : (fGraph false).rf ix b2),
+    f_rb_b1_a2, f_rb_b2_a1 false⟩
 
 /-- **The relaxed SB outcome is allowed:** a consistent and complete graph with the two writes
     and their reads and both reads-before edges. Feeds: `sb_ohne_sc_erlaubt`, `sb_vollstaendig`. -/
@@ -267,7 +282,7 @@ theorem sc_fences_sb_erlaubt : ScFencesSbErlaubtAussage := by
     decide
   refine ⟨SbEv, Bool, Nat, sbGraph .rlx, hk, sb_vollstaendig .rlx,
     a1, b1, a2, b2, ix, iy, ?_⟩
-  decide
+  exact ⟨by decide, by decide, by decide, by decide, p₁, p₂, hf₁, hf₂, r₁, r₂⟩
 
 /-- **Literature statement, FALSE in this model:** message passing with an `sc` fence after the
     relaxed data write and before the relaxed flag write, and one between the flag read and the
@@ -286,7 +301,11 @@ theorem sc_fences_mp_nicht_verboten : ¬ ScFencesMpVerbotenAussage := by
   apply h
   refine ⟨FenceEv, Bool, Nat, fGraph true, f_konsistent true,
     a1, f1, b1, a2, f2, b2, ix, ?_⟩
-  decide
+  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+    (by decide : (fGraph true).po a1 f1), (by decide : (fGraph true).po f1 b1),
+    (by decide : (fGraph true).po a2 f2), (by decide : (fGraph true).po f2 b2),
+    (by decide : (fGraph true).rf b1 a2), (by decide : (fGraph true).rf ix b2),
+    f_rb_b2_a1 true⟩
 
 /-- **The relaxed MP outcome is allowed:** a consistent and complete graph in which the flag read
     sees the flag write while the data read sees the initial write. -/
@@ -299,7 +318,10 @@ def ScFencesMpErlaubtAussage : Prop :=
 theorem sc_fences_mp_erlaubt : ScFencesMpErlaubtAussage := by
   refine ⟨FenceEv, Bool, Nat, fGraph true, f_konsistent true, f_vollstaendig true,
     a1, b1, a2, b2, ix, ?_⟩
-  decide
+  exact ⟨by decide, by decide, by decide, by decide,
+    (by decide : (fGraph true).po a1 b1), (by decide : (fGraph true).po a2 b2),
+    (by decide : (fGraph true).rf b1 a2), (by decide : (fGraph true).rf ix b2),
+    f_rb_b2_a1 true⟩
 
 /-- **The SC-fence group root.** The two literature-forbidden halves are refuted by this model, so
     the pinned model-side result records their negations together with the two allowed halves. -/
