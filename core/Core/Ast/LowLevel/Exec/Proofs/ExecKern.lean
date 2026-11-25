@@ -151,9 +151,9 @@ theorem execGenauInternal {t : Nat} {c : Kontext} {s u : ExecState}
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-    have hmem := unchanged memory
-    rw [hmem.1, hmem.2, ← rahmen.graph] at nextEq ⊢
-    exact ⟨rfl, nextEq⟩
+      have hmem := unchanged memory
+      rw [hmem.1, hmem.2, ← rahmen.graph] at nextEq ⊢
+      exact ⟨rfl, nextEq⟩
 
 /-- Every execution of an exec instruction records the empty cut, so every head form meets
     the isolation duty under every domain plan. -/
