@@ -41,8 +41,11 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
           rfl
         · cases hload'
       obtain rfl := Option.some.inj (atV.symm.trans (z0.trans hload))
-      refine ⟨fun q hq => by rw [hfragen.1] at hq; cases hq, ?_⟩
-      rw [hep]
+      refine ⟨?_, ?_⟩
+      · intro q hq
+        rw [hfragen.1] at hq
+        cases hq
+      · rw [hep]
   | succ t ih =>
     intro w atW
     have tick := ρ.zeit.takt t
