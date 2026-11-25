@@ -65,6 +65,5 @@ theorem evalPrecAlsFolge (cf cg : Nat.Partrec.Code) (a k : Nat) :
         (precFolgeVon cg a 0 k v).bind
           (fun u => Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair (0 + k) u)))
     rw [Nat.zero_add]
-    rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
