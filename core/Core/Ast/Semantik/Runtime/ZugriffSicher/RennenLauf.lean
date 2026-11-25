@@ -66,20 +66,26 @@ theorem zugriffBefugtBrauchtAnkunft (z : Zugriffsform)
       (keineBefugnisOhneAnkunft (s := s) (c := c) leer
         ((Zugriffsform.operand (Zugriffsform.veroeffentliche region index quelle mode) (s.lokal c)).ort) .schreiben)
   | tausche ziel region index quelle typ mode =>
-    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
-      Wirkungsklasse.befugt] using
-(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.tausche ziel region index quelle typ mode) (s.lokal c)).ort) .lesen) h.1)
+    intro bef
+    have hn := keineBefugnisOhneAnkunft (s := s) (c := c) leer
+      ((Zugriffsform.operand (Zugriffsform.tausche ziel region index quelle typ mode) (s.lokal c)).ort) .lesen
+    exact hn (by
+      simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+        Wirkungsklasse.befugt] using bef.1)
   | vergleicheTausche ziel region index erwartet neu typ mode =>
-    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
-      Wirkungsklasse.befugt] using
-(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ mode) (s.lokal c)).ort) .lesen) h.1)
+    intro bef
+    have hn := keineBefugnisOhneAnkunft (s := s) (c := c) leer
+      ((Zugriffsform.operand (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ mode) (s.lokal c)).ort) .lesen
+    exact hn (by
+      simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+        Wirkungsklasse.befugt] using bef.1)
   | holeUndAddiere ziel region index betrag typ mode =>
-    simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
-      Wirkungsklasse.befugt] using
-(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.holeUndAddiere ziel region index betrag typ mode) (s.lokal c)).ort) .lesen) h.1)
+    intro bef
+    have hn := keineBefugnisOhneAnkunft (s := s) (c := c) leer
+      ((Zugriffsform.operand (Zugriffsform.holeUndAddiere ziel region index betrag typ mode) (s.lokal c)).ort) .lesen
+    exact hn (by
+      simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
+        Wirkungsklasse.befugt] using bef.1)
 
 /-- A step of a class-good instruction at a context with no arrival regions plans the
     private step: a frame-only form is private by its class; a fence plans nothing; every other
