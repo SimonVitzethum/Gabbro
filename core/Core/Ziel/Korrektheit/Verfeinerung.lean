@@ -18,13 +18,15 @@
   split on the class. The refutability statement below is the guard against pinning a duty that no unit can
   violate.
 
-  The three family statements `FlushSimAussage`, `LockFreeSimAussage` and `StotterMassAussage` of
-  `Verfeinerung/Abnahme` take free function parameters (decoder, abstract specification, mass) with no binding to
-  the unit: for each, a degenerate choice proves it for every unit (`Verfeinerung/Review/Befunde.lean`). The
-  design that binds them (diff D-K3 in the report) puts the decoder in the UNIT (`Einrichtung.sicht`), derives the
-  sequential history of a lock-free family from a faithful abstraction function (so linearisability is a theorem,
-  not an obligation), and states the stutter duty as `RegelStotterSchranke` (the mass is a proof device). Until
-  those forms enter the model the three statements must not be relied upon; they are not restated here.
+  The three former family statements `FlushSimAussage`, `LockFreeSimAussage` and `StotterMassAussage`
+  of `Verfeinerung/Abnahme` took free function parameters (decoder, abstract specification, mass) with no
+  binding to the unit: a degenerate choice proved each for every unit. D-K3 closes this. The decoder,
+  together with family membership and, for lock-free, the abstraction function, its start and its abstract
+  specification, is declared data of the family's unit wrapper (`FlushEinheit`, `LockFreeEinheit`); the
+  lock-free sequential history is derived by theorem from an abstraction faithfulness duty, so linearisability
+  is proved and not an obligation; the stutter duty is the per-rule `RegelStotterSchranke`, with the mass an
+  internal proof device. Each family statement records a satisfiable and a refutable case next to it; the old
+  free-parameter forms are deleted.
 -/
 module
 
