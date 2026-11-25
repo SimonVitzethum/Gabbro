@@ -342,9 +342,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 10823183783054127743),
   (`Gabbro.Core.Beobachtung.DurchlaufEinheitAussage, 7734846788320134769),
   (`Gabbro.Core.Ast.Semantik.InvariantenSicherheitAussage, 8883460472224307007),
-  (`Gabbro.Core.Ast.Semantik.KlassenSperrwortbeinAussage, 6854725570782911502),
-  (`Gabbro.Core.Maschine.I.FlushFamilienAussage, 520612642184778992),
-  (`Gabbro.Core.Maschine.I.LockFreeFamilienAussage, 13262704674363817065),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 10231270103410849029)]
+  (`Gabbro.Core.Ast.Semantik.KlassenSperrwortbeinAussage, 12948677020863155897),
+  (`Gabbro.Core.Maschine.I.FlushFamilienAussage, 5738096403899585922),
+  (`Gabbro.Core.Maschine.I.LockFreeFamilienAussage, 16890382388105400655),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 11628676760312913929)]
 
 end Gabbro.Core.Waechter
