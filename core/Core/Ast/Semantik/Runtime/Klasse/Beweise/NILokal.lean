@@ -323,16 +323,24 @@ theorem klassen_stummer_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
   subst p
   subst u
   obtain ⟨_, _, _, _, fuehrtAus, speicherfolge, s'Eq⟩ := aus
-  cases fuehrtAus
-  cases speicherfolge
-  cases spur
-  exact ⟨s'Eq, rfl⟩
+  cases hA : spur.aussen with
+  | cons e es => cases fuehrtAus
+  | nil =>
+      cases fuehrtAus
+      cases hS : spur.speicher with
+      | cons e es => cases speicherfolge
+      | nil =>
+          cases speicherfolge
+          have spurEq : spur = ⟨[], []⟩ := by
+            cases spur
+            simp_all
+          exact ⟨s'Eq, spurEq⟩
 
 /-- A silent form with no public output, speculation or constant-time event appends nothing to the
     low trace. -/
 theorem klassen_stummer_schrittbeob {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
     (kopf : ∀ (c : Kontext) (v : Zustand), E.system.kopf v c = some f →
-      E.fluss.spekulativ f v = fun pred => [] ∧ E.fluss.konstantzeit f = false)
+      E.fluss.spekulativ f (v.lokal c) = fun pred => [] ∧ E.fluss.konstantzeit f = false)
     (privatAus : ∀ (c : Kontext) (v : Zustand),
       E.fluss.ausgaben ((F.nach c v 0).lokal c) = E.fluss.ausgaben (v.lokal c))
     {ρ : Lauf E} {predictor : Praediktor} {t : Nat} {c : Kontext} {w : PUnit}
@@ -376,7 +384,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
     (kopfSicht : ∀ (c : Kontext) (v w : Zustand), Beobachtung.QuellzustandGleich E v w →
       E.system.kopf v c = some f → E.system.kopf w c = some f)
     (kopfStill : ∀ (c : Kontext) (v : Zustand), E.system.kopf v c = some f →
-      E.fluss.spekulativ f v = fun pred => [] ∧ E.fluss.konstantzeit f = false)
+      E.fluss.spekulativ f (v.lokal c) = fun pred => [] ∧ E.fluss.konstantzeit f = false)
     (privatAus : ∀ (c : Kontext) (v : Zustand),
       E.fluss.ausgaben ((F.nach c v 0).lokal c) = E.fluss.ausgaben (v.lokal c)) :
     Beobachtung.RegelNIPflicht E f := by
