@@ -298,7 +298,7 @@ theorem atomarKonsistent : (atomarGraph .rlx).Konsistent where
     rcases hmo with ⟨_, hw'u⟩
     rcases hmo' with ⟨hw'w, _⟩
     subst w'
-    cases hw'u
+    cases hw'w
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
