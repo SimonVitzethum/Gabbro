@@ -38,9 +38,10 @@ private meta def istAussagenTypSyn : Expr → Bool
   | .forallE _ _ b _ => istAussagenTypSyn b
   | e => e.isProp
 
-/-- Proposition test with bounded cost: the syntactic shape first (no heartbeat cost), then the
-    elaborator test only for small non-arrow types, so a single pathological type cannot exhaust the
-    guard's heartbeat budget. Statement types are small; large types fall back to the shape test. -/
+/-- Proposition test with bounded cost for structure field types: the syntactic shape first (no
+    heartbeat cost), then the elaborator test only for small non-arrow types — equation-stated
+    fields such as `lesen none = none` hide there. Field types are small; large types fall back to
+    the shape test, so a single pathological type cannot exhaust the guard's heartbeat budget. -/
 private meta def istPropTyp (type : Expr) : MetaM Bool := do
   if istAussagenTypSyn type then return true
   if type.approxDepth.toNat > 200 then return false
@@ -83,7 +84,8 @@ private meta def strukturScan (env : Environment) (erlaubt : Std.HashSet (Name �
     Core.withCurrHeartbeats do
       let mut found : Array String := #[]
       for (f, t) in (← strukturFeldTypen env s) do
-        if enthaeltPropFunktion t || (← istPropTyp t) then
+        let propWertig ← if enthaeltPropFunktion t then pure true else istPropTyp t
+        if propWertig then
           if !erlaubt.contains (s, f) then
             found := found.push
               s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
@@ -143,13 +145,13 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
   for name in ziel.toArray.qsort Name.lt do
     if endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
-    unless (← istPropTyp info.type) do continue
+    unless istAussagenTypSyn info.type do continue
     imZiel := imZiel.push name
   let mut waisen : Array (Name × String) := #[]
   for name in coreDeclarations env do
     if ziel.contains name || endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
-    unless (← istPropTyp info.type) do continue
+    unless istAussagenTypSyn info.type do continue
     let begleiter := env.contains (name ++ `erfuellbar) || env.contains (name ++ `nichtTrivial) ||
       env.contains (name ++ `beweis)
     let beweis := verwendung.contains name
