@@ -288,11 +288,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) seq
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
                   fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) ukerne
-                cases hakt : plan.aktion with
+                cases aktion with
                 | intern =>
-                  rw [hakt] at aktion
-                  cases aktion with
-                  | intern =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -301,9 +298,6 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | warte =>
-                  rw [hakt] at aktion
-                  cases aktion with
-                  | warte =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -312,9 +306,6 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | sperre =>
-                  rw [hakt] at aktion
-                  cases aktion with
-                  | sperre =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -323,9 +314,6 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | frage =>
-                  rw [hakt] at aktion
-                  cases aktion with
-                  | frage =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -334,9 +322,6 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | verbrauche =>
-                  rw [hakt] at aktion
-                  cases aktion with
-                  | verbrauche =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -344,10 +329,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     · rw [sstack, vuk] at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
-                | rueckkehr =>
-                  rw [hakt] at aktion
-                  cases aktion with
-              | @rueckkehr k _ _ _ =>
+                | @rueckkehr k _ _ _ =>
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skerne] at h
                   by_cases heq : k = k'
