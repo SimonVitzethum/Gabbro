@@ -271,7 +271,6 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
           rw [eq]
           exact ihlive c k h
         · rw [eq] at h₁ h₂
-          rw [eq]
           exact ihsingle c k₁ k₂ h₁ h₂
   intro tick
   obtain ⟨hlive, hsingle⟩ := key tick
