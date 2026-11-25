@@ -25,6 +25,7 @@ theorem geraete_issue_pre {binding : Binding k} {access : RegisterAccess}
   by_contra hB
   have hnone := (hpost hB).1
   have hobj : s.buchung.geraet binding.object = none := congrFun hnone binding.object
+  simp only [Binding.object] at hobj
   rw [owned.1] at hobj
   cases hobj
 
@@ -117,7 +118,6 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
   cases spur with
   | mk speicher aussen =>
     obtain ⟨rahmen, auth, sperren, v, fuehrtAus, speicherfolge, nEqState⟩ := aus
-    rw [hplan] at fuehrtAus
     cases fuehrtAus with
     | frage q =>
       simp only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
@@ -158,7 +158,8 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
       ((setFrame s c { s.lokal c with pending := some (binding.question access) }).frage
         (s.stelleFrage t c (binding.question access))) := by
   have hA := geraete_issue_pre inv owned
-  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hverw, hepoche, hidle, hbusy⟩ := inv.1 hA
+  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
+  obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   have hentry : c = entryContext := geraete_issue_kontext hA owned
   have hbal := hidle idle
   obtain ⟨hnm, hverb, halle⟩ := hbal
@@ -268,7 +269,8 @@ theorem geraete_issue_schliesst_ankunft_aus {binding : Binding k} {access : Regi
     (idle : (s.lokal c).pending = none) :
     ¬ ∃ a hw t, s.AntwortAngeboten (d.unit locals).katalog hw t a := by
   have hA := geraete_issue_pre inv owned
-  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hverw, hepoche, hidle, hbusy⟩ := inv.1 hA
+  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
+  obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   obtain ⟨hnm, hverb, halle⟩ := hidle idle
   rintro ⟨a, hw, t, offered⟩
   obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
