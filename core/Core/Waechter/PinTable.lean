@@ -371,6 +371,18 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Speicher.RsLitmusAussage, 17763330376480677578),
   (`Gabbro.Core.Speicher.ScFencesLitmusAussage, 18180688835626432796),
   (`Gabbro.Core.Speicher.WrcLitmusAussage, 15706039629379633836),
-  (`Gabbro.Core.Speicher.ZweiPlusZweiWLitmusAussage, 5470574054871293577)]
+  (`Gabbro.Core.Speicher.ZweiPlusZweiWLitmusAussage, 5470574054871293577),
+  (`Gabbro.Core.Beobachtung.GeraeteAbsturzErhaltAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteAbsturzInvariantAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteAnkunftInvariantAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteAntwortErhaltAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteInterruptErhaltAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteInterruptInvariantAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteInvariantAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteKontextErhaltAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteKopplungAlleAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteKopplungAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraeteLedgerGleichAussage, 0),
+  (`Gabbro.Core.Beobachtung.GeraetePauseErhaltAussage, 0)]
 
 end Gabbro.Core.Waechter
