@@ -11,11 +11,10 @@
   * statically bounded loops: `Surface.boundedWhile_entry`, `Surface.forRange_entry`,
     elaboration `Semantik.boundedWhileEntry`, `Semantik.forRangeEntry`.
 
-  MELDUNG M1 — no surface syntax reaches `lade`/`speichere`: no `Expr`/`Stmt`
-  constructor elaborates to `Befehl.zugriff` (`fragment_rein`: every elaborated
-  fragment is `Rein`, i.e. frame-only). `zugriff_nicht_aus_quelle` below is the
-  formal side: a `zugriff` instruction never occurs in elaborated source code.
-  The memory instructions of MK-04 exist at the machine level only.
+  MELDUNG M1 (closed by MK-04b) — the statement `mem load` / `mem store` (`Stmt.access`) elaborates to
+  `Befehl.zugriff`, so an elaborated fragment is no longer frame-only in general
+  (`Fragment.KlassenRein`, `Atom/Klassenrein`); the slice grammar F_klein has no access statement, so
+  its fragments stay `Rein`.
 
   MELDUNG M2 — no surface syntax for the lock section: SYNTAX §9 has
   `lockstmt = "locks" … block`, but `Stmt` has no lock constructor, and
@@ -72,12 +71,6 @@ noncomputable def klein_elab_arithmetik := (literalEntry, binaryEntry, ifElseEnt
 /-- The elaboration registry covers the bounded-loop forms of the slice. -/
 noncomputable def klein_elab_schleifen := (boundedWhileProofs, forRangeProofs)
 
-/-- MELDUNG M1, formal side: no access instruction occurs in elaborated source code,
-    so no surface syntax reaches `lade`/`speichere` (the machine forms of MK-04). -/
-theorem zugriff_nicht_aus_quelle (t : Ast.Unit) (z : Zugriffsform)
-    (h : Befehl.zugriff z ∈ (fragment Category.unit t).code) : False :=
-  absurd rfl (Befehl.privat_ne_zugriff_klasse _ (fragment_rein _ _ _ h) z)
-
 /-- MELDUNG M2, formal side: no instruction has a lock class, so the lock section
     of F_klein has no machine instruction yet (`Wirkungsklasse.sperre` is empty
     at the `Befehl` level). -/
@@ -86,7 +79,7 @@ theorem sperre_ohne_befehl (b : Befehl) (a : Maschine.SperrAktion) :
   cases b <;> simp only [Befehl.klasse, ne_eq, reduceCtorEq, not_false_eq_true]
   all_goals
     rename_i form
-    cases form <;> simp only [Zugriffsform.klasse, Fadenform.klasse, reduceCtorEq,
-      not_false_eq_true]
+    cases form <;> simp only [Zugriffsform.klasse, Fadenform.klasse, AussenfrageformKlasse,
+      reduceCtorEq, not_false_eq_true]
 
 end Gabbro.Core.Ziel.Review.Slice

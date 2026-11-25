@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Variant.Grammar
 public import Core.Ast.LowLevel.Syntax
+public import Core.Ast.Program.AccessGrammar
 
 @[expose] public section
 
@@ -174,6 +175,8 @@ inductive StmtReads (result : Option (Ty .value)) : (scope : Scope) →
       LoopLabelReads input label bodyInput →
       BlockReads result scope bodyInput body rest →
       StmtReads result scope (keyword "forever" :: input) ⟨scope, .forever label body⟩ rest
+  | access : AccessReads scope input ⟨after, form⟩ rest →
+      StmtReads result scope (keyword "mem" :: input) ⟨after, .access form⟩ rest
 
 /-- The sequence production consumes the closing brace. -/
 inductive BlockItems (result : Option (Ty .value)) :

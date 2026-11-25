@@ -271,14 +271,14 @@ def functionScope (outer : Scope) (parameters : List (Parameter outer)) : Scope 
 
 def directName (name : Identifier) : Prop :=
   ordinaryLocal name ∧ name.val ∉
-    ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"].map String.toList
+    ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"].map String.toList
 
 theorem directName_of_singleton (spelling : name.val = [c]) : directName name := by
   simp only [directName, ordinaryLocal, ordinaryAtomWord, spelling, List.map_cons, List.map_nil,
     List.mem_cons, List.not_mem_nil, or_false]
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   all_goals first | (intro same; cases same; done) | skip
-  · rintro (same | same | same | same | same | same | same | same | same) <;> cases same
+  · rintro (same | same | same | same | same | same | same | same | same | same) <;> cases same
 
 structure DirectCall (scope : Scope) where
   name : Identifier
@@ -328,6 +328,34 @@ inductive OptionInitializer (scope : Scope) (count : Nat) where
 def optionLetHead (mutable : Bool) (name : Identifier) : List Token :=
   .word "let".toList :: (if mutable then [.word "mut".toList] else []) ++
     [.word name.val, .punctuation [':']]
+
+/-- **The memory order of a source access**: the four modes of the memory model (`Speicher.Modus`). `na` is the plain
+    access, `rlx` the relaxed atomic, `ra` the release-acquire atomic and `sc` the sequentially consistent one. -/
+inductive AccessMode where
+  | na
+  | rlx
+  | ra
+  | sc
+  deriving DecidableEq
+
+/-- **The access forms of the source (MK-04b)**: one cell of an owned region is read or written in a memory order.
+    The region is named by its owner local, the cell by an index expression. Each form elaborates to ONE access
+    instruction (`Befehl.zugriff`), whose step the memory model decides: a load binds the value it read, a store binds
+    nothing. A later form (an exchange, a compare-and-swap, a fetch-and-add, the confirming observation, the
+    publication) is a new constructor at the END of this inductive, not of `Stmt`. -/
+inductive Access : Scope → Scope → Type where
+  /-- `mem load name : T = region, index, mode;` binds the value read at the written type. -/
+  | load (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (mode : AccessMode) :
+      Access scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- `mem store region, index, value, mode;` writes the value into the cell. -/
+  | store (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (value : Expr scope (.int valueLo valueHi)) (mode : AccessMode) :
+      Access scope scope
 
 mutual
 
@@ -402,6 +430,8 @@ inductive Stmt (result : Option (Ty .value)) : Scope → Scope → Type where
       §5): that the loop is endless is the language's meaning, never an environment promise. The per-pass
       cost, the loop frame and the invariant are written clauses of the loop, not part of this node. -/
   | forever (label : Option Identifier) (body : BracedBlock result scope) : Stmt result scope scope
+  /-- The memory access statements (`Access`): the head word `mem` and one access form. -/
+  | access (form : Access scope after) : Stmt result scope after
 
 /-- Sequential scope composition inside a pair of braces. -/
 inductive Block (result : Option (Ty .value)) : Scope → Scope → Type where
