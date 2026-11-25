@@ -68,12 +68,13 @@ theorem selLink2 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[6] (some e) =
       some (frameL2 e ein aus frei n) := by
   have h11 := selLink1 ein aus frei n e hepc hes
+  have hpc : (frameL1 e ein aus frei n).pc = 28 := rfl
   have hq : (frameL1 e ein aus frei n).temp (frei + 1) = some (natVal (Nat.sqrt n)) :=
     updateHit _ _ _
   have g0 : (leftBlk ein aus frei)[28]? = some (.binden nameX (frei + 1)) := by rfl
   have g1 : (leftBlk ein aus frei)[28 + 1]? = some (.lesen (frei + 2) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[28 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 28 (frei + 2) (frei + 1) _ (by rfl) hq g0 g1 g2
+  have e0 := laufKopie _ _ 28 (frei + 2) (frei + 1) _ hpc hq g0 g1 g2
   rw [show (6 : Nat) = 3 + 3 from rfl, Function.iterate_add_apply, h11]
   simpa only [frameL2] using e0
 
@@ -109,7 +110,7 @@ theorem selLink4 (ein aus frei n : Nat) (e : Rahmen)
   have g0 : (leftBlk ein aus frei)[32]? = some (.binden nameX (frei + 1)) := by rfl
   have g1 : (leftBlk ein aus frei)[32 + 1]? = some (.lesen (frei + 2) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[32 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 32 (frei + 2) (frei + 1) _ (by rfl) hq g0 g1 g2
+  have e0 := laufKopie _ _ 32 (frei + 2) (frei + 1) _ (by rfl : (frameL3 e ein aus frei n).pc = 32) hq g0 g1 g2
   rw [show (10 : Nat) = 3 + 7 from rfl, Function.iterate_add_apply, h33]
   simpa only [frameL4] using e0
 
