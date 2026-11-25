@@ -349,9 +349,17 @@ theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Prae
     simp only [hfluss, Flussdaten.leer, Flussdaten.spekulativ]
   have hspek : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe
       ([] : List (Option Nat)) = ([] : List Nat) := by
-    cases hf : (d.unit locals).katalog.plattform.spekulationshuelle.fenster with
-    | none => rfl
-    | some _ => rfl
+    cases hfenster : (d.unit locals).katalog.plattform.spekulationshuelle.fenster with
+    | none =>
+      have hred : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe
+          ([] : List (Option Nat)) = (([] : List (Option Nat))).filterMap id := by
+        simp only [Spekulationshuelle.zugriffe, hfenster]
+      rw [hred, List.filterMap_nil]
+    | some n =>
+      have hred : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe
+          ([] : List (Option Nat)) = (([] : List (Option Nat)).take n).filterMap id := by
+        simp only [Spekulationshuelle.zugriffe, hfenster]
+      rw [hred]
   simp only [kontextBeob, hcommit, hausgabe, hzeit, hkopf, hkonstant, hspec, hspek,
     Bool.false_eq_true, if_false, List.map_nil, List.append_nil]
 
