@@ -15,6 +15,8 @@ public import Core.Speicher.Litmus
 public import Core.Speicher.Praefix
 public import Core.Speicher.Trennung
 public import Core.Speicher.Litmus.Sb
+public import Core.Speicher.Litmus.Rmw
+public import Core.Speicher.Litmus.Rs
 public import Core.Speicher.Litmus.Katalog
 public import Core.Speicher.Erfuellbar
 public import Core.Speicher.Einbettung
