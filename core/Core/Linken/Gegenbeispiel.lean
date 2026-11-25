@@ -101,7 +101,7 @@ theorem teilen_guard_form {l : Nat} {frame : Rahmen} {p : (op : PartielleOperati
     | some b =>
       simp only [hz2, Option.bind_eq_bind, Option.bind_some] at h
       simp only [Option.pure_def, Option.some.injEq] at h
-      exact ⟨a, b, hz, hz2, h.symm⟩
+      exact ⟨a, b, rfl, rfl, h.symm⟩
 
 /-- Every instruction of A preserves a clean slot 1 at the acting context. -/
 theorem nach_temp1 {b : Befehl} {c : Kontext} {s : Zustand}
@@ -151,7 +151,7 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
     intro d
     by_cases heq : d = c
     · subst heq
-      exact nach_temp1 (by simp [fragA_code]) (h c)
+      exact nach_temp1 (by simp [fragA_code]) (h _)
     · have hkeep : ((Befehl.literal 0 10).nach c s).lokal d = s.lokal d :=
         Function.update_of_ne heq _ _
       rw [hkeep]
@@ -165,12 +165,12 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
       cases h1
       intro d
       by_cases heq : d = c
-      · subst heq
-        exact nach_temp1 (by simp [fragA_code]) (h c)
-      · have hkeep : ((Befehl.literal 1 2).nach c s).lokal d = s.lokal d :=
-          Function.update_of_ne heq _ _
-        rw [hkeep]
-        exact h d
+    · subst heq
+      exact nach_temp1 (by simp [fragA_code]) (h _)
+    · have hkeep : ((Befehl.literal 1 2).nach c s).lokal d = s.lokal d :=
+        Function.update_of_ne heq _ _
+      rw [hkeep]
+      exact h d
     | succ m =>
       cases m with
       | zero =>
@@ -180,12 +180,12 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
         cases h2
         intro d
         by_cases heq : d = c
-        · subst heq
-          exact nach_temp1 (by simp [fragA_code]) (h c)
-        · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d :=
-            Function.update_of_ne heq _ _
-          rw [hkeep]
-          exact h d
+    · subst heq
+      exact nach_temp1 (by simp [fragA_code]) (h _)
+    · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d :=
+        Function.update_of_ne heq _ _
+      rw [hkeep]
+      exact h d
       | succ k => omega
 /-- Slot 1 is clean in every start frame of A. -/
 theorem start_temp1 (s : AussenStart) (c : Kontext) :
@@ -207,15 +207,16 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
     cases htakt : ρ.zeit.takt t with
     | schritt label step =>
       cases step with
-      | kontext _ bereit regel aus =>
+      | @kontext _ _ u0 plan0 spur0 c0 w0 kab0 bereit regel aus =>
         have hall := schritt_temp1 (fun d => ih d) regel
         obtain ⟨b, head, ideal⟩ := regel
         obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal
         cases same
         cases after
         have hakt : Semantik.plan.aktion = .intern := rfl
-        obtain ⟨rahmen, _, _, _, fuehrt, _, hstate⟩ := aus
+        obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
         rw [hakt] at fuehrt
+        generalize hau : spur0.2 = au at fuehrt
         cases fuehrt with
         | intern =>
           rw [hstate]
