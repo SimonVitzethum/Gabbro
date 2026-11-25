@@ -142,7 +142,7 @@ theorem laufBleibtVorEnde (blk : List Befehl) (r : Rahmen) (k : Nat) (rk : Rahme
   obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le hjsucc
   have hrk' : (Schritt blk)^[t] ((Schritt blk)^[1] ((Schritt blk)^[j] (some r))) = some rk := by
     rw [← Function.iterate_add_apply, ← Function.iterate_add_apply]
-    rw [show t + (1 + j) = k by omega]
+    rw [show t + 1 + j = k by omega]
     exact hrk
   have h1 : (Schritt blk)^[1] (some rj) = none := by simpa using hnone
   rw [hrj, h1, laufKein] at hrk'
