@@ -85,7 +85,21 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       · simp only [hsgeliefert, Zustand.verbrauche, setFrame]
       · simp only [hskerne, Zustand.verbrauche, setFrame]
       · simp only [hsstatus, Zustand.verbrauche, setFrame]
-      · rw [hslokal]
+      · have e_lokal : (Zustand.verbrauche
+            (setFrame s c { s.lokal c with
+              pending := none
+              last := some (access.result answer.reply)
+              phases := match access.result answer.reply, target with
+                | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
+                | _, _ => (s.lokal c).phases }) c).lokal =
+            Function.update s.lokal c { s.lokal c with
+              pending := none
+              last := some (access.result answer.reply)
+              phases := match access.result answer.reply, target with
+                | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
+                | _, _ => (s.lokal c).phases } := rfl
+        rw [hslokal]
+        exact e_lokal
       · simp only [hslokal, Zustand.verbrauche, setFrame, Function.update_self]
       · simp only [hsinitial, Zustand.verbrauche, setFrame]
       · simp only [hsrechte, Zustand.verbrauche, setFrame]
