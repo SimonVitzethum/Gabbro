@@ -76,18 +76,23 @@ theorem Rs.atomar_rechts (hwf : G.Wohlgeformt) {w x : E} (h : G.Rs w x) :
   | po _ _ _ _ ha => exact ha
   | rmw _ _ hu _ => exact hwf.rmw_atomar hu
 
+/-- An update reading from an atomic write synchronises with that write (the classic shape). -/
+theorem sw_von_rmw (hk : G.Konsistent) (hn : G.NurSC) {x u : E}
+    (hxatom : (G.modus x).atomar) (hrf : G.rf x u) (hu : G.istRmw u) : G.sw x u := by
+  have hxstark : (G.modus x).stark := sc_stark (hn.sc_von_atomar hxatom)
+  have hustark : (G.modus u).stark := sc_stark (hn.sc_von_atomar (hk.wf.rmw_atomar hu))
+  exact sw_von_klassisch
+    ⟨hk.wf.rf_schreibt _ _ hrf, hxstark, istRmw_liest hu, hustark, x,
+    .selbst (hk.wf.rf_schreibt _ _ hrf) hxatom, hrf⟩
+
 /-- A release sequence stays at its head and advances by `po` or by a synchronising update. -/
 theorem Rs.hbOderGleich (hk : G.Konsistent) (hn : G.NurSC) {w x : E} (h : G.Rs w x) :
     w = x ∨ G.hb w x := by
   induction h with
   | selbst _ _ => exact Or.inl rfl
   | po _ hpo _ _ _ => exact Or.inr (G.hb_von_po hpo)
-  | @rmw w₀ x₀ u hRs hrf hu ih =>
-    have hxstark : (G.modus x₀).stark := sc_stark (hn.sc_von_atomar (Rs.atomar_rechts hk.wf hRs))
-    have hustark : (G.modus u).stark := sc_stark (hn.sc_von_atomar (hk.wf.rmw_atomar hu))
-    have hsw : G.sw x₀ u := sw_von_klassisch
-      ⟨hk.wf.rf_schreibt _ _ hrf, hxstark, istRmw_liest hu, hustark, x₀,
-      .selbst (hk.wf.rf_schreibt _ _ hrf) (hk.wf.rmw_atomar hu), hrf⟩
+  | rmw hRs hrf hu ih =>
+    have hsw := sw_von_rmw hk hn (Rs.atomar_rechts hk.wf hRs) hrf hu
     rcases ih with rfl | hbwx
     · exact Or.inr (G.hb_von_sw hsw)
     · exact Or.inr (G.hb_trans hbwx (G.hb_von_sw hsw))
