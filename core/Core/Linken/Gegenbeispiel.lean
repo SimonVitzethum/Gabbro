@@ -142,11 +142,10 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
   revert hpc hlen
   generalize (s.lokal c).pc = pc
   intro hpc hlen
-  cases pc with
-  | zero =>
+  match hmpc : pc with
+  | 0 =>
     have h0 : fragA.code[0]? = some (Befehl.literal 0 10) := rfl
-    have hpc0 : fragA.code[0]? = some b := hpc
-    rw [hpc0] at h0
+    rw [hpc] at h0
     cases h0
     intro d
     by_cases heq : d = c
@@ -156,37 +155,31 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
         Function.update_of_ne heq _ _
       rw [hkeep]
       exact h d
-  | succ n =>
-    cases n with
-    | zero =>
-      have hpc1 : fragA.code[1]? = some b := hpc
-      have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := rfl
-      rw [hpc1] at h1
-      cases h1
-      intro d
-      by_cases heq : d = c
+  | 1 =>
+    have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := rfl
+    rw [hpc] at h1
+    cases h1
+    intro d
+    by_cases heq : d = c
     · subst heq
       exact nach_temp1 (by simp [fragA_code]) (h _)
     · have hkeep : ((Befehl.literal 1 2).nach c s).lokal d = s.lokal d :=
         Function.update_of_ne heq _ _
       rw [hkeep]
       exact h d
-    | succ m =>
-      cases m with
-      | zero =>
-        have hpc2 : fragA.code[2]? = some b := hpc
-        have h2 : fragA.code[2]? = some (Befehl.teilen 0) := rfl
-        rw [hpc2] at h2
-        cases h2
-        intro d
-        by_cases heq : d = c
+  | 2 =>
+    have h2 : fragA.code[2]? = some (Befehl.teilen 0) := rfl
+    rw [hpc] at h2
+    cases h2
+    intro d
+    by_cases heq : d = c
     · subst heq
       exact nach_temp1 (by simp [fragA_code]) (h _)
     · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d :=
         Function.update_of_ne heq _ _
       rw [hkeep]
       exact h d
-      | succ k => omega
+  | n + 3 => omega
 /-- Slot 1 is clean in every start frame of A. -/
 theorem start_temp1 (s : AussenStart) (c : Kontext) :
     temp1Sauber ((((fragA.einheit .x86_64).startdaten s).lokal c)) := by
@@ -207,7 +200,8 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
     cases htakt : ρ.zeit.takt t with
     | schritt label step =>
       cases step with
-      | @kontext _ _ u0 plan0 spur0 c0 w0 kab0 bereit regel aus =>
+      | kontext _ bereit regel aus =>
+        rename_i u0 plan0 spur0 c0 w0 kab0
         have hall := schritt_temp1 (fun d => ih d) regel
         obtain ⟨b, head, ideal⟩ := regel
         obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal
