@@ -152,6 +152,44 @@ theorem einheitVon_bereit_vollzug (P : Katalog.Plattform) (t : Ast.Unit)
       (i.nach c s)).mpr ⟨rfl, rfl⟩
   · exact Ast.Semantik.Befehl.vollzug _ i tick c s
 
+/-- A delivery dispatches its handler on the delivery core. -/
+theorem zustandseintritt_laeuft {s s' : Ast.Semantik.Zustand} {k : Maschine.Kern}
+    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat}
+    (h : s' = Maschine.Zustandseintritt s k id c nmi) :
+    (s'.kerne k).laeuft = some c := by
+  rw [h]
+  rfl
+
+/-- A delivery leaves every other core alone. -/
+theorem zustandseintritt_anderer {s s' : Ast.Semantik.Zustand} {k k' : Maschine.Kern}
+    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat} (hne : k ≠ k')
+    (h : s' = Maschine.Zustandseintritt s k' id c nmi) :
+    (s'.kerne k).laeuft = (s.kerne k).laeuft ∧ (s'.kerne k).stapel = (s.kerne k).stapel := by
+  have h1 : ((Maschine.Zustandseintritt s k' id c nmi).kerne k).laeuft = (s.kerne k).laeuft := by
+    show (Function.update s.kerne k' _ k).laeuft = _
+    rw [Function.update_of_ne hne]
+  have h2 : ((Maschine.Zustandseintritt s k' id c nmi).kerne k).stapel = (s.kerne k).stapel := by
+    show (Function.update s.kerne k' _ k).stapel = _
+    rw [Function.update_of_ne hne]
+  rw [h]
+  exact ⟨h1, h2⟩
+
+/-- The stack of a delivery is the pushed preempted context on top of the old stack. -/
+theorem zustandseintritt_stapel {s s' : Ast.Semantik.Zustand} {k : Maschine.Kern}
+    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat}
+    (h : s' = Maschine.Zustandseintritt s k id c nmi) :
+    ∀ v n, (v, n) ∈ (s'.kerne k).stapel →
+      (v = (s.kerne k).laeuft ∧ n = (s.kerne k).nmiAktiv) ∨ (v, n) ∈ (s.kerne k).stapel := by
+  intro v n mem
+  have h1 : ((Maschine.Zustandseintritt s k id c nmi).kerne k).stapel =
+      ((s.kerne k).laeuft, (s.kerne k).nmiAktiv) :: (s.kerne k).stapel := rfl
+  rw [h, h1] at mem
+  cases List.mem_cons.mp mem with
+  | inl htop =>
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
+    exact Or.inl ⟨rfl, rfl⟩
+  | inr hrest => exact Or.inr hrest
+
 /-- Every context the elaborated unit dispatches runs on a valid core, as does every
     saved preemption: only the entry context starts dispatched (on its assigned core),
     deliveries name valid cores, crashes reset to core zero. -/
@@ -247,9 +285,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
                 have skerne : s.kerne = v.kerne := congrArg (fun z => z.kerne) seq
                 have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
-                  fun k => congrArg (fun z => (z.kerne k).stapel) seq
+                  fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) seq
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
-                  fun k => congrArg (fun z => (z.kerne k).stapel) ukerne
+                  fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) ukerne
                 cases hakt : plan.aktion with
                 | intern =>
                   rw [hakt] at aktion
@@ -309,65 +347,65 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 | rueckkehr =>
                   rw [hakt] at aktion
                   cases aktion with
-                  | rueckkehr k' =>
-                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne] at h
-                      by_cases heq : k = k'
-                      · subst heq
-                        have hv : v.kerne k' = (u.kerne k').zurueck := by
-                          show Function.update _ _ _ _ = _
-                          rw [Function.update_self]
-                        cases hst : (u.kerne k').stapel with
-                        | nil =>
-                          have hnone : ((u.kerne k').zurueck).laeuft = none := by
-                            rw [hst]
-                            rfl
-                          rw [hv, hnone] at h
-                          cases h
-                        | cons top rest =>
-                          obtain ⟨w, n⟩ := top
-                          have hpop : (v.kerne k').laeuft = w := by
-                            rw [hv, hst]
-                            rfl
-                          rw [hpop] at h
-                          have hmem : (w, n) ∈ (u.kerne k').stapel := by
-                            rw [hst]
-                            exact List.mem_cons_self
-                          rw [ustack] at hmem
-                          exact ihs k' w n hmem c h
-                      · have hsame : v.kerne k = u.kerne k := by
-                          show Function.update _ _ _ _ = _
-                          rw [Function.update_of_ne heq]
-                        rw [hsame, ukerne] at h
-                        exact ihd k c h
-                    · rw [sstack] at h
-                      by_cases heq : k = k'
-                      · subst heq
-                        have hv : v.kerne k' = (u.kerne k').zurueck := by
-                          show Function.update _ _ _ _ = _
-                          rw [Function.update_self]
-                        cases hst : (u.kerne k').stapel with
-                        | nil =>
-                          have hnil : ((u.kerne k').zurueck).stapel = [] := by
-                            rw [hst]
-                            rfl
-                          rw [hv, hnil] at h
-                          exact (List.not_mem_nil h).elim
-                        | cons top rest =>
-                          have hcons : ((u.kerne k').zurueck).stapel = rest := by
-                            rw [hst]
-                            rfl
-                          rw [hv, hcons] at h
-                          have hmem : (w, m) ∈ (u.kerne k').stapel := by
-                            rw [hst]
-                            exact List.mem_cons_of_mem _ h
-                          rw [ustack] at hmem
-                          exact ihs k' w m hmem c hc
-                      · have hsame : (v.kerne k).stapel = (u.kerne k).stapel := by
-                          show (Function.update _ _ _ _).stapel = _
-                          rw [Function.update_of_ne heq]
-                        rw [hsame, ustack] at h
-                        exact ihs k w m h c hc
+              | @rueckkehr k _ _ _ =>
+                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                · rw [skerne] at h
+                  by_cases heq : k = k'
+                  · subst heq
+                    have hv : v.kerne k' = (u.kerne k').zurueck := by
+                      show Function.update _ _ _ _ = _
+                      rw [Function.update_self]
+                    cases hst : (u.kerne k').stapel with
+                    | nil =>
+                      have hnone : ((u.kerne k').zurueck).laeuft = none := by
+                        rw [hst]
+                        rfl
+                      rw [hv, hnone] at h
+                      cases h
+                    | cons top rest =>
+                      obtain ⟨w, n⟩ := top
+                      have hpop : (v.kerne k').laeuft = w := by
+                        rw [hv, hst]
+                        rfl
+                      rw [hpop] at h
+                      have hmem : (w, n) ∈ (u.kerne k').stapel := by
+                        rw [hst]
+                        exact List.mem_cons_self
+                      rw [ustack] at hmem
+                      exact ihs k' w n hmem c h
+                  · have hsame : v.kerne k = u.kerne k := by
+                      show Function.update _ _ _ _ = _
+                      rw [Function.update_of_ne heq]
+                    rw [hsame, ukerne] at h
+                    exact ihd k c h
+                · rw [sstack] at h
+                  by_cases heq : k = k'
+                  · subst heq
+                    have hv : v.kerne k' = (u.kerne k').zurueck := by
+                      show Function.update _ _ _ _ = _
+                      rw [Function.update_self]
+                    cases hst : (u.kerne k').stapel with
+                    | nil =>
+                      have hnil : ((u.kerne k').zurueck).stapel = [] := by
+                        rw [hst]
+                        rfl
+                      rw [hv, hnil] at h
+                      exact (List.not_mem_nil h).elim
+                    | cons top rest =>
+                      have hcons : ((u.kerne k').zurueck).stapel = rest := by
+                        rw [hst]
+                        rfl
+                      rw [hv, hcons] at h
+                      have hmem : (w, m) ∈ (u.kerne k').stapel := by
+                        rw [hst]
+                        exact List.mem_cons_of_mem _ h
+                      rw [ustack] at hmem
+                      exact ihs k' w m hmem c hc
+                  · have hsame : (v.kerne k).stapel = (u.kerne k).stapel := by
+                      show (Function.update _ _ _ _).stapel = _
+                      rw [Function.update_of_ne heq]
+                    rw [hsame, ustack] at h
+                    exact ihs k w m h c hc
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
@@ -381,8 +419,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
-                    (Maschine.Zustandseintritt z k' id c' nmi).kerne := congrArg _ hstate
-                have einkern : ∀ k, (Maschine.Zustandseintritt z k' id c' nmi).kerne k =
+                    (Maschine.Zustandseintritt z k' _ c' nmi).kerne := congrArg _ hstate
+                have einkern : ∀ k, (Maschine.Zustandseintritt z k' _ c' nmi).kerne k =
                     if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                   intro k
                   by_cases heq : k = k'
@@ -420,7 +458,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 obtain ⟨_, heq⟩ := crash.genau
                 have skernew : s.kerne =
                     (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                      (Katalog.nachAbsturz z.persistenz)).kerne := congrArg _ heq
+                      (Maschine.nachAbsturz z.persistenz)).kerne := congrArg _ heq
                 rw [wkern, weintritt] at *
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skernew] at h
@@ -432,8 +470,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   · rw [if_neg hk] at hif
                     cases hif
                 · rw [skernew] at h
-                  have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                      (Katalog.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
+                have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
+                    (Maschine.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
                   rw [hempty] at h
                   exact (List.not_mem_nil h).elim
       | wartet label eq _ =>
