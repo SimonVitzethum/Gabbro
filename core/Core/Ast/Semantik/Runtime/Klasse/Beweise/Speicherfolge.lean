@@ -366,8 +366,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
         schreibEreignisse, List.filter, List.map] at folge
-      let l : Etikett Zelle Int := ⟨.rmw, (F.operand (vor.lokal c)).ort, m, v,
-        (F.operand (vor.lokal c)).wert⟩
+      let l : Etikett Zelle Int := ⟨(F.operand (vor.lokal c)).aenderung.art v, (F.operand (vor.lokal c)).ort, m, v,
+        (F.operand (vor.lokal c)).aenderung.schreibt v (F.operand (vor.lokal c)).wert⟩
       have hbuch : nach.buchung.adresse (vor.zugriffsereignis l.ort) = vor.adresse c l.ort := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -375,7 +375,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
-          (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
+          (Aenderung.art_ne_aussen _ _) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
       have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -383,7 +383,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
-      refine ⟨eineZugriffGebucht vor nach c l (by simp only [l]; decide) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
+      refine ⟨eineZugriffGebucht vor nach c l (Aenderung.art_ne_aussen _ _) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
       refine ⟨[], ?_, ?_⟩
       · exact keineWirkungen vor nach spur hkeinAbsturz hwirk
       · exact keineFreigaben vor nach hw t spur (by rw [hnach]; rfl) hkeinAbsturz

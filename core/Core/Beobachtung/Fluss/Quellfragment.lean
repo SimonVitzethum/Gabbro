@@ -2,6 +2,7 @@ module
 
 public import Core.Beobachtung.Fluss.Quellregel
 public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 
 @[expose] public section
 
@@ -12,8 +13,8 @@ open Ast.Semantik (Fragment)
 
 /-- The fragment reads its public region grants at boot. Its forms change only
     the current frame, using the declared local and region-authority inputs. -/
-theorem fragment_fluss_lokal (p : Fragment) (plattform : Plattform) :
-    FlussLokal (p.einheit plattform) := by
+theorem fragment_fluss_lokal (p : Fragment) (plattform : Plattform)
+    (rein : ∀ f ∈ p.code, f.Privat) : FlussLokal (p.einheit plattform) := by
   constructor
   · intro s₁ s₂ gleich
     have regionen : s₁.regions = s₂.regions := congrArg (fun proj => proj.2.2.1) gleich
@@ -27,9 +28,9 @@ theorem fragment_fluss_lokal (p : Fragment) (plattform : Plattform) :
       refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun privat => ?_⟩
       exact (Bool.false_ne_true privat.symm).elim
     · intro _ c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ gleich links rechts
-      have transfer₁ : [p₁] = [Ast.Semantik.plan] ∧ u₁ = f.nach c v₁ := (f.ideal_privat c v₁ w₁ [p₁] u₁).1 links.2
+      have transfer₁ : [p₁] = [Ast.Semantik.plan] ∧ u₁ = f.nach c v₁ := (f.ideal_privat (rein f (Ast.Semantik.kopf_mem (code := p.code) links.1)) c v₁ w₁ [p₁] u₁).1 links.2
       have transfer₂ : [p₂] = [Ast.Semantik.plan] ∧ u₂ = f.nach c v₂ :=
-        (f.ideal_privat c v₂ w₂ [p₂] u₂).1 rechts.2
+        (f.ideal_privat (rein f (Ast.Semantik.kopf_mem (code := p.code) rechts.1)) c v₂ w₂ [p₂] u₂).1 rechts.2
       rw [(List.cons.inj transfer₁.1).1, (List.cons.inj transfer₂.1).1, transfer₁.2, transfer₂.2]
       obtain ⟨lokale, ende, initial, rechte, leihen, antwort⟩ := gleich
       refine ⟨⟨?_, ende, initial, rechte, leihen, antwort⟩, rfl, rfl⟩

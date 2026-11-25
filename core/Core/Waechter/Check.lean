@@ -16,6 +16,7 @@ meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+meta import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
@@ -190,7 +191,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.starte, `Gabbro.Core.Ast.Semantik.kern_starte),
     (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende),
     (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.environmentBefehlEntry) ], #[
-    (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage) ]⟩]
 
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
@@ -268,6 +270,7 @@ private meta def flowEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.aggregat, `Gabbro.Core.Beobachtung.AggregatNIAussage, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.variante, `Gabbro.Core.Beobachtung.VarianteNIAussage, none⟩,
   ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.text, `Gabbro.Core.Beobachtung.TextNIAussage, none⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.LokalFamilie.zugriff, `Gabbro.Core.Beobachtung.ZugriffNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.antwort, `Gabbro.Core.Beobachtung.AntwortNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.interrupt, `Gabbro.Core.Beobachtung.InterruptNIAussage, none⟩,
   ⟨`Gabbro.Core.Maschine.SchrittWahl.absturz, `Gabbro.Core.Beobachtung.AbsturzNIAussage, none⟩,
