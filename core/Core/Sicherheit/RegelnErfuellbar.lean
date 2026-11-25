@@ -68,7 +68,7 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
       exact hcon
     exact writersNach c hc' hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
-  exact q.gilt_of_initial vor nach hinit.symm vorGilt
+  exact Pruefung.Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
 
 /-- Invariants transport across an interrupt arrival: the fresh handler context was at rest,
     so its writer scope comes from the post-state alone. -/
@@ -106,7 +106,7 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
         exact hcon
       exact writersNach c' hcNach hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
-  exact q.gilt_of_initial vor nach hinit.symm vorGilt
+  exact Pruefung.Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
 
 private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     {ps : List Pruefung.Praedikat}

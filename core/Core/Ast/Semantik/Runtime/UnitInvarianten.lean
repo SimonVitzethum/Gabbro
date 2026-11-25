@@ -98,8 +98,8 @@ theorem InvariantenSicherheitAussage.nichtTrivial :
     have h0 : (((programmMitInvarianten
       ⟨⟨[], .done⟩, [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩).sicherheitsEinheit
         .x86_64)).invarianten[0]? =
-      some (⟨none, (Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)).gilt⟩ :
-        Invariante Nat Zustand)) := rfl
+      some ⟨none, Praedikat.gilt
+        (Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5))⟩ := rfl
     have w : ∀ c, Leerzustand.status c = .laeuft → ¬ Leerzustand.buchung.schreibt c 0 :=
       fun _ _ schreibt => schreibt
     have hg := h 0 _ h0 w
