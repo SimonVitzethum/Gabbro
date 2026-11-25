@@ -229,9 +229,9 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                   rw [nextEq, hu] at hN
                   have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
                     intro d
+                    unfold neuBeendet
                     have hst : (transfer.apply c s).status = s.status := rfl
                     rw [hst]
-                    unfold neuBeendet
                     cases hd : s.status d <;> rw [hd] <;> rfl
                   have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
                     rintro ⟨d, hd⟩
