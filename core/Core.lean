@@ -259,6 +259,10 @@ public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Linken.Abgeschottet
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 public import Core.Linken.GuardTransfer
+public import Core.Linken.GuardTransfer
+public import Core.Linken.DeckungsZustand
+public import Core.Linken.DeckungsSchluss
+public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 meta import Core.Waechter.Check
 
 #check_core
