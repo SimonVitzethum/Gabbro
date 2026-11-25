@@ -93,7 +93,7 @@ theorem InvariantenSicherheitAussage.nichtTrivial :
       ∃ (s : Zustand),
         ¬ DeklariertHalten ((programmMitInvarianten u).sicherheitsEinheit .x86_64) s := by
   refine ⟨⟨⟨[], .done⟩,
-    [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩, ?_, _⟩
+    [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩, ?_, ?_⟩
   · decide
   · refine ⟨Leerzustand, fun h => ?_⟩
     have h0 : (((programmMitInvarianten
