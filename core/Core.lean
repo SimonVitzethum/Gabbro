@@ -44,6 +44,8 @@ public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
+public import Core.Annahme.DomaeneBeweise.Bruecke
+public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
 public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
@@ -160,6 +162,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Atom.Beine
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
+public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
