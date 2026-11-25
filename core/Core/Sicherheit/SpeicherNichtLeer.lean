@@ -97,8 +97,8 @@ theorem ungeordnet : ∀ i j : Fin g₃.ev.length, ¬ g₃.graph.hb i j := by
   intro i j hb
   obtain ⟨k, po | sw⟩ := Speicher.transGen_kopf hb
   · exact keinPo i k po
-  · obtain ⟨_, _, _, _, x, _, rf⟩ := sw
-    exact keinRf x k rf
+  · obtain ⟨_, x, r, _, _, rf, _, _, _⟩ := sw
+    exact keinRf x r rf
 
 end ZweiSchreiber
 
