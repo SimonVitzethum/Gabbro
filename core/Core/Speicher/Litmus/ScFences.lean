@@ -212,13 +212,17 @@ theorem f_kein_psc (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).psc a b := by
   · exact hpo (f_hb_in_po h₃.1)
   · revert hmo
     rcases hfa with rfl | rfl
-    · cases mp <;> cases b <;> show ¬ fMo mp f1 b <;> decide
-    · cases mp <;> cases b <;> show ¬ fMo mp f2 b <;> decide
+    · show ¬ fMo mp f1 b
+      cases mp <;> cases b <;> decide
+    · show ¬ fMo mp f2 b
+      cases mp <;> cases b <;> decide
   · obtain ⟨w, hrf, _, _⟩ := hrb
     revert hrf
     rcases hfa with rfl | rfl
-    · cases mp <;> cases w <;> show ¬ fRf mp w f1 <;> decide
-    · cases mp <;> cases w <;> show ¬ fRf mp w f2 <;> decide
+    · show ¬ fRf mp w f1
+      cases mp <;> cases w <;> decide
+    · show ¬ fRf mp w f2
+      cases mp <;> cases w <;> decide
 
 theorem f_psc_acyclisch (mp : Bool) : Azyklisch (fGraph mp).psc := by
   intro a h
