@@ -33,8 +33,11 @@ private theorem invariantenAusPruefung {p : Fragment} (platform : Plattform)
     InvariantenAmSchnitt (p.sicherheitsEinheit platform) s := by
   refine ⟨fun _ _ => trivial, ?_⟩
   intro i d vorhanden _
+  change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
   rw [tab, List.getElem?_map] at vorhanden
-  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
   exact haelt q (List.mem_of_getElem? hsome)
 
 /-- Invariants transport across a step that preserves memory content, lock bookings and
@@ -49,8 +52,11 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
   obtain ⟨_, deklariert⟩ := vorSicher
   refine ⟨fun _ _ => trivial, ?_⟩
   intro i d vorhanden writersNach
+  change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
   rw [tab, List.getElem?_map] at vorhanden
-  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
   have htab : p.klauseln.invariant[i]? = some q.gilt := by
     rw [tab, List.getElem?_map, hsome]
   have writersVor : ∀ c, vor.status c = .laeuft → ¬ vor.buchung.schreibt c i := by
@@ -79,8 +85,11 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
   obtain ⟨_, deklariert⟩ := vorSicher
   refine ⟨fun _ _ => trivial, ?_⟩
   intro i d vorhanden writersNach
+  change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at vorhanden
   rw [tab, List.getElem?_map] at vorhanden
-  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
+  rw [List.getElem?_map] at hinner
+  obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
   have htab : p.klauseln.invariant[i]? = some q.gilt := by
     rw [tab, List.getElem?_map, hsome]
   have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by

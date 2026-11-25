@@ -34,8 +34,11 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
   · intro vorSicher
     refine ⟨fun _ _ => trivial, ?_⟩
     intro i d declared writersNach
+    change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at declared
     rw [tab, List.getElem?_map] at declared
-    obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp declared
+    obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp declared
+    rw [List.getElem?_map] at hinner
+    obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
     have htab : p.klauseln.invariant[i]? = some q.gilt := by
       rw [tab, List.getElem?_map, hsome]
     have hok := Pruefung.pruefeBefehlErhalt_richtig ps b q
@@ -46,8 +49,6 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
     exact q.gilt_nach b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
