@@ -358,6 +358,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage, 9260166058713430687),
   (`Gabbro.Core.Ast.Semantik.SendeLiefertAussage, 4328701168167657756),
   (`Gabbro.Core.Ast.Semantik.LeiteWirktAussage, 15409793448109244359),
-  (`Gabbro.Core.Ast.Semantik.UnterbrechungAussagen, 16692194069064079216)]
+  (`Gabbro.Core.Ast.Semantik.UnterbrechungAussagen, 16692194069064079216),
+  (`Gabbro.Core.Beobachtung.SchrankenbindungAussage, 1351789225119163043),
+  (`Gabbro.Core.Beobachtung.SchrankenbindungOffenAussage, 7665698189149313601)]
 
 end Gabbro.Core.Waechter
