@@ -27,7 +27,7 @@ theorem antwort_kontext_intern {p : Fragment} (plattform : Plattform)
     (regel : (p.einheit plattform).system.ImplSchritt c s w [plan] u) :
     plan.aktion = .intern := by
   obtain ⟨i, _, impl⟩ := regel
-  exact i.impl_aktion_intern impl
+  exact i.regel_aktion_intern rfl impl
 
 /-- A form action other than a question leaves the pending-question ledger unchanged. -/
 theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
@@ -51,7 +51,7 @@ theorem antwort_schritt_fragen {p : Fragment} (plattform : Plattform)
   cases step with
   | kontext _ _ regel aus =>
       obtain ⟨i, _, impl⟩ := regel
-      have intern := i.impl_aktion_intern impl
+      have intern := i.regel_aktion_intern rfl impl
       obtain ⟨frame, _, _, _, aktion, _, s'Eq⟩ := aus
       have vLeer := antwort_fuehrt_aus_fragen_leer plattform aktion
         (frame.fragen.trans leer) (fun q h => by rw [intern] at h; cases h)
