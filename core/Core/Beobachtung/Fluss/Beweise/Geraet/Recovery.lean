@@ -70,7 +70,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
         | schritt label _ => cases label
         | wartet _ eq _ =>
           have heq : v = s := Option.some.inj (atV.symm.trans eq)
-          subst heq
+          rw [heq]
           obtain ⟨ihfragen, ihepo⟩ := ih s hz
           exact ⟨fun q hq => Nat.lt_succ_of_lt (ihfragen q hq), Nat.le_trans ihepo (Nat.le_succ _)⟩
       | some ev =>
@@ -92,11 +92,11 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
             cases ev with
             | mk wahl sp =>
               cases wahl with
-              | kontext c w =>
+              | .kontext c w =>
                 cases step with
                 | schritt impl =>
                   cases impl with
-                  | kontext _ _ regel aus =>
+                  | .kontext _ _ regel aus =>
                     obtain ⟨kopfEq, plan', hplans, rule⟩ := geraete_kontext_regel ruleEq regel
                     cases rule with
                     | issue owned idle =>
@@ -123,11 +123,11 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                         exact Nat.lt_succ_of_lt (ihfragen q hq)
                       · rw [hepoche]
                         exact Nat.le_trans ihepo (Nat.le_succ _)
-              | antwort a =>
+              | .antwort a =>
                 cases step with
                 | schritt impl =>
                   cases impl with
-                  | antwort _ h =>
+                  | .antwort _ h =>
                     obtain ⟨offered, spurEq, append, stateEq⟩ := h
                     have hfragen : s'.fragen = s.fragen := by
                       simp only [stateEq]
@@ -139,11 +139,11 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                       exact Nat.lt_succ_of_lt (ihfragen q hq)
                     · rw [hep]
                       exact Nat.le_trans ihepo (Nat.le_succ _)
-              | interrupt id =>
+              | .interrupt id =>
                 cases step with
                 | schritt impl =>
                   cases impl with
-                  | interrupt _ h =>
+                  | .interrupt _ h =>
                     obtain ⟨kk, irq, cc, nmi, offer, pend, nimmt, ruht, aussen, append, nextEq⟩ := h
                     have hfragen : s'.fragen = s.fragen := by rw [nextEq]
                     have hep : s'.epoche = s.epoche := by rw [nextEq]
@@ -157,7 +157,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                 cases step with
                 | schritt h =>
                   cases h with
-                  | absturz crash =>
+                  | .absturz crash =>
                     have hfragen : s'.fragen = s.fragen := by rw [crash.genau.2]
                     have hep : s'.epoche = t + 1 := by rw [crash.genau.2]
                     obtain ⟨ihfragen, _⟩ := ih s hz
