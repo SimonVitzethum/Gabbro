@@ -189,6 +189,7 @@ public import Core.Beobachtung.SchrankenBeweise.RessourcenEinheit
 public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
 public import Core.Beobachtung.SchrankenBeweise.Bindung
+public import Core.Beobachtung.SchrankenBeweise.BindungKosten
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
