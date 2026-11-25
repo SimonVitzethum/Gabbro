@@ -18,10 +18,17 @@
              * the RACE leg (`RennenImGraph`): it holds for the atomic modes, and for the non-atomic modes only
                under the lock sections that order the conflicting accesses (`RennfreiAusLokalAussage`, MK-04).
              The class `sperre` is excluded from the booking leg: the machine records a change of the lock owner
-             as a memory event on the lock word, `ZugriffGebucht` asks for a handle for it, and `Zustand.griff` has
-             none for a lock word (`kein_zugriff_sperre`). The lock word needs its own authority (an exemption of
-             the lock word in `ZugriffGebucht`, or a handle for it): a finding for MK-05.
--/
+              as a memory event on the lock word, `ZugriffGebucht` asks for a handle for it, and `Zustand.griff` has
+              none for a lock word (`kein_zugriff_sperre`). The lock word needs its own authority (an exemption of
+              the lock word in `ZugriffGebucht`, or a handle for it): a finding for MK-05.
+              Decision (MK-05): the exemption — a lock-word event is authorised by the lock protocol
+              itself (only the owner releases, only the head takes), not by ledger rights. A handle
+              would alias region objects (`Zelle.objekt` maps lock words to `0`) and require memory-plan
+              data in `Zustand.griff`, a state and setup change across `Frame`, `Start` and `Mehrkontext`;
+              the machine already owns the protocol fields (`Zustandsrahmen`: forms never touch `sperren`).
+              `KlassenSperrwortbeinAussage` below pins the contentful leg; wiring it into
+              `KlassenSicherheitAussage` is follow-up work.
+ -/
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
@@ -32,6 +39,7 @@ public import Core.Sicherheit.Regel
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
+open Gabbro.Core.Speicher (Etikett)
 
 /-- Does a step of the class change the owner of a lock, so that the machine records an event on the lock
     word? Only the lock actions do. -/
@@ -59,6 +67,31 @@ def KlassenSpeicherbeinAussage (k : Wirkungsklasse) : Prop :=
         Sicherheit.ZugriffGebucht vor nach spur ∧
           ∃ neu, Sicherheit.NeueWirkungen vor nach spur neu ∧
             Sicherheit.FreigabenGueltig vor nach hw t spur neu
+
+/-- **The lock-word leg, once for the lock class.** A step of class `.sperre` records no
+    cell access and no footprint write: its memory trace holds exactly the lock events of
+    the owner change at the unit's lock location. The lock word needs no memory handle —
+    the event is authorised by the lock protocol itself, which the machine owns. Open
+    (MK-05 follow-up). Difficulty: mittel. Sketch: `FuehrtAus.sperre` fixes the recorded
+    labels to `sperrEreignisse` at `e.sperrOrt l` and the outside record to `[]`;
+    `Wirkungsklasse.Erlaubt` gives `lesen = []` and `fuss = []` for a lock plan, so the
+    trace is exactly the lock events, each carrying that location; the step books nothing
+    (`Schrittform.buchungNach` for `.sperre` is the unchanged ledger), so `neu = []`,
+    `NeueWirkungen` is the unchanged ledger and `FreigabenGueltig` is empty. -/
+def KlassenSperrwortbeinAussage (k : Wirkungsklasse) : Prop :=
+  k.beruehrtSperrwort = true →
+    ∀ (ι : Type) (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι) (f : ι)
+      (F : Schrittform), F.klasse = k → F.Eingebettet E.maschine f →
+      ∀ (hw : HwLauf) (t : Nat) (c : Kontext) (w : PUnit) (vor zwischen nach : Zustand) (plan : Plan)
+        (spur : SchrittSpur Zelle Int),
+        E.maschine.system.kopf vor c = some f →
+        (E.maschine.system.regel f).impl c vor w [plan] zwischen →
+        FuehrtSchrittAus E.maschine.einrichtung t c vor zwischen plan spur nach →
+        (∀ (i : Nat) (actor : SpeicherAkteur Zelle) (l : Etikett Zelle Int),
+          spur.speicher[i]? = some (actor, l) → l.art ≠ .aussen →
+          ∃ l' : Nat, l.ort = E.maschine.einrichtung.sperrOrt l') ∧
+        ∃ neu, Sicherheit.NeueWirkungen vor nach spur neu ∧
+          Sicherheit.FreigabenGueltig vor nach hw t spur neu
 
 /-- **The authority of pending questions, once per class.** A step of the class keeps every pending question
     authorised (`OffeneFragenBefugt`), including the question it issues: its guard (`fragenBefugt`) holds

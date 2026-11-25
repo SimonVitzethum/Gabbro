@@ -18,7 +18,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     Akzeptiert (p.einheit platform) := by
   let E := p.einheit platform
   refine ⟨⟨platform.katalog_wohlgeformt, fun b => Befehl.regelLokal p platform b, ⟨Aussen.zulassung_m2 _, ?_⟩,
-    Beobachtung.fragment_fluss_lokal p platform rein, ?_⟩, ?_, ?_⟩
+    Beobachtung.fragment_fluss_lokal p platform rein, ?_, ?_⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
@@ -28,6 +28,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
+  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ p.klauseln.invariant, _) ∧

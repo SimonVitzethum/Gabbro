@@ -18,6 +18,7 @@ meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 meta import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public meta import Core.Waechter.AussagePins
+public meta import Core.Waechter.AussagenErweitert
 public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
 public meta import Core.Waechter.Decision
@@ -54,6 +55,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.SchrankenProtokoll,
     `Gabbro.Core.Annahme.TiefenBezug,
     `Gabbro.Core.Annahme.SchrankenLokal,
+    `Gabbro.Core.Annahme.AbschnittWartefrei,
     `Gabbro.Core.Beobachtung.niedereAussensicht,
     `Gabbro.Core.Beobachtung.startProjektion,
     `Gabbro.Core.Beobachtung.NiedrigGleich,
@@ -290,6 +292,15 @@ private meta def catalogueKinds : Array ClosedKinds := #[
     `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz]⟩]
 private meta def closing : Option ClosingSpec := none
 
+/-- The goal statements whose closure Regel N treats like named statements: the `Core/Ziel` shapes and
+    the two collective statements that gather the correctness and class duties. -/
+private meta def zielRoots : Array Name := #[
+  `Gabbro.Core.Ziel.Rahmen, `Gabbro.Core.Ziel.NichtLeer, `Gabbro.Core.Ziel.Verfeinert,
+  `Gabbro.Core.Ziel.NI, `Gabbro.Core.Ziel.GabbroZielForm,
+  `Gabbro.Core.Ziel.Sicherheit, `Gabbro.Core.Ziel.SicherheitNichtLeer,
+  `Gabbro.Core.Ziel.GabbroSicherheitForm,
+  `Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, `Gabbro.Core.Ast.Semantik.KlassenAussagen]
+
 private meta def sourceBatches (items : Array Source) : Array (Array Source) := Id.run do
   let batchCount := 12
   let batchSize := max 1 ((items.size + batchCount - 1) / batchCount)
@@ -318,7 +329,7 @@ elab "#check_core" : command => do
   let env := withAxiomSummaries (env.setExporting false)
   let elaboratedErrors ← liftTermElabM <| withEnv env do
     let declarationTask ← Meta.MetaM.asTask' (proofErrors (coreDeclarations env))
-    let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots
+    let roots := pins.map (·.1) ++ acceptance.acceptance ++ acceptance.ideal ++ safety ++ wildcardRoots ++ zielRoots
     let closingRoots := closing.toArray.flatMap fun spec => #[spec.shape, spec.frame]
     let index := indexDependencies env roots closingRoots (closing.map (·.trustedRoots) |>.getD {})
     -- The pin hashes walk the closure of every pin; run them on their own threads so that the
@@ -345,6 +356,18 @@ elab "#check_core" : command => do
     errors := errors ++ binder.errors
     unless binder.infos.isEmpty do
       logInfo m!"statement findings ({binder.infos.size}):\n{String.intercalate "\n" binder.infos.toList}"
+    -- Regel S and Regel N share one task and the already computed closures, so the heartbeat
+    -- budget does not grow with the number of rules.
+    let erweitertTask ← Meta.MetaM.asTask' do
+      let struktur ← strukturPropInfos env index (pins.map (·.1))
+      let waisen ← strukturPropWaisenInfos env (coveredNames.contains ·)
+      let namenlos ← namenloseAussageInfos env index zielRoots (coveredNames.contains ·)
+      return (struktur ++ waisen, namenlos)
+    let (strukturInfos, namenlosInfos) ← withoutModifyingState erweitertTask.get
+    unless strukturInfos.isEmpty do
+      logInfo m!"statement structure findings ({strukturInfos.size}):\n{String.intercalate "\n" strukturInfos.toList}"
+    unless namenlosInfos.isEmpty do
+      logInfo m!"unnamed statement findings ({namenlosInfos.size}):\n{String.intercalate "\n" namenlosInfos.toList}"
     if let some spec := closing then
       errors := errors ++ (← closingErrors spec pins (imported.setExporting true) index)
     return dependencyErrors ++ (← withoutModifyingState declarationTask.get) ++ errors
