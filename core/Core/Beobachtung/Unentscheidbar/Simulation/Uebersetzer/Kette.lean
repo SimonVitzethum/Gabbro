@@ -27,22 +27,22 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
       r'.pc = (blkA ++ blkB).length ∧ r'.temp aus = some (natVal a) ∧
       (∀ t, t < frei → t ≠ aus → r'.temp t = r.temp t) ∧
       r'.lokale = r.lokale ∧ r'.rueckgabe = r.rueckgabe ∧ r'.stopp = r.stopp := by
-  rcases hA with ⟨hAein, hAmit, hAun, hArest⟩
-  rcases hArest with ⟨hAfwd, hAbwd⟩
-  rcases hB with ⟨hBein, hBaus, hBun, hBrest⟩
-  rcases hBrest with ⟨hBfwd, hBbwd⟩
+  rcases hA with ⟨hAein, hAmit, hAun, hAnr⟩
+  rcases hB with ⟨hBein, hBaus, hBun, hBnr⟩
+  rcases hAnr n r hpc hr with ⟨hAfwd, hAbwd⟩
   have ha' : (Nat.Partrec.Code.eval cA n).bind Nat.Partrec.Code.eval cB = Part.some a := ha
   obtain ⟨b, hbA, hbB⟩ := (Part.bind_eq_some_iff.mp ha')
   obtain ⟨kA, rA, hrunA, hpcA, htempA, hpresA, hlokA, hrueckA, hstoppA⟩ :=
-    hAfwd n r hpc hr b hbA
+    hAfwd b hbA
   have hbleibA := laufBleibtVorEnde blkA r kA rA hrunA hpcA
   have hprefixA : (Schritt (blkA ++ blkB))^[kA] (some r) = some rA :=
     laufAnhang blkA blkB r kA hbleibA
   let rA0 : Rahmen := { rA with pc := 0 }
   have hrA0pc : rA0.pc = 0 := rfl
   have hrA0temp : rA0.temp mit = some (natVal b) := htempA
+  rcases hBnr b rA0 hrA0pc hrA0temp with ⟨hBfwd, hBbwd⟩
   obtain ⟨kB, rB, hrunB, hpcB, htempB, hpresB, hlokB, hrueckB, hstoppB⟩ :=
-    hBfwd b rA0 hrA0pc hrA0temp a hbB
+    hBfwd a hbB
   have hbleibB := laufBleibtVorEnde blkB rA0 kB rB hrunB hpcB
   have hshift := laufMitPc blkA blkB [] hvB rA0 kB hbleibB
   have hmitPcA : mitPc blkA.length rA0 = rA := by
