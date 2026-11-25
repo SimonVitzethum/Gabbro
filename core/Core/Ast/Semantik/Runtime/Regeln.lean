@@ -121,10 +121,14 @@ theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Ze
 
 /-- Preservation across the frame transfer for predicates whose observed cells the command
     does not write. -/
-theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
+namespace Pruefung.Praedikat
+
+theorem gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
     (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
   intro hq
   exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
+
+end Pruefung.Praedikat
 
 def system (code : List Befehl) : LokalSystem :=
   ⟨Befehl.regel, kopf code, fun s c => kopf code s c = none, fun _ _ _ => False⟩
