@@ -111,9 +111,13 @@ theorem verschiebbarPrecRumpf (base : Nat) (cgBlk : List Befehl) (aus frei : Nat
   unfold precRumpf
   apply verschiebbarVonAppend
   · apply verschiebbarVonAppend
-    · exact verschiebbarVonLift base _ (verschiebbarPaarBerechnung _ _ _ _)
-    · exact verschiebbarVonLift (base + 44) _ (verschiebbarPaarBerechnung _ _ _ _)
-  · exact verschiebbarVonLift (base + 44 + 44) _ hv
+    · exact verschiebbarVonLift base
+        (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
+        (verschiebbarPaarBerechnung _ _ _ _)
+    · exact verschiebbarVonLift (base + 44)
+        (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
+        (verschiebbarPaarBerechnung _ _ _ _)
+  · exact verschiebbarVonLift (base + 44 + 44) cgBlk hv
 
 /-- Increment the counter and jump back to the check. The backward jump
     distance is relative to the whole loop, not to this tail. -/
@@ -180,7 +184,7 @@ theorem verschiebbarPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
           · simp only [Verschiebbar]
           · intro d hd; cases hd
     · have hlen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]).length = 8 := by
-        simp only [precCheckLaenge, List.length_cons, List.length_nil]
+        simp only [precCheckLaenge, List.length_append, List.length_cons, List.length_nil]
       rw [hlen]
       exact verschiebbarPrecRumpf 8 cgBlk aus frei hv
   · have hlen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)] ++
@@ -189,6 +193,6 @@ theorem verschiebbarPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
         List.length_cons, List.length_nil]
       omega
     rw [hlen]
-    exact verschiebbarPrecEnde (cgBlk.length + 96) cgBlk frei rfl
+    simpa only [Nat.zero_add] using verschiebbarPrecEnde (cgBlk.length + 96) cgBlk frei rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
