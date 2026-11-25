@@ -1,9 +1,10 @@
 /-
   File:      core/Core/Speicher/Relationen.lean
   Subject:   THE AXIOMATIC MEMORY MODEL W, part 2: the shape of a graph (`Wohlgeformt`) and the
-             derived relations of RC11 without fences: reads-before `rb`, extended coherence order
-             `eco`, release sequences `Rs`, synchronises-with `sw`, happens-before `hb`, the SC base
-             `scb` and the partial SC relation `psc` (Lahav et al., PLDI 2017, §3, fence-free part).
+              derived relations of RC11 with fences: reads-before `rb`, extended coherence order
+              `eco`, release sequences `Rs`, synchronises-with `sw` (with release/acquire fences),
+              happens-before `hb`, the SC base `scb` and the partial SC relation `psc` (with
+              `seq_cst` fences, `pscBasis` and `pscZaun`; Lahav et al., PLDI 2017, §3).
 -/
 module
 
@@ -32,9 +33,16 @@ def schreibt (a : E) : Prop := (G.lab a).art.schreibt
 /-- The event is an update (read-modify-write). -/
 def istRmw (a : E) : Prop := (G.lab a).art = .rmw
 
+/-- The event is a fence (no access, only order). -/
+def istZaun (a : E) : Prop := (G.lab a).art = .zaun
+
+/-- The graph has no fence events. -/
+def OhneZaun : Prop := ∀ a, (G.lab a).art ≠ .zaun
+
 /-- **The shape of an execution graph.** `po` a strict order; `rf` from a write to a read of the
     same location carrying the written value, at most one source per read; `mo` a strict total
-    order on the writes of each location. -/
+    order on the writes of each location. An update is atomic by definition (RC11's `U`), so it
+    never carries the plain mode `na`. -/
 structure Wohlgeformt : Prop where
   po_trans : ∀ a b c, G.po a b → G.po b c → G.po a c
   po_irrefl : ∀ a, ¬ G.po a a
@@ -48,6 +56,14 @@ structure Wohlgeformt : Prop where
   mo_trans : ∀ a b c, G.mo a b → G.mo b c → G.mo a c
   mo_irrefl : ∀ a, ¬ G.mo a a
   mo_total : ∀ a b, G.schreibt a → G.schreibt b → G.ort a = G.ort b → a ≠ b → G.mo a b ∨ G.mo b a
+  rmw_nicht_na : ∀ a, G.istRmw a → G.modus a ≠ .na
+
+/-- An update of a well-formed graph has an atomic mode. -/
+theorem Wohlgeformt.rmw_atomar {E Ort Wert : Type} {G : Graph E Ort Wert}
+    (hw : G.Wohlgeformt) {a : E} (h : G.istRmw a) : (G.modus a).atomar := by
+  cases m : G.modus a with
+  | na => exact False.elim ((hw.rmw_nicht_na a h) m)
+  | rlx | ra | sc => exact trivial
 
 /-- **Reads-before** (RC11's `rb = rf⁻¹ ; mo \ id`): `r` reads a write that `w` follows in `mo`. -/
 def rb (r w : E) : Prop := ∃ w', G.rf w' r ∧ G.mo w' w ∧ r ≠ w
@@ -58,17 +74,37 @@ def ecoSchritt (a b : E) : Prop := G.rf a b ∨ G.mo a b ∨ G.rb a b
 /-- **Extended coherence order** `eco = (rf ∪ mo ∪ rb)⁺`. -/
 def eco (a b : E) : Prop := Relation.TransGen G.ecoSchritt a b
 
-/-- **Release sequence** (RC11's `rs = [W] ; po|loc? ; [W ⊒ rlx] ; (rf ; rmw)*`): the writes that
-    carry the release of `w`. -/
+/-- **Release sequence** (RC11's `rs = [W] ; po|loc? ; [W ⊒ rlx] ; (rf ; rmw)*`, with
+    single-event updates: the `rmw` step stays at the update, which is itself atomic): the writes
+    that carry the release of `w`. -/
 inductive Rs : E → E → Prop
-  | selbst {w : E} : G.schreibt w → Rs w w
+  | selbst {w : E} : G.schreibt w → (G.modus w).atomar → Rs w w
   | po {w x : E} : G.schreibt w → G.po w x → G.schreibt x → G.ort x = G.ort w →
       (G.modus x).atomar → Rs w x
   | rmw {w x u : E} : Rs w x → G.rf x u → G.istRmw u → Rs w u
 
-/-- **Synchronises-with** (fence-free RC11: `[W ⊒ rel] ; rs ; rf ; [R ⊒ acq]`). -/
+/-- **A synchronising fence** (RC11's `F ⊒ rel` on the release side and `F ⊒ acq` on the
+    acquire side): with the collapsed modes a fence of at least release/acquire strength plays
+    both roles, like `acqrel`. -/
+def istSyncZaun (a : E) : Prop := G.istZaun a ∧ (G.modus a).stark
+
+/-- **The head of a synchronisation** (RC11's `[E ⊒ rel] ; ([F] ; po)?`): a release write, or
+    a synchronising fence before a write. -/
+def FreigabeKopf (a w : E) : Prop :=
+  (a = w ∧ G.schreibt a ∧ (G.modus a).stark) ∨
+    (G.istSyncZaun a ∧ G.po a w ∧ G.schreibt w)
+
+/-- **The tail of a synchronisation** (RC11's `[R ⊒ acq]`-side `[R] ; (po ; [F])?`): an acquire
+    read, or an atomic read before a synchronising fence. -/
+def ErwerbSchwanz (r b : E) : Prop :=
+  (r = b ∧ G.liest b ∧ (G.modus b).stark) ∨
+    (G.liest r ∧ (G.modus r).atomar ∧ G.po r b ∧ G.istSyncZaun b)
+
+/-- **Synchronises-with** (RC11's `[E ⊒ rel] ; ([F] ; po)? ; rs ; rf ; [R] ; (po ; [F])? ;
+    [E ⊒ acq]`, Lahav et al., PLDI 2017, §3.2, with single-event updates). -/
 def sw (a b : E) : Prop :=
-  G.schreibt a ∧ (G.modus a).stark ∧ G.liest b ∧ (G.modus b).stark ∧ ∃ x, G.Rs a x ∧ G.rf x b
+  ∃ w x r : E, G.FreigabeKopf a w ∧ G.Rs w x ∧ G.rf x r ∧ (G.modus r).atomar ∧ G.liest r ∧
+    G.ErwerbSchwanz r b
 
 /-- One step of happens-before. -/
 def hbSchritt (a b : E) : Prop := G.po a b ∨ G.sw a b
@@ -76,8 +112,8 @@ def hbSchritt (a b : E) : Prop := G.po a b ∨ G.sw a b
 /-- **Happens-before** `hb = (po ∪ sw)⁺`. -/
 def hb (a b : E) : Prop := Relation.TransGen G.hbSchritt a b
 
-/-- **The SC base** (fence-free RC11):
-    `scb = po ∪ po|≠loc ; hb ; po|≠loc ∪ hb|loc ∪ mo ∪ rb`. -/
+/-- **The SC base** (RC11's `scb = po ∪ po|≠loc ; hb ; po|≠loc ∪ hb|loc ∪ mo ∪ rb`;
+    `hb` already carries the fence synchronisations). -/
 def scb (a b : E) : Prop :=
   G.po a b
     ∨ (∃ c d, G.po a c ∧ G.ort a ≠ G.ort c ∧ G.hb c d ∧ G.po d b ∧ G.ort d ≠ G.ort b)
@@ -91,8 +127,22 @@ def sc (a : E) : Prop := G.modus a = .sc
 /-- The event is a plain (non-atomic) access. -/
 def na (a : E) : Prop := G.modus a = .na
 
-/-- **Partial SC relation** (fence-free RC11: `psc = [E_sc] ; scb ; [E_sc]`). -/
-def psc (a b : E) : Prop := G.sc a ∧ G.sc b ∧ G.scb a b
+/-- An `seq_cst` fence (RC11's `F sc`). -/
+def istSCZaun (a : E) : Prop := G.istZaun a ∧ G.modus a = .sc
+
+/-- **The SC base with SC fences** (RC11's `psc_base = ([E sc] ∪ [F sc] ; hb?) ; scb ;
+    ([E sc] ∪ hb? ; [F sc])`). -/
+def pscBasis (a b : E) : Prop :=
+  ∃ c d : E, G.scb c d ∧ (G.sc a ∧ a = c ∨ G.istSCZaun a ∧ (a = c ∨ G.hb a c)) ∧
+    (G.sc b ∧ d = b ∨ G.istSCZaun b ∧ (d = b ∨ G.hb d b))
+
+/-- **SC fences order through coherence** (RC11's `psc_F = [F sc] ; (hb ∪ hb ; eco ; hb) ;
+    [F sc]`). -/
+def pscZaun (a b : E) : Prop :=
+  G.istSCZaun a ∧ G.istSCZaun b ∧ (G.hb a b ∨ ∃ c d : E, G.hb a c ∧ G.eco c d ∧ G.hb d b)
+
+/-- **Partial SC relation** (RC11's `psc = psc_base ∪ psc_F`). -/
+def psc (a b : E) : Prop := G.pscBasis a b ∨ G.pscZaun a b
 
 /-- One step of `po ∪ rf`, the relation whose acyclicity excludes load buffering. -/
 def porf (a b : E) : Prop := G.po a b ∨ G.rf a b
@@ -117,14 +167,41 @@ variable {G}
 /-- A release sequence stays at its head's location. -/
 theorem Rs.ort_gleich (hw : G.Wohlgeformt) {w x : E} (h : G.Rs w x) : G.ort x = G.ort w := by
   induction h with
-  | selbst _ => rfl
+  | selbst _ _ => rfl
   | po _ _ _ ho _ => exact ho
   | rmw _ hrf _ ih => exact (hw.rf_ort _ _ hrf).symm.trans ih
 
-/-- `sw` stays at one location. -/
-theorem sw_ort (hw : G.Wohlgeformt) {a b : E} (h : G.sw a b) : G.ort a = G.ort b := by
-  obtain ⟨_, _, _, _, x, hrs, hrf⟩ := h
-  exact (Rs.ort_gleich hw hrs).symm.trans (hw.rf_ort _ _ hrf)
+/-- **Without fences a synchronisation is the classic shape**: with no fence at either end the
+    release head is a release write and the acquire tail an acquire read. -/
+theorem sw_klassisch {a b : E} (ha : ¬ G.istZaun a) (hb : ¬ G.istZaun b) (h : G.sw a b) :
+    G.schreibt a ∧ (G.modus a).stark ∧ G.liest b ∧ (G.modus b).stark ∧
+      ∃ x, G.Rs a x ∧ G.rf x b := by
+  obtain ⟨w, x, r, hkopf, hrs, hrf, _, _, hschwanz⟩ := h
+  rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, _, _⟩
+  · rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨_, _, _, hz⟩
+    · exact ⟨hsa, hma, hlb, hmb, x, hrs, hrf⟩
+    · exact absurd hz.1 hb
+  · exact absurd hza.1 ha
+
+/-- The classic shape synchronises. -/
+theorem sw_von_klassisch {a b : E}
+    (h : G.schreibt a ∧ (G.modus a).stark ∧ G.liest b ∧ (G.modus b).stark ∧
+      ∃ x, G.Rs a x ∧ G.rf x b) : G.sw a b := by
+  obtain ⟨hsa, hma, hlb, hmb, x, hrs, hrf⟩ := h
+  exact ⟨a, x, b, Or.inl ⟨rfl, hsa, hma⟩, hrs, hrf, Modus.stark_atomar hmb, hlb,
+    Or.inl ⟨rfl, hlb, hmb⟩⟩
+
+/-- The release end of a synchronisation is strong, with or without a fence. -/
+theorem sw_stark_links {a b : E} (h : G.sw a b) : (G.modus a).stark := by
+  obtain ⟨_, _, _, hkopf, _, _, _, _, _⟩ := h
+  rcases hkopf with ⟨rfl, _, hma⟩ | ⟨hza, _, _⟩
+  · exact hma
+  · exact hza.2
+
+/-- The classic shape stays at one location. -/
+theorem sw_klassisch_ort (hw : G.Wohlgeformt) {a b x : E} (hrs : G.Rs a x) (hrf : G.rf x b) :
+    G.ort a = G.ort b :=
+  (Rs.ort_gleich hw hrs).symm.trans (hw.rf_ort _ _ hrf)
 
 /-- Reads-before stays at one location. -/
 theorem rb_ort (hw : G.Wohlgeformt) {r w : E} (h : G.rb r w) : G.ort r = G.ort w := by
@@ -136,16 +213,43 @@ theorem rb_schreibt (hw : G.Wohlgeformt) {r w : E} (h : G.rb r w) : G.schreibt w
   obtain ⟨w', _, hmo, _⟩ := h
   exact (hw.mo_schreibt _ _ hmo).2
 
-/-- The endpoints of `psc` are `seq_cst`. -/
-theorem psc_sc_links {a b : E} (h : G.psc a b) : G.sc a := h.1
+/-- The endpoints of `psc` are `seq_cst` (an `seq_cst` fence has `seq_cst` mode). -/
+theorem psc_sc_links {a b : E} (h : G.psc a b) : G.sc a := by
+  rcases h with ⟨_, _, _, hl, _⟩ | ⟨hza, _, _⟩
+  · rcases hl with ⟨hsc, _⟩ | ⟨hza, _⟩
+    · exact hsc
+    · exact hza.2
+  · exact hza.2
 
-theorem psc_sc_rechts {a b : E} (h : G.psc a b) : G.sc b := h.2.1
+theorem psc_sc_rechts {a b : E} (h : G.psc a b) : G.sc b := by
+  rcases h with ⟨_, _, _, _, hr⟩ | ⟨_, hzb, _⟩
+  · rcases hr with ⟨hsc, _⟩ | ⟨hzb, _⟩
+    · exact hsc
+    · exact hzb.2
+  · exact hzb.2
+
+/-- **Without fences `psc` is the classic shape**: with no fence at either end both ends are
+    `seq_cst` accesses related by the SC base. -/
+theorem psc_klassisch {a b : E} (ha : ¬ G.istZaun a) (hb : ¬ G.istZaun b) (h : G.psc a b) :
+    G.sc a ∧ G.sc b ∧ G.scb a b := by
+  rcases h with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, _, _⟩
+  · rcases hl with ⟨hsa, rfl⟩ | ⟨hza, _⟩
+    · rcases hr with ⟨hsb, rfl⟩ | ⟨hzb, _⟩
+      · exact ⟨hsa, hsb, hscb⟩
+      · exact absurd hzb.1 hb
+    · exact absurd hza.1 ha
+  · exact absurd hza.1 ha
+
+/-- The classic shape is a `psc` step. -/
+theorem psc_von_klassisch {a b : E} (h : G.sc a ∧ G.sc b ∧ G.scb a b) : G.psc a b := by
+  obtain ⟨hsa, hsb, hscb⟩ := h
+  exact Or.inl ⟨a, b, hscb, Or.inl ⟨hsa, rfl⟩, Or.inl ⟨hsb, rfl⟩⟩
 
 /-- The endpoints of a `psc` path are `seq_cst`. -/
 theorem psc_pfad_sc {a b : E} (h : Relation.TransGen G.psc a b) : G.sc a ∧ G.sc b := by
   obtain ⟨_, h1⟩ := transGen_kopf h
   obtain ⟨_, h2⟩ := transGen_ende h
-  exact ⟨h1.1, h2.2.1⟩
+  exact ⟨psc_sc_links h1, psc_sc_rechts h2⟩
 
 end Graph
 

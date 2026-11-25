@@ -148,12 +148,21 @@ theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
         | exact False.elim (hne rfl)
         | (simp only [Graph.ort, fGraph, fLab, Art.schreibt, reduceCtorEq, if_false, if_true,
             Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases mp <;> cases a <;> simp only [Graph.istRmw, fGraph, fLab, reduceCtorEq, if_false, if_true] at h
+
+theorem f_kein_zaun (mp : Bool) (a : FenceEv) : ¬ (fGraph mp).istZaun a := by
+  intro ha
+  cases mp <;> cases a <;>
+    simp only [Graph.istZaun, fGraph, fLab, reduceCtorEq, if_false, if_true] at ha
 
 /-- No synchronises-with edge: a memory event is `.rlx` (not `stark`) and a barrier reads and
     writes nothing. -/
 theorem f_kein_sw (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).sw a b := by
   intro h
-  obtain ⟨hsa, hsta, hlb, hstb, x, hrs, hrf⟩ := h
+  obtain ⟨hsa, hsta, _, _, _, _, _⟩ :=
+    Graph.sw_klassisch (f_kein_zaun mp a) (f_kein_zaun mp b) h
   cases mp <;> cases a <;>
     simp only [Graph.schreibt, Graph.modus, fGraph, fLab, Art.schreibt, Modus.stark,
       reduceCtorEq, if_false, if_true] at hsa hsta
@@ -193,7 +202,8 @@ theorem f_eco {mp : Bool} {a b : FenceEv} (h : (fGraph mp).eco a b) : fEco a b :
 /-- An `sc` event is a barrier; barriers are in different threads and neither write nor read. -/
 theorem f_kein_psc (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).psc a b := by
   intro h
-  obtain ⟨hsa, hsb, hscb⟩ := h
+  obtain ⟨hsa, hsb, hscb⟩ :=
+    Graph.psc_klassisch (f_kein_zaun mp a) (f_kein_zaun mp b) h
   have hfa : a = f1 ∨ a = f2 := by
     cases mp <;> cases a <;>
       simp only [Graph.sc, Graph.modus, fGraph, fLab, reduceCtorEq, if_false, if_true] at hsa ⊢ <;>

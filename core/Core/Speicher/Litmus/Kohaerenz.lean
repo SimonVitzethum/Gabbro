@@ -217,10 +217,17 @@ theorem co_wf (m : Modus) : (coGraph m).Wohlgeformt where
   mo_total := by
     intro a b ha hb ho hne
     exact coMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, coGraph, coLab, reduceCtorEq] at h
 
 theorem co_kein_rmw (m : Modus) (u : CoEv) : ¬ (coGraph m).istRmw u := by
   intro hu
   cases u <;> simp only [Graph.istRmw, coGraph, coLab, reduceCtorEq] at hu
+
+theorem co_kein_zaun (m : Modus) (a : CoEv) : ¬ (coGraph m).istZaun a := by
+  intro ha
+  cases a <;> simp only [Graph.istZaun, coGraph, coLab, reduceCtorEq] at ha
 
 theorem coRb_closed (w' r w : CoEv) : (coRf w' r ∧ coMo w' w) → coRb r w := by
   cases w' <;> cases r <;> cases w <;> decide
@@ -252,7 +259,8 @@ theorem coRang_hbSchritt (m : Modus) (a b : CoEv) :
   intro h
   rcases h with hpo | hsw
   · exact coPo_rang a b hpo
-  · obtain ⟨_, hmw, _, _, x, hrs, hrf⟩ := hsw
+  · obtain ⟨_, _, _, _, x, hrs, hrf⟩ :=
+      Graph.sw_klassisch (co_kein_zaun m a) (co_kein_zaun m b) hsw
     have hax : a = x ∨ coPo a x := Graph.Rs.ohne_rmw (co_kein_rmw m) hrs
     rcases hax with rfl | hpx
     · exact coRf_rang a b hrf
@@ -290,8 +298,9 @@ theorem coRang_scb (m : Modus) {a b : CoEv} (h : (coGraph m).scb a b) : coRang a
   · exact coMo_rang a b hmo
   · exact coRb_rang a b (co_rb hrb)
 
-theorem coRang_psc (m : Modus) {a b : CoEv} (h : (coGraph m).psc a b) : coRang a < coRang b :=
-  coRang_scb m h.2.2
+theorem coRang_psc (m : Modus) {a b : CoEv} (h : (coGraph m).psc a b) : coRang a < coRang b := by
+  obtain ⟨_, _, hscb⟩ := Graph.psc_klassisch (co_kein_zaun m a) (co_kein_zaun m b) h
+  exact coRang_scb m hscb
 
 theorem co_konsistent (m : Modus) : (coGraph m).Konsistent where
   wf := co_wf m

@@ -85,7 +85,8 @@ theorem schritt_ohne_lesen {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
     (hv : Z.graph.Vollstaendig) (k : F) (l : Etikett Ort Wert) (hl : ¬ l.art.liest) :
     ∃ Z', Schritt Z k l Z' := by
   have A : Anhang Z k l (vorK Z k) 0 :=
-    ⟨vorK_eigen Z k, vorK_vorher hk k, fun h => absurd h hl⟩
+    ⟨vorK_eigen Z k, vorK_vorher hk k, fun h => absurd h hl, fun hrmw _ => by
+      exact False.elim (hl (by rw [hrmw]; exact trivial))⟩
   exact ⟨_, senke_schritt A hk hv⟩
 
 /-- **A step exists for every access**: an access of context `k` of kind `a` at `x` with mode `m`
@@ -94,7 +95,8 @@ theorem schritt_ohne_lesen {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
 theorem schritt_existiert {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
     (hv : Z.graph.Vollstaendig) (k : F) (a : Art) (x : Ort) (m : Modus) (v : Wert)
     (hw : a.liest → ∃ i, ∃ h : i < Z.ev.length,
-      (Z.ev[i]'h).lab.art.schreibt ∧ (Z.ev[i]'h).lab.ort = x) :
+      (Z.ev[i]'h).lab.art.schreibt ∧ (Z.ev[i]'h).lab.ort = x)
+    (hrmw : a = .rmw → m ≠ .na) :
     ∃ r Z', Schritt Z k ⟨a, x, m, r, v⟩ Z' ∧
       (a.liest → ∃ w, Z.graph.MoLetzte x w ∧ (Z.graph.lab w).geschrieben = r) := by
   by_cases hl : a.liest
@@ -106,7 +108,9 @@ theorem schritt_existiert {Z : Zustand F Ort Wert} (hk : Z.graph.Konsistent)
       ⟨vorK_eigen Z k, vorK_vorher hk k, fun _ => ⟨w.2, hws, hwo, rfl, fun u hu hus huo => by
         rcases hmax ⟨u, hu⟩ hus huo with e | e
         · exact Or.inl (congrArg Fin.val e)
-        · exact Or.inr e⟩⟩
+        · exact Or.inr e⟩, by
+        intro ha
+        exact hrmw ha⟩
     exact ⟨_, _, senke_schritt A hk hv, fun _ => ⟨w, ⟨hws, hwo, hmax⟩, rfl⟩⟩
   · obtain ⟨Z', hs⟩ := schritt_ohne_lesen hk hv k ⟨a, x, m, v, v⟩ hl
     exact ⟨v, Z', hs, fun h => absurd h hl⟩

@@ -119,13 +119,16 @@ theorem rmWf : rmGraph.Wohlgeformt where
     intro a b _ _ _ hne
     show rmMo a b ∨ rmMo b a
     cases a <;> cases b <;> first | decide | exact absurd rfl hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> decide
 
 /-- No `sw` step exists: every mode is relaxed, so `Modus.stark` fails. -/
 theorem rmHbSchrittFalsch (a b : RmwLitEv) : ¬ rmGraph.hbSchritt a b := by
   intro h
   rcases h with hpo | hsw
   · exact False.elim hpo
-  · rcases hsw with ⟨_, hstark, _, _, _⟩
+  · have hstark : (rmGraph.modus a).stark := Graph.sw_stark_links hsw
     cases a <;> simp only [Graph.modus, rmGraph, rmLab, Modus.stark] at hstark <;>
       exact False.elim hstark
 
@@ -137,7 +140,7 @@ theorem rmHbFalsch (a b : RmwLitEv) : ¬ rmGraph.hb a b := by
 
 theorem rmPscFalsch (a b : RmwLitEv) : ¬ rmGraph.psc a b := by
   intro h
-  obtain ⟨hsc, _⟩ := h
+  have hsc : rmGraph.sc a := Graph.psc_sc_links h
   cases a <;> simp only [Graph.sc, Graph.modus, rmGraph, rmLab, reduceCtorEq] at hsc
 
 theorem rmKonsistent : rmGraph.Konsistent where
