@@ -245,9 +245,11 @@ theorem selJumpT (ein aus frei n : Nat) (e : Rahmen)
     rw [e1]
     exact decide_eq_true h
   have g : (leftBlk ein aus frei)[46]? = some (.springeWenn (frei + 1) true 4) := by rfl
+  have e0' := schrittSpringeWennWahr (leftBlk ein aus frei) (frameL9 e ein aus frei n) 46
+      (frei + 1) true (cmpBoolLeft (Nat.sqrt n) n) 4 (by rfl) (updateHit _ _ _) hbool g
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL9 e ein aus frei n)) =
-      some (frameL10t e ein aus frei n) :=
-    schrittSpringeWennWahr _ _ _ _ _ _ _ (by rfl) (updateHit _ _ _) hbool g
+      some (frameL10t e ein aus frei n) := by
+    simpa only [frameL10t] using e0'
   rw [show (22 : Nat) = 1 + 21 from rfl, Function.iterate_add_apply, hpre]
   exact e0
 
@@ -267,9 +269,11 @@ theorem selJumpE (ein aus frei n : Nat) (e : Rahmen)
     rw [e1, e2]
     exact Bool.false_ne_true
   have g : (leftBlk ein aus frei)[46]? = some (.springeWenn (frei + 1) true 4) := by rfl
+  have e0' := schrittSpringeWennFalsch (leftBlk ein aus frei) (frameL9 e ein aus frei n) 46
+      (frei + 1) true (cmpBoolLeft (Nat.sqrt n) n) 4 (by rfl) (updateHit _ _ _) hbool g
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL9 e ein aus frei n)) =
-      some (frameL10e e ein aus frei n) :=
-    schrittSpringeWennFalsch _ _ _ _ _ _ _ (by rfl) (updateHit _ _ _) hbool g
+      some (frameL10e e ein aus frei n) := by
+    simpa only [frameL10e] using e0'
   rw [show (22 : Nat) = 1 + 21 from rfl, Function.iterate_add_apply, hpre]
   exact e0
 
@@ -280,6 +284,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[25] (some e) =
       some (frameL11e e ein aus frei n) := by
   have hpre := selJumpE ein aus frei n e hepc hes heq hein haus h
+  have hne0 : (frei + 0) ≠ aus := Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
   have g0 : (leftBlk ein aus frei)[47]? = some (.binden nameX (frei + 0)) := by rfl
   have g1 : (leftBlk ein aus frei)[47 + 1]? = some (.lesen aus 0) := by rfl
   have g2 : (leftBlk ein aus frei)[47 + 2]? = some (.blockEnde 1) := by rfl
