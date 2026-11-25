@@ -249,7 +249,8 @@ theorem ressourcenProtokollAussage_falsch :
   change (if (zustand2Gegen s).lokal kontext = some griff2 then 1 else 0) ≤ 0 at post
   have lokalPost : (zustand2Gegen s).lokal kontext = some griff2 := by
     dsimp only [zustand2Gegen, Zustand.wiederanlauf, Zustand.start, gegenEinheit,
-      einrichtungGegen, einrichtung, daten]
+      einrichtungGegen, einrichtung, daten, Fluechtig.verwerfen, fluechtigIdentisch]
+    rfl
   rw [if_pos lokalPost] at post
   omega
 
