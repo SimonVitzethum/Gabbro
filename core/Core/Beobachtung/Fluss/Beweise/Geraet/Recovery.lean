@@ -1,6 +1,8 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Consume
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueKontext
 
 @[expose] public section
@@ -86,55 +88,35 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
               cases step with
               | schritt impl =>
                 cases impl with
-                | @kontext _ s' u plan spur _ _ _ _ regel aus =>
+                | kontext _ _ regel aus =>
                   obtain ⟨kopfEq, plan', hplans, rule⟩ := geraete_kontext_regel ruleEq regel
                   cases rule with
                   | issue owned idle =>
-                    have hplan : plan' = { internal with aktion := .frage (binding.question access) } :=
-                      (List.cons.inj hplans).1
-                    subst hplan
-                    cases spur with
-                    | mk speicher aussen =>
-                      obtain ⟨rahmen, auth, sperren, vv, fuehrtAus, speicherfolge, nEqState⟩ := aus
-                      cases fuehrtAus with
-                      | frage qq =>
-                        have hfragen : s'.fragen =
-                            s.fragen ++ [s.stelleFrage t c (binding.question access)] := by
-                          simp only [nEqState]
-                        have hep : s'.epoche = s.epoche := by
-                          simp only [nEqState]
-                        obtain rfl := Option.some.inj atV
-                        obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                        refine ⟨?_, ?_⟩
-                        · intro q hq
-                          rw [hfragen, List.mem_append] at hq
-                          cases hq with
-                          | inl hmem => exact Nat.lt_succ_of_lt (ihfragen q hmem)
-                          | inr hsingle =>
-                            rw [List.mem_singleton.mp hsingle]
-                            exact Nat.lt_succ_self t
-                        · rw [hep]
-                          exact Nat.le_succ ihepo
+                    have htick := geraete_issue_tick (target := target) aus hplans rfl owned idle
+                    obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -, -, -, -, -⟩ := htick
+                    obtain rfl := Option.some.inj atV
+                    obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                    refine ⟨?_, ?_⟩
+                    · intro q hq
+                      rw [hfragen, List.mem_append] at hq
+                      cases hq with
+                      | inl hmem => exact Nat.lt_succ_of_lt (ihfragen q hmem)
+                      | inr hsingle =>
+                        rw [List.mem_singleton.mp hsingle]
+                        exact Nat.lt_succ_self t
+                    · rw [hepoche]
+                      exact Nat.le_succ ihepo
                   | consume owned pending ready sameQuestion =>
-                    have hplan : plan' = { internal with aktion := .verbrauche answer } :=
-                      (List.cons.inj hplans).1
-                    subst hplan
-                    cases spur with
-                    | mk speicher aussen =>
-                      obtain ⟨rahmen, auth, sperren, vv, fuehrtAus, speicherfolge, nEqState⟩ := aus
-                      cases fuehrtAus with
-                      | verbrauche ready' =>
-                        have hfragen : s'.fragen = s.fragen := by
-                          simp only [nEqState]
-                        have hep : s'.epoche = s.epoche := by
-                          simp only [nEqState]
-                        obtain rfl := Option.some.inj atV
-                        obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                        refine ⟨fun q hq => ?_, ?_⟩
-                        · rw [hfragen] at hq
-                          exact Nat.lt_succ_of_lt (ihfragen q hq)
-                        · rw [hep]
-                          exact Nat.le_succ ihepo
+                    have htick := geraete_consume_tick (target := target) aus hplans rfl
+                      owned pending ready sameQuestion
+                    obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -⟩ := htick
+                    obtain rfl := Option.some.inj atV
+                    obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                    refine ⟨fun q hq => ?_, ?_⟩
+                    · rw [hfragen] at hq
+                      exact Nat.lt_succ_of_lt (ihfragen q hq)
+                    · rw [hepoche]
+                      exact Nat.le_succ ihepo
             | antwort a =>
               cases step with
               | schritt impl =>
