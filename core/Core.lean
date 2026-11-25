@@ -197,6 +197,7 @@ public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.PrueferKlauseln
 public import Core.Ziel.Korrektheit.PrueferRestBeweis
+public import Core.Ziel.Korrektheit.PrueferWaechterBeweise
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher
