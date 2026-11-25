@@ -40,7 +40,7 @@ theorem bindungLadeSchranken (P : Katalog.Plattform) (u : UnitMitSchranken) :
     have hs : s = Zustand.start d.lokal d.status d.kerne d.rechte
         (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
           (programm u.baum).speicher).initial (.leer (startmedium a)) :=
-      Option.some.inj geladen
+      (Option.some.inj geladen).symm
     subst s
     constructor
     · intro c n bound
