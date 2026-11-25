@@ -24,9 +24,9 @@ open Gabbro.Core.Katalog
 noncomputable def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
-    ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
+    ⟨by decide, by decide, pendingV0, by decide, auswahlV0⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
-    zV0_ruht_Hv, rfl, by rw [rV_eq] at hmemV; rw [← labV]; exact hmemV, rfl⟩
+    zV0_ruht_Hv, rfl, by have h := hmemV; rw [rV_eq, ← labV] at h; exact h, rfl⟩
 
 /-- Handler steps from tick one on. -/
 noncomputable def stepV (t : Nat) : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
@@ -46,9 +46,9 @@ noncomputable def taktV (t : Nat) : Takt (Lauffolge E_v hwV) (KeinSchritt (Lauff
 noncomputable def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
-    ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
+    ⟨by decide, by decide, pendingV0, by decide, auswahlV0⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
-    zV0_ruht_Hv, rfl, by rw [rV_eq] at hmemV; rw [← labV]; exact hmemV, rfl⟩
+    zV0_ruht_Hv, rfl, by have h := hmemV; rw [rV_eq, ← labV] at h; exact h, rfl⟩
 
 /-- Ideal handler steps from tick one on. -/
 noncomputable def istepV (t : Nat) : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
@@ -63,8 +63,8 @@ noncomputable def itaktV (t : Nat) : Takt
     (fun t _ => ¬ AbsturzAngeboten E_v.katalog hwV t)
     t (ZV t) (spurV t) (ZV (t + 1)) := by
   cases t with
-  | zero => exact .schritt rfl (.schritt istepV0)
-  | succ t => exact .schritt rfl (.schritt (istepV t))
+  | zero => exact .schritt rfl istepV0
+  | succ t => exact .schritt rfl (istepV t)
 
 noncomputable def sV : AussenStart :=
   Classical.choose (zulStart_erfuellbar fairV.hardware wBildV_gueltig)
@@ -83,8 +83,9 @@ noncomputable def ηV : Maschine.I.Lauf E_v :=
 theorem spurV_zero : spurV 0 =
     some (.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩) := rfl
 
-theorem spurV_succ (t : Nat) : spurV (t + 1) = some (.kontext Hv (), ⟨[], []⟩) :=
-  fun _ => rfl
+theorem spurV_succ (t : Nat) : spurV (t + 1) =
+    some (SchrittWahl.kontext Hv (), ⟨[], []⟩) :=
+  rfl
 
 theorem ρV_spur : ∀ t, ρV.zeit.spur t = spurV t := fun _ => rfl
 
@@ -140,7 +141,7 @@ theorem nretV : ¬ Maschine.VerdraengungKehrtZurueck E_v ρV := by
   obtain ⟨t', ht', k', z', hz', hd⟩ := hret A 0 0
     ⟨zV0, rfl, zV0_dispatch0, zV0_live_A⟩ ⟨(0, 0), _, rfl⟩
   have hzz : ρV.zeit.zustand t' = some (ZV t') := rfl
-  have hseq : z' = ZV t' := Option.some.inj (hzz.symm.trans hz')
+  have hseq : z' = ZV t' := (Option.some.inj (hzz.symm.trans hz')).symm
   rw [hseq] at hd
   obtain ⟨m, rfl⟩ : ∃ m, t' = m + 1 := ⟨t' - 1, by omega⟩
   exact nirgendsV (m + 1) k' (Nat.succ_pos m) hd
