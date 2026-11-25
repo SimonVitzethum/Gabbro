@@ -40,9 +40,8 @@ theorem zustandsBedarfBei_nach_anderer (p : Fragment) (c c' : Kontext) (b : Befe
 theorem zustandImModul_nach_anderer (off : Nat) (c c' : Kontext) (b : Befehl)
     (s : Zustand) (hne : c' ≠ c) :
     zustandImModul off c (b.nach c' s) = b.nach c' (zustandImModul off c s) := by
-  unfold zustandImModul Befehl.nach frameZurueck
-  simp only [Function.update_of_ne hne]
-  rw [Function.update_comm hne]
+  simp only [zustandImModul, Befehl.nach, frameZurueck, Zustand.regionLive,
+    Function.update_of_ne hne, Function.update_comm hne]
 
 /-- The acting frame's head and guard survive the projection and a frame-only step of another
     context: the step commutes with `zustandImModul`, and the projected frame of `c` is the one the
@@ -53,7 +52,7 @@ theorem zustandsBedarfBei_projiziert_nach_anderer (p : Fragment) (off : Nat)
     (need : zustandsBedarfBei p c (zustandImModul off c s) op args) :
     zustandsBedarfBei p c (zustandImModul off c (b.nach c' s)) op args := by
   rw [zustandImModul_nach_anderer off c c' b s hne]
-  exact zustandsBedarfBei_nach_anderer p c c' b s hne op args need
+  exact zustandsBedarfBei_nach_anderer p c c' b (zustandImModul off c s) hne op args need
 
 /-- From any state, a maximal ideal-style timeline exists for an arbitrary step relation: the
     canonical timeline pauses exactly when no step exists. This supplies the maximality half of
