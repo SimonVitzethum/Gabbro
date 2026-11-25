@@ -344,6 +344,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.KlassenSperrwortbeinAussage, 12948677020863155897),
   (`Gabbro.Core.Maschine.I.FlushFamilienAussage, 5738096403899585922),
   (`Gabbro.Core.Maschine.I.LockFreeFamilienAussage, 16890382388105400655),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 11628676760312913929)]
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 11628676760312913929),
+  (`Gabbro.Core.Aussenfrage.AussenFrageAussagen, 0)]
 
 end Gabbro.Core.Waechter
