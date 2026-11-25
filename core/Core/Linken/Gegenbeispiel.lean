@@ -51,7 +51,7 @@ def planAB : Bauplan :=
 
 /-- The witness plan is refused under the seal; the old link check accepted it. -/
 theorem planAB_sealed : kontrollflussAbgeschottet planAB = false := by
-  decide
+  rfl
 
 theorem planAB_linke_none : linke planAB = none := by
   unfold linke
