@@ -139,6 +139,7 @@ public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
+public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 meta import Core.Waechter.Check
