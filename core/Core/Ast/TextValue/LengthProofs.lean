@@ -129,7 +129,7 @@ theorem textLength_ideal : TextLengthIdealAussage := by
   intro scope
   refine ⟨textLength_amOrt scope, ?_⟩
   intro args
-  exact ⟨((textLengthForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(textLengthForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem textLength_einheit : TextLengthEinheitAussage := by
   intro scope platform args

@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Frame
+public import Core.Ast.Semantik.Runtime.Atom.Form
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -69,6 +70,7 @@ inductive Befehl where
   | definiereEffektgruppe (effects : List CarrierEffect)
   | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
   | bindeRegion (receiver : Nat) (init : RegionInitializer)
+  | zugriff (form : Zugriffsform)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _slot => false) : Rahmen :=
@@ -263,6 +265,7 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
       pc := frame.pc + 1
       environment := (name, abi, row) :: frame.environment }
   | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
+  | .zugriff form, frame => form.uebertrag frame 0
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 
