@@ -125,15 +125,17 @@ theorem geraete_angebot_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.uni
   have hang := congrArg Prod.fst vergleich.politik
   have ht := congrFun hang t
   have hetik : (d.unit locals).etiketten = .leer := geraete_etiketten_leer d
-  simp only [hwPolitikProjektion, angebotProjektion, hetik] at ht
+  simp only [hwPolitikProjektion] at ht
+  generalize ha1 : (ρ₁.hw.angebot t) = a1 at ht
+  generalize ha2 : (ρ₂.hw.angebot t) = a2 at ht
+  cases a1 with
+  | mk c1 i1 s1 d1 m1 cr1 cy1 =>
+  cases a2 with
+  | mk c2 i2 s2 d2 m2 cr2 cy2 =>
+  simp only [angebotProjektion, hetik] at ht
   have hend : ∀ e : Endpunkt, (Etiketten.leer (Ort := Nat)).endpunkt e = ∅ :=
     fun _ => rfl
   simp only [hend, geraete_sichtbar_leer] at ht
-  cases h1 : ρ₁.hw.angebot t with
-  | mk c1 i1 s1 d1 m1 cr1 cy1 =>
-  cases h2 : ρ₂.hw.angebot t with
-  | mk c2 i2 s2 d2 m2 cr2 cy2 =>
-  simp only [h1, h2] at ht
   obtain ⟨hcore, hinterrupt, hinterrupts, hdelivery, hmedium, hcrash, hcycles⟩ := ht
   have hdel : d1 = d2 :=
     funext fun e => Option.some.inj (congrFun hdelivery e)
@@ -166,7 +168,10 @@ theorem geraete_verlauf_leer {Ort : Type} (h : AussenVerlauf) :
   induction h with
   | nil => rfl
   | cons e tail ih =>
-    rw [List.filter_cons_of_pos (key e), ih]
+    exact (List.filter_cons_of_pos (p := fun entry : Nat × AussenEreignis =>
+      match entry.2 with
+      | .frage q | .antwort q _ => oeffentlich ((Etiketten.leer (Ort := Ort)).frage q))
+      (a := e) (l := tail) (key e)).trans (congrArg _ ih)
 
 /-- Compared runs answer every question identically: empty labels expose the policy. -/
 theorem geraete_politik_antwort_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
