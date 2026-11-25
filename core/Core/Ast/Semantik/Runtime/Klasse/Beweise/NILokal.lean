@@ -25,7 +25,7 @@ open Maschine Katalog Beobachtung
 def Klasseneinheit.Fragenfrei {ι : Type} (E : Klasseneinheit ι) : Prop :=
   (∀ (i : ι) (c : Kontext) (s : Zustand) (w : PUnit) (p : Plan) (u : Zustand),
       (E.system.regel i).impl c s w [p] u → ∀ q : Frage, p.aktion ≠ .frage q) ∧
-  (∀ (h : Umgebung) (s : AussenStart) (z : Zustand),
+  (∀ (h : Katalog.Umgebung) (s : AussenStart) (z : Zustand),
       E.laden s (h.lade E.bild) = some z → z.fragen = [])
 
 /-- A protocol action other than a question leaves the pending-question ledger unchanged. -/
@@ -42,8 +42,8 @@ theorem klassen_antwort_fuehrt_aus_fragen_leer {ι : Type} (E : Klasseneinheit �
 
 /-- A machine step of a question-free unit never creates a pending question. -/
 theorem klassen_antwort_schritt_fragen {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
-    {hw : HwLauf} {t : Nat} {s s' : Zustand} {spur : SchrittSpur Zelle Int}
-    (step : ImplSchritt E.einrichtung E.system E.katalog hw t s spur s')
+    {hw : HwLauf} {t : Nat} {s s' : Zustand} {label : SchrittWahl PUnit × SchrittSpur Zelle Int}
+    (step : ImplSchritt E.einrichtung E.system E.katalog hw t s label s')
     (leer : s.fragen = []) : s'.fragen = [] := by
   cases step with
   | kontext _ _ regel aus =>
@@ -73,7 +73,7 @@ theorem klassen_antwort_schritt_fragen {ι : Type} (E : Klasseneinheit ι) (frei
 
 /-- By induction over the cuts, a question-free unit has no pending question at any loaded cut. -/
 theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
-    {h : Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ) :
+    {h : Katalog.Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ) :
     ∀ t, ρ.zeit.zustand t = none ∨ ∃ z, ρ.zeit.zustand t = some z ∧ z.fragen = [] := by
   intro t
   induction t with
@@ -112,7 +112,7 @@ theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : 
 
 /-- The pending-question fact at a named loaded cut. -/
 theorem klassen_antwort_fragen_leer_an {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
-    {h : Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ)
+    {h : Katalog.Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ)
     (t : Nat) {z : Zustand} (atZ : ρ.zeit.zustand t = some z) : z.fragen = [] := by
   have alle := klassen_antwort_fragen_leer E frei lauf t
   cases alle with
@@ -125,7 +125,7 @@ theorem klassen_antwort_fragen_leer_an {ι : Type} (E : Klasseneinheit ι) (frei
 
 /-- **Generalised `antwortNI`**: a question-free `Klasseneinheit` never records an answer. -/
 theorem antwortNI_klasseneinheit {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei) :
-    ∀ (h : Umgebung) (ρ : Lauf E), Laeufe E h ρ → ∀ t a spur,
+    ∀ (h : Katalog.Umgebung) (ρ : Lauf E), Laeufe E h ρ → ∀ t a spur,
       ρ.zeit.spur t ≠ some (.antwort a, spur) := by
   intro h ρ lauf t a spur gleich
   have tick := ρ.zeit.takt t
