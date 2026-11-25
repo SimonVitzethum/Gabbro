@@ -272,7 +272,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [l, dif_pos rfl]
+        simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef) (fun h => by cases h)
@@ -325,7 +325,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [l, dif_pos rfl]
+        simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun h => by cases h) (fun _ => hBef)
@@ -372,7 +372,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [l, dif_pos rfl]
+        simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
