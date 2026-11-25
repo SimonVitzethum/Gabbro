@@ -45,7 +45,7 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
     have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
       writersNach
     have vorGilt : q.gilt vor := vorSicher.2 i _ declared writersVor
-    exact q.gilt_nach b c vor hok vorGilt
+    exact Gabbro.Core.Ast.Pruefung.Praedikat.gilt_nach q b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
