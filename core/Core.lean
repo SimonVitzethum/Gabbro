@@ -151,6 +151,7 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
+public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Linken.Modul
