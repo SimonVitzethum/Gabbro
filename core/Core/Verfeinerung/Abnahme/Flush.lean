@@ -453,7 +453,9 @@ theorem FlushFamilienAussage_nichtTrivial :
       subst a
       exact ⟨0, rfl⟩
   obtain ⟨s, admissible⟩ := zulStart_erfuellbar fair.hardware image
-  have persistence : E.katalog.enthaelt .persistence := by decide
+  have persistence : E.katalog.enthaelt .persistence := by
+    change .persistence ∈ (ZielZeilen ++ .persistence :: _ : List Zeile)
+    exact List.mem_append.mpr (Or.inr (List.Mem.head _))
   obtain ⟨_, η, _, valid, _, _, _, _, _, crash0⟩ :=
     absturz_laeufe_erfuellbar (E := E) admissible fair persistence rfl
   let decoder : EffektSicht Unit Unit Unit (Nat × FlushPhase) :=
