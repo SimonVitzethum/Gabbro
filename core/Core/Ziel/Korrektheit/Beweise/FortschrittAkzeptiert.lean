@@ -242,7 +242,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               have hz : ρ.zeit.zustand n = some z := hzn
               obtain ⟨ihd, ihs⟩ := ih z hz
               cases trans with
-              | @kontext _ _ u plan _ _ _ _ _ _ aus =>
+              | @kontext _ u plan _ _ _ _ _ _ aus =>
                 obtain ⟨rahmen, _, _, _, aktion, _, seq⟩ := aus
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
                 have skerne : s.kerne = v.kerne := congrArg _ seq
