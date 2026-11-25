@@ -163,7 +163,13 @@ theorem verdraengung_ohne_meldung (hw : HwLauf) (leer : ∀ i, (hw.angebot i).in
     cases htakt : ρ.zeit.takt t with
     | schritt label step =>
       rw [hstt] at step
-      cases step
+      cases hsuc : ρ.zeit.zustand (t + 1) with
+      | none =>
+        rw [hsuc] at step
+        cases step
+      | some s' =>
+        rw [hsuc] at step
+        cases step
     | wartet label _ _ =>
       rw [label] at hspur
       cases hspur
@@ -171,26 +177,32 @@ theorem verdraengung_ohne_meldung (hw : HwLauf) (leer : ∀ i, (hw.angebot i).in
     cases htakt : ρ.zeit.takt t with
     | schritt label step =>
       rw [hstt] at step
-      cases step with
-      | schritt trans =>
-        cases trans with
-        | kontext _ _ _ _ =>
-          have hev := Option.some.inj (label.symm.trans hspur)
-          have hfst := congrArg Prod.fst hev
-          simp at hfst
-        | antwort _ _ =>
-          have hev := Option.some.inj (label.symm.trans hspur)
-          have hfst := congrArg Prod.fst hev
-          simp at hfst
-        | interrupt _ h =>
-          obtain ⟨_, _, _, _, _, haus, _, _, _, _, _⟩ := h
-          have hang := haus.2.2.1
-          rw [hρ, leer id.1] at hang
-          simp only [List.getElem?_nil, reduceCtorEq] at hang
-        | absturz _ =>
-          have hev := Option.some.inj (label.symm.trans hspur)
-          have hfst := congrArg Prod.fst hev
-          simp at hfst
+      cases hsuc : ρ.zeit.zustand (t + 1) with
+      | none =>
+        rw [hsuc] at step
+        cases step
+      | some s' =>
+        rw [hsuc] at step
+        cases step with
+        | schritt trans =>
+          cases trans with
+          | kontext _ _ _ _ =>
+            have hev := Option.some.inj (label.symm.trans hspur)
+            have hfst := congrArg Prod.fst hev
+            simp at hfst
+          | antwort _ _ =>
+            have hev := Option.some.inj (label.symm.trans hspur)
+            have hfst := congrArg Prod.fst hev
+            simp at hfst
+          | interrupt _ h =>
+            obtain ⟨_, _, _, _, _, haus, _, _, _, _, _⟩ := h
+            have hang := haus.2.2.1
+            rw [hρ, leer id.1] at hang
+            simp only [List.getElem?_nil, reduceCtorEq] at hang
+          | absturz _ =>
+            have hev := Option.some.inj (label.symm.trans hspur)
+            have hfst := congrArg Prod.fst hev
+            simp at hfst
     | wartet label _ _ =>
       rw [label] at hspur
       cases hspur
