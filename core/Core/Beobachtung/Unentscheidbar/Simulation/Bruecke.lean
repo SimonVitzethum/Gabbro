@@ -41,8 +41,8 @@ theorem haeltMitAusBlock (blk : List Befehl) (c : Nat.Partrec.Code) (ein aus fre
   let rE := frameEnde rB
   have hgetB : (blk ++ [.binden nameX aus, .ende])[rEnd.pc]? = some (.binden nameX aus) := by
     rw [hpcE]
-    rw [show blk.length + 0 = blk.length by omega]
-    exact getNachPrefix blk [.binden nameX aus, .ende] 0 (by simp only [List.length_cons, Nat.lt_succ_self])
+    simpa only [Nat.add_zero] using
+      (getNachPrefix blk [.binden nameX aus, .ende] 0 (by simp))
   have hsB : Schritt (abschliessen blk aus) (some rEnd) = some rB := by
     change Schritt (blk ++ [.binden nameX aus, .ende]) (some rEnd) = some rB
     show (match (blk ++ [.binden nameX aus, .ende])[rEnd.pc]? with
@@ -53,7 +53,8 @@ theorem haeltMitAusBlock (blk : List Befehl) (c : Nat.Partrec.Code) (ein aus fre
     change (blk ++ [.binden nameX aus, .ende])[rEnd.pc + 1]? = some (.ende)
     rw [hpcE]
     rw [show blk.length + 1 = blk.length + 1 by rfl]
-    exact getNachPrefix blk [.binden nameX aus, .ende] 1 (by omega)
+    simpa only [Nat.add_zero] using
+      (getNachPrefix blk [.binden nameX aus, .ende] 1 (by simp))
   have hsE : Schritt (abschliessen blk aus) (some rB) = some rE := by
     change Schritt (blk ++ [.binden nameX aus, .ende]) (some rB) = some rE
     show (match (blk ++ [.binden nameX aus, .ende])[rB.pc]? with
@@ -61,11 +62,9 @@ theorem haeltMitAusBlock (blk : List Befehl) (c : Nat.Partrec.Code) (ein aus fre
     rw [hgetE]
     rfl
   have hrunTotal : (Schritt (abschliessen blk aus))^[k + 2] (some r) = some rE := by
-    rw [show k + 2 = 2 + k by omega, Function.iterate_add_apply]
-    rw [show (Schritt (abschliessen blk aus))^[2] (some rEnd) = some rE by
-      change Schritt (abschliessen blk aus) (Schritt (abschliessen blk aus) (some rEnd)) = some rE
-      rw [hsB, hsE]]
-    exact hprefix
+    rw [show k + 2 = 2 + k by omega, Function.iterate_add_apply, hprefix]
+    change Schritt (abschliessen blk aus) (Schritt (abschliessen blk aus) (some rEnd)) = some rE
+    rw [hsB, hsE]
   refine ⟨rE, ⟨k + 2, hrunTotal⟩, ?_⟩
   change rE.rueckgabe.bind NatAusgabe = some a
   have hrueckgabe : rE.rueckgabe = some (natVal a) := by
