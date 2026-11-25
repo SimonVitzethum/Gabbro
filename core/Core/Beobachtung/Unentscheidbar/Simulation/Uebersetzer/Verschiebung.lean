@@ -92,9 +92,12 @@ theorem schrittMitPcBei (pre mid post : List Befehl) (hv : VerschiebbaresProgram
     have hd0 : d ≤ r.pc := hzd d hd
     simp only [mitPc]
     omega
+  have hgetConcat' : (pre ++ mid ++ post)[(mitPc pre.length r).pc]? = some b := by
+    simpa only [mitPc] using hgetConcat
   have e2 : b.auswerten (mitPc pre.length r) = mitPc pre.length (b.auswerten r) :=
     auswertenMitPc pre.length b r hvb hzb
-  simp only [Schritt, mitPc, hgetConcat, hb, e2]
+  simp only [Schritt, hgetConcat', hb]
+  rw [e2]
 
 /-- A whole relocation of a run that stays below the block length. -/
 theorem laufMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgramm mid)
