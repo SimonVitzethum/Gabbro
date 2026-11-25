@@ -8,13 +8,17 @@
              adds. A new class is a new constructor at the END of `Wirkungsklasse`, and the guard demands its
              registry packet before an instruction can use it (`Befehl.klasse` has no wildcard, so a new
              instruction must be classified).
-             * `lokal`, `ruf` change the acting frame only (private step).
-             * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
-               atomic update): the plan carries the access, the frame names the cell.
-             * `sperre` draws a ticket, takes or gives one lock of the unit.
-             * `frage` issues one question to the outside world.
-             The classes of waiting, thread start and join, authority, time, persistence, randomness and
-             guests are appended by the packages that introduce their first instruction.
+              * `lokal`, `ruf` change the acting frame only (private step).
+              * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
+                atomic update): the plan carries the access, the frame names the cell.
+              * `sperre` draws a ticket, takes or gives one lock of the unit.
+              * `frage` issues one question to the outside world.
+              * `maskiere`, `prioritaet`, `sendeUnterbrechung`, `leiteLeitung` are the interrupt-control
+                classes (MK-20): they step the acting frame only (the per-core mask, threshold, pending
+                send and routing the step names are applied by the machine duties of
+                `Unterbrechung/Aussagen`, never mid-step).
+              The classes of waiting, thread start and join, authority, time, persistence, randomness and
+              guests are appended by the packages that introduce their first instruction.
 -/
 module
 
@@ -31,7 +35,11 @@ namespace Gabbro.Core.Ast.Semantik
     * `schreiben m`: a write of one cell in mode `m`.
     * `rmw m`: an atomic read-modify-write of one cell in mode `m`.
     * `sperre a`: one lock action `a` (ticket, take, give) on one lock of the unit.
-    * `frage`: one question to the outside world; its answer arrives later, as its own transition. -/
+    * `frage`: one question to the outside world; its answer arrives later, as its own transition.
+    * `maskiere`: mask or unmask one vector; frame-only, applied at the next boundary.
+    * `prioritaet`: set the priority threshold; frame-only, applied at the next boundary.
+    * `sendeUnterbrechung`: raise one vector on one core; frame-only, delivered later.
+    * `leiteLeitung`: route one line to one core with a priority; frame-only. -/
 inductive Wirkungsklasse where
   | lokal
   | ruf
@@ -40,6 +48,10 @@ inductive Wirkungsklasse where
   | rmw (modus : Gabbro.Core.Speicher.Modus)
   | sperre (aktion : Gabbro.Core.Maschine.SperrAktion)
   | frage
+  | maskiere
+  | prioritaet
+  | sendeUnterbrechung
+  | leiteLeitung
 
 /-- **The class of an access instruction** (MK-04): a load and the confirming observation read, a store and the
     publication write, an update (exchange, compare-and-swap, fetch-and-add) is an update, each in the mode the
@@ -68,6 +80,10 @@ def Befehl.klasse : Befehl → Wirkungsklasse
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .lokal
+  | .maskiere .. => .maskiere
+  | .prioritaet .. => .prioritaet
+  | .sendeUnterbrechung .. => .sendeUnterbrechung
+  | .leiteLeitung .. => .leiteLeitung
 
 /-- **The stack effect of an instruction**: the frame it steps grows its continuation stack by at
     most `k`. -/
@@ -79,7 +95,8 @@ def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
     every other class steps its frame without pushing a continuation. -/
 def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
   | .ruf => 1
-  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => 0
+  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => 0
 
 /-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
     Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is

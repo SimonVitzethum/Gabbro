@@ -194,7 +194,11 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende),
     (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.environmentBefehlEntry) ], #[
     (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
-    (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.maskiere, `Gabbro.Core.Ast.Semantik.MaskeSimAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.prioritaet, `Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.SendeLiefertAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.leiteLeitung, `Gabbro.Core.Ast.Semantik.LeiteWirktAussage) ]⟩]
 
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
@@ -261,6 +265,10 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lesen, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.schreiben, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.rmw, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.maskiere, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.prioritaet, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.leiteLeitung, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sperre, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.frage, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
 ]

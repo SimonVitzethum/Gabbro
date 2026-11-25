@@ -109,7 +109,7 @@ theorem modulCall_akzeptiert :
   · intro b present
     change b ∈ ([Ast.Semantik.Befehl.rufe Ast.Semantik.mainName [] none] : List Ast.Semantik.Befehl) at present
     obtain rfl := List.mem_singleton.mp present
-    exact Or.inr rfl
+    exact Or.inr (Or.inl rfl)
   · intro b present frame
     change b ∈ ([Ast.Semantik.Befehl.rufe Ast.Semantik.mainName [] none] : List Ast.Semantik.Befehl) at present
     obtain rfl := List.mem_singleton.mp present

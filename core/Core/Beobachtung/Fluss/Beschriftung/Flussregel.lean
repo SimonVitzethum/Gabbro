@@ -11,6 +11,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
+public import Core.Ast.Semantik.Runtime.Unterbrechung.Beweise
 
 @[expose] public section
 
@@ -168,6 +169,9 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .bindeRegion _ _ =>
     (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
     (∀ i, oeffentlich (β.lokal pc i) = true)
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. =>
+    (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
+    (∀ i, oeffentlich (β.lokal (pc + 1) i) = true → oeffentlich (β.lokal pc i) = true)
   -- An access instruction has no label rule yet: the label rule of a memory event is MK-13, and a form the
   -- model has no rule for is refused (AGENTS.md §2), so the labelled flow rule is never accepted for it.
   | .zugriff _ => False
@@ -183,7 +187,11 @@ theorem Befehl.FlussRegel.privat {β : Beschriftung} {pc : Nat} {f : Befehl} (re
     f.Privat := by
   cases f <;> first
     | exact Or.inl rfl
-    | exact Or.inr rfl
+    | exact Or.inr (Or.inl rfl)
+    | exact Or.inr (Or.inr (Or.inl rfl))
+    | exact Or.inr (Or.inr (Or.inr (Or.inl rfl)))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))
     | exact False.elim regel
 
 /-- **Soundness of the checker's flow rule, instruction by instruction.** -/
@@ -271,6 +279,12 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
     exact substringSicht β pc basis capacity regel.1 regel.2.1 regel.2.2.1 regel.2.2.2.1
       regel.2.2.2.2
   | bindeRegion receiver init => exact bindeRegionSicht β pc receiver init regel.1 regel.2
+  | maskiere vektor aus => exact maskiereSicht β pc vektor aus regel.1 regel.2
+  | prioritaet grenze => exact prioritaetSicht β pc grenze regel.1 regel.2
+  | sendeUnterbrechung vektor kern =>
+    exact sendeUnterbrechungSicht β pc vektor kern regel.1 regel.2
+  | leiteLeitung leitung kern prioritaet =>
+    exact leiteLeitungSicht β pc leitung kern prioritaet regel.1 regel.2
   | zugriff form => exact False.elim regel
 
 /-- Per instruction family: the rule is sound for every declaration. -/

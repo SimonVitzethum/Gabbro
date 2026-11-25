@@ -60,9 +60,9 @@ theorem liesRecord_cong : (types : List (Ty .value)) →
 theorem maskiere_anhaengen {l₀ l₁ : Nat → Etikett} :
     ∀ (n : Nat) (vs : List (Option Dynamisch)) (xs ys : List (Option Dynamisch)),
       (∀ j, oeffentlich (l₁ (n + j)) = true → oeffentlich (l₀ j) = true) →
-      maskiere l₀ 0 xs = maskiere l₀ 0 ys →
+      maskiereLokal l₀ 0 xs = maskiereLokal l₀ 0 ys →
       vs.length = n →
-      maskiere l₁ 0 (vs ++ xs) = maskiere l₁ 0 (vs ++ ys)
+      maskiereLokal l₁ 0 (vs ++ xs) = maskiereLokal l₁ 0 (vs ++ ys)
   | 0, vs, xs, ys, hL, e, hlen => by
       have hvn : vs = [] := by
         cases vs with
@@ -72,7 +72,7 @@ theorem maskiere_anhaengen {l₀ l₁ : Nat → Etikett} :
             omega
       subst vs
       simpa only [List.nil_append, Nat.zero_add] using
-        (maskiere_gleich_mono (fun i hi => hL i (by simpa only [Nat.zero_add] using hi))
+        (maskiereLokal_gleich_mono (fun i hi => hL i (by simpa only [Nat.zero_add] using hi))
           0 xs ys e)
   | n + 1, vs, xs, ys, hL, e, hlen => by
       cases vs with
@@ -87,10 +87,10 @@ theorem maskiere_anhaengen {l₀ l₁ : Nat → Etikett} :
               have hz : (n + j) + 1 = n + 1 + j := by omega
               exact hL j (by simpa only [hz] using hj))
             e (by omega)
-          have tailEq : maskiere l₁ 1 (vs' ++ xs) = maskiere l₁ 1 (vs' ++ ys) := by
+          have tailEq : maskiereLokal l₁ 1 (vs' ++ xs) = maskiereLokal l₁ 1 (vs' ++ ys) := by
             simpa only [Nat.zero_add, maskiere_verschoben] using ih
           rw [List.cons_append, List.cons_append]
-          simp only [maskiere, Nat.zero_add, tailEq]
+          simp only [maskiereLokal, Nat.zero_add, tailEq]
 
 /-- The view after `baueArray`: it writes one temporary, so the shared write rule applies. -/
 theorem baueArraySicht : BaueArraySichtAussage := by
@@ -175,7 +175,7 @@ theorem sicht_bindeTupel (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0
           (((((r.temp source).bind (wertAls (tupleType types))).map fun product =>
               tupleLocals types product bind).getD []).reverse ++ r.lokale) } :=
   rfl
@@ -198,8 +198,8 @@ theorem bindeTupelSicht : BindeTupelSichtAussage := by
   have vsEq : vs₁ = vs₂ := by
     dsimp only [vs₁, vs₂]
     rw [tempPub quelle hQ]
-  have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 (vs₁.reverse ++ r₁.lokale) =
-      maskiere (β.lokal (r₁.pc + 1)) 0 (vs₂.reverse ++ r₂.lokale) := by
+  have hLe : maskiereLokal (β.lokal (r₁.pc + 1)) 0 (vs₁.reverse ++ r₁.lokale) =
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 (vs₂.reverse ++ r₂.lokale) := by
     rw [← vsEq]
     have hlen : vs₁.length = 0 ∨ vs₁.length = behalteneTupel types bind := by
       dsimp only [vs₁]
@@ -219,9 +219,9 @@ theorem bindeTupelSicht : BindeTupelSichtAussage := by
               rw [hcase] at h0
               cases h0
         rw [hnil]
-        change maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-          maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale
-        exact maskiere_gleich_mono (fun i hi => hL i hi) 0 r₁.lokale r₂.lokale lokEq
+        change maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+          maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale
+        exact maskiereLokal_gleich_mono (fun i hi => hL i hi) 0 r₁.lokale r₂.lokale lokEq
     | inr hn =>
         apply maskiere_anhaengen (l₀ := β.lokal r₁.pc) (l₁ := β.lokal (r₁.pc + 1))
           vs₁.length vs₁.reverse r₁.lokale r₂.lokale
@@ -243,7 +243,7 @@ theorem sicht_setzeRecordFeld (β : Beschriftung) (r : Rahmen) (live : Nat → B
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0
           (r.lokale.set indexLocal (do
             let old ← r.lokale[indexLocal]?.join.bind
               (wertAls (recordValueType name labels types))
@@ -273,7 +273,7 @@ theorem setzeRecordFeldSicht : SetzeRecordFeldSichtAussage := by
   have hV : oeffentlich (β.lokal (r₁.pc + 1) indexLocal) = true → upd₁ = upd₂ := by
     intro hi
     have hJoin : r₁.lokale[indexLocal]?.join = r₂.lokale[indexLocal]?.join :=
-      maskiere_eintrag 0 r₁.lokale r₂.lokale indexLocal lokEq (by
+      maskiereLokal_eintrag 0 r₁.lokale r₂.lokale indexLocal lokEq (by
         simpa only [Nat.zero_add] using hLok hi)
     have hTemp : r₁.temp source = r₂.temp source := tempPub source (hIndex hi)
     change (do

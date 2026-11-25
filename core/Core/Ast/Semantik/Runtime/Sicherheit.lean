@@ -16,7 +16,7 @@ def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
 
 theorem Befehl.sicher (p : Fragment) (platform : Plattform)
     (keine : p.klauseln.invariant = []) (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
   intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
   obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute h
@@ -45,7 +45,7 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
 
 /-- The local value transfer leaves the question ledger and its authority unchanged. -/
 theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
   intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
   obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute h
@@ -53,7 +53,7 @@ theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl)
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
     (keine : p.klauseln.invariant = []) (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
   ⟨b.sicher p platform keine h, b.antwortSicher p platform h⟩
 

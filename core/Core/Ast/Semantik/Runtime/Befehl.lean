@@ -71,6 +71,10 @@ inductive Befehl where
   | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
   | bindeRegion (receiver : Nat) (init : RegionInitializer)
   | zugriff (form : Zugriffsform)
+  | maskiere (vektor : Nat) (aus : Bool)
+  | prioritaet (grenze : Nat)
+  | sendeUnterbrechung (vektor kern : Nat)
+  | leiteLeitung (leitung kern prioritaet : Nat)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _slot => false) : Rahmen :=
@@ -266,6 +270,10 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
       environment := (name, abi, row) :: frame.environment }
   | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
   | .zugriff form, frame => form.uebertrag frame 0
+  | .maskiere .., frame => { frame with pc := frame.pc + 1 }
+  | .prioritaet .., frame => { frame with pc := frame.pc + 1 }
+  | .sendeUnterbrechung .., frame => { frame with pc := frame.pc + 1 }
+  | .leiteLeitung .., frame => { frame with pc := frame.pc + 1 }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

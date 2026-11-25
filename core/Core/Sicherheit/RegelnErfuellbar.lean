@@ -38,7 +38,7 @@ private theorem arithmetik_schritt
     (s : Ast.Semantik.Zustand) (b : Befehl)
     (normal : (hw.angebot t).crash = false) (bereit : KannSchreiten hw t eintritt s)
     (kopf : (p.einheit platform).system.kopf s eintritt = some b)
-    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl) :
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)) :
     Lauffolge (p.einheit platform) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
       (some (b.nach eintritt s)) :=
   .schritt (.kontext normal bereit

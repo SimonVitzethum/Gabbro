@@ -31,17 +31,24 @@ def Befehl.regel (b : Befehl) : Regel := ⟨b.impl, b.ideal⟩
 def Befehl.plan (b : Befehl) (r : Rahmen) (v : Int) : Plan :=
   b.form.plan r v
 
-/-- **A frame-only instruction**: it has the class `lokal` or `ruf`. Since MK-04 an instruction can have an
+/-- **A frame-only instruction**: it has a frame-only class (`lokal`, `ruf` or one of the
+    interrupt-control classes of MK-20). Since MK-04 an instruction can have an
     access class, so a generic proof over all instructions splits on the class: the frame-only part is stated
     for the instructions that satisfy this predicate, the access part is the duty of its class
     (`Klasse/Pflichten`) or a pinned statement of the access instructions (`Atom/Aussagen`). -/
-def Befehl.Privat (b : Befehl) : Prop := b.klasse = .lokal ∨ b.klasse = .ruf
+def Befehl.Privat (b : Befehl) : Prop :=
+  b.klasse = .lokal ∨ b.klasse = .ruf ∨ b.klasse = .maskiere ∨ b.klasse = .prioritaet ∨
+    b.klasse = .sendeUnterbrechung ∨ b.klasse = .leiteLeitung
 
-/-- **Every instruction that is no access instruction is frame-only.** -/
+/-- **Every instruction that is no access instruction and no interrupt-control instruction is frame-only.** -/
 theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugriff form) : b.Privat := by
   cases b <;> first
     | exact Or.inl rfl
-    | exact Or.inr rfl
+    | exact Or.inr (Or.inl rfl)
+    | exact Or.inr (Or.inr (Or.inl rfl))
+    | exact Or.inr (Or.inr (Or.inr (Or.inl rfl)))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))
     | exact absurd rfl (h _)
 
 /-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the
@@ -49,7 +56,7 @@ theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugrif
 theorem Befehl.uebertrag_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (live : Nat → Bool) (v : Int) :
     b.uebertrag r live v = b.auswerten r live := by
   cases b with
-  | zugriff form => rcases h with h | h <;> cases form <;> cases h
+  | zugriff form => rcases h with h | h | h | h | h | h <;> cases form <;> cases h
   | _ => rfl
 
 /-- **The state after the step of a frame-only form**: the transfer of the form is the evaluation of the
@@ -65,18 +72,32 @@ theorem Befehl.nach_form (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand)
 theorem Befehl.plan_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (v : Int) :
     b.plan r v = Semantik.plan := by
   show b.klasse.plan (b.operand r) v = Semantik.plan
-  rcases h with h | h <;> simp only [h, Wirkungsklasse.plan]
+  rcases h with h | h | h | h | h | h <;> simp only [h, Wirkungsklasse.plan]
 
 /-- The ideal step of a form of a frame-only class: its private plan and its frame transfer. -/
-theorem Schrittform.ideal_privat (F : Schrittform) (h : F.klasse = .lokal ∨ F.klasse = .ruf)
+theorem Schrittform.ideal_privat (F : Schrittform)
+    (h : F.klasse = .lokal ∨ F.klasse = .ruf ∨ F.klasse = .maskiere ∨ F.klasse = .prioritaet ∨
+      F.klasse = .sendeUnterbrechung ∨ F.klasse = .leiteLeitung)
     (c : Kontext) (s : Zustand) (w : PUnit.{1}) (plans : List Plan) (u : Zustand) :
     F.ideal c s w plans u ↔ plans = [Semantik.plan] ∧ u = F.nach c s 0 := by
   obtain ⟨k, o, t⟩ := F
-  rcases h with h | h
+  rcases h with h | h | h | h | h | h
   · change k = .lokal at h
     subst h
     exact Iff.rfl
   · change k = .ruf at h
+    subst h
+    exact Iff.rfl
+  · change k = .maskiere at h
+    subst h
+    exact Iff.rfl
+  · change k = .prioritaet at h
+    subst h
+    exact Iff.rfl
+  · change k = .sendeUnterbrechung at h
+    subst h
+    exact Iff.rfl
+  · change k = .leiteLeitung at h
     subst h
     exact Iff.rfl
 
@@ -106,10 +127,12 @@ theorem Befehl.impl_aktion_intern (b : Befehl) {c : Kontext} {s : Zustand} {w : 
   · cases b with
     | zugriff z =>
       cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩ <;>
-        (have e := (List.cons.inj same).1
-         subst e
-         rfl)
-    | _ => exact absurd (by first | exact Or.inl rfl | exact Or.inr rfl) hp
+      · have e := (List.cons.inj same).1
+        subst e
+        rfl
+    | maskiere _ _ | prioritaet _ | sendeUnterbrechung _ _ | leiteLeitung _ _ _ =>
+      exact absurd (Befehl.privat_von_kein_zugriff (fun _ eq => by cases eq)) hp
+    | _ => exact absurd (by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)) hp
 
 /-- The same, for a rule that is the rule of the instruction. -/
 theorem Befehl.regel_aktion_intern (b : Befehl) {R : Regel} (hR : R = b.regel) {c : Kontext} {s : Zustand}
@@ -120,7 +143,7 @@ theorem Befehl.regel_aktion_intern (b : Befehl) {R : Regel} (hR : R = b.regel) {
 /-- A frame-only instruction is in no access family. -/
 theorem Befehl.privat_ne_zugriff_klasse (b : Befehl) (h : b.Privat) (z : Zugriffsform) : b ≠ .zugriff z := by
   rintro rfl
-  rcases h with h | h <;> cases z <;> cases h
+  rcases h with h | h | h | h | h | h <;> cases z <;> cases h
 
 abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 

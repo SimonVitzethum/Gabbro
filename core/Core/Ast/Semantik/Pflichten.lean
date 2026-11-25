@@ -14,7 +14,7 @@ open Maschine Annahme Katalog
 open Ideal (RegelBestimmt RegelFortschritt)
 
 theorem Befehl.lokal (E : Einheit) (b : Befehl) (rule : E.system.regel b = b.regel)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) : RegelLokal E b := by
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) : RegelLokal E b := by
   intro c s u w p step
   rw [rule] at step
   have same : [p] = [Semantik.plan] := ((b.ideal_privat h c s w [p] u).1 step).1
@@ -22,14 +22,14 @@ theorem Befehl.lokal (E : Einheit) (b : Befehl) (rule : E.system.regel b = b.reg
   exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
 
 theorem Befehl.bestimmt (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) : RegelBestimmt b.regel :=
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) : RegelBestimmt b.regel :=
   fun c s w es es' s1 s2 left right =>
     let l := (b.ideal_privat h c s w es s1).1 left
     let r := (b.ideal_privat h c s w es' s2).1 right
     ⟨l.1.trans r.1.symm, l.2.trans r.2.symm⟩
 
 theorem Befehl.fortschritt (p : Fragment) (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     RegelFortschritt (system p.code) b :=
   fun s c _ => Or.inl ⟨(), [Semantik.plan], b.nach c s, (b.ideal_privat h c s () [Semantik.plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩
 
@@ -40,7 +40,7 @@ theorem Befehl.vollzug (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     fun _ empty => (List.not_mem_nil empty).elim, [], _, .intern, .nil _, rfl⟩
 
 theorem Befehl.komponierbar (p : Fragment) (platform : Plattform) (b : Befehl)
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     I.RegelKomponierbar (p.einheit platform).einrichtung (p.einheit platform).system b := by
   intro t s c w plans u _ _ step
   obtain ⟨same, after⟩ : plans = [Semantik.plan] ∧ u = b.nach c s := (b.ideal_privat h c s w plans u).1 step
@@ -49,7 +49,7 @@ theorem Befehl.komponierbar (p : Fragment) (platform : Plattform) (b : Befehl)
 
 theorem Befehl.vollzug_genau (b : Befehl) {e t c s u w p spur s'}
     (rule : b.impl c s w [p] u) (execute : FuehrtSchrittAus e t c s u p spur s')
-    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     spur = ⟨[], []⟩ ∧ s' = b.nach c s := by
   have transfer := (b.impl_privat h c s w [p] u).1 rule
   have same : [p] = [Semantik.plan] := transfer.1

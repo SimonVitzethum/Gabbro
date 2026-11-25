@@ -97,7 +97,7 @@ theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (fram
 /-- Every instruction of the example is frame-only. -/
 theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 /-- The example's linked unit is accepted. -/
 theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.plattform) := by
@@ -216,7 +216,7 @@ theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.
   have hc : modulDef.fragment.code =
       [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid] := rfl
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+  rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 /-- The defining module alone is accepted. -/
 theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by

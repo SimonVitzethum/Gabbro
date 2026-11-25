@@ -88,6 +88,22 @@ theorem zugriffsschritt_liest (F : Schrittform) (c : Kontext) (s u : Zustand) {p
       simp only [Wirkungsklasse.plan] at hl
       rw [hleer.1] at hl
       cases hl
+    | maskiere =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
+    | prioritaet =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
+    | sendeUnterbrechung =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
+    | leiteLeitung =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
 
 /-- **Composability of the accepted steps of an access instruction** (`ZugriffKomponierbarAussage`).
     The step changes the machine frame only locally, its recorded labels all read, and its action is

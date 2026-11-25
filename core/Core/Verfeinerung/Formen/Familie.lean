@@ -37,6 +37,7 @@ def Befehl.familie : Befehl → LokalFamilie
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung .. => .variante
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .text
   | .zugriff .. => .zugriff
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => .kontrollfluss
 
 /-- **Every instruction is a form of its class, embedded in the unit of every fragment**: the unit
     reads its rule from the instruction's step form and memory through the elaborated model. The class

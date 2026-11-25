@@ -24,7 +24,7 @@ structure Quellform (category : Category) (Arguments : Type) where
     intro args
     first
       | exact Or.inl rfl
-      | exact Or.inr rfl
+      | exact Or.inr (Or.inl rfl)
       | (apply Befehl.privat_von_kein_zugriff; intro f h; cases h)
 
 variable {category : Category} {Arguments : Type} (form : Quellform category Arguments)

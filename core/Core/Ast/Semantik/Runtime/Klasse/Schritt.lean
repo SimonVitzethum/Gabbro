@@ -61,8 +61,8 @@ def Operand.fragePlan (o : Operand) : Plan :=
 /-- **The plan of one step of class `k`** at the operand `o`, where `v` is the value the memory model
     returned for a read. A read records its label with the value read; a write names its cell in the
     footprint with the value and the mode; an update is ONE event that reads `v` and writes the operand's
-    value; a lock action and a question name their lock and question; a private step and a refused access
-    have the private plan. -/
+    value; a lock action and a question name their lock and question; a private step, an
+    interrupt-control step and a refused access have the private plan. -/
 def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .lokal, _o, _v => Semantik.plan
   | .ruf, _o, _v => Semantik.plan
@@ -76,11 +76,15 @@ def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .sperre a, o, _v =>
     ⟨.sperre o.sperre a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
   | .frage, o, _v => o.fragePlan
+  | .maskiere, _o, _v => Semantik.plan
+  | .prioritaet, _o, _v => Semantik.plan
+  | .sendeUnterbrechung, _o, _v => Semantik.plan
+  | .leiteLeitung, _o, _v => Semantik.plan
 
 /-- **The shape of the plans of a class**: the only plans a step of the class may have. The footprint of the
-    step on the shared state is read off the class alone: nothing for a private step, one read label for a
-    load, one written cell for a store, one update label for an atomic update, one lock action, one
-    question. -/
+    step on the shared state is read off the class alone: nothing for a private step or an
+    interrupt-control step, one read label for a load, one written cell for a store, one update
+    label for an atomic update, one lock action, one question. -/
 def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
   | .lokal, p => p = Semantik.plan
   | .ruf, p => p = Semantik.plan
@@ -94,11 +98,16 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
       ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩] ∨ p.lesen = [⟨.lesen, z, m, v, v⟩]
   | .sperre a, p => (∃ l : Nat, p.aktion = .sperre l a) ∧ p.lesen = [] ∧ p.fuss = []
   | .frage, p => (∃ q : Frage, p.aktion = .frage q) ∧ p.lesen = [] ∧ p.fuss = []
+  | .maskiere, p => p = Semantik.plan
+  | .prioritaet, p => p = Semantik.plan
+  | .sendeUnterbrechung, p => p = Semantik.plan
+  | .leiteLeitung, p => p = Semantik.plan
 
 /-- Does a step of the class read a value from the memory model? Only a load and an atomic update do. -/
 def Wirkungsklasse.liest : Wirkungsklasse → Bool
   | .lesen .. | .rmw .. => true
-  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage => false
+  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- The value a step of the class may take from the memory model: any value for a class that reads, and
     the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
@@ -107,7 +116,8 @@ def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
 
 /-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `Zustand.fragenBefugt`): the right
     on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
-    the question and the device authority of a register access for a question. The frame-only classes and the lock actions need none: a lock action that
+    the question and the device authority of a register access for a question. The frame-only classes, the
+    interrupt-control classes and the lock actions need none: a lock action that
     the protocol does not allow does not execute, it waits or never runs. -/
 def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
   | .lokal, _o, _s, _c => True
@@ -117,6 +127,10 @@ def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext �
   | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
   | .sperre _a, _o, _s, _c => True
   | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.fragenBefugt c q
+  | .maskiere, _o, _s, _c => True
+  | .prioritaet, _o, _s, _c => True
+  | .sendeUnterbrechung, _o, _s, _c => True
+  | .leiteLeitung, _o, _s, _c => True
 
 /-- **A step form**: a class, the operand its frame supplies and the frame transfer it applies. Everything
     else about the step is the class's. -/
@@ -146,6 +160,7 @@ noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Z
         if e = s.zugriffsereignis (F.operand (s.lokal c)).ort then s.adresse c (F.operand (s.lokal c)).ort
         else s.buchung.adresse e }
   | .lokal | .ruf | .sperre .. | .frage => s.buchung
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => s.buchung
 
 /-- The state after the step of an access class: the frame transfer and the booked ledger. -/
 noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
@@ -163,13 +178,17 @@ def Schrittform.zugriffsschritt (F : Schrittform) (c : Kontext) (s : Zustand) (p
   (F.klasse.befugt (F.operand (s.lokal c)) s c ∧
     ∃ v : Int, F.klasse.Lesewert v ∧ plans = [F.plan (s.lokal c) v] ∧ u = F.zugriffNach c s v)
 
-/-- **The ideal step of a form, from its class.** A private class has one private plan and its frame
-    transfer; an access class has the step above. -/
+/-- **The ideal step of a form, from its class.** A private or interrupt-control class has one private plan
+    and its frame transfer; an access class has the step above. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   match F.klasse with
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .maskiere => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .prioritaet => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .sendeUnterbrechung => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .leiteLeitung => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
 
 /-- **The implementation step of a form.** Every class of this package has ONE linearisation point: the
@@ -225,6 +244,7 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
     ignores that value; every other instruction ignores it and evaluates at the instruction boundary. -/
@@ -243,6 +263,7 @@ def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : 
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => b.auswerten r live
 
 /-- **The step form of an instruction**: its class, operand and transfer. -/
 def Befehl.form (b : Befehl) : Schrittform := ⟨b.klasse, b.operand, b.uebertrag⟩

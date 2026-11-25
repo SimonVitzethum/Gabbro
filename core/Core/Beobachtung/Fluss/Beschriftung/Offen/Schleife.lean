@@ -16,7 +16,7 @@ theorem sicht_pcZaehler_ansicht (β : Beschriftung) (r : Rahmen) (q : Nat) (z : 
       { r.sicht β with
         pc := q
         temp := fun s => if oeffentlich (β.temp q s) = true then r.temp s else none
-        lokale := maskiere (β.lokal q) 0 r.lokale
+        lokale := maskiereLokal (β.lokal q) 0 r.lokale
         zaehler := Function.update r.zaehler r.pc z } := rfl
 
 /-- A counter-touching program-counter change keeps equal views when the labels at the new
@@ -37,8 +37,8 @@ theorem sicht_pcZaehler (β : Beschriftung) (q₁ q₂ : Nat) (z : Option Nat)
     · simp only [hp, if_true]
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal q₁) 0 r₁.lokale = maskiere (β.lokal q₁) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal q₁) 0 r₁.lokale = maskiereLokal (β.lokal q₁) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   have hZaehler : r₁.zaehler = r₂.zaehler := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).zaehler) h
   rw [sicht_pcZaehler_ansicht, sicht_pcZaehler_ansicht, h, hTe, hLe, hZaehler, pcEq]
@@ -97,7 +97,7 @@ theorem sicht_lokal0 (β : Beschriftung) (r₁ r₂ : Rahmen)
     r₁.lokale.head?.join = r₂.lokale.head?.join := by
   obtain ⟨_, _, lokEq⟩ := sicht_oeffentliche_teile h
   simpa only [List.head?_eq_getElem?] using
-    (maskiere_eintrag 0 r₁.lokale r₂.lokale 0 lokEq h0)
+    (maskiereLokal_eintrag 0 r₁.lokale r₂.lokale 0 lokEq h0)
 
 /-- `whileTest`: a public test forks public control; both successors keep the labels at
     least as secret and both counter-reading branches are handled by `passSicht`. -/
@@ -128,7 +128,7 @@ theorem sicht_forAnfang_push (β : Beschriftung) (r : Rahmen) (initial : Dynamis
       { r.sicht β with
         pc := next
         temp := fun s => if oeffentlich (β.temp next s) = true then r.temp s else none
-        lokale := maskiere (β.lokal next) 0 (some initial :: r.lokale)
+        lokale := maskiereLokal (β.lokal next) 0 (some initial :: r.lokale)
         obergrenzen := Function.update r.obergrenzen next (some b)
         zaehler := Function.update r.zaehler next (some d) } := rfl
 
@@ -142,7 +142,7 @@ theorem sicht_forAnfang_push_pure (β : Beschriftung) (r : Rahmen) (initial : Dy
       { r.sicht β with
         pc := next
         temp := fun s => if oeffentlich (β.temp next s) = true then r.temp s else none
-        lokale := maskiere (β.lokal next) 0 (some initial :: r.lokale)
+        lokale := maskiereLokal (β.lokal next) 0 (some initial :: r.lokale)
         obergrenzen := Function.update r.obergrenzen next (some b)
         zaehler := Function.update r.zaehler next (some d) } := by
   change ({ r with
@@ -249,7 +249,7 @@ theorem sicht_forNaechster_schritt (β : Beschriftung) (r : Rahmen) (q : Nat)
       { r.sicht β with
         pc := q
         temp := fun s => if oeffentlich (β.temp q s) = true then r.temp s else none
-        lokale := maskiere (β.lokal q) 0 loks } := rfl
+        lokale := maskiereLokal (β.lokal q) 0 loks } := rfl
 
 theorem sicht_forNaechster_schritt_pure (β : Beschriftung) (r : Rahmen) (q : Nat)
     (loks : List (Option Dynamisch)) :
@@ -257,7 +257,7 @@ theorem sicht_forNaechster_schritt_pure (β : Beschriftung) (r : Rahmen) (q : Na
       { r.sicht β with
         pc := q
         temp := fun s => if oeffentlich (β.temp q s) = true then r.temp s else none
-        lokale := maskiere (β.lokal q) 0 loks } := by
+        lokale := maskiereLokal (β.lokal q) 0 loks } := by
   change ({ r with pc := q, lokale := loks } : Rahmen).sicht β = _
   rfl
 

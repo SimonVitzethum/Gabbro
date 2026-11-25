@@ -113,6 +113,10 @@ theorem Schrittform.zugriffsschritt_treu (F : Schrittform) (hl : F.klasse.liest 
     | schreiben _ => cases hl
     | sperre _ => cases hl
     | frage => cases hl
+    | maskiere => cases hl
+    | prioritaet => cases hl
+    | sendeUnterbrechung => cases hl
+    | leiteLeitung => cases hl
 
 /-- The class rule of a reading form is faithful to the class step. -/
 theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : AtomarTreu F F.regel := by
@@ -126,6 +130,10 @@ theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : 
   | schreiben _ => cases hl
   | sperre _ => cases hl
   | frage => cases hl
+  | maskiere => cases hl
+  | prioritaet => cases hl
+  | sendeUnterbrechung => cases hl
+  | leiteLeitung => cases hl
 
 /-- **Atomic simulation** (the proof of `AtomarSimAussage`). -/
 theorem atomarSim : AtomarSimAussage := by
