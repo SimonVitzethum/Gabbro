@@ -297,4 +297,57 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
           | schritt _ => exact Or.inr ⟨_, _, eq1, rfl⟩
         | wartet _ eq2 _ => exact Or.inr ⟨_, _, eq1, eq2⟩
 
+/-- The device unit carries empty bounds. -/
+theorem geraete_schranken_leer (d : Denotation k scope) :
+    (d.unit locals).schranken = .leer := by
+  cases d <;> rfl
+
+/-- Memory traces over outside-only labels contribute no low observation. -/
+theorem geraete_speicher_still {anfang : Nat → UInt8} {f : SpeicherAkteur Nat}
+    {g g' : SpeicherGraph Nat UInt8}
+    {ls : List (Speicher.Etikett Nat UInt8)}
+    {es : List (SpeicherAkteur Nat × Speicher.Etikett Nat UInt8)}
+    (folge : Speicherfolge anfang f g ls es g')
+    (aussen : ∀ l ∈ ls, l.art = .aussen) :
+    es.filterMap (speicherBeob (d.unit locals).etiketten) = [] := by
+  induction folge with
+  | nil _ => rfl
+  | cons vor hs nach ih =>
+    cases vor with
+    | ohne _ =>
+      simp only [List.nil_append]
+      have hart : l.art = .aussen := aussen l List.mem_cons_self
+      have hnone : speicherBeob (d.unit locals).etiketten (f, l) = none := by
+        simp only [speicherBeob, hart]
+      simp only [hnone, List.filterMap_cons_none, ih (fun l h => aussen l (List.mem_cons_of_mem _ h))]
+    | erste mem _ _ =>
+      exact absurd (aussen _ List.mem_cons_self) mem
+
+/-- A device context tick appends no commit, output or time observation. -/
+theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Praediktor}
+    {t : Nat} {c : Kontext} {s n : State} {spur : SchrittSpur Nat UInt8}
+    (hbuch : s.buchung = n.buchung)
+    (hkopf : (d.unit locals).system.kopf s c = some ()) :
+    kontextBeob ρ predictor t c s n spur = [] := by
+  have hfluss : (d.unit locals).fluss = .leer := geraete_fluss_leer d
+  have hcommit : commitBeob (d.unit locals).katalog.plattform s n = [] := by
+    simp only [commitBeob, hbuch, List.drop_length, List.filterMap_nil]
+  have hausgabe : ausgabeBeob (d.unit locals) c (s.lokal c) (n.lokal c) = [] := by
+    simp only [ausgabeBeob, hfluss, Flussdaten.leer, Flussdaten.ausgaben,
+      Flussdaten.ausgabeZuwachs, List.drop_nil, List.filter_nil, List.map_nil]
+  have hzeit : zeitBeob ρ c (s.lokal c) (n.lokal c) = [] := by
+    have hschrank : (d.unit locals).schranken = .leer := geraete_schranken_leer d
+    simp only [zeitBeob, hschrank, Schrankendaten.leer, Schrankendaten.zeitstand,
+      List.filter_nil, List.filterMap_nil]
+  have hkonstant : (d.unit locals).fluss.konstantzeit () = false := by
+    simp only [hfluss, Flussdaten.leer, Flussdaten.konstantzeit]
+  have hspec : (d.unit locals).fluss.spekulativ () (s.lokal c) predictor = [] := by
+    simp only [hfluss, Flussdaten.leer, Flussdaten.spekulativ]
+  have hspek : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe [] = [] := by
+    cases hf : (d.unit locals).katalog.plattform.spekulationshuelle.fenster with
+    | none => rfl
+    | some _ => rfl
+  simp only [kontextBeob, hcommit, hausgabe, hzeit, hkopf, hkonstant, hspec, hspek,
+    Bool.false_eq_true, if_false, List.map_nil, List.append_nil]
+
 end Gabbro.Core.Beobachtung
