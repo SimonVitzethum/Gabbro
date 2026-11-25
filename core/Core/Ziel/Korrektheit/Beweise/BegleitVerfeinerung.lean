@@ -13,9 +13,11 @@ public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 public import Core.Verfeinerung.Erfuellbar
 public import Core.Fortschritt.Verhungern
+public import Core.Fortschritt.VerdraengungLauf
 public import Core.Annahme.Annahme
 public import Core.Maschine.Start
 
@@ -99,22 +101,45 @@ theorem ZielFXAkzeptiertAussage.nichtTrivial :
   change some z = none at h0
   cases h0
 
-/-- The premises of progress hold jointly: an accepted elaborated unit has a run on a hardware-fair
-    history. Feeds: `trivial_erfuellbar`. -/
+/-- The premises of progress hold jointly: an accepted elaborated unit has a scheduler-fair
+    run without preemption on a hardware-fair history. Feeds: `einheitVon_fair_lauf_erfuellbar`. -/
 theorem FortschrittAkzeptiertAussage.erfuellbar :
-    ∃ (P : Plattform) (t : Ast.Unit) (H : Umgebung) (hw : HwLauf)
+    ∃ (P : Plattform) (t : Ast.Unit) (H : Umgebung)
       (ρ : Maschine.Lauf (einheitVon P t)),
       Annahme.Akzeptiert (einheitVon P t) ∧ Maschine.Laeufe (einheitVon P t) H ρ ∧
-        FairLaeufe (einheitVon P t).katalog H hw := by
-  obtain ⟨P, t, H, hw, ρ, akz, run, fair⟩ := trivial_erfuellbar
-  exact ⟨P, t, H, hw, ρ, akz, run, fair⟩
+        FairLaeufe (einheitVon P t).katalog H ρ.hw ∧
+        Maschine.SchedulerFair (einheitVon P t) ρ ∧
+        Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ := by
+  obtain ⟨H, ρ, akz, run, fair, sched, ret⟩ :=
+    einheitVon_fair_lauf_erfuellbar Plattform.x86_64 trivialUnit trivial_akzeptiert
+  exact ⟨Plattform.x86_64, trivialUnit, H, ρ, akz, run, fair, sched, ret⟩
 
-/-- The no-hang leg is load-bearing: the starvation run has a continuously enabled, dispatched
-    context that is never discharged. Feeds: `hang_B`. -/
-theorem FortschrittAkzeptiertAussage.nichtTrivial :
+/-- Scheduler fairness is load-bearing: without it a context hangs although the run is
+    admissible, the history is hardware-fair, and no preemption ever occurs. Feeds: the
+    starvation run `hang_B` over an admissible implementation run. -/
+theorem FortschrittAkzeptiertAussage.nichtTrivial_ohne_scheduler :
     ∃ (E : Maschine.Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit)
-      (ρ : Maschine.Lauf E) (η : I.Lauf E) (c : Kontext), I.Haengt E ρ η c :=
-  ⟨E_w dispatch2, ρAB, ηAB, B, hang_B⟩
+      (H : Umgebung) (ρ : Maschine.Lauf E) (η : I.Lauf E) (c : Kontext),
+      Maschine.Laeufe E H ρ ∧ FairLaeufe E.katalog H ρ.hw ∧
+        Maschine.VerdraengungKehrtZurueck E ρ ∧ I.Haengt E ρ η c := by
+  obtain ⟨s, zul⟩ := Katalog.zulStart_erfuellbar fair2.hardware wBildV_gueltig
+  obtain ⟨zeit, init⟩ :=
+    Zeitlauf.existiert (Lauffolge (E_w dispatch2) hw2) ((E_w dispatch2).laden s (h2.lade (E_w dispatch2).bild))
+  refine ⟨E_w dispatch2, h2, ⟨s, hw2, zeit⟩, ηAB, B,
+    ⟨fair2.hardware, fair2.konform, zul, init⟩, fair2, ?_, hang_B⟩
+  exact Maschine.verdraengung_ohne_meldung (E_w dispatch2) hw2 (fun i => rfl) _
+    rfl
+
+/-- The return premise is load-bearing: preemption without return hangs a context although
+    the run is admissible, the history is hardware-fair, and the run is scheduler-fair.
+    Feeds: `hangV`, `nretV`. -/
+theorem FortschrittAkzeptiertAussage.nichtTrivial_ohne_rueckkehr :
+    ∃ (E : Maschine.Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit)
+      (H : Umgebung) (ρ : Maschine.Lauf E) (η : I.Lauf E) (c : Kontext),
+      Maschine.Laeufe E H ρ ∧ FairLaeufe E.katalog H ρ.hw ∧
+        Maschine.SchedulerFair E ρ ∧ I.Haengt E ρ η c ∧
+        ¬ Maschine.VerdraengungKehrtZurueck E ρ :=
+  ⟨E_v, HV, ρV, ηV, A, laufV, fairV, sfV, hangV, nretV⟩
 
 /-- The per-form duty is discriminating: some rule's implementation step the ideal rule refuses.
     Feeds: `regelSimDiskriminiert`. -/
