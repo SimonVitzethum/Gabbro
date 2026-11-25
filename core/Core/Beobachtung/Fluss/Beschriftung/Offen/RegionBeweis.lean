@@ -1,12 +1,17 @@
 
 module
 
+public import Core.Ast.LowLevel.Execution
+public import Core.Ast.LowLevel.Proofs.Preservation
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.RegionBeweisHelpers
 
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung
+
+open Katalog Maschine
+open Ast.LowLevel (Instruction unit)
 
 /-- Source flow rules carry the noninterference duty for every low-level instruction:
     the only context step is the instruction itself, it is silent, and the right run
