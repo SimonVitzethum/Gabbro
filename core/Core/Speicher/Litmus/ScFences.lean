@@ -73,6 +73,10 @@ def fLab (mp : Bool) : FenceEv → Etikett Bool Nat
 
 def fGraph (mp : Bool) : Graph FenceEv Bool Nat := ⟨fLab mp, fPo, fRf mp, fMo mp⟩
 
+abbrev fRlx (mp : Bool) (a : FenceEv) : Prop := (fLab mp a).modus = .rlx
+
+abbrev fSc (mp : Bool) (a : FenceEv) : Prop := (fLab mp a).modus = .sc
+
 theorem f_po_trans (a b c : FenceEv) : (fPo a b ∧ fPo b c) → fPo a c := by
   cases a <;> cases b <;> cases c <;> decide
 
@@ -134,6 +138,7 @@ theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
     cases mp <;> cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
+    show fMo mp a b ∨ fMo mp b a
     cases mp <;> cases a <;> cases b <;>
       first
         | exact Or.inl (by decide)
@@ -141,7 +146,8 @@ theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
         | exact False.elim ha
         | exact False.elim hb
         | exact False.elim (hne rfl)
-        | (simp only [Graph.ort, fGraph, fLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+        | (simp only [Graph.ort, fGraph, fLab, Art.schreibt, reduceCtorEq, if_false, if_true,
+            Bool.false_eq_true, Bool.true_eq_false] at ho; done)
 
 /-- No synchronises-with edge: a memory event is `.rlx` (not `stark`) and a barrier reads and
     writes nothing. -/
@@ -149,7 +155,8 @@ theorem f_kein_sw (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).sw a b := by
   intro h
   obtain ⟨hsa, hsta, hlb, hstb, x, hrs, hrf⟩ := h
   cases mp <;> cases a <;>
-    simp only [Graph.schreibt, Graph.modus, fGraph, fLab, Modus.stark, reduceCtorEq] at hsa hsta
+    simp only [Graph.schreibt, Graph.modus, fGraph, fLab, Art.schreibt, Modus.stark,
+      reduceCtorEq, if_false, if_true] at hsa hsta
 
 theorem f_hb_in_po {mp : Bool} {a b : FenceEv} (h : (fGraph mp).hb a b) : fPo a b :=
   transGen_von_trans (f_wf mp).po_trans
@@ -171,8 +178,10 @@ theorem f_koh (a b : FenceEv) : (fPo a b ∧ fEco b a) → False := by
 theorem f_eco_schritt {mp : Bool} {a b : FenceEv} (h : (fGraph mp).ecoSchritt a b) : fEco a b := by
   rcases h with hrf | hmo | hrb
   · revert hrf
+    show fRf mp a b → fEco a b
     cases mp <;> cases a <;> cases b <;> decide
   · revert hmo
+    show fMo mp a b → fEco a b
     cases mp <;> cases a <;> cases b <;> decide
   · rcases hrb with ⟨w, h1, h2, hne⟩
     exact f_rb_eco mp w a b ⟨h1, h2, hne⟩
@@ -187,11 +196,11 @@ theorem f_kein_psc (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).psc a b := by
   obtain ⟨hsa, hsb, hscb⟩ := h
   have hfa : a = f1 ∨ a = f2 := by
     cases mp <;> cases a <;>
-      simp only [Graph.sc, Graph.modus, fGraph, fLab, reduceCtorEq] at hsa ⊢ <;>
+      simp only [Graph.sc, Graph.modus, fGraph, fLab, reduceCtorEq, if_false, if_true] at hsa ⊢ <;>
       first | contradiction | decide
   have hfb : b = f1 ∨ b = f2 := by
     cases mp <;> cases b <;>
-      simp only [Graph.sc, Graph.modus, fGraph, fLab, reduceCtorEq] at hsb ⊢ <;>
+      simp only [Graph.sc, Graph.modus, fGraph, fLab, reduceCtorEq, if_false, if_true] at hsb ⊢ <;>
       first | contradiction | decide
   have hpo : ¬ fPo a b := by
     rcases hfa with rfl | rfl <;> rcases hfb with rfl | rfl <;> decide
@@ -202,10 +211,14 @@ theorem f_kein_psc (mp : Bool) (a b : FenceEv) : ¬ (fGraph mp).psc a b := by
       ((f_wf mp).po_trans c d b (f_hb_in_po hcd) hdb))
   · exact hpo (f_hb_in_po h₃.1)
   · revert hmo
-    rcases hfa with rfl | rfl <;> cases mp <;> cases b <;> decide
+    rcases hfa with rfl | rfl
+    · cases mp <;> cases b <;> show ¬ fMo mp f1 b <;> decide
+    · cases mp <;> cases b <;> show ¬ fMo mp f2 b <;> decide
   · obtain ⟨w, hrf, _, _⟩ := hrb
     revert hrf
-    rcases hfa with rfl | rfl <;> cases mp <;> cases w <;> decide
+    rcases hfa with rfl | rfl
+    · cases mp <;> cases w <;> show ¬ fRf mp w f1 <;> decide
+    · cases mp <;> cases w <;> show ¬ fRf mp w f2 <;> decide
 
 theorem f_psc_acyclisch (mp : Bool) : Azyklisch (fGraph mp).psc := by
   intro a h
@@ -233,24 +246,28 @@ theorem f_konsistent (mp : Bool) : (fGraph mp).Konsistent where
     exact f_koh a b ⟨f_hb_in_po h, f_eco he⟩
   atomar := by
     intro w u w' hrf hu hmo
-    cases mp <;> cases u <;> simp only [fGraph, fLab, Graph.istRmw, reduceCtorEq] at hu
+    cases mp <;> cases u <;>
+      simp only [fGraph, fLab, Graph.istRmw, reduceCtorEq, if_false, if_true] at hu
   psc := f_psc_acyclisch mp
   ohneLB := by
     refine azyklisch_von_rang fRang ?_
     intro a b h
     revert h
+    show (fPo a b ∨ fRf mp a b) → fRang a < fRang b
     cases mp <;> cases a <;> cases b <;> decide
   liest_vorher := by
     intro w u hrf hu
-    cases mp <;> cases u <;> simp only [fGraph, fLab, Graph.istRmw, reduceCtorEq] at hu
+    cases mp <;> cases u <;>
+      simp only [fGraph, fLab, Graph.istRmw, reduceCtorEq, if_false, if_true] at hu
 
 theorem f_vollstaendig (mp : Bool) : (fGraph mp).Vollstaendig := by
   intro r hr
-  cases mp <;> cases r <;> simp only [Graph.liest, fGraph, fLab, Art.liest, reduceCtorEq] at hr
-  · exact ⟨iy, by decide⟩
-  · exact ⟨ix, by decide⟩
-  · exact ⟨b1, by decide⟩
-  · exact ⟨ix, by decide⟩
+  cases mp <;> cases r <;>
+    simp only [Graph.liest, fGraph, fLab, Art.liest, reduceCtorEq, if_false, if_true] at hr
+  · exact ⟨iy, (by show fRf false iy b1; decide)⟩
+  · exact ⟨ix, (by show fRf false ix b2; decide)⟩
+  · exact ⟨b1, (by show fRf true b1 a2; decide)⟩
+  · exact ⟨ix, (by show fRf true ix b2; decide)⟩
 
 theorem f_rb_b1_a2 : (fGraph false).rb b1 a2 :=
   ⟨iy, (by show fRf false iy b1; decide), (by show fMo false iy a2; decide), by decide⟩
@@ -275,10 +292,12 @@ theorem sc_fences_sb_nicht_verboten : ¬ ScFencesSbVerbotenAussage := by
   apply h
   refine ⟨FenceEv, Bool, Nat, fGraph false, f_konsistent false,
     a1, f1, b1, a2, f2, b2, ix, iy, ?_⟩
-  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide,
-    (by decide : (fGraph false).po a1 f1), (by decide : (fGraph false).po f1 b1),
-    (by decide : (fGraph false).po a2 f2), (by decide : (fGraph false).po f2 b2),
-    (by decide : (fGraph false).rf iy b1), (by decide : (fGraph false).rf ix b2),
+  exact ⟨(by show fRlx false a1; decide), (by show fRlx false b1; decide),
+    (by show fRlx false a2; decide), (by show fRlx false b2; decide),
+    (by show fSc false f1; decide), (by show fSc false f2; decide),
+    (by show fPo a1 f1; decide), (by show fPo f1 b1; decide),
+    (by show fPo a2 f2; decide), (by show fPo f2 b2; decide),
+    (by show fRf false iy b1; decide), (by show fRf false ix b2; decide),
     f_rb_b1_a2, f_rb_b2_a1 false⟩
 
 /-- **The relaxed SB outcome is allowed:** a consistent and complete graph with the two writes
@@ -299,7 +318,10 @@ theorem sc_fences_sb_erlaubt : ScFencesSbErlaubtAussage := by
     decide
   refine ⟨SbEv, Bool, Nat, sbGraph .rlx, hk, sb_vollstaendig .rlx,
     a1, b1, a2, b2, ix, iy, ?_⟩
-  exact ⟨by decide, by decide, by decide, by decide, p₁, p₂, hf₁, hf₂, r₁, r₂⟩
+  exact ⟨(by show (sbLab .rlx a1).modus = .rlx; decide),
+    (by show (sbLab .rlx b1).modus = .rlx; decide),
+    (by show (sbLab .rlx a2).modus = .rlx; decide),
+    (by show (sbLab .rlx b2).modus = .rlx; decide), p₁, p₂, hf₁, hf₂, r₁, r₂⟩
 
 /-- **Literature statement, FALSE in this model:** message passing with an `sc` fence after the
     relaxed data write and before the relaxed flag write, and one between the flag read and the
@@ -318,10 +340,12 @@ theorem sc_fences_mp_nicht_verboten : ¬ ScFencesMpVerbotenAussage := by
   apply h
   refine ⟨FenceEv, Bool, Nat, fGraph true, f_konsistent true,
     a1, f1, b1, a2, f2, b2, ix, ?_⟩
-  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide,
-    (by decide : (fGraph true).po a1 f1), (by decide : (fGraph true).po f1 b1),
-    (by decide : (fGraph true).po a2 f2), (by decide : (fGraph true).po f2 b2),
-    (by decide : (fGraph true).rf b1 a2), (by decide : (fGraph true).rf ix b2),
+  exact ⟨(by show fRlx true a1; decide), (by show fRlx true b1; decide),
+    (by show fRlx true a2; decide), (by show fRlx true b2; decide),
+    (by show fSc true f1; decide), (by show fSc true f2; decide),
+    (by show fPo a1 f1; decide), (by show fPo f1 b1; decide),
+    (by show fPo a2 f2; decide), (by show fPo f2 b2; decide),
+    (by show fRf true b1 a2; decide), (by show fRf true ix b2; decide),
     f_rb_b2_a1 true⟩
 
 /-- **The relaxed MP outcome is allowed:** a consistent and complete graph in which the flag read
@@ -335,9 +359,10 @@ def ScFencesMpErlaubtAussage : Prop :=
 theorem sc_fences_mp_erlaubt : ScFencesMpErlaubtAussage := by
   refine ⟨FenceEv, Bool, Nat, fGraph true, f_konsistent true, f_vollstaendig true,
     a1, b1, a2, b2, ix, ?_⟩
-  exact ⟨by decide, by decide, by decide, by decide,
-    (by decide : (fGraph true).po a1 b1), (by decide : (fGraph true).po a2 b2),
-    (by decide : (fGraph true).rf b1 a2), (by decide : (fGraph true).rf ix b2),
+  exact ⟨(by show fRlx true a1; decide), (by show fRlx true b1; decide),
+    (by show fRlx true a2; decide), (by show fRlx true b2; decide),
+    (by show fPo a1 b1; decide), (by show fPo a2 b2; decide),
+    (by show fRf true b1 a2; decide), (by show fRf true ix b2; decide),
     f_rb_b2_a1 true⟩
 
 /-- **The SC-fence group root.** The two literature-forbidden halves are refuted by this model, so
