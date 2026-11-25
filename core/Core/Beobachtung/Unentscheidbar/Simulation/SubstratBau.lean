@@ -32,6 +32,9 @@ theorem komposition_berechenbar : Computable (fun c => kodiere (programm c)) := 
   have h := Nat.Partrec.Code.computable_recOn (c := fun c : Nat.Partrec.Code => c)
     Computable.id (hz := hz) (hs := hs) (hl := hl) (hr := hr)
     (hpr := hpr) (hco := hco) (hpc := hpc) (hrf := hrf)
-  simpa only [kodiere, programm, e0, e1] using h
+  unfold kodiere programm
+  refine h.of_eq ?_
+  intro c
+  cases c <;> rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
