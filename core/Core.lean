@@ -176,6 +176,7 @@ public import Core.Beobachtung.SchrankenBeweise.Bindung
 public import Core.Beobachtung.SchrankenBeweise.BindungZeitDurchlauf
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
+public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
