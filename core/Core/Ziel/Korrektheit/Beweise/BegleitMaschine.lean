@@ -40,7 +40,7 @@ theorem trivialUnit_rein : (Ast.Semantik.fragment Ast.Category.unit trivialUnit)
   rw [code] at present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl
-  · exact Or.inr rfl
+  · exact Or.inr (Or.inl rfl)
   · exact Or.inl rfl
 
 
