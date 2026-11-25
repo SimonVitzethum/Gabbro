@@ -245,18 +245,6 @@ theorem programmMitInvarianten_klauseln (u : UnitMitInvarianten) :
     (programmMitInvarianten u).klauseln.invariant = u.invarianten.map Pruefung.Praedikat.gilt :=
   rfl
 
-/-- Plain units elaborate with the empty predicate list: the clause table is empty. -/
-theorem fragment_unit_invarianten (tree : Ast.Unit) :
-    (fragment .unit tree).klauseln.invariant = [].map Pruefung.Praedikat.gilt := rfl
-
-/-- The checker accepts the empty predicate list on every fragment. -/
-theorem pruefeEinheit_leer (p : Fragment) : pruefeEinheit p [] = true := by
-  have h1 : Pruefung.pruefeStart p.speicher.initial [] = true := rfl
-  have h2 : Pruefung.pruefeNeustart [] = true := rfl
-  have h3 : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
-    List.all_eq_true.mpr (fun b _ => rfl)
-  simp only [pruefeEinheit, h1, h2, h3]
-
 def fragment : (category : Category) → category.Tree → Fragment
   | .expression scope, tree => { expr 0 tree.2 with eingang := scope }
   | .statement scope _, tree => { stmt tree.2 with eingang := scope }
@@ -292,6 +280,18 @@ theorem pruefeEinheit_befehl (p : Fragment) (ps : List Pruefung.Praedikat) (b : 
   obtain ⟨_, hcode⟩ := ok
   simp only [List.all_eq_true] at hcode
   exact hcode b hmem
+
+/-- Plain units elaborate with the empty predicate list: the clause table is empty. -/
+theorem fragment_unit_invarianten (tree : Ast.Unit) :
+    (fragment .unit tree).klauseln.invariant = [].map Pruefung.Praedikat.gilt := rfl
+
+/-- The checker accepts the empty predicate list on every fragment. -/
+theorem pruefeEinheit_leer (p : Fragment) : pruefeEinheit p [] = true := by
+  have h1 : Pruefung.pruefeStart p.speicher.initial [] = true := rfl
+  have h2 : Pruefung.pruefeNeustart [] = true := rfl
+  have h3 : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
+    List.all_eq_true.mpr (fun b _ => rfl)
+  simp only [pruefeEinheit, h1, h2, h3]
 
 abbrev Einheit := Maschine.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
