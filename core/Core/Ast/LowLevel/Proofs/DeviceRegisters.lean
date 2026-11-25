@@ -147,25 +147,25 @@ def RegisterRegelSicherAussage : Prop :=
   ∀ k (binding : Binding k) access,
     Sicherheit.RegelSicher (registerSafetyUnit binding access) ()
 
-def RegisterRegelAntwortSicherAussage (kind : RegisterAccess → Prop) : Prop :=
+/-- Every composed operation preserves pending authority, including for
+    each question it issues. The former `kind` selector is gone: the proof
+    never used it, so the claim holds for every access. -/
+def RegisterRegelAntwortSicherAussage : Prop :=
   ∀ k (binding : Binding k) access,
-    kind access → Sicherheit.RegelAntwortSicher (registerSafetyUnit binding access) ()
+    Sicherheit.RegelAntwortSicher (registerSafetyUnit binding access) ()
 
 def RegisterReadAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
-  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset, access = .read offset)
+  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage
 
 def RegisterWriteAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
-  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset value, access = .write offset value)
+  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage
 
 def RegisterReadElseAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterFallibleAussage ∧
-  RegisterRegelSicherAussage ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset range, access = .fallibleRead offset range) ∧
+  RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage ∧
   ∀ (k : Katalog) (scope : Scope) (d : Denotation k scope) destination binding offset promise handler,
     d = .fallibleRead destination binding offset promise handler →
     (∀ err, d.resume (.refused err) = .branch handler) ∧
@@ -246,8 +246,8 @@ theorem register_regelSicher : RegisterRegelSicherAussage := by
 
 /-- Issuing a question uses the checked device owner. Consuming a reply changes
     its consumption counter and leaves pending questions and their rights intact. -/
-theorem register_regelAntwortSicher (kind : RegisterAccess → Prop) : RegisterRegelAntwortSicherAussage kind := by
-  intro k binding access _ t c w vor middle next plan trace _ impl execute befugt
+theorem register_regelAntwortSicher : RegisterRegelAntwortSicherAussage := by
+  intro k binding access t c w vor middle next plan trace _ impl execute befugt
   obtain ⟨selected, plans, step⟩ := impl
   cases (List.cons.inj plans).1
   rcases trace with ⟨memory, events⟩
@@ -269,15 +269,15 @@ theorem register_regelAntwortSicher (kind : RegisterAccess → Prop) : RegisterR
 
 theorem register_read : RegisterReadAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_regelSicher, register_regelAntwortSicher _⟩
+    register_safety, register_regelSicher, register_regelAntwortSicher⟩
 
 theorem register_write : RegisterWriteAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_regelSicher, register_regelAntwortSicher _⟩
+    register_safety, register_regelSicher, register_regelAntwortSicher⟩
 
 theorem register_readElse : RegisterReadElseAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_fallible, register_regelSicher, register_regelAntwortSicher _,
+    register_safety, register_fallible, register_regelSicher, register_regelAntwortSicher,
     register_fallible_resume⟩
 
 end Gabbro.Core.Ast.LowLevel.Device
