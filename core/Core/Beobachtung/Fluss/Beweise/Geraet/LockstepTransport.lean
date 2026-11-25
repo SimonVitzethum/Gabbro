@@ -14,14 +14,14 @@ variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
 variable {d : Denotation k scope}
 
 /-- An outside event always admits a memory continuation on a consistent complete graph. -/
-theorem geraete_aussen_schritt {s : State} {f : SpeicherAkteur Nat} {event : Ereignis}
+theorem geraete_aussen_schritt {s : State} {event : Ereignis}
     (gut : s.SpeicherGut) :
-    ∃ g', Speicherfolge s.initial f s.graph
+    ∃ g', Speicherfolge s.initial .aussen s.graph
       [aussenEtikett (d.unit locals).einrichtung event]
       [(.aussen, aussenEtikett (d.unit locals).einrichtung event)] g' := by
   have hliest : ¬ (aussenEtikett (d.unit locals).einrichtung event).art.liest := by
     simp [aussenEtikett, Speicher.Art.liest]
-  obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2 f
+  obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2 .aussen
     (aussenEtikett (d.unit locals).einrichtung event) hliest
   refine ⟨g', ?_⟩
   exact Speicherfolge.cons (Initialisierung.ohne (Or.inl rfl)) hs (Speicherfolge.nil g')
@@ -52,7 +52,7 @@ theorem geraete_antwort_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
       spur₂.aussen = [.antwort a] := by
   obtain ⟨offered₁, spurEq₁, _, _⟩ := step₁
   obtain ⟨g₂, folge₂⟩ :=
-    geraete_aussen_schritt (s := s₂) (f := .aussen) (event := .antwort a) gut₂
+    geraete_aussen_schritt (s := s₂) (event := .antwort a) gut₂
   let spur₂ : SchrittSpur Nat UInt8 :=
     ⟨[(SpeicherAkteur.aussen, aussenEtikett (d.unit locals).einrichtung (.antwort a))], [.antwort a]⟩
   refine ⟨spur₂, { s₂.antwort a with graph := g₂ }, ?_, rfl⟩
