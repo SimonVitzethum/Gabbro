@@ -57,8 +57,10 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
   obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
   rw [List.getElem?_map] at hinner
   obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-  have htab : p.klauseln.invariant[i]? = some q.gilt := by
-    rw [tab, List.getElem?_map, hsome]
+  have htab : (p.sicherheitsEinheit platform).invarianten[i]? =
+      some (⟨none, q.gilt⟩ : Invariante Nat Zustand) := by
+    show (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = _
+    simp only [tab, List.getElem?_map, hsome]
   have writersVor : ∀ c, vor.status c = .laeuft → ¬ vor.buchung.schreibt c i := by
     intro c hc hcon
     have hc' : nach.status c = .laeuft := by
@@ -90,8 +92,10 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
   obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
   rw [List.getElem?_map] at hinner
   obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-  have htab : p.klauseln.invariant[i]? = some q.gilt := by
-    rw [tab, List.getElem?_map, hsome]
+  have htab : (p.sicherheitsEinheit platform).invarianten[i]? =
+      some (⟨none, q.gilt⟩ : Invariante Nat Zustand) := by
+    show (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = _
+    simp only [tab, List.getElem?_map, hsome]
   have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by
     intro c' hc' hcon
     by_cases heq : c' = c
