@@ -229,6 +229,8 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                   rw [nextEq, hu] at hN
                   have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
                     intro d
+                    have hst : (transfer.apply c s).status = s.status := rfl
+                    rw [hst]
                     unfold neuBeendet
                     cases hd : s.status d <;> rw [hd] <;> rfl
                   have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
@@ -252,5 +254,8 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                   rw [schrittBeob, spurGlied, hS, hN]
                   simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
                     List.nil_append]
+              | antwort _ _ => cases label
+              | interrupt _ _ => cases label
+              | absturz _ => cases label
 
 end Gabbro.Core.Beobachtung
