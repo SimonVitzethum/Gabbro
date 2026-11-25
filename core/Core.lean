@@ -130,6 +130,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NISichtbar
+public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
@@ -157,6 +158,8 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
+public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
+public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
