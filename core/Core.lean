@@ -16,6 +16,7 @@ public import Core.Speicher.Litmus.Wrc
 public import Core.Speicher.Litmus.Isa2
 public import Core.Speicher.Litmus.Mp
 public import Core.Speicher.Litmus.Lb
+public import Core.Speicher.Litmus.Katalog
 public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte

@@ -17,7 +17,6 @@ public import Core.Speicher.Trennung
 public import Core.Speicher.Litmus.Sb
 public import Core.Speicher.Litmus.Rmw
 public import Core.Speicher.Litmus.Rs
-public import Core.Speicher.Litmus.Katalog
 public import Core.Speicher.Litmus.ZweiPlusZweiW
 public import Core.Speicher.Litmus.Kohaerenz
 public import Core.Speicher.Erfuellbar
