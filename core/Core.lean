@@ -192,6 +192,7 @@ public import Core.Linken.Aussage
 public import Core.Durchstich.Klein
 public import Core.Durchstich.Oberflaeche
 public import Core.Durchstich.Ziel
+public import Core.Durchstich.NichtTrivial
 meta import Core.Waechter.Check
 
 #check_core
