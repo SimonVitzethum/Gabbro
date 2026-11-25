@@ -49,6 +49,7 @@ public import Core.Aussen
 public import Core.Aussen.Frage.Form
 public import Core.Aussen.Frage.Aussagen
 public import Core.Aussen.Frage.Beweise
+public import Core.Aussen.Frage.Verbrauche
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
