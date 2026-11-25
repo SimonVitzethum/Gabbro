@@ -102,11 +102,9 @@ theorem zugriffSpeicherfolge_etiketten_gleich
     (h₂ : Maschine.Speicherfolge anfang f₂ g [l] es₂ g₂) :
     es₁.map Prod.snd = es₂.map Prod.snd := by
   cases h₁ with
-  | nil => simp
   | cons vor₁ hs₁ nach₁ =>
     cases nach₁
     cases h₂ with
-    | nil => simp
     | cons vor₂ hs₂ nach₂ =>
       cases nach₂
       cases vor₁ with
@@ -133,8 +131,9 @@ theorem zugriffSpeicherBeob_gleich
     {Ort Wert Grund Form : Type} (label : Etiketten Ort)
     {es₁ es₂ : List (Maschine.SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
     (h : es₁.map Prod.snd = es₂.map Prod.snd) :
-    es₁.filterMap (speicherBeob label) = es₂.filterMap (speicherBeob label) := by
-  have h' := congrArg (List.filterMap (speicherBeob label)) h
+    es₁.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) =
+      es₂.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) := by
+  have h' := congrArg (List.filterMap (speicherBeob (Grund := Grund) (Form := Form) label)) h
   simpa only [List.filterMap_map, Function.comp_apply, speicherBeob] using h'
 
 end Gabbro.Core.Beobachtung
