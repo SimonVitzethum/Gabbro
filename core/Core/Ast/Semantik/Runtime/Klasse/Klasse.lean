@@ -31,6 +31,8 @@ public import Core.Ast.Semantik.Runtime.Befehl
 
 namespace Gabbro.Core.Ast.Semantik
 
+open Gabbro.Core.Aussenfrage
+
 /-- **The effect class of an instruction.**
     * `lokal`: one private step whose only effect is the acting frame; it never deepens the call stack.
     * `ruf`: the same, but the step may push one continuation (a call, or the start of the program).
@@ -57,6 +59,7 @@ inductive Wirkungsklasse where
   | beende
   | verbinde
   | wechsle
+  | verbrauche
   | maskiere
   | prioritaet
   | sendeUnterbrechung
@@ -83,10 +86,19 @@ def Fadenform.klasse : Fadenform → Wirkungsklasse
   | .verbinde .. => .verbinde
   | .wechsle .. | .kernStart .. => .wechsle
 
+/-- **The class of an outside-question instruction** (MK-06): issuing a question has the question class;
+    consuming the next arrived answer has its own class. The transfer of the answer value into the frame and
+    the guard that revalidates it at commit are declared duties of this class, proved once here where the
+    model decides them and handed over as pinned statements where a catalogue row decides them. -/
+def AussenfrageformKlasse : Aussenfrageform → Wirkungsklasse
+  | .frage .. => .frage
+  | .verbrauche .. => .verbrauche
+
 /-- Classify every instruction. A new instruction must be classified: there is no wildcard. -/
 def Befehl.klasse : Befehl → Wirkungsklasse
   | .zugriff form => form.klasse
   | .faden form => form.klasse
+  | .aussen form => AussenfrageformKlasse form
   | .rufe .. | .starte .. => .ruf
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
@@ -115,7 +127,8 @@ def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
 def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
   | .ruf => 1
   | .lokal | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .starte | .beende
-  | .verbinde | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => 0
+  | .verbinde | .wechsle | .verbrauche | .maskiere | .prioritaet | .sendeUnterbrechung
+  | .leiteLeitung => 0
 
 /-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
     Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is

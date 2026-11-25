@@ -90,7 +90,7 @@ theorem fortschritt_erfuellbar :
       (fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
-      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+      Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
   have frei {ρ : Maschine.Lauf E₀} {η : Lauf E₀} (matched : Laufabgleich ρ η) (t : Nat) :
       η.belegt t = none := by
     cases occupied : η.belegt t with
