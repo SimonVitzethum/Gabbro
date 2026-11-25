@@ -243,7 +243,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
   rcases hk with rfl | rfl | rfl
   · simp only [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl_step
     rw [hFk] at impl_step
-    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt] at impl_step
+    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt, hFk] at impl_step
     rcases impl_step with href | haut
     · obtain ⟨hnichtBef, hplanL, hzwischen⟩ := href
       have hplan : plan = Semantik.plan := (List.cons.inj hplanL).1
@@ -266,26 +266,31 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
-        schreibEreignisse, List.map_nil] at folge
+        schreibEreignisse, List.filter, List.map] at folge
       let l : Etikett Zelle Int := ⟨.lesen, (F.operand (vor.lokal c)).ort, m, v, v⟩
       have hbuch : nach.buchung.adresse (vor.zugriffsereignis l.ort) = vor.adresse c l.ort := by
         rw [hnach]
-        simp only [Schrittform.zugriffNach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [Schrittform.buchungNach, dif_pos rfl]
+        simp only [dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef) (fun h => by cases h)
+      have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
+        rw [hnach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
+        rw [hFk]
+        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
       refine ⟨eineZugriffGebucht vor nach c l (by simp only [l]; decide) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
       refine ⟨[], ?_, ?_⟩
-      · exact keineWirkungen vor nach spur hkeinAbsturz (by rw [hnach]; rfl)
+      · exact keineWirkungen vor nach spur hkeinAbsturz hwirk
       · exact keineFreigaben vor nach hw t spur (by rw [hnach]; rfl) hkeinAbsturz
   · simp only [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl_step
     rw [hFk] at impl_step
-    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt] at impl_step
+    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt, hFk] at impl_step
     rcases impl_step with href | haut
     · obtain ⟨hnichtBef, hplanL, hzwischen⟩ := href
       have hplan : plan = Semantik.plan := (List.cons.inj hplanL).1
@@ -308,27 +313,39 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
-        schreibEreignisse, decide_eq_true_eq] at folge
+        schreibEreignisse] at folge
+      have hfilter : List.filter (fun x => decide (x = (F.operand (vor.lokal c)).ort))
+          [(F.operand (vor.lokal c)).ort] = [(F.operand (vor.lokal c)).ort] := by
+        have hdec : decide ((F.operand (vor.lokal c)).ort = (F.operand (vor.lokal c)).ort) = true := by decide
+        simp only [List.filter]
+        rw [hdec]
+      rw [hfilter] at folge
+      simp only [List.map, List.cons_append, List.append_nil] at folge
       let l : Etikett Zelle Int := ⟨.schreiben, (F.operand (vor.lokal c)).ort, m,
         (F.operand (vor.lokal c)).wert, (F.operand (vor.lokal c)).wert⟩
       have hbuch : nach.buchung.adresse (vor.zugriffsereignis l.ort) = vor.adresse c l.ort := by
         rw [hnach]
-        simp only [Schrittform.zugriffNach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [Schrittform.buchungNach, dif_pos rfl]
+        simp only [dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun h => by cases h) (fun _ => hBef)
+      have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
+        rw [hnach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
+        rw [hFk]
+        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
       refine ⟨eineZugriffGebucht vor nach c l (by simp only [l]; decide) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
       refine ⟨[], ?_, ?_⟩
-      · exact keineWirkungen vor nach spur hkeinAbsturz (by rw [hnach]; rfl)
+      · exact keineWirkungen vor nach spur hkeinAbsturz hwirk
       · exact keineFreigaben vor nach hw t spur (by rw [hnach]; rfl) hkeinAbsturz
   · simp only [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl_step
     rw [hFk] at impl_step
-    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt] at impl_step
+    simp only [Schrittform.zugriffsschritt, Wirkungsklasse.befugt, hFk] at impl_step
     rcases impl_step with href | haut
     · obtain ⟨hnichtBef, hplanL, hzwischen⟩ := href
       have hplan : plan = Semantik.plan := (List.cons.inj hplanL).1
@@ -351,23 +368,28 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
-        schreibEreignisse, List.map_nil] at folge
+        schreibEreignisse, List.filter, List.map] at folge
       let l : Etikett Zelle Int := ⟨.rmw, (F.operand (vor.lokal c)).ort, m, v,
         (F.operand (vor.lokal c)).wert⟩
       have hbuch : nach.buchung.adresse (vor.zugriffsereignis l.ort) = vor.adresse c l.ort := by
         rw [hnach]
-        simp only [Schrittform.zugriffNach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [Schrittform.buchungNach, dif_pos rfl]
+        simp only [dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
+      have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
+        rw [hnach]
+        simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
+        rw [hFk]
+        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
       refine ⟨eineZugriffGebucht vor nach c l (by simp only [l]; decide) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
       refine ⟨[], ?_, ?_⟩
-      · exact keineWirkungen vor nach spur hkeinAbsturz (by rw [hnach]; rfl)
+      · exact keineWirkungen vor nach spur hkeinAbsturz hwirk
       · exact keineFreigaben vor nach hw t spur (by rw [hnach]; rfl) hkeinAbsturz
 
 end Gabbro.Core.Ast.Semantik
