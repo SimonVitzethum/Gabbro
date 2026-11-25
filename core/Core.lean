@@ -71,6 +71,7 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetStart
 public import Core.Beobachtung.Fluss.Beweise.GeraetInvariante
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueLedger
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueKontext
+public import Core.Beobachtung.Fluss.Beweise.GeraetIssueFrisch
 public import Core.Beobachtung.Fluss.Beweise.GeraetBeobachtung
 public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
