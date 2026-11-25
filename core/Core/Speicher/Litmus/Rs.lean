@@ -168,7 +168,8 @@ theorem rsRb {r w : RelEv} (h : rsGraph.rb r w) : r = rd ∧ w = wd := by
 theorem rsEcoTrans (a b c : RelEv) : rsEco a b → rsEco b c → rsEco a c := by
   intro hxy hyz
   cases a <;> cases b <;> cases c <;>
-    simp only [rsEco, reduceCtorEq] at hxy hyz ⊢
+    simp only [rsEco, reduceCtorEq, and_true, true_and, and_false, false_and, or_true, true_or,
+      or_false, false_or, not_false_eq_true] at hxy hyz ⊢
 
 theorem rsEcoSchritt (a b : RelEv) (h : rsGraph.ecoSchritt a b) : rsEco a b := by
   rcases h with h | h | h
