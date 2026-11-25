@@ -37,25 +37,23 @@ theorem bindungLadeSchranken (P : Katalog.Plattform) (u : UnitMitSchranken) :
   · rw [if_pos ok] at geladen
     let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
       (a.assignment 0) P a.regions
-    have hs : s = Zustand.start d.lokal d.status d.kerne d.rechte
+    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
+      d.kerne d.rechte
         (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-          (programm u.baum).speicher).initial (.leer (startmedium a)) :=
-      (Option.some.inj geladen).symm
+          (programm u.baum).speicher).initial (.leer (startmedium a))
+    have hs : s = s0 := by
+      dsimp only [s0]
+      exact (Option.some.inj geladen).symm
     subst s
     constructor
     · intro c n bound
-      dsimp only [d, startdaten, Zustand.start, Rahmen.start]
+      dsimp only [s0, d, startdaten, Zustand.start, Rahmen.start]
       exact Nat.zero_le n
     · intro n bound
-      have nichtsLebt : LebendeZellen (Zustand.start d.lokal d.status d.kerne d.rechte
-          (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-            (programm u.baum).speicher).initial (.leer (startmedium a))) = ∅ := by
+      have nichtsLebt : LebendeZellen s0 = ∅ := by
         apply Set.eq_empty_iff_forall_notMem.mpr
         intro z mem
-        change (Zustand.start d.lokal d.status d.kerne d.rechte
-          (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-            (programm u.baum).speicher).initial (.leer (startmedium a))).rechte.lebt z.1 = true ∧
-          z.2 < (Buchung.leer.umfang z.1).length at mem
+        change s0.rechte.lebt z.1 = true ∧ z.2 < (Buchung.leer.umfang z.1).length at mem
         simp only [Buchung.leer] at mem
         exact Nat.not_lt_zero _ mem.2
       rw [nichtsLebt, Set.encard_empty]
