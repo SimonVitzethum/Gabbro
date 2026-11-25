@@ -246,7 +246,9 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                   have hzeit : zeitBeob ρ c (s.lokal c) ((transfer.apply c s).lokal c) = [] := by
                     simp only [zeitBeob, unit, Schrankendaten.leer, List.filter_nil, List.filterMap_nil]
                   have hspec : (k.plattform.spekulationshuelle).zugriffe ([] : List (Option Nat)) = [] := by
-                    cases k.plattform.spekulationshuelle <;> rfl
+                    cases k.plattform.spekulationshuelle with
+                    | mk fenster =>
+                        cases fenster <;> simp only [Spekulationshuelle.zugriffe, List.filterMap_nil, List.take_nil]
                   have hcommitE : commitBeob (Form := Instruction k) (unit op).katalog.plattform s
                       (transfer.apply c s) = [] := by
                     simpa only [unit] using hcommit
