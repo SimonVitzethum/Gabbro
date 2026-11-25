@@ -18,6 +18,7 @@ meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 meta import Core.Ast.Semantik.Runtime.Atom.Aussagen
 meta import Core.Ast.Semantik.Runtime.Faden.Aussagen
+meta import Core.Ast.Semantik.Runtime.Faden.Offen
 public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
