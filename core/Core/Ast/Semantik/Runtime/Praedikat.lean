@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Pruefung/Praedikat.lean
+  File:      core/Core/Ast/Semantik/Runtime/Praedikat.lean
   Subject:   THE DECIDABLE INVARIANT LANGUAGE (MK-19 design step 2): comparisons and arithmetic over
              named cells and integer constants, closed under conjunction, disjunction and negation.
 
@@ -23,9 +23,7 @@ public import Core.Ast.Semantik.Runtime.Befehl
 
 @[expose] public section
 
-namespace Gabbro.Core.Ast.Pruefung
-
-open Gabbro.Core.Ast.Semantik
+namespace Gabbro.Core.Ast.Semantik
 
 /-- Arithmetic over named cells and integer constants. A cell `zelle z` reads the unit's memory
     content at `z`; the operators are the exact integer operations. -/
@@ -235,4 +233,4 @@ theorem pruefeBefehlErhalt_richtig (ps : List Praedikat) (b : Befehl) (q : Praed
   simp only [decide_eq_true_eq] at hdec
   exact hdec
 
-end Gabbro.Core.Ast.Pruefung
+end Gabbro.Core.Ast.Semantik

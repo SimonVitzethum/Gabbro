@@ -2,6 +2,7 @@ module
 
 public import Core.Sicherheit.Lauf
 public import Core.Ast.Semantik.Runtime.Sicherheit
+public import Core.Ast.Semantik.Runtime.Praedikat
 import Core.Sicherheit.Laufkonstruktion
 
 @[expose] public section
@@ -13,8 +14,8 @@ open Maschine Katalog Ast Ast.Semantik
 /-- The declared invariants of a checker-accepted table hold at a state whose memory content
     satisfies every declared predicate. -/
 private theorem invariantenAusPruefung {p : Fragment} (platform : Plattform)
-    {ps : List Pruefung.Praedikat}
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
     (s : Ast.Semantik.Zustand) (haelt : ∀ q ∈ ps, q.haelt s.initial) :
     InvariantenAmSchnitt (p.sicherheitsEinheit platform) s := by
   refine ⟨fun _ _ => trivial, ?_⟩
@@ -29,8 +30,8 @@ private theorem invariantenAusPruefung {p : Fragment} (platform : Plattform)
 /-- Invariants transport across a step that preserves memory content, lock bookings and
     running contexts: from the declared part at `vor` to the declared part at `nach`. -/
 private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
-    {ps : List Pruefung.Praedikat}
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
     (vor nach : Ast.Semantik.Zustand) (hinit : nach.initial = vor.initial)
     (hbuch : nach.buchung = vor.buchung) (hstatus : nach.status = vor.status)
     (vorSicher : InvariantenAmSchnitt (p.sicherheitsEinheit platform) vor) :
@@ -54,13 +55,13 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
       exact hcon
     exact writersNach c hc' hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
-  exact Pruefung.Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
+  exact Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
 
 /-- Invariants transport across an interrupt arrival: the fresh handler context was at rest,
     so its writer scope comes from the post-state alone. -/
 private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattform)
-    {ps : List Pruefung.Praedikat}
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
     (vor nach : Ast.Semantik.Zustand) (c : Kontext)
     (hinit : nach.initial = vor.initial) (hbuch : nach.buchung = vor.buchung)
     (hstatus : ∀ c', c' ≠ c → nach.status c' = vor.status c')
@@ -92,11 +93,11 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
         exact hcon
       exact writersNach c' hcNach hcon'
   have vorGilt : q.gilt vor := deklariert i _ vorhanden writersVor
-  exact Pruefung.Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
+  exact Praedikat.gilt_of_initial q vor nach hinit.symm vorGilt
 
 private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
-    {ps : List Pruefung.Praedikat}
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+    {ps : List Praedikat}
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
     (startOk : ∀ q ∈ ps, q.haelt p.speicher.initial)
     (restartOk : ∀ q ∈ ps, q.haelt (fun _ => 0)) :
     GrenzenSicher (p.sicherheitsEinheit platform) := by
@@ -187,18 +188,18 @@ theorem sicherheit_aus_regeln_erfuellbar :
     (.binary .add (.lit 1) (.binary .mul (.lit 2) (.lit 3)))
   let p := stmt tree
   have keine : p.klauseln.invariant = [] := stmt_keine_invarianten tree
-  have tab : p.klauseln.invariant = [].map Pruefung.Praedikat.gilt := by
+  have tab : p.klauseln.invariant = [].map Praedikat.gilt := by
     simp only [keine, List.map_nil]
-  have leer : ∀ q ∈ ([] : List Pruefung.Praedikat), q.haelt p.speicher.initial :=
+  have leer : ∀ q ∈ ([] : List Praedikat), q.haelt p.speicher.initial :=
     fun q hq => (List.not_mem_nil hq).elim
-  have leerStart : ∀ q ∈ ([] : List Pruefung.Praedikat), q.haelt (fun _ => 0) :=
+  have leerStart : ∀ q ∈ ([] : List Praedikat), q.haelt (fun _ => 0) :=
     fun q hq => (List.not_mem_nil hq).elim
-  have okAll : ∀ b ∈ p.code, Pruefung.pruefeBefehlErhalt [] b = true := by
+  have okAll : ∀ b ∈ p.code, pruefeBefehlErhalt [] b = true := by
     intro b _
     rfl
-  have okStart : Pruefung.pruefeStart p.speicher.initial [] = true := rfl
-  have okRestart : Pruefung.pruefeNeustart [] = true := rfl
-  have okCode : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
+  have okStart : pruefeStart p.speicher.initial [] = true := rfl
+  have okRestart : pruefeNeustart [] = true := rfl
+  have okCode : p.code.all (pruefeBefehlErhalt []) = true :=
     List.all_eq_true.mpr (fun b _ => rfl)
   have ok : pruefeEinheit p [] = true := by
     simp only [pruefeEinheit, Bool.and_eq_true]
@@ -250,8 +251,8 @@ theorem sicherheit_aus_regeln_erfuellbar :
 
 /-- Every concrete run of a checker-accepted fragment with predicate invariants is safe.
     The checker verdict supplies the loader, crash-recovery and per-command premises. -/
-theorem fragment_sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.Praedikat)
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
+theorem fragment_sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
     (ok : pruefeEinheit p ps = true) :
     ∀ H (ρ : Lauf (p.sicherheitsEinheit platform)),
       Maschine.Laeufe (p.einheit platform) H ρ →

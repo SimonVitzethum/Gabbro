@@ -131,9 +131,9 @@ theorem antwortSicher_allQuellformen {category : Gabbro.Core.Ast.Category} {Argu
     table is a checker-accepted predicate table. -/
 theorem regelSicher_allQuellformen {category : Gabbro.Core.Ast.Category} {Arguments : Type}
     (form : Quellform category Arguments) (platform : Plattform) (args : Arguments)
-    (ps : List Ast.Pruefung.Praedikat)
-    (tab : (form.fragment args).klauseln.invariant = ps.map Ast.Pruefung.Praedikat.gilt)
-    (ok : ∀ b ∈ (form.fragment args).code, Ast.Pruefung.pruefeBefehlErhalt ps b = true) :
+    (ps : List Praedikat)
+    (tab : (form.fragment args).klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ (form.fragment args).code, pruefeBefehlErhalt ps b = true) :
     Sicherheit.RegelSicher ((form.fragment args).sicherheitsEinheit platform) (form.befehl args) :=
   (form.befehl args).sicher (form.fragment args) platform ps tab ok
 

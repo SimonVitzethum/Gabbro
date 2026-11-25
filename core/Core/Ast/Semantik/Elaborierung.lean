@@ -3,7 +3,7 @@ module
 public import Core.Ast.Grammar
 public import Core.Ast.Semantik.Runtime.ExpressionCode
 public import Core.Ast.LowLevel.Admission
-public import Core.Ast.Pruefung.Praedikat
+public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
 
@@ -228,21 +228,21 @@ def programm (tree : Ast.Unit) : Fragment :=
 
 /-- A source unit together with the invariants it declares. The observable state is the unit
     state `Zustand`; the declared invariants are expressions of the decidable predicate
-    language (`Pruefung.Praedikat`), elaborated into denotations in the fragment's clause
+    language (`Praedikat`), elaborated into denotations in the fragment's clause
     table. Surface syntax for the declarations is MK-19/3; until then units elaborate with
     the empty list. -/
 structure UnitMitInvarianten where
   baum : Ast.Unit
-  invarianten : List Pruefung.Praedikat
+  invarianten : List Praedikat
 
 /-- Elaboration carries the declared invariants into the fragment's clause table. Code,
     entries and memory plan are those of `programm`; the clause table is exactly the
     denotations, so facts about it are `rfl` and need no induction over the unit body. -/
 def programmMitInvarianten (u : UnitMitInvarianten) : Fragment :=
-  { programm u.baum with klauseln := ⟨[], [], u.invarianten.map Pruefung.Praedikat.gilt⟩ }
+  { programm u.baum with klauseln := ⟨[], [], u.invarianten.map Praedikat.gilt⟩ }
 
 theorem programmMitInvarianten_klauseln (u : UnitMitInvarianten) :
-    (programmMitInvarianten u).klauseln.invariant = u.invarianten.map Pruefung.Praedikat.gilt :=
+    (programmMitInvarianten u).klauseln.invariant = u.invarianten.map Praedikat.gilt :=
   rfl
 
 def fragment : (category : Category) → category.Tree → Fragment
@@ -254,28 +254,28 @@ def fragment : (category : Category) → category.Tree → Fragment
 
 /-- The whole checker for a fragment: the loader premise on the memory plan, the
     crash-recovery premise, and preservation per command. -/
-def pruefeEinheit (p : Fragment) (ps : List Pruefung.Praedikat) : Bool :=
-  Pruefung.pruefeStart p.speicher.initial ps && Pruefung.pruefeNeustart ps &&
-    p.code.all (Pruefung.pruefeBefehlErhalt ps)
+def pruefeEinheit (p : Fragment) (ps : List Praedikat) : Bool :=
+  pruefeStart p.speicher.initial ps && pruefeNeustart ps &&
+    p.code.all (pruefeBefehlErhalt ps)
 
 /-- A passing unit satisfies every declared predicate on its memory plan. -/
-theorem pruefeEinheit_start (p : Fragment) (ps : List Pruefung.Praedikat)
+theorem pruefeEinheit_start (p : Fragment) (ps : List Praedikat)
     (ok : pruefeEinheit p ps = true) : ∀ q ∈ ps, q.haelt p.speicher.initial := by
   simp only [pruefeEinheit, Bool.and_eq_true] at ok
   obtain ⟨⟨hstart, _⟩, _⟩ := ok
-  exact (Pruefung.pruefeStart_richtig _ _).mp hstart
+  exact (pruefeStart_richtig _ _).mp hstart
 
 /-- A passing unit satisfies every declared predicate after crash recovery. -/
-theorem pruefeEinheit_neustart (p : Fragment) (ps : List Pruefung.Praedikat)
+theorem pruefeEinheit_neustart (p : Fragment) (ps : List Praedikat)
     (ok : pruefeEinheit p ps = true) : ∀ q ∈ ps, q.haelt (fun _ => 0) := by
   simp only [pruefeEinheit, Bool.and_eq_true] at ok
   obtain ⟨⟨_, hrestart⟩, _⟩ := ok
-  exact (Pruefung.pruefeNeustart_richtig _).mp hrestart
+  exact (pruefeNeustart_richtig _).mp hrestart
 
 /-- A passing unit preserves every declared predicate across each of its commands. -/
-theorem pruefeEinheit_befehl (p : Fragment) (ps : List Pruefung.Praedikat) (b : Befehl)
+theorem pruefeEinheit_befehl (p : Fragment) (ps : List Praedikat) (b : Befehl)
     (hmem : b ∈ p.code) (ok : pruefeEinheit p ps = true) :
-    Pruefung.pruefeBefehlErhalt ps b = true := by
+    pruefeBefehlErhalt ps b = true := by
   simp only [pruefeEinheit, Bool.and_eq_true] at ok
   obtain ⟨_, hcode⟩ := ok
   simp only [List.all_eq_true] at hcode
@@ -283,18 +283,18 @@ theorem pruefeEinheit_befehl (p : Fragment) (ps : List Pruefung.Praedikat) (b : 
 
 /-- A fragment with an empty clause table denotes the empty predicate list. -/
 theorem tabLeer (p : Fragment) (h : p.klauseln.invariant = []) :
-    p.klauseln.invariant = [].map Pruefung.Praedikat.gilt := by
+    p.klauseln.invariant = [].map Praedikat.gilt := by
   simp only [h, List.map_nil]
 
 /-- Plain units elaborate with the empty predicate list: the clause table is empty. -/
 theorem fragment_unit_invarianten (tree : Ast.Unit) :
-    (fragment .unit tree).klauseln.invariant = [].map Pruefung.Praedikat.gilt := rfl
+    (fragment .unit tree).klauseln.invariant = [].map Praedikat.gilt := rfl
 
 /-- The checker accepts the empty predicate list on every fragment. -/
 theorem pruefeEinheit_leer (p : Fragment) : pruefeEinheit p [] = true := by
-  have h1 : Pruefung.pruefeStart p.speicher.initial [] = true := rfl
-  have h2 : Pruefung.pruefeNeustart [] = true := rfl
-  have h3 : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
+  have h1 : pruefeStart p.speicher.initial [] = true := rfl
+  have h2 : pruefeNeustart [] = true := rfl
+  have h3 : p.code.all (pruefeBefehlErhalt []) = true :=
     List.all_eq_true.mpr (fun b _ => rfl)
   simp only [pruefeEinheit, Bool.and_eq_true]
   exact ⟨⟨h1, h2⟩, h3⟩

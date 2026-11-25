@@ -11,7 +11,7 @@
   accepted by the checker.
 
   The checker decides preservation per command in the decidable fragment
-  (`Pruefung.pruefeBefehlErhalt`: disjointness of observed cells and write footprint) and the
+  (`pruefeBefehlErhalt`: disjointness of observed cells and write footprint) and the
   loader and crash-recovery premises on the memory plan (`pruefeStart`, `pruefeNeustart`);
   `pruefeEinheit` conjoins the three. `InvariantenSicherheitAussage` is the safety of
   checker-accepted elaborated units with invariants; anything the checker does not decide stays
@@ -32,21 +32,21 @@ module
 public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Elaborierung
-public import Core.Ast.Pruefung.Praedikat
+public import Core.Ast.Semantik.Runtime.Praedikat
 public import Core.Sicherheit.RegelnErfuellbar
 
 @[expose] public section
 
 namespace Gabbro.Core.Ast.Semantik
 
-open Maschine Sicherheit Katalog Pruefung
+open Maschine Sicherheit Katalog
 
 def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
   (programmMitInvarianten u).einheit platform
 
 theorem sicherheitsEinheit_invarianten (u : UnitMitInvarianten) (platform : Plattform) :
     ((programmMitInvarianten u).sicherheitsEinheit platform).invarianten =
-      (u.invarianten.map Pruefung.Praedikat.gilt).map
+      (u.invarianten.map Praedikat.gilt).map
         fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand) := rfl
 
 /-- The declared part of `InvariantenAmSchnitt`: every tabled invariant holds outside its

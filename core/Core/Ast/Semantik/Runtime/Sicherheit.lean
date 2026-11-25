@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.Semantik.Pflichten
 public import Core.Sicherheit.Regel
-public import Core.Ast.Pruefung.Praedikat
+public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
 
@@ -14,9 +14,9 @@ def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
     Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
   ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
 
-theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.Praedikat)
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
-    (ok : ∀ b ∈ p.code, Pruefung.pruefeBefehlErhalt ps b = true) (b : Befehl) :
+theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true) (b : Befehl) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
   intro H ρ t c w vor zwischen nach plan spur head impl execute
   obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
@@ -40,12 +40,12 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
     rw [List.getElem?_map] at hinner
     obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
     rw [← tab, ← List.getElem?_map] at declared
-    have hok := Pruefung.pruefeBefehlErhalt_richtig ps b q
+    have hok := pruefeBefehlErhalt_richtig ps b q
       (List.mem_of_getElem? hsome) okB
     have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
       writersNach
     have vorGilt : q.gilt vor := vorSicher.2 i _ declared writersVor
-    exact Gabbro.Core.Ast.Pruefung.Praedikat.gilt_nach q b c vor hok vorGilt
+    exact q.gilt_nach b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
@@ -61,9 +61,9 @@ theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) 
   exact befugt
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
-    (ps : List Pruefung.Praedikat)
-    (tab : p.klauseln.invariant = ps.map Pruefung.Praedikat.gilt)
-    (ok : ∀ b ∈ p.code, Pruefung.pruefeBefehlErhalt ps b = true) (b : Befehl) :
+    (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true) (b : Befehl) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
   ⟨b.sicher p platform ps tab ok, b.antwortSicher p platform⟩
 
