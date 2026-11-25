@@ -59,8 +59,9 @@ theorem Aenderung.art_ne_aussen (a : Aenderung) (gelesen : Int) : a.art gelesen 
   | tausche => intro h; cases h
   | addiere => intro h; cases h
   | vergleiche erwartet =>
-    unfold Aenderung.art
-    split <;> intro h <;> cases h
+    by_cases hg : gelesen = erwartet
+    · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
+    · simp only [Aenderung.art, hg, ↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- **The instructions that access shared memory.** The cell is the `index`-th cell of the region with the
     number `region`; `index`, `quelle`, `betrag`, `erwartet` (as a slot) and `neu` name temporaries of the frame;
