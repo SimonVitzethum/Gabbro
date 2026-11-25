@@ -113,10 +113,12 @@ private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     obtain ⟨_, _, _, heq⟩ := step
     have hinit : nach.initial = vor.initial := by rw [heq]
     have hbuch : nach.buchung = vor.buchung := by rw [heq]
-    have hstatus : nach.status = vor.status := by rw [heq]
+    have hstatus : nach.status = vor.status := by
+      rw [heq]
+      rfl
     exact invariantenErhaltenInitial platform tab vor nach hinit hbuch hstatus vorSicher
   · intro hw t id vor spur nach step vorSicher
-    obtain ⟨k, irq, c, nmi, _, _, _, _, _, _, _, heq⟩ := step
+    obtain ⟨k, irq, c, nmi, _, _, _, _, _, _, heq⟩ := step
     have hinit : nach.initial = vor.initial := by rw [heq]
     have hbuch : nach.buchung = vor.buchung := by rw [heq]
     have hstatus : ∀ c', c' ≠ c → nach.status c' = vor.status c' := by
