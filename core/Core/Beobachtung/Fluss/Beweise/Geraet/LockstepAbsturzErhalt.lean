@@ -130,8 +130,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hbeob₁ := geraete_absturz_beob_tick (predictor := predictor) hlabel hz₁ hn₁ hneu₁
                     have hbeob₂ := geraete_absturz_beob_tick (predictor := predictor) labEq hz₂ hn₂ hneu₂
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
-                    refine ⟨?_, ?_, ?_, ?_⟩
-                    · rw [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
+                    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+                    · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
                       change List.Forall₂ _ (NiedrigeBeob E ρ₁ predictor t ++ [.katalog (.persistenz .crash)])
                         ((NiedrigeBeob E ρ₂ predictor t ++ [.katalog (.persistenz .crash)]).take
                           ((NiedrigeBeob E ρ₁ predictor t).length + 1))
