@@ -167,6 +167,7 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
   · cases idealSchritt with
     | kontext _ _ rule ausIdeal =>
       have planPrivat := planBeiIdeal _ _ rule
+      simp only [FuehrtSchrittAus] at ausIdeal
       rw [planPrivat, aussenLeer] at ausIdeal
       rcases ausIdeal with ⟨_, _, _, _, aus, folge, _⟩
       cases aus
