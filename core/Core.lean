@@ -70,7 +70,8 @@ public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.AggregatBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Lies
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
-public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Variante
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Text
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
@@ -85,6 +86,7 @@ public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
 public import Core.Beobachtung.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
+public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.SchrankenB8
 public import Core.Beobachtung.SchrankenB8Aussagen
 public import Core.Beobachtung.SchrankenB8Beweise
@@ -116,6 +118,7 @@ public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
@@ -124,11 +127,15 @@ public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NISichtbar
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
@@ -153,7 +160,12 @@ public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
+public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
+public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.BildGueltig
+public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 meta import Core.Waechter.Check
