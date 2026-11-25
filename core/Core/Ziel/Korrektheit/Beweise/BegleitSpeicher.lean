@@ -88,8 +88,12 @@ theorem RmwNichtDoppeltAussage.nichtTrivial :
     vacuously all-`seq_cst`. Feeds: `Zustand.leer_konsistent`, `Zustand.leer_elim`. -/
 theorem IriwScVerbotenAussage.erfuellbar :
     ∃ (E Ort Wert : Type) (G : Speicher.Graph E Ort Wert),
-      G.Konsistent ∧ ∀ a, G.sc a :=
-  ⟨_, _, _, _, Zustand.leer_konsistent, fun a => (Zustand.leer_elim a).elim⟩
+      G.Konsistent ∧ ∀ a, G.sc a := by
+  refine ⟨Fin 0, Bool, Nat,
+    (Zustand.leer (F := Unit) (Ort := Bool) (Wert := Nat)).graph, ?_, ?_⟩
+  · exact Zustand.leer_konsistent
+  · intro a
+    exact (Zustand.leer_elim a).elim
 
 /-- The ban is sharp: the same disagreeing-readers shape occurs in a consistent graph below
     `seq_cst`. Feeds: `ir_konsistent`, `ir_kein_sc`. Proof sketch: the release/acquire IRIW
