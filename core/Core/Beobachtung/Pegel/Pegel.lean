@@ -10,27 +10,27 @@ namespace Gabbro.Core.Beobachtung
 
 open Ast.Semantik
 
-/-- Surface level attribute (D-4): `public` and `secret` are the two named
-    spellings, `compartment s` is a free compartment set. Elaboration maps
+/-- Surface level attribute (D-4): `offen` is the `public` spelling, `geheim`
+    the `secret` spelling, `abteil s` a free compartment set. Elaboration maps
     every level to an `Etikett`; only this mapping reaches the flow rule. -/
 inductive Pegel where
-  | public
-  | secret
-  | compartment (mitglieder : Finset Nat)
+  | offen
+  | geheim
+  | abteil (mitglieder : Finset Nat)
   deriving DecidableEq
 
 /-- Elaboration of the type attribute into a compartment label.
-    `public` is the empty label, `secret` is the singleton `{0}`,
-    a compartment denotes itself. -/
+    `offen` (`public`) is the empty label, `geheim` (`secret`) is the
+    singleton `{0}`, a compartment denotes itself. -/
 def Pegel.zuEtikett : Pegel → Etikett
-  | .public => ∅
-  | .secret => {0}
-  | .compartment s => s
+  | .offen => ∅
+  | .geheim => {0}
+  | .abteil s => s
 
-theorem pegel_public_oeffentlich : oeffentlich Pegel.public.zuEtikett = true := by
+theorem pegel_public_oeffentlich : oeffentlich Pegel.offen.zuEtikett = true := by
   simp only [Pegel.zuEtikett, oeffentlich_leer]
 
-theorem pegel_secret_verborgen : oeffentlich Pegel.secret.zuEtikett = false := by
+theorem pegel_secret_verborgen : oeffentlich Pegel.geheim.zuEtikett = false := by
   simp only [Pegel.zuEtikett, oeffentlich]
   apply decide_eq_false
   intro eq
@@ -39,7 +39,7 @@ theorem pegel_secret_verborgen : oeffentlich Pegel.secret.zuEtikett = false := b
   exact Finset.notMem_empty _ mem
 
 theorem pegel_compartment_elab (s : Finset Nat) :
-    (Pegel.compartment s).zuEtikett = s := rfl
+    (Pegel.abteil s).zuEtikett = s := rfl
 
 /-- A source type carries its level as an attribute; the checker elaborates
     the attribute, never the type itself, into the label the flow rule reads. -/
