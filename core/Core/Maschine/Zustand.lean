@@ -60,7 +60,7 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   /-- **The creator of every context** (MK-07): a start records the acting context as the creator of the
       new thread. A join requires the creator and clears the entry, so only the creator joins and only
       once; a second join has no step. The entry thread and never-started threads have no creator. -/
-  erzeuger : Kontext → Option Kontext := fun _ => none
+  erzeuger : Kontext → Option Kontext := fun _kontext => none
 
 namespace Zustand
 
