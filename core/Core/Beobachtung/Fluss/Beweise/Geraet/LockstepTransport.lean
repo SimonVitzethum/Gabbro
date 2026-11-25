@@ -101,6 +101,5 @@ theorem geraete_interrupt_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (
       exact ruht₁
     · exact folge₂
   · rw [spurEq₁]
-    rfl
 
 end Gabbro.Core.Beobachtung
