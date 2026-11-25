@@ -212,9 +212,8 @@ theorem NISichtbar.regelFluss (m : Modus) :
             (Wirkungsklasse.plan (.schreiben m) Operand.keiner val) = ([], [], none)
           simp only [Beobachtung.PlanSicht, NISichtbar.einheit, NISichtbar.etikettOrt,
             Wirkungsklasse.plan, Operand.keiner, List.filter_nil]
-          rw [NISichtbar.geheim_verborgen]
-          simp only [Bool.and_false, Bool.false_eq_true, if_false, List.filterMap_cons,
-            List.filterMap_nil, List.nil_append]
+          simp only [NISichtbar.geheim_verborgen, Bool.and_false, Bool.false_eq_true,
+            if_false, List.filterMap_cons, List.filterMap_nil, List.nil_append]
         · rfl
   · intro pub
     exfalso
