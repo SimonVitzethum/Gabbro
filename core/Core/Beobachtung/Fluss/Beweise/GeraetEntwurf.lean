@@ -61,14 +61,14 @@ theorem geraetProtokollRegel_register (access : RegisterAccess) :
 
 /-- The declared virtio row exposes the readable register at offset `0x70`. -/
 theorem virtioRegisterLesbar :
-    (Plattform.x86_64.virtio.register 0x70).any Register.read = true := by
-  decide
+    (Plattform.x86_64.virtio.register 0x70).any Register.read = true :=
+  rfl
 
 /-- The checker line is satisfiable for a declared device protocol: the virtio
     register `0x70` is readable and its read shape is accepted. -/
 theorem geraetProtokollRegel_erfuellbar :
     ∃ offset, offset = 0x70 ∧ geraetProtokollRegelBool (.read offset) none = true ∧
       (Plattform.x86_64.virtio.register offset).any Register.read = true :=
-  ⟨0x70, rfl, rfl, by decide⟩
+  ⟨0x70, rfl, rfl, rfl⟩
 
 end Gabbro.Core.Beobachtung
