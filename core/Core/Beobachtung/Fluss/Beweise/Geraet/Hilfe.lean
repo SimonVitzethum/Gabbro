@@ -206,14 +206,17 @@ theorem geraete_angeboten_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (
   obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
   refine ⟨hcut, ?_, henthaelt, ?_, ?_⟩
   · obtain ⟨hdel, hpol⟩ := herlaubt
-    rw [hcut] at hdel hpol ⊢
-    refine ⟨?_, ?_⟩
-    · have hdel2 := geraete_delivery_gleich vergleich t a.question.endpoint
-      rw [← hdel2]
-      exact hdel
-    · have hpol2 := geraete_politik_antwort_gleich vergleich t s₂.verlauf a.question
-      rw [← hpol2, ← hverlauf]
-      exact hpol
+    have hgoal : (ρ₂.hw.angebot a.cut).delivery a.question.endpoint = true ∧
+        ρ₂.hw.politik.antwort a.cut s₂.verlauf a.question = Entscheidung.antwort a.reply := by
+      rw [hcut] at hdel hpol ⊢
+      refine ⟨?_, ?_⟩
+      · have hdel2 := geraete_delivery_gleich vergleich t a.question.endpoint
+        rw [← hdel2]
+        exact hdel
+      · have hpol2 := geraete_politik_antwort_gleich vergleich t s₂.verlauf a.question
+        rw [← hpol2, ← hverlauf]
+        exact hpol
+    exact hgoal
   · obtain ⟨q, hqmem, hqcut, hzu⟩ := hfrage
     exact ⟨q, hfragen ▸ hqmem, hepoche ▸ hqcut, hzu⟩
   · intro e he
