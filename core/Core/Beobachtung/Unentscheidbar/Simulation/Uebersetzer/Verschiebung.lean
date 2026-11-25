@@ -43,17 +43,17 @@ theorem auswertenMitPc (p : Nat) (b : Befehl) (r : Rahmen)
   | verneinen z => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
   | teilen l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
   | vergleichen op l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | zuweisen q i z t => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+  | zuweisen q i t => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | springe d => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | blockEnde c => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | ende => simp only [Befehl.auswerten, mitPc]
   | springeWenn q wv d =>
-    simp only [Befehl.auswerten, mitPc]
-    split <;> omega
+    simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | zurueckSprung d =>
-    have hd : d ≤ r.pc := hz d rfl
-    simp only [Befehl.auswerten, mitPc]
-    omega
+    have hpc : (p + r.pc) - d = p + (r.pc - d) := by
+      have hd : d ≤ r.pc := hz d rfl
+      omega
+    simp only [Befehl.auswerten, mitPc, hpc]
   | _ => cases hv
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
