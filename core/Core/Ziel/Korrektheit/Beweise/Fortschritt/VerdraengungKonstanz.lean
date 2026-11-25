@@ -191,7 +191,8 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     have hneg : ¬ (d < Nat.find hex - 1 ∧ ∃ k''', ∃ z''', ρ.zeit.zustand (Nat.find hex - 1) =
         some z''' ∧ (z'''.kerne k''').laeuft = some c) := by
       intro hcon
-      have hle := Nat.find_min hex _ hcon
+      have hle : Nat.find hex ≤ Nat.find hex - 1 :=
+        Nat.find_min hex (Nat.find hex - 1) hcon
       omega
     have hle1 : a ≤ Nat.find hex - 1 := Nat.le_trans hd (Nat.le_of_lt hprev)
     obtain ⟨zprev, hzprev, _⟩ := matched.zustand (Nat.find hex - 1)
