@@ -30,7 +30,7 @@ private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E
     obtain ⟨w, spur, event, _⟩ := ticks t
     exact ⟨w, spur, event⟩
   · intro _ a c f opened _ _ _
-    obtain ⟨k, running⟩ := opened.1
+    obtain ⟨k, running⟩ := opened.1 a (Nat.le_refl _)
     cases dispatch a k c running
     obtain ⟨w, spur, _, event⟩ := ticks a
     exact ((opened.2 a (Nat.le_refl _)).2.2 (Or.inl ⟨w, spur, event⟩)).elim

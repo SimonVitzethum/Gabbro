@@ -17,9 +17,11 @@ def Erledigt (η : Lauf E) (c : Kontext) (t : Nat) : Prop :=
     η.zeit.spur t = some (.absturz, absturzSpur) ∨
     (∃ e, (η.zeit.zustand (t + 1)).status c = .beendet e)
 
-/-- A dispatched unit whose step instance remains open on the entire suffix. -/
+/-- A unit dispatched on the entire suffix whose step instance remains open there: a
+    context that loses its dispatch is preempted, not starved, so the hang notion only sees
+    continuously dispatched contexts (PERFECT-MODEL §3.7: the open step instance). -/
 def BleibtOffen (η : Lauf E) (c : Kontext) (f : F) (a : Nat) : Prop :=
-  (∃ k, ((η.zeit.zustand a).kerne k).laeuft = some c) ∧
+  (∀ t, a ≤ t → ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some c) ∧
     ∀ t, a ≤ t → E.system.kopf (η.zeit.zustand t) c = some f ∧
       (η.zeit.zustand t).status c = .laeuft ∧ ¬ Erledigt η c t
 

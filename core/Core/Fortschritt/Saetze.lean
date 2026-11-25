@@ -271,7 +271,7 @@ theorem waitfrei_schliesst_schwaches_haengen_aus {ρ : Maschine.Lauf E} {η : I.
       exact ⟨h.1, by omega, hstep t ht⟩
     omega
   obtain ⟨t, h1, _, herl⟩ := hwf c f a (opened.2 a (Nat.le_refl _)).1
-    (opened.2 a (Nat.le_refl _)).2.1 opened.1
+    (opened.2 a (Nat.le_refl _)).2.1 (opened.1 a (Nat.le_refl _))
     (fun t h => (opened.2 t h).1) (fun t h => (opened.2 t h).2.1) enabled
     (U - a) hcount
   exact (opened.2 t h1).2.2 herl
