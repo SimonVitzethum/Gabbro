@@ -91,7 +91,7 @@ private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : 
 private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
     FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
   refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
     cases hl

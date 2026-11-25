@@ -51,7 +51,8 @@ open Gabbro.Core.Beobachtung
 
 /-- Machine fact: a question recorded in the `aussen` trace of a context implementation
     step carries the acting context's number. Only the `frage` protocol action records a
-    question event; every other action records the empty event list. -/
+    question event; every other action (including the thread actions `starte`,
+    `verbinde`, `beende` and `wechsle`) records the empty event list. -/
 theorem frageStelltKontext [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (t : Nat) (c : Kontext) (s u s' : Zustand L Ort Wert Raum Lok Grund)
@@ -73,6 +74,10 @@ theorem frageStelltKontext [DecidableEq L]
     rfl
   | verbrauche _ => exact (List.not_mem_nil hmem).elim
   | rueckkehr _ _ => exact (List.not_mem_nil hmem).elim
+  | starte _ => exact (List.not_mem_nil hmem).elim
+  | verbinde _ => exact (List.not_mem_nil hmem).elim
+  | beende _ => exact (List.not_mem_nil hmem).elim
+  | wechsle _ _ _ _ => exact (List.not_mem_nil hmem).elim
 
 /-- Vacuity of the NI comparison with acceptance: an accepted unit has no recorded
     question at any context cut of any run. The hostile plan puts every context in

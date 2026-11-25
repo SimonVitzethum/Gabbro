@@ -19,6 +19,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
 public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
+public import Core.Ast.Semantik.Runtime.Faden.Erhalt
 
 @[expose] public section
 
@@ -47,9 +48,13 @@ structure Operand where
   sperre : Nat
   frage : Option Frage
   aenderung : Aenderung
+  faden : Fadenoperand
 
 /-- The operand of a step that names nothing (the frame-only classes). -/
-def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche⟩
+def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner⟩
+
+/-- The plan of a step that records no memory event and no question and carries the given protocol action. -/
+def planMit (a : Aktion Nat PUnit) : Plan := ⟨a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
 
 /-- The plan of a step that asks the question the operand names; an operand without a question has the
     private plan (the step is refused). -/
@@ -76,6 +81,10 @@ def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .sperre a, o, _v =>
     ⟨.sperre o.sperre a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
   | .frage, o, _v => o.fragePlan
+  | .starte, _o, _v => planMit .starte
+  | .beende, _o, _v => planMit .beende
+  | .verbinde, o, _v => planMit (.verbinde (.faden o.faden.kind))
+  | .wechsle, o, _v => planMit (.wechsle o.faden.kern (.faden o.faden.kind))
 
 /-- **The shape of the plans of a class**: the only plans a step of the class may have. The footprint of the
     step on the shared state is read off the class alone: nothing for a private step, one read label for a
@@ -94,11 +103,15 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
       ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩] ∨ p.lesen = [⟨.lesen, z, m, v, v⟩]
   | .sperre a, p => (∃ l : Nat, p.aktion = .sperre l a) ∧ p.lesen = [] ∧ p.fuss = []
   | .frage, p => (∃ q : Frage, p.aktion = .frage q) ∧ p.lesen = [] ∧ p.fuss = []
+  | .starte, p => p.aktion = .starte ∧ p.lesen = [] ∧ p.fuss = []
+  | .beende, p => p.aktion = .beende ∧ p.lesen = [] ∧ p.fuss = []
+  | .verbinde, p => (∃ k : Kontext, p.aktion = .verbinde k) ∧ p.lesen = [] ∧ p.fuss = []
+  | .wechsle, p => (∃ (k : Kern) (d : Kontext), p.aktion = .wechsle k d) ∧ p.lesen = [] ∧ p.fuss = []
 
 /-- Does a step of the class read a value from the memory model? Only a load and an atomic update do. -/
 def Wirkungsklasse.liest : Wirkungsklasse → Bool
   | .lesen .. | .rmw .. => true
-  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage => false
+  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
 
 /-- The value a step of the class may take from the memory model: any value for a class that reads, and
     the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
@@ -117,6 +130,11 @@ def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext �
   | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
   | .sperre _a, _o, _s, _c => True
   | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.fragenBefugt c q
+  | .starte, o, s, c =>
+    o.faden.gueltig = true ∧ ∀ g ∈ o.faden.griffe, s.rechte.Gueltig g ∧ ∃ r, s.buchung.haelt c g r
+  | .beende, o, _s, _c => o.faden.gueltig = true
+  | .verbinde, o, _s, _c => o.faden.gueltig = true
+  | .wechsle, o, _s, _c => o.faden.gueltig = true
 
 /-- **A step form**: a class, the operand its frame supplies and the frame transfer it applies. Everything
     else about the step is the class's. -/
@@ -145,7 +163,7 @@ noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Z
       adresse := fun e =>
         if e = s.zugriffsereignis (F.operand (s.lokal c)).ort then s.adresse c (F.operand (s.lokal c)).ort
         else s.buchung.adresse e }
-  | .lokal | .ruf | .sperre .. | .frage => s.buchung
+  | .lokal | .ruf | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => s.buchung
 
 /-- The state after the step of an access class: the frame transfer and the booked ledger. -/
 noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
@@ -163,14 +181,58 @@ def Schrittform.zugriffsschritt (F : Schrittform) (c : Kontext) (s : Zustand) (p
   (F.klasse.befugt (F.operand (s.lokal c)) s c ∧
     ∃ v : Int, F.klasse.Lesewert v ∧ plans = [F.plan (s.lokal c) v] ∧ u = F.zugriffNach c s v)
 
+/-- **The state after the step of a lifecycle class** (MK-07), before the machine adds its part
+    (`FuehrtAus`: the status of the new thread and the counter of a start, the core of a switch).
+    * `starte`: the starter's frame binds the number of the new thread, the new thread gets its entry frame, and
+      the handles named are handed over (`Buchung.uebergeben`);
+    * `beende`: the acting thread stops and its status records the outcome it names;
+    * `verbinde`: the joiner's frame binds the outcome of the ended thread and the joiner takes back what the ended
+      thread still held (`Buchung.zurueckgegeben`); a thread that ended with a reason exit halts the joiner; a
+      thread that has not ended changes nothing (the machine does not run the join then);
+    * `wechsle`: only the acting frame advances; the machine moves the core. -/
+def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
+  let o := (F.operand (s.lokal c)).faden
+  match F.klasse with
+  | .starte =>
+    { s with
+      lokal := Function.update
+        (Function.update s.lokal c (F.uebertrag (s.lokal c) s.regionLive (s.naechsterFaden : Int)))
+        (.faden s.naechsterFaden) { o.anfang with fortsetzungen := [] },
+      buchung := { s.buchung with
+        haelt := s.buchung.uebergeben c (.faden s.naechsterFaden) o.griffe } }
+  | .beende =>
+    { s with
+      lokal := Function.update s.lokal c (F.uebertrag (s.lokal c) s.regionLive 0),
+      status := Function.update s.status c (.beendet (.wert o.ergebnis)) }
+  | .verbinde =>
+    match s.status (.faden o.kind) with
+    | .beendet (.wert w) =>
+      { s with
+        lokal := Function.update s.lokal c (F.uebertrag (s.lokal c) s.regionLive w),
+        buchung := { s.buchung with haelt := s.buchung.zurueckgegeben (.faden o.kind) c } }
+    | .beendet (.grund _) =>
+      { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerWert) }
+    | .ruht | .laeuft => s
+  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage | .wechsle => F.nach c s 0
+
+/-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
+    its class, no memory event) and the state above; without them, the private plan and the refusal. The
+    machine decides whether the action itself runs: a start of a thread that does not rest, a join of a
+    thread that has not ended and a switch to a context that cannot be switched to do not execute. -/
+def Schrittform.faedenschritt (F : Schrittform) (c : Kontext) (s : Zustand) (plans : List Plan)
+    (u : Zustand) : Prop :=
+  (¬ F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [Semantik.plan] ∧ u = F.verweigert c s) ∨
+  (F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [F.plan (s.lokal c) 0] ∧ u = F.faedenNach c s)
+
 /-- **The ideal step of a form, from its class.** A private class has one private plan and its frame
-    transfer; an access class has the step above. -/
+    transfer; an access class has the step above; a lifecycle class has the lifecycle step. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   match F.klasse with
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
+  | .starte | .beende | .verbinde | .wechsle => F.faedenschritt c s plans u
 
 /-- **The implementation step of a form.** Every class of this package has ONE linearisation point: the
     implementation step is the ideal step, so a step of the implementation machine is a step of `I`. A class
@@ -188,8 +250,8 @@ def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
     context holds a handle: the access is refused, nothing is read or written. -/
 def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) (a : Aenderung) : Operand :=
   match wert with
-  | some w => ⟨r.zelle region index, w, 0, none, a⟩
-  | none => ⟨.aussen, 0, 0, none, a⟩
+  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner⟩
+  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner⟩
 
 /-- **The operand of an access instruction at a frame**, read from the frame it steps. -/
 def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
@@ -213,6 +275,7 @@ def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
 def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   match b with
   | .zugriff form => form.operand r
+  | .faden form => { Operand.keiner with faden := form.operand r }
   | .rufe .. | .starte .. => Operand.keiner
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
@@ -231,6 +294,7 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
 def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : Int) : Rahmen :=
   match b with
   | .zugriff form => form.uebertrag r gelesen
+  | .faden form => form.uebertrag r gelesen
   | .rufe .. | .starte .. => b.auswerten r live
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..

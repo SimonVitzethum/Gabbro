@@ -247,7 +247,7 @@ theorem stummer_schritt_koppelt
           · show w₂.status c = .laeuft
             rw [← statusEq]; exact stat₁
         have rahmen₂ : Zustandsrahmen w₂ (f.nach c w₂) :=
-          ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+          ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
         -- empty labels extend the graph by nothing; the kernel unfolds the
         -- internal plan, the write-event filter and the empty appends definitionally
         have speicher₂ : Speicherfolge w₂.initial (.kontext c) w₂.graph _ [] w₂.graph :=

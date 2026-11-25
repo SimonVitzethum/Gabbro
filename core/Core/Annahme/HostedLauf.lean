@@ -59,10 +59,10 @@ theorem antwort_atomar (history : AussenVerlauf) (bytes : List UInt8) :
     atomar einheit.katalog.plattform (sicht bytes 2 history) frage = .antwort (ausgabe bytes) := rfl
 
 private theorem rahmen_binde (s : Zustand) : Zustandsrahmen s (binde s) :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 private theorem rahmen_warte (s : Zustand) : Zustandsrahmen s (warte s) :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 private theorem binde_regel {s : AussenStart} (zul : einheit.ZulStart (umgebung []) s) :
     regel kontext (startZustand s) () [bindePlan] (binde (startZustand s)) := by

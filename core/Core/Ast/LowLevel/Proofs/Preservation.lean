@@ -50,7 +50,7 @@ theorem vollzug {k : Katalog} (op : Instruction k) (transfer : Transfer k)
     (t : Nat) (c : Kontext) (s : State k) :
     FuehrtSchrittAus (setup k) t c s (transfer.apply c s) plan ⟨[], []⟩ (transfer.apply c s) := by
   refine ⟨?_, ?_, [], transfer.apply c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
     cases hl

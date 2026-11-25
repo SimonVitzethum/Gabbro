@@ -53,6 +53,10 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
   epoche : Nat
   verworfen : Kontext → Nat
   buchung : Sicherheit.Buchung Ort := .leer
+  /-- **The number of the next thread to start** (MK-07): a start gives the new thread the context
+      `faden naechsterFaden` and advances the counter, so no number is ever used twice. A start state has
+      only the entry thread `faden 0`, hence `1`. -/
+  naechsterFaden : Nat := 1
 
 namespace Zustand
 
