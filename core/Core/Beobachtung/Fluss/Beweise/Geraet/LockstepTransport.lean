@@ -20,10 +20,10 @@ theorem geraete_aussen_schritt {s : State} {f : SpeicherAkteur Nat} {event : Ere
       [(.aussen, aussenEtikett (d.unit locals).einrichtung event)] g' := by
   let l : Speicher.Etikett Nat UInt8 := aussenEtikett (d.unit locals).einrichtung event
   have hliest : ¬ l.art.liest := by
-    simp only [l, aussenEtikett, Speicher.Art.liest]
+    simp [l, aussenEtikett, Speicher.Art.liest]
   obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2 f l hliest
   refine ⟨g', ?_⟩
-  exact Speicherfolge.cons (Initialisierung.ohne (Or.inl (by simp only [l, aussenEtikett])))
+  exact Speicherfolge.cons (Initialisierung.ohne (Or.inl (by dsimp only [l, aussenEtikett])))
     (by simpa only [l] using hs) (Speicherfolge.nil g')
 
 /-- An offered answer on the left is offered on the right at the same cut with the ledgers
@@ -47,8 +47,8 @@ theorem geraete_antwort_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
     (hkopp : GeraeteKopplungAussage (d.unit locals) ρ₁ ρ₂ predictor t t)
     (hz₁ : ρ₁.zeit.zustand t = some s₁) (hz₂ : ρ₂.zeit.zustand t = some s₂)
     (gut₂ : s₂.SpeicherGut)
-    (step₁ : AntwortSchritt (d.unit locals).katalog ρ₁.hw t a s₁ spur₁ n₁) :
-    ∃ spur₂ n₂, AntwortSchritt (d.unit locals).katalog ρ₂.hw t a s₂ spur₂ n₂ ∧
+    (step₁ : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog ρ₁.hw t a s₁ spur₁ n₁) :
+    ∃ spur₂ n₂, AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog ρ₂.hw t a s₂ spur₂ n₂ ∧
       spur₂.aussen = [.antwort a] := by
   obtain ⟨offered₁, spurEq₁, _, _⟩ := step₁
   obtain ⟨g₂, folge₂⟩ :=
