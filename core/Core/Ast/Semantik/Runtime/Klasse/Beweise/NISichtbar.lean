@@ -4,9 +4,9 @@
              `KlassenNIAussage` asks for `RegelNIPflicht` from three premises: the unit's flow rule for
              the one form `f`, visibility of the form's operands, and the class not reading. This file
              proves the part that follows from those premises alone: the public-state comparison is
-             transitive, two steps of the SAME form from public-equal states end in public-equal
-             states with the same plan view and the same public output, and the operands of a form are
-             equal on public-equal states.
+             symmetric and transitive, two steps of the SAME form from public-equal states end in
+             public-equal states with the same plan view and the same public output, and the operands
+             of a form are equal on public-equal states.
 
              It also proves that the premises do NOT determine the form at the head of the second run:
              a unit can satisfy them and still have `system.kopf` return different forms on two
@@ -27,22 +27,37 @@ open Gabbro.Core.Speicher (Modus)
 
 /-! ### What follows from the flow premises -/
 
-/-- The public state comparison is transitive: every component is an equality of a projection. -/
+/-- The public state comparison is symmetric: every component is an equality of a projection. -/
+theorem Beobachtung.QuellzustandGleich.symm
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {v u : Maschine.Zustand L Ort Wert Raum Lok Grund}
+    (h : Beobachtung.QuellzustandGleich E v u) :
+    Beobachtung.QuellzustandGleich E u v := by
+  refine ⟨?_, ?_, ?_, h.2.2.2.1.symm, h.2.2.2.2.1.symm, ?_⟩
+  · intro c p hp
+    exact (h.1 c p hp).symm
+  · intro c
+    exact (h.2.1 c).symm
+  · intro x
+    exact (h.2.2.1 x).symm
+  · intro c
+    exact (h.2.2.2.2.2 c).symm
+
+/-- The public state comparison is transitive. -/
 theorem Beobachtung.QuellzustandGleich.trans
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
     {v u n : Maschine.Zustand L Ort Wert Raum Lok Grund}
     (h₁ : Beobachtung.QuellzustandGleich E v u) (h₂ : Beobachtung.QuellzustandGleich E u n) :
     Beobachtung.QuellzustandGleich E v n := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, h₁.2.2.2.1.trans h₂.2.2.2.1, h₁.2.2.2.2.1.trans h₂.2.2.2.2.1, ?_⟩
   · intro c p hp
     exact (h₁.1 c p hp).trans (h₂.1 c p hp)
   · intro c
     exact (h₁.2.1 c).trans (h₂.2.1 c)
   · intro x
     exact (h₁.2.2.1 x).trans (h₂.2.2.1 x)
-  · exact h₁.2.2.2.1.trans h₂.2.2.2.1
-  · exact h₁.2.2.2.2.1.trans h₂.2.2.2.2.1
   · intro c
     exact (h₁.2.2.2.2.2 c).trans (h₂.2.2.2.2.2 c)
 
@@ -56,7 +71,7 @@ theorem Schrittform.operand_gleich {ι : Type} {E : Klasseneinheit ι} {F : Schr
 /-- **Two steps of the same form from public-equal states stay public-equal.** This is the whole
     content of `RegelFluss` for a pair of steps: for a public control form the rule states the
     agreement directly; for a private control form each step preserves the public state and has an
-    empty plan/output view, and transitivity of the comparison completes the claim. -/
+    empty plan/output view, and symmetry plus transitivity complete the claim. -/
 theorem Beobachtung.RegelFluss.schrittpaar_gleich
     {ι : Type} {E : Klasseneinheit ι} {f : ι} (fl : Beobachtung.RegelFluss E f)
     {c : Kontext} {v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂}
@@ -71,8 +86,11 @@ theorem Beobachtung.RegelFluss.schrittpaar_gleich
       cases hb : oeffentlich (E.fluss.kontrolle f) <;> simp_all
     have o₁ := (fl.1 c v₁ w₁ p₁ u₁ s₁).2 pubf
     have o₂ := (fl.1 c v₂ w₂ p₂ u₂ s₂).2 pubf
-    exact ⟨Beobachtung.QuellzustandGleich.trans (v := v₁) (u := u₁) (n := u₂) o₁.1 o₂.1,
-      o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
+    have hquel : Beobachtung.QuellzustandGleich E u₁ u₂ :=
+      Beobachtung.QuellzustandGleich.trans (v := u₁) (u := v₁) (n := u₂)
+        (Beobachtung.QuellzustandGleich.symm (v := v₁) (u := u₁) o₁.1)
+        (Beobachtung.QuellzustandGleich.trans (v := v₁) (u := v₂) (n := u₂) gleich o₂.1)
+    exact ⟨hquel, o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
 
 /-! ### The missing premise: the head of the second run is not determined -/
 
@@ -95,19 +113,27 @@ def NISichtbar.schreibform (m : Modus) : Schrittform :=
     different forms, while the flow and visibility premises for `true` are satisfied. -/
 def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
   let F := NISichtbar.schreibform m
-  let E₀ := Regeleinheit .x86_64 F.regel
-  { E₀ with
-    etiketten := { E₀.etiketten with ort := (fun _ => NISichtbar.geheim),
+  { katalog := .x86_64.katalog
+    bild := bild
+    einrichtung := einrichtung Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher
+    system := ⟨(fun _ => F.regel),
+      (fun s _c => if s.verworfen eintritt = 0 then some true else some false),
+      (fun _ _ => False), (fun _ _ _ => False)⟩
+    startdaten := fun start =>
+      startdaten Fragment.leer.eingang Fragment.leer.eintritte (start.assignment 0) .x86_64 []
+    startmedium := startmedium
+    laden := laden Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher .x86_64
+    lokalerBezug := Eq
+    stotterLaenge := fun _ => 0
+    quelltabellen := Fragment.leer.tabellen
+    etiketten := { ort := (fun _ => NISichtbar.geheim),
       bootByte := (fun _ => NISichtbar.geheim) }
     fluss := { lokal := (fun _ => Beobachtung.LokaleEtiketten.ganz NISichtbar.geheim),
-      kontrolle := (fun _ => NISichtbar.geheim) }
-    system := { E₀.system with
-      kopf := fun s _c => if s.verworfen eintritt = 0 then some true else some false } }
+      kontrolle := (fun _ => NISichtbar.geheim) } }
 
 /-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
 def NISichtbar.start : AussenStart :=
-  ⟨0, fun _ => some 0, [], fun _ => none,
-    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩⟩
+  ⟨0, fun _ => some 0, [], fun _ => none, .leer⟩
 
 /-- The state of the unit with the hidden discarded-answer counter set to `b`. -/
 def NISichtbar.zustand (m : Modus) (b : Nat) : Zustand :=
@@ -134,13 +160,9 @@ theorem NISichtbar.premissen (m : Modus) :
       (NISichtbar.schreibform m).Eingebettet (NISichtbar.einheit m) true ∧
       (.schreiben m : Wirkungsklasse).liest = false ∧
       (NISichtbar.schreibform m).Operandensicht (NISichtbar.einheit m) := by
-  refine ⟨rfl, ?_, rfl, ?_⟩
-  · refine ⟨?_, ?_, ?_⟩
-    · simp only [NISichtbar.einheit, Regeleinheit]
-    · rfl
-    · simp only [NISichtbar.einheit, Regeleinheit, einrichtung]
-  · intro c v₁ v₂ gleich
-    rfl
+  refine ⟨rfl, ⟨rfl, rfl, rfl⟩, rfl, ?_⟩
+  intro c v₁ v₂ gleich
+  rfl
 
 /-- Yet the two publicly equal states carry different forms at the head. -/
 theorem NISichtbar.kopf_nicht_offenbar (m : Modus) :
