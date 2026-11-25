@@ -408,9 +408,9 @@ theorem leftArrivalThen (ein aus frei n : Nat) (r : Rahmen)
           (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int))
             (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
       show Function.update _ (frei + 1) _ aus = _
-      rw [updateMiss _ _ _ _ (scratchNeAus (Nat.le_add_right frei 1) haus)]
+      rw [updateMiss _ _ _ _ (ltNeAdd haus)]
       show Function.update _ (frei + 2) _ aus = _
-      rw [updateMiss _ _ _ _ (scratchNeAus (Nat.le_add_right frei 2) haus)]
+      rw [updateMiss _ _ _ _ (ltNeAdd haus)]
       show Function.update _ aus _ aus = _
       exact updateHit _ _ _
     rw [hget, hcast, hunLeft n, if_pos hcond]
