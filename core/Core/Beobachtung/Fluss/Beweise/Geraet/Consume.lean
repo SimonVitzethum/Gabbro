@@ -181,15 +181,20 @@ theorem geraete_consume_ausgeglichen {binding : Binding k} {access : RegisterAcc
     obtain ⟨hnm', hverb', hex⟩ := hub
     have hang : s.angekommen entryContext = s.antworten := by
       simp only [Zustand.angekommen]
-      induction s.antworten with
+      suffices h : ∀ l : List AntwortEreignis, (∀ a ∈ l, a.context = entryContext.nummer) →
+          (l.filter fun e => e.context == entryContext.nummer) = l from
+        h s.antworten hactx
+      intro l hall
+      induction l with
       | nil => rfl
       | cons a as ih =>
-        have hmem : a ∈ a :: as := List.mem_cons.mpr (Or.inl rfl)
-        have hac : a.context = entryContext.nummer := hactx a hmem
+        have hac : a.context = entryContext.nummer :=
+          hall a (List.mem_cons.mpr (Or.inl rfl))
         have hpos : ((fun e => e.context == entryContext.nummer) a) = true := by
           simp only [hac, beq_self_eq_true]
         rw [List.filter_cons_of_pos (p := fun e => e.context == entryContext.nummer)
-          (a := a) (l := as) hpos, ih]
+          (a := a) (l := as) hpos,
+          ih (fun b hb => hall b (List.mem_cons.mpr (Or.inr hb)))]
     have hidx : s.verworfen entryContext + s.verbraucht entryContext = s.antworten.length := by
       rw [hverw entryContext, Nat.zero_add, hverb']
     have hnone : s.naechsteAntwort entryContext = none := by
