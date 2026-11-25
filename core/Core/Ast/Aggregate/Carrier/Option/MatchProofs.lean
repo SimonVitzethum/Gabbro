@@ -197,7 +197,7 @@ theorem optionMatchIdeal : OptionMatchIdealAussage := by
   · exact om_amOrt ctx
   · intro a
     constructor
-    · exact ((optionMatchForm ctx).befehl a).bestimmt
+    · exact (optionMatchForm ctx).bestimmt a
     · intro c s w plans u
       rfl
 

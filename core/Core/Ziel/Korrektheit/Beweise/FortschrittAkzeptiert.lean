@@ -6,7 +6,7 @@
   `FortschrittAkzeptiertAussage` is pinned through `KorrektheitAussagen` and is not changed here. Two of its
   legs are available for every accepted unit today: a matched ideal run with whole-run simulation
   (`sim_im_lauf`) and the composed per-cut alternatives (`fortschritt_im_lauf`). The four form-side fields of
-  `FortschrittsPflichten` are theorems of the elaborated system (`Fragment.fertig`, `Befehl.fortschritt`,
+  `FortschrittsPflichten` are theorems of the elaborated system (`Fragment.fertig`, `Befehl.regelFortschritt`,
   `Befehl.komponierbar`, `Fragment.bereit_eindeutig`), collected in `einheit_fortschrittsfelder`.
 
   The remaining leg is per-context liveness: `¬ Haengt` asks that a continuously enabled, dispatched context
@@ -65,9 +65,13 @@ theorem einheit_fortschrittsfelder (P : Katalog.Plattform) (t : Ast.Unit) :
   refine ⟨?_, ?_, ?_, ?_⟩
   · exact Ast.Semantik.Fragment.fertig (Ast.Semantik.fragment Ast.Category.unit t) P
   · intro f
-    exact Ast.Semantik.Befehl.fortschritt (Ast.Semantik.fragment Ast.Category.unit t) f
+    exact Ast.Semantik.Befehl.regelFortschritt (Ast.Semantik.fragment Ast.Category.unit t) P f
   · intro f
-    exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P f
+    by_cases h : f.Privat
+    · exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P f h
+    · intro t' s c w plans u hk _ _
+      exact absurd (Ast.Semantik.fragment_rein Ast.Category.unit t f (Ast.Semantik.kopf_mem
+        (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h
   · intro s c bereit
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step

@@ -240,11 +240,11 @@ theorem optionConstructorIdeal : OptionConstructorIdealAussage := by
   · intro ctx
     refine ⟨letOption_amOrt ctx, ?_⟩
     intro args
-    exact ⟨((optionLetForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(optionLetForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
   · intro ctx
     refine ⟨returnOption_amOrt ctx, ?_⟩
     intro args
-    exact ⟨((optionReturnForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(optionReturnForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem optionConstructorEinheit : OptionConstructorEinheitAussage := by
   constructor
