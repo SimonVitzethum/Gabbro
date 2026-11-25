@@ -66,11 +66,7 @@ theorem Schrittform.faedenNach_nurFaden (F : Schrittform) (c : Kontext) (s : Zus
     (F.faedenNach c s).NurFaden s := by
   unfold Schrittform.faedenNach
   try dsimp only
-  split
-  · constructor <;> rfl
-  · constructor <;> rfl
-  · split <;> constructor <;> rfl
-  · constructor <;> rfl
+  split <;> (try split) <;> constructor <;> rfl
 
 /-- **The step of a lifecycle form, in facts**: the state differs from the pre-state only in frames, status and
     holdings; the plan records no memory event and has no footprint; its action is still (internal after a refusal,
@@ -133,21 +129,18 @@ theorem Schrittform.faedenNach_stapel {ι : Type} (E : Klasseneinheit ι) (F : S
     exact stapel (s.lokal d) s.regionLive v n bound vorTief
   unfold Schrittform.faedenNach
   try dsimp only
-  split
-  · by_cases h1 : d = Kontext.faden s.naechsterFaden
-    · rw [h1]
-      change (Function.update (Function.update s.lokal c _) (Kontext.faden s.naechsterFaden) _
-        (Kontext.faden s.naechsterFaden)).fortsetzungen.length ≤ n
-      rw [Function.update_self]
-      exact Nat.zero_le _
-    · change (Function.update (Function.update s.lokal c _) (Kontext.faden s.naechsterFaden) _ d).fortsetzungen.length ≤ n
-      rw [Function.update_of_ne h1]
-      exact update_stapel (fun h => acting h _) vorTief
-  · exact update_stapel (fun h => acting h _) vorTief
-  · split
-    · exact update_stapel (fun h => acting h _) vorTief
-    · exact update_stapel (fun h => by rw [← h]; exact vorTief) vorTief
-    · exact vorTief
-  · exact update_stapel (fun h => acting h _) vorTief
+  split <;> (try split) <;> first
+    | exact vorTief
+    | exact update_stapel (fun h => acting h _) vorTief
+    | exact update_stapel (fun h => by rw [← h]; exact vorTief) vorTief
+    | (by_cases h1 : d = Kontext.faden s.naechsterFaden
+       · rw [h1]
+         change (Function.update (Function.update s.lokal c _) (Kontext.faden s.naechsterFaden) _
+           (Kontext.faden s.naechsterFaden)).fortsetzungen.length ≤ n
+         rw [Function.update_self]
+         exact Nat.zero_le _
+       · change (Function.update (Function.update s.lokal c _) (Kontext.faden s.naechsterFaden) _ d).fortsetzungen.length ≤ n
+         rw [Function.update_of_ne h1]
+         exact update_stapel (fun h => acting h _) vorTief)
 
 end Gabbro.Core.Ast.Semantik
