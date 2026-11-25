@@ -125,6 +125,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
