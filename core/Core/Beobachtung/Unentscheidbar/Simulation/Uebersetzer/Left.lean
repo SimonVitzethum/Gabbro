@@ -20,9 +20,6 @@ def leftSel (ein aus frei : Nat) : List Befehl :=
 def leftBlk (ein aus frei : Nat) : List Befehl :=
   sqrtPrefix ein frei ++ leftSel ein aus frei
 
-theorem leftSelLaenge (ein aus frei : Nat) : (leftSel ein aus frei).length = 25 := by
-  rfl
-
 theorem leftBlkLaenge (ein aus frei : Nat) : (leftBlk ein aus frei).length = 50 := by
   rfl
 
@@ -71,13 +68,12 @@ theorem selLink2 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[6] (some e) =
       some (frameL2 e ein aus frei n) := by
   have h11 := selLink1 ein aus frei n e hepc hes
-  have hpc : (frameL1 e ein aus frei n).pc = 28 := rfl
   have hq : (frameL1 e ein aus frei n).temp (frei + 1) = some (natVal (Nat.sqrt n)) :=
     updateHit _ _ _
   have g0 : (leftBlk ein aus frei)[28]? = some (.binden nameX (frei + 1)) := by rfl
   have g1 : (leftBlk ein aus frei)[28 + 1]? = some (.lesen (frei + 2) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[28 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 28 (frei + 2) (frei + 1) _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 28 (frei + 2) (frei + 1) _ (by rfl) hq g0 g1 g2
   rw [show (6 : Nat) = 3 + 3 from rfl, Function.iterate_add_apply, h11]
   simpa only [frameL2] using e0
 
@@ -86,7 +82,6 @@ theorem selLink3 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[7] (some e) =
       some (frameL3 e ein aus frei n) := by
   have h22 := selLink2 ein aus frei n e hepc hes
-  have hpc : (frameL2 e ein aus frei n).pc = 31 := rfl
   have ha : (frameL2 e ein aus frei n).zahl (frei + 1) =
       some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal ((Nat.sqrt n : Nat) : Int)⟩ := by
     have hA : (frameL2 e ein aus frei n).temp (frei + 1) = some (natVal (Nat.sqrt n)) := by
@@ -100,7 +95,7 @@ theorem selLink3 (ein aus frei n : Nat) (e : Rahmen)
   have g : (leftBlk ein aus frei)[31]? = some (.binaer .mul (frei + 1)) := by rfl
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL2 e ein aus frei n)) =
       some (frameL3 e ein aus frei n) :=
-    schrittBinaer _ _ _ _ .mul _ _ hpc ha hb g
+    schrittBinaer _ _ _ _ .mul _ _ (by rfl) ha hb g
   rw [show (7 : Nat) = 1 + 6 from rfl, Function.iterate_add_apply, h22]
   exact e0
 
@@ -109,13 +104,12 @@ theorem selLink4 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[10] (some e) =
       some (frameL4 e ein aus frei n) := by
   have h33 := selLink3 ein aus frei n e hepc hes
-  have hpc : (frameL3 e ein aus frei n).pc = 32 := rfl
   have hq : (frameL3 e ein aus frei n).temp (frei + 1) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int))⟩) :=
     updateHit _ _ _
   have g0 : (leftBlk ein aus frei)[32]? = some (.binden nameX (frei + 1)) := by rfl
   have g1 : (leftBlk ein aus frei)[32 + 1]? = some (.lesen (frei + 2) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[32 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 32 (frei + 2) (frei + 1) _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 32 (frei + 2) (frei + 1) _ (by rfl) hq g0 g1 g2
   rw [show (10 : Nat) = 3 + 7 from rfl, Function.iterate_add_apply, h33]
   simpa only [frameL4] using e0
 
@@ -125,7 +119,6 @@ theorem selLink5 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[13] (some e) =
       some (frameL5 e ein aus frei n) := by
   have h44 := selLink4 ein aus frei n e hepc hes
-  have hpc : (frameL4 e ein aus frei n).pc = 35 := rfl
   have hq : (frameL4 e ein aus frei n).temp ein = some (natVal n) := by
     show Function.update _ (frei + 2) _ ein = _
     rw [updateMiss _ _ _ _ (ltNeAdd hein)]
@@ -139,7 +132,7 @@ theorem selLink5 (ein aus frei n : Nat) (e : Rahmen)
   have g0 : (leftBlk ein aus frei)[35]? = some (.binden nameX ein) := by rfl
   have g1 : (leftBlk ein aus frei)[35 + 1]? = some (.lesen (frei + 1) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[35 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 35 (frei + 1) ein _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 35 (frei + 1) ein _ (by rfl) hq g0 g1 g2
   rw [show (13 : Nat) = 3 + 10 from rfl, Function.iterate_add_apply, h44]
   simpa only [frameL5] using e0
 
@@ -149,7 +142,6 @@ theorem selLink6 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[14] (some e) =
       some (frameL6 e ein aus frei n) := by
   have h55 := selLink5 ein aus frei n e hepc hes heq hein
-  have hpc : (frameL5 e ein aus frei n).pc = 38 := rfl
   have ha : (frameL5 e ein aus frei n).zahl (frei + 1) = some ⟨(n : Int), (n : Int), Zahl.literal (n : Int)⟩ := by
     have hA : (frameL5 e ein aus frei n).temp (frei + 1) = some (natVal n) := updateHit _ _ _
     exact zahlOfNat _ _ _ hA
@@ -164,7 +156,7 @@ theorem selLink6 (ein aus frei n : Nat) (e : Rahmen)
   have g : (leftBlk ein aus frei)[38]? = some (.binaer .sub (frei + 1)) := by rfl
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL5 e ein aus frei n)) =
       some (frameL6 e ein aus frei n) :=
-    schrittBinaer _ _ _ _ .sub _ _ hpc ha hb g
+    schrittBinaer _ _ _ _ .sub _ _ (by rfl) ha hb g
   rw [show (14 : Nat) = 1 + 13 from rfl, Function.iterate_add_apply, h55]
   exact e0
 
@@ -174,13 +166,12 @@ theorem selLink7 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[17] (some e) =
       some (frameL7 e ein aus frei n) := by
   have h66 := selLink6 ein aus frei n e hepc hes heq hein
-  have hpc : (frameL6 e ein aus frei n).pc = 39 := rfl
   have hq : (frameL6 e ein aus frei n).temp (frei + 1) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) :=
     updateHit _ _ _
   have g0 : (leftBlk ein aus frei)[39]? = some (.binden nameX (frei + 1)) := by rfl
   have g1 : (leftBlk ein aus frei)[39 + 1]? = some (.lesen aus 0) := by rfl
   have g2 : (leftBlk ein aus frei)[39 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 39 aus (frei + 1) _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 39 aus (frei + 1) _ (by rfl) hq g0 g1 g2
   rw [show (17 : Nat) = 3 + 14 from rfl, Function.iterate_add_apply, h66]
   simpa only [frameL7] using e0
 
@@ -190,7 +181,6 @@ theorem selLink8 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[20] (some e) =
       some (frameL8 e ein aus frei n) := by
   have h77 := selLink7 ein aus frei n e hepc hes heq hein
-  have hpc : (frameL7 e ein aus frei n).pc = 42 := rfl
   have hne0 : (frei + 0) ≠ aus := Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
   have hq : (frameL7 e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
     show Function.update _ aus _ (frei + 0) = _
@@ -211,7 +201,7 @@ theorem selLink8 (ein aus frei n : Nat) (e : Rahmen)
   have g0 : (leftBlk ein aus frei)[42]? = some (.binden nameX (frei + 0)) := by rfl
   have g1 : (leftBlk ein aus frei)[42 + 1]? = some (.lesen (frei + 2) 0) := by rfl
   have g2 : (leftBlk ein aus frei)[42 + 2]? = some (.blockEnde 1) := by rfl
-  have e0 := laufKopie _ _ 42 (frei + 2) (frei + 0) _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 42 (frei + 2) (frei + 0) _ (by rfl) hq g0 g1 g2
   rw [show (20 : Nat) = 3 + 17 from rfl, Function.iterate_add_apply, h77]
   simpa only [frameL8] using e0
 
@@ -221,7 +211,6 @@ theorem selLink9 (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[21] (some e) =
       some (frameL9 e ein aus frei n) := by
   have h88 := selLink8 ein aus frei n e hepc hes heq hein haus
-  have hpc : (frameL8 e ein aus frei n).pc = 45 := rfl
   have ha : (frameL8 e ein aus frei n).zahl (frei + 1) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩ := by
     have hA : (frameL8 e ein aus frei n).temp (frei + 1) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
       show Function.update _ (frei + 2) _ (frei + 1) = _
@@ -237,7 +226,7 @@ theorem selLink9 (ein aus frei n : Nat) (e : Rahmen)
   have g : (leftBlk ein aus frei)[45]? = some (.vergleichen .lt (frei + 1)) := by rfl
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL8 e ein aus frei n)) =
       some (frameL9 e ein aus frei n) :=
-    schrittVergleichen _ _ _ _ .lt _ _ hpc ha hb g
+    schrittVergleichen _ _ _ _ .lt _ _ (by rfl) ha hb g
   rw [show (21 : Nat) = 1 + 20 from rfl, Function.iterate_add_apply, h88]
   exact e0
 
@@ -248,10 +237,6 @@ theorem selJumpT (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[22] (some e) =
       some (frameL10t e ein aus frei n) := by
   have hpre := selLink9 ein aus frei n e hepc hes heq hein haus
-  have hpc : (frameL9 e ein aus frei n).pc = 46 := rfl
-  have htemp : (frameL9 e ein aus frei n).temp (frei + 1) =
-      some ⟨.bool, cmpBoolLeft (Nat.sqrt n) n⟩ :=
-    updateHit _ _ _
   have hbool : cmpBoolLeft (Nat.sqrt n) n = true := by
     have e1 : cmpBoolLeft (Nat.sqrt n) n =
         decide (n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n) := by
@@ -261,7 +246,7 @@ theorem selJumpT (ein aus frei n : Nat) (e : Rahmen)
   have g : (leftBlk ein aus frei)[46]? = some (.springeWenn (frei + 1) true 4) := by rfl
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL9 e ein aus frei n)) =
       some (frameL10t e ein aus frei n) :=
-    schrittSpringeWennWahr _ _ _ _ _ _ _ hpc htemp hbool g
+    schrittSpringeWennWahr _ _ _ _ _ _ _ (by rfl) (updateHit _ _ _) hbool g
   rw [show (22 : Nat) = 1 + 21 from rfl, Function.iterate_add_apply, hpre]
   exact e0
 
@@ -272,10 +257,6 @@ theorem selJumpE (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[22] (some e) =
       some (frameL10e e ein aus frei n) := by
   have hpre := selLink9 ein aus frei n e hepc hes heq hein haus
-  have hpc : (frameL9 e ein aus frei n).pc = 46 := rfl
-  have htemp : (frameL9 e ein aus frei n).temp (frei + 1) =
-      some ⟨.bool, cmpBoolLeft (Nat.sqrt n) n⟩ :=
-    updateHit _ _ _
   have hbool : cmpBoolLeft (Nat.sqrt n) n ≠ true := by
     have e1 : cmpBoolLeft (Nat.sqrt n) n =
         decide (n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n) := by
@@ -287,7 +268,7 @@ theorem selJumpE (ein aus frei n : Nat) (e : Rahmen)
   have g : (leftBlk ein aus frei)[46]? = some (.springeWenn (frei + 1) true 4) := by rfl
   have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL9 e ein aus frei n)) =
       some (frameL10e e ein aus frei n) :=
-    schrittSpringeWennFalsch _ _ _ _ _ _ _ hpc htemp hbool g
+    schrittSpringeWennFalsch _ _ _ _ _ _ _ (by rfl) (updateHit _ _ _) hbool g
   rw [show (22 : Nat) = 1 + 21 from rfl, Function.iterate_add_apply, hpre]
   exact e0
 
@@ -298,15 +279,10 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     (Schritt (leftBlk ein aus frei))^[25] (some e) =
       some (frameL11e e ein aus frei n) := by
   have hpre := selJumpE ein aus frei n e hepc hes heq hein haus h
-  have hpc : (frameL10e e ein aus frei n).pc = 47 := rfl
   have g0 : (leftBlk ein aus frei)[47]? = some (.binden nameX (frei + 0)) := by rfl
   have g1 : (leftBlk ein aus frei)[47 + 1]? = some (.lesen aus 0) := by rfl
   have g2 : (leftBlk ein aus frei)[47 + 2]? = some (.blockEnde 1) := by rfl
   have hq : (frameL10e e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
-    have h01 : (frameL10e e ein aus frei n).temp (frei + 0) =
-        (frameL9 e ein aus frei n).temp (frei + 0) := rfl
-    rw [h01]
-    have hne0 : (frei + 0) ≠ aus := Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     show Function.update _ (frei + 2) _ (frei + 0) = _
@@ -326,7 +302,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     exact hes
-  have e0 := laufKopie _ _ 47 aus (frei + 0) _ hpc hq g0 g1 g2
+  have e0 := laufKopie _ _ 47 aus (frei + 0) _ (by rfl) hq g0 g1 g2
   rw [show (25 : Nat) = 3 + 22 from rfl, Function.iterate_add_apply, hpre]
   simpa only [frameL11e] using e0
 
@@ -400,10 +376,7 @@ theorem leftArrivalThen (ein aus frei n : Nat) (r : Rahmen)
   have hausT : (frameL10t rE ein aus frei n).temp aus =
       some (natVal ((Nat.unpair n).1)) := by
     have hcast := packSubCast (Nat.sqrt n) n hsqrt
-    have htemp : (frameL10t rE ein aus frei n).temp aus =
-        (frameL9 rE ein aus frei n).temp aus := rfl
-    rw [htemp]
-    have hget : (frameL9 rE ein aus frei n).temp aus =
+    have hget : (frameL10t rE ein aus frei n).temp aus =
         some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int))
           (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int))
             (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
