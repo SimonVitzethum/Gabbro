@@ -148,7 +148,8 @@ theorem laufBleibtVorEnde (blk : List Befehl) (r : Rahmen) (k : Nat) (rk : Rahme
         (Schritt blk)^[t] ((Schritt blk)^[j + 1] (some r)) := by
       rw [show (j + 1) + t = t + (j + 1) by omega, Function.iterate_add_apply]
     rw [e2, e1]
-  rw [hiter, hrj, hnone, laufKein] at hrk
+  have h1 : (Schritt blk)^[1] (some rj) = none := by simpa using hnone
+  rw [hiter, hrj, h1, laufKein] at hrk
   cases hrk
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
