@@ -5,13 +5,12 @@
 
   Findings proved below:
 
-  * `KorrektheitAussagen` is FALSE as written. Its docstring says that every pinned statement is a conjunct
-    "with its parameters universally quantified", and the definition does quantify `C : Pruefer` and
-    `π : Parser` universally. It therefore claims that EVERY checker is correct and non-trivial and that
-    EVERY parser agrees with the reference relation. A checker whose three verdict functions are constantly
-    `false` fails `PrueferNichtTrivialAussage` (and `PrueferKorrektAussage` on any accepted unit); the
-    universal closure is refuted below. The statement is hash-pinned (PinTable), so it is not changed here.
-    The intended collection is an existential choice of checker/parser, or a structure with those fields.
+  * The checker package inside `KorrektheitAussagen` is existential, and it is not fulfilled by an
+    arbitrary checker: a checker whose three verdict functions are constantly `false` fails
+    `PrueferNichtTrivialAussage` (and hence the package `PrueferKorrektAussage ∧ PrueferVollstaendigAussage ∧
+    PrueferNichtTrivialAussage ∧ PrueferDecktFormenAussage`, for every registry evidence). The witness
+    below records this. The earlier universal reading of `KorrektheitAussagen` ("every checker is correct
+    and non-trivial") was false and has been replaced by the existential one.
 
   * `GabbroSicherheitForm` is VACUOUS over a free frame, exactly as `GabbroZielForm` is (the latter is
     recorded in `Verfeinerung/Review/Befunde.lean`). With `Laeufe` nonempty, all four safety predicates
@@ -34,10 +33,11 @@ open Gabbro.Core.Ziel
 open Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core.Katalog
 
-/-- The pinned collection statement is false: quantifying the checker universally makes it assert that a
-    refuse-everything checker is non-trivial. -/
-theorem KorrektheitAussagen.falsch : ¬ KorrektheitAussagen := by
-  intro h
+/-- The existential checker package is not fulfilled by an arbitrary checker: the refuse-everything
+    checker fails non-triviality, hence fails the package for every registry evidence. -/
+theorem KorrektheitAussagen.nichtTrivial :
+    ∃ C : Pruefer, ∀ B : FormBeleg, ¬ (PrueferKorrektAussage C ∧ PrueferVollstaendigAussage C ∧
+      PrueferNichtTrivialAussage C ∧ PrueferDecktFormenAussage C B) := by
   let C : Pruefer :=
     { pruefeLokal := fun _ _ => false
       pruefeKlauseln := fun _ _ => false
@@ -45,11 +45,9 @@ theorem KorrektheitAussagen.falsch : ¬ KorrektheitAussagen := by
       fragmentLokal := fun _ _ => false
       fragmentKlauseln := fun _ _ => false
       fragmentWaechter := fun _ _ => false }
-  let B : FormBeleg := ⟨PEmpty, fun _ _ => False, fun _ _ _ => False⟩
-  let π : Parser := { parse := fun _ => none }
-  have hk := h Plattform.x86_64 B C π
-  have hnt : PrueferNichtTrivialAussage C := hk.2.2.2.2.2.2.2.2.1
-  rcases hnt.1 with ⟨_, _, ht⟩
+  refine ⟨C, fun _ h => ?_⟩
+  obtain ⟨_, _, hnt, _⟩ := h
+  obtain ⟨_, _, ht⟩ := hnt.1
   dsimp only [Pruefer.pruefe, C] at ht
   cases ht
 
