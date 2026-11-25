@@ -171,7 +171,7 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
   obtain ⟨ρ, run, sched, _, hwEq⟩ :=
     Maschine.fairer_lauf_mit_hw (einheitVon P t) hardware zul fair.konform
   refine ⟨h, ρ, run, ?_, sched, ?_⟩
-  · rw [← hwEq]
+  · rw [← hwEq] at fair
     exact fair
   · exact Maschine.verdraengung_ohne_meldung (einheitVon P t) hw (fun i => rfl) ρ hwEq
 
