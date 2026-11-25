@@ -110,9 +110,9 @@ theorem FortschrittAkzeptiertAussage.erfuellbar :
         FairLaeufe (einheitVon P t).katalog H ρ.hw ∧
         Maschine.SchedulerFair (einheitVon P t) ρ ∧
         Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ := by
-  obtain ⟨H, ρ, akz, run, fair, sched, ret⟩ :=
+  obtain ⟨H, ρ, run, fair, sched, ret⟩ :=
     einheitVon_fair_lauf_erfuellbar Plattform.x86_64 trivialUnit trivial_akzeptiert
-  exact ⟨Plattform.x86_64, trivialUnit, H, ρ, akz, run, fair, sched, ret⟩
+  exact ⟨Plattform.x86_64, trivialUnit, H, ρ, trivial_akzeptiert, run, fair, sched, ret⟩
 
 /-- Scheduler fairness is load-bearing: without it a context hangs although the run is
     admissible, the history is hardware-fair, and no preemption ever occurs. Feeds: the
