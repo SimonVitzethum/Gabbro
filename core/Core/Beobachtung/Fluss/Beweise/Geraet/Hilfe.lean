@@ -312,7 +312,7 @@ theorem geraete_speicher_still {anfang : Nat → UInt8} {f : SpeicherAkteur Nat}
     es.filterMap (speicherBeob (Grund := PUnit) (Form := PUnit) (d.unit locals).etiketten) = [] := by
   induction folge with
   | nil _ => rfl
-  | cons vor hs nach ih =>
+  | @cons g g₀ g₁ g₂ l ls init es vor hs nach ih =>
     cases vor with
     | ohne _ =>
       simp only [List.nil_append]
@@ -331,12 +331,15 @@ theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Prae
     (hkopf : (d.unit locals).system.kopf s c = some ()) :
     kontextBeob ρ predictor t c s n spur = [] := by
   have hfluss : (d.unit locals).fluss = .leer := geraete_fluss_leer d
-  have hcommit : commitBeob (d.unit locals).katalog.plattform s n = [] := by
+  have hcommit : commitBeob (d.unit locals).katalog.plattform s n =
+      ([] : List (NiedrigesEreignis Nat UInt8 PUnit PUnit)) := by
     simp only [commitBeob, hbuch, List.drop_length, List.filterMap_nil]
-  have hausgabe : ausgabeBeob (d.unit locals) c (s.lokal c) (n.lokal c) = [] := by
+  have hausgabe : ausgabeBeob (d.unit locals) c (s.lokal c) (n.lokal c) =
+      ([] : List (NiedrigesEreignis Nat UInt8 PUnit PUnit)) := by
     simp only [ausgabeBeob, hfluss, Flussdaten.leer, Flussdaten.ausgaben,
       Flussdaten.ausgabeZuwachs, List.drop_nil, List.filter_nil, List.map_nil]
-  have hzeit : zeitBeob ρ c (s.lokal c) (n.lokal c) = [] := by
+  have hzeit : zeitBeob ρ c (s.lokal c) (n.lokal c) =
+      ([] : List (NiedrigesEreignis Nat UInt8 PUnit PUnit)) := by
     have hschrank : (d.unit locals).schranken = .leer := geraete_schranken_leer d
     simp only [zeitBeob, hschrank, Schrankendaten.leer, Schrankendaten.zeitstand,
       List.filter_nil, List.filterMap_nil]
