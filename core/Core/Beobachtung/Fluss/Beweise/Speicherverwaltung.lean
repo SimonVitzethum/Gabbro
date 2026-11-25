@@ -41,12 +41,10 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
     cases ht with
     | wartet _ gleich _ => exact ⟨s, gleich⟩
     | schritt _ step =>
-      cases hn : ρ.zeit.zustand (t + 1) with
-      | none =>
-        cases step
-      | some n =>
-        cases step with
-        | schritt _ => exact ⟨n, rfl⟩
+      cases step with
+      | schritt impl =>
+        rename_i n
+        exact ⟨n, rfl⟩
 
 /-- The rule of a memory form determines one frame and the fixed private plan. -/
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
@@ -74,6 +72,8 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
   cases recorded with
   | wartet label _ _ => cases label
   | schritt label transition =>
+    injection label with evEq
+    subst evEq
     cases sOpt with
     | none => cases transition
     | some s =>
@@ -83,7 +83,7 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
         cases transition with
         | schritt impl =>
           cases impl with
-          | kontext _ _ regel _ =>
+          | kontext _ _ regel aus =>
             obtain ⟨f, frame, kopf, _, planEq, uEq⟩ := mem_regel_aus k code regel
             rw [uEq] at aus
             rw [planEq] at aus
@@ -146,7 +146,7 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
       MemInstruction.evaluate k.plattform.ziel f s c = some frame ∧
       n = frame.advance c s := by
   cases step with
-  | kontext _ _ regel _ =>
+  | kontext _ _ regel aus =>
     obtain ⟨f, frame, kopf, eval, planEq, uEq⟩ := mem_regel_aus k code regel
     rw [uEq] at aus
     rw [planEq] at aus
@@ -170,7 +170,7 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     (step : ImplSchritt memSetup (memProgram k code).system k hw t s spur n)
     (leer : s.fragen = []) : n.fragen = [] := by
   cases step with
-  | kontext _ _ regel _ =>
+  | kontext _ _ regel aus =>
     obtain ⟨_, _, _, _, planEq, uEq⟩ := mem_regel_aus k code regel
     rw [uEq] at aus
     rw [planEq] at aus
@@ -264,20 +264,24 @@ private theorem mem_zustand_gleich {c : Kontext} {vor w₂ : MemState} {frame : 
       Function.update w₂.lokal c {frame with pc := (w₂.lokal c).pc + 1} d
     by_cases hdc : d = c
     · subst d
-      rw [Function.update_self, congrFun lokEqFun c]
+      simp only [Function.update_self]
+      rw [congrFun lokEqFun c]
     · rw [Function.update_of_ne hdc, Function.update_of_ne hdc]
       exact congrFun lokEqFun d
-  · change EndeSicht (memProgram k code) d (vor.status d) =
+  · intro d
+    change EndeSicht (memProgram k code) d (vor.status d) =
       EndeSicht (memProgram k code) d (w₂.status d)
     exact endeGleich d
-  · change sichtbar ((memProgram k code).etiketten.ort x) (vor.initial x) =
+  · intro x
+    change sichtbar ((memProgram k code).etiketten.ort x) (vor.initial x) =
       sichtbar ((memProgram k code).etiketten.ort x) (w₂.initial x)
     exact initialGleich x
   · change vor.rechte = w₂.rechte
     exact rechteEq
   · change vor.leihen = w₂.leihen
     exact leihenEq
-  · change AntwortSicht (memProgram k code) vor d = AntwortSicht (memProgram k code) w₂ d
+  · intro d
+    change AntwortSicht (memProgram k code) vor d = AntwortSicht (memProgram k code) w₂ d
     exact antwortGleich d
   · change vor.epoche = w₂.epoche
     exact epoche
@@ -298,6 +302,8 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
   cases takt₁ with
   | wartet label _ _ => cases label
   | schritt label step₁ =>
+    injection label with evEq
+    subst evEq
     cases nOpt₁ with
     | none => cases step₁
     | some nach₁ =>
