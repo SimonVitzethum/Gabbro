@@ -182,6 +182,13 @@ theorem sw_von_klassisch {a b : E}
   exact ⟨a, x, b, Or.inl ⟨rfl, hsa, hma⟩, hrs, hrf, Modus.stark_atomar hmb, hlb,
     Or.inl ⟨rfl, hlb, hmb⟩⟩
 
+/-- The release end of a synchronisation is strong, with or without a fence. -/
+theorem sw_stark_links {a b : E} (h : G.sw a b) : (G.modus a).stark := by
+  obtain ⟨_, _, _, hkopf, _, _, _, _, _⟩ := h
+  rcases hkopf with ⟨rfl, _, hma⟩ | ⟨hza, _, _⟩
+  · exact hma
+  · exact hza.2
+
 /-- The classic shape stays at one location. -/
 theorem sw_klassisch_ort (hw : G.Wohlgeformt) {a b x : E} (hrs : G.Rs a x) (hrf : G.rf x b) :
     G.ort a = G.ort b :=
