@@ -2,6 +2,7 @@ module
 
 public import Core.Sicherheit.Lauf
 public import Core.Ast.Semantik.Runtime.Sicherheit
+public import Core.Ast.Semantik.Runtime.Atom.Rein
 import Core.Sicherheit.Laufkonstruktion
 
 @[expose] public section
@@ -32,21 +33,16 @@ private theorem arithmetik_grenzen {p : Fragment} (platform : Plattform)
     exact ⟨rfl, rfl, rfl, ohneDeklarationen platform keine _⟩
   · cases h
 
-private theorem arithmetik_antwortrechte (p : Fragment) (platform : Plattform) (b : Befehl) :
-    RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
-  intro t c w vor zwischen nach plan spur _ regel vollzug befugt
-  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) regel vollzug
-  exact befugt
-
 private theorem arithmetik_schritt
     (p : Fragment) (platform : Plattform) (hw : HwLauf) (t : Nat)
     (s : Ast.Semantik.Zustand) (b : Befehl)
     (normal : (hw.angebot t).crash = false) (bereit : KannSchreiten hw t eintritt s)
-    (kopf : (p.einheit platform).system.kopf s eintritt = some b) :
+    (kopf : (p.einheit platform).system.kopf s eintritt = some b)
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl) :
     Lauffolge (p.einheit platform) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
       (some (b.nach eintritt s)) :=
   .schritt (.kontext normal bereit
-    ⟨b, kopf, (b.impl_privat eintritt s () [Ast.Semantik.plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+    ⟨b, kopf, (b.impl_privat priv eintritt s () [Ast.Semantik.plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
     (b.vollzug _ t eintritt s))
 
 /-- The rule and boundary obligations hold jointly for a loaded unit that actually
@@ -109,19 +105,24 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let abEins := voran (schritt := fun t => schritt (t + 1)) abZwei (some z₁) _ s₁
   let zeit := voran (schritt := schritt) abEins (some z₀) _ s₀
   let ρ : Lauf E := ⟨start, hw, zeit⟩
-  exact ⟨E, H, ρ, arithmetik_grenzen platform keine, arithmetik_antwortrechte p platform,
-    Befehl.sicher p platform keine, ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
+  have rein : ∀ b ∈ p.code, b.Privat := stmt_rein tree
+  exact ⟨E, H, ρ, arithmetik_grenzen platform keine,
+    fun f => (Fragment.sicherheitsPflichten_alle p platform keine rein f).2,
+    fun f => (Fragment.sicherheitsPflichten_alle p platform keine rein f).1,
+    ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
     z₆, ⟨7, Int.le_refl _, Int.le_refl _⟩, ende, rfl, rfl⟩
 
-/-- Every concrete run of a current fragment without invariant declarations is
+/-- Every concrete run of a frame-only fragment without invariant declarations is
     safe. The instruction proof is applied in the enclosing machine. -/
-theorem fragment_sicher (p : Fragment) (platform : Plattform) (keine : p.klauseln.invariant = []) :
+theorem fragment_sicher (p : Fragment) (platform : Plattform) (keine : p.klauseln.invariant = [])
+    (rein : ∀ b ∈ p.code, b.Privat) :
     ∀ H (ρ : Lauf (p.sicherheitsEinheit platform)),
       Maschine.Laeufe (p.einheit platform) H ρ →
       Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
         InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
         Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
         ToctouFrei (p.sicherheitsEinheit platform) H ρ :=
-  sicherheit_aus_regeln (arithmetik_grenzen platform keine) (Befehl.sicherheitsPflichten p platform keine)
+  sicherheit_aus_regeln (arithmetik_grenzen platform keine)
+    (Fragment.sicherheitsPflichten_alle p platform keine rein)
 
 end Gabbro.Core.Sicherheit

@@ -10,6 +10,8 @@ public import Core.Text.Model
 public import Core.Text.Review.Befunde
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Litmus.Mp
+public import Core.Speicher.Litmus.Lb
 public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
@@ -32,6 +34,7 @@ public import Core.Fortschritt.WarteBundle
 public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
+public import Core.Fortschritt.SperrFreigabe
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
@@ -55,6 +58,7 @@ public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
@@ -144,8 +148,12 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
+public import Core.Ast.Semantik.Runtime.Atom.Aussagen
+public import Core.Ast.Semantik.Runtime.Atom.Beine
+public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
@@ -164,9 +172,12 @@ public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
+public import Core.Ziel.Review.Befunde
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
+public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
+public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz

@@ -68,7 +68,7 @@ theorem taggedDecl_ideal : TaggedDeclIdealAussage := by
   · exact td_amOrt scope
   · intro args
     constructor
-    · exact ((taggedDeclForm scope).befehl args).bestimmt
+    · exact (taggedDeclForm scope).bestimmt args
     · intro c s w plans u
       rfl
 

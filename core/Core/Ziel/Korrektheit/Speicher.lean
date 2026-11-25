@@ -24,7 +24,7 @@ module
 public import Core.Speicher.Graphmaschine
 public import Core.Speicher.GraphmaschineVollstaendig
 public import Core.Speicher.DRFSC
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 public import Core.Speicher.Trennung
 
 @[expose] public section

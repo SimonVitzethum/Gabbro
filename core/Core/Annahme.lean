@@ -13,3 +13,4 @@ public import Core.Annahme.AussenLauf
 public import Core.Annahme.Hosted
 public import Core.Annahme.HostedLauf
 public import Core.Annahme.FruehererCommit
+public import Core.Annahme.Domaene

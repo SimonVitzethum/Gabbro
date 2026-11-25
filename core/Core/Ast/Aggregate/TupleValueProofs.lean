@@ -162,7 +162,7 @@ theorem tupleValue_ideal : TupleValueIdealAussage := by
   intro scope
   refine ⟨tupleValue_am_ort scope, ?_⟩
   intro args
-  exact ⟨((tupleValueForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(tupleValueForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleValue_einheit : TupleValueEinheitAussage := by
   intro scope platform args
