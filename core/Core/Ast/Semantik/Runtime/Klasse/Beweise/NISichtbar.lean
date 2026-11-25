@@ -22,7 +22,6 @@ public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog Beobachtung
-open Gabbro.Core.Speicher (Modus)
 
 /-! ### What follows from the flow premises -/
 
@@ -94,15 +93,15 @@ theorem Beobachtung.RegelFluss.schrittpaar_gleich
 /-! ### The step-level class duty follows from the flow rule alone -/
 
 /-- **The step-level class duty holds for every class.** Both sides take the same form by
-    hypothesis, so `RegelFluss.schrittpaar_gleich` applies directly: the countermodel's missing
-    head premise (`kopf_nicht_offenbar`) is not needed at the step level. The `liest` restriction
-    and the operand visibility stay as scope: for the reading classes the flow rule premise itself
-    is what cannot hold without the label binding of the read value (MK-13). -/
+    hypothesis, so `RegelFluss.schrittpaar_gleich` applies directly and no premise about the head
+    of a second run is needed. The `liest` restriction and the operand visibility stay as scope:
+    for the reading classes the flow rule premise itself is what cannot hold without the label
+    binding of the read value (MK-13). -/
 theorem klassenSchrittNI (k : Wirkungsklasse) : KlassenSchrittNIAussage k := by
   intro ι E f F _ _ _ fl _sicht c v₁ v₂ w p₁ p₂ u₁ u₂ gleich s₁ s₂
   exact Beobachtung.RegelFluss.schrittpaar_gleich fl gleich s₁ s₂
 
-/-! ### The missing premise: the head of the second run is not determined -/
+/-! ### The flow-rule premise is not vacuous -/
 
 /-- A secret compartment, as in the other flow countermodels. -/
 def NISichtbar.geheim : Beobachtung.Etikett := {0}
@@ -114,125 +113,14 @@ theorem NISichtbar.geheim_verborgen : oeffentlich NISichtbar.geheim = false := b
   rw [eq] at mem
   exact Finset.notMem_empty _ mem
 
-/-- All locations and control labels are secret in the countermodel. -/
+/-- All locations and boot bytes are secret in the countermodel. -/
 def NISichtbar.etikettOrt (_ : Zelle) : Beobachtung.Etikett := NISichtbar.geheim
 def NISichtbar.etikettBoot (_ : Nat) : Beobachtung.Etikett := NISichtbar.geheim
-def NISichtbar.lokalEtikett (_ : Kontext) : Beobachtung.LokaleEtiketten Rahmen :=
-  Beobachtung.LokaleEtiketten.ganz NISichtbar.geheim
-def NISichtbar.kontrollEtikett (_ : Bool) : Beobachtung.Etikett := NISichtbar.geheim
-
-/-- A writing form that names no particular cell. -/
-def NISichtbar.schreibform (m : Modus) : Schrittform :=
-  ⟨.schreiben m, fun _ => Operand.keiner, fun r _ _ => r⟩
-
-/-- A unit embedding the writing form at `true`. Its head function reads the discarded-answer
-    counter, which is NOT part of the public state comparison: two publicly equal states carry
-    different forms, while the flow and visibility premises for `true` are satisfied. -/
-def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
-  let F := NISichtbar.schreibform m
-  { katalog := (Plattform.x86_64).katalog,
-    bild := bild,
-    einrichtung := einrichtung Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher,
-    system := ⟨(fun _ => F.regel),
-      (fun s _c => if s.verworfen eintritt = 0 then some true else some false),
-      (fun _ _ => False), (fun _ _ _ => False)⟩,
-    startdaten := fun start =>
-      startdaten Fragment.leer.eingang Fragment.leer.eintritte (start.assignment 0) .x86_64 [],
-    startmedium := startmedium,
-    laden := laden Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher .x86_64,
-    lokalerBezug := Eq,
-    stotterLaenge := fun _ => 0,
-    quelltabellen := Fragment.leer.tabellen,
-    etiketten := { ort := NISichtbar.etikettOrt, bootByte := NISichtbar.etikettBoot },
-    fluss := { lokal := NISichtbar.lokalEtikett, kontrolle := NISichtbar.kontrollEtikett } }
 
 /-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
 def NISichtbar.start : AussenStart :=
   ⟨0, fun _ => some 0, [], fun _ => none, .leer⟩
 
-/-- The state of the unit with the hidden discarded-answer counter set to `b`. -/
-def NISichtbar.zustand (m : Modus) (b : Nat) : Zustand :=
-  let v := (I.start (NISichtbar.einheit m) NISichtbar.start).2
-  { v with verworfen := fun _ => b }
-
-/-- Changing the hidden counter preserves the public state. -/
-theorem NISichtbar.quellzustand_gleich (m : Modus) :
-    Beobachtung.QuellzustandGleich (NISichtbar.einheit m)
-      (NISichtbar.zustand m 0) (NISichtbar.zustand m 1) := by
-  refine ⟨?_, ?_, ?_, rfl, rfl, ?_⟩
-  · intro c p hp
-    rfl
-  · intro c
-    rfl
-  · intro x
-    rfl
-  · intro c
-    rfl
-
-/-- A step that changes only local data preserves the public state in the countermodel. -/
-theorem NISichtbar.quellzustand_nur_lokal (m : Modus) (v u : Zustand)
-    (hstatus : u.status = v.status) (hinitial : u.initial = v.initial)
-    (hrechte : u.rechte = v.rechte) (hleihen : u.leihen = v.leihen)
-    (hantwort : ∀ c, AntwortSicht (NISichtbar.einheit m) u c =
-      AntwortSicht (NISichtbar.einheit m) v c) :
-    Beobachtung.QuellzustandGleich (NISichtbar.einheit m) v u := by
-  refine ⟨?_, ?_, ?_, hrechte.symm, hleihen.symm, ?_⟩
-  · intro c p hp
-    exfalso
-    have hp' : oeffentlich NISichtbar.geheim = true := by
-      simpa only [NISichtbar.einheit, NISichtbar.lokalEtikett,
-        Beobachtung.LokaleEtiketten.ganz] using hp
-    exact Bool.false_ne_true (NISichtbar.geheim_verborgen.symm.trans hp')
-  · intro c
-    rw [hstatus]
-  · intro x
-    rw [hinitial]
-  · intro c
-    exact (hantwort c).symm
-
-/-- The flow rule of the embedded form holds: the step changes only hidden local data, and every
-    label it could release is secret. -/
-theorem NISichtbar.regelFluss (m : Modus) :
-    Beobachtung.RegelFluss (NISichtbar.einheit m) true := by
-  constructor
-  · intro c v w p u step
-    refine ⟨?_, ?_⟩
-    · refine ⟨?_, ?_⟩
-      · rfl
-      · intro id quelle val mem
-        exact (List.not_mem_nil mem).elim
-    · intro pubf
-      have ide : (NISichtbar.schreibform m).ideal c v w [p] u := by
-        simpa only [NISichtbar.einheit, Schrittform.regel] using step.2
-      unfold Schrittform.ideal Schrittform.zugriffsschritt at ide
-      rcases ide with ⟨_, peq, ueq⟩ | ⟨_, val, _, peq, ueq⟩
-      · have pEq : p = Semantik.plan := (List.cons.inj peq).1
-        subst p
-        subst ueq
-        refine ⟨?_, ?_, ?_⟩
-        · exact NISichtbar.quellzustand_nur_lokal m v _ rfl rfl rfl rfl (fun _ => rfl)
-        · rfl
-        · rfl
-      · have pEq : p = (NISichtbar.schreibform m).plan (v.lokal c) val := (List.cons.inj peq).1
-        subst p
-        subst ueq
-        refine ⟨?_, ?_, ?_⟩
-        · exact NISichtbar.quellzustand_nur_lokal m v _ rfl rfl rfl rfl (fun _ => rfl)
-        · change Beobachtung.PlanSicht (NISichtbar.einheit m)
-            (Wirkungsklasse.plan (.schreiben m) Operand.keiner val) = ([], [], none)
-          simp only [Beobachtung.PlanSicht, NISichtbar.einheit, NISichtbar.etikettOrt,
-            Wirkungsklasse.plan, Operand.keiner, List.filter_nil]
-          simp only [NISichtbar.geheim_verborgen, Bool.and_false, Bool.false_eq_true,
-            if_false, List.filterMap_cons, List.filterMap_nil, List.nil_append]
-        · rfl
-  · intro pub
-    exfalso
-    have pubf : oeffentlich ((NISichtbar.einheit m).fluss.kontrolle true) = false := by
-      simp only [NISichtbar.einheit, NISichtbar.kontrollEtikett]
-      exact NISichtbar.geheim_verborgen
-    exact Bool.false_ne_true (pubf.symm.trans pub)
-
-/-! ### The flow-rule premise is not vacuous -/
 
 /-- A local label that projects only counter 0. Counter 1 is secret because it is not in the projection. -/
 def NISichtbar.lokalEtikettLeak (_ : Kontext) : Beobachtung.LokaleEtiketten Rahmen :=
