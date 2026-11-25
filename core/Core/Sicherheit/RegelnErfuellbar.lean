@@ -225,7 +225,15 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let z₄ := (Befehl.binaer .mul 1).nach eintritt z₃
   let z₅ := (Befehl.binaer .add 0).nach eintritt z₄
   let z₆ := (Befehl.binden name 0).nach eintritt z₅
-  have z6kopf : ∀ c, E.maschine.system.kopf z₆ c = none := fun _ => by rfl
+  have z6kopf : ∀ c, E.maschine.system.kopf z₆ c = none := by
+    intro c
+    by_cases hc : c = Ast.Semantik.eintritt
+    · subst hc
+      decide
+    · have hst : z₆.status c = .ruht := by
+        show (if c = Ast.Semantik.eintritt then Status.laeuft else Status.ruht) = _
+        rw [if_neg hc]
+      simp only [Ast.Semantik.kopf, hst]
   have z6fragen : z₆.fragen = [] := by rfl
   have hwRuhig (t : Nat) : (hw.angebot t).interrupts = [] := rfl
   have hwKeinAbsturz (t : Nat) : (hw.angebot t).crash = false := rfl
