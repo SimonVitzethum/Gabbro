@@ -167,7 +167,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
   have hstill := FuehrtAus.still_erhaelt aktion still
   rw [planEq] at folge
   simp [hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] at folge
-  obtain ⟨_, gEq⟩ := speicherfolgeLeer folgeLeer
+  obtain ⟨_, gEq⟩ := speicherfolgeLeer folge
   rw [gEq]
 
 /-- Every event a `Speicherfolge` appends is a step of its actor or a lazily materialised
