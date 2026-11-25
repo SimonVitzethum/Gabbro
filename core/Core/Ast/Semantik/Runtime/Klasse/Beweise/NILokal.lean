@@ -48,10 +48,9 @@ theorem klassen_antwort_schritt_fragen {ι : Type} (E : Klasseneinheit ι) (frei
   cases step with
   | kontext _ _ regel aus =>
       obtain ⟨i, _, impl⟩ := regel
-      rename_i c w plan u
-      have keinFrage : ∀ q : Frage, plan.aktion ≠ .frage q := frei.1 i c s w plan u impl
+      have keinFrage := frei.1 i _ _ _ _ _ impl
       obtain ⟨frame, _, _, _, fuehrtAus, _, s'Eq⟩ := aus
-      have uLeer : u.fragen = [] := frame.fragen.trans leer
+      have uLeer := frame.fragen.trans leer
       have vLeer := klassen_antwort_fuehrt_aus_fragen_leer E fuehrtAus uLeer keinFrage
       rw [s'Eq]
       exact vLeer
@@ -79,9 +78,13 @@ theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : 
   induction t with
   | zero =>
       rw [lauf.2.2.2]
-      right
-      refine ⟨_, rfl, ?_⟩
-      exact frei.2 h ρ.start _ rfl
+      cases hlad : E.laden ρ.start (h.lade E.bild) with
+      | none =>
+          rw [hlad]
+          exact Or.inl rfl
+      | some z =>
+          rw [hlad]
+          exact Or.inr ⟨z, rfl, frei.2 h ρ.start z hlad⟩
   | succ t ih =>
       cases ih with
       | inl noneq =>
@@ -154,7 +157,7 @@ theorem antwortNI_klasseneinheit {ι : Type} (E : Klasseneinheit ι) (frei : E.F
                   cases impl with
                   | antwort _ arrives =>
                       obtain ⟨angebot, _, _, _⟩ := arrives
-                      have zLeer := klassen_antwort_fragen_leer_an E frei h ρ lauf t before
+                      have zLeer := klassen_antwort_fragen_leer_an E frei lauf t before
                       obtain ⟨q, qmem, _⟩ := angebot.2.2.2.1
                       rw [zLeer] at qmem
                       cases qmem
