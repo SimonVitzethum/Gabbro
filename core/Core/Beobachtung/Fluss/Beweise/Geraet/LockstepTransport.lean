@@ -312,8 +312,8 @@ theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
       · rw [hplanF]
         exact FuehrtAus.verbrauche ready₂
       · rw [hplanF]
-        simp only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
-          List.nil_append, List.append_nil, List.map_nil]
+        dsimp only [spur₂, n₂]
+        exact Speicherfolge.nil s₂.graph
   obtain ⟨spurEq₁, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁, hbuchung₁,
     hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, hpending₁, hinitial₁, hrechte₁,
     hleihen₁, hpersistenz₁⟩ :=
@@ -341,24 +341,22 @@ theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
     have n2rechte : n₂.rechte = u₂.rechte := by rw [hrechte₂]; rfl
     have n1leihen : n₁.leihen = u₁.leihen := by rw [hleihen₁, hu]; rfl
     have n2leihen : n₂.leihen = u₂.leihen := by rw [hleihen₂]; rfl
-    have n1antwort : n₁.naechsteAntwort = u₁.naechsteAntwort := by
-      funext c'
-      rw [hu]
-      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁, hverbraucht₁,
-        hverworfen₁, Zustand.verbrauche, setFrame]
-    have n2antwort : n₂.naechsteAntwort = u₂.naechsteAntwort := by
-      funext c'
-      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂, hverbraucht₂,
-        hverworfen₂, Zustand.verbrauche]
-    unfold QuellzustandGleich at hq ⊢
-    unfold AntwortSicht at hq ⊢
-    simpa only [n1lokal, n2lokal, n1status, n2status, n1initial, n2initial, n1rechte,
-      n2rechte, n1leihen, n2leihen, n1antwort, n2antwort] using hq
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+    · simpa only [n1lokal, n2lokal] using hq.1
+    · simpa only [n1status, n2status] using hq.2.1
+    · simpa only [n1initial, n2initial] using hq.2.2.1
+    · simpa only [n1rechte, n2rechte] using hq.2.2.2.1
+    · simpa only [n1leihen, n2leihen] using hq.2.2.2.2.1
+    · intro c'
+      unfold AntwortSicht
+      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁, hantworten₂,
+        hverbraucht₁, hverbraucht₂, hverworfen₁, hverworfen₂, hantworten, hverbraucht,
+        hverworfen, Function.update_same]
   refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
   · rw [spurEq₁, spurEq₂]
   · exact ⟨by rw [hfragen₁, hfragen₂, hfragen], by rw [hverlauf₁, hverlauf₂, hverlauf],
       by rw [hantworten₁, hantworten₂, hantworten],
-      by rw [hverbraucht₁, hverbraucht₂, hverbraucht, Function.update_self],
+      by rw [hverbraucht₁, hverbraucht₂, hverbraucht],
       by rw [hverworfen₁, hverworfen₂, hverworfen]⟩
   · rw [hbuchung₁, hbuchung₂, hbuch]
   · rw [hepoche₁, hepoche₂, hepoche]
