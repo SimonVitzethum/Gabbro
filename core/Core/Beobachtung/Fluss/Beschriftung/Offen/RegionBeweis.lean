@@ -87,9 +87,9 @@ private theorem evaluate_isSome_gleich {k : Katalog} (op : Instruction k)
   | denoteAddress _ _ _ => rfl
   | selectEnvironment _ _ _ _ => rfl
   | projectAddress slot =>
-      rw [held_gleich hl hre hle]
+      simp only [Instruction.evaluate, held_gleich hl hre hle]
   | borrowView slot shape =>
-      rw [held_gleich hl hre hle]
+      simp only [Instruction.evaluate, held_gleich hl hre hle]
 
 /-- Inverting the low-level head: only the instruction itself runs at the entry, once. -/
 private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel.State k}
@@ -117,7 +117,7 @@ private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel
 /-- The low-level unit never issues a question, so no reached state carries a pending one. -/
 private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
     {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
-    (t : Nat) {s : Ast.LowLevel.State k} (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
+    (t : Nat) (s : Ast.LowLevel.State k) (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
   induction t generalizing s with
   | zero =>
       rw [lauf.2.2.2] at hs
@@ -137,7 +137,7 @@ private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umge
           | wartet _ eq _ => rw [eq] at hs; cases hs
           | schritt _ laufstep => cases laufstep
       | some s0 =>
-          have ihs := ih (s := s0) rfl
+          have ihs := ih s0 rfl
           rw [hv, hs] at tak
           cases tak with
           | wartet label eq _ =>
@@ -194,7 +194,7 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
               | antwort _ hantwort =>
                   obtain ⟨angebot, _, _, _⟩ := hantwort
                   obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
-                  have leer := unit_fragen_leer_an op lauf t hv
+                  have leer := unit_fragen_leer_an op lauf t s0 hv
                   rw [leer] at hqmem
                   cases hqmem
               | interrupt _ _ => cases label
