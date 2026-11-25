@@ -340,6 +340,12 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Speicher.MpLitmusAussage, 13796261553310205886),
   (`Gabbro.Core.Speicher.LbLitmusAussage, 8829005192830706516),
   (`Gabbro.Core.Speicher.WrcLitmusAussage, 14128650416748295131),
-  (`Gabbro.Core.Speicher.Isa2LitmusAussage, 9404969472844494484)]
+  (`Gabbro.Core.Speicher.Isa2LitmusAussage, 9404969472844494484),
+  (`Gabbro.Core.Speicher.IriwLitmusAussage, 16941650859092486165),
+  (`Gabbro.Core.Speicher.ScFencesLitmusAussage, 200699653715525669),
+  (`Gabbro.Core.Ast.Semantik.AtomUpdateAussage, 2243360310584985032),
+  (`Gabbro.Core.Annahme.DomaenenPrueferAussage, 13844777376618478780),
+  (`Gabbro.Core.Beobachtung.durchlaufKostenAussage, 5396160036186339239),
+  (`Gabbro.Core.Ziel.Review.Slice.DurchstichKleinAussage, 15967805062844775672)]
 
 end Gabbro.Core.Waechter
