@@ -44,7 +44,7 @@ def textIndexUnit : Ast.Unit :=
   let value : Expr [] (.int 0 255) := Expr.textIndex (Expr.textLiteral []) (Expr.lit 0)
   ⟨[⟨indexName, .int 0 255, false, true⟩],
     .step (.constant indexName indexName_ordinary written
-      (by norm_num [WrittenType.valid, WrittenType.storage]) value
+      (by decide) value
       (by dsimp [value]; decide) (by dsimp [value, written]; decide)) .done⟩
 
 /-- The elaborated code: two setup instructions, the guarded index, the binding, the entry and the end. -/
