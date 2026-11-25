@@ -19,7 +19,6 @@ public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
-public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Annahme.Annahme
 public import Core.Ast.TextValue.IndexProofs
@@ -374,7 +373,7 @@ theorem textIndexUnit_nicht_akzeptiert :
     have hg := (textIndexBytes (sourceUtf8 []).size (TextValue.literal [])
       (⟨0, 0, Zahl.literal 0⟩ : Ganzzahl) ((ρ.zeit.zustand 2).lokal eintritt)
       htemp0 hzahl1).1
-    simpa [TextValue.literal, sourceUtf8] using hg
+    simpa [TextValue.literal, sourceUtf8, Zahl.literal] using hg
   let cut : I.Schnitt textIndexEinheit ρ := ⟨2, Or.inr ⟨1, ev1, rfl, hspur1⟩⟩
   have need2 : (kanonischeVerwendung textIndexEinheit).bedarf ρ cut .index (0, 0) :=
     ⟨eintritt, .textIndex 0 (sourceUtf8 []).size, head2, guard2⟩
@@ -434,14 +433,11 @@ theorem prueferEntscheidet_nichtTrivial : PrueferNichtTrivialAussage prueferEnts
       · rfl
     · rfl
 
-/-- The content of the goal theorem over `R₀` is now complete: all four conjuncts hold
-    at the concrete frame, the refused-unit conjunct by the text-index witness. -/
-theorem zielInhaltAussage_x86_64 : ZielInhaltAussage Katalog.Plattform.x86_64 := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · obtain ⟨H, s, hw, ρ, run⟩ := trivialUnit_lauf Katalog.Plattform.x86_64
-    exact ⟨trivialUnit, trivialUnit_akzeptiert _, H, ρ, run⟩
-  · exact ⟨textIndexUnit, textIndexUnit_nicht_akzeptiert⟩
-  · exact SimRefutierbarAussage.erfuellbar
-  · exact NIAkzeptiertAussage.nichtTrivial
+/-- The refused-unit leg of `ZielInhaltAussage` at the concrete frame: the text-index
+    source unit has an elaboration that is not accepted. The three other legs have
+    their own companions, the noninterference refutation remaining open there. -/
+theorem ZielInhaltAussage.refutierbareEinheit :
+    ∃ t : Ast.Unit, ¬ Annahme.Akzeptiert (einheitVon Katalog.Plattform.x86_64 t) :=
+  ⟨textIndexUnit, textIndexUnit_nicht_akzeptiert⟩
 
 end Gabbro.Core.Ziel.Korrektheit
