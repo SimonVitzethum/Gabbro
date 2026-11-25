@@ -7,7 +7,7 @@ public import Core.Beobachtung.Speicherverwaltung
 namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
-open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame)
+open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame memProgram memHead)
 
 variable (k : Katalog) (code : List MemInstruction)
 
@@ -52,7 +52,7 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
     (regel : (memProgram k code).system.ImplSchritt c s w [p] u) :
     ∃ f frame, (memProgram k code).system.kopf s c = some f ∧
-      MemInstruction.evaluate k.plattform.ziel f c s = some frame ∧
+      MemInstruction.evaluate k.plattform.ziel f s c = some frame ∧
       p = Ast.LowLevel.plan ∧ u = frame.advance c s := by
   rcases regel with ⟨f, kopf, impl⟩
   change MemInstruction.step k.plattform.ziel f c s w [p] u at impl
@@ -146,10 +146,10 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
 /-- The observed post-state of a memory context step is the advanced frame. -/
 private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     {c : Kontext} {w : PUnit} {spur : SchrittSpur Nat UInt8}
-    (step : ImplSchritt memSetup (MemInstruction.rule k.plattform.ziel) k hw t s
+    (step : ImplSchritt memSetup (memProgram k code).system k hw t s
       (.kontext c w, spur) n) :
     ∃ f frame, (memProgram k code).system.kopf s c = some f ∧
-      MemInstruction.evaluate k.plattform.ziel f c s = some frame ∧
+      MemInstruction.evaluate k.plattform.ziel f s c = some frame ∧
       n = frame.advance c s := by
   cases step with
   | kontext _ _ regel _ =>
@@ -173,7 +173,7 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
 /-- No memory form issues a question, so no cut of an admitted run has a pending question. -/
 private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     {spur : SchrittWahl PUnit × SchrittSpur Nat UInt8}
-    (step : ImplSchritt memSetup (MemInstruction.rule k.plattform.ziel) k hw t s spur n)
+    (step : ImplSchritt memSetup (memProgram k code).system k hw t s spur n)
     (leer : s.fragen = []) : n.fragen = [] := by
   cases step with
   | kontext _ _ regel _ =>
@@ -292,12 +292,10 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
   rw [spurGlied, zustand] at takt₁
   cases hN₁ : ρ₁.zeit.zustand (t + 1) with
   | none =>
-    rw [hN₁] at takt₁
     cases takt₁ with
     | wartet label _ _ => cases label
-    | schritt _ step => rw [hN₁] at step; cases step
+    | schritt _ step => cases step
   | some nach₁ =>
-    rw [hN₁] at takt₁
     cases takt₁ with
     | wartet label _ _ => cases label
     | schritt _ step₁ =>
@@ -352,13 +350,11 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
         rw [zustand₂] at takt₂
         cases hN₂ : ρ₂.zeit.zustand (t + 1) with
         | none =>
-          rw [hN₂] at takt₂
-          cases takt₂ with
+                cases takt₂ with
           | wartet label _ _ => cases label
-          | schritt _ step => rw [hN₂] at step; cases step
+          | schritt _ step => cases step
         | some nach₂ =>
-          rw [hN₂] at takt₂
-          cases takt₂ with
+                cases takt₂ with
           | wartet label gleich₂ _ =>
             have e₂ : NiedrigeBeob (memProgram k code) ρ₂ predictor (t + 1) =
                 NiedrigeBeob (memProgram k code) ρ₂ predictor t := by
