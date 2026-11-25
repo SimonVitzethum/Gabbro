@@ -201,14 +201,16 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
       intro s hs
       obtain ⟨x, hx, bezug⟩ := matched.zustand 0
       have xeq : x = s := Option.some.inj (hx.symm.trans hs)
-      subst xeq
       obtain ⟨proto, lokal⟩ := bezug
       have hlokal : (einheitVon P t).lokalerBezug = Eq := rfl
       rw [hlokal] at lokal
       have hstate : s = η.zeit.zustand 0 := by
-        have h := proto
-        rw [← lokal] at h
-        exact h
+        have hxstate : x = η.zeit.zustand 0 := by
+          unfold Maschine.I.ProtokollBezug at proto
+          rw [← lokal] at proto
+          exact proto
+        rw [← xeq]
+        exact hxstate
       have hinit := valid.2.2.2.1
       rw [matched.start] at hinit
       rw [hstate, hinit]
