@@ -127,7 +127,7 @@ theorem execImplTransfer {op : ExecInstruction} {c : Kontext}
 theorem execVollzug (frame : ExecFrame) (t : Nat) (c : Kontext) (s : ExecState) :
     FuehrtSchrittAus execSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
   refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
     cases hl

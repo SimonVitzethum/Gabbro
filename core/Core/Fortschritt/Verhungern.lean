@@ -102,7 +102,7 @@ theorem spurABρ_ne {t : Nat} (h : ¬ t % 2 = 0) : spurABρ t = some bLabel := b
 def abAusfuehr (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Bool Unit) :
     FuehrtSchrittAus (E_w dispatch2).einrichtung t c x (toggleUpdate c x) togglePlan ⟨[], []⟩
       (toggleUpdate c x) :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, [], toggleUpdate c x, .intern, .nil _, rfl⟩
 
 def taktAB (t : Nat) : Takt

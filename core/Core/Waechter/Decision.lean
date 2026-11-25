@@ -68,10 +68,10 @@ private meta def smallProposition (goal : Expr) : MetaM Bool := do
 private meta def checkGoal (goal : Expr) : MetaM Bool := do
   let start ← IO.getNumHeartbeats
   -- Budget the reduction that reveals the propositional structure independently for each goal.
-  let small ← try
-      withTheReader Core.Context (fun ctx =>
-        { ctx with initHeartbeats := start, maxHeartbeats := 20000 }) <| smallProposition goal
-    catch _ => pure false
+  let small ← tryCatchRuntimeEx
+      (withTheReader Core.Context (fun ctx =>
+        { ctx with initHeartbeats := start, maxHeartbeats := 20000 }) <| smallProposition goal)
+      fun _ => pure false
   return small && (← IO.getNumHeartbeats) - start ≤ 20000
 
 private meta def decisionGoals (body : Expr) : Array Expr := runST fun world => do

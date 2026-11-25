@@ -125,7 +125,7 @@ theorem hw1_opp0 (t : Nat) : hw1.gelegenheit t 0 := by
 def posAusfuehr (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Bool Unit) :
     FuehrtSchrittAus (E_w dispatch1).einrichtung t c x (toggleUpdate c x) togglePlan ⟨[], []⟩
       (toggleUpdate c x) :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, [], toggleUpdate c x, .intern, .nil _, rfl⟩
 
 def posTakt (t : Nat) : Takt

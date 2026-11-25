@@ -70,21 +70,21 @@ public meta def modulName (env : Environment) (name : Name) : String :=
     budget and reports instead of failing when the budget runs out. -/
 public meta def statementScan (env : Environment) (name : Name) (info : DefinitionVal)
     (force : Bool) : MetaM (Array String) := do
-  try
-    Core.withCurrHeartbeats do
-      let mut found : Array String := #[]
-      let depth := info.value.approxDepth.toNat
-      let modul := modulName env name
-      if force || depth ≤ 60 then
-        for n in (← unusedBinders (depth + 2) info.value) do
-          found := found.push s!"statement {name} in module {modul} has the unused data binder {n}"
-        for n in (← functionParameters info.type) do
-          found := found.push
-            s!"statement {name} in module {modul} takes the free function parameter {n} that nothing binds to the model"
-      -- A binder unused in both the type and the value position (or shadowed) would print
-      -- byte-identical lines; report each finding once.
-      return found.toList.eraseDups.toArray
-  catch _ => return #[s!"statement {name} in module {modulName env name} could not be scanned within the heartbeat budget"]
+  tryCatchRuntimeEx
+    (Core.withCurrHeartbeats do
+        let mut found : Array String := #[]
+        let depth := info.value.approxDepth.toNat
+        let modul := modulName env name
+        if force || depth ≤ 60 then
+          for n in (← unusedBinders (depth + 2) info.value) do
+            found := found.push s!"statement {name} in module {modul} has the unused data binder {n}"
+          for n in (← functionParameters info.type) do
+            found := found.push
+              s!"statement {name} in module {modul} takes the free function parameter {n} that nothing binds to the model"
+        -- A binder unused in both the type and the value position (or shadowed) would print
+        -- byte-identical lines; report each finding once.
+        return found.toList.eraseDups.toArray)
+    fun _ => return #[s!"statement {name} in module {modulName env name} could not be scanned within the heartbeat budget"]
 
 private meta def correctnessNamespace : Name := `Gabbro.Core.Ziel.Korrektheit
 

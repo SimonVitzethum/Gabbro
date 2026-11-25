@@ -2,15 +2,11 @@ module
 public meta import Lean
 public meta import Core.Waechter.Dependencies
 public meta import Core.Waechter.Binder
+public meta import Core.Waechter.StrukturPropErlaubt
 
 open Lean Meta
 
 namespace Gabbro.Core.Waechter
-
-/-- Regel S, allow-list of `(structure, field)` pairs whose Prop-valued field the review has tied to a
-    model definition. An entry needs a comment naming the binding definition. The list starts empty:
-    Regel S first only measures, every candidate is reported as information. -/
-public meta def strukturPropErlaubt : Array (Name × Name) := #[]
 
 /-- True when `type` ends in `Prop` after stripping binders (shape only, no unfolding). -/
 private meta def endetInProp : Expr → Bool
@@ -40,8 +36,7 @@ private meta def istAussagenTypSyn : Expr → Bool
 private meta def istPropTyp (type : Expr) : MetaM Bool := do
   if istAussagenTypSyn type then return true
   if type.approxDepth.toNat > 200 then return false
-  try isProp type
-  catch _ => return false
+  tryCatchRuntimeEx (isProp type) fun _ => return false
 
 /-- Every constant any Core proof (`theorem`) refers to. A Prop-valued field or an unnamed
     proposition that a proof mentions carries statement content, even when no pin or goal closure
@@ -75,17 +70,17 @@ private meta def strukturFeldTypen (env : Environment) (s : Name) :
     the structure is in scope. -/
 private meta def strukturScan (env : Environment) (erlaubt : Std.HashSet (Name × Name))
     (s : Name) (grund : String) : MetaM (Array String) := do
-  try
-    Core.withCurrHeartbeats do
-      let mut found : Array String := #[]
-      for (f, t) in (← strukturFeldTypen env s) do
-        let propWertig ← if enthaeltPropFunktion t then pure true else istPropTyp t
-        if propWertig then
-          if !erlaubt.contains (s, f) then
-            found := found.push
-              s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
-      return found
-  catch _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
+  tryCatchRuntimeEx
+    (Core.withCurrHeartbeats do
+        let mut found : Array String := #[]
+        for (f, t) in (← strukturFeldTypen env s) do
+          let propWertig ← if enthaeltPropFunktion t then pure true else istPropTyp t
+          if propWertig then
+            if !erlaubt.contains (s, f) then
+              found := found.push
+                s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
+        return found)
+    fun _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
 
 /-- Regel S: every structure in the closure of the pin roots whose fields are Prop-valued or functions
     into `Prop` is reported as information (name, module, reason), unless the field is allow-listed.
@@ -123,15 +118,19 @@ public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name �
     infos := infos ++ (← strukturScan env erlaubt s " (outside every pin closure, used by a proof)")
   return infos
 
-/-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
-    not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
+/-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that
+    does not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
     its name. The same holds outside the goal closure for a definition that is used as a statement:
     one with `…erfuellbar`, `…nichtTrivial` or `…beweis` companions, or one a proof refers to (at task
     time `PegelNISatz` was such a case: reached by no closure, its proof still used it as a statement;
-    since renamed to the pinned `PegelNIAussage`). Everything is
-    reported as information (name, module, reason); no existing statement is changed. -/
-public meta def namenloseAussageInfos (env : Environment) (index : DependencyIndex)
-    (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String) := do
+    since renamed to the pinned `PegelNIAussage`).
+
+    The verdict is split: the pin-coverage finding about the goal closure is an ERROR — a new
+    unnamed statement there turns the Core check red (non-vacuity is probed by adding such a definition
+    temporarily and observing the error) — while the binder scan and all findings outside the goal closure
+    stay information; no existing statement is changed. -/
+public meta def namenloseAussageFehlerUndInfos (env : Environment) (index : DependencyIndex)
+    (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String × Array String) := do
   let mut ziel : Std.HashSet Name := {}
   for root in zielRoots do
     for name in index.closure root do
@@ -158,10 +157,11 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
     else if beweis then
       waisen := waisen.push (name, "is referenced by a proof")
     else continue
+  let mut fehler := #[]
   let mut infos := #[]
   for name in imZiel do
     unless pinned name do
-      infos := infos.push
+      fehler := fehler.push
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used in the goal closure but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
     infos := infos ++ (← statementScan env name info true)
@@ -171,6 +171,6 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used as a statement outside the goal closure ({grund}) but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
     infos := infos ++ (← statementScan env name info true)
-  return infos
+  return (fehler, infos)
 
 end Gabbro.Core.Waechter
