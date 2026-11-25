@@ -47,6 +47,8 @@ public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Annahme.DomaeneBeweise.Pruefer
+public import Core.Annahme.DomaeneBeweise.Tabellen
+public import Core.Annahme.DomaeneBeweise.Vakuum
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
