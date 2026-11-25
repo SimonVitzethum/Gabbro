@@ -53,6 +53,7 @@ public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
+public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
