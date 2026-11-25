@@ -70,7 +70,10 @@ theorem geraete_absturz_invariant_falsch (binding : Binding k) :
   have hinv' : GeraeteInvariantAussage binding (s.wiederanlauf w 0 p) :=
     all binding s w 0 p hInv hcut
   obtain ⟨hothers', _, _, _, _, _, _⟩ := hinv'
-  have hnone := (hothers' (.faden 1) (by decide)).1
+  have hne1 : (.faden 1 : Kontext) ≠ entryContext := by
+    intro heq
+    cases heq
+  have hnone := (hothers' (.faden 1) hne1).1
   have hsome : ((s.wiederanlauf w 0 p).lokal (.faden 1)).pending = some q := by
     simp only [Zustand.wiederanlauf, Zustand.start, w, daten]
   rw [hsome] at hnone
