@@ -69,9 +69,10 @@ private meta def strukturScan (env : Environment) (erlaubt : Std.HashSet (Name �
     Core.withCurrHeartbeats do
       let mut found : Array String := #[]
       for (f, t) in (← strukturFeldTypen env s) do
-        if enthaeltPropFunktion t && !erlaubt.contains (s, f) then
-          found := found.push
-            s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
+        if (← isProp t) || enthaeltPropFunktion t then
+          if !erlaubt.contains (s, f) then
+            found := found.push
+              s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
       return found
   catch _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
 
@@ -112,9 +113,16 @@ public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name �
   return infos
 
 /-- A definition type that is `Prop` or a family into `Prop` (shape only, like the binder guard). -/
-private meta def istAussagenTyp : Expr → Bool
-  | .forallE _ _ b _ => istAussagenTyp b
+private meta def istAussagenTypSyn : Expr → Bool
+  | .forallE _ _ b _ => istAussagenTypSyn b
   | e => e.isProp
+
+/-- A definition type that is `Prop` or a family into `Prop`: the elaborator's proposition test, with the
+    syntactic shape as fallback when it does not decide. Catches equations and other applied
+    propositions (`Eq`, `And`, …), not only syntactic arrows into `Prop`. -/
+private meta def istAussagenTyp (type : Expr) : MetaM Bool := do
+  try isProp type
+  catch _ => return istAussagenTypSyn type
 
 /-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
     not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
@@ -133,13 +141,13 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
   for name in ziel.toArray.qsort Name.lt do
     if endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
-    unless istAussagenTyp info.type do continue
+    unless (← istAussagenTyp info.type) do continue
     imZiel := imZiel.push name
   let mut waisen : Array (Name × String) := #[]
   for name in coreDeclarations env do
     if ziel.contains name || endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
-    unless istAussagenTyp info.type do continue
+    unless (← istAussagenTyp info.type) do continue
     let begleiter := env.contains (name ++ `erfuellbar) || env.contains (name ++ `nichtTrivial) ||
       env.contains (name ++ `beweis)
     let beweis := verwendung.contains name
