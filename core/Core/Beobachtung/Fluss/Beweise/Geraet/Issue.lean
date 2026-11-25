@@ -136,7 +136,7 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
         have hleer : (d.unit locals).etiketten = .leer := geraete_etiketten_leer d
         have hfrage := geraete_issue_beob (E := d.unit locals) hleer
           (s.stelleFrage t c (binding.question access))
-        simp only [hfrage, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+        simp only [hfrage, Zustand.stelleFrage, List.flatMap_cons, List.flatMap_nil, List.append_nil]
       have hkontext := geraete_kontext_beob_still (ρ := ρ) hbuch hkopf
       have hende : ¬ ∃ d, (neuBeendet s s' (d.unit locals).etiketten d).isSome = true := by
         rintro ⟨d, hd⟩
