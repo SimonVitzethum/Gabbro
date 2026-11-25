@@ -132,6 +132,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
     (hEqR : Zustand.regionLive (ρ.zeit.zustand t) = Zustand.regionLive sPre)
     (hHead : kopf (verknuepfteFragmente planAB).code sPre eintritt = some b)
+    (hPriv : b.Privat)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
     (hFrPre : sPre.fragen = []) :
@@ -154,7 +155,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
   have stepT : I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog ρ.hw t
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat b.klasse_privat eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
+      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
       (b.vollzug _ _ _ _)
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
@@ -180,7 +181,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           rfl
         subst b'
         obtain ⟨same, after⟩ :=
-          (b.ideal_privat b.klasse_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
+          (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
         have hakt : Semantik.plan.aktion = .intern := rfl
@@ -302,32 +303,32 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
   have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
     baseL baseS baseK baseF baseR
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st1 := forceStep ρ hρ 1 k (.literal 1 2) (sLinked1 s)
     (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
     st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2.1 st0.2.2.2.2.2
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st2 := forceStep ρ hρ 2 k (.teilen 0) (sLinked2 s)
     (hwCrash 2) (hwCore 2) (hwInt 2) hwInts (hwDel 2) (hwFrei 2)
     st1.2.1 st1.2.2.1 st1.2.2.2.1 st1.2.2.2.2.1 st1.2.2.2.2.2
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st3 := forceStep ρ hρ 3 k (.literal 0 5) (sLinked3 s)
     (hwCrash 3) (hwCore 3) (hwInt 3) hwInts (hwDel 3) (hwFrei 3)
     st2.2.1 st2.2.2.1 st2.2.2.2.1 st2.2.2.2.2.1 st2.2.2.2.2.2
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st4 := forceStep ρ hρ 4 k (.literal 1 0) (sLinked4 s)
     (hwCrash 4) (hwCore 4) (hwInt 4) hwInts (hwDel 4) (hwFrei 4)
     st3.2.1 st3.2.2.1 st3.2.2.2.1 st3.2.2.2.2.1 st3.2.2.2.2.2
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st5 := forceStep ρ hρ 5 k (.zurueckSprung 3) (sLinked5 s)
     (hwCrash 5) (hwCore 5) (hwInt 5) hwInts (hwDel 5) (hwFrei 5)
     st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2.1 st4.2.2.2.2.2
-    (by rfl) (readyAt _ _ rfl rfl)
+    (by rfl) (by first | exact Or.inl rfl | exact Or.inr rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have hspur5 : ∃ ev, ρ.zeit.spur 5 = some ev := st5.1
   obtain ⟨ev5, hspur5⟩ := hspur5

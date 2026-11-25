@@ -6,6 +6,7 @@ public import Core.Annahme.Klauseln
 public import Core.Annahme.Waechter
 public import Core.Annahme.Schranken
 public import Core.Beobachtung.Fluss.Quellfragment
+public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 
 @[expose] public section
 
@@ -55,17 +56,17 @@ theorem seal_aus_link {plan : Bauplan} {frag : Fragment} (h : linke plan = some 
   rw [Bool.and_eq_true] at hok
   exact hok.2
 
-/-- Composition from sealed parts up to the guard transfer: with accepted parts and
-    every guard use of the linked whole satisfied, the linked whole is accepted.
-    The seal is not needed for any conjunct proved here — it is only needed for the
-    guard transfer itself, which remains open (the simulation of whole runs by part
-    runs). -/
+/-- Composition from sealed parts up to the guard transfer: with accepted parts, a
+    frame-only linked program and every guard use of the linked whole satisfied, the
+    linked whole is accepted. The seal is not needed for any conjunct proved here; it
+    is only needed for the guard transfer itself, which remains open (the simulation
+    of whole runs by part runs). -/
 theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
     (hlink : linke plan = some frag)
     (hparts : ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform))
-    (hguard : ∀ (ρ : I.Lauf (frag.einheit plan.plattform))
-      (hρ : I.Laeufe (frag.einheit plan.plattform) ρ) (t : I.Schnitt _ ρ)
-      (op : PartielleOperation) (args : Operanden op),
+    (hpriv : ∀ b ∈ (verknuepfteFragmente plan).code, b.Privat)
+    (hguard : ∀ (ρ : I.Lauf (frag.einheit plan.plattform)) (hρ : I.Laeufe (frag.einheit plan.plattform))
+      (t : I.Schnitt _ ρ) (op : PartielleOperation) (args : Operanden op),
       (kanonischeVerwendung _).bedarf ρ t op args → waechterBedarf op args) :
     Akzeptiert (frag.einheit plan.plattform) := by
   obtain ⟨hok, rfl⟩ := linke_eq_some hlink
@@ -78,15 +79,17 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
     verknuepfte_klauseln_leer hcompat
   let E := (verknuepfteFragmente plan).einheit plan.plattform
   refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => Befehl.regelLokal _ _ b,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _
-      (fun b _ => b.klasse_privat), schrankenLokal_leer (E := E) rfl rfl rfl,
+    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _ hpriv,
+    schrankenLokal_leer (E := E) rfl rfl rfl,
     abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb)⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
     | kontext _ _ rule execute =>
-      obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute b.klasse_privat
+      obtain ⟨b, head, transfer⟩ := rule
+      have head' : kopf (verknuepfteFragmente plan).code s c = some b := head
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+        (hpriv b (kopf_mem head'))
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · intro run conforms
