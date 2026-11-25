@@ -267,9 +267,11 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
               cases hif₁
       | wartet label eq _ =>
         refine ⟨fun c k h => ?_, fun c k₁ k₂ h₁ h₂ => ?_⟩
-        · rw [eq] at h ⊢
+        · rw [eq] at h
+          rw [eq]
           exact ihlive c k h
-        · rw [eq] at h₁ h₂ ⊢
+        · rw [eq] at h₁ h₂
+          rw [eq]
           exact ihsingle c k₁ k₂ h₁ h₂
   intro tick
   obtain ⟨hlive, hsingle⟩ := key tick
@@ -293,7 +295,8 @@ theorem einheitVon_dispatch_konstant (P : Katalog.Plattform) (t : Ast.Unit)
   refine ⟨k, fun t' ht' => ?_⟩
   induction ht' with
   | refl => exact hk
-  | step m hm ih =>
+  | step hm ih =>
+    rename_i m
     cases htakt : η.zeit.takt m with
     | schritt label step =>
       cases step with
