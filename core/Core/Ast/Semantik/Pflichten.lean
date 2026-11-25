@@ -60,15 +60,17 @@ theorem Befehl.vollzug_genau (b : Befehl) {e t c s u w p spur s'}
   cases spur with
   | mk events outside =>
     cases action
-    simp only [Semantik.plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+    simp only [Semantik.plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil,
+      List.append_nil] at memory
     have unchanged : ∀ {recorded graph},
         Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
           recorded = [] ∧ graph = s.graph := by
       intro _ _ run
       cases run
       exact ⟨rfl, rfl⟩
-    obtain ⟨rfl, graph⟩ := unchanged memory
-    rw [graph] at next
+    have hmem := unchanged memory
+    rw [hmem.1]
+    rw [hmem.2] at next
     exact ⟨rfl, next⟩
 
 theorem Befehl.abgleich (p : Fragment) (platform : Plattform) (b : Befehl) :

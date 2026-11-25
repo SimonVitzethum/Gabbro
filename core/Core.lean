@@ -51,9 +51,10 @@ public import Core.Aussen.Frage.Aussagen
 public import Core.Aussen.Frage.Beweise
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
-public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
+public import Core.Annahme.DomaeneBeweise.Kanal
 public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Annahme.DomaeneBeweise.Pruefer
+public import Core.Annahme.DomaeneBeweise.Tabellen
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
@@ -178,6 +179,9 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.KetteRand
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BlockKette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Paar
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Divergenz
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -186,6 +190,7 @@ public import Core.Beobachtung.SchrankenBeweise.Ressourcen
 public import Core.Beobachtung.SchrankenBeweise.RessourcenEinheit
 public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
+public import Core.Beobachtung.SchrankenBeweise.Bindung
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
@@ -282,6 +287,7 @@ public import Core.Linken.GuardTransfer
 public import Core.Linken.GuardTransfer
 public import Core.Linken.DeckungsZustand
 public import Core.Linken.DeckungsSchluss
+public import Core.Linken.LaufChirurgie
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 meta import Core.Waechter.Check
 

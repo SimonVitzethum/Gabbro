@@ -57,7 +57,7 @@ def falsifizierbareEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Uni
       let d := falsifizierbareDaten s.bootCore
       some (Zustand.start d.lokal d.status d.kerne d.rechte
         falsifizierbareEinrichtung.initial (.leer (fun _ => 0)))),
-    Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+    Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
 
 def falsifizierbareSicht (t : Nat) : AussenVerlauf → AussenSicht := fun _ =>
   ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
