@@ -280,7 +280,7 @@ theorem schrankenbindung_erfuellbar :
         ProtokollMarkenErhaltend (einheitMitSchranken P u) := by
   refine ⟨Katalog.Plattform.x86_64,
     ⟨leerBaum, ⟨some 5, some 7, some 3, [], [], []⟩⟩,
-    rfl, rfl, rfl, by decide, markenErhaltend_aus_bindung _ _⟩
+    rfl, rfl, rfl, rfl, markenErhaltend_aus_bindung _ _⟩
 
 /-- Sharpness of the binding: the recovery line refuses a nonempty stand, and ceiling zero
     against need one fails the per-pass line and falsifies the bound. With the line soundness
@@ -290,8 +290,8 @@ theorem schrankenbindung_nichtTrivial :
     (∃ staende : List (List (Nat × Nat)), pruefeProtokollMarken staende = false) ∧
       ∃ (grenze : Option Nat) (bedarf : Nat),
         pruefeDurchlauf grenze bedarf = false ∧ ¬ UnterGrenze grenze bedarf := by
-  refine ⟨⟨[[(0, 0)]], by decide⟩, (some 0), 1, by decide, ?_⟩
+  refine ⟨⟨[[(0, 0)]], rfl⟩, (some 0), 1, rfl, ?_⟩
   intro h
-  exact (by decide : ¬ 1 ≤ 0) (h 0 rfl)
+  exact (by omega : ¬ 1 ≤ 0) (h 0 rfl)
 
 end Gabbro.Core.Beobachtung
