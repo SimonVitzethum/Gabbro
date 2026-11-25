@@ -173,6 +173,6 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
   refine ⟨h, ρ, run, ?_, sched, ?_⟩
   · rw [← hwEq]
     exact fair
-  · exact Maschine.verdraengung_ohne_meldung hw (fun i => rfl) ρ hwEq
+  · exact Maschine.verdraengung_ohne_meldung (einheitVon P t) hw (fun i => rfl) ρ hwEq
 
 end Gabbro.Core.Ziel.Korrektheit
