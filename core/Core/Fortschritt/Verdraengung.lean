@@ -88,7 +88,11 @@ def HV : Umgebung := Katalog.Umgebung.referenz Plattform.x86_64.katalog 1 sichtV
 theorem HV1 : HV.kernzahl = 1 := rfl
 
 /-- The x86-64 target supports the raised line. -/
-theorem hsupV : HV.ziel.unterstuetzt irqV := by decide
+theorem hsupV : HV.ziel.unterstuetzt irqV := by
+  have hziel : HV.ziel = Plattform.ziel Plattform.x86_64 := rfl
+  rw [hziel]
+  show 0 < 256 ∧ 0 < 256
+  exact ⟨by decide, by decide⟩
 
 /-- The selected raise at tick zero. -/
 theorem auswahlV0 : (angebotV 0).interruptAuswahl = some (0, (0, 0), irqV) := rfl
