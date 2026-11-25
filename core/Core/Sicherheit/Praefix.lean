@@ -87,7 +87,7 @@ def voran2 {hw : Katalog.HwLauf}
     (s₀ : Option (Maschine.Zustand L Ort Wert Raum Lok Grund))
     (e₀ : Maschine.SchrittWahl Wahl × Maschine.SchrittSpur Ort Wert)
     (h₀ : Maschine.Lauffolge E hw 0 s₀ e₀ s₁) : Zeitlauf (Maschine.Lauffolge E hw) :=
-  voran (voran (schritt := fun t => Maschine.Lauffolge E hw (t + 1)) tail s₁ e₁ h₁) s₂ e₂ h₀
+  voran (voran (schritt := fun t => Maschine.Lauffolge E hw (t + 1)) tail s₁ e₁ h₁) s₀ e₀ h₀
 
 /-- A fair tail spliced after two prefix steps keeps scheduler fairness. -/
 theorem voran2_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
