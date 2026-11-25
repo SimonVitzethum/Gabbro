@@ -12,7 +12,7 @@ open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame memPro
 variable (k : Katalog) (code : List MemInstruction)
 
 private theorem speicherfolge_leer {Ort Wert : Type} {anfang : Ort → Wert}
-    {f : SpeicherAkteur Ort} {g g' : SpeicherGraph Ort Wert} {es : SpeicherSpur Ort}
+    {f : SpeicherAkteur Ort} {g g' : SpeicherGraph Ort Wert} {es : SpeicherSpur Ort Wert}
     (h : Speicherfolge anfang f g [] es g') : es = [] ∧ g' = g := by
   cases h
   exact ⟨rfl, rfl⟩
@@ -181,6 +181,8 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     rw [planEq] at aus
     unfold FuehrtSchrittAus at aus
     rcases aus with ⟨_, _, _, _, fuehrtAus, _, nEqState⟩
+    generalize hAussen : spur.2.aussen = aussen at fuehrtAus
+    change FuehrtAus memSetup t c s (frame.advance c s) .intern _ aussen _ at fuehrtAus
     cases fuehrtAus
     rw [nEqState]
     change s.fragen = []
@@ -229,7 +231,7 @@ private theorem mem_fragen_leer {h : Umgebung} {ρ : Lauf (memProgram k code)}
         cases step with
         | schritt impl =>
           right
-          refine ⟨_, hn.symm, ?_⟩
+          refine ⟨_, rfl, ?_⟩
           exact mem_schritt_fragen k code impl fragenLeer
       | wartet _ eq _ =>
         right
@@ -364,12 +366,12 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
           cases takt₂ with
           | wartet _label _gleich pause₂ =>
             cases nOpt₂ with
-            | none => cases step₂
+            | none => cases _gleich
             | some _ =>
               have rahmen₂ : Zustandsrahmen w₂ (frame₁.advance c w₂) :=
-                ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+                ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
               have eval₂neu : MemInstruction.evaluate k.plattform.ziel f w₂ c = some frame₁ := by
-                rw [MemInstruction.evaluate_congr f k.plattform.ziel c lokEqFun rechteEq leihenEq]
+                rw [(MemInstruction.evaluate_congr f k.plattform.ziel c lokEqFun rechteEq leihenEq).symm]
                 exact eval₁
               have regel₂neu : (memProgram k code).system.ImplSchritt c w₂ w
                   [Ast.LowLevel.plan] (frame₁.advance c w₂) := by
@@ -410,43 +412,50 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                 have stepCopy := impl₂
                 cases impl₂ with
                 | kontext _ bereit₂' regel₂' aus₂' =>
-                  rename_i planR spurR cR wR
                   obtain ⟨k₂, geleg₂, kern₂, stat₂⟩ := bereit₂'
                   have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
                   have kk : k₁ = k₂ := Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
                   have gleich : (w₂.kerne k₂).laeuft = some c := by
                     rw [← kk, ← kerneEq]
                     exact kern₁
-                  have c_eq : cR = c := Option.some.inj (kern₂.symm.trans gleich)
-                  subst cR
-                  obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
-                  have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-                  subst f₂
-                  have evalEq := MemInstruction.evaluate_congr f k.plattform.ziel c
-                    lokEqFun rechteEq leihenEq
-                  have frameEq : frame₁ = frame₂ :=
-                    Option.some.inj (eval₁.symm.trans (evalEq.trans eval₂))
-                  rw [← frameEq] at hNach₂
-                  have e₂ : NiedrigeBeob (memProgram k code) ρ₂ predictor (t + 1) =
-                      NiedrigeBeob (memProgram k code) ρ₂ predictor t := by
-                    change NiedrigeBeob (memProgram k code) ρ₂ predictor t ++
-                      schrittBeob ρ₂ predictor t = _
-                    rw [mem_kontext_still k code (predictor := predictor) (t := t) label₂, List.append_nil]
-                  have zustandGleich := mem_zustand_gleich k code (c := c) (vor := vor) (w₂ := w₂)
-                    (frame := frame₁) ⟨lokGleich, endeGleich, initialGleich, rechteEq, leihenEq, antwortGleich⟩
-                    epocheEq geliefertEq kerneEq statusEq
-                  refine ⟨?_, ?_, ?_⟩
-                  · rw [e₁, e₂]
-                    exact kopplung.1
-                  · intro a b ha hb
-                    rw [hN₁] at ha
-                    rw [hN₂] at hb
-                    obtain rfl := Option.some.inj ha
-                    obtain rfl := Option.some.inj hb
-                    rw [hNach₁, hNach₂]
-                    exact zustandGleich
-                  · rw [e₁, e₂]
-                    exact kopplung.2.2
+                  cases hkern : (w₂.kerne k₂).laeuft with
+                  | none =>
+                    rw [hkern] at kern₂
+                    cases kern₂
+                  | some cR =>
+                    rw [hkern] at kern₂
+                    injection kern₂ with hcc
+                    cases hcc
+                    obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
+                    have hcR : cR = c := Option.some.inj (hkern.symm.trans gleich)
+                    rw [hcR] at kopf₂'
+                    have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+                    subst f₂
+                    have evalEq := MemInstruction.evaluate_congr f k.plattform.ziel c
+                      lokEqFun rechteEq leihenEq
+                    have frameEq : frame₁ = frame₂ :=
+                      Option.some.inj (eval₁.symm.trans (evalEq.trans eval₂))
+                    rw [← frameEq] at hNach₂
+                    have e₂ : NiedrigeBeob (memProgram k code) ρ₂ predictor (t + 1) =
+                        NiedrigeBeob (memProgram k code) ρ₂ predictor t := by
+                      change NiedrigeBeob (memProgram k code) ρ₂ predictor t ++
+                        schrittBeob ρ₂ predictor t = _
+                      rw [mem_kontext_still k code (predictor := predictor) (t := t) label₂, List.append_nil]
+                    have zustandGleich := mem_zustand_gleich k code (c := c) (vor := vor) (w₂ := w₂)
+                      (frame := frame₁) ⟨lokGleich, endeGleich, initialGleich, rechteEq, leihenEq, antwortGleich⟩
+                      epocheEq geliefertEq kerneEq statusEq
+                    refine ⟨?_, ?_, ?_⟩
+                    · rw [e₁, e₂]
+                      exact kopplung.1
+                    · intro a b ha hb
+                      rw [hN₁] at ha
+                      rw [hN₂] at hb
+                      obtain rfl := Option.some.inj ha
+                      obtain rfl := Option.some.inj hb
+                      rw [hNach₁, hNach₂]
+                      exact zustandGleich
+                    · rw [e₁, e₂]
+                      exact kopplung.2.2
                 | antwort _ h =>
                   obtain ⟨angebot, _, _, _⟩ := h
                   obtain ⟨_, _, _, present, _⟩ := angebot
