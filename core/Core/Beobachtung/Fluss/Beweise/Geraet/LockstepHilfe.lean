@@ -93,8 +93,8 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
           | schritt label _ => cases label
           | wartet _ eq _ =>
             have hv : v = s := Option.some.inj (atV.symm.trans eq)
-            subst hv
-            exact ih s hz
+            subst v
+            exact ih hz
         | some ev =>
           rw [hev] at tick
           revert atV
@@ -107,9 +107,11 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
             | wartet _ eq _ => cases eq
           | some s' =>
             intro atV
+            have hv : v = s' := Option.some.inj (atV.symm.trans hpost)
+            subst v
             rw [hpost] at tick
-            obtain rfl := Option.some.inj atV
             cases tick with
+            | wartet label _ _ => cases label
             | schritt _ step =>
               cases step with
               | schritt impl =>
@@ -121,7 +123,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                     have htick := geraete_issue_tick (target := target) aus hplans rfl owned idle
                     obtain ⟨_, hfragen, _, hantworten, hverbraucht, hverworfen,
                       hbuchung, hepoche, _, _, _, hlokal, _, _, _, _, _, _, _, _, _⟩ := htick
-                    have hinv := ih s hz
+                    have hinv := ih hz
                     have hinv' := geraete_issue_erhaelt_invariante (target := target) hinv owned idle
                     unfold GeraeteInvariantAussage at hinv' ⊢
                     rw [hlokal, hfragen, hantworten, hverbraucht, hverworfen, hbuchung, hepoche]
@@ -131,7 +133,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                       owned pending ready sameQuestion
                     obtain ⟨_, hfragen, _, hantworten, hverbraucht, hverworfen,
                       hbuchung, hepoche, _, _, _, hlokal, _, _, _, _, _, _⟩ := htick
-                    have hinv := ih s hz
+                    have hinv := ih hz
                     have hinv' := geraete_consume_erhaelt_invariante (target := target) hinv
                       owned pending ready sameQuestion
                     unfold GeraeteInvariantAussage at hinv' ⊢
@@ -139,23 +141,21 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                     simpa only [Zustand.verbrauche, setFrame, geraete_consume_rahmen] using hinv'
                 | antwort _ h =>
                   obtain ⟨offered, _, _, stateEq⟩ := h
-                  have hinv := ih s hz
+                  have hinv := ih hz
                   have hinv' := geraete_ankunft_invariant (binding := binding) hinv offered
                   unfold GeraeteInvariantAussage at hinv' ⊢
                   rw [stateEq]
                   simpa only [Zustand.antwort] using hinv'
-                | interrupt (id := intId) _ h =>
+                | interrupt _ h =>
                   obtain ⟨kk, irq, cc, nmi, _, _, _, _, _, _, nextEq⟩ := h
-                  have hinv := ih s hz
-                  have hinv' := geraete_interrupt_invariant (binding := binding) (s := s)
-                    (kern := kk) (id := intId) (c := cc) (nmi := nmi) (graph := s'.graph) hinv
-                  unfold GeraeteInvariantAussage at hinv' ⊢
+                  have hinv := ih hz
                   rw [nextEq]
-                  simpa only [Zustandseintritt] using hinv'
+                  exact geraete_interrupt_invariant (binding := binding) (s := s)
+                    (kern := kk) (c := cc) (nmi := nmi) (graph := s'.graph) hinv
                 | absturz crash =>
                   obtain ⟨_, stateEq⟩ := AbsturzSchritt.genau crash
                   have hcut := geraete_schnitt_schranke lauf t s hz
-                  have hinv := ih s hz
+                  have hinv := ih hz
                   rw [stateEq]
                   have rein : ∀ c,
                       (((d.unit locals).einrichtung.wiederanlauf.daten
