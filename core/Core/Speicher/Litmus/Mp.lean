@@ -29,6 +29,8 @@ public import Core.Speicher.Einbettung
 
 namespace Gabbro.Core.Speicher
 
+open MpEv
+
 /-- **Message passing is forbidden through a synchronising flag.** `wd` (data) precedes `wf` (flag)
     in program order; `sw` reads the flag from `wf` with release/acquire strength; `rd` follows that
     read in program order. Then `rd` cannot read a write older than `wd`. Feeds: `Graph.mp_verboten`. -/
@@ -147,7 +149,7 @@ theorem mpRlx_kein_rmw (m : Modus) (u : MpRlxEv) : ¬ (mpRlxGraph m).istRmw u :=
 /-- With `.rlx` no event is strong, so there is no `sw` edge. -/
 theorem mpRlx_kein_sw (a b : MpRlxEv) : ¬ (mpRlxGraph .rlx).sw a b := by
   intro h
-  rcases h with ⟨_, hs, _, _, _, _⟩
+  rcases h with ⟨_, hs, _, _, _⟩
   cases a <;> exact hs
 
 /-- Without `sw`, happens-before is program order. -/

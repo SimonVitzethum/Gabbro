@@ -129,7 +129,7 @@ theorem lb_kein_rmw (m : Modus) (u : LbEv) : ¬ (lbGraph m).istRmw u := by
 /-- With `.rlx` no event is strong, so there is no `sw` edge. -/
 theorem lb_kein_sw (a b : LbEv) : ¬ (lbGraph .rlx).sw a b := by
   intro h
-  rcases h with ⟨_, hs, _, _, _, _⟩
+  rcases h with ⟨_, hs, _, _, _⟩
   cases a <;> exact hs
 
 /-- Without `sw`, happens-before is program order. -/
