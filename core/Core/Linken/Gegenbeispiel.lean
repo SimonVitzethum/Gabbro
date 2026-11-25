@@ -3,6 +3,7 @@ module
 public import Core.Linken.Modul
 public import Core.Annahme.Annahme
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
+public import Core.Ziel.Korrektheit.Zusammensetzung
 
 @[expose] public section
 
@@ -409,6 +410,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     (hEqS : (ρ.zeit.zustand t).status = sPre.status)
     (hEqK : (ρ.zeit.zustand t).kerne = sPre.kerne)
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
+    (hEqR : (ρ.zeit.zustand t).regionLive = sPre.regionLive)
     (hHead : kopf (verknuepfteFragmente planAB).code sPre eintritt = some b)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
@@ -417,7 +419,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       (ρ.zeit.zustand (t + 1)).lokal = (b.nach eintritt sPre).lokal ∧
       (ρ.zeit.zustand (t + 1)).status = (b.nach eintritt sPre).status ∧
       (ρ.zeit.zustand (t + 1)).kerne = (b.nach eintritt sPre).kerne ∧
-      (ρ.zeit.zustand (t + 1)).fragen = [] := by
+      (ρ.zeit.zustand (t + 1)).fragen = [] ∧
+      (ρ.zeit.zustand (t + 1)).regionLive = (b.nach eintritt sPre).regionLive := by
   have hReadyT : KannSchreiten ρ.hw t eintritt (ρ.zeit.zustand t) := by
     obtain ⟨kk, hg, hd, hs⟩ := hReady
     refine ⟨kk, hg, ?_, ?_⟩
@@ -466,15 +469,17 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
         generalize hau : spur0.2 = au at fuehrt
         cases fuehrt with
         | intern =>
-          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_⟩
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp only [Befehl.nach, hEqL]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
             simp only [Befehl.nach, hEqS]
           · rw [hstate]
             simp only [Befehl.nach, hEqK]
           · rw [hstate]
             simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate]
+            simp only [Befehl.nach_regionLive, hEqR]
       · exfalso
         obtain ⟨b', head', _⟩ := regel
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
@@ -549,6 +554,10 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
     rfl
+  have baseR : (ρ.zeit.zustand 0).regionLive = (sLinked s).regionLive := by
+    have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
+    rw [e]
+    rfl
   have hwCrash : ∀ t, (ρ.hw.angebot t).crash = false := fun t => rfl
   have hwCore : ∀ t, (ρ.hw.angebot t).core = some k := fun t => rfl
   have hwInt : ∀ t, (ρ.hw.angebot t).interrupt = fun _ => false := fun t => rfl
@@ -572,35 +581,35 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
       exact boot_status_entry s
   have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
-    baseL baseS baseK baseF
+    baseL baseS baseK baseF baseR
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st1 := forceStep ρ hρ 1 k (.literal 1 2) (sLinked1 s)
     (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
-    st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2
+    st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2.1 st0.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st2 := forceStep ρ hρ 2 k (.teilen 0) (sLinked2 s)
     (hwCrash 2) (hwCore 2) (hwInt 2) hwInts (hwDel 2) (hwFrei 2)
-    st1.2.1 st1.2.2.1 st1.2.2.2.1 st1.2.2.2.2
+    st1.2.1 st1.2.2.1 st1.2.2.2.1 st1.2.2.2.2.1 st1.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st3 := forceStep ρ hρ 3 k (.literal 0 5) (sLinked3 s)
     (hwCrash 3) (hwCore 3) (hwInt 3) hwInts (hwDel 3) (hwFrei 3)
-    st2.2.1 st2.2.2.1 st2.2.2.2.1 st2.2.2.2.2
+    st2.2.1 st2.2.2.1 st2.2.2.2.1 st2.2.2.2.2.1 st2.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st4 := forceStep ρ hρ 4 k (.literal 1 0) (sLinked4 s)
     (hwCrash 4) (hwCore 4) (hwInt 4) hwInts (hwDel 4) (hwFrei 4)
-    st3.2.1 st3.2.2.1 st3.2.2.2.1 st3.2.2.2.2
+    st3.2.1 st3.2.2.1 st3.2.2.2.1 st3.2.2.2.2.1 st3.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   have st5 := forceStep ρ hρ 5 k (.zurueckSprung 3) (sLinked5 s)
     (hwCrash 5) (hwCore 5) (hwInt 5) hwInts (hwDel 5) (hwFrei 5)
-    st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2
+    st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2.1 st4.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  obtain ⟨ev5, hspur5, hEqL6, hEqS6, hEqK6, hEqF6⟩ := st5
+  obtain ⟨ev5, hspur5, hEqL6, hEqS6, hEqK6, hEqF6, hEqR6⟩ := st5
   have hHead6 : kopf (verknuepfteFragmente planAB).code (sLinked6 s) eintritt =
       some (Befehl.teilen 0) := by
     rfl
