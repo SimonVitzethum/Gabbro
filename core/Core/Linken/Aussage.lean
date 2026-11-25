@@ -70,7 +70,11 @@ def LinkErfuellbarAussage : Prop :=
     Akzeptiert (frag.einheit plan.plattform)
 
 /-- The link check holds for the example plan. -/
-theorem beispielOk : bauplanOk beispielPlan = true :=
+theorem beispielOk : bauplanOk beispielPlan = true := by
+  rfl
+
+/-- The example plan is sealed. -/
+theorem beispielAbgeschottet : kontrollflussAbgeschottet beispielPlan = true := by
   rfl
 
 /-- Linking the example plan yields the concatenated fragments. -/

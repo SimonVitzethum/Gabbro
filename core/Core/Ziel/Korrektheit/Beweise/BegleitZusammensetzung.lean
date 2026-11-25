@@ -227,12 +227,14 @@ theorem ZielInhaltAussage.nichtTrivial :
     ∃ (E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit), ¬ Annahme.Akzeptiert E :=
   ⟨Annahme.staleEinheit, Annahme.stale_nicht_akzeptiert⟩
 
-/-- The premise of linker acceptance holds jointly: the two-module example plan links and both of its modules
-    are accepted on their own. -/
+/-- The premise of linker acceptance holds jointly: the two-module example plan links, is sealed,
+    and both of its modules are accepted on their own. -/
 theorem LinkerAkzeptiertAussage.erfuellbar :
     ∃ (plan : Bauplan) (frag : Ast.Semantik.Fragment), linke plan = some frag ∧
+      kontrollflussAbgeschottet plan = true ∧
       ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
-  refine ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke, ?_⟩
+  refine ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke,
+    Linken.beispielAbgeschottet, ?_⟩
   intro m present
   simp only [Linken.beispielPlan, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl
