@@ -365,6 +365,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffIdealBestimmtAussage, 17782959457929549639),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffNIFragmentAussage, 7100031250029834542),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffSchrittExistiertAussage, 775341139493448682),
-  (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 17343892225237514526)]
+  (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 17343892225237514526),
+  (`Gabbro.Core.Beobachtung.SpeicherGraphKopplungAussage, 7664228132537297139)]
 
 end Gabbro.Core.Waechter

@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ziel/Korrektheit/Beweise/ZugriffNIFragment.lean
+  File:      core/Core/Ziel/Korrektheit/Beweise2/ZugriffNIFragment.lean
   Subject:   THE COUPLING MACHINERY OVER `FragmentNIBeweise` FOR THE TWO CLASSES. `ZugriffNIFragmentAussage`
              is the noninterference leg for a fragment whose code is frame-only or an access instruction.
              The accepted-fragment theorem of `Beobachtung` needs `rein : ∀ b ∈ p.code, b.Privat`, which a
