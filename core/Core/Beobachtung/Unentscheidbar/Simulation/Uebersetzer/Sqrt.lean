@@ -198,7 +198,7 @@ theorem sqrtSchleifeVon (ein frei s n : Nat) (q : Rahmen) (rest : List Befehl)
       exact hq1
     obtain ⟨k', q', hrun', hpc', hsqrt', hpres', hlok', hrueck', hstopp', hk'⟩ :=
       ih (s + 1) (frameA11 q frei s n) hpcW hqm hsqrtW hq1m
-        (by rw [← Nat.add_assoc, Nat.add_comm 1 f]; exact hs) hcont
+        (by rw [Nat.add_assoc s 1 f, Nat.add_comm 1 f]; exact hs) hcont
     have e : (Schritt (sqrtPrefix ein frei ++ rest))^[23 + k'] (some q) =
         (Schritt (sqrtPrefix ein frei ++ rest))^[k']
           ((Schritt (sqrtPrefix ein frei ++ rest))^[23] (some q)) := by
