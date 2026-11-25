@@ -79,7 +79,7 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
   have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by
     intro c' hc' hcon
     by_cases heq : c' = c
-    · subst heq
+    · subst c'
       have hcon' : nach.buchung.schreibt c i := by
         rw [hbuch]
         exact hcon
