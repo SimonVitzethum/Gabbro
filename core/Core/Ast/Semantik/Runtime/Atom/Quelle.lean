@@ -180,7 +180,10 @@ theorem Zugriffsform.ideal_aktion_intern (z : Zugriffsform) {c : Kontext} {s : Z
     rfl
   · have e : plan = (Befehl.zugriff z).form.plan (s.lokal c) v := (List.cons.inj same).1
     subst e
-    obtain h | h | h := z.klasse_modus
+    obtain h | h | h | h := z.klasse_modus
+    · show (z.klasse.plan _ _).aktion = .intern
+      rw [h]
+      rfl
     · show (z.klasse.plan _ _).aktion = .intern
       rw [h]
       rfl
