@@ -466,7 +466,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
         generalize hau : spur0.2 = au at fuehrt
         cases fuehrt with
         | intern =>
-          refine ⟨ev, hev, ?_, ?_, ?_, ?_⟩
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
             simp only [Befehl.nach, hEqL]
           · rw [hstate]
@@ -623,7 +623,8 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
 
 /-- The current linker statement is false: both parts are accepted, the plan links,
     but the linked unit divides by zero. -/
-theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage := by
+theorem linkerAkzeptiert_ohne_abschottung_falsch :
+    ¬ Gabbro.Core.Ziel.Korrektheit.LinkerAkzeptiertAussage := by
   intro hlink
   have hparts : ∀ m ∈ planAB.module, Akzeptiert (m.fragment.einheit planAB.plattform) := by
     intro m hm
