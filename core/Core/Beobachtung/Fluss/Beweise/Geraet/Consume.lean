@@ -17,22 +17,6 @@ open Classical
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
 variable {d : Denotation k scope}
 
-/-- The consume frame projects back to the acting context update. -/
-theorem geraete_consume_frame_lokal {binding : Binding k} {access : RegisterAccess}
-    {c : Kontext} {s : State} {answer : AntwortEreignis} {target : Option GeraetePhase} :
-    ((setFrame s c { s.lokal c with
-      pending := none
-      last := some (access.result answer.reply)
-      phases := match access.result answer.reply, target with
-        | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-        | _, _ => (s.lokal c).phases }).verbrauche c).lokal =
-      Function.update s.lokal c { s.lokal c with
-        pending := none
-        last := some (access.result answer.reply)
-        phases := match access.result answer.reply, target with
-          | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-          | _, _ => (s.lokal c).phases } := rfl
-
 /-- A consume tick consumes the first unconsumed answer: the ledgers stay, the
     consumption counter advances and the entry frame clears. -/
 theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
@@ -66,7 +50,6 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       (s'.lokal c).pending = none ∧
       s'.initial = s.initial ∧ s'.rechte = s.rechte ∧ s'.leihen = s.leihen ∧
       s'.persistenz = s.persistenz := by
-  subst hu
   have hplan : plan = { internal with aktion := .verbrauche answer } :=
     (List.cons.inj hplans).1
   subst hplan
@@ -88,25 +71,44 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
     have hsrechte : s'.rechte = v.rechte := by rw [nEqState]
     have hsleihen : s'.leihen = v.leihen := by rw [nEqState]
     have hspersistenz : s'.persistenz = v.persistenz := by rw [nEqState]
+    have huvfragen : u.fragen = s.fragen := by rw [hu]; rfl
+    have huvverlauf : u.verlauf = s.verlauf := by rw [hu]; rfl
+    have huvantworten : u.antworten = s.antworten := by rw [hu]; rfl
+    have huvverbraucht : u.verbraucht = s.verbraucht := by rw [hu]; rfl
+    have huvverworfen : u.verworfen = s.verworfen := by rw [hu]; rfl
+    have huvbuchung : u.buchung = s.buchung := by rw [hu]; rfl
+    have huvepoche : u.epoche = s.epoche := by rw [hu]; rfl
+    have huvgeliefert : u.geliefert = s.geliefert := by rw [hu]; rfl
+    have huvkerne : u.kerne = s.kerne := by rw [hu]; rfl
+    have huvstatus : u.status = s.status := by rw [hu]; rfl
+    have huvinitial : u.initial = s.initial := by rw [hu]; rfl
+    have huvrechte : u.rechte = s.rechte := by rw [hu]; rfl
+    have huvleihen : u.leihen = s.leihen := by rw [hu]; rfl
+    have huvpersistenz : u.persistenz = s.persistenz := by rw [hu]; rfl
     cases fuehrtAus with
     | verbrauche ready' =>
+      have e1 : s'.lokal = u.lokal := by
+        rw [hslokal]
+        rfl
       refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · simp only [hsfragen, Zustand.verbrauche, setFrame]
-      · simp only [hsverlauf, Zustand.verbrauche, setFrame]
-      · simp only [hsantworten, Zustand.verbrauche, setFrame]
-      · simp only [hsverbraucht, Zustand.verbrauche, setFrame]
-      · simp only [hsverworfen, Zustand.verbrauche, setFrame]
-      · simp only [hsbuchung, Zustand.verbrauche, setFrame]
-      · simp only [hsepoche, Zustand.verbrauche, setFrame]
-      · simp only [hsgeliefert, Zustand.verbrauche, setFrame]
-      · simp only [hskerne, Zustand.verbrauche, setFrame]
-      · simp only [hsstatus, Zustand.verbrauche, setFrame]
-      · rw [hslokal, Zustand.verbrauche, geraete_consume_frame_lokal]
-      · simp only [hslokal, Zustand.verbrauche, setFrame, Function.update_self]
-      · simp only [hsinitial, Zustand.verbrauche, setFrame]
-      · simp only [hsrechte, Zustand.verbrauche, setFrame]
-      · simp only [hsleihen, Zustand.verbrauche, setFrame]
-      · simp only [hspersistenz, Zustand.verbrauche, setFrame]
+      · simp only [hsfragen, huvfragen, Zustand.verbrauche]
+      · simp only [hsverlauf, huvverlauf, Zustand.verbrauche]
+      · simp only [hsantworten, huvantworten, Zustand.verbrauche]
+      · simp only [hsverbraucht, huvverbraucht, Zustand.verbrauche]
+      · simp only [hsverworfen, huvverworfen, Zustand.verbrauche]
+      · simp only [hsbuchung, huvbuchung, Zustand.verbrauche]
+      · simp only [hsepoche, huvepoche, Zustand.verbrauche]
+      · simp only [hsgeliefert, huvgeliefert, Zustand.verbrauche]
+      · simp only [hskerne, huvkerne, Zustand.verbrauche]
+      · simp only [hsstatus, huvstatus, Zustand.verbrauche]
+      · rw [e1, hu]
+        rfl
+      · rw [e1, hu]
+        simp only [setFrame, Function.update_self]
+      · simp only [hsinitial, huvinitial, Zustand.verbrauche]
+      · simp only [hsrechte, huvrechte, Zustand.verbrauche]
+      · simp only [hsleihen, huvleihen, Zustand.verbrauche]
+      · simp only [hspersistenz, huvpersistenz, Zustand.verbrauche]
 
 /-- A consume tick is silent: no memory label, no outside event, no commit and no
     new end is recorded. -/
