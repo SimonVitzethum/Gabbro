@@ -39,7 +39,7 @@ private theorem trivial_akzeptiert :
     change b ∈ ([Ast.Semantik.Befehl.starte Ast.Semantik.mainName,
       Ast.Semantik.Befehl.ende] : List Ast.Semantik.Befehl) at present
     simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-    rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+    rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
   · intro b present frame
     change b ∈ ([Ast.Semantik.Befehl.starte Ast.Semantik.mainName,
       Ast.Semantik.Befehl.ende] : List Ast.Semantik.Befehl) at present

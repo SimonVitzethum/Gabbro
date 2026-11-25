@@ -1,8 +1,9 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Zugriff.lean
-  Subject:   THE GOAL LEGS FOR FRAGMENTS WITH ACCESS INSTRUCTIONS (MK-04b). The proofs of the safety, noninterference
-             and `I` legs of `Ziel/Korrektheit` rest on `fragment_rein`: every instruction of an elaborated fragment is
-             frame-only (`Befehl.Privat`), whose step is the template `impl ≡ ideal`. A source form that elaborates to an
+   Subject:   THE GOAL LEGS FOR FRAGMENTS WITH ACCESS INSTRUCTIONS (MK-04b). The proofs of the safety, noninterference
+              and `I` legs of `Ziel/Korrektheit` for frame-only fragments rest on `fragment_rein`: every instruction
+              of such a fragment is frame-only (`Befehl.Privat`), whose step is the template `impl ≡ ideal`. A source
+              form that elaborates to an
              access instruction (`Zugriffsquelle`) makes a fragment that is not: its instruction reads a value the memory
              model chooses, so the template does not apply. The legs for such a fragment (`Fragment.MitZugriff`) rest on
              the duties of the access classes instead. What the classes carry is proved (`KlassenAussagen`,

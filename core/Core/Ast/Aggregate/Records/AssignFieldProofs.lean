@@ -295,7 +295,7 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
   let E := elaborieren platform (category := .unit) tree
   have advance {s : Zustand} {b : Befehl} (reached : E.system.IErreichbar (I.start E start).2 s)
       (head : E.system.kopf s eintritt = some b)
-      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
       E.system.IErreichbar (I.start E start).2 (b.nach eintritt s) :=
     .schritt eintritt () [plan] reached
       ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩

@@ -81,7 +81,7 @@ theorem sicht_waehleUmgebung (β : Beschriftung) (r : Rahmen) (live : Nat → Bo
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 r.lokale
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 r.lokale
         environment := (name, abi, row) :: r.environment } := rfl
 
 theorem waehleUmgebungSicht : WaehleUmgebungSichtAussage := by
@@ -95,9 +95,9 @@ theorem waehleUmgebungSicht : WaehleUmgebungSichtAussage := by
     · simp only [hp, if_true]
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   have hEnv : ((name, abi, row) :: r₁.environment) =
       ((name, abi, row) :: r₂.environment) := by
     have e : r₁.environment = r₂.environment := by

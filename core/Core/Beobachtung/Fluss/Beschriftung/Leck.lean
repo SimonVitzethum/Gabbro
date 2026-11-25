@@ -41,7 +41,7 @@ def leckFragment : Fragment := Fragment.einzel (.lesen 0 0)
 
 theorem sicht_geheim (β : Beschriftung) (h : oeffentlich (β.lokal 0 0) = false) (x y : Bool) :
     (rahmenGeheim x).sicht β = (rahmenGeheim y).sicht β := by
-  simp only [Rahmen.sicht, rahmenGeheim, Rahmen.start, maskiere, h, Bool.false_eq_true, if_false]
+  simp only [Rahmen.sicht, rahmenGeheim, Rahmen.start, maskiereLokal, h, Bool.false_eq_true, if_false]
   rfl
 
 /-- The labelled unit of the leaking program. -/
