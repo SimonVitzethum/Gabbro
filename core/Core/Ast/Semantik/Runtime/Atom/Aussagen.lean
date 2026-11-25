@@ -108,19 +108,24 @@ theorem Schrittform.zugriffsschritt_treu (F : Schrittform) (hl : F.klasse.liest 
     cases k with
     | lesen m => exact ⟨_, List.mem_singleton.2 rfl, rfl⟩
     | rmw m => exact ⟨_, List.mem_singleton.2 rfl, rfl⟩
-    | lokal => exact absurd hl (by decide)
-    | ruf => exact absurd hl (by decide)
-    | schreiben _ => exact absurd hl (by decide)
-    | sperre _ => exact absurd hl (by decide)
-    | frage => exact absurd hl (by decide)
+    | lokal => cases hl
+    | ruf => cases hl
+    | schreiben _ => cases hl
+    | sperre _ => cases hl
+    | frage => cases hl
 
 /-- The class rule of a reading form is faithful to the class step. -/
 theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : AtomarTreu F F.regel := by
   refine ⟨fun _ _ _ _ _ => Iff.rfl, fun c s w p u step => F.zugriffsschritt_treu hl ?_⟩
   obtain ⟨k, o, t⟩ := F
-  cases k <;> first
-    | exact absurd hl (by decide)
-    | exact step
+  cases k with
+  | lesen m => exact step
+  | rmw m => exact step
+  | lokal => cases hl
+  | ruf => cases hl
+  | schreiben _ => cases hl
+  | sperre _ => cases hl
+  | frage => cases hl
 
 /-- **Atomic simulation** (the proof of `AtomarSimAussage`). -/
 theorem atomarSim : AtomarSimAussage := by

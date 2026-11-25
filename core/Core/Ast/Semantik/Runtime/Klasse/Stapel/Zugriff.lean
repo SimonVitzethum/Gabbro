@@ -29,12 +29,12 @@ theorem Zugriffsform.uebertrag_fortsetzungen (z : Zugriffsform) (r : Rahmen) (ge
     split
     · exact r.bindeGelesen_fortsetzungen _ _ _
     · rfl
-  | speichere .. => rfl
-  | veroeffentliche .. => rfl
-  | lade .. => exact r.bindeGelesen_fortsetzungen _ _ _
-  | tausche .. => exact r.bindeGelesen_fortsetzungen _ _ _
-  | vergleicheTausche .. => exact r.bindeGelesen_fortsetzungen _ _ _
-  | holeUndAddiere .. => exact r.bindeGelesen_fortsetzungen _ _ _
+  | speichere _ _ _ _ => rfl
+  | veroeffentliche _ _ _ _ => rfl
+  | lade _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
+  | tausche _ _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
+  | vergleicheTausche _ _ _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
+  | holeUndAddiere _ _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
 
 theorem zugriffStapel (b : Befehl) (familie : b.familie = .zugriff) :
     b.Stapelwirkung b.klasse.Stapel := by
