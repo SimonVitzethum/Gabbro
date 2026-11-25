@@ -57,7 +57,6 @@ theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein 
       | exact Or.inr (Or.inl rfl)
       | refine ⟨?_, ?_⟩
 
-<<<<<<< HEAD
 /-- A binding statement is frame-only. -/
 theorem stmt_letValue_rein (name : Identifier) (ordinary : name.val ≠ "mut".toList) (value : Expr scope type) :
     (stmt (Stmt.letValue (result := result) name ordinary value)).Rein := by
