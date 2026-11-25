@@ -5,8 +5,9 @@
              the statement, with the decision premises realised) and an `X.nichtTrivial`
              (a non-accepted object or a degenerate checker violates the statement). No pinned
              statement is changed. The soundness companions use `staleEinheit`; the completeness
-             companions use `akzeptiert_erfuellbar`. The checker that decides each conjunct
-             makes the soundness and completeness statements true non-vacuously.
+             companions use `akzeptiert_erfuellbar`. The checker that decides each conjunct by
+             a classical `if` makes the soundness and completeness statements true non-vacuously
+             without a `decide` proof on a large proposition.
 -/
 module
 
@@ -21,12 +22,13 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core
 open Classical
 
-/-- The checker that decides each conjunct of `Akzeptiert` and whose fragment is total. Every
-    soundness and completeness statement below holds for this checker with a real decision. -/
+/-- The checker whose three verdicts are the classical decisions of the three conjuncts of
+    `Akzeptiert`, and whose fragment is total. Every soundness and completeness statement below
+    holds for this checker with a real decision. -/
 noncomputable def prueferEntscheidet : Pruefer where
-  pruefeLokal := fun P t => decide (Annahme.Lokal (einheitVon P t))
-  pruefeKlauseln := fun P t => decide (Annahme.KlauselnWahr (einheitVon P t))
-  pruefeWaechter := fun P t => decide (Annahme.WaechterHalten (einheitVon P t))
+  pruefeLokal := fun P t => if Annahme.Lokal (einheitVon P t) then true else false
+  pruefeKlauseln := fun P t => if Annahme.KlauselnWahr (einheitVon P t) then true else false
+  pruefeWaechter := fun P t => if Annahme.WaechterHalten (einheitVon P t) then true else false
   fragmentLokal := fun _ _ => true
   fragmentKlauseln := fun _ _ => true
   fragmentWaechter := fun _ _ => true
@@ -62,8 +64,10 @@ theorem PrueferLokalKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferLokalKorrektAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t accepted
-  change decide (Annahme.Lokal (einheitVon P t)) = true at accepted
-  exact of_decide_eq_true accepted
+  change (if Annahme.Lokal (einheitVon P t) then true else false) = true at accepted
+  split at accepted
+  · assumption
+  · cases accepted
 
 theorem PrueferLokalKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, ¬ Annahme.Lokal E :=
@@ -73,8 +77,10 @@ theorem PrueferKlauselnKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferKlauselnKorrektAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t accepted
-  change decide (Annahme.KlauselnWahr (einheitVon P t)) = true at accepted
-  exact of_decide_eq_true accepted
+  change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true at accepted
+  split at accepted
+  · assumption
+  · cases accepted
 
 theorem PrueferKlauselnKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -85,8 +91,10 @@ theorem PrueferWaechterKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferWaechterKorrektAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t accepted
-  change decide (Annahme.WaechterHalten (einheitVon P t)) = true at accepted
-  exact of_decide_eq_true accepted
+  change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true at accepted
+  split at accepted
+  · assumption
+  · cases accepted
 
 theorem PrueferWaechterKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -97,14 +105,20 @@ theorem PrueferKorrektAussage.erfuellbar : ∃ C : Pruefer, PrueferKorrektAussag
   refine ⟨prueferEntscheidet, ?_⟩
   apply pruefer_korrekt_aus_teilen
   · intro P t accepted
-    change decide (Annahme.Lokal (einheitVon P t)) = true at accepted
-    exact of_decide_eq_true accepted
+    change (if Annahme.Lokal (einheitVon P t) then true else false) = true at accepted
+    split at accepted
+    · assumption
+    · cases accepted
   · intro P t accepted
-    change decide (Annahme.KlauselnWahr (einheitVon P t)) = true at accepted
-    exact of_decide_eq_true accepted
+    change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true at accepted
+    split at accepted
+    · assumption
+    · cases accepted
   · intro P t accepted
-    change decide (Annahme.WaechterHalten (einheitVon P t)) = true at accepted
-    exact of_decide_eq_true accepted
+    change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true at accepted
+    split at accepted
+    · assumption
+    · cases accepted
 
 theorem PrueferKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -117,8 +131,11 @@ theorem PrueferLokalVollstaendigAussage.erfuellbar :
     ∃ C : Pruefer, PrueferLokalVollstaendigAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t _ hLocal
-  change decide (Annahme.Lokal (einheitVon P t)) = true
-  exact decide_eq_true hLocal
+  change (if Annahme.Lokal (einheitVon P t) then true else false) = true
+  split
+  · rfl
+  · rename_i notLocal
+    exact (notLocal hLocal).elim
 
 theorem PrueferLokalVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -129,8 +146,11 @@ theorem PrueferKlauselnVollstaendigAussage.erfuellbar :
     ∃ C : Pruefer, PrueferKlauselnVollstaendigAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t _ clauses
-  change decide (Annahme.KlauselnWahr (einheitVon P t)) = true
-  exact decide_eq_true clauses
+  change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true
+  split
+  · rfl
+  · rename_i notClauses
+    exact (notClauses clauses).elim
 
 theorem PrueferKlauselnVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -141,8 +161,11 @@ theorem PrueferWaechterVollstaendigAussage.erfuellbar :
     ∃ C : Pruefer, PrueferWaechterVollstaendigAussage C := by
   refine ⟨prueferEntscheidet, ?_⟩
   intro P t _ guards
-  change decide (Annahme.WaechterHalten (einheitVon P t)) = true
-  exact decide_eq_true guards
+  change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true
+  split
+  · rfl
+  · rename_i notGuards
+    exact (notGuards guards).elim
 
 theorem PrueferWaechterVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -153,14 +176,23 @@ theorem PrueferVollstaendigAussage.erfuellbar : ∃ C : Pruefer, PrueferVollstae
   refine ⟨prueferEntscheidet, ?_⟩
   apply pruefer_vollstaendig_aus_teilen
   · intro P t _ hLocal
-    change decide (Annahme.Lokal (einheitVon P t)) = true
-    exact decide_eq_true hLocal
+    change (if Annahme.Lokal (einheitVon P t) then true else false) = true
+    split
+    · rfl
+    · rename_i notLocal
+      exact (notLocal hLocal).elim
   · intro P t _ clauses
-    change decide (Annahme.KlauselnWahr (einheitVon P t)) = true
-    exact decide_eq_true clauses
+    change (if Annahme.KlauselnWahr (einheitVon P t) then true else false) = true
+    split
+    · rfl
+    · rename_i notClauses
+      exact (notClauses clauses).elim
   · intro P t _ guards
-    change decide (Annahme.WaechterHalten (einheitVon P t)) = true
-    exact decide_eq_true guards
+    change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true
+    split
+    · rfl
+    · rename_i notGuards
+      exact (notGuards guards).elim
 
 theorem PrueferVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
