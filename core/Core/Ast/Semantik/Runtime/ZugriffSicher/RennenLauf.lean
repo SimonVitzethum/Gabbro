@@ -68,18 +68,18 @@ theorem zugriffBefugtBrauchtAnkunft (z : Zugriffsform)
   | tausche ziel region index quelle typ mode =>
     simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
-      (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.tausche ziel region index quelle typ mode) (s.lokal c)).ort) .lesen)
+(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
+        ((Zugriffsform.operand (Zugriffsform.tausche ziel region index quelle typ mode) (s.lokal c)).ort) .lesen) h.1)
   | vergleicheTausche ziel region index erwartet neu typ mode =>
     simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
-      (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ mode) (s.lokal c)).ort) .lesen)
+(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
+        ((Zugriffsform.operand (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ mode) (s.lokal c)).ort) .lesen) h.1)
   | holeUndAddiere ziel region index betrag typ mode =>
     simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
       Wirkungsklasse.befugt] using
-      (keineBefugnisOhneAnkunft (s := s) (c := c) leer
-        ((Zugriffsform.operand (Zugriffsform.holeUndAddiere ziel region index betrag typ mode) (s.lokal c)).ort) .lesen)
+(fun h => (keineBefugnisOhneAnkunft (s := s) (c := c) leer
+        ((Zugriffsform.operand (Zugriffsform.holeUndAddiere ziel region index betrag typ mode) (s.lokal c)).ort) .lesen) h.1)
 
 /-- A step of a class-good instruction at a context with no arrival regions plans the
     private step: a frame-only form is private by its class; a fence plans nothing; every other
@@ -91,7 +91,7 @@ theorem quellSchrittPlanPrivat (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
     plan = Semantik.plan := by
   change f.impl c s w [plan] u at impl
   rcases hgut with hpriv | ⟨z, rfl⟩
-  · exact ((Befehl.impl_privat f hpriv c s w [plan] u).1 impl).1
+  · exact (List.cons.inj (((Befehl.impl_privat f hpriv c s w [plan] u).1 impl).1)).1
   · have step := (Zugriffsform.ideal_iff z c s w [plan] u).1 impl
     rcases step with ⟨_, eq, _⟩ | ⟨bef, v, _, eq, _⟩
     · exact (List.cons.inj eq).1
