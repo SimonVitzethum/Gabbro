@@ -41,7 +41,7 @@ theorem haeltMitAusBlock (blk : List Befehl) (c : Nat.Partrec.Code) (ein aus fre
   let rE := frameEnde rB
   have hgetB : (blk ++ [.binden nameX aus, .ende])[rEnd.pc]? = some (.binden nameX aus) := by
     rw [hpcE]
-    simpa only [Nat.add_zero] using
+    simpa only [Nat.add_zero, List.getElem?_cons_zero] using
       (getNachPrefix blk [.binden nameX aus, .ende] 0 (by simp))
   have hsB : Schritt (abschliessen blk aus) (some rEnd) = some rB := by
     change Schritt (blk ++ [.binden nameX aus, .ende]) (some rEnd) = some rB
@@ -53,7 +53,7 @@ theorem haeltMitAusBlock (blk : List Befehl) (c : Nat.Partrec.Code) (ein aus fre
     change (blk ++ [.binden nameX aus, .ende])[rEnd.pc + 1]? = some (.ende)
     rw [hpcE]
     rw [show blk.length + 1 = blk.length + 1 by rfl]
-    simpa only [Nat.add_zero] using
+    simpa only [Nat.add_zero, List.getElem?_cons_succ, List.getElem?_cons_zero] using
       (getNachPrefix blk [.binden nameX aus, .ende] 1 (by simp))
   have hsE : Schritt (abschliessen blk aus) (some rB) = some rE := by
     change Schritt (blk ++ [.binden nameX aus, .ende]) (some rB) = some rE
