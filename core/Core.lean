@@ -67,11 +67,13 @@ public import Core.Beobachtung.Fluss.Beschriftung.Aggregat
 public import Core.Beobachtung.Fluss.Beschriftung.Variante
 public import Core.Beobachtung.Fluss.Beschriftung.Text
 public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
-public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Lies
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Variante
-public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Text
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Kontrollfluss
@@ -123,6 +125,9 @@ public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
@@ -141,9 +146,11 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
+public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
+public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 meta import Core.Waechter.Check
