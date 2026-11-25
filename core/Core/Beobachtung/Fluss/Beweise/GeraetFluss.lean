@@ -147,9 +147,8 @@ theorem geraeteRegelFlussAussage {k scope} (locals : Ast.Umgebung scope)
         cases neu
     · intro hpriv
       have hpub : oeffentlich ((d.unit locals).fluss.kontrolle ()) = true := by
-        dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit, Einheit.fluss,
-          Flussdaten.leer, Flussdaten.kontrolle, oeffentlich]
-        decide
+        change decide ((∅ : Etikett) = ∅) = true
+        simp only [decide_eq_true_eq]
       rw [hpub] at hpriv
       cases hpriv
   · intro hpub c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ qg s₁ s₂
