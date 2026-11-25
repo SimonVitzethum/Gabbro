@@ -40,7 +40,7 @@ theorem fragment_sperrhalter_halten (p : Fragment) (platform : Plattform) :
     instruction's own, independent of the surrounding code. -/
 theorem verknuepfte_regel_lokal (plan : Bauplan) (b : Befehl) :
     RegelLokal ((verknuepfteFragmente plan).einheit plan.plattform) b :=
-  b.lokal _ rfl
+  Befehl.regelLokal _ _ b
 
 /-- Entries relocate by concatenation offset: entries of the second fragment shift
     behind the first fragment's instructions; the first fragment's entry wins. -/
@@ -65,7 +65,7 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
     (hlink : linke plan = some frag)
     (hparts : ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform))
     (hpriv : ∀ b ∈ (verknuepfteFragmente plan).code, b.Privat)
-    (hguard : ∀ (ρ : I.Lauf (frag.einheit plan.plattform)) (hρ : I.Laeufe (frag.einheit plan.plattform))
+    (hguard : ∀ (ρ : I.Lauf (frag.einheit plan.plattform)) (hρ : I.Laeufe _ ρ)
       (t : I.Schnitt _ ρ) (op : PartielleOperation) (args : Operanden op),
       (kanonischeVerwendung _).bedarf ρ t op args → waechterBedarf op args) :
     Akzeptiert (frag.einheit plan.plattform) := by
