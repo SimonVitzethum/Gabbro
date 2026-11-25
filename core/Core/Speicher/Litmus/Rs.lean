@@ -146,14 +146,17 @@ theorem rsWf : rsGraph.Wohlgeformt where
     cases a <;> decide
   mo_total := by
     intro a b ha hb ho hne
+    have ha' : rsSchreibt a := ha
+    have hb' : rsSchreibt b := hb
+    have ho' : rsOrt a = rsOrt b := ho
     show rsMo a b ∨ rsMo b a
     cases a <;> cases b <;>
       first
         | decide
-        | exact False.elim ha
-        | exact False.elim hb
+        | exact False.elim ha'
+        | exact False.elim hb'
         | exact False.elim (hne rfl)
-        | (simp only [rsOrt, rsLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+        | (simp only [rsOrt, rsLab, Bool.false_eq_true, Bool.true_eq_false] at ho'; done)
 
 /-- The only `rb` edge is from the stale data read to the data write. -/
 theorem rsRb {r w : RelEv} (h : rsGraph.rb r w) : r = rd ∧ w = wd := by
@@ -163,7 +166,9 @@ theorem rsRb {r w : RelEv} (h : rsGraph.rb r w) : r = rd ∧ w = wd := by
   cases w' <;> cases r <;> cases w <;> decide
 
 theorem rsEcoTrans (a b c : RelEv) : rsEco a b → rsEco b c → rsEco a c := by
-  cases a <;> cases b <;> cases c <;> decide
+  intro hxy hyz
+  cases a <;> cases b <;> cases c <;>
+    simp only [rsEco, reduceCtorEq] at hxy hyz ⊢
 
 theorem rsEcoSchritt (a b : RelEv) (h : rsGraph.ecoSchritt a b) : rsEco a b := by
   rcases h with h | h | h
