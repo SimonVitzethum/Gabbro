@@ -59,23 +59,27 @@ theorem fadenVerweigertKomponierbar : FadenVerweigertKomponierbarAussage := by
     rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.intern)⟩
 
 /-- **Composability of an accepted start** (`StarteKomponierbarAussage`). The resting thread and the
-    machine's counter are the premises of `FuehrtAus.starte`. -/
+    machine's counter are the premises of `FuehrtAus.starte`; the machine records the acting context as
+    the creator of the new thread. -/
 theorem starteKomponierbar : StarteKomponierbarAussage := by
   intro p platform z t s c w plan u _hkopf hstep hakt hruht
   obtain ⟨rahmen, hlesen, hfuss⟩ := faden_schritt_fakten hstep
   exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan
     { u with status := Function.update u.status (.faden s.naechsterFaden) .laeuft,
-             naechsterFaden := s.naechsterFaden + 1 }
+             naechsterFaden := s.naechsterFaden + 1,
+             erzeuger := Function.update u.erzeuger (.faden s.naechsterFaden) (some c) }
     rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.starte hruht)⟩
 
 /-- **Composability of an accepted join** (`VerbindeKomponierbarAussage`). The ended status of the
-    joined context is exactly the premise of `FuehrtAus.verbinde`. -/
+    joined context and the recorded creator are exactly the premises of `FuehrtAus.verbinde`; after the
+    join the creator entry is cleared. -/
 theorem verbindeKomponierbar : VerbindeKomponierbarAussage := by
-  intro p platform z t s c w plan u kind _hkopf hstep hakt hfertig
+  intro p platform z t s c w plan u kind _hkopf hstep hakt hfertig herz
   obtain ⟨rahmen, hlesen, hfuss⟩ := faden_schritt_fakten hstep
   obtain ⟨ausgang, hfertig⟩ := hfertig
-  exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan u
-    rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.verbinde hfertig)⟩
+  exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan
+    { u with erzeuger := Function.update u.erzeuger kind none }
+    rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.verbinde hfertig herz)⟩
 
 /-- **Composability of an accepted end** (`BeendeKomponierbarAussage`). The outcome the form sets in
     the acting thread's status is exactly the premise of `FuehrtAus.beende`. -/
@@ -106,8 +110,8 @@ private theorem ausfuehrbar_fuehrtAus (e : Einrichtung Nat Zelle Int Nat Rahmen 
   | intern => exact ⟨u, FuehrtAus.intern⟩
   | starte => exact ⟨_, FuehrtAus.starte h⟩
   | verbinde kind =>
-    obtain ⟨ausgang, hfertig⟩ := h
-    exact ⟨u, FuehrtAus.verbinde hfertig⟩
+    obtain ⟨⟨ausgang, hfertig⟩, herz⟩ := h
+    exact ⟨_, FuehrtAus.verbinde hfertig herz⟩
   | beende =>
     obtain ⟨ausgang, hfertig⟩ := h
     exact ⟨u, FuehrtAus.beende hfertig⟩
