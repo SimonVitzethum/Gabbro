@@ -378,21 +378,21 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
-              | antwort _ arrives =>
+              | antwort a arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  have h1 : s.kerne = ((z.antwort _).kerne) := by rw [hstate]
-                  have h2 : ((z.antwort _).kerne) = z.kerne := rfl
+                  have h1 : s.kerne = ((z.antwort a).kerne) := by rw [hstate]
+                  have h2 : ((z.antwort a).kerne) = z.kerne := rfl
                   exact h1.trans h2
                 rw [skerne]
                 exact ih z hz
-              | interrupt _ enters =>
+              | interrupt id enters =>
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
-                    (Maschine.Zustandseintritt z k' _ c' nmi).kerne :=
+                    (Maschine.Zustandseintritt z k' id c' nmi).kerne :=
                   congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
-                have einkern : ∀ k, (Maschine.Zustandseintritt z k' _ c' nmi).kerne k =
+                have einkern : ∀ k, (Maschine.Zustandseintritt z k' id c' nmi).kerne k =
                     if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                   intro k
                   by_cases heq : k = k'
