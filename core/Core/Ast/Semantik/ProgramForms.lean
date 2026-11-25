@@ -88,10 +88,10 @@ def foreverJoint : Prop :=
 def accessForm (scope : Scope) (result : Option (Ty .value)) :
     Zugriffsquelle (.statement scope result) (AccessStatement scope) where
   produktion := Surface.access scope result
-  form := fun a => match a.2 with
+  form := fun ⟨_, form⟩ => match form with
     | .load _ _ written _ region _ _ _ mode => .lade 0 region.index 0 written.type mode.modus
     | .store region _ _ _ _ mode => .speichere region.index 0 1 mode.modus
-  position := fun a => match a.2 with
+  position := fun ⟨_, form⟩ => match form with
     | .load _ _ _ _ _ _ _ index _ => (expr 0 index).code.length
     | .store _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
 
