@@ -38,11 +38,13 @@ def Befehl.plan (b : Befehl) (r : Rahmen) (v : Int) : Plan :=
 def Befehl.Privat (b : Befehl) : Prop := b.klasse = .lokal ∨ b.klasse = .ruf
 
 /-- **Every instruction that is no access instruction is frame-only.** -/
-theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugriff form) : b.Privat := by
+theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugriff form)
+    (h' : ∀ form, b ≠ .faden form) : b.Privat := by
   cases b <;> first
     | exact Or.inl rfl
     | exact Or.inr rfl
     | exact absurd rfl (h _)
+    | exact absurd rfl (h' _)
 
 /-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the
     memory returned. -/
@@ -50,6 +52,7 @@ theorem Befehl.uebertrag_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (live :
     b.uebertrag r live v = b.auswerten r live := by
   cases b with
   | zugriff form => rcases h with h | h <;> cases form <;> cases h
+  | faden form => rcases h with h | h <;> cases form <;> cases h
   | _ => rfl
 
 /-- **The state after the step of a frame-only form**: the transfer of the form is the evaluation of the
@@ -94,31 +97,42 @@ theorem Befehl.impl_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustan
     b.impl c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s :=
   b.ideal_privat h c s w plans u
 
-/-- **No instruction issues a question or takes a lock: every step of every instruction is an internal action.** A
-    frame-only step has the private plan; the step of an access instruction has the plan of its class or the private
-    plan of its refusal, and the classes `lesen`, `schreiben` and `rmw` plan the internal action. -/
-theorem Befehl.impl_aktion_intern (b : Befehl) {c : Kontext} {s : Zustand} {w : PUnit.{1}} {p : Plan}
-    {u : Zustand} (h : b.impl c s w [p] u) : p.aktion = .intern := by
+/-- **No instruction issues a question or takes a lock: every step of every instruction is a still action** (the
+    internal action or a lifecycle action, MK-07). A frame-only step has the private plan; the step of an access
+    instruction has the plan of its class or the private plan of its refusal, and the classes `lesen`, `schreiben` and
+    `rmw` plan the internal action; the step of a lifecycle instruction plans the action of its class. -/
+theorem Befehl.impl_aktion_still (b : Befehl) {c : Kontext} {s : Zustand} {w : PUnit.{1}} {p : Plan}
+    {u : Zustand} (h : b.impl c s w [p] u) : p.aktion.Still := by
   by_cases hp : b.Privat
   · have same := (List.cons.inj ((b.impl_privat hp c s w [p] u).1 h).1).1
     subst same
-    rfl
+    trivial
   · cases b with
     | zugriff z =>
       cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩ <;>
         (have e := (List.cons.inj same).1
          subst e
-         rfl)
+         trivial)
+    | faden z =>
+      cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, same, _⟩ <;>
+        (have e := (List.cons.inj same).1
+         subst e
+         trivial)
     | _ => exact absurd (by first | exact Or.inl rfl | exact Or.inr rfl) hp
 
 /-- The same, for a rule that is the rule of the instruction. -/
-theorem Befehl.regel_aktion_intern (b : Befehl) {R : Regel} (hR : R = b.regel) {c : Kontext} {s : Zustand}
-    {w : PUnit.{1}} {p : Plan} {u : Zustand} (h : R.impl c s w [p] u) : p.aktion = .intern := by
+theorem Befehl.regel_aktion_still (b : Befehl) {R : Regel} (hR : R = b.regel) {c : Kontext} {s : Zustand}
+    {w : PUnit.{1}} {p : Plan} {u : Zustand} (h : R.impl c s w [p] u) : p.aktion.Still := by
   subst hR
-  exact b.impl_aktion_intern (w := w) h
+  exact b.impl_aktion_still (w := w) h
 
 /-- A frame-only instruction is in no access family. -/
 theorem Befehl.privat_ne_zugriff_klasse (b : Befehl) (h : b.Privat) (z : Zugriffsform) : b ≠ .zugriff z := by
+  rintro rfl
+  rcases h with h | h <;> cases z <;> cases h
+
+/-- A frame-only instruction is no lifecycle instruction. -/
+theorem Befehl.privat_ne_faden_klasse (b : Befehl) (h : b.Privat) (z : Fadenform) : b ≠ .faden z := by
   rintro rfl
   rcases h with h | h <;> cases z <;> cases h
 

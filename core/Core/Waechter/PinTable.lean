@@ -227,6 +227,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.AtomAussagen, 10018845777804343364),
   (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 15230201805166795792),
   (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799),
+  (`Gabbro.Core.Ast.Semantik.FadenAussagen, 0),
+  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 0),
   (`Gabbro.Core.Maschine.I.Haengt, 2121491499351378413),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 5575662477350292693),
   (`Gabbro.Core.Annahme.Akzeptiert, 7382700461333643143),

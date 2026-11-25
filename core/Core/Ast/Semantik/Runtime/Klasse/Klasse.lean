@@ -40,6 +40,10 @@ inductive Wirkungsklasse where
   | rmw (modus : Gabbro.Core.Speicher.Modus)
   | sperre (aktion : Gabbro.Core.Maschine.SperrAktion)
   | frage
+  | starte
+  | beende
+  | verbinde
+  | wechsle
 
 /-- **The class of an access instruction** (MK-04): a load and the confirming observation read, a store and the
     publication write, an update (exchange, compare-and-swap, fetch-and-add) is an update, each in the mode the
@@ -53,9 +57,18 @@ def Zugriffsform.klasse : Zugriffsform → Wirkungsklasse
   | .vergleicheTausche _ _ _ _ _ _ m => .rmw m
   | .holeUndAddiere _ _ _ _ _ m => .rmw m
 
+/-- **The class of a lifecycle instruction** (MK-07): starting a thread, ending one, joining one, and switching a
+    core to a thread (which is also how a core is started). -/
+def Fadenform.klasse : Fadenform → Wirkungsklasse
+  | .starte .. => .starte
+  | .beende .. => .beende
+  | .verbinde .. => .verbinde
+  | .wechsle .. | .kernStart .. => .wechsle
+
 /-- Classify every instruction. A new instruction must be classified: there is no wildcard. -/
 def Befehl.klasse : Befehl → Wirkungsklasse
   | .zugriff form => form.klasse
+  | .faden form => form.klasse
   | .rufe .. | .starte .. => .ruf
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
@@ -79,7 +92,8 @@ def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
     every other class steps its frame without pushing a continuation. -/
 def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
   | .ruf => 1
-  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => 0
+  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage | .starte | .beende | .verbinde
+  | .wechsle => 0
 
 /-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
     Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is

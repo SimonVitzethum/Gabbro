@@ -289,4 +289,27 @@ def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
 instance : Encodable Zugriffsform :=
   Encodable.ofLeftInjection zugriffZuSumme zugriffVonSumme (by intro z; cases z <;> rfl)
 
+/-! ## Fadenform (MK-07) -/
+
+/-- A lifecycle instruction as a sum of the products of its fields. -/
+abbrev FadensummeTyp : Type :=
+  (Nat × Nat × Ty .value × List Nat) ⊕ Nat ⊕ (Nat × Nat × Ty .value) ⊕ (Nat × Nat) ⊕ (Nat × Nat)
+
+def fadenZuSumme : Fadenform → FadensummeTyp
+  | .starte a b t l => .inl (a, b, t, l)
+  | .beende a => .inr (.inl a)
+  | .verbinde a b t => .inr (.inr (.inl (a, b, t)))
+  | .wechsle a b => .inr (.inr (.inr (.inl (a, b))))
+  | .kernStart a b => .inr (.inr (.inr (.inr (a, b))))
+
+def fadenVonSumme : FadensummeTyp → Option Fadenform
+  | .inl (a, b, t, l) => Option.some (.starte a b t l)
+  | .inr (.inl a) => Option.some (.beende a)
+  | .inr (.inr (.inl (a, b, t))) => Option.some (.verbinde a b t)
+  | .inr (.inr (.inr (.inl (a, b)))) => Option.some (.wechsle a b)
+  | .inr (.inr (.inr (.inr (a, b)))) => Option.some (.kernStart a b)
+
+instance : Encodable Fadenform :=
+  Encodable.ofLeftInjection fadenZuSumme fadenVonSumme (by intro z; cases z <;> rfl)
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation

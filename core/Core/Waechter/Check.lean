@@ -17,6 +17,7 @@ meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
 meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 meta import Core.Ast.Semantik.Runtime.Atom.Aussagen
+meta import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public meta import Core.Waechter.AussagePins
 public meta import Core.Waechter.Binder
 public meta import Core.Waechter.Closing
@@ -192,7 +193,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende),
     (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.environmentBefehlEntry) ], #[
     (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
-    (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage) ]⟩]
 
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
@@ -261,6 +263,10 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.rmw, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sperre, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.frage, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.starte, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.beende, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.verbinde, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.wechsle, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
 ]
 
 private meta def flowEntries : Array RegistryPacket := #[

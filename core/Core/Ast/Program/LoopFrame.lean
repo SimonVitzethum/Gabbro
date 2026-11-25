@@ -96,6 +96,9 @@ private theorem Befehl.schrittForm (b : Befehl) (frame : Rahmen) (key : Nat) :
   case zugriff form =>
     obtain ⟨stapel, pc, zaehler⟩ := form.uebertrag_lokal frame 0
     exact .lokal stapel (by omega) (fun _ => by rw [zaehler])
+  case faden form =>
+    obtain ⟨stapel, pc, zaehler⟩ := form.uebertrag_lokal frame 0
+    exact .lokal stapel (by omega) (fun _ => by rw [zaehler])
   case rufe => exact SchrittForm.rufform frame _ _ _
   case zurueck => exact SchrittForm.rueckform frame _
   case rueckVoid => exact SchrittForm.rueckform frame _

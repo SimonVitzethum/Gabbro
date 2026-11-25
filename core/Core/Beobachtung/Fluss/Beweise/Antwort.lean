@@ -20,14 +20,14 @@ abbrev AntwortZustand := Ast.Semantik.Zustand
 abbrev AntwortPlan := Ast.Semantik.Plan
 abbrev AntwortSpur := SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int
 
-/-- The action of every context step of a canonical fragment is internal:
+/-- The action of every context step of a canonical fragment is still (internal or a lifecycle action):
     a `Befehl` never issues a question. -/
-theorem antwort_kontext_intern {p : Fragment} (plattform : Plattform)
+theorem antwort_kontext_still {p : Fragment} (plattform : Plattform)
     {c : Kontext} {s u : AntwortZustand} {w : PUnit} {plan : AntwortPlan}
     (regel : (p.einheit plattform).system.ImplSchritt c s w [plan] u) :
-    plan.aktion = .intern := by
+    plan.aktion.Still := by
   obtain ⟨i, _, impl⟩ := regel
-  exact i.regel_aktion_intern rfl impl
+  exact i.regel_aktion_still rfl impl
 
 /-- A form action other than a question leaves the pending-question ledger unchanged. -/
 theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
@@ -52,10 +52,10 @@ theorem antwort_schritt_fragen {p : Fragment} (plattform : Plattform)
   cases step with
   | kontext _ _ regel aus =>
       obtain ⟨i, _, impl⟩ := regel
-      have intern := i.regel_aktion_intern rfl impl
+      have still := i.regel_aktion_still rfl impl
       obtain ⟨frame, _, _, _, aktion, _, s'Eq⟩ := aus
       have vLeer := antwort_fuehrt_aus_fragen_leer plattform aktion
-        (frame.fragen.trans leer) (fun q h => by rw [intern] at h; cases h)
+        (frame.fragen.trans leer) (fun q h => by rw [h] at still; exact False.elim still)
       rw [s'Eq]
       exact vLeer
   | antwort _ arrives =>
