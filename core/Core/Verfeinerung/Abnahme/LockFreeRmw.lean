@@ -173,6 +173,7 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
       cases aus
       simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, List.filter_nil,
         List.map_nil, List.nil_append, List.append_nil] at folge
+      generalize hg : i'.graph = endGraph at folge
       generalize ht : spur.speicher = trace at folge
       have leerTrace : trace = [] := by
         cases folge
