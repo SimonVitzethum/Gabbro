@@ -207,7 +207,7 @@ theorem sqrtSchleifeVon (ein frei s n : Nat) (q : Rahmen) (rest : List Befehl)
         some q' := by
       rw [e, hrunW, hrun']
     have hk : 23 + k' = 23 * (f + 1) + 19 := by
-      rw [hk', Nat.mul_add, Nat.mul_one, Nat.add_assoc 23 (23 * f) 19,
+      rw [hk', Nat.mul_add, Nat.mul_one, ← Nat.add_assoc 23 (23 * f) 19,
         Nat.add_comm 23 (23 * f)]
     have hpres : ∀ t, t < frei → q'.temp t = q.temp t := fun t ht =>
       (hpres' t ht).trans (hpresW t ht)
