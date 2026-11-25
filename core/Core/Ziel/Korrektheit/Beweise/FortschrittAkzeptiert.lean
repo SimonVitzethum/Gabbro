@@ -177,9 +177,10 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
     have hif : (if some k = ρ.start.assignment 0 then some Ast.Semantik.eintritt
         else none) = some c := h
     rw [assign0] at hif
-    split at hif with hk
-    · exact Option.some.inj hk ▸ rfl
-    · cases hif
+    by_cases hk : some k = some k₀
+    · exact Option.some.inj hk
+    · rw [if_neg hk] at hif
+      cases hif
   have startstapel : ∀ k v n, (v, n) ∈
       ((Maschine.I.start (einheitVon P t) ρ.start).2.kerne k).stapel → False := by
     intro k v n h
