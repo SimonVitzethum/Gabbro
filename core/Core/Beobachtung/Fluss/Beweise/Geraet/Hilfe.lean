@@ -363,4 +363,46 @@ theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Prae
   simp only [kontextBeob, hcommit, hausgabe, hzeit, hkopf, hkonstant, hspec, hspek,
     Bool.false_eq_true, if_false, List.map_nil, List.append_nil]
 
+/-- Matching answers carry the instances of their questions, per index. -/
+theorem geraete_forall₂_inst {antworten : List AntwortEreignis} {qs : List FrageEreignis}
+    (h : List.Forall₂ (fun a q => a.zu q) antworten qs) {i : Nat}
+    (h1 : i < antworten.length) (h2 : i < qs.length) :
+    ((antworten[i]'h1).questionInstance) = ((qs[i]'h2).questionInstance) := by
+  induction h generalizing i with
+  | nil =>
+    simp only [List.length_nil] at h1
+    exact absurd h1 (Nat.not_lt_zero _)
+  | @cons a q as qs ha tail ih =>
+    cases i with
+    | zero =>
+      have hazu : a.zu q := ha
+      simp only [List.getElem_cons_zero]
+      exact hazu.2.2.1.symm
+    | succ n =>
+      simp only [List.getElem_cons_succ]
+      have hlen1 : (a :: as).length = as.length + 1 := rfl
+      have hlen2 : (q :: qs).length = qs.length + 1 := rfl
+      have g1 : n < as.length := by omega
+      have g2 : n < qs.length := by omega
+      exact ih g1 g2
+
+/-- Answer instances follow the ledger order. -/
+theorem geraete_antwort_inst_range {antworten : List AntwortEreignis} {qs : List FrageEreignis}
+    (h : List.Forall₂ (fun a q => a.zu q) antworten qs)
+    (hrange : List.map (fun q : FrageEreignis => q.questionInstance) qs =
+      List.range qs.length) :
+    List.map (fun a : AntwortEreignis => a.questionInstance) antworten =
+      List.range antworten.length := by
+  have hlen : antworten.length = qs.length := List.Forall₂.length_eq h
+  apply List.ext_getElem hlen
+  intro i h1 h2
+  have h2' : i < qs.length := by
+    simp only [List.length_range] at h2
+    omega
+  have hqi : ((qs[i]'h2').questionInstance) = i := geraete_fragen_inst hrange h2'
+  have hai : ((antworten[i]'h1).questionInstance) = ((qs[i]'h2').questionInstance) :=
+    geraete_forall₂_inst h h1 h2'
+  simp only [List.getElem_map, List.getElem_range h2]
+  exact hai.trans hqi
+
 end Gabbro.Core.Beobachtung
