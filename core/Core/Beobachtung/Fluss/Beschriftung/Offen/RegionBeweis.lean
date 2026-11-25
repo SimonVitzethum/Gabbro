@@ -50,8 +50,11 @@ private theorem frage_leer {Ort : Type} (e : Etiketten Ort)
   induction q.zugriffe with
   | nil => rfl
   | cons t ts ih =>
-      simp only [List.map_cons, List.foldl_cons, ho, Finset.empty_union]
+      rw [List.map_cons, List.foldl_cons, ho t.handle.origin.object, Finset.empty_union]
       exact ih
+
+private theorem bind_some {α : Type} (x : Option α) : x.bind some = x := by
+  cases x <;> rfl
 
 private theorem etiketten_leer_frage {Ort : Type} (q : Frage) : (Etiketten.leer : Etiketten Ort).frage q = ∅ := by
   exact frage_leer (Etiketten.leer : Etiketten Ort) (fun _ => rfl) (fun _ => rfl) q
@@ -62,7 +65,7 @@ private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
   unfold QuellzustandGleich at h
   have hx := h.2.2.2.2.2 c
   simpa only [unit, Flussdaten.leer, AntwortSicht, sichtbar, oeffentlich,
-    decide_true, if_true, etiketten_leer_frage] using hx
+    decide_true, if_true, etiketten_leer_frage, bind_some] using hx
 
 /-- A failed state stays failed at the next cut. -/
 private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
