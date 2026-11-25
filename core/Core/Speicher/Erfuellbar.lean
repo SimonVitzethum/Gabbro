@@ -1,8 +1,8 @@
 /-
   File:      core/Core/Speicher/Erfuellbar.lean
-  Subject:   SATISFIABILITY of the premise bundle of `drf_sc` (AGENTS.md §3): a consistent fence-free graph with
-             only `seq_cst` atomics and no race in which both premises bite -- a plain carrier with
-             conflicting accesses and a `seq_cst` carrier (`drf_sc_erfuellbar`). The graph is
+  Subject:   SATISFIABILITY of the premise bundle of `drf_sc` (AGENTS.md §3): a consistent graph with
+              only `seq_cst` atomics and no race in which both premises bite -- a plain carrier with
+              conflicting accesses and a `seq_cst` carrier (`drf_sc_erfuellbar`). The graph is
              message passing: thread 1 writes the plain `x := 1`, then the `seq_cst` flag
              `y := 1`; thread 2 reads the flag `1`, then reads `x = 1`.
 -/
@@ -116,8 +116,6 @@ theorem mp_kein_zaun (a : MpEv) : ¬ mpGraph.istZaun a := by
   intro hu
   cases a <;> simp only [Graph.istZaun, mpGraph, mpLab, reduceCtorEq] at hu
 
-theorem mp_ohne_zaun : mpGraph.OhneZaun := fun a hu => mp_kein_zaun a hu
-
 theorem mp_hb {a b : MpEv} (h : mpGraph.hb a b) : mpHb a b := by
   have htr : ∀ x y z, mpHb x y → mpHb y z → mpHb x z := by
     intro x y z
@@ -224,13 +222,12 @@ theorem mp_rennfrei : mpGraph.Rennfrei := by
       | (simp only [Graph.na, Graph.modus, mpGraph, mpLab, reduceCtorEq, or_self] at hna; done)
       | (simp only [Graph.schreibt, mpGraph, mpLab, Art.schreibt, or_self] at hw; done)
 
-/-- **Satisfiability of the premises of `drf_sc`**: a consistent fence-free graph with only
-    `seq_cst` atomics and no race, containing a `seq_cst` access and a conflicting pair on a
-    plain carrier. -/
+/-- **Satisfiability of the premises of `drf_sc`**: a consistent graph with only `seq_cst`
+    atomics and no race, containing a `seq_cst` access and a conflicting pair on a plain carrier. -/
 theorem drf_sc_erfuellbar :
-    ∃ G : Graph MpEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.OhneZaun ∧ G.Rennfrei ∧ (∃ a, G.sc a) ∧
+    ∃ G : Graph MpEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.Rennfrei ∧ (∃ a, G.sc a) ∧
     ∃ a b, G.Konflikt a b ∧ G.na a ∧ G.na b :=
-  ⟨mpGraph, mp_konsistent, mp_nur_sc, mp_ohne_zaun, mp_rennfrei, ⟨wy, rfl⟩,
+  ⟨mpGraph, mp_konsistent, mp_nur_sc, mp_rennfrei, ⟨wy, rfl⟩,
     wx, rx, ⟨by decide, rfl, Or.inl trivial⟩, rfl, rfl⟩
 
 end Gabbro.Core.Speicher

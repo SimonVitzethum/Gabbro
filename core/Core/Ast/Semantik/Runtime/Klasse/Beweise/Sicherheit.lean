@@ -4,7 +4,8 @@
              of the four legs fixed by the effect class alone: booking and releases, the authority of pending
              questions, device authority and committed outside operations. Three legs hold for every class
              (`klassenFragenbein`, `klassenRegisterbein`, `klassenCommitbein`). The booking leg is split by
-             class: `klassenSpeicherbein_privat` for `lokal`, `ruf` and `frage`, `klassenSpeicherbein_zugriff`
+              class: `klassenSpeicherbein_privat` for `lokal`, `ruf`, the four interrupt-control
+              classes and `frage`, `klassenSpeicherbein_zugriff`
              for `lesen`, `schreiben` and `rmw`. For `sperre` the booking leg is vacuous, because the premise
              `beruehrtSperrwort = false` is contradictory: a lock action changes the lock owner and the machine
              records that as an event on the lock word; `ZugriffGebucht` would ask for a handle that
@@ -36,7 +37,19 @@ theorem klassenSicherheit (k : Wirkungsklasse) : KlassenSicherheitAussage k := b
   | ruf => exact klassenSpeicherbein_privat .ruf (Or.inr (Or.inl rfl))
   | frage => exact klassenSpeicherbein_privat .frage (Or.inr (Or.inr (Or.inl rfl)))
   | zaun m =>
-    exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr ⟨m, rfl⟩)))
+    exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr (Or.inl ⟨m, rfl⟩))))
+  | maskiere =>
+      exact klassenSpeicherbein_privat .maskiere
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
+  | prioritaet =>
+      exact klassenSpeicherbein_privat .prioritaet
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))
+  | sendeUnterbrechung =>
+      exact klassenSpeicherbein_privat .sendeUnterbrechung
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))
+  | leiteLeitung =>
+      exact klassenSpeicherbein_privat .leiteLeitung
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl)))))))
   | lesen m => exact klassenSpeicherbein_zugriff (.lesen m) m (Or.inl rfl)
   | schreiben m => exact klassenSpeicherbein_zugriff (.schreiben m) m (Or.inr (Or.inl rfl))
   | rmw m => exact klassenSpeicherbein_zugriff (.rmw m) m (Or.inr (Or.inr rfl))
