@@ -8,14 +8,13 @@ namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
 
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
-open Nat.Partrec.Code
 
 /-- Forward correctness of composing two translator blocks. The first block
     computes `cA` from `ein` into the fresh slot `mit`; the second block reads
     `mit` and computes `cB` into `aus`. The composite freedom bound `frei` must
     lie at or below `mit`, so the intermediate slot is scratch, not a preserved
     user slot. -/
-theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Code)
+theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
     (ein mit aus frei freiA freiB : Nat)
     (hA : BlockKorrekt blkA cA ein mit freiA)
     (hvB : VerschiebbaresProgramm blkB)
@@ -23,14 +22,14 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Code)
     (heinFrei : ein < frei) (hausFrei : aus < frei) (hfreiMit : frei ≤ mit)
     (heina : ein ≠ aus)
     (n : Nat) (r : Rahmen) (hpc : r.pc = 0) (hr : r.temp ein = some (natVal n))
-    (a : Nat) (ha : eval (.comp cB cA) n = Part.some a) :
+    (a : Nat) (ha : Nat.Partrec.Code.eval (Nat.Partrec.Code.comp cB cA) n = Part.some a) :
     ∃ k r', (Schritt (blkA ++ blkB))^[k] (some r) = some r' ∧
       r'.pc = (blkA ++ blkB).length ∧ r'.temp aus = some (natVal a) ∧
       (∀ t, t < frei → t ≠ aus → r'.temp t = r.temp t) ∧
       r'.lokale = r.lokale ∧ r'.rueckgabe = r.rueckgabe ∧ r'.stopp = r.stopp := by
   rcases hA with ⟨hAein, hAmit, hAun, hAfwd, hAbwd⟩
   rcases hB with ⟨hBein, hBaus, hBun, hBfwd, hBbwd⟩
-  have ha' : (eval cA n).bind eval cB = Part.some a := ha
+  have ha' : (Nat.Partrec.Code.eval cA n).bind Nat.Partrec.Code.eval cB = Part.some a := ha
   obtain ⟨b, hbA, hbB⟩ := (Part.bind_eq_some_iff.mp ha')
   obtain ⟨kA, rA, hrunA, hpcA, htempA, hpresA, hlokA, hrueckA, hstoppA⟩ :=
     hAfwd n r hpc hr b hbA
