@@ -232,7 +232,7 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                     unfold neuBeendet
                     have hst : (transfer.apply c s).status = s.status := rfl
                     rw [hst]
-                    cases hd : s.status d <;> rw [hd] <;> rfl
+                    cases hd : s.status d <;> simp only [hd] <;> rfl
                   have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
                     rintro ⟨d, hd⟩
                     rw [hEnde d] at hd
