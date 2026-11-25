@@ -7,8 +7,8 @@ namespace Gabbro.Core.Waechter
 
 /-- The measured hash of every pinned definition, checked by `#check_core`. -/
 public meta def pinTable : Array (Name × UInt64) :=
-#[(`Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, 11316753019576002796),
-  (`Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, 2929323346393994112),
+#[(`Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, 6061281143332110911),
+  (`Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, 16917548668720392066),
   (`Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, 15792867493450409807),
   (`Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, 13755835794060346916),
   (`Gabbro.Core.Ast.LowLevel.schemaMem, 1205476213095782427),
@@ -35,10 +35,10 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.RegionAddressUnitAussage, 15743219238722912585),
   (`Gabbro.Core.Ast.Semantik.ViewUnitAussage, 10252866817737561623),
   (`Gabbro.Core.Ast.Semantik.RegionBindUnitAussage, 9231426579610150324),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadAussage, 2870055630094471077),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterWriteAussage, 8442008534900033012),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadElseAussage, 10401558559206093355),
-  (`Gabbro.Core.Ast.LowLevel.Device.RegisterRegelAntwortSicherAussage, 96181606003195246),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadAussage, 264432195037300287),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterWriteAussage, 17440373135966955394),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterReadElseAussage, 15923081095361584343),
+  (`Gabbro.Core.Ast.LowLevel.Device.RegisterRegelAntwortSicherAussage, 5853693952086992004),
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterTransitionAussage, 15925079208446412034),
   (`Gabbro.Core.Ast.LowLevel.Device.LendAussage, 1565130735486471890),
   (`Gabbro.Core.Ast.LowLevel.Device.TakeBackAussage, 15024429517389417597),
@@ -82,7 +82,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.AbsturzNIAussage, 4774154309074733004),
   (`Gabbro.Core.Beobachtung.RegionNIAussage, 16381440954448882324),
   (`Gabbro.Core.Beobachtung.SpeicherverwaltungsNIAussage, 1040977466060420654),
-  (`Gabbro.Core.Beobachtung.GeraeteNIAussage, 13047728318979478448),
+  (`Gabbro.Core.Beobachtung.GeraeteNIAussage, 3740131064377831971),
   (`Gabbro.Core.Katalog.Plattform.spekulationshuelle, 9646114676836847360),
   (`Gabbro.Core.Beobachtung.NiedrigGleich, 5156642695302779492),
   (`Gabbro.Core.Beobachtung.GleicheNiedrigeUmgebung, 17237607824785545572),
@@ -290,7 +290,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.LiesRecordFeldSichtAussage, 16303408567787572128),
   (`Gabbro.Core.Ast.Semantik.LiesTupelfeldSichtAussage, 16713801374878544054),
   (`Gabbro.Core.Ast.Semantik.OptionIstBesetztSichtAussage, 11382218168381689367),
-  (`Gabbro.Core.Ast.Semantik.PointerTypeUseAussage, 17890971355823180795),
+  (`Gabbro.Core.Ast.Semantik.PointerTypeUseAussage, 8666350082213249740),
   (`Gabbro.Core.Ast.Semantik.PruefeMassSichtAussage, 1371571470644003098),
   (`Gabbro.Core.Ast.Semantik.RueckVoidSichtAussage, 15016942873419555456),
   (`Gabbro.Core.Ast.Semantik.RufeSichtAussage, 15178512974520966823),
@@ -319,9 +319,11 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.PausenNIPflicht, 16223562429260322264),
   (`Gabbro.Core.Beobachtung.Kopplung, 6110979099335943282),
   (`Gabbro.Core.Beobachtung.PauseNIAussage, 7230082277468785826),
-  (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 10109246271746066486),
+  (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 9311341833550991294),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 7571697784290166693),
-  (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 13211478858899147079),
-  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 8786197960430367534)]
+  (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 12317285642116121779),
+  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 4402769921863729746),
+  (`Gabbro.Core.Beobachtung.GeraeteProtokollNIAussage, 6186587137293681807),
+  (`Gabbro.Core.Beobachtung.geraeteNI_nichtTrivialAussage, 16110184015794889854)]
 
 end Gabbro.Core.Waechter

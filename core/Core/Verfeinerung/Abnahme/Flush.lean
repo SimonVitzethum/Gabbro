@@ -2,6 +2,7 @@ module
 
 public import Core.Verfeinerung.Abnahme.Effekte
 public import Core.Verfeinerung.Formpflichten
+public import Core.Katalog.Erfuellbar
 
 @[expose] public section
 
@@ -118,19 +119,29 @@ theorem FlushProtokoll.frei_bei_freigabe {Id : Type} {spur : Nat → Option (Id 
   exact gone (persist (a - (h + 1)) (by rw [Nat.add_sub_of_le ha]; exact hz))
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
-variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
 abbrev FlushSicht (Ort Wert Wahl Id : Type) :=
   EffektSicht Ort Wert Wahl (Id × FlushPhase)
 
-/-- A multi-phase flush family supplies one step obligation per staged
-    machine rule and proves the protocol from every actual ideal run. The
-    decoder must be tied to those rules by the form's semantics proof. -/
-def FlushSimAussage (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
-    (phase : F → Prop) {Id : Type} (sicht : FlushSicht Ort Wert Wahl Id) : Prop :=
-  (∀ f, phase f → RegelSimulation E f) ∧
-    ∀ (η : Lauf E), Laeufe E η →
-      FlushProtokoll (fun t => sicht.lesen (η.zeit.spur t))
+/-- A flush family declares its staged-rule set, its event type and the decoder of actual steps as
+    data of the family's unit wrapper. None of them is chosen by the proof of the duty, so an empty
+    decoder can no longer satisfy the statement for every unit. -/
+structure FlushBindung (Ort Wert Wahl F : Type) where
+  Id : Type
+  mitglied : F → Prop
+  sicht : FlushSicht Ort Wert Wahl Id
+
+/-- The subject of the family duty: a unit together with its declared flush binding. -/
+structure FlushEinheit (L Ort Wert Raum Lok Grund Bedingung Wahl F : Type) [DecidableEq L] where
+  einheit : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F
+  bindung : FlushBindung Ort Wert Wahl F
+
+/-- Every declared staged rule is simulated, and every actual ideal run of the declared unit
+    decodes to a shootdown protocol trace. -/
+def FlushFamilienAussage (U : FlushEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop :=
+  (∀ f, U.bindung.mitglied f → RegelSimulation U.einheit f) ∧
+    ∀ η : Lauf U.einheit, Laeufe U.einheit η →
+      FlushProtokoll (fun t => U.bindung.sicht.lesen (η.zeit.spur t))
         (fun t => η.zeit.spur t = some (.absturz, absturzSpur))
         (fun k => k < η.umgebung.kernzahl)
 
@@ -143,15 +154,16 @@ private theorem absturzGleich
   | privat c w => exact ⟨(fun h => by cases h), (fun h => by cases h)⟩
   | schritt event => exact Iff.rfl
 
-theorem FlushSimAussage.konkret {phase : F → Prop} {Id : Type}
-    {sicht : FlushSicht Ort Wert Wahl Id} (pflicht : FlushSimAussage E phase sicht)
-    {ρ : Maschine.Lauf E} {η : Lauf E} (valid : Laeufe E η) (matched : Laufabgleich ρ η) :
-    FlushProtokoll (fun t => sicht.lesen (ρ.zeit.spur t))
+theorem FlushFamilienAussage.konkret (U : FlushEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (pflicht : FlushFamilienAussage U)
+    {ρ : Maschine.Lauf U.einheit} {η : Lauf U.einheit} (valid : Laeufe U.einheit η)
+    (matched : Laufabgleich ρ η) :
+    FlushProtokoll (fun t => U.bindung.sicht.lesen (ρ.zeit.spur t))
       (fun t => ρ.zeit.spur t = some (.absturz, absturzSpur))
       (fun k => k < η.umgebung.kernzahl) := by
-  have phases : (fun t => sicht.lesen (ρ.zeit.spur t)) =
-      (fun t => sicht.lesen (η.zeit.spur t)) :=
-    funext fun t => matched.effekte sicht t
+  have phases : (fun t => U.bindung.sicht.lesen (ρ.zeit.spur t)) =
+      (fun t => U.bindung.sicht.lesen (η.zeit.spur t)) :=
+    funext fun t => matched.effekte U.bindung.sicht t
   have crash : (fun t => ρ.zeit.spur t = some (.absturz, absturzSpur)) =
       (fun t => η.zeit.spur t = some (.absturz, absturzSpur)) := by
     exact funext fun t => propext (absturzGleich (matched.spur t))
@@ -315,5 +327,152 @@ theorem FlushProtokoll_erfuellbar :
       · cases h0.2.2
       · cases h0.2.2
       · cases h0.2.2
+
+/-- The duty is satisfiable by a runnable unit: the empty member set discharges the step
+    obligations and a decoder that emits no event makes every ideal run a legal trace. -/
+theorem FlushFamilienAussage_erfuellbar :
+    ∃ U : FlushEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
+      FlushFamilienAussage U ∧ ∃ η : Lauf U.einheit, Laeufe U.einheit η := by
+  let k := Plattform.x86_64.katalog
+  let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
+  let entry := Kontext.faden 0
+  let daten (kern : Nat) : Startdaten Unit Unit Bool Unit :=
+    ⟨fun _ => false, fun c => if c = entry then .laeuft else .ruht,
+      fun j => ⟨if j = kern then some entry else none, .nutzer, (), fun _ => false, 0, false, []⟩,
+      ⟨fun _ => false, fun _ => 0⟩⟩
+  let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
+    ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
+      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+  let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
+  let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
+    { s with lokal := Function.update s.lokal c (!s.lokal c) }
+  let impl (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (_ : Unit) plans u :=
+    plans = [plan] ∧ u = update c s
+  let sy : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨fun _ => ⟨impl, impl⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+  let E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨k, bild, e, sy, fun s => daten s.bootCore, fun _ _ => 0,
+      (fun s _ =>
+        let d := daten s.bootCore
+        some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
+      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+  let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
+    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
+  let h := Umgebung.referenz k 1 sicht
+  let hw := Umgebung.referenzLauf k 1 sicht
+  have fair : FairLaeufe k h hw := Umgebung.referenz_fair k 1 sicht
+    Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ _)
+  have image : bild.gueltig k.plattform.ziel := by
+    refine ⟨List.Mem.head _, ?_, ?_⟩
+    · intro a byte present
+      change (if a = 0 then some 0 else none) = some byte at present
+      split at present
+      · rename_i atZero
+        subst a
+        exact Nat.pow_pos (Nat.zero_lt_succ _)
+      · cases present
+    · intro a mem
+      have ha : a = 0 := List.mem_singleton.mp mem
+      subst a
+      exact ⟨0, rfl⟩
+  obtain ⟨s, admissible⟩ := zulStart_erfuellbar fair.hardware image
+  obtain ⟨η, valid, _, _⟩ := I.lauf_mit_hw E fair.hardware admissible fair.konform
+  let U : FlushEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨E, ⟨Nat, fun _ => False, { lesen := fun _ => none, leer := rfl, privat := fun _ _ => rfl }⟩⟩
+  refine ⟨U, ?_, ?_⟩
+  · refine ⟨?_, ?_⟩
+    · intro f member
+      cases member
+    · intro ξ _
+      refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+      · intro id phase t u ht
+        change none = some (id, phase) at ht
+        cases ht
+      · intro id xs ys t u ht
+        change none = some (id, FlushPhase.senden xs) at ht
+        cases ht
+      · intro id kk t ht
+        change none = some (id, FlushPhase.handler kk) at ht
+        cases ht
+      · intro id kk t ht
+        change none = some (id, FlushPhase.bestaetigen kk) at ht
+        cases ht
+      · intro id t ht
+        change none = some (id, FlushPhase.freigeben) at ht
+        cases ht
+      · intro id ziele t ht
+        change none = some (id, FlushPhase.senden ziele) at ht
+        cases ht
+  · exact ⟨η, valid⟩
+
+/-- The duty is sharp: a runnable unit whose ideal run crashes at the first cut and a decoder that
+    reads a crash as a release fail the chain, because no send precedes that release. -/
+theorem FlushFamilienAussage_nichtTrivial :
+    ∃ U : FlushEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
+      ¬ FlushFamilienAussage U := by
+  let k := Plattform.x86_64.katalog
+  let bild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
+  let entry := Kontext.faden 0
+  let daten (kern : Nat) : Startdaten Unit Unit Bool Unit :=
+    ⟨fun _ => false, fun c => if c = entry then .laeuft else .ruht,
+      fun j => ⟨if j = kern then some entry else none, .nutzer, (), fun _ => false, 0, false, []⟩,
+      ⟨fun _ => false, fun _ => 0⟩⟩
+  let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
+    ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
+      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+  let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
+  let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
+    { s with lokal := Function.update s.lokal c (!s.lokal c) }
+  let impl (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (_ : Unit) plans u :=
+    plans = [plan] ∧ u = update c s
+  let sy : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨fun _ => ⟨impl, impl⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+  let E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨k, bild, e, sy, fun s => daten s.bootCore, fun _ _ => 0,
+      (fun s _ =>
+        let d := daten s.bootCore
+        some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
+      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+  let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
+    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
+  let h := Umgebung.referenz k 1 sicht
+  let hw := Umgebung.referenzLauf k 1 sicht
+  have fair : FairLaeufe k h hw := Umgebung.referenz_fair k 1 sicht
+    Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ _)
+  have image : bild.gueltig k.plattform.ziel := by
+    refine ⟨List.Mem.head _, ?_, ?_⟩
+    · intro a byte present
+      change (if a = 0 then some 0 else none) = some byte at present
+      split at present
+      · rename_i atZero
+        subst a
+        exact Nat.pow_pos (Nat.zero_lt_succ _)
+      · cases present
+    · intro a mem
+      have ha : a = 0 := List.mem_singleton.mp mem
+      subst a
+      exact ⟨0, rfl⟩
+  obtain ⟨s, admissible⟩ := zulStart_erfuellbar fair.hardware image
+  have persistence : E.katalog.enthaelt .persistence := by
+    change .persistence ∈ (ZielZeilen ++ .persistence :: _ : List Zeile)
+    exact List.mem_append.mpr (Or.inr (List.Mem.head _))
+  obtain ⟨_, η, _, valid, _, _, _, _, _, crash0⟩ :=
+    absturz_laeufe_erfuellbar (E := E) admissible fair persistence rfl
+  let decoder : EffektSicht Unit Unit Unit (Nat × FlushPhase) :=
+    { lesen := fun
+        | none => none
+        | some (.absturz, _) => some ((0 : Nat), FlushPhase.freigeben)
+        | some _ => none
+      leer := rfl
+      privat := by intro c w; rfl }
+  let U : FlushEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨E, ⟨Nat, fun _ => False, decoder⟩⟩
+  refine ⟨U, ?_⟩
+  intro dies
+  have release : U.bindung.sicht.lesen (η.zeit.spur 0) = some ((0 : Nat), FlushPhase.freigeben) := by
+    change decoder.lesen (η.zeit.spur 0) = some ((0 : Nat), FlushPhase.freigeben)
+    rw [crash0]
+  obtain ⟨_, _, before, _, _, _⟩ := (dies.2 η valid).freigabe 0 0 release
+  omega
 
 end Gabbro.Core.Maschine.I
