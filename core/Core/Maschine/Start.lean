@@ -212,7 +212,7 @@ theorem lauf_ab_start {h : Umgebung} {s : AussenStart}
   intro a c _ oppd n hn
   obtain ⟨t, _, k, opp, _⟩ := oppd n hn
   rw [hwEq] at opp
-  exact keine t k opp
+  exact (keine t k opp).elim
 
 theorem lauf_erfuellbar (katalog : KatalogWohlgeformt E.katalog) (bild : E.bild.gueltig E.katalog.plattform.ziel) :
     ∃ h s hw ρ, E.ZulStart h s ∧ FairLaeufe E.katalog h hw ∧
@@ -338,7 +338,7 @@ theorem absturz_laeufe_erfuellbar {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   obtain ⟨ρ, run, startEq, hwEq⟩ := fairer_lauf E start fairCrash
   obtain ⟨η, ideal, startEq', hwEq'⟩ := I.lauf_mit_hw E fairCrash.hardware start fairCrash.konform
   have load : ρ.zeit.zustand 0 = some z := by
-    rw [run.2.2.2, startEq, loaded]
+    rw [run.2.2.2.1, startEq, loaded]
   obtain ⟨_, label, _, _⟩ := absturz_am_schnitt load (hwEq.symm ▸ offer)
   obtain ⟨label', _⟩ := I.absturz_am_schnitt E η (hwEq'.symm ▸ offer)
   exact ⟨ρ, η, run, ideal, startEq, startEq', hwEq.trans hwEq'.symm, hwEq.symm ▸ fairCrash,
