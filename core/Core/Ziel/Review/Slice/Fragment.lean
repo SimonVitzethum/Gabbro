@@ -19,7 +19,7 @@
   `erwarte`, `veroeffentliche`).
 
   FINDING (lock section, MK-05): `Wirkungsklasse.sperre` has NO `Befehl` constructor —
-  `Befehl.klasse` maps every non-`zugriff` instruction to `.lokal` or `.ruf`, so no
+  `Befehl.klasse` maps every non-`zugriff`, non-interrupt instruction to `.lokal` or `.ruf`, so no
   elaborated unit can contain a lock instruction. The lock section of F_klein is
   therefore a requirement on the elaborated unit (`AbschnittWartefrei`), not a
   machine instruction; its surface form (`locks place block`, SYNTAX §9) has no

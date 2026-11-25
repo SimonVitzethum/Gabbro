@@ -15,7 +15,7 @@ theorem sicht_schreibe (β : Beschriftung) (r : Rahmen) (dst : Nat) (v : Option 
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then
           Function.update r.temp dst v s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 r.lokale } :=
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 r.lokale } :=
   rfl
 
 /-- **One write rule serves every instruction of that shape.** -/
@@ -36,8 +36,8 @@ theorem Befehl.sichtErhaltend_schreibform {β : Beschriftung} {pc dst : Nat} {li
       congrFun (congrArg Rahmen.temp h) s
     rw [pcEq] at e
     exact e
-  have lokEq : maskiere (β.lokal r₁.pc) 0 r₁.lokale = maskiere (β.lokal r₁.pc) 0 r₂.lokale := by
-    have e : maskiere (β.lokal r₁.pc) 0 r₁.lokale = maskiere (β.lokal r₂.pc) 0 r₂.lokale :=
+  have lokEq : maskiereLokal (β.lokal r₁.pc) 0 r₁.lokale = maskiereLokal (β.lokal r₁.pc) 0 r₂.lokale := by
+    have e : maskiereLokal (β.lokal r₁.pc) 0 r₁.lokale = maskiereLokal (β.lokal r₂.pc) 0 r₂.lokale :=
       congrArg Rahmen.lokale h
     rw [pcEq] at e
     exact e
@@ -47,7 +47,7 @@ theorem Befehl.sichtErhaltend_schreibform {β : Beschriftung} {pc dst : Nat} {li
   have lokPub : ∀ i, oeffentlich (β.lokal r₁.pc i) = true →
       r₁.lokale[i]?.join = r₂.lokale[i]?.join := by
     intro i hi
-    exact maskiere_eintrag 0 _ _ i lokEq (by simpa only [Nat.zero_add] using hi)
+    exact maskiereLokal_eintrag 0 _ _ i lokEq (by simpa only [Nat.zero_add] using hi)
   have gleich : oeffentlich (β.temp (r₁.pc + 1) dst) = true → g r₁ = g r₂ := by
     intro hs
     refine cong r₁ r₂ fun k hk => ?_
@@ -69,9 +69,9 @@ theorem Befehl.sichtErhaltend_schreibform {β : Beschriftung} {pc dst : Nat} {li
       · simp only [Function.update_of_ne hs]
         exact tempPub s (hT s hs hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   rw [sicht_schreibe, sicht_schreibe, h, pcEq, hTe, hLe]
 
 end Gabbro.Core.Ast.Semantik
