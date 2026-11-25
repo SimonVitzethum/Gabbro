@@ -15,6 +15,14 @@ structure Startdaten (Wert Raum Lok Grund : Type) where
   kerne : Kern → KernZustand Raum
   rechte : Rechte
 
+/-- The volatile part of a context's local state. A restart discards it for every context before
+    the entry data take effect; durable state is never touched by this operation. A local state
+    with no declared volatile part keeps this identity instance. -/
+class Fluechtig (Lok : Type) where
+  verwerfen : Lok → Lok := id
+
+instance (priority := 100) fluechtigIdentisch (Lok : Type) : Fluechtig Lok := {}
+
 /-- The declared restart entry, its core, and its initial data. The declaration sees the
     durable bytes only. Recovery code itself steps through the ordinary form rules. -/
 structure Wiederanlauf (Ort Wert Raum Lok Grund : Type) where
@@ -42,9 +50,10 @@ theorem persistenz_absturz_iff {r : Strecke} {s p : PersistZustand} :
     persistenz r s .crash p ↔ p = nachAbsturz s :=
   ⟨fun h => by cases h; rfl, fun h => h ▸ .crash s⟩
 
-/-- Reset the volatile machine and dispatch the recovery entry. The outside ledgers record
-    past events, while the epoch and cancellation counters exclude all pre-crash pending work. -/
-def Zustand.wiederanlauf (s : Zustand L Ort Wert Raum Lok Grund)
+/-- Reset the volatile machine and dispatch the recovery entry. Every context's volatile local
+    state is discarded before the entry data take effect; the outside ledgers record past events,
+    while the epoch and cancellation counters exclude all pre-crash pending work. -/
+def Zustand.wiederanlauf [Fluechtig Lok] (s : Zustand L Ort Wert Raum Lok Grund)
     (w : Wiederanlauf Ort Wert Raum Lok Grund) (t : Nat) (p : PersistZustand) :
     Zustand L Ort Wert Raum Lok Grund :=
   let d := w.daten p.dauerhaft
@@ -53,7 +62,8 @@ def Zustand.wiederanlauf (s : Zustand L Ort Wert Raum Lok Grund)
     laeuft := if k = w.kern then some w.eintritt else none
     nmiAktiv := false
     stapel := [] }
-  { Zustand.start d.lokal status kerne d.rechte (w.initial p.dauerhaft) p with
+  { Zustand.start (fun c => Fluechtig.verwerfen (d.lokal c)) status kerne d.rechte
+      (w.initial p.dauerhaft) p with
     fragen := s.fragen
     antworten := s.antworten
     verlauf := s.verlauf
