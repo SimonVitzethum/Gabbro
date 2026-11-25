@@ -3,17 +3,16 @@
   Subject:   THE THREE FALSIFIABILITY STATEMENTS of `Ziel/Korrektheit/Verfeinerung`: the per-form
              simulation duty is discriminating, the whole-run simulation separates ideal runs, and the
              refinement refuses an implementation run. Each statement is an existential over a unit, so
-             the proofs construct ONE concrete one-form unit whose single form toggles a private local
-             value at the last hardware opportunity.
+             the proofs construct ONE concrete one-form unit whose single form takes a private `.intern`
+             step on a hardware history with a single opportunity.
 
-             The unit is the same as in `Verfeinerung/Erfuellbar`: a private `.intern` step changes one
-             boolean local state. Two rule variants give the two witnesses: the refusing variant makes
-             the ideal rule empty, so no ideal run matches (the refinement is refuted and the duty
-             discriminated); the tolerant variant keeps the ideal transition and hides the changed
-             local value from the local relation, so the stutter bound alone decides the match. On a
-             history whose only opportunity is tick zero, the tolerant variant with bound zero has one
-             ideal run that replays the transition and one that spends the private tick, separating
-             `Sim`. All three statements are proved; none of the pinned statements is changed.
+             Two rule variants give the witnesses. The refusing variant has an empty ideal rule, so
+             every ideal run is separated from the run (`simRefutierbar`) and the per-form duty is false
+             (`regelSimDiskriminiert`). The tolerant variant keeps the ideal transition and hides the
+             form-local state from the local relation, so the checked stutter bound alone decides the
+             match: of two ideal runs of it one replays the transition and one spends the private tick
+             (`simTrennt`). `nicht_sim_bei_stotterueberlauf` supplies the refutation in both cases.
+             The pinned statements are unchanged.
 -/
 module
 
@@ -28,18 +27,18 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core Maschine Katalog
 open Gabbro.Core.Maschine.I
 
-/-! ### A concrete one-form unit with a single private toggle -/
+/-! ### A concrete one-form unit with one private step -/
 
 def falsifizierbaresBild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
 def falsifizierbarerEintrag : Kontext := Kontext.faden 0
 
-def falsifizierbareDaten (kern : Nat) : Startdaten Unit Unit Bool Unit :=
-  ⟨fun _ => false, fun c => if c = falsifizierbarerEintrag then .laeuft else .ruht,
+def falsifizierbareDaten (kern : Nat) : Startdaten Unit Unit Unit Unit :=
+  ⟨fun _ => (), fun c => if c = falsifizierbarerEintrag then .laeuft else .ruht,
     fun j => ⟨if j = kern then some falsifizierbarerEintrag else none, .nutzer, (), fun _ => false, 0, false, []⟩,
     ⟨fun _ => false, fun _ => 0⟩⟩
 
-def falsifizierbareEinrichtung : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
+def falsifizierbareEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
     fun _ _ => True, ⟨0, 1⟩,
     ⟨falsifizierbarerEintrag, 0, fun _ => falsifizierbareDaten 0, fun _ _ => ()⟩,
@@ -48,19 +47,18 @@ def falsifizierbareEinrichtung : Einrichtung Unit Unit Unit Unit Bool Unit Unit 
 def falsifizierbarerPlan : SchrittPlan Unit Unit Unit Unit :=
   ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 
-def falsifizierbareAenderung (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
-  { s with lokal := Function.update s.lokal c (!s.lokal c) }
+def falsifizierbareAenderung (c : Kontext) (s : Zustand Unit Unit Unit Unit Unit Unit) := s
 
-def falsifizierbareImpl (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (_ : Unit)
+def falsifizierbareImpl (c : Kontext) (s : Zustand Unit Unit Unit Unit Unit Unit) (_ : Unit)
     (plans : List (SchrittPlan Unit Unit Unit Unit))
-    (u : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
-  plans = [falsifizierbarerPlan] ∧ u = falsifizierbareAenderung c s
+    (u : Zustand Unit Unit Unit Unit Unit Unit) : Prop :=
+  plans = [falsifizierbarerPlan] ∧ u = s
 
-def falsifizierbaresSystem : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+def falsifizierbaresSystem : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => ⟨falsifizierbareImpl, falsifizierbareImpl⟩, fun _ _ => some (),
     fun _ _ => False, fun _ _ _ => False⟩
 
-def falsifizierbareEinheit : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+def falsifizierbareEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, falsifizierbaresBild, falsifizierbareEinrichtung,
     falsifizierbaresSystem, fun s => falsifizierbareDaten s.bootCore, fun _ _ => 0,
     (fun s _ =>
@@ -94,7 +92,7 @@ theorem falsifizierbaresBild_gueltig :
     exact ⟨0, rfl⟩
 
 theorem falsifizierbarerPlan_autorisiert
-    (s : Zustand Unit Unit Unit Unit Bool Unit) (c : Kontext) :
+    (s : Zustand Unit Unit Unit Unit Unit Unit) (c : Kontext) :
     falsifizierbarerPlan.Autorisiert falsifizierbareEinrichtung s c :=
   ⟨fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
 
@@ -128,89 +126,6 @@ theorem falsifizierbares_letztesAngebot_ideal {L Ort Wert Raum Lok Grund Bedingu
       exact Bool.false_ne_true offered
   | absturz crash => exact Bool.false_ne_true crash.1.2
 
-/-! ### The concrete run and its one private step -/
-
-theorem falsifizierbar_konfiguration :
-    ∃ (s : AussenStart) (z z' u : Zustand Unit Unit Unit Unit Bool Unit)
-      (plan : SchrittPlan Unit Unit Unit Unit) (spur : SchrittSpur Unit Unit)
-      (ρ : Maschine.Lauf falsifizierbareEinheit),
-      falsifizierbareEinheit.ZulStart falsifizierbareUmgebung s ∧
-      (Maschine.I.start falsifizierbareEinheit s).2 = z ∧
-      plan = falsifizierbarerPlan ∧ u = z' ∧
-      z' = falsifizierbareAenderung falsifizierbarerEintrag z ∧
-      ρ.start = s ∧ ρ.hw = falsifizierbarerHw ∧
-      Maschine.Laeufe falsifizierbareEinheit falsifizierbareUmgebung ρ ∧
-      ρ.zeit.spur 0 = some (.kontext falsifizierbarerEintrag (), spur) ∧ spur = ⟨[], []⟩ ∧
-      ρ.zeit.zustand 0 = some z ∧ ρ.zeit.zustand 1 = some z' ∧
-      (falsifizierbareEinheit.system.regel ()).impl falsifizierbarerEintrag z () [plan] u ∧
-      FuehrtSchrittAus falsifizierbareEinrichtung 0 falsifizierbarerEintrag z u plan spur z' ∧
-      KannSchreiten falsifizierbarerHw 0 falsifizierbarerEintrag z ∧
-      (falsifizierbarerHw.angebot 0).crash = false ∧
-      z.lokal falsifizierbarerEintrag = false ∧ z'.lokal falsifizierbarerEintrag = true := by
-  let E₀ := falsifizierbareEinheit
-  let e := falsifizierbareEinrichtung
-  let sy := falsifizierbaresSystem
-  let plan := falsifizierbarerPlan
-  let hw := falsifizierbarerHw
-  let h := falsifizierbareUmgebung
-  let entry := falsifizierbarerEintrag
-  have fair : FairLaeufe E₀.katalog h hw := by
-    change FairLaeufe Plattform.x86_64.katalog
-      (Umgebung.referenz Plattform.x86_64.katalog 1 falsifizierbareSicht)
-      (Umgebung.referenzLauf Plattform.x86_64.katalog 1 falsifizierbareSicht)
-    exact Umgebung.referenz_fair _ 1 _ Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ _)
-  have bild : E₀.bild.gueltig E₀.katalog.plattform.ziel := by
-    change falsifizierbaresBild.gueltig Plattform.x86_64.katalog.plattform.ziel
-    exact falsifizierbaresBild_gueltig
-  obtain ⟨s, admissible⟩ := zulStart_erfuellbar fair.hardware bild
-  have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ admissible.2.1)
-  let z := (Maschine.I.start E₀ s).2
-  let z' := falsifizierbareAenderung entry z
-  let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
-  have execute (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Bool Unit) :
-      FuehrtSchrittAus e t c x (falsifizierbareAenderung c x) plan label.2
-        (falsifizierbareAenderung c x) := by
-    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-      fun _ hn => (List.not_mem_nil hn).elim, [], falsifizierbareAenderung c x, .intern, .nil _, rfl⟩
-  let zustand (t : Nat) : Zustand Unit Unit Unit Unit Bool Unit :=
-    Nat.rec z (fun _ => falsifizierbareAenderung entry) t
-  have protocol (t : Nat) : (zustand t).kerne = z.kerne ∧ (zustand t).status = z.status := by
-    induction t with
-    | zero => exact ⟨rfl, rfl⟩
-    | succ t ih => exact ih
-  have dispatch : (z.kerne 0).laeuft = some entry := by
-    change (if 0 = s.bootCore then some entry else none) = some entry
-    rw [boot, ite_eq_left rfl]
-  have live : z.status entry = .laeuft := by
-    change (if entry = entry then Status.laeuft else Status.ruht) = (Status.laeuft : Status Unit Unit)
-    exact ite_eq_left rfl
-  have opportunity (t : Nat) : hw.gelegenheit t 0 := congrArg some (Nat.mod_one _)
-  have step (t : Nat) : Lauffolge E₀ hw t (some (zustand t)) label (some (zustand (t + 1))) :=
-    .schritt (.kontext rfl
-      ⟨0, opportunity t,
-        (congrArg (fun cores => (cores 0).laeuft) (protocol t).1).trans dispatch,
-        (congrFun (protocol t).2 entry).trans live⟩
-      ⟨(), rfl, rfl, rfl⟩ (execute t entry (zustand t)))
-  let ρ : Maschine.Lauf E₀ := ⟨s, hw, {
-    zustand := fun t => some (zustand t)
-    spur := fun _ => some label
-    takt := fun t => .schritt rfl (step t) }⟩
-  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
-  have ready : KannSchreiten hw 0 entry z := ⟨0, opportunity 0, dispatch, live⟩
-  have normal : (hw.angebot 0).crash = false := rfl
-  have implSchritt : (E₀.system.regel ()).impl entry z () [plan] z' := by
-    change falsifizierbareImpl entry z () [falsifizierbarerPlan] z'
-    exact ⟨rfl, rfl⟩
-  have exec : FuehrtSchrittAus e 0 entry z z' plan ⟨[], []⟩ z' := by
-    simpa only [z', label] using execute 0 entry z
-  have zFalsch : z.lokal entry = false := rfl
-  have z'Wahr : z'.lokal entry = true := by
-    change Function.update z.lokal entry (!z.lokal entry) entry = true
-    rw [Function.update_self, zFalsch]
-    rfl
-  refine ⟨s, z, z', z', plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl, rfl,
-    konkret, rfl, rfl, rfl, rfl, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩
-
 theorem falsifizierbares_letztesAngebot_konkret {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type}
     [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     {hw : HwLauf} (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund) :
@@ -231,26 +146,88 @@ theorem falsifizierbares_letztesAngebot_konkret {L Ort Wert Raum Lok Grund Bedin
           exact Bool.false_ne_true offered
       | absturz crash => exact Bool.false_ne_true crash.1.2
 
+/-! ### The concrete run and its one private step -/
+
+theorem falsifizierbar_konfiguration :
+    ∃ (s : AussenStart) (z z' u : Zustand Unit Unit Unit Unit Unit Unit)
+      (plan : SchrittPlan Unit Unit Unit Unit) (spur : SchrittSpur Unit Unit)
+      (ρ : Maschine.Lauf falsifizierbareEinheit),
+      falsifizierbareEinheit.ZulStart falsifizierbareUmgebung s ∧
+      (Maschine.I.start falsifizierbareEinheit s).2 = z ∧
+      plan = falsifizierbarerPlan ∧ u = z' ∧
+      z' = falsifizierbareAenderung falsifizierbarerEintrag z ∧
+      ρ.start = s ∧ ρ.hw = falsifizierbarerHw ∧
+      Maschine.Laeufe falsifizierbareEinheit falsifizierbareUmgebung ρ ∧
+      ρ.zeit.spur 0 = some (.kontext falsifizierbarerEintrag (), spur) ∧ spur = ⟨[], []⟩ ∧
+      ρ.zeit.zustand 0 = some z ∧ ρ.zeit.zustand 1 = some z' ∧
+      (falsifizierbareEinheit.system.regel ()).impl falsifizierbarerEintrag z () [plan] u ∧
+      FuehrtSchrittAus falsifizierbareEinrichtung 0 falsifizierbarerEintrag z u plan spur z' ∧
+      KannSchreiten falsifizierbarerHw 0 falsifizierbarerEintrag z ∧
+      (falsifizierbarerHw.angebot 0).crash = false := by
+  let E₀ := falsifizierbareEinheit
+  let e := falsifizierbareEinrichtung
+  let plan := falsifizierbarerPlan
+  let hw := falsifizierbarerHw
+  let h := falsifizierbareUmgebung
+  let entry := falsifizierbarerEintrag
+  have fair : FairLaeufe E₀.katalog h hw := by
+    change FairLaeufe Plattform.x86_64.katalog
+      (Umgebung.referenz Plattform.x86_64.katalog 1 falsifizierbareSicht)
+      (Umgebung.referenzLauf Plattform.x86_64.katalog 1 falsifizierbareSicht)
+    exact Umgebung.referenz_fair _ 1 _ Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ _)
+  have bild : E₀.bild.gueltig E₀.katalog.plattform.ziel := by
+    change falsifizierbaresBild.gueltig Plattform.x86_64.katalog.plattform.ziel
+    exact falsifizierbaresBild_gueltig
+  obtain ⟨s, admissible⟩ := zulStart_erfuellbar fair.hardware bild
+  have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ admissible.2.1)
+  let z := (Maschine.I.start E₀ s).2
+  let z' := falsifizierbareAenderung entry z
+  let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
+  have execute (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Unit Unit) :
+      FuehrtSchrittAus e t c x x plan label.2 x := by
+    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+      fun _ hn => (List.not_mem_nil hn).elim, [], x, .intern, .nil _, rfl⟩
+  let zustand (t : Nat) : Zustand Unit Unit Unit Unit Unit Unit := z
+  have dispatch : (z.kerne 0).laeuft = some entry := by
+    change (if 0 = s.bootCore then some entry else none) = some entry
+    rw [boot, ite_eq_left rfl]
+  have live : z.status entry = .laeuft := by
+    change (if entry = entry then Status.laeuft else Status.ruht) = (Status.laeuft : Status Unit Unit)
+    exact ite_eq_left rfl
+  have opportunity (t : Nat) : hw.gelegenheit t 0 := congrArg some (Nat.mod_one _)
+  have step (t : Nat) : Lauffolge E₀ hw t (some z) label (some z) :=
+    .schritt (.kontext rfl ⟨0, opportunity t, dispatch, live⟩ ⟨(), rfl, rfl, rfl⟩ (execute t entry z))
+  let ρ : Maschine.Lauf E₀ := ⟨s, hw, {
+    zustand := fun _ => some z
+    spur := fun _ => some label
+    takt := fun t => .schritt rfl (step t) }⟩
+  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
+  have ready : KannSchreiten hw 0 entry z := ⟨0, opportunity 0, dispatch, live⟩
+  have normal : (hw.angebot 0).crash = false := rfl
+  have implSchritt : (E₀.system.regel ()).impl entry z () [plan] z := by
+    change falsifizierbareImpl entry z () [falsifizierbarerPlan] z
+    exact ⟨rfl, rfl⟩
+  have exec : FuehrtSchrittAus e 0 entry z z plan ⟨[], []⟩ z := by
+    simpa only [z', label] using execute 0 entry z
+  refine ⟨s, z, z', z, plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl, rfl,
+    konkret, rfl, rfl, rfl, rfl, implSchritt, exec, ready, normal⟩
+
 /-! ### The per-form duty distinguishes a rule whose ideal side is empty -/
 
 theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
   obtain ⟨s, z, z', u, plan, spur, ρ, zul, zStart, planEq, uEq, z'Eq, ρstart, ρhw, konkret,
-    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩ :=
-    falsifizierbar_konfiguration
+    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal⟩ := falsifizierbar_konfiguration
   subst u
   subst plan
   subst spur
-  let syRef : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-    { falsifizierbaresSystem with
-      regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
-  let ERef : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+  let syRef : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
+    { falsifizierbaresSystem with regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
+  let ERef : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbareEinheit with system := syRef, stotterLaenge := fun _ => 0 }
   refine ⟨ERef, (), ?_⟩
   intro sim
-  have implRef : (ERef.system.regel ()).impl falsifizierbarerEintrag z () [falsifizierbarerPlan] z' := by
-    exact implSchritt
-  have folgerung := sim falsifizierbarerHw 0 falsifizierbarerEintrag () z z' z' z
-    falsifizierbarerPlan ⟨[], []⟩ ⟨ProtokollBezug.refl z, rfl⟩ normal ready rfl implRef exec
+  have folgerung := sim falsifizierbarerHw 0 falsifizierbarerEintrag () z z z
+    z falsifizierbarerPlan ⟨[], []⟩ ⟨ProtokollBezug.refl z, rfl⟩ normal ready rfl implSchritt exec
   cases folgerung with
   | inl idealFolge =>
       obtain ⟨i', idealSchritt, _⟩ := idealFolge
@@ -267,51 +244,44 @@ theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
 
 theorem simTrennt : SimTrenntAussage := by
   obtain ⟨s, z, z', u, plan, spur, ρ, zul, zStart, planEq, uEq, z'Eq, ρstart, ρhw, konkret,
-    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩ :=
-    falsifizierbar_konfiguration
+    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal⟩ := falsifizierbar_konfiguration
   subst u
   subst plan
   subst spur
-  let syTrenn : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+  let syTrenn : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbaresSystem with
       regel := fun _ => ⟨falsifizierbareImpl,
         fun _ x _ plans v => plans = [falsifizierbarerPlan] ∧ v = x⟩ }
-  let ETrenn : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+  let ETrenn : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbareEinheit with
       system := syTrenn
       lokalerBezug := fun l i => ∀ c, c ≠ falsifizierbarerEintrag → l c = i c
       stotterLaenge := fun _ => 0 }
   have initial : Zustandsbezug ETrenn z z := ⟨ProtokollBezug.refl z, fun _ _ => rfl⟩
   have final : Zustandsbezug ETrenn z' z := by
-    refine ⟨?_, ?_⟩
-    · change { z' with lokal := z.lokal } = z
-      rw [show z' = falsifizierbareAenderung falsifizierbarerEintrag z from rfl]
-      rfl
-    · intro c different
-      change (falsifizierbareAenderung falsifizierbarerEintrag z).lokal c = z.lokal c
-      exact Function.update_of_ne different _ _
+    rw [z'Eq]
+    exact ⟨ProtokollBezug.refl z, fun _ _ => rfl⟩
   have konform : falsifizierbarerHw.konform ETrenn.katalog falsifizierbareUmgebung := by
     rw [← ρhw]
     exact konkret.2.1
   have loaded : ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild) = some z := by
     change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
+    rw [← ρstart]
     exact (ρz0.symm.trans konkret.2.2.2).symm
   have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
     change falsifizierbarerHw.gelegenheit 0 0
-    congrArg some (Nat.mod_one 0)
-  have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ zul.2.1)
-  have dispatchZ : (z.kerne 0).laeuft = some falsifizierbarerEintrag := by
-    change (if 0 = s.bootCore then some falsifizierbarerEintrag else none) = some falsifizierbarerEintrag
-    rw [boot, ite_eq_left rfl]
-  have liveZ : z.status falsifizierbarerEintrag = .laeuft := by
-    change (if falsifizierbarerEintrag = falsifizierbarerEintrag then Status.laeuft else Status.ruht) =
-      (Status.laeuft : Status Unit Unit)
-    exact ite_eq_left rfl
+    exact congrArg some (Nat.mod_one 0)
   have lastReady : KannSchreiten (letztesAngebot falsifizierbarerHw) 0 falsifizierbarerEintrag z :=
-    ⟨0, lastOpportunity, dispatchZ, liveZ⟩
+    ⟨0, lastOpportunity, (by
+      change (if 0 = s.bootCore then some falsifizierbarerEintrag else none) = some falsifizierbarerEintrag
+      have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ zul.2.1)
+      rw [boot, ite_eq_left rfl]), (by
+      change (if falsifizierbarerEintrag = falsifizierbarerEintrag then Status.laeuft else Status.ruht) =
+        (Status.laeuft : Status Unit Unit)
+      exact ite_eq_left rfl)⟩
   have privateStep : ImplSchritt falsifizierbareEinrichtung syTrenn ETrenn.katalog
       (letztesAngebot falsifizierbarerHw) 0 z
-      (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) z' :=
+      (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) z :=
     .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ exec
   have execKeep : FuehrtSchrittAus falsifizierbareEinrichtung 0 falsifizierbarerEintrag z z
       falsifizierbarerPlan ⟨[], []⟩ z := by
@@ -323,11 +293,11 @@ theorem simTrennt : SimTrenntAussage := by
     .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ execKeep
   have konformLetztes := falsifizierbares_letztesAngebot_konform konform
   let ρT : Maschine.Lauf ETrenn := ⟨s, letztesAngebot falsifizierbarerHw, {
-    zustand := fun | 0 => some z | _ + 1 => some z'
+    zustand := fun _ => some z
     spur := fun | 0 => some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) | _ + 1 => none
     takt := fun
       | 0 => .schritt rfl (.schritt privateStep)
-      | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ETrenn t z') }⟩
+      | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ETrenn t z) }⟩
   have runT : Maschine.Laeufe ETrenn falsifizierbareUmgebung ρT :=
     ⟨konkret.1, konformLetztes, zul, loaded⟩
   let η₂ : Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
@@ -354,10 +324,9 @@ theorem simTrennt : SimTrenntAussage := by
     · intro t d mark
       cases t with
       | zero =>
-          refine ⟨rfl, ?_⟩
           have deq : d = falsifizierbarerEintrag := Option.some.inj mark
           subst d
-          exact lastReady
+          exact ⟨rfl, lastReady⟩
       | succ _ => exact (Option.some_ne_none _ mark.symm).elim
   let η₁ : Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => z
@@ -382,9 +351,7 @@ theorem simTrennt : SimTrenntAussage := by
   have matched₁ : Laufabgleich ρT η₁ := by
     refine ⟨rfl, rfl, ?_, ?_, ?_, ?_⟩
     · intro t
-      cases t with
-      | zero => exact ⟨z, rfl, initial⟩
-      | succ _ => exact ⟨z', rfl, final⟩
+      exact ⟨z, rfl, initial⟩
     · intro t
       cases t with
       | zero => exact .schritt rfl
@@ -438,15 +405,13 @@ theorem simTrennt : SimTrenntAussage := by
 
 theorem simRefutierbar : SimRefutierbarAussage := by
   obtain ⟨s, z, z', u, plan, spur, ρ, zul, zStart, planEq, uEq, z'Eq, ρstart, ρhw, konkret,
-    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩ :=
-    falsifizierbar_konfiguration
+    ρspur0, spurEq, ρz0, ρz1, implSchritt, exec, ready, normal⟩ := falsifizierbar_konfiguration
   subst u
   subst plan
   subst spur
-  let syRef : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-    { falsifizierbaresSystem with
-      regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
-  let ERef : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+  let syRef : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
+    { falsifizierbaresSystem with regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
+  let ERef : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbareEinheit with system := syRef, stotterLaenge := fun _ => 0 }
   refine ⟨ERef, falsifizierbareUmgebung, ρ, ?_, ?_⟩
   · change Maschine.Laeufe falsifizierbareEinheit falsifizierbareUmgebung ρ
