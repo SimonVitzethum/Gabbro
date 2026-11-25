@@ -168,6 +168,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlo
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarFrame
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarSegmente
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
