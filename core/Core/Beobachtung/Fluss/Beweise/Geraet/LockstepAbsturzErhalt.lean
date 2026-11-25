@@ -132,7 +132,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      let e := NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))
+                      let e : NiedrigesEreignis Nat UInt8 PUnit PUnit :=
+                        NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))
                       let L₁ := NiedrigeBeob.praefix E ρ₁ predictor t
                       let L₂ := NiedrigeBeob.praefix E ρ₂ predictor t
                       have hlenP : L₁.length = L₂.length := by
@@ -188,7 +189,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                         rfl
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
-                        List.length_append, List.length_singleton, hlen]
+                        List.length_append, List.length_singleton]
+                      simpa only [NiedrigeBeob] using congrArg (fun n => n + 1) hlen
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
