@@ -66,6 +66,7 @@ public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
+public import Core.Beobachtung.Fluss.Beweise.GeraetKopplung
 public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
