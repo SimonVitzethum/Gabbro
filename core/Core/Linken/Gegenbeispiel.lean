@@ -455,7 +455,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           rw [system_kopf, headT] at head'
           cases head'
           rfl
-        subst hb'
+        subst b'
         obtain ⟨same, after⟩ :=
           (b.ideal_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
@@ -631,9 +631,8 @@ theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage :=
     rcases hm with rfl | rfl
     · exact fragA_akzeptiert
     · exact fragB_akzeptiert
-  simp only [LinkerAkzeptiertAussage] at hlink
   have hlinked : Akzeptiert ((verknuepfteFragmente planAB).einheit planAB.plattform) :=
-    hlink planAB _ planAB_linke hparts
+    hlink _ _ planAB_linke hparts
   exact linked_nicht_akzeptiert hlinked
 
 end Gabbro.Core.Linken
