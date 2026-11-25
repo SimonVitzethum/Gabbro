@@ -165,6 +165,7 @@ public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
+public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
