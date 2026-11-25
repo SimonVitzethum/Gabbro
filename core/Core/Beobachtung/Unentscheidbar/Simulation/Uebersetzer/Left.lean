@@ -75,14 +75,14 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       some (frameL11 e ein aus frei n) := by
   have p1 : (Schritt (leftBlk ein aus frei))^[3] (some e) =
       some (frameL1 e ein aus frei n) := by
-    have e0 := laufKopie _ _ 25 (frei + 1) (frei + 0) _ hepc hes (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 25 (frei + 1) (frei + 0) _ hepc hes (by rfl) (by rfl) (by rfl)
     simpa only [frameL1] using e0
   have p2 : (Schritt (leftBlk ein aus frei))^[6] (some e) =
       some (frameL2 e ein aus frei n) := by
     have hpc : (frameL1 e ein aus frei n).pc = 28 := rfl
     have hq : (frameL1 e ein aus frei n).temp (frei + 1) = some (natVal (Nat.sqrt n)) :=
       updateHit _ _ _
-    have e0 := laufKopie _ _ 28 (frei + 3) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 28 (frei + 3) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (6 : Nat) = 3 + 3 from rfl, Function.iterate_add_apply, p1]
     simpa only [frameL2] using e0
   have p3 : (Schritt (leftBlk ein aus frei))^[9] (some e) =
@@ -92,7 +92,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 3) _ (frei + 1) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (1 : Nat) ≠ 3))]
       exact updateHit _ _ _
-    have e0 := laufKopie _ _ 31 (frei + 4) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 31 (frei + 4) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (9 : Nat) = 3 + 6 from rfl, Function.iterate_add_apply, p2]
     simpa only [frameL3] using e0
   have p4 : (Schritt (leftBlk ein aus frei))^[10] (some e) =
@@ -115,7 +115,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
     have g : (leftBlk ein aus frei)[34]? = some (.binaer .mul (frei + 3)) := by rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL3 e ein aus frei n)) =
         some (frameL4 e ein aus frei n) :=
-      schrittBinaer _ _ _ _ .mul _ _ hpc ha hb g
+      schrittBinaer (leftBlk ein aus frei) _ _ _ .mul _ _ hpc ha hb g
     rw [show (10 : Nat) = 1 + 9 from rfl, Function.iterate_add_apply, p3]
     exact e0
   have p5 : (Schritt (leftBlk ein aus frei))^[13] (some e) =
@@ -131,7 +131,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 1) _ ein = _
       rw [updateMiss _ _ _ _ (ltNeAdd hein)]
       exact heq
-    have e0 := laufKopie _ _ 35 (frei + 1) ein _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 35 (frei + 1) ein _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (13 : Nat) = 3 + 10 from rfl, Function.iterate_add_apply, p4]
     simpa only [frameL5] using e0
   have p6 : (Schritt (leftBlk ein aus frei))^[16] (some e) =
@@ -139,7 +139,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
     have hpc : (frameL5 e ein aus frei n).pc = 38 := rfl
     have hq : (frameL5 e ein aus frei n).temp (frei + 1) = some (natVal n) :=
       updateHit _ _ _
-    have e0 := laufKopie _ _ 38 (frei + 5) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 38 (frei + 5) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (16 : Nat) = 3 + 13 from rfl, Function.iterate_add_apply, p5]
     simpa only [frameL6] using e0
   have p7 : (Schritt (leftBlk ein aus frei))^[19] (some e) =
@@ -151,7 +151,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 1) _ (frei + 3) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 1))]
       exact updateHit _ _ _
-    have e0 := laufKopie _ _ 41 (frei + 6) (frei + 3) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 41 (frei + 6) (frei + 3) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (19 : Nat) = 3 + 16 from rfl, Function.iterate_add_apply, p6]
     simpa only [frameL7] using e0
   have p8 : (Schritt (leftBlk ein aus frei))^[20] (some e) =
@@ -171,7 +171,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL7 e ein aus frei n)) =
         some (frameL8 e ein aus frei n) :=
-      schrittBinaer _ _ _ _ .sub _ _ hpc ha7 hb7 (by rfl)
+      schrittBinaer (leftBlk ein aus frei) _ _ _ .sub _ _ hpc ha7 hb7 (by rfl)
     rw [show (20 : Nat) = 1 + 19 from rfl, Function.iterate_add_apply, p7]
     exact e0
   have p9 : (Schritt (leftBlk ein aus frei))^[23] (some e) =
@@ -179,7 +179,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
     have hpc : (frameL8 e ein aus frei n).pc = 45 := rfl
     have hq : (frameL8 e ein aus frei n).temp (frei + 5) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) :=
       updateHit _ _ _
-    have e0 := laufKopie _ _ 45 (frei + 3) (frei + 5) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 45 (frei + 3) (frei + 5) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (23 : Nat) = 3 + 20 from rfl, Function.iterate_add_apply, p8]
     simpa only [frameL9] using e0
   have p10 : (Schritt (leftBlk ein aus frei))^[26] (some e) =
@@ -205,7 +205,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 1) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
       exact hes
-    have e0 := laufKopie _ _ 48 (frei + 4) (frei + 0) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie (leftBlk ein aus frei) _ 48 (frei + 4) (frei + 0) _ hpc hq (by rfl) (by rfl) (by rfl)
     rw [show (26 : Nat) = 3 + 23 from rfl, Function.iterate_add_apply, p9]
     simpa only [frameL10] using e0
   have p11 : (Schritt (leftBlk ein aus frei))^[27] (some e) =
@@ -225,7 +225,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL10 e ein aus frei n)) =
         some (frameL11 e ein aus frei n) :=
-      schrittVergleichen _ _ _ _ .lt _ _ hpc ha10 hb10 (by rfl)
+      schrittVergleichen (leftBlk ein aus frei) _ _ _ .lt _ _ hpc ha10 hb10 (by rfl)
     rw [show (27 : Nat) = 1 + 26 from rfl, Function.iterate_add_apply, p10]
     exact e0
   exact p11
@@ -249,7 +249,7 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
     exact decide_eq_true h
   have hjump : (Schritt (leftBlk ein aus frei))^[1] (some (frameL11 e ein aus frei n)) =
       some (frameL12t e ein aus frei n) :=
-    schrittSpringeWennWahr _ _ _ _ _ _ _ hpc htemp hbool (by rfl)
+    schrittSpringeWennWahr (leftBlk ein aus frei) _ _ _ _ _ _ hpc htemp hbool (by rfl)
   have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
       some (frameL12t e ein aus frei n) := by
     rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
@@ -266,7 +266,7 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
     show Function.update _ (frei + 3) _ (frei + 5) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (5 : Nat) ≠ 3))]
     exact updateHit _ _ _
-  have e0 := laufKopie _ _ 57 aus (frei + 5) _ hpc2 hq (by rfl) (by rfl) (by rfl)
+  have e0 := laufKopie (leftBlk ein aus frei) _ 57 aus (frei + 5) _ hpc2 hq (by rfl) (by rfl) (by rfl)
   rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
   simpa only [frameL13t] using e0
 
@@ -291,7 +291,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     exact Bool.false_ne_true
   have hjump : (Schritt (leftBlk ein aus frei))^[1] (some (frameL11 e ein aus frei n)) =
       some (frameL12e e ein aus frei n) :=
-    schrittSpringeWennFalsch _ _ _ _ _ _ _ hpc htemp hbool (by rfl)
+    schrittSpringeWennFalsch (leftBlk ein aus frei) _ _ _ _ _ _ hpc htemp hbool (by rfl)
   have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
       some (frameL12e e ein aus frei n) := by
     rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
@@ -321,7 +321,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     exact hes
-  have e0 := laufKopie _ _ 53 aus (frei + 0) _ hpc2 hq (by rfl) (by rfl) (by rfl)
+  have e0 := laufKopie (leftBlk ein aus frei) _ 53 aus (frei + 0) _ hpc2 hq (by rfl) (by rfl) (by rfl)
   have h31 : (Schritt (leftBlk ein aus frei))^[31] (some e) =
       some (frameL13e e ein aus frei n) := by
     rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
@@ -329,7 +329,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
   have hpc3 : (frameL13e e ein aus frei n).pc = 56 := rfl
   have e1 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL13e e ein aus frei n)) =
       some (frameL14e e ein aus frei n) :=
-    schrittSpringe _ _ _ _ hpc3 (by rfl)
+    schrittSpringe (leftBlk ein aus frei) _ _ _ hpc3 (by rfl)
   rw [show (32 : Nat) = 1 + 31 from rfl, Function.iterate_add_apply, h31]
   exact e1
 
