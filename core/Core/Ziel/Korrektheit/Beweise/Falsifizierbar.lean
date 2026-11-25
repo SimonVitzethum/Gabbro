@@ -120,7 +120,7 @@ theorem simTrennt : SimTrenntAussage := by
   have stillT : ∀ t, 1 ≤ t → ∀ s, ρT.zeit.zustand t = some s →
       KeinSchritt (Lauffolge ETrenn ρT.hw) t (some s) := by
     intro t ht s hs ev next step
-    obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega)
+    obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (n := t) (by omega)
     have hss : s = z := (Option.some.inj hs).symm
     subst hss
     exact falsifizierbares_letztesAngebot_konkret ETrenn m z ev next step

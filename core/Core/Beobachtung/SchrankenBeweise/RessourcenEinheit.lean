@@ -209,7 +209,7 @@ private theorem gegen_konkreter_lauf (s : AussenStart) (zul : einheit.ZulStart (
   have still1 : ∀ t, 1 ≤ t → ∀ st, ρ.zeit.zustand t = some st →
       KeinSchritt (Lauffolge gegenEinheit ρ.hw) t (some st) := by
     intro t ht st hs ev next step
-    obtain ⟨u, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega)
+    obtain ⟨u, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (n := t) (by omega)
     have hss : st = z2 := (Option.some.inj hs).symm
     subst hss
     exact still u ev next step
