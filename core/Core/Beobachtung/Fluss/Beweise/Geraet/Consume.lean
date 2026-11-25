@@ -219,6 +219,7 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := hinv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   have hentry : c = entryContext := geraete_issue_kontext (target := target) hA owned
+  have checkinv : GeraeteInvariantAussage binding s := hinv
   have hbb : s.fragen.length = s.antworten.length ∧
       s.verbraucht entryContext + 1 = s.antworten.length ∧
       ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q :=
