@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/RennenBein.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/RennenBein.lean
   Subject:   THE RACE LEG (the second unit of `ZugriffSicherAussage`), GRAPH PART. A reachable
               graph whose executed accesses all belong to one memory actor is race free: the
               events of one actor are in program order in their append order (`erreichbar_faden`),
@@ -14,7 +14,7 @@
 -/
 module
 
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.KlassenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.KlassenBein
 
 @[expose] public section
 

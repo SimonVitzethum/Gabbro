@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/KlassenBein.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/KlassenBein.lean
   Subject:   THE CLASS-DETERMINED LEGS OF AN ACCESS STEP (the first unit of
               `ZugriffSicherAussage`). An access command owes booking and releases, the authority
               of pending questions, device authority, committed outside operations, invariant
@@ -12,7 +12,7 @@
 -/
 module
 
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.InvariantenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.InvariantenBein
 public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Atom.Klassenrein

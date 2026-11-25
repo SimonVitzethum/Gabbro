@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/Grenzen.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/Grenzen.lean
   Subject:   THE BOUNDARY OBLIGATIONS OF A CHECKER-ACCEPTED FRAGMENT, made available to the
               pieces of `ZugriffSicherAussage`. `RegelnErfuellbar` keeps its construction of
               `GrenzenSicher` private; the same construction is repeated here so the access proof

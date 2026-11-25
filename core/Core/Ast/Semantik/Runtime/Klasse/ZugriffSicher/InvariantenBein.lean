@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/InvariantenBein.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/InvariantenBein.lean
   Subject:   THE INVARIANT LEG OF AN ACCESS STEP (the third unit of `ZugriffSicherAussage`).
               `Praedikat.gilt` is the denotation of a declared invariant; it reads the memory
               content `s.initial`. A form step leaves that content untouched (the frame transfer
@@ -13,7 +13,7 @@
 -/
 module
 
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.Induktion
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.Induktion
 public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
 public import Core.Ast.Semantik.Runtime.Atom.Quelle
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge

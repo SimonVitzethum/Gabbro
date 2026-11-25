@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/RennenLauf.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/RennenLauf.lean
   Subject:   THE RUN-LEVEL RACE INVARIANT OF A SOURCE UNIT (the missing second leg of
               `ZugriffSicherAussage`). A run of a source unit appends memory events only at the entry
               context: its `eintritte` names no handler, so every other context's boot frame carries no
@@ -10,14 +10,14 @@
 -/
 module
 
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.RennenBein
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.Grenzen
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.Grenzen
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Sicherheit.KatalogSchritt
 public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
-public import Core.Ast.Semantik.Runtime.ZugriffSicher.Grenzen
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.Grenzen
 
 @[expose] public section
 
@@ -166,7 +166,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
   obtain ⟨_, _, sperren, v, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
   rw [planEq] at folge
-  simp [hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] at folge
+  simp only [hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] at folge
   obtain ⟨_, gEq⟩ := speicherfolgeLeer folge
   rw [gEq]
 
@@ -404,7 +404,7 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
                 change x ∈ ([] : List (Speicher.Ereignis (SpeicherAkteur Zelle) Zelle Int)) at hx
                 cases hx
               · intro d hd
-                simp [Zustand.wiederanlauf, Zustand.start, Fragment.sicherheitsEinheit,
+                simp only [Zustand.wiederanlauf, Zustand.start, Fragment.sicherheitsEinheit,
                   Fragment.einheit, einrichtung, startdaten, hd]
   intro t s anfang
   exact einAktRennen (schnitte t s anfang).1 (schnitte t s anfang).2.1

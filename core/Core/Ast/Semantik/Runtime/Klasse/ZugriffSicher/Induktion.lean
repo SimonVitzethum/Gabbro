@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ast/Semantik/Runtime/ZugriffSicher/Induktion.lean
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/ZugriffSicher/Induktion.lean
   Subject:   THE SAFETY INDUCTION WITHOUT THE PER-STEP RACE LEG. `sicherheit_aus_regeln`
               (`Sicherheit/Lauf`) derives the four run-level safety legs from a per-form duty
               `RegelPflichten`, whose `RegelSicher.rennen` leg quantifies over EVERY pre-state. A
