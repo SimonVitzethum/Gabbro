@@ -312,7 +312,7 @@ theorem verletzung_nicht_regel_lokal : ¬ RegelLokal verletzungEinheit () := by
   intro h
   have hI := h (.faden 0) verletzungZustand verletzungZustand () verletzungPlan_schritt trivial
   exact befugt_verweigert _ verletzungZustand (.faden 0) verletzungPlan_schritt
-    (fun _ => rfl) (Or.inl (by decide)) hI
+    (fun _ => rfl) (Or.inl (fun h => nomatch h)) hI
 
 /-- The checker excludes the violating unit: without live authority it is not accepted. -/
 theorem verletzung_nicht_akzeptiert : ¬ Akzeptiert verletzungEinheit := by
