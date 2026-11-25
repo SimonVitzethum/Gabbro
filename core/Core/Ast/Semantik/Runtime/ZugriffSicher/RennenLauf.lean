@@ -165,12 +165,8 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
   have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
   obtain ⟨_, _, sperren, v, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
-  have hlabels : sperren ++ plan.lesen ++
-      schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
-      spur.aussen.map (aussenEtikett (p.einheit platform).einrichtung) = [] := by
-    simp [planEq, hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse]
-  have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] spur.speicher s'.graph := by
-    simpa [List.append_assoc, hlabels] using folge
+  rw [planEq] at folge
+  simp [hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] at folge
   obtain ⟨_, gEq⟩ := speicherfolgeLeer folgeLeer
   rw [gEq]
 
