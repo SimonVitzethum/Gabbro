@@ -11,9 +11,6 @@ open Katalog Maschine
 
 abbrev Unit := Maschine.Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit
 
-def boot (core : Option Nat) : Startdaten UInt8 PUnit Frame PUnit :=
-  bootFor (⟨.virtio, 0⟩ : Objekt) core
-
 /-- Boot data with the declared device in `ready`: only the declaring entry context
     owns the phase entry, every other object stays undeclared. -/
 def bootFor (obj : Objekt) (core : Option Nat) : Startdaten UInt8 PUnit Frame PUnit :=
@@ -30,6 +27,9 @@ def startBuchung (obj : Objekt) (h : Handle) : Gabbro.Core.Sicherheit.Buchung Na
   { Gabbro.Core.Sicherheit.Buchung.leer with
     geraet := fun o => if o = obj then some (entryContext, .frei) else none
     aussengriff := fun c h' right => c = entryContext ∧ h' = h ∧ right ∈ h'.rights }
+
+def boot (core : Option Nat) : Startdaten UInt8 PUnit Frame PUnit :=
+  bootFor (⟨.virtio, 0⟩ : Objekt) core
 
 def setup (obj : Objekt := (⟨.virtio, 0⟩ : Objekt)) :
     Einrichtung PUnit Nat UInt8 PUnit Frame PUnit PUnit :=
