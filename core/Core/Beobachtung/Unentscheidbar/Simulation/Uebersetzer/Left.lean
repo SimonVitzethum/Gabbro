@@ -58,7 +58,6 @@ theorem hunLeft (n : Nat) : Nat.unpair n =
       then (n - Nat.sqrt n * Nat.sqrt n, Nat.sqrt n)
       else (Nat.sqrt n, n - Nat.sqrt n * Nat.sqrt n - Nat.sqrt n)) := rfl
 
-/-- The left projection selects the difference when it is smaller. -/
 theorem hunLeftT (n : Nat) (h : n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n) :
     (Nat.unpair n).1 = n - Nat.sqrt n * Nat.sqrt n := by
   rw [hunLeft n, if_pos h]
@@ -73,18 +72,27 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
     (heq : e.temp ein = some (natVal n)) (hein : ein < frei) :
     (Schritt (leftBlk ein aus frei))^[27] (some e) =
       some (frameL11 e ein aus frei n) := by
+  have g0 : (leftBlk ein aus frei)[25]? = some (.binden nameX (frei + 0)) := by rfl
+  have g1 : (leftBlk ein aus frei)[25 + 1]? = some (.lesen (frei + 1) 0) := by rfl
+  have g2 : (leftBlk ein aus frei)[25 + 2]? = some (.blockEnde 1) := by rfl
   have p1 : (Schritt (leftBlk ein aus frei))^[3] (some e) =
       some (frameL1 e ein aus frei n) := by
-    have e0 := laufKopie (leftBlk ein aus frei) _ 25 (frei + 1) (frei + 0) _ hepc hes (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 25 (frei + 1) (frei + 0) _ hepc hes g0 g1 g2
     simpa only [frameL1] using e0
+  have g3 : (leftBlk ein aus frei)[28]? = some (.binden nameX (frei + 1)) := by rfl
+  have g4 : (leftBlk ein aus frei)[28 + 1]? = some (.lesen (frei + 3) 0) := by rfl
+  have g5 : (leftBlk ein aus frei)[28 + 2]? = some (.blockEnde 1) := by rfl
   have p2 : (Schritt (leftBlk ein aus frei))^[6] (some e) =
       some (frameL2 e ein aus frei n) := by
     have hpc : (frameL1 e ein aus frei n).pc = 28 := rfl
     have hq : (frameL1 e ein aus frei n).temp (frei + 1) = some (natVal (Nat.sqrt n)) :=
       updateHit _ _ _
-    have e0 := laufKopie (leftBlk ein aus frei) _ 28 (frei + 3) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 28 (frei + 3) (frei + 1) _ hpc hq g3 g4 g5
     rw [show (6 : Nat) = 3 + 3 from rfl, Function.iterate_add_apply, p1]
     simpa only [frameL2] using e0
+  have g6 : (leftBlk ein aus frei)[31]? = some (.binden nameX (frei + 1)) := by rfl
+  have g7 : (leftBlk ein aus frei)[31 + 1]? = some (.lesen (frei + 4) 0) := by rfl
+  have g8 : (leftBlk ein aus frei)[31 + 2]? = some (.blockEnde 1) := by rfl
   have p3 : (Schritt (leftBlk ein aus frei))^[9] (some e) =
       some (frameL3 e ein aus frei n) := by
     have hpc : (frameL2 e ein aus frei n).pc = 31 := rfl
@@ -92,78 +100,82 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 3) _ (frei + 1) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (1 : Nat) ≠ 3))]
       exact updateHit _ _ _
-    have e0 := laufKopie (leftBlk ein aus frei) _ 31 (frei + 4) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 31 (frei + 4) (frei + 1) _ hpc hq g6 g7 g8
     rw [show (9 : Nat) = 3 + 6 from rfl, Function.iterate_add_apply, p2]
     simpa only [frameL3] using e0
+  have g9 : (leftBlk ein aus frei)[34]? = some (.binaer .mul (frei + 3)) := by rfl
   have p4 : (Schritt (leftBlk ein aus frei))^[10] (some e) =
       some (frameL4 e ein aus frei n) := by
     have hpc : (frameL3 e ein aus frei n).pc = 34 := rfl
     have ha : (frameL3 e ein aus frei n).zahl (frei + 3) =
         some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal ((Nat.sqrt n : Nat) : Int)⟩ := by
-      have hA3t : (frameL3 e ein aus frei n).temp (frei + 3) = some (natVal (Nat.sqrt n)) := by
+      show (((frameL3 e ein aus frei n).temp (frei + 3)).bind alsGanzzahl) = some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal ((Nat.sqrt n : Nat) : Int)⟩
+      rw [show (frameL3 e ein aus frei n).temp (frei + 3) = some (natVal (Nat.sqrt n)) from by
         show Function.update _ (frei + 4) _ (frei + 3) = _
         rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 4))]
-        exact updateHit _ _ _
-      show (((frameL3 e ein aus frei n).temp (frei + 3)).bind alsGanzzahl) = _
-      rw [hA3t]
+        exact updateHit _ _ _]
       rfl
     have hb : (frameL3 e ein aus frei n).zahl (frei + 4) =
         some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal (((Nat.sqrt n : Nat)) : Int)⟩ := by
       show (((frameL3 e ein aus frei n).temp (frei + 4)).bind alsGanzzahl) = _
       rw [show (frameL3 e ein aus frei n).temp (frei + 4) = some (natVal (Nat.sqrt n)) from updateHit _ _ _]
       rfl
-    have g : (leftBlk ein aus frei)[34]? = some (.binaer .mul (frei + 3)) := by rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL3 e ein aus frei n)) =
         some (frameL4 e ein aus frei n) :=
-      schrittBinaer (leftBlk ein aus frei) _ _ _ .mul _ _ hpc ha hb g
+      schrittBinaer _ _ _ _ .mul _ _ hpc ha hb g9
     rw [show (10 : Nat) = 1 + 9 from rfl, Function.iterate_add_apply, p3]
     exact e0
+  have g10 : (leftBlk ein aus frei)[35]? = some (.binden nameX ein) := by rfl
+  have g11 : (leftBlk ein aus frei)[35 + 1]? = some (.lesen (frei + 1) 0) := by rfl
+  have g12 : (leftBlk ein aus frei)[35 + 2]? = some (.blockEnde 1) := by rfl
   have p5 : (Schritt (leftBlk ein aus frei))^[13] (some e) =
       some (frameL5 e ein aus frei n) := by
     have hpc : (frameL4 e ein aus frei n).pc = 35 := rfl
     have hq : (frameL4 e ein aus frei n).temp ein = some (natVal n) := by
-      show Function.update _ (frei + 3) _ ein = _
+      simp only [frameL4, frameL3, frameL2, frameL1]
       rw [updateMiss _ _ _ _ (ltNeAdd hein)]
-      show Function.update _ (frei + 4) _ ein = _
       rw [updateMiss _ _ _ _ (ltNeAdd hein)]
-      show Function.update _ (frei + 3) _ ein = _
       rw [updateMiss _ _ _ _ (ltNeAdd hein)]
-      show Function.update _ (frei + 1) _ ein = _
       rw [updateMiss _ _ _ _ (ltNeAdd hein)]
       exact heq
-    have e0 := laufKopie (leftBlk ein aus frei) _ 35 (frei + 1) ein _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 35 (frei + 1) ein _ hpc hq g10 g11 g12
     rw [show (13 : Nat) = 3 + 10 from rfl, Function.iterate_add_apply, p4]
     simpa only [frameL5] using e0
+  have g13 : (leftBlk ein aus frei)[38]? = some (.binden nameX (frei + 1)) := by rfl
+  have g14 : (leftBlk ein aus frei)[38 + 1]? = some (.lesen (frei + 5) 0) := by rfl
+  have g15 : (leftBlk ein aus frei)[38 + 2]? = some (.blockEnde 1) := by rfl
   have p6 : (Schritt (leftBlk ein aus frei))^[16] (some e) =
       some (frameL6 e ein aus frei n) := by
     have hpc : (frameL5 e ein aus frei n).pc = 38 := rfl
     have hq : (frameL5 e ein aus frei n).temp (frei + 1) = some (natVal n) :=
       updateHit _ _ _
-    have e0 := laufKopie (leftBlk ein aus frei) _ 38 (frei + 5) (frei + 1) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 38 (frei + 5) (frei + 1) _ hpc hq g13 g14 g15
     rw [show (16 : Nat) = 3 + 13 from rfl, Function.iterate_add_apply, p5]
     simpa only [frameL6] using e0
+  have g16 : (leftBlk ein aus frei)[41]? = some (.binden nameX (frei + 3)) := by rfl
+  have g17 : (leftBlk ein aus frei)[41 + 1]? = some (.lesen (frei + 6) 0) := by rfl
+  have g18 : (leftBlk ein aus frei)[41 + 2]? = some (.blockEnde 1) := by rfl
   have p7 : (Schritt (leftBlk ein aus frei))^[19] (some e) =
       some (frameL7 e ein aus frei n) := by
     have hpc : (frameL6 e ein aus frei n).pc = 41 := rfl
     have hq : (frameL6 e ein aus frei n).temp (frei + 3) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int))⟩) := by
-      show Function.update _ (frei + 5) _ (frei + 3) = _
+      simp only [frameL6, frameL5, frameL4]
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 5))]
-      show Function.update _ (frei + 1) _ (frei + 3) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 1))]
       exact updateHit _ _ _
-    have e0 := laufKopie (leftBlk ein aus frei) _ 41 (frei + 6) (frei + 3) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 41 (frei + 6) (frei + 3) _ hpc hq g16 g17 g18
     rw [show (19 : Nat) = 3 + 16 from rfl, Function.iterate_add_apply, p6]
     simpa only [frameL7] using e0
+  have g19 : (leftBlk ein aus frei)[44]? = some (.binaer .sub (frei + 5)) := by rfl
   have p8 : (Schritt (leftBlk ein aus frei))^[20] (some e) =
       some (frameL8 e ein aus frei n) := by
     have hpc : (frameL7 e ein aus frei n).pc = 44 := rfl
     have ha7 : (frameL7 e ein aus frei n).zahl (frei + 5) = some ⟨(n : Int), (n : Int), Zahl.literal (n : Int)⟩ := by
-      have hA7t : (frameL7 e ein aus frei n).temp (frei + 5) = some (natVal n) := by
+      show (((frameL7 e ein aus frei n).temp (frei + 5)).bind alsGanzzahl) = _
+      rw [show (frameL7 e ein aus frei n).temp (frei + 5) = some (natVal n) from by
         show Function.update _ (frei + 6) _ (frei + 5) = _
         rw [updateMiss _ _ _ _ (addNeLinks (by decide : (5 : Nat) ≠ 6))]
-        exact updateHit _ _ _
-      show (((frameL7 e ein aus frei n).temp (frei + 5)).bind alsGanzzahl) = _
-      rw [hA7t]
+        exact updateHit _ _ _]
       rfl
     have hb7 : (frameL7 e ein aus frei n).zahl (frei + 6) = some ⟨_, _, Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int))⟩ := by
       show (((frameL7 e ein aus frei n).temp (frei + 6)).bind alsGanzzahl) = _
@@ -171,53 +183,51 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL7 e ein aus frei n)) =
         some (frameL8 e ein aus frei n) :=
-      schrittBinaer (leftBlk ein aus frei) _ _ _ .sub _ _ hpc ha7 hb7 (by rfl)
+      schrittBinaer _ _ _ _ .sub _ _ hpc ha7 hb7 g19
     rw [show (20 : Nat) = 1 + 19 from rfl, Function.iterate_add_apply, p7]
     exact e0
+  have g20 : (leftBlk ein aus frei)[45]? = some (.binden nameX (frei + 5)) := by rfl
+  have g21 : (leftBlk ein aus frei)[45 + 1]? = some (.lesen (frei + 3) 0) := by rfl
+  have g22 : (leftBlk ein aus frei)[45 + 2]? = some (.blockEnde 1) := by rfl
   have p9 : (Schritt (leftBlk ein aus frei))^[23] (some e) =
       some (frameL9 e ein aus frei n) := by
     have hpc : (frameL8 e ein aus frei n).pc = 45 := rfl
     have hq : (frameL8 e ein aus frei n).temp (frei + 5) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) :=
       updateHit _ _ _
-    have e0 := laufKopie (leftBlk ein aus frei) _ 45 (frei + 3) (frei + 5) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 45 (frei + 3) (frei + 5) _ hpc hq g20 g21 g22
     rw [show (23 : Nat) = 3 + 20 from rfl, Function.iterate_add_apply, p8]
     simpa only [frameL9] using e0
+  have g23 : (leftBlk ein aus frei)[48]? = some (.binden nameX (frei + 0)) := by rfl
+  have g24 : (leftBlk ein aus frei)[48 + 1]? = some (.lesen (frei + 4) 0) := by rfl
+  have g25 : (leftBlk ein aus frei)[48 + 2]? = some (.blockEnde 1) := by rfl
   have p10 : (Schritt (leftBlk ein aus frei))^[26] (some e) =
       some (frameL10 e ein aus frei n) := by
     have hpc : (frameL9 e ein aus frei n).pc = 48 := rfl
     have hq : (frameL9 e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
-      show Function.update _ (frei + 3) _ (frei + 0) = _
+      simp only [frameL9, frameL8, frameL7, frameL6, frameL5, frameL4, frameL3, frameL2, frameL1]
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-      show Function.update _ (frei + 5) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
-      show Function.update _ (frei + 6) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 6))]
-      show Function.update _ (frei + 5) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
-      show Function.update _ (frei + 1) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
-      show Function.update _ (frei + 3) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-      show Function.update _ (frei + 4) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 4))]
-      show Function.update _ (frei + 3) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-      show Function.update _ (frei + 1) _ (frei + 0) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
       exact hes
-    have e0 := laufKopie (leftBlk ein aus frei) _ 48 (frei + 4) (frei + 0) _ hpc hq (by rfl) (by rfl) (by rfl)
+    have e0 := laufKopie _ _ 48 (frei + 4) (frei + 0) _ hpc hq g23 g24 g25
     rw [show (26 : Nat) = 3 + 23 from rfl, Function.iterate_add_apply, p9]
     simpa only [frameL10] using e0
+  have g26 : (leftBlk ein aus frei)[51]? = some (.vergleichen .lt (frei + 3)) := by rfl
   have p11 : (Schritt (leftBlk ein aus frei))^[27] (some e) =
       some (frameL11 e ein aus frei n) := by
     have hpc : (frameL10 e ein aus frei n).pc = 51 := rfl
-    have ha10 : (frameL10 e ein aus frei n).zahl (frei + 3) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩ := by
-      have hA10t : (frameL10 e ein aus frei n).temp (frei + 3) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
+    have ha10 : (frameL10 e ein aus frei n).zahl (frei + 3) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
+      show (((frameL10 e ein aus frei n).temp (frei + 3)).bind alsGanzzahl) = _
+      rw [show (frameL10 e ein aus frei n).temp (frei + 3) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) from by
         show Function.update _ (frei + 4) _ (frei + 3) = _
         rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 4))]
-        exact updateHit _ _ _
-      show (((frameL10 e ein aus frei n).temp (frei + 3)).bind alsGanzzahl) = _
-      rw [hA10t]
+        exact updateHit _ _ _]
       rfl
     have hb10 : (frameL10 e ein aus frei n).zahl (frei + 4) = some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal ((Nat.sqrt n : Nat) : Int)⟩ := by
       show (((frameL10 e ein aus frei n).temp (frei + 4)).bind alsGanzzahl) = _
@@ -225,7 +235,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
       rfl
     have e0 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL10 e ein aus frei n)) =
         some (frameL11 e ein aus frei n) :=
-      schrittVergleichen (leftBlk ein aus frei) _ _ _ .lt _ _ hpc ha10 hb10 (by rfl)
+      schrittVergleichen _ _ _ _ .lt _ _ hpc ha10 hb10 g26
     rw [show (27 : Nat) = 1 + 26 from rfl, Function.iterate_add_apply, p10]
     exact e0
   exact p11
@@ -247,14 +257,18 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
       simp only [cmpBoolLeft, Compare.eval, decideDlt _ _ (Nat.sqrt_le n)]
     rw [e1]
     exact decide_eq_true h
+  have g27 : (leftBlk ein aus frei)[52]? = some (.springeWenn (frei + 3) true 5) := by rfl
   have hjump : (Schritt (leftBlk ein aus frei))^[1] (some (frameL11 e ein aus frei n)) =
       some (frameL12t e ein aus frei n) :=
-    schrittSpringeWennWahr (leftBlk ein aus frei) _ _ _ _ _ _ hpc htemp hbool (by rfl)
+    schrittSpringeWennWahr _ _ _ _ _ _ _ hpc htemp hbool g27
   have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
       some (frameL12t e ein aus frei n) := by
     rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
     exact hjump
   have hpc2 : (frameL12t e ein aus frei n).pc = 57 := rfl
+  have g28 : (leftBlk ein aus frei)[57]? = some (.binden nameX (frei + 5)) := by rfl
+  have g29 : (leftBlk ein aus frei)[57 + 1]? = some (.lesen aus 0) := by rfl
+  have g30 : (leftBlk ein aus frei)[57 + 2]? = some (.blockEnde 1) := by rfl
   have hq : (frameL12t e ein aus frei n).temp (frei + 5) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
     have h11 : (frameL12t e ein aus frei n).temp (frei + 5) =
         (frameL11 e ein aus frei n).temp (frei + 5) := rfl
@@ -266,7 +280,7 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
     show Function.update _ (frei + 3) _ (frei + 5) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (5 : Nat) ≠ 3))]
     exact updateHit _ _ _
-  have e0 := laufKopie (leftBlk ein aus frei) _ 57 aus (frei + 5) _ hpc2 hq (by rfl) (by rfl) (by rfl)
+  have e0 := laufKopie _ _ 57 aus (frei + 5) _ hpc2 hq g28 g29 g30
   rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
   simpa only [frameL13t] using e0
 
@@ -289,47 +303,42 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
       decide_eq_false h
     rw [e1, e2]
     exact Bool.false_ne_true
+  have g27 : (leftBlk ein aus frei)[52]? = some (.springeWenn (frei + 3) true 5) := by rfl
   have hjump : (Schritt (leftBlk ein aus frei))^[1] (some (frameL11 e ein aus frei n)) =
       some (frameL12e e ein aus frei n) :=
-    schrittSpringeWennFalsch (leftBlk ein aus frei) _ _ _ _ _ _ hpc htemp hbool (by rfl)
+    schrittSpringeWennFalsch _ _ _ _ _ _ _ hpc htemp hbool g27
   have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
       some (frameL12e e ein aus frei n) := by
     rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
     exact hjump
   have hpc2 : (frameL12e e ein aus frei n).pc = 53 := rfl
+  have g28 : (leftBlk ein aus frei)[53]? = some (.binden nameX (frei + 0)) := by rfl
+  have g29 : (leftBlk ein aus frei)[53 + 1]? = some (.lesen aus 0) := by rfl
+  have g30 : (leftBlk ein aus frei)[53 + 2]? = some (.blockEnde 1) := by rfl
   have hq : (frameL12e e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
-    show Function.update _ (frei + 3) _ (frei + 0) = _
+    simp only [frameL12e, frameL11, frameL10, frameL9, frameL8, frameL7, frameL6, frameL5, frameL4, frameL3, frameL2, frameL1]
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-    show Function.update _ (frei + 4) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 4))]
-    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-    show Function.update _ (frei + 5) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
-    show Function.update _ (frei + 6) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 6))]
-    show Function.update _ (frei + 5) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
-    show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
-    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-    show Function.update _ (frei + 4) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 4))]
-    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
-    show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     exact hes
-  have e0 := laufKopie (leftBlk ein aus frei) _ 53 aus (frei + 0) _ hpc2 hq (by rfl) (by rfl) (by rfl)
+  have e0 := laufKopie _ _ 53 aus (frei + 0) _ hpc2 hq g28 g29 g30
   have h31 : (Schritt (leftBlk ein aus frei))^[31] (some e) =
       some (frameL13e e ein aus frei n) := by
     rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
     simpa only [frameL13e] using e0
   have hpc3 : (frameL13e e ein aus frei n).pc = 56 := rfl
+  have g31 : (leftBlk ein aus frei)[56]? = some (.springe 4) := by rfl
   have e1 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL13e e ein aus frei n)) =
       some (frameL14e e ein aus frei n) :=
-    schrittSpringe (leftBlk ein aus frei) _ _ _ hpc3 (by rfl)
+    schrittSpringe _ _ _ _ hpc3 g31
   rw [show (32 : Nat) = 1 + 31 from rfl, Function.iterate_add_apply, h31]
   exact e1
 
@@ -337,40 +346,18 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
 theorem presSelPrefix (ein aus frei n : Nat) (e : Rahmen) (t : Nat)
     (ht : t < frei) :
     (frameL11 e ein aus frei n).temp t = e.temp t := by
-  have e3 : (frameL11 e ein aus frei n).temp t = (frameL10 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 3) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e4 : (frameL10 e ein aus frei n).temp t = (frameL9 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 4) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e5 : (frameL9 e ein aus frei n).temp t = (frameL8 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 3) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e6 : (frameL8 e ein aus frei n).temp t = (frameL7 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 5) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e7 : (frameL7 e ein aus frei n).temp t = (frameL6 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 6) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e8 : (frameL6 e ein aus frei n).temp t = (frameL5 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 5) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e9 : (frameL5 e ein aus frei n).temp t = (frameL4 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 1) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e10 : (frameL4 e ein aus frei n).temp t = (frameL3 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 3) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e11 : (frameL3 e ein aus frei n).temp t = (frameL2 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 4) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e12 : (frameL2 e ein aus frei n).temp t = (frameL1 e ein aus frei n).temp t := by
-    show Function.update _ (frei + 3) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  have e13 : (frameL1 e ein aus frei n).temp t = e.temp t := by
-    show Function.update _ (frei + 1) _ t = _
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
-  rw [e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13]
+  simp only [frameL11, frameL10, frameL9, frameL8, frameL7, frameL6, frameL5, frameL4, frameL3, frameL2, frameL1]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+  rw [updateMiss _ _ _ _ (ltNeAdd ht)]
 
 /-- Preservation through the selection for the then-branch. -/
 theorem presSelT (ein aus frei n : Nat) (e : Rahmen) (t : Nat)
@@ -482,25 +469,18 @@ theorem blockLeft (ein aus frei : Nat) (hein : ein < frei) (haus : aus < frei)
   apply And.intro hunters
   intro n r hpc hr
   refine ⟨?_, ?_⟩
-  · by_cases hcond : n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n
-    · intro a ha
-      have ha0 : a = (Nat.unpair n).1 := by
-        have h0 : Part.some ((Nat.unpair n).1) = Part.some a := by
-          change Part.some ((Nat.unpair n).1) = Part.some a at ha
-          exact ha
-        exact (Part.some_injective h0).symm
-      subst ha0
-      obtain ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩ :=
+  · intro a ha
+    have ha0 : a = (Nat.unpair n).1 := by
+      have h0 : Part.some ((Nat.unpair n).1) = Part.some a := by
+        change Part.some ((Nat.unpair n).1) = Part.some a at ha
+        exact ha
+      exact (Part.some_injective h0).symm
+    subst ha0
+    by_cases hcond : n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n
+    · obtain ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩ :=
         leftArrivalThen ein aus frei n r hpc hr hein haus hunters hcond
       exact ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩
-    · intro a ha
-      have ha0 : a = (Nat.unpair n).1 := by
-        have h0 : Part.some ((Nat.unpair n).1) = Part.some a := by
-          change Part.some ((Nat.unpair n).1) = Part.some a at ha
-          exact ha
-        exact (Part.some_injective h0).symm
-      subst ha0
-      obtain ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩ :=
+    · obtain ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩ :=
         leftArrivalElse ein aus frei n r hpc hr hein haus hunters hcond
       exact ⟨k, r', hrun, hpc', haus', hpres, hlok, hrueck, hstopp⟩
   · intro k r' hk hpc'
@@ -511,7 +491,7 @@ theorem blockLeft (ein aus frei : Nat) (hein : ein < frei) (haus : aus < frei)
       · exfalso
         exact laufStirbtNach _ _ _ _ _ _ hk hpc' hrunT h
       · subst h
-        have heq : r' = rT := Option.some_inj (hk.symm.trans hrunT)
+        have heq : r' = rT := Option.some.inj (hk.symm.trans hrunT)
         subst heq
         have heval : Nat.Partrec.Code.eval .left n = Part.some ((Nat.unpair n).1) := rfl
         exact ⟨(Nat.unpair n).1, heval, hausT, hpresT, hlokT, hrueckT, hstoppT⟩
@@ -523,7 +503,7 @@ theorem blockLeft (ein aus frei : Nat) (hein : ein < frei) (haus : aus < frei)
       · exfalso
         exact laufStirbtNach _ _ _ _ _ _ hk hpc' hrunE h
       · subst h
-        have heq : r' = rE := Option.some_inj (hk.symm.trans hrunE)
+        have heq : r' = rE := Option.some.inj (hk.symm.trans hrunE)
         subst heq
         have heval : Nat.Partrec.Code.eval .left n = Part.some ((Nat.unpair n).1) := rfl
         exact ⟨(Nat.unpair n).1, heval, hausE, hpresE, hlokE, hrueckE, hstoppE⟩
