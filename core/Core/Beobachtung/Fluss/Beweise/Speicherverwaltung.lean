@@ -41,10 +41,12 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
     cases ht with
     | wartet _ gleich _ => exact ⟨s, gleich⟩
     | schritt _ step =>
+      generalize hn : ρ.zeit.zustand (t + 1) = nOpt at step
       cases step with
       | schritt impl =>
-        rename_i n
-        exact ⟨n, rfl⟩
+        cases nOpt with
+        | none => cases impl
+        | some n => exact ⟨n, hn⟩
 
 /-- The rule of a memory form determines one frame and the fixed private plan. -/
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
@@ -95,12 +97,14 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
               have folge := speicherfolge
               simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
                 Ast.LowLevel.plan, schreibEreignisse] at folge
+              generalize hEs : spur.speicher = es at folge
               cases folge
-              rfl
+              exact hEs
             have hGraph : n.graph = s.graph := by
               have folge := speicherfolge
               simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
                 Ast.LowLevel.plan, schreibEreignisse] at folge
+              generalize hEs : spur.speicher = es at folge
               cases folge
               rfl
             have hBuchung : n.buchung = s.buchung := by
@@ -158,6 +162,7 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
       have folge := speicherfolge
       simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
         Ast.LowLevel.plan, schreibEreignisse] at folge
+      generalize hEs : spur.speicher = es at folge
       cases folge
       rfl
     refine ⟨f, frame, kopf, eval, ?_⟩
@@ -175,8 +180,7 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     rw [uEq] at aus
     rw [planEq] at aus
     unfold FuehrtSchrittAus at aus
-    rcases aus with ⟨_, _, sperren, v, fuehrtAus, _, nEqState⟩
-    change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren spur.aussen v at fuehrtAus
+    rcases aus with ⟨_, _, _, _, fuehrtAus, _, nEqState⟩
     cases fuehrtAus
     rw [nEqState]
     change s.fragen = []
@@ -221,13 +225,14 @@ private theorem mem_fragen_leer {h : Umgebung} {ρ : Lauf (memProgram k code)}
       rw [atZ] at tick
       cases tick with
       | schritt _ step =>
-        cases nach : ρ.zeit.zustand (t + 1) with
-        | none => cases step
-        | some n =>
-          right
-          refine ⟨n, rfl, ?_⟩
-          cases step with
-          | schritt impl =>
+        generalize hn : ρ.zeit.zustand (t + 1) = nOpt at step
+        cases step with
+        | schritt impl =>
+          cases nOpt with
+          | none => cases impl
+          | some n =>
+            right
+            refine ⟨n, hn, ?_⟩
             exact mem_schritt_fragen k code impl fragenLeer
       | wartet _ eq _ =>
         right
@@ -355,7 +360,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
           have e₁ : NiedrigeBeob (memProgram k code) ρ₁ predictor (t + 1) =
               NiedrigeBeob (memProgram k code) ρ₁ predictor t := by
             change NiedrigeBeob (memProgram k code) ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
-            rw [mem_kontext_still k code t (c := c) (w := w) (spur := spur) spurGlied, List.append_nil]
+            rw [mem_kontext_still k code (predictor := predictor) (t := t) (c := c) (w := w) (spur := spur) spurGlied, List.append_nil]
           have takt₂ := ρ₂.zeit.takt t
           rw [zustand₂] at takt₂
           generalize hN₂ : ρ₂.zeit.zustand (t + 1) = nOpt₂ at takt₂
@@ -391,15 +396,15 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
               | schritt impl₂ =>
                 have stepCopy := impl₂
                 cases impl₂ with
-                | kontext _ bereit₂' regel₂' aus₂' =>
+                | kontext (c := cR) _ bereit₂' regel₂' aus₂' =>
                   obtain ⟨k₂, geleg₂, kern₂, stat₂⟩ := bereit₂'
                   have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
                   have kk : k₁ = k₂ := Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
                   have gleich : (w₂.kerne k₂).laeuft = some c := by
                     rw [← kk, ← kerneEq]
                     exact kern₁
-                  have c_eq : c₂ = c := Option.some.inj (kern₂.symm.trans gleich)
-                  subst c₂
+                  have c_eq : cR = c := Option.some.inj (kern₂.symm.trans gleich)
+                  subst cR
                   obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
                   have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                   subst f₂
@@ -412,7 +417,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                       NiedrigeBeob (memProgram k code) ρ₂ predictor t := by
                     change NiedrigeBeob (memProgram k code) ρ₂ predictor t ++
                       schrittBeob ρ₂ predictor t = _
-                    rw [mem_kontext_still k code t label₂, List.append_nil]
+                    rw [mem_kontext_still k code (predictor := predictor) (t := t) label₂, List.append_nil]
                   have zustandGleich := mem_zustand_gleich k code (c := c) (vor := vor) (w₂ := w₂)
                     (frame := frame₁) ⟨lokGleich, endeGleich, initialGleich, rechteEq, leihenEq, antwortGleich⟩
                     epocheEq geliefertEq kerneEq statusEq
