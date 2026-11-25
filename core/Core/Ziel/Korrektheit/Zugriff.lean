@@ -29,7 +29,6 @@ public import Core.Sicherheit.RegelnErfuellbar
 namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core Maschine
-open Ast.Semantik (Fragment Befehl Zugriffsform)
 
 /-- **The four safety legs for a fragment with an access instruction.** For a fragment whose code is frame-only or
     access, with an access instruction, no declared invariant and an accepted unit, every run is memory safe, keeps the
@@ -45,7 +44,7 @@ open Ast.Semantik (Fragment Befehl Zugriffsform)
     `Sicherheit/Atom/RennfreiAusLokal`). (3) `InvariantenErhalten` for an empty clause table is `Befehl.sicher`'s
     invariant leg, the same for every instruction. -/
 def ZugriffSicherAussage : Prop :=
-  ∀ (p : Fragment) (platform : Katalog.Plattform), p.MitZugriff → p.klauseln.invariant = [] →
+  ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff → p.klauseln.invariant = [] →
     Annahme.Akzeptiert (p.einheit platform) →
     ∀ (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform)),
       Maschine.Laeufe (p.einheit platform) H ρ →
@@ -62,7 +61,7 @@ def ZugriffSicherAussage : Prop :=
     (`Speicherfolge.ausgabe`), and the value of a read equals the value written by its `rf` source, which is an event
     of the common prefix. The step `FuehrtSchrittAus.bestimmt` then gives equal traces and states. -/
 def ZugriffIdealBestimmtAussage : Prop :=
-  ∀ (p : Fragment) (platform : Katalog.Plattform), p.MitZugriff →
+  ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff →
     Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system
 
 /-- **The memory model offers a read to every access head.** In a consistent complete memory, an access instruction at the
@@ -74,12 +73,12 @@ def ZugriffIdealBestimmtAussage : Prop :=
     a store extends `mo` at the end. The plan is `Wirkungsklasse.plan` at that value, the authority decision is the
     state's. -/
 def ZugriffSchrittExistiertAussage : Prop :=
-  ∀ (p : Fragment) (platform : Katalog.Plattform) (z : Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext),
-    (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) → s.SpeicherGut →
+  ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform) (z : Ast.Semantik.Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext),
+    (p.einheit platform).system.kopf s c = some (Ast.Semantik.Befehl.zugriff z) → s.SpeicherGut →
       ∃ (w : PUnit.{1}) (plan : Ast.Semantik.Plan) (u : Ast.Semantik.Zustand)
         (es : List (SpeicherAkteur Ast.Semantik.Zelle × Speicher.Etikett Ast.Semantik.Zelle Int))
         (g : SpeicherGraph Ast.Semantik.Zelle Int),
-        (Befehl.zugriff z).ideal c s w [plan] u ∧
+        (Ast.Semantik.Befehl.zugriff z).ideal c s w [plan] u ∧
           Speicherfolge s.initial (.kontext c) s.graph
             (plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert) es g
 
@@ -91,7 +90,7 @@ def ZugriffSchrittExistiertAussage : Prop :=
     records its written cell (`PlanSicht` shows it for a public cell), a load puts the value of its `rf` source into
     the frame, which the coupled runs choose equal for a public cell (the graph-level coupling of MK-13). -/
 def ZugriffNIFragmentAussage : Prop :=
-  ∀ (p : Fragment) (platform : Katalog.Plattform), p.MitZugriff →
+  ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff →
     Annahme.Akzeptiert (p.einheit platform) → Beobachtung.Nichtinterferent (p.einheit platform)
 
 /-- **The root of the goal legs for a fragment with an access instruction.** -/
@@ -100,14 +99,14 @@ def ZugriffZielAussage : Prop :=
 
 /-- **The statements are about a nonempty set of fragments**: the unit of one load is a fragment with an access
     instruction (frame-only code is excluded, so no frame-only theorem applies to it). -/
-theorem mitZugriff_erfuellbar : ∃ p : Fragment, p.MitZugriff :=
+theorem mitZugriff_erfuellbar : ∃ p : Ast.Semantik.Fragment, p.MitZugriff :=
   ⟨_, Ast.Semantik.Fragment.einzel_zugriff_mitZugriff
     (.lade 0 0 0 (Ast.Ty.int 0 0) Gabbro.Core.Speicher.Modus.na)⟩
 
 /-- **`I.Fortschritt` for a fragment of the two classes, from the liveness of the memory model.** A frame-only head
     steps by its template (`Befehl.vollzug`); an access head steps by the step the memory model offers
     (`ZugriffSchrittExistiertAussage`), which composes with the protocol (`zugriffKomponierbar`). -/
-theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p : Fragment)
+theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
     (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
     Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system := by
   refine Maschine.I.fortschritt_aus_koepfen _ _ (Ast.Semantik.Fragment.fertig p platform)
