@@ -206,8 +206,16 @@ private theorem gegen_konkreter_lauf (s : AussenStart) (zul : einheit.ZulStart (
         | 0 => .schritt rfl step0
         | u + 1 => .wartet rfl rfl (still u) }
   let ρ : Lauf gegenEinheit := ⟨s, gegenHw, zeit⟩
+  have still1 : ∀ t, 1 ≤ t → ∀ st, ρ.zeit.zustand t = some st →
+      KeinSchritt (Lauffolge gegenEinheit ρ.hw) t (some st) := by
+    intro t ht st hs ev next step
+    obtain ⟨u, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega)
+    have hss : st = z2 := (Option.some.inj hs).symm
+    subst hss
+    exact still u ev next step
   refine ⟨ρ, ?_, rfl, rfl, rfl⟩
-  exact ⟨erlaubt [], gegenHw_konform, zul, rfl⟩
+  exact ⟨erlaubt [], gegenHw_konform, zul, rfl,
+    SchedulerFair_aus_stillstand_ab gegenEinheit ρ 1 still1⟩
 
 /-- The bare protocol statement is false: a crash installs recovery data outside the declared
     stack bound even though the pre-state meets it. The missing premise is
