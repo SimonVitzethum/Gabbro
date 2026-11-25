@@ -258,9 +258,12 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   cases aktion with
                   | intern =>
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne, ukerne] at h
+                    · rw [skerne] at h
+                      change ((u.kerne k).laeuft = some c) at h
+                      rw [ukerne] at h
                       exact ihd k c h
                     · rw [sstack] at h
+                      change ((w, m) ∈ (u.kerne k).stapel) at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | warte =>
@@ -268,9 +271,12 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   cases aktion with
                   | warte =>
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne, ukerne] at h
+                    · rw [skerne] at h
+                      change ((u.kerne k).laeuft = some c) at h
+                      rw [ukerne] at h
                       exact ihd k c h
                     · rw [sstack] at h
+                      change ((w, m) ∈ (u.kerne k).stapel) at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | sperre =>
@@ -278,9 +284,12 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   cases aktion with
                   | sperre =>
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne, ukerne] at h
+                    · rw [skerne] at h
+                      change ((u.kerne k).laeuft = some c) at h
+                      rw [ukerne] at h
                       exact ihd k c h
                     · rw [sstack] at h
+                      change ((w, m) ∈ (u.kerne k).stapel) at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | frage =>
@@ -288,9 +297,12 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   cases aktion with
                   | frage =>
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne, ukerne] at h
+                    · rw [skerne] at h
+                      change ((u.kerne k).laeuft = some c) at h
+                      rw [ukerne] at h
                       exact ihd k c h
                     · rw [sstack] at h
+                      change ((w, m) ∈ (u.kerne k).stapel) at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | verbrauche =>
@@ -298,9 +310,12 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   cases aktion with
                   | verbrauche =>
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                    · rw [skerne, ukerne] at h
+                    · rw [skerne] at h
+                      change ((u.kerne k).laeuft = some c) at h
+                      rw [ukerne] at h
                       exact ihd k c h
                     · rw [sstack] at h
+                      change ((w, m) ∈ (u.kerne k).stapel) at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | rueckkehr =>
