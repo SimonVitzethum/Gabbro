@@ -83,6 +83,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.RegionNIAussage, 16381440954448882324),
   (`Gabbro.Core.Beobachtung.SpeicherverwaltungsNIAussage, 1040977466060420654),
   (`Gabbro.Core.Beobachtung.GeraeteNIAussage, 3740131064377831971),
+  (`Gabbro.Core.Beobachtung.PegelNIAussage, 3329128189660835396),
   (`Gabbro.Core.Katalog.Plattform.spekulationshuelle, 9646114676836847360),
   (`Gabbro.Core.Beobachtung.NiedrigGleich, 5156642695302779492),
   (`Gabbro.Core.Beobachtung.GleicheNiedrigeUmgebung, 17237607824785545572),
@@ -214,6 +215,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Katalog.unterbrechungen, 11302222399176252642),
   (`Gabbro.Core.Maschine.Ergebnis, 14979664447435771641),
   (`Gabbro.Core.Maschine.AbsturzSchritt, 18430886093284593060),
+  (`Gabbro.Core.Maschine.PersistenzAussage, 12597926176805113012),
   (`Gabbro.Core.Maschine.I.Schritt, 9356686837508255266),
   (`Gabbro.Core.Maschine.ImplSchritt, 6963896559948721205),
   (`Gabbro.Core.Maschine.Laeufe, 8602615822631803625),
@@ -328,6 +330,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Speicher.LitmusKatalogAussage, 14490508692865327562),
   (`Gabbro.Core.Ast.Semantik.AtomAussagen, 10018845777804343364),
   (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 15230201805166795792),
-  (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799)]
+  (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799),
+  (`Gabbro.Core.Annahme.DomaenenAussage, 12680160187326211984),
+  (`Gabbro.Core.Speicher.MpLitmusAussage, 13796261553310205886),
+  (`Gabbro.Core.Speicher.LbLitmusAussage, 8829005192830706516)]
 
 end Gabbro.Core.Waechter
