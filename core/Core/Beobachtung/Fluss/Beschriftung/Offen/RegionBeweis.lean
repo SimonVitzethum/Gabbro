@@ -213,12 +213,13 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
   generalize hN : ρ.zeit.zustand (t + 1) = nOpt at tak
   cases tak with
   | wartet label _ _ => cases label
-  | schritt label laufstep =>
-      cases laufstep with
-      | schritt impl =>
-          cases impl with
-          | kontext _ _ regel aus =>
-              cases label
+      | schritt label laufstep =>
+          cases laufstep with
+          | schritt impl =>
+              rename_i s sN
+              cases impl with
+              | kontext _ _ regel aus =>
+                  cases label
               obtain ⟨i, kopfI, implI⟩ := regel
               obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := wahl) implI
               cases (List.cons.inj planEq).1
@@ -226,13 +227,6 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
               obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal aus
               subst spur
               rw [nextEq, hu] at hN
-              have hsSome : ∃ s, sOpt = some s := by
-                cases sOpt with
-                | none => cases hS
-                | some s => exact ⟨s, rfl⟩
-              obtain ⟨s, hsOpt⟩ := hsSome
-              subst sOpt
-              simp only [hS] at *
               have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
                 intro d
                 unfold neuBeendet
