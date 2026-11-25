@@ -32,9 +32,28 @@ theorem auswertenMitPc (p : Nat) (b : Befehl) (r : Rahmen)
     (hv : Verschiebbar b)
     (hz : ∀ d, b = .zurueckSprung d → d ≤ r.pc) :
     b.auswerten (mitPc p r) = mitPc p (b.auswerten r) := by
-  cases b <;> simp only [Verschiebbar] at hv
-  all_goals try cases hv
-  all_goals simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  all_goals omega
+  cases b with
+  | literal z v => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | binaer op l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | binden n q => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+  | wahrheitswert z v => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | lesen z i => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | negativ z m => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | negieren z => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | verneinen z => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | teilen l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | vergleichen op l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | zuweisen q i z t => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+  | springe d => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+  | blockEnde c => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+  | ende => simp only [Befehl.auswerten, mitPc]
+  | springeWenn q wv d =>
+    simp only [Befehl.auswerten, mitPc]
+    split <;> omega
+  | zurueckSprung d =>
+    have hd : d ≤ r.pc := hz d rfl
+    simp only [Befehl.auswerten, mitPc]
+    omega
+  | _ => cases hv
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
