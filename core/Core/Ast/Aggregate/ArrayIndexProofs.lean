@@ -239,8 +239,7 @@ theorem arrayIndexErhaltung : ArrayIndexErhaltungAussage := by
 
 theorem arrayIndexRegelSicher : ArrayIndexRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((arrayIndexForm scope).fragment args) platform
-    (arrayIndex_keine_invarianten scope args) ((arrayIndexForm scope).befehl args)
+  exact Befehl.sicher ((arrayIndexForm scope).fragment args) platform [] (tabLeer _ (arrayIndex_keine_invarianten scope args)) (fun b _ => rfl) ((arrayIndexForm scope).befehl args)
 
 theorem arrayIndexErfuellbarAm : ArrayIndexErfuellbarAmAussage := by
   intro platform start

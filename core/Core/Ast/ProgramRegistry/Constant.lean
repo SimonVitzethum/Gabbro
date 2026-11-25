@@ -71,7 +71,7 @@ theorem constant_erhaltung (scope : Scope) : (constantForm scope).ErhaltungsAuss
   exact ⟨((constantForm scope).befehl args).abgleich ((constantForm scope).fragment args) platform,
     ((constantForm scope).befehl args).fortschritt ((constantForm scope).fragment args),
     ((constantForm scope).befehl args).komponierbar ((constantForm scope).fragment args) platform,
-    ((constantForm scope).befehl args).sicherheitsPflichten ((constantForm scope).fragment args) platform inv⟩
+    ((constantForm scope).befehl args).sicherheitsPflichten ((constantForm scope).fragment args) platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem constant_sicher (scope : Scope) platform a :
@@ -81,7 +81,7 @@ theorem constant_sicher (scope : Scope) platform a :
     change (expr 0 a.value).klauseln.invariant ++ [] = []
     rw [expr_keine_invarianten]
     rfl
-  exact ((constantForm scope).befehl a).sicher ((constantForm scope).fragment a) platform inv
+  exact ((constantForm scope).befehl a).sicher ((constantForm scope).fragment a) platform [] (tabLeer _ inv) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem constant_erfuellbar : constantJoint := by

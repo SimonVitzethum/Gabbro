@@ -186,8 +186,7 @@ theorem textConcatKernOrt : TextConcatKernOrtAussage := by
 
 theorem textConcatRegelSicher : TextConcatRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((textConcatForm scope).fragment args) platform
-    (textConcat_keine_invarianten scope args) ((textConcatForm scope).befehl args)
+  exact Befehl.sicher ((textConcatForm scope).fragment args) platform [] (tabLeer _ (textConcat_keine_invarianten scope args)) (fun b _ => rfl) ((textConcatForm scope).befehl args)
 
 theorem textConcatRegelAntwortSicher : TextConcatRegelAntwortSicherAussage := by
   intro scope platform args

@@ -181,9 +181,9 @@ theorem tupleValue_erhaltung : TupleValueErhaltungAussage := by
 theorem tupleValue_regelSicher : TupleValueRegelSicherAussage := by
   intro scope platform args
   exact ((tupleValueForm scope).befehl args).sicher ((tupleValueForm scope).fragment args)
-    platform (by
+    platform [] (tabLeer _ (by
       change (expr 0 (Expr.tupleValue args.first args.second args.tail)).klauseln.invariant = []
-      exact expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail))
+      exact expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail))) (fun b _ => rfl)
 
 theorem tupleValue_parse : TupleValueParseAussage := by
   intro scope args text pieces lexed prod

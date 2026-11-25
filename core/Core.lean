@@ -145,6 +145,7 @@ public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
+public import Core.Ast.Semantik.Runtime.Praedikat
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
 public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
