@@ -74,6 +74,8 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetIssueKontext
 public import Core.Beobachtung.Fluss.Beweise.GeraetIssueFrisch
 public import Core.Beobachtung.Fluss.Beweise.GeraetBeobachtung
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetFluss
+public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
