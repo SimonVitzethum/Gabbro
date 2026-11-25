@@ -91,7 +91,8 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
     (r : Rahmen) (k : Nat) (r' : Rahmen) (hrpc : r.pc = 0)
     (hk : (Schritt (blkA ++ blkB))^[k] (some r) = some r')
     (hpcEnd : r'.pc = (blkA ++ blkB).length) :
-    ∃ j rA, j ≤ k ∧ (Schritt blkA)^[j] (some r) = some rA ∧ rA.pc = blkA.length := by
+    ∃ j rA, j ≤ k ∧ (Schritt (blkA ++ blkB))^[j] (some r) = some rA ∧
+      (Schritt blkA)^[j] (some r) = some rA ∧ rA.pc = blkA.length := by
   classical
   let Q : Nat → Prop := fun s =>
     ∃ rs, s ≤ k ∧ (Schritt (blkA ++ blkB))^[s] (some r) = some rs ∧ blkA.length ≤ rs.pc
@@ -190,6 +191,6 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
   have hrunA0 : (Schritt blkA)^[Nat.find hQ] (some r) = some rJ := by
     rw [← hagree]
     exact hrunJ
-  exact ⟨Nat.find hQ, rJ, hjFindK, hrunA0, hEqJ⟩
+  exact ⟨Nat.find hQ, rJ, hjFindK, hrunJ, hrunA0, hEqJ⟩
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer

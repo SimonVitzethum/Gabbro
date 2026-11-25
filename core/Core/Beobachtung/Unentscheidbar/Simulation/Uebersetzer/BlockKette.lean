@@ -35,7 +35,7 @@ theorem blockKette (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
       ⟨hAein, hAmit, hAun, hAnr⟩ hvB ⟨hBein, hBaus, hBun, hBnr⟩
       heinFrei hausFrei hfreiMit heina n r hpc hr a ha
   · intro k r' hk hpcEnd
-    obtain ⟨j, rA, hjk, hrunA, hpcA⟩ :=
+    obtain ⟨j, rA, hjk, hrunC, hrunA, hpcA⟩ :=
       randAusEndePrefix blkA blkB hlocal hlenA hlenB r k r' hpc hk hpcEnd
     rcases hAnr n r hpc hr with ⟨hAfwd, hAbwd⟩
     obtain ⟨b, hbAeval, hrAmit, hpresA, hlokA, hrueckA, hstoppA⟩ :=
@@ -46,12 +46,13 @@ theorem blockKette (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
       congr 1
       omega
     have hkS : (Schritt (blkA ++ blkB))^[k - j] (some rA) = some r' := by
-      rw [← hkdecomp]
+      rw [hkdecomp, hrunC] at hk
       exact hk
     let rA0 : Rahmen := { rA with pc := 0 }
     have hrA0mit : rA0.temp mit = some (natVal b) := hrAmit
     have hmitA : mitPc blkA.length rA0 = rA := by
-      ext <;> simp only [mitPc, rA0] <;> omega
+      show { rA with pc := blkA.length + 0 } = rA
+      rw [show blkA.length + 0 = rA.pc by omega]
     have hkS' : (Schritt (blkA ++ blkB))^[k - j] (some (mitPc blkA.length rA0)) = some r' := by
       rw [hmitA]
       exact hkS
@@ -63,9 +64,11 @@ theorem blockKette (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
     obtain ⟨a, hbBeval, hrBaus, hpresB, hlokB, hrueckB, hstoppB⟩ :=
       hBbwd (k - j) rB hrunB hpcB
     refine ⟨a, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · change (Nat.Partrec.Code.eval cA n).bind (Nat.Partrec.Code.eval cB) = Part.some a
-      rw [hbAeval, hbBeval]
-      rfl
+    · have hres : (Nat.Partrec.Code.eval cA n).bind (fun x => Nat.Partrec.Code.eval cB x) =
+          Part.some a := by
+        apply Part.bind_eq_some_iff.mpr
+        exact ⟨b, hbAeval, hbBeval⟩
+      exact hres
     · rw [hEqEnd]
       change rB.temp aus = some (natVal a)
       exact hrBaus
