@@ -87,10 +87,8 @@ private theorem evaluate_isSome_gleich {k : Katalog} (op : Instruction k)
   | denoteAddress _ _ _ => rfl
   | selectEnvironment _ _ _ _ => rfl
   | projectAddress slot =>
-      unfold Instruction.evaluate
       rw [held_gleich hl hre hle]
   | borrowView slot shape =>
-      unfold Instruction.evaluate
       rw [held_gleich hl hre hle]
 
 /-- Inverting the low-level head: only the instruction itself runs at the entry, once. -/
@@ -120,7 +118,7 @@ private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel
 private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
     {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
     (t : Nat) {s : Ast.LowLevel.State k} (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
-  induction t with
+  induction t generalizing s with
   | zero =>
       rw [lauf.2.2.2] at hs
       simp only [unit] at hs
@@ -191,12 +189,15 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
       | schritt _ laufstep =>
           cases laufstep with
           | schritt impl =>
-              cases impl with
-              | antwort _ hantwort =>
-                  obtain ⟨angebot, _, _, _⟩ := hantwort
-                  obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
-                  have leer := unit_fragen_leer_an op lauf t hv
-                  rw [leer] at hqmem
-                  cases hqmem
+          cases impl with
+          | kontext _ _ _ _ => contradiction
+          | antwort _ hantwort =>
+              obtain ⟨angebot, _, _, _⟩ := hantwort
+              obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
+              have leer := unit_fragen_leer_an op lauf t hv
+              rw [leer] at hqmem
+              cases hqmem
+          | interrupt _ _ => contradiction
+          | absturz _ => contradiction
 
 end Gabbro.Core.Beobachtung
