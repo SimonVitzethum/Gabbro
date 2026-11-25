@@ -367,7 +367,9 @@ theorem FlushFamilienAussage_erfuellbar :
     · intro a byte present
       change (if a = 0 then some 0 else none) = some byte at present
       split at present
-      · exact Nat.pow_pos (Nat.zero_lt_succ _)
+      · rename_i atZero
+        subst a
+        exact Nat.pow_pos (Nat.zero_lt_succ _)
       · cases present
     · intro a mem
       have ha : a = 0 := List.mem_singleton.mp mem
@@ -387,19 +389,19 @@ theorem FlushFamilienAussage_erfuellbar :
         change none = some (id, phase) at ht
         cases ht
       · intro id xs ys t u ht
-        change none = some (id, .senden xs) at ht
+        change none = some (id, FlushPhase.senden xs) at ht
         cases ht
       · intro id kk t ht
-        change none = some (id, .handler kk) at ht
+        change none = some (id, FlushPhase.handler kk) at ht
         cases ht
       · intro id kk t ht
-        change none = some (id, .bestaetigen kk) at ht
+        change none = some (id, FlushPhase.bestaetigen kk) at ht
         cases ht
       · intro id t ht
-        change none = some (id, .freigeben) at ht
+        change none = some (id, FlushPhase.freigeben) at ht
         cases ht
       · intro id ziele t ht
-        change none = some (id, .senden ziele) at ht
+        change none = some (id, FlushPhase.senden ziele) at ht
         cases ht
   · exact ⟨η, valid⟩
 
@@ -442,7 +444,9 @@ theorem FlushFamilienAussage_nichtTrivial :
     · intro a byte present
       change (if a = 0 then some 0 else none) = some byte at present
       split at present
-      · exact Nat.pow_pos (Nat.zero_lt_succ _)
+      · rename_i atZero
+        subst a
+        exact Nat.pow_pos (Nat.zero_lt_succ _)
       · cases present
     · intro a mem
       have ha : a = 0 := List.mem_singleton.mp mem
@@ -466,7 +470,6 @@ theorem FlushFamilienAussage_nichtTrivial :
   have release : U.bindung.sicht.lesen (η.zeit.spur 0) = some ((0 : Nat), FlushPhase.freigeben) := by
     change decoder.lesen (η.zeit.spur 0) = some ((0 : Nat), FlushPhase.freigeben)
     rw [crash0]
-    rfl
   obtain ⟨_, _, before, _, _, _⟩ := (dies.2 η valid).freigabe 0 0 release
   omega
 
