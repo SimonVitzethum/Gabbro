@@ -196,24 +196,19 @@ theorem falsifizierbar_konfiguration :
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
-  have takt := ρ.zeit.takt 0
-  change Takt (Lauffolge E₀ hw) (KeinSchritt (Lauffolge E₀ hw)) 0 (some z) (some label) (some z') at takt
-  cases takt with
-  | schritt eq lauf =>
-      cases lauf with
-      | schritt impl =>
-          cases impl with
-          | kontext normal ready rule exec =>
-              have eq' : label = (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) := rfl
-              rw [eq'] at eq
-              cases Option.some.inj eq
-              obtain ⟨hp, hu⟩ := rule
-              cases (List.cons.inj hp).1
-              subst u
-              refine ⟨s, z, z', z', plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl,
-                rfl, rfl, konkret, rfl, rfl, rfl, rfl, ?_, ?_, ready, normal, rfl, rfl⟩
-              · change falsifizierbareImpl falsifizierbarerEintrag z () [falsifizierbarerPlan] z'
-                exact ⟨rfl, rfl⟩
-              · simpa only [z'] using exec
+  have ready : KannSchreiten hw 0 entry z := ⟨0, opportunity 0, dispatch, live⟩
+  have normal : (hw.angebot 0).crash = false := rfl
+  have implSchritt : (E₀.system.regel ()).impl entry z () [plan] z' := by
+    change falsifizierbareImpl entry z () [falsifizierbarerPlan] z'
+    exact ⟨rfl, rfl⟩
+  have exec : FuehrtSchrittAus e 0 entry z z' plan ⟨[], []⟩ z' := by
+    simpa only [z', label] using execute 0 entry z
+  have zFalsch : z.lokal entry = false := rfl
+  have z'Wahr : z'.lokal entry = true := by
+    change Function.update z.lokal entry (!z.lokal entry) entry = true
+    rw [Function.update_self, zFalsch]
+    rfl
+  refine ⟨s, z, z', z', plan, ⟨[], []⟩, ρ, admissible, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+    konkret, rfl, rfl, rfl, rfl, implSchritt, exec, ready, normal, zFalsch, z'Wahr⟩
 
 end Gabbro.Core.Ziel.Korrektheit
