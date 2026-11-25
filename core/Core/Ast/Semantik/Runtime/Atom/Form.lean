@@ -91,12 +91,13 @@ def Rahmen.weiter (r : Rahmen) : Rahmen := { r with pc := r.pc + 1 }
     observed the marker; otherwise the frame is unchanged and the instruction observes again. -/
 def Zugriffsform.uebertrag (z : Zugriffsform) (r : Rahmen) (gelesen : Int) : Rahmen :=
   match z with
-  | .lade ziel _ _ typ _ => r.bindeGelesen ziel typ gelesen
+  | .lade (ziel := ziel) (typ := typ) .. => r.bindeGelesen ziel typ gelesen
   | .speichere .. => r.weiter
-  | .tausche ziel _ _ _ typ _ => r.bindeGelesen ziel typ gelesen
-  | .vergleicheTausche ziel _ _ _ _ typ _ => r.bindeGelesen ziel typ gelesen
-  | .holeUndAddiere ziel _ _ _ typ _ => r.bindeGelesen ziel typ gelesen
-  | .erwarte ziel _ _ erwartet typ _ => if gelesen = erwartet then r.bindeGelesen ziel typ gelesen else r
+  | .tausche (ziel := ziel) (typ := typ) .. => r.bindeGelesen ziel typ gelesen
+  | .vergleicheTausche (ziel := ziel) (typ := typ) .. => r.bindeGelesen ziel typ gelesen
+  | .holeUndAddiere (ziel := ziel) (typ := typ) .. => r.bindeGelesen ziel typ gelesen
+  | .erwarte (ziel := ziel) (erwartet := erwartet) (typ := typ) .. =>
+    if gelesen = erwartet then r.bindeGelesen ziel typ gelesen else r
   | .veroeffentliche .. => r.weiter
 
 /-- Binding the value read changes only the program counter, the temporaries or the stop reason of the frame: the

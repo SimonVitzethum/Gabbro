@@ -194,13 +194,17 @@ def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) 
 /-- **The operand of an access instruction at a frame**, read from the frame it steps. -/
 def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
   match z with
-  | .lade _ region index _ _ => r.zugriffOperand region index (some 0) .tausche
-  | .erwarte _ region index _ _ _ => r.zugriffOperand region index (some 0) .tausche
-  | .speichere region index quelle _ => r.zugriffOperand region index (r.ganz quelle) .tausche
-  | .veroeffentliche region index quelle _ => r.zugriffOperand region index (r.ganz quelle) .tausche
-  | .tausche _ region index quelle _ _ => r.zugriffOperand region index (r.ganz quelle) .tausche
-  | .holeUndAddiere _ region index betrag _ _ => r.zugriffOperand region index (r.ganz betrag) .addiere
-  | .vergleicheTausche _ region index erwartet neu _ _ =>
+  | .lade (region := region) (index := index) .. => r.zugriffOperand region index (some 0) .tausche
+  | .erwarte (region := region) (index := index) .. => r.zugriffOperand region index (some 0) .tausche
+  | .speichere (region := region) (index := index) (quelle := quelle) .. =>
+    r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .veroeffentliche (region := region) (index := index) (quelle := quelle) .. =>
+    r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .tausche (region := region) (index := index) (quelle := quelle) .. =>
+    r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .holeUndAddiere (region := region) (index := index) (betrag := betrag) .. =>
+    r.zugriffOperand region index (r.ganz betrag) .addiere
+  | .vergleicheTausche (region := region) (index := index) (erwartet := erwartet) (neu := neu) .. =>
     match r.ganz erwartet with
     | some e => r.zugriffOperand region index (r.ganz neu) (.vergleiche e)
     | none => r.zugriffOperand region index none .tausche
@@ -209,14 +213,36 @@ def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
 def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   match b with
   | .zugriff form => form.operand r
-  | _ => Operand.keiner
+  | .rufe .. | .starte .. => Operand.keiner
+  | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
+  | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
+  | .binden .. | .springeWenn .. | .zuweisen .. | .zurueck .. | .springe ..
+  | .blockEnde .. | .bindeWert .. | .ende | .bindeRegion ..
+  | .definiere .. | .rueckVoid | .pruefeMass .. | .setzePasszahl ..
+  | .whileTest .. | .forAnfang .. | .forTest .. | .forNaechster .. | .zurueckSprung ..
+  | .baueArray .. | .liesArray .. | .baueTupel .. | .liesTupelfeld .. | .bindeTupel ..
+  | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
+  | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
+  | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
     ignores that value; every other instruction ignores it and evaluates at the instruction boundary. -/
 def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : Int) : Rahmen :=
   match b with
   | .zugriff form => form.uebertrag r gelesen
-  | _ => b.auswerten r live
+  | .rufe .. | .starte .. => b.auswerten r live
+  | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
+  | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
+  | .binden .. | .springeWenn .. | .zuweisen .. | .zurueck .. | .springe ..
+  | .blockEnde .. | .bindeWert .. | .ende | .bindeRegion ..
+  | .definiere .. | .rueckVoid | .pruefeMass .. | .setzePasszahl ..
+  | .whileTest .. | .forAnfang .. | .forTest .. | .forNaechster .. | .zurueckSprung ..
+  | .baueArray .. | .liesArray .. | .baueTupel .. | .liesTupelfeld .. | .bindeTupel ..
+  | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
+  | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
+  | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
 
 /-- **The step form of an instruction**: its class, operand and transfer. -/
 def Befehl.form (b : Befehl) : Schrittform := ⟨b.klasse, b.operand, b.uebertrag⟩
