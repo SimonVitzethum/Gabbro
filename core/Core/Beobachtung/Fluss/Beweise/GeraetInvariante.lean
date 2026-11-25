@@ -40,11 +40,10 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
     · intro c hc
       dsimp only [bootFor, Zustand.start] at ⊢
       rw [if_neg hc]
-      rfl
     · intro _
       refine ⟨?_, ?_⟩
       · intro _
-        simp only [hfragen, hantworten]
+        rfl
       · intro hne
         dsimp only [bootFor, Zustand.start] at hne
         rw [if_pos rfl] at hne
