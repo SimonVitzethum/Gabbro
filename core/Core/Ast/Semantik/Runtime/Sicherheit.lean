@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Pflichten
+public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Sicherheit.Regel
 
 @[expose] public section
@@ -55,6 +56,21 @@ theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
     (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
   ⟨b.sicher p platform keine h, b.antwortSicher p platform h⟩
+
+/-- **Every form carries the safety duties of its unit when the code of the unit is frame-only.** A form that is
+    not frame-only never stands at a head of a unit whose code is, so its duties are vacuous; a frame-only form pays
+    its class (`Befehl.sicherheitsPflichten`). An access instruction owes the memory legs of its class
+    (`KlassenSicherheitAussage`) and the race leg (`RennfreiAusLokalAussage`) instead. -/
+theorem Fragment.sicherheitsPflichten_alle (p : Fragment) (platform : Plattform)
+    (keine : p.klauseln.invariant = []) (rein : ∀ b ∈ p.code, b.Privat) (f : Befehl) :
+    RegelPflichten (p.sicherheitsEinheit platform) f := by
+  by_cases h : f.Privat
+  · exact f.sicherheitsPflichten p platform keine h
+  · refine ⟨?_, ?_⟩
+    · intro H ρ t c w vor zwischen nach plan spur head
+      exact absurd (rein f (kopf_mem (code := p.code) head)) h
+    · intro t c w vor zwischen nach plan spur head
+      exact absurd (rein f (kopf_mem (code := p.code) head)) h
 
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
