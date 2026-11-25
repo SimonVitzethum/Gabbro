@@ -33,7 +33,7 @@ theorem ressourcenStart_unterLade
       E.laden a p = some s → StapelZustand E s ∧ SpeicherZustand E s) :
     ressourcenStartAussage E := by
   intro h ρ lauf s cut
-  exact lade ρ.start (h.lade E.bild) (lauf.2.2.2.1.symm.trans cut)
+  exact lade ρ.start (h.lade E.bild) (lauf.2.2.2.symm.trans cut)
 
 /-- The protocol duty under its narrow premise: the recovery entry's start data meets the stack
     bound and admits no live cell on the durable booking. Answers and interrupts leave rights,
@@ -70,7 +70,7 @@ theorem ressourcenStartAussage_falsch :
     zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨ρ, lauf, startEq⟩ := lauf_ab_start startGegenEinheit (erlaubt []) zul
   have cut : ρ.zeit.zustand 0 = some (startZustand start) := by
-    rw [lauf.2.2.2.1, startEq]
+    rw [lauf.2.2.2, startEq]
     rfl
   have bounds := all startGegenEinheit lauf (startZustand start) cut
   have post := bounds.1 kontext 0 rfl
@@ -206,16 +206,8 @@ private theorem gegen_konkreter_lauf (s : AussenStart) (zul : einheit.ZulStart (
         | 0 => .schritt rfl step0
         | u + 1 => .wartet rfl rfl (still u) }
   let ρ : Lauf gegenEinheit := ⟨s, gegenHw, zeit⟩
-  have still1 : ∀ t, 1 ≤ t → ∀ st, ρ.zeit.zustand t = some st →
-      KeinSchritt (Lauffolge gegenEinheit ρ.hw) t (some st) := by
-    intro t ht st hs ev next step
-    obtain ⟨u, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (n := t) (by omega)
-    have hss : st = z2 := (Option.some.inj hs).symm
-    subst hss
-    exact still u ev next step
   refine ⟨ρ, ?_, rfl, rfl, rfl⟩
-  exact ⟨erlaubt [], gegenHw_konform, zul, rfl,
-    SchedulerFair_aus_stillstand_ab gegenEinheit ρ 1 still1⟩
+  exact ⟨erlaubt [], gegenHw_konform, zul, rfl⟩
 
 /-- The bare protocol statement is false: a crash installs recovery data outside the declared
     stack bound even though the pre-state meets it. The missing premise is

@@ -61,20 +61,8 @@ theorem toctoufrei_nichtLeer :
   have second : Lauffolge E.maschine (hardware sicht) 1 (some middle) (.kontext c (), spur₁) (some last) :=
     ausfuehren (c := c) (plan := ruhigerPlan) ⟨1, rfl, rfl, rfl⟩
       (show form c middle [ruhigerPlan] last from ⟨rfl, rfl, rfl, rfl⟩) execute
-  let tail := Maschine.fairerZeitAb E.maschine (hardware sicht) (some last) 2
-  have h1' : Maschine.Lauffolge E.maschine (hardware sicht) 1 (some middle) (.kontext c (), spur₁)
-      (tail.zustand 0) := second
-  have h0' : Maschine.Lauffolge E.maschine (hardware sicht) 0 (some z) (.antwort arrival, spur₀)
-      (some middle) := first
-  let zeit := voran2 tail (some middle) (.kontext c (), spur₁) h1'
-    (some z) (.antwort arrival, spur₀) h0'
-  have boot : zeit.zustand 0 = some z := rfl
-  have between : zeit.zustand 1 = some middle := rfl
-  have lab : zeit.spur 1 = some (.kontext c (), spur₁) := rfl
-  have after : zeit.zustand 2 = some last := rfl
-  have fair : ∀ a, Maschine.SchedulerFair E.maschine ⟨a, hardware sicht, zeit⟩ := fun a =>
-    voran2_fair h1' h0' (Maschine.fairerZeitAb_fair E.maschine (hardware sicht) (some last) 2 a)
-  obtain ⟨bootStart, run⟩ := laeuft zeit boot fair
+  obtain ⟨zeit, boot, _, between, lab, after⟩ := praefix_erfuellbar first second
+  obtain ⟨bootStart, run⟩ := laeuft zeit boot
   let ρ : Lauf E := ⟨bootStart, hardware sicht, zeit⟩
   refine ⟨E, _, ρ, run, fun safe => ?_⟩
   obtain ⟨neu, journal, effects⟩ := (safe.2 1 middle spur₁ last ⟨between, ⟨_, lab⟩, after⟩).2

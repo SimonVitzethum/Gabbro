@@ -82,7 +82,7 @@ theorem simTrennt : SimTrenntAussage := by
   have loaded : ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild) = some z := by
     change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
     rw [← ρstart]
-    exact (ρz0.symm.trans konkret.2.2.2.1).symm
+    exact (ρz0.symm.trans konkret.2.2.2).symm
   have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
     change falsifizierbarerHw.gelegenheit 0 0
     exact congrArg some (Nat.mod_one 0)
@@ -117,17 +117,10 @@ theorem simTrennt : SimTrenntAussage := by
     takt := fun
       | 0 => .schritt rfl (.schritt privateStep)
       | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ETrenn t z) }⟩
-  have stillT : ∀ t, 1 ≤ t → ∀ s, ρT.zeit.zustand t = some s →
-      KeinSchritt (Lauffolge ETrenn ρT.hw) t (some s) := by
-    intro t ht s hs ev next step
-    obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (n := t) (by omega)
-    have hss : s = z := (Option.some.inj hs).symm
-    subst hss
-    exact falsifizierbares_letztesAngebot_konkret ETrenn m z ev next step
   have runT : Maschine.Laeufe ETrenn falsifizierbareUmgebung ρT :=
     ⟨konkret.1, konformLetztes, zul, by
       change some z = ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild)
-      exact loaded.symm, SchedulerFair_aus_stillstand_ab ETrenn ρT 1 stillT⟩
+      exact loaded.symm⟩
   let η₂ : I.Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => z
     spur := fun _ => none
@@ -248,7 +241,7 @@ theorem simRefutierbar : SimRefutierbarAussage := by
   have loaded : ERef.laden s (falsifizierbareUmgebung.lade ERef.bild) = some z := by
     change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
     rw [← ρstart]
-    exact (ρz0.symm.trans konkret.2.2.2.1).symm
+    exact (ρz0.symm.trans konkret.2.2.2).symm
   have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
     change falsifizierbarerHw.gelegenheit 0 0
     exact congrArg some (Nat.mod_one 0)

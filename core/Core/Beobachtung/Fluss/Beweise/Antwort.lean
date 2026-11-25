@@ -83,7 +83,7 @@ theorem antwort_fragen_leer (p : Fragment) (plattform : Plattform)
   intro t
   induction t with
   | zero =>
-      rw [lauf.2.2.2.1]
+      rw [lauf.2.2.2]
       have ladenEq : (p.einheit plattform).laden =
           Gabbro.Core.Ast.Semantik.laden p.eingang p.eintritte p.speicher plattform := rfl
       rw [ladenEq]

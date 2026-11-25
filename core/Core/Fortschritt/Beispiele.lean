@@ -165,7 +165,7 @@ theorem pos_deadlockfrei : DeadlockFrei (E := E_w dispatch1) η1 := by
 theorem pos_starvationfrei : StarvationFrei (E := E_w dispatch1) ρ1 η1 := by
   intro c hhang
   obtain ⟨-, a, f, hopen, hen⟩ := hhang
-  obtain ⟨k, hdisp⟩ := hopen.1 a (Nat.le_refl _)
+  obtain ⟨k, hdisp⟩ := hopen.1
   rw [η1_zustand, z1_kerne] at hdisp
   have hdis : dispatch1 k = some c := hdisp
   cases k with

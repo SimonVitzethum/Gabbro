@@ -225,44 +225,7 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let z₄ := (Befehl.binaer .mul 1).nach eintritt z₃
   let z₅ := (Befehl.binaer .add 0).nach eintritt z₄
   let z₆ := (Befehl.binden name 0).nach eintritt z₅
-  have z6kopf : ∀ c, E.maschine.system.kopf z₆ c = none := by
-    intro c
-    by_cases hc : c = Ast.Semantik.eintritt
-    · subst hc
-      rfl
-    · have hst : z₆.status c = .ruht := by
-        show (if c = Ast.Semantik.eintritt then Status.laeuft else Status.ruht) = _
-        rw [if_neg hc]
-      change Ast.Semantik.kopf _ z₆ c = none
-      simp only [Ast.Semantik.kopf, hst]
-  have z6fragen : z₆.fragen = [] := by rfl
-  have hwRuhig (t : Nat) : (hw.angebot t).interrupts = [] := rfl
-  have hwKeinAbsturz (t : Nat) : (hw.angebot t).crash = false := rfl
-  have keinAb6 : ∀ t, KeinSchritt (Lauffolge E.maschine hw) (t + 6) (some z₆) := by
-    intro t event next step
-    cases step with
-    | schritt step =>
-      cases step with
-      | kontext _ _ regel _ =>
-        obtain ⟨_, kopf, _⟩ := regel
-        rw [z6kopf _] at kopf
-        cases kopf
-      | antwort _ arrives =>
-        have hq := arrives.1.2.2.2.1
-        obtain ⟨q, hmem, _⟩ := hq
-        rw [z6fragen] at hmem
-        exact List.not_mem_nil hmem
-      | interrupt _ enters =>
-        obtain ⟨_, _, _, _, _, haus, _⟩ := enters
-        have hinter := haus.2.2.1
-        rw [hwRuhig _] at hinter
-        simp only [List.getElem?_nil, reduceCtorEq] at hinter
-      | absturz crash => exact Bool.false_ne_true (hwKeinAbsturz _ |>.symm.trans crash.1.2)
-  let rest : Zeitlauf (fun t => Lauffolge E.maschine hw (t + 6)) :=
-    { zustand := fun _ => some z₆
-      spur := fun _ => none
-      takt := fun t => .wartet rfl rfl (keinAb6 t) }
-  have ende : rest.zustand 0 = some z₆ := rfl
+  obtain ⟨rest, ende⟩ := Zeitlauf.existiert (fun t => Lauffolge E.maschine hw (t + 6)) (some z₆)
   have s₀ := arithmetik_schritt p platform hw 0 z₀ (.literal 0 1) rfl ⟨0, rfl, rfl, rfl⟩ rfl
   have s₁ := arithmetik_schritt p platform hw 1 z₁ (.literal 1 2) rfl ⟨0, rfl, rfl, rfl⟩ rfl
   have s₂ := arithmetik_schritt p platform hw 2 z₂ (.literal 2 3) rfl ⟨0, rfl, rfl, rfl⟩ rfl
@@ -277,19 +240,11 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let abEins := voran (schritt := fun t => schritt (t + 1)) abZwei (some z₁) _ s₁
   let zeit := voran (schritt := schritt) abEins (some z₀) _ s₀
   let ρ : Lauf E := ⟨start, hw, zeit⟩
-  have still6 : ∀ t, 6 ≤ t → ∀ s, ρ.zeit.zustand t = some s →
-      KeinSchritt (Lauffolge E.maschine hw) t (some s) := by
-    intro t ht s hs ev next step
-    obtain ⟨m, rfl⟩ : ∃ m, t = m + 6 := ⟨t - 6, by omega⟩
-    have hss : s = z₆ := (Option.some.inj hs).symm
-    subst hss
-    exact keinAb6 m ev next step
   have rein : ∀ b ∈ p.code, b.Privat := stmt_rein tree
   exact ⟨E, H, ρ, arithmetik_grenzen platform tab leer leerStart,
     fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).2,
     fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).1,
-    ⟨fair.hardware, fair.konform, admissible, geladen.symm,
-      SchedulerFair_aus_stillstand_ab E.maschine ρ 6 still6⟩,
+    ⟨fair.hardware, fair.konform, admissible, geladen.symm⟩,
     z₆, ⟨7, Int.le_refl _, Int.le_refl _⟩, ende, rfl, rfl⟩
 
 /-- Every concrete run of a checker-accepted frame-only fragment with predicate invariants

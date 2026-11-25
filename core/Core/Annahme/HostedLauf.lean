@@ -257,15 +257,7 @@ theorem konkreter_lauf {s : AussenStart} (zul : einheit.ZulStart (umgebung []) s
       (.antwort (angekommen s bytes), antwortSpur s bytes) (some (fertig s bytes g g')) :=
     .schritt (.antwort rfl reply)
   let ρ : Lauf einheit := ⟨s, hardware bytes, dreiTakte h₀ h₁ h₂ (fun t => konkret_still (t + 3))⟩
-  have fair : SchedulerFair einheit ρ := by
-    intro a c dle _ n hn
-    obtain ⟨z, eq, _, live, _, _, _, _, _, _, _, _⟩ := dle (a + 3) (Nat.le_add_right _ _)
-    have hzustand : ρ.zeit.zustand (a + 3) = some (fertig s bytes g g') := rfl
-    have same : z = fertig s bytes g g' := Option.some.inj (eq.symm.trans hzustand)
-    subst same
-    change Status.ruht = Status.laeuft at live
-    cases live
-  exact ⟨ρ, g, g', ⟨erlaubt bytes, konform bytes, gleicher_start zul bytes, rfl, fair⟩,
+  exact ⟨ρ, g, g', ⟨erlaubt bytes, konform bytes, gleicher_start zul bytes, rfl⟩,
     rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun _ => rfl⟩
 
 end Gabbro.Core.Annahme.Hosted

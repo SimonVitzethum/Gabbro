@@ -19,7 +19,7 @@ def letztesAngebot (hw : HwLauf) : HwLauf :=
     | _ + 1 => ⟨none, fun _ => false, [], fun _ => false, false, false, (hw.angebot 0).cycles⟩),
     hw.politik⟩
 
-theorem letztesAngebot_konform {k h hw} (valid : HwLauf.konform k h hw) :
+private theorem letztesAngebot_konform {k h hw} (valid : HwLauf.konform k h hw) :
     (letztesAngebot hw).konform k h := by
   refine ⟨valid.1, fun t => ?_⟩
   cases t with
@@ -76,21 +76,6 @@ private theorem hoechstens_eine_markierung (markiert : Nat → Bool)
       change zaehle markiert a (n + 1) + (if markiert ((a + n) + 1) then 1 else 0) ≤
         if markiert a then 1 else 0
       simpa only [spaeter, Bool.false_eq_true, ite_false, Nat.add_zero] using ih
-
-/-- Scheduler fairness holds vacuously on a last-offer history: opportunities exist
-    at tick zero at most, so no context has infinitely many of them. -/
-theorem letztesAngebot_fair {hw : HwLauf} (s : AussenStart)
-    (zeit : Zeitlauf (Lauffolge E (letztesAngebot hw))) :
-    SchedulerFair E ⟨s, letztesAngebot hw, zeit⟩ := by
-  intro a c _ oppd n hn
-  obtain ⟨t, ht, k, opp, _⟩ := oppd (a + 1) (Nat.le_succ _)
-  cases t with
-  | zero => exact absurd ht (by omega)
-  | succ t =>
-    unfold HwLauf.gelegenheit at opp
-    have keine : ((letztesAngebot hw).angebot (t + 1)).core = none := rfl
-    rw [keine] at opp
-    cases opp
 
 /-- A single private transition can consume the last hardware opportunity
     while an ideal step is possible. Both runs remain maximal and finite.
@@ -198,8 +183,7 @@ theorem lauf_mit_letztem_privattakt {h : Umgebung} {s : AussenStart} {hw : HwLau
           subst g
           simpa only [mark, decide_true, ite_true] using allowed
         · simpa only [decide_eq_false mark, Bool.false_eq_true, ite_false] using Nat.zero_le (E.stotterLaenge g)
-  have fair : Maschine.SchedulerFair E ρ := letztesAngebot_fair s ρ.zeit
-  exact ⟨ρ, η, ⟨hardware, konform, zul, loaded.symm, fair⟩, ideal, matched, unfair,
+  exact ⟨ρ, η, ⟨hardware, konform, zul, loaded.symm⟩, ideal, matched, unfair,
     (matched.endlich ideal).mpr idealFinite, idealFinite, bound, rfl, rfl, fun _ => rfl, enabled, rfl, rfl⟩
 
 end Gabbro.Core.Maschine.I

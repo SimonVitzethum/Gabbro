@@ -30,7 +30,7 @@ private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E
     obtain ⟨w, spur, event, _⟩ := ticks t
     exact ⟨w, spur, event⟩
   · intro _ a c f opened _ _ _
-    obtain ⟨k, running⟩ := opened.1 a (Nat.le_refl _)
+    obtain ⟨k, running⟩ := opened.1
     cases dispatch a k c running
     obtain ⟨w, spur, _, event⟩ := ticks a
     exact ((opened.2 a (Nat.le_refl _)).2.2 (Or.inl ⟨w, spur, event⟩)).elim
@@ -182,22 +182,7 @@ theorem fortschritt_erfuellbar :
     zustand := fun t => some (zustand t)
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
-  have fairLauf : SchedulerFair E₀ ρ := by
-    intro a c dle oppd n hn
-    obtain ⟨x, eq, disp, _, _, _, _, _, _, _, _, _⟩ := dle (max n a) (Nat.le_max_right _ _)
-    have xeq : x = zustand (max n a) := Option.some.inj eq.symm
-    subst xeq
-    rw [(protocol (max n a)).1] at disp
-    obtain ⟨j, running⟩ := disp
-    have centry : c = entry := by
-      change (if j = s.bootCore then some entry else none) = some c at running
-      split at running
-      · exact (Option.some.inj running).symm
-      · cases running
-    subst centry
-    obtain ⟨t, ht, _, _, _, _, _⟩ := oppd n hn
-    exact ⟨t, ht, (), ⟨[], []⟩, rfl⟩
-  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl, fairLauf⟩
+  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
   obtain ⟨η, ideal, matched, checked, env⟩ := laufabgleich abgleich konkret
   have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched checked)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung

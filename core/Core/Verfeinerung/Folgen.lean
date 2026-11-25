@@ -20,7 +20,7 @@ theorem AbgleichPflichten.sicherheit_am_schnitt (pflicht : AbgleichPflichten E)
     {h : Umgebung} (run : Maschine.Laeufe E h ρ) (k : Maschine.Schnitt E ρ) :
     ∃ z, ρ.zeit.zustand k.val = some z ∧ z.SpeicherGut ∧ z.Verbrauch := by
   obtain ⟨z, loaded, related⟩ := pflicht.laden h ρ.start run.1 run.2.2.1
-  exact speicher_verbrauch_im_lauf ⟨z, run.2.2.2.1.trans loaded, related.1⟩ k.val
+  exact speicher_verbrauch_im_lauf ⟨z, run.2.2.2.trans loaded, related.1⟩ k.val
 
 /-- At the image of each concrete cut, the ideal state is the state at that
     hardware tick, even if the most recent ideal transition was earlier. -/

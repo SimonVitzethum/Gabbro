@@ -80,7 +80,7 @@ theorem interruptNI : InterruptNIAussage := by
       exact ruht₁
     have init₂ : ∃ z, ρ₂.zeit.zustand 0 = some z ∧ I.ProtokollBezug z (I.start E ρ₂.start).2 := by
       refine ⟨(I.start E ρ₂.start).2, ?_, I.ProtokollBezug.refl _⟩
-      rw [vergleich.rechts.2.2.2.1]
+      rw [vergleich.rechts.2.2.2]
       exact fragment_geladen p plattform vergleich.rechts.1 vergleich.rechts.2.2.1
     obtain ⟨wGut, atW, gutW, _⟩ := speicher_verbrauch_im_lauf (E := E) init₂ t
     have wGl : wGut = v₂ := Option.some.inj (atW.symm.trans zustand₂)

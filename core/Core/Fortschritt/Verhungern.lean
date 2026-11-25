@@ -186,8 +186,7 @@ theorem bereit_B (t : Nat) (_ : 0 ≤ t) : I.Bereit (E := E_w dispatch2) (ZAB t)
 
 /-- `B` hangs on the fair schedule: dispatched, open, enabled, never discharged. -/
 theorem hang_B : I.Haengt (E_w dispatch2) ρAB ηAB B := by
-  refine ⟨fair2, 0, (), ⟨fun t _ => ⟨1, by rw [ηAB_zustand, zAB_kerne]; exact zAB0_dispatch1⟩,
-    fun t _ => ⟨rfl, by rw [ηAB_zustand, zAB_status]; exact zAB0_live _, ?_⟩⟩, Or.inl ?_⟩
+  refine ⟨fair2, 0, (), ⟨⟨1, rfl⟩, fun t _ => ⟨rfl, by rw [ηAB_zustand, zAB_status]; exact zAB0_live _, ?_⟩⟩, Or.inl ?_⟩
   · intro herl
     exact nie_erledigt_B t herl
   · intro t _

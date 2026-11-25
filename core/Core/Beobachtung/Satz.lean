@@ -51,7 +51,7 @@ theorem anfangsbeob (ρ : Lauf E) (h : Umgebung) (lauf : Laeufe E h ρ) (p : Pra
       [match LaderSicht E h ρ.start with
         | none => .ladefehler
         | some inhalt => .anfangsspeicher inhalt] := by
-  simp only [NiedrigeBeob, NiedrigeBeob.praefix, lauf.2.2.2.1, LaderSicht]
+  simp only [NiedrigeBeob, NiedrigeBeob.praefix, lauf.2.2.2, LaderSicht]
   cases E.laden ρ.start (h.lade E.bild) <;> rfl
 
 theorem anfang_aus_lader (pflicht : LaderNIPflicht E) {h₁ h₂ ρ₁ ρ₂}

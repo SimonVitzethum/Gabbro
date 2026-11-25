@@ -117,12 +117,7 @@ noncomputable def buendelUnterZulStart (B : Zufallsbindung) (S : Scheduler)
   let zeit := Classical.choose rest
   have init := Classical.choose_spec rest
   let ρ : Maschine.Lauf E := ⟨s, hw, zeit⟩
-  have keine : ∀ t k, ¬ hw.gelegenheit t k := fun t k h => nomatch h
-  have fair : Maschine.SchedulerFair E ρ := by
-    intro a c _ oppd n hn
-    obtain ⟨t, _, k, opp, _⟩ := oppd n hn
-    exact (keine t k opp).elim
-  have zulaessig : Maschine.Laeufe E h ρ := ⟨hardware, konform, zul, init, fair⟩
+  have zulaessig : Maschine.Laeufe E h ρ := ⟨hardware, konform, zul, init⟩
   have spurKein (t : Nat) : ρ.zeit.spur t = none := by
     change zeit.spur t = none
     exact idlerHwlauf_zeitPause E h s hardware zul zeit init t

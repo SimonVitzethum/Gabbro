@@ -109,16 +109,8 @@ open Laufkonstruktion ZweiSchreiber
 /-- A real write through an allocated object's previous generation violates memory safety. -/
 theorem speichersicher_nichtLeer :
     ∃ (E : Modell) (H : Umgebung) (ρ : Lauf E), Maschine.Laeufe E.maschine H ρ ∧ ¬ Speichersicher E H ρ := by
-  let tail := Maschine.fairerZeitAb (E 0).maschine (hardware leer) (some (nach₀ 0)) 1
-  have h0' : Maschine.Lauffolge (E 0).maschine (hardware leer) 0 (some (vor 0))
-      (.kontext (.faden 0) (), spur₀) (tail.zustand 0) := schritt₀ 0
-  let zeit := voran tail (some (vor 0)) (.kontext (.faden 0) (), spur₀) h0'
-  have boot : zeit.zustand 0 = some (vor 0) := rfl
-  have lab : zeit.spur 0 = some (.kontext (.faden 0) (), spur₀) := rfl
-  have after : zeit.zustand 1 = some (nach₀ 0) := rfl
-  have fair : ∀ a, Maschine.SchedulerFair (E 0).maschine ⟨a, hardware leer, zeit⟩ := fun a =>
-    voran1_fair h0' (Maschine.fairerZeitAb_fair (E 0).maschine (hardware leer) (some (nach₀ 0)) 1 a)
-  obtain ⟨a, run⟩ := laeuft zeit boot fair
+  obtain ⟨zeit, boot, lab, after⟩ := schritt_erfuellbar (schritt₀ 0)
+  obtain ⟨a, run⟩ := laeuft zeit boot
   let ρ : Lauf (E 0) := ⟨a, hardware leer, zeit⟩
   refine ⟨_, _, ρ, run, fun safe => ?_⟩
   have h := (safe.2 0 (vor 0) spur₀ (nach₀ 0) ⟨boot, ⟨_, lab⟩, after⟩).1 1 (.kontext (.faden 0))
@@ -131,19 +123,8 @@ theorem speichersicher_nichtLeer :
 /-- Two implementation threads really append plain writes to the same location, with no hb edge. -/
 theorem rennfrei_nichtLeer :
     ∃ (E : Modell) (H : Umgebung) (ρ : Lauf E), Maschine.Laeufe E.maschine H ρ ∧ ¬ Rennfrei E H ρ := by
-  let tail := Maschine.fairerZeitAb (E 1).maschine (hardware leer) (some (nach₁ 1)) 2
-  have h1' : Maschine.Lauffolge (E 1).maschine (hardware leer) 1 (some (nach₀ 1))
-      (.kontext (.faden 1) (), spur₁) (tail.zustand 0) := schritt₁ 1
-  have h0' : Maschine.Lauffolge (E 1).maschine (hardware leer) 0 (some (vor 1))
-      (.kontext (.faden 0) (), spur₀) (some (nach₀ 1)) := schritt₀ 1
-  let zeit := voran2 tail (some (nach₀ 1)) (.kontext (.faden 1) (), spur₁) h1'
-    (some (vor 1)) (.kontext (.faden 0) (), spur₀) h0'
-  have boot : zeit.zustand 0 = some (vor 1) := rfl
-  have lab : zeit.spur 1 = some (.kontext (.faden 1) (), spur₁) := rfl
-  have after : zeit.zustand 2 = some (nach₁ 1) := rfl
-  have fair : ∀ a, Maschine.SchedulerFair (E 1).maschine ⟨a, hardware leer, zeit⟩ := fun a =>
-    voran2_fair h1' h0' (Maschine.fairerZeitAb_fair (E 1).maschine (hardware leer) (some (nach₁ 1)) 2 a)
-  obtain ⟨a, run⟩ := laeuft zeit boot fair
+  obtain ⟨zeit, boot, _, _, lab, after⟩ := praefix_erfuellbar (schritt₀ 1) (schritt₁ 1)
+  obtain ⟨a, run⟩ := laeuft zeit boot
   let ρ : Lauf (E 1) := ⟨a, hardware leer, zeit⟩
   refine ⟨_, _, ρ, run, fun safe => ?_⟩
   let cut : Maschine.Schnitt (E 1).maschine ρ := ⟨2, Or.inr ⟨1, _, rfl, lab⟩⟩

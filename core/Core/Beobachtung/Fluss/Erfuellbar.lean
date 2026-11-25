@@ -27,14 +27,11 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) (priv : f.Privat) :
   let vor := (I.start E s).2
   let nach := f.nach eintritt vor
   let event : SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int := (.kontext eintritt (), ⟨[], []⟩)
-  -- A single-offer history keeps the tick-zero step and rules out later opportunities,
-  -- so scheduler fairness holds vacuously over the arbitrary tail.
-  let hw' := I.letztesAngebot hw
-  have schritt : Lauffolge E hw' 0 (some vor) event (some nach) :=
+  have schritt : Lauffolge E hw 0 (some vor) event (some nach) :=
     .schritt (.kontext normal bereit ⟨f, kopf, transfer⟩ vollzug)
-  obtain ⟨rest, anfang⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw' (t + 1)) (some nach)
+  obtain ⟨rest, anfang⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw (t + 1)) (some nach)
   let ρ : Lauf E :=
-    ⟨s, hw', {
+    ⟨s, hw, {
       zustand := fun | 0 => some vor | t + 1 => rest.zustand t
       spur := fun | 0 => some event | t + 1 => rest.spur t
       takt := by
@@ -42,16 +39,14 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) (priv : f.Privat) :
         cases t with
         | zero =>
           refine .schritt rfl ?_
-          change Lauffolge E hw' 0 (some vor) event (rest.zustand 0)
+          change Lauffolge E hw 0 (some vor) event (rest.zustand 0)
           rw [anfang]
           exact schritt
         | succ t =>
           cases rest.takt t with
           | schritt label schritt => exact .schritt label schritt
           | wartet label gleich pause => exact .wartet label gleich pause }⟩
-  have lauf : Laeufe E h ρ :=
-    ⟨hardware, I.letztesAngebot_konform konform, zul,
-      (fragment_geladen p .x86_64 hardware zul).symm, I.letztesAngebot_fair s ρ.zeit⟩
+  have lauf : Laeufe E h ρ := ⟨hardware, konform, zul, (fragment_geladen p .x86_64 hardware zul).symm⟩
   have vergleich : Vergleich E h h ρ ρ := ⟨lauf, lauf, rfl, rfl, rfl⟩
   have quelle := fragment_fluss_lokal p .x86_64 (fun b hb => by
     rw [List.mem_singleton.mp hb]

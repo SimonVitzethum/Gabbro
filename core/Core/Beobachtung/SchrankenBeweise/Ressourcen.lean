@@ -48,7 +48,7 @@ theorem ressourcenRegelAussage_falsch :
     spur0, spur1, spur2, idle⟩ := konkreter_lauf zul []
   let ρ' := laufGegen ρ
   have lauf' : Laeufe gegenEinheit (umgebung []) ρ' :=
-    ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2.1, lauf.2.2.2.2⟩
+    ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2⟩
   have cut0' : ρ'.zeit.zustand 0 = some (startZustand start) := cut0
   have spur0' : ρ'.zeit.spur 0 = some (.kontext kontext (), ⟨[], []⟩) := spur0
   have cut1' : ρ'.zeit.zustand 1 = some (binde (startZustand start)) := cut1
