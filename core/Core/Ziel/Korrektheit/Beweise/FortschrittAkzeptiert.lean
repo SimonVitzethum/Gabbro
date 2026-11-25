@@ -381,57 +381,47 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  have h1 : s.kerne = ((z.antwort _).kerne) := by rw [hstate]
-                  have h2 : ((z.antwort _).kerne) = z.kerne := rfl
-                  exact h1.trans h2
+                  rw [hstate]
                 rw [skerne]
                 exact ih z hz
               | interrupt _ enters =>
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
-                    (Maschine.Zustandseintritt z k' _ c' nmi).kerne :=
-                  congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
-                have einkern : ∀ k, (Maschine.Zustandseintritt z k' _ c' nmi).kerne k =
-                    if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
-                  intro k
-                  by_cases heq : k = k'
-                  · subst heq
-                    show Function.update _ _ _ _ = _
-                    rw [Function.update_self]
-                  · show Function.update _ _ _ _ = _
-                    rw [Function.update_of_ne heq]
+                    Function.update z.kerne k' ((z.kerne k').unterbrechen c' nmi) := by
+                  rw [hstate]
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, einkern] at h
+                · rw [skerne] at h
                   by_cases heq : k = k'
                   · subst heq
-                    simp only [if_true] at h
+                    rw [Function.update_self] at h
                     have hdispatch : ((z.kerne k').unterbrechen c' nmi).laeuft
                         = some c' := rfl
                     rw [hdispatch] at h
                     have hc' : c = c' := Option.some.inj h
                     subst hc'
                     exact hkk
-                  · simp only [if_neg heq] at h
+                  · rw [Function.update_of_ne heq] at h
                     exact ihd k c h
-                · rw [skerne, einkern] at h
+                · rw [skerne] at h
                   by_cases heq : k = k'
                   · subst heq
-                    simp only [if_true] at h
+                    simp only [Function.update_self, Maschine.KernZustand.unterbrechen] at h
                     cases List.mem_cons.mp h with
                     | inl htop =>
                       obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
                       exact ihd k' c hc
                     | inr hrest =>
                       exact ihs k' w m hrest c hc
-                  · simp only [if_neg heq] at h
+                  · rw [Function.update_of_ne heq] at h
                     exact ihs k w m h c hc
               | absturz crash =>
                 obtain ⟨_, heq⟩ := crash.genau
                 have skernew : s.kerne =
                     (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                      (Maschine.nachAbsturz z.persistenz)).kerne := congrArg _ heq
-                rw [wkern, weintritt] at *
+                      (Maschine.nachAbsturz z.persistenz)).kerne := by
+                  rw [heq]
+                rw [wkern, weintritt] at skernew
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skernew] at h
                   have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
