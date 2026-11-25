@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
+public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
 
@@ -152,6 +153,26 @@ def kopf (code : List Befehl) (s : Zustand) (c : Kontext) : Option Befehl :=
     | none => if (s.lokal c).stopp.isNone then code[(s.lokal c).pc]? else none
     | some _ => none
   | .beendet _ => none
+
+/-- The frame transfer preserves memory content: it touches only the acting frame. -/
+theorem Befehl.nach_initial (b : Befehl) (c : Kontext) (s : Zustand) :
+    (b.nach c s).initial = s.initial := rfl
+
+/-- The write footprint is sound against the frame transfer: outside it, memory content is
+    unchanged. Vacuous today (every footprint is empty); MK-04 proves the conditional from
+    the memory rules. -/
+theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Zelle)
+    (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
+  congrFun (b.nach_initial c s) z
+
+/-- Preservation across the frame transfer for predicates whose observed cells the command
+    does not write. -/
+theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
+    (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
+  intro hq
+  exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
+
+
 
 def system (code : List Befehl) : LokalSystem :=
   ⟨Befehl.regel, kopf code, fun s c => kopf code s c = none, fun _ _ _ => False⟩

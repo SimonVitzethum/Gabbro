@@ -147,8 +147,7 @@ theorem arrayTypeErhaltung : ArrayTypeErhaltungAussage := by
 
 theorem arrayTypeRegelSicher : ArrayTypeRegelSicherAussage := by
   intro ctx platform args
-  exact Befehl.sicher ((typeUseForm ctx arrayTypeUse).fragment args) platform
-    (arrayType_keine_invarianten ctx args) ((typeUseForm ctx arrayTypeUse).befehl args)
+  exact Befehl.sicher ((typeUseForm ctx arrayTypeUse).fragment args) platform [] (tabLeer _ (arrayType_keine_invarianten ctx args)) (fun b _ => rfl) ((typeUseForm ctx arrayTypeUse).befehl args)
 
 theorem arrayTypeErfuellbarAm : ArrayTypeErfuellbarAmAussage := by
   intro platform start

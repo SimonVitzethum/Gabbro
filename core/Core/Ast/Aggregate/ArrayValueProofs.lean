@@ -274,8 +274,7 @@ theorem arrayValueErhaltung : ArrayValueErhaltungAussage := by
 
 theorem arrayValueRegelSicher : ArrayValueRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((arrayValueForm scope).fragment args) platform
-    (arrayValue_keine_invarianten scope args) ((arrayValueForm scope).befehl args)
+  exact Befehl.sicher ((arrayValueForm scope).fragment args) platform [] (tabLeer _ (arrayValue_keine_invarianten scope args)) (fun b _ => rfl) ((arrayValueForm scope).befehl args)
 
 theorem arrayValueErfuellbarAm : ArrayValueErfuellbarAmAussage := by
   intro platform start

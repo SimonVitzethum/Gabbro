@@ -29,12 +29,15 @@ def LinkAkzeptanzAussage : Prop :=
 theorem linkAkzeptanz : LinkAkzeptanzAussage :=
   fun _ => Iff.rfl
 
-/-- The defining module: defines the function `main` with an empty body. -/
+/-- The defining module: defines the function `main` with an empty body and ends.
+    The trailing `ende` seals the module: without it the definition would fall
+    through into the next module. -/
 def modulDef : Modul :=
   { name := "a"
-    fragment := (Fragment.einzel
+    fragment := ((Fragment.einzel
       (Befehl.definiere mainName [] none 0 2 false [] none)).anhaengen
-      (Fragment.einzel Befehl.rueckVoid)
+      (Fragment.einzel Befehl.rueckVoid)).anhaengen
+      (Fragment.einzel Befehl.ende)
     exporte := ["main"]
     importe := [] }
 
@@ -67,7 +70,11 @@ def LinkErfuellbarAussage : Prop :=
     Akzeptiert (frag.einheit plan.plattform)
 
 /-- The link check holds for the example plan. -/
-theorem beispielOk : bauplanOk beispielPlan = true :=
+theorem beispielOk : bauplanOk beispielPlan = true := by
+  rfl
+
+/-- The example plan is sealed. -/
+theorem beispielAbgeschottet : kontrollflussAbgeschottet beispielPlan = true := by
   rfl
 
 /-- Linking the example plan yields the concatenated fragments. -/
@@ -78,9 +85,9 @@ theorem beispielLinke : linke beispielPlan = some beispielFragment :=
 theorem beispielZwei : beispielPlan.module.length = 2 :=
   rfl
 
-/-- The example code is the three instructions. -/
+/-- The example code is the four instructions. -/
 theorem beispielCode : beispielFragment.code =
-    [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid,
+    [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende,
       Befehl.rufe mainName [] none] := by
   rfl
 
@@ -92,12 +99,12 @@ theorem beispielKlauseln : beispielFragment.klauseln = .leer := by
 theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (frame : Rahmen) :
     b.guard frame = none := by
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl | rfl <;> rfl
 
 /-- Every instruction of the example is frame-only. -/
 theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+  rcases present with rfl | rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
 
 /-- The example's linked unit is accepted. -/
 theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.plattform) := by
@@ -113,7 +120,7 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
     exact List.mem_cons_self
   · refine ⟨[], none, ?_⟩
     rw [beispielCode]
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
 
 /-- Linking succeeds exactly when the declarative check holds, with the concatenated fragments. -/
 theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
@@ -207,16 +214,16 @@ theorem modulDef_klauseln : modulDef.fragment.klauseln = .leer :=
 theorem modulDef_guard (b : Befehl) (present : b ∈ modulDef.fragment.code) (frame : Rahmen) :
     b.guard frame = none := by
   have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid] := rfl
+      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende] := rfl
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl <;> rfl
 
 /-- The defining module uses only frame-only instructions. -/
 theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.Privat := by
   have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid] := rfl
+      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende] := rfl
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
 
 /-- The defining module alone is accepted. -/
 theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by
