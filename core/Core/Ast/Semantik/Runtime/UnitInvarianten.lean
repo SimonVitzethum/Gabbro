@@ -46,7 +46,8 @@ def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : 
 
 theorem sicherheitsEinheit_invarianten (u : UnitMitInvarianten) (platform : Plattform) :
     ((programmMitInvarianten u).sicherheitsEinheit platform).invarianten =
-      u.invarianten.map fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand) := rfl
+      (u.invarianten.map Pruefung.Praedikat.gilt).map
+        fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand) := rfl
 
 /-- The declared part of `InvariantenAmSchnitt`: every tabled invariant holds outside its
     writers. -/
@@ -63,7 +64,7 @@ def DeklariertHalten
 def InvariantenSicherheitAussage (P : Plattform) : Prop :=
   ∀ (u : UnitMitInvarianten),
     pruefeEinheit (programmMitInvarianten u) u.invarianten = true →
-    ∀ (H : Umgebung) (ρ : Sicherheit.Lauf ((programmMitInvarianten u).sicherheitsEinheit P)),
+    ∀ (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf ((programmMitInvarianten u).sicherheitsEinheit P)),
       Laeufe (elaborierenMitInvarianten P u).maschine H ρ →
         Speichersicher ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
         InvariantenErhalten ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
