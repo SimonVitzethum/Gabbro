@@ -10,6 +10,8 @@ public import Core.Text.Model
 public import Core.Text.Review.Befunde
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Litmus.Wrc
+public import Core.Speicher.Litmus.Isa2
 public import Core.Speicher.Litmus.Mp
 public import Core.Speicher.Litmus.Lb
 public import Core.Speicher.Review.Befunde
@@ -34,12 +36,15 @@ public import Core.Fortschritt.WarteBundle
 public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
+public import Core.Fortschritt.SperrFreigabe
 public import Core.Katalog.Erfuellbar
+public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
+public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
