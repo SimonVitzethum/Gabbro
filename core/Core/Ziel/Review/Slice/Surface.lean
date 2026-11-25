@@ -86,7 +86,7 @@ theorem sperre_ohne_befehl (b : Befehl) (a : Maschine.SperrAktion) :
   cases b <;> simp only [Befehl.klasse, ne_eq, reduceCtorEq, not_false_eq_true]
   all_goals
     rename_i form
-    cases form <;> simp only [Zugriffsform.klasse, Fadenform.klasse, reduceCtorEq,
-      not_false_eq_true]
+    cases form <;> simp only [Zugriffsform.klasse, Fadenform.klasse, AussenfrageformKlasse,
+      reduceCtorEq, not_false_eq_true]
 
 end Gabbro.Core.Ziel.Review.Slice
