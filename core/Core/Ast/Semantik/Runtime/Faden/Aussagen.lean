@@ -55,7 +55,7 @@ def StarteBestimmtAussage : Prop :=
     FuehrtAus e t c s u .starte sperren ereignisse v →
       s.status (.faden s.naechsterFaden) = .ruht ∧ v.status (.faden s.naechsterFaden) = .laeuft ∧
         v.naechsterFaden = s.naechsterFaden + 1 ∧
-        (∀ d, d ≠ .faden s.naechsterFaden → v.status d = u.status d) ∧
+        (∀ d : Kontext, d ≠ .faden s.naechsterFaden → v.status d = u.status d) ∧
         (FuehrtAus e t c s u .starte sperren' ereignisse' v' → v = v')
 
 /-- **A start is exact and determinate** (the proof of `StarteBestimmtAussage`). -/
@@ -358,9 +358,12 @@ theorem kindStartetBeiAnkunft_nichtTrivial :
       F.klasse = .starte ∧ F'.klasse = .starte ∧
         ((F.faedenNach c s).lokal (.faden s.naechsterFaden)).pc ≠
           ((F'.faedenNach c s).lokal (.faden s.naechsterFaden)).pc := by
-  refine ⟨(Befehl.faden (.starte 0 5 .bool [])).form, (Befehl.faden (.starte 0 6 .bool [])).form, eintritt,
-    Leerzustand, rfl, rfl, ?_⟩
-  rw [Schrittform.faedenNach_starte_pc _ rfl, Schrittform.faedenNach_starte_pc _ rfl]
+  let F₁ : Schrittform := (Befehl.faden (.starte 0 5 .bool [])).form
+  let F₂ : Schrittform := (Befehl.faden (.starte 0 6 .bool [])).form
+  have h₁ := Schrittform.faedenNach_starte_pc F₁ rfl eintritt Leerzustand
+  have h₂ := Schrittform.faedenNach_starte_pc F₂ rfl eintritt Leerzustand
+  refine ⟨F₁, F₂, eintritt, Leerzustand, rfl, rfl, ?_⟩
+  rw [h₁, h₂]
   intro h
   exact absurd h (by decide : (5 : Nat) ≠ 6)
 
