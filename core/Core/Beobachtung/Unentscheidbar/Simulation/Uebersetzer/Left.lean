@@ -35,10 +35,10 @@ def frameL5 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL4 e ein aus 
 def frameL6 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL5 e ein aus frei n with pc := 25 + 14, temp := Function.update (frameL5 e ein aus frei n).temp (frei + 1) (some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩)) }
 def frameL7 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL6 e ein aus frei n with pc := 25 + 17, temp := Function.update (frameL6 e ein aus frei n).temp aus (some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩)) }
 def frameL8 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL7 e ein aus frei n with pc := 25 + 20, temp := Function.update (frameL7 e ein aus frei n).temp (frei + 2) (some (natVal (Nat.sqrt n))) }
+def frameL9 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL8 e ein aus frei n with pc := 25 + 21, temp := Function.update (frameL8 e ein aus frei n).temp (frei + 1) (some ⟨.bool, cmpBoolLeft (Nat.sqrt n) n⟩) }
 
 /-- The difference `n - s * s` as a machine integer comparison. -/
 def cmpBoolLeft (s n : Nat) : Bool := Compare.eval .lt ((n : Int) - (s : Int) * (s : Int)) (s : Int)
-def frameL9 (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL8 e ein aus frei n with pc := 25 + 21, temp := Function.update (frameL8 e ein aus frei n).temp (frei + 1) (some ⟨.bool, cmpBoolLeft (Nat.sqrt n) n⟩) }
 def frameL10t (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL9 e ein aus frei n with pc := 25 + 25 }
 def frameL10e (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL9 e ein aus frei n with pc := 25 + 22 }
 def frameL11e (e : Rahmen) (ein aus frei n : Nat) : Rahmen := { frameL10e e ein aus frei n with pc := 25 + 25, temp := Function.update (frameL10e e ein aus frei n).temp aus (some (natVal (Nat.sqrt n))) }
@@ -157,7 +157,7 @@ theorem selLink6 (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ (frei + 1) _ (frei + 2) = _
       rw [updateMiss _ _ _ _ (addNeLinks (by decide : (2 : Nat) ≠ 1))]
       exact updateHit _ _ _
-    show (((frameL5 e ein aus frei n).temp (frei + 2)).bind alsGanzzahl) = some ⟨_, _, Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int))⟩
+    show (((frameL5 e ein aus frei n).temp (frei + 2)).bind alsGanzzahl) = some ⟨_, _, Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int))⟩)
     rw [hA]
     rfl
   have g : (leftBlk ein aus frei)[38]? = some (.binaer .sub (frei + 1)) := by rfl
@@ -190,11 +190,10 @@ theorem selLink8 (ein aus frei n : Nat) (e : Rahmen)
       some (frameL8 e ein aus frei n) := by
   have h77 := selLink7 ein aus frei n e hepc hes heq hein
   have hpc : (frameL7 e ein aus frei n).pc = 42 := rfl
+  have hne0 : (frei + 0) ≠ aus := Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
   have hq : (frameL7 e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
-    have hne : (frei + 0) ≠ aus :=
-      Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
     show Function.update _ aus _ (frei + 0) = _
-    rw [updateMiss _ _ _ _ hne]
+    rw [updateMiss _ _ _ _ hne0]
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     show Function.update _ (frei + 1) _ (frei + 0) = _
@@ -229,7 +228,7 @@ theorem selLink9 (ein aus frei n : Nat) (e : Rahmen)
       show Function.update _ aus _ (frei + 1) = _
       rw [updateMiss _ _ _ _ (scratchNeAus (Nat.le_add_right frei 1) haus)]
       exact updateHit _ _ _
-    show (((frameL8 e ein aus frei n).temp (frei + 1)).bind alsGanzzahl) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩
+    show (((frameL8 e ein aus frei n).temp (frei + 1)).bind alsGanzzahl) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩)
     rw [hA]
     rfl
   have hb : (frameL8 e ein aus frei n).zahl (frei + 2) = some ⟨((Nat.sqrt n : Nat) : Int), ((Nat.sqrt n : Nat) : Int), Zahl.literal ((Nat.sqrt n : Nat) : Int)⟩ :=
@@ -306,13 +305,13 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     have h01 : (frameL10e e ein aus frei n).temp (frei + 0) =
         (frameL9 e ein aus frei n).temp (frei + 0) := rfl
     rw [h01]
+    have hne0 : (frei + 0) ≠ aus := Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus))
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     show Function.update _ (frei + 2) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 2))]
     show Function.update _ aus _ (frei + 0) = _
-    rw [updateMiss _ _ _ _
-      (Ne.symm (Nat.ne_of_lt (by simpa only [Nat.add_zero] using haus)))]
+    rw [updateMiss _ _ _ _ hne0]
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     show Function.update _ (frei + 1) _ (frei + 0) = _
