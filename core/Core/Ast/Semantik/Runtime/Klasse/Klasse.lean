@@ -73,13 +73,17 @@ def Fadenform.klasse : Fadenform → Wirkungsklasse
   | .verbinde .. => .verbinde
   | .wechsle .. | .kernStart .. => .wechsle
 
+namespace Gabbro.Core.Aussenfrage
+
 /-- **The class of an outside-question instruction** (MK-06): issuing a question has the question class;
     consuming the next arrived answer has its own class. The transfer of the answer value into the frame and
     the guard that revalidates it at commit are declared duties of this class, proved once here where the
     model decides them and handed over as pinned statements where a catalogue row decides them. -/
-def Aussenfrageform.klasse : Aussenfrageform → Wirkungsklasse
+def Aussenfrageform.klasse : Aussenfrageform → Gabbro.Core.Ast.Semantik.Wirkungsklasse
   | .frage .. => .frage
   | .verbrauche .. => .verbrauche
+
+end Gabbro.Core.Aussenfrage
 
 /-- Classify every instruction. A new instruction must be classified: there is no wildcard. -/
 def Befehl.klasse : Befehl → Wirkungsklasse
