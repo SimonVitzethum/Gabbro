@@ -204,8 +204,8 @@ theorem mp_hb_wx_rx : mpGraph.hb wx rx :=
   mpGraph.hb_trans
     (mpGraph.hb_trans (mpGraph.hb_von_po (show mpPo wx wy by decide))
       (mpGraph.hb_von_sw (a := wy) (b := ry)
-        ⟨trivial, trivial, trivial, trivial, wy, .selbst trivial trivial,
-        show mpRf wy ry by decide⟩))
+        ⟨wy, wy, ry, Or.inl ⟨rfl, trivial, trivial⟩, .selbst trivial trivial,
+        show mpRf wy ry by decide, trivial, trivial, Or.inl ⟨rfl, trivial, trivial⟩⟩))
     (mpGraph.hb_von_po (show mpPo ry rx by decide))
 
 theorem mp_rennfrei : mpGraph.Rennfrei := by
