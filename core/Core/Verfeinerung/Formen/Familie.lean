@@ -37,6 +37,7 @@ def Befehl.familie : Befehl → LokalFamilie
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung .. => .variante
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .text
   | .zugriff .. | .faden .. | .aussen .. => .zugriff
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => .kontrollfluss
 
 /-- **Every instruction is a form of its class, embedded in the unit of every fragment**: the unit
     reads its rule from the instruction's step form and memory through the elaborated model. The class
@@ -61,7 +62,7 @@ theorem Befehl.privat_ne_zugriff {b : Befehl} (h : b.Privat) : b.familie ≠ .zu
   cases b with
   | zugriff z => exact absurd rfl (Befehl.privat_ne_zugriff_klasse _ h z)
   | faden z => exact absurd rfl (Befehl.privat_ne_faden_klasse _ h z)
-  | aussen z => cases z <;> rcases h with h | h <;> cases h
+  | aussen z => cases z <;> rcases h with h | h | h | h | h | h <;> cases h
   | _ => cases hf
 
 /-- **Locality of every instruction, from its class.** -/

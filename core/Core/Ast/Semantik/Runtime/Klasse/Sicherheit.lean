@@ -47,6 +47,8 @@ def Wirkungsklasse.beruehrtSperrwort : Wirkungsklasse → Bool
   | .sperre .. => true
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .frage | .verbrauche | .starte
   | .beende | .verbinde | .wechsle => false
+  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .frage | .starte | .beende
+  | .verbinde | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- **Booking and releases, once per class.** In a safety unit that embeds a form of the class, every memory
     access the step records is booked with a handle and the right it needs (the class books the address,

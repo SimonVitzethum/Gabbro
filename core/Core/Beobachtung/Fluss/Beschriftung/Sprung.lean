@@ -31,13 +31,13 @@ theorem sicht_springe (β : Beschriftung) (r : Rahmen) (q : Nat) :
       { r.sicht β with
         pc := q
         temp := fun s => if oeffentlich (β.temp q s) = true then r.temp s else none
-        lokale := maskiere (β.lokal q) 0 r.lokale } :=
+        lokale := maskiereLokal (β.lokal q) 0 r.lokale } :=
   rfl
 
 /-- Public equality at `pc` gives public equality of the temporaries and locals there. -/
 theorem sicht_oeffentliche_teile {β : Beschriftung} {r₁ r₂ : Rahmen} (h : r₁.sicht β = r₂.sicht β) :
     r₂.pc = r₁.pc ∧ (∀ s, oeffentlich (β.temp r₁.pc s) = true → r₁.temp s = r₂.temp s) ∧
-      maskiere (β.lokal r₁.pc) 0 r₁.lokale = maskiere (β.lokal r₁.pc) 0 r₂.lokale := by
+      maskiereLokal (β.lokal r₁.pc) 0 r₁.lokale = maskiereLokal (β.lokal r₁.pc) 0 r₂.lokale := by
   have pcEq : r₂.pc = r₁.pc := (sicht_pc h).symm
   refine ⟨pcEq, fun s hs => ?_, ?_⟩
   · have e : (if oeffentlich (β.temp r₁.pc s) = true then r₁.temp s else none) =
@@ -45,7 +45,7 @@ theorem sicht_oeffentliche_teile {β : Beschriftung} {r₁ r₂ : Rahmen} (h : r
       congrFun (congrArg Rahmen.temp h) s
     rw [pcEq] at e
     simpa only [hs, if_true] using e
-  · have e : maskiere (β.lokal r₁.pc) 0 r₁.lokale = maskiere (β.lokal r₂.pc) 0 r₂.lokale :=
+  · have e : maskiereLokal (β.lokal r₁.pc) 0 r₁.lokale = maskiereLokal (β.lokal r₂.pc) 0 r₂.lokale :=
       congrArg Rahmen.lokale h
     rw [pcEq] at e
     exact e
@@ -66,7 +66,7 @@ theorem sicht_pcWechsel {β : Beschriftung} {q : Nat} {r₁ r₂ : Rahmen}
     · simp only [hp, if_true]
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  rw [hTe, maskiere_gleich_mono hL 0 _ _ lokEq]
+  rw [hTe, maskiereLokal_gleich_mono hL 0 _ _ lokEq]
   rfl
 
 theorem springeSicht : SpringeSichtAussage := by

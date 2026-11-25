@@ -9,12 +9,17 @@
              registry packet before an instruction can use it (`Befehl.klasse` has no wildcard, so a new
              instruction must be classified).
              * `lokal`, `ruf` change the acting frame only (private step).
-  * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
-                atomic update): the plan carries the access, the frame names the cell.
-  * `zaun` orders in a mode (a fence): like the frame-only classes it plans the private plan;
-    the fence event reaches the graph when plans carry fence labels.
-  * `sperre` draws a ticket, takes or gives one lock of the unit.
+             * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
+               atomic update): the plan carries the access, the frame names the cell.
+             * `zaun` orders in a mode (a fence): like the frame-only classes it plans the private plan;
+               the fence event reaches the graph when plans carry fence labels.
+             * `sperre` draws a ticket, takes or gives one lock of the unit.
              * `frage` issues one question to the outside world.
+             * `starte`, `beende`, `verbinde`, `wechsle` are the thread-lifecycle classes (MK-07).
+             * `maskiere`, `prioritaet`, `sendeUnterbrechung`, `leiteLeitung` are the interrupt-control
+               classes (MK-20): they step the acting frame only (the per-core mask, threshold, pending
+               send and routing the step names are applied by the machine duties of
+               `Unterbrechung/Aussagen`, never mid-step).
              The classes of waiting, thread start and join, authority, time, persistence, randomness and
              guests are appended by the packages that introduce their first instruction.
 -/
@@ -36,7 +41,11 @@ open Gabbro.Core.Aussenfrage
     * `rmw m`: an atomic read-modify-write of one cell in mode `m`.
     * `zaun m`: a fence in mode `m`; it orders but accesses nothing, so its plan is private.
     * `sperre a`: one lock action `a` (ticket, take, give) on one lock of the unit.
-    * `frage`: one question to the outside world; its answer arrives later, as its own transition. -/
+    * `frage`: one question to the outside world; its answer arrives later, as its own transition.
+    * `maskiere`: mask or unmask one vector; frame-only, applied at the next boundary.
+    * `prioritaet`: set the priority threshold; frame-only, applied at the next boundary.
+    * `sendeUnterbrechung`: raise one vector on one core; frame-only, delivered later.
+    * `leiteLeitung`: route one line to one core with a priority; frame-only. -/
 inductive Wirkungsklasse where
   | lokal
   | ruf
@@ -51,6 +60,10 @@ inductive Wirkungsklasse where
   | verbinde
   | wechsle
   | verbrauche
+  | maskiere
+  | prioritaet
+  | sendeUnterbrechung
+  | leiteLeitung
 
 /-- **The class of an access instruction** (MK-04): a load and the confirming observation read, a store and the
     publication write, an update (exchange, compare-and-swap, fetch-and-add) is an update, each in the mode the
@@ -98,6 +111,10 @@ def Befehl.klasse : Befehl → Wirkungsklasse
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .lokal
+  | .maskiere .. => .maskiere
+  | .prioritaet .. => .prioritaet
+  | .sendeUnterbrechung .. => .sendeUnterbrechung
+  | .leiteLeitung .. => .leiteLeitung
 
 /-- **The stack effect of an instruction**: the frame it steps grows its continuation stack by at
     most `k`. -/
@@ -110,7 +127,8 @@ def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
 def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
   | .ruf => 1
   | .lokal | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .starte | .beende
-  | .verbinde | .wechsle | .verbrauche => 0
+  | .verbinde | .wechsle | .verbrauche | .maskiere | .prioritaet | .sendeUnterbrechung
+  | .leiteLeitung => 0
 
 /-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
     Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is

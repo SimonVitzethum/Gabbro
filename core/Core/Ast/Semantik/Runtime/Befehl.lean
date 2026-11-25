@@ -76,6 +76,10 @@ inductive Befehl where
   | zugriff (form : Zugriffsform)
   | faden (form : Fadenform)
   | aussen (form : Aussenfrageform)
+  | maskiere (vektor : Nat) (aus : Bool)
+  | prioritaet (grenze : Nat)
+  | sendeUnterbrechung (vektor kern : Nat)
+  | leiteLeitung (leitung kern prioritaet : Nat)
 
 /-- Exact evaluation at the instruction boundary. Each result retains its source range. -/
 def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _slot => false) : Rahmen :=
@@ -273,6 +277,10 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
   | .zugriff form, frame => form.uebertrag frame 0
   | .faden form, frame => form.uebertrag frame 0
   | .aussen _form, frame => frame
+  | .maskiere .., frame => { frame with pc := frame.pc + 1 }
+  | .prioritaet .., frame => { frame with pc := frame.pc + 1 }
+  | .sendeUnterbrechung .., frame => { frame with pc := frame.pc + 1 }
+  | .leiteLeitung .., frame => { frame with pc := frame.pc + 1 }
 
 abbrev Bedarf := (op : PartielleOperation) × Operanden op
 

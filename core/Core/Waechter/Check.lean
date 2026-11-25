@@ -208,7 +208,11 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage),
-    (`Gabbro.Core.Ast.Semantik.Befehl.aussen, `Gabbro.Core.Aussenfrage.AussenFrageAussagen) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.aussen, `Gabbro.Core.Aussenfrage.AussenFrageAussagen),
+    (`Gabbro.Core.Ast.Semantik.Befehl.maskiere, `Gabbro.Core.Ast.Semantik.MaskeSimAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.prioritaet, `Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.SendeLiefertAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.leiteLeitung, `Gabbro.Core.Ast.Semantik.LeiteWirktAussage) ]⟩]
 
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
@@ -276,6 +280,10 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.schreiben, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.rmw, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.zaun, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.maskiere, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.prioritaet, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.leiteLeitung, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sperre, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.frage, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.starte, `Gabbro.Core.Ast.Semantik.KlassenAussagen),

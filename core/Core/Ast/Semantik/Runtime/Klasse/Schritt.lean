@@ -66,8 +66,8 @@ def Operand.fragePlan (o : Operand) : Plan :=
 /-- **The plan of one step of class `k`** at the operand `o`, where `v` is the value the memory model
     returned for a read. A read records its label with the value read; a write names its cell in the
     footprint with the value and the mode; an update is ONE event that reads `v` and writes the operand's
-    value; a lock action and a question name their lock and question; a private step, a fence and a refused
-    access have the private plan. -/
+    value; a lock action and a question name their lock and question; a private step, a fence, an
+    interrupt-control step and a refused access have the private plan. -/
 def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .lokal, _o, _v => Semantik.plan
   | .ruf, _o, _v => Semantik.plan
@@ -87,11 +87,15 @@ def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .beende, _o, _v => planMit .beende
   | .verbinde, o, _v => planMit (.verbinde (.faden o.faden.kind))
   | .wechsle, o, _v => planMit (.wechsle o.faden.kern (.faden o.faden.kind))
+  | .maskiere, _o, _v => Semantik.plan
+  | .prioritaet, _o, _v => Semantik.plan
+  | .sendeUnterbrechung, _o, _v => Semantik.plan
+  | .leiteLeitung, _o, _v => Semantik.plan
 
 /-- **The shape of the plans of a class**: the only plans a step of the class may have. The footprint of the
-    step on the shared state is read off the class alone: nothing for a private step, a fence or a refused
-    access, one read label for a load, one written cell for a store, one update label for an atomic update,
-    one lock action, one question. -/
+    step on the shared state is read off the class alone: nothing for a private step, a fence, an
+    interrupt-control step or a refused access, one read label for a load, one written cell for a store,
+    one update label for an atomic update, one lock action, one question. -/
 def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
   | .lokal, p => p = Semantik.plan
   | .ruf, p => p = Semantik.plan
@@ -111,12 +115,17 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
   | .beende, p => p.aktion = .beende ∧ p.lesen = [] ∧ p.fuss = []
   | .verbinde, p => (∃ k : Kontext, p.aktion = .verbinde k) ∧ p.lesen = [] ∧ p.fuss = []
   | .wechsle, p => (∃ (k : Kern) (d : Kontext), p.aktion = .wechsle k d) ∧ p.lesen = [] ∧ p.fuss = []
+  | .maskiere, p => p = Semantik.plan
+  | .prioritaet, p => p = Semantik.plan
+  | .sendeUnterbrechung, p => p = Semantik.plan
+  | .leiteLeitung, p => p = Semantik.plan
 
 /-- Does a step of the class read a value from the memory model? Only a load and an atomic update do. -/
 def Wirkungsklasse.liest : Wirkungsklasse → Bool
   | .lesen .. | .rmw .. => true
   | .lokal | .ruf | .schreiben .. | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde
   | .wechsle | .verbrauche => false
+  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- The value a step of the class may take from the memory model: any value for a class that reads, and
     the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
@@ -126,7 +135,8 @@ def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
 /-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `Zustand.fragenBefugt`): the right
     on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
     the question and the device authority of a register access for a question. The frame-only classes, the
-    fence and the lock actions need none: a fence orders but accesses nothing, and a lock action that
+    fence, the interrupt-control classes and the lock actions need none: a fence orders but accesses
+    nothing, and a lock action that
     the protocol does not allow does not execute, it waits or never runs. -/
 def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
   | .lokal, _o, _s, _c => True
@@ -143,6 +153,10 @@ def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext �
   | .beende, o, _s, _c => o.faden.gueltig = true
   | .verbinde, o, _s, _c => o.faden.gueltig = true
   | .wechsle, o, _s, _c => o.faden.gueltig = true
+  | .maskiere, _o, _s, _c => True
+  | .prioritaet, _o, _s, _c => True
+  | .sendeUnterbrechung, _o, _s, _c => True
+  | .leiteLeitung, _o, _s, _c => True
 
 /-- **A step form**: a class, the operand its frame supplies and the frame transfer it applies. Everything
     else about the step is the class's. -/
@@ -173,6 +187,8 @@ noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Z
         else s.buchung.adresse e }
   | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .verbrauche | .starte | .beende | .verbinde
   | .wechsle => s.buchung
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => s.buchung
 
 /-- The state after the step of an access class: the frame transfer and the booked ledger. -/
 noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
@@ -224,6 +240,9 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
     | .ruht | .laeuft => s
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .verbrauche
   | .wechsle => F.nach c s 0
+  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .wechsle
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung =>
+    F.nach c s 0
 
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
@@ -234,8 +253,8 @@ def Schrittform.faedenschritt (F : Schrittform) (c : Kontext) (s : Zustand) (pla
   (¬ F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [Semantik.plan] ∧ u = F.verweigert c s) ∨
   (F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [F.plan (s.lokal c) 0] ∧ u = F.faedenNach c s)
 
-/-- **The ideal step of a form, from its class.** A private class has one private plan and its frame
-    transfer; a fence steps its frame privately; an access class has the step above; a lifecycle class has the
+/-- **The ideal step of a form, from its class.** A private or interrupt-control class has one private
+    plan and its frame transfer; an access class has the step above; a lifecycle class has the
     lifecycle step. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
@@ -243,6 +262,10 @@ def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .verbrauche => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .maskiere => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .prioritaet => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .sendeUnterbrechung => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .leiteLeitung => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
   | .starte | .beende | .verbinde | .wechsle => F.faedenschritt c s plans u
 
@@ -302,6 +325,8 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
     ignores that value; every other instruction ignores it and evaluates at the instruction boundary. -/
@@ -321,6 +346,8 @@ def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : 
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => b.auswerten r live
+  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => b.auswerten r live
 
 /-- **The step form of an instruction**: its class, operand and transfer. -/
 def Befehl.form (b : Befehl) : Schrittform := ⟨b.klasse, b.operand, b.uebertrag⟩
