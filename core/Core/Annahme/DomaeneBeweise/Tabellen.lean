@@ -33,11 +33,9 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
-/-- The table data lives in `Core/Maschine/Quelltabellen.lean` (MK-17d): the unit carries
-    its table in `Einheit.domaenen`, so the checker row can decide exactly the unit's own
-    declaration. This file keeps the checker analysis over `Maschine.DomaenenTabelle`. -/
-
-/-- CORRECTNESS of the table checker: every accepted table is coherent. No
+/-- CORRECTNESS of the table checker over `Maschine.DomaenenTabelle` (MK-17d: the unit
+    carries its table in `Einheit.domaenen`; the data lives in
+    `Core/Maschine/Quelltabellen.lean`): every accepted table is coherent. No
     `Akzeptiert`, no well-formedness premise. -/
 def DomaenenTabellenKorrektAussage : Prop :=
   ∀ tab : DomaenenTabelle, pruefeDomaenenTab tab = true → tabKohaerent tab
