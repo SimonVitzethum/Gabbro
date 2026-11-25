@@ -342,7 +342,12 @@ theorem kopf_ruht {s : Zustand} {c : Kontext}
 
 /-- The system head is the code head. -/
 theorem system_kopf (s : Zustand) (c : Kontext) :
-    E_linked.system.kopf s c = kopf (verknuepfteFragmente planAB).code s c :=
+    E_linked.system.kopf s c = kopf (verknuepfteFragmente planAB).code s c := by
+  rfl
+
+/-- Liveness ignores the recorded graph. -/
+theorem regionLive_graph_irrelevant (s : Zustand) (g : _) :
+    Zustand.regionLive { s with graph := g } = Zustand.regionLive s := by
   rfl
 
 /-- No context steps at a resting head. -/
@@ -410,7 +415,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     (hEqS : (ρ.zeit.zustand t).status = sPre.status)
     (hEqK : (ρ.zeit.zustand t).kerne = sPre.kerne)
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
-    (hEqR : (ρ.zeit.zustand t).regionLive = sPre.regionLive)
+    (hEqR : Zustand.regionLive (ρ.zeit.zustand t) = Zustand.regionLive sPre)
     (hHead : kopf (verknuepfteFragmente planAB).code sPre eintritt = some b)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
@@ -420,7 +425,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       (ρ.zeit.zustand (t + 1)).status = (b.nach eintritt sPre).status ∧
       (ρ.zeit.zustand (t + 1)).kerne = (b.nach eintritt sPre).kerne ∧
       (ρ.zeit.zustand (t + 1)).fragen = [] ∧
-      (ρ.zeit.zustand (t + 1)).regionLive = (b.nach eintritt sPre).regionLive := by
+      Zustand.regionLive (ρ.zeit.zustand (t + 1)) = Zustand.regionLive (b.nach eintritt sPre) := by
   have hReadyT : KannSchreiten ρ.hw t eintritt (ρ.zeit.zustand t) := by
     obtain ⟨kk, hg, hd, hs⟩ := hReady
     refine ⟨kk, hg, ?_, ?_⟩
@@ -478,6 +483,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
             simp only [Befehl.nach, hEqK]
           · rw [hstate]
             simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
+              ← Befehl.nach_regionLive]
           · rw [hstate]
             simp only [Befehl.nach_regionLive, hEqR]
       · exfalso
@@ -554,7 +561,7 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
     rfl
-  have baseR : (ρ.zeit.zustand 0).regionLive = (sLinked s).regionLive := by
+  have baseR : Zustand.regionLive (ρ.zeit.zustand 0) = Zustand.regionLive (sLinked s) := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
     rfl
