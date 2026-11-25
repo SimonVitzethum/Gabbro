@@ -29,7 +29,7 @@ theorem leereUnit_zugelassen (P : Katalog.Plattform) :
   constructor
   · exact ⟨List.nodup_nil, fun e mem => (List.not_mem_nil mem).elim⟩
   · change (Ast.Semantik.programm leereUnit).code.all (Ast.Semantik.Befehl.platformAllowed P) = true
-    simp only [Ast.Semantik.programm, Ast.Semantik.unitBody, Ast.Semantik.Fragment.leer,
+    simp only [Ast.Semantik.programm, leereUnit, Ast.Semantik.unitBody, Ast.Semantik.Fragment.leer,
       Ast.Semantik.Fragment.anhaengen, Ast.Semantik.Fragment.einzel, List.append_nil,
       List.all_cons, List.all_nil, Ast.Semantik.Befehl.platformAllowed, Bool.true_and]
 
