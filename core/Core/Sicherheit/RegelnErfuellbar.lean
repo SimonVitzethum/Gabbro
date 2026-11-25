@@ -57,7 +57,7 @@ private theorem invariantenErhaltenInitial {p : Fragment} (platform : Plattform)
   obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
   rw [List.getElem?_map] at hinner
   obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-  rw [← tab] at vorhanden
+  rw [← tab, ← List.getElem?_map] at vorhanden
   have writersVor : ∀ c, vor.status c = .laeuft → ¬ vor.buchung.schreibt c i := by
     intro c hc hcon
     have hc' : nach.status c = .laeuft := by
@@ -89,7 +89,7 @@ private theorem invariantenErhaltenInterrupt {p : Fragment} (platform : Plattfor
   obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp vorhanden
   rw [List.getElem?_map] at hinner
   obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-  rw [← tab] at vorhanden
+  rw [← tab, ← List.getElem?_map] at vorhanden
   have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by
     intro c' hc' hcon
     by_cases heq : c' = c
