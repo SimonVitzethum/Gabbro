@@ -24,10 +24,11 @@
     `RegelAntwortSicherAussage` are generic theorems over an arbitrary `Befehl`: their traces are
     forced to `⟨[], []⟩` by `Befehl.vollzug_genau`, or discharged by `Befehl.sicher`/`.antwortSicher`.
     Again the "empty traces" case.
-  * `LocalTypeUseAussage` quantifies over `{a // select a.written}` and additionally
-    demands a selected written type (`∃ w, select w`). The empty selector `fun _ => False`
-    is therefore refuted (`localTypeUseAussage_leer_falsch`) instead of proving all eight
-    obligations vacuously - the former "premise that never holds" case.
+  * `LocalTypeUseAussage` quantifies over `{a // anyTypeUse a.written}`, the universal
+    selector fixed by the model, and additionally exhibits a selected written type
+    (`∃ w, anyTypeUse w`). No caller-supplied selector remains, so the eight obligations
+    cannot hold vacuously over an empty subtype - the former "premise that never holds"
+    case is closed by construction.
 -/
 module
 
@@ -165,12 +166,5 @@ theorem falschesLiteralForm_antwort_vakuös (platform : Plattform) (n : Nat) :
     Gabbro.Core.Ast.Semantik.RegelAntwortSicher
       (falschesLiteralForm.fragment n) platform (falschesLiteralForm.befehl n) :=
   antwortSicher_allQuellformen falschesLiteralForm platform n
-
-/-- With a selector that admits no written type the strengthened `LocalTypeUseAussage`
-    is false: the required selected written type is missing. -/
-theorem localTypeUseAussage_leer_falsch :
-    ¬ LocalTypeUseAussage (fun _ : Gabbro.Core.Ast.WrittenType => False) := by
-  rintro ⟨⟨w, hw⟩, _⟩
-  exact hw
 
 end Gabbro.Core.Text.Review

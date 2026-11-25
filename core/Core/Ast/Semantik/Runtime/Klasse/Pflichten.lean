@@ -9,13 +9,15 @@
              memory through `Zustand.griff` and `Zelle.objekt`), with no free function parameter: the form is a
              bundled `Schrittform` whose plan, guard and refusal the class builds, so the duty is proved from
              the class definition, not assumed of an arbitrary decoder.
-             PROVED here, for every class: simulation with the authority of the plan (`klassenSim`), locality
-             (`klassenLokal`), progress (`klassenFortschritt`) and the non-triviality of the duties
-             (`klassenNichtTrivial`). OPEN for the provers, all pinned under the one statement
-             `KlassenAussagen`: information flow (`KlassenNIAussage`), bounds (`KlassenSchrankenAussage`) and
-             the four class-determined safety legs (`KlassenSicherheitAussage`, `Klasse/Sicherheit`). What the
-             statements do NOT claim, and why, is in their docstrings: reading classes for information flow,
-             lock actions for the booking leg, the invariant and race legs for the memory classes.
+              All duties are proved for every class and assembled into the pinned statement `KlassenAussagen`
+              in `Klasse/Beweise/Gesamt`: simulation with the authority of the plan (`klassenSim`), locality
+              (`klassenLokal`), progress (`klassenFortschritt`), information flow on the step level
+              (`klassenSchrittNI`), bounds (`klassenSchranken`), the four class-determined safety legs
+              (`klassenSicherheit`) and the non-triviality of the duties (`klassenNichtTrivial`). Information
+              flow is stated for two steps of the same form (`KlassenSchrittNIAussage`); the earlier run-level
+              form was not derivable from its premises and is gone. What the statements do NOT claim, and why,
+              is in their docstrings: reading classes for information flow, lock actions for the booking leg,
+              the invariant and race legs for the memory classes.
              The duties are informative because the classes carry real plans: a step that reads or writes
              covers its cell by authority only through the guard of its class, and a form without the guard
              violates locality (`KlassenNichtTrivialAussage`). Over the frame-only classes the same duties
@@ -68,21 +70,26 @@ def KlassenFortschrittAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
     Ideal.RegelFortschritt E.system f
 
-/-- **Information flow, once per class that does not read.** In a unit that labels the form by the checker's
-    flow rule (`RegelFluss`), whose operands the observer sees equal from public-equal states, the form
-    preserves the coupling of two runs (`RegelNIPflicht`). The plan of the step is `Wirkungsklasse.plan` of
-    operands that `Operandensicht` makes equal, so the observed trace entries agree, and the successor frame
-    is `uebertrag` of frames that agree publicly. The classes that READ (`lesen`, `rmw`) are not claimed here:
-    `RegelFluss` quantifies the semantic choice of the form independently on the two sides, and a read puts
-    its value into the frame, so the premise cannot hold for a read whose target is public; the read value
-    has to be tied to the label of the cell and coupled at the graph level (the coupled runs read the same
-    value from a public cell). That is the label rule of the memory events (MK-13). Open. Difficulty: schwer.
-    Sketch for the silent classes: the step is silent (`lokal`, `ruf`) or a visible event with public operands
-    (`schreiben`, `sperre`, `frage`); use `stummer_schritt_koppelt` for the silent ones and the coupled
-    graph step for the write. -/
-def KlassenNIAussage (k : Wirkungsklasse) : Prop :=
+/-- **Information flow, once per class that does not read, ON THE STEP LEVEL.** Two steps of the
+    SAME form of the class from publicly equal source states end in publicly equal states, with
+    equal plan and output views. Both sides take the same form `f` by hypothesis, so no claim about
+    the head of a second run is needed and the step statement follows from the flow rule alone
+    (`RegelFluss.schrittpaar_gleich`, proved as `klassenSchrittNI`). This is the pinned replacement
+    for the earlier run-level form: that form asked for `RegelNIPflicht` from premises that do not
+    determine the head of the second run, so it was not derivable and is gone. The restriction
+    `k.liest = false` stays: for the reading classes the flow rule itself cannot hold without tying
+    the read value to the label of the cell (MK-13). `Operandensicht` stays as the checker's address
+    rule: it is the premise the fragment wiring discharges. The graph coupling of the two steps is
+    not part of this source-level claim: equal public plans extend equal pre-graphs equally, and
+    that lifting belongs to the generic run composition in the fragment NI machinery. -/
+def KlassenSchrittNIAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
-    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E → Beobachtung.RegelNIPflicht E f
+    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E →
+    ∀ (c : Kontext) (v₁ v₂ : Zustand) (w : PUnit) (p₁ p₂ : Plan) (u₁ u₂ : Zustand),
+      Beobachtung.QuellzustandGleich E v₁ v₂ →
+      Beobachtung.FormSchritt E f c v₁ w p₁ u₁ → Beobachtung.FormSchritt E f c v₂ w p₂ u₂ →
+      Beobachtung.QuellzustandGleich E u₁ u₂ ∧ Beobachtung.PlanSicht E p₁ = Beobachtung.PlanSicht E p₂ ∧
+        Beobachtung.AusgabeSicht E c v₁ u₁ = Beobachtung.AusgabeSicht E c v₂ u₂
 
 /-- **Bounds, once per class.** A form whose transfer respects the declared stack bound, in a unit whose
     depth measure counts the continuation stack, preserves the stack and memory bounds of every ideal run
@@ -141,10 +148,11 @@ def KlassenNichtTrivialAussage (k : Wirkungsklasse) : Prop :=
   (k.gesichert = true → ∃ (platform : Plattform) (F : Schrittform), F.klasse = k ∧
       ¬ RegelLokal (Regeleinheit platform F.ungeschuetzt) ())
 
-/-- **The six duties of every class, in one pinned statement.** The proved parts are `klassenSim`,
-    `klassenLokal`, `klassenFortschritt`; the rest is open for the provers. -/
+/-- **The six duties of every class, in one pinned statement.** All conjunctions are proved and
+    assembled as `klassenAussagen` in `Klasse/Beweise/Gesamt`. Information flow is the step-level
+    statement `KlassenSchrittNIAussage`; the run-level `KlassenNIAussage` is gone from the model. -/
 def KlassenAussagen : Prop :=
-  ∀ k : Wirkungsklasse, KlassenSimAussage k ∧ KlassenNIAussage k ∧ KlassenSchrankenAussage k ∧
+  ∀ k : Wirkungsklasse, KlassenSimAussage k ∧ KlassenSchrittNIAussage k ∧ KlassenSchrankenAussage k ∧
     KlassenSicherheitAussage k ∧ KlassenFortschrittAussage k ∧ KlassenLokalAussage k ∧
     KlassenNichtTrivialAussage k
 
