@@ -134,7 +134,7 @@ theorem b9_b21_schritte_erfuellbar :
   obtain ⟨ρ, g, g', lauf, _, hw, cut0, cut1, cut2, cut3, label0, _, label2, _⟩ := konkreter_lauf zul []
   let ρ' := lauf_mit_grenzen ρ
   have lauf' : Laeufe (mitGrenzen startZustand) (umgebung []) ρ' :=
-    ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2⟩
+    ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2.1, lauf.2.2.2.2⟩
   have pflichten := hosted_pflichten startZustand (fun s => by
     rw [zellen_leer (s := startZustand s) (fun _ => rfl), Set.encard_empty]
     exact zero_le)

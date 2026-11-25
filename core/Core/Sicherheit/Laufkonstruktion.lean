@@ -64,11 +64,12 @@ theorem bild_gueltig : bild.gueltig katalog.plattform.ziel := by
 
 theorem laeuft {z : Zustand} {form : Formular} {inv} {sicht : Sicht}
     (zeit : Zeitlauf (Lauffolge (einheit z form inv).maschine (hardware sicht)))
-    (boot : zeit.zustand 0 = some z) :
+    (boot : zeit.zustand 0 = some z)
+    (fair : ∀ a, Maschine.SchedulerFair (einheit z form inv).maschine ⟨a, hardware sicht, zeit⟩) :
     ∃ a, Maschine.Laeufe (einheit z form inv).maschine (umgebung sicht)
       ⟨a, hardware sicht, zeit⟩ := by
   obtain ⟨a, zul⟩ := zulStart_erfuellbar (erlaubt sicht) bild_gueltig
-  exact ⟨a, erlaubt sicht, konform sicht, zul, boot⟩
+  exact ⟨a, erlaubt sicht, konform sicht, zul, boot, fair a⟩
 
 def ruhigerPlan : Plan := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
 

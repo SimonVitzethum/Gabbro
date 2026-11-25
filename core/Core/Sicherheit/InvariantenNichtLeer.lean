@@ -35,8 +35,16 @@ theorem invarianten_nichtLeer :
   have first : Lauffolge E.maschine (hardware leer) 0 (some z) (.kontext c (), spur) (some next) :=
     ausfuehren (c := c) (plan := plan) ⟨0, rfl, rfl, rfl⟩
       (show form c z [plan] z from ⟨rfl, rfl⟩) execute
-  obtain ⟨zeit, boot, lab, after⟩ := schritt_erfuellbar first
-  obtain ⟨a, run⟩ := laeuft zeit boot
+  let tail := Maschine.fairerZeitAb E.maschine (hardware leer) (some next) 1
+  have h0' : Maschine.Lauffolge E.maschine (hardware leer) 0 (some z) (.kontext c (), spur)
+      (tail.zustand 0) := first
+  let zeit := voran tail (some z) (.kontext c (), spur) h0'
+  have boot : zeit.zustand 0 = some z := rfl
+  have lab : zeit.spur 0 = some (.kontext c (), spur) := rfl
+  have after : zeit.zustand 1 = some next := rfl
+  have fair : ∀ a, Maschine.SchedulerFair E.maschine ⟨a, hardware leer, zeit⟩ := fun a =>
+    voran1_fair h0' (Maschine.fairerZeitAb_fair E.maschine (hardware leer) (some next) 1 a)
+  obtain ⟨a, run⟩ := laeuft zeit boot fair
   let ρ : Lauf E := ⟨a, hardware leer, zeit⟩
   refine ⟨E, _, ρ, run, fun safe => ?_⟩
   have nonCrash : ¬ Absturz spur := List.not_mem_nil

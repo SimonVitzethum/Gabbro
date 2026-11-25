@@ -191,21 +191,21 @@ theorem lauf_mit_hw {h : Umgebung} {s : AussenStart} {hw : HwLauf}
 /-- Shifted scheduler fairness for a fair tail: the same duties as `SchedulerFair`,
     read at shifted hardware ticks. Spliced runs inherit it through `voran`. -/
 def ShiftFair (hw : HwLauf) (ab : Nat) (s : AussenStart)
-    (tail : Zeitlauf (fun t => Lauffolge E hw (ab + t))) : Prop :=
+    (tail : Zeitlauf (fun t => Lauffolge E hw (t + ab))) : Prop :=
   ∀ (a : Nat) (c : Kontext),
     (∀ t, a ≤ t → ∃ z, tail.zustand t = some z ∧
       (∃ k, (z.kerne k).laeuft = some c) ∧ z.status c = .laeuft ∧
-      (hw.angebot (ab + t)).crash = false ∧
+      (hw.angebot (t + ab)).crash = false ∧
       ∃ w plan u spur s', E.system.ImplSchritt c z w [plan] u ∧
-        FuehrtSchrittAus E.einrichtung (ab + t) c z u plan spur s') →
-    (∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ k, hw.gelegenheit (ab + t) k ∧
+        FuehrtSchrittAus E.einrichtung (t + ab) c z u plan spur s') →
+    (∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ k, hw.gelegenheit (t + ab) k ∧
       ∃ z, tail.zustand t = some z ∧ (z.kerne k).laeuft = some c) →
     ∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ w spur, tail.spur t = some (.kontext c w, spur)
 
 theorem fairerSchritt_taktAb (hw : HwLauf) (ab t : Nat)
     (s : Option (Zustand L Ort Wert Raum Lok Grund)) :
-    Takt (fun t => Lauffolge E hw (ab + t)) (KeinSchritt (fun t => Lauffolge E hw (ab + t))) t s
-      (fairerSchritt E hw (ab + t) s).2 (fairerSchritt E hw (ab + t) s).1 := by
+    Takt (fun t => Lauffolge E hw (t + ab)) (KeinSchritt (fun t => Lauffolge E hw (t + ab))) t s
+      (fairerSchritt E hw (t + ab) s).2 (fairerSchritt E hw (t + ab) s).1 := by
   unfold fairerSchritt
   classical
   split
@@ -223,10 +223,10 @@ noncomputable def fairerFolgeAb (hw : HwLauf) (init : Option (Zustand L Ort Wert
     Nat → Option (Zustand L Ort Wert Raum Lok Grund) ×
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert)
   | 0 => (init, none)
-  | t + 1 => fairerSchritt E hw (ab + t) (fairerFolgeAb hw init ab t).1
+  | t + 1 => fairerSchritt E hw (t + ab) (fairerFolgeAb hw init ab t).1
 
 noncomputable def fairerZeitAb (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
-    (ab : Nat) : Zeitlauf (fun t => Lauffolge E hw (ab + t)) where
+    (ab : Nat) : Zeitlauf (fun t => Lauffolge E hw (t + ab)) where
   zustand := fun t => (fairerFolgeAb E hw init ab t).1
   spur := fun t => (fairerFolgeAb E hw init ab (t + 1)).2
   takt := fun t => fairerSchritt_taktAb E hw ab t (fairerFolgeAb E hw init ab t).1
@@ -244,15 +244,15 @@ theorem fairerZeitAb_fair (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum 
     bereit t ((Nat.le_max_right n a).trans ht)
   have same : z' = z := Option.some.inj (eq'.symm.trans hstate)
   subst z'
-  have schritt : Lauffolge E hw (ab + t) (some z) (.kontext c w, spur) s' :=
+  have schritt : Lauffolge E hw (t + ab) (some z) (.kontext c w, spur) s' :=
     .schritt (.kontext normal ⟨k, gelegenheit, dispatch, live⟩ regel aus)
-  have bevorzugt : BevorzugtSchritt hw (ab + t) (some z) (.kontext c w, spur) :=
+  have bevorzugt : BevorzugtSchritt hw (t + ab) (some z) (.kontext c w, spur) :=
     ⟨c, w, spur, k, rfl, gelegenheit, z, rfl, dispatch⟩
-  have wahl : ∃ ev next, Lauffolge E hw (ab + t) (some z) ev next ∧
-      BevorzugtSchritt hw (ab + t) (some z) ev :=
+  have wahl : ∃ ev next, Lauffolge E hw (t + ab) (some z) ev next ∧
+      BevorzugtSchritt hw (t + ab) (some z) ev :=
     ⟨_, _, schritt, bevorzugt⟩
   have spurEq : (fairerZeitAb E hw init ab).spur t = some (Classical.choose wahl) := by
-    show (fairerSchritt E hw (ab + t) (fairerFolgeAb E hw init ab t).1).2 = _
+    show (fairerSchritt E hw (t + ab) (fairerFolgeAb E hw init ab t).1).2 = _
     rw [hstate]
     unfold fairerSchritt
     classical

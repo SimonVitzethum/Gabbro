@@ -182,7 +182,22 @@ theorem fortschritt_erfuellbar :
     zustand := fun t => some (zustand t)
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
-  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
+  have fairLauf : SchedulerFair E₀ ρ := by
+    intro a c dle oppd n hn
+    obtain ⟨x, eq, disp, _, _, _, _, _, _, _, _, _⟩ := dle (max n a) (Nat.le_max_left _ _)
+    have xeq : x = zustand (max n a) := Option.some.inj eq.symm
+    subst xeq
+    rw [(protocol (max n a)).1] at disp
+    obtain ⟨j, running⟩ := disp
+    have centry : c = entry := by
+      change (if j = s.bootCore then some entry else none) = some c at running
+      split at running
+      · exact (Option.some.inj running).symm
+      · cases running
+    subst centry
+    obtain ⟨t, ht, _, _, _, _, _⟩ := oppd n hn
+    exact ⟨t, ht, (), ⟨[], []⟩, rfl⟩
+  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl, fairLauf⟩
   obtain ⟨η, ideal, matched, checked, env⟩ := laufabgleich abgleich konkret
   have sim := matched.sim ideal (abgleich.schranke h ρ η konkret matched checked)
     (pflicht.autoritaet h ρ konkret) pflicht.fortsetzung

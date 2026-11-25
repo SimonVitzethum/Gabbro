@@ -175,7 +175,7 @@ theorem laufabgleich (pflicht : AbgleichPflichten E)
       rw [mark]
       exact .pause
   obtain ⟨ideal, idealStart, related, ticks⟩ := Zeitlauf.laufbild ρ.zeit bezug lokalTakt _
-    ⟨z, run.2.2.2.trans loaded, init⟩ folgt
+    ⟨z, run.2.2.2.1.trans loaded, init⟩ folgt
   let belegt (t : Nat) : Option Kontext :=
     if priv : ρ.zeit.spur t ≠ none ∧ ideal.spur t = none then
       some (Classical.choose ((ticks t).2.2 priv.1 priv.2))
