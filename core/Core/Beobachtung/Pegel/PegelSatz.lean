@@ -44,7 +44,7 @@ theorem pegelNISatz_erfuellbar :
     refused), so the checker excludes a real behaviour; the accepted program
     above shows the rule is not empty. -/
 theorem pegelNISatz_nichtTrivial :
-    (∃ platform : Plattform, ¬ FlussLokal (leckEinheit platform)) ∧ PegelNISatz := by
-  refine ⟨⟨_, fun platform => leck_abgelehnt platform⟩, pegelNISatz_beweis⟩
+    (∃ platform : Plattform, ¬ FlussLokal (leckEinheit platform)) ∧ PegelNISatz :=
+  ⟨⟨.x86_64, leck_abgelehnt .x86_64⟩, pegelNISatz_beweis⟩
 
 end Gabbro.Core.Beobachtung
