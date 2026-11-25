@@ -635,9 +635,10 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
       alsGanzzahl, Option.bind_some, Option.pure_def]
     rfl
   have t6 : I.Schnitt E_linked ρ := ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩
-  have need6 : (kanonischeVerwendung E_linked).bedarf ρ ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩
-      .division (5, 0) :=
-    ⟨eintritt, .teilen 0, head6, guard6⟩
+  have e6 : t6.val = 6 := rfl
+  have need6 : (kanonischeVerwendung E_linked).bedarf ρ t6 .division (5, 0) := by
+    simp only [kanonischeVerwendung, Fragment.tabellen, e6]
+    exact ⟨eintritt, .teilen 0, head6, guard6⟩
   intro ha
   have hbad := ha.2.2.1 ρ hρ t6 .division (5, 0) need6
   simp only [waechterBedarf] at hbad
