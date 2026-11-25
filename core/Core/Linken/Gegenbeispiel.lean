@@ -87,25 +87,21 @@ theorem teilen_guard_form {l : Nat} {frame : Rahmen} {p : (op : PartielleOperati
     (h : (Befehl.teilen l).guard frame = some p) :
     ∃ a b, frame.zahl l = some a ∧ frame.zahl (l + 1) = some b ∧
       p = ⟨.division, (a.zahl.wert.natAbs, b.zahl.wert.natAbs)⟩ := by
-  dsimp only [Befehl.guard] at h
-  obtain ⟨a, ha⟩ : ∃ a, frame.zahl l = some a := by
-    cases hz : frame.zahl l with
+  simp only [Befehl.guard] at h
+  cases hz : frame.zahl l with
+  | none =>
+    simp only [hz, Option.bind_eq_bind, Option.bind_none] at h
+    cases h
+  | some a =>
+    simp only [hz, Option.bind_eq_bind, Option.bind_some] at h
+    cases hz2 : frame.zahl (l + 1) with
     | none =>
-      rw [hz] at h
+      simp only [hz2, Option.bind_eq_bind, Option.bind_none] at h
       cases h
-    | some _ => exact ⟨_, rfl⟩
-  rw [ha] at h
-  dsimp only at h
-  obtain ⟨b, hb⟩ : ∃ b, frame.zahl (l + 1) = some b := by
-    cases hz : frame.zahl (l + 1) with
-    | none =>
-      rw [hz] at h
-      cases h
-    | some _ => exact ⟨_, rfl⟩
-  rw [hb] at h
-  dsimp only at h
-  cases h
-  exact ⟨a, b, ha, hb, rfl⟩
+    | some b =>
+      simp only [hz2, Option.bind_eq_bind, Option.bind_some] at h
+      simp only [Option.pure_def, Option.some.injEq] at h
+      exact ⟨a, b, hz, hz2, h.symm⟩
 
 /-- Every instruction of A preserves a clean slot 1 at the acting context. -/
 theorem nach_temp1 {b : Befehl} {c : Kontext} {s : Zustand}
@@ -138,7 +134,7 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
   have hlen : (s.lokal c).pc < 3 := by
     by_contra hle
     push_neg at hle
-    have h3 : fragA.code.length = 3 := by rw [fragA_code]
+    have h3 : fragA.code.length = 3 := rfl
     have hnone : fragA.code[(s.lokal c).pc]? = none :=
       List.getElem?_eq_none (by omega)
     rw [hnone] at hpc
@@ -146,10 +142,11 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
   revert hpc hlen
   generalize (s.lokal c).pc = pc
   intro hpc hlen
-  match hmpc : pc with
-  | 0 =>
+  cases pc with
+  | zero =>
     have h0 : fragA.code[0]? = some (Befehl.literal 0 10) := rfl
-    rw [hpc] at h0
+    have hpc0 : fragA.code[0]? = some b := hpc
+    rw [hpc0] at h0
     cases h0
     intro d
     by_cases heq : d = c
@@ -159,31 +156,37 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
         Function.update_of_ne heq _ _
       rw [hkeep]
       exact h d
-  | 1 =>
-    have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := rfl
-    rw [hpc] at h1
-    cases h1
-    intro d
-    by_cases heq : d = c
-    · subst heq
-      exact nach_temp1 (by simp [fragA_code]) (h c)
-    · have hkeep : ((Befehl.literal 1 2).nach c s).lokal d = s.lokal d :=
-        Function.update_of_ne heq _ _
-      rw [hkeep]
-      exact h d
-  | 2 =>
-    have h2 : fragA.code[2]? = some (Befehl.teilen 0) := rfl
-    rw [hpc] at h2
-    cases h2
-    intro d
-    by_cases heq : d = c
-    · subst heq
-      exact nach_temp1 (by simp [fragA_code]) (h c)
-    · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d :=
-        Function.update_of_ne heq _ _
-      rw [hkeep]
-      exact h d
-  | n + 3 => omega
+  | succ n =>
+    cases n with
+    | zero =>
+      have hpc1 : fragA.code[1]? = some b := hpc
+      have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := rfl
+      rw [hpc1] at h1
+      cases h1
+      intro d
+      by_cases heq : d = c
+      · subst heq
+        exact nach_temp1 (by simp [fragA_code]) (h c)
+      · have hkeep : ((Befehl.literal 1 2).nach c s).lokal d = s.lokal d :=
+          Function.update_of_ne heq _ _
+        rw [hkeep]
+        exact h d
+    | succ m =>
+      cases m with
+      | zero =>
+        have hpc2 : fragA.code[2]? = some b := hpc
+        have h2 : fragA.code[2]? = some (Befehl.teilen 0) := rfl
+        rw [hpc2] at h2
+        cases h2
+        intro d
+        by_cases heq : d = c
+        · subst heq
+          exact nach_temp1 (by simp [fragA_code]) (h c)
+        · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d :=
+            Function.update_of_ne heq _ _
+          rw [hkeep]
+          exact h d
+      | succ k => omega
 /-- Slot 1 is clean in every start frame of A. -/
 theorem start_temp1 (s : AussenStart) (c : Kontext) :
     temp1Sauber ((((fragA.einheit .x86_64).startdaten s).lokal c)) := by
@@ -208,9 +211,8 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
         have hall := schritt_temp1 (fun d => ih d) regel
         obtain ⟨b, head, ideal⟩ := regel
         obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal
-        have hplan := (List.cons.inj same).1
-        rw [after] at hall aus
-        rw [hplan] at aus
+        cases same
+        cases after
         have hakt : Semantik.plan.aktion = .intern := rfl
         obtain ⟨rahmen, _, _, _, fuehrt, _, hstate⟩ := aus
         rw [hakt] at fuehrt
