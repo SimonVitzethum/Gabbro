@@ -27,6 +27,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 open Gabbro.Core.Speicher
+open Gabbro.Core.Ast.Semantik
 
 /-- One initial write `w` of a location and two updates `u₁`, `u₂` that both read `w`. -/
 inductive RmwEv where
@@ -224,7 +225,7 @@ structure ShapeOhneRmw (G : Graph E Ort Wert) : Prop where
   mo_total : ∀ a b, G.schreibt a → G.schreibt b → G.ort a = G.ort b → a ≠ b → G.mo a b ∨ G.mo b a
 
 /-- The shape of the two-event graph does not depend on the update's mode. -/
-theorem atomarShape (m : Modus) : (atomarGraph m).ShapeOhneRmw where
+theorem atomarShape (m : Modus) : ShapeOhneRmw (atomarGraph m) where
   po_trans := fun _ _ _ h _ => False.elim h
   po_irrefl := fun _ h => h
   rf_schreibt := by
@@ -294,9 +295,10 @@ theorem atomarKonsistent : (atomarGraph .rlx).Konsistent where
   atomar := by
     intro w u w' hrf _ hmo hmo'
     rcases hrf with ⟨rfl, rfl⟩
-    rcases hmo with ⟨rfl, rfl⟩
-    rcases hmo' with ⟨h, _⟩
-    cases h
+    rcases hmo with ⟨_, hw'u⟩
+    rcases hmo' with ⟨hw'w, _⟩
+    subst w'
+    cases hw'u
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
@@ -320,11 +322,14 @@ theorem rmwAtomar : RmwAtomarAussage := by
   · intro E Ort Wert G hk a ha
     exact hk.wf.rmw_atomar ha
   · intro z e i q ty m
-    cases m <;> decide
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
   · intro z e i a n ty m
-    cases m <;> decide
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
   · intro z e i b ty m
-    cases m <;> decide
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
 
 /-- The statement is satisfiable on both levels: a consistent graph with an update, and an accepted
     update form. -/
@@ -340,7 +345,7 @@ theorem RmwAtomarAussage.erfuellbar :
     sharp as well: the exchange form at `na` is refused. -/
 theorem RmwAtomarAussage.nichtTrivial :
     (∃ (E Ort Wert : Type) (G : Graph E Ort Wert),
-      G.ShapeOhneRmw ∧ ∃ a, G.istRmw a ∧ G.modus a = .na) ∧
+      ShapeOhneRmw G ∧ ∃ a, G.istRmw a ∧ G.modus a = .na) ∧
     (∃ (z e i q : Nat) (ty : Gabbro.Core.Ast.Ty .value),
       ¬ (Gabbro.Core.Ast.Semantik.Zugriffsform.tausche z e i q ty .na).wohlgeformt) := by
   refine ⟨⟨AtomarEv, Bool, Nat, atomarGraph .na, atomarShape .na, AtomarEv.u, rfl, rfl⟩,

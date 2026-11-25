@@ -52,7 +52,8 @@ structure Wohlgeformt : Prop where
   rmw_nicht_na : ∀ a, G.istRmw a → G.modus a ≠ .na
 
 /-- An update of a well-formed graph has an atomic mode. -/
-theorem Wohlgeformt.rmw_atomar (hw : G.Wohlgeformt) {a : E} (h : G.istRmw a) : (G.modus a).atomar := by
+theorem Wohlgeformt.rmw_atomar {E Ort Wert : Type} {G : Graph E Ort Wert}
+    (hw : G.Wohlgeformt) {a : E} (h : G.istRmw a) : (G.modus a).atomar := by
   cases m : G.modus a with
   | na => exact False.elim ((hw.rmw_nicht_na a h) m)
   | rlx | ra | sc => exact trivial
