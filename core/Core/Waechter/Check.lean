@@ -53,6 +53,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.SchrankenProtokoll,
     `Gabbro.Core.Annahme.TiefenBezug,
     `Gabbro.Core.Annahme.SchrankenLokal,
+    `Gabbro.Core.Annahme.AbschnittWartefrei,
     `Gabbro.Core.Beobachtung.niedereAussensicht,
     `Gabbro.Core.Beobachtung.startProjektion,
     `Gabbro.Core.Beobachtung.NiedrigGleich,
