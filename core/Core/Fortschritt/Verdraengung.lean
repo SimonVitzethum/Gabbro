@@ -110,13 +110,15 @@ theorem gueltigV (i : Nat) :
       subst hc0
       exact Nat.zero_lt_succ 0
     · intro sig hmem
-      simp only [angebotV, irqV, List.mem_cons, List.mem_singleton] at hmem
-      rcases hmem with rfl | rfl
+      simp only [angebotV, irqV] at hmem
+      rcases List.mem_cons.mp hmem with rfl | hmem
       · exact ⟨by decide, hsupV⟩
-      · refine ⟨by decide, hsupV, rfl, auswahlV0, ?_, rfl, ?_⟩
+      · have hmem : sig = .zustellen 0 (0, 0) irqV := List.mem_singleton.mp hmem
+        subst hmem
+        refine ⟨by decide, hsupV, rfl, auswahlV0, ?_, rfl, ?_⟩
         · exact ⟨rfl, pendingV0⟩
         · intro e he
-          cases he
+          exact (List.not_mem_nil he).elim
     · intro e he
       cases he
     · intro h
@@ -151,9 +153,12 @@ theorem fairV : FairLaeufe Plattform.x86_64.katalog HV hwV where
   kerne := by
     refine ⟨fun i k h => ?_, fun k hk cut => ?_⟩
     · cases i with
-      | zero => cases h
+      | zero =>
+        simp only [hwV, angebotV] at h
+        cases h
       | succ t =>
-        have hk0 : k = 0 := Option.some.inj h
+        simp only [hwV, angebotV] at h
+        have hk0 : k = 0 := (Option.some.inj h).symm
         subst hk0
         rw [HV1]
         exact Nat.zero_lt_succ 0
