@@ -8452,3 +8452,32 @@ elaborated source fragments are frame-only (`fragment_rein`), the access instruc
 | `AtomAussagen`, `atomAussagen` | `Runtime/Atom/Aussagen.lean` | The three kernel statements pinned together. |
 | `speicherbein_nichtTrivial`, `rennenbein_nichtTrivial`, `invariantenbein_nichtTrivial`, `commitbein_nichtTrivial` | `Runtime/Atom/Beine.lean` | Each safety leg has a run of the machine that violates it. |
 
+
+## 222. Threads: start, join, switch, core start, as instructions with effect classes (MK-07, 2026-11-25)
+
+The machine got exact thread creation (owner decision D-3): `Zustand.naechsterFaden` (the next free thread number, framed: a form
+never moves it) and four protocol actions `Aktion.starte`, `.verbinde kind`, `.beende`, `.wechsle kern kind`
+(`FuehrtAus`, `Maschine/Schritte.lean`). A start makes the RESTING thread with the next number run and advances the counter, so no
+number is used twice; a join runs only for a context that has ended; a switch (and a core start, the switch to an idle core) runs
+a running context that runs on no core, so no context runs on two cores. `Befehl.faden (form : Fadenform)` is the one new
+instruction constructor (`starte`, `beende`, `verbinde`, `wechsle`, `kernStart`); its classes are `starte`, `beende`, `verbinde`
+and `wechsle`. A lifecycle step has a private plan with a lifecycle protocol action (no memory event, no footprint) and changes only
+frames, the status of the acting thread and the holdings of the ledger. Authority MOVES: a start hands the named handles to the new
+thread (`Buchung.uebergeben`), a join takes back what the ended thread held (`Buchung.zurueckgegeben`). The happens-before of start
+and join is the one of a publication and an observation of a flag cell in program order (`veroeffentliche`, `erwarte`); a start
+without them is an instruction of the model, the checker's refusal of it excludes the race. The bytes of a core start are the
+generated startup sequence of the target binding (K4/O17); the model fixes its effect, the target row carries the bytes, and that the
+hardware behaves like the row is a named assumption. Meaning change of a pinned definition (D-3): `Aktion`, `Zustand`,
+`Zustandsrahmen`, `FuehrtAus` (and with them `I.Schritt`, `ImplSchritt`); no statement of `gabbro_ziel` changes its meaning.
+
+| Statement or theorem | File | What it says |
+|---|---|---|
+| `Aktion.starte`, `.verbinde`, `.beende`, `.wechsle`, `FuehrtAus.starte`, `.verbinde`, `.beende`, `.wechsle`, `Zustand.naechsterFaden` | `Maschine/Schritte.lean`, `Maschine/Zustand.lean` | The exact thread creation of the machine; the counter is in `Zustandsrahmen`. |
+| `FuehrtAus.still_erhaelt`, `starte_genau`, `wechsle_genau`, `wechsle_erhaelt_einkern`, `Aktion.Ausfuehrbar` | `Runtime/Faden/Erhalt.lean` | What the lifecycle actions do and do not touch; the one-core invariant. |
+| `Fadenform`, `Fadenoperand`, `Fadenform.uebertrag`, `Rahmen.kindRahmen` | `Runtime/Faden/Form.lean` | The lifecycle instructions and their frame transfer; a temporary that names nothing is refused. |
+| `Wirkungsklasse.starte/beende/verbinde/wechsle`, `Schrittform.faedenNach`, `faedenschritt` | `Klasse/Klasse.lean`, `Klasse/Schritt.lean` | The classes and their step: refusal or the planned step with the new state. |
+| `Buchung.uebergeben`, `zurueckgegeben`, `uebergeben_eindeutig`, `zurueckgegeben_eindeutig` | `Maschine/Buchung.lean`, `Runtime/Faden/Autoritaet.lean` | Authority moves, never copied; exclusive authority keeps one holder. |
+| `Schrittform.lebenszyklus_ideal`, `faedenNach_nurFaden`, `faedenNach_stapel` | `Klasse/Beweise/Faden.lean` | The step of a lifecycle form in facts; the class duties follow. |
+| `klassenAussagen` (for the four classes) | `Klasse/Beweise/*` | `KlassenAussagen` holds for the new classes: arms in the safety, bounds, locality and totality proofs. |
+| `StarteBestimmtAussage`, `FadenAutoritaetAussage`, `VerbindeErgebnisAussage`, `WechsleAussage`, `KindStartetBeiAnkunftAussage`, `FadenHbAussage`, `FadenBestimmtAussage`, `FadenAussagen`, `fadenAussagen` | `Runtime/Faden/Aussagen.lean` | The kernel statements, proved, each with `_erfuellbar` and `_nichtTrivial`. |
+| `FadenKomponierbarAussage`, `VerbindeFortschrittAussage`, `FadenBefehlAussage` | `Runtime/Faden/Aussagen.lean` | The open duties of the lifecycle instructions (registry packet of `Befehl.faden`). |

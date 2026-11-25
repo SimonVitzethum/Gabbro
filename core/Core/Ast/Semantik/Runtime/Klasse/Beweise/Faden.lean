@@ -65,7 +65,7 @@ theorem Schrittform.verweigert_nurFaden (F : Schrittform) (c : Kontext) (s : Zus
 theorem Schrittform.faedenNach_nurFaden (F : Schrittform) (c : Kontext) (s : Zustand) :
     (F.faedenNach c s).NurFaden s := by
   unfold Schrittform.faedenNach
-  dsimp only
+  try dsimp only
   split
   · constructor <;> rfl
   · constructor <;> rfl
@@ -132,7 +132,7 @@ theorem Schrittform.faedenNach_stapel {ι : Type} (E : Klasseneinheit ι) (F : S
     rw [← hdc]
     exact stapel (s.lokal d) s.regionLive v n bound vorTief
   unfold Schrittform.faedenNach
-  dsimp only
+  try dsimp only
   split
   · by_cases h1 : d = Kontext.faden s.naechsterFaden
     · rw [h1]

@@ -192,7 +192,7 @@ theorem Schrittform.faedenNach_verbinde_wert (F : Schrittform) (hk : F.klasse = 
         lokal := Function.update s.lokal c (F.uebertrag (s.lokal c) s.regionLive v),
         buchung := { s.buchung with haelt := s.buchung.zurueckgegeben (.faden n) c } } := by
   unfold Schrittform.faedenNach
-  dsimp only
+  try dsimp only
   rw [hk]
   simp only [hn, hs]
 
@@ -310,7 +310,7 @@ theorem Schrittform.faedenNach_starte_pc (F : Schrittform) (hk : F.klasse = .sta
   change k = .starte at hk
   subst hk
   unfold Schrittform.faedenNach
-  dsimp only
+  try dsimp only
   rw [Function.update_self]
 
 /-- **A resting thread never steps, and a started thread begins at its entry.** The machine schedules a context only

@@ -142,10 +142,10 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
                  naechsterFaden := s.naechsterFaden + 1 }
   /-- **A join.** It takes place only when the joined context has ended; until then the joiner does not
       step. -/
-  | verbinde {kind e} (fertig : s.status kind = .beendet e) :
+  | verbinde {kind ausgang} (fertig : s.status kind = .beendet ausgang) :
       FuehrtAus t c s u (.verbinde kind) [] [] u
   /-- **A thread end.** The form sets the outcome in the status of the acting thread. -/
-  | beende {e} (ende : u.status c = .beendet e) : FuehrtAus t c s u .beende [] [] u
+  | beende {ausgang} (ende : u.status c = .beendet ausgang) : FuehrtAus t c s u .beende [] [] u
   /-- **A switch and a core start.** The acting context holds the core or the core is idle; the context
       switched to runs, rests on no core and is no other than the acting one. The core then runs it. -/
   | wechsle {kern kind} (frei : (s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none)
