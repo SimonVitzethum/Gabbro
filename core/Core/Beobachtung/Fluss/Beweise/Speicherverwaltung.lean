@@ -175,10 +175,10 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     rfl
 
 private theorem fuehrtAus_intern_fragen {t : Nat} {c : Kontext} {s u : MemState}
-    {a : List (Speicher.Etikett Nat UInt8)} {v : MemState}
-    (h : FuehrtAus memSetup t c s u .intern a v) : a = [] ∧ v = u := by
+    {a : List (Speicher.Etikett Nat UInt8)} {b : List Ereignis} {v : MemState}
+    (h : FuehrtAus memSetup t c s u .intern a b v) : a = [] ∧ b = [] ∧ v = u := by
   cases h
-  exact ⟨rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl⟩
 
 /-- No memory form issues a question, so no cut of an admitted run has a pending question. -/
 private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
@@ -460,7 +460,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                     injection kern₂ with hctx
                     have hcEq : cR = c := Option.some.inj (hkern.symm.trans gleich)
                     subst cR
-                    cases hctx
+                    cases hcEq
                     obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
                     have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                     subst f₂
