@@ -14,7 +14,7 @@ open Annahme.Hosted
     so the B8 prefix holds at every cut of every admitted run. -/
 private theorem hosted_prefix {bytes : List UInt8} {ρ : Lauf einheit}
     (lauf : Laeufe einheit (umgebung bytes) ρ) (t : Nat) : B8Prefix einheit ρ t := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro n h
     cases h
   · intro l c a n _ _
@@ -24,6 +24,10 @@ private theorem hosted_prefix {bytes : List UInt8} {ρ : Lauf einheit}
     cases h
   · intro t' s _ _ c m hmem
     have leer : einheit.schranken.zeitstand (s.lokal c) = [] := rfl
+    rw [leer] at hmem
+    exact (List.not_mem_nil hmem).elim
+  · intro t' s _ _ c m hmem
+    have leer : einheit.schranken.durchlaufstand (s.lokal c) = [] := rfl
     rw [leer] at hmem
     exact (List.not_mem_nil hmem).elim
 
