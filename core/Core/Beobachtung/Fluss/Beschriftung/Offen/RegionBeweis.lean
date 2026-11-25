@@ -201,4 +201,61 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
               | interrupt _ _ => cases label
               | absturz _ => cases label
 
+/-- A context step of a low-level unit records no public event: its plan is the internal plan,
+    its trace is empty and the transfer leaves status and bookkeeping unchanged. -/
+private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf (unit op)}
+    {predictor : Praediktor} {t : Nat} {c : Kontext} {wahl : PUnit} {spur : SchrittSpur Nat UInt8}
+    (spurGlied : ρ.zeit.spur t = some (.kontext c wahl, spur)) :
+    schrittBeob ρ predictor t = [] := by
+  have tak := ρ.zeit.takt t
+  rw [spurGlied] at tak
+  generalize hS : ρ.zeit.zustand t = sOpt at tak
+  generalize hN : ρ.zeit.zustand (t + 1) = nOpt at tak
+  cases tak with
+  | wartet label _ _ => cases label
+  | schritt label laufstep =>
+      cases laufstep with
+      | schritt impl =>
+          cases impl with
+          | kontext _ _ regel aus =>
+              obtain ⟨i, kopfI, implI⟩ := regel
+              obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := wahl) implI
+              cases (List.cons.inj planEq).1
+              simp only [unit] at aus
+              obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal aus
+              subst spur
+              rw [nextEq, hu] at hN
+              have hsSome : ∃ s, sOpt = some s := by
+                cases sOpt with
+                | none => cases hS
+                | some s => exact ⟨s, rfl⟩
+              obtain ⟨s, hsOpt⟩ := hsSome
+              subst sOpt
+              simp only [hS] at *
+              have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
+                intro d
+                unfold neuBeendet
+                cases hd : s.status d <;> rw [hd] <;> rfl
+              have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
+                rintro ⟨d, hd⟩
+                rw [hEnde d] at hd
+                cases hd
+              have hcommit : commitBeob k.plattform s (transfer.apply c s) = [] := by
+                simp only [commitBeob, List.drop_length, List.filterMap_nil]
+              have hausgabe : ausgabeBeob (unit op) c s.lokal c (transfer.apply c s).lokal c = [] := by
+                simp only [ausgabeBeob, unit, Flussdaten.leer, Flussdaten.ausgabeZuwachs,
+                  List.drop_nil, List.filter_nil, List.map_nil]
+              have hzeit : zeitBeob ρ c s.lokal c (transfer.apply c s).lokal c = [] := by
+                simp only [zeitBeob, unit, Schrankendaten.leer, List.filter_nil, List.filterMap_nil]
+              have hspec : (k.plattform.spekulationshuelle).zugriffe ([] : List (Option Nat)) = [] := by
+                cases k.plattform.spekulationshuelle <;> rfl
+              have hKontext : kontextBeob ρ predictor t c s (transfer.apply c s) ⟨[], []⟩ = [] := by
+                unfold kontextBeob
+                rw [hcommit, hausgabe, hzeit, kopfI]
+                simp only [unit, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
+                  List.map_nil, List.nil_append, List.append_nil]
+              rw [schrittBeob, spurGlied, hS, hN]
+              simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
+                List.nil_append]
+
 end Gabbro.Core.Beobachtung
