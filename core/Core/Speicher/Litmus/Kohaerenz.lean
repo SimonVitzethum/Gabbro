@@ -222,6 +222,10 @@ theorem co_kein_rmw (m : Modus) (u : CoEv) : ¬ (coGraph m).istRmw u := by
   intro hu
   cases u <;> simp only [Graph.istRmw, coGraph, coLab, reduceCtorEq] at hu
 
+theorem co_kein_zaun (m : Modus) (a : CoEv) : ¬ (coGraph m).istZaun a := by
+  intro ha
+  cases a <;> simp only [Graph.istZaun, coGraph, coLab, reduceCtorEq] at ha
+
 theorem coRb_closed (w' r w : CoEv) : (coRf w' r ∧ coMo w' w) → coRb r w := by
   cases w' <;> cases r <;> cases w <;> decide
 
@@ -252,7 +256,8 @@ theorem coRang_hbSchritt (m : Modus) (a b : CoEv) :
   intro h
   rcases h with hpo | hsw
   · exact coPo_rang a b hpo
-  · obtain ⟨_, hmw, _, _, x, hrs, hrf⟩ := hsw
+  · obtain ⟨_, _, _, _, x, hrs, hrf⟩ :=
+      Graph.sw_klassisch (co_kein_zaun m a) (co_kein_zaun m b) hsw
     have hax : a = x ∨ coPo a x := Graph.Rs.ohne_rmw (co_kein_rmw m) hrs
     rcases hax with rfl | hpx
     · exact coRf_rang a b hrf

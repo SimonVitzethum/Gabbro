@@ -212,10 +212,15 @@ theorem rsRsWfNur (x : RelEv) (h : rsGraph.Rs wf x) : x = wf := by
       exfalso
       rcases hrf with ⟨h1, _⟩ | ⟨h1, _⟩ | ⟨h1, _⟩ <;> cases h1
 
+theorem rs_kein_zaun (a : RelEv) : ¬ rsGraph.istZaun a := by
+  intro ha
+  cases a <;> simp only [Graph.istZaun, rsGraph, rsLab, reduceCtorEq] at ha
+
 /-- The update does not read from the release write, so no `sw` edge exists in this graph. -/
 theorem rsKeinSw (a b : RelEv) : ¬ rsGraph.sw a b := by
   intro h
-  rcases h with ⟨hsch, hst, hl, hstb, x, hrs, hrf⟩
+  obtain ⟨hsch, hst, hl, hstb, x, hrs, hrf⟩ :=
+    Graph.sw_klassisch rs_kein_zaun rs_kein_zaun h
   have ha : a = wf := rsStarkSchreibt a hsch hst
   have hb : b = r := rsStarkLiest b hl hstb
   subst a

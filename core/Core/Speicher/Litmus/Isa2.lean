@@ -210,7 +210,7 @@ theorem isa2_hb (m : Modus) (hm : ¬ m.stark) {a b : Isa2Ev} (h : (isa2Graph m).
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hst, _, _, _⟩ := hsw
+    · have hst : ((isa2Graph m).modus x).stark := Graph.sw_stark_links hsw
       rw [isa2_modus m x] at hst
       exact False.elim (hm hst)
   exact transGen_von_trans (fun x y z hxy hyz => isa2Po_trans x y z ⟨hxy, hyz⟩)

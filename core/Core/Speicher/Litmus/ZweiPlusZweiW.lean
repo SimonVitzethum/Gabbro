@@ -232,7 +232,7 @@ theorem zp2w_hb_rlx {a b : Zp2wEv} (h : (zp2wGraph .rlx).hb a b) : zp2wPo a b :=
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hmw, _, _, _, _, _⟩ := hsw
+    · have hmw : ((zp2wGraph .rlx).modus x).stark := Graph.sw_stark_links hsw
       cases x <;> cases hmw
   exact transGen_von_trans zp2wPo_trans (transGen_mono schritt h)
 

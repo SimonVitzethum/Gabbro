@@ -202,7 +202,7 @@ theorem wrc_hb (m : Modus) (hm : ¬ m.stark) {a b : WrcEv} (h : (wrcGraph m).hb 
     intro x y hxy
     rcases hxy with hpo | hsw
     · exact hpo
-    · obtain ⟨_, hst, _, _, _⟩ := hsw
+    · have hst : ((wrcGraph m).modus x).stark := Graph.sw_stark_links hsw
       rw [wrc_modus m x] at hst
       exact False.elim (hm hst)
   exact transGen_von_trans (fun x y z hxy hyz => wrcPo_trans x y z ⟨hxy, hyz⟩)

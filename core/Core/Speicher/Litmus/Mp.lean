@@ -149,7 +149,7 @@ theorem mpRlx_kein_rmw (m : Modus) (u : MpRlxEv) : ¬ (mpRlxGraph m).istRmw u :=
 /-- With `.rlx` no event is strong, so there is no `sw` edge. -/
 theorem mpRlx_kein_sw (a b : MpRlxEv) : ¬ (mpRlxGraph .rlx).sw a b := by
   intro h
-  rcases h with ⟨_, hs, _, _, _⟩
+  have hs : ((mpRlxGraph .rlx).modus a).stark := Graph.sw_stark_links h
   cases a <;> exact hs
 
 /-- Without `sw`, happens-before is program order. -/
