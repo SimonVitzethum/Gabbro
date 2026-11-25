@@ -141,11 +141,11 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
         geraete_kontext_beob_still (ρ := ρ) (predictor := predictor) (t := t)
           (spur := ⟨speicher, [.frage (s.stelleFrage t c (binding.question access))]⟩)
           hbuch hkopf
-      have hende : ¬ ∃ d, (neuBeendet s s' (d.unit locals).etiketten d).isSome = true := by
-        rintro ⟨d, hd⟩
-        have hnone : neuBeendet s s' (d.unit locals).etiketten d = none := by
+      have hende : ¬ ∃ ctx, (neuBeendet s s' (d.unit locals).etiketten ctx).isSome = true := by
+        rintro ⟨ctx, hd⟩
+        have hnone : neuBeendet s s' (d.unit locals).etiketten ctx = none := by
           simp only [neuBeendet, hstatus]
-          cases hst : s.status d <;> rfl
+          cases hst : s.status ctx <;> rfl
         rw [hnone] at hd
         cases hd
       rw [schrittBeob, tick, atS, atN]
