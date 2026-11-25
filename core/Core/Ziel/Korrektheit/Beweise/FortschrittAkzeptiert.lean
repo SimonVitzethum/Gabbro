@@ -311,27 +311,27 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     · rw [skerne] at h
                       by_cases heq : k = kr
                       · subst heq
-                        have hkk : ((Maschine.Zustandsrueckkehr u kr).kerne kr).laeuft =
-                            ((u.kerne kr).zurueck).laeuft := rfl
+                        have hkk : ((Maschine.Zustandsrueckkehr u k).kerne k).laeuft =
+                            ((u.kerne k).zurueck).laeuft := rfl
                         rw [hkk] at h
-                        cases hst : (u.kerne kr).stapel with
+                        cases hst : (u.kerne k).stapel with
                         | nil =>
-                          have hnone : ((u.kerne kr).zurueck).laeuft = none := by
+                          have hnone : ((u.kerne k).zurueck).laeuft = none := by
                             rw [hst]
                             rfl
                           rw [hnone] at h
                           cases h
                         | cons top rest =>
                           obtain ⟨w, n⟩ := top
-                          have hpop : ((u.kerne kr).zurueck).laeuft = w := by
+                          have hpop : ((u.kerne k).zurueck).laeuft = w := by
                             rw [hst]
                             rfl
                           rw [hpop] at h
-                          have hmem : (w, n) ∈ (u.kerne kr).stapel := by
+                          have hmem : (w, n) ∈ (u.kerne k).stapel := by
                             rw [hst]
                             exact List.mem_cons_self
                           rw [ustack] at hmem
-                          exact ihs kr w n hmem c h
+                          exact ihs k w n hmem c h
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).laeuft =
                           (u.kerne k).laeuft := by
                         simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
@@ -340,26 +340,26 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     · rw [sstack] at h
                       by_cases heq : k = kr
                       · subst heq
-                        have hkk : ((Maschine.Zustandsrueckkehr u kr).kerne kr).stapel =
-                            ((u.kerne kr).zurueck).stapel := rfl
+                        have hkk : ((Maschine.Zustandsrueckkehr u k).kerne k).stapel =
+                            ((u.kerne k).zurueck).stapel := rfl
                         rw [hkk] at h
-                        cases hst : (u.kerne kr).stapel with
+                        cases hst : (u.kerne k).stapel with
                         | nil =>
-                          have hnil : ((u.kerne kr).zurueck).stapel = [] := by
+                          have hnil : ((u.kerne k).zurueck).stapel = [] := by
                             rw [hst]
                             rfl
                           rw [hnil] at h
                           exact (List.not_mem_nil h).elim
                         | cons top rest =>
-                          have hcons : ((u.kerne kr).zurueck).stapel = rest := by
+                          have hcons : ((u.kerne k).zurueck).stapel = rest := by
                             rw [hst]
                             rfl
                           rw [hcons] at h
-                          have hmem : (w, m) ∈ (u.kerne kr).stapel := by
+                          have hmem : (w, m) ∈ (u.kerne k).stapel := by
                             rw [hst]
                             exact List.mem_cons_of_mem _ h
                           rw [ustack] at hmem
-                          exact ihs kr w m hmem c hc
+                          exact ihs k w m hmem c hc
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).stapel =
                           (u.kerne k).stapel := by
                         simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
