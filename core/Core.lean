@@ -67,6 +67,8 @@ public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetFluss
+public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
@@ -202,6 +204,10 @@ public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
+public import Core.Ziel.Review.Slice.Fragment
+public import Core.Ziel.Review.Slice.Surface
+public import Core.Ziel.Review.Slice.Goal
+public import Core.Ziel.Review.Slice.NonTrivial
 meta import Core.Waechter.Check
 
 #check_core
