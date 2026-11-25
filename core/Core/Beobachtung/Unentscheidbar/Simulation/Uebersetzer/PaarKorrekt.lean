@@ -45,11 +45,14 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   by_cases hab : a < b
   · have hF := paarVorwaertsWahr aSlot bSlot aus frei r a b hpc ha hb haF hbF hab
+    have hpcF : (pb12w r a b aus frei).pc = (paarBerechnung aSlot bSlot aus frei).length := by
+      rw [paarBerechnungLaenge]
+      rfl
     have hkEq : k = 28 := by
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-      · exact laufStirbtNach _ r k 28 rEnd (pb12w r a b aus frei) hk rfl hF hlt
-      · exact laufStirbtNach _ r 28 k (pb12w r a b aus frei) rEnd hF rfl hk hgt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 28 rEnd (pb12w r a b aus frei) hk hpcF hF hlt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 28 k (pb12w r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb12w r a b aus frei := by
       subst k
       exact Option.some.inj (hk.trans hF.symm)
@@ -59,11 +62,14 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     show Function.update (pb11w r a b frei).temp aus (some (natVal (b * b + a))) aus = _
     exact updateHit _ _ _
   · have hF := paarVorwaertsFalsch aSlot bSlot aus frei r a b hpc ha hb haF hbF hab
+    have hpcF : (pb14f r a b aus frei).pc = (paarBerechnung aSlot bSlot aus frei).length := by
+      rw [paarBerechnungLaenge]
+      rfl
     have hkEq : k = 30 := by
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-      · exact laufStirbtNach _ r k 30 rEnd (pb14f r a b aus frei) hk rfl hF hlt
-      · exact laufStirbtNach _ r 30 k (pb14f r a b aus frei) rEnd hF rfl hk hgt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 30 rEnd (pb14f r a b aus frei) hk hpcF hF hlt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 30 k (pb14f r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb14f r a b aus frei := by
       subst k
       exact Option.some.inj (hk.trans hF.symm)
