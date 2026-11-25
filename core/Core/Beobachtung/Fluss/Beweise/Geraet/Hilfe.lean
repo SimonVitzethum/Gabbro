@@ -261,19 +261,24 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
       rw [n1] at tick1
       have tick2 := ρ₂.zeit.takt t
       rw [n2] at tick2
+      generalize hN1 : ρ₁.zeit.zustand (t + 1) = post1 at tick1
+      generalize hN2 : ρ₂.zeit.zustand (t + 1) = post2 at tick2
       cases tick1 with
       | schritt _ step1 => cases step1
       | wartet _ eq1 _ =>
         cases tick2 with
         | schritt _ step2 => cases step2
         | wartet _ eq2 _ =>
-          exact Or.inl ⟨eq1.trans n1, eq2.trans n2⟩
+          rw [← hN1, ← hN2]
+          exact Or.inl ⟨eq1, eq2⟩
     | inr hsome =>
       obtain ⟨v1, v2, s1, s2⟩ := hsome
       have tick1 := ρ₁.zeit.takt t
       rw [s1] at tick1
       have tick2 := ρ₂.zeit.takt t
       rw [s2] at tick2
+      generalize hN1 : ρ₁.zeit.zustand (t + 1) = post1 at tick1
+      generalize hN2 : ρ₂.zeit.zustand (t + 1) = post2 at tick2
       cases tick1 with
       | schritt _ step1 =>
         cases step1 with
@@ -282,12 +287,12 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
           | schritt _ step2 =>
             cases step2 with
             | schritt _ => exact Or.inr ⟨_, _, rfl, rfl⟩
-          | wartet _ eq2 _ => exact Or.inr ⟨_, _, rfl, eq2⟩
+          | wartet _ eq2 _ => exact Or.inr ⟨_, _, rfl, hN2.trans eq2⟩
       | wartet _ eq1 _ =>
         cases tick2 with
         | schritt _ step2 =>
           cases step2 with
-          | schritt _ => exact Or.inr ⟨_, _, eq1, rfl⟩
-        | wartet _ eq2 _ => exact Or.inr ⟨_, _, eq1, eq2⟩
+          | schritt _ => exact Or.inr ⟨_, _, hN1.trans eq1, rfl⟩
+        | wartet _ eq2 _ => exact Or.inr ⟨_, _, hN1.trans eq1, hN2.trans eq2⟩
 
 end Gabbro.Core.Beobachtung
