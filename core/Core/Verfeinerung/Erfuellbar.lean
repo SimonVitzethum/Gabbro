@@ -184,7 +184,7 @@ theorem fortschritt_erfuellbar :
     takt := fun t => .schritt rfl (step t) }⟩
   have fairLauf : SchedulerFair E₀ ρ := by
     intro a c dle oppd n hn
-    obtain ⟨x, eq, disp, _, _, _, _, _, _, _, _, _⟩ := dle (max n a) (Nat.le_max_left _ _)
+    obtain ⟨x, eq, disp, _, _, _, _, _, _, _, _, _⟩ := dle (max n a) (Nat.le_max_right _ _)
     have xeq : x = zustand (max n a) := Option.some.inj eq.symm
     subst xeq
     rw [(protocol (max n a)).1] at disp
