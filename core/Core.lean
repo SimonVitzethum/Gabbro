@@ -200,6 +200,7 @@ public import Core.Beobachtung.SchrankenBeweise.RessourcenEinheit
 public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
 public import Core.Beobachtung.SchrankenBeweise.Bindung
+public import Core.Beobachtung.SchrankenBeweise.BindungKosten
 public import Core.Beobachtung.SchrankenBeweise.BindungZeitDurchlauf
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
@@ -212,6 +213,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
@@ -219,6 +221,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NISichtbar
 public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
