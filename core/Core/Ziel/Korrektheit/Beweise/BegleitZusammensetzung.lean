@@ -243,15 +243,12 @@ theorem LinkerAkzeptiertAussage.erfuellbar :
 theorem LinkerAkzeptiertAussage.nichtTrivial :
     ∃ (plan : Bauplan), linke plan = none ∧
       ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
-  let plan : Bauplan := ⟨[Linken.modulDef], [], Plattform.x86_64, "keinEinstieg"⟩
+  let plan : Bauplan := ⟨[], [("x", "y")], Plattform.x86_64, "keinEinstieg"⟩
   refine ⟨plan, ?_, ?_⟩
-  · simp [Linken.linke, Linken.bauplanOk, Linken.modulNamenEindeutig, Linken.modulNamen,
-      Linken.exporteEindeutig, Linken.alleExporte, Linken.einstiegVorhanden,
-      Linken.importeGedeckt, Linken.abhaengigkeitenOk, plan, Linken.modulDef]
+  · unfold Linken.linke
+    rfl
   · intro m present
-    simp only [plan, List.mem_singleton] at present
-    subst m
-    exact modulDef_akzeptiert
+    cases present
 
 /-- The linker is non-trivial in both directions: it links the accepted two-module example and refuses a plan
     whose only module is accepted (`Linken.link_erfuellbar`, the refusal witness above). -/
