@@ -272,7 +272,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [dif_pos rfl]
+        simp only [l, dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef) (fun h => by cases h)
@@ -280,7 +280,6 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
@@ -316,9 +315,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         schreibEreignisse] at folge
       have hfilter : List.filter (fun x => decide (x = (F.operand (vor.lokal c)).ort))
           [(F.operand (vor.lokal c)).ort] = [(F.operand (vor.lokal c)).ort] := by
-        have hdec : decide ((F.operand (vor.lokal c)).ort = (F.operand (vor.lokal c)).ort) = true := by decide
         simp only [List.filter]
-        rw [hdec]
+        rfl
       rw [hfilter] at folge
       simp only [List.map, List.cons_append, List.append_nil] at folge
       let l : Etikett Zelle Int := ⟨.schreiben, (F.operand (vor.lokal c)).ort, m,
@@ -327,7 +325,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [dif_pos rfl]
+        simp only [l, dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun h => by cases h) (fun _ => hBef)
@@ -335,7 +333,6 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
@@ -375,7 +372,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        simp only [dif_pos rfl]
+        simp only [l, dif_pos rfl]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
@@ -383,7 +380,6 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         rw [hFk]
-        rfl
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
