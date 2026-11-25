@@ -116,7 +116,7 @@ theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some 
   cases hb : bauplanOk plan with
   | false => simp [linke, hb] at h
   | true => simp [linke, hb] at h
-    exact ⟨hb, h.symm⟩
+    exact ⟨rfl, h.symm⟩
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
@@ -186,6 +186,8 @@ theorem verknuepfte_code (plan : Bauplan) :
       plan.module.flatMap (fun m => m.fragment.code) := by
   unfold verknuepfteFragmente
   have h := verknuepfte_code_aux plan.module Fragment.leer
+  have e : Fragment.leer.code = [] := rfl
+  rw [e] at h
   simpa using h
 
 /-- The defining module alone is accepted: guard-free with empty clauses. -/
