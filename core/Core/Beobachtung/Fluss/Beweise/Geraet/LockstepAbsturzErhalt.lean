@@ -132,17 +132,20 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      have htake : (NiedrigeBeob.praefix E ρ₂ predictor t ++
-                          [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
-                          ((NiedrigeBeob.praefix E ρ₁ predictor t).length + 1) =
-                          (NiedrigeBeob.praefix E ρ₂ predictor t).take
-                            ((NiedrigeBeob.praefix E ρ₁ predictor t).length) ++
-                            [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))] := by
-                        rw [List.take_append]
-                        simp only [hlen, List.length_take, Nat.sub_self,
-                          List.take_zero, List.append_nil]
-                      rw [htake]
-                      exact List.rel_append (geraeteKopplung_kopplung hkopp).1
+                      let e := NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))
+                      let L₁ := NiedrigeBeob.praefix E ρ₁ predictor t
+                      let L₂ := NiedrigeBeob.praefix E ρ₂ predictor t
+                      have hlenP : L₁.length = L₂.length := by
+                        simpa only [L₁, L₂, NiedrigeBeob] using hlen
+                      have hlenApp : (L₂ ++ [e]).length = (L₁ ++ [e]).length := by
+                        simp only [List.length_append, List.length_singleton, hlenP]
+                      have ht1 : (L₂ ++ [e]).take ((L₁ ++ [e]).length) = L₂ ++ [e] :=
+                        List.take_of_length_le (le_of_eq hlenApp.symm)
+                      have ht2 : L₂.take L₁.length = L₂ :=
+                        List.take_of_length_le (le_of_eq hlenP.symm)
+                      rw [ht1, ht2]
+                      exact List.rel_append (by simpa only [L₁, L₂] using
+                          (geraeteKopplung_kopplung hkopp).1)
                         (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
@@ -184,16 +187,18 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       · dsimp only [Zustand.wiederanlauf, Denotation.unit,
                           Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                         rfl
-                    · rw [hbeob₁, hbeob₂, hlen]
-                      simp only [List.length_append, List.length_singleton]
+                    · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
+                        List.length_append, List.length_singleton, hlen]
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                       rw [n₁Eq, n₂Eq]
-                      refine ⟨hfragen, hverlauf, hantworten, hverbraucht, ?_, rfl⟩
-                      funext c
-                      dsimp only [Zustand.wiederanlauf, Zustand.angekommen]
-                      rw [hantworten, hverbraucht]
+                      refine ⟨⟨hfragen, hverlauf, hantworten, hverbraucht, ?_⟩, ?_⟩
+                      · funext c
+                        dsimp only [Zustand.wiederanlauf, Zustand.angekommen]
+                        rw [hantworten, hverbraucht]
+                      · dsimp only [Zustand.wiederanlauf]
+                        rfl
                   | kontext nc _ _ _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                   | antwort nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                   | interrupt nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
