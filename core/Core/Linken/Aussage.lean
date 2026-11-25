@@ -115,7 +115,8 @@ theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some 
     bauplanOk plan = true ∧ frag = verknuepfteFragmente plan := by
   cases hb : bauplanOk plan with
   | false => simp [linke, hb] at h
-  | true => simp [linke, hb] at h
+  | true =>
+    simp [linke, hb] at h
     exact ⟨rfl, h.symm⟩
 
 /-- An empty list is the only list with `isEmpty`. -/
