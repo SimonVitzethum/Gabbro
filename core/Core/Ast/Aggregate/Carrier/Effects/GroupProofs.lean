@@ -224,7 +224,7 @@ theorem effectGroup_ideal : EffectGroupIdealAussage := by
   intro scope
   refine ⟨eg_amOrt scope, ?_⟩
   intro args
-  exact ⟨((effectGroupForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(effectGroupForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 theorem effectGroup_einheit : EffectGroupEinheitAussage := by
   intro scope platform args
   exact ⟨rfl, ((effectGroupForm scope).befehl args).kommutation⟩

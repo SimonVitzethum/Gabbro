@@ -184,7 +184,7 @@ theorem tupleBind_ideal : TupleBindIdealAussage := by
   intro ctx
   refine ⟨tupleBind_am_ort ctx, ?_⟩
   intro args
-  exact ⟨((tupleBindForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(tupleBindForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleBind_einheit : TupleBindEinheitAussage := by
   intro ctx platform args

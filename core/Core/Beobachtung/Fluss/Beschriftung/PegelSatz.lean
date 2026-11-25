@@ -17,7 +17,7 @@ open Katalog
     expresses the leak and the checker refuses it. (c) Public outputs and every
     release occurrence are low-visible: the low observer sees inputs, outputs
     and releases, so the statement is not vacuous. -/
-def PegelNISatz : Prop :=
+def PegelNIAussage : Prop :=
   (∀ platform : Plattform, FlussLokal (gutFragment.beschriftet platform gutBeschriftung)) ∧
   (∀ platform : Plattform, ¬ FlussLokal (leckEinheit platform)) ∧
   (∀ (e : Etiketten Unit) (k : Nat),
@@ -27,7 +27,7 @@ def PegelNISatz : Prop :=
     Ausgabe.niedrig e (Ausgabe.freigabe (Wert := Int) id q w) = true)
 
 /-- Proof of the collective statement from the established witnesses. -/
-theorem pegelNISatz_beweis : PegelNISatz := by
+theorem pegelNIAussage_beweis : PegelNIAussage := by
   refine ⟨fun platform => gut_fluss_lokal platform, fun platform => leck_abgelehnt platform, ?_, ?_⟩
   · intro e k h
     simp only [Ausgabe.niedrig, h]
@@ -36,15 +36,15 @@ theorem pegelNISatz_beweis : PegelNISatz := by
 
 /-- Satisfiability: the premises hold jointly. The accepted program with the
     all-secret-local declaration is the joint witness. -/
-theorem pegelNISatz_erfuellbar :
+theorem pegelNIAussage_erfuellbar :
     ∃ (β : Ast.Semantik.Beschriftung), gutFragment.FlussAkzeptiert β :=
   ⟨gutBeschriftung, gut_akzeptiert⟩
 
 /-- Non-triviality: the model expresses the error (the leaking program is
     refused), so the checker excludes a real behaviour; the accepted program
     above shows the rule is not empty. -/
-theorem pegelNISatz_nichtTrivial :
-    (∃ platform : Plattform, ¬ FlussLokal (leckEinheit platform)) ∧ PegelNISatz :=
-  ⟨⟨.x86_64, leck_abgelehnt .x86_64⟩, pegelNISatz_beweis⟩
+theorem pegelNIAussage_nichtTrivial :
+    (∃ platform : Plattform, ¬ FlussLokal (leckEinheit platform)) ∧ PegelNIAussage :=
+  ⟨⟨.x86_64, leck_abgelehnt .x86_64⟩, pegelNIAussage_beweis⟩
 
 end Gabbro.Core.Beobachtung

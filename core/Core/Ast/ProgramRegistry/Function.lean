@@ -46,7 +46,7 @@ theorem function_ideal (scope : Scope) : (functionForm scope).IdealAussage := by
     simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((functionForm scope).befehl args).bestimmt
+    · exact (functionForm scope).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

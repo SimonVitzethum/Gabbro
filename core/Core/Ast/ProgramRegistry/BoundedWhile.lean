@@ -69,7 +69,7 @@ theorem boundedWhile_ideal (scope : Scope) (result : Option (Ty .value)) : (boun
       omega
   · intro args
     constructor
-    · exact ((boundedWhileForm scope result).befehl args).bestimmt
+    · exact (boundedWhileForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

@@ -33,6 +33,7 @@ public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Elaborierung
 public import Core.Ast.Semantik.Runtime.Praedikat
+public import Core.Ast.Semantik.Runtime.Atom.Rein
 public import Core.Sicherheit.RegelnErfuellbar
 
 @[expose] public section
@@ -75,7 +76,7 @@ def InvariantenSicherheitAussage (P : Plattform) : Prop :=
 theorem invariantenSicherheit (P : Plattform) : InvariantenSicherheitAussage P := by
   intro u ok H ρ lauf
   exact fragment_sicher (programmMitInvarianten u) P u.invarianten
-    (programmMitInvarianten_klauseln u) ok H ρ lauf
+    (programmMitInvarianten_klauseln u) ok (programm_rein u.baum) H ρ lauf
 
 /-- The checker premises hold jointly: the empty unit with a satisfied predicate passes. -/
 theorem InvariantenSicherheitAussage.erfuellbar :

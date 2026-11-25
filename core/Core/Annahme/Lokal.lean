@@ -5,7 +5,9 @@
   `Lokal E` is the decidable local rules over the program's syntax interface, generic over the
   program's units and forms: the per-form authority obligation (`RegelLokal`, discharged per
   form), the per-form stack and memory obligation (`SchrankenLokal`, discharged per form;
-  open bounds stay admitted) and the outside rule of §4 (`AussenLokal` with `AussenGueltig`:
+  open bounds stay admitted), the wait-free lock sections (`AbschnittWartefrei`: no waiting
+  on a not-yet-enabled condition while holding a bound lock) and the outside rule of §4
+  (`AussenLokal` with `AussenGueltig`:
   every outside effect valid at commit), over the catalogue selection (`KatalogWohlgeformt`).
   `stale_griff_ungueltig`
   and the refusal theorems connect M10's outside provenance to validity at commit: a handle
@@ -115,12 +117,41 @@ def AussenLokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung
     Prop :=
   Aussen.ZulassungsRegel E.katalog.plattform ∧ AussenGueltig E
 
+/-- **Wait-free lock sections** (PERFECT-MODEL §3.2, step M5; MK-05 Option A): a context
+    that holds a lock under a declared hold bound waits — if its system reports it blocked
+    at all — only on an already-enabled lock take: the awaited lock is free and the holder
+    stands at the head of its queue. A wait on an `await`, a join, an outside question or a
+    hardware delay while holding is refused, as is a wait on a lock that is held or queued
+    ahead: the holder keeps no blockade the progress duties cannot discharge
+    (`FortschrittsPflichten.eindeutig`: a ready context is never blocked), so a live
+    dispatched holder whose rule offers the release step stays eligible until it hands the
+    lock off (`SperrHalterBereit`). This is a checker row like `RegelLokal`: no user proof
+    is owed — only the reported blockade is discriminated, over decidable state facts. -/
+def AbschnittWartefrei [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
+  ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (l : L),
+    E.schranken.halten l ≠ none → (s.sperren l).besitzer = some c →
+    ∀ (b : Blockade L Bedingung), E.system.blockiert s c b →
+      match b with
+      | .sperre l' => (s.sperren l').besitzer = none ∧ (s.sperren l').schlange[0]? = some c
+      | _ => False
+
+/-- A unit that never reports a context blocked meets the section row. -/
+theorem abschnittWartefrei_ohne_blockade [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (nie : ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (b : Blockade L Bedingung),
+      ¬ E.system.blockiert s c b) :
+    AbschnittWartefrei E := by
+  intro s c l _ _ b hb
+  exact False.elim (nie s c b hb)
+
 /-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
-    flow and stack/memory bounds at source initialisation and at each form. The bounds row
-    is last, so units with open bounds are accepted exactly as before. -/
+    flow, stack/memory bounds and wait-free lock sections at source initialisation and at
+    each form. The bounds row is last but one, the section row last, so units with open
+    bounds are accepted exactly as before. -/
 def Lokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
   KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧
-    Beobachtung.FlussLokal E ∧ SchrankenLokal E
+    Beobachtung.FlussLokal E ∧ SchrankenLokal E ∧ AbschnittWartefrei E
 
 /-- Satisfiability with both rights: a read and a write can use the same owned location. -/
 theorem befugt_erfuellbar (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)

@@ -82,7 +82,7 @@ theorem variantValue_ideal : VariantValueIdealAussage := by
   · exact vv_amOrt scope
   · intro args
     constructor
-    · exact ((variantValueForm scope).befehl args).bestimmt
+    · exact (variantValueForm scope).bestimmt args
     · intro c s w plans u
       rfl
 

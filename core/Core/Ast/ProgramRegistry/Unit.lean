@@ -60,7 +60,7 @@ theorem program_ideal  : (programForm).IdealAussage := by
     · omega
   · intro args
     constructor
-    · exact ((programForm).befehl args).bestimmt
+    · exact (programForm).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

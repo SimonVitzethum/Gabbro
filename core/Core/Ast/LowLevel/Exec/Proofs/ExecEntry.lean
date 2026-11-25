@@ -284,10 +284,11 @@ private theorem entryZulStart {k : Katalog} {h : Katalog.Umgebung}
 
 private theorem entryUnitAkzeptiert (k : Katalog) (op : ExecInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (execUnit k op) := by
-  refine ⟨⟨hwf, ?_, execAussenLokalUnit k op, execFlussLokal k op, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, execAussenLokalUnit k op, execFlussLokal k op, ?_, ?_⟩, ?_, ?_⟩
   · intro i
     exact execRegelLokal k i
   · exact schrankenLokal_leer rfl rfl rfl
+  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro ρ runs
     dsimp [kanonischeKlauseln, execUnit, execProgram, Quelltabellen.leer, Quellklauseln.leer]
     refine ⟨?_, ?_, ?_⟩

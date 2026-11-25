@@ -15,7 +15,7 @@ module
 
 public import Core.Ziel.Korrektheit.Speicher
 public import Core.Speicher.Kohaerenz
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 
 @[expose] public section
 

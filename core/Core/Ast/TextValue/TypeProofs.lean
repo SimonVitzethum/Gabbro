@@ -138,7 +138,7 @@ theorem TextTypeIdeal : TextTypeIdealAussage := by
   intro ctx
   refine ⟨textTypeAtRoot ctx, ?_⟩
   intro args
-  exact ⟨((typeUseForm ctx textTypeUse).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(typeUseForm ctx textTypeUse).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem TextTypeEinheit : TextTypeEinheitAussage := by
   intro ctx platform args

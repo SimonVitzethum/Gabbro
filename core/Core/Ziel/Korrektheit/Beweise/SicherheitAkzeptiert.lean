@@ -35,6 +35,7 @@ theorem sicherheitAkzeptiert (P : Katalog.Plattform) : SicherheitAkzeptiertAussa
     Ast.Semantik.Fragment.sicherheitsEinheit, Ast.Semantik.Fragment.einheit,
     Ast.Semantik.Fragment.tabellen, Ast.Semantik.fragment] using
     (Gabbro.Core.Sicherheit.fragment_sicher (Ast.Semantik.fragment Ast.Category.unit t) P []
-      (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _) H ρ lauf)
+      (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _)
+      (Ast.Semantik.fragment_rein Ast.Category.unit t) H ρ lauf)
 
 end Gabbro.Core.Ziel.Korrektheit

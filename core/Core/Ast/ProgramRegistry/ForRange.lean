@@ -74,7 +74,7 @@ theorem forRange_ideal (scope : Scope) (result : Option (Ty .value)) : (forRange
       omega
   · intro args
     constructor
-    · exact ((forRangeForm scope result).befehl args).bestimmt
+    · exact (forRangeForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

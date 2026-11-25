@@ -133,7 +133,7 @@ theorem recordDecl_ideal : RecordDeclIdealAussage := by
   intro scope
   refine ⟨rd_amOrt scope, ?_⟩
   intro args
-  exact ⟨((recordDeclForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(recordDeclForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem recordDecl_einheit : RecordDeclEinheitAussage := by
   intro scope platform args

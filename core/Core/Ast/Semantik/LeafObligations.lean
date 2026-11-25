@@ -28,7 +28,7 @@ theorem trueLit_annahme (ctx : Scope) : (trueLitForm ctx).AnnahmeAussage := by
 -- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
 theorem trueLit_ideal (ctx : Scope) : (trueLitForm ctx).IdealAussage := by
   refine ⟨(fun _ => rfl), fun args => ?_⟩
-  exact ⟨((trueLitForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(trueLitForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem trueLit_einheit (ctx : Scope) : (trueLitForm ctx).EinheitAussage := by
@@ -77,7 +77,7 @@ theorem falseLit_annahme (ctx : Scope) : (falseLitForm ctx).AnnahmeAussage := by
 -- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
 theorem falseLit_ideal (ctx : Scope) : (falseLitForm ctx).IdealAussage := by
   refine ⟨(fun _ => rfl), fun args => ?_⟩
-  exact ⟨((falseLitForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(falseLitForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem falseLit_einheit (ctx : Scope) : (falseLitForm ctx).EinheitAussage := by
@@ -126,7 +126,7 @@ theorem variable_annahme (ctx : Scope) : (variableForm ctx).AnnahmeAussage := by
 -- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
 theorem variable_ideal (ctx : Scope) : (variableForm ctx).IdealAussage := by
   refine ⟨(fun _ => rfl), fun args => ?_⟩
-  exact ⟨((variableForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(variableForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem variable_einheit (ctx : Scope) : (variableForm ctx).EinheitAussage := by
@@ -183,7 +183,7 @@ theorem negativeLit_annahme (ctx : Scope) : (negativeLitForm ctx).AnnahmeAussage
 -- Mirror binary_am_ort and Befehl.bestimmt with the named plan and successor.
 theorem negativeLit_ideal (ctx : Scope) : (negativeLitForm ctx).IdealAussage := by
   refine ⟨(fun _ => rfl), fun args => ?_⟩
-  exact ⟨((negativeLitForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(negativeLitForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem negativeLit_einheit (ctx : Scope) : (negativeLitForm ctx).EinheitAussage := by
@@ -241,7 +241,7 @@ theorem neg_ideal (ctx : Scope) : (negForm ctx).IdealAussage := by
       some (.negieren 0)
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((negForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(negForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem neg_einheit (ctx : Scope) : (negForm ctx).EinheitAussage := by
@@ -308,7 +308,7 @@ theorem notValue_ideal (ctx : Scope) : (notValueForm ctx).IdealAussage := by
       some (.verneinen 0)
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((notValueForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(notValueForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem notValue_einheit (ctx : Scope) : (notValueForm ctx).EinheitAussage := by

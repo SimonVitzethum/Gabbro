@@ -43,7 +43,7 @@ theorem subtraction_ideal (ctx : Scope) : (subtractionForm ctx).IdealAussage := 
     rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
-  · exact ⟨((subtractionForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(subtractionForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem subtraction_einheit (ctx : Scope) : (subtractionForm ctx).EinheitAussage := by
@@ -120,7 +120,7 @@ theorem division_ideal (ctx : Scope) : (divisionForm ctx).IdealAussage := by
     rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
-  · exact ⟨((divisionForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(divisionForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem division_einheit (ctx : Scope) : (divisionForm ctx).EinheitAussage := by
@@ -246,7 +246,7 @@ theorem comparison_ideal (ctx : Scope) : (comparisonForm ctx).IdealAussage := by
     rw [List.getElem?_append_right (by rw [List.length_append])]
     rw [List.length_append, Nat.sub_self]
     rfl
-  · exact ⟨((comparisonForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(comparisonForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem comparison_einheit (ctx : Scope) : (comparisonForm ctx).EinheitAussage := by
@@ -328,7 +328,7 @@ theorem logic_ideal (ctx : Scope) : (logicForm ctx).IdealAussage := by
         Nat.lt_succ_self])]
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((logicForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(logicForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem logic_einheit (ctx : Scope) : (logicForm ctx).EinheitAussage := by

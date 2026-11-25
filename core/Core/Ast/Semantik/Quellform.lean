@@ -18,8 +18,20 @@ structure Quellform (category : Category) (Arguments : Type) where
   produktion : Surface.Rule category Arguments
   befehl : Arguments → Befehl
   position : Arguments → Nat
+  /-- The instruction of a source form is frame-only: a source form never elaborates to an access instruction
+      (those are written by the access forms of MK-04). Proved by evaluating the class of the instruction. -/
+  privat : ∀ args, (befehl args).Privat := by
+    intro args
+    first
+      | exact Or.inl rfl
+      | exact Or.inr rfl
+      | (apply Befehl.privat_von_kein_zugriff; intro f h; cases h)
 
 variable {category : Category} {Arguments : Type} (form : Quellform category Arguments)
+
+/-- The instruction of a source form is determined: it is frame-only. -/
+theorem Quellform.bestimmt (args : Arguments) : Ideal.RegelBestimmt (form.befehl args).regel :=
+  (form.befehl args).bestimmt (form.privat args)
 
 def Quellform.fragment (args : Arguments) : Fragment :=
   Semantik.fragment category (form.produktion.tree args)
@@ -47,8 +59,8 @@ theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     Realisiert form platform args s := by
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc, position args]
-  exact ⟨atPc, head, ⟨_, head, ((form.befehl args).ideal_privat eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩,
-    ⟨_, head, ((form.befehl args).impl_privat eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩⟩
+  exact ⟨atPc, head, ⟨_, head, ((form.befehl args).ideal_privat (form.privat args) eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩,
+    ⟨_, head, ((form.befehl args).impl_privat (form.privat args) eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩⟩
 
 /-- Elaboration-independent part of the schema supplies the real raw grammar proof. -/
 def Quellform.ParseAussage : Prop :=

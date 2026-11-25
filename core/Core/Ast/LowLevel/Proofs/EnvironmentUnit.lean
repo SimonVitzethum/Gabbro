@@ -121,7 +121,7 @@ theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
 theorem environmentUnit_ideal : environmentUnitForm.IdealAussage := by
   refine ⟨environmentUnit_am_ort, ?_⟩
   intro args
-  refine ⟨(environmentUnitForm.befehl args).bestimmt, ?_⟩
+  refine ⟨environmentUnitForm.bestimmt args, ?_⟩
   intro c s w plans u
   exact Iff.rfl
 
