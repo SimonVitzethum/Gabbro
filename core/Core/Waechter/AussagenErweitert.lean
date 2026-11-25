@@ -107,7 +107,7 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
       env.contains (name ++ `beweis) do continue
     mitBegleitern := mitBegleitern.push name
   let mut infos := #[]
-  for name in imZiel ++ mitBegleitern.qsort Name.lt do
+  for name in (imZiel ++ mitBegleitern).qsort Name.lt do
     let inZiel := ziel.contains name
     let grund := if inZiel then "used in the goal closure"
       else "used as a statement (has statement companions)"
