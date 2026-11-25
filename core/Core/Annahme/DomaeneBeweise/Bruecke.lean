@@ -54,7 +54,7 @@ theorem regelIsolation_laufisolation [DecidableEq L]
 theorem isolation_aus_regel [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (hakk : Akzeptiert E) : LaufIsolation E (tabellePlan E.domaenen) :=
-  regelIsolation_laufisolation E (akzeptiert_domaenen E hakk)
+  regelIsolation_laufisolation E (akzeptiert_domaenen hakk)
 
 /-- **The core statement over elaborated units**: acceptance carries the checker row over
     the elaborated unit's own table, and the bridge turns the row into run isolation. -/

@@ -59,6 +59,20 @@ theorem hoch_verborgen : oeffentlich hoch = false := by
   rw [eq] at mem
   exact Finset.notMem_empty _ mem
 
+/-- The hosted unit's declared table (MK-17d): contexts and memory objects live in
+    domain `0`, the hosted device object in domain `1`, with the channel from `0` to
+    `1` declared. The unit's question about the hosted object therefore travels over a
+    declared channel. -/
+def hostedTabelle : DomaenenTabelle where
+  domaenen := 2
+  kontexte := []
+  objekte := []
+  geraete := [(⟨.hosted, 0⟩, 1)]
+  kanaele := [(0, 1)]
+
+/-- The hosted table passes the line. -/
+theorem hostedTabelle_akzeptiert : pruefeDomaenenTab hostedTabelle = true := rfl
+
 def einheit : Modell where
   katalog := Plattform.x86_64.katalog
   bild := Sicherheit.Laufkonstruktion.bild
@@ -70,6 +84,7 @@ def einheit : Modell where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
+  domaenen := hostedTabelle
   etiketten := { endpunkt := fun _ => hoch, objekt := fun _ => hoch, ende := fun _ => hoch }
   fluss := { lokal := fun _ => .ganz hoch, kontrolle := fun _ => hoch }
 
@@ -84,7 +99,7 @@ private theorem quellzustand_gleich (v u : Zustand) (initial : v.initial = u.ini
     exact (verdeckt _).trans (verdeckt _).symm
   · rw [initial]
 
-private theorem fluss_lokal : FlussLokal einheit := by
+theorem fluss_lokal : FlussLokal einheit := by
   refine ⟨fun s₁ s₂ _ => quellzustand_gleich (I.start einheit s₁).2 (I.start einheit s₂).2
       rfl rfl rfl (fun _ => rfl),
     fun _ => ⟨?_, fun low => (Bool.false_ne_true (hoch_verborgen.symm.trans low)).elim⟩⟩
@@ -117,13 +132,13 @@ theorem eigene_frage (s : Zustand) : AussengriffeEigen (binde s) kontext frage :
   cases List.mem_singleton.mp mem
   exact Or.inr ⟨rfl, rfl, rfl⟩
 
-private theorem binden_offen {s : Zustand} {g} (offen : OffeneGriffeEigen s) :
+theorem binden_offen {s : Zustand} {g} (offen : OffeneGriffeEigen s) :
     OffeneGriffeEigen { binde s with graph := g } := by
   intro ev mem epoche unbeantwortet
   obtain ⟨c, id, eig⟩ := offen ev mem epoche unbeantwortet
   exact ⟨c, id, fun z h => Or.inl (eig z h)⟩
 
-private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s c frage)
+theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s c frage)
     (offen : OffeneGriffeEigen s) :
     OffeneGriffeEigen { (warte s).frage (s.stelleFrage t c frage) with graph := g } := by
   intro ev mem epoche unbeantwortet
@@ -133,9 +148,9 @@ private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s
   · exact offen ev bisher epoche unbeantwortet
   · exact ⟨c, rfl, rechte⟩
 
-/- No acceptance proof for the hosted unit: its `frage` rule issues a question about a
-   foreign-domain object under every channel-free plan, so the head-gated isolation row
-   `DomaenenLokal` does not hold for it. The admitted runs with the owned request are
-   carried by `HostedLauf.konkreter_lauf` without acceptance. -/
+/- Acceptance of the hosted unit is proved in `DomaeneBeweise/Kanal.lean`: its declared
+   table (`hostedTabelle`) carries the channel its question uses, so the bound isolation
+   row holds for it. The admitted runs with the owned request are carried by
+   `HostedLauf.konkreter_lauf`. -/
 
 end Gabbro.Core.Annahme.Hosted
