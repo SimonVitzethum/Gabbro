@@ -50,19 +50,20 @@ def modulB : Modul :=
 def planAB : Bauplan :=
   { module := [modulA, modulB], abhaengigkeiten := [], plattform := .x86_64, einstieg := "a" }
 
-/-- The current link check accepts the witness plan. -/
-theorem planAB_ok : bauplanOk planAB = true := by
+/-- The witness plan is refused under the seal; the old link check accepted it. -/
+theorem planAB_sealed : kontrollflussAbgeschottet planAB = false := by
   decide
+
+theorem planAB_linke_none : linke planAB = none := by
+  unfold linke
+  rw [if_neg]
+  intro ht
+  simp only [bauplanOk, planAB_sealed, Bool.and_false] at ht
 
 /-- The linked code is the concatenation: the divider runs with B's divisor. -/
 theorem planAB_code : (verknuepfteFragmente planAB).code =
     [.literal 0 10, .literal 1 2, .teilen 0, .literal 0 5, .literal 1 0, .zurueckSprung 3] := by
   rfl
-
-/-- Linking the witness plan succeeds under the current check. -/
-theorem planAB_linke : linke planAB = some (verknuepfteFragmente planAB) := by
-  unfold linke
-  rw [if_pos planAB_ok]
 
 /-- Every instruction of B is guard-free. -/
 theorem fragB_guard (b : Befehl) (present : b ∈ fragB.code) (frame : Rahmen) :
@@ -642,19 +643,16 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
   simp only [waechterBedarf] at hbad
   exact hbad rfl
 
-/-- The current linker statement is false: both parts are accepted, the plan links,
-    but the linked unit divides by zero. -/
-theorem linkerAkzeptiert_ohne_abschottung_falsch :
-    ¬ Gabbro.Core.Ziel.Korrektheit.LinkerAkzeptiertAussage := by
-  intro hlink
-  have hparts : ∀ m ∈ planAB.module, Akzeptiert (m.fragment.einheit planAB.plattform) := by
-    intro m hm
-    simp only [planAB, List.mem_cons, List.not_mem_nil, or_false] at hm
-    rcases hm with rfl | rfl
-    · exact fragA_akzeptiert
-    · exact fragB_akzeptiert
-  have hlinked : Akzeptiert ((verknuepfteFragmente planAB).einheit planAB.plattform) :=
-    hlink _ _ planAB_linke hparts
-  exact linked_nicht_akzeptiert hlinked
+/-- The sealed linker refuses the witness plan although both parts are accepted:
+    unsealed linking is unsound (the linked fragment divides by zero), sealed
+    linking refuses. -/
+theorem sealedLinkerRefusesWitness : linke planAB = none ∧
+    (∀ m ∈ planAB.module, Akzeptiert (m.fragment.einheit planAB.plattform)) := by
+  refine ⟨planAB_linke_none, ?_⟩
+  intro m hm
+  simp only [planAB, List.mem_cons, List.not_mem_nil, or_false] at hm
+  rcases hm with rfl | rfl
+  · exact fragA_akzeptiert
+  · exact fragB_akzeptiert
 
 end Gabbro.Core.Linken

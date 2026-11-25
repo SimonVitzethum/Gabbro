@@ -97,9 +97,9 @@ theorem modulDef_akzeptiert :
   refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulDef.fragment Plattform.x86_64 rfl ?_
   intro b present frame
   change b ∈ ([Ast.Semantik.Befehl.definiere Ast.Semantik.mainName [] none 0 2 false [] none,
-    Ast.Semantik.Befehl.rueckVoid] : List Ast.Semantik.Befehl) at present
+    Ast.Semantik.Befehl.rueckVoid, Ast.Semantik.Befehl.ende] : List Ast.Semantik.Befehl) at present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl <;> rfl
 
 theorem modulCall_akzeptiert :
     Annahme.Akzeptiert (Linken.modulCall.fragment.einheit Plattform.x86_64) := by
