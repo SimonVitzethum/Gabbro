@@ -31,7 +31,7 @@ theorem leereUnit_zugelassen (P : Katalog.Plattform) :
   · change (Ast.Semantik.programm leereUnit).code.all (Ast.Semantik.Befehl.platformAllowed P) = true
     simp only [Ast.Semantik.programm, leereUnit, Ast.Semantik.unitBody, Ast.Semantik.Fragment.leer,
       Ast.Semantik.Fragment.anhaengen, Ast.Semantik.Fragment.einzel, List.append_nil,
-      List.nil_append, List.all_cons, List.all_nil,
+      List.nil_append, List.singleton_append, List.all_cons, List.all_nil,
       Ast.Semantik.Befehl.platformAllowed, Bool.true_and]
 
 /-- The printed text of the empty unit denotes its elaboration on every platform. Feeds:
