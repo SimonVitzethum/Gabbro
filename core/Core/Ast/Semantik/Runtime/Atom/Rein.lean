@@ -50,9 +50,11 @@ theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein 
     intros
     simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.rein_leer, Fragment.rein_einzel_iff,
       Fragment.rein_anhaengen_iff, true_and, and_true]
-  all_goals first
-    | exact Or.inl rfl
-    | exact Or.inr rfl
+  all_goals
+    repeat' first
+      | exact Or.inl rfl
+      | exact Or.inr rfl
+      | refine ⟨?_, ?_⟩
 
 private theorem argsCode_rein (slot : Nat) (args : List (TypedExpr scope)) : (argsCode slot args).Rein := by
   induction args generalizing slot with
@@ -64,10 +66,13 @@ private theorem argsCode_rein (slot : Nat) (args : List (TypedExpr scope)) : (ar
 private theorem optionCode_rein (slot : Nat) (value : OptionInitializer scope count) :
     (optionCode slot value).Rein := by
   simp only [optionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff]
-  refine ⟨?_, Or.inl rfl⟩
-  cases value with
-  | absent => exact Fragment.rein_leer
-  | present value _ => exact expr_rein _ _
+  refine ⟨?_, ?_⟩
+  · cases value with
+    | absent => exact Fragment.rein_leer
+    | present value _ => exact expr_rein _ _
+  · first
+      | exact Or.inl rfl
+      | exact Or.inr rfl
 
 theorem stmt_rein (tree : Stmt result before after) : (stmt tree).Rein := by
   refine @Stmt.rec result
@@ -81,9 +86,11 @@ theorem stmt_rein (tree : Stmt result before after) : (stmt tree).Rein := by
     simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
       ↓reduceIte, Fragment.rein_leer, Fragment.rein_einzel_iff, Fragment.rein_anhaengen_iff, expr_rein,
       argsCode_rein, optionCode_rein, true_and, and_true]
-  all_goals first
-    | exact Or.inl rfl
-    | exact Or.inr rfl
+  all_goals
+    repeat' first
+      | exact Or.inl rfl
+      | exact Or.inr rfl
+      | refine ⟨?_, ?_⟩
 
 theorem bracedBlock_rein (tree : BracedBlock result scope) : (bracedBlock tree).Rein := by
   have both := stmt_rein (Stmt.ite .trueLit tree tree)
@@ -97,11 +104,11 @@ private theorem functionCode_rein {result : Option WrittenType} {scope : Scope}
   | none =>
     simp only [functionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, Fragment.rein_leer,
       bracedBlock_rein, true_and]
-    exact Or.inr rfl
+    exact Or.inl rfl
   | some m =>
     simp only [functionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, expr_rein,
       bracedBlock_rein, true_and]
-    exact ⟨Or.inr rfl, Or.inr rfl⟩
+    exact ⟨Or.inl rfl, Or.inl rfl⟩
 
 private theorem decl_rein {before after : Scope} (d : Decl before after) : (decl d).Rein := by
   cases d with
