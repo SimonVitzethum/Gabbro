@@ -61,8 +61,8 @@ def Operand.fragePlan (o : Operand) : Plan :=
 /-- **The plan of one step of class `k`** at the operand `o`, where `v` is the value the memory model
     returned for a read. A read records its label with the value read; a write names its cell in the
     footprint with the value and the mode; an update is ONE event that reads `v` and writes the operand's
-    value; a lock action and a question name their lock and question; a private step and a refused access
-    have the private plan. -/
+    value; a lock action and a question name their lock and question; a private step, a fence and a refused
+    access have the private plan. -/
 def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .lokal, _o, _v => Semantik.plan
   | .ruf, _o, _v => Semantik.plan
@@ -73,14 +73,15 @@ def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .rmw m, o, v =>
     ⟨.intern, [⟨o.aenderung.art v, o.ort, m, v, o.aenderung.schreibt v o.wert⟩], [], fun _ort => false,
       fun _ort => .na, fun _ort => 0⟩
+  | .zaun _m, _o, _v => Semantik.plan
   | .sperre a, o, _v =>
     ⟨.sperre o.sperre a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
   | .frage, o, _v => o.fragePlan
 
 /-- **The shape of the plans of a class**: the only plans a step of the class may have. The footprint of the
-    step on the shared state is read off the class alone: nothing for a private step, one read label for a
-    load, one written cell for a store, one update label for an atomic update, one lock action, one
-    question. -/
+    step on the shared state is read off the class alone: nothing for a private step, a fence or a refused
+    access, one read label for a load, one written cell for a store, one update label for an atomic update,
+    one lock action, one question. -/
 def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
   | .lokal, p => p = Semantik.plan
   | .ruf, p => p = Semantik.plan
@@ -92,13 +93,14 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
   | .rmw m, p =>
     p.aktion = .intern ∧ p.fuss = [] ∧
       ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩] ∨ p.lesen = [⟨.lesen, z, m, v, v⟩]
+  | .zaun _m, p => p = Semantik.plan
   | .sperre a, p => (∃ l : Nat, p.aktion = .sperre l a) ∧ p.lesen = [] ∧ p.fuss = []
   | .frage, p => (∃ q : Frage, p.aktion = .frage q) ∧ p.lesen = [] ∧ p.fuss = []
 
 /-- Does a step of the class read a value from the memory model? Only a load and an atomic update do. -/
 def Wirkungsklasse.liest : Wirkungsklasse → Bool
   | .lesen .. | .rmw .. => true
-  | .lokal | .ruf | .schreiben .. | .sperre .. | .frage => false
+  | .lokal | .ruf | .schreiben .. | .zaun .. | .sperre .. | .frage => false
 
 /-- The value a step of the class may take from the memory model: any value for a class that reads, and
     the fixed value `0` for every other class (it reads nothing, so nothing is chosen). -/
@@ -107,7 +109,8 @@ def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
 
 /-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `Zustand.fragenBefugt`): the right
     on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
-    the question and the device authority of a register access for a question. The frame-only classes and the lock actions need none: a lock action that
+    the question and the device authority of a register access for a question. The frame-only classes, the
+    fence and the lock actions need none: a fence orders but accesses nothing, and a lock action that
     the protocol does not allow does not execute, it waits or never runs. -/
 def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
   | .lokal, _o, _s, _c => True
@@ -115,6 +118,7 @@ def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext �
   | .lesen _m, o, s, c => s.befugt c o.ort .lesen
   | .schreiben _m, o, s, c => s.befugt c o.ort .schreiben
   | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
+  | .zaun _m, _o, _s, _c => True
   | .sperre _a, _o, _s, _c => True
   | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.fragenBefugt c q
 
@@ -145,7 +149,7 @@ noncomputable def Schrittform.buchungNach (F : Schrittform) (c : Kontext) (s : Z
       adresse := fun e =>
         if e = s.zugriffsereignis (F.operand (s.lokal c)).ort then s.adresse c (F.operand (s.lokal c)).ort
         else s.buchung.adresse e }
-  | .lokal | .ruf | .sperre .. | .frage => s.buchung
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage => s.buchung
 
 /-- The state after the step of an access class: the frame transfer and the booked ledger. -/
 noncomputable def Schrittform.zugriffNach (F : Schrittform) (c : Kontext) (s : Zustand) (v : Int) : Zustand :=
@@ -164,13 +168,13 @@ def Schrittform.zugriffsschritt (F : Schrittform) (c : Kontext) (s : Zustand) (p
     ∃ v : Int, F.klasse.Lesewert v ∧ plans = [F.plan (s.lokal c) v] ∧ u = F.zugriffNach c s v)
 
 /-- **The ideal step of a form, from its class.** A private class has one private plan and its frame
-    transfer; an access class has the step above. -/
+    transfer; a fence steps its frame privately; an access class has the step above. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   match F.klasse with
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
-  | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
+  | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage => F.zugriffsschritt c s plans u
 
 /-- **The implementation step of a form.** Every class of this package has ONE linearisation point: the
     implementation step is the ideal step, so a step of the implementation machine is a step of `I`. A class
@@ -191,7 +195,8 @@ def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) 
   | some w => ⟨r.zelle region index, w, 0, none, a⟩
   | none => ⟨.aussen, 0, 0, none, a⟩
 
-/-- **The operand of an access instruction at a frame**, read from the frame it steps. -/
+/-- **The operand of an access instruction at a frame**, read from the frame it steps. A fence names
+    nothing. -/
 def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
   match z with
   | .lade (region := region) (index := index) .. => r.zugriffOperand region index (some 0) .tausche
@@ -208,6 +213,7 @@ def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
     match r.ganz erwartet with
     | some e => r.zugriffOperand region index (r.ganz neu) (.vergleiche e)
     | none => r.zugriffOperand region index none .tausche
+  | .zaun .. => Operand.keiner
 
 /-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
 def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
