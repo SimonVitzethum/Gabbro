@@ -260,6 +260,9 @@ theorem ir_konsistent : (irGraph .ra).Konsistent where
     intro a b
     show (irPo a b ∨ irRf a b) → irRang a < irRang b
     cases a <;> cases b <;> decide
+  liest_vorher := by
+    intro w u _ hu
+    exact absurd hu (ir_kein_rmw .ra u)
 
 /-- THE SAME SHAPE IS ALLOWED BELOW `seq_cst`. Feeds: `ir_konsistent` (well-formedness, coherence,
     atomicity, empty `psc` and `ohneLB` for the small graph), `hb_in_po`, `transGen_von_trans`,
