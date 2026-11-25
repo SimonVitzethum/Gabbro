@@ -39,15 +39,11 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
     obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp declared
     rw [List.getElem?_map] at hinner
     obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-    have htab : (p.sicherheitsEinheit platform).invarianten[i]? =
-        some (⟨none, q.gilt⟩ : Invariante Nat Zustand) := by
-      show (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = _
-      simp only [tab, List.getElem?_map, hsome]
     have hok := Pruefung.pruefeBefehlErhalt_richtig ps b q
       (List.mem_of_getElem? hsome) okB
     have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
       writersNach
-    have vorGilt : q.gilt vor := vorSicher.2 i _ htab writersVor
+    have vorGilt : q.gilt vor := vorSicher.2 i _ declared writersVor
     exact q.gilt_nach b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim

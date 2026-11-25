@@ -41,24 +41,6 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Sicherheit Katalog Pruefung
 
-/-- The frame transfer preserves memory content: it touches only the acting frame. -/
-theorem Befehl.nach_initial (b : Befehl) (c : Kontext) (s : Zustand) :
-    (b.nach c s).initial = s.initial := rfl
-
-/-- The write footprint is sound against the frame transfer: outside it, memory content is
-    unchanged. Vacuous today (every footprint is empty); MK-04 proves the conditional from
-    the memory rules. -/
-theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Zelle)
-    (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
-  congrFun (b.nach_initial c s) z
-
-/-- Preservation across the frame transfer for predicates whose observed cells the command
-    does not write. -/
-theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
-    (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
-  intro hq
-  exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
-
 def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
   (programmMitInvarianten u).einheit platform
 
