@@ -224,11 +224,6 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Maschine.I.Sim, 4003783696440285705),
   (`Gabbro.Core.Ast.Semantik.KlassenAussagen, 11486635014550492908),
   (`Gabbro.Core.Ast.Semantik.KlassenStapelAussage, 11935008529195197431),
-  (`Gabbro.Core.Ast.Semantik.AtomAussagen, 10018845777804343364),
-  (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 15230201805166795792),
-  (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799),
-  (`Gabbro.Core.Ast.Semantik.FadenAussagen, 0),
-  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 0),
   (`Gabbro.Core.Maschine.I.Haengt, 2121491499351378413),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 5575662477350292693),
   (`Gabbro.Core.Annahme.Akzeptiert, 7382700461333643143),
@@ -324,11 +319,17 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.PausenNIPflicht, 16223562429260322264),
   (`Gabbro.Core.Beobachtung.Kopplung, 6110979099335943282),
   (`Gabbro.Core.Beobachtung.PauseNIAussage, 13028714332762398035),
-  (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 14809298441376643319),
+  (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 1314194910503100543),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 5707275174059607358),
   (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 4789413847062862868),
   (`Gabbro.Core.Linken.LinkErfuellbarAussage, 6806654601588448369),
   (`Gabbro.Core.Beobachtung.GeraeteProtokollNIAussage, 6186587137293681807),
-  (`Gabbro.Core.Beobachtung.geraeteNI_nichtTrivialAussage, 16110184015794889854)]
+  (`Gabbro.Core.Beobachtung.geraeteNI_nichtTrivialAussage, 16110184015794889854),
+  (`Gabbro.Core.Speicher.LitmusKatalogAussage, 14490508692865327562),
+  (`Gabbro.Core.Ast.Semantik.AtomAussagen, 10018845777804343364),
+  (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 15230201805166795792),
+  (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 5446591221718213799),
+  (`Gabbro.Core.Ast.Semantik.FadenAussagen, 0),
+  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 0)]
 
 end Gabbro.Core.Waechter
