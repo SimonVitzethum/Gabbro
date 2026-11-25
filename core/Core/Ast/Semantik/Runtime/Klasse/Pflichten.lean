@@ -111,9 +111,7 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
   | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .verbrauche | .starte | .beende | .verbinde
-  | .wechsle => false
-  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle
-  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
+  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/

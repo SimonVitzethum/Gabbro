@@ -69,6 +69,12 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
       intro d hd
       simp only [Schrittform.nach, Function.update_of_ne hd]
   | verbrauche =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨rfl, rfl, ?_⟩
+      intro d hd
+      simp only [Schrittform.nach, Function.update_of_ne hd]
   | maskiere =>
       obtain ⟨hp, hu⟩ := step
       cases hp
@@ -210,6 +216,11 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
         simp only [Schrittform.nach, Function.update_self]
         exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
     | verbrauche =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        simp only [Schrittform.nach, Function.update_self]
+        exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
     | maskiere =>
         obtain ⟨hp, hu⟩ := step
         cases hp

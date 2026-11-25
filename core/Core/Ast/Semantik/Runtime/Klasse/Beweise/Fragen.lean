@@ -126,7 +126,6 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
         exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
           (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
   | verbrauche =>
-  | maskiere =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
       have planAkt : plan.aktion = .intern := by
         rw [(List.cons.inj impl.1).1]
@@ -136,6 +135,13 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
       cases aktion with
       | intern =>
         have buchung := nach_aussen_gleich (⟨.verbrauche, o, tr⟩ : Schrittform) c vor 0
+        exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
+          (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+  | maskiere =>
+      dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
+      have planAkt : plan.aktion = .intern := by
+        rw [(List.cons.inj impl.1).1]
+        rfl
       have zwischenEq : zwischen = (⟨.maskiere, o, tr⟩ : Schrittform).nach c vor 0 := impl.2
       rw [planAkt] at aktion
       cases aktion with

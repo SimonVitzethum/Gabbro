@@ -278,6 +278,9 @@ theorem inv_faden (f0 : _) :
 
 theorem inv_aussen (f0 : _) :
     befehlVonCode (befehlZuCode (.aussen f0)) = some (.aussen f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
 theorem inv_maskiere (f0 : _) (f1 : _) :
     befehlVonCode (befehlZuCode (.maskiere f0 f1)) = some (.maskiere f0 f1) := by
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,

@@ -88,17 +88,15 @@ private theorem privat_fertig {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int 
       in `Klasse/Sicherheit` and pinned through `KlassenAussagen`; the proof only unfolds the class rule
       and reads the trace of `FuehrtSchrittAus`. -/
 theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
-    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ k = .verbrauche ∨ ∃ m, k = .zaun m) :
-    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ (∃ m, k = .zaun m) ∨ k = .maskiere ∨
-      k = .prioritaet ∨ k = .sendeUnterbrechung ∨ k = .leiteLeitung) :
+    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ k = .verbrauche ∨ (∃ m, k = .zaun m) ∨
+      k = .maskiere ∨ k = .prioritaet ∨ k = .sendeUnterbrechung ∨ k = .leiteLeitung) :
     KlassenSpeicherbeinAussage k := by
   intro _ ι E f F hkF emb hw t c w vor zwischen nach plan spur kopf impl aus
   have implIdeal : F.ideal c vor w [plan] zwischen := by
     change (F.regel).impl c vor w [plan] zwischen
     rw [← emb.regel]
     exact impl
-  rcases hk with rfl | rfl | rfl | rfl | ⟨m, rfl⟩
-  rcases hk with rfl | rfl | rfl | ⟨m, rfl⟩ | rfl | rfl | rfl | rfl
+  rcases hk with rfl | rfl | rfl | rfl | ⟨m, rfl⟩ | rfl | rfl | rfl | rfl
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .lokal at hkF
     subst kF
