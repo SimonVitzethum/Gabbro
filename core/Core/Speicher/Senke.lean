@@ -170,7 +170,7 @@ theorem scb_ohne_trans (hs : G.Senke e) {c d : E} (h : G.scb c d) (hc : c ≠ e)
           (Or.inl ⟨⟨x, hxe⟩, ⟨y, hye⟩, h1, h2, (hs.hb_ohne h3 hye).2, h4, h5⟩)
   · exact Or.inr (Or.inr (Or.inl ⟨(hs.hb_ohne h1 hd).2, h2⟩))
   · exact Or.inr (Or.inr (Or.inr (Or.inl h)))
-  · exact Or.inr (Or.inr (Or.inr (Or.inr (hs.rb_ohne h x.2 y.2))))
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (hs.rb_ohne h hc hd))))
 
 theorem psc_ohne (hs : G.Senke e) {a b : {x // x ≠ e}} (h : G.psc a.1 b.1) :
     (ohne G e).psc a b := by
@@ -201,14 +201,14 @@ theorem psc_ohne (hs : G.Senke e) {a b : {x // x ≠ e}} (h : G.psc a.1 b.1) :
         refine Or.inr ⟨hza, ?_⟩
         rcases hcc with rfl | hhb
         · exact Or.inl rfl
-        · exact Or.inr (hs.hb_ohne hhb hd).2
+        · exact Or.inr (hs.hb_ohne hhb hc).2
     · rcases hr with hl | hr
       · obtain ⟨hsc, hcb⟩ := hl
-        exact Or.inl ⟨hsc, Subtype.ext hcb.symm⟩
+        exact Or.inl ⟨hsc, Subtype.ext hcb⟩
       · obtain ⟨hzb, hcc⟩ := hr
         refine Or.inr ⟨hzb, ?_⟩
         rcases hcc with hcb | hhb
-        · exact Or.inl (Subtype.ext hcb.symm)
+        · exact Or.inl (Subtype.ext hcb)
         · exact Or.inr (hs.hb_ohne hhb b.2).2
   · refine Or.inr ⟨hza, hzb, ?_⟩
     rcases h with hhb | ⟨x, y, h1, h2, h3⟩
