@@ -378,7 +378,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
-              | @antwort _ _ _ a_ev _ arrives =>
+              | @antwort _ _ a_ev _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
                   have h1 : s.kerne = ((z.antwort a_ev).kerne) := by rw [hstate]
@@ -386,7 +386,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   exact h1.trans h2
                 rw [skerne]
                 exact ih z hz
-              | @interrupt _ _ _ id_ev _ enters =>
+              | @interrupt _ _ id_ev _ enters =>
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
