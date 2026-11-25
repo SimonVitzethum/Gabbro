@@ -1,8 +1,8 @@
 /-
   File:      core/Core/Speicher.lean
-  Subject:   The memory model (PERFECT-MODEL §3.4/§3.5, step M3): RC11 without fences, `po ∪ rf`
-             acyclic, truly SC `seq_cst`, DRF-SC, the operational graph machine (sound and complete),
-             embeddings, coherence consequences and the sink lemma.
+  Subject:   The memory model (PERFECT-MODEL §3.4/§3.5, step M3): RC11 with fences, `po ∪ rf`
+              acyclic, truly SC `seq_cst`, DRF-SC, the operational graph machine (sound and complete),
+              embeddings, coherence consequences and the sink lemma.
 -/
 module
 
@@ -11,9 +11,14 @@ public import Core.Speicher.Relationen
 public import Core.Speicher.Konsistent
 public import Core.Speicher.DRFSC
 public import Core.Speicher.SCOrdnung
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 public import Core.Speicher.Praefix
 public import Core.Speicher.Trennung
+public import Core.Speicher.Litmus.Sb
+public import Core.Speicher.Litmus.Rmw
+public import Core.Speicher.Litmus.Rs
+public import Core.Speicher.Litmus.ZweiPlusZweiW
+public import Core.Speicher.Litmus.Kohaerenz
 public import Core.Speicher.Erfuellbar
 public import Core.Speicher.Einbettung
 public import Core.Speicher.Graphmaschine

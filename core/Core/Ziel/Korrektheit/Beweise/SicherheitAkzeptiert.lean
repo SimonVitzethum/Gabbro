@@ -4,12 +4,16 @@
              (`Core/Ziel/Korrektheit/Zusammensetzung.lean`).
 
   The leg quantifies over source units `t : Ast.Unit` and asks the four safety properties of the safety unit
-  `sicherheitVon (einheitVon P t)`. Elaboration of a unit is `(fragment Ast.Category.unit t).einheit P`, and a
-  unit fragment is `programm t`, whose clause table has no declared invariant (`programm_keine_invarianten`).
-  Hence `sicherheitVon (einheitVon P t)` is definitionally `(fragment Ast.Category.unit t).sicherheitsEinheit P`,
-  and the leg is the instance of `fragment_sicher` at that fragment. The boundary obligations are discharged by
-  `arithmetik_grenzen` (the elaborated loader) and the rule duties by `Befehl.sicherheitsPflichten`; acceptance is
-  stronger than needed and is not used. No statement is changed and no witness or per-program fact is used.
+  `sicherheitVon (einheitVon P t)`. Elaboration of a unit is `(fragment Ast.Category.unit t).einheit P`, and a unit
+  fragment is `programmMitInvarianten ⟨t, []⟩`, whose clause table is the empty denotation list
+  (`fragment_unit_invarianten`). Hence `sicherheitVon (einheitVon P t)` is definitionally `(fragment
+  Ast.Category.unit t).sicherheitsEinheit P`, and the leg is the instance of `fragment_sicher` at that fragment
+  with the empty predicate list (the checker accepts it by `pruefeEinheit_leer`). The boundary obligations are
+  discharged by `arithmetik_grenzen` (the elaborated loader) and the rule duties by
+  `Befehl.sicherheitsPflichten`; acceptance is stronger than needed and is not used. Units with declared
+  invariants are the content of `InvariantenSicherheitAussage`
+  (`Core/Ast/Semantik/Runtime/UnitInvarianten.lean`). No statement is changed and no witness or per-program
+  fact is used.
 -/
 module
 
@@ -22,14 +26,16 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 
-/-- EVERY RUN OF AN ACCEPTED ELABORATED UNIT IS SAFE (the pinned `SicherheitAkzeptiertAussage`). A unit has no
-    declared invariant, so its safety unit is the fragment's safety unit and `fragment_sicher` applies directly. -/
+/-- EVERY RUN OF AN ACCEPTED ELABORATED UNIT IS SAFE (the pinned `SicherheitAkzeptiertAussage`). A plain unit
+    declares no invariant, so its safety unit is the fragment's safety unit and `fragment_sicher` applies
+    directly. -/
 theorem sicherheitAkzeptiert (P : Katalog.Plattform) : SicherheitAkzeptiertAussage P := by
   intro t h H ρ lauf
   simpa [einheitVon, Ast.Semantik.elaborieren, sicherheitVon,
     Ast.Semantik.Fragment.sicherheitsEinheit, Ast.Semantik.Fragment.einheit,
     Ast.Semantik.Fragment.tabellen, Ast.Semantik.fragment] using
-    (Gabbro.Core.Sicherheit.fragment_sicher (Ast.Semantik.fragment Ast.Category.unit t) P
-      (Ast.Semantik.programm_keine_invarianten t) H ρ lauf)
+    (Gabbro.Core.Sicherheit.fragment_sicher (Ast.Semantik.fragment Ast.Category.unit t) P []
+      (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _)
+      (Ast.Semantik.fragment_rein Ast.Category.unit t) H ρ lauf)
 
 end Gabbro.Core.Ziel.Korrektheit

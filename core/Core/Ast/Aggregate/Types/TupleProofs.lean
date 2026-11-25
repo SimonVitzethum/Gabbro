@@ -169,7 +169,7 @@ theorem tupleType_ideal : TupleTypeIdealAussage := by
   intro ctx
   refine ⟨tupleTypeUse_am_ort ctx, ?_⟩
   intro args
-  exact ⟨((typeUseForm ctx tupleTypeUse).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(typeUseForm ctx tupleTypeUse).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleType_einheit : TupleTypeEinheitAussage := by
   intro ctx platform args
@@ -193,7 +193,8 @@ theorem tupleType_erhaltung : TupleTypeErhaltungAussage := by
 theorem tupleType_regelSicher : TupleTypeRegelSicherAussage := by
   intro ctx platform args
   exact ((typeUseForm ctx tupleTypeUse).befehl args).sicher
-    ((typeUseForm ctx tupleTypeUse).fragment args) platform (tupleTypeUse_keineInvarianten ctx args)
+    ((typeUseForm ctx tupleTypeUse).fragment args) platform []
+    (tabLeer _ (tupleTypeUse_keineInvarianten ctx args)) (fun b _ => rfl)
 
 theorem tupleType_erfuellbar : TupleTypeErfuellbarAmAussage := by
   intro platform start

@@ -162,7 +162,7 @@ theorem tupleValue_ideal : TupleValueIdealAussage := by
   intro scope
   refine ⟨tupleValue_am_ort scope, ?_⟩
   intro args
-  exact ⟨((tupleValueForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(tupleValueForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleValue_einheit : TupleValueEinheitAussage := by
   intro scope platform args
@@ -181,9 +181,9 @@ theorem tupleValue_erhaltung : TupleValueErhaltungAussage := by
 theorem tupleValue_regelSicher : TupleValueRegelSicherAussage := by
   intro scope platform args
   exact ((tupleValueForm scope).befehl args).sicher ((tupleValueForm scope).fragment args)
-    platform (by
+    platform [] (tabLeer _ (by
       change (expr 0 (Expr.tupleValue args.first args.second args.tail)).klauseln.invariant = []
-      exact expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail))
+      exact expr_keine_invarianten 0 (Expr.tupleValue args.first args.second args.tail))) (fun b _ => rfl)
 
 theorem tupleValue_parse : TupleValueParseAussage := by
   intro scope args text pieces lexed prod

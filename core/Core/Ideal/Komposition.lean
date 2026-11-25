@@ -21,8 +21,9 @@ def Bestimmt : Prop :=
     Schritt e Sy k hw t s (w, es) s' → Schritt e Sy k hw t s (w, es') s'' →
     SpeicherWahlGleich s'.graph s''.graph → es = es' ∧ s' = s''
 
-theorem bestimmt_aus_regeln (regeln : ∀ i, RegelBestimmt (Sy.regel i)) : Bestimmt e Sy := by
-  have forms : IBestimmt Sy := Gabbro.Core.Ideal.bestimmt_aus_regeln Sy regeln
+/-- The composed step is determined when the forms are: `I.Bestimmt` of the system, the protocol lemmas and the
+    memory resolution. -/
+theorem bestimmt_aus_formen (forms : IBestimmt Sy) : Bestimmt e Sy := by
   intro k hw t s w es es' s' s'' left right memory
   cases left with
   | kontext _ _ rule run =>
@@ -41,6 +42,19 @@ theorem bestimmt_aus_regeln (regeln : ∀ i, RegelBestimmt (Sy.regel i)) : Besti
   | absturz crash =>
     cases right with
     | absturz crash' => exact ⟨crash.genau.1.trans crash'.genau.1.symm, crash.genau.2.trans crash'.genau.2.symm⟩
+
+theorem bestimmt_aus_regeln (regeln : ∀ i, RegelBestimmt (Sy.regel i)) : Bestimmt e Sy :=
+  bestimmt_aus_formen e Sy (Gabbro.Core.Ideal.bestimmt_aus_regeln Sy regeln)
+
+/-- **The composed step is determined when every form that stands at a head is determinate.** A form that no state
+    ever presents at a head of a context (an access instruction in a system whose code has none) owes nothing. -/
+theorem bestimmt_aus_kopfregeln
+    (regeln : ∀ i s c, Sy.kopf s c = some i → RegelBestimmt (Sy.regel i)) : Bestimmt e Sy := by
+  refine bestimmt_aus_formen e Sy ?_
+  intro c s w es es' s1 s2 ⟨i, hi, h1⟩ ⟨j, hj, h2⟩
+  rw [hi] at hj
+  cases hj
+  exact regeln i s c hi c s w es es' s1 s2 h1 h2
 
 /-- A form with an ideal rule must supply one plan that can execute through the shared
     machine protocol from a consistent graph. This is checked when the form enters. -/
@@ -149,7 +163,7 @@ theorem komposition_erfuellbar (k : Katalog.Katalog) (hw : HwLauf) (t : Nat) (c 
     ⟨fun _ => form, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
   have execute (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) :
       FuehrtSchrittAus e t c s s plan ⟨[], []⟩ s :=
-    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ h => (List.not_mem_nil h).elim,
+    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, fun _ h => (List.not_mem_nil h).elim,
       [], s, .intern, .nil _, rfl⟩
   refine ⟨system, ?_, ?_, ?_, .kontext normal bereit ⟨(), rfl, rfl, rfl⟩ (execute t c s)⟩
   · intro _ _ _ _ _ _ _ _ a b

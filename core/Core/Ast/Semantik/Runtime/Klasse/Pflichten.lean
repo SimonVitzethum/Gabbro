@@ -9,13 +9,15 @@
              memory through `Zustand.griff` and `Zelle.objekt`), with no free function parameter: the form is a
              bundled `Schrittform` whose plan, guard and refusal the class builds, so the duty is proved from
              the class definition, not assumed of an arbitrary decoder.
-             PROVED here, for every class: simulation with the authority of the plan (`klassenSim`), locality
-             (`klassenLokal`), progress (`klassenFortschritt`) and the non-triviality of the duties
-             (`klassenNichtTrivial`). OPEN for the provers, all pinned under the one statement
-             `KlassenAussagen`: information flow (`KlassenNIAussage`), bounds (`KlassenSchrankenAussage`) and
-             the four class-determined safety legs (`KlassenSicherheitAussage`, `Klasse/Sicherheit`). What the
-             statements do NOT claim, and why, is in their docstrings: reading classes for information flow,
-             lock actions for the booking leg, the invariant and race legs for the memory classes.
+              All duties are proved for every class and assembled into the pinned statement `KlassenAussagen`
+              in `Klasse/Beweise/Gesamt`: simulation with the authority of the plan (`klassenSim`), locality
+              (`klassenLokal`), progress (`klassenFortschritt`), information flow on the step level
+              (`klassenSchrittNI`), bounds (`klassenSchranken`), the four class-determined safety legs
+              (`klassenSicherheit`) and the non-triviality of the duties (`klassenNichtTrivial`). Information
+              flow is stated for two steps of the same form (`KlassenSchrittNIAussage`); the earlier run-level
+              form was not derivable from its premises and is gone. What the statements do NOT claim, and why,
+              is in their docstrings: reading classes for information flow, lock actions for the booking leg,
+              the invariant and race legs for the memory classes.
              The duties are informative because the classes carry real plans: a step that reads or writes
              covers its cell by authority only through the guard of its class, and a form without the guard
              violates locality (`KlassenNichtTrivialAussage`). Over the frame-only classes the same duties
@@ -68,21 +70,26 @@ def KlassenFortschrittAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
     Ideal.RegelFortschritt E.system f
 
-/-- **Information flow, once per class that does not read.** In a unit that labels the form by the checker's
-    flow rule (`RegelFluss`), whose operands the observer sees equal from public-equal states, the form
-    preserves the coupling of two runs (`RegelNIPflicht`). The plan of the step is `Wirkungsklasse.plan` of
-    operands that `Operandensicht` makes equal, so the observed trace entries agree, and the successor frame
-    is `uebertrag` of frames that agree publicly. The classes that READ (`lesen`, `rmw`) are not claimed here:
-    `RegelFluss` quantifies the semantic choice of the form independently on the two sides, and a read puts
-    its value into the frame, so the premise cannot hold for a read whose target is public; the read value
-    has to be tied to the label of the cell and coupled at the graph level (the coupled runs read the same
-    value from a public cell). That is the label rule of the memory events (MK-13). Open. Difficulty: schwer.
-    Sketch for the silent classes: the step is silent (`lokal`, `ruf`) or a visible event with public operands
-    (`schreiben`, `sperre`, `frage`); use `stummer_schritt_koppelt` for the silent ones and the coupled
-    graph step for the write. -/
-def KlassenNIAussage (k : Wirkungsklasse) : Prop :=
+/-- **Information flow, once per class that does not read, ON THE STEP LEVEL.** Two steps of the
+    SAME form of the class from publicly equal source states end in publicly equal states, with
+    equal plan and output views. Both sides take the same form `f` by hypothesis, so no claim about
+    the head of a second run is needed and the step statement follows from the flow rule alone
+    (`RegelFluss.schrittpaar_gleich`, proved as `klassenSchrittNI`). This is the pinned replacement
+    for the earlier run-level form: that form asked for `RegelNIPflicht` from premises that do not
+    determine the head of the second run, so it was not derivable and is gone. The restriction
+    `k.liest = false` stays: for the reading classes the flow rule itself cannot hold without tying
+    the read value to the label of the cell (MK-13). `Operandensicht` stays as the checker's address
+    rule: it is the premise the fragment wiring discharges. The graph coupling of the two steps is
+    not part of this source-level claim: equal public plans extend equal pre-graphs equally, and
+    that lifting belongs to the generic run composition in the fragment NI machinery. -/
+def KlassenSchrittNIAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
-    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E → Beobachtung.RegelNIPflicht E f
+    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E →
+    ∀ (c : Kontext) (v₁ v₂ : Zustand) (w : PUnit) (p₁ p₂ : Plan) (u₁ u₂ : Zustand),
+      Beobachtung.QuellzustandGleich E v₁ v₂ →
+      Beobachtung.FormSchritt E f c v₁ w p₁ u₁ → Beobachtung.FormSchritt E f c v₂ w p₂ u₂ →
+      Beobachtung.QuellzustandGleich E u₁ u₂ ∧ Beobachtung.PlanSicht E p₁ = Beobachtung.PlanSicht E p₂ ∧
+        Beobachtung.AusgabeSicht E c v₁ u₁ = Beobachtung.AusgabeSicht E c v₂ u₂
 
 /-- **Bounds, once per class.** A form whose transfer respects the declared stack bound, in a unit whose
     depth measure counts the continuation stack, preserves the stack and memory bounds of every ideal run
@@ -103,7 +110,7 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .sperre .. | .frage => false
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -141,10 +148,11 @@ def KlassenNichtTrivialAussage (k : Wirkungsklasse) : Prop :=
   (k.gesichert = true → ∃ (platform : Plattform) (F : Schrittform), F.klasse = k ∧
       ¬ RegelLokal (Regeleinheit platform F.ungeschuetzt) ())
 
-/-- **The six duties of every class, in one pinned statement.** The proved parts are `klassenSim`,
-    `klassenLokal`, `klassenFortschritt`; the rest is open for the provers. -/
+/-- **The six duties of every class, in one pinned statement.** All conjunctions are proved and
+    assembled as `klassenAussagen` in `Klasse/Beweise/Gesamt`. Information flow is the step-level
+    statement `KlassenSchrittNIAussage`; the run-level `KlassenNIAussage` is gone from the model. -/
 def KlassenAussagen : Prop :=
-  ∀ k : Wirkungsklasse, KlassenSimAussage k ∧ KlassenNIAussage k ∧ KlassenSchrankenAussage k ∧
+  ∀ k : Wirkungsklasse, KlassenSimAussage k ∧ KlassenSchrittNIAussage k ∧ KlassenSchrankenAussage k ∧
     KlassenSicherheitAussage k ∧ KlassenFortschrittAussage k ∧ KlassenLokalAussage k ∧
     KlassenNichtTrivialAussage k
 
@@ -172,6 +180,14 @@ theorem Befugt.autorisiert {ι : Type} {E : Klasseneinheit ι} {s : Zustand} {c 
     (h : Befugt E s c p) : p.Autorisiert E.einrichtung s c :=
   ⟨fun l hl => BefugtOrt.zugriff (h.2 l hl).1, fun x hx _ => BefugtOrt.zugriff (h.1 x hx)⟩
 
+/-- The step of a lifecycle class exists in every state: with the operands, the planned step; without them, the
+    refusal. -/
+theorem Schrittform.faedenschritt_total (F : Schrittform) (c : Kontext) (s : Zustand) :
+    ∃ (plans : List Plan) (u : Zustand), F.faedenschritt c s plans u := by
+  by_cases g : F.klasse.befugt (F.operand (s.lokal c)) s c
+  · exact ⟨_, _, Or.inr ⟨g, rfl, rfl⟩⟩
+  · exact ⟨_, _, Or.inl ⟨g, rfl, rfl⟩⟩
+
 /-- The step of an access class exists in every state: with the authority, the planned step; without
     it, the refusal. -/
 theorem Schrittform.zugriffsschritt_total (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -190,8 +206,13 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   | lesen m => exact Schrittform.zugriffsschritt_total ⟨.lesen m, o, t⟩ c s
   | schreiben m => exact Schrittform.zugriffsschritt_total ⟨.schreiben m, o, t⟩ c s
   | rmw m => exact Schrittform.zugriffsschritt_total ⟨.rmw m, o, t⟩ c s
+  | zaun m => exact Schrittform.zugriffsschritt_total ⟨.zaun m, o, t⟩ c s
   | sperre a => exact Schrittform.zugriffsschritt_total ⟨.sperre a, o, t⟩ c s
   | frage => exact Schrittform.zugriffsschritt_total ⟨.frage, o, t⟩ c s
+  | starte => exact Schrittform.faedenschritt_total ⟨.starte, o, t⟩ c s
+  | beende => exact Schrittform.faedenschritt_total ⟨.beende, o, t⟩ c s
+  | verbinde => exact Schrittform.faedenschritt_total ⟨.verbinde, o, t⟩ c s
+  | wechsle => exact Schrittform.faedenschritt_total ⟨.wechsle, o, t⟩ c s
 
 /-- The plan of a question reads nothing and writes nothing. -/
 theorem Operand.fragePlan_leer (o : Operand) :
@@ -240,6 +261,12 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       have hl' := List.mem_singleton.1 hl
       subst hl'
       exact ⟨Schrittform.befugt_ort emb g.1, fun _ => Schrittform.befugt_ort emb g.2⟩
+  | zaun m =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan (.zaun m) (o (s.lokal c)) v := (List.cons.inj same).1
+      subst hp
+      exact Befugt.privat rfl
   | sperre a =>
     rcases step with ⟨_, same, _⟩ | ⟨g, v, _, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -259,6 +286,30 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       · have hl' : l ∈ (o (s.lokal c)).fragePlan.lesen := hl
         rw [hlesen] at hl'
         exact (List.not_mem_nil hl').elim
+  | starte =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .starte (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | beende =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .beende (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | verbinde =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .verbinde (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | wechsle =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .wechsle (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
 
 /-- **Simulation, once per class** (`KlassenSimAussage`): the one rule is its own implementation, so the
     simulation duty holds with zero stutter, and every recorded plan is authorised because the ideal step
@@ -308,7 +359,7 @@ theorem leerzustand_griff (c : Kontext) (slot offset : Nat) :
     that names the cell `0` of region `0` plans an access at the empty state, where no context holds a
     handle, so the planned access is covered by no authority. -/
 theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk : k.gesichert = true)
-    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none⟩)
+    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩)
     (t : Rahmen → (Nat → Bool) → Int → Rahmen) :
     ¬ RegelLokal (Regeleinheit platform (Schrittform.ungeschuetzt ⟨k, o, t⟩)) () := by
   intro h
@@ -334,21 +385,25 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
     rw [keinGriff] at hg
     cases hg
   | rmw m =>
-    obtain ⟨g, _, hg, _⟩ := (bef.2 ⟨.rmw, (o (Leerzustand.lokal eintritt)).ort, m, 0, (o (Leerzustand.lokal eintritt)).wert⟩
-      (List.mem_singleton.2 rfl)).1
+    obtain ⟨g, _, hg, _⟩ := (bef.2 _ (List.mem_singleton.2 rfl)).1
     change Zustand.griff Leerzustand eintritt (o (Leerzustand.lokal eintritt)).ort = some g at hg
     rw [keinGriff] at hg
     cases hg
+  | zaun m => cases hk
   | lokal => cases hk
   | ruf => cases hk
   | sperre a => cases hk
   | frage => cases hk
+  | starte => cases hk
+  | beende => cases hk
+  | verbinde => cases hk
+  | wechsle => cases hk
 
 /-- **The duties are informative, for every class** (`KlassenNichtTrivialAussage`). -/
 theorem klassenNichtTrivial (k : Wirkungsklasse) : KlassenNichtTrivialAussage k := by
   refine ⟨⟨.x86_64, ⟨k, fun _ => Operand.keiner, fun r _ _ => r⟩, rfl, rfl, rfl, rfl⟩, ?_⟩
   intro hk
-  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none⟩, fun r _ _ => r⟩, rfl,
+  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩, fun r _ _ => r⟩, rfl,
     ungeschuetzt_nicht_lokal .x86_64 k hk _ (fun _ => rfl) _⟩
 
 end Gabbro.Core.Ast.Semantik

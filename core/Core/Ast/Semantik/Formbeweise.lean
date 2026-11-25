@@ -25,7 +25,7 @@ theorem Quellform.erhaltung (form : Quellform category Arguments)
   let p := form.fragment args
   let b := form.befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (ohneInvarianten args)⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ (ohneInvarianten args)) (fun b _ => rfl)⟩
 
 def Quellform.eintrag {cat : Scope → Category} {args : Scope → Type}
     (forms : (scope : Scope) → Quellform (cat scope) (args scope)) (joint : Prop) (constructor : Name)
@@ -39,10 +39,10 @@ def Quellform.eintrag {cat : Scope → Category} {args : Scope → Type}
     (fun scope platform a s running active atPc => (forms scope).realisiert (atRoot scope) platform a s running active atPc)
   acceptanceRule := fun scope => (forms scope).annahme
   idealRule := fun scope =>
-    ⟨atRoot scope, fun a => ⟨((forms scope).befehl a).bestimmt,
-      fun c s w plans u => ((forms scope).befehl a).ideal_privat c s w plans u⟩⟩
+    ⟨atRoot scope, fun a => ⟨(forms scope).bestimmt a,
+      fun c s w plans u => ((forms scope).befehl a).ideal_privat ((forms scope).privat a) c s w plans u⟩⟩
   unitsAndCommutation := fun scope _ a => ⟨rfl, ((forms scope).befehl a).kommutation⟩
-  implementationRule := fun scope a c s w plans u => ((forms scope).befehl a).impl_privat c s w plans u
+  implementationRule := fun scope a c s w plans u => ((forms scope).befehl a).impl_privat ((forms scope).privat a) c s w plans u
   preservation := fun scope => (forms scope).erhaltung (ohneInvarianten scope)
   jointlySatisfiable := erfuellbar
 

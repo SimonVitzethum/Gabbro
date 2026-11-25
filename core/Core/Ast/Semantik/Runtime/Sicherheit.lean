@@ -1,7 +1,9 @@
 module
 
 public import Core.Ast.Semantik.Pflichten
+public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Sicherheit.Regel
+public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
 
@@ -13,11 +15,14 @@ def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
     Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
   ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
 
-theorem Befehl.sicher (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
-  intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
-  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  intro H ρ t c w vor zwischen nach plan spur head impl execute
+  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute h
+  have okB := ok b (kopf_mem head)
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
   have wirkungen :
       NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
@@ -28,12 +33,21 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
   · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
     intro _ obj alive lost
     exact nomatch alive.symm.trans lost
-  · intro _
+  · intro vorSicher
     refine ⟨fun _ _ => trivial, ?_⟩
-    intro i d declared _
+    intro i d declared writersNach
     change (p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩))[i]? = some d at declared
-    rw [keine] at declared
-    cases declared
+    rw [tab, List.getElem?_map] at declared
+    obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp declared
+    rw [List.getElem?_map] at hinner
+    obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
+    rw [← tab, ← List.getElem?_map] at declared
+    have hok := pruefeBefehlErhalt_richtig ps b q
+      (List.mem_of_getElem? hsome) okB
+    have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
+      writersNach
+    have vorGilt : q.gilt vor := vorSicher.2 i _ declared writersVor
+    exact q.gilt_nach b c vor hok vorGilt
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
@@ -42,16 +56,38 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
 /-- The local value transfer leaves the question ledger and its authority unchanged. -/
-theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) :
+theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
   intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
-  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute h
   exact befugt
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
-  ⟨b.sicher p platform keine, b.antwortSicher p platform⟩
+  ⟨b.sicher p platform ps tab ok h, b.antwortSicher p platform h⟩
+
+/-- **Every form carries the safety duties of its unit when the code of the unit is frame-only.** A form that is
+    not frame-only never stands at a head of a unit whose code is, so its duties are vacuous; a frame-only form pays
+    its class (`Befehl.sicherheitsPflichten`). An access instruction owes the memory legs of its class
+    (`KlassenSicherheitAussage`) and the race leg (`RennfreiAusLokalAussage`) instead. -/
+theorem Fragment.sicherheitsPflichten_alle (p : Fragment) (platform : Plattform)
+    (ps : List Praedikat)
+    (tab : p.klauseln.invariant = ps.map Praedikat.gilt)
+    (ok : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true)
+    (rein : ∀ b ∈ p.code, b.Privat) (f : Befehl) :
+    RegelPflichten (p.sicherheitsEinheit platform) f := by
+  by_cases h : f.Privat
+  · exact f.sicherheitsPflichten p platform ps tab ok h
+  · refine ⟨?_, ?_⟩
+    · intro H ρ t c w vor zwischen nach plan spur head
+      exact absurd (rein f (kopf_mem head)) h
+    · intro t c w vor zwischen nach plan spur head
+      exact absurd (rein f (kopf_mem head)) h
 
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by
@@ -140,10 +176,5 @@ private theorem unitBody_keine_invarianten {before after : Scope} (body : UnitBo
   | step first rest ih =>
       simp only [unitBody, Fragment.anhaengen, Quellklauseln.anhaengen,
         List.nil_append, decl_keine_invarianten, ih]
-
-theorem programm_keine_invarianten (tree : Ast.Unit) :
-    (programm tree).klauseln.invariant = [] := by
-  simp only [programm, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
-    Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append, unitBody_keine_invarianten]
 
 end Gabbro.Core.Ast.Semantik

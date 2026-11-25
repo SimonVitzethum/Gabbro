@@ -48,7 +48,7 @@ theorem taggedDecl_erhaltung : TaggedDeclErhaltungAussage := by
   let p := (taggedDeclForm scope).fragment args
   let b := (taggedDeclForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ (by rfl)) (fun b _ => rfl)⟩
 
 theorem taggedDecl_regelSicher : TaggedDeclRegelSicherAussage := by
   intro scope platform args
@@ -68,7 +68,7 @@ theorem taggedDecl_ideal : TaggedDeclIdealAussage := by
   · exact td_amOrt scope
   · intro args
     constructor
-    · exact ((taggedDeclForm scope).befehl args).bestimmt
+    · exact (taggedDeclForm scope).bestimmt args
     · intro c s w plans u
       rfl
 

@@ -67,7 +67,8 @@ end Allgemein
     lock action, question) deepen no frame; a `ruf` step leaves every frame within the declared depth. -/
 def klassenStapelFuss (E : Semantik.Einheit) (vor nach : Semantik.Zustand) :
     Semantik.Wirkungsklasse → Prop
-  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage =>
+  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .starte | .beende
+  | .verbinde | .wechsle =>
     ∀ d, E.schranken.stapelTiefe (nach.lokal d) ≤ E.schranken.stapelTiefe (vor.lokal d)
   | .ruf => ∀ n, E.schranken.stapel = some n → ∀ d, E.schranken.stapelTiefe (nach.lokal d) ≤ n
 
@@ -87,7 +88,7 @@ theorem klassenSchranken (E : Semantik.Einheit) (b : Semantik.Befehl)
     | ruf =>
       intro d n bound
       exact stack n bound d
-    | lokal | lesen _ | schreiben _ | rmw _ | sperre _ | frage =>
+    | lokal | lesen _ | schreiben _ | rmw _ | zaun _ | sperre _ | frage | starte | beende | verbinde | wechsle =>
       intro d n bound
       exact le_trans (stack d) (stapelVor d n bound)
   · intro n bound
@@ -109,7 +110,7 @@ theorem schranken_lokal_einheit (p : Semantik.Fragment) (platform : Plattform)
     obtain ⟨i, kopfI, rule⟩ := regel
     have same : i = b := Option.some.inj (kopfI.symm.trans kopf)
     rw [same] at rule
-    obtain ⟨_, nachBefehl⟩ := b.vollzug_genau (show b.impl c vor w [_] _ from rule) aus
+    obtain ⟨_, nachBefehl⟩ := b.vollzug_genau (show b.impl c vor w [_] _ from rule) aus (Or.inl klasse)
     subst nachBefehl
     rw [klasse]
     refine And.intro (fun z hz => hz) ?_

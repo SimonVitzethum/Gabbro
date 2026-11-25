@@ -121,7 +121,7 @@ theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
 theorem environmentUnit_ideal : environmentUnitForm.IdealAussage := by
   refine ⟨environmentUnit_am_ort, ?_⟩
   intro args
-  refine ⟨(environmentUnitForm.befehl args).bestimmt, ?_⟩
+  refine ⟨environmentUnitForm.bestimmt args, ?_⟩
   intro c s w plans u
   exact Iff.rfl
 
@@ -137,6 +137,6 @@ theorem environmentUnit_erhaltung : environmentUnitForm.ErhaltungsAussage := by
   let p := environmentUnitForm.fragment args
   let b := environmentUnitForm.befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (programm_keine_invarianten args.unit)⟩
+    b.sicherheitsPflichten p platform [] (fragment_unit_invarianten _) (fun b _ => rfl)⟩
 
 end Gabbro.Core.Ast.Semantik

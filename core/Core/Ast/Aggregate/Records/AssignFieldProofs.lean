@@ -141,7 +141,7 @@ theorem AssignFieldIdeal : AssignFieldIdealAussage := by
       some (.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index))
     simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
   · intro args
-    exact ⟨((assignFieldForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(assignFieldForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem AssignFieldEinheit : AssignFieldEinheitAussage := by
   intro ctx platform args
@@ -291,10 +291,11 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
   let tree : Ast.Unit := ⟨RecordExample.scope, .step schema (.step main .done)⟩
   let E := elaborieren platform (category := .unit) tree
   have advance {s : Zustand} {b : Befehl} (reached : E.system.IErreichbar (I.start E start).2 s)
-      (head : E.system.kopf s eintritt = some b) :
+      (head : E.system.kopf s eintritt = some b)
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
       E.system.IErreichbar (I.start E start).2 (b.nach eintritt s) :=
     .schritt eintritt () [plan] reached
-      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
   let defineSchema := Befehl.definiereRecord name.val value.labels value.types
   let defineMain := functionInstruction RecordExample.scope mainName [] none false
     (functionCode none none body) none

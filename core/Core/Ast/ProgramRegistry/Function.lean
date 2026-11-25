@@ -46,7 +46,7 @@ theorem function_ideal (scope : Scope) : (functionForm scope).IdealAussage := by
     simp only [Fragment.anhaengen, Fragment.einzel, List.cons_append, List.nil_append, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((functionForm scope).befehl args).bestimmt
+    · exact (functionForm scope).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -96,7 +96,7 @@ theorem function_erhaltung (scope : Scope) : (functionForm scope).ErhaltungsAuss
   exact ⟨((functionForm scope).befehl args).abgleich ((functionForm scope).fragment args) platform,
     ((functionForm scope).befehl args).fortschritt ((functionForm scope).fragment args),
     ((functionForm scope).befehl args).komponierbar ((functionForm scope).fragment args) platform,
-    ((functionForm scope).befehl args).sicherheitsPflichten ((functionForm scope).fragment args) platform inv⟩
+    ((functionForm scope).befehl args).sicherheitsPflichten ((functionForm scope).fragment args) platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem function_sicher (scope : Scope) platform a :
@@ -132,7 +132,7 @@ theorem function_sicher (scope : Scope) platform a :
     change ((Fragment.einzel (functionInstruction scope a.name a.parameters a.result a.measure.isSome (functionCode a.result a.measure a.body) (declaredEffects a.effects))).anhaengen (functionCode a.result a.measure a.body)).klauseln.invariant = []
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
     exact codeInv a.result a.measure a.body
-  exact ((functionForm scope).befehl a).sicher ((functionForm scope).fragment a) platform inv
+  exact ((functionForm scope).befehl a).sicher ((functionForm scope).fragment a) platform [] (tabLeer _ inv) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem function_erfuellbar : functionJoint := by

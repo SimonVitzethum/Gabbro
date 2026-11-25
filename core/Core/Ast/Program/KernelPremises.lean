@@ -25,6 +25,11 @@ def Befehl.programConstructor : Befehl → Option Name
   | .ende .. => some ``Befehl.ende
   | _ => none
 
+/-- A program-level instruction is frame-only: only the access instructions are not, and they have no program constructor. -/
+theorem Befehl.privat_von_programConstructor {b : Befehl} {n : Name}
+    (h : b.programConstructor = some n) : b.Privat :=
+  b.privat_von_kein_zugriff (fun form eq => by subst eq; cases h) (fun form eq => by subst eq; cases h)
+
 def programConstructors : List Name :=
   [``Befehl.bindeWert,
     ``Befehl.definiere,
@@ -56,8 +61,8 @@ private theorem at_source {category : Category} {tree : category.Tree}
     (head : (elaborieren platform tree).system.kopf s eintritt = some b) :
     ProgramInstructionPremises constructor platform start :=
   ⟨category, tree, Ast.print tree, s, b, tag, Ast.parse_print tree, reach, head,
-    ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
-      ⟨b, head, (b.impl_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩⟩
+    ⟨b, head, (b.ideal_privat (Befehl.privat_von_programConstructor tag) eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
+      ⟨b, head, (b.impl_privat (Befehl.privat_von_programConstructor tag) eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩⟩
 
 private theorem Quellform.program_occurrence {category : Category} {args : Type}
     (form : Quellform category args) {platform : Plattform} {start : AussenStart}
@@ -70,10 +75,11 @@ private theorem Quellform.program_occurrence {category : Category} {args : Type}
 
 private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustand} {s : Zustand} {b : Befehl}
     (reach : (p.einheit platform).system.IErreichbar start s)
-    (head : (p.einheit platform).system.kopf s eintritt = some b) :
+    (head : (p.einheit platform).system.kopf s eintritt = some b)
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
   .schritt eintritt () [plan] reach
-      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
 
 private theorem while_occurrences :
     (∀ platform start, ProgramInstructionPremises ``Befehl.setzePasszahl platform start) ∧
@@ -127,7 +133,7 @@ private theorem for_occurrences :
   · intro platform start
     obtain ⟨reach, head⟩ := cut platform start
     have hs := reach_step reach head
-    have ht := reach_step (b := form.befehl a) hs rfl
+    have ht := reach_step (b := form.befehl a) hs rfl (form.privat a)
     have hb := reach_step (b := .blockEnde 0) ht rfl
     exact at_source (tree := form.produktion.tree a) (b := .forNaechster 2 index) rfl hb rfl
 

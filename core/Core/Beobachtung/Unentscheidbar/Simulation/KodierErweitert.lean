@@ -239,4 +239,80 @@ instance : Encodable RegionInitializer :=
         classical
         simp_all [regionInitializerCode, regionInitializerDecode, Encodable.encodek, viewRegion, valid])
 
+/-! ## Zugriffsform (MK-04) -/
+
+/-- The access modes as numbers. -/
+def modusNr : Gabbro.Core.Speicher.Modus → Nat
+  | .na => 0
+  | .rlx => 1
+  | .ra => 2
+  | .sc => 3
+
+def modusVonNr : Nat → Option Gabbro.Core.Speicher.Modus
+  | 0 => Option.some .na
+  | 1 => Option.some .rlx
+  | 2 => Option.some .ra
+  | 3 => Option.some .sc
+  | _ => Option.none
+
+instance : Encodable Gabbro.Core.Speicher.Modus :=
+  Encodable.ofLeftInjection modusNr modusVonNr (by intro m; cases m <;> rfl)
+
+/-- An access instruction as a sum of the products of its fields. -/
+abbrev ZugriffssummeTyp : Type :=
+  (Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Int × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
+    (Nat × Nat × Nat × Gabbro.Core.Speicher.Modus) ⊕
+    Gabbro.Core.Speicher.Modus
+
+def zugriffZuSumme : Zugriffsform → ZugriffssummeTyp
+  | .lade a b c t m => .inl (a, b, c, t, m)
+  | .speichere a b c m => .inr (.inl (a, b, c, m))
+  | .tausche a b c d t m => .inr (.inr (.inl (a, b, c, d, t, m)))
+  | .vergleicheTausche a b c d e t m => .inr (.inr (.inr (.inl (a, b, c, d, e, t, m))))
+  | .holeUndAddiere a b c d t m => .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m)))))
+  | .erwarte a b c i t m => .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m))))))
+  | .veroeffentliche a b c m => .inr (.inr (.inr (.inr (.inr (.inr (.inl (a, b, c, m)))))))
+  | .zaun m => .inr (.inr (.inr (.inr (.inr (.inr (.inr m))))))
+
+def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
+  | .inl (a, b, c, t, m) => Option.some (.lade a b c t m)
+  | .inr (.inl (a, b, c, m)) => Option.some (.speichere a b c m)
+  | .inr (.inr (.inl (a, b, c, d, t, m))) => Option.some (.tausche a b c d t m)
+  | .inr (.inr (.inr (.inl (a, b, c, d, e, t, m)))) => Option.some (.vergleicheTausche a b c d e t m)
+  | .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m))))) => Option.some (.holeUndAddiere a b c d t m)
+  | .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m)))))) => Option.some (.erwarte a b c i t m)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inl (a, b, c, m))))))) => Option.some (.veroeffentliche a b c m)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inr m)))))) => Option.some (.zaun m)
+
+instance : Encodable Zugriffsform :=
+  Encodable.ofLeftInjection zugriffZuSumme zugriffVonSumme (by intro z; cases z <;> rfl)
+
+/-! ## Fadenform (MK-07) -/
+
+/-- A lifecycle instruction as a sum of the products of its fields. -/
+abbrev FadensummeTyp : Type :=
+  (Nat × Nat × Ty .value × List Nat) ⊕ Nat ⊕ (Nat × Nat × Ty .value) ⊕ (Nat × Nat) ⊕ (Nat × Nat)
+
+def fadenZuSumme : Fadenform → FadensummeTyp
+  | .starte a b t l => .inl (a, b, t, l)
+  | .beende a => .inr (.inl a)
+  | .verbinde a b t => .inr (.inr (.inl (a, b, t)))
+  | .wechsle a b => .inr (.inr (.inr (.inl (a, b))))
+  | .kernStart a b => .inr (.inr (.inr (.inr (a, b))))
+
+def fadenVonSumme : FadensummeTyp → Option Fadenform
+  | .inl (a, b, t, l) => Option.some (.starte a b t l)
+  | .inr (.inl a) => Option.some (.beende a)
+  | .inr (.inr (.inl (a, b, t))) => Option.some (.verbinde a b t)
+  | .inr (.inr (.inr (.inl (a, b)))) => Option.some (.wechsle a b)
+  | .inr (.inr (.inr (.inr (a, b)))) => Option.some (.kernStart a b)
+
+instance : Encodable Fadenform :=
+  Encodable.ofLeftInjection fadenZuSumme fadenVonSumme (by intro z; cases z <;> rfl)
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation

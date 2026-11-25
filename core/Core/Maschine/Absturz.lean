@@ -118,4 +118,85 @@ theorem AbsturzSchritt.verbrauch {region w k run t} {s s' : Zustand L Ort Wert R
     change (s.angekommen c)[(s.angekommen c).length - s.verbraucht c + s.verbraucht c]? = none
     exact List.getElem?_eq_none (index c).symm.le
 
+/-! ## Crash invariants over the durable state (MK-15)
+
+The three duties below form the single umbrella `PersistenzAussage`. The umbrella is
+pinned with one hash row; every duty is reachable from it through the dependency closure.
+No duty quantifies over a free function: the invariant is bound by its holds-before/holds-after
+premises. -/
+
+/-- The declared crash invariant over the durable state holds after every restart: the
+    recovery entry observes the same durable image the crash interrupted. -/
+def AbsturzInvariantePflicht : Prop :=
+  ∀ (L Ort Wert Raum Lok Grund : Type) [DecidableEq L]
+    (region : Strecke) (w : Wiederanlauf Ort Wert Raum Lok Grund)
+    (k : Katalog) (run : HwLauf) (t : Nat)
+    (s s' : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert)
+    (inv : AbsturzInvariante),
+    AbsturzSchritt region w k run t s spur s' →
+      inv s.persistenz.dauerhaft → inv s'.persistenz.dauerhaft
+
+theorem absturzInvariante_haelt : AbsturzInvariantePflicht := by
+  intro L Ort Wert Raum Lok Grund _ region w k run t s s' spur inv step held
+  rw [step.neustart.1]
+  exact held
+
+/-- The persistence turnover as a crash-step statement: a crash drops exactly the volatile
+    and queued writes and keeps every durable byte. -/
+def PersistenzumschlagPflicht : Prop :=
+  ∀ (L Ort Wert Raum Lok Grund : Type) [DecidableEq L]
+    (region : Strecke) (w : Wiederanlauf Ort Wert Raum Lok Grund)
+    (k : Katalog) (run : HwLauf) (t : Nat)
+    (s s' : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert),
+    AbsturzSchritt region w k run t s spur s' →
+      s'.persistenz.dauerhaft = s.persistenz.dauerhaft ∧
+        s'.persistenz.fluechtig = [] ∧ s'.persistenz.eingereiht = []
+
+theorem persistenzumschlag_haelt : PersistenzumschlagPflicht := by
+  intro L Ort Wert Raum Lok Grund _ region w k run t s s' spur step
+  exact ⟨step.neustart.1, step.neustart.2.1, step.neustart.2.2.1⟩
+
+/-- Every declared durable object keeps its bytes across a crash. -/
+def DauerhaftObjektPflicht : Prop :=
+  ∀ (L Ort Wert Raum Lok Grund : Type) [DecidableEq L]
+    (o : DauerhaftObjekt) (region : Strecke) (w : Wiederanlauf Ort Wert Raum Lok Grund)
+    (k : Katalog) (run : HwLauf) (t : Nat)
+    (s s' : Zustand L Ort Wert Raum Lok Grund) (spur : SchrittSpur Ort Wert),
+    AbsturzSchritt region w k run t s spur s' →
+      ∀ a, o.bereich.drin a → s'.persistenz.dauerhaft a = s.persistenz.dauerhaft a
+
+theorem dauerhaftObjekt_haelt : DauerhaftObjektPflicht := by
+  intro L Ort Wert Raum Lok Grund _ o region w k run t s s' spur step a _
+  exact congrFun step.neustart.1 a
+
+/-- The single umbrella statement of MK-15: the crash invariant, the turnover and the
+    durable objects, pinned with one hash row. -/
+def PersistenzAussage : Prop :=
+  AbsturzInvariantePflicht ∧ PersistenzumschlagPflicht ∧ DauerhaftObjektPflicht
+
+/-- All three duties hold over the crash step of the machine. -/
+theorem PersistenzAussage_erfuellbar : PersistenzAussage :=
+  ⟨absturzInvariante_haelt, persistenzumschlag_haelt, dauerhaftObjekt_haelt⟩
+
+private theorem uint8_null_ne_fuenf : (0 : UInt8) ≠ 5 := by
+  intro h
+  have t : (0 : Nat) = 5 := congrArg UInt8.toNat h
+  exact absurd t (by decide)
+
+/-- The model represents the fault instead of ruling it out: the invariant language
+    distinguishes durable images, and a crash step can discard pending writes. Only the
+    declared invariant (checked by the checker) excludes the loss, never the model. -/
+theorem PersistenzAussage_nichtTrivial :
+    (∃ inv : AbsturzInvariante, (∃ d, inv d) ∧ ∃ d, ¬ inv d) ∧
+      ∃ (r : Strecke) (s p : PersistZustand),
+        persistenz r s .crash p ∧ s.fluechtig ≠ [] ∧ p.fluechtig = [] := by
+  constructor
+  · refine ⟨fun d => d 0 = 5, ⟨fun _ => 5, rfl⟩, ⟨fun _ => 0, ?_⟩⟩
+    show ¬ ((0 : UInt8) = 5)
+    exact uint8_null_ne_fuenf
+  · refine ⟨⟨0, 1⟩, { PersistZustand.leer (fun _ => 0) with fluechtig := [⟨0, 0, 7⟩] }, _,
+      .crash _, ?_, rfl⟩
+    intro h
+    cases h
+
 end Gabbro.Core.Maschine

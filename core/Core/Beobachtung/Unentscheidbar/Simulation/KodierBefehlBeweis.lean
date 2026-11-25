@@ -266,6 +266,16 @@ theorem inv_bindeRegion (f0 : _) (f1 : _) :
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
 
+theorem inv_zugriff (f0 : _) :
+    befehlVonCode (befehlZuCode (.zugriff f0)) = some (.zugriff f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
+theorem inv_faden (f0 : _) :
+    befehlVonCode (befehlZuCode (.faden f0)) = some (.faden f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
 theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = some b
   | .literal f0 f1 => inv_literal f0 f1
   | .binaer f0 f1 => inv_binaer f0 f1
@@ -317,6 +327,8 @@ theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = som
   | .definiereEffektgruppe f0 => inv_definiereEffektgruppe f0
   | .waehleUmgebung f0 f1 f2 => inv_waehleUmgebung f0 f1 f2
   | .bindeRegion f0 f1 => inv_bindeRegion f0 f1
+  | .zugriff f0 => inv_zugriff f0
+  | .faden f0 => inv_faden f0
 
 instance : Encodable Befehl :=
   Encodable.ofLeftInjection

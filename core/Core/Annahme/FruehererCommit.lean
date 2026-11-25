@@ -59,7 +59,7 @@ theorem frueherer_commit_erfuellbar :
   let spur : Spur := ⟨[], []⟩
   have form : fruehereEinheit.system.ISchritt kontext vor () [bindePlan] nach :=
     ⟨(), rfl, vorher, List.mem_cons_self, rfl, rfl, rfl, rfl⟩
-  have rahmen : Zustandsrahmen vor nach := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  have rahmen : Zustandsrahmen vor nach := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have aus : FuehrtSchrittAus einrichtung 3 kontext vor nach bindePlan spur nach :=
     ⟨rahmen, fun _ mem => (List.not_mem_nil mem).elim, [], nach, .intern, .nil _, rfl⟩
   have step : I.Schritt fruehereEinheit.einrichtung fruehereEinheit.system fruehereEinheit.katalog

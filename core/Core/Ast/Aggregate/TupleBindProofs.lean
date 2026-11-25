@@ -184,7 +184,7 @@ theorem tupleBind_ideal : TupleBindIdealAussage := by
   intro ctx
   refine ⟨tupleBind_am_ort ctx, ?_⟩
   intro args
-  exact ⟨((tupleBindForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(tupleBindForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem tupleBind_einheit : TupleBindEinheitAussage := by
   intro ctx platform args
@@ -207,7 +207,7 @@ theorem tupleBind_erhaltung : TupleBindErhaltungAussage := by
 theorem tupleBind_regelSicher : TupleBindRegelSicherAussage := by
   intro ctx platform args
   exact ((tupleBindForm ctx).befehl args).sicher ((tupleBindForm ctx).fragment args)
-    platform (tupleBind_keineInvarianten ctx args)
+    platform [] (tabLeer _ (tupleBind_keineInvarianten ctx args)) (fun b _ => rfl)
 
 private theorem tupleLocals_length : (types : List (Ty .value)) → (value : Wert (tupleType types)) →
     (names : List (Option Identifier)) → names.length = types.length →

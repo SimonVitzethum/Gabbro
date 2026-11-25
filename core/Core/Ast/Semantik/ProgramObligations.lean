@@ -62,7 +62,7 @@ theorem returnVoid_annahme (scope : Scope) (result : Option (Ty .value)) : (retu
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem returnVoid_ideal (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).IdealAussage := by
-  exact ⟨fun _ => rfl, fun args => ⟨((returnVoidForm scope result).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
+  exact ⟨fun _ => rfl, fun args => ⟨(returnVoidForm scope result).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩⟩
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem returnVoid_einheit (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).EinheitAussage := by
@@ -80,13 +80,13 @@ theorem returnVoid_erhaltung (scope : Scope) (result : Option (Ty .value)) : (re
   exact ⟨((returnVoidForm scope result).befehl args).abgleich ((returnVoidForm scope result).fragment args) platform,
     ((returnVoidForm scope result).befehl args).fortschritt ((returnVoidForm scope result).fragment args),
     ((returnVoidForm scope result).befehl args).komponierbar ((returnVoidForm scope result).fragment args) platform,
-    ((returnVoidForm scope result).befehl args).sicherheitsPflichten ((returnVoidForm scope result).fragment args) platform rfl⟩
+    ((returnVoidForm scope result).befehl args).sicherheitsPflichten ((returnVoidForm scope result).fragment args) platform [] (tabLeer _ rfl) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem returnVoid_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((returnVoidForm scope result).fragment a).sicherheitsEinheit platform)
       ((returnVoidForm scope result).befehl a) := by
-  exact ((returnVoidForm scope result).befehl a).sicher ((returnVoidForm scope result).fragment a) platform rfl
+  exact ((returnVoidForm scope result).befehl a).sicher ((returnVoidForm scope result).fragment a) platform [] (tabLeer _ rfl) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem returnVoid_erfuellbar : returnVoidJoint := by
@@ -147,7 +147,7 @@ theorem mutableLocal_ideal (scope : Scope) (result : Option (Ty .value)) : (muta
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((mutableLocalForm scope result).befehl args).bestimmt
+    · exact (mutableLocalForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -167,17 +167,17 @@ theorem mutableLocal_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((mutableLocalForm scope result).befehl args).abgleich ((mutableLocalForm scope result).fragment args) platform,
     ((mutableLocalForm scope result).befehl args).fortschritt ((mutableLocalForm scope result).fragment args),
     ((mutableLocalForm scope result).befehl args).komponierbar ((mutableLocalForm scope result).fragment args) platform,
-    ((mutableLocalForm scope result).befehl args).sicherheitsPflichten ((mutableLocalForm scope result).fragment args) platform (by
+    ((mutableLocalForm scope result).befehl args).sicherheitsPflichten ((mutableLocalForm scope result).fragment args) platform [] (tabLeer _ (by
       change (stmt ((mutableLocalForm scope result).produktion.tree args).2).klauseln.invariant = []
-      exact stmt_keine_invarianten _)⟩
+      exact stmt_keine_invarianten _)) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem mutableLocal_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((mutableLocalForm scope result).fragment a).sicherheitsEinheit platform)
       ((mutableLocalForm scope result).befehl a) := by
-  exact ((mutableLocalForm scope result).befehl a).sicher ((mutableLocalForm scope result).fragment a) platform (by
+  exact ((mutableLocalForm scope result).befehl a).sicher ((mutableLocalForm scope result).fragment a) platform [] (tabLeer _ (by
     change (stmt ((mutableLocalForm scope result).produktion.tree a).2).klauseln.invariant = []
-    exact stmt_keine_invarianten _)
+    exact stmt_keine_invarianten _)) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem mutableLocal_erfuellbar : mutableLocalJoint := by
@@ -250,7 +250,7 @@ theorem directCall_ideal (scope : Scope) (result : Option (Ty .value)) : (direct
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((directCallForm scope result).befehl args).bestimmt
+    · exact (directCallForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -270,17 +270,17 @@ theorem directCall_erhaltung (scope : Scope) (result : Option (Ty .value)) : (di
   exact ⟨((directCallForm scope result).befehl args).abgleich ((directCallForm scope result).fragment args) platform,
     ((directCallForm scope result).befehl args).fortschritt ((directCallForm scope result).fragment args),
     ((directCallForm scope result).befehl args).komponierbar ((directCallForm scope result).fragment args) platform,
-    ((directCallForm scope result).befehl args).sicherheitsPflichten ((directCallForm scope result).fragment args) platform (by
+    ((directCallForm scope result).befehl args).sicherheitsPflichten ((directCallForm scope result).fragment args) platform [] (tabLeer _ (by
       change (stmt ((directCallForm scope result).produktion.tree args).2).klauseln.invariant = []
-      exact stmt_keine_invarianten _)⟩
+      exact stmt_keine_invarianten _)) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem directCall_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((directCallForm scope result).fragment a).sicherheitsEinheit platform)
       ((directCallForm scope result).befehl a) := by
-  exact ((directCallForm scope result).befehl a).sicher ((directCallForm scope result).fragment a) platform (by
+  exact ((directCallForm scope result).befehl a).sicher ((directCallForm scope result).fragment a) platform [] (tabLeer _ (by
     change (stmt ((directCallForm scope result).produktion.tree a).2).klauseln.invariant = []
-    exact stmt_keine_invarianten _)
+    exact stmt_keine_invarianten _)) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem directCall_erfuellbar : directCallJoint := by
@@ -335,7 +335,7 @@ theorem bindDirect_ideal (scope : Scope) (result : Option (Ty .value)) : (bindDi
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((bindDirectForm scope result).befehl args).bestimmt
+    · exact (bindDirectForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -355,17 +355,17 @@ theorem bindDirect_erhaltung (scope : Scope) (result : Option (Ty .value)) : (bi
   exact ⟨((bindDirectForm scope result).befehl args).abgleich ((bindDirectForm scope result).fragment args) platform,
     ((bindDirectForm scope result).befehl args).fortschritt ((bindDirectForm scope result).fragment args),
     ((bindDirectForm scope result).befehl args).komponierbar ((bindDirectForm scope result).fragment args) platform,
-    ((bindDirectForm scope result).befehl args).sicherheitsPflichten ((bindDirectForm scope result).fragment args) platform (by
+    ((bindDirectForm scope result).befehl args).sicherheitsPflichten ((bindDirectForm scope result).fragment args) platform [] (tabLeer _ (by
       change (stmt ((bindDirectForm scope result).produktion.tree args).2).klauseln.invariant = []
-      exact stmt_keine_invarianten _)⟩
+      exact stmt_keine_invarianten _)) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem bindDirect_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
     Sicherheit.RegelSicher (((bindDirectForm scope result).fragment a).sicherheitsEinheit platform)
       ((bindDirectForm scope result).befehl a) := by
-  exact ((bindDirectForm scope result).befehl a).sicher ((bindDirectForm scope result).fragment a) platform (by
+  exact ((bindDirectForm scope result).befehl a).sicher ((bindDirectForm scope result).fragment a) platform [] (tabLeer _ (by
     change (stmt ((bindDirectForm scope result).produktion.tree a).2).klauseln.invariant = []
-    exact stmt_keine_invarianten _)
+    exact stmt_keine_invarianten _)) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem bindDirect_erfuellbar : bindDirectJoint := by

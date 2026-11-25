@@ -19,9 +19,9 @@ def KontrollflussNIAussage : Prop :=
     are exactly the forms whose only effect is the program counter and the local bindings. -/
 theorem kontrollflussNI : KontrollflussNIAussage := by
   classical
-  intro p plattform f _ _ h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
+  intro p plattform f familie _ h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
     zustand kopf spurGlied kopplung
   exact stummer_schritt_koppelt vergleich zustand kopf spurGlied
-    (antwortNI p plattform h₂ ρ₂ vergleich.rechts t · ·) kopplung
+    (antwortNI p plattform h₂ ρ₂ vergleich.rechts t · ·) (Befehl.privat_von_familie (fun e => by rw [familie] at e; cases e)) kopplung
 
 end Gabbro.Core.Beobachtung

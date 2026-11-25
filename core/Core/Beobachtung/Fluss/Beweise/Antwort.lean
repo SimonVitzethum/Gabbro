@@ -20,17 +20,14 @@ abbrev AntwortZustand := Ast.Semantik.Zustand
 abbrev AntwortPlan := Ast.Semantik.Plan
 abbrev AntwortSpur := SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int
 
-/-- The plan of every context step of a canonical fragment is the internal plan:
+/-- The action of every context step of a canonical fragment is still (internal or a lifecycle action):
     a `Befehl` never issues a question. -/
-theorem antwort_kontext_intern {p : Fragment} (plattform : Plattform)
+theorem antwort_kontext_still {p : Fragment} (plattform : Plattform)
     {c : Kontext} {s u : AntwortZustand} {w : PUnit} {plan : AntwortPlan}
     (regel : (p.einheit plattform).system.ImplSchritt c s w [plan] u) :
-    plan = Gabbro.Core.Ast.Semantik.plan := by
+    plan.aktion.Still := by
   obtain ⟨i, _, impl⟩ := regel
-  have impl' := (i.impl_privat c s w [plan] u).1 impl
-  have pl := impl'.1
-  have head := congrArg List.head? pl
-  simpa using head
+  exact i.regel_aktion_still rfl impl
 
 /-- A form action other than a question leaves the pending-question ledger unchanged. -/
 theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
@@ -41,7 +38,8 @@ theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
     (uLeer : u.fragen = []) (keinFrage : ∀ q, aktion ≠ .frage q) : v.fragen = [] := by
   cases aktionStep with
   | frage q => exact (keinFrage q rfl).elim
-  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
+  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ _ | beende _
+    | wechsle _ _ _ _ =>
       change u.fragen = []
       exact uLeer
 
@@ -54,16 +52,10 @@ theorem antwort_schritt_fragen {p : Fragment} (plattform : Plattform)
   cases step with
   | kontext _ _ regel aus =>
       obtain ⟨i, _, impl⟩ := regel
-      have impl' := (i.impl_privat _ _ () _ _).1 impl
-      have pl := impl'.1
-      have planEq := Option.some.inj (congrArg List.head? pl)
-      rw [planEq] at aus
+      have still := i.regel_aktion_still rfl impl
       obtain ⟨frame, _, _, _, aktion, _, s'Eq⟩ := aus
-      have keinFrage : ∀ q : Frage, Gabbro.Core.Ast.Semantik.plan.aktion ≠ .frage q := by
-        intro q h
-        cases h
       have vLeer := antwort_fuehrt_aus_fragen_leer plattform aktion
-        (frame.fragen.trans leer) keinFrage
+        (frame.fragen.trans leer) (fun q h => by rw [h] at still; exact False.elim still)
       rw [s'Eq]
       exact vLeer
   | antwort _ arrives =>

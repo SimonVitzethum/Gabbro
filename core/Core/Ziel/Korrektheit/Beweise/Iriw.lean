@@ -6,14 +6,15 @@
              or exhibit one concrete RC11-consistent graph (allowed half); no fixture is evaluated
              on the compiler path.
 
-  Feeding facts: `Graph.drf_sc`, `Graph.scSchritt`, `Graph.rb`, `Graph.hb_in_po`,
-  `Graph.hb_irrefl`, `Graph.atomar`, `Konsistent.psc`, `Konsistent.ohneLB`,
-  `transGen_von_trans`, `transGen_mono`, `transGen_kopf`, `azyklisch_von_rang`,
-  and the closed-form case-split style of `Core/Speicher/Trennung.lean`.
+   Feeding facts: `Graph.sw_direkt`, `Graph.sc_stark`, `Graph.psc_von_klassisch`, `Graph.rb`,
+   `Graph.hb_in_po`, `Graph.hb_irrefl`, `Graph.atomar`, `Konsistent.psc`, `Konsistent.ohneLB`,
+   `transGen_von_trans`, `transGen_mono`, `transGen_kopf`, `azyklisch_von_rang`,
+   and the closed-form case-split style of `Core/Speicher/Trennung.lean`.
 -/
 module
 
 public import Core.Ziel.Korrektheit.Speicher
+public import Core.Speicher.Kohaerenz
 
 @[expose] public section
 
@@ -22,35 +23,26 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core
 open Gabbro.Core.Speicher
 
-/-- INDEPENDENT READS OF INDEPENDENT WRITES ARE FORBIDDEN UNDER `seq_cst`. Feeds: `drf_sc` (an
-    all-`seq_cst` graph has no plain access, hence is race free, hence sequentially consistent),
-    `scSchritt` (`rf`, `po` and `rb` are each one step of the SC order), `Graph.rb`. Proof sketch:
-    the six assumptions are six `scSchritt` steps closing `wx → r1x → r1y → wy → r2y → r2x → wx`;
-    a transitive path around that loop is a `scSchritt` cycle, which `SCKonsistent` excludes. -/
+/-- INDEPENDENT READS OF INDEPENDENT WRITES ARE FORBIDDEN UNDER `seq_cst`. Feeds: the
+    classic `psc` steps (`Graph.psc_von_klassisch`: the two `rf` edges synchronise through `sw_direkt`
+    into `hb|loc`, the `po` and `rb` edges are in `scb`). Proof sketch: the six assumptions are
+    six `psc` steps closing `wx → r1x → r1y → wy → r2y → r2x → wx`; a transitive path around
+    that loop is a `psc` cycle, which `Konsistent.psc` excludes. -/
 theorem iriw_sc_verboten : IriwScVerbotenAussage := by
   intro E Ort Wert G hk hsc wx wy r1x r1y r2y r2x hf1 hp1 hrb1 hf2 hp2 hrb2
-  have hn : G.NurSC := fun a => Or.inr (hsc a)
-  have hr : G.Rennfrei := by
-    intro a b _ hnab
-    rcases hnab with hna | hna
-    · have hsa : G.modus a = Modus.sc := hsc a
-      have hna' : G.modus a = Modus.na := hna
-      rw [hsa] at hna'
-      cases hna'
-    · have hsb : G.modus b = Modus.sc := hsc b
-      have hnb' : G.modus b = Modus.na := hna
-      rw [hsb] at hnb'
-      cases hnb'
-  have hSC : G.SCKonsistent := Graph.drf_sc hk hn hr
-  have h1 : G.scSchritt wx r1x := Or.inr (Or.inl hf1)
-  have h2 : G.scSchritt r1x r1y := Or.inl hp1
-  have h3 : G.scSchritt r1y wy := Or.inr (Or.inr (Or.inr hrb1))
-  have h4 : G.scSchritt wy r2y := Or.inr (Or.inl hf2)
-  have h5 : G.scSchritt r2y r2x := Or.inl hp2
-  have h6 : G.scSchritt r2x wx := Or.inr (Or.inr (Or.inr hrb2))
-  have hp : Relation.TransGen G.scSchritt wx wx :=
-    (((((Relation.TransGen.single h1).tail h2).tail h3).tail h4).tail h5).tail h6
-  exact hSC wx hp
+  have s1 : G.psc wx r1x := Graph.psc_von_klassisch ⟨hsc wx, hsc r1x, Or.inr (Or.inr (Or.inl
+    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf1 (Graph.sc_stark (hsc wx)) (Graph.sc_stark (hsc r1x))),
+      hk.wf.rf_ort _ _ hf1⟩))⟩
+  have s2 : G.psc r1x r1y := Graph.psc_von_klassisch ⟨hsc r1x, hsc r1y, Or.inl hp1⟩
+  have s3 : G.psc r1y wy :=
+    Graph.psc_von_klassisch ⟨hsc r1y, hsc wy, Or.inr (Or.inr (Or.inr (Or.inr hrb1)))⟩
+  have s4 : G.psc wy r2y := Graph.psc_von_klassisch ⟨hsc wy, hsc r2y, Or.inr (Or.inr (Or.inl
+    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf2 (Graph.sc_stark (hsc wy)) (Graph.sc_stark (hsc r2y))),
+      hk.wf.rf_ort _ _ hf2⟩))⟩
+  have s5 : G.psc r2y r2x := Graph.psc_von_klassisch ⟨hsc r2y, hsc r2x, Or.inl hp2⟩
+  have s6 : G.psc r2x wx :=
+    Graph.psc_von_klassisch ⟨hsc r2x, hsc wx, Or.inr (Or.inr (Or.inr (Or.inr hrb2)))⟩
+  exact hk.psc wx (.tail (.tail (.tail (.tail (.tail (.single s1) s2) s3) s4) s5) s6)
 
 /-- The eight events of the release/acquire IRIW outcome: the initial writes `ix`, `iy`, the two
     release writes `wx`, `wy`, and the acquire readers `r1x; r1y` and `r2y; r2x`. -/
@@ -211,6 +203,9 @@ theorem ir_wf (m : Modus) : (irGraph m).Wohlgeformt where
   mo_total := by
     intro a b ha hb ho hne
     exact irMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, irGraph, irLab, reduceCtorEq] at h
 
 theorem ir_kein_rmw (m : Modus) (u : IriwEv) : ¬ (irGraph m).istRmw u := by
   intro hu
@@ -231,9 +226,13 @@ theorem ir_eco {m : Modus} {a b : IriwEv} (h : (irGraph m).eco a b) : irEco a b 
   exact transGen_von_trans (fun x y z hxy hyz => irEco_trans x y z ⟨hxy, hyz⟩)
     (transGen_mono (fun _ _ h => ir_eco_schritt h) h)
 
+theorem ir_kein_zaun (m : Modus) (a : IriwEv) : ¬ (irGraph m).istZaun a := by
+  intro hu
+  cases a <;> simp only [Graph.istZaun, irGraph, irLab, reduceCtorEq] at hu
+
 /-- Every `rf` edge lies inside program order here, so `hb_in_po` describes `hb` by `irPo`. -/
 theorem ir_hb {m : Modus} {a b : IriwEv} (h : (irGraph m).hb a b) : irPo a b :=
-  Graph.hb_in_po (ir_wf m) (ir_kein_rmw m) irRf_po h
+  Graph.hb_in_po (ir_wf m) (ir_kein_zaun m) (ir_kein_rmw m) irRf_po h
 
 theorem ir_kein_sc (e : IriwEv) : ¬ (irGraph .ra).sc e := by
   cases e <;> simp only [Graph.sc, Graph.modus, irGraph, irLab, reduceCtorEq] <;> trivial
@@ -254,7 +253,11 @@ theorem ir_konsistent : (irGraph .ra).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (ir_kein_sc a) hc.1
+    rcases hc with ⟨_, _, _, hl, _⟩ | ⟨hza, _, _⟩
+    · rcases hl with ⟨hsc, _⟩ | ⟨hza, _⟩
+      · exact absurd hsc (ir_kein_sc a)
+      · exact absurd hza.1 (ir_kein_zaun .ra a)
+    · exact absurd hza.1 (ir_kein_zaun .ra a)
   ohneLB := by
     refine azyklisch_von_rang irRang ?_
     intro a b

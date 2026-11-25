@@ -240,11 +240,11 @@ theorem optionConstructorIdeal : OptionConstructorIdealAussage := by
   · intro ctx
     refine ⟨letOption_amOrt ctx, ?_⟩
     intro args
-    exact ⟨((optionLetForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(optionLetForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
   · intro ctx
     refine ⟨returnOption_amOrt ctx, ?_⟩
     intro args
-    exact ⟨((optionReturnForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(optionReturnForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem optionConstructorEinheit : OptionConstructorEinheitAussage := by
   constructor
@@ -270,11 +270,11 @@ theorem optionConstructorErhaltung : OptionConstructorErhaltungAussage := by
 theorem optionConstructorRegelSicher : OptionConstructorRegelSicherAussage := by
   constructor
   · intro ctx platform args
-    exact ((optionLetForm ctx).befehl args).sicher ((optionLetForm ctx).fragment args) platform
-      (letOption_keineInvarianten ctx args)
+    exact ((optionLetForm ctx).befehl args).sicher ((optionLetForm ctx).fragment args) platform []
+      (tabLeer _ (letOption_keineInvarianten ctx args)) (fun b _ => rfl)
   · intro ctx platform args
-    exact ((optionReturnForm ctx).befehl args).sicher ((optionReturnForm ctx).fragment args) platform
-      (returnOption_keineInvarianten ctx args)
+    exact ((optionReturnForm ctx).befehl args).sicher ((optionReturnForm ctx).fragment args) platform []
+      (tabLeer _ (returnOption_keineInvarianten ctx args)) (fun b _ => rfl)
 
 theorem optionLetErfuellbarAm : OptionLetErfuellbarAmAussage := by
   intro platform start

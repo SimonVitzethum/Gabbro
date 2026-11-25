@@ -139,31 +139,33 @@ theorem register_fallible : RegisterFallibleAussage := by
   · intro offset range answer failure reply
     simp only [RegisterAccess.result, reply]
 
-/-- The whole composed operation carries the actual M7 safety obligation,
-    including the recorded question's authority at its issue cut. -/
-def RegisterRegelSicherAussage (kind : RegisterAccess → Prop) : Prop :=
+/-- Every composed operation carries the actual M7 safety obligation,
+    including the recorded question's authority at its issue cut. The former
+    `kind` selector is gone: the proof never used it, so the claim holds for
+    every access. -/
+def RegisterRegelSicherAussage : Prop :=
   ∀ k (binding : Binding k) access,
-    kind access → Sicherheit.RegelSicher (registerSafetyUnit binding access) ()
+    Sicherheit.RegelSicher (registerSafetyUnit binding access) ()
 
-def RegisterRegelAntwortSicherAussage (kind : RegisterAccess → Prop) : Prop :=
+/-- Every composed operation preserves pending authority, including for
+    each question it issues. The former `kind` selector is gone: the proof
+    never used it, so the claim holds for every access. -/
+def RegisterRegelAntwortSicherAussage : Prop :=
   ∀ k (binding : Binding k) access,
-    kind access → Sicherheit.RegelAntwortSicher (registerSafetyUnit binding access) ()
+    Sicherheit.RegelAntwortSicher (registerSafetyUnit binding access) ()
 
 def RegisterReadAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
-  RegisterSafetyAussage ∧ RegisterRegelSicherAussage (fun access => ∃ offset, access = .read offset) ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset, access = .read offset)
+  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage
 
 def RegisterWriteAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
-  RegisterSafetyAussage ∧ RegisterRegelSicherAussage (fun access => ∃ offset value, access = .write offset value) ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset value, access = .write offset value)
+  RegisterSafetyAussage ∧ RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage
 
 def RegisterReadElseAussage : Prop :=
   RegisterBefugtAussage ∧ RegisterAussenLokalAussage ∧ RegisterUnitAussenLokalAussage ∧ RegisterCommitAussage ∧
   RegisterSafetyAussage ∧ RegisterFallibleAussage ∧
-  RegisterRegelSicherAussage (fun access => ∃ offset range, access = .fallibleRead offset range) ∧
-  RegisterRegelAntwortSicherAussage (fun access => ∃ offset range, access = .fallibleRead offset range) ∧
+  RegisterRegelSicherAussage ∧ RegisterRegelAntwortSicherAussage ∧
   ∀ (k : Katalog) (scope : Scope) (d : Denotation k scope) destination binding offset promise handler,
     d = .fallibleRead destination binding offset promise handler →
     (∀ err, d.resume (.refused err) = .branch handler) ∧
@@ -181,19 +183,19 @@ theorem register_fallible_resume :
 
 private theorem register_trace (binding : Binding k) (access : RegisterAccess) {stepPlan : Plan}
     (step : Rule binding access required target c s stepPlan middle)
-    (execute : FuehrtSchrittAus setup t c s middle stepPlan trace next) :
+    (execute : FuehrtSchrittAus (setup binding.object) t c s middle stepPlan trace next) :
     next.buchung = s.buchung ∧ next.rechte = s.rechte ∧ next.sperren = s.sperren ∧
       (RennenImGraph s.graph → RennenImGraph next.graph) ∧
       (trace = ⟨[], []⟩ ∨
         ∃ event : FrageEreignis,
-          trace = ⟨[(.kontext c, aussenEtikett setup (.frage event))], [.frage event]⟩) := by
+          trace = ⟨[(.kontext c, aussenEtikett (setup binding.object) (.frage event))], [.frage event]⟩) := by
   rcases trace with ⟨accesses, events⟩
   obtain ⟨_, _, _, _, action, memory, after⟩ := execute
   cases step with
   | issue _ _ =>
     cases action
     let event := s.stelleFrage t c (binding.question access)
-    change Speicherfolge s.initial (.kontext c) s.graph [aussenEtikett setup (.frage event)]
+    change Speicherfolge s.initial (.kontext c) s.graph [aussenEtikett (setup binding.object) (.frage event)]
       accesses next.graph at memory
     obtain ⟨rfl, race⟩ := aussen_label_speicher rfl memory
     refine ⟨?_, ?_, ?_, race, Or.inr ⟨event, rfl⟩⟩ <;> rw [after] <;> rfl
@@ -207,8 +209,8 @@ private theorem register_trace (binding : Binding k) (access : RegisterAccess) {
     obtain ⟨rfl, graph⟩ := unchanged
     refine ⟨?_, ?_, ?_, fun race => graph.symm ▸ race, Or.inl rfl⟩ <;> rw [after] <;> rfl
 
-theorem register_regelSicher (kind : RegisterAccess → Prop) : RegisterRegelSicherAussage kind := by
-  intro k binding access _ H run t c w vor middle next plan trace _ impl execute
+theorem register_regelSicher : RegisterRegelSicherAussage := by
+  intro k binding access H run t c w vor middle next plan trace _ impl execute
   obtain ⟨selected, plans, step⟩ := impl
   cases (List.cons.inj plans).1
   obtain ⟨book, rights, locks, race, traceShape⟩ := register_trace binding access step execute
@@ -219,7 +221,7 @@ theorem register_regelSicher (kind : RegisterAccess → Prop) : RegisterRegelSic
       cases List.mem_singleton.mp crash
   obtain ⟨effects, releases⟩ := wirkungsloser_schritt (hw := run.hw) (t := t) noCrash book rights
   refine ⟨⟨?_, [], effects, releases⟩, ?_, fun _ => kein_sperrwechsel locks, race,
-    register_safety k binding access _ _ setup run.hw t c vor middle plan trace next step execute,
+    register_safety k binding access _ _ (setup binding.object) run.hw t c vor middle plan trace next step execute,
     ?_⟩
   · intro i actor label recorded ordinary
     rcases traceShape with rfl | ⟨event, rfl⟩
@@ -244,8 +246,8 @@ theorem register_regelSicher (kind : RegisterAccess → Prop) : RegisterRegelSic
 
 /-- Issuing a question uses the checked device owner. Consuming a reply changes
     its consumption counter and leaves pending questions and their rights intact. -/
-theorem register_regelAntwortSicher (kind : RegisterAccess → Prop) : RegisterRegelAntwortSicherAussage kind := by
-  intro k binding access _ t c w vor middle next plan trace _ impl execute befugt
+theorem register_regelAntwortSicher : RegisterRegelAntwortSicherAussage := by
+  intro k binding access t c w vor middle next plan trace _ impl execute befugt
   obtain ⟨selected, plans, step⟩ := impl
   cases (List.cons.inj plans).1
   rcases trace with ⟨memory, events⟩
@@ -267,15 +269,15 @@ theorem register_regelAntwortSicher (kind : RegisterAccess → Prop) : RegisterR
 
 theorem register_read : RegisterReadAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_regelSicher _, register_regelAntwortSicher _⟩
+    register_safety, register_regelSicher, register_regelAntwortSicher⟩
 
 theorem register_write : RegisterWriteAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_regelSicher _, register_regelAntwortSicher _⟩
+    register_safety, register_regelSicher, register_regelAntwortSicher⟩
 
 theorem register_readElse : RegisterReadElseAussage :=
   ⟨register_befugt, register_aussenLokal, register_unit_aussenLokal, register_commit,
-    register_safety, register_fallible, register_regelSicher _, register_regelAntwortSicher _,
+    register_safety, register_fallible, register_regelSicher, register_regelAntwortSicher,
     register_fallible_resume⟩
 
 end Gabbro.Core.Ast.LowLevel.Device

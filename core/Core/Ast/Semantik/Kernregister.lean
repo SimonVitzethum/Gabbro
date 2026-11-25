@@ -70,12 +70,19 @@ theorem programKern_erfuellbar (constructor : Name) (registered : constructor �
 def programKernProofs (constructor : Name) (registered : constructor ∈ programConstructors) :
     RegistryEntry constructor ⟨.core, programKernStatements constructor⟩ where
   realization := .core aus_elaborierung
-  acceptanceRule := fun p platform b _ => b.lokal (p.einheit platform) rfl
-  idealRule := fun b _ => ⟨b.bestimmt, fun c s w plans u => b.ideal_privat c s w plans u⟩
+  acceptanceRule := fun p platform b tag =>
+    b.lokal (p.einheit platform) rfl (Befehl.privat_von_programConstructor tag)
+  idealRule := fun b tag =>
+    ⟨b.bestimmt (Befehl.privat_von_programConstructor tag),
+      fun c s w plans u => b.ideal_privat (Befehl.privat_von_programConstructor tag) c s w plans u⟩
   unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
-  implementationRule := fun b _ c s w plans u => b.impl_privat c s w plans u
-  preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
-    b.komponierbar p platform, Befehl.sicherheitsPflichten p platform inv b⟩
+  implementationRule := fun b tag c s w plans u =>
+    b.impl_privat (Befehl.privat_von_programConstructor tag) c s w plans u
+  preservation := fun p platform b tag inv => ⟨b.abgleich p platform,
+    b.fortschritt p (Befehl.privat_von_programConstructor tag),
+    b.komponierbar p platform (Befehl.privat_von_programConstructor tag),
+    Befehl.sicherheitsPflichten p platform [] (tabLeer _ inv) (fun b _ => rfl) b
+      (Befehl.privat_von_programConstructor tag)⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered
 
 theorem programKern_sicherheit (constructor : Name)

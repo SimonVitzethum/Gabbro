@@ -85,9 +85,10 @@ theorem speicherfolge_leer {Ort Wert : Type} {anfang : Ort → Wert} {f : Speich
 open Classical in
 /-- The concrete address of an authorised access satisfies `Speicherzugriff`. The ledger picks an
     address through `Zustand.adresse`; the handle it names equals the one the guard holds, because
-    `Zustand.griff` is a function. -/
+    `Zustand.griff` is a function. A fence label never reaches this lemma (the fence class plans
+    the private plan): it is neither a read nor a write. -/
 theorem adresse_speicherzugriff {s : Zustand} {c : Kontext} {z : Zelle} {l : Etikett Zelle Int}
-    (hneq : l.art ≠ .aussen) (hz : z = l.ort)
+    (hneq : l.art ≠ .aussen) (hzaun : l.art ≠ .zaun) (hz : z = l.ort)
     (hBles : l.art.liest → s.befugt c z .lesen)
     (hBschr : l.art.schreibt → s.befugt c z .schreiben) :
     ∃ a : Adresse, s.adresse c z = some a ∧ Speicherzugriff s c l a := by
@@ -97,6 +98,7 @@ theorem adresse_speicherzugriff {s : Zustand} {c : Kontext} {z : Zelle} {l : Eti
     | schreiben => exact Or.inr (hBschr (by simp only [hla, Speicher.Art.schreibt]))
     | rmw => exact Or.inl (hBles (by simp only [hla, Speicher.Art.liest]))
     | aussen => exact False.elim (hneq hla)
+    | zaun => exact False.elim (hzaun hla)
   rcases hbef with hb | hb
   · obtain ⟨g, off, hg, hgo, hgu, hzug, humf, hhaelt⟩ := hb
     have hex : ∃ a : Adresse, s.griff c z = some a.griff ∧
@@ -275,7 +277,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
-          (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef) (fun h => by cases h)
+          (by simp only [l]; decide) (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef)
+          (fun h => by cases h)
       have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -328,7 +331,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
-          (by simp only [l]; decide) (by simp only [l]) (fun h => by cases h) (fun _ => hBef)
+          (by simp only [l]; decide) (by simp only [l]; decide) (by simp only [l]) (fun h => by cases h)
+          (fun _ => hBef)
       have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -366,8 +370,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
         schreibEreignisse, List.filter, List.map] at folge
-      let l : Etikett Zelle Int := ⟨.rmw, (F.operand (vor.lokal c)).ort, m, v,
-        (F.operand (vor.lokal c)).wert⟩
+      let l : Etikett Zelle Int := ⟨(F.operand (vor.lokal c)).aenderung.art v, (F.operand (vor.lokal c)).ort, m, v,
+        (F.operand (vor.lokal c)).aenderung.schreibt v (F.operand (vor.lokal c)).wert⟩
       have hbuch : nach.buchung.adresse (vor.zugriffsereignis l.ort) = vor.adresse c l.ort := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -375,7 +379,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         simp only [l, dif_pos rfl, if_true]
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
-          (by simp only [l]; decide) (by simp only [l]) (fun _ => hBef.1) (fun _ => hBef.2)
+          (Aenderung.art_ne_aussen _ _) (Aenderung.art_ne_zaun _ _) (by simp only [l]) (fun _ => hBef.1)
+          (fun _ => hBef.2)
       have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
@@ -383,7 +388,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hkeinAbsturz : ¬ Absturz spur := by
         rw [Absturz, haussen]
         simp only [List.not_mem_nil, not_false_eq_true]
-      refine ⟨eineZugriffGebucht vor nach c l (by simp only [l]; decide) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
+      refine ⟨eineZugriffGebucht vor nach c l (Aenderung.art_ne_aussen _ _) (.kontext c) rfl folge hbuch hgebucht, ?_⟩
       refine ⟨[], ?_, ?_⟩
       · exact keineWirkungen vor nach spur hkeinAbsturz hwirk
       · exact keineFreigaben vor nach hw t spur (by rw [hnach]; rfl) hkeinAbsturz

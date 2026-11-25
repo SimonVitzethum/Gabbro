@@ -81,7 +81,7 @@ private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : 
 private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
     FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
   refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
     cases hl
@@ -146,7 +146,7 @@ private theorem memProgramAussenLokal (k : Katalog) (code : List MemInstruction)
 theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   refine ⟨?_, ?_, ?_⟩
-  · refine ⟨hwf, ?_, memProgramAussenLokal k code, memProgramFlussLokal k code, ?_⟩
+  · refine ⟨hwf, ?_, memProgramAussenLokal k code, memProgramFlussLokal k code, ?_, ?_⟩
     · intro i c s u w plan hideal
       simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hideal
       obtain ⟨frame, _, hp, hu⟩ := hideal
@@ -157,6 +157,7 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       · intro x hx; cases hx
       · intro l hl; cases hl
     · exact schrankenLokal_leer rfl rfl rfl
+    · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro rho lauf
     refine ⟨?_, ?_, ?_⟩
     · intro p hp; cases hp

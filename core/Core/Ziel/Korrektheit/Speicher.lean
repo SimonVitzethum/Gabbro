@@ -24,8 +24,9 @@ module
 public import Core.Speicher.Graphmaschine
 public import Core.Speicher.GraphmaschineVollstaendig
 public import Core.Speicher.DRFSC
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 public import Core.Speicher.Trennung
+public import Core.Ast.Semantik.Runtime.Atom.Form
 
 @[expose] public section
 
@@ -65,6 +66,21 @@ precedes, contradicting `atomar`. -/
 def RmwNichtDoppeltAussage : Prop :=
   ∀ (E Ort Wert : Type) (G : Speicher.Graph E Ort Wert), G.Konsistent →
     ∀ w u₁ u₂ : E, G.rf w u₁ → G.rf w u₂ → G.istRmw u₁ → G.istRmw u₂ → u₁ = u₂
+
+/-- **AN UPDATE IS ATOMIC BY DEFINITION** (RC11's `U`), in the model and at the checker's access-form row:
+    every update event of a consistent graph has an atomic mode, and the three update forms are accepted
+    exactly at atomic modes. Feeds: `Wohlgeformt.rmw_nicht_na`, `pruefeZugriffsform`. Proof: `rmwAtomar`.
+    Non-triviality: `RmwAtomarAussage.nichtTrivial` -- a plain update satisfies the other eleven shape fields
+    and fails only the atomic-mode field. -/
+def RmwAtomarAussage : Prop :=
+  (∀ (E Ort Wert : Type) (G : Speicher.Graph E Ort Wert), G.Konsistent →
+      ∀ a, G.istRmw a → (G.modus a).atomar) ∧
+  (∀ (z e i q : Nat) (ty : Gabbro.Core.Ast.Ty .value) (m : Speicher.Modus),
+      (Gabbro.Core.Ast.Semantik.Zugriffsform.tausche z e i q ty m).wohlgeformt ↔ m.atomar) ∧
+  (∀ (z e i a n : Nat) (ty : Gabbro.Core.Ast.Ty .value) (m : Speicher.Modus),
+      (Gabbro.Core.Ast.Semantik.Zugriffsform.vergleicheTausche z e i a n ty m).wohlgeformt ↔ m.atomar) ∧
+  (∀ (z e i b : Nat) (ty : Gabbro.Core.Ast.Ty .value) (m : Speicher.Modus),
+      (Gabbro.Core.Ast.Semantik.Zugriffsform.holeUndAddiere z e i b ty m).wohlgeformt ↔ m.atomar)
 
 /-- INDEPENDENT READS OF INDEPENDENT WRITES are forbidden when every access is `seq_cst`: two readers cannot
 disagree on the order of two independent writes. Feeds: `drf_sc` (an all-`seq_cst` graph is race free, hence

@@ -224,7 +224,7 @@ theorem effectGroup_ideal : EffectGroupIdealAussage := by
   intro scope
   refine ⟨eg_amOrt scope, ?_⟩
   intro args
-  exact ⟨((effectGroupForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(effectGroupForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 theorem effectGroup_einheit : EffectGroupEinheitAussage := by
   intro scope platform args
   exact ⟨rfl, ((effectGroupForm scope).befehl args).kommutation⟩
@@ -236,7 +236,7 @@ theorem effectGroup_erhaltung : EffectGroupErhaltungAussage := by
   let p := (effectGroupForm scope).fragment args
   let b := (effectGroupForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ (by rfl)) (fun b _ => rfl)⟩
 theorem effectGroup_regelSicher : EffectGroupRegelSicherAussage := by
   intro scope platform args
   exact (effectGroup_erhaltung scope platform args).2.2.2.1

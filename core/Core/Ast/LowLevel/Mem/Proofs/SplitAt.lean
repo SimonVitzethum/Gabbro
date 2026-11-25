@@ -53,7 +53,7 @@ private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : 
 private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
     FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
   refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · intro l hl
     simp only [plan] at hl
     cases hl
@@ -154,8 +154,9 @@ private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_⟩, ?_, ?_⟩
   · exact schrankenLokal_leer rfl rfl rfl
+  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

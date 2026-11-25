@@ -60,7 +60,7 @@ theorem program_ideal  : (programForm).IdealAussage := by
     · omega
   · intro args
     constructor
-    · exact ((programForm).befehl args).bestimmt
+    · exact (programForm).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -80,14 +80,15 @@ theorem program_erhaltung  : (programForm).ErhaltungsAussage := by
   exact ⟨((programForm).befehl args).abgleich (programForm.fragment args) platform,
     ((programForm).befehl args).fortschritt (programForm.fragment args),
     ((programForm).befehl args).komponierbar (programForm.fragment args) platform,
-    ((programForm).befehl args).sicherheitsPflichten (programForm.fragment args) platform
-      (programm_keine_invarianten args.unit)⟩
+    ((programForm).befehl args).sicherheitsPflichten (programForm.fragment args) platform []
+      (fragment_unit_invarianten _) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem program_sicher  platform a :
     Sicherheit.RegelSicher (((programForm).fragment a).sicherheitsEinheit platform)
       ((programForm).befehl a) := by
-  exact ((programForm).befehl a).sicher (programForm.fragment a) platform (programm_keine_invarianten a.unit)
+  exact ((programForm).befehl a).sicher (programForm.fragment a) platform []
+    (fragment_unit_invarianten _) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem program_erfuellbar : programJoint := by

@@ -23,6 +23,7 @@ theorem invarianten_nichtLeer :
   let E := einheit z form [d]
   obtain ⟨r, es, g, append⟩ := speicherzug_existiert z.initial (.kontext c)
     Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig .schreiben () .ra ()
+    (fun h => by cases h)
   cases r
   let spur : Spur := ⟨es, []⟩
   let freigegeben : Laufkonstruktion.Zustand := { z with sperren := Function.update z.sperren () .frei }

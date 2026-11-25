@@ -426,8 +426,11 @@ module sprache::zeiger {
 type Kopf  = { x : u32, y : u32, };
 type Worte = { w0 : u32, w1 : u32, };
 
-// a re-view: the answer has the root of its argument
-extern fn sicht(r : ptr<normal, r> Kopf) -> ptr<normal, r> Worte effects { reads r } costs <= 4 ops;
+// a re-view: the answer carries the root of its argument
+impl fn sicht(r : ptr<normal, r> Kopf) -> ptr<normal, r> Kopf effects { reads r } costs <= 4 ops
+{
+    return r;
+}
 
 impl fn lesen(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
     effects { reads k, reads w }
@@ -436,13 +439,13 @@ impl fn lesen(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
     return k.x;
 }
 
-// two views of one root, both read-only: fine
-impl fn nur_lesend(k : ptr<normal, r> Kopf) -> u32
-    effects { reads k }
+// borrowing through a re-view, then a read through both views
+impl fn nur_lesend(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
+    effects { reads k, reads w }
     costs   <= 32 ops
 {
-    let w = sicht(k);
-    return lesen(k, w);
+    let v = sicht(k);
+    return lesen(v, w);
 }
 
 }
@@ -671,7 +674,7 @@ arbitrary declared function is the decision's reach, not a built form). Quantifi
 ## 7. Functions, contracts, costs
 
 ```text
-fndecl = [ "pub" ] [ "spec" | "impl" | "divergent" | "extern" ]
+fndecl = [ "pub" ] [ "spec" | "impl" | "divergent" ]
          "fn" ident "(" [ params ] ")" [ "->" typeexpr [ "or" reason ] ]
          [ "requires" predlist ] [ "ensures" predlist ] [ "maintains" identlist ]
          [ "effects" "{" efflist "}" ] [ "costs" "<=" expr "ops" ]
@@ -701,7 +704,7 @@ Contracts stand **before** the body in this fixed order, so a tool that does not
 **`effects` is not fail-open.** Where the body settles the hull, an omitted clause is *derived*
 and checked exactly like a written one; whoever touches nothing derives `effects { pure }`. A
 written clause is the enforced bound: the body must stay inside it (`E008`, `E010` for reads).
-Where nothing settles — no body (`extern`), an unresolvable edge, a callee promising
+Where nothing settles — an unresolvable edge, a callee promising
 more than its deeds cover — the omission is refused with the reason (`N305`). `gabbro abgeleitet`
 prints the derived clause per routine.
 
@@ -720,7 +723,7 @@ arithmetic operation, load, store). A call counts the **declared** `costs` of th
 traversal counts body × domain bound; branches count the maximum. It is a **property of the
 program**, computed statically (`gabbro kosten`), not a time measurement; there are no cycles in
 the language. An omitted `costs` is never refused (it is not a promise); a written bound is what
-the body is held against (`K001`); calling a gate or `extern fn` with no countable promise is
+the body is held against (`K001`); calling a gate with no countable promise is
 `K003`/`N322`. Two sharpenings:
 
 1. The four primitives are conclusive: `if`, `match`, `return`, `leave` cost **nothing** (the
@@ -779,7 +782,10 @@ reason Fehler {
     exhaustive
 }
 
-extern fn hol() -> u32 or Fehler effects { pure } costs <= 1 ops;
+impl fn hol() -> u32 or Fehler effects { pure } costs <= 1 ops
+{
+    return 7;
+}
 
 // the consumer: `let … else`, and `e` is a value of the reason
 impl fn nutze() -> u32
@@ -911,7 +917,7 @@ The body cannot shadow the index. The exporter examines all nested assignments a
 if none can write `i`, its generated increments reach `hi` within the static bound, so no
 handler is needed. A body that writes `i`, or whose writes cannot be classified, requires
 `on_exceeded h`; it then has exactly the same bound-exhaustion semantics as `while`.
-The handler is a declared zero-argument foreign item, with the same checks as `retry`.
+The handler is a declared zero-argument Gabbro function, with the same checks as `retry`.
 Missing bounds, nonstatic bounds, noninteger ranges and missing required handlers are named
 refusals (`while.bound.missing`, `while.bound.static-natural-required`,
 `for.range.static-integer-required`, `for.on_exceeded.required-for-index-write`).
@@ -1250,9 +1256,15 @@ Linux runner image remains the default. This entry binds lock waiting, not unrel
 ### 12.2 Boot and checked machine access
 
 Assembly bodies, `prim fn`, `raw fn` and `entrust` are refused. Their words remain
-reserved only to report one dedicated diagnostic per form. Machine access uses the checked
+reserved only to report one dedicated diagnostic per form. There is no `extern fn`
+either: same-address-space foreign code does not exist, and in-image bindings are
+ordinary Gabbro functions. Foreign code runs only outside the address space, attached
+through a channel to a pinned catalogue row selected by name — a process or guest, a
+socket or pipe, or a lent region with a protocol. The selected row supplies the service
+contract; a program never writes one. A fault in foreign code delivers only wrong answers
+through the channel and never breaks a guarantee. The `extern fn` form of the frozen
+`grammatik/` package is history. Machine access uses the checked
 language constructs described in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
-`extern fn` remains the general named-assumption interface to environment services with a contract.
 
 | removed form | refusal | poison probe |
 |---|---|---|
@@ -1353,21 +1365,18 @@ Ghosts, `progress`, `costs`, contracts, `check` in the shipping build: zero byte
 construct has an extra cost of zero against correct handwriting; `accumulates` is *negative*
 against the CAS version. Output is deterministic: same source, same bytes.
 
-**`extern fn` is the edge.** A foreign body whose contract is an `assume` per declaration,
-counted into the axiom layer — the edge is visible and ratchetable instead of silent. It takes
-no function pointer (`N574`) and a buffer parameter needs its length clause (`N506`).
-**Warning (2026-11-14):** C code in the same address space is neither checked nor
-restricted by anything in the language. Using even ONE `extern fn` (or letting C call an `entry`
-function, plan item A6) can in theory destroy EVERY guarantee of the goal theorem — memory safety,
-race freedom, invariants, contracts: the guarantees then hold only as far as that one named
-environment assumption holds. The contract of the foreign function must therefore name, beside
-`requires`/`ensures`, its frame (only its declared `effects`), its extents, that it keeps no
-Gabbro pointer beyond the call and starts no thread that touches Gabbro memory.
-**Bounds at every C call (2026-11-14):** every buffer handed to C is proved inside its
-region before the call; every length, index, count or region C hands back (result, out-parameter,
-or argument of an `entry` call from C) is checked once at run time against the handed-over
-capacity before Gabbro uses it; a failed check is a named stop or the declared `or` reason. The
-compiler emits these checks; the user writes none.
+**Foreign code is outside the address space.** There is no same-address-space foreign
+code: in-image bindings are ordinary Gabbro functions, and no declaration can call code
+that shares the image's memory outside the language's checks. Foreign code runs only
+outside the address space, attached through a channel to a pinned catalogue row selected
+by name — a process or guest, a socket or pipe, or a lent region with a protocol. The
+selected row supplies the service contract; a program never writes one. Every outside
+question goes through a handle the program owns with its preconditions checked in the
+same question, and every answer arrives with an error channel; an old answer is
+historical data and never proves current authority, identity or a precondition. A fault
+in foreign code therefore delivers only wrong answers through the channel: memory safety,
+race freedom, invariants and contracts keep holding. The same-address-space `extern fn`
+form exists only in the frozen `grammatik/` package.
 
 **The generator also emits the ANNOTATIONS** — contracts the downstream prover reads. A
 generator that accidentally emits *weakened* contracts delivers a green proof over a weaker
@@ -1399,7 +1408,7 @@ library's scope is [`PLAN-STDLIB.md`](PLAN-STDLIB.md)). Handwritten C or assembl
 Gabbro cannot express the thing (a thread entry before any stack exists), each piece booked with
 its reason.
 
-A foreign body (`extern fn`) throws away what a system-call site knows — an ABI, a structured
+A bare foreign call throws away what a system-call site knows — an ABI, a structured
 error channel, OS state, a counterpart, a class of assumption — so the user side has its own
 construct:
 
@@ -1457,8 +1466,8 @@ impl fn schreibe(fd : u64, buf : u64, len : u64) -> u64
 * **machine**: `A006`; **assumption** with a falsifier (`N004`/`N005`); **costs**: a call counts the
   declared figure plus the dispatch step, never zero (`N322`, `K003`);
 * **buffers**: a pointer parameter the kernel moves *bytes* through points at `u8`/`i8` and is
-  bounded by `requires x <= lenof(p)` (`N464`, held at every call by `N463`; `N506` for
-  `extern fn`; a kernel that finds the end of its data by a terminator owes a named caller
+   bounded by `requires x <= lenof(p)` (`N464`, held at every call by `N463`;
+   a kernel that finds the end of its data by a terminator owes a named caller
   obligation, `N507`);
 * **a region answer** (`-> ptr<normal, …> u8 or R`, §5.5): the word zero is `hardware`; without the
   `or R` channel the C emitter refuses (`C186`);
