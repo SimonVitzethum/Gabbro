@@ -347,7 +347,8 @@ theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Prae
     simp only [hfluss, Flussdaten.leer, Flussdaten.konstantzeit]
   have hspec : (d.unit locals).fluss.spekulativ () (s.lokal c) predictor = [] := by
     simp only [hfluss, Flussdaten.leer, Flussdaten.spekulativ]
-  have hspek : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe [] = [] := by
+  have hspek : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe
+      ([] : List (Option Nat)) = ([] : List Nat) := by
     cases hf : (d.unit locals).katalog.plattform.spekulationshuelle.fenster with
     | none => rfl
     | some _ => rfl
