@@ -133,7 +133,8 @@ theorem rennfrei_nichtLeer :
       (.kontext (.faden 1) (), spur₁) (tail.zustand 0) := schritt₁ 1
   have h0' : Maschine.Lauffolge (E 1).maschine (hardware leer) 0 (some (vor 1))
       (.kontext (.faden 0) (), spur₀) (some (nach₀ 1)) := schritt₀ 1
-  let zeit := voran2 h1' (some (vor 1)) (.kontext (.faden 0) (), spur₀) h0'
+  let zeit := voran2 tail (some (nach₀ 1)) (.kontext (.faden 1) (), spur₁) h1'
+    (some (vor 1)) (.kontext (.faden 0) (), spur₀) h0'
   have boot : zeit.zustand 0 = some (vor 1) := rfl
   have lab : zeit.spur 1 = some (.kontext (.faden 1) (), spur₁) := rfl
   have after : zeit.zustand 2 = some (nach₁ 1) := rfl

@@ -80,13 +80,13 @@ theorem voran1_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
 /-- Two prefix steps spliced onto a fair tail. The inner step relation is pinned
     explicitly so higher-order unification never has to guess it. -/
 def voran2 {hw : Katalog.HwLauf}
-    {s₀ s₁ : Option (Maschine.Zustand L Ort Wert Raum Lok Grund)}
-    {e₀ e₁ : Maschine.SchrittWahl Wahl × Maschine.SchrittSpur Ort Wert}
-    {tail : Zeitlauf (fun t => Maschine.Lauffolge E hw (t + 2))}
+    (tail : Zeitlauf (fun t => Maschine.Lauffolge E hw (t + 2)))
+    (s₁ : Option (Maschine.Zustand L Ort Wert Raum Lok Grund))
+    (e₁ : Maschine.SchrittWahl Wahl × Maschine.SchrittSpur Ort Wert)
     (h₁ : Maschine.Lauffolge E hw 1 s₁ e₁ (tail.zustand 0))
-    (s₂ : Option (Maschine.Zustand L Ort Wert Raum Lok Grund))
-    (e₂ : Maschine.SchrittWahl Wahl × Maschine.SchrittSpur Ort Wert)
-    (h₀ : Maschine.Lauffolge E hw 0 s₂ e₂ s₁) : Zeitlauf (Maschine.Lauffolge E hw) :=
+    (s₀ : Option (Maschine.Zustand L Ort Wert Raum Lok Grund))
+    (e₀ : Maschine.SchrittWahl Wahl × Maschine.SchrittSpur Ort Wert)
+    (h₀ : Maschine.Lauffolge E hw 0 s₀ e₀ s₁) : Zeitlauf (Maschine.Lauffolge E hw) :=
   voran (voran (schritt := fun t => Maschine.Lauffolge E hw (t + 1)) tail s₁ e₁ h₁) s₂ e₂ h₀
 
 /-- A fair tail spliced after two prefix steps keeps scheduler fairness. -/
@@ -97,7 +97,7 @@ theorem voran2_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
     (h₁ : Maschine.Lauffolge E hw 1 s₁ e₁ (tail.zustand 0))
     (h₀ : Maschine.Lauffolge E hw 0 s₀ e₀ s₁)
     (tailFair : Maschine.ShiftFair E hw 2 s tail) :
-    Maschine.SchedulerFair E ⟨s, hw, voran2 h₁ s₀ e₀ h₀⟩ := by
+    Maschine.SchedulerFair E ⟨s, hw, voran2 tail s₁ e₁ h₁ s₀ e₀ h₀⟩ := by
   intro a c dle oppd n hn
   have dle' : ∀ t, a ≤ t → ∃ z, tail.zustand t = some z ∧
       (∃ k, (z.kerne k).laeuft = some c) ∧ z.status c = .laeuft ∧
@@ -107,7 +107,7 @@ theorem voran2_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
     intro t ht
     obtain ⟨z, eq, disp, live, crash, w, plan, u, spur, s', regel, aus⟩ :=
       dle (t + 2) (Nat.le_trans ht (Nat.le_add_right _ _))
-    have : (voran2 h₁ s₀ e₀ h₀).zustand (t + 2) = tail.zustand t := rfl
+    have : (voran2 tail s₁ e₁ h₁ s₀ e₀ h₀).zustand (t + 2) = tail.zustand t := rfl
     rw [this] at eq
     exact ⟨z, eq, disp, live, crash, w, plan, u, spur, s', regel, aus⟩
   have oppd' : ∀ m, a ≤ m → ∃ t, m ≤ t ∧ ∃ k, hw.gelegenheit (t + 2) k ∧
@@ -115,11 +115,11 @@ theorem voran2_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
     intro m _
     obtain ⟨T, hT, k, opp, z, eq, disp⟩ := oppd (max (m + 2) a) (Nat.le_max_right _ _)
     obtain ⟨t', rfl⟩ : ∃ t', T = t' + 2 := ⟨T - 2, by omega⟩
-    have : (voran2 h₁ s₀ e₀ h₀).zustand (t' + 2) = tail.zustand t' := rfl
+    have : (voran2 tail s₁ e₁ h₁ s₀ e₀ h₀).zustand (t' + 2) = tail.zustand t' := rfl
     rw [this] at eq
     exact ⟨t', by omega, k, opp, z, eq, disp⟩
   obtain ⟨t', ht', w, spur, step⟩ := tailFair a c dle' oppd' n hn
-  have spurEq : (voran2 h₁ s₀ e₀ h₀).spur (t' + 2) = tail.spur t' := rfl
+  have spurEq : (voran2 tail s₁ e₁ h₁ s₀ e₀ h₀).spur (t' + 2) = tail.spur t' := rfl
   rw [← spurEq] at step
   exact ⟨t' + 2, Nat.le_trans ht' (Nat.le_add_right _ _), w, spur, step⟩
 
