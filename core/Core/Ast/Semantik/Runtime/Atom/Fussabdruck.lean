@@ -91,7 +91,7 @@ theorem Zugriffsform.operand_ort (z : Zugriffsform) (r : Rahmen) :
     (z.operand r).ort.imRegion z.region = true := by
   cases z with
   | vergleicheTausche ziel region index erwartet neu typ modus =>
-    unfold Zugriffsform.operand
+    simp only [Zugriffsform.operand, Zugriffsform.region]
     split
     · exact r.zugriffOperand_ort region index _ _
     · exact r.zugriffOperand_ort region index _ _
@@ -101,6 +101,11 @@ theorem Zugriffsform.operand_ort (z : Zugriffsform) (r : Rahmen) :
   | holeUndAddiere ziel region index betrag typ modus => exact r.zugriffOperand_ort region index _ _
   | erwarte ziel region index erwartet typ modus => exact r.zugriffOperand_ort region index _ _
   | veroeffentliche region index quelle modus => exact r.zugriffOperand_ort region index _ _
+
+/-- The plan of a question names no footprint and records no label. -/
+theorem Operand.fragePlan_leer (o : Operand) : o.fragePlan.fuss = [] ∧ o.fragePlan.lesen = [] := by
+  unfold Operand.fragePlan
+  split <;> exact ⟨rfl, rfl⟩
 
 /-- **A plan that writes comes from a writing class and writes the cell its operand names.** -/
 theorem Wirkungsklasse.plan_schreibt (k : Wirkungsklasse) (o : Operand) (v : Int) (x : Zelle)
@@ -130,12 +135,12 @@ theorem Wirkungsklasse.plan_schreibt (k : Wirkungsklasse) (o : Operand) (v : Int
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | frage =>
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩
-    · exact absurd mem (by
-        unfold Operand.fragePlan
-        split <;> exact List.not_mem_nil)
-    · exact absurd mem (by
-        unfold Operand.fragePlan
-        split <;> exact List.not_mem_nil)
+    · have e : (Wirkungsklasse.frage.plan o v).fuss = [] := (Operand.fragePlan_leer o).1
+      rw [e] at mem
+      exact absurd mem List.not_mem_nil
+    · have e : (Wirkungsklasse.frage.plan o v).lesen = [] := (Operand.fragePlan_leer o).2
+      rw [e] at mem
+      exact absurd mem List.not_mem_nil
   | starte =>
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | beende =>
@@ -154,12 +159,6 @@ theorem Zugriffsform.plan_schreibt (z : Zugriffsform) (r : Rahmen) (v : Int) (x 
   unfold Zugriffsform.schreibtMoeglich
   rw [writes, same]
   exact z.operand_ort r
-
-/-- **The footprint is sound against the plan of the instruction as a step form**: the same statement for the plan
-    `Befehl.plan` of an access instruction. -/
-theorem Zugriffsform.befehl_plan_schreibt (z : Zugriffsform) (r : Rahmen) (v : Int) (x : Zelle)
-    (h : ((Befehl.zugriff z).plan r v).schreibtZelle x) : z.schreibtMoeglich x = true :=
-  z.plan_schreibt r v x h
 
 /-- **A load and the confirming observation have an empty footprint.** -/
 theorem Zugriffsform.lesend_schreibt_nichts (z : Zugriffsform) (h : z.klasse.schreibend = false) (x : Zelle) :
