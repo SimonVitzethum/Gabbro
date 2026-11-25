@@ -14,7 +14,7 @@
   only — explicitly "independently of dispatch ... or the existence of a successful implementation step"
   (`Katalog/Lauf.lean`) — so it does not arbitrate which ready context takes a step. The four scheduler fields
   `angebot`, `wahl`, `individuell` and `systemweit` of `FortschrittsPflichten` are therefore an additional
-  premise (`SchedulerFortschrittAussage`), not a theorem of the current model. With that premise the pinned
+  premise (`SchedulerFortschrittVoraussetzung`), not a theorem of the current model. With that premise the pinned
   statement follows by `sim_ziel_fortschritt_im_lauf`; without it the strongest theorem here is
   `fortschritt_akzeptiert_ohne_haengen`, which leaves exactly the no-hang leg open.
 -/
@@ -40,7 +40,7 @@ open Gabbro.Core.Ideal (RegelFortschritt)
     completion duty; vacuous for `blockierend`). The other four fields of `FortschrittsPflichten` are theorems
     over the elaborated system (`einheit_fortschrittsfelder`), so this is exactly the hypothesis that
     `sim_ziel_fortschritt_im_lauf` still needs for the pinned `FortschrittAkzeptiertAussage`. -/
-def SchedulerFortschrittAussage : Prop :=
+def SchedulerFortschrittVoraussetzung : Prop :=
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ → Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
@@ -74,7 +74,7 @@ theorem einheit_fortschrittsfelder (P : Katalog.Plattform) (t : Ast.Unit) :
 
 /-- TODAY'S PROGRESS LEG FOR EVERY ACCEPTED ELABORATED UNIT: a matched ideal run with whole-run simulation and
     the composed per-cut alternatives exist. This is all of the pinned statement except the per-context
-    no-hang leg; the scheduler duty `SchedulerFortschrittAussage` is what remains. -/
+    no-hang leg; the scheduler duty `SchedulerFortschrittVoraussetzung` is what remains. -/
 theorem fortschritt_akzeptiert_ohne_haengen :
     ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
       ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
@@ -96,9 +96,9 @@ theorem fortschritt_akzeptiert_ohne_haengen :
   exact Maschine.I.fortschritt_im_lauf valid fertig regeln komponierbar zeit kontext live dispatch
 
 /-- The pinned statement follows once the scheduler duties are stated for the elaborated unit:
-    `sim_ziel_fortschritt_im_lauf` consumes exactly `SchedulerFortschrittAussage`, and every other premise is
+    `sim_ziel_fortschritt_im_lauf` consumes exactly `SchedulerFortschrittVoraussetzung`, and every other premise is
     already a theorem. -/
-theorem fortschritt_akzeptiert_aus_scheduler (scheduler : SchedulerFortschrittAussage) :
+theorem fortschritt_akzeptiert_aus_scheduler (scheduler : SchedulerFortschrittVoraussetzung) :
     FortschrittAkzeptiertAussage := by
   intro P t akzeptiert H ρ lauf fair
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
