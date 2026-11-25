@@ -335,8 +335,8 @@ theorem boot_dispatch (s : AussenStart) (k : Nat) (assigned : s.assignment 0 = s
   exact if_pos rfl
 
 /-- A head at rest is absent. -/
-theorem kopf_ruht {code : List Befehl} {s : Zustand} {c : Kontext}
-    (h : s.status c = .ruht) : kopf code s c = none := by
+theorem kopf_ruht {s : Zustand} {c : Kontext}
+    (h : s.status c = .ruht) : kopf (verknuepfteFragmente planAB).code s c = none := by
   simp only [kopf, h]
 
 /-- No context steps at a resting head. -/
@@ -344,8 +344,9 @@ theorem keinSchritt_ruht {c : Kontext} {s : Zustand} {w : PUnit.{1}} {plans : Li
     {u : Zustand} (h : s.status c = .ruht) (step : E_linked.system.ISchritt c s w plans u) :
     False := by
   obtain ⟨b, head, _⟩ := step
-  rw [kopf_ruht h] at head
-  cases head
+  have head' : kopf (verknuepfteFragmente planAB).code s c = some b := head
+  rw [kopf_ruht h] at head'
+  cases head'
 
 /-- The witness hardware is conformant. -/
 theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
@@ -432,7 +433,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     cases hsp : ρ.zeit.spur t with
     | none =>
       exfalso
-      exact ((hρ.2.2.2.2).1 t hsp hFrei _ _ stepT).elim
+      obtain ⟨maxA, _⟩ := (hρ.2.2.2.2).1
+      exact (maxA t hsp hFrei _ _ stepT).elim
     | some ev => exact ⟨ev, rfl⟩
   obtain ⟨ev, hev⟩ := hsome
   have htakt := ρ.zeit.takt t
@@ -446,11 +448,14 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       · subst heq
         obtain ⟨b', head', ideal'⟩ := regel
         have hb' : b' = b := by
-          rw [headT] at head'
-          cases head'
+          have head0 : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand t) eintritt =
+              some b' := head'
+          rw [headT] at head0
+          cases head0
           rfl
         subst hb'
-        obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal'
+        obtain ⟨same, after⟩ :=
+          (b.ideal_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
         have hakt : Semantik.plan.aktion = .intern := rfl
@@ -473,8 +478,10 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
           rw [hEqS]
           exact hStPre c0 heq
-        rw [kopf_ruht hruht] at head'
-        cases head'
+        have head0 : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand t) c0 =
+            some b' := head'
+        rw [kopf_ruht hruht] at head0
+        cases head0
     | antwort _ reply =>
       exfalso
       obtain ⟨offered, _, _, _⟩ := reply
@@ -483,7 +490,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       exact (List.not_mem_nil hmem).elim
     | interrupt _ enters =>
       exfalso
-      obtain ⟨kk, irq, cc, nmi, _, _, hoffer, _, _⟩ := enters
+      obtain ⟨kk, irq, cc, nmi, _, haus, _, _, _, _, _⟩ := enters
+      obtain ⟨_, _, hoffer, _, _⟩ := haus
       rw [hNoInts _] at hoffer
       cases hoffer
     | absturz crash =>
@@ -562,10 +570,6 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
       exact boot_dispatch s k assigned
     · rw [hS]
       exact boot_status_entry s
-  have fragenPre : ∀ (sPre : Zustand),
-      sPre.fragen = ((I.start E_linked s).2).fragen → sPre.fragen = [] := by
-    intro sPre heq
-    rw [heq]
   have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
     baseL baseS baseK baseF
