@@ -233,12 +233,15 @@ theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
   cases folgerung with
   | inl idealFolge =>
       obtain ⟨i', idealSchritt, _⟩ := idealFolge
-      obtain ⟨j, _, idealJ⟩ := idealSchritt
-      simpa only [ERef, syRef] using idealJ
+      cases idealSchritt with
+      | kontext _ _ regelIdeal _ =>
+          obtain ⟨j, _, idealJ⟩ := regelIdeal
+          simpa only [ERef, syRef] using idealJ
   | inr privat =>
-      have ueberlauf : 0 < 0 := by
-        simpa only [ERef] using privat.2.2.2.2
-      exact (Nat.lt_irrefl 0 ueberlauf)
+      rcases privat with ⟨_, _, _, _, ueberlauf⟩
+      have null : 0 < 0 := by
+        simpa only [ERef] using ueberlauf
+      exact (Nat.lt_irrefl 0 null)
 
 /-! ### The same real match and a stuttering ideal run separate `Sim` -/
 
@@ -495,12 +498,14 @@ theorem simRefutierbar : SimRefutierbarAussage := by
             zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1 := by
           change 0 < zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1
           simpa only [zaehle, Nat.zero_add, decide_eq_true hmark, ite_true] using Nat.zero_lt_one
-        exact nicht_sim_bei_stotterueberlauf interval ueberlauf
+        exact (nicht_sim_bei_stotterueberlauf (ρ := ρRef) interval ueberlauf)
   · have etakt := η.zeit.takt 0
     rw [ηlabel] at etakt
     cases etakt with
+    | wartet still _ _ =>
+        exact (Option.some_ne_none label (ηlabel.symm.trans still)).elim
     | schritt labelEq idealSchritt =>
-        have evEq := Option.some.inj (labelEq.symm.trans ηlabel)
+        have evEq := Option.some.inj labelEq.symm
         cases idealSchritt with
         | kontext _ _ regelIdeal _ =>
             obtain ⟨i, _, idealI⟩ := regelIdeal
