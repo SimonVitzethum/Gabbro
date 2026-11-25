@@ -93,7 +93,7 @@ theorem teilen_guard_form {l : Nat} {frame : Rahmen} {p : (op : PartielleOperati
     | none =>
       rw [hz] at h
       cases h
-    | some a => exact ⟨a, hz⟩
+    | some _ => exact ⟨_, rfl⟩
   rw [ha] at h
   dsimp only at h
   obtain ⟨b, hb⟩ : ∃ b, frame.zahl (l + 1) = some b := by
@@ -101,7 +101,7 @@ theorem teilen_guard_form {l : Nat} {frame : Rahmen} {p : (op : PartielleOperati
     | none =>
       rw [hz] at h
       cases h
-    | some b => exact ⟨b, hz⟩
+    | some _ => exact ⟨_, rfl⟩
   rw [hb] at h
   dsimp only at h
   cases h
@@ -116,14 +116,14 @@ theorem nach_temp1 {b : Befehl} {c : Kontext} {s : Zustand}
   rcases hb with rfl | rfl | rfl
   · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_self,
       temp1Sauber]
-    rw [Function.update_of_ne (by decide : (0 : Nat) ≠ 1)]
+    rw [Function.update_of_ne (by decide : (1 : Nat) ≠ 0)]
     exact h
   · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_self,
       temp1Sauber]
     exact Or.inr rfl
   · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_self,
       temp1Sauber]
-    rw [Function.update_of_ne (by decide : (0 : Nat) ≠ 1)]
+    rw [Function.update_of_ne (by decide : (1 : Nat) ≠ 0)]
     exact h
 
 /-- A step of A preserves a clean slot 1 in every context. -/
@@ -138,10 +138,9 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
   have hlen : (s.lokal c).pc < 3 := by
     by_contra hle
     push_neg at hle
-    have hnone : fragA.code[(s.lokal c).pc]? = none := by
-      rw [fragA_code]
-      simp only [List.getElem?_eq_none, List.length_cons, List.length_nil]
-      omega
+    have h3 : fragA.code.length = 3 := by rw [fragA_code]
+    have hnone : fragA.code[(s.lokal c).pc]? = none :=
+      List.getElem?_eq_none (by omega)
     rw [hnone] at hpc
     cases hpc
   revert hpc hlen
@@ -150,7 +149,6 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
   match hmpc : pc with
   | 0 =>
     have h0 : fragA.code[0]? = some (Befehl.literal 0 10) := rfl
-    rw [hmpc] at hpc
     rw [hpc] at h0
     cases h0
     intro d
@@ -163,7 +161,6 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
       exact h d
   | 1 =>
     have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := rfl
-    rw [hmpc] at hpc
     rw [hpc] at h1
     cases h1
     intro d
@@ -176,7 +173,6 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
       exact h d
   | 2 =>
     have h2 : fragA.code[2]? = some (Befehl.teilen 0) := rfl
-    rw [hmpc] at hpc
     rw [hpc] at h2
     cases h2
     intro d
@@ -213,7 +209,8 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
         obtain ⟨b, head, ideal⟩ := regel
         obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal
         have hplan := (List.cons.inj same).1
-        rw [hplan, after] at hall aus
+        rw [after] at hall aus
+        rw [hplan] at aus
         have hakt : Semantik.plan.aktion = .intern := rfl
         obtain ⟨rahmen, _, _, _, fuehrt, _, hstate⟩ := aus
         rw [hakt] at fuehrt
@@ -269,7 +266,8 @@ theorem fragA_guard_hält (ρ : I.Lauf (fragA.einheit .x86_64))
       exact e
     rw [hb] at hzahl
     cases hzahl
-    exact Nat.ne_zero _
+    show (2 : Nat) ≠ 0
+    decide
 
 /-- Part A alone is accepted: straight-line code with divisor 2. -/
 theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
