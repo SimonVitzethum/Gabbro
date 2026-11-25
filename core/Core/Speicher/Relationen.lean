@@ -183,11 +183,9 @@ theorem sw_von_klassisch {a b : E}
     Or.inl ⟨rfl, hlb, hmb⟩⟩
 
 /-- The classic shape stays at one location. -/
-theorem sw_klassisch_ort (hw : G.Wohlgeformt) {a b : E}
-    (h : G.schreibt a ∧ (G.modus a).stark ∧ G.liest b ∧ (G.modus b).stark ∧
-      ∃ x, G.Rs a x ∧ G.rf x b) : G.ort a = G.ort b := by
-  obtain ⟨_, _, _, _, x, hrs, hrf⟩ := h
-  exact (Rs.ort_gleich hw hrs).symm.trans (hw.rf_ort _ _ hrf)
+theorem sw_klassisch_ort (hw : G.Wohlgeformt) {a b x : E} (hrs : G.Rs a x) (hrf : G.rf x b) :
+    G.ort a = G.ort b :=
+  (Rs.ort_gleich hw hrs).symm.trans (hw.rf_ort _ _ hrf)
 
 /-- Reads-before stays at one location. -/
 theorem rb_ort (hw : G.Wohlgeformt) {r w : E} (h : G.rb r w) : G.ort r = G.ort w := by
