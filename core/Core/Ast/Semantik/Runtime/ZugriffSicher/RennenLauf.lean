@@ -14,6 +14,7 @@ public import Core.Ast.Semantik.Runtime.ZugriffSicher.RennenBein
 public import Core.Ast.Semantik.Runtime.ZugriffSicher.Grenzen
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
 public import Core.Sicherheit.KatalogSchritt
+public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
 public import Core.Ast.Semantik.Runtime.ZugriffSicher.Grenzen
@@ -154,12 +155,11 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
     (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s') :
     s'.graph.ev = s.graph.ev := by
   have planEq := quellSchrittPlanPrivat p f hgut leer impl
-  have still : plan.aktion.Still := Befehl.impl_aktion_still f impl
+  have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
   obtain ⟨_, _, _, _, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
   have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] [] s'.graph := by
-    rw [planEq] at folge
-    simpa [hstill.1, hstill.2.1] using folge
+    simpa [planEq, hstill.1, hstill.2.1] using folge
   have evEq := folgeLeer.viele.ev
   simpa using evEq
 
@@ -198,18 +198,7 @@ theorem speicherfolgeEinzel {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkte
     {g g' : SpeicherGraph Ort Wert} {l : Speicher.Etikett Ort Wert} {es}
     (h : Speicherfolge anfang f g [l] es g') :
     ∀ x ∈ es, (∃ ort, x.1 = SpeicherAkteur.initial ort) ∨ x = (f, l) := by
-  cases h with
-  | nil g => intro x hx; cases hx
-  | @cons g g0 g1 g2 l' ls init esTail vor hs nach ih =>
-    cases ls with
-    | nil =>
-      cases nach
-      intro x hx
-      change x ∈ init ++ [(f, l')] at hx
-      rw [List.mem_append, List.mem_singleton] at hx
-      rcases hx with hx | rfl
-      · exact Or.inl (initialisierungAkteen vor x hx)
-      · exact Or.inr rfl
+  cases h <;> simp_all
 
 /-- **One actor in the event list**: every memory access recorded in the graph was appended by
     the entry context. This is the list form of the premise of `rennenAusEinemKontext`. -/
@@ -222,6 +211,7 @@ theorem einAktIndex {Ort Wert : Type} {g : SpeicherGraph Ort Wert} {c : Kontext}
     ∀ i (hi : i < g.ev.length), AusgefuehrterZugriff g ⟨i, hi⟩ →
       (g.ev[i]'hi).kontext = .kontext c := by
   intro i hi zg
+  unfold AusgefuehrterZugriff at zg
   exact h (g.ev[i]'hi) (List.getElem_mem _) zg.1 (by
     intro ort eq
     rw [eq] at zg
@@ -232,11 +222,11 @@ theorem einAktRennen {g : SpeicherGraph Zelle Int} (h : Gabbro.Core.Speicher.Zus
   rennenAusEinemKontext h (einAktIndex ein)
 
 /-- A catalogue event adds no executed access, so it keeps the one-actor property. -/
-theorem einAktBeiAussen {Ort Wert} {vor nach : SpeicherGraph Ort Wert}
+theorem einAktBeiAussen {Ort Wert} {initial : Ort → Wert} {vor nach : SpeicherGraph Ort Wert}
     {label : Speicher.Etikett Ort Wert} {spur : SpeicherSpur Ort Wert}
     (istAussen : label.art = .aussen)
-    (folge : Speicherfolge vor.initial (.aussen : SpeicherAkteur Ort) vor.graph [label] spur nach.graph)
-    (vorEin : EinAkt vor.graph eintritt) : EinAkt nach.graph eintritt := by
+    (folge : Speicherfolge initial (.aussen : SpeicherAkteur Ort) vor [label] spur nach)
+    (vorEin : EinAkt vor eintritt) : EinAkt nach eintritt := by
   have evEq := folge.viele.ev
   intro x hx memLab nichtInitial
   rw [evEq] at hx
@@ -247,7 +237,7 @@ theorem einAktBeiAussen {Ort Wert} {vor nach : SpeicherGraph Ort Wert}
     · exact False.elim (nichtInitial ort hinit)
     · have artAus : pair.2.art = .aussen := by rw [heq, istAussen]
       rw [artAus] at memLab
-      exact memLab.elim id id
+      exact False.elim memLab
 
 /-- A class-good step keeps the one-actor property: either its context has no arrival regions
     and the graph is unchanged, or it is the entry context and every new access is booked there. -/
@@ -289,7 +279,7 @@ theorem einAktAnkunft (p : Fragment) (platform : Plattform) (f : Befehl) (hgut :
     (vorAnk : ∀ d, d ≠ eintritt → (s.lokal d).arrivalRegions = []) :
     ∀ d, d ≠ eintritt → (s'.lokal d).arrivalRegions = [] := by
   obtain ⟨_, _, _, _, aktion, _, zustand⟩ := aus
-  have still : plan.aktion.Still := Befehl.impl_aktion_still f impl
+  have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
   have hstill := FuehrtAus.still_erhaelt aktion still
   intro d hd
   rw [zustand, hstill.2.2.1]
@@ -305,7 +295,7 @@ def QuellSchnitt (p : Fragment) (platform : Plattform) (s : Zustand) : Prop :=
 
 /-- The loader of a source unit starts at the empty graph and grants arrival regions only to
     the entry context. -/
-theorem quellStartSchnitt (p : Fragment) (platform : Plattform) (H : Umgebung) (start : AussenStart)
+theorem quellStartSchnitt (p : Fragment) (platform : Plattform) (H : Katalog.Umgebung) (start : AussenStart)
     {s : Zustand}
     (h : (p.einheit platform).laden start (H.lade (p.einheit platform).bild) = some s) :
     QuellSchnitt p platform s := by
@@ -331,13 +321,13 @@ theorem quellKontextSchnitt (p : Fragment) (platform : Plattform) (klassenrein :
     (vorher : QuellSchnitt p platform vor) :
     QuellSchnitt p platform nach := by
   have hgut := klassenrein f (kopf_mem head)
-  refine ⟨(FuehrtSchrittAus.viele aus).erreichbar vorher.1, ?_, ?_⟩
+  refine ⟨(FuehrtSchrittAus.viele (p.einheit platform).einrichtung aus).erreichbar vorher.1, ?_, ?_⟩
   · exact einAktBeiKontext p platform f hgut impl aus vorher.2.1 vorher.2.2
   · exact einAktAnkunft p platform f hgut impl aus vorher.2.2
 
 /-- **The race invariant of every cut of a run of a source unit.** -/
 theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.KlassenRein)
-    (H : Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform))
+    (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform))
     (lauf : Laeufe (p.einheit platform) H ρ) :
     ∀ t s, ρ.zeit.zustand t = some s → RennenImGraph s.graph := by
   have schnitte (t : Nat) : ∀ s, ρ.zeit.zustand t = some s → QuellSchnitt p platform s := by
