@@ -421,7 +421,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
                       (Maschine.nachAbsturz z.persistenz)).kerne := by
                   rw [heq]
-                rw [wkern, weintritt] at skernew
+                simp only [Maschine.Zustand.wiederanlauf, wkern, weintritt] at skernew
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skernew] at h
                   have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
