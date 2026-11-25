@@ -164,7 +164,7 @@ theorem fairV : FairLaeufe Plattform.x86_64.katalog HV hwV where
     subst hc0
     cases cut with
     | zero => exact ⟨0, Nat.le_refl 0, rfl⟩
-    | succ cut => exact ⟨cut + 1, Nat.le_succ _, rfl⟩
+    | succ cut => exact ⟨cut + 1, Nat.le_refl _, rfl⟩
   auslieferung := by
     intro e selected cut
     obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (n := max cut 1) (by omega)
@@ -235,7 +235,7 @@ noncomputable def ZV : Nat → Zustand Unit Unit Unit Unit Bool Unit
 
 /-- The run trace: the interrupt, then handler steps. -/
 noncomputable def spurV : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
-  | 0 => some (SchrittWahl.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩)
+  | 0 => some (SchrittWahl.interrupt (0, 0), ⟨[Ereignis.interrupt 0 irqV Eintritt.handler], esV⟩)
   | _ + 1 => some (SchrittWahl.kontext Hv (), ⟨[], []⟩)
 
 theorem ZV_kerne_succ : ∀ t, (ZV (t + 1)).kerne = zV1.kerne := by

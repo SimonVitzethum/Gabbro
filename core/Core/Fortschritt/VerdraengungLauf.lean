@@ -22,7 +22,7 @@ open Gabbro.Core.Katalog
 
 /-- The interrupt step at tick zero displaces the worker. -/
 noncomputable def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
-    (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩) zV1 :=
+    (.interrupt (0, 0), ⟨[Ereignis.interrupt 0 irqV Eintritt.handler], esV⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
     ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
@@ -44,7 +44,7 @@ noncomputable def taktV (t : Nat) : Takt (Lauffolge E_v hwV) (KeinSchritt (Lauff
 
 /-- The ideal interrupt step at tick zero. -/
 noncomputable def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
-    (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩) zV1 :=
+    (.interrupt (0, 0), ⟨[Ereignis.interrupt 0 irqV Eintritt.handler], esV⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
     ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
@@ -81,7 +81,7 @@ noncomputable def ηV : Maschine.I.Lauf E_v :=
   ⟨sV, HV, hwV, ⟨ZV, spurV, itaktV⟩, fun _ => none⟩
 
 theorem spurV_zero : spurV 0 =
-    some (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩) := rfl
+    some (.interrupt (0, 0), ⟨[Ereignis.interrupt 0 irqV Eintritt.handler], esV⟩) := rfl
 
 theorem spurV_succ (t : Nat) : spurV (t + 1) = some (.kontext Hv (), ⟨[], []⟩) :=
   fun _ => rfl
