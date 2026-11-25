@@ -188,6 +188,8 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherbein
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
+public import Core.Ast.Semantik.Runtime.Unterbrechung.Aussagen
+public import Core.Ast.Semantik.Runtime.Unterbrechung.Beweise
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Atom.Beine

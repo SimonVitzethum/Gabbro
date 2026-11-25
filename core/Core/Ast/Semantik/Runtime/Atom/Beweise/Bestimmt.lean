@@ -57,6 +57,10 @@ theorem Schrittform.zugriffsschritt_bestimmt (F : Schrittform) {c : Kontext} {s 
         | beende => cases hl
         | verbinde => cases hl
         | wechsle => cases hl
+        | maskiere => cases hl
+        | prioritaet => cases hl
+        | sendeUnterbrechung => cases hl
+        | leiteLeitung => cases hl
       · have hv0 : v = 0 := by
           simpa only [Wirkungsklasse.Lesewert, hl, reduceCtorEq, false_or] using hv
         have hv0' : v' = 0 := by

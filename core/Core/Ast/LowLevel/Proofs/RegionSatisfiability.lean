@@ -73,7 +73,7 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
       rw [instructions] at occurs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at occurs
       rcases occurs with same | same | same | same | same | same <;> cases same <;>
-        first | exact Or.inl rfl | exact Or.inr rfl
+        first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
     · intro b occurs frame
       rw [instructions] at occurs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at occurs

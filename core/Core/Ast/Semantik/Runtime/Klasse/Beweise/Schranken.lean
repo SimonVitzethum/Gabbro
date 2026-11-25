@@ -68,6 +68,34 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
       refine ⟨rfl, rfl, ?_⟩
       intro d hd
       simp only [Schrittform.nach, Function.update_of_ne hd]
+  | maskiere =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨rfl, rfl, ?_⟩
+      intro d hd
+      simp only [Schrittform.nach, Function.update_of_ne hd]
+  | prioritaet =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨rfl, rfl, ?_⟩
+      intro d hd
+      simp only [Schrittform.nach, Function.update_of_ne hd]
+  | sendeUnterbrechung =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨rfl, rfl, ?_⟩
+      intro d hd
+      simp only [Schrittform.nach, Function.update_of_ne hd]
+  | leiteLeitung =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨rfl, rfl, ?_⟩
+      intro d hd
+      simp only [Schrittform.nach, Function.update_of_ne hd]
   | lesen m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
       · subst u
@@ -175,6 +203,30 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
         simp only [Schrittform.nach, Function.update_self]
         exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
     | ruf =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        simp only [Schrittform.nach, Function.update_self]
+        exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+    | maskiere =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        simp only [Schrittform.nach, Function.update_self]
+        exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+    | prioritaet =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        simp only [Schrittform.nach, Function.update_self]
+        exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+    | sendeUnterbrechung =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        simp only [Schrittform.nach, Function.update_self]
+        exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+    | leiteLeitung =>
         obtain ⟨hp, hu⟩ := step
         cases hp
         subst u
