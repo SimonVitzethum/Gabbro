@@ -42,7 +42,7 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
     have hlive : (η.zeit.zustand u).status c = .laeuft := (opened.2 u hu).2.1
     have heq : zminus = η.zeit.zustand u :=
       einheitVon_zustand_gleich P t matched u zminus hzminus
-    rw [heq] at hlive
+    rw [← heq] at hlive
     exact hlive
   cases htakt : ρ.zeit.takt u with
   | schritt label step =>
@@ -84,7 +84,7 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
         intro hk
         rw [skerne, einkern] at hk
         by_cases heq : k = k'
-        · subst heq
+        · subst k
           simp only [if_true] at hk
           have hdispatch : ((zminus.kerne k').unterbrechen c' nmi).laeuft
               = some c' := rfl
@@ -130,12 +130,12 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     (hstate : spost = {Maschine.Zustandseintritt s kstep id cstep nmi with
       graph := spost.graph}) :
     False := by
-  subst hkk
+  subst kstep
   have live : s.status c = .laeuft := by
     have hlive : (η.zeit.zustand d).status c = .laeuft := (opened.2 d hd).2.1
     have heq : s = η.zeit.zustand d :=
       einheitVon_zustand_gleich P t matched d s hs
-    rw [heq] at hlive
+    rw [← heq] at hlive
     exact hlive
   obtain ⟨hliveρ, hsingleρ⟩ := einheitVon_dispatch_eindeutig_rho P t lauf valid matched
   have hne : cstep ≠ c := by
@@ -161,7 +161,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     intro k'' hk''
     rw [skerne, einkern] at hk''
     by_cases heq : k'' = kstep
-    · subst heq
+    · subst k''
       simp only [if_true] at hk''
       have hdispatch : ((s.kerne kstep).unterbrechen cstep nmi).laeuft
           = some cstep := rfl
@@ -240,7 +240,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
       obtain ⟨k₁, hk₁⟩ := opened.1
       have hk₁ρ : (sa.kerne k₁).laeuft = some c := hseq_a ▸ hk₁
       have hkk : k₁ = k₀ := hsingleρ a sa c k₁ k₀ hsa hk₁ρ hk₀
-      subst hkk
+      subst k₁
       rw [← hsa_eq]
       exact hk₀
     | succ d ih =>
@@ -281,7 +281,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
                 obtain ⟨k', irq, c', nmi, _hoffer, _haus, _nimmt, dormant,
                   _haussen, _hmem, hstate⟩ := enters
                 by_cases heq : k₀ = k'
-                · subst heq
+                · subst k'
                   have hspur := label
                   exact (einheitVon_keine_verdraengung P t lauf valid matched
                     opened crashfrei ret (a + d) hm k₀ z hzn ihz hs'
