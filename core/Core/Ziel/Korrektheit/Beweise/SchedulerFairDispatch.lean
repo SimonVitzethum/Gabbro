@@ -62,9 +62,11 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
     (regel : (einheitVon P t).system.ISchritt c s w [plan] u)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
-  obtain ⟨b, _, ideal⟩ := regel
+  obtain ⟨b, kopfB, ideal⟩ := regel
+  have hpriv : b.Privat :=
+    Ast.Semantik.fragment_rein Ast.Category.unit t b (Ast.Semantik.kopf_mem kopfB)
   have hideal :=
-    (Ast.Semantik.Befehl.ideal_privat b c s w [plan] u).mp ideal
+    (Ast.Semantik.Befehl.ideal_privat b hpriv c s w [plan] u).mp ideal
   have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
   have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
   have hakt : plan.aktion = .intern := by rw [planEq]; rfl

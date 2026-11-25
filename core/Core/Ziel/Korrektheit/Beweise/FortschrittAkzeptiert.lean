@@ -124,7 +124,9 @@ theorem einheitVon_impl_aus_ideal (P : Katalog.Plattform) (t : Ast.Unit)
     (h : (einheitVon P t).system.ISchritt c s w plans u) :
     (einheitVon P t).system.ImplSchritt c s w plans u := by
   obtain ⟨i, kopf, ideal⟩ := h
-  have same := (Ast.Semantik.Befehl.ideal_privat i c s w plans u).mp ideal
+  have hpriv : i.Privat :=
+    Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
+  have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
   obtain ⟨rfl, rfl⟩ := same
   exact ⟨i, kopf, (Ast.Semantik.Befehl.impl_privat i c s w [Ast.Semantik.plan]
     (i.nach c s)).mpr ⟨rfl, rfl⟩⟩
@@ -134,9 +136,11 @@ theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit} {plan : Ast.Semantik.Plan}
     {l : Nat} {a : Maschine.SperrAktion}
     (h : (einheitVon P t).system.ISchritt c s w [plan] u)
-    (hsperre : plan.aktion = Maschine.Aktion.sperre l a) : False := by
-  obtain ⟨i, _, ideal⟩ := h
-  have same := (Ast.Semantik.Befehl.ideal_privat i c s w [plan] u).mp ideal
+    (hsperre : plan.aktion = Aktion.sperre l a) : False := by
+  obtain ⟨i, kopf, ideal⟩ := h
+  have hpriv : i.Privat :=
+    Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
+  have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w [plan] u).mp ideal
   have hplan : plan = Ast.Semantik.plan := (List.cons.inj same.1).1
   subst hplan
   cases hsperre
@@ -149,10 +153,12 @@ theorem einheitVon_bereit_vollzug (P : Katalog.Plattform) (t : Ast.Unit)
       Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s' := by
   obtain ⟨w, plans, u, ischritt⟩ := h
   obtain ⟨i, kopf, ideal⟩ := ischritt
-  have same := (Ast.Semantik.Befehl.ideal_privat i c s w plans u).mp ideal
+  have hpriv : i.Privat :=
+    Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
+  have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
   obtain ⟨rfl, rfl⟩ := same
   refine ⟨w, Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s, ⟨i, kopf, ?_⟩, ?_⟩
-  · exact (Ast.Semantik.Befehl.impl_privat i c s w [Ast.Semantik.plan]
+  · exact (Ast.Semantik.Befehl.impl_privat i hpriv c s w [Ast.Semantik.plan]
       (i.nach c s)).mpr ⟨rfl, rfl⟩
   · exact Ast.Semantik.Befehl.vollzug _ i tick c s
 
@@ -245,7 +251,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               have hz : ρ.zeit.zustand n = some z := hzn
               obtain ⟨ihd, ihs⟩ := ih z hz
               cases trans with
-              | @kontext _ u plan spur _ _ _ _ _ aus =>
+              | @kontext _ u plan spur _ _ _ _ regel aus =>
                 obtain ⟨rahmen, _, _, v, aktion, _, seq⟩ := aus
                 generalize haussen : spur.aussen = aussen at aktion
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
@@ -256,6 +262,14 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel := by
                   intro k
                   rw [ukerne]
+                have hplanEq : plan = Ast.Semantik.plan := by
+                  obtain ⟨b, kopfB, implB⟩ := regel
+                  have hpriv : b.Privat :=
+                    Ast.Semantik.fragment_rein Ast.Category.unit t b
+                      (Ast.Semantik.kopf_mem kopfB)
+                  exact (List.cons.inj
+                    ((Ast.Semantik.Befehl.impl_privat b hpriv _ _ _ [plan] _).1 implB).1).1
+                have hakt_intern : plan.aktion = .intern := by rw [hplanEq]; rfl
                 cases hakt : plan.aktion with
                 | intern =>
                   rw [hakt] at aktion
@@ -382,6 +396,18 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
+                | starte =>
+                  rw [hakt_intern] at hakt
+                  cases hakt
+                | verbinde =>
+                  rw [hakt_intern] at hakt
+                  cases hakt
+                | beende =>
+                  rw [hakt_intern] at hakt
+                  cases hakt
+                | wechsle =>
+                  rw [hakt_intern] at hakt
+                  cases hakt
               | @antwort _ _ a_ev _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
