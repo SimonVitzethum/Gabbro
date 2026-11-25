@@ -245,11 +245,11 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | @kontext _ u plan _ _ _ _ _ _ aus =>
                 obtain ⟨rahmen, _, _, v, aktion, _, seq⟩ := aus
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
-                have skerne : s.kerne = v.kerne := congrArg _ seq
+                have skerne : s.kerne = v.kerne := congrArg (fun z => z.kerne) seq
                 have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
-                  fun k => congrArg _ (congrArg _ seq)
+                  fun k => congrArg (fun z => (z.kerne k).stapel) seq
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
-                  fun k => congrArg _ (congrArg _ ukerne)
+                  fun k => congrArg (fun z => (z.kerne k).stapel) ukerne
                 cases hakt : plan.aktion with
                 | intern =>
                   rw [hakt] at aktion
@@ -371,7 +371,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  have h1 : s.kerne = ((z.antwort _).kerne) := congrArg _ hstate
+                  have h1 : s.kerne = ((z.antwort _).kerne) :=
+                    congrArg (fun z => z.kerne) hstate
                   have h2 : ((z.antwort _).kerne) = z.kerne := rfl
                   exact h1.trans h2
                 rw [skerne]
