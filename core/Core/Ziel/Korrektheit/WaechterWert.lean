@@ -1,0 +1,199 @@
+/-
+  File:      core/Core/Ziel/Korrektheit/WaechterWert.lean
+  Subject:   VALUE LEMMAS for the joined environments: each static instruction writes exactly
+             its analysed constant into its temporary, so the joined lookup covers it.
+
+  These feed the master transfer in `WaechterErhalt.lean`, one lemma per static write.
+-/
+module
+
+public import Core.Ziel.Korrektheit.WaechterSchritt
+
+@[expose] public section
+
+namespace Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
+
+open Gabbro.Core.Ast.Semantik
+open Gabbro.Core.Ast
+
+/-- The text-concatenation value satisfies every present text lookup. -/
+theorem textConcat_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
+    (dst a b : Nat) (hmem : (Befehl.textConcat dst a b) ∈ code)
+    (h : RahmenErfuellt code frame) :
+    ∀ (d : Dynamisch),
+      (((Befehl.textConcat dst a b).auswerten frame live).temp dst) = some d →
+      ∀ (cap : Nat) (t : TextValue cap), d = ⟨.text cap, t⟩ → ∀ L H : Nat,
+      umgebungText code dst = some (L, H) → L ≤ t.bytes.size ∧ t.bytes.size ≤ H := by
+  intro d hd cap t hdt L H hlook
+  cases hleft : (frame.temp dst).bind (wertAls (.text a)) with
+  | none =>
+    simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, eq_self_iff_true,
+      if_true, hleft, Option.bind_none] at hd
+    cases hd
+  | some l =>
+    simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, eq_self_iff_true,
+      if_true, hleft, Option.bind_some] at hd
+    cases hright : (frame.temp (dst + 1)).bind (wertAls (.text b)) with
+    | none =>
+      simp only [hright, Option.bind_none] at hd
+      cases hd
+    | some r =>
+      simp only [hright, Option.bind_some] at hd
+      cases hd
+      cases hdt
+      exact textConcat_wertSat code dst a b hmem l r L H hlook
+
+/-- The substring value satisfies every present text lookup. -/
+theorem substring_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
+    (dst capacity : Nat) (hmem : (Befehl.substring dst capacity) ∈ code)
+    (h : RahmenErfuellt code frame) :
+    ∀ (d : Dynamisch),
+      (((Befehl.substring dst capacity).auswerten frame live).temp dst) = some d →
+      ∀ (cap : Nat) (t : TextValue cap), d = ⟨.text cap, t⟩ → ∀ L H : Nat,
+      umgebungText code dst = some (L, H) → L ≤ t.bytes.size ∧ t.bytes.size ≤ H := by
+  intro d hd cap t hdt L H hlook
+  simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, Rahmen.halt, Id.run, eq_self_iff_true, if_true] at hd
+  cases htext : (frame.temp dst).bind (wertAls (.text capacity)) with
+  | none =>
+    simp only [htext] at hd
+    rw [hdt] at hd
+    exact h.2.1 dst _ _ hlook _ hd cap t rfl
+  | some text =>
+    simp only [htext] at hd
+    cases hfirst : frame.zahl (dst + 1) with
+    | none =>
+      simp only [hfirst] at hd
+      rw [hdt] at hd
+      exact h.2.1 dst _ _ hlook _ hd cap t rfl
+    | some first =>
+      simp only [hfirst] at hd
+      cases hlast : frame.zahl (dst + 2) with
+      | none =>
+        simp only [hlast] at hd
+        rw [hdt] at hd
+        exact h.2.1 dst _ _ hlook _ hd cap t rfl
+      | some last =>
+        simp only [hlast] at hd
+        by_cases hok : 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧
+            last.zahl.wert ≤ (text.bytes.size : Int)
+      · simp only [if_pos hok] at hd
+        cases hd
+        cases hdt
+        exact substring_wertSat code dst capacity hmem text
+          first.zahl.wert.toNat last.zahl.wert.toNat L H hlook
+        · simp only [if_neg hok] at hd
+          rw [hdt] at hd
+          exact h.2.1 dst _ _ hlook _ hd cap t rfl
+
+/-- The text-length value satisfies every present integer lookup. -/
+theorem textLength_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
+    (dst capacity : Nat) (hmem : (Befehl.textLength dst capacity) ∈ code)
+    (h : RahmenErfuellt code frame) :
+    ∀ g : Ganzzahl,
+      (((Befehl.textLength dst capacity).auswerten frame live).temp dst).bind alsGanzzahl =
+        some g →
+      ∀ L H : Int, umgebungInt code dst = some (L, H) → L ≤ g.zahl.wert ∧ g.zahl.wert ≤ H := by
+  intro g hg L H hlook
+  simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true] at hg
+  cases hbind : (frame.temp dst).bind (wertAls (.text capacity)) with
+  | none =>
+    simp only [hbind, Option.bind_none, Option.map_none] at hg
+    cases hg
+  | some t =>
+    simp only [hbind, Option.bind_some, Option.map_some] at hg
+    have hgv : (⟨(0 : Int), (capacity : Int), TextValue.lengthValue t⟩ : Ganzzahl) = g := by
+      simpa [alsGanzzahl] using hg
+    subst hgv
+    exact textLength_wertSat code dst capacity hmem t L H hlook
+
+/-- The text-index value satisfies every present integer lookup; halts keep the frame. -/
+theorem textIndex_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
+    (dst capacity : Nat) (hmem : (Befehl.textIndex dst capacity) ∈ code)
+    (h : RahmenErfuellt code frame) :
+    ∀ g : Ganzzahl,
+      (((Befehl.textIndex dst capacity).auswerten frame live).temp dst).bind alsGanzzahl =
+        some g →
+      ∀ L H : Int, umgebungInt code dst = some (L, H) → L ≤ g.zahl.wert ∧ g.zahl.wert ≤ H := by
+  intro g hg L H hlook
+  cases htext : (frame.temp dst).bind (wertAls (.text capacity)) with
+  | none =>
+    have htemp : ((Befehl.textIndex dst capacity).auswerten frame live).temp = frame.temp := by
+      simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+      rfl
+    rw [htemp] at hg
+    exact h.1 dst _ _ hlook g hg
+  | some text =>
+    cases hzahl : frame.zahl (dst + 1) with
+    | none =>
+      have htemp : ((Befehl.textIndex dst capacity).auswerten frame live).temp = frame.temp := by
+        simp only [Befehl.auswerten, htext, hzahl, Rahmen.halt, Id.run]
+        rfl
+      rw [htemp] at hg
+      exact h.1 dst _ _ hlook g hg
+    | some offset =>
+      by_cases hneg : offset.zahl.wert < 0
+      · have htemp : ((Befehl.textIndex dst capacity).auswerten frame live).temp =
+            frame.temp := by
+          simp only [Befehl.auswerten, htext, hzahl, if_pos hneg, Rahmen.halt, Id.run]
+          rfl
+        rw [htemp] at hg
+        exact h.1 dst _ _ hlook g hg
+      · cases hbyte : text.bytes[offset.zahl.wert.toNat]? with
+        | none =>
+          have htemp : ((Befehl.textIndex dst capacity).auswerten frame live).temp =
+              frame.temp := by
+            simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt, Id.run]
+            rfl
+          rw [htemp] at hg
+          exact h.1 dst _ _ hlook g hg
+        | some byte =>
+          have htemp : ((Befehl.textIndex dst capacity).auswerten frame live).temp dst =
+              some ⟨.int (0 : Int) 255, byteValue byte⟩ := by
+            simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt,
+              Id.run]
+            show (Function.update frame.temp dst
+              (some ⟨.int (0 : Int) 255, byteValue byte⟩ : Option Dynamisch)) dst = _
+            simp only [Function.update_self]
+          rw [htemp] at hg
+          have hgv : (⟨(0 : Int), 255, byteValue byte⟩ : Ganzzahl) = g := by
+            simpa [alsGanzzahl] using hg
+          subst hgv
+          exact textIndex_wertSat code dst capacity hmem byte L H hlook
+
+/-- The array-read value satisfies every present integer lookup; misses write nothing. -/
+theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
+    (basis count : Nat) (lo hi : Int)
+    (hmem : (Befehl.liesArray basis (.int lo hi) count) ∈ code)
+    (h : RahmenErfuellt code frame) :
+    ∀ g : Ganzzahl,
+      (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp basis).bind
+        alsGanzzahl = some g →
+      ∀ L H : Int, umgebungInt code basis = some (L, H) → L ≤ g.zahl.wert ∧ g.zahl.wert ≤ H := by
+  intro g hg L H hlook
+  cases hvals : (frame.temp basis).bind (wertAls (.array (.int lo hi) count))
+  case none =>
+    simp only [Befehl.auswerten, hvals, Rahmen.schreibe, Function.update_self,
+      eq_self_iff_true, if_true, Option.bind_none] at hg
+    cases hg
+  case some values =>
+    simp only [Befehl.auswerten, hvals, Rahmen.schreibe, Function.update_self,
+      eq_self_iff_true, if_true, Option.bind_some] at hg
+    cases hindex : frame.zahl (basis + 1)
+    case none =>
+      simp only [hindex, Option.bind_none] at hg
+      cases hg
+    case some index =>
+      simp only [hindex, Option.bind_some] at hg
+      by_cases hneg : index.zahl.wert < 0
+      · simp only [if_pos hneg, Option.bind_none] at hg
+        cases hg
+      · simp only [if_neg hneg] at hg
+        by_cases hbound : index.zahl.wert.toNat < count
+        · simp only [dif_pos hbound, Option.bind_some, alsGanzzahl] at hg
+          cases hg
+          exact liesArray_wertSat code basis count lo hi hmem
+            values[index.zahl.wert.toNat] L H hlook
+        · simp only [dif_neg hbound, Option.bind_none] at hg
+          cases hg
+
+end Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse

@@ -45,55 +45,89 @@ inductive TextBeitrag where
   | laenge (lo hi : Nat)
   deriving DecidableEq, Repr
 
+/-- Every temporary slot an instruction may write. Calls reset temporaries (sound to ignore
+    in the join) and returns restore saved ones (covered by the saved-temporary invariant);
+    access instructions are excluded globally. -/
+def schreibtTemp : Befehl → List Nat
+  | .literal dst _ | .negativ dst _ | .binaer _ dst | .wahrheitswert dst _ | .lesen dst _
+  | .negieren dst | .verneinen dst | .teilen dst | .vergleichen _ dst => [dst]
+  | .baueArray dst _ _ | .liesArray dst _ _ | .baueTupel dst _ | .liesTupelfeld dst _ _
+  | .baueRecord dst _ _ _ _ | .liesRecordFeld dst _ _ _ _ | .baueVariante dst _ _ _ _
+  | .textLiteral dst _ | .textConcat dst _ _ | .textIndex dst _ | .substring dst _
+  | .textLength dst _ | .optionIstBesetzt dst _ => [dst]
+  | _ => []
+
 /-- The static integer information one instruction writes to one slot: `none` means the
-    instruction does not write an integer (or no integer-relevant value) there. -/
+    instruction does not write a temporary there; every other temporary write poisons the
+    slot (`unbekannt`), which is always sound. -/
 def beitragInt : Befehl → Nat → Option IntBeitrag
-  | .literal dst val, s => if s == dst then some (.intervall val val) else none
+  | .literal dst val, s => if s = dst then some (.intervall val val) else none
   | .negativ dst betrag, s =>
-    if s == dst then some (.intervall (-(betrag : Int)) (-(betrag : Int))) else none
-  | .binaer _ links, s => if s == links then some .unbekannt else none
-  | .lesen dst _, s => if s == dst then some .unbekannt else none
-  | .negieren dst, s => if s == dst then some .unbekannt else none
-  | .teilen links, s => if s == links then some .unbekannt else none
+    if s = dst then some (.intervall (-(betrag : Int)) (-(betrag : Int))) else none
   | .liesArray basis (.int lo hi) _, s =>
-    if s == basis then some (.intervall lo hi) else none
-  | .liesArray basis _ _, s => if s == basis then some .unbekannt else none
-  | .textIndex basis _, s => if s == basis then some (.intervall 0 255) else none
+    if s = basis then some (.intervall lo hi) else none
+  | .liesArray basis _ _, s =>
+    if s = basis then some .unbekannt else none
+  | .textIndex basis _, s => if s = basis then some (.intervall 0 255) else none
   | .textLength basis capacity, s =>
-    if s == basis then some (.intervall 0 capacity) else none
-  | _, _ => none
+    if s = basis then some (.intervall 0 capacity) else none
+  | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
 /-- The static text-length information one instruction writes to one slot. -/
 def beitragText : Befehl → Nat → Option TextBeitrag
   | .textLiteral dst decoded, s =>
-    if s == dst then some (.laenge (sourceUtf8 decoded).size (sourceUtf8 decoded).size) else none
-  | .textConcat dst a b, s => if s == dst then some (.laenge 0 (a + b)) else none
-  | .substring dst capacity, s => if s == dst then some (.laenge 0 capacity) else none
-  | .lesen dst _, s => if s == dst then some .unbekannt else none
-  | _, _ => none
+    if s = dst then some (.laenge (sourceUtf8 decoded).size (sourceUtf8 decoded).size) else none
+  | .textConcat dst a b, s => if s = dst then some (.laenge 0 (a + b)) else none
+  | .substring dst capacity, s => if s = dst then some (.laenge 0 capacity) else none
+  | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
-/-- Join one integer contribution into the running hull. `none` is top: no information. -/
-def vereinigeInt : Option (Int × Int) → Option IntBeitrag → Option (Int × Int)
-  | acc, none => acc
-  | _, some .unbekannt => none
-  | none, some (.intervall lo hi) => some (lo, hi)
-  | some (a, b), some (.intervall lo hi) => some (min a lo, max b hi)
+/-- Join one integer interval into the running hull; unknown writes are handled
+    separately by `slotUnbekanntInt`, so the join only ever widens. -/
+def huelleIntAux : Option (Int × Int) → Option IntBeitrag → Option (Int × Int)
+  | acc, some (.intervall lo hi) => match acc with
+    | none => some (lo, hi)
+    | some (a, b) => some (min a lo, max b hi)
+  | acc, _ => acc
 
-/-- Join one text-length contribution into the running hull. -/
-def vereinigeText : Option (Nat × Nat) → Option TextBeitrag → Option (Nat × Nat)
-  | acc, none => acc
-  | _, some .unbekannt => none
-  | none, some (.laenge lo hi) => some (lo, hi)
-  | some (a, b), some (.laenge lo hi) => some (min a lo, max b hi)
+/-- The hull of every static integer interval written to the slot. -/
+def huelleInt (code : List Befehl) (slot : Nat) : Option (Int × Int) :=
+  code.foldr (fun b acc => huelleIntAux acc (beitragInt b slot)) none
+
+/-- Whether an unknown integer write reaches the slot anywhere in the code. -/
+def slotUnbekanntInt (code : List Befehl) (slot : Nat) : Bool :=
+  code.any fun b => match beitragInt b slot with
+    | some .unbekannt => true
+    | _ => false
 
 /-- The joined integer environment of the whole code at one slot: the hull of every static
     contribution, top (`none`) when an unknown write reaches the slot. -/
 def umgebungInt (code : List Befehl) (slot : Nat) : Option (Int × Int) :=
-  code.foldr (fun b acc => vereinigeInt acc (beitragInt b slot)) none
+  match slotUnbekanntInt code slot with
+  | true => none
+  | false => huelleInt code slot
+
+/-- Join one text-length interval into the running hull. -/
+def huelleTextAux : Option (Nat × Nat) → Option TextBeitrag → Option (Nat × Nat)
+  | acc, some (.laenge lo hi) => match acc with
+    | none => some (lo, hi)
+    | some (a, b) => some (min a lo, max b hi)
+  | acc, _ => acc
+
+/-- The hull of every static text-length interval written to the slot. -/
+def huelleText (code : List Befehl) (slot : Nat) : Option (Nat × Nat) :=
+  code.foldr (fun b acc => huelleTextAux acc (beitragText b slot)) none
+
+/-- Whether an unknown text write reaches the slot anywhere in the code. -/
+def slotUnbekanntText (code : List Befehl) (slot : Nat) : Bool :=
+  code.any fun b => match beitragText b slot with
+    | some .unbekannt => true
+    | _ => false
 
 /-- The joined text-length environment of the whole code at one slot. -/
 def umgebungText (code : List Befehl) (slot : Nat) : Option (Nat × Nat) :=
-  code.foldr (fun b acc => vereinigeText acc (beitragText b slot)) none
+  match slotUnbekanntText code slot with
+  | true => none
+  | false => huelleText code slot
 
 /-- The static guard check of one instruction under the joined environments. -/
 def pruefeBedarf (code : List Befehl) : Befehl → Bool
@@ -154,18 +188,6 @@ def bedarfStellen : Befehl → List (Nat × OperandenArt)
   | .liesArray basis _ _ => [(basis + 1, .ganz)]
   | .textIndex basis _ => [(basis, .text), (basis + 1, .ganz)]
   | .substring basis _ => [(basis, .text), (basis + 1, .ganz), (basis + 2, .ganz)]
-  | _ => []
-
-/-- Every temporary slot an instruction may write. Calls reset temporaries (sound to ignore
-    in the join) and returns restore saved ones (covered by the saved-temporary invariant);
-    access instructions are excluded globally. -/
-def schreibtTemp : Befehl → List Nat
-  | .literal dst _ | .negativ dst _ | .binaer _ dst | .wahrheitswert dst _ | .lesen dst _
-  | .negieren dst | .verneinen dst | .teilen dst | .vergleichen _ dst => [dst]
-  | .baueArray dst _ _ | .liesArray dst _ _ | .baueTupel dst _ | .liesTupelfeld dst _ _
-  | .baueRecord dst _ _ _ _ | .liesRecordFeld dst _ _ _ _ | .baueVariante dst _ _ _ _
-  | .textLiteral dst _ | .textConcat dst _ _ | .textIndex dst _ | .substring dst _
-  | .textLength dst _ | .optionIstBesetzt dst _ => [dst]
   | _ => []
 
 /-- Constant integer writes: their runtime value is exactly the analysed one. -/
