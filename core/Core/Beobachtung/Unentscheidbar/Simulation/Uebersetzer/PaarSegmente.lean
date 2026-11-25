@@ -82,6 +82,7 @@ theorem pb4Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
   rw [e]
   rfl
 
+set_option maxHeartbeats 400000 in
 theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb4 r a b frei)) = some (pb5 r a b frei) := by
   have hx : (pb4 r a b frei).temp frei = some (natVal a) := by
@@ -105,6 +106,7 @@ theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have e := schrittVergleichNat _ (pb4 r a b frei) 12 frei a b rfl hx hy g
   exact e
 
+set_option maxHeartbeats 400000 in
 theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a < b) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6w r a b frei) := by
   have hw : Compare.eval .lt (a : Int) (b : Int) = true := (vergleichLtNat a b).mpr hab
@@ -117,6 +119,7 @@ theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a 
   have e := schrittSpringeWennWahr _ (pb5 r a b frei) 13 frei true true 17 rfl ht rfl g
   exact e
 
+set_option maxHeartbeats 400000 in
 theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬ a < b) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6f r a b frei) := by
   have hw : Compare.eval .lt (a : Int) (b : Int) ≠ true := by
@@ -171,6 +174,7 @@ theorem pb8wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   rw [e]
   rfl
 
+set_option maxHeartbeats 400000 in
 theorem pb9wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb8w r a b frei)) = some (pb9w r a b frei) := by
   have hx : (pb8w r a b frei).temp (frei + 4) = some (natVal b) := by
@@ -213,6 +217,7 @@ theorem pb10wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
   rw [e]
   rfl
 
+set_option maxHeartbeats 400000 in
 theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb10w r a b frei)) = some (pb11w r a b frei) := by
   have hx : (pb10w r a b frei).temp (frei + 4) = some (natVal (b * b)) := by
