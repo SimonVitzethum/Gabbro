@@ -32,6 +32,7 @@
 module
 
 public import Core.Ziel.Korrektheit.Beweise.SchedulerFairDispatch
+public import Core.Fortschritt.Verzoegerung
 public import Core.Fortschritt.Verhungern
 
 @[expose] public section
@@ -125,7 +126,7 @@ theorem scheduler_fuer_einheitVon : SchedulerFortschrittVoraussetzung := by
           ρ.hw.gelegenheit t'' k ∧ ∃ s, ρ.zeit.zustand t'' = some s ∧
             (s.kerne k).laeuft = some c := by
         intro m hm
-        obtain ⟨t'', ht'', hgeleg⟩ := fair'.kerne.2 kstar hstarη m hm
+        obtain ⟨t'', ht'', hgeleg⟩ := fair'.kerne.2 kstar hstarη m
         obtain ⟨s, hs, _⟩ := matched.zustand t''
         have hseq : s = η.zeit.zustand t'' :=
           einheitVon_bezug_gleich P t matched t'' s hs
@@ -135,7 +136,7 @@ theorem scheduler_fuer_einheitVon : SchedulerFortschrittVoraussetzung := by
         exact ⟨t'', ht'', kstar, hgeleg, s, hs, hd⟩
       have scheduler := lauf.2.2.2.2
       obtain ⟨t', ht', w, spur, hstep⟩ := scheduler a c suffixReady opportunities n hn
-      exact ⟨t', ht', ⟨w, spur, hstep⟩, bereitAlle t' ht'⟩
+      exact ⟨t', ht', ⟨w, spur, hstep⟩, bereitAlle t' (Nat.le_trans hn ht')⟩
     | inr lockOft =>
       obtain ⟨_, _, _, w, plan, u, _, ischritt, hakt⟩ := lockOft a (Nat.le_refl _)
       exact (einheitVon_kein_sperre P t ischritt hakt).elim
