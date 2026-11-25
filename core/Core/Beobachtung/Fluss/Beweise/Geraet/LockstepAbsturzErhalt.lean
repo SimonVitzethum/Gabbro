@@ -53,7 +53,7 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
   cases tick₁ with
   | wartet lab _ _ =>
     exfalso
-    have hcontra : none = some (.absturz, spur) := lab.symm.trans hlabel
+    have hcontra : none = some ((SchrittWahl.absturz : SchrittWahl PUnit), spur) := lab.symm.trans hlabel
     cases hcontra
   | schritt lab step =>
     cases hz₁ : ρ₁.zeit.zustand t with
@@ -74,7 +74,7 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
               exact offer₁.2
             obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
               (by intro h; rw [hz₁] at h; cases h.1)
-            have hvEq : v₁ = s₁ := Option.some.inj (hz₁.symm.trans hv₁)
+            have hvEq : v₁ = s₁ := Option.some.inj (hv₁.symm.trans hz₁)
             subst v₁
             have tick₂ := ρ₂.zeit.takt t
             rw [hz₂] at tick₂
@@ -83,8 +83,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
               exfalso
               let st : Lauffolge E ρ₂.hw t (some s₂) (.absturz, absturzSpur)
                   (some (s₂.wiederanlauf E.einrichtung.wiederanlauf t (nachAbsturz s₂.persistenz))) :=
-                .schritt (absturz_schritt_erfuellbar E.einrichtung.persistenzRegion
-                  E.einrichtung.wiederanlauf ⟨offer₁.1, crashOffer₂⟩ s₂)
+                .schritt (.absturz (absturz_schritt_erfuellbar E.einrichtung.persistenzRegion
+                  E.einrichtung.wiederanlauf ⟨offer₁.1, crashOffer₂⟩ s₂))
               exact (hkein (.absturz, absturzSpur) _ st).elim
             | schritt lab₂ st =>
               cases hn₂ : ρ₂.zeit.zustand (t + 1) with
@@ -93,17 +93,19 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                 rw [hn₂] at st
                 have labEq : ρ₂.zeit.spur t = some (.absturz, absturzSpur) := by
                   have ho : AbsturzAngeboten E.katalog ρ₂.hw t := ⟨offer₁.1, crashOffer₂⟩
-                  exact (ImplSchritt.absturzfall st ho).1 ▸ lab₂
+                  exact (ImplSchritt.absturzfall E.einrichtung E.system st ho).1 ▸ lab₂
                 have crash₂ : AbsturzSchritt E.einrichtung.persistenzRegion E.einrichtung.wiederanlauf
                     E.katalog ρ₂.hw t s₂ absturzSpur n₂ := by
                   cases st with
                   | schritt impl₂ =>
                     cases impl₂ with
-                    | absturz h => exact h
+                    | absturz h => simpa only [E] using h
                     | kontext nc _ _ _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                     | antwort nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                     | interrupt nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
-                obtain ⟨_, n₁Eq⟩ := AbsturzSchritt.genau crash₁
+                obtain ⟨spurEq₁, n₁Eq⟩ := AbsturzSchritt.genau crash₁
+                have hlabelA : ρ₁.zeit.spur t = some (.absturz, absturzSpur) := by
+                  simpa only [spurEq₁] using hlabel
                 obtain ⟨_, n₂Eq⟩ := AbsturzSchritt.genau crash₂
                 have hled := geraeteKopplung_ledger hkopp hz₁ hz₂
                 obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ := hled
@@ -115,14 +117,22 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   obtain ⟨e, he⟩ := h
                   rw [n₁Eq] at he
                   dsimp only [Zustand.wiederanlauf] at he
-                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc] at he <;> cases he
+                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt
+                  · rw [if_pos hc] at he
+                    cases he
+                  · rw [if_neg hc] at he
+                    cases he
                 have hneu₂ : ∀ c, ¬ ∃ e, n₂.status c = .beendet e := by
                   intro c h
                   obtain ⟨e, he⟩ := h
                   rw [n₂Eq] at he
                   dsimp only [Zustand.wiederanlauf] at he
-                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt <;> simp only [hc] at he <;> cases he
-                have hbeob₁ := geraete_absturz_beob_tick hlabel hz₁ hn₁ hneu₁
+                  by_cases hc : c = E.einrichtung.wiederanlauf.eintritt
+                  · rw [if_pos hc] at he
+                    cases he
+                  · rw [if_neg hc] at he
+                    cases he
+                have hbeob₁ := geraete_absturz_beob_tick hlabelA hz₁ hn₁ hneu₁
                 have hbeob₂ := geraete_absturz_beob_tick labEq hz₂ hn₂ hneu₂
                 have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                 refine ⟨?_, ?_, ?_, ?_⟩
