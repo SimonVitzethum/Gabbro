@@ -346,13 +346,13 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Maschine.I.LockFreeFamilienAussage, 16890382388105400655),
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 11628676760312913929),
   (`Gabbro.Core.Aussenfrage.AussenFrageAussagen, 16871627961827395252),
-  (`Gabbro.Core.Aussenfrage.FrageSimErfuellbarAussage, 0),
-  (`Gabbro.Core.Aussenfrage.FrageSimNichtTrivialAussage, 0),
-  (`Gabbro.Core.Aussenfrage.GleitAntwortErfuellbarAussage, 0),
-  (`Gabbro.Core.Aussenfrage.GleitAntwortNichtTrivialAussage, 0),
-  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitErfuellbarAussage, 0),
-  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 0),
-  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 0),
-  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 0)]
+  (`Gabbro.Core.Aussenfrage.FrageSimErfuellbarAussage, 1570115693079025518),
+  (`Gabbro.Core.Aussenfrage.FrageSimNichtTrivialAussage, 15071856897253546520),
+  (`Gabbro.Core.Aussenfrage.GleitAntwortErfuellbarAussage, 17811623054896033037),
+  (`Gabbro.Core.Aussenfrage.GleitAntwortNichtTrivialAussage, 14930102462155942313),
+  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitErfuellbarAussage, 17346613051275136900),
+  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 3929521243651914860),
+  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 17464773647101239365),
+  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 15792455024006385417)]
 
 end Gabbro.Core.Waechter
