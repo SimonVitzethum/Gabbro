@@ -225,10 +225,11 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
     refine ⟨?_, ?_, ?_⟩
     · have h1 : (u.lokal c').pending =
           ((setFrame s c (geraete_consume_rahmen s c binding access answer target)).lokal c').pending := rfl
-      rw [h1, Function.update_of_ne hne]
+      simp only [h1, setFrame, geraete_consume_rahmen, Function.update_of_ne hne]
       exact (hothers c' hc').1
     · have h2 : u.verbraucht c' = s.verbraucht c' := by
-        simp only [hu, Zustand.verbrauche, Function.update_of_ne hne]
+        simp only [hu, Zustand.verbrauche, setFrame, geraete_consume_rahmen,
+          Function.update_of_ne hne]
       rw [h2]
       exact (hothers c' hc').2.1
     · have h3 : u.verworfen c' = s.verworfen c' := by rfl
@@ -259,9 +260,10 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
         exact hnm
       · have hv1 : u.verbraucht entryContext = s.verbraucht c + 1 := by
           rw [← hentry]
-          simp only [hu, Zustand.verbrauche, setFrame, Function.update_self]
+          simp only [hu, Zustand.verbrauche, setFrame, geraete_consume_rahmen,
+            Function.update_self]
         have hverb' : s.verbraucht c + 1 = s.antworten.length := by
-          rw [← hentry]
+          rw [hentry]
           exact hverb
         rw [hv1, hverb', huantworten]
       · intro q hq hcut
