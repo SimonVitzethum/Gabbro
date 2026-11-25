@@ -341,7 +341,7 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     schrittSpringeWennFalsch _ _ _ _ _ _ _ hpc htemp hbool g27
   have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
       some (frameL12e e ein aus frei n) := by
-    rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, h28]
+    rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
     exact hjump
   have hpc2 : (frameL12e e ein aus frei n).pc = 53 := rfl
   have g28 : (leftBlk ein aus frei)[53]? = some (.binden nameX (frei + 0)) := by rfl
