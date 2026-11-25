@@ -133,7 +133,7 @@ private theorem memWaechterHalten (k : Katalog) (code : List MemInstruction) :
 private theorem memAkzeptiertX86 (code : List MemInstruction) :
     Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, memKlauselnWahr _ code, memWaechterHalten _ code⟩
-  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨by simpa [memProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro i
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
@@ -166,6 +166,11 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
       exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
     · exact tiefenBezug_eq rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := MemInstruction.activateGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
 
 theorem activateJoint : ActivateJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog

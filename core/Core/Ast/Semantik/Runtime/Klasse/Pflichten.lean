@@ -1,10 +1,11 @@
 /-
   File:      core/Core/Ast/Semantik/Runtime/Klasse/Pflichten.lean
   Subject:   THE DUTIES OF A FORM, PROVED ONCE PER EFFECT CLASS (MK-03). A form of class `k` owes the machine
-             six duties: simulation (with the authority of every planned access), locality (the step covers
-             its memory footprint by authority), progress (the form always has its `I` step), information
-             flow (the label rule of its operands and plan), bounds (stack and memory) and safety (the legs
-             of `Klasse/Sicherheit`). Each duty is stated for EVERY unit that embeds a form of the class
+              seven duties: simulation (with the authority of every planned access), locality (the step covers
+              its memory footprint by authority), progress (the form always has its `I` step), information
+              flow (the label rule of its operands and plan), bounds (stack and memory), cost and hold
+              (the static row of the class, `Klasse/Kosten`) and safety (the legs
+              of `Klasse/Sicherheit`). Each duty is stated for EVERY unit that embeds a form of the class
              (`Schrittform.Eingebettet`: the unit's rule for the form is the class rule, and the unit reads
              memory through `Zustand.griff` and `Zelle.objekt`), with no free function parameter: the form is a
              bundled `Schrittform` whose plan, guard and refusal the class builds, so the duty is proved from
@@ -33,6 +34,7 @@ public import Core.Beobachtung.Fluss.Quellregel
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Ideal.Eigenschaften
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
+public import Core.Ast.Semantik.Runtime.Klasse.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
 public import Core.Sicherheit.Regel
 public import Core.Verfeinerung.Formpflichten
@@ -110,8 +112,8 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle
-  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .verbrauche | .starte | .beende | .verbinde
+  | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -149,13 +151,14 @@ def KlassenNichtTrivialAussage (k : Wirkungsklasse) : Prop :=
   (k.gesichert = true → ∃ (platform : Plattform) (F : Schrittform), F.klasse = k ∧
       ¬ RegelLokal (Regeleinheit platform F.ungeschuetzt) ())
 
-/-- **The six duties of every class, in one pinned statement.** All conjunctions are proved and
+/-- **The seven duties of every class, in one pinned statement.** All conjunctions are proved and
     assembled as `klassenAussagen` in `Klasse/Beweise/Gesamt`. Information flow is the step-level
-    statement `KlassenSchrittNIAussage`; the run-level `KlassenNIAussage` is gone from the model. -/
+    statement `KlassenSchrittNIAussage`; the run-level `KlassenNIAussage` is gone from the model.
+    Cost and hold are the static row `KlassenKostenAussage` over `Wirkungsklasse.kostenZeile`. -/
 def KlassenAussagen : Prop :=
   ∀ k : Wirkungsklasse, KlassenSimAussage k ∧ KlassenSchrittNIAussage k ∧ KlassenSchrankenAussage k ∧
     KlassenSicherheitAussage k ∧ KlassenFortschrittAussage k ∧ KlassenLokalAussage k ∧
-    KlassenNichtTrivialAussage k
+    KlassenNichtTrivialAussage k ∧ KlassenKostenAussage Wirkungsklasse.kostenZeile k
 
 /-! ### Proofs, once for every class -/
 
@@ -214,6 +217,7 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   | zaun m => exact Schrittform.zugriffsschritt_total ⟨.zaun m, o, t⟩ c s
   | sperre a => exact Schrittform.zugriffsschritt_total ⟨.sperre a, o, t⟩ c s
   | frage => exact Schrittform.zugriffsschritt_total ⟨.frage, o, t⟩ c s
+  | verbrauche => exact ⟨[Semantik.plan], _, rfl, rfl⟩
   | starte => exact Schrittform.faedenschritt_total ⟨.starte, o, t⟩ c s
   | beende => exact Schrittform.faedenschritt_total ⟨.beende, o, t⟩ c s
   | verbinde => exact Schrittform.faedenschritt_total ⟨.verbinde, o, t⟩ c s
@@ -295,6 +299,7 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       · have hl' : l ∈ (o (s.lokal c)).fragePlan.lesen := hl
         rw [hlesen] at hl'
         exact (List.not_mem_nil hl').elim
+  | verbrauche => exact Befugt.privat (List.cons.inj step.1).1
   | starte =>
     rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -407,6 +412,7 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
   | leiteLeitung => cases hk
   | sperre a => cases hk
   | frage => cases hk
+  | verbrauche => cases hk
   | starte => cases hk
   | beende => cases hk
   | verbinde => cases hk

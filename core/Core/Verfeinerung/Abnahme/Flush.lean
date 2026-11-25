@@ -355,7 +355,7 @@ theorem FlushFamilienAussage_erfuellbar :
       (fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
-      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+      Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
     ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let h := Umgebung.referenz k 1 sicht
@@ -432,7 +432,7 @@ theorem FlushFamilienAussage_nichtTrivial :
       (fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
-      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+      Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
     ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let h := Umgebung.referenz k 1 sicht
