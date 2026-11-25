@@ -69,7 +69,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Text
 public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
-public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Variante
 public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife

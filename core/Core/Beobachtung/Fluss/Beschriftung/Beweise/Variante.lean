@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
 
 @[expose] public section
 
