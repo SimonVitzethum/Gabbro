@@ -38,10 +38,10 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   · obtain rfl := Option.some.inj geladen
     refine ⟨?_, ?_⟩
     · intro c hc
-      simp only [bootFor, if_neg hc]
+      simp only [bootFor, Zustand.start, if_neg hc]
     · intro _
       have hpend : (z.lokal entryContext).pending = none := by
-        simp only [bootFor, if_true]
+        simp only [bootFor, Zustand.start, if_true]
       refine ⟨?_, ?_⟩
       · intro _
         simp only [hfragen, hantworten]
