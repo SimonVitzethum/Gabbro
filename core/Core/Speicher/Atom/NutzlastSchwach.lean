@@ -116,6 +116,9 @@ theorem stGraph_wf (mw mr : Modus) : (stGraph mw mr).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, stGraph, stLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, stGraph, stLab, reduceCtorEq] at h
 
 theorem stGraph_kein_rmw (mw mr : Modus) (u : StEv) : ¬ (stGraph mw mr).istRmw u := by
   intro hu

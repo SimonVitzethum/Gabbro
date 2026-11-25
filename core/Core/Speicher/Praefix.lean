@@ -43,6 +43,7 @@ theorem einschraenken_wf (hw : G.Wohlgeformt) : (G.einschraenken P).Wohlgeformt 
   mo_irrefl := fun a h => hw.mo_irrefl a.1 h
   mo_total := fun a b ha hb ho hne =>
     hw.mo_total a.1 b.1 ha hb ho (fun e => hne (Subtype.ext e))
+  rmw_nicht_na := fun a ha => hw.rmw_nicht_na a.1 ha
 
 theorem einschraenken_rs {a b : {e // P e}} (h : (G.einschraenken P).Rs a b) : G.Rs a.1 b.1 := by
   induction h with

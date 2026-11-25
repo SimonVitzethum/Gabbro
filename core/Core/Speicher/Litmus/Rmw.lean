@@ -119,6 +119,9 @@ theorem rmWf : rmGraph.Wohlgeformt where
     intro a b _ _ _ hne
     show rmMo a b ∨ rmMo b a
     cases a <;> cases b <;> first | decide | exact absurd rfl hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> decide
 
 /-- No `sw` step exists: every mode is relaxed, so `Modus.stark` fails. -/
 theorem rmHbSchrittFalsch (a b : RmwLitEv) : ¬ rmGraph.hbSchritt a b := by

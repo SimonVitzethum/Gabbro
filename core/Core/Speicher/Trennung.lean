@@ -134,6 +134,9 @@ theorem sb_wf (m : Modus) : (sbGraph m).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, sbGraph, sbLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, sbGraph, sbLab, reduceCtorEq] at h
 
 theorem sb_rb {m : Modus} {r w : SbEv} (h : (sbGraph m).rb r w) :
     (r = b1 ∧ w = a2) ∨ (r = b2 ∧ w = a1) := by

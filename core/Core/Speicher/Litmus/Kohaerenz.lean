@@ -217,6 +217,9 @@ theorem co_wf (m : Modus) : (coGraph m).Wohlgeformt where
   mo_total := by
     intro a b ha hb ho hne
     exact coMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, coGraph, coLab, reduceCtorEq] at h
 
 theorem co_kein_rmw (m : Modus) (u : CoEv) : ¬ (coGraph m).istRmw u := by
   intro hu

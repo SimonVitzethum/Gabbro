@@ -141,6 +141,9 @@ theorem mpRlx_wf (m : Modus) : (mpRlxGraph m).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, mpRlxGraph, mpRlxLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, mpRlxGraph, mpRlxLab, reduceCtorEq] at h
 
 theorem mpRlx_kein_rmw (m : Modus) (u : MpRlxEv) : ¬ (mpRlxGraph m).istRmw u := by
   intro hu

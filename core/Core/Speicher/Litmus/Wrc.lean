@@ -168,6 +168,9 @@ theorem wrc_wf (m : Modus) : (wrcGraph m).Wohlgeformt where
     show ¬ wrcMo a a
     cases a <;> decide
   mo_total := by intro a b ha hb ho hne; exact wrcMo_total m a b ha hb ho hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, wrcGraph, wrcLab, reduceCtorEq] at h
 
 theorem wrc_kein_rmw (m : Modus) (u : WrcEv) : ¬ (wrcGraph m).istRmw u := by
   intro hu

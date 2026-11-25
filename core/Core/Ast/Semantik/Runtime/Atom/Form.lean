@@ -75,6 +75,50 @@ inductive Zugriffsform where
   | erwarte (ziel region index : Nat) (erwartet : Int) (typ : Ty .value) (modus : Modus)
   | veroeffentliche (region index quelle : Nat) (modus : Modus)
 
+/-- **The static checker line for access forms.** An update reads and writes ONE event, so RC11 requires an
+    atomic mode. `tausche`, `vergleicheTausche` and `holeUndAddiere` are refused when they name `na`;
+    every other form is admitted. This is the row of the admission check that decides form well-formedness. -/
+def pruefeZugriffsform : Zugriffsform → Bool
+  | .tausche _ _ _ _ _ .na => false
+  | .vergleicheTausche _ _ _ _ _ _ .na => false
+  | .holeUndAddiere _ _ _ _ _ .na => false
+  | _ => true
+
+/-- **A form is well formed exactly when the checker line accepts it.** -/
+def Zugriffsform.wohlgeformt (z : Zugriffsform) : Prop := pruefeZugriffsform z = true
+
+/-- The checker line decides form well-formedness, by definition. -/
+theorem pruefeZugriffsform_korrekt (z : Zugriffsform) :
+    pruefeZugriffsform z = true → z.wohlgeformt := fun h => h
+
+/-- **The three update forms at `na` are refused.** -/
+theorem tausche_na_verweigert (ziel region index quelle : Nat) (typ : Ty .value) :
+    pruefeZugriffsform (.tausche ziel region index quelle typ .na) = false := rfl
+
+theorem vergleicheTausche_na_verweigert (ziel region index erwartet neu : Nat) (typ : Ty .value) :
+    pruefeZugriffsform (.vergleicheTausche ziel region index erwartet neu typ .na) = false := rfl
+
+theorem holeUndAddiere_na_verweigert (ziel region index betrag : Nat) (typ : Ty .value) :
+    pruefeZugriffsform (.holeUndAddiere ziel region index betrag typ .na) = false := rfl
+
+theorem tausche_na_nicht_wohlgeformt (ziel region index quelle : Nat) (typ : Ty .value) :
+    ¬ (Zugriffsform.tausche ziel region index quelle typ .na).wohlgeformt := by
+  intro h
+  change false = true at h
+  cases h
+
+theorem vergleicheTausche_na_nicht_wohlgeformt (ziel region index erwartet neu : Nat) (typ : Ty .value) :
+    ¬ (Zugriffsform.vergleicheTausche ziel region index erwartet neu typ .na).wohlgeformt := by
+  intro h
+  change false = true at h
+  cases h
+
+theorem holeUndAddiere_na_nicht_wohlgeformt (ziel region index betrag : Nat) (typ : Ty .value) :
+    ¬ (Zugriffsform.holeUndAddiere ziel region index betrag typ .na).wohlgeformt := by
+  intro h
+  change false = true at h
+  cases h
+
 /-- The integer a temporary slot of the frame holds. -/
 def Rahmen.ganz (r : Rahmen) (slot : Nat) : Option Int :=
   (r.zahl slot).map fun n => n.zahl.wert
