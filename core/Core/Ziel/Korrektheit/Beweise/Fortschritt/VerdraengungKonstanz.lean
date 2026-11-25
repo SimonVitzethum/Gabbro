@@ -178,6 +178,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
       ∀ k'', (z.kerne k'').laeuft = some c → False := by
     intro u hu
     obtain ⟨e, rfl⟩ : ∃ e, u = d + 1 + e := ⟨u - (d + 1), by omega⟩
+    clear hu
     induction e with
     | zero =>
       intro z hz k'' hk
