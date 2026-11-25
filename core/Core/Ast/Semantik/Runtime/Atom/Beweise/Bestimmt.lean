@@ -53,6 +53,7 @@ theorem Schrittform.zugriffsschritt_bestimmt (F : Schrittform) {c : Kontext} {s 
         | zaun _ => cases hl
         | sperre _ => cases hl
         | frage => cases hl
+        | verbrauche => cases hl
         | starte => cases hl
         | beende => cases hl
         | verbinde => cases hl

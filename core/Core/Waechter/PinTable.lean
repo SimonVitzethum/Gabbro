@@ -354,7 +354,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 3929521243651914860),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 17464773647101239365),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 15792455024006385417),
-  (`Gabbro.Core.Ast.Semantik.MaskeSimAussage, 3231974317913293110),
+  (`Gabbro.Core.Ast.Semantik.MaskeSimAussage, 1216902672063950490),
   (`Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage, 9260166058713430687),
   (`Gabbro.Core.Ast.Semantik.SendeLiefertAussage, 4328701168167657756),
   (`Gabbro.Core.Ast.Semantik.LeiteWirktAussage, 15409793448109244359),
@@ -383,6 +383,15 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.GeraeteKopplungAlleAussage, 15570760885692706522),
   (`Gabbro.Core.Beobachtung.GeraeteKopplungAussage, 16362949051896789462),
   (`Gabbro.Core.Beobachtung.GeraeteLedgerGleichAussage, 5479693944465842336),
-  (`Gabbro.Core.Beobachtung.GeraetePauseErhaltAussage, 1360175916354924054)]
+  (`Gabbro.Core.Beobachtung.GeraetePauseErhaltAussage, 1360175916354924054),
+  (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 9653400672800903365),
+  (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 6717755339853453320),
+  (`Gabbro.Core.Aussenfrage.VerbrauchePrivatAussage, 2931169377843750625),
+  (`Gabbro.Core.Aussenfrage.VerbraucheFehlerGrundAussage, 15839307104568870586),
+  (`Gabbro.Core.Ast.Semantik.ZugriffSicherAussage, 1225684797408260671),
+  (`Gabbro.Core.Ziel.Korrektheit.ZugriffIdealBestimmtAussage, 5372369777362461711),
+  (`Gabbro.Core.Ziel.Korrektheit.ZugriffNIFragmentAussage, 18283494251907150653),
+  (`Gabbro.Core.Ziel.Korrektheit.ZugriffSchrittExistiertAussage, 18347576729964049018),
+  (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 9730869702400421529)]
 
 end Gabbro.Core.Waechter

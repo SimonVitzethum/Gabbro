@@ -32,6 +32,18 @@ open Maschine
     never inspect source forms. -/
 def trivialUnit : Ast.Unit := ⟨[], Ast.UnitBody.done⟩
 
+/-- The empty source unit elaborates to frame-only code. -/
+theorem trivialUnit_rein : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).Rein := by
+  intro b present
+  have code : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
+      [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
+  rw [code] at present
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl
+  · exact Or.inr (Or.inl rfl)
+  · exact Or.inl rfl
+
+
 /-- The loader succeeds for the empty unit on x86-64, with hardware, a fair history, an admissible
     start and a loaded state satisfying the protocol invariants. Feeds: `katalog_nichtLeer`,
     `zulStart_erfuellbar`, `fragment_geladen`, `protokoll_start_gut`. The image proof follows the
@@ -226,7 +238,7 @@ theorem IdealAkzeptierteEinheitAussage.erfuellbar :
     ∃ (P : Plattform) (t : Ast.Unit),
       I.Bestimmt (einheitVon P t).einrichtung (einheitVon P t).system ∧
       I.Fortschritt (einheitVon P t).einrichtung (einheitVon P t).system :=
-  ⟨Plattform.x86_64, trivialUnit, ideal_akzeptierte_einheit _ _⟩
+  ⟨Plattform.x86_64, trivialUnit, ideal_akzeptierte_einheit_rein _ trivialUnit trivialUnit_rein⟩
 
 /-- Determinacy is a real restriction on the ideal side too: the same release-witness rule is
     nondeterministic through its ideal projection. Feeds: `Annahme.gebenSystem`. -/
