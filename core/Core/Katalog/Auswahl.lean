@@ -84,6 +84,23 @@ theorem Plattform.katalog_wohlgeformt (p : Plattform) : KatalogWohlgeformt p.kat
   ⟨p.zeilen_nodup, fun _ h => List.mem_append_left _ h, fun _ h => h,
     ziele_gut p, systemAbi_gut p, geraete_gut p⟩
 
+/-- Pinned catalogue data (PERFECT-MODEL §4, step M10): the objects a platform row
+    declares stable between check and commit. The approved rows declare the `cProcess`
+    object 1 stable; every other object stays unstable. -/
+def Plattform.stabileObjekte : Plattform → List Objekt
+  | .x86_64 => [⟨.cProcess, 1⟩]
+  | .aarch64 => [⟨.cProcess, 1⟩]
+  | .riscv64 => [⟨.cProcess, 1⟩]
+
+/-- A row declares stability for the object: membership in its pinned stable set. -/
+def Plattform.stabilGemeldet (p : Plattform) (o : Objekt) : Prop :=
+  o ∈ p.stabileObjekte
+
+/-- The hardware/environment assumption of the row assures stability exactly for the
+    objects the row declares stable. -/
+def Plattform.stabilZugesichert (p : Plattform) (o : Objekt) : Prop :=
+  o ∈ p.stabileObjekte
+
 /-- Look up a maximum in a selected row. Random-source rows carry no duration maximum.
     Approval of the selection is a separate catalogue rule. -/
 def Katalog.dauerMaximum (k : Katalog) (id : Nat) : Option Nat :=

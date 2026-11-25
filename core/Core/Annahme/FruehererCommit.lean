@@ -10,19 +10,21 @@ open Katalog Maschine
 open Sicherheit (AussenCommit Wirkung)
 open Hosted
 
-/-- With the selected rows, a context cannot add an unmediated outside commit. The context
-    cannot rely on an earlier answer to supply the stability the catalogue has not granted. -/
+/-- With the selected rows, a context cannot add an unmediated outside commit that touches
+    an object the rows do not declare stable. The context cannot rely on an earlier answer
+    to supply the stability the catalogue has not granted. -/
 theorem unvermittelter_commit_verweigert {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
     [DecidableEq L] {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form} {run t s c w spur s'}
     (step : I.Schritt E.einrichtung E.system E.katalog run t s (.kontext c w, spur) s')
     (effect : AussenCommit) {neu : List Wirkung}
-    (ledger : s'.buchung.wirkungen = s.buchung.wirkungen ++ neu) (mem : Wirkung.aussen effect ∈ neu) :
+    (ledger : s'.buchung.wirkungen = s.buchung.wirkungen ++ neu) (mem : Wirkung.aussen effect ∈ neu)
+    (instabil : ¬ Aussen.ReihenStabil E.katalog.plattform effect.frage.handle.origin.object) :
     ¬ Akzeptiert E := by
   intro akzeptiert
   obtain ⟨suffix, record, check⟩ := ((akzeptiert_aussen akzeptiert).1 run t s (.kontext c w) spur s' step).2
   have equal := List.append_cancel_left (ledger.symm.trans record)
   have covers := (check effect (equal ▸ mem)).2.2.2.1
-  exact Aussen.reihe_instabil _ _ (covers ⟨effect.frage.handle, effect.frage.operation.required⟩ List.mem_cons_self)
+  exact instabil (covers ⟨effect.frage.handle, effect.frage.operation.required⟩ List.mem_cons_self)
 
 /-- An unmediated form uses the earlier reply as its only external evidence. -/
 def fruehereEinheit : Modell :=
@@ -65,7 +67,8 @@ theorem frueherer_commit_erfuellbar :
     .kontext rfl ⟨0, rfl, rfl, rfl⟩ form aus
   refine ⟨run, vor, nach, spur, vorher, effect, List.mem_cons_self, Nat.lt_succ_self _, rfl, rfl,
     eigene_frage _, .griff _ _, rfl, ?_, step, rfl,
-    unvermittelter_commit_verweigert step effect rfl List.mem_cons_self⟩
+    unvermittelter_commit_verweigert step effect rfl List.mem_cons_self
+      (Aussen.hosted_nicht_stabil _ _ rfl)⟩
   exact issue_ungueltig [] []
 
 end Gabbro.Core.Annahme
