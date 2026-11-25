@@ -69,6 +69,7 @@ def befehlZuCode : Befehl → Code
   | .definiereEffektgruppe f0 => Code.pair (natZuCode 47) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
   | .waehleUmgebung f0 f1 f2 => Code.pair (natZuCode 48) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
   | .bindeRegion f0 f1 => Code.pair (natZuCode 49) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .zugriff f0 => Code.pair (natZuCode 50) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
 
 def befehlVonCodeA : Code → Option Befehl
   | Code.pair tag kids =>

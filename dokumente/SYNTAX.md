@@ -43,7 +43,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | defined EBNF rules | 132 | **211** unique definitions in the fenced EBNF; assembly-body and entrust productions are removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **247** active Lean table words; **4** additional words reserved solely for removal refusals (`asm`, `prim`, `raw`, `entrust`); special forms are unchanged |
+ | vocabulary words | 221 | **246** active Lean table words; **5** additional words reserved solely for removal refusals (`asm`, `prim`, `raw`, `entrust`, `extern`); special forms are unchanged |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | the grammar and reserved-word table checks of `instrumente/pruefe-lean.py` (the `lex_keywords` whole-table theorem in `Parser/Lex/Lexer/Teil2a.lean`); the retired `pruefe-syntax` (2026-10-17, see git history) also held closure of the rules, reachability from `program` and terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it read the same grammar |
@@ -76,11 +76,11 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 248 words
+## Vocabulary — closed, 247 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
-             spec impl divergent extern section arch when
+             spec impl divergent section arch when
   Vertraege  requires ensures maintains refines breaking effects costs where in
               exhaustive old narrow to induction order advances retires deadline
   Wirkungen  reads writes locks masks allocs consumes borrows moves mints publishes diverges pure
@@ -111,7 +111,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
   Sonderform O @version Held TESTBUILD    (NOT vocabulary words -- see footnote G6)
 ```
 
-Removed spellings reserved for refusal: `asm`, `prim`, `raw`, `entrust` (see §14).
+Removed spellings reserved for refusal: `asm`, `prim`, `raw`, `entrust`, `extern fn` (see §14).
 
 **Everything else is an identifier.** A new word is a language change and needs an entry here.
 **`owner` is the one new word of the third version** («SG-9», §9): it names the linear mark
@@ -129,11 +129,12 @@ production and a name, and each is decided by the grammar and not by a list:
 2. **`old` and `result`** — words inside a contract clause, names everywhere else;
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-**Seventeen of the 248 are still not names** (recounted 2026-09-26, Opus agent L:
-retired `zaehle-wortschatz` reads 248 words, 17 reserved, 231 contextual;
+**Sixteen of the 247 are still not names** (`extern` left this table with the removal
+of `extern fn`; otherwise recounted 2026-09-26, Opus agent L:
+retired `zaehle-wortschatz` reads 248 words, 17 reserved, 231 contextual at the time;
 retired `pruefe-wortschatz` reads 245 EBNF terminals against 245 table words --
 the three over are `r` `w` `x`, single letters both sides drop by construction).
-Every one of the seventeen has **zero** declarator sites in 585 foreign files, and every
+Every one of the sixteen has **zero** declarator sites in 585 foreign files, and every
 one names below the position that forces it -- a use-site occurrence always parses as
 the keyword form, so a variable of that name could be bound and never read back:
 
@@ -151,19 +152,19 @@ the keyword form, so a variable of that name could be bound and never read back:
   None       option nil primary and pattern                                  :1958 :3929
   const      item head `const N : T = ...`, one word before `const fn`       :710 :713
   static     item head `static ...`                                           :714
-  extern     function-class head `extern fn`                                 :2919
   if         statement head and if-expression                                :3532
   else       else-branch after `}`                                            :3663
   return     statement head `return expr ;`                                   :3594
   bool       type keyword arm above the named-type arm                       :1102
 ```
 
-Ten head an expression or a predicate unconditionally; seven break the emitted C as an
+Ten head an expression or a predicate unconditionally; six break the emitted C as an
 ordinary local (`uint32_t <word> = 1; return <word>;` through
-`cc -std=c11 -Wall -Wextra -Werror` -- `const` `static` `extern` `if` `else` `return`
-`bool`, measured 2026-09-05). The Lean side pins the same seventeen in
-`grammatik/Grammatik/Parser/Lex/WortStellung.lean` (`reserviertTafel`, with a theorem per
-row above: the twelve place-refusals, the five expression heads, the seven C names).
+`cc -std=c11 -Wall -Wextra -Werror` -- `const` `static` `if` `else` `return`
+`bool`, measured 2026-09-05). The frozen `grammatik/` side pins seventeen in
+`grammatik/Grammatik/Parser/Lex/WortStellung.lean` (`reserviertTafel`: the table above
+plus `extern` as the function-class head of the removed `extern fn` form, with a theorem
+per row — the twelve place-refusals, the five expression heads, the seven C names).
 
 Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`
 `errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap with sampling, §9.1), `free` (slot release, TODO §1-B, §9.1),
@@ -171,7 +172,7 @@ Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `
 `memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
 the Lean theorem `lex_keywords` (`grammatik/Grammatik/Parser/Lex/Lexer/Teil2a.lean`) checks
 every word of the `wortschatz` table lexes as its keyword token. No word freed since stands
-unread: freeing one of the seventeen buys zero foreign sites and breaks either a read
+unread: freeing one of the sixteen buys zero foreign sites and breaks either a read
 or the C, so the residue is irreducible by measurement, not by taste.
 
 ---
@@ -424,8 +425,8 @@ markorder  = "order" "{" identlist "}" ;
 (* «B37»: the stages of a linear mark, in ONE declaration. `order` stands before the `=`
    because it is not a body: an order says which steps are admissible on the value. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
-            | indexty | stringty     (* lane 261 *)
-            | entryfn | tupletype ;
+             | indexty | stringty     (* lane 261 *)
+             | tupletype ;
 tupletype  = "(" typeexpr "," typeexpr { "," typeexpr } ")" ;
 stringty   = stringkopf "max" int ;
 stringkopf = ident ;
@@ -496,30 +497,14 @@ fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
    function. *)
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
-entryfn    = "entry" "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] ;
-(* NEW C-free lane, C2 slice 3 (2026-10-01; OFFEN O39): CODE handed in by generated C. No new
-   word -- `entry` heads an item at item level, and a type only before `fn`. The value is the
-    designator of a function a GENERATED driver wrote (in a kernel module, the wrapper around a
-    declared root, template `faden.modul`), and the type is the one shape in which code reaches
-    a foreign body (`N574` is not yet a Lean judgment). It carries a C signature and NO
-    contract: no Gabbro code calls through it. The Lean checker holds it: it stands only as the
-    own type of a parameter of an `extern fn` or a Gabbro function, with plain integers, `bool`
-    and `ptr<normal, …>` at plain integers, not behind `...` (`N575` in
-    `Bausteine/Schablonen/SchablonenModul/Teil1.lean`); a Gabbro function that
-    takes one is called, taken or dispatched to by no Gabbro source (`N576` is not yet a
-    Lean judgment); inside it the
-    parameter is named once, as the whole argument of an `extern fn`'s `entry fn` parameter of
-    the same signature, outside every loop (`N577` in the same module). The exporter refuses such a function by
-    name (`LG001`): G has no code values, and nothing in Gabbro calls it. *)
+(* REMOVED: the `entry fn` C-signature type belonged to the frozen same-address-space
+   foreign interface and does not exist. In-image bindings are ordinary Gabbro
+   functions; foreign code runs only outside the address space through a channel to a
+   pinned catalogue row, and no Gabbro type carries a C signature. *)
 typelist   = typeexpr { "," typeexpr } ;
-params     = ident ":" typeexpr { "," ( ident ":" typeexpr | "..." ) } ;
-(* CHANGED C-free lane, C2 (2026-09-30): `...` once, behind at least one parameter, in the
-   parameter list of an `extern fn` only -- the foreign C symbol is VARIADIC from there on
-   (`_printk`, `panic`). Every parameter behind it is still declared, typed and passed at every
-   call; the emitter writes the prototype as the fixed parameters and `...` and casts each
-   argument behind it to its declared type (C converts nothing there). Only integers and
-   pointers behind it, no `or R` channel (`N573`). The model's `D.Ax` keeps the fixed arity:
-   the marker is a fact about C linkage, and the Lean front end skips it. *)
+params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
+(* REMOVED: the variadic `...` form belonged to the frozen same-address-space `extern fn`
+   C interface and does not exist. Parameter lists carry no `...`. *)
 fnptrparams = fnptrparam { "," fnptrparam } ;
 fnptrparam  = [ ident ":" ] typeexpr ;
 (* The name in a pointer type is optional: all 11 pointer-type sites in Caprock write none. *)
@@ -987,7 +972,7 @@ index binding and held-guard requirements remain identical. Unsupported domains 
 ## 6. Functions and contracts — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "divergent" | "extern" ]
+fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "divergent" ]
            "fn" ident [ "[" gparams "]" ] "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
            [ "payload" path ]
@@ -1177,8 +1162,8 @@ each named carrier.
 
 **`effects` is NOT fail-open.** A function **without** `effects` over a body
 derives it (lane 191: the derived hull is checked exactly like a written
-line); whoever touches nothing derives `effects { pure }`. Without a body —
-`extern` — and where the derivation settles nothing, the omission is
+line); whoever touches nothing derives `effects { pure }`. Where the derivation
+settles nothing, the omission is
 a compile error with the reason (`E001`, `N305`).
 
 **`decreases <expr>` — the descent measure of the RECURSION** («K5.4»): `costs` at a
@@ -1206,8 +1191,8 @@ not fall.
 | `by induction over d` | names the scheme; no term | none |
 | `spec fn … = pred` | a typed predicate helper, checked before substitution (below) | SUGAR |
 | `const fn` | a translation-time number: a literal at every use | `Expr.lit` (SUGAR) |
-| `extern fn` | a **foreign body**: its contract is all Gabbro knows; the body is the machine | `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
-| `-> never`, `divergent fn` | no `return` derivable; the only exits are `leave`/`next` of an enclosing loop, a `return R::F`, or a foreign body | `Ty.never`, theorem `never_leer` |
+| `extern fn` | no form: same-address-space foreign code does not exist; in-image bindings are ordinary Gabbro functions; foreign code runs only outside the address space through a channel to a pinned catalogue row (see §14); the spelling is refused | frozen `grammatik/` only: `D.Ax` with `aparams`/`aerg`/`aschreibt`; `Stmt.axiomCall`, `Block.bindAxiom` («SG-18») |
+| `-> never`, `divergent fn` | no `return` derivable; the only exits are `leave`/`next` of an enclosing loop or a `return R::F` | `Ty.never`, theorem `never_leer` |
 | `requires Held(L), …` | **the lock set is part of the contract**: the `Held` list of a signature names EXACTLY the locks held at every call — `∀ L, Held(L) ∈ Λ ↔ L ∈ haelt(S)` («SG-20», evening of 2026-09-09). Only so can a `locks` inside the callee stand above *everything* held (`H006` across call boundaries); a helper used under two lock sets is two signatures; **at a call every `Held(L)` of the callee stands in the caller's Λ** (`N587`: an enclosing `locks L` or the caller's own `Held(L)`, never an `effects` line) | `Signatur.haelt`, `RufPasst.hh`, `Signatur.anfang`, `Vertrag.ende` |
 | a **call** `f(a, b);` | the callee's `writes` ⊆ the caller's, its `consumes` ⊆ Λ, its `Held` = the held set, and a callee with `or R` is callable only through `let … else` | `Stmt.call f args hp hr` with `hp : RufPasst`, `hr : gruende = 0`; theorem `ruf_hat_alles` |
 | an **indirect call** `p(a, b);` | the same, against the signature at the **type** of `p` («SG-8») | `Stmt.callInd`, `Block.bindCallInd`; theorem `zeigerruf_hat_alles` |
@@ -1761,8 +1746,8 @@ plus the four things only a library declaration can fail:
   module outward (`N060`). It stands behind the signature because it extends
   the call shape (what the translator fills), not the contract.
 * **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
-  no foreign body). The transitive call hull holds no `extern` (`N059`, `CHECKER.md` §0c) — structure, never prose
-  comparison.
+   no foreign body). The transitive call hull holds no foreign body (`N059`, `CHECKER.md` §0c) — structure, never prose
+   comparison.
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
   (through the call graph), `or R` and costs are checked exactly like an
@@ -1842,7 +1827,7 @@ RUNS.
 
 **The checks** — the body is an ordinary function body: types, contracts,
 effects and costs are checked by the ordinary checker, and the transitive
-call hull holds no `extern` (`N059`,
+call hull holds no foreign body (`N059`,
 `CHECKER.md` §0c). Five new refusals hold the five things only the
 linkage can fail:
 
@@ -2048,9 +2033,9 @@ table      = [ "pub" ] "table" ident [ "space" ident ] [ "count" constexpr ] [ "
    the premise `Wettlauf.lean` takes for its race theorem. *)
 (* `owner m` names a `linear type m;` whose mark every access to the table must hold. A table
    without `owner` and without `protects` is accessible from anywhere -- which is what a
-   `static` is today. The FIRST mark is minted once, by a single foreign body returning the
-   mark without taking it (`extern fn erste() -> Marke`: a named assumption, like every
-   foreign body); no signature (re)produces it (`D266`, the checker half of
+   `static` is today. The FIRST mark is minted once, by a single declared minter
+   function returning the mark without taking it (a named assumption, executed
+   once); no signature (re)produces it (`D266`, the checker half of
    `eigner_nie_erzeugt`), it travels by linear handoff (`M2`: exactly once, never doubled),
    and every access to the table -- read or write -- holds it (`D267`, reads through the
    very walk `E010` reads). The single mint executes exactly once: one static site, outside
@@ -2696,15 +2681,15 @@ they point at stands in §1 beside `entrydecl`.
   call counts it on top of the dispatch step (`1 + fa`, never zero); without
   a countable promise the declaration falls (`N322`), no bounded loop can
   host a call through it, and a caller with a cost promise meets `K003` over
-  it. A promise about the kernel, like `costs` at an `extern fn` — counted,
-  not re-measured.
+   it. A promise about the kernel, like `costs` at a gate — counted,
+   not re-measured.
 * **buffers: `requires x <= lenof(p)`** (fix lane F5, review G04 F3; lane 262,
   OFFEN O23) — a
   parameter that points at numbers is a buffer the kernel moves BYTES
   through: it points at `u8`/`i8`, and the gate bounds it by a clause
   `requires x <= lenof(p)` (or `<`) over one of its integer parameters
-  (`N464`). An `extern fn` parameter that points at numbers beside a length
-  parameter is held to the same clause (`N506`); a lone object pointer with
+   (`N464`). A pointer parameter that points at numbers beside a length
+   parameter is held to the same clause; a lone object pointer with
   no length beside it is one object, not a transfer. `lenof` of a pointer
   parameter is the number of elements the
   caller's object holds from the pointer on. At every call, of any callee,
@@ -2976,10 +2961,16 @@ name"*: not derivable.
 
 ## 14. Boot and checked machine access
 
-Assembly bodies, `prim fn`, `raw fn` and `entrust` are refused. Their words remain
-reserved only to report one dedicated diagnostic per form. Machine access uses the checked
+Assembly bodies, `prim fn`, `raw fn`, `entrust` and `extern fn` are refused. Their words
+remain reserved only to report one dedicated diagnostic per form. There is no
+same-address-space foreign code: in-image bindings are ordinary Gabbro functions.
+Foreign code runs only outside the address space, attached through a channel to a
+pinned catalogue row selected by name — a process or guest, a socket or pipe, or a
+lent region with a protocol. The selected row supplies the service contract; a program
+never writes one. A fault in foreign code delivers only wrong answers through the
+channel and never breaks a guarantee. The `extern fn` form of the frozen `grammatik/`
+package is history. Machine access uses the checked
 language constructs described in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md).
-`extern fn` remains the general named-assumption interface to environment services with a contract.
 
 | removed form | refusal | poison probe |
 |---|---|---|

@@ -44,7 +44,7 @@ private theorem fragment_speicher_gut {p : Fragment} {plattform : Plattform}
     the left run's `KeinSchritt` (answers are impossible on canonical fragment runs outright).
     The only remaining right tick is a pause, and both sides then keep their states and traces. -/
 theorem pauseNI : PauseNIAussage := by
-  intro p plattform h₁ h₂ ρ₁ ρ₂ vergleich predictor t idle₁ kopplung
+  intro p plattform rein h₁ h₂ ρ₁ ρ₂ vergleich predictor t idle₁ kopplung
   classical
   let E := p.einheit plattform
   have warte₁ := ρ₁.zeit.wartet idle₁
@@ -142,7 +142,7 @@ theorem pauseNI : PauseNIAussage := by
               Ast.Semantik.plan ⟨[], []⟩ (f₂.nach c₂ v₁) :=
             ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
           have regel₁ : E.system.ImplSchritt c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁) :=
-            ⟨f₂, kopf₁, (f₂.impl_privat c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁)).2 ⟨rfl, rfl⟩⟩
+            ⟨f₂, kopf₁, (f₂.impl_privat (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂)) c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁)).2 ⟨rfl, rfl⟩⟩
           have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
               (.kontext c₂ w₂, ⟨[], []⟩) (f₂.nach c₂ v₁) :=
             .kontext crash₁ bereit₁ regel₁ aus₁

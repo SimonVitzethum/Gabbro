@@ -12,7 +12,7 @@ open Ast.Semantik (Befehl Fragment eintritt)
 
 /-- The premise of each instruction obligation occurs at the first cut of an admitted
     concrete run. The same run supplies a comparison for every predictor. -/
-theorem fragment_ni_form_erfuellbar (f : Befehl) :
+theorem fragment_ni_form_erfuellbar (f : Befehl) (priv : f.Privat) :
     let p := Fragment.einzel f
     let E := p.einheit .x86_64
     ∃ (h : Umgebung) (ρ : Lauf E) (vor : Ast.Semantik.Zustand),
@@ -23,7 +23,7 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) :
   let p := Fragment.einzel f
   let E := p.einheit .x86_64
   obtain ⟨h, s, hw, hardware, zul, konform, _, normal, bereit, kopf, transfer, vollzug⟩ :=
-    Ast.Semantik.sim_formvoraussetzungen_erfuellbar f
+    Ast.Semantik.sim_formvoraussetzungen_erfuellbar f priv
   let vor := (I.start E s).2
   let nach := f.nach eintritt vor
   let event : SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int := (.kontext eintritt (), ⟨[], []⟩)
@@ -48,7 +48,9 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) :
           | wartet label gleich pause => exact .wartet label gleich pause }⟩
   have lauf : Laeufe E h ρ := ⟨hardware, konform, zul, (fragment_geladen p .x86_64 hardware zul).symm⟩
   have vergleich : Vergleich E h h ρ ρ := ⟨lauf, lauf, rfl, rfl, rfl⟩
-  have quelle := fragment_fluss_lokal p .x86_64
+  have quelle := fragment_fluss_lokal p .x86_64 (fun b hb => by
+    rw [List.mem_singleton.mp hb]
+    exact priv)
   exact ⟨h, ρ, vor, quelle.2 f, vergleich, rfl, kopf, rfl,
     anfang_aus_lader E (fragment_lader_ni p .x86_64 quelle.1) vergleich⟩
 

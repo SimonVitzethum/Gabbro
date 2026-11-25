@@ -32,7 +32,12 @@ structure Zeitmarke where
   deriving DecidableEq
 
 /-- Elaborated declarations and layout interpretation. A missing optional resource bound is open.
-    The form implementing a timed block exposes its live activations in the local state. -/
+    The form implementing a timed block exposes its live activations in the local state.
+    Cost marks (`durchlauf`/`durchlaufstand`, MK-12) bound the cost of one pass or call each
+    (`per_pass bounded n ops`, `costs <= n ops`, `on_exceeded`): `durchlauf` is the declared
+    ceiling per open mark (block number), `durchlaufstand` lists the open marks as
+    (block number, opening cut) read from the local state. Open marks stay admitted
+    (`durchlauf = fun _ => none`). -/
 structure Schrankendaten (L Lok : Type) where
   kosten : Option Nat := none
   speicher : Option Nat := none
@@ -41,6 +46,8 @@ structure Schrankendaten (L Lok : Type) where
   stapelTiefe : Lok → Nat := fun _ => 0
   zeit : Nat → Option Zeitdeklaration := fun _ => none
   zeitstand : Lok → List Zeitmarke := fun _ => []
+  durchlauf : Nat → Option Nat := fun _ => none
+  durchlaufstand : Lok → List (Nat × Nat) := fun _ => []
 
 def Schrankendaten.leer : Schrankendaten L Lok := {}
 

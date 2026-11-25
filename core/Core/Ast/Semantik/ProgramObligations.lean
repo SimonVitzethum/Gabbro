@@ -62,7 +62,7 @@ theorem returnVoid_annahme (scope : Scope) (result : Option (Ty .value)) : (retu
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.
 theorem returnVoid_ideal (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).IdealAussage := by
-  exact ⟨fun _ => rfl, fun args => ⟨((returnVoidForm scope result).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
+  exact ⟨fun _ => rfl, fun args => ⟨(returnVoidForm scope result).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩⟩
 
 -- Mirror Befehl.kommutation with one linearisation point and zero private steps.
 theorem returnVoid_einheit (scope : Scope) (result : Option (Ty .value)) : (returnVoidForm scope result).EinheitAussage := by
@@ -147,7 +147,7 @@ theorem mutableLocal_ideal (scope : Scope) (result : Option (Ty .value)) : (muta
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((mutableLocalForm scope result).befehl args).bestimmt
+    · exact (mutableLocalForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -250,7 +250,7 @@ theorem directCall_ideal (scope : Scope) (result : Option (Ty .value)) : (direct
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((directCallForm scope result).befehl args).bestimmt
+    · exact (directCallForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 
@@ -335,7 +335,7 @@ theorem bindDirect_ideal (scope : Scope) (result : Option (Ty .value)) : (bindDi
       Nat.sub_self, List.getElem?_cons_zero]
   · intro args
     constructor
-    · exact ((bindDirectForm scope result).befehl args).bestimmt
+    · exact (bindDirectForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

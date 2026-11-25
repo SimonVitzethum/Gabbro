@@ -72,6 +72,7 @@ theorem ankunftUnveraendert : AnkunftUnveraendertAussage := by
       | rfl
       | split
       | rw [ruf_arrival]
+      | exact Zugriffsform.uebertrag_arrival _ _ _
       | apply eintrittArgumente_arrival
         assumption
 

@@ -92,11 +92,12 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
 
 /-- **Satisfiability of acceptance**: a concrete (trivial-syntax) system where all three
     conjuncts hold jointly: no uses to guard, nothing written to violate, never blocked, the
-    holder row holds trivially (no hold bound is declared), and no bounds to violate
+    holder row holds trivially (no hold bound is declared), no lock section is ever reported
+    blocked, and no bounds to violate
     (open by default, so the bounds row holds unconditionally). -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
-  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩,
+  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -113,6 +114,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
   · exact schrankenLokal_leer rfl rfl rfl
+  · exact abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
@@ -179,7 +181,8 @@ def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
 
 /-- The release-witness state: the holder owns the lock, the waiter is queued. -/
 def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
@@ -197,6 +200,67 @@ theorem sperrhalter_bereit_erfuellbar :
   refine ⟨E_geben, gebenZustand, (), gibtHalter, rfl, fun hne => ?_⟩
   refine ⟨rfl, ⟨0, rfl⟩, (), gebenPlan, gebenZustand,
     ⟨(), rfl, Or.inl ⟨_, .besitzer _ _, rfl, rfl⟩⟩, rfl, fun _ _ _ => trivial⟩
+
+/-- The honest lock-wait report: a lock wait is reported blocked exactly when the
+    awaited lock is free and the waiter stands at the head of its queue; every other
+    blockade is never reported. -/
+def wartefreiBlockiert (s : Zustand Bool Unit Unit Unit Unit Unit) (c : Kontext) :
+    Blockade Bool Unit → Prop
+  | .sperre l' => (s.sperren l').besitzer = none ∧ (s.sperren l').schlange[0]? = some c
+  | _ => False
+
+/-- The holder in the section-witness: owns one lock, queues for the other. -/
+def wartefreiHalter : Kontext := .faden 0
+
+/-- The section-witness unit: two bound locks, the honest wait report, silent rules. -/
+def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
+  katalog := Plattform.x86_64.katalog
+  bild := ⟨Bildformat.elf, fun _ => none, []⟩
+  einrichtung := ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (),
+    fun _ _ _ => False, fun _ _ => True, ⟨0, 0⟩,
+    ⟨.faden 0, 0,
+      fun _ => ⟨fun _ => (), fun _ => .ruht,
+        fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
+        ⟨fun _ => true, fun _ => 0⟩⟩,
+      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+  system := ⟨fun _ => ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩,
+    fun _ _ => none, fun _ _ => False, wartefreiBlockiert⟩
+  startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
+    fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
+    ⟨fun _ => true, fun _ => 0⟩⟩
+  startmedium := fun _ _ => 0
+  laden := fun _ _ => none
+  lokalerBezug := Eq
+  stotterLaenge := fun _ => 0
+  quelltabellen := .leer
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
+
+/-- The section-witness state: the holder owns `false`, queues at the head of `true`. -/
+def wartefreiZustand : Zustand Bool Unit Unit Unit Unit Unit :=
+  let base : Zustand Bool Unit Unit Unit Unit Unit :=
+    Zustand.start (fun _ => ()) (fun _ => .laeuft)
+      (fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩)
+      ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))
+  { base with
+    sperren := fun | false => ⟨some wartefreiHalter, []⟩ | true => ⟨none, [wartefreiHalter]⟩ }
+
+/-- **Satisfiability of the section row, with the permitted case occurring**: the witness
+    unit meets `AbschnittWartefrei`, and in the witness state the holder of the bound lock
+    `false` is reported waiting on the enabled take of `true`. -/
+theorem abschnittWartefrei_erfuellbar :
+    ∃ (E : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit)
+      (s : Zustand Bool Unit Unit Unit Unit Unit) (h : Kontext),
+      AbschnittWartefrei E ∧ (s.sperren false).besitzer = some h ∧
+      E.system.blockiert s h (.sperre true) := by
+  refine ⟨wartefreiEinheit, wartefreiZustand, wartefreiHalter, ?_, rfl, ⟨rfl, rfl⟩⟩
+  intro s c l _ _ b hb
+  cases b with
+  | sperre l' => exact hb
+  | warten _ => exact False.elim hb
+  | join _ => exact False.elim hb
+  | frage _ => exact False.elim hb
+  | verzoegert _ => exact False.elim hb
 
 /-- **A system with a closed waiting set at an `I` cut is not accepted.** -/
 theorem geschlossen_nicht_akzeptiert [DecidableEq L]

@@ -27,9 +27,8 @@ theorem Fragment.simBasis (p : Fragment) (platform : Plattform) :
     rfl
   · exact fun _ _ _ _ _ _ rule => rule
   · intro b c s w stepPlan u rule
-    have same : [stepPlan] = [plan] := ((b.impl_privat c s w [stepPlan] u).1 rule).1
-    cases (List.cons.inj same).1
-    exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
+    exact (klassenSim b.klasse Befehl (p.einheit platform) b b.form rfl (b.eingebettet p platform) rfl rfl).2
+      c s u w stepPlan rule
 
 /-- Connect the form packets to the ordinary elaboration and run interfaces. -/
 theorem sim_elaborierter_lauf

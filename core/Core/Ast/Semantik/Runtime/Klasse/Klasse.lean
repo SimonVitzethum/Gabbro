@@ -41,8 +41,21 @@ inductive Wirkungsklasse where
   | sperre (aktion : Gabbro.Core.Maschine.SperrAktion)
   | frage
 
+/-- **The class of an access instruction** (MK-04): a load and the confirming observation read, a store and the
+    publication write, an update (exchange, compare-and-swap, fetch-and-add) is an update, each in the mode the
+    instruction names. -/
+def Zugriffsform.klasse : Zugriffsform → Wirkungsklasse
+  | .lade _ _ _ _ m => .lesen m
+  | .erwarte _ _ _ _ _ m => .lesen m
+  | .speichere _ _ _ m => .schreiben m
+  | .veroeffentliche _ _ _ m => .schreiben m
+  | .tausche _ _ _ _ _ m => .rmw m
+  | .vergleicheTausche _ _ _ _ _ _ m => .rmw m
+  | .holeUndAddiere _ _ _ _ _ m => .rmw m
+
 /-- Classify every instruction. A new instruction must be classified: there is no wildcard. -/
 def Befehl.klasse : Befehl → Wirkungsklasse
+  | .zugriff form => form.klasse
   | .rufe .. | .starte .. => .ruf
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
