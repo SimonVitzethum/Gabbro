@@ -219,7 +219,11 @@ theorem klassen_stummer_ideal {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
   obtain ⟨k, o, t⟩ := F
   rw [emb.regel] at step
   change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u at step
-  rcases hk with rfl | rfl <;> exact step
+  rcases hk with rfl | rfl
+  · simp only [Schrittform.ideal] at step
+    exact step
+  · simp only [Schrittform.ideal] at step
+    exact step
 
 /-- An implementation step of a silent form at a head is a source step with the private plan. -/
 theorem klassen_stummer_formschritt {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
@@ -229,9 +233,11 @@ theorem klassen_stummer_formschritt {ι : Type} (E : Klasseneinheit ι) (f : ι)
     Beobachtung.FormSchritt E f c s w p u := by
   obtain ⟨k, o, t⟩ := F
   refine ⟨kopf, ?_⟩
+  rw [emb.regel]
   rw [emb.regel] at step
   change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u at step
-  rcases hk with rfl | rfl <;> exact step
+  change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u
+  exact step
 
 /-- **State-level flow of a silent form**: two steps of the same embedded silent form from
     publicly equal pre-states leave the post-states publicly equal. This is the flow premise at
@@ -259,12 +265,12 @@ theorem klassen_stummer_fluss_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) 
       ((⟨k, o, t⟩ : Schrittform).nach c v₂ 0)
     rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
   by_cases hp : oeffentlich (E.fluss.kontrolle f) = true
-  · exact (fluss.2 hp c v₁ () Semantik.plan (F.nach c v₁ 0)
-      v₂ () Semantik.plan (F.nach c v₂ 0) gleich fs1 fs2).1
+  · exact (fluss.2 hp c v₁ () Semantik.plan ((⟨k, o, t⟩ : Schrittform).nach c v₁ 0)
+      v₂ () Semantik.plan ((⟨k, o, t⟩ : Schrittform).nach c v₂ 0) gleich fs1 fs2).1
   · have hfalse : oeffentlich (E.fluss.kontrolle f) = false := by
       cases hpub : oeffentlich (E.fluss.kontrolle f) <;> simp_all
-    have n1 := (fluss.1 c v₁ () Semantik.plan (F.nach c v₁ 0) fs1).2 hfalse
-    have n2 := (fluss.1 c v₂ () Semantik.plan (F.nach c v₂ 0) fs2).2 hfalse
+    have n1 := (fluss.1 c v₁ () Semantik.plan ((⟨k, o, t⟩ : Schrittform).nach c v₁ 0) fs1).2 hfalse
+    have n2 := (fluss.1 c v₂ () Semantik.plan ((⟨k, o, t⟩ : Schrittform).nach c v₂ 0) fs2).2 hfalse
     exact quellzustandGleich_trans E (quellzustandGleich_symm E n1.1)
       (quellzustandGleich_trans E gleich n2.1)
 
