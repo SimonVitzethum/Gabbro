@@ -174,6 +174,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Autoritaet
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public import Core.Ast.Semantik.Runtime.Faden.Offen
+public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
