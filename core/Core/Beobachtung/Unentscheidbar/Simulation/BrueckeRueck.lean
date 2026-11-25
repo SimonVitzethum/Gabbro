@@ -57,6 +57,6 @@ theorem laufErhaeltRueckgabe (blk : List Befehl) (r : Rahmen) (k : Nat) (rk : Ra
     | none => simp only [hmid, laufKein] at hrk; cases hrk
     | some rm =>
       have hstep : Schritt blk (some rm) = some rk := by simpa only [hmid] using hrk
-      exact (ih rm hmid).trans (schrittErhaeltRueckgabe blk rm rk hstep hall)
+      exact (schrittErhaeltRueckgabe blk rm rk hstep hall).trans (ih rm hmid)
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
