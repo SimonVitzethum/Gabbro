@@ -152,44 +152,6 @@ theorem einheitVon_bereit_vollzug (P : Katalog.Plattform) (t : Ast.Unit)
       (i.nach c s)).mpr ⟨rfl, rfl⟩
   · exact Ast.Semantik.Befehl.vollzug _ i tick c s
 
-/-- A delivery dispatches its handler on the delivery core. -/
-theorem zustandseintritt_laeuft {s s' : Ast.Semantik.Zustand} {k : Maschine.Kern}
-    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat}
-    (h : s' = Maschine.Zustandseintritt s k id c nmi) :
-    (s'.kerne k).laeuft = some c := by
-  rw [h]
-  rfl
-
-/-- A delivery leaves every other core alone. -/
-theorem zustandseintritt_anderer {s s' : Ast.Semantik.Zustand} {k k' : Maschine.Kern}
-    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat} (hne : k ≠ k')
-    (h : s' = Maschine.Zustandseintritt s k' id c nmi) :
-    (s'.kerne k).laeuft = (s.kerne k).laeuft ∧ (s'.kerne k).stapel = (s.kerne k).stapel := by
-  have h1 : ((Maschine.Zustandseintritt s k' id c nmi).kerne k).laeuft = (s.kerne k).laeuft := by
-    show (Function.update s.kerne k' _ k).laeuft = _
-    rw [Function.update_of_ne hne]
-  have h2 : ((Maschine.Zustandseintritt s k' id c nmi).kerne k).stapel = (s.kerne k).stapel := by
-    show (Function.update s.kerne k' _ k).stapel = _
-    rw [Function.update_of_ne hne]
-  rw [h]
-  exact ⟨h1, h2⟩
-
-/-- The stack of a delivery is the pushed preempted context on top of the old stack. -/
-theorem zustandseintritt_stapel {s s' : Ast.Semantik.Zustand} {k : Maschine.Kern}
-    {c : Maschine.Kontext} {nmi : Bool} {id : Nat × Nat}
-    (h : s' = Maschine.Zustandseintritt s k id c nmi) :
-    ∀ v n, (v, n) ∈ (s'.kerne k).stapel →
-      (v = (s.kerne k).laeuft ∧ n = (s.kerne k).nmiAktiv) ∨ (v, n) ∈ (s.kerne k).stapel := by
-  intro v n mem
-  have h1 : ((Maschine.Zustandseintritt s k id c nmi).kerne k).stapel =
-      ((s.kerne k).laeuft, (s.kerne k).nmiAktiv) :: (s.kerne k).stapel := rfl
-  rw [h, h1] at mem
-  cases List.mem_cons.mp mem with
-  | inl htop =>
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
-    exact Or.inl ⟨rfl, rfl⟩
-  | inr hrest => exact Or.inr hrest
-
 /-- Every context the elaborated unit dispatches runs on a valid core, as does every
     saved preemption: only the entry context starts dispatched (on its assigned core),
     deliveries name valid cores, crashes reset to core zero. -/
@@ -198,8 +160,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
     {η : Maschine.I.Lauf (einheitVon P t)} (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η)
-    {tick : Nat} {s : Ast.Semantik.Zustand} :
-    ρ.zeit.zustand tick = some s →
+    {tick : Nat} {s : Ast.Semantik.Zustand} (hz : ρ.zeit.zustand tick = some s) :
     (∀ k c, (s.kerne k).laeuft = some c → k < H.kernzahl) ∧
     (∀ k v n, (v, n) ∈ (s.kerne k).stapel → ∀ c, v = some c → k < H.kernzahl) := by
   have konform : ρ.hw.konform (einheitVon P t).katalog H := lauf.2.1
@@ -288,8 +249,11 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) seq
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
                   fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) ukerne
-                cases aktion with
+                cases hakt : plan.aktion with
                 | intern =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | intern =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -298,6 +262,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | warte =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | warte =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -306,6 +273,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | sperre =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | sperre =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -314,6 +284,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | frage =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | frage =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -322,6 +295,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       rw [ustack] at h
                       exact ihs k w m h c hc
                 | verbrauche =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | verbrauche =>
                     have vuk : v.kerne = u.kerne := rfl
                     refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                     · rw [skerne, vuk, ukerne] at h
@@ -329,8 +305,11 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     · rw [sstack, vuk] at h
                       rw [ustack] at h
                       exact ihs k w m h c hc
-                | @rueckkehr k _ _ _ =>
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                | rueckkehr =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | @rueckkehr k _ _ _ =>
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skerne] at h
                   by_cases heq : k = k'
                   · subst heq
