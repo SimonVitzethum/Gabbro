@@ -132,13 +132,13 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      change List.Forall₂ _ (NiedrigeBeob E ρ₁ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))])
-                        ((NiedrigeBeob E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
-                          ((NiedrigeBeob E ρ₁ predictor t).length + 1))
-                      have htake : (NiedrigeBeob E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
+                      change List.Forall₂ _ (NiedrigeBeob.praefix E ρ₁ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))])
+                        ((NiedrigeBeob.praefix E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
+                          ((NiedrigeBeob.praefix E ρ₁ predictor t).length + 1))
+                      have htake : (NiedrigeBeob.praefix E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
                           ((NiedrigeBeob E ρ₁ predictor t).length + 1) =
-                          (NiedrigeBeob E ρ₂ predictor t).take
-                            ((NiedrigeBeob E ρ₁ predictor t).length) ++
+                          (NiedrigeBeob.praefix E ρ₂ predictor t).take
+                            ((NiedrigeBeob.praefix E ρ₁ predictor t).length) ++
                             [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))] := by
                         rw [List.take_append]
                         simp only [hlen, List.take_succ_eq_append_getElem, List.getElem?_eq_none,
@@ -167,34 +167,25 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           rfl
                         · intro c
                           dsimp only [EndeSicht, Zustand.wiederanlauf, Zustand.start]
-                          by_cases hc : c = E.einrichtung.wiederanlauf.eintritt
-                          · rw [if_pos hc]
-                            rfl
-                          · rw [if_neg hc]
-                            rfl
                         · intro x
                           dsimp only [Zustand.wiederanlauf, Denotation.unit,
                             Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                           rfl
                         · intro c
                           dsimp only [AntwortSicht]
-                          have hn1 : (s₁.wiederanlauf E.einrichtung.wiederanlauf t
-                              (nachAbsturz s₁.persistenz)).naechsteAntwort c = s₁.naechsteAntwort c := by
+                          have hn : (s₁.wiederanlauf E.einrichtung.wiederanlauf t
+                              (nachAbsturz s₁.persistenz)).naechsteAntwort c =
+                              (s₂.wiederanlauf E.einrichtung.wiederanlauf t
+                              (nachAbsturz s₂.persistenz)).naechsteAntwort c := by
                             dsimp only [Zustand.naechsteAntwort, Zustand.wiederanlauf, Zustand.angekommen]
-                            rw [hantworten, hverbraucht, hverworfen]
-                          have hn2 : (s₂.wiederanlauf E.einrichtung.wiederanlauf t
-                              (nachAbsturz s₂.persistenz)).naechsteAntwort c = s₂.naechsteAntwort c := by
-                            dsimp only [Zustand.naechsteAntwort, Zustand.wiederanlauf, Zustand.angekommen]
-                            rfl
-                          rw [hn1, hn2]
-                          rw [geraete_antwort_gleich (d := d) hq₁]
+                            rw [hantworten, hverbraucht]
+                          rw [hn]
                       · dsimp only [Zustand.wiederanlauf, Denotation.unit,
                           Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                         rfl
-                      · dsimp only [Zustand.wiederanlauf]
-                        by_cases hc : c = E.einrichtung.wiederanlauf.eintritt
-                        · rw [if_pos hc]; rfl
-                        · rw [if_neg hc]; rfl
+                      · dsimp only [Zustand.wiederanlauf, Denotation.unit,
+                          Gabbro.Core.Ast.LowLevel.Device.unit, setup]
+                        rfl
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
