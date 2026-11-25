@@ -9,7 +9,7 @@
   obligations of the generic `Quellform.statements` template, repeated per form:
 
   * `ImplAussage` only restates the implementation step of the class: for every instruction of the frame-only
-    classes `lokal` and `ruf` (all of the current set, `Befehl.klasse_privat`) `Befehl.impl` is the ideal step
+    classes `lokal` and `ruf` (every instruction a source form elaborates to, `Befehl.Privat`) `Befehl.impl` is the ideal step
     of its class (`Befehl.impl_privat`). It holds for EVERY form and cannot tell a correct command from a
     wrong one. `falschesLiteralForm` below is a form whose command is provably not the literal command,
     yet it satisfies the obligation. This is the "only talks about ideal = impl" case.
