@@ -137,7 +137,7 @@ private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umge
           | wartet _ eq _ => rw [eq] at hs; cases hs
           | schritt _ laufstep => cases laufstep
       | some s0 =>
-          have ihs := ih s0 rfl
+          have ihs := ih s0 hv
           rw [hv, hs] at tak
           cases tak with
           | wartet label eq _ =>
