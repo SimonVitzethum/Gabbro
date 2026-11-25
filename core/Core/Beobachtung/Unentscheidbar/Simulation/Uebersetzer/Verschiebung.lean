@@ -49,6 +49,7 @@ theorem auswertenMitPc (p : Nat) (b : Befehl) (r : Rahmen)
   | ende => simp only [Befehl.auswerten, mitPc]
   | springeWenn q wv d =>
     simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
+    split <;> rfl
   | zurueckSprung d =>
     have hpc : (p + r.pc) - d = p + (r.pc - d) := by
       have hd : d ≤ r.pc := hz d rfl
