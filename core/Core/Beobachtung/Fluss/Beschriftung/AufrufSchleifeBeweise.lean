@@ -19,7 +19,7 @@ theorem sicht_definiere (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
       { r.sicht β with
         pc := r.pc + skip
         temp := fun s => if oeffentlich (β.temp (r.pc + skip) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + skip)) 0 r.lokale
+        lokale := maskiereLokal (β.lokal (r.pc + skip)) 0 r.lokale
         funktionen :=
           ⟨name, r.pc + 1, ps, res, glob, meas, calls, effs⟩ :: r.funktionen } := rfl
 
@@ -34,9 +34,9 @@ theorem definiereSicht : DefiniereSichtAussage := by
     · simp only [hp, if_true]
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal (r₁.pc + skip)) 0 r₁.lokale =
-      maskiere (β.lokal (r₁.pc + skip)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal (r₁.pc + skip)) 0 r₁.lokale =
+      maskiereLokal (β.lokal (r₁.pc + skip)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   have hF : (⟨name, r₁.pc + 1, ps, res, glob, meas, calls, effs⟩ : Funktion) ::
         r₁.funktionen =
       (⟨name, r₂.pc + 1, ps, res, glob, meas, calls, effs⟩ : Funktion) ::
@@ -65,7 +65,7 @@ theorem sicht_setzePasszahl_some (β : Beschriftung) (r : Rahmen) (stelle : Nat)
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 r.lokale
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 r.lokale
         zaehler := Function.update r.zaehler (r.pc + stelle)
           (some value.zahl.wert.toNat) } := rfl
 
@@ -82,9 +82,9 @@ theorem setzePasszahlSicht : SetzePasszahlSichtAussage := by
     · simp only [hp, if_true]
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   cases hZc : r₁.zahl quelle with
   | none =>
     have hZ₂ : r₂.zahl quelle = none := by rw [← hZ, hZc]

@@ -25,11 +25,11 @@ structure Beschriftung where
 def Beschriftung.alleOeffentlich : Beschriftung := {}
 
 /-- Mask the entries of a local stack whose level is not public; `i` is the position of the head. -/
-def maskiere (label : Nat → Beobachtung.Etikett) :
+def maskiereLokal (label : Nat → Beobachtung.Etikett) :
     Nat → List (Option Dynamisch) → List (Option Dynamisch)
   | _, [] => []
   | i, x :: xs =>
-    (if Beobachtung.oeffentlich (label i) = true then x else none) :: maskiere label (i + 1) xs
+    (if Beobachtung.oeffentlich (label i) = true then x else none) :: maskiereLokal label (i + 1) xs
 
 /-- The public view of a frame at its own program counter: secret temporaries, locals and
     the result are replaced by `none`, everything else is kept. Two frames are public-equal
@@ -37,22 +37,22 @@ def maskiere (label : Nat → Beobachtung.Etikett) :
 def Rahmen.sicht (β : Beschriftung) (r : Rahmen) : Rahmen :=
   { r with
     temp := fun s => if Beobachtung.oeffentlich (β.temp r.pc s) = true then r.temp s else none
-    lokale := maskiere (β.lokal r.pc) 0 r.lokale
+    lokale := maskiereLokal (β.lokal r.pc) 0 r.lokale
     rueckgabe := if Beobachtung.oeffentlich β.ergebnis = true then r.rueckgabe else none }
 
 theorem oeffentlich_leer : Beobachtung.oeffentlich (∅ : Beobachtung.Etikett) = true := by
   simp only [Beobachtung.oeffentlich, decide_eq_true_eq]
 
-theorem maskiere_leer (i : Nat) (xs : List (Option Dynamisch)) :
-    maskiere (fun _ => (∅ : Beobachtung.Etikett)) i xs = xs := by
+theorem maskiereLokal_leer (i : Nat) (xs : List (Option Dynamisch)) :
+    maskiereLokal (fun _ => (∅ : Beobachtung.Etikett)) i xs = xs := by
   induction xs generalizing i with
   | nil => rfl
   | cons x xs ih =>
-    simp only [maskiere, oeffentlich_leer, if_true, ih]
+    simp only [maskiereLokal, oeffentlich_leer, if_true, ih]
 
 /-- With every component public the view is the frame itself. -/
 theorem sicht_alleOeffentlich (r : Rahmen) : r.sicht .alleOeffentlich = r := by
-  simp only [Rahmen.sicht, Beschriftung.alleOeffentlich, oeffentlich_leer, if_true, maskiere_leer]
+  simp only [Rahmen.sicht, Beschriftung.alleOeffentlich, oeffentlich_leer, if_true, maskiereLokal_leer]
 
 /-- Equal views have equal program counters: control is never masked. -/
 theorem sicht_pc {β : Beschriftung} {r₁ r₂ : Rahmen} (h : r₁.sicht β = r₂.sicht β) :

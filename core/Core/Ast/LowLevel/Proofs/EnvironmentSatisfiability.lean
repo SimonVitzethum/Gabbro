@@ -93,7 +93,7 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
         .definiere mainName [] none 0 3 false [] none, .blockEnde 0, .rueckVoid, .starte mainName, .ende] at present
       simp only [List.mem_cons, List.not_mem_nil, or_false] at present
       rcases present with same | same | same | same | same | same <;> cases same <;>
-        first | exact Or.inl rfl | exact Or.inr rfl
+        first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
     · intro b present frame
       change b ∈ [.waehleUmgebung name .biosInterrupt .biosServices,
         .definiere mainName [] none 0 3 false [] none, .blockEnde 0, .rueckVoid, .starte mainName, .ende] at present

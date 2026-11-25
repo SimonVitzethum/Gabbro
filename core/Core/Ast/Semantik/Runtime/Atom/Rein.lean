@@ -53,7 +53,7 @@ theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein 
   all_goals
     repeat' first
       | exact Or.inl rfl
-      | exact Or.inr rfl
+      | exact Or.inr (Or.inl rfl)
       | refine ⟨?_, ?_⟩
 
 private theorem argsCode_rein (slot : Nat) (args : List (TypedExpr scope)) : (argsCode slot args).Rein := by
@@ -72,7 +72,7 @@ private theorem optionCode_rein (slot : Nat) (value : OptionInitializer scope co
     | present value _ => exact expr_rein _ _
   · first
       | exact Or.inl rfl
-      | exact Or.inr rfl
+      | exact Or.inr (Or.inl rfl)
 
 theorem stmt_rein (tree : Stmt result before after) : (stmt tree).Rein := by
   refine @Stmt.rec result
@@ -89,7 +89,7 @@ theorem stmt_rein (tree : Stmt result before after) : (stmt tree).Rein := by
   all_goals
     repeat' first
       | exact Or.inl rfl
-      | exact Or.inr rfl
+      | exact Or.inr (Or.inl rfl)
       | refine ⟨?_, ?_⟩
 
 theorem bracedBlock_rein (tree : BracedBlock result scope) : (bracedBlock tree).Rein := by
@@ -110,7 +110,7 @@ private theorem functionCode_rein {result : Option WrittenType} {scope : Scope}
       bracedBlock_rein, true_and]
     repeat' first
       | exact Or.inl rfl
-      | exact Or.inr rfl
+      | exact Or.inr (Or.inl rfl)
       | exact trivial
       | refine ⟨?_, ?_⟩
 
@@ -147,7 +147,7 @@ private theorem unitBody_rein {before after : Scope} (body : UnitBody before aft
 
 theorem programm_rein (tree : Ast.Unit) : (programm tree).Rein := by
   simp only [programm, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, unitBody_rein, true_and]
-  exact ⟨Or.inr rfl, Or.inl rfl⟩
+  exact ⟨Or.inr (Or.inl rfl), Or.inl rfl⟩
 
 /-- **Every elaborated fragment of every category is frame-only.** -/
 theorem fragment_rein (category : Category) (tree : category.Tree) : (fragment category tree).Rein := by

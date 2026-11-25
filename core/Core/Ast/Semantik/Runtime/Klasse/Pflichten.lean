@@ -110,7 +110,8 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -203,6 +204,10 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   cases k with
   | lokal => exact ⟨[Semantik.plan], _, rfl, rfl⟩
   | ruf => exact ⟨[Semantik.plan], _, rfl, rfl⟩
+  | maskiere => exact ⟨[Semantik.plan], _, rfl, rfl⟩
+  | prioritaet => exact ⟨[Semantik.plan], _, rfl, rfl⟩
+  | sendeUnterbrechung => exact ⟨[Semantik.plan], _, rfl, rfl⟩
+  | leiteLeitung => exact ⟨[Semantik.plan], _, rfl, rfl⟩
   | lesen m => exact Schrittform.zugriffsschritt_total ⟨.lesen m, o, t⟩ c s
   | schreiben m => exact Schrittform.zugriffsschritt_total ⟨.schreiben m, o, t⟩ c s
   | rmw m => exact Schrittform.zugriffsschritt_total ⟨.rmw m, o, t⟩ c s
@@ -234,6 +239,10 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
   cases k with
   | lokal => exact Befugt.privat (List.cons.inj step.1).1
   | ruf => exact Befugt.privat (List.cons.inj step.1).1
+  | maskiere => exact Befugt.privat (List.cons.inj step.1).1
+  | prioritaet => exact Befugt.privat (List.cons.inj step.1).1
+  | sendeUnterbrechung => exact Befugt.privat (List.cons.inj step.1).1
+  | leiteLeitung => exact Befugt.privat (List.cons.inj step.1).1
   | lesen m =>
     rcases step with ⟨_, same, _⟩ | ⟨g, v, _, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -392,6 +401,10 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
   | zaun m => cases hk
   | lokal => cases hk
   | ruf => cases hk
+  | maskiere => cases hk
+  | prioritaet => cases hk
+  | sendeUnterbrechung => cases hk
+  | leiteLeitung => cases hk
   | sperre a => cases hk
   | frage => cases hk
   | starte => cases hk

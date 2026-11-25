@@ -76,7 +76,7 @@ private theorem Quellform.program_occurrence {category : Category} {args : Type}
 private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustand} {s : Zustand} {b : Befehl}
     (reach : (p.einheit platform).system.IErreichbar start s)
     (head : (p.einheit platform).system.kopf s eintritt = some b)
-    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
   .schritt eintritt () [plan] reach
       ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩

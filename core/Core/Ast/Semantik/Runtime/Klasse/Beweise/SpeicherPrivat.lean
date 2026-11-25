@@ -1,12 +1,13 @@
 /-
   File:      core/Core/Ast/Semantik/Runtime/Klasse/Beweise/SpeicherPrivat.lean
-  Subject:   THE MEMORY LEG OF THE PRIVATE CLASSES (MK-03). A step of `lokal`, `ruf` or `frage` records no
+  Subject:   THE MEMORY LEG OF THE PRIVATE CLASSES (MK-03, MK-20). A step of `lokal`, `ruf`, `frage`
+             or one of the four interrupt-control classes records no
              memory access that needs a handle: a private step runs the internal protocol action, and a
              question adds only the outside event of `FuehrtAus.frage`, whose memory label is `.aussen`.
              Both shapes leave the ledger and the rights of the state unchanged, so `ZugriffGebucht` is
              vacuous, `NeueWirkungen` holds with `neu = []` and `FreigabenGueltig` has no release to check.
-             The statement is pinned through `KlassenAussagen`; this file only proves it for the three
-             classes named in the brief (the lock class is excluded in `Klasse/Sicherheit`).
+             The statement is pinned through `KlassenAussagen`; this file only proves it for the classes
+             named in the brief (the lock class is excluded in `Klasse/Sicherheit`).
 -/
 module
 
@@ -87,14 +88,15 @@ private theorem privat_fertig {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int 
       in `Klasse/Sicherheit` and pinned through `KlassenAussagen`; the proof only unfolds the class rule
       and reads the trace of `FuehrtSchrittAus`. -/
 theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
-    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ ∃ m, k = .zaun m) :
+    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ (∃ m, k = .zaun m) ∨ k = .maskiere ∨
+      k = .prioritaet ∨ k = .sendeUnterbrechung ∨ k = .leiteLeitung) :
     KlassenSpeicherbeinAussage k := by
   intro _ ι E f F hkF emb hw t c w vor zwischen nach plan spur kopf impl aus
   have implIdeal : F.ideal c vor w [plan] zwischen := by
     change (F.regel).impl c vor w [plan] zwischen
     rw [← emb.regel]
     exact impl
-  rcases hk with rfl | rfl | rfl | ⟨m, rfl⟩
+  rcases hk with rfl | rfl | rfl | ⟨m, rfl⟩ | rfl | rfl | rfl | rfl
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .lokal at hkF
     subst kF
@@ -170,6 +172,46 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
       obtain ⟨form, buchung, rechte⟩ :=
         intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
       exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
+  · obtain ⟨kF, o, ue⟩ := F
+    change kF = .maskiere at hkF
+    subst kF
+    simp only [Schrittform.ideal] at implIdeal
+    obtain ⟨same, after⟩ := implIdeal
+    subst zwischen
+    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    obtain ⟨form, buchung, rechte⟩ :=
+      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+    exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
+  · obtain ⟨kF, o, ue⟩ := F
+    change kF = .prioritaet at hkF
+    subst kF
+    simp only [Schrittform.ideal] at implIdeal
+    obtain ⟨same, after⟩ := implIdeal
+    subst zwischen
+    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    obtain ⟨form, buchung, rechte⟩ :=
+      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+    exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
+  · obtain ⟨kF, o, ue⟩ := F
+    change kF = .sendeUnterbrechung at hkF
+    subst kF
+    simp only [Schrittform.ideal] at implIdeal
+    obtain ⟨same, after⟩ := implIdeal
+    subst zwischen
+    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    obtain ⟨form, buchung, rechte⟩ :=
+      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+    exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
+  · obtain ⟨kF, o, ue⟩ := F
+    change kF = .leiteLeitung at hkF
+    subst kF
+    simp only [Schrittform.ideal] at implIdeal
+    obtain ⟨same, after⟩ := implIdeal
+    subst zwischen
+    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    obtain ⟨form, buchung, rechte⟩ :=
+      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+    exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
 
 /-- A step with the empty trace and no new effect releases nothing and books no access, whatever it does to the
     holdings of the ledger. -/

@@ -103,7 +103,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   have headBind : E.system.kopf s₆ eintritt = some bind := atHead rfl local₆ rfl rfl rfl
   have extend {s : Zustand} {b : Befehl} (reach : E.system.IErreichbar s₀ s)
       (head : E.system.kopf s eintritt = some b)
-      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
       E.system.IErreichbar s₀ (b.nach eintritt s) :=
     .schritt eintritt () [plan] reach
       ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
@@ -117,7 +117,7 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
       (head : E.system.kopf s eintritt = some b) (live : ((b.nach eintritt s).lokal eintritt).stopp = none)
       (pushes : ((b.nach eintritt s).lokal eintritt).fortsetzungen.length =
         (s.lokal eintritt).fortsetzungen.length + 1)
-      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) : LaufenderRuf platform start b :=
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) : LaufenderRuf platform start b :=
     ⟨unit, Ast.print (category := .unit) unit, s, Ast.parse_print _, reach, head,
       ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
       ⟨b, head, (b.impl_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩, live, pushes⟩
