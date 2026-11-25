@@ -201,7 +201,7 @@ theorem scratchNeAus {frei aus s : Nat} (hle : frei ≤ s) (haus : aus < frei) :
 /-- Reading back an exact integer slot yields its bounds and value. -/
 theorem zahlOfNat (t : Rahmen) (s N : Nat) (h : t.temp s = some (natVal N)) :
     t.zahl s = some ⟨((N : Nat) : Int), ((N : Nat) : Int), Zahl.literal ((N : Nat) : Int)⟩ := by
-  show (((t.temp s).bind alsGanzzahl) = _
+  show ((t.temp s).bind alsGanzzahl) = _
   rw [h]
   rfl
 
