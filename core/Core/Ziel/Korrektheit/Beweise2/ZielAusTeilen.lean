@@ -42,6 +42,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 open Gabbro.Core.Maschine
+open Gabbro.Core.Fortschritt
 
 variable (hang :
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
@@ -51,6 +52,8 @@ variable (hang :
       ∀ η : Maschine.I.Lauf (einheitVon P t),
         Maschine.I.Laeufe (einheitVon P t) η → Maschine.I.Sim (einheitVon P t) ρ η →
         ∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c)
+
+include hang
 
 /-- The middle part of `GabbroZielForm (R₀ P B)`: from every admissible start a run, and one ideal run that
 refines every implementation run. Only the no-hang premise is extra; all other legs are existing theorems. -/
@@ -69,7 +72,7 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
   intro bildG formG _ schranken _
   constructor
   · intro a E hbez hacc H hwH s zul
-    exact lauf_ab_start hwH zul
+    exact lauf_ab_start E hwH zul
   · intro a E hbez hacc H hwH ρ laufR
     obtain ⟨t, _, hElab, hZul⟩ := hbez
     change E = einheitVon P t at hElab
@@ -112,22 +115,22 @@ theorem zielAusTeilenMitLuecken
     · intro a
       exact text_wohlgeformt P a
     · intro a E E' hE hE'
-      exact designated_funktional P a E E' hE hE'
+      exact bezeichnet_funktional P a E E' hE hE'
     · intro f
       exact formG f
     · intro E hE
-      exact akzeptiert_katalog E hE
+      exact Annahme.akzeptiert_katalog E hE
     · intro K hK
-      exact katalog_nichtLeer K hK
+      exact Katalog.katalog_nichtLeer K hK
     · intro a E hbez hacc H hwH
       obtain ⟨t, _, hElab, hZul⟩ := hbez
       change E = einheitVon P t at hElab
       have img : (einheitVon P t).bild.gueltig (einheitVon P t).katalog.plattform.ziel :=
         bildG t hZul
       subst E
-      exact zulStart_erfuellbar hwH img
-    · intro a E hbez hacc H s hw' zul fair
-      obtain ⟨ρ, run, st, hwEq⟩ := fairer_lauf zul fair
+      exact Katalog.zulStart_erfuellbar hwH img
+    · intro a E hbez hacc H s hwLauf hw zul fair
+      obtain ⟨ρ, run, st, hwEq⟩ := fairer_lauf E zul fair
       exact ⟨⟨E, ρ⟩, rfl, run, st, hwEq⟩
     · intro E hacc
       exact idealLuecke E hacc
@@ -136,7 +139,8 @@ theorem zielAusTeilenMitLuecken
     · intro E H₁ H₂ ρ₁ s₂ hacc hw₁ hw₂ laufR gleiche zulStart niedrig
       rcases ρ₁ with ⟨E₁, ρ₁'⟩
       change E₁ = E ∧ Maschine.Laeufe E₁ H₁ ρ₁' at laufR
-      have run₁ : Maschine.Laeufe E H₁ ρ₁' := laufR.1 ▸ laufR.2
+      subst E₁
+      have run₁ : Maschine.Laeufe E H₁ ρ₁' := laufR.2
       obtain ⟨ρ₂', run₂, stEq, polEq⟩ :=
         (niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig
       constructor
@@ -149,10 +153,11 @@ theorem zielAusTeilenMitLuecken
         rcases ρ₂ with ⟨E₂, ρ₂''⟩
         change E₂ = E ∧ Maschine.Laeufe E₂ H₂ ρ₂'' at lauf₂
         change E₂ = E ∧ ∃ h : E₂ = E, Beobachtung.GleichePolitik E ρ₁' (h ▸ ρ₂'') at pol₂
+        subst E₂
         obtain ⟨_, h, pol⟩ := pol₂
         cases h
         exact ((niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig).2
-          ρ₂'' (laufR.1 ▸ lauf₂.2) st₂ pol
+          ρ₂'' lauf₂.2 st₂ pol
 
 /-- The goal follows from the scheduler premise in place of the progress leg, with the three gaps supplied. -/
 theorem zielAusTeilenAusScheduler
