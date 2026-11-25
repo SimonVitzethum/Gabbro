@@ -1,6 +1,7 @@
 module
 public import Core.Katalog.Lauf
 public import Core.Katalog.Spekulation
+public import Core.Maschine.Absturz
 public import Core.Maschine.Kontext
 public import Mathlib.Data.Finset.Empty
 public import Mathlib.Data.Finset.Lattice.Basic
@@ -10,6 +11,7 @@ public import Mathlib.Data.Finset.Lattice.Basic
 
 namespace Gabbro.Core.Beobachtung
 
+open Katalog Maschine
 
 /-- Timing declarations identify the required hardware duration row and the cost of the fallback. -/
 structure Zeitdeklaration where
@@ -48,10 +50,20 @@ structure Schrankendaten (L Lok : Type) where
   zeitstand : Lok → List Zeitmarke := fun _ => []
   durchlauf : Nat → Option Nat := fun _ => none
   durchlaufstand : Lok → List (Nat × Nat) := fun _ => []
+  /-- A restart discards the volatile part of every local state, so no cost mark of an aborted
+      pass survives. The default stand is empty for every state and discharges this by reflexivity;
+      a unit that exposes local marks supplies the proof for its own clearing operation. -/
+  durchlaufstand_nachVerwerfenLeer : ∀ [Fluechtig Lok] (l : Lok),
+    durchlaufstand (Fluechtig.verwerfen l) = [] := by
+    intro _ l
+    rfl
+  /-- The same clearing applies to the time marks. -/
+  zeitstand_nachVerwerfenLeer : ∀ [Fluechtig Lok] (l : Lok),
+    zeitstand (Fluechtig.verwerfen l) = [] := by
+    intro _ l
+    rfl
 
 def Schrankendaten.leer : Schrankendaten L Lok := {}
-
-open Katalog Maschine
 
 /-- Compartments ordered by inclusion, with union as join and intersection as meet.
     The empty label is public. -/
