@@ -127,8 +127,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         cases he
                       · rw [if_neg hc] at he
                         cases he
-                    have hbeob₁ := geraete_absturz_beob_tick hlabel hz₁ hn₁ hneu₁
-                    have hbeob₂ := geraete_absturz_beob_tick labEq hz₂ hn₂ hneu₂
+                    have hbeob₁ := geraete_absturz_beob_tick (predictor := predictor) hlabel hz₁ hn₁ hneu₁
+                    have hbeob₂ := geraete_absturz_beob_tick (predictor := predictor) labEq hz₂ hn₂ hneu₂
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨?_, ?_, ?_, ?_⟩
                     · rw [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
