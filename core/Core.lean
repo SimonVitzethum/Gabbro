@@ -95,6 +95,7 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.Lockstep
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInvariant
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturz
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
