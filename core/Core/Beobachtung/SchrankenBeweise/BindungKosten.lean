@@ -111,6 +111,7 @@ theorem bindungKlassenKHRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f 
   · have hocc := laufkosten_schritt_besetzt spurEq
     have hcost := kostenSlack (h := h) t kostenP
     rw [Wirkungsklasse.kostenZeile_kosten] at hcost
+    show UnterGrenze (einheitMitSchranken P u).schranken.kosten (Laufkosten ρ 0 (t + 1))
     rw [hocc]
     exact hcost
   · intro l c' a n bound own
@@ -158,6 +159,7 @@ theorem bindungKostenProtokoll_unterSlack (P : Katalog.Plattform) (u : UnitMitSc
   refine ⟨?_, ?_⟩
   · have hocc := laufkosten_schritt_besetzt spurEq
     have hcost := kostenSlack (h := h) t kostenP
+    show UnterGrenze (einheitMitSchranken P u).schranken.kosten (Laufkosten ρ 0 (t + 1))
     rw [hocc]
     exact hcost
   · intro l c' a n bound own
