@@ -178,6 +178,17 @@ theorem intSqSuccLe (s n : Nat) :
       (s + 1) * (s + 1) ≤ n := by
   rw [intSuccCast, ← Nat.cast_mul, Nat.cast_le]
 
+/-- A disequality of offsets lifts to a disequality of scratch slots:
+    cancelling the common base leaves a closed literal disequality, which
+    the decision guard admits. Replaces `omega` on open slot goals. -/
+theorem addNeLinks {frei a b : Nat} (h : a ≠ b) : frei + a ≠ frei + b :=
+  fun e => h (Nat.add_left_cancel e)
+
+/-- A slot below the scratch base differs from every scratch slot:
+    below the base means below the base plus any offset. -/
+theorem ltNeAdd {t frei k : Nat} (h : t < frei) : t ≠ frei + k :=
+  Nat.ne_of_lt (Nat.lt_of_lt_of_le h (Nat.le_add_right frei k))
+
 /-- Adding one on the machine is the successor as an exact integer. -/
 theorem packAddSucc (s : Nat) : (Ganzzahl.pack ⟨_, _,
     Arith.auswerten .add (Zahl.literal (s : Int)) (Zahl.literal ((1 : Nat) : Int))⟩) = natVal (s + 1) := by
