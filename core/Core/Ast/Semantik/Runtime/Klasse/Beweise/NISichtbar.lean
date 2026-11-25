@@ -1,0 +1,151 @@
+/-
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/Beweise/NISichtbar.lean
+  Subject:   WHAT THE FLOW PREMISES OF THE NON-READING CLASSES ACTUALLY GIVE (MK-03). The pinned
+             `KlassenNIAussage` asks for `RegelNIPflicht` from three premises: the unit's flow rule for
+             the one form `f`, visibility of the form's operands, and the class not reading. This file
+             proves the part that follows from those premises alone: the public-state comparison is
+             transitive, two steps of the SAME form from public-equal states end in public-equal
+             states with the same plan view and the same public output, and the operands of a form are
+             equal on public-equal states.
+
+             It also proves that the premises do NOT determine the form at the head of the second run:
+             a unit can satisfy them and still have `system.kopf` return different forms on two
+             publicly equal states. The remaining step of `KlassenNIAussage` -- that the second run
+             takes the same form, plus the coupled graph step that matches the low events -- is
+             therefore not a consequence of the pinned premises. The pinned statements are unchanged.
+-/
+module
+
+public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Katalog Beobachtung
+open Gabbro.Core.Speicher (Modus)
+
+/-! ### What follows from the flow premises -/
+
+/-- The public state comparison is transitive: every component is an equality of a projection. -/
+theorem Beobachtung.QuellzustandGleich.trans
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
+    {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {v u n : Maschine.Zustand L Ort Wert Raum Lok Grund}
+    (h₁ : Beobachtung.QuellzustandGleich E v u) (h₂ : Beobachtung.QuellzustandGleich E u n) :
+    Beobachtung.QuellzustandGleich E v n := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro c p hp
+    exact (h₁.1 c p hp).trans (h₂.1 c p hp)
+  · intro c
+    exact (h₁.2.1 c).trans (h₂.2.1 c)
+  · intro x
+    exact (h₁.2.2.1 x).trans (h₂.2.2.1 x)
+  · exact h₁.2.2.2.1.trans h₂.2.2.2.1
+  · exact h₁.2.2.2.2.1.trans h₂.2.2.2.2.1
+  · intro c
+    exact (h₁.2.2.2.2.2 c).trans (h₂.2.2.2.2.2 c)
+
+/-- Visibility of a form's operands, specialised to two public-equal states at one context. -/
+theorem Schrittform.operand_gleich {ι : Type} {E : Klasseneinheit ι} {F : Schrittform}
+    (sicht : F.Operandensicht E) {c : Kontext} {v₁ v₂ : Zustand}
+    (gleich : Beobachtung.QuellzustandGleich E v₁ v₂) :
+    F.operand (v₁.lokal c) = F.operand (v₂.lokal c) :=
+  sicht c v₁ v₂ gleich
+
+/-- **Two steps of the same form from public-equal states stay public-equal.** This is the whole
+    content of `RegelFluss` for a pair of steps: for a public control form the rule states the
+    agreement directly; for a private control form each step preserves the public state and has an
+    empty plan/output view, and transitivity of the comparison completes the claim. -/
+theorem Beobachtung.RegelFluss.schrittpaar_gleich
+    {ι : Type} {E : Klasseneinheit ι} {f : ι} (fl : Beobachtung.RegelFluss E f)
+    {c : Kontext} {v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂}
+    (gleich : Beobachtung.QuellzustandGleich E v₁ v₂)
+    (s₁ : Beobachtung.FormSchritt E f c v₁ w₁ p₁ u₁)
+    (s₂ : Beobachtung.FormSchritt E f c v₂ w₂ p₂ u₂) :
+    Beobachtung.QuellzustandGleich E u₁ u₂ ∧ PlanSicht E p₁ = PlanSicht E p₂ ∧
+      AusgabeSicht E c v₁ u₁ = AusgabeSicht E c v₂ u₂ := by
+  by_cases pub : oeffentlich (E.fluss.kontrolle f) = true
+  · exact fl.2 pub c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ gleich s₁ s₂
+  · have o₁ := (fl.1 c v₁ w₁ p₁ u₁ s₁).2 pub
+    have o₂ := (fl.1 c v₂ w₂ p₂ u₂ s₂).2 pub
+    exact ⟨o₁.1.trans o₂.1, o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
+
+/-! ### The missing premise: the head of the second run is not determined -/
+
+/-- A secret compartment, as in the other flow countermodels. -/
+def NISichtbar.geheim : Beobachtung.Etikett := {0}
+
+theorem NISichtbar.geheim_verborgen : oeffentlich NISichtbar.geheim = false := by
+  apply decide_eq_false
+  intro eq
+  have mem : 0 ∈ NISichtbar.geheim := Finset.mem_singleton_self _
+  rw [eq] at mem
+  exact Finset.notMem_empty _ mem
+
+/-- A writing form that names no particular cell. -/
+def NISichtbar.schreibform (m : Modus) : Schrittform :=
+  ⟨.schreiben m, fun _ => Operand.keiner, fun r _ _ => r⟩
+
+/-- A unit embedding the writing form at `true`. Its head function reads the persistence medium,
+    which is NOT part of the public state comparison: two publicly equal states carry different
+    forms, while the flow and visibility premises for `true` are satisfied. -/
+def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
+  let F := NISichtbar.schreibform m
+  let E₀ := Regeleinheit .x86_64 F.regel
+  { E₀ with
+    etiketten := { E₀.etiketten with ort := fun _ => NISichtbar.geheim,
+      bootByte := fun _ => NISichtbar.geheim }
+    fluss := { lokal := fun _ => .ganz NISichtbar.geheim,
+      kontrolle := fun _ => NISichtbar.geheim }
+    system := { E₀.system with
+      kopf := fun s _c => if s.persistenz.dauerhaft 0 = 0 then some true else some false } }
+
+/-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
+def NISichtbar.start : AussenStart :=
+  ⟨0, fun _ => some 0, [], fun _ => none,
+    ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩⟩
+
+/-- The state of the unit with the persistence medium's first byte set to `b`. -/
+def NISichtbar.zustand (m : Modus) (b : UInt8) : Zustand :=
+  let v := (I.start (NISichtbar.einheit m) NISichtbar.start).2
+  { v with persistenz := { v.persistenz with dauerhaft :=
+      fun n => if n = 0 then b else v.persistenz.dauerhaft n } }
+
+/-- Changing the hidden medium preserves the public state. -/
+theorem NISichtbar.quellzustand_gleich (m : Modus) :
+    Beobachtung.QuellzustandGleich (NISichtbar.einheit m)
+      (NISichtbar.zustand m 0) (NISichtbar.zustand m 1) := by
+  refine ⟨?_, ?_, ?_, rfl, rfl, ?_⟩
+  · intro c p hp
+    rfl
+  · intro c
+    rfl
+  · intro x
+    rfl
+  · intro c
+    rfl
+
+/-- The embedded form, its visibility premise and `liest = false` all hold. -/
+theorem NISichtbar.premissen (m : Modus) :
+    (NISichtbar.schreibform m).klasse = .schreiben m ∧
+      (NISichtbar.schreibform m).Eingebettet (NISichtbar.einheit m) true ∧
+      (.schreiben m : Wirkungsklasse).liest = false ∧
+      (NISichtbar.schreibform m).Operandensicht (NISichtbar.einheit m) := by
+  refine ⟨rfl, ⟨rfl, rfl, rfl⟩, rfl, ?_⟩
+  intro c v₁ v₂ gleich
+  rfl
+
+/-- Yet the two publicly equal states carry different forms at the head. -/
+theorem NISichtbar.kopf_nicht_offenbar (m : Modus) :
+    (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 0) eintritt ≠
+      (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt := by
+  intro h
+  have h0 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 0) eintritt = some true := by
+    rfl
+  have h1 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt = some false := by
+    rfl
+  rw [h0, h1] at h
+  cases h
+
+end Gabbro.Core.Ast.Semantik
