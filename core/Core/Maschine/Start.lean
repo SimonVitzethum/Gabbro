@@ -109,11 +109,9 @@ noncomputable def fairerSchritt (hw : HwLauf) (t : Nat)
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert) := by
   classical
   exact if h1 : ∃ ev next, Lauffolge E hw t s ev next ∧ BevorzugtSchritt hw t s ev then
-    let ev := Classical.choose h1
-    (Classical.choose (Classical.choose_spec h1), some ev)
+    (Classical.choose (Classical.choose_spec h1), some (Classical.choose h1))
   else if h2 : ∃ ev next, Lauffolge E hw t s ev next then
-    let ev := Classical.choose h2
-    (Classical.choose (Classical.choose_spec h2), some ev)
+    (Classical.choose (Classical.choose_spec h2), some (Classical.choose h2))
   else (s, none)
 
 theorem fairerSchritt_takt (hw : HwLauf) (t : Nat)
@@ -124,13 +122,13 @@ theorem fairerSchritt_takt (hw : HwLauf) (t : Nat)
   classical
   split
   · next h1 =>
-    obtain ⟨next, step, _⟩ := Classical.choose_spec h1
-    exact .schritt rfl step
-  · next _ h2 =>
-    obtain ⟨next, step⟩ := Classical.choose_spec h2
-    exact .schritt rfl step
-  · next h1 h2 =>
-    refine .wartet rfl rfl (fun ev next step => h2 ⟨ev, next, step⟩)
+    exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h1)).1
+  · next h1 =>
+    split
+    · next h2 =>
+      exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h2)).1
+    · next h2 =>
+      refine .wartet rfl rfl (fun ev next step => h2 ⟨ev, next, step⟩)
 
 /-- The fair schedule from an initial state: preferred dispatched-context steps everywhere. -/
 noncomputable def fairerFolge (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund)) :
