@@ -299,38 +299,6 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
     · intro run conforms t l h _ hne
       exact (hne rfl).elim
 
-/-- Part A alone is accepted: straight-line code with divisor 2. -/
-theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
-  let E := fragA.einheit .x86_64
-  have hklauseln : fragA.klauseln = .leer := codeFrag_klauseln _
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => b.lokal E rfl,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64, ?_⟩, ?_, ?_⟩
-  · apply aussen_gueltig_aus_kontext
-    intro run t s c w spur next step
-    cases step with
-    | kontext _ _ rule execute =>
-      obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer rfl rfl rfl
-  · intro run conforms
-    change (∀ pred ∈ fragA.klauseln.voraus, _) ∧
-      (∀ _ : I.Schnitt E run, ∀ pred ∈ fragA.klauseln.invariant, _) ∧
-      ∀ _ : I.Schnitt E run, _ → ∀ pred ∈ fragA.klauseln.sicher, _
-    rw [hklauseln]
-    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
-      fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨?_, ?_, ?_⟩
-    · intro run conforms t op args need
-      exact fragA_guard_hält run conforms t op args need
-    · intro run conforms t waiting
-      obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
-      obtain ⟨_, impossible, _⟩ := blocked c member
-      exact impossible
-    · intro run conforms t l h _ hne
-      exact (hne rfl).elim
-
 /-- The linked unit of the witness plan. -/
 def E_linked : Ast.Semantik.Einheit :=
   (verknuepfteFragmente planAB).einheit .x86_64
@@ -364,7 +332,7 @@ theorem boot_dispatch (s : AussenStart) (k : Nat) (assigned : s.assignment 0 = s
     (((I.start E_linked s).2).kerne k).laeuft = some eintritt := by
   show (if some k = s.assignment 0 then some eintritt else none) = some eintritt
   rw [assigned]
-  rfl
+  exact if_pos rfl
 
 /-- A head at rest is absent. -/
 theorem kopf_ruht {code : List Befehl} {s : Zustand} {c : Kontext}
@@ -384,7 +352,7 @@ theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
     (k : Nat) (assigned : s.assignment 0 = some k) :
     (hwLinked h k).konform E_linked.katalog h := by
   refine ⟨rfl, fun i => ?_⟩
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro core hc
     have heq : core = k := by
       cases hc
@@ -392,11 +360,11 @@ theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
     subst heq
     exact (zul.2.2.2.1 0 k assigned).2
   · intro core hc
-    exact Bool.false_ne_true hc
+    simp at hc
   · intro signal mem
     exact (List.not_mem_nil mem).elim
   · intro e hd
-    exact Bool.false_ne_true hd
+    simp at hd
   · intro hmed
     rcases hmed with hmed | hcrash <;> exact Bool.false_ne_true ‹_›
 
@@ -456,10 +424,10 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     simp only [kopf, hEqS, hEqL]
     exact hHead
   have stepT : I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog ρ.hw t
-      (ρ.zeit.zustand t) (.kontext () (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
+      (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
     .kontext hNoCrash hReadyT
       ⟨b, headT, (b.ideal_privat eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug _ _ _ _ _)
+      (b.vollzug _ _ _ _)
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
@@ -560,15 +528,19 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
   have baseL : (ρ.zeit.zustand 0).lokal = (sLinked s).lokal := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
+    rfl
   have baseS : (ρ.zeit.zustand 0).status = (sLinked s).status := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
+    rfl
   have baseK : (ρ.zeit.zustand 0).kerne = (sLinked s).kerne := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
+    rfl
   have baseF : (ρ.zeit.zustand 0).fragen = (sLinked s).fragen := by
     have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
     rw [e]
+    rfl
   have hwCrash : ∀ t, (ρ.hw.angebot t).crash = false := fun t => rfl
   have hwCore : ∀ t, (ρ.hw.angebot t).core = some k := fun t => rfl
   have hwInt : ∀ t, (ρ.hw.angebot t).interrupt = fun _ => false := fun t => rfl
@@ -594,35 +566,35 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
       sPre.fragen = ((I.start E_linked s).2).fragen → sPre.fragen = [] := by
     intro sPre heq
     rw [heq]
-  have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s) (sLinked1 s)
+  have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
     baseL baseS baseK baseF
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st1 := forceStep ρ hρ 1 k (.literal 1 2) (sLinked1 s) (sLinked2 s)
+  have st1 := forceStep ρ hρ 1 k (.literal 1 2) (sLinked1 s)
     (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
     st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st2 := forceStep ρ hρ 2 k (.teilen 0) (sLinked2 s) (sLinked3 s)
+  have st2 := forceStep ρ hρ 2 k (.teilen 0) (sLinked2 s)
     (hwCrash 2) (hwCore 2) (hwInt 2) hwInts (hwDel 2) (hwFrei 2)
     st1.2.1 st1.2.2.1 st1.2.2.2.1 st1.2.2.2.2
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st3 := forceStep ρ hρ 3 k (.literal 0 5) (sLinked3 s) (sLinked4 s)
+  have st3 := forceStep ρ hρ 3 k (.literal 0 5) (sLinked3 s)
     (hwCrash 3) (hwCore 3) (hwInt 3) hwInts (hwDel 3) (hwFrei 3)
     st2.2.1 st2.2.2.1 st2.2.2.2.1 st2.2.2.2.2
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st4 := forceStep ρ hρ 4 k (.literal 1 0) (sLinked4 s) (sLinked5 s)
+  have st4 := forceStep ρ hρ 4 k (.literal 1 0) (sLinked4 s)
     (hwCrash 4) (hwCore 4) (hwInt 4) hwInts (hwDel 4) (hwFrei 4)
     st3.2.1 st3.2.2.1 st3.2.2.2.1 st3.2.2.2.2
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st5 := forceStep ρ hρ 5 k (.zurueckSprung 3) (sLinked5 s) (sLinked6 s)
+  have st5 := forceStep ρ hρ 5 k (.zurueckSprung 3) (sLinked5 s)
     (hwCrash 5) (hwCore 5) (hwInt 5) hwInts (hwDel 5) (hwFrei 5)
     st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2
-    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
   obtain ⟨ev5, hspur5, hEqL6, hEqS6, hEqK6, hEqF6⟩ := st5
   have hHead6 : kopf (verknuepfteFragmente planAB).code (sLinked6 s) eintritt =
@@ -655,7 +627,10 @@ theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage :=
     rcases hm with rfl | rfl
     · exact fragA_akzeptiert
     · exact fragB_akzeptiert
-  have hlinked := hlink planAB _ planAB_linke hparts
+  have hlink' : ∀ (plan : Bauplan) (frag : Fragment), linke plan = some frag →
+      (∀ m ∈ plan.module, Akzeptiert (m.fragment.einheit plan.plattform)) →
+      Akzeptiert (frag.einheit plan.plattform) := hlink
+  have hlinked := hlink' planAB _ planAB_linke hparts
   exact linked_nicht_akzeptiert hlinked
 
 end Gabbro.Core.Linken
