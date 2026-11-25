@@ -200,10 +200,12 @@ theorem stGraph_psc {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv
   obtain ⟨ha, hb, hs⟩ := hp
   have ha' : (stLab mw mr a).modus = .sc := ha
   have hb' : (stLab mw mr b).modus = .sc := hb
-  rcases stGraph_scb h hs with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;>
-    first
-      | exact absurd ha' (by intro hh; cases hh)
-      | exact absurd hb' (by intro hh; cases hh)
+  rcases stGraph_scb h hs with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · exact absurd ha' (by intro hh; cases hh)
+  · exact absurd hb' (by intro hh; cases hh)
+  · exact absurd ha' (by intro hh; cases hh)
+  · exact absurd ha' (by intro hh; cases hh)
+  · exact absurd ha' (by intro hh; cases hh)
 
 theorem stGraph_konsistent {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) :
     (stGraph mw mr).Konsistent where
