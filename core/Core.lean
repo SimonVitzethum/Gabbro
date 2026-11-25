@@ -41,6 +41,7 @@ public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
+public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
