@@ -86,7 +86,9 @@ theorem PrueferKlauselnKorrektAussage.nichtTrivial :
     ∃ C : Pruefer, ¬ PrueferKlauselnKorrektAussage C := by
   refine ⟨prueferNimmtAlles, ?_⟩
   intro h
-  exact verletzteInvariante_verletzt _ (h _ _ rfl)
+  have hacc : prueferNimmtAlles.pruefeKlauseln Katalog.Plattform.x86_64 verletzteInvariante
+      = true := rfl
+  exact verletzteInvariante_verletzt _ (h _ _ hacc)
 
 theorem PrueferWaechterKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferWaechterKorrektAussage C := by
