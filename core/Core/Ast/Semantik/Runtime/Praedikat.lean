@@ -9,7 +9,7 @@
   denotation is preserved by every command step and the checker's footprint rule
   (`pruefeBefehlErhalt` in `Core/Ast/Semantik/Runtime/UnitInvarianten.lean`) decides preservation
   by disjointness of observed cells and write footprint. Memory commands (MK-04) populate
-  `Befehl.schreibFussabdruck`; the stability lemma `haelt_stabil` already carries the rule.
+  `Befehl.schreibtMoeglich` (the cells an access may write, `Atom/Fussabdruck`); the stability lemma `haelt_stabil` already carries the rule.
 
   Evaluation `werteAus` is a plain `Bool` function and `werteAus_richtig` ties it to `haelt`;
   `pruefeStart`/`pruefeNeustart` decide the loader and crash-recovery premises of the safety
@@ -20,6 +20,7 @@ module
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
 
 @[expose] public section
 
@@ -222,15 +223,14 @@ theorem Praedikat.gilt_of_initial (q : Praedikat) (s₁ s₂ : Zustand)
 /-- The checker decides preservation per command: accept iff the command writes no observed
     cell of any declared predicate. -/
 def pruefeBefehlErhalt (ps : List Praedikat) (b : Befehl) : Bool :=
-  ps.all fun q => q.beobachtet.all fun z => decide (z ∉ b.schreibFussabdruck)
+  ps.all fun q => q.beobachtet.all fun z => b.schreibtMoeglich z == false
 
 /-- An accepted command writes no cell observed by the checked predicates. -/
 theorem pruefeBefehlErhalt_richtig (ps : List Praedikat) (b : Befehl) (q : Praedikat)
     (hmem : q ∈ ps) (ok : pruefeBefehlErhalt ps b = true) (z : Zelle)
-    (hm : z ∈ q.beobachtet) : z ∉ b.schreibFussabdruck := by
+    (hm : z ∈ q.beobachtet) : b.schreibtMoeglich z = false := by
   simp only [pruefeBefehlErhalt, List.all_eq_true] at ok
   have hdec := ok q hmem z hm
-  simp only [decide_eq_true_eq] at hdec
-  exact hdec
+  simpa only [beq_iff_eq] using hdec
 
 end Gabbro.Core.Ast.Semantik

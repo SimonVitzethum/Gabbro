@@ -232,6 +232,9 @@ public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
+public import Core.Ast.Semantik.Runtime.Atom.Quelle
+public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
@@ -250,6 +253,7 @@ public import Core.Ziel.Korrektheit.Beweise.ImplBestimmt
 public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
+public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle

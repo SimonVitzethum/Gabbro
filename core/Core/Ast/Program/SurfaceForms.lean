@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Program.BatchSurface
+public import Core.Ast.Program.AccessGrammar
 
 @[expose] public section
 
@@ -255,6 +256,29 @@ theorem forever_syntax_erfuellbar (scope : Scope) (result : Option (Ty .value)) 
 -- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
 theorem forever_entry (scope : Scope) (result : Option (Ty .value)) : (forever scope result).Entry :=
   ⟨fun _ _ => forever_reads, forever_print, forever_syntax_erfuellbar scope result⟩
+
+/-- `mem` with one access form: a load or a store of one cell of an owned region in a memory order. -/
+def access (scope : Scope) (result : Option (Ty .value)) : Rule (.statement scope result) (AccessStatement scope) where
+  tree := fun a => ⟨a.1, .access a.2⟩
+  production := fun a tokens => StmtReads result scope tokens ⟨a.1, .access a.2⟩ []
+
+-- Mirror Stmt.printReads for the canonical derivation.
+theorem access_print {scope : Scope} {result : Option (Ty .value)} (a : AccessStatement scope) :
+    (access scope result).production a (((Category.statement scope result).printPieces ((access scope result).tree a)).map PrintedToken.value) := by
+  change (Category.statement scope result).reads _ _
+  exact Category.reads_print _ _
+
+-- Mirror Rule.Entry.reads using the corresponding production constructor.
+theorem access_reads {scope : Scope} {result : Option (Ty .value)} {a : AccessStatement scope} {tokens : List Token}
+    (read : (access scope result).production a tokens) :
+    (Category.statement scope result).reads tokens ((access scope result).tree a) := by exact read
+
+-- Mirror Rule.Entry.parse, using the canonical printer and the joint syntax proof.
+theorem access_entry (a : AccessStatement scope) (result : Option (Ty .value)) :
+    (access scope result).Entry where
+  reads := fun _ _ => access_reads
+  prints := access_print
+  erfuellbar := Rule.satisfiableOfPrint a (access_print a)
 
 structure ConstantArgs (scope : Scope) where
   name : Identifier

@@ -42,7 +42,7 @@ theorem trivialUnit_akzeptiert (P : Plattform) :
   let p := Ast.Semantik.fragment Ast.Category.unit trivialUnit
   change Annahme.Akzeptiert (p.einheit P)
   refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf p P ?_
-    (Ast.Semantik.fragment_rein Ast.Category.unit trivialUnit) ?_
+    trivialUnit_rein ?_
   · rfl
   · intro b present frame
     have code : p.code = [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
@@ -161,7 +161,7 @@ theorem NIAkzeptiertAussage.erfuellbar :
     ∃ (P : Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) ∧
       Beobachtung.Nichtinterferent (einheitVon P t) :=
   ⟨Plattform.x86_64, trivialUnit, trivialUnit_akzeptiert _,
-    niAkzeptiert _ _ (trivialUnit_akzeptiert _)⟩
+    niAkzeptiert_rein _ trivialUnit trivialUnit_rein (trivialUnit_akzeptiert _)⟩
 
 /-- Noninterference has content: the comparison premise of two low-equal runs with different high answers is
     satisfiable (`ni_erfuellbar` at the generic unit type). -/
@@ -172,10 +172,10 @@ def NIAkzeptiertAussage.nichtTrivial := Beobachtung.ni_erfuellbar
     `SchrankenAkzeptiertAussage` are the legs still open (`SchedulerFortschrittVoraussetzung`, M9). -/
 theorem ZielAusTeilenAussage.erfuellbar
     (fortschritt : FortschrittAkzeptiertAussage)
-    (schranken : SchrankenAkzeptiertAussage Plattform.x86_64) :
+    (schranken : SchrankenAkzeptiertAussage Plattform.x86_64) (zugriff : ZugriffNIFragmentAussage) :
     ∃ (P : Plattform) (B : FormBeleg), BildGueltigAussage P ∧ FormenGedecktAussage P B ∧
       FortschrittAkzeptiertAussage ∧ SchrankenAkzeptiertAussage P ∧ NIAkzeptiertAussage P :=
-  ⟨Plattform.x86_64, beleg, bildGueltig _, beleg_gedeckt, fortschritt, schranken, niAkzeptiert _⟩
+  ⟨Plattform.x86_64, beleg, bildGueltig _, beleg_gedeckt, fortschritt, schranken, niAkzeptiert _ zugriff⟩
 
 /-- A leg of the composition is a real restriction: a registry whose form never occurs breaks coverage. -/
 theorem ZielAusTeilenAussage.nichtTrivial :
@@ -208,10 +208,11 @@ def SicherheitNichtLeerInstanzAussage.nichtTrivial := Gabbro.Core.Sicherheit.sic
 /-- The two legs of safety hold jointly once the concrete refutations are supplied (open: the four witnesses
     at `Ast.Semantik.Einheit`); acceptance of the elaborated empty unit is proved here. -/
 theorem SicherheitAusTeilenAussage.erfuellbar
-    (nichtLeer : SicherheitNichtLeerInstanzAussage Plattform.x86_64 beleg) :
+    (nichtLeer : SicherheitNichtLeerInstanzAussage Plattform.x86_64 beleg)
+    (zugriff : Ast.Semantik.ZugriffSicherAussage) :
     ∃ (P : Plattform) (B : FormBeleg), SicherheitAkzeptiertAussage P ∧
       SicherheitNichtLeerInstanzAussage P B :=
-  ⟨Plattform.x86_64, beleg, sicherheitAkzeptiert _, nichtLeer⟩
+  ⟨Plattform.x86_64, beleg, sicherheitAkzeptiert _ zugriff, nichtLeer⟩
 
 /-- The safety conclusion is not trivially true: memory safety can fail on an admitted run at the generic
     unit type. -/

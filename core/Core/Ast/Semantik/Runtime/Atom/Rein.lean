@@ -1,13 +1,14 @@
 /-
   File:      core/Core/Ast/Semantik/Runtime/Atom/Rein.lean
-  Subject:   A SOURCE FRAGMENT CONTAINS NO ACCESS INSTRUCTION (MK-04). The access instructions
-             (`Befehl.zugriff`) are written by the access forms of the memory model; no source form of the
-             present grammar elaborates to one. Every instruction an elaborated fragment contains is therefore
-             frame-only (`Befehl.Privat`), and the statements about EVERY elaborated unit that rest on the template
-             step of the frame-only classes (`I.Bestimmt`, `I.Fortschritt`, the flow rule) keep holding for the
-             elaborated units, while a unit that does contain an access instruction owes the duties of its class
-             (`KlassenAussagen`, `ZugriffBefehlAussage`). The statement is proved once by the recursion over the
-             source tree, exactly as the elaboration of the clauses (`fragment_unit_invarianten`, `tabLeer`).
+  Subject:   FRAME-ONLY ELABORATED FRAGMENTS. Every instruction an elaborated fragment contains is frame-only
+             (`Befehl.Privat`) -- unless the source names an access form (`Stmt.access`, MK-04b), which
+             elaborates to `Befehl.zugriff`, or a lifecycle instruction (`Befehl.faden`) arrives from outside the
+             source trees. The unconditional form ("every elaborated fragment is frame-only") is therefore false,
+             with a `mem load` as witness; the statements below carry the code property as premise. The template
+             legs of the frame-only classes (`I.Bestimmt`, `I.Fortschritt`, the flow rule) apply to the fragments
+             that meet it, while a unit that does contain an access instruction owes the duties of its class
+             (`KlassenAussagen`, `ZugriffBefehlAussage`). The expression side holds unconditionally: no expression
+             elaborates to an access.
 -/
 module
 
@@ -56,6 +57,12 @@ theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein 
       | exact Or.inr (Or.inl rfl)
       | refine ⟨?_, ?_⟩
 
+/-- A binding statement is frame-only. -/
+theorem stmt_letValue_rein (name : Identifier) (ordinary : name.val ≠ "mut".toList) (value : Expr scope type) :
+    (stmt (Stmt.letValue (result := result) name ordinary value)).Rein := by
+  simp only [stmt, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, expr_rein, true_and]
+  exact Or.inl rfl
+
 private theorem argsCode_rein (slot : Nat) (args : List (TypedExpr scope)) : (argsCode slot args).Rein := by
   induction args generalizing slot with
   | nil => exact Fragment.rein_leer
@@ -74,88 +81,53 @@ private theorem optionCode_rein (slot : Nat) (value : OptionInitializer scope co
       | exact Or.inl rfl
       | exact Or.inr (Or.inl rfl)
 
-theorem stmt_rein (tree : Stmt result before after) : (stmt tree).Rein := by
-  refine @Stmt.rec result
-    (fun _ _ t => (stmt t).Rein)
-    (fun _ _ t => (block t).Rein)
-    (fun _ t => (bracedBlock t).Rein)
-    (fun _ _ _ _ t => (variantArms t).body.Rein)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
-  all_goals
-    intros
-    simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
-      ↓reduceIte, Fragment.rein_leer, Fragment.rein_einzel_iff, Fragment.rein_anhaengen_iff, expr_rein,
-      argsCode_rein, optionCode_rein, true_and, and_true]
-  all_goals
-    repeat' first
-      | exact Or.inl rfl
-      | exact Or.inr (Or.inl rfl)
-      | refine ⟨?_, ?_⟩
+/-- **A statement tree whose elaborated code has no access or lifecycle instruction is frame-only.**
+    The access form is the only source form with an access class; lifecycle instructions come from
+    outside the source trees. -/
+theorem stmt_rein (tree : Stmt result before after)
+    (h : ∀ b ∈ (stmt tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (stmt tree).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
-theorem bracedBlock_rein (tree : BracedBlock result scope) : (bracedBlock tree).Rein := by
-  have both := stmt_rein (Stmt.ite .trueLit tree tree)
-  simp only [stmt, expr, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff] at both
-  exact both.1.1.2
+theorem bracedBlock_rein (tree : BracedBlock result scope)
+    (h : ∀ b ∈ (bracedBlock tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (bracedBlock tree).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
 private theorem functionCode_rein {result : Option WrittenType} {scope : Scope}
-    (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
+    (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope)
+    (h : ∀ b ∈ (functionCode result measure body).code,
+      (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
     (functionCode result measure body).Rein := by
-  cases measure with
-  | none =>
-    simp only [functionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, Fragment.rein_leer,
-      bracedBlock_rein, true_and]
-    exact Or.inl rfl
-  | some m =>
-    simp only [functionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, expr_rein,
-      bracedBlock_rein, true_and]
-    repeat' first
-      | exact Or.inl rfl
-      | exact Or.inr (Or.inl rfl)
-      | exact trivial
-      | refine ⟨?_, ?_⟩
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
-private theorem decl_rein {before after : Scope} (d : Decl before after) : (decl d).Rein := by
-  cases d with
-  | constant name ordinary written valid value staticValue fits =>
-    simp only [decl, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, expr_rein, true_and]
-    exact Or.inl rfl
-  | function name ordinary parameters result valid decreases body distinct returns effects =>
-    simp only [decl, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, functionCode_rein, and_true]
-    exact Or.inl rfl
-  | record exported name fields valid distinct =>
-    simp only [decl, Fragment.rein_einzel_iff]
-    exact Or.inl rfl
-  | tagged exported name first tail valid distinct =>
-    simp only [decl, Fragment.rein_einzel_iff]
-    exact Or.inl rfl
-  | table item =>
-    simp only [decl, Fragment.rein_einzel_iff]
-    exact Or.inl rfl
-  | effectGroup item =>
-    simp only [decl, Fragment.rein_einzel_iff]
-    exact Or.inl rfl
-  | environment name abi row =>
-    simp only [decl, Fragment.rein_einzel_iff]
-    exact Or.inl rfl
+private theorem decl_rein {before after : Scope} (d : Decl before after)
+    (h : ∀ b ∈ (decl d).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (decl d).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
-private theorem unitBody_rein {before after : Scope} (body : UnitBody before after) : (unitBody body).Rein := by
-  induction body with
-  | done => exact Fragment.rein_leer
-  | step first rest ih =>
-    simp only [unitBody, Fragment.rein_anhaengen_iff]
-    exact ⟨decl_rein first, ih⟩
+private theorem unitBody_rein {before after : Scope} (body : UnitBody before after)
+    (h : ∀ b ∈ (unitBody body).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (unitBody body).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
-theorem programm_rein (tree : Ast.Unit) : (programm tree).Rein := by
-  simp only [programm, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, unitBody_rein, true_and]
-  exact ⟨Or.inr (Or.inl rfl), Or.inl rfl⟩
+theorem programm_rein (tree : Ast.Unit)
+    (h : ∀ b ∈ (programm tree).code, (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (programm tree).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
-/-- **Every elaborated fragment of every category is frame-only.** -/
-theorem fragment_rein (category : Category) (tree : category.Tree) : (fragment category tree).Rein := by
-  cases category with
-  | expression scope => exact expr_rein _ _
-  | statement scope result => exact stmt_rein _
-  | block scope result => exact bracedBlock_rein _
-  | unit => exact programm_rein tree
-  | declaration scope => exact decl_rein _
+/-- **Every elaborated fragment whose code has no access or lifecycle instruction is frame-only.** -/
+theorem fragment_rein (category : Category) (tree : category.Tree)
+    (h : ∀ b ∈ (fragment category tree).code,
+      (∀ form, b ≠ .zugriff form) ∧ ∀ form, b ≠ .faden form) :
+    (fragment category tree).Rein := by
+  intro b hb
+  exact Befehl.privat_von_kein_zugriff (h b hb).1 (h b hb).2
 
 end Gabbro.Core.Ast.Semantik

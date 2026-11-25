@@ -304,9 +304,4 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
     pure ⟨.teilfolge, (first.zahl.wert, last.zahl.wert, text.bytes.size)⟩
   | _, _ => none
 
-/-- The write footprint of a command: the shared cells it may write. Every command of the
-    current set is frame-only, so every footprint is empty; MK-04 fills this for memory
-    commands. The checker refuses preservation for observed cells in the footprint. -/
-def Befehl.schreibFussabdruck : Befehl → List Zelle := fun _ => []
-
 end Gabbro.Core.Ast.Semantik

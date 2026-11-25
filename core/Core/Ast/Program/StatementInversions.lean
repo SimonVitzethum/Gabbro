@@ -104,6 +104,9 @@ theorem StmtReads.assign_inversion
   | letOption mutable _ _ _ _ _ _ =>
     cases mutable
     all_goals cases (List.cons.inj (List.cons.inj same).2).1
+  | access accessRead =>
+    rw [← (List.cons.inj same).2] at accessRead
+    cases accessRead
   | _ => cases (List.cons.inj (List.cons.inj same).2).1
 
 theorem StmtReads.ret_inversion

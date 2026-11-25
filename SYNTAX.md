@@ -267,5 +267,33 @@ Resource-only handoffs and retirement emit no runtime words: `nachSig` erases
 the call inputs and appends exactly the outputs, and `retires` lowers through
 the existing ghost statement case. The source-to-IR retirement witnesses are
 implemented, pending the lead build. The dynamic escrow replay and the C08
-mint software-call/root-once admission remain open; Stage 0 continues to
+mint software-call/root-once admission remain open. Stage 0 continues to
 refuse mint effects and ghost value types at its metadata gate.
+
+### Memory access statements
+
+A statement that reads or writes one cell of an owned region names its order:
+
+```ebnf
+statement += "mem" ( load | store ) ;
+load       = "load" ident ":" type "=" region "," index "," mode ";" ;
+store      = "store" region "," index "," value "," mode ";" ;
+mode       = "na" | "rlx" | "ra" | "sc" ;
+```
+
+`region` is the name of an owned-region local, `index` and `value` are integer
+expressions. `mem load x : T = r, i, m;` evaluates `i`, reads one cell of `r`
+in mode `m` and binds the value read to `x` at the written type `T`;
+`mem store r, i, v, m;` evaluates `i` and `v` and writes one cell of `r` in
+mode `m`. The modes are the four of the memory model: `na` the plain access,
+`rlx` the relaxed atomic, `ra` the release-acquire atomic and `sc` the
+sequentially consistent one. The head word `mem` is reserved; the words after
+it are unreserved, so updates (exchange, compare-and-swap, fetch-and-add),
+the confirming observation and the publication extend the same form without
+reserving more.
+
+Each form elaborates to one access instruction (`Befehl.zugriff`) at the end
+of the evaluated operands; the write footprint of a store is its region,
+a load writes nothing. The registry carries the nine frame statements for the
+constructor; the joint satisfiability exhibits a load and a store stepped from
+canonical initialisation.

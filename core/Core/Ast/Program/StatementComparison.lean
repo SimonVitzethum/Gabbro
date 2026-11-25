@@ -11,14 +11,19 @@ open Gabbro.Core.Text
 namespace StatementComparison
 
 private theorem callNotReserved (call : DirectCall scope) (spelling : String)
-    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"])
+    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"])
     (same : Token.word call.name.val :: first = keyword spelling :: second) : False :=
   call.ordinary.2 (List.mem_map.mpr ⟨spelling, reserved, (Token.word.inj (List.cons.inj same).1).symm⟩)
 
 private theorem foreverReserved :
-    "forever" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"] :=
+    "forever" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"] :=
   List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
     (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))
+
+private theorem memReserved :
+    "mem" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"] :=
+  List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+    (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))))
 
 local macro "deny_statement" equality:ident : tactic =>
   `(tactic|
@@ -88,6 +93,7 @@ theorem directCall (call : DirectCall scope)
   | ite _ _ _ => exact (callNotReserved call "if" (List.Mem.tail _ (List.Mem.head _)) eq).elim
   | whileBounded _ _ _ _ _ _ _ => exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq).elim
   | forever _ _ _ => exact (callNotReserved call "forever" foreverReserved eq).elim
+  | access _ => exact (callNotReserved call "mem" memReserved eq).elim
   | variantMatch _ _ => exact (callNotReserved call "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) eq).elim
   | tupleBind _ _ _ _ => exact (callNotReserved call "let" (List.Mem.head _) eq).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
@@ -186,6 +192,31 @@ theorem forever (label : Option Identifier)
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
+theorem access (accessRead : AccessReads scope input ⟨after, form⟩ rest)
+    (accessDet : ∀ {b suffix}, AccessReads scope input b suffix →
+      (⟨after, form⟩ : AccessStatement scope) = b ∧ rest = suffix)
+    (other : StmtReads result scope (keyword "mem" :: input) b suffix) :
+    (⟨after, .access form⟩ : Statement result scope) = b ∧ rest = suffix := by
+  generalize eq : (keyword "mem" :: input) = tokens at other
+  cases other with
+  | access otherRead =>
+    cases (List.cons.inj eq).2
+    obtain ⟨sameForm, sameRest⟩ := accessDet otherRead
+    cases sameForm
+    exact ⟨rfl, sameRest⟩
+  | assignVar _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at accessRead
+    cases accessRead
+  | assignField _ _ _ _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at accessRead
+    cases accessRead
+  | directCall callRead =>
+    cases callRead
+    rename_i call _ _
+    exact (callNotReserved call "mem" memReserved eq.symm).elim
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
+  | _ => deny_statement eq
+
 theorem forRange (name : Identifier) (ordinary : ordinaryLocal name)
     (body : BracedBlock result (rangeBinding name low high :: scope))
     (lower : Expr scope (.int low lowHi)) (upper : Expr scope (.int highLo high))
@@ -280,6 +311,9 @@ theorem assignField (ref : Local scope (recordValueType name labels types)) (vis
   | forever _ otherLabel _ =>
     rw [← (List.cons.inj eq).2] at otherLabel
     exact otherLabel.not_dot.elim
+  | access otherAccess =>
+    rw [← (List.cons.inj eq).2] at otherAccess
+    cases otherAccess
   | variantMatch otherValue _ =>
     rw [← (List.cons.inj eq).2] at otherValue
     exact otherValue.not_dot.elim
@@ -389,5 +423,48 @@ theorem retOption (declared : result = some (indexOptionType count))
   · rcases assignment with ⟨_, rfl⟩ | ⟨_, _, rfl⟩ <;> cases valueRead
 
 end StatementComparison
+
+/-- **The productions of the access forms are deterministic**: two reads of the same tokens agree on the form and on
+    the rest. -/
+theorem AccessReads.deterministic (left : AccessReads scope input a rest)
+    (right : AccessReads scope input b rest') : a = b ∧ rest = rest' := by
+  generalize eq : input = tokens at right
+  cases left with
+  | load name ordinary written valid region visible receiverOrdinary typeRead indexRead modeRead =>
+    cases right with
+    | load otherName otherOrdinary otherWritten otherValid otherRegion otherVisible otherReceiver
+        otherType otherIndex otherMode =>
+      have nameEq : name.val = otherName.val := Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
+      cases Subtype.ext nameEq
+      cases (List.cons.inj (List.cons.inj (List.cons.inj eq).2).2).2
+      obtain ⟨rfl, rhsEq⟩ := typeRead.deterministic otherType
+      have regionName : region.binding.name.val = otherRegion.binding.name.val :=
+        Token.word.inj (List.cons.inj (List.cons.inj rhsEq).2).1
+      cases Local.nameVisible_unique region otherRegion visible otherVisible regionName
+      cases (List.cons.inj (List.cons.inj (List.cons.inj rhsEq).2).2).2
+      obtain ⟨sameIndex, indexRest⟩ := indexRead.deterministic otherIndex
+      cases sameIndex
+      cases (List.cons.inj indexRest).2
+      obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
+      cases (List.cons.inj modeRest).2
+      exact ⟨rfl, rfl⟩
+    | store _ _ _ _ _ _ => cases (List.cons.inj eq).1
+  | store region visible receiverOrdinary indexRead valueRead modeRead =>
+    cases right with
+    | load _ _ _ _ _ _ _ _ _ _ => cases (List.cons.inj eq).1
+    | store otherRegion otherVisible otherReceiver otherIndex otherValue otherMode =>
+      have regionName : region.binding.name.val = otherRegion.binding.name.val :=
+        Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
+      cases Local.nameVisible_unique region otherRegion visible otherVisible regionName
+      cases (List.cons.inj (List.cons.inj (List.cons.inj eq).2).2).2
+      obtain ⟨sameIndex, indexRest⟩ := indexRead.deterministic otherIndex
+      cases sameIndex
+      cases (List.cons.inj indexRest).2
+      obtain ⟨sameValue, valueRest⟩ := valueRead.deterministic otherValue
+      cases sameValue
+      cases (List.cons.inj valueRest).2
+      obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
+      cases (List.cons.inj modeRest).2
+      exact ⟨rfl, rfl⟩
 
 end Gabbro.Core.Ast
