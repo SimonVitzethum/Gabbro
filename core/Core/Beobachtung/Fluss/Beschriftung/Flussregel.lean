@@ -3,9 +3,9 @@ module
 public import Core.Beobachtung.Fluss.Beschriftung.Sprung
 public import Core.Beobachtung.Fluss.Beschriftung.AufgabenBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.AufrufSchleifeBeweise
-public import Core.Beobachtung.Fluss.Beschriftung.AggregatBeweise
-public import Core.Beobachtung.Fluss.Beschriftung.VarianteBeweise
-public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.AggregatBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.VarianteBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Ruf
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Schleife
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Aggregat
