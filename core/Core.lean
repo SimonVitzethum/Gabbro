@@ -227,6 +227,7 @@ public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
+public import Core.Ziel.Korrektheit.SicherheitAusTeilen
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
