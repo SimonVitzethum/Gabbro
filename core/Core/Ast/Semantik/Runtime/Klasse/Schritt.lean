@@ -218,7 +218,8 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
     | .beendet (.grund _) =>
       { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerWert) }
     | .ruht | .laeuft => s
-  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage | .wechsle => F.nach c s 0
+  | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .wechsle =>
+    F.nach c s 0
 
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The

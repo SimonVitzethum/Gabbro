@@ -285,9 +285,15 @@ theorem atomarWf (m : Modus) (hm : m ≠ .na) : (atomarGraph m).Wohlgeformt := b
   · simp only [Graph.istRmw, atomarGraph, atomarLab, reduceCtorEq] at h
   · exact hm
 
+/-- The two-event graph has no fence. -/
+theorem atomarKeinZaun (m : Modus) (a : AtomarEv) : ¬ (atomarGraph m).istZaun a := by
+  intro ha
+  cases a <;> simp only [Graph.istZaun, atomarGraph, atomarLab, reduceCtorEq] at ha
+
 /-- No `sw` edge exists: neither access is release or acquire. -/
 theorem atomarSwFalsch (a b : AtomarEv) : ¬ (atomarGraph .rlx).sw a b := by
-  rintro ⟨_, hstark, _, _, _, _, _⟩
+  intro h
+  obtain ⟨_, hstark, _⟩ := Graph.sw_klassisch (atomarKeinZaun .rlx a) (atomarKeinZaun .rlx b) h
   cases a <;> simp only [Graph.modus, atomarGraph, atomarLab, Modus.stark, reduceCtorEq] at hstark
 
 /-- Happens-before is empty. -/
@@ -313,7 +319,7 @@ theorem atomarKonsistent : (atomarGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    have hsc : (atomarGraph .rlx).sc a := hc.1
+    have hsc : (atomarGraph .rlx).sc a := Graph.psc_sc_links hc
     cases a <;> simp only [Graph.sc, Graph.modus, atomarGraph, atomarLab, reduceCtorEq] at hsc
   ohneLB := by
     refine azyklisch_von_rang atomarRang ?_
