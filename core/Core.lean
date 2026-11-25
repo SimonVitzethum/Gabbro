@@ -9,6 +9,8 @@ public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Text.Review.Befunde
 public import Core.Ast
+public import Core.Ast.Inventory.Entries.PointerTypeUse
+public import Core.Ast.Semantik.Runtime.ProgramKernSicherheit
 public import Core.Speicher
 public import Core.Speicher.Litmus.Iriw
 public import Core.Speicher.Litmus.ScFences
