@@ -26,6 +26,7 @@ module
 
 public import Core.Aussen.Frage.Aussagen
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
+public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 
 @[expose] public section
 
@@ -46,7 +47,8 @@ def VerbraucheKlasseAussage : Prop :=
     `Schrittform.ideal_total`, then unfold `Schrittform.ideal` at a `verbrauche` class. -/
 def VerbrauchePrivatAussage : Prop :=
   ∀ (F : Schrittform) (c : Kontext) (s : Zustand), F.klasse = .verbrauche →
-    ∃ (plans : List Plan) (u : Zustand), F.ideal c s () plans u ∧ plans = [Semantik.plan]
+    ∃ (plans : List Plan) (u : Zustand), F.ideal c s () plans u ∧
+      plans = [Gabbro.Core.Ast.Semantik.plan]
 
 /-- **An outside error is a reason exit.** The error is the reason of the end, not a bound value.
     Difficulty: leicht. Sketch: `rfl` on `aussenEnde`. -/
@@ -68,6 +70,7 @@ theorem verbrauchePrivat : VerbrauchePrivatAussage := by
   refine ⟨plans, u, step, ?_⟩
   obtain ⟨k, _o, _t⟩ := F
   cases h
+  simp only [Schrittform.ideal] at step
   exact step.1
 
 /-- An outside error is a reason exit. -/
