@@ -251,7 +251,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
     · obtain ⟨hBef, v, hv, hplanL, hzwischen⟩ := haut
@@ -261,7 +262,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
         schreibEreignisse, List.map_nil] at folge
@@ -291,7 +293,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
     · obtain ⟨hBef, v, hv, hplanL, hzwischen⟩ := haut
@@ -301,7 +304,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
         schreibEreignisse, decide_eq_true_eq] at folge
@@ -332,7 +336,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
     · obtain ⟨hBef, v, hv, hplanL, hzwischen⟩ := haut
@@ -342,7 +347,8 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rfl
       rw [hplanakt] at hfa
       obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
-      rw [hsperren, haussen, hvfa] at folge hnach
+      rw [hsperren, haussen] at folge
+      rw [hvfa] at hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
         schreibEreignisse, List.map_nil] at folge
