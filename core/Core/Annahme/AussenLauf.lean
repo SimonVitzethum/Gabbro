@@ -29,7 +29,8 @@ private theorem fragen_vor_aktion {t c s u s' a ls es}
     rcases mem with bisher | rfl
     · exact Nat.lt_succ_of_lt (alt ev bisher)
     · exact Nat.lt_succ_self _
-  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
+  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ | beende _
+    | wechsle _ _ _ _ =>
     exact fun _ mem => Nat.lt_succ_of_lt (alt _ (rahmen.fragen ▸ mem))
 
 private theorem fragen_vor_schritt {run t s w spur s'}

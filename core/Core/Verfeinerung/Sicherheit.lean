@@ -31,6 +31,10 @@ theorem FuehrtAus.verbrauch {t c aktion lock outside v}
       simp only [Zustand.naechsteAntwort, Zustand.angekommen, frame.antworten, frame.verbraucht, frame.verworfen]
     exact Zustand.verbrauche_verbrauch inner (same.trans ready)
   | rueckkehr _ _ => exact inner
+  | starte _ => exact inner
+  | verbinde _ => exact inner
+  | beende _ => exact inner
+  | wechsle _ _ _ _ => exact inner
 
 theorem FuehrtSchrittAus.verbrauch {t c plan spur}
     (step : FuehrtSchrittAus e t c s u plan spur s') (vorher : s.Verbrauch) : s'.Verbrauch := by

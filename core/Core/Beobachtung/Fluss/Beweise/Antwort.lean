@@ -38,7 +38,8 @@ theorem antwort_fuehrt_aus_fragen_leer {p : Fragment} (plattform : Plattform)
     (uLeer : u.fragen = []) (keinFrage : ∀ q, aktion ≠ .frage q) : v.fragen = [] := by
   cases aktionStep with
   | frage q => exact (keinFrage q rfl).elim
-  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
+  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ | beende _
+    | wechsle _ _ _ _ =>
       change u.fragen = []
       exact uLeer
 

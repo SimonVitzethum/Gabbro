@@ -29,6 +29,13 @@ theorem sperr_schritt_erfuellbar (c d : Kontext) :
       SperrSchritt .geben c ⟨some c, [d]⟩ ⟨some d, []⟩ :=
   ⟨.ticket (fun h => nomatch h) List.not_mem_nil, .nehmen (.frei c [d]), .geben (.besitzer c [d])⟩
 
+/-- **The protocol actions of a step.** The first six are the lock, question and handler protocol. The four
+    last ones are the thread lifecycle (MK-07):
+    * `starte`: start the thread `faden naechsterFaden`, which rests, and advance the counter;
+    * `verbinde kind`: join the context `kind`, which has ended;
+    * `beende`: end the acting thread (the form records its outcome in its own status);
+    * `wechsle kern kind`: run the running context `kind` on the core `kern`, which the acting context
+      holds or which is idle (a core start). -/
 inductive Aktion (L Bedingung : Type) where
   | intern
   | warte (b : Bedingung)
@@ -36,6 +43,10 @@ inductive Aktion (L Bedingung : Type) where
   | frage (q : Frage)
   | verbrauche (a : AntwortEreignis)
   | rueckkehr
+  | starte
+  | verbinde (kind : Kontext)
+  | beende
+  | wechsle (kern : Kern) (kind : Kontext)
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where
@@ -95,6 +106,8 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   persistenz : s'.persistenz = s.persistenz
   epoche : s'.epoche = s.epoche
   verworfen : s'.verworfen = s.verworfen
+  /-- The thread counter is the machine's: a form never moves it (`FuehrtAus.starte` does). -/
+  naechsterFaden : s'.naechsterFaden = s.naechsterFaden
 
 variable (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
 
@@ -120,6 +133,26 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
       FuehrtAus t c s u (.verbrauche a) [] [] (u.verbrauche c)
   | rueckkehr {k ausgang} (aktiv : KehrtZurueck s c k) (ende : u.status c = .beendet ausgang) :
       FuehrtAus t c s u .rueckkehr [] [] (Zustandsrueckkehr u k)
+  /-- **A thread start.** The machine, not the form, picks the new thread: it is the resting context with the
+      next number, which becomes running while the counter moves on. The form supplies the entry frame of
+      the new thread and what it hands over. -/
+  | starte (ruht : s.status (.faden s.naechsterFaden) = .ruht) :
+      FuehrtAus t c s u .starte [] []
+        { u with status := Function.update u.status (.faden s.naechsterFaden) .laeuft,
+                 naechsterFaden := s.naechsterFaden + 1 }
+  /-- **A join.** It takes place only when the joined context has ended; until then the joiner does not
+      step. -/
+  | verbinde {kind e} (fertig : s.status kind = .beendet e) :
+      FuehrtAus t c s u (.verbinde kind) [] [] u
+  /-- **A thread end.** The form sets the outcome in the status of the acting thread. -/
+  | beende {e} (ende : u.status c = .beendet e) : FuehrtAus t c s u .beende [] [] u
+  /-- **A switch and a core start.** The acting context holds the core or the core is idle; the context
+      switched to runs, rests on no core and is no other than the acting one. The core then runs it. -/
+  | wechsle {kern kind} (frei : (s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none)
+      (laeuft : s.status kind = .laeuft) (nirgends : ∀ k, (s.kerne k).laeuft ≠ some kind)
+      (anders : kind ≠ c) :
+      FuehrtAus t c s u (.wechsle kern kind) [] []
+        { u with kerne := Function.update u.kerne kern { u.kerne kern with laeuft := some kind } }
 
 /-- Physical opportunity, dispatch and a live context are required for a context step. -/
 def KannSchreiten (run : HwLauf) (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
