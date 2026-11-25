@@ -84,7 +84,7 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       · simp only [hsgeliefert, Zustand.verbrauche, setFrame]
       · simp only [hskerne, Zustand.verbrauche, setFrame]
       · simp only [hsstatus, Zustand.verbrauche, setFrame]
-      · simp only [hslokal, Zustand.verbrauche, setFrame]
+      · rw [hslokal]
       · simp only [hslokal, Zustand.verbrauche, setFrame, Function.update_self]
       · simp only [hsinitial, Zustand.verbrauche, setFrame]
       · simp only [hsrechte, Zustand.verbrauche, setFrame]
