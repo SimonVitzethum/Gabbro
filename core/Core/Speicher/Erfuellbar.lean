@@ -266,7 +266,7 @@ def zfRang : ZfEv → Nat
   | zfz => 3
   | zrx => 4
 
-theorem zf_po_trans {a b c : ZfEv} (h1 : zfPo a b) (h2 : zfPo b c) : zfPo a c := by
+theorem zf_po_trans (a b c : ZfEv) (h1 : zfPo a b) (h2 : zfPo b c) : zfPo a c := by
   revert h1 h2
   cases a <;> cases b <;> cases c <;> decide
 
@@ -343,8 +343,8 @@ theorem zf_kein_sw (a b : ZfEv) : ¬ zfGraph.sw a b := by
   intro h
   obtain ⟨w, x, r, hkopf, hrs, hrf, hrat, hlies, hschwanz⟩ := h
   revert hrf hrat
-  show zfRf x r → (zfGraph.modus r).atomar → False
-  cases x <;> cases r <;> decide
+  show zfRf x r → (zfLab r).modus.atomar → False
+  cases x <;> cases r <;> simp only [zfRf, zfLab, Modus.atomar, reduceCtorEq] <;> decide
 
 theorem zf_hb_in_po {a b : ZfEv} (h : zfGraph.hb a b) : zfPo a b := by
   refine transGen_von_trans zf_po_trans (transGen_mono (fun x y hs => ?_) h)
@@ -353,11 +353,13 @@ theorem zf_hb_in_po {a b : ZfEv} (h : zfGraph.hb a b) : zfPo a b := by
   · exact False.elim (zf_kein_sw x y hsw)
 
 theorem zf_hb_rang {a b : ZfEv} (h : zfGraph.hb a b) : zfRang a < zfRang b := by
-  refine transGen_von_trans (fun x y z hxy hyz => lt_trans hxy hyz)
-    (transGen_mono (fun x y hs => ?_) h)
-  rcases hs with hp | hsw
-  · exact zf_po_rang hp
-  · exact False.elim (zf_kein_sw x y hsw)
+  have hmono : Relation.TransGen (fun x y : ZfEv => zfRang x < zfRang y) a b :=
+    transGen_mono (r := zfGraph.hbSchritt) (fun x y hs => by
+      rcases hs with hp | hsw
+      · exact zf_po_rang hp
+      · exact False.elim (zf_kein_sw x y hsw)) h
+  exact transGen_von_trans (r := fun x y : ZfEv => zfRang x < zfRang y)
+    (fun x y z hxy hyz => Nat.lt_trans hxy hyz) hmono
 
 theorem zf_rb_leer {r w : ZfEv} (h : zfGraph.rb r w) : False := by
   obtain ⟨w', h1, h2, -⟩ := h
@@ -366,12 +368,14 @@ theorem zf_rb_leer {r w : ZfEv} (h : zfGraph.rb r w) : False := by
   cases w' <;> cases r <;> cases w <;> decide
 
 theorem zf_eco_rang {a b : ZfEv} (h : zfGraph.eco a b) : zfRang a < zfRang b := by
-  refine transGen_von_trans (fun x y z hxy hyz => lt_trans hxy hyz)
-    (transGen_mono (fun x y hs => ?_) h)
-  rcases hs with hrf | hmo | hrb
-  · exact zf_rf_rang hrf
-  · exact zf_mo_rang hmo
-  · exact False.elim (zf_rb_leer hrb)
+  have hmono : Relation.TransGen (fun x y : ZfEv => zfRang x < zfRang y) a b :=
+    transGen_mono (r := zfGraph.ecoSchritt) (fun x y hs => by
+      rcases hs with hrf | hmo | hrb
+      · exact zf_rf_rang hrf
+      · exact zf_mo_rang hmo
+      · exact False.elim (zf_rb_leer hrb)) h
+  exact transGen_von_trans (r := fun x y : ZfEv => zfRang x < zfRang y)
+    (fun x y z hxy hyz => Nat.lt_trans hxy hyz) hmono
 
 theorem zf_zaun {a : ZfEv} (h : zfGraph.istSCZaun a) : a = zfz := by
   cases a <;>
@@ -384,25 +388,27 @@ theorem zf_psc_rang {a b : ZfEv} (h : zfGraph.psc a b) : zfRang a < zfRang b := 
       rcases hscb with hp | hcross | hhb | hmo | hrb
       · exact zf_po_rang hp
       · obtain ⟨u, v, hpu, -, huv, hpv, -⟩ := hcross
-        exact lt_trans (zf_po_rang hpu) (lt_trans (zf_hb_rang huv) (zf_po_rang hpv))
-      · exact zf_hb_rang hhb
+        exact Nat.lt_trans (zf_po_rang hpu) (Nat.lt_trans (zf_hb_rang huv) (zf_po_rang hpv))
+      · exact zf_hb_rang hhb.1
       · exact zf_mo_rang hmo
       · exact False.elim (zf_rb_leer hrb)
     have ha : zfRang a ≤ zfRang c := by
       rcases hl with ⟨_, rfl⟩ | ⟨_, rfl | hac⟩
-      · exact le_rfl
-      · exact le_of_lt (zf_hb_rang hac)
+      · exact Nat.le_refl _
+      · exact Nat.le_of_lt (zf_hb_rang hac)
     have hb : zfRang d ≤ zfRang b := by
       rcases hr with ⟨_, rfl⟩ | ⟨_, rfl | hdb⟩
-      · exact le_rfl
-      · exact le_of_lt (zf_hb_rang hdb)
-    exact lt_of_le_of_lt ha (lt_of_lt_of_le hcd hb)
-  · subst a
+      · exact Nat.le_refl _
+      · exact Nat.le_of_lt (zf_hb_rang hdb)
+    exact Nat.lt_of_le_of_lt ha (Nat.lt_of_lt_of_le hcd hb)
+  · have hfa : a = zfz := zf_zaun hza
+    have hfb : b = zfz := zf_zaun hzb
+    subst a
     subst b
     rcases hord with hhb | ⟨c, d, hac, heco, hdb⟩
     · exact False.elim (Nat.lt_irrefl _ (zf_hb_rang hhb))
     · have hcycl : zfRang zfz < zfRang zfz :=
-        lt_trans (zf_hb_rang hac) (lt_trans (zf_eco_rang heco) (zf_hb_rang hdb))
+        Nat.lt_trans (zf_hb_rang hac) (Nat.lt_trans (zf_eco_rang heco) (zf_hb_rang hdb))
       exact False.elim (Nat.lt_irrefl _ hcycl)
 
 theorem zf_konsistent : zfGraph.Konsistent where
