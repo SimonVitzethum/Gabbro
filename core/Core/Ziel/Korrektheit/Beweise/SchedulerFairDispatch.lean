@@ -272,10 +272,13 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
           exact ihlive c k h
         · rw [eq] at h₁ h₂
           exact ihsingle c k₁ k₂ h₁ h₂
-  intro tick
-  obtain ⟨hlive, hsingle⟩ := key tick
-  exact ⟨fun c k h => hlive c k h,
-    fun c k₁ k₂ h₁ h₂ => hsingle c k₁ k₂ h₁ h₂⟩
+  refine ⟨?_, ?_⟩
+  · intro tick
+    obtain ⟨hlive, _⟩ := key tick
+    exact fun c k h => hlive c k h
+  · intro tick
+    obtain ⟨_, hsingle⟩ := key tick
+    exact fun c k₁ k₂ h₁ h₂ => hsingle c k₁ k₂ h₁ h₂
 
 /-- On an open suffix the dispatch core never changes: context steps and
     answers preserve all cores, a crash would discharge the context, and an
@@ -345,10 +348,10 @@ theorem einheitVon_dispatch_konstant (P : Katalog.Plattform) (t : Ast.Unit)
           rw [hsame] at hk₂
           have hkk : k₂ = k := ihsingle m c k₂ k hk₂ ih
           have hne : k ≠ k' := hkk ▸ heq
-          rw [skerne, einkern, if_neg hne]
+          simpa only [skerne, einkern, if_neg hne] using ih
       | absturz crash =>
         obtain ⟨offer, _, _, _, _⟩ := crash
-        have hcrash := (Maschine.I.absturz_am_schnitt η offer).1
+        have hcrash := (Maschine.I.absturz_am_schnitt (einheitVon P t) η offer).1
         exact ((offen.2 m hm).2.2 (Or.inr (Or.inl hcrash))).elim
     | wartet label eq _ =>
       rw [eq]

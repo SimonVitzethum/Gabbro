@@ -87,7 +87,7 @@ theorem scheduler_fuer_einheitVon : SchedulerFortschrittVoraussetzung := by
           have offerη : AbsturzAngeboten (einheitVon P t).katalog η.hw t' := by
             rw [matched.hardware]
             exact offer
-          have hspurη := (Maschine.I.absturz_am_schnitt η offerη).1
+          have hspurη := (Maschine.I.absturz_am_schnitt (einheitVon P t) η offerη).1
           exact ((opened.2 t' ht').2.2 (Or.inr (Or.inl hspurη))).elim
       obtain ⟨kstar, hkonst⟩ :=
         einheitVon_dispatch_konstant P t valid matched opened
