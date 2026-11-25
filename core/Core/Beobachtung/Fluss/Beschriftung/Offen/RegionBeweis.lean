@@ -283,7 +283,9 @@ theorem regionNI : RegionNIAussage := by
   | none =>
       have hn₂ : ρ₂.zeit.zustand (t + 1) = none := zustand_nach hz₂
       have still₂ : schrittBeob ρ₂ predictor t = [] := by
-        simp only [schrittBeob, hz₂]
+        cases hs : ρ₂.zeit.spur t with
+        | none => simp only [schrittBeob, hs]
+        | some _ => simp only [schrittBeob, hs, hz₂]
       have e₁ : NiedrigeBeob (unit op) ρ₁ predictor (t + 1) =
           NiedrigeBeob (unit op) ρ₁ predictor t := by
         change NiedrigeBeob (unit op) ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
