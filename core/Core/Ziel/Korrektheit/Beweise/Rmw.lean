@@ -96,7 +96,7 @@ theorem rmwWf : rmwGraph.Wohlgeformt where
     cases a <;> cases b <;> first | decide | exact absurd rfl hne
   rmw_nicht_na := by
     intro a h
-    cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, reduceCtorEq, not_false_eq_true]
+    cases a <;> decide
 
 /-- Every `hb` step is impossible: `po` is empty and every mode is relaxed, so `sw` is empty. -/
 theorem rmwHbSchrittFalsch (a b : RmwEv) : ¬ rmwGraph.hbSchritt a b := by

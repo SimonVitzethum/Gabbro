@@ -188,10 +188,12 @@ theorem senke_wf (A : Anhang Z k l P q) (hk : Z.graph.Konsistent) :
       · exact absurd (Fin.ext (ha'.trans hb'.symm)) hne
     rmw_nicht_na := fun a hrmw hna => by
       rcases senke_idx a with ha | ha
-      · unfold Graph.istRmw Graph.modus at hrmw hna
+      · unfold Graph.istRmw at hrmw
+        unfold Graph.modus at hna
         rw [senke_lab_alt a ha] at hrmw hna
         exact (hw.rmw_nicht_na ⟨a.1, ha⟩ hrmw) hna
-      · unfold Graph.istRmw Graph.modus at hrmw hna
+      · unfold Graph.istRmw at hrmw
+        unfold Graph.modus at hna
         rw [senke_lab_neu a ha] at hrmw hna
         exact (A.rmw_nicht_na hrmw) hna }
 
