@@ -37,17 +37,17 @@ def ZeitPrefix (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
           (fun i => (ρ.hw.angebot i).cycles)
           (fun i => Kontextkosten ρ c i (t' + 1 - i))
 
-/-- The B8 legs (hold bounds, cost, time) of `ImSchranken` at one prefix. Stack (B9) and
-    memory (B21) follow in later steps. -/
+/-- The B8 legs (hold bounds, cost, per-pass cost, time) of `ImSchranken` at one prefix.
+    Stack (B9) and memory (B21) follow in later steps. -/
 def B8Prefix (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) (t : Nat) : Prop :=
-  KostenPrefix E ρ t ∧ HaltePrefix E ρ t ∧ ZeitPrefix E ρ t
+  KostenPrefix E ρ t ∧ HaltePrefix E ρ t ∧ ZeitPrefix E ρ t ∧ DurchlaufPrefix E ρ t
 
-/-- The B8 conclusion: exactly the hold, cost and time legs of `ImSchranken`. The stack and
-    memory legs are separate obligations of the B9 and B21 steps. -/
+/-- The B8 conclusion: exactly the hold, cost, per-pass cost and time legs of `ImSchranken`.
+    The stack and memory legs are separate obligations of the B9 and B21 steps. -/
 def B8Abschluss (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) : Prop :=
-  HalteSchranken E ρ ∧ (∀ t, KostenPrefix E ρ t) ∧
+  HalteSchranken E ρ ∧ (∀ t, KostenPrefix E ρ t) ∧ (∀ t, DurchlaufPrefix E ρ t) ∧
     ∀ t s, ρ.zeit.zustand t = some s →
       ∀ c m, m ∈ E.schranken.zeitstand (s.lokal c) →
         ∃ d, E.schranken.zeit m.block = some d ∧
@@ -304,8 +304,9 @@ theorem b8_kh_aus_pflichten (pflicht : KHPflichten E) {h : Umgebung} {ρ : Lauf 
   intro l c a n own
   exact (alle (a + n)).2 l c a n (Nat.le_refl _) own
 
-/-- The B8 conclusion is exactly the hold, cost and time legs of `ImSchranken`; the remaining
-    two legs are the stack (B9) and memory (B21) obligations of the later steps. -/
+/-- The B8 conclusion is exactly the hold, cost, per-pass cost and time legs of
+    `ImSchranken`; the remaining two legs are the stack (B9) and memory (B21) obligations
+    of the later steps. -/
 theorem b8_abschluss_imSchranken {ρ : Lauf E} :
     B8Abschluss E ρ ∧
       (∀ t s, ρ.zeit.zustand t = some s →
@@ -315,10 +316,10 @@ theorem b8_abschluss_imSchranken {ρ : Lauf E} :
     ImSchranken E ρ := by
   simp only [B8Abschluss, ImSchranken, KostenPrefix]
   constructor
-  · rintro ⟨⟨halte, kosten, zeit⟩, speicher, stapel⟩
-    exact ⟨halte, kosten, fun t s h => ⟨speicher t s h, stapel t s h, zeit t s h⟩⟩
-  · rintro ⟨halte, kosten, rest⟩
-    exact ⟨⟨halte, kosten, fun t s h => (rest t s h).2.2⟩,
+  · rintro ⟨⟨halte, kosten, durchlauf, zeit⟩, speicher, stapel⟩
+    exact ⟨halte, kosten, durchlauf, fun t s h => ⟨speicher t s h, stapel t s h, zeit t s h⟩⟩
+  · rintro ⟨halte, kosten, durchlauf, rest⟩
+    exact ⟨⟨halte, kosten, durchlauf, fun t s h => (rest t s h).2.2⟩,
       fun t s h => (rest t s h).1, fun t s h => (rest t s h).2.1⟩
 
 end Gabbro.Core.Beobachtung
