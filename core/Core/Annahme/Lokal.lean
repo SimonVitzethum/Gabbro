@@ -12,14 +12,15 @@
   `stale_griff_ungueltig`
   and the refusal theorems connect M10's outside provenance to validity at commit: a handle
   that records only an earlier answer's generation never establishes validity once the commit
-  snapshot moved on.
+  snapshot moved on. The domain isolation row (`DomaenenLokal`, MK-17): every form that can
+  stand at a head meets the per-form duty `RegelIsolation` under every domain plan.
 -/
 module
 
 public import Core.Maschine.Start
+public import Core.Maschine.Ergebnis
 public import Core.Aussen.Bindung
 public import Core.Aussen.Zulassung
-public import Core.Aussen.Provenienz
 public import Core.Annahme.Schranken
 public import Core.Beobachtung.Fluss.Quellregel
 
@@ -145,13 +146,108 @@ theorem abschnittWartefrei_ohne_blockade [DecidableEq L]
   intro s c l _ _ b hb
   exact False.elim (nie s c b hb)
 
+/-- An isolation domain identity. -/
+abbrev Domaene := Nat
+
+/-- **The static domain declaration of a unit**: the number of domains, the total static
+    assignment of every context, memory object and outside object to its owning domain,
+    and the declared channels between domains. Pure data; every premise below binds it
+    to the unit or to the declaration. -/
+structure DomaenenPlan where
+  domaenen : Nat
+  kontextDomaene : Kontext → Domaene
+  objektDomaene : Nat → Domaene
+  geraetDomaene : Objekt → Domaene
+  kanaele : List (Domaene × Domaene)
+
+/-- **The static checker line**: the declaration is finite and well-scoped — at least one
+    domain, every channel between declared domains. Domain membership itself needs no
+    enumeration: it is a total static function of the context identity. -/
+def pruefeDomaenen (plan : DomaenenPlan) : Bool :=
+  decide (0 < plan.domaenen) &&
+    plan.kanaele.all (fun k => decide (k.1 < plan.domaenen) && decide (k.2 < plan.domaenen))
+
+/-- A plan is well-formed exactly when the static line accepts it. -/
+def DomaenenPlan.wohlgeformt (plan : DomaenenPlan) : Prop :=
+  pruefeDomaenen plan = true
+
+/-- The checker line decides well-formedness, by definition. -/
+theorem pruefeDomaenen_korrekt (plan : DomaenenPlan) :
+    pruefeDomaenen plan = true → plan.wohlgeformt :=
+  fun h => h
+
+/-- Same domain, or a declared channel from the acting domain to the owning one. -/
+def DomaenenPlan.erlaubt (plan : DomaenenPlan) (von nach : Domaene) : Prop :=
+  von = nach ∨ (von, nach) ∈ plan.kanaele
+
+/-- The cell lies in a foreign domain with no channel from the acting context. -/
+def FremdeZelle (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (plan : DomaenenPlan) (c : Kontext) (x : Ort) : Prop :=
+  ¬ plan.erlaubt (plan.kontextDomaene c) (plan.objektDomaene (E.einrichtung.speicherObjekt x))
+
+/-- The question targets a foreign-domain object with no channel from the acting context. -/
+def FremdeFrage (plan : DomaenenPlan) (c : Kontext) (q : Frage) : Prop :=
+  ¬ plan.erlaubt (plan.kontextDomaene c) (plan.geraetDomaene q.objekt)
+
+/-- One recorded cut respects the domains: every memory access of the acting context
+    stays in its domain or uses a channel, and every issued question is asked by the
+    context the trace names, in its domain or over a channel. Lazy initial writes and
+    environment arrivals are not program accesses. -/
+def SpurRespektiert (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (plan : DomaenenPlan) (c : Kontext) (spur : SchrittSpur Ort Wert) : Prop :=
+  (∀ a l, (a, l) ∈ spur.speicher → a = .kontext c → ¬ FremdeZelle E plan c l.ort) ∧
+  (∀ ev : FrageEreignis, Ereignis.frage ev ∈ spur.aussen →
+    ∀ d : Kontext, d.nummer = ev.context → ¬ FremdeFrage plan d ev.question)
+
+/-- **The checker-side isolation duty of one form** (the `RegelLokal` pattern, lifted to the
+    recorded step as for `Beobachtung.RegelNIPflicht`): every implementation step of the form
+    that the machine carries out through `FuehrtSchrittAus` produces a spur the acting context's
+    domain respects. The duty is per form, generic over units, and carries no per-program data. -/
+def RegelIsolation [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (plan : DomaenenPlan) (i : ι) : Prop :=
+  ∀ (t : Nat) (c : Kontext) (s u s' : Zustand L Ort Wert Raum Lok Grund)
+    (w : Wahl) (p : SchrittPlan L Ort Wert Bedingung) (spur : SchrittSpur Ort Wert),
+    (E.system.regel i).impl c s w [p] u →
+    FuehrtSchrittAus E.einrichtung t c s u p spur s' →
+    SpurRespektiert E plan c spur
+
+/-- **Isolation duty of a unit** (MK-17 checker row): every form that can stand at the head
+    of a context meets the per-form duty under every domain plan. The head gate is the
+    honest scope: the rule table covers every form of the type, but only heads ever step,
+    so only heads owe the duty. -/
+def DomaenenLokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
+    Prop :=
+  ∀ (plan : DomaenenPlan) (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (i : ι),
+    E.system.kopf s c = some i → RegelIsolation E plan i
+
+/-- The empty recorded cut respects every domain plan: no memory access, no question. -/
+theorem spurRespektiert_leer [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (plan : DomaenenPlan) (c : Kontext) :
+    SpurRespektiert E plan c ⟨[], []⟩ := by
+  refine ⟨fun _ _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
+
+/-- A unit that never reports a head meets the isolation row (the
+    `abschnittWartefrei_ohne_blockade` pattern). -/
+theorem domaenenLokal_ohne_kopf [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (nie : ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext),
+      E.system.kopf s c = none) :
+    DomaenenLokal E := by
+  intro plan s c i hkopf
+  rw [nie s c] at hkopf
+  exact nomatch hkopf
+
 /-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
-    flow, stack/memory bounds and wait-free lock sections at source initialisation and at
-    each form. The bounds row is last but one, the section row last, so units with open
-    bounds are accepted exactly as before. -/
+    flow, stack/memory bounds, wait-free lock sections and domain isolation at source
+    initialisation and at each form. The bounds row is third from last, the section row
+    second from last and the isolation row last, so units with open bounds are accepted
+    exactly as before. The isolation row (MK-17, meaning change) constrains the recorded
+    implementation steps: every form that can stand at a head respects every domain plan. -/
 def Lokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
   KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧
-    Beobachtung.FlussLokal E ∧ SchrankenLokal E ∧ AbschnittWartefrei E
+    Beobachtung.FlussLokal E ∧ SchrankenLokal E ∧ AbschnittWartefrei E ∧ DomaenenLokal E
 
 /-- Satisfiability with both rights: a read and a write can use the same owned location. -/
 theorem befugt_erfuellbar (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)

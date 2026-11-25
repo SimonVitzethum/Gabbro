@@ -154,9 +154,14 @@ private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
 
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_, ?_⟩, ?_, ?_⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := memGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

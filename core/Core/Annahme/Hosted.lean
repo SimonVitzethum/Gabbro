@@ -133,45 +133,9 @@ private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s
   · exact offen ev bisher epoche unbeantwortet
   · exact ⟨c, rfl, rechte⟩
 
-theorem akzeptiert : Akzeptiert einheit := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, fluss_lokal, ?_, ?_⟩, ?_, ?_⟩
-  · intro i c s u w plan h
-    change regel c s w [plan] u at h
-    rcases h.2 with ⟨eq, _, _⟩ | ⟨eq, _, _⟩ <;>
-      cases (List.cons.inj eq).1 <;>
-      exact ⟨fun _ mem => (List.not_mem_nil mem).elim, fun _ mem => (List.not_mem_nil mem).elim⟩
-  · apply aussen_gueltig_aus_kontext
-    intro _ _ s c w spur s' h
-    rcases spur with ⟨memory, events⟩
-    cases h with
-    | kontext _ _ form aus =>
-      obtain ⟨i, _, h⟩ := form
-      obtain ⟨_, _, _, _, aktion, _, ziel⟩ := aus
-      change regel c s w [_] _ at h
-      change FuehrtAus einrichtung _ c s _ _ _ events _ at aktion
-      rcases h.2 with ⟨eq, _, rfl⟩ | ⟨eq, rechte, rfl⟩
-      · cases (List.cons.inj eq).1
-        cases aktion
-        rw [ziel]
-        exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-          (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, binden_offen⟩
-      · cases (List.cons.inj eq).1
-        cases aktion
-        rw [ziel]
-        refine ⟨⟨?_, [], (List.append_nil _).symm,
-          fun _ mem => (List.not_mem_nil mem).elim⟩, fragen_offen rechte⟩
-        intro ev mem
-        cases Ereignis.frage.inj (List.mem_singleton.mp mem)
-        exact ⟨ausgewaehlt, rechte⟩
-  · exact schrankenLokal_leer rfl rfl rfl
-  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro ρ _
-    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
-      fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,
-      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
-    obtain ⟨_, ⟨c, mem⟩, blockiert⟩ := h
-    obtain ⟨_, nein, _⟩ := blockiert c mem
-    exact nein
+/- No acceptance proof for the hosted unit: its `frage` rule issues a question about a
+   foreign-domain object under every channel-free plan, so the head-gated isolation row
+   `DomaenenLokal` does not hold for it. The admitted runs with the owned request are
+   carried by `HostedLauf.konkreter_lauf` without acceptance. -/
 
 end Gabbro.Core.Annahme.Hosted

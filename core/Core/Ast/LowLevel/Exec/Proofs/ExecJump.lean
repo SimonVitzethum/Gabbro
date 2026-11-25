@@ -206,7 +206,7 @@ private theorem jumpWaechter (k : Katalog) (code : List ExecInstruction) :
 private theorem jumpAkzeptiert (code : List ExecInstruction) :
     Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
   refine ⟨?_, jumpKlauseln _ code, jumpWaechter _ code⟩
-  refine ⟨by simpa [execProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨by simpa [execProgram, Plattform.katalog] using Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro i c s u w p hideal
     change ∃ frame, i.evaluate s c = some frame ∧ [p] = [plan] ∧
       u = frame.advance c s at hideal
@@ -232,6 +232,11 @@ private theorem jumpAkzeptiert (code : List ExecInstruction) :
   · exact execProgramFlussLokal _ code
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := execGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
 private theorem jumpJoint : JumpJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
   let decl : ExecStateDecl := ⟨64, .kernel, .off, []⟩

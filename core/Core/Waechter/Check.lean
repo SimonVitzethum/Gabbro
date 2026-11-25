@@ -55,6 +55,18 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.TiefenBezug,
     `Gabbro.Core.Annahme.SchrankenLokal,
     `Gabbro.Core.Annahme.AbschnittWartefrei,
+    `Gabbro.Core.Annahme.Domaene,
+    `Gabbro.Core.Annahme.DomaenenPlan,
+    `Gabbro.Core.Annahme.DomaenenPlan.wohlgeformt,
+    `Gabbro.Core.Annahme.DomaenenPlan.erlaubt,
+    `Gabbro.Core.Annahme.pruefeDomaenen,
+    `Gabbro.Core.Annahme.FremdeZelle,
+    `Gabbro.Core.Annahme.FremdeFrage,
+    `Gabbro.Core.Annahme.SpurRespektiert,
+    `Gabbro.Core.Annahme.RegelIsolation,
+    `Gabbro.Core.Annahme.DomaenenLokal,
+    `Gabbro.Core.Annahme.spurRespektiert_leer,
+    `Gabbro.Core.Annahme.domaenenLokal_ohne_kopf,
     `Gabbro.Core.Beobachtung.niedereAussensicht,
     `Gabbro.Core.Beobachtung.startProjektion,
     `Gabbro.Core.Beobachtung.NiedrigGleich,
@@ -96,11 +108,14 @@ private meta def acceptance : AcceptanceSpec := {
   -- quantify over `Zustand`, so the ideal layer includes it.
   idealModules := #[`Core.Maschine, `Core.Ideal, `Core.Speicher],
   catalogueModules := #[`Core.Katalog, `Core.Aussen],
-  forbidden := #[
-    `Gabbro.Core.Maschine.ImplSchritt, `Gabbro.Core.Maschine.Lauffolge,
-    `Gabbro.Core.Maschine.Lauf, `Gabbro.Core.Maschine.Laeufe, `Gabbro.Core.Maschine.Schnitt,
-    `Gabbro.Core.Maschine.System.ImplSchritt, `Gabbro.Core.Maschine.System.ImplErreichbar,
-    `Gabbro.Core.Maschine.Regel.impl, `Gabbro.Core.Maschine.Einheit.laden],
+    -- Meaning change (MK-17): the isolation row of `Lokal` constrains the recorded
+    -- implementation steps through `Regel.impl`, so the form-step projection is no longer
+    -- forbidden; images, runs and the loader stay outside acceptance.
+    forbidden := #[
+      `Gabbro.Core.Maschine.ImplSchritt, `Gabbro.Core.Maschine.Lauffolge,
+      `Gabbro.Core.Maschine.Lauf, `Gabbro.Core.Maschine.Laeufe, `Gabbro.Core.Maschine.Schnitt,
+      `Gabbro.Core.Maschine.System.ImplSchritt, `Gabbro.Core.Maschine.System.ImplErreichbar,
+      `Gabbro.Core.Maschine.Einheit.laden],
   forbiddenModules := #[`Core.Verfeinerung, `Core.Sicherheit],
   ideal := #[`Gabbro.Core.Maschine.I.Schritt, `Gabbro.Core.Maschine.I.start, `Gabbro.Core.Maschine.I.Laeufe] }
 private meta def registry : Array RegistryFamily := #[

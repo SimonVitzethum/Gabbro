@@ -57,7 +57,7 @@ private theorem memProgramAkzeptiertW (code : List MemInstruction) :
     Annahme.Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   let E := memProgram Plattform.x86_64.katalog code
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code, ?_, ?_⟩, ?_, ?_⟩
+    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code, ?_, ?_, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hstep
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hP, hu⟩
@@ -87,6 +87,11 @@ private theorem memProgramAkzeptiertW (code : List MemInstruction) :
           exact h q hq hcut hans
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := memGenauInternalW haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro ρ lauf
     change (∀ p ∈ ([] : List (MemState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (MemState → Prop)), p (ρ.zeit.zustand t.val)) ∧

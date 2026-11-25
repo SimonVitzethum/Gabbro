@@ -326,12 +326,17 @@ private theorem execAussenLokalProgram (k : Katalog) (code : List ExecInstructio
 
 private theorem execAkzeptiert (k : Katalog) (code : List ExecInstruction)
     (wf : KatalogWohlgeformt k) : Annahme.Akzeptiert (execProgram k code) := by
-  refine ⟨⟨wf, ?_, ?_, execProgramFlussLokal k code, ?_, ?_⟩, execKlauseln k code, execWaechter k code⟩
+  refine ⟨⟨wf, ?_, ?_, execProgramFlussLokal k code, ?_, ?_, ?_⟩, execKlauseln k code, execWaechter k code⟩
   · intro i
     exact execRegelLokal k i
   · exact execAussenLokalProgram k code
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := execGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
 private def execStateName : Identifier :=
   ⟨['s'], ⟨'s', [], rfl, by
     unfold isNameStart isLetter
