@@ -295,8 +295,9 @@ theorem coRang_scb (m : Modus) {a b : CoEv} (h : (coGraph m).scb a b) : coRang a
   · exact coMo_rang a b hmo
   · exact coRb_rang a b (co_rb hrb)
 
-theorem coRang_psc (m : Modus) {a b : CoEv} (h : (coGraph m).psc a b) : coRang a < coRang b :=
-  coRang_scb m h.2.2
+theorem coRang_psc (m : Modus) {a b : CoEv} (h : (coGraph m).psc a b) : coRang a < coRang b := by
+  obtain ⟨_, _, hscb⟩ := Graph.psc_klassisch (co_kein_zaun m a) (co_kein_zaun m b) h
+  exact coRang_scb m hscb
 
 theorem co_konsistent (m : Modus) : (coGraph m).Konsistent where
   wf := co_wf m

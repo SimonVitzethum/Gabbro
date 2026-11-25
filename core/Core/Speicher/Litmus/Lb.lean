@@ -188,7 +188,7 @@ theorem lb_konsistent : (lbGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (lb_kein_sc a) hc.1
+    exact (lb_kein_sc a) (Graph.psc_sc_links hc)
   ohneLB := by
     refine azyklisch_von_rang lbRang ?_
     intro a b

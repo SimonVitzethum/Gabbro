@@ -209,7 +209,7 @@ theorem mpRlx_konsistent : (mpRlxGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (mpRlx_kein_sc a) hc.1
+    exact (mpRlx_kein_sc a) (Graph.psc_sc_links hc)
   ohneLB := by
     refine azyklisch_von_rang mpRlxRang ?_
     intro a b

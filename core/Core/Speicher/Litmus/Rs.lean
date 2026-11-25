@@ -39,10 +39,12 @@ def RsVerbotenAussage : Prop :=
 theorem rs_verboten_kat : RsVerbotenAussage := by
   rintro ⟨E, Ort, Wert, G, hk, wd, wf, u, r, rd, p1, hf, hrf1, hu, hrf2, hr, p2, hrb⟩
   have hwf : G.schreibt wf := hk.wf.rf_schreibt wf u hrf1
-  have hrs1 : G.Rs wf wf := Graph.Rs.selbst hwf
+  have hrs1 : G.Rs wf wf := Graph.Rs.selbst hwf (Modus.stark_atomar hf)
   have hrs : G.Rs wf u := Graph.Rs.rmw hrs1 hrf1 hu
   have hl : G.liest r := hk.wf.rf_liest u r hrf2
-  have hsw : G.sw wf r := ⟨hwf, hf, hl, hr, u, hrs, hrf2⟩
+  have hsw : G.sw wf r := by
+    apply Graph.sw_von_klassisch
+    exact ⟨hwf, hf, hl, hr, u, hrs, hrf2⟩
   have hhb : G.hb wd rd :=
     G.hb_trans (G.hb_trans (G.hb_von_po p1) (G.hb_von_sw hsw)) (G.hb_von_po p2)
   exact hk.kohaerent wd rd hhb (G.eco_von_rb hrb)
@@ -220,7 +222,7 @@ theorem rs_kein_zaun (a : RelEv) : ¬ rsGraph.istZaun a := by
 theorem rsKeinSw (a b : RelEv) : ¬ rsGraph.sw a b := by
   intro h
   obtain ⟨hsch, hst, hl, hstb, x, hrs, hrf⟩ :=
-    Graph.sw_klassisch rs_kein_zaun rs_kein_zaun h
+    Graph.sw_klassisch (rs_kein_zaun a) (rs_kein_zaun b) h
   have ha : a = wf := rsStarkSchreibt a hsch hst
   have hb : b = r := rsStarkLiest b hl hstb
   subst a
@@ -276,7 +278,7 @@ theorem rsKonsistent : rsGraph.Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    have hsc : rsGraph.sc a := hc.1
+    have hsc : rsGraph.sc a := Graph.psc_sc_links hc
     cases a <;> simp only [Graph.sc, Graph.modus, rsGraph, rsLab, reduceCtorEq] at hsc
   ohneLB := by
     refine azyklisch_von_rang rsRang ?_
