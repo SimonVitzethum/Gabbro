@@ -364,4 +364,29 @@ theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
   · rw [hkerne₁, hkerne₂, hkerne]
   · rw [hstatus₁, hstatus₂, hstatus]
 
+/-- A reserved interrupt excludes every delivery at that cut: the catalogue row is only
+    served when no interrupt was selected. -/
+theorem geraete_interrupt_schliesst_antwort_aus
+    {k : Katalog.Katalog} {h : Umgebung} {run : HwLauf} {t : Nat} {a : AntwortEreignis}
+    {kern id irq}
+    (gueltig : AngebotGueltig k h (run.angebot t) (run.interruptUrsprung t))
+    (wahl : (run.angebot t).interruptAuswahl = some (kern, id, irq))
+    {e : Endpunkt} (delivery : (run.angebot t).delivery e = true) : False := by
+  have hres := AngebotGueltig.interrupt_reserviert gueltig wahl
+  exact Bool.false_ne_true ((hres.2.2 e).symm.trans delivery)
+
+/-- A reserved interrupt leaves no core opportunity, so no context step can be ready. -/
+theorem geraete_interrupt_schliesst_kontext_aus
+    {k : Katalog.Katalog} {h : Umgebung} {run : HwLauf} {t : Nat} {c : Kontext}
+    {kern id irq}
+    (gueltig : AngebotGueltig k h (run.angebot t) (run.interruptUrsprung t))
+    (wahl : (run.angebot t).interruptAuswahl = some (kern, id, irq))
+    {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
+    {s : Zustand L Ort Wert Raum Lok Grund}
+    (bereit : KannSchreiten run t c s) : False := by
+  have hres := AngebotGueltig.interrupt_reserviert gueltig wahl
+  obtain ⟨core, geleg, _, _⟩ := bereit
+  exact Option.some_ne_none core (hres.2.1.trans geleg.symm)
+
 end Gabbro.Core.Beobachtung
