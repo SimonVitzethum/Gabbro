@@ -245,11 +245,13 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 obtain ⟨rahmen, _, _, v, aktion, _, seq⟩ := aus
                 obtain ⟨_, _⟩ := spur
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
-                have skerne : s.kerne = v.kerne := congrArg (fun z => z.kerne) seq
-                have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
-                  fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) seq
-                have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
-                  fun k => congrArg (fun (x : Ast.Semantik.Zustand) => (x.kerne k).stapel) ukerne
+                have skerne : s.kerne = v.kerne := by rw [seq]
+                have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel := by
+                  intro k
+                  rw [skerne]
+                have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel := by
+                  intro k
+                  rw [ukerne]
                 cases hakt : plan.aktion with
                 | intern =>
                   rw [hakt] at aktion
@@ -332,8 +334,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs kr w n hmem c h
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).laeuft =
                           (u.kerne k).laeuft := by
-                          show ((Function.update u.kerne kr _).laeuft) = _
-                          rw [Function.update_of_ne heq]
+                        simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ukerne] at h
                         exact ihd k c h
                     · rw [sstack] at h
@@ -361,8 +362,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs kr w m hmem c hc
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).stapel =
                           (u.kerne k).stapel := by
-                          show ((Function.update u.kerne kr _).stapel) = _
-                          rw [Function.update_of_ne heq]
+                        simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
               | antwort _ arrives =>
