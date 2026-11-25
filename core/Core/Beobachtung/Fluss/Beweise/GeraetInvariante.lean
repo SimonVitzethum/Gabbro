@@ -11,34 +11,37 @@ open Katalog Maschine
 open Gabbro.Core.Ast.LowLevel.Device
 open Gabbro.Core.Ast.LowLevel (entryContext)
 
-/-- Single-context invariant for device runs: only the declaring entry context
-    ever carries a pending question; while the device authority is still the
-    initial one, an empty pending slot means the ledgers agree in length.
-    After a crash the booking is empty and no device step is enabled, so the
-    length link is only required while the initial booking still holds.
-    Pre-crash the epoch is zero, nothing is discarded and consumption counts
-    the arrived answers (all arrived when idle, all but the last when a fresh
-    answer waits). All questions and answers belong to the entry context, and
-    recent questions are answered exactly when no fresh question waits.
-    Questions are issued in order with fresh instances, and answers match the
-    questions in order. -/
+/-- Single-context invariant for device runs, pre- and post-crash. Pre-crash
+    (while the device authority is still the initial one) only the declaring
+    entry context ever carries a pending question, nothing is discarded, the
+    epoch is zero, and consumption counts the arrived answers (all arrived when
+    idle, all but the last when a fresh answer waits). All questions and answers
+    belong to the entry context, recent questions are answered exactly when no
+    fresh question waits, questions are issued in order with fresh instances,
+    and answers match the questions in order. Post-crash (any other authority)
+    the booking is empty, no context carries a pending question, and every
+    recorded question predates the crash epoch, so no arrival can match it. -/
 def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Prop :=
   (∀ c, c ≠ entryContext → (s.lokal c).pending = none ∧ s.verbraucht c = 0 ∧ s.verworfen c = 0) ∧
-    (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
-    (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
-    List.Forall₂ (fun a q => a.zu q) s.antworten (s.fragen.take s.antworten.length) ∧
-    List.map (fun q : FrageEreignis => q.questionInstance) s.fragen =
-      List.range s.fragen.length ∧
-    (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
-      s.epoche = 0 ∧ (∀ c, s.verworfen c = 0) ∧
-      ((s.lokal entryContext).pending = none →
-        s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext = s.antworten.length ∧
-        ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∧
-      ((s.lokal entryContext).pending ≠ none →
-        (s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext + 1 = s.antworten.length ∧
-          ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∨
-        (s.fragen.length = s.antworten.length + 1 ∧ s.verbraucht entryContext = s.antworten.length ∧
-          ∃ q ∈ s.fragen, s.epoche ≤ q.cut ∧ ∀ a ∈ s.antworten, ¬ a.zu q)))
+  (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
+  (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
+  List.Forall₂ (fun a q => a.zu q) s.antworten (s.fragen.take s.antworten.length) ∧
+  List.map (fun q : FrageEreignis => q.questionInstance) s.fragen =
+    List.range s.fragen.length ∧
+  (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
+    (∀ c, s.verworfen c = 0) ∧ s.epoche = 0 ∧
+    ((s.lokal entryContext).pending = none →
+      s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext = s.antworten.length ∧
+      ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∧
+    ((s.lokal entryContext).pending ≠ none →
+      (s.fragen.length = s.antworten.length ∧ s.verbraucht entryContext + 1 = s.antworten.length ∧
+        ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q) ∨
+      (s.fragen.length = s.antworten.length + 1 ∧ s.verbraucht entryContext = s.antworten.length ∧
+        ∃ q ∈ s.fragen, s.epoche ≤ q.cut ∧ ∀ a ∈ s.antworten, ¬ a.zu q))) ∧
+  (s.buchung.geraet ≠ (startBuchung binding.object binding.handle).geraet →
+    s.buchung.geraet = (fun _ => none) ∧
+    (∀ c, (s.lokal c).pending = none) ∧
+    (∀ q ∈ s.fragen, q.cut < s.epoche))
 
 /-- The invariant holds for every loaded device state: other contexts are
     empty, the entry pending slot is empty and both ledgers are empty. -/
@@ -51,7 +54,7 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   dsimp only at geladen
   split at geladen
   · obtain rfl := Option.some.inj geladen
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro c hc
       dsimp only [bootFor, Zustand.start] at ⊢
       rw [if_neg hc]
@@ -63,7 +66,7 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
     · exact List.Forall₂.nil
     · rfl
     · intro _
-      refine ⟨rfl, fun _ => rfl, ?_, ?_⟩
+      refine ⟨fun _ => rfl, rfl, ?_, ?_⟩
       · intro _
         refine ⟨rfl, rfl, ?_⟩
         intro q hq _
@@ -72,6 +75,8 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
         dsimp only [bootFor, Zustand.start] at hne
         rw [if_pos rfl] at hne
         exact absurd rfl hne
+    · intro hne
+      exact (hne rfl).elim
   · cases geladen
 
 end Gabbro.Core.Beobachtung

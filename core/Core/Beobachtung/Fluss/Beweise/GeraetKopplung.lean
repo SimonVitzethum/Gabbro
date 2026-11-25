@@ -13,24 +13,24 @@ variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 
 /-- Ledger equality for the outside ledgers that `Kopplung` does not cover:
     the pending questions, the outside history, the arrived answers and the
-    per-context consumption counters. -/
+    per-context consumption and cancellation counters. -/
 def GeraeteLedgerGleichAussage (v u : Zustand L Ort Wert Raum Lok Grund) : Prop :=
   v.fragen = u.fragen ∧ v.verlauf = u.verlauf ∧ v.antworten = u.antworten ∧
-    v.verbraucht = u.verbraucht
+    v.verbraucht = u.verbraucht ∧ v.verworfen = u.verworfen
 
 theorem GeraeteLedgerGleichAussage.refl (v : Zustand L Ort Wert Raum Lok Grund) :
     GeraeteLedgerGleichAussage v v :=
-  ⟨rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 theorem GeraeteLedgerGleichAussage.symm {v u : Zustand L Ort Wert Raum Lok Grund}
     (h : GeraeteLedgerGleichAussage v u) : GeraeteLedgerGleichAussage u v := by
-  obtain ⟨h1, h2, h3, h4⟩ := h
-  exact ⟨h1.symm, h2.symm, h3.symm, h4.symm⟩
+  obtain ⟨h1, h2, h3, h4, h5⟩ := h
+  exact ⟨h1.symm, h2.symm, h3.symm, h4.symm, h5.symm⟩
 
 /-- The device-strengthened coupling: `Kopplung` plus ledger equality of the
     two states at the same cut `t`, plus booking equality (the device authority
     that enables issue and consume). The prefix and state parts are unchanged;
-    only the four ledgers and the booking are added. `Kopplung` itself is untouched. -/
+    only the five ledgers and the booking are added. `Kopplung` itself is untouched. -/
 def GeraeteKopplungAussage (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ₁ ρ₂ : Lauf E) (predictor : Praediktor) (t u : Nat) : Prop :=
   Kopplung E ρ₁ ρ₂ predictor t u ∧
