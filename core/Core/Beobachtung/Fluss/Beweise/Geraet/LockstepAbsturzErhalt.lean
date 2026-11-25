@@ -65,7 +65,10 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
           cases impl with
           | absturz crash₁ =>
             obtain ⟨spurEq₁, n₁Eq⟩ := AbsturzSchritt.genau crash₁
-            subst spur
+            have hspurEq : spur = spur✝ := by
+              injection lab with h
+              exact h
+            rw [hspurEq, spurEq₁] at hlabel
             have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t := crash₁.1
             have crashOffer₂ : (ρ₂.hw.angebot t).crash = true := by
               rw [← geraete_angebot_gleich vergleich t]
