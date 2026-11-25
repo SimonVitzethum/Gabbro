@@ -207,7 +207,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.environmentBefehlEntry) ], #[
     (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
-    (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage) ]⟩]
+    (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.aussen, `Gabbro.Core.Aussenfrage.AussenFrageAussagen) ]⟩]
 
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
