@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarSegmente
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarSegmente
 
 @[expose] public section
 
