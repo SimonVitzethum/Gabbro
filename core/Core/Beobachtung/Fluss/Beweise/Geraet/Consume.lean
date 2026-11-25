@@ -208,21 +208,21 @@ theorem geraete_consume_ausgeglichen {binding : Binding k} {access : RegisterAcc
 theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : RegisterAccess}
     {required : GeraetePhase} {target : Option GeraetePhase}
     {c : Kontext} {s : State} {answer : AntwortEreignis}
-    (inv : GeraeteInvariantAussage binding s)
+    (hinv : GeraeteInvariantAussage binding s)
     (owned : Befugt binding required access s c)
     (pending : (s.lokal c).pending = some (binding.question access))
     (ready : s.naechsteAntwort c = some answer)
     (sameQuestion : answer.question = binding.question access) :
     GeraeteInvariantAussage binding
       ((setFrame s c (geraete_consume_rahmen s c binding access answer target)).verbrauche c) := by
-  have hA := geraete_issue_pre inv owned
-  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
+  have hA := geraete_issue_pre hinv owned
+  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := hinv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   have hentry : c = entryContext := geraete_issue_kontext (target := target) hA owned
   have hbb : s.fragen.length = s.antworten.length ∧
       s.verbraucht entryContext + 1 = s.antworten.length ∧
       ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ a ∈ s.antworten, a.zu q :=
-    geraete_consume_ausgeglichen (target := target) inv owned pending ready
+    geraete_consume_ausgeglichen (target := target) hinv owned pending ready
   obtain ⟨hnm, hverb, halle⟩ := hbb
   set u := (setFrame s c (geraete_consume_rahmen s c binding access answer target)).verbrauche c with hu
   have hufragen : u.fragen = s.fragen := rfl
