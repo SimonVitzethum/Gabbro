@@ -71,7 +71,8 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
   intro a E hbez hacc H hwH
   constructor
   · intro s zul
-    exact lauf_ab_start E hwH zul
+    obtain ⟨ρ, run, st⟩ := lauf_ab_start E hwH zul
+    exact ⟨⟨E, ρ⟩, ⟨rfl, run⟩, st⟩
   · intro ρ laufR
     obtain ⟨t, _, hElab, hZul⟩ := hbez
     change E = einheitVon P t at hElab
@@ -92,8 +93,10 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
         exact ⟨rfl, zielFX_akzeptiert P t hacc H ρ' run k⟩
       · intro fair
         refine ⟨?_, ?_⟩
-        · intro c
-          exact hang P t hacc H ρ' run fair η valid sim c
+        · intro c hc
+          obtain ⟨_, hEq, hAng⟩ := hc
+          cases hEq
+          exact hang P t hacc H ρ' run fair η valid sim c hAng
         · refine ⟨rfl, ?_⟩
           change DeadlockFrei η
           exact deadlockfrei_aus_waechter valid hacc.2.2
@@ -144,15 +147,12 @@ theorem zielAusTeilenMitLuecken
       obtain ⟨⟨ρ₂', run₂, stEq, polEq⟩, rest⟩ :=
         (niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig
       constructor
-      · refine ⟨⟨E, ρ₂'⟩, ?_, ?_, ?_⟩
-        · exact rfl
-        · exact run₂
-        · exact stEq
-        · exact ⟨rfl, ⟨rfl, polEq⟩⟩
+      · refine ⟨⟨E, ρ₂'⟩, ⟨⟨rfl, run₂⟩, stEq, ?_⟩⟩
+        exact ⟨rfl, ⟨rfl, polEq⟩⟩
       · intro ρ₂ lauf₂ st₂ pol₂
         rcases ρ₂ with ⟨E₂, ρ₂''⟩
         change E₂ = E ∧ Maschine.Laeufe E₂ H₂ ρ₂'' at lauf₂
-        change E₂ = E ∧ ∃ h : E₂ = E, Beobachtung.GleichePolitik E ρ₁' (h ▸ ρ₂'') at pol₂
+        change E = E ∧ ∃ h : E₂ = E, Beobachtung.GleichePolitik E ρ₁' (h ▸ ρ₂'') at pol₂
         have e₂ : E₂ = E := lauf₂.1
         subst E₂
         obtain ⟨_, h, pol⟩ := pol₂
