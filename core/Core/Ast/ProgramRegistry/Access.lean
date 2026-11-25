@@ -50,10 +50,8 @@ theorem access_am_ort (scope : Scope) (result : Option (Ty .value)) :
       omega
     rw [List.getElem?_append_left hlt]
     rw [List.getElem?_append_right]
-    · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self,
-        List.getElem?_cons_zero]
-    · simp only [List.length_append, List.length_cons, List.length_nil]
-      omega
+    · simp only [Nat.sub_self, List.getElem?_cons_zero]
+    · omega
   | store region visible receiverOrdinary index value mode =>
     change ((((expr 0 index).anhaengen (expr 1 value)).anhaengen
       (.einzel (Befehl.zugriff (.speichere region.index 0 1 mode.modus)))).code[(expr 0 index).code.length + (expr 1 value).code.length]? =
