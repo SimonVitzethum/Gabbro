@@ -11,6 +11,12 @@ open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame memPro
 
 variable (k : Katalog) (code : List MemInstruction)
 
+private theorem speicherfolge_leer {Ort Wert : Type} {anfang : Ort → Wert}
+    {f : SpeicherAkteur Ort} {g g' : SpeicherGraph Ort Wert} {es : SpeicherSpur Ort}
+    (h : Speicherfolge anfang f g [] es g') : es = [] ∧ g' = g := by
+  cases h
+  exact ⟨rfl, rfl⟩
+
 /-- The selected loader row yields the canonical initial state of a memory program. -/
 private theorem mem_geladen {h : Umgebung} {s : AussenStart}
     (hardware : Hardware (memProgram k code).katalog h)
@@ -93,27 +99,19 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
             change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren aussen v at fuehrtAus
             cases fuehrtAus
             rw [hAussen] at speicherfolge
-            have hSpur : spur.speicher = [] := by
-              have folge := speicherfolge
-              simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
-                Ast.LowLevel.plan, schreibEreignisse] at folge
-              generalize hEs : spur.speicher = es at folge
-              cases folge
-              exact hEs
-            have hGraph : n.graph = s.graph := by
-              have folge := speicherfolge
-              simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
-                Ast.LowLevel.plan, schreibEreignisse] at folge
-              generalize hEs : spur.speicher = es at folge
-              cases folge
-              rfl
+            have folge := speicherfolge
+            simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
+              Ast.LowLevel.plan, schreibEreignisse] at folge
+            have leerFolge := speicherfolge_leer folge
+            have hSpur : spur.speicher = [] := leerFolge.1
+            have hGraph : n.graph = s.graph := leerFolge.2
             have hBuchung : n.buchung = s.buchung := by
               rw [nEqState]
               rfl
             have hStatus : n.status = s.status := by
               rw [nEqState]
               rfl
-            have hCommit : commitBeob (Form := MemInstruction) k.plattform s n = [] := by
+            have hCommit : commitBeob (Form := MemInstruction) (memProgram k code).katalog.plattform s n = [] := by
               rw [commitBeob, hBuchung, List.drop_length, List.filterMap_nil]
             have hAusgabe : ausgabeBeob (memProgram k code) c (s.lokal c) (n.lokal c) = [] := by
               rfl
@@ -131,15 +129,18 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
                 List.nil_append, List.append_nil]
             have hEnde : ∀ d, (neuBeendet s n (memProgram k code).etiketten d).isSome = false := by
               intro d
-              rw [neuBeendet, hStatus d]
+              rw [neuBeendet, congrFun hStatus d]
               cases hst : s.status d <;> rfl
             have hKeinEnde : ¬ ∃ d, (neuBeendet s n (memProgram k code).etiketten d).isSome = true := by
               rintro ⟨d, hd⟩
               rw [hEnde d] at hd
               cases hd
+            have spurEq : spur = ⟨[], []⟩ := by
+              cases spur
+              simp_all only
             rw [schrittBeob, tick, hS, hN]
-            simp only [hSpur, List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde,
-              if_false, List.nil_append]
+            simp only [hSpur, hAussen, spurEq, List.filterMap_nil, List.flatMap_nil,
+              hKontext, hKeinEnde, if_false, List.nil_append]
 
 /-- The observed post-state of a memory context step is the advanced frame. -/
 private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
@@ -160,13 +161,10 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren aussen v at fuehrtAus
     cases fuehrtAus
     rw [hAussen] at speicherfolge
-    have hGraph : n.graph = s.graph := by
-      have folge := speicherfolge
-      simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
-        Ast.LowLevel.plan, schreibEreignisse] at folge
-      generalize hEs : spur.speicher = es at folge
-      cases folge
-      rfl
+    have folge := speicherfolge
+    simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
+      Ast.LowLevel.plan, schreibEreignisse] at folge
+    have hGraph : n.graph = s.graph := (speicherfolge_leer folge).2
     refine ⟨f, frame, kopf, eval, ?_⟩
     rw [nEqState, hGraph]
     rfl
@@ -231,7 +229,7 @@ private theorem mem_fragen_leer {h : Umgebung} {ρ : Lauf (memProgram k code)}
         cases step with
         | schritt impl =>
           right
-          refine ⟨_, hn, ?_⟩
+          refine ⟨_, hn.symm, ?_⟩
           exact mem_schritt_fragen k code impl fragenLeer
       | wartet _ eq _ =>
         right
@@ -364,29 +362,45 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
           rw [zustand₂] at takt₂
           generalize hN₂ : ρ₂.zeit.zustand (t + 1) = nOpt₂ at takt₂
           cases takt₂ with
-          | wartet label gleich₂ _ =>
+          | wartet _label _gleich pause₂ =>
             cases nOpt₂ with
-            | none => cases gleich₂
-            | some nach₂ =>
-              have e₂ : NiedrigeBeob (memProgram k code) ρ₂ predictor (t + 1) =
-                  NiedrigeBeob (memProgram k code) ρ₂ predictor t := by
-                rw [beob_pause ρ₂ predictor t label]
-              have hNach₂Pause : nach₂ = w₂ := Option.some.inj gleich₂
-              have zustandGleich := mem_zustand_gleich k code (c := c) (vor := vor) (w₂ := w₂)
-                (frame := frame₁) ⟨lokGleich, endeGleich, initialGleich, rechteEq, leihenEq, antwortGleich⟩
-                epocheEq geliefertEq kerneEq statusEq
-              refine ⟨?_, ?_, ?_⟩
-              · rw [e₁, e₂]
-                exact kopplung.1
-              · intro a b ha hb
-                rw [hN₁] at ha
-                rw [hN₂] at hb
-                obtain rfl := Option.some.inj ha
-                obtain rfl := Option.some.inj hb
-                rw [hNach₁, hNach₂Pause]
-                exact zustandGleich
-              · rw [e₁, e₂]
-                exact kopplung.2.2
+            | none => cases step₂
+            | some _ =>
+              have rahmen₂ : Zustandsrahmen w₂ (frame₁.advance c w₂) :=
+                ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+              have eval₂neu : MemInstruction.evaluate k.plattform.ziel f w₂ c = some frame₁ := by
+                rw [MemInstruction.evaluate_congr f k.plattform.ziel c lokEqFun rechteEq leihenEq]
+                exact eval₁
+              have regel₂neu : (memProgram k code).system.ImplSchritt c w₂ w
+                  [Ast.LowLevel.plan] (frame₁.advance c w₂) := by
+                refine ⟨f, kopf₂, ?_⟩
+                change MemInstruction.step k.plattform.ziel f c w₂ w [Ast.LowLevel.plan]
+                  (frame₁.advance c w₂)
+                exact ⟨frame₁, eval₂neu, rfl, rfl⟩
+              have speicher₂ : Speicherfolge w₂.initial (.kontext c) w₂.graph [] [] w₂.graph :=
+                Speicherfolge.nil _
+              have aus₂neu : FuehrtSchrittAus memSetup t c w₂ (frame₁.advance c w₂)
+                  Ast.LowLevel.plan ⟨[], []⟩ (frame₁.advance c w₂) := by
+                refine ⟨rahmen₂, ?_, ⟨[], frame₁.advance c w₂, .intern, speicher₂, rfl⟩⟩
+                intro l hl
+                simp only [Ast.LowLevel.plan] at hl
+                cases hl
+              have geleg₂neu : ρ₂.hw.gelegenheit t k₁ := by
+                change (ρ₂.hw.angebot t).core = some k₁
+                rw [← coreEq]
+                exact core₁
+              have kerne₂neu : (w₂.kerne k₁).laeuft = some c := by
+                rw [← kerneEq]
+                exact kern₁
+              have status₂neu : w₂.status c = .laeuft := by
+                rw [← statusEq]
+                exact stat₁
+              have bereit₂neu : KannSchreiten ρ₂.hw t c w₂ :=
+                ⟨k₁, geleg₂neu, kerne₂neu, status₂neu⟩
+              have step₂neu : ImplSchritt memSetup (memProgram k code).system k ρ₂.hw t w₂
+                  (.kontext c w, ⟨[], []⟩) (frame₁.advance c w₂) :=
+                .kontext crash₂ bereit₂neu regel₂neu aus₂neu
+              exact (pause₂ _ _ (Lauffolge.schritt step₂neu)).elim
           | schritt label₂ step₂ =>
             cases nOpt₂ with
             | none => cases step₂
@@ -396,7 +410,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                 have stepCopy := impl₂
                 cases impl₂ with
                 | kontext _ bereit₂' regel₂' aus₂' =>
-                  rename_i uR planR spurR cR wR
+                  rename_i planR spurR cR wR
                   obtain ⟨k₂, geleg₂, kern₂, stat₂⟩ := bereit₂'
                   have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
                   have kk : k₁ = k₂ := Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
