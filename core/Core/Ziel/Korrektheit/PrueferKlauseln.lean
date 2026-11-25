@@ -52,8 +52,14 @@ theorem einheitVon_klauselnLeer (P : Katalog.Plattform) (t : Ast.Unit) :
 theorem einheitVon_klauselnWahr (P : Katalog.Plattform) (t : Ast.Unit) :
     Annahme.KlauselnWahr (einheitVon P t) := by
   intro ρ hρ
-  exact ⟨fun p hp => by cases hp, fun t hp hp2 => by cases hp2,
-    fun t ht hp hp2 => by cases hp2⟩
+  constructor
+  · intro p hp
+    cases hp
+  constructor
+  · intro t p hp
+    cases hp
+  · intro t hf p hp
+    cases hp
 
 /-- SOUNDNESS of the clause component holds for every checker, because its conclusion holds for
     every unit the checker is asked about. -/
