@@ -277,8 +277,7 @@ theorem textIndexKernOrt : TextIndexKernOrtAussage := by
 
 theorem textIndexRegelSicher : TextIndexRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((textIndexForm scope).fragment args) platform
-    (textIndex_keine_invarianten scope args) ((textIndexForm scope).befehl args)
+  exact Befehl.sicher ((textIndexForm scope).fragment args) platform [] (tabLeer _ (textIndex_keine_invarianten scope args)) (fun b _ => rfl) ((textIndexForm scope).befehl args)
 
 theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
   intro scope platform args form t c s choice stepPlan u spur next head impl execute

@@ -71,6 +71,7 @@ def speicherBeob (label : Etiketten Ort) (e : SpeicherAkteur Ort × Speicher.Eti
   | .lesen => sichtbar (label.ort l.ort) (.speicher actor l.art l.ort l.modus (some l.gelesen) none)
   | .schreiben => sichtbar (label.ort l.ort) (.speicher actor l.art l.ort l.modus none (some l.geschrieben))
   | .rmw => sichtbar (label.ort l.ort) (.speicher actor l.art l.ort l.modus (some l.gelesen) (some l.geschrieben))
+  | .zaun => none
   | .aussen => none
 
 def neuBeendet (v n : Zustand L Ort Wert Raum Lok Grund) (label : Etiketten Ort)
@@ -115,7 +116,7 @@ def kontextBeob (ρ : Lauf E) (predictor : Praediktor) (t : Nat) (c : Kontext)
       let adressen := spur.speicher.filterMap fun e =>
         match e.2.art with
         | .lesen | .schreiben | .rmw => some e.2.ort
-        | .aussen => none
+        | .zaun | .aussen => none
       [.konstanteZeit c form adressen (Laufkosten ρ t 1)]
       else []
     let spekulation := E.katalog.plattform.spekulationshuelle.zugriffe (E.fluss.spekulativ form lok predictor)

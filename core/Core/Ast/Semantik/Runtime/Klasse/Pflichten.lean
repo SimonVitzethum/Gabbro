@@ -110,7 +110,7 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -206,6 +206,7 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   | lesen m => exact Schrittform.zugriffsschritt_total ⟨.lesen m, o, t⟩ c s
   | schreiben m => exact Schrittform.zugriffsschritt_total ⟨.schreiben m, o, t⟩ c s
   | rmw m => exact Schrittform.zugriffsschritt_total ⟨.rmw m, o, t⟩ c s
+  | zaun m => exact Schrittform.zugriffsschritt_total ⟨.zaun m, o, t⟩ c s
   | sperre a => exact Schrittform.zugriffsschritt_total ⟨.sperre a, o, t⟩ c s
   | frage => exact Schrittform.zugriffsschritt_total ⟨.frage, o, t⟩ c s
   | starte => exact Schrittform.faedenschritt_total ⟨.starte, o, t⟩ c s
@@ -260,6 +261,12 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       have hl' := List.mem_singleton.1 hl
       subst hl'
       exact ⟨Schrittform.befugt_ort emb g.1, fun _ => Schrittform.befugt_ort emb g.2⟩
+  | zaun m =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan (.zaun m) (o (s.lokal c)) v := (List.cons.inj same).1
+      subst hp
+      exact Befugt.privat rfl
   | sperre a =>
     rcases step with ⟨_, same, _⟩ | ⟨g, v, _, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -382,6 +389,7 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
     change Zustand.griff Leerzustand eintritt (o (Leerzustand.lokal eintritt)).ort = some g at hg
     rw [keinGriff] at hg
     cases hg
+  | zaun m => cases hk
   | lokal => cases hk
   | ruf => cases hk
   | sperre a => cases hk

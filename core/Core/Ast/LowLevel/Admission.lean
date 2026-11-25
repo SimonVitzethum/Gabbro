@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Regeln
+public import Core.Ast.Semantik.Runtime.Atom.Form
 
 @[expose] public section
 
@@ -26,6 +27,7 @@ def Befehl.platformAllowed (platform : Plattform) : Befehl → Bool
   | .definiereVariante _ _ cases => (cases.flatMap Option.toList).all (platformType platform)
   | .rufe _ args result => (args ++ result.toList).all (platformType platform)
   | .bindeRegion _ (.view written _) => (LowLevel.layout platform.ziel written).isSome
+  | .zugriff z => pruefeZugriffsform z
   | _ => true
 
 end Gabbro.Core.Ast.Semantik

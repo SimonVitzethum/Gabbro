@@ -7,7 +7,7 @@
              step of the frame-only classes (`I.Bestimmt`, `I.Fortschritt`, the flow rule) keep holding for the
              elaborated units, while a unit that does contain an access instruction owes the duties of its class
              (`KlassenAussagen`, `ZugriffBefehlAussage`). The statement is proved once by the recursion over the
-             source tree, exactly as the elaboration of the clauses (`programm_keine_invarianten`).
+             source tree, exactly as the elaboration of the clauses (`fragment_unit_invarianten`, `tabLeer`).
 -/
 module
 
