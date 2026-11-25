@@ -126,7 +126,7 @@ theorem kopf_nil (s : Zustand) (c : Kontext) : kopf [] s c = none := by
     | none =>
       by_cases hs : (s.lokal c).stopp.isNone
       · simp only [hs, ↓reduceIte, List.getElem?_nil]
-      · simp only [hs, ↓reduceIte]
+      · simp only [hs, Bool.false_eq_true, ↓reduceIte]
     | some _ => rfl
 
 /-- The accumulator cannot carry a guard use: its code is empty. -/
