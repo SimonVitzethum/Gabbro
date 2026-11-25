@@ -119,16 +119,19 @@ theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Ze
     (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
   congrFun (b.nach_initial c s) z
 
-namespace Pruefung.Praedikat
+namespace Gabbro.Core.Ast.Pruefung.Praedikat
+
+open Gabbro.Core.Ast.Semantik
 
 /-- Preservation across the frame transfer for predicates whose observed cells the command
     does not write. -/
-theorem gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
+theorem gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext)
+    (s : Gabbro.Core.Ast.Semantik.Zustand)
     (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
   intro hq
   exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
 
-end Pruefung.Praedikat
+end Gabbro.Core.Ast.Pruefung.Praedikat
 
 def system (code : List Befehl) : LokalSystem :=
   ⟨Befehl.regel, kopf code, fun s c => kopf code s c = none, fun _ _ _ => False⟩
