@@ -130,20 +130,14 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
       n₁.epoche = n₂.epoche ∧ n₁.geliefert = n₂.geliefert ∧
       n₁.kerne = n₂.kerne ∧ n₁.status = n₂.status ∧
       QuellzustandGleich (d.unit locals) n₁ n₂ := by
-  obtain ⟨kopf₁, plan', hplans', rule₁⟩ := geraete_kontext_regel ruleEq regel₁
-  have hplan : plan = plan' := (List.cons.inj hplans').1
-  subst plan
-  have kopf₁ : (d.unit locals).system.kopf s₁ c = some () := by
-    exact (geraete_kontext_regel ruleEq regel₁).1
-  have impl₁ : ((d.unit locals).system.regel ()).impl c s₁ () [{ internal with aktion := .frage (binding.question access) }] u₁ := by
-    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
-    rw [ruleEq]
-    dsimp only [Rule.machine]
-    exact ⟨_, rfl, rule₁⟩
+  have hplanF : plan = { internal with aktion := .frage (binding.question access) } :=
+    (List.cons.inj hplans).1
+  obtain ⟨i₁, kopf₁, impl₁⟩ := regel₁
+  cases i₁
   have hbuch := geraeteKopplung_buchung hkopp hz₁ hz₂
   have hlokal := geraete_lokal_gleich quell
-  have hledger := geraeteKopplung_ledger hkopp hz₁ hz₂
-  obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ := hledger
+  obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
+    geraeteKopplung_ledger hkopp hz₁ hz₂
   have hstate := (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
   have hepoche := hstate.2.1
   have hgeliefert := hstate.2.2.1
@@ -161,12 +155,12 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
     dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
     rw [ruleEq]
     dsimp only [Rule.machine]
-    refine ⟨{ internal with aktion := .frage (binding.question access) }, rfl, ?_⟩
+    refine ⟨{ internal with aktion := .frage (binding.question access) }, hplans, ?_⟩
     exact Rule.issue owned₂ idle₂
   have regel₂ : (d.unit locals).system.ImplSchritt c s₂ w [plan] u₂ := ⟨(), kopf₂, impl₂⟩
   let e₂ : FrageEreignis := s₂.stelleFrage t c (binding.question access)
-  obtain ⟨g₂, folge₂⟩ := geraete_aussen_schritt (s := s₂)
-    (f := .kontext c) (event := .frage e₂) gut₂
+  obtain ⟨g₂, folge₂⟩ := geraete_aussen_schritt (s := s₂) (f := .kontext c)
+    (event := .frage e₂) gut₂
   let spur₂ : SchrittSpur Nat UInt8 :=
     ⟨[(SpeicherAkteur.kontext c, aussenEtikett (d.unit locals).einrichtung (.frage e₂))],
       [.frage e₂]⟩
@@ -175,27 +169,29 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
     refine ⟨?_, ?_, ?_⟩
     · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     · intro l hl
-      simp only [hplans] at hl
-      exact False.elim (by simpa only [List.mem_singleton] using hl)
+      rw [hplanF] at hl
+      cases hl
     · refine ⟨[], u₂.frage e₂, ?_, ?_, rfl⟩
-      · exact FuehrtAus.frage (binding.question access)
-      · simpa only [hplans, internal, schreibEreignisse, List.filter_nil, List.map_nil,
+      · rw [hplanF]
+        exact FuehrtAus.frage (binding.question access)
+      · rw [hplanF]
+        simpa only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
           List.nil_append, List.append_nil, List.map_cons] using folge₂
   obtain ⟨spurEq₁, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁, hbuchung₁,
     hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, hpending₁, hinitial₁, hrechte₁,
     hleihen₁, hpersistenz₁, heinst₁, hectx₁, hecut₁, heq₁⟩ :=
-    geraete_issue_tick (target := target) aus₁ rfl hu owned idle
+    geraete_issue_tick (target := target) aus₁ hplans hu owned idle
   obtain ⟨spurEq₂, hfragen₂, hverlauf₂, hantworten₂, hverbraucht₂, hverworfen₂, hbuchung₂,
     hepoche₂, hgeliefert₂, hkerne₂, hstatus₂, hlokal₂, hpending₂, hinitial₂, hrechte₂,
     hleihen₂, hpersistenz₂, heinst₂, hectx₂, hecut₂, heq₂⟩ :=
-    geraete_issue_tick (target := target) aus₂ rfl rfl owned₂ idle₂
+    geraete_issue_tick (target := target) aus₂ hplans rfl owned₂ idle₂
   have heq : (s₁.stelleFrage t c (binding.question access)) =
       (s₂.stelleFrage t c (binding.question access)) := by
     simp only [Zustand.stelleFrage, hfragen]
   have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-    have hform₁ : FormSchritt (d.unit locals) () c s₁ () ({ internal with aktion := .frage (binding.question access) }) u₁ := ⟨kopf₁, impl₁⟩
-    have hform₂ : FormSchritt (d.unit locals) () c s₂ () ({ internal with aktion := .frage (binding.question access) }) u₂ := ⟨kopf₂, impl₂⟩
-    have hq := (geraeteSchrittNI locals d c s₁ s₂ () ({ internal with aktion := .frage (binding.question access) }) ({ internal with aktion := .frage (binding.question access) }) u₁ u₂ quell hform₁ hform₂).1
+    have hform₁ : FormSchritt (d.unit locals) () c s₁ () plan u₁ := ⟨kopf₁, impl₁⟩
+    have hform₂ : FormSchritt (d.unit locals) () c s₂ () plan u₂ := ⟨kopf₂, impl₂⟩
+    have hq := (geraeteSchrittNI locals d c s₁ s₂ () plan plan u₁ u₂ quell hform₁ hform₂).1
     simpa only [Zustand.frage] using hq
   refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
   · rw [spurEq₁, spurEq₂, heq]
