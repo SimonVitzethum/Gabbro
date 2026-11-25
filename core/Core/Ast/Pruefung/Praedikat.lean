@@ -170,7 +170,7 @@ theorem Praedikat.haelt_stabil (q : Praedikat) : ∀ (f₁ f₂ : Zelle → Int)
       a.wert_kongruent f₁ f₂ (fun z mem => h z (List.mem_append_left _ mem))
     have eb : b.wert f₁ = b.wert f₂ :=
       b.wert_kongruent f₁ f₂ (fun z mem => h z (List.mem_append_right _ mem))
-    rw [ea, eb]
+    rw [ea, eb] at hq
     exact hq
   | und x y ihx ihy =>
     intro f₁ f₂ h hq
