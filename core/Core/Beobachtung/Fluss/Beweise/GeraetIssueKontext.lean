@@ -19,7 +19,7 @@ theorem geraete_issue_kontext {k : Katalog} {binding : Binding k} {access : Regi
     (befugt : Befugt binding required access s c) :
     c = entryContext := by
   have hobj : s.buchung.geraet binding.object = some (entryContext, .frei) := by
-    simp only [buchung, startBuchung]
+    simp only [buchung, startBuchung, if_true]
   have hbefugt : s.buchung.geraet binding.object = some (c, .frei) := befugt.1
   have heq : (c, Aussen.Vollmacht.frei) = (entryContext, Aussen.Vollmacht.frei) :=
     Option.some.inj (hbefugt.symm.trans hobj)
