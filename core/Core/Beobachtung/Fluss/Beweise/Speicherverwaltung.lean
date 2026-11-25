@@ -5,7 +5,6 @@ public import Core.Beobachtung.Speicherverwaltung
 @[expose] public section
 
 namespace Gabbro.Core.Beobachtung
-
 open Katalog Maschine
 open Ast.LowLevel (MemInstruction MemState memSetup medium image MemFrame memProgram memHead)
 
@@ -317,6 +316,10 @@ private theorem memHead_congr {s₁ s₂ : MemState} {c : Kontext}
       cases hidx : code[(s₂.lokal c).pc]? with
       | none => rfl
       | some op =>
+        change (if (MemInstruction.evaluate k.plattform.ziel op s₁ c).isSome = true
+          then some op else none) =
+          (if (MemInstruction.evaluate k.plattform.ziel op s₂ c).isSome = true
+          then some op else none)
         rw [MemInstruction.evaluate_congr op k.plattform.ziel c lok rechte leihen]
     | ruht | beendet _ => rfl
   · rw [if_neg hc, if_neg hc]
@@ -450,8 +453,9 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                   | some cR =>
                     rw [hkern] at kern₂
                     injection kern₂ with hctx
-                    subst c
+                    have hcEq : cR = c := Option.some.inj (hkern.symm.trans gleich)
                     subst cR
+                    subst_vars
                     obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
                     have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                     subst f₂
