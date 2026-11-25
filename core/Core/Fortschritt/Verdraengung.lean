@@ -238,22 +238,22 @@ def spurV : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
 
 theorem ZV_kerne_succ : ∀ t, (ZV (t + 1)).kerne = zV1.kerne := by
   intro t
-  cases t with
+  induction t with
   | zero =>
     show (ZV 1).kerne = zV1.kerne
     rfl
-  | succ t =>
+  | succ t ih =>
     have hz : ZV (t + 2) = toggleUpdate Hv (ZV (t + 1)) := by simp only [ZV]
     rw [hz]
     exact ih
 
 theorem ZV_status_succ : ∀ t, (ZV (t + 1)).status = zV1.status := by
   intro t
-  cases t with
+  induction t with
   | zero =>
     show (ZV 1).status = zV1.status
     rfl
-  | succ t =>
+  | succ t ih =>
     have hz : ZV (t + 2) = toggleUpdate Hv (ZV (t + 1)) := by simp only [ZV]
     rw [hz]
     exact ih
@@ -278,7 +278,8 @@ theorem nurV (t : Nat) (k : Kern) (c : Kontext)
   | zero =>
     cases k with
     | zero =>
-      have hc : c = A := Option.some.inj (zV0_dispatch0.symm.trans h)
+      simp only [ZV] at h
+      have hc : c = A := (Option.some.inj (zV0_dispatch0.symm.trans h)).symm
       exact Or.inl ⟨rfl, hc⟩
     | succ k =>
       simp only [ZV, dispatchV] at h
@@ -288,7 +289,7 @@ theorem nurV (t : Nat) (k : Kern) (c : Kontext)
     cases k with
     | zero =>
       rw [hkerne, zV1_dispatch] at h
-      have hc : c = Hv := Option.some.inj h
+      have hc : c = Hv := (Option.some.inj h).symm
       exact Or.inr ⟨Nat.succ_pos _, hc⟩
     | succ k =>
       rw [hkerne] at h
