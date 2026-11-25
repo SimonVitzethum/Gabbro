@@ -448,7 +448,7 @@ theorem AccessReads.deterministic (left : AccessReads scope input a rest)
       obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
       cases (List.cons.inj modeRest).2
       exact ⟨rfl, rfl⟩
-    | store _ _ _ _ _ _ _ _ => cases (List.cons.inj eq).1
+    | store _ _ _ _ _ _ => cases (List.cons.inj eq).1
   | store region visible receiverOrdinary indexRead valueRead modeRead =>
     cases right with
     | load _ _ _ _ _ _ _ _ _ _ => cases (List.cons.inj eq).1

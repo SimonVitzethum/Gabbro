@@ -86,6 +86,9 @@ theorem AssignFieldInversion : AssignFieldInversionAussage := by
       cases initializer <;> cases (List.cons.inj (List.cons.inj htok).2).1
   | letRegion => cases (List.cons.inj (List.cons.inj htok).2).1
   | forever => simp_all [letKeyword, keyword, returnKeyword, ifKeyword, assignment, dot, semicolon, noDotExpr, noDotCall, noDotPattern, noDotLabel]
+  | access accessRead =>
+    rw [← (List.cons.inj htok).2] at accessRead
+    cases accessRead
 
 theorem AssignFieldSuffix : AssignFieldSuffixAussage := by
   intro scope result name field input tree rest read
