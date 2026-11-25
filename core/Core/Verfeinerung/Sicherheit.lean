@@ -35,6 +35,10 @@ theorem FuehrtAus.verbrauch {t c aktion lock outside v}
   | verbinde _ _ => exact inner
   | beende _ => exact inner
   | wechsle _ _ _ _ => exact inner
+  | maskiere _ _ => exact inner
+  | prioritaet _ => exact inner
+  | sende _ _ => exact inner
+  | leite _ _ _ => exact inner
 
 theorem FuehrtSchrittAus.verbrauch {t c plan spur}
     (step : FuehrtSchrittAus e t c s u plan spur s') (vorher : s.Verbrauch) : s'.Verbrauch := by

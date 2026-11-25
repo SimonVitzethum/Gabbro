@@ -52,7 +52,7 @@ private theorem aktion_fragen_vor {t c zwischen a ls es}
     · cases jetzt
       exact Nat.lt_succ_self _
   | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ _ | beende _
-    | wechsle _ _ _ _ =>
+    | wechsle _ _ _ _ | maskiere _ _ | prioritaet _ | sende _ _ | leite _ _ _ =>
     intro a member
     exact Nat.lt_succ_of_lt (alt _ (rahmen.fragen ▸ member))
 

@@ -51,6 +51,10 @@ theorem FuehrtAus.bestimmt [DecidableEq L] {t c s u aktion lock lock' outside ou
   | verbinde _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
   | beende _ => cases b; exact ⟨rfl, rfl, rfl⟩
   | wechsle _ _ _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
+  | maskiere _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
+  | prioritaet _ => cases b; exact ⟨rfl, rfl, rfl⟩
+  | sende _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
+  | leite _ _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
 
 private theorem spur_gleich {spur spur' : SchrittSpur Ort Wert}
     (memory : spur.speicher = spur'.speicher) (outside : spur.aussen = spur'.aussen) : spur = spur' := by
