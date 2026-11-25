@@ -139,6 +139,13 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Kodierung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Programm
 public import Core.Beobachtung.Unentscheidbar.Simulation.Substrat
 public import Core.Beobachtung.Unentscheidbar.Simulation.Nummer
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Grundlagen
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Null
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SuccSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Succ
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtKette
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Sqrt
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
