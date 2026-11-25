@@ -338,11 +338,11 @@ instance : Encodable Dienst :=
   Encodable.ofLeftInverse dienstCode dienstOfNat (by intro d; cases d <;> rfl)
 
 abbrev AussenOperationSummeTyp : Type :=
-  Unit ⊕ (List UInt8) ⊕ (List UInt8) ⊕ (Dienst × List UInt8) ⊕ (List UInt8) ⊕
+  Nat ⊕ (List UInt8) ⊕ (List UInt8) ⊕ (Dienst × List UInt8) ⊕ (List UInt8) ⊕
     Nat ⊕ (Nat × Nat) ⊕ (Nat × Nat)
 
 def aussenOperationZuSumme : AussenOperation → AussenOperationSummeTyp
-  | .read => .inl ()
+  | .read => .inl 0
   | .write bytes => .inr (.inl bytes)
   | .resolve name => .inr (.inr (.inl name))
   | .firmware service bytes => .inr (.inr (.inr (.inl (service, bytes))))
@@ -352,7 +352,7 @@ def aussenOperationZuSumme : AussenOperation → AussenOperationSummeTyp
   | .waitRegister offset expected => .inr (.inr (.inr (.inr (.inr (.inr (.inr ((offset, expected))))))))
 
 def aussenOperationVonSumme : AussenOperationSummeTyp → Option AussenOperation
-  | .inl () => Option.some .read
+  | .inl _ => Option.some .read
   | .inr (.inl bytes) => Option.some (.write bytes)
   | .inr (.inr (.inl name)) => Option.some (.resolve name)
   | .inr (.inr (.inr (.inl (service, bytes)))) => Option.some (.firmware service bytes)

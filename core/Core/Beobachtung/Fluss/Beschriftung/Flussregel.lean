@@ -173,6 +173,8 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .zugriff _ => False
   -- A lifecycle instruction has no label rule either (thread creation is labelled in MK-13), so it is refused.
   | .faden _ => False
+  -- An outside question has no label rule yet (the answer label is MK-13), so it is refused.
+  | .aussen _ => False
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
     f.SichtErhaltendBei Beschriftung.alleOeffentlich pc := by
@@ -275,6 +277,7 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
   | bindeRegion receiver init => exact bindeRegionSicht β pc receiver init regel.1 regel.2
   | zugriff form => exact False.elim regel
   | faden form => exact False.elim regel
+  | aussen form => exact False.elim regel
 
 /-- Per instruction family: the rule is sound for every declaration. -/
 def FamilienSicht (familie : LokalFamilie) : Prop :=
