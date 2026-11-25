@@ -465,7 +465,7 @@ theorem simRefutierbar : SimRefutierbarAussage := by
       exact loaded.symm⟩
   refine ⟨ERef, falsifizierbareUmgebung, ρRef, runRef, ?_⟩
   intro η validη simη
-  rcases simη with ⟨_, matched, bound, _⟩
+  rcases simη with ⟨ordnung, matched, bound, rest⟩
   have sp0 : SpurAbgleich (some label) (η.zeit.spur 0) := by
     simpa only [ρRefSpur0] using matched.spur 0
   rcases SpurAbgleich.ideales_etikett sp0 with ηleer | ηlabel
@@ -498,12 +498,12 @@ theorem simRefutierbar : SimRefutierbarAussage := by
             zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1 := by
           change 0 < zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1
           simpa only [zaehle, Nat.zero_add, decide_eq_true hmark, ite_true] using Nat.zero_lt_one
-        exact (nicht_sim_bei_stotterueberlauf (ρ := ρRef) interval ueberlauf)
+        exact (nicht_sim_bei_stotterueberlauf (ρ := ρRef) interval ueberlauf) ⟨ordnung, matched, bound, rest⟩
   · have etakt := η.zeit.takt 0
     rw [ηlabel] at etakt
     cases etakt with
     | wartet still _ _ =>
-        exact (Option.some_ne_none label (ηlabel.symm.trans still)).elim
+        exact (Option.some_ne_none label still).elim
     | schritt labelEq idealSchritt =>
         have evEq := Option.some.inj labelEq.symm
         cases idealSchritt with
