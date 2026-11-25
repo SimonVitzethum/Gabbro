@@ -1,0 +1,162 @@
+/-
+  File:      core/Core/Ast/Semantik/Runtime/Klasse/Beweise/NILokal.lean
+  Subject:   INFORMATION FLOW OF THE SILENT CLASSES (MK-03). The flow duty of a form of class `lokal`
+             or `ruf`: a step of such a form is silent, so a coupled pair of runs stays coupled across
+             the step. The helper `antwortNI`, which in the fragment package is tied to `p.einheit`,
+             is generalised here to an arbitrary `Klasseneinheit`: a unit whose forms never issue a
+             question never records an answer. The generalisation is supplied first as its own lemma.
+-/
+module
+
+public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Beobachtung.Fluss.Beweise.Antwort
+public import Core.Beobachtung.Fluss.Fragment
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Katalog Beobachtung
+
+/-- A unit is question-free if none of its forms issues a question in an implementation step and
+    its loader begins with no pending question. These are the two properties the fragment package
+    gets from `Befehl.impl_privat` and the canonical loader; they are not consequences of embedding
+    a single silent form. -/
+def Klasseneinheit.Fragenfrei {ι : Type} (E : Klasseneinheit ι) : Prop :=
+  (∀ (i : ι) (c : Kontext) (s : Zustand) (w : PUnit) (p : Plan) (u : Zustand),
+      (E.system.regel i).impl c s w [p] u → ∀ q : Frage, p.aktion ≠ .frage q) ∧
+  (∀ (h : Umgebung) (s : AussenStart) (z : Zustand),
+      E.laden s (h.lade E.bild) = some z → z.fragen = [])
+
+/-- A protocol action other than a question leaves the pending-question ledger unchanged. -/
+theorem klassen_antwort_fuehrt_aus_fragen_leer {ι : Type} (E : Klasseneinheit ι)
+    {t : Nat} {c : Kontext} {s u v : Zustand} {aktion : Aktion Nat PUnit}
+    {sperren : List (Speicher.Etikett Zelle Int)} {aussen : List Ereignis}
+    (aktionStep : FuehrtAus E.einrichtung t c s u aktion sperren aussen v)
+    (uLeer : u.fragen = []) (keinFrage : ∀ q, aktion ≠ .frage q) : v.fragen = [] := by
+  cases aktionStep with
+  | frage q => exact (keinFrage q rfl).elim
+  | intern | warte _ | sperre _ _ | verbrauche _ | rueckkehr _ _ =>
+      change u.fragen = []
+      exact uLeer
+
+/-- A machine step of a question-free unit never creates a pending question. -/
+theorem klassen_antwort_schritt_fragen {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
+    {hw : HwLauf} {t : Nat} {s s' : Zustand} {spur : SchrittSpur Zelle Int}
+    (step : ImplSchritt E.einrichtung E.system E.katalog hw t s spur s')
+    (leer : s.fragen = []) : s'.fragen = [] := by
+  cases step with
+  | kontext _ _ regel aus =>
+      obtain ⟨i, _, impl⟩ := regel
+      rename_i c w plan u
+      have keinFrage : ∀ q : Frage, plan.aktion ≠ .frage q := frei.1 i c s w plan u impl
+      obtain ⟨frame, _, _, _, fuehrtAus, _, s'Eq⟩ := aus
+      have uLeer : u.fragen = [] := frame.fragen.trans leer
+      have vLeer := klassen_antwort_fuehrt_aus_fragen_leer E fuehrtAus uLeer keinFrage
+      rw [s'Eq]
+      exact vLeer
+  | antwort _ arrives =>
+      obtain ⟨_, _, _, stateEq⟩ := arrives
+      rw [stateEq]
+      change s.fragen = []
+      exact leer
+  | interrupt _ enters =>
+      obtain ⟨_, _, _, _, _, _, _, _, _, _, stateEq⟩ := enters
+      rw [stateEq]
+      change s.fragen = []
+      exact leer
+  | absturz crash =>
+      obtain ⟨_, _, _, _, stateEq⟩ := crash
+      rw [stateEq]
+      change s.fragen = []
+      exact leer
+
+/-- By induction over the cuts, a question-free unit has no pending question at any loaded cut. -/
+theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
+    {h : Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ) :
+    ∀ t, ρ.zeit.zustand t = none ∨ ∃ z, ρ.zeit.zustand t = some z ∧ z.fragen = [] := by
+  intro t
+  induction t with
+  | zero =>
+      rw [lauf.2.2.2]
+      right
+      refine ⟨_, rfl, ?_⟩
+      exact frei.2 h ρ.start _ rfl
+  | succ t ih =>
+      cases ih with
+      | inl noneq =>
+          have tick := ρ.zeit.takt t
+          rw [noneq] at tick
+          cases tick with
+          | schritt _ step => cases step
+          | wartet _ eq _ => exact Or.inl eq
+      | inr gefunden =>
+          obtain ⟨z, atZ, fragenLeer⟩ := gefunden
+          have tick := ρ.zeit.takt t
+          rw [atZ] at tick
+          cases tick with
+          | schritt _ step =>
+              cases after : ρ.zeit.zustand (t + 1) with
+              | none =>
+                  rw [after] at step
+                  cases step
+              | some next =>
+                  right
+                  refine ⟨next, rfl, ?_⟩
+                  rw [after] at step
+                  cases step with
+                  | schritt impl => exact klassen_antwort_schritt_fragen E frei impl fragenLeer
+          | wartet _ eq _ =>
+              right
+              exact ⟨z, eq, fragenLeer⟩
+
+/-- The pending-question fact at a named loaded cut. -/
+theorem klassen_antwort_fragen_leer_an {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei)
+    {h : Umgebung} {ρ : Lauf E} (lauf : Laeufe E h ρ)
+    (t : Nat) {z : Zustand} (atZ : ρ.zeit.zustand t = some z) : z.fragen = [] := by
+  have alle := klassen_antwort_fragen_leer E frei lauf t
+  cases alle with
+  | inl noneq => cases (atZ.symm.trans noneq)
+  | inr gefunden =>
+      obtain ⟨z', eq, leer⟩ := gefunden
+      have zz : z = z' := Option.some.inj (atZ.symm.trans eq)
+      cases zz
+      exact leer
+
+/-- **Generalised `antwortNI`**: a question-free `Klasseneinheit` never records an answer. -/
+theorem antwortNI_klasseneinheit {ι : Type} (E : Klasseneinheit ι) (frei : E.Fragenfrei) :
+    ∀ (h : Umgebung) (ρ : Lauf E), Laeufe E h ρ → ∀ t a spur,
+      ρ.zeit.spur t ≠ some (.antwort a, spur) := by
+  intro h ρ lauf t a spur gleich
+  have tick := ρ.zeit.takt t
+  rw [gleich] at tick
+  cases tick with
+  | wartet label _ _ => cases label
+  | schritt label step =>
+      rename_i event
+      have evEq := Option.some.inj label
+      rw [← evEq] at step
+      cases before : ρ.zeit.zustand t with
+      | none =>
+          rw [before] at step
+          cases step
+      | some z =>
+          cases after : ρ.zeit.zustand (t + 1) with
+          | none =>
+              rw [before] at step
+              rw [after] at step
+              cases step
+          | some next =>
+              rw [before] at step
+              rw [after] at step
+              cases step with
+              | schritt impl =>
+                  cases impl with
+                  | antwort _ arrives =>
+                      obtain ⟨angebot, _, _, _⟩ := arrives
+                      have zLeer := klassen_antwort_fragen_leer_an E frei h ρ lauf t before
+                      obtain ⟨q, qmem, _⟩ := angebot.2.2.2.1
+                      rw [zLeer] at qmem
+                      cases qmem
+
+end Gabbro.Core.Ast.Semantik
