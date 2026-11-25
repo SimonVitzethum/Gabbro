@@ -18,6 +18,7 @@ namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
 open Gabbro.Core.Ast
+open Gabbro.Core.Ast.Semantik
 
 /-- At every cut of a bound unit every per-pass mark is absent: the stand is the empty list. -/
 theorem bindungDurchlaufRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f : Befehl) :
