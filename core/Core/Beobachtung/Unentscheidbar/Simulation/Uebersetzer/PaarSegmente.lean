@@ -229,7 +229,7 @@ theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   exact e
 
 theorem pb12wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
-    (haus4 : aus ≠ frei + 4) :
+    :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[3] (some (pb11w r a b frei)) = some (pb12w r a b aus frei) := by
   have ht : (pb11w r a b frei).temp (frei + 4) = some (natVal (b * b + a)) := by
     show Function.update (pb10w r a b frei).temp (frei + 4) (some (natVal (b * b + a))) (frei + 4) = _

@@ -41,7 +41,7 @@ theorem paarVorwaertsWahr (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
   have h9 := pb9wLauf aSlot bSlot aus frei r a b
   have h10 := pb10wLauf aSlot bSlot aus frei r a b (by omega) (by omega)
   have h11 := pb11wLauf aSlot bSlot aus frei r a b
-  have h12 := pb12wLauf aSlot bSlot aus frei r a b (by omega)
+  have h12 := pb12wLauf aSlot bSlot aus frei r a b
   have h14 := kettenEinSchritt _ r (pb5 r a b frei) (pb6w r a b frei) 13 h5 h6
   have h17 := kettenSchritt _ r (pb6w r a b frei) (pb7w r a b frei) 14 3 h14 h7
   have h20 := kettenSchritt _ r (pb7w r a b frei) (pb8w r a b frei) 17 3 h17 h8
@@ -77,12 +77,12 @@ theorem paarVorwaertsFalsch (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat
 
 theorem pb12wPres (r : Rahmen) (a b aus frei s : Nat) (hs : s < frei) (hne : s ≠ aus) :
     (pb12w r a b aus frei).temp s = r.temp s := by
-  have h0 : s ≠ frei := ltNeAdd hs
-  have h1 : s ≠ frei + 1 := ltNeAdd hs
-  have h2 : s ≠ frei + 2 := ltNeAdd hs
-  have h3 : s ≠ frei + 3 := ltNeAdd hs
-  have h4 : s ≠ frei + 4 := ltNeAdd hs
-  have h5 : s ≠ frei + 5 := ltNeAdd hs
+  have h0 : s ≠ frei := by omega
+  have h1 : s ≠ frei + 1 := by omega
+  have h2 : s ≠ frei + 2 := by omega
+  have h3 : s ≠ frei + 3 := by omega
+  have h4 : s ≠ frei + 4 := by omega
+  have h5 : s ≠ frei + 5 := by omega
   show Function.update (pb11w r a b frei).temp aus (some (natVal (b * b + a))) s = _
   rw [updateMiss _ _ _ _ hne]
   show Function.update (pb10w r a b frei).temp (frei + 4) (some (natVal (b * b + a))) s = _
@@ -108,12 +108,12 @@ theorem pb12wPres (r : Rahmen) (a b aus frei s : Nat) (hs : s < frei) (hne : s �
 
 theorem pb14fPres (r : Rahmen) (a b aus frei s : Nat) (hs : s < frei) (hne : s ≠ aus) :
     (pb14f r a b aus frei).temp s = r.temp s := by
-  have h0 : s ≠ frei := ltNeAdd hs
-  have h1 : s ≠ frei + 1 := ltNeAdd hs
-  have h2 : s ≠ frei + 2 := ltNeAdd hs
-  have h3 : s ≠ frei + 3 := ltNeAdd hs
-  have h4 : s ≠ frei + 4 := ltNeAdd hs
-  have h5 : s ≠ frei + 5 := ltNeAdd hs
+  have h0 : s ≠ frei := by omega
+  have h1 : s ≠ frei + 1 := by omega
+  have h2 : s ≠ frei + 2 := by omega
+  have h3 : s ≠ frei + 3 := by omega
+  have h4 : s ≠ frei + 4 := by omega
+  have h5 : s ≠ frei + 5 := by omega
   show (pb13f r a b aus frei).temp s = _
   show Function.update (pb12f r a b frei).temp aus (some (natVal (a * a + a + b))) s = _
   rw [updateMiss _ _ _ _ hne]
