@@ -181,9 +181,9 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
   obtain ⟨kfst, zfst, hzfst, hfst⟩ := first.2
   rcases Nat.eq_or_lt_of_le hle with h | h
   · -- The return is immediate: against the vacated post-state.
-    have hseq : zfst = spost := Option.some.inj (hzfst.symm.trans hsplus)
     have hfind : Nat.find hex = d + 1 := h.symm
     rw [hfind] at hzfst
+    have hseq : zfst = spost := Option.some.inj (hzfst.symm.trans hsplus)
     rw [hseq] at hfst
     exact nowhere kfst hfst
   · -- The return is later: the tick before is still vacated, against no re-dispatch.
