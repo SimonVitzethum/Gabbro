@@ -220,40 +220,37 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
               cases impl with
               | kontext _ _ regel aus =>
                   cases label
-              obtain ⟨i, kopfI, implI⟩ := regel
-              obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := wahl) implI
-              cases (List.cons.inj planEq).1
-              simp only [unit] at aus
-              obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal aus
-              subst spur
-              rw [nextEq, hu] at hN
-              have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
-                intro d
-                unfold neuBeendet
-                cases hd : s.status d <;> rw [hd] <;> rfl
-              have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
-                rintro ⟨d, hd⟩
-                rw [hEnde d] at hd
-                cases hd
-              have hcommit : commitBeob k.plattform s (transfer.apply c s) = [] := by
-                simp only [commitBeob, List.drop_length, List.filterMap_nil]
-              have hausgabe : ausgabeBeob (unit op) c s.lokal c (transfer.apply c s).lokal c = [] := by
-                simp only [ausgabeBeob, unit, Flussdaten.leer, Flussdaten.ausgabeZuwachs,
-                  List.drop_nil, List.filter_nil, List.map_nil]
-              have hzeit : zeitBeob ρ c s.lokal c (transfer.apply c s).lokal c = [] := by
-                simp only [zeitBeob, unit, Schrankendaten.leer, List.filter_nil, List.filterMap_nil]
-              have hspec : (k.plattform.spekulationshuelle).zugriffe ([] : List (Option Nat)) = [] := by
-                cases k.plattform.spekulationshuelle <;> rfl
-              have hKontext : kontextBeob ρ predictor t c s (transfer.apply c s) ⟨[], []⟩ = [] := by
-                unfold kontextBeob
-                rw [hcommit, hausgabe, hzeit, kopfI]
-                simp only [unit, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
-                  List.map_nil, List.nil_append, List.append_nil]
-              rw [schrittBeob, spurGlied, hS, hN]
-              simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
-                List.nil_append]
-          | antwort _ _ => cases label
-          | interrupt _ _ => cases label
-          | absturz _ => cases label
+                  obtain ⟨i, kopfI, implI⟩ := regel
+                  obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := wahl) implI
+                  cases (List.cons.inj planEq).1
+                  simp only [unit] at aus
+                  obtain ⟨traceEq, nextEq⟩ := Instruction.genauInternal aus
+                  subst spur
+                  rw [nextEq, hu] at hN
+                  have hEnde : ∀ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = false := by
+                    intro d
+                    unfold neuBeendet
+                    cases hd : s.status d <;> rw [hd] <;> rfl
+                  have hKeinEnde : ¬ ∃ d, (neuBeendet s (transfer.apply c s) (unit op).etiketten d).isSome = true := by
+                    rintro ⟨d, hd⟩
+                    rw [hEnde d] at hd
+                    cases hd
+                  have hcommit : commitBeob k.plattform s (transfer.apply c s) = [] := by
+                    simp only [commitBeob, List.drop_length, List.filterMap_nil]
+                  have hausgabe : ausgabeBeob (unit op) c s.lokal c (transfer.apply c s).lokal c = [] := by
+                    simp only [ausgabeBeob, unit, Flussdaten.leer, Flussdaten.ausgabeZuwachs,
+                      List.drop_nil, List.filter_nil, List.map_nil]
+                  have hzeit : zeitBeob ρ c s.lokal c (transfer.apply c s).lokal c = [] := by
+                    simp only [zeitBeob, unit, Schrankendaten.leer, List.filter_nil, List.filterMap_nil]
+                  have hspec : (k.plattform.spekulationshuelle).zugriffe ([] : List (Option Nat)) = [] := by
+                    cases k.plattform.spekulationshuelle <;> rfl
+                  have hKontext : kontextBeob ρ predictor t c s (transfer.apply c s) ⟨[], []⟩ = [] := by
+                    unfold kontextBeob
+                    rw [hcommit, hausgabe, hzeit, kopfI]
+                    simp only [unit, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
+                      List.map_nil, List.nil_append, List.append_nil]
+                  rw [schrittBeob, spurGlied, hS, hN]
+                  simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
+                    List.nil_append]
 
 end Gabbro.Core.Beobachtung
