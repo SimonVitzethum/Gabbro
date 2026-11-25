@@ -37,18 +37,25 @@ def rmwZeugeForm : Schrittform := rmwZeugeBefehl.form
 
 /-- The false implementation: the rule fires the rmw and binds `0`, whatever the memory returned.
     Its ideal side is the guarded instruction rule, which refuses an access without authority. -/
-def rmwZeugeRegel : RmwZeugeRegel := Schrittform.verloren rmwZeugeForm
+def rmwZeugeRegelWert : RmwZeugeRegel := Schrittform.verloren rmwZeugeForm
 
 /-- The unit whose only form is that false rmw instruction. -/
-def rmwZeugeEinheitWert : RmwZeugeEinheit := Regeleinheit .x86_64 rmwZeugeRegel
+def rmwZeugeEinheitWert : RmwZeugeEinheit := Regeleinheit .x86_64 rmwZeugeRegelWert
 
-/-- The frame of the empty start holds no temporary, so the instruction names the outside cell.
-    No context holds a handle there and the guarded rule refuses. -/
+/-- The frame of the empty start holds no temporary, so the instruction names the outside cell. -/
 theorem rmwZeuge_operand_aussen :
     (rmwZeugeForm.operand (Leerzustand.lokal eintritt)) =
       ⟨.aussen, 0, 0, none, .tausche⟩ := by
   rfl
 
+/-- The plan of the real instruction at that frame: one rmw event reading `gelesen`, writing `0`. -/
+theorem rmwZeuge_plan (gelesen : Int) :
+    rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen =
+      ⟨.intern, [⟨.rmw, .aussen, .sc, gelesen, 0⟩], [],
+        (fun _ => false), (fun _ => .na), (fun _ => 0)⟩ := by
+  rfl
+
+/-- No context holds a handle at the outside cell, so the guarded rule refuses. -/
 theorem rmwZeuge_keinRecht :
     ¬ rmwZeugeForm.klasse.befugt (rmwZeugeForm.operand (Leerzustand.lokal eintritt))
         Leerzustand eintritt := by
@@ -65,49 +72,54 @@ theorem rmwZeugeKonfiguration :
       (u s' : RmwZeugeZustand),
     plan = rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen ∧
       u = Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0 ∧
-      rmwZeugeRegel.impl eintritt Leerzustand () [plan] u ∧
+      rmwZeugeRegelWert.impl eintritt Leerzustand () [plan] u ∧
       FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' ∧
       spur.speicher ≠ [] ∧
-      ¬ rmwZeugeRegel.ideal eintritt Leerzustand () [plan] u := by
+      ¬ rmwZeugeRegelWert.ideal eintritt Leerzustand () [plan] u := by
   obtain ⟨gelesen, es, graph, folge⟩ := speicherzug_existiert
     (anfang := Leerzustand.initial) (f := .kontext eintritt)
     (g := Leerzustand.graph) Speicher.Zustand.leer_konsistent
     Speicher.Zustand.leer_vollstaendig (a := .rmw) (x := .aussen) (m := .sc) (v := 0)
-  let plan := rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen
+  let plan : RmwZeugePlan :=
+    ⟨.intern, [⟨.rmw, .aussen, .sc, gelesen, 0⟩], [],
+      (fun _ => false), (fun _ => .na), (fun _ => 0)⟩
   let spur : SchrittSpur Zelle Int := ⟨es, []⟩
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
   let s' : RmwZeugeZustand := { u with graph := graph }
   have rahmen : Zustandsrahmen Leerzustand u := by
-    simp only [u, Schrittform.zugriffNach, Schrittform.nach, Zustandsrahmen]
+    rfl
   have liest : ∀ l ∈ plan.lesen, l.art.liest := by
     intro l mem
-    simp only [plan, rmwZeugeForm, Schrittform.plan, Wirkungsklasse.plan,
-      rmwZeuge_operand_aussen, List.mem_singleton] at mem
-    subst l
+    change l ∈ [⟨.rmw, .aussen, .sc, gelesen, 0⟩] at mem
+    rcases List.mem_singleton.mp mem with rfl
     rfl
   have spurGefuellt : spur.speicher ≠ [] := by
     cases folge with
-    | nil => simp only [plan, rmwZeugeForm, Schrittform.plan, Wirkungsklasse.plan,
-        rmwZeuge_operand_aussen, List.nil_append, List.cons_append, List.cons_ne_nil] at *
-    | cons _ _ _ => simp only [spur, List.nil_append, List.cons_append, List.cons_ne_nil]
+    | cons _ _ _ =>
+      intro leer
+      have letzte := (List.append_eq_nil.mp leer).2
+      cases letzte
   have aus : FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' := by
     refine ⟨rahmen, liest, [], u, .intern, ?_, rfl⟩
-    simpa only [plan, rmwZeugeForm, Schrittform.plan, Wirkungsklasse.plan,
-      rmwZeuge_operand_aussen, spur, List.nil_append, List.append_nil] using folge
-  have impl : rmwZeugeRegel.impl eintritt Leerzustand () [plan] u := by
+    simpa only [plan, SchrittSpur.speicher, spur, SchrittPlan.lesen, SchrittPlan.fuss,
+      SchrittPlan.schreibt, SchrittPlan.modus, SchrittPlan.wert, schreibEreignisse,
+      List.filter_nil, List.map_nil, List.nil_append, List.append_nil] using folge
+  have impl : rmwZeugeRegelWert.impl eintritt Leerzustand () [plan] u := by
     refine ⟨gelesen, ?_, rfl⟩
-    rfl
-  have idealVerweigert : ¬ rmwZeugeRegel.ideal eintritt Leerzustand () [plan] u := by
+    exact rmwZeuge_plan gelesen
+  have idealVerweigert : ¬ rmwZeugeRegelWert.ideal eintritt Leerzustand () [plan] u := by
     intro step
     change rmwZeugeForm.zugriffsschritt eintritt Leerzustand [plan] u at step
     rcases step with ⟨_, planPrivat, _⟩ | ⟨befugt, _, _, _⟩
-    · have lesenLeer : plan.lesen = [] := by
-        rw [planPrivat]
+    · have planGleich : plan = Semantik.plan := (List.cons.inj planPrivat).1
+      have lesenLeer : plan.lesen = [] := by
+        rw [planGleich]
         rfl
-      simp only [plan, rmwZeugeForm, Schrittform.plan, Wirkungsklasse.plan,
-        rmwZeuge_operand_aussen, List.cons_ne_nil] at lesenLeer
+      change [⟨.rmw, .aussen, .sc, gelesen, 0⟩] = [] at lesenLeer
+      cases lesenLeer
     · exact rmwZeuge_keinRecht befugt
-  exact ⟨gelesen, plan, spur, u, s', rfl, rfl, impl, aus, spurGefuellt, idealVerweigert⟩
+  exact ⟨gelesen, plan, spur, u, s', rmwZeuge_plan gelesen, rfl, impl, aus,
+    spurGefuellt, idealVerweigert⟩
 
 /-- The family statement refuses that error: the false rmw rule cannot satisfy its simulation leg. -/
 theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert () := by
@@ -119,7 +131,8 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
   have hw : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 1
     (fun _ _ => ⟨(fun _ => ⟨0, false, false, [], fun _ => 0⟩),
       (fun _ _ => none), (fun _ _ => none)⟩)
-  have crash : (hw.angebot 0).crash = false := rfl
+  have crash : (hw.angebot 0).crash = false := by
+    simp only [hw, Umgebung.referenzLauf]
   have ready : KannSchreiten hw 0 eintritt Leerzustand := by
     refine ⟨0, ?_, ?_, ?_⟩
     · exact congrArg some (Nat.mod_one _)
@@ -142,10 +155,11 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
         rcases rule with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
         · exact (List.cons.inj privat).1
         · exact (rmwZeuge_keinRecht befugt).elim
-      subst planPrivat
+      rw [planPrivat] at ausIdeal
       rcases ausIdeal with ⟨_, _, sperren, vIdeal, aus, folge, _⟩
       cases aus
-      simp only [List.nil_append, List.append_nil] at folge
+      simp only [Semantik.plan, schreibEreignisse, List.filter_nil, List.map_nil,
+        List.nil_append, List.append_nil] at folge
       cases folge
       exact spurNe rfl
   · exact spurNe (congrArg SchrittSpur.speicher leer)
