@@ -3,14 +3,14 @@
   Subject:   THE THREE FALSIFIABILITY STATEMENTS of `Ziel/Korrektheit/Verfeinerung`: the per-form
              simulation duty is discriminating, the whole-run simulation separates ideal runs, and the
              refinement refuses an implementation run. The shared concrete unit and run come from
-             `FalsifizierbarZeuge`. Two rule variants give the witnesses: an empty ideal rule refutes
+             `FalsifizierbarBasis`. Two rule variants give the witnesses: an empty ideal rule refutes
              every ideal run and discriminates the per-form duty; a tolerant rule with stutter bound
              zero has one matched ideal run and one that spends the private tick, separated by
              `nicht_sim_bei_stotterueberlauf`. The pinned statements are unchanged.
 -/
 module
 
-public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarZeuge
+public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 
 @[expose] public section
 

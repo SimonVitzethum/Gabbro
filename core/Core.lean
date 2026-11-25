@@ -155,7 +155,7 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
-public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarZeuge
+public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
