@@ -59,6 +59,7 @@ theorem planAB_linke_none : linke planAB = none := by
   rw [if_neg]
   intro ht
   simp only [bauplanOk, planAB_sealed, Bool.and_false] at ht
+  exact Bool.false_ne_true ht
 
 /-- The linked code is the concatenation: the divider runs with B's divisor. -/
 theorem planAB_code : (verknuepfteFragmente planAB).code =

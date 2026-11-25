@@ -111,7 +111,7 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
     exact List.mem_cons_self
   · refine ⟨[], none, ?_⟩
     rw [beispielCode]
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
 
 /-- Linking succeeds exactly when the declarative check holds, with the concatenated fragments. -/
 theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
