@@ -160,4 +160,105 @@ theorem antwortNI_klasseneinheit {ι : Type} (E : Klasseneinheit ι) (frei : E.F
                       rw [zLeer] at qmem
                       cases qmem
 
+/-! ### State-level flow of a silent form
+
+    The two pieces below are the state-level part of the flow duty: a step of a silent form is the
+    private plan and a frame update, and `RegelFluss` transfers public equality of the pre-states
+    to public equality of the post-states. Lifting this to `RegelNIPflicht` is the open step; see the
+    closing note of this file. -/
+
+/-- Public source-state equality is reflexive. -/
+theorem quellzustandGleich_refl {ι : Type} (E : Klasseneinheit ι) (v : Zustand) :
+    Beobachtung.QuellzustandGleich E v v := by
+  refine ⟨?_, ?_, ?_, rfl, rfl, ?_⟩
+  · intro c p hp
+    rfl
+  · intro c
+    rfl
+  · intro x
+    rfl
+  · intro c
+    rfl
+
+/-- Public source-state equality is symmetric. -/
+theorem quellzustandGleich_symm {ι : Type} (E : Klasseneinheit ι) {v u : Zustand}
+    (h : Beobachtung.QuellzustandGleich E v u) : Beobachtung.QuellzustandGleich E u v := by
+  rcases h with ⟨lok, ende, initial, rechte, leihen, antwort⟩
+  refine ⟨?_, ?_, ?_, rechte.symm, leihen.symm, ?_⟩
+  · intro c p hp
+    exact (lok c p hp).symm
+  · intro c
+    exact (ende c).symm
+  · intro x
+    exact (initial x).symm
+  · intro c
+    exact (antwort c).symm
+
+/-- Public source-state equality is transitive. -/
+theorem quellzustandGleich_trans {ι : Type} (E : Klasseneinheit ι) {v u w : Zustand}
+    (hvu : Beobachtung.QuellzustandGleich E v u)
+    (huw : Beobachtung.QuellzustandGleich E u w) : Beobachtung.QuellzustandGleich E v w := by
+  rcases hvu with ⟨lokvu, endvu, initvu, rechtevu, leihenvu, antvu⟩
+  rcases huw with ⟨lokuw, enduw, inituw, rechteuw, leihenuw, antuw⟩
+  refine ⟨?_, ?_, ?_, rechtevu.trans rechteuw, leihenvu.trans leihenuw, ?_⟩
+  · intro c p hp
+    exact (lokvu c p hp).trans (lokuw c p hp)
+  · intro c
+    exact (endvu c).trans (enduw c)
+  · intro x
+    exact (initvu x).trans (inituw x)
+  · intro c
+    exact (antvu c).trans (antuw c)
+
+/-- The step relation of a silent form is its ideal relation with the private plan. -/
+theorem klassen_stummer_ideal {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
+    (emb : F.Eingebettet E f) (hk : F.klasse = .lokal ∨ F.klasse = .ruf)
+    {c : Kontext} {s : Zustand} {w : PUnit} {p : Plan} {u : Zustand}
+    (step : (E.system.regel f).ideal c s w [p] u) :
+    p = Semantik.plan ∧ u = F.nach c s 0 := by
+  rw [emb.regel] at step
+  change F.ideal c s w [p] u at step
+  rcases hk with rfl | rfl <;> exact step
+
+/-- An implementation step of a silent form at a head is a source step with the private plan. -/
+theorem klassen_stummer_formschritt {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
+    (emb : F.Eingebettet E f) (hk : F.klasse = .lokal ∨ F.klasse = .ruf)
+    {c : Kontext} {s : Zustand} {w : PUnit} {p : Plan} {u : Zustand}
+    (kopf : E.system.kopf s c = some f) (step : (E.system.regel f).impl c s w [p] u) :
+    Beobachtung.FormSchritt E f c s w p u := by
+  refine ⟨kopf, ?_⟩
+  rw [emb.regel] at step
+  change F.ideal c s w [p] u at step
+  rcases hk with rfl | rfl <;> exact step
+
+/-- **State-level flow of a silent form**: two steps of the same embedded silent form from
+    publicly equal pre-states leave the post-states publicly equal. This is the flow premise at
+    the source level; the run-level coupling additionally needs the head function to respect the
+    public state and the step to be observationally silent. -/
+theorem klassen_stummer_fluss_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
+    (emb : F.Eingebettet E f) (hk : F.klasse = .lokal ∨ F.klasse = .ruf)
+    (fluss : Beobachtung.RegelFluss E f) {c : Kontext} {v₁ v₂ : Zustand}
+    (kopf₁ : E.system.kopf v₁ c = some f) (kopf₂ : E.system.kopf v₂ c = some f)
+    (gleich : Beobachtung.QuellzustandGleich E v₁ v₂) :
+    Beobachtung.QuellzustandGleich E (F.nach c v₁ 0) (F.nach c v₂ 0) := by
+  have fs1 : Beobachtung.FormSchritt E f c v₁ () Semantik.plan (F.nach c v₁ 0) := by
+    refine ⟨kopf₁, ?_⟩
+    rw [emb.regel]
+    change F.ideal c v₁ () [Semantik.plan] (F.nach c v₁ 0)
+    rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
+  have fs2 : Beobachtung.FormSchritt E f c v₂ () Semantik.plan (F.nach c v₂ 0) := by
+    refine ⟨kopf₂, ?_⟩
+    rw [emb.regel]
+    change F.ideal c v₂ () [Semantik.plan] (F.nach c v₂ 0)
+    rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
+  by_cases hp : oeffentlich (E.fluss.kontrolle f) = true
+  · exact (fluss.2 hp c v₁ () Semantik.plan (F.nach c v₁ 0)
+      v₂ () Semantik.plan (F.nach c v₂ 0) gleich fs1 fs2).1
+  · have hfalse : oeffentlich (E.fluss.kontrolle f) = false := by
+      cases hpub : oeffentlich (E.fluss.kontrolle f) <;> simp_all
+    have n1 := (fluss.1 c v₁ () Semantik.plan (F.nach c v₁ 0) fs1).2 hfalse
+    have n2 := (fluss.1 c v₂ () Semantik.plan (F.nach c v₂ 0) fs2).2 hfalse
+    exact quellzustandGleich_trans E (quellzustandGleich_symm E n1.1)
+      (quellzustandGleich_trans E gleich n2.1)
+
 end Gabbro.Core.Ast.Semantik
