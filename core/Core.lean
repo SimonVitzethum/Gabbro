@@ -16,6 +16,7 @@ public import Core.Speicher.Litmus.Wrc
 public import Core.Speicher.Litmus.Isa2
 public import Core.Speicher.Litmus.Mp
 public import Core.Speicher.Litmus.Lb
+public import Core.Speicher.Litmus.Katalog
 public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
@@ -174,6 +175,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Autoritaet
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public import Core.Ast.Semantik.Runtime.Faden.Offen
+public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar

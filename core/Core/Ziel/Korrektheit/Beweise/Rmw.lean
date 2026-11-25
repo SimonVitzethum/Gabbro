@@ -11,6 +11,11 @@
   no write is `mo`-after the source, `hb` and `psc` are empty, `rf` strictly increases the
   rank -- and violates the new `liest_vorher` field. It stays as the non-triviality witness
   `liest_vorher_nichtTrivial`: the new field is not implied by the old ones.
+
+  The second half proves the pinned `RmwAtomarAussage`: an update of a consistent graph is atomic, and
+  the checker accepts each update form exactly at an atomic mode. A two-event graph with an `na` update
+  satisfies the other eleven well-formedness fields and fails only the atomic-mode field
+  (`RmwAtomarAussage.nichtTrivial`), so the statement is not vacuous.
 -/
 module
 
@@ -22,6 +27,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 open Gabbro.Core.Speicher
+open Gabbro.Core.Ast.Semantik
 
 /-- One initial write `w` of a location and two updates `u₁`, `u₂` that both read `w`. -/
 inductive RmwEv where
@@ -94,15 +100,21 @@ theorem rmwWf : rmwGraph.Wohlgeformt where
     intro a b _ _ _ hne
     show rmwMo a b ∨ rmwMo b a
     cases a <;> cases b <;> first | decide | exact absurd rfl hne
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> decide
 
 /-- Every `hb` step is impossible: `po` is empty and every mode is relaxed, so `sw` is empty. -/
 theorem rmwHbSchrittFalsch (a b : RmwEv) : ¬ rmwGraph.hbSchritt a b := by
   intro h
   rcases h with hpo | hsw
   · exact False.elim hpo
-  · rcases hsw with ⟨_, hstark, _, _, _⟩
-    cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, Modus.stark] at hstark <;>
-      exact False.elim hstark
+  · obtain ⟨w, x, r, hkopf, _, _, _, _, _⟩ := hsw
+    rcases hkopf with ⟨rfl, _, hstark⟩ | ⟨hza, _, _⟩
+    · cases a <;> simp only [Graph.modus, rmwGraph, rmwLab, Modus.stark] at hstark <;>
+        exact False.elim hstark
+    · obtain ⟨hza, _⟩ := hza
+      cases a <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hza
 
 /-- Happens-before is empty in this graph. -/
 theorem rmwHbFalsch (a b : RmwEv) : ¬ rmwGraph.hb a b := by
@@ -111,12 +123,20 @@ theorem rmwHbFalsch (a b : RmwEv) : ¬ rmwGraph.hb a b := by
   | single hs => exact rmwHbSchrittFalsch _ _ hs
   | tail _ _ ih => exact ih
 
-/-- The `psc` relation is empty: no access is `seq_cst`. -/
+/-- The `rmw` graph has no fences. -/
+theorem rmw_kein_zaun (u : RmwEv) : ¬ rmwGraph.istZaun u := by
+  intro hu
+  cases u <;> simp only [Graph.istZaun, rmwGraph, rmwLab, reduceCtorEq] at hu
+
+/-- The `psc` relation is empty: no access is `seq_cst` and there is no `seq_cst` fence. -/
 theorem rmwPscFalsch (a b : RmwEv) : ¬ rmwGraph.psc a b := by
   intro h
-  obtain ⟨hsc, _⟩ := h
-  cases a <;> simp only [Graph.sc, Graph.modus, rmwGraph, rmwLab, reduceCtorEq] at hsc <;>
-    exact False.elim hsc
+  rcases h with ⟨_, _, _, hl, _⟩ | ⟨hza, _, _⟩
+  · rcases hl with ⟨hsc, _⟩ | ⟨hza, _⟩
+    · cases a <;> simp only [Graph.sc, Graph.modus, rmwGraph, rmwLab, reduceCtorEq] at hsc <;>
+        exact False.elim hsc
+    · exact absurd hza.1 (rmw_kein_zaun a)
+  · exact absurd hza.1 (rmw_kein_zaun a)
 
 /-- The empty relation is acyclic. -/
 theorem azyklischLeer : Azyklisch (fun _ _ : RmwEv => False) := by
@@ -173,5 +193,180 @@ theorem liest_vorher_nichtTrivial :
     rcases h with hpo | hrf
     · exact False.elim hpo
     · rcases hrf with ⟨rfl, (rfl | rfl)⟩ <;> decide
+
+/-! ### RC11 updates are atomic: model and checker row -/
+
+/-- One write `w` and one update `u` that reads it, both in one location. -/
+inductive AtomarEv where
+  | w
+  | u
+  deriving DecidableEq, Repr
+
+/-- The update carries the mode under discussion; the initial write stays relaxed. -/
+def atomarLab (m : Modus) : AtomarEv → Etikett Bool Nat
+  | .w => ⟨.schreiben, true, .rlx, 0, 1⟩
+  | .u => ⟨.rmw, true, m, 1, 1⟩
+
+@[reducible] def atomarPo (_a _b : AtomarEv) : Prop := False
+
+@[reducible] def atomarRf (a b : AtomarEv) : Prop := a = AtomarEv.w ∧ b = AtomarEv.u
+
+@[reducible] def atomarMo (a b : AtomarEv) : Prop := a = AtomarEv.w ∧ b = AtomarEv.u
+
+def atomarRang : AtomarEv → Nat
+  | AtomarEv.w => 0
+  | AtomarEv.u => 1
+
+def atomarGraph (m : Modus) : Graph AtomarEv Bool Nat :=
+  ⟨atomarLab m, atomarPo, atomarRf, atomarMo⟩
+
+/-- The eleven shape fields of a well-formed graph, without the RC11 update-mode field. -/
+structure ShapeOhneRmw (G : Graph E Ort Wert) : Prop where
+  po_trans : ∀ a b c, G.po a b → G.po b c → G.po a c
+  po_irrefl : ∀ a, ¬ G.po a a
+  rf_schreibt : ∀ w r, G.rf w r → G.schreibt w
+  rf_liest : ∀ w r, G.rf w r → G.liest r
+  rf_ort : ∀ w r, G.rf w r → G.ort w = G.ort r
+  rf_wert : ∀ w r, G.rf w r → (G.lab w).geschrieben = (G.lab r).gelesen
+  rf_eindeutig : ∀ w w' r, G.rf w r → G.rf w' r → w = w'
+  mo_schreibt : ∀ a b, G.mo a b → G.schreibt a ∧ G.schreibt b
+  mo_ort : ∀ a b, G.mo a b → G.ort a = G.ort b
+  mo_trans : ∀ a b c, G.mo a b → G.mo b c → G.mo a c
+  mo_irrefl : ∀ a, ¬ G.mo a a
+  mo_total : ∀ a b, G.schreibt a → G.schreibt b → G.ort a = G.ort b → a ≠ b → G.mo a b ∨ G.mo b a
+
+/-- The shape of the two-event graph does not depend on the update's mode. -/
+theorem atomarShape (m : Modus) : ShapeOhneRmw (atomarGraph m) where
+  po_trans := fun _ _ _ h _ => False.elim h
+  po_irrefl := fun _ h => h
+  rf_schreibt := by
+    rintro _ _ ⟨rfl, _⟩
+    exact trivial
+  rf_liest := by
+    rintro _ _ ⟨rfl, rfl⟩
+    exact trivial
+  rf_ort := by
+    rintro _ _ ⟨rfl, rfl⟩
+    rfl
+  rf_wert := by
+    rintro _ _ ⟨rfl, rfl⟩
+    rfl
+  rf_eindeutig := by
+    intro w w' _ h1 h2
+    rcases h1 with ⟨rfl, _⟩
+    rcases h2 with ⟨rfl, _⟩
+    rfl
+  mo_schreibt := by
+    rintro _ _ ⟨rfl, rfl⟩
+    exact ⟨trivial, trivial⟩
+  mo_ort := by
+    rintro _ _ ⟨rfl, rfl⟩
+    rfl
+  mo_trans := by
+    intro a b c
+    show atomarMo a b → atomarMo b c → atomarMo a c
+    cases a <;> cases b <;> cases c <;> decide
+  mo_irrefl := by
+    intro a
+    show ¬ atomarMo a a
+    cases a <;> decide
+  mo_total := by
+    intro a b _ _ _ hne
+    show atomarMo a b ∨ atomarMo b a
+    cases a <;> cases b <;> first | decide | exact absurd rfl hne
+
+/-- The graph is well formed exactly when its update is atomic. -/
+theorem atomarWf (m : Modus) (hm : m ≠ .na) : (atomarGraph m).Wohlgeformt := by
+  have s := atomarShape m
+  refine ⟨s.po_trans, s.po_irrefl, s.rf_schreibt, s.rf_liest, s.rf_ort, s.rf_wert, s.rf_eindeutig,
+    s.mo_schreibt, s.mo_ort, s.mo_trans, s.mo_irrefl, s.mo_total, ?_⟩
+  intro a h
+  cases a
+  · simp only [Graph.istRmw, atomarGraph, atomarLab, reduceCtorEq] at h
+  · exact hm
+
+/-- The two-event graph has no fence. -/
+theorem atomarKeinZaun (m : Modus) (a : AtomarEv) : ¬ (atomarGraph m).istZaun a := by
+  intro ha
+  cases a <;> simp only [Graph.istZaun, atomarGraph, atomarLab, reduceCtorEq] at ha
+
+/-- No `sw` edge exists: neither access is release or acquire. -/
+theorem atomarSwFalsch (a b : AtomarEv) : ¬ (atomarGraph .rlx).sw a b := by
+  intro h
+  obtain ⟨_, hstark, _⟩ := Graph.sw_klassisch (atomarKeinZaun .rlx a) (atomarKeinZaun .rlx b) h
+  cases a <;> simp only [Graph.modus, atomarGraph, atomarLab, Modus.stark, reduceCtorEq] at hstark
+
+/-- Happens-before is empty. -/
+theorem atomarHbFalsch (a b : AtomarEv) : ¬ (atomarGraph .rlx).hb a b := by
+  intro h
+  obtain ⟨c, hc⟩ := transGen_kopf h
+  rcases hc with hpo | hsw
+  · exact hpo
+  · exact atomarSwFalsch a c hsw
+
+/-- The relaxed two-event graph is consistent: the update reads the write it follows in `mo`. -/
+theorem atomarKonsistent : (atomarGraph .rlx).Konsistent where
+  wf := atomarWf .rlx (by decide)
+  hb_irrefl := fun a h => atomarHbFalsch a a h
+  kohaerent := fun _ _ h _ => absurd h (atomarHbFalsch _ _)
+  atomar := by
+    intro w u w' hrf _ hmo hmo'
+    rcases hrf with ⟨rfl, rfl⟩
+    rcases hmo with ⟨_, hw'u⟩
+    rcases hmo' with ⟨hw'w, _⟩
+    subst w'
+    cases hw'w
+  psc := by
+    intro a h
+    obtain ⟨c, hc⟩ := transGen_kopf h
+    have hsc : (atomarGraph .rlx).sc a := Graph.psc_sc_links hc
+    cases a <;> simp only [Graph.sc, Graph.modus, atomarGraph, atomarLab, reduceCtorEq] at hsc
+  ohneLB := by
+    refine azyklisch_von_rang atomarRang ?_
+    intro a b h
+    rcases h with hpo | hrf
+    · exact False.elim hpo
+    · rcases hrf with ⟨rfl, rfl⟩ <;> decide
+  liest_vorher := by
+    intro w u hrf _
+    rcases hrf with ⟨rfl, rfl⟩
+    exact ⟨rfl, rfl⟩
+
+/-- **The pinned RC11 update statement**: the graph half is `Wohlgeformt.rmw_atomar`, the instruction half
+    is decided by `pruefeZugriffsform` for each of the three update forms. -/
+theorem rmwAtomar : RmwAtomarAussage := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro E Ort Wert G hk a ha
+    exact hk.wf.rmw_atomar ha
+  · intro z e i q ty m
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
+  · intro z e i a n ty m
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
+  · intro z e i b ty m
+    cases m <;> simp only [Zugriffsform.wohlgeformt, pruefeZugriffsform, Modus.atomar,
+      reduceCtorEq, Bool.false_eq_true]
+
+/-- The statement is satisfiable on both levels: a consistent graph with an update, and an accepted
+    update form. -/
+theorem RmwAtomarAussage.erfuellbar :
+    (∃ (E Ort Wert : Type) (G : Graph E Ort Wert), G.Konsistent ∧ ∃ a, G.istRmw a) ∧
+    (∃ (z e i q : Nat) (ty : Gabbro.Core.Ast.Ty .value) (m : Modus),
+      (Gabbro.Core.Ast.Semantik.Zugriffsform.tausche z e i q ty m).wohlgeformt ∧ m.atomar) := by
+  refine ⟨⟨AtomarEv, Bool, Nat, atomarGraph .rlx, atomarKonsistent, AtomarEv.u, rfl⟩,
+    ⟨0, 0, 0, 0, Gabbro.Core.Ast.Ty.bool, .rlx, rfl, trivial⟩⟩
+
+/-- **The new atomicity field is not implied by the other shape fields**: the two-event graph with an
+    `na` update satisfies all eleven of them, and its update fails only the new one. The checker half is
+    sharp as well: the exchange form at `na` is refused. -/
+theorem RmwAtomarAussage.nichtTrivial :
+    (∃ (E Ort Wert : Type) (G : Graph E Ort Wert),
+      ShapeOhneRmw G ∧ ∃ a, G.istRmw a ∧ G.modus a = .na) ∧
+    (∃ (z e i q : Nat) (ty : Gabbro.Core.Ast.Ty .value),
+      ¬ (Gabbro.Core.Ast.Semantik.Zugriffsform.tausche z e i q ty .na).wohlgeformt) := by
+  refine ⟨⟨AtomarEv, Bool, Nat, atomarGraph .na, atomarShape .na, AtomarEv.u, rfl, rfl⟩,
+    ⟨0, 0, 0, 0, Gabbro.Core.Ast.Ty.bool,
+      tausche_na_nicht_wohlgeformt 0 0 0 0 Gabbro.Core.Ast.Ty.bool⟩⟩
 
 end Gabbro.Core.Ziel.Korrektheit

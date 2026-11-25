@@ -64,6 +64,10 @@ theorem zugriffsschritt_liest (F : Schrittform) (c : Kontext) (s u : Zustand) {p
       intro l hl
       simp only [Wirkungsklasse.plan, Semantik.plan] at hl
       cases hl
+    | zaun m =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
     | lesen m =>
       intro l hl
       simp only [Wirkungsklasse.plan, List.mem_singleton] at hl

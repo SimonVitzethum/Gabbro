@@ -116,26 +116,36 @@ theorem stGraph_wf (mw mr : Modus) : (stGraph mw mr).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, stGraph, stLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, stGraph, stLab, reduceCtorEq] at h
 
 theorem stGraph_kein_rmw (mw mr : Modus) (u : StEv) : ¬ (stGraph mw mr).istRmw u := by
   intro hu
   cases u <;> simp only [Graph.istRmw, stGraph, stLab, reduceCtorEq] at hu
 
+/-- The stale-payload graph has no fences. -/
+theorem stGraph_kein_zaun (mw mr : Modus) (u : StEv) : ¬ (stGraph mw mr).istZaun u := by
+  intro hu
+  cases u <;> simp only [Graph.istZaun, stGraph, stLab, reduceCtorEq] at hu
+
 /-- With the flag modes not both at least release/acquire, nothing synchronises. -/
 theorem stGraph_kein_sw {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv} :
     ¬ (stGraph mw mr).sw a b := by
-  rintro ⟨_, ha, _, hb, x, hrs, hrf⟩
+  intro hsw
+  obtain ⟨_, hma, _, hmb, x, hrs, hrf⟩ :=
+    Graph.sw_klassisch (stGraph_kein_zaun mw mr a) (stGraph_kein_zaun mw mr b) hsw
   have hx := Graph.Rs.ohne_rmw (stGraph_kein_rmw mw mr) hrs
   have hrf' : stRf x b := hrf
   rcases hrf' with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-  · have hmr : mr.stark := hb
+  · have hmr : mr.stark := hmb
     rcases hx with rfl | hpo
-    · exact h ⟨ha, hmr⟩
+    · exact h ⟨hma, hmr⟩
     · have hpo' : stPo a wy := hpo
       rcases hpo' with ⟨rfl, _⟩ | ⟨_, h2⟩
-      · exact ha
+      · exact hma
       · cases h2
-  · exact hb
+  · exact hmb
 
 theorem stGraph_hb {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv}
     (hab : (stGraph mw mr).hb a b) : stPo a b := by
@@ -197,15 +207,22 @@ theorem stGraph_scb {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv
 /-- **No two events of this graph are related by `psc`**: of every pair the SC base relates, one is a plain access. -/
 theorem stGraph_psc {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv}
     (hp : (stGraph mw mr).psc a b) : False := by
-  obtain ⟨ha, hb, hs⟩ := hp
-  have ha' : (stLab mw mr a).modus = .sc := ha
-  have hb' : (stLab mw mr b).modus = .sc := hb
-  rcases stGraph_scb h hs with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-  · exact absurd ha' (by intro hh; cases hh)
-  · exact absurd hb' (by intro hh; cases hh)
-  · exact absurd ha' (by intro hh; cases hh)
-  · exact absurd ha' (by intro hh; cases hh)
-  · exact absurd ha' (by intro hh; cases hh)
+  rcases hp with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, _, _⟩
+  · rcases hl with ⟨ha, hac⟩ | ⟨hza, _⟩
+    · rcases hr with ⟨hb, hdb⟩ | ⟨hzb, _⟩
+      · have ha' : (stLab mw mr a).modus = .sc := ha
+        have hb' : (stLab mw mr b).modus = .sc := hb
+        subst hac
+        subst hdb
+        rcases stGraph_scb h hscb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+        · exact absurd ha' (by intro hh; cases hh)
+        · exact absurd hb' (by intro hh; cases hh)
+        · exact absurd ha' (by intro hh; cases hh)
+        · exact absurd ha' (by intro hh; cases hh)
+        · exact absurd ha' (by intro hh; cases hh)
+      · exact absurd hzb.1 (stGraph_kein_zaun mw mr _)
+    · exact absurd hza.1 (stGraph_kein_zaun mw mr _)
+  · exact absurd hza.1 (stGraph_kein_zaun mw mr _)
 
 theorem stGraph_konsistent {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) :
     (stGraph mw mr).Konsistent where

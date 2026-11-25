@@ -9,9 +9,11 @@
              registry packet before an instruction can use it (`Befehl.klasse` has no wildcard, so a new
              instruction must be classified).
              * `lokal`, `ruf` change the acting frame only (private step).
-             * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
-               atomic update): the plan carries the access, the frame names the cell.
-             * `sperre` draws a ticket, takes or gives one lock of the unit.
+  * `lesen`, `schreiben`, `rmw` access one cell of the shared memory in a mode (a load, a store, an
+                atomic update): the plan carries the access, the frame names the cell.
+  * `zaun` orders in a mode (a fence): like the frame-only classes it plans the private plan;
+    the fence event reaches the graph when plans carry fence labels.
+  * `sperre` draws a ticket, takes or gives one lock of the unit.
              * `frage` issues one question to the outside world.
              The classes of waiting, thread start and join, authority, time, persistence, randomness and
              guests are appended by the packages that introduce their first instruction.
@@ -30,6 +32,7 @@ namespace Gabbro.Core.Ast.Semantik
     * `lesen m`: a read of one cell in mode `m`; the value read is chosen by the memory model.
     * `schreiben m`: a write of one cell in mode `m`.
     * `rmw m`: an atomic read-modify-write of one cell in mode `m`.
+    * `zaun m`: a fence in mode `m`; it orders but accesses nothing, so its plan is private.
     * `sperre a`: one lock action `a` (ticket, take, give) on one lock of the unit.
     * `frage`: one question to the outside world; its answer arrives later, as its own transition. -/
 inductive Wirkungsklasse where
@@ -38,6 +41,7 @@ inductive Wirkungsklasse where
   | lesen (modus : Gabbro.Core.Speicher.Modus)
   | schreiben (modus : Gabbro.Core.Speicher.Modus)
   | rmw (modus : Gabbro.Core.Speicher.Modus)
+  | zaun (modus : Gabbro.Core.Speicher.Modus)
   | sperre (aktion : Gabbro.Core.Maschine.SperrAktion)
   | frage
   | starte
@@ -47,7 +51,7 @@ inductive Wirkungsklasse where
 
 /-- **The class of an access instruction** (MK-04): a load and the confirming observation read, a store and the
     publication write, an update (exchange, compare-and-swap, fetch-and-add) is an update, each in the mode the
-    instruction names. -/
+    instruction names; a fence is a fence in its mode. -/
 def Zugriffsform.klasse : Zugriffsform → Wirkungsklasse
   | .lade _ _ _ _ m => .lesen m
   | .erwarte _ _ _ _ _ m => .lesen m
@@ -56,6 +60,7 @@ def Zugriffsform.klasse : Zugriffsform → Wirkungsklasse
   | .tausche _ _ _ _ _ m => .rmw m
   | .vergleicheTausche _ _ _ _ _ _ m => .rmw m
   | .holeUndAddiere _ _ _ _ _ m => .rmw m
+  | .zaun m => .zaun m
 
 /-- **The class of a lifecycle instruction** (MK-07): starting a thread, ending one, joining one, and switching a
     core to a thread (which is also how a core is started). -/
@@ -92,8 +97,8 @@ def Befehl.Stapelwirkung (b : Befehl) (k : Nat) : Prop :=
     every other class steps its frame without pushing a continuation. -/
 def Wirkungsklasse.Stapel : Wirkungsklasse → Nat
   | .ruf => 1
-  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage | .starte | .beende | .verbinde
-  | .wechsle => 0
+  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .starte | .beende
+  | .verbinde | .wechsle => 0
 
 /-- Frame-level fact each instruction pays for its class: its stack effect is the one of its class.
     Difficulty: leicht-mittel. Sketch: case split on the instruction; every case but `rufe` and `starte` is
