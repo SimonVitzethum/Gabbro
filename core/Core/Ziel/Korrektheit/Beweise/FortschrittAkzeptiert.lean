@@ -327,20 +327,19 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       by_cases heq : k = kr
                       · subst heq
                         have hkk : ((Maschine.Zustandsrueckkehr u k).kerne k).laeuft =
-                            ((u.kerne k).zurueck).laeuft := rfl
+                            ((u.kerne k).zurueck).laeuft := by
+                          simp only [Maschine.Zustandsrueckkehr, Function.update_self]
                         rw [hkk] at h
                         cases hst : (u.kerne k).stapel with
                         | nil =>
                           have hnone : ((u.kerne k).zurueck).laeuft = none := by
-                            rw [hst]
-                            rfl
+                            simp only [hst, Maschine.KernZustand.zurueck]
                           rw [hnone] at h
                           cases h
                         | cons top rest =>
                           obtain ⟨w, n⟩ := top
                           have hpop : ((u.kerne k).zurueck).laeuft = w := by
-                            rw [hst]
-                            rfl
+                            simp only [hst, Maschine.KernZustand.zurueck]
                           rw [hpop] at h
                           have hmem : (w, n) ∈ (u.kerne k).stapel := by
                             rw [hst]
