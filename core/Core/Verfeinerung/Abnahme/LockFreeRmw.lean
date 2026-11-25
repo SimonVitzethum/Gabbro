@@ -84,6 +84,9 @@ theorem rmwZeugeKonfiguration :
     ⟨.intern, [⟨.rmw, .aussen, .sc, gelesen, 0⟩], [],
       (fun _ => false), (fun _ => .na), (fun _ => 0)⟩
   let spur : SchrittSpur Zelle Int := ⟨es, []⟩
+  have planLesen : plan.lesen =
+      [⟨.rmw, .aussen, .sc, gelesen, (0 : Int)⟩] := by
+    rfl
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
   let s' : RmwZeugeZustand := { u with graph := graph }
   have rahmen : Zustandsrahmen Leerzustand u :=
@@ -92,7 +95,7 @@ theorem rmwZeugeKonfiguration :
     intro l mem
     change l ∈ [⟨.rmw, .aussen, .sc, gelesen, 0⟩] at mem
     rcases List.mem_singleton.mp mem with rfl
-    simp only [Art.liest]
+    simp only [Gabbro.Core.Speicher.Art.liest]
   have spurGefuellt : spur.speicher ≠ [] := by
     cases folge with
     | cons _ _ _ =>
@@ -117,7 +120,7 @@ theorem rmwZeugeKonfiguration :
       have lesenLeer : plan.lesen = [] := by
         rw [planGleich]
         rfl
-      change [⟨.rmw, .aussen, .sc, gelesen, 0⟩] = [] at lesenLeer
+      rw [planLesen] at lesenLeer
       cases lesenLeer
     · exact rmwZeuge_keinRecht befugt
   exact ⟨gelesen, plan, spur, u, s', rmwZeuge_plan gelesen, rfl, impl, aus,
@@ -150,16 +153,19 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
     (s' := s') (i := Leerzustand)
     (plan := rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen) (spur := spur)
     bezug crash ready rfl impl exec
+  have planBeiIdeal (p : RmwZeugePlan) (v : RmwZeugeZustand)
+      (step : System.ISchritt rmwZeugeEinheitWert.system eintritt Leerzustand () [p] v) :
+      p = Gabbro.Core.Ast.Semantik.plan := by
+    rcases step with ⟨i, _, idealRegel⟩
+    subst i
+    change rmwZeugeForm.zugriffsschritt eintritt Leerzustand [p] v at idealRegel
+    rcases idealRegel with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
+    · exact (List.cons.inj privat).1
+    · exact (rmwZeuge_keinRecht befugt).elim
   rcases simuliert with ⟨i', idealSchritt, _⟩ | ⟨leer, _, _, _, _⟩
   · cases idealSchritt with
     | kontext _ _ rule ausIdeal =>
-      have planPrivat : _ = Gabbro.Core.Ast.Semantik.plan := by
-        rcases rule with ⟨i, _, idealRegel⟩
-        subst i
-        change rmwZeugeForm.zugriffsschritt eintritt Leerzustand _ _ at idealRegel
-        rcases idealRegel with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
-        · exact (List.cons.inj privat).1
-        · exact (rmwZeuge_keinRecht befugt).elim
+      have planPrivat := planBeiIdeal _ _ rule
       rw [planPrivat] at ausIdeal
       rcases ausIdeal with ⟨_, _, _, _, aus, folge, _⟩
       cases aus
