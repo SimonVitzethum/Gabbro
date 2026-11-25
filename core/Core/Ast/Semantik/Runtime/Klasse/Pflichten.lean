@@ -370,7 +370,8 @@ theorem leerzustand_griff (c : Kontext) (slot offset : Nat) :
     that names the cell `0` of region `0` plans an access at the empty state, where no context holds a
     handle, so the planned access is covered by no authority. -/
 theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk : k.gesichert = true)
-    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩)
+    (o : Rahmen → Operand)
+    (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner, Unterbrechungsoperand.keiner⟩)
     (t : Rahmen → (Nat → Bool) → Int → Rahmen) :
     ¬ RegelLokal (Regeleinheit platform (Schrittform.ungeschuetzt ⟨k, o, t⟩)) () := by
   intro h
@@ -419,7 +420,8 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
 theorem klassenNichtTrivial (k : Wirkungsklasse) : KlassenNichtTrivialAussage k := by
   refine ⟨⟨.x86_64, ⟨k, fun _ => Operand.keiner, fun r _ _ => r⟩, rfl, rfl, rfl, rfl⟩, ?_⟩
   intro hk
-  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩, fun r _ _ => r⟩, rfl,
+  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner,
+    Unterbrechungsoperand.keiner⟩, fun r _ _ => r⟩, rfl,
     ungeschuetzt_nicht_lokal .x86_64 k hk _ (fun _ => rfl) _⟩
 
 end Gabbro.Core.Ast.Semantik

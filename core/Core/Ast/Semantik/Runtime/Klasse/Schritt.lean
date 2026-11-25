@@ -40,8 +40,23 @@ def Zustand.regionLive (s : Zustand) (slot : Nat) : Bool :=
   s.rechte.lebt slot && s.rechte.gen slot == 0 &&
     (match s.leihen slot with | .eigen => true | .verliehen _device => false)
 
+/-- **What an interrupt-control step names** (MK-20): the immediates of the four instructions. A mask
+    step names its vector and direction, a threshold step its bound, a send its vector and target core,
+    a route its line, target core and priority. The operand is filled from the instruction, not the frame. -/
+structure Unterbrechungsoperand where
+  vektor : Nat
+  aus : Bool
+  grenze : Nat
+  kern : Nat
+  leitung : Nat
+  prioritaet : Nat
+
+/-- The operand of a step that names no interrupt (every other class). -/
+def Unterbrechungsoperand.keiner : Unterbrechungsoperand := ⟨0, false, 0, 0, 0, 0⟩
+
 /-- **What a step names, read from its frame**: the cell of an access, the value it writes, the lock of a
-    lock action, the question it asks. A class reads the fields it needs and ignores the others. -/
+    lock action, the question it asks, the interrupt immediates of an interrupt-control step. A class
+    reads the fields it needs and ignores the others. -/
 structure Operand where
   ort : Zelle
   wert : Int
@@ -49,9 +64,11 @@ structure Operand where
   frage : Option Frage
   aenderung : Aenderung
   faden : Fadenoperand
+  unterbrechung : Unterbrechungsoperand
 
 /-- The operand of a step that names nothing (the frame-only classes). -/
-def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner⟩
+def Operand.keiner : Operand :=
+  ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner, Unterbrechungsoperand.keiner⟩
 
 /-- The plan of a step that records no memory event and no question and carries the given protocol action. -/
 def planMit (a : Aktion Nat PUnit) : Plan := ⟨a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
@@ -279,8 +296,8 @@ def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
     context holds a handle: the access is refused, nothing is read or written. -/
 def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) (a : Aenderung) : Operand :=
   match wert with
-  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner⟩
-  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner⟩
+  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner, Unterbrechungsoperand.keiner⟩
+  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner, Unterbrechungsoperand.keiner⟩
 
 /-- **The operand of an access instruction at a frame**, read from the frame it steps. A fence names
     nothing. -/
@@ -319,7 +336,14 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
   | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
-  | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
+  | .maskiere vektor aus =>
+    { Operand.keiner with unterbrechung := ⟨vektor, aus, 0, 0, 0, 0⟩ }
+  | .prioritaet grenze =>
+    { Operand.keiner with unterbrechung := ⟨0, false, grenze, 0, 0, 0⟩ }
+  | .sendeUnterbrechung vektor kern =>
+    { Operand.keiner with unterbrechung := ⟨vektor, false, 0, kern, 0, 0⟩ }
+  | .leiteLeitung ltg krn prio =>
+    { Operand.keiner with unterbrechung := ⟨0, false, 0, krn, ltg, prio⟩ }
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
     ignores that value; every other instruction ignores it and evaluates at the instruction boundary. -/
