@@ -84,6 +84,29 @@ def KlassenNIAussage (k : Wirkungsklasse) : Prop :=
   ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
     k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E → Beobachtung.RegelNIPflicht E f
 
+/-- **Information flow, once per class that does not read, ON THE STEP LEVEL.** Two steps of the
+    SAME form of the class from publicly equal source states end in publicly equal states, with
+    equal plan and output views. Both sides take the same form `f` by hypothesis, so — unlike the
+    run-level `KlassenNIAussage` above — no claim about the head of the second run is needed: the
+    countermodel of `NISichtbar` (publicly equal states with different heads, `kopf_nicht_offenbar`)
+    does not apply, and the step statement follows from the flow rule alone
+    (`RegelFluss.schrittpaar_gleich`, proved as `klassenSchrittNI`). The restriction
+    `k.liest = false` stays: for the reading classes the flow rule itself cannot hold without tying
+    the read value to the label of the cell (MK-13). `Operandensicht` stays as the checker's address
+    rule: it is the premise the fragment wiring discharges. NOT pinned: this is the design
+    replacement for the run-level form above; the swap (delete the old form, repin
+    `KlassenAussagen` with measured values) is the lead's step. The graph coupling of the two steps
+    is not part of this source-level claim: equal public plans extend equal pre-graphs equally, and
+    that lifting belongs to the generic run composition in the fragment NI machinery. -/
+def KlassenSchrittNIAussage (k : Wirkungsklasse) : Prop :=
+  ∀ (ι : Type) (E : Klasseneinheit ι) (f : ι) (F : Schrittform), F.klasse = k → F.Eingebettet E f →
+    k.liest = false → Beobachtung.RegelFluss E f → F.Operandensicht E →
+    ∀ (c : Kontext) (v₁ v₂ : Zustand) (w : PUnit) (p₁ p₂ : Plan) (u₁ u₂ : Zustand),
+      Beobachtung.QuellzustandGleich E v₁ v₂ →
+      Beobachtung.FormSchritt E f c v₁ w p₁ u₁ → Beobachtung.FormSchritt E f c v₂ w p₂ u₂ →
+      Beobachtung.QuellzustandGleich E u₁ u₂ ∧ Beobachtung.PlanSicht E p₁ = Beobachtung.PlanSicht E p₂ ∧
+        Beobachtung.AusgabeSicht E c v₁ u₁ = Beobachtung.AusgabeSicht E c v₂ u₂
+
 /-- **Bounds, once per class.** A form whose transfer respects the declared stack bound, in a unit whose
     depth measure counts the continuation stack, preserves the stack and memory bounds of every ideal run
     (`RegelSchranken`). The step of an access class changes the acting frame and the ledger of addresses

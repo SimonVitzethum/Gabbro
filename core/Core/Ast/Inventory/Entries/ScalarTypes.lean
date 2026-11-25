@@ -84,11 +84,10 @@ private theorem scalarTypeErhaltung (belongs : WrittenType → Prop) :
   exact Quellform.erhaltung (typeUseForm ctx belongs)
     (fun args => scalarType_keine_invarianten belongs ctx args)
 
-private theorem scalarTypeUseAussage (belongs : WrittenType → Prop)
-    (belegt : ∃ w, belongs w) : LocalTypeUseAussage belongs :=
-  ⟨belegt, scalarTypeParse belongs, scalarTypeElaboriert belongs, scalarTypeRealisiert belongs,
-    scalarTypeAnnahme belongs, scalarTypeIdeal belongs, scalarTypeEinheit belongs,
-    scalarTypeImpl belongs, scalarTypeErhaltung belongs⟩
+private theorem scalarTypeUseAussage : LocalTypeUseAussage :=
+  ⟨⟨.bool, trivial⟩, scalarTypeParse anyTypeUse, scalarTypeElaboriert anyTypeUse,
+    scalarTypeRealisiert anyTypeUse, scalarTypeAnnahme anyTypeUse, scalarTypeIdeal anyTypeUse,
+    scalarTypeEinheit anyTypeUse, scalarTypeImpl anyTypeUse, scalarTypeErhaltung anyTypeUse⟩
 
 private def scalarName : Identifier :=
   ⟨['x'], ⟨'x', [], rfl,
@@ -181,11 +180,10 @@ private theorem integerTypeErfuellbarAm : IntegerTypeErfuellbarAussage := by
   exact integerErfuellbar platform start signed bounded
 
 private theorem boolTypeRegistry : BoolTypeRegistryAussage :=
-  ⟨boolTypeDerivation, scalarTypeUseAussage boolTypeUse ⟨.bool, trivial⟩, boolTypeErfuellbarAm⟩
+  ⟨boolTypeDerivation, scalarTypeUseAussage, boolTypeErfuellbarAm⟩
 
 private theorem integerTypeRegistry : IntegerTypeRegistryAussage :=
-  ⟨integerTypeDerivation, scalarTypeUseAussage integerTypeUse
-    ⟨.integer true 1 none, trivial⟩, integerTypeErfuellbarAm⟩
+  ⟨integerTypeDerivation, scalarTypeUseAussage, integerTypeErfuellbarAm⟩
 
 public theorem boolTypeEntry : RegistryPacketProof ``WrittenType.bool BoolTypeRegistryAussage :=
   ⟨boolTypeRegistry⟩
