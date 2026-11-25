@@ -33,16 +33,16 @@ theorem klassenSpeicherbein (k : Wirkungsklasse) : KlassenSpeicherbeinAussage k 
   | zaun m => exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨m, rfl⟩)))))
   | maskiere =>
       exact klassenSpeicherbein_privat .maskiere
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))
   | prioritaet =>
       exact klassenSpeicherbein_privat .prioritaet
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))
   | sendeUnterbrechung =>
       exact klassenSpeicherbein_privat .sendeUnterbrechung
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))))
   | leiteLeitung =>
       exact klassenSpeicherbein_privat .leiteLeitung
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl)))))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (rfl)))))))))
   | lesen m => exact klassenSpeicherbein_zugriff (.lesen m) m (Or.inl rfl)
   | schreiben m => exact klassenSpeicherbein_zugriff (.schreiben m) m (Or.inr (Or.inl rfl))
   | rmw m => exact klassenSpeicherbein_zugriff (.rmw m) m (Or.inr (Or.inr rfl))
