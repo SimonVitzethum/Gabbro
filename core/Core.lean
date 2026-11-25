@@ -46,6 +46,9 @@ public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
+public import Core.Aussen.Frage.Form
+public import Core.Aussen.Frage.Aussagen
+public import Core.Aussen.Frage.Beweise
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
@@ -197,6 +200,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Form
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
 public import Core.Ast.Semantik.Runtime.Faden.Autoritaet
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
+public import Core.Ast.Semantik.Runtime.Faden.Erzeuger
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public import Core.Ast.Semantik.Runtime.Faden.Offen
 public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
@@ -256,6 +260,7 @@ public import Core.Ziel.Review.Slice.NonTrivial
 public import Core.Linken.Gegenbeispiel
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Linken.Abgeschottet
+public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 meta import Core.Waechter.Check
 
 #check_core
