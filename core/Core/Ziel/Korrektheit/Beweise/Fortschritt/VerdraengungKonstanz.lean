@@ -46,6 +46,7 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
     exact hlive
   cases htakt : ρ.zeit.takt u with
   | schritt label step =>
+    rw [hzminus, hzplus] at step
     cases step with
     | schritt trans =>
       cases trans with
@@ -104,6 +105,7 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
         rw [offer.2] at hc
         cases hc
   | wartet label eq _ =>
+    rw [hzminus, hzplus] at eq
     have hseq : zplus = zminus := Option.some.inj eq
     intro hk
     rw [hseq] at hk
@@ -238,6 +240,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
       (s.kerne k₀).laeuft = some c := by
     intro t' ht'
     obtain ⟨d, rfl⟩ : ∃ d, t' = a + d := ⟨t' - a, by omega⟩
+    clear ht'
     induction d with
     | zero =>
       intro s hs_a
@@ -254,64 +257,102 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
       have hsucc : a + (d + 1) = (a + d) + 1 := by omega
       rw [hsucc] at hs'
       have hm : a ≤ a + d := Nat.le_add_right a d
-      obtain ⟨z, hz, _⟩ := matched.zustand (a + d)
-      have ihz : (z.kerne k₀).laeuft = some c := ih z hz
       cases htakt : ρ.zeit.takt (a + d) with
       | schritt label step =>
-        cases step with
-        | schritt trans =>
-          cases trans with
-          | @kontext _ w plan spur _ _ _ _ regel aus =>
-            obtain ⟨kerneEq, _⟩ := einheitVon_kontext_erhaelt_impl P t regel aus
-            rw [kerneEq]
-            exact ihz
-          | @antwort _ _ a_ev _ arrives =>
-            obtain ⟨_, _, _, hstate⟩ := arrives
-            obtain ⟨kerneEq, _⟩ := einheitVon_antwort_erhaelt hstate
-            rw [kerneEq]
-            exact ihz
-          | @interrupt _ _ id_ev _ enters =>
-            obtain ⟨k', irq, c', nmi, _hoffer, _haus, _nimmt, dormant,
-              _haussen, _hmem, hstate⟩ := enters
-            by_cases heq : k₀ = k'
-            · subst heq
-              have hspur := label
-              exact (einheitVon_keine_verdraengung P t lauf valid matched
-                opened crashfrei ret (a + d) hm k₀ z hz ihz hs'
-                hspur k₀ rfl irq c' nmi dormant hstate).elim
-            · have skerne : s'.kerne =
-                  (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
-                have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
-                have hkerne : ({Maschine.Zustandseintritt z k' id_ev c' nmi with
-                    graph := s'.graph} : Ast.Semantik.Zustand).kerne =
-                    (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := rfl
-                have hseq : s' =
-                    ({Maschine.Zustandseintritt z k' id_ev c' nmi with
-                      graph := s'.graph} : Ast.Semantik.Zustand) := hstate
-                rw [hseq, hkerne]
-                exact h
-              have einkern : ∀ k, (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne k =
-                  if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
-                intro k
-                by_cases heq : k = k'
-                · rw [heq]
-                  show Function.update _ _ _ _ = _
-                  rw [Function.update_self, if_pos rfl]
-                · show Function.update _ _ _ _ = _
-                  rw [Function.update_of_ne heq, if_neg heq]
-              have hsame : (s'.kerne k₀) = (z.kerne k₀) := by
-                rw [skerne, einkern, if_neg heq]
-              rw [hsame]
-              exact ihz
-          | absturz crash =>
-            obtain ⟨offer, _, _⟩ := crash
-            have hc := crashfrei (a + d) hm
-            rw [offer.2] at hc
-            cases hc
+        cases hzn : ρ.zeit.zustand (a + d) with
+        | none =>
+          rw [hzn] at step
+          cases step with
+          | schritt _ h => cases h
+          | wartet _ heq _ =>
+            rw [hzn] at heq
+            have hcon := hs'.symm.trans heq
+            cases hcon
+        | some z =>
+          rw [hzn] at step
+          have ihz : (z.kerne k₀).laeuft = some c := ih z hzn
+          cases hsuc : ρ.zeit.zustand ((a + d) + 1) with
+          | none =>
+            rw [hsuc] at step
+            cases step with
+            | schritt _ h => cases h
+            | wartet _ _ _ =>
+              have hcon := hs'.symm.trans hsuc
+              cases hcon
+          | some s'' =>
+            rw [hsuc] at step
+            have hseq : s' = s'' := Option.some.inj (hs'.symm.trans hsuc)
+            subst hseq
+            cases step with
+            | schritt trans =>
+              cases trans with
+              | @kontext _ _w _plan _spur _ _ _ _ regel aus =>
+                obtain ⟨kerneEq, _⟩ := einheitVon_kontext_erhaelt_impl P t regel aus
+                rw [kerneEq]
+                exact ihz
+              | @antwort _ _ a_ev _ arrives =>
+                obtain ⟨_, _, _, hstate⟩ := arrives
+                obtain ⟨kerneEq, _⟩ := einheitVon_antwort_erhaelt hstate
+                rw [kerneEq]
+                exact ihz
+              | @interrupt _ _ id_ev _ enters =>
+                obtain ⟨k', irq, c', nmi, _hoffer, _haus, _nimmt, dormant,
+                  _haussen, _hmem, hstate⟩ := enters
+                by_cases heq : k₀ = k'
+                · subst heq
+                  have hspur := label
+                  exact (einheitVon_keine_verdraengung P t lauf valid matched
+                    opened crashfrei ret (a + d) hm k₀ z hz ihz hs'
+                    hspur k₀ rfl irq c' nmi dormant hstate).elim
+                · have skerne : s'.kerne =
+                      (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
+                    have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+                    have hkerne : ({Maschine.Zustandseintritt z k' id_ev c' nmi with
+                        graph := s'.graph} : Ast.Semantik.Zustand).kerne =
+                        (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := rfl
+                    have hseq : s' =
+                        ({Maschine.Zustandseintritt z k' id_ev c' nmi with
+                          graph := s'.graph} : Ast.Semantik.Zustand) := hstate
+                    rw [hseq, hkerne]
+                    exact h
+                  have einkern : ∀ k, (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne k =
+                      if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
+                    intro k
+                    by_cases heq : k = k'
+                    · rw [heq]
+                      show Function.update _ _ _ _ = _
+                      rw [Function.update_self, if_pos rfl]
+                    · show Function.update _ _ _ _ = _
+                      rw [Function.update_of_ne heq, if_neg heq]
+                  have hsame : (s'.kerne k₀) = (z.kerne k₀) := by
+                    rw [skerne, einkern, if_neg heq]
+                  rw [hsame]
+                  exact ihz
+              | absturz crash =>
+                obtain ⟨offer, _, _⟩ := crash
+                have hc := crashfrei (a + d) hm
+                rw [offer.2] at hc
+                cases hc
       | wartet label eq _ =>
-        have hseq : s' = z := Option.some.inj eq
-        rw [hseq]
-        exact ihz
+        cases hzn : ρ.zeit.zustand (a + d) with
+        | none =>
+          rw [hzn] at eq
+          have hcon := hs'.symm.trans eq
+          cases hcon
+        | some z =>
+          rw [hzn] at eq
+          have ihz : (z.kerne k₀).laeuft = some c := ih z hzn
+          cases hsuc : ρ.zeit.zustand ((a + d) + 1) with
+          | none =>
+            rw [hsuc] at eq
+            have hcon := hs'.symm.trans eq
+            cases hcon
+          | some s'' =>
+            rw [hsuc] at eq
+            have hzz : s'' = z := Option.some.inj eq
+            have hseq : s' = s'' := Option.some.inj (hs'.symm.trans hsuc)
+            rw [hseq, hzz]
+            exact ihz
   exact key t' ht'
 
 end Gabbro.Core.Ziel.Korrektheit
