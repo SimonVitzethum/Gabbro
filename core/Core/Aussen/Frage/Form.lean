@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Aussenfrage/Form.lean
+  File:      core/Core/Aussen/Frage/Form.lean
   Subject:   THE PROGRAM FORMS OF OUTSIDE QUESTIONS (MK-06, design). A program issues an
              outside question and consumes its answer as two command forms: `frage` names the
              operation and its argument slots and binds the answer, `verbrauche` takes the next
@@ -46,7 +46,7 @@ inductive Aussenfrageform where
     that row and the payload slots. The payload is marshalled to bytes by the elaborator;
     the checker rule for the row fixes which slots may flow into it. -/
 structure Dienstruf where
-  name : List Char
+  name : String
   abi : DienstAbi
   row : FirmwareZeile
   service : Dienst

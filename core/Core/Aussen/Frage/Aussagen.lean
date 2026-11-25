@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Aussenfrage/Aussagen.lean
+  File:      core/Core/Aussen/Frage/Aussagen.lean
   Subject:   THE PINNED OUTSIDE-QUESTION STATEMENTS (MK-06, design). Four kernel statements
              under one pinned root `AussenFrageAussagen`, each with its satisfiability
              (`…ErfuellbarAussage`: the model reaches the good case) and its non-triviality

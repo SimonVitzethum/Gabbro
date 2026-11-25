@@ -1,7 +1,7 @@
 /-
-  File:      core/Core/Aussenfrage/Beweise.lean
+  File:      core/Core/Aussen/Frage/Beweise.lean
   Subject:   THE OUTSIDE-QUESTION PROOFS (MK-06, design). Every statement of
-             `Aussenfrage/Aussagen` that the current model already decides is proved here
+             `Aussen/Frage/Aussagen` that the current model already decides is proved here
              from the machine lemmas (`antwort_global`, `verbrauch_lokal`), the commit
              lemmas (`atomar_gueltig`, `fruehere_antwort_ungueltig`, `gueltig_erfuellbar`,
              `ungueltig_erfuellbar`), the provenance lemmas (`abgeleitet_traegt`,
@@ -11,7 +11,7 @@
 -/
 module
 
-public import Core.Aussenfrage.Aussagen
+public import Core.Aussen.Frage.Aussagen
 public import Core.Katalog.Aussen
 public import Core.Katalog.Lauf
 
