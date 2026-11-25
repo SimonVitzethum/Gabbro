@@ -359,7 +359,7 @@ theorem geraete_kontext_beob_still {ρ : Lauf (d.unit locals)} {predictor : Prae
       have hred : (d.unit locals).katalog.plattform.spekulationshuelle.zugriffe
           ([] : List (Option Nat)) = (([] : List (Option Nat)).take n).filterMap id := by
         simp only [Spekulationshuelle.zugriffe, hfenster]
-      rw [hred]
+      rw [hred, List.take_eq_nil_of_eq_nil rfl, List.filterMap_nil]
   simp only [kontextBeob, hcommit, hausgabe, hzeit, hkopf, hkonstant, hspec, hspek,
     Bool.false_eq_true, if_false, List.map_nil, List.append_nil]
 
