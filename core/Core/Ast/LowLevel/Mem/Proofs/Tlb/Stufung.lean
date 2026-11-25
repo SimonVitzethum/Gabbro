@@ -94,7 +94,9 @@ The MMU of a core translates through its cached cell when it has one (`uebersetz
 that way is a right of the cached entry, so by the invariant it is a right of the table unless a
 narrowing of the page is pending. -/
 
-/-- A translation granted through a cached entry grants a right of that entry. -/
+/-- A translation granted through a cached entry grants a right of that entry. Pure decode lemma
+    over `uebersetze`: no frame, no hardware and no run premise enter, so the view stays free here
+    by design. The bound use instantiates it at `frame.mmuSicht` in the binding module. -/
 theorem uebersetze_gecacht {z : ZielDaten} {sicht : MmuSicht} {core space addr : Nat}
     {right : Speicherdienst} {result : Nat × Nat}
     (ok : uebersetze z sicht core space addr right = .ok result) {entry : Seiteneintrag}
@@ -111,7 +113,11 @@ theorem uebersetze_gecacht {z : ZielDaten} {sicht : MmuSicht} {core space addr :
       · cases ok
 
 /-- **A right used through a cached translation is a table right, or a narrowing is pending.** `view`
-    says the MMU's cached entries are the cells of the frame. -/
+    says the MMU's cached entries are the cells of the frame. The view stays free here by design:
+    this is the frame-generic bridge between an arbitrary cache view and the frame's cells. The
+    bound use instantiates it at `frame.mmuSicht`, where `view` holds because every cached answer
+    comes from a cell. No hardware or run premise enters, so no free view reaches a
+    Hardware/Lauf context. -/
 theorem gecachte_rechte_gedeckt {frame : MemFrame} {sicht : MmuSicht}
     (view : ∀ core space page entry, sicht.tlb core space page = some entry →
       (⟨core, space, page, entry⟩ : TlbZelle) ∈ frame.tlb.zellen)
