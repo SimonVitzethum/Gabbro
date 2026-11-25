@@ -52,6 +52,7 @@ theorem einschraenken_rs {a b : {e // P e}} (h : (G.einschraenken P).Rs a b) : G
 
 theorem einschraenken_sw {a b : {e // P e}} (h : (G.einschraenken P).sw a b) : G.sw a.1 b.1 := by
   obtain ⟨w, x, r, hkopf, hrs, hrf, hatom, hliest, hschwanz⟩ := h
+  unfold Graph.sw
   exact ⟨w.1, x.1, r.1, ?_, einschraenken_rs hrs, hrf, hatom, hliest, ?_⟩
   · rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
     · exact Or.inl ⟨rfl, hsa, hma⟩

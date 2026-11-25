@@ -128,6 +128,7 @@ theorem sw (h : Einbettung H G g) {a b : F} (hs : H.sw a b) : G.sw (g a) (g b) :
   have hatom' : (G.modus (g r)).atomar := by
     rw [← h.modus r]
     exact hatom
+  unfold Graph.sw
   refine ⟨g w, g x, g r, ?_, h.rs hrs, (h.rf _ _).1 hrf, hatom', (h.liest r).1 hliest, ?_⟩
   · rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
     · refine Or.inl ⟨rfl, (h.schreibt _).1 hsa, ?_⟩
