@@ -266,15 +266,15 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
             · rw [if_neg hk₁] at hif₁
               cases hif₁
       | wartet label eq _ =>
-        obtain ⟨ihlive, ihsingle⟩ := ih
         refine ⟨fun c k h => ?_, fun c k₁ k₂ h₁ h₂ => ?_⟩
         · rw [eq] at h ⊢
           exact ihlive c k h
         · rw [eq] at h₁ h₂ ⊢
           exact ihsingle c k₁ k₂ h₁ h₂
+  intro tick
   obtain ⟨hlive, hsingle⟩ := key tick
-  exact ⟨fun tick c k h => hlive tick c k h,
-    fun tick c k₁ k₂ h₁ h₂ => hsingle tick c k₁ k₂ h₁ h₂⟩
+  exact ⟨fun c k h => hlive c k h,
+    fun c k₁ k₂ h₁ h₂ => hsingle c k₁ k₂ h₁ h₂⟩
 
 /-- On an open suffix the dispatch core never changes: context steps and
     answers preserve all cores, a crash would discharge the context, and an
@@ -293,7 +293,7 @@ theorem einheitVon_dispatch_konstant (P : Katalog.Plattform) (t : Ast.Unit)
   refine ⟨k, fun t' ht' => ?_⟩
   induction ht' with
   | refl => exact hk
-  | step hm ih =>
+  | step m hm ih =>
     cases htakt : η.zeit.takt m with
     | schritt label step =>
       cases step with
