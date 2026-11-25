@@ -237,7 +237,7 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                     rintro ⟨d, hd⟩
                     rw [hEnde d] at hd
                     cases hd
-                  have hcommit : commitBeob k.plattform s (transfer.apply c s) = [] := by
+                  have hcommit : commitBeob (Form := Instruction k) k.plattform s (transfer.apply c s) = [] := by
                     simp only [commitBeob, List.drop_length, List.filterMap_nil]
                   have hausgabe : ausgabeBeob (unit op) c s.lokal c (transfer.apply c s).lokal c = [] := by
                     simp only [ausgabeBeob, unit, Flussdaten.leer, Flussdaten.ausgabeZuwachs,
