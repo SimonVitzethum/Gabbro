@@ -48,7 +48,7 @@ def ExecAnnahmeAussage (form : ExecForm) : Prop :=
     Annahme.RegelLokal (execUnit k op) op
 
 def ExecIdealAussage (form : ExecForm) : Prop :=
-  ∀ (k : Katalog) scope (tree : ExecTree form) op, elaborateExec scope tree = some op →
+  ∀ scope (tree : ExecTree form) op, elaborateExec scope tree = some op →
     Ideal.RegelBestimmt op.rule
 
 def ExecEinheitAussage (form : ExecForm) : Prop :=
