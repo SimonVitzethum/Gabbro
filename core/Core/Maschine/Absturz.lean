@@ -120,10 +120,10 @@ theorem AbsturzSchritt.verbrauch {region w k run t} {s s' : Zustand L Ort Wert R
 
 /-! ## Crash invariants over the durable state (MK-15)
 
-The three duties below form the single umbrella `PersistenzAussagen`. The plural name
-keeps the statement-guard sweep silent until the lead pins the umbrella with one hash row;
-every duty is reachable from it through the dependency closure. No duty quantifies over a
-free function: the invariant is bound by its holds-before/holds-after premises. -/
+The three duties below form the single umbrella `PersistenzAussage`. The umbrella is
+pinned with one hash row; every duty is reachable from it through the dependency closure.
+No duty quantifies over a free function: the invariant is bound by its holds-before/holds-after
+premises. -/
 
 /-- The declared crash invariant over the durable state holds after every restart: the
     recovery entry observes the same durable image the crash interrupted. -/
@@ -170,12 +170,12 @@ theorem dauerhaftObjekt_haelt : DauerhaftObjektPflicht := by
   exact congrFun step.neustart.1 a
 
 /-- The single umbrella statement of MK-15: the crash invariant, the turnover and the
-    durable objects, pinned with one hash row by the lead. -/
-def PersistenzAussagen : Prop :=
+    durable objects, pinned with one hash row. -/
+def PersistenzAussage : Prop :=
   AbsturzInvariantePflicht ∧ PersistenzumschlagPflicht ∧ DauerhaftObjektPflicht
 
 /-- All three duties hold over the crash step of the machine. -/
-theorem PersistenzAussagen_erfuellbar : PersistenzAussagen :=
+theorem PersistenzAussage_erfuellbar : PersistenzAussage :=
   ⟨absturzInvariante_haelt, persistenzumschlag_haelt, dauerhaftObjekt_haelt⟩
 
 private theorem uint8_null_ne_fuenf : (0 : UInt8) ≠ 5 := by
@@ -186,7 +186,7 @@ private theorem uint8_null_ne_fuenf : (0 : UInt8) ≠ 5 := by
 /-- The model represents the fault instead of ruling it out: the invariant language
     distinguishes durable images, and a crash step can discard pending writes. Only the
     declared invariant (checked by the checker) excludes the loss, never the model. -/
-theorem PersistenzAussagen_nichtTrivial :
+theorem PersistenzAussage_nichtTrivial :
     (∃ inv : AbsturzInvariante, (∃ d, inv d) ∧ ∃ d, ¬ inv d) ∧
       ∃ (r : Strecke) (s p : PersistZustand),
         persistenz r s .crash p ∧ s.fluechtig ≠ [] ∧ p.fluechtig = [] := by

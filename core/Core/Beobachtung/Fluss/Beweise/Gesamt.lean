@@ -14,7 +14,7 @@ open Annahme Katalog Maschine
 open Ast.Semantik (Fragment)
 
 /-- All ten instruction-family and protocol proof packets are now proved: the six
-    silent families, answers, interrupts, crashes and pauses. -/
+    silent families, answers, interrupts, crashes and pauses (for frame-only fragments). -/
 theorem fragmentNIBeweise : FragmentNIBeweise where
   skalar := skalarNI
   kontrollfluss := kontrollflussNI
@@ -30,8 +30,8 @@ theorem fragmentNIBeweise : FragmentNIBeweise where
 /-- Every accepted source fragment is non-interferent, with no remaining open
     obligations: the packets above discharge all family and protocol duties and
     acceptance supplies the start rule. -/
-theorem fragment_nichtinterferent (p : Fragment) (plattform : Plattform) :
+theorem fragment_nichtinterferent (p : Fragment) (plattform : Plattform) (rein : ∀ b ∈ p.code, b.Privat) :
     Akzeptiert (p.einheit plattform) → Nichtinterferent (p.einheit plattform) :=
-  akzeptiertes_fragment_ni fragmentNIBeweise p plattform
+  akzeptiertes_fragment_ni fragmentNIBeweise p plattform rein
 
 end Gabbro.Core.Beobachtung

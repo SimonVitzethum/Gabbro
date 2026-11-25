@@ -208,7 +208,7 @@ theorem RecordFieldIdeal : RecordFieldIdealAussage := by
       some (.liesRecordFeld 0 args.name args.labels args.types args.index))
     simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
   · intro args
-    exact ⟨((recordFieldForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(recordFieldForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem RecordFieldEinheit : RecordFieldEinheitAussage := by
   intro scope platform args

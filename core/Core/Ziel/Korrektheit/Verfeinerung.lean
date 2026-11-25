@@ -7,16 +7,19 @@
   acceptance of `einheitVon P t` and a run of it, and its conclusion the existence of one ideal run that matches.
   For the current instruction set it is a theorem (`verfeinerung_akzeptiert`, from `sim_elaborierter_lauf` and
   the class theorem `klassenSim`); the finding that goes with it is in the docstring of
-  `RegelSimDiskriminiertAussage`: every instruction of the current set is frame-only (`Befehl.klasse_privat`),
-  its rule is the template `impl ≡ ideal` of the classes `lokal` and `ruf`, so the theorem is TRUE BUT NOT YET
-  INFORMATIVE about memory, locks, questions or threads: no instruction of those classes exists in `Befehl` yet.
+  `RegelSimDiskriminiertAussage`: every instruction an elaborated source unit contains is frame-only
+  (`Befehl.Privat`), its rule is the template `impl ≡ ideal` of the classes `lokal` and `ruf`, so the theorem is
+  TRUE BUT NOT YET INFORMATIVE about memory, locks, questions or threads: the source forms of those classes enter
+  the grammar later. Since MK-04 `Befehl` HAS instructions of the classes `lesen`, `schreiben` and `rmw`
+  (`Befehl.zugriff`, `Runtime/Atom/Form`); the generic proofs split on the class (`Befehl.Privat` for the frame-only
+  part, the class theorems for the rest), and the kernel statements of the access instructions are pinned under
+  `AtomAussagen`.
   The classes themselves exist (MK-03): they carry real plans that depend on the frame (`Wirkungsklasse.plan`),
   an authority guard with refusal, and a booked ledger entry, their duties are stated once per class
-  (`KlassenAussagen`) and are informative (`klassenNichtTrivial`: dropping the guard breaks locality). The first
-  instruction of a class (MK-04, MK-05, MK-06) is a constructor of `Befehl`, a class assignment and its frame
-  operand and transfer; `Befehl.klasse_privat` then becomes false and every generic proof that uses it must
-  split on the class. The refutability statement below is the guard against pinning a duty that no unit can
-  violate.
+  (`KlassenAussagen`) and are informative (`klassenNichtTrivial`: dropping the guard breaks locality). The next
+  instruction of a class (MK-05, MK-06) is a constructor of `Befehl` (or a form of `Zugriffsform`), a class
+  assignment and its frame operand and transfer. The refutability statement below is the guard against pinning a
+  duty that no unit can violate.
 
   The three former family statements `FlushSimAussage`, `LockFreeSimAussage` and `StotterMassAussage`
   of `Verfeinerung/Abnahme` took free function parameters (decoder, abstract specification, mass) with no

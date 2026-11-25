@@ -33,10 +33,10 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Annahme Katalog
 
-/-- All step premises can hold jointly, for every instruction and therefore
-    for each family packet. The chosen tick executes the instruction at the
+/-- All step premises can hold jointly, for every frame-only instruction and therefore
+    for each frame-only family packet. The chosen tick executes the instruction at the
     canonical initial cut of a singleton fragment. -/
-theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) :
+theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) (priv : b.Privat) :
     let E := (Fragment.einzel b).einheit .x86_64
     ∃ h s hw,
       Hardware E.katalog h ∧ E.ZulStart h s ∧ hw.konform E.katalog h ∧
@@ -58,7 +58,7 @@ theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) :
     rw [assigned, ite_eq_left rfl]
   exact ⟨Hosted.umgebung [], s, Hosted.hardware [], hardware, zul, Hosted.konform [],
     ⟨I.ProtokollBezug.refl _, rfl⟩, rfl, ready, rfl,
-    (b.impl_privat eintritt (I.start E s).2 () [plan] (b.nach eintritt (I.start E s).2)).2 ⟨rfl, rfl⟩,
+    (b.impl_privat priv eintritt (I.start E s).2 () [plan] (b.nach eintritt (I.start E s).2)).2 ⟨rfl, rfl⟩,
     b.vollzug _ _ _ _⟩
 
 end Gabbro.Core.Ast.Semantik

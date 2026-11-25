@@ -41,7 +41,8 @@ theorem trivialUnit_akzeptiert (P : Plattform) :
     Annahme.Akzeptiert (einheitVon P trivialUnit) := by
   let p := Ast.Semantik.fragment Ast.Category.unit trivialUnit
   change Annahme.Akzeptiert (p.einheit P)
-  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf p P ?_ ?_
+  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf p P ?_
+    (Ast.Semantik.fragment_rein Ast.Category.unit trivialUnit) ?_
   · rfl
   · intro b present frame
     have code : p.code = [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
@@ -94,7 +95,8 @@ theorem beleg_gedeckt : FormenGedecktAussage Plattform.x86_64 beleg := by
 /-- The two defining modules of the example plan are accepted on their own. -/
 theorem modulDef_akzeptiert :
     Annahme.Akzeptiert (Linken.modulDef.fragment.einheit Plattform.x86_64) := by
-  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulDef.fragment Plattform.x86_64 rfl ?_
+  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulDef.fragment Plattform.x86_64 rfl
+    Linken.modulDef_rein ?_
   intro b present frame
   change b ∈ ([Ast.Semantik.Befehl.definiere Ast.Semantik.mainName [] none 0 2 false [] none,
     Ast.Semantik.Befehl.rueckVoid] : List Ast.Semantik.Befehl) at present
@@ -103,11 +105,15 @@ theorem modulDef_akzeptiert :
 
 theorem modulCall_akzeptiert :
     Annahme.Akzeptiert (Linken.modulCall.fragment.einheit Plattform.x86_64) := by
-  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulCall.fragment Plattform.x86_64 rfl ?_
-  intro b present frame
-  change b ∈ ([Ast.Semantik.Befehl.rufe Ast.Semantik.mainName [] none] : List Ast.Semantik.Befehl) at present
-  obtain rfl := List.mem_singleton.mp present
-  rfl
+  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulCall.fragment Plattform.x86_64 rfl ?_ ?_
+  · intro b present
+    change b ∈ ([Ast.Semantik.Befehl.rufe Ast.Semantik.mainName [] none] : List Ast.Semantik.Befehl) at present
+    obtain rfl := List.mem_singleton.mp present
+    exact Or.inr rfl
+  · intro b present frame
+    change b ∈ ([Ast.Semantik.Befehl.rufe Ast.Semantik.mainName [] none] : List Ast.Semantik.Befehl) at present
+    obtain rfl := List.mem_singleton.mp present
+    rfl
 
 /-- The premises of image validity hold jointly: the empty unit is admitted and its image is valid. -/
 theorem BildGueltigAussage.erfuellbar :

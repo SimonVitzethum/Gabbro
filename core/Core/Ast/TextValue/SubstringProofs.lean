@@ -332,7 +332,7 @@ theorem substringIdeal : SubstringIdealAussage := by
   intro scope
   refine ⟨substringAmOrt scope, ?_⟩
   intro args
-  exact ⟨((substringForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(substringForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem substringEinheit : SubstringEinheitAussage := by
   intro scope platform args

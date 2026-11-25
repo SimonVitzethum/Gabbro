@@ -168,12 +168,23 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   | .bindeRegion _ _ =>
     (∀ s, oeffentlich (β.temp (pc + 1) s) = true → oeffentlich (β.temp pc s) = true) ∧
     (∀ i, oeffentlich (β.lokal pc i) = true)
+  -- An access instruction has no label rule yet: the label rule of a memory event is MK-13, and a form the
+  -- model has no rule for is refused (AGENTS.md §2), so the labelled flow rule is never accepted for it.
+  | .zugriff _ => False
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
     f.SichtErhaltendBei Beschriftung.alleOeffentlich pc := by
   intro r₁ r₂ live _ h
   rw [sicht_alleOeffentlich, sicht_alleOeffentlich] at h
   rw [sicht_alleOeffentlich, sicht_alleOeffentlich, h]
+
+/-- An instruction the labelled flow rule accepts is frame-only: an access instruction has no label rule. -/
+theorem Befehl.FlussRegel.privat {β : Beschriftung} {pc : Nat} {f : Befehl} (regel : f.FlussRegel β pc) :
+    f.Privat := by
+  cases f <;> first
+    | exact Or.inl rfl
+    | exact Or.inr rfl
+    | exact False.elim regel
 
 /-- **Soundness of the checker's flow rule, instruction by instruction.** -/
 theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
@@ -260,6 +271,7 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
     exact substringSicht β pc basis capacity regel.1 regel.2.1 regel.2.2.1 regel.2.2.2.1
       regel.2.2.2.2
   | bindeRegion receiver init => exact bindeRegionSicht β pc receiver init regel.1 regel.2
+  | zugriff form => exact False.elim regel
 
 /-- Per instruction family: the rule is sound for every declaration. -/
 def FamilienSicht (familie : LokalFamilie) : Prop :=
@@ -276,6 +288,10 @@ def Fragment.FlussAkzeptiert (p : Fragment) (β : Beschriftung) : Prop :=
 
 theorem Fragment.flussAkzeptiert_lokal (p : Fragment) (platform : Katalog.Plattform) (β : Beschriftung)
     (h : p.FlussAkzeptiert β) : FlussLokal (p.beschriftet platform β) :=
-  p.beschriftet_fluss_lokal platform β fun pc f hf => f.sichtErhaltend (h pc f hf)
+  p.beschriftet_fluss_lokal platform β
+    (fun f hf => by
+      obtain ⟨pc, hpc⟩ := List.mem_iff_getElem?.mp hf
+      exact (h pc f hpc).privat)
+    fun pc f hf => f.sichtErhaltend (h pc f hf)
 
 end Gabbro.Core.Ast.Semantik
