@@ -381,7 +381,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  rw [hstate]
+                  simp only [hstate, Maschine.Zustand.antwort]
                 rw [skerne]
                 exact ih z hz
               | interrupt _ enters =>
