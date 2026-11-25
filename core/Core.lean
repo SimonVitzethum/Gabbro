@@ -43,6 +43,9 @@ public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
+public import Core.Aussenfrage.Form
+public import Core.Aussenfrage.Aussagen
+public import Core.Aussenfrage.Beweise
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
