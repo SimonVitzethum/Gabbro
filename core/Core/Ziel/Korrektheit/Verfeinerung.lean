@@ -36,6 +36,7 @@ module
 public import Core.Ziel.Korrektheit.Maschine
 public import Core.Verfeinerung.Formen.Abdeckung
 public import Core.Verfeinerung.Fortschritt
+public import Core.Maschine.SchedulerFair
 
 @[expose] public section
 
