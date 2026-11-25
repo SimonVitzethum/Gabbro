@@ -19,11 +19,10 @@
              * `ErhaltungsAussage`: state match, progress, composability of the steps the memory model accepts, and
                the four class-determined safety legs. The race leg and the invariant legs are NOT class duties and
                are NOT claimed here: they belong to the fragment (`ZugriffSicherAussage`).
-             A form of the source states only what is specific to its production: `ParseAussage`, `ElaboriertAussage`,
-             `RegelAmOrt` and the joint satisfiability. Everything else is generic and proved once here
-             (`Zugriffsquelle.aussage`). The registry entry of a surface constructor that elaborates to an access is the
-             conjunction `Zugriffsquelle.Aussage` of the nine statements.
--/
+              A form of the source states only what is specific to its production: `ParseAussage`, `ElaboriertAussage`,
+              `RegelAmOrt` and the joint satisfiability. Everything else is proved once here (the eight generic
+              statement proofs); the registry entry of a surface constructor that elaborates to an access assembles
+              the nine statements from them. -/
 module
 
 public import Core.Ast.Semantik.Quellform
@@ -157,12 +156,6 @@ def Zugriffsquelle.ErfuellbarAm (platform : Plattform) (start : AussenStart) (ar
     ∀ (g : Bedarf), (quelle.befehl args).guard (s.lokal eintritt) = some g →
       waechterBedarf g.1 g.2
 
-/-- **The nine statements of a source form that elaborates to an access**, with the joint satisfiability `joint` the
-    production names. -/
-def Zugriffsquelle.Aussage (joint : Prop) : Prop :=
-  quelle.ParseAussage ∧ quelle.ElaboriertAussage ∧ quelle.RealisiertAussage ∧ quelle.AnnahmeAussage ∧
-    quelle.IdealAussage ∧ quelle.EinheitAussage ∧ quelle.ImplAussage ∧ quelle.ErhaltungsAussage ∧ joint
-
 /-! ### The generic proofs -/
 
 /-- The ideal step of an access instruction is the step of its class. -/
@@ -227,16 +220,6 @@ theorem Zugriffsquelle.erhaltung : quelle.ErhaltungsAussage := by
     (quelle.befehl args).regelFortschritt (quelle.fragment args) platform, ?_, klassenSicherheit _⟩
   intro t s c w plan u es g head step folge
   exact zugriffKomponierbar (quelle.fragment args) platform (quelle.form args) t s c w plan u es g head step folge
-
-/-- **Everything but the production-specific part is generic**: a source form that elaborates to an access carries its
-    nine statements as soon as its grammar proof, its elaboration, its occurrence and its joint satisfiability are
-    proved. -/
-theorem Zugriffsquelle.aussage (joint : Prop) (parse : quelle.ParseAussage)
-    (elaboriert : quelle.ElaboriertAussage) (position : quelle.RegelAmOrt) (erfuellbar : joint) :
-    quelle.Aussage joint :=
-  ⟨parse, elaboriert, fun platform args s running active live atPc =>
-    quelle.realisiert position platform args s running active live atPc, quelle.annahme,
-    quelle.ideal position, quelle.einheitAussage, quelle.impl, quelle.erhaltung, erfuellbar⟩
 
 theorem Zugriffsquelle.elaboriert : quelle.ElaboriertAussage :=
   fun _ _ => rfl

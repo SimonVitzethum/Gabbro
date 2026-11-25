@@ -103,7 +103,10 @@ theorem load_erfuellbar (platform : Plattform) (start : AussenStart) :
   have ordinaryR : ordinaryLocal rname := (directName_of_singleton (name := rname) rfl).1
   let xname : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
   have ordinaryX : ordinaryLocal xname := (directName_of_singleton (name := xname) rfl).1
-  have xne : xname.val ≠ "mut".toList := by decide
+  have xne : xname.val ≠ "mut".toList := by
+    change ['x'] ≠ ['m', 'u', 't']
+    intro same
+    cases same
   let scope : Scope := [⟨rname, .ownedRegion, false, false⟩]
   let region : Local scope .ownedRegion := .here
   let written := WrittenType.integer false 8 none
