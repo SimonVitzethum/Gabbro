@@ -83,9 +83,9 @@ theorem speicherfolge_lesewert_gleich
     {anfang : Ort → Wert} {f : SpeicherAkteur Ort}
     {g g₁ g₂ : SpeicherGraph Ort Wert} {l₁ l₂ : Etikett Ort Wert}
     {es₁ es₂ : List (SpeicherAkteur Ort × Etikett Ort Wert)}
-    (hort : l₁.ort = l₂.ort) (hmod : l₁.modus = l₂.modus)
     (h₁ : Speicherfolge anfang f g [l₁] es₁ g₁)
     (h₂ : Speicherfolge anfang f g [l₂] es₂ g₂)
+    (hort : l₁.ort = l₂.ort) (hmod : l₁.modus = l₂.modus)
     (liest₁ : l₁.art.liest) (liest₂ : l₂.art.liest)
     (wahl : SpeicherWahlGleich g₁ g₂) :
     l₁.gelesen = l₂.gelesen := by
@@ -148,5 +148,185 @@ theorem speicherfolge_lesewert_gleich
           exact wert1.trans ((congrArg Etikett.geschrieben labw).trans wert2.symm)
 
 end ZugriffIdeal
+
+open Gabbro.Core.Ast.Semantik
+
+/-- The composed step of a fragment with an access instruction is determined by the source choice
+    and the resolution of the memory order (the proof of `ZugriffIdealBestimmtAussage`). -/
+theorem zugriffIdealBestimmt : ZugriffIdealBestimmtAussage := by
+  intro p platform mit
+  have rein : p.KlassenRein := mit.1
+  intro k hw t s w es es' s' s'' left right wahl
+  cases left with
+  | antwort _ h =>
+      cases right with
+      | antwort _ h' => exact h.bestimmt h' wahl
+  | interrupt _ h =>
+      cases right with
+      | interrupt _ h' => exact h.bestimmt h' wahl
+  | absturz h =>
+      cases right with
+      | absturz h' =>
+        have genau := h.genau
+        have genau' := h'.genau
+        exact ⟨genau.1.trans genau'.1.symm, genau.2.trans genau'.2.symm⟩
+  | @kontext _ u plan spur c wChoice _ _ regel aus =>
+      cases right with
+      | @kontext _ u' plan' spur' _ _ _ _ regel' aus' =>
+        rcases regel with ⟨i, hHeadI, ideal⟩
+        rcases regel' with ⟨j, hHeadJ, ideal'⟩
+        rw [hHeadI] at hHeadJ
+        cases hHeadJ
+        have kgut := rein i (Ast.Semantik.kopf_mem hHeadI)
+        rcases kgut with priv | ⟨z, hz⟩
+        · have det := i.bestimmt priv
+          obtain ⟨pl, st⟩ := det c s wChoice [plan] [plan'] u u' ideal ideal'
+          cases (List.cons.inj pl).1
+          cases st
+          exact aus.bestimmt aus' wahl
+        · cases hz
+          change (Befehl.zugriff z).ideal c s wChoice [plan] u at ideal
+          change (Befehl.zugriff z).ideal c s wChoice [plan'] u' at ideal'
+          by_cases hg : (Befehl.zugriff z).form.klasse.befugt
+              ((Befehl.zugriff z).form.operand (s.lokal c)) s c
+          · have step := (zugriff_ideal_zugriffsschritt z c s wChoice [plan] u).1 ideal
+            have step' := (zugriff_ideal_zugriffsschritt z c s wChoice [plan'] u').1 ideal'
+            rcases step with ⟨hng, _, _⟩ | ⟨_, v, hv, hp, _⟩
+            · exact (hng hg).elim
+            rcases step' with ⟨hng', _, _⟩ | ⟨_, v', hv', hp', _⟩
+            · exact (hng' hg).elim
+            have hpv : plan = (Befehl.zugriff z).form.plan (s.lokal c) v := (List.cons.inj hp).1
+            have hpv' : plan' = (Befehl.zugriff z).form.plan (s.lokal c) v' := (List.cons.inj hp').1
+            have vEq : v = v' := by
+              cases z with
+              | lade _ _ _ _ _ =>
+                obtain ⟨_, liesAus, sperren, _, fuehrtAus, folge, _⟩ := aus
+                obtain ⟨_, liesAus', sperren', _, fuehrtAus', folge', _⟩ := aus'
+                rw [hpv] at fuehrtAus folge
+                rw [hpv'] at fuehrtAus' folge'
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, schreibEreignisse, List.filter_nil, List.map_nil,
+                  List.nil_append, List.append_nil] at fuehrtAus fuehrtAus' folge folge'
+                have hnil := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus
+                have hnil' := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus'
+                rw [hnil.1, hnil.2.1] at folge
+                rw [hnil'.1, hnil'.2.1] at folge'
+                simp only [List.nil_append, List.append_nil, List.map_nil] at folge folge'
+                exact ZugriffIdeal.speicherfolge_lesewert_gleich folge folge' rfl rfl
+                  (by apply liesAus; rw [hpv]; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl)
+                  (by apply liesAus'; rw [hpv']; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl) wahl
+              | erwarte _ _ _ _ _ _ =>
+                obtain ⟨_, liesAus, sperren, _, fuehrtAus, folge, _⟩ := aus
+                obtain ⟨_, liesAus', sperren', _, fuehrtAus', folge', _⟩ := aus'
+                rw [hpv] at fuehrtAus folge
+                rw [hpv'] at fuehrtAus' folge'
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, schreibEreignisse, List.filter_nil, List.map_nil,
+                  List.nil_append, List.append_nil] at fuehrtAus fuehrtAus' folge folge'
+                have hnil := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus
+                have hnil' := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus'
+                rw [hnil.1, hnil.2.1] at folge
+                rw [hnil'.1, hnil'.2.1] at folge'
+                simp only [List.nil_append, List.append_nil, List.map_nil] at folge folge'
+                exact ZugriffIdeal.speicherfolge_lesewert_gleich folge folge' rfl rfl
+                  (by apply liesAus; rw [hpv]; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl)
+                  (by apply liesAus'; rw [hpv']; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl) wahl
+              | speichere _ _ _ _ =>
+                simp only [Wirkungsklasse.Lesewert, Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                  Wirkungsklasse.liest, reduceCtorEq, false_or] at hv hv'
+                exact hv.trans hv'.symm
+              | veroeffentliche _ _ _ _ =>
+                simp only [Wirkungsklasse.Lesewert, Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                  Wirkungsklasse.liest, reduceCtorEq, false_or] at hv hv'
+                exact hv.trans hv'.symm
+              | zaun _ =>
+                simp only [Wirkungsklasse.Lesewert, Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                  Wirkungsklasse.liest, reduceCtorEq, false_or] at hv hv'
+                exact hv.trans hv'.symm
+              | tausche _ _ _ _ _ _ =>
+                obtain ⟨_, liesAus, sperren, _, fuehrtAus, folge, _⟩ := aus
+                obtain ⟨_, liesAus', sperren', _, fuehrtAus', folge', _⟩ := aus'
+                rw [hpv] at fuehrtAus folge
+                rw [hpv'] at fuehrtAus' folge'
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, Aenderung.art, Aenderung.schreibt, schreibEreignisse,
+                  List.filter_nil, List.map_nil, List.nil_append, List.append_nil] at fuehrtAus fuehrtAus' folge folge'
+                have hnil := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus
+                have hnil' := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus'
+                rw [hnil.1, hnil.2.1] at folge
+                rw [hnil'.1, hnil'.2.1] at folge'
+                simp only [List.nil_append, List.append_nil, List.map_nil] at folge folge'
+                exact ZugriffIdeal.speicherfolge_lesewert_gleich folge folge' rfl rfl
+                  (by apply liesAus; rw [hpv]; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl)
+                  (by apply liesAus'; rw [hpv']; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl) wahl
+              | holeUndAddiere _ _ _ _ _ _ =>
+                obtain ⟨_, liesAus, sperren, _, fuehrtAus, folge, _⟩ := aus
+                obtain ⟨_, liesAus', sperren', _, fuehrtAus', folge', _⟩ := aus'
+                rw [hpv] at fuehrtAus folge
+                rw [hpv'] at fuehrtAus' folge'
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, Aenderung.art, Aenderung.schreibt, schreibEreignisse,
+                  List.filter_nil, List.map_nil, List.nil_append, List.append_nil] at fuehrtAus fuehrtAus' folge folge'
+                have hnil := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus
+                have hnil' := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus'
+                rw [hnil.1, hnil.2.1] at folge
+                rw [hnil'.1, hnil'.2.1] at folge'
+                simp only [List.nil_append, List.append_nil, List.map_nil] at folge folge'
+                exact ZugriffIdeal.speicherfolge_lesewert_gleich folge folge' rfl rfl
+                  (by apply liesAus; rw [hpv]; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl)
+                  (by apply liesAus'; rw [hpv']; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl) wahl
+              | vergleicheTausche _ _ _ _ _ _ _ =>
+                obtain ⟨_, liesAus, sperren, _, fuehrtAus, folge, _⟩ := aus
+                obtain ⟨_, liesAus', sperren', _, fuehrtAus', folge', _⟩ := aus'
+                rw [hpv] at fuehrtAus folge
+                rw [hpv'] at fuehrtAus' folge'
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, Aenderung.art, Aenderung.schreibt, schreibEreignisse,
+                  List.filter_nil, List.map_nil, List.nil_append, List.append_nil] at fuehrtAus fuehrtAus' folge folge'
+                have hnil := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus
+                have hnil' := fuehrtAus_intern_nil c (p.einheit platform).einrichtung fuehrtAus'
+                rw [hnil.1, hnil.2.1] at folge
+                rw [hnil'.1, hnil'.2.1] at folge'
+                simp only [List.nil_append, List.append_nil, List.map_nil] at folge folge'
+                exact ZugriffIdeal.speicherfolge_lesewert_gleich folge folge' rfl rfl
+                  (by apply liesAus; rw [hpv]; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl)
+                  (by apply liesAus'; rw [hpv']; simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse,
+                    Schrittform.plan, Wirkungsklasse.plan]; exact List.mem_singleton.mpr rfl) wahl
+            have hlesen : ∀ q q', [plan] = [q] → [plan'] = [q'] →
+                q.lesen.map (fun l => l.gelesen) = q'.lesen.map (fun l => l.gelesen) := by
+              intro q q' hq hq'
+              have hqv0 : q = plan := (List.cons.inj hq).1.symm
+              have hq'v0 : q' = plan' := (List.cons.inj hq').1.symm
+              have hqv : q = (Befehl.zugriff z).form.plan (s.lokal c) v := hqv0.trans hpv
+              have hq'v : q' = (Befehl.zugriff z).form.plan (s.lokal c) v' := hq'v0.trans hpv'
+              rw [hqv, hq'v]
+              cases z <;>
+                simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+                  Wirkungsklasse.plan, List.map_cons, List.map_nil, vEq]
+            obtain ⟨plEq, uEq⟩ := zugriffBestimmt z c s wChoice [plan] [plan'] u u' ideal ideal' hlesen
+            cases (List.cons.inj plEq).1
+            cases uEq
+            exact aus.bestimmt aus' wahl
+          · have step := (zugriff_ideal_zugriffsschritt z c s wChoice [plan] u).1 ideal
+            have step' := (zugriff_ideal_zugriffsschritt z c s wChoice [plan'] u').1 ideal'
+            rcases step with ⟨_, hp, hu⟩ | ⟨hgg, _, _, _, _⟩
+            · rcases step' with ⟨_, hp', hu'⟩ | ⟨hgg', _, _, _, _⟩
+              · have hpv : plan = Ast.Semantik.plan := (List.cons.inj hp).1
+                have hpv' : plan' = Ast.Semantik.plan := (List.cons.inj hp').1
+                cases hpv
+                cases hpv'
+                cases hu.trans hu'.symm
+                exact aus.bestimmt aus' wahl
+              · exact (hg hgg').elim
+            · exact (hg hgg).elim
 
 end Gabbro.Core.Ziel.Korrektheit
