@@ -348,8 +348,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs k w n hmem c h
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).laeuft =
                           (u.kerne k).laeuft := by
-                          show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).laeuft = _
-                          rw [Function.update_of_ne heq]
+                          simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ukerne] at h
                         exact ihd k c h
                     · rw [sstack] at h
@@ -357,20 +356,17 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                       · subst heq
                         have hkk : ((Maschine.Zustandsrueckkehr u k).kerne k).stapel =
                             ((u.kerne k).zurueck).stapel := by
-                          show ((Function.update u.kerne k ((u.kerne k).zurueck)) k).stapel = _
-                          rw [Function.update_self]
+                          simp only [Maschine.Zustandsrueckkehr, Function.update_self]
                         rw [hkk] at h
                         cases hst : (u.kerne k).stapel with
                         | nil =>
                           have hnil : ((u.kerne k).zurueck).stapel = [] := by
-                            rw [hst]
-                            rfl
+                            simp only [hst, Maschine.KernZustand.zurueck]
                           rw [hnil] at h
                           exact (List.not_mem_nil h).elim
                         | cons top rest =>
                           have hcons : ((u.kerne k).zurueck).stapel = rest := by
-                            rw [hst]
-                            rfl
+                            simp only [hst, Maschine.KernZustand.zurueck]
                           rw [hcons] at h
                           have hmem : (w, m) ∈ (u.kerne k).stapel := by
                             rw [hst]
@@ -379,8 +375,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs k w m hmem c hc
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).stapel =
                           (u.kerne k).stapel := by
-                          show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).stapel = _
-                          rw [Function.update_of_ne heq]
+                          simp only [Maschine.Zustandsrueckkehr, Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
               | antwort _ arrives =>
