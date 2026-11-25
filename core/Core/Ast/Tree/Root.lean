@@ -372,5 +372,13 @@ inductive Access : Scope → Scope → Type where
       (index : Expr scope (.int lo hi)) (expected : Expr scope (.int eLo eHi))
       (neu : Expr scope (.int nLo nHi)) (mode : AccessMode) :
       Access scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- `mem fetch_add name : T = region, index, amount, mode;` binds the value read and adds the amount
+      operand to it in one atomic update. -/
+  | holeUndAddiere (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (betrag : Expr scope (.int bLo bHi)) (mode : AccessMode) :
+      Access scope (⟨name, written.type, false, false⟩ :: scope)
 
 end Gabbro.Core.Ast

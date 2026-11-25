@@ -223,6 +223,8 @@ theorem braced_rueckkanten (tree : BracedBlock result before) :
     | vergleicheTausche _ _ _ _ _ _ _ index expected neu _ =>
       exact .snoc (.snoc (.append (.append (expr_no_back 0 index) (expr_no_back 1 expected))
         (expr_no_back 2 neu)) (Nat.zero_le _)) (Nat.zero_le _)
+    | holeUndAddiere _ _ _ _ _ _ _ index betrag _ =>
+      exact .snoc (.snoc (.append (expr_no_back 0 index) (expr_no_back 1 betrag)) (Nat.zero_le _)) (Nat.zero_le _)
   · intros
     exact .nil
   · intro before middle after head rest headOK restOK

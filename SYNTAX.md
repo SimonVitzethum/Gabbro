@@ -275,11 +275,12 @@ refuse mint effects and ghost value types at its metadata gate.
 A statement that reads or writes one cell of an owned region names its order:
 
 ```ebnf
-statement += "mem" ( load | store | swap | cas ) ;
+statement += "mem" ( load | store | swap | cas | fetch_add ) ;
 load       = "load" ident ":" type "=" region "," index "," mode ";" ;
 store      = "store" region "," index "," value "," mode ";" ;
 swap       = "swap" ident ":" type "=" region "," index "," value "," mode ";" ;
 cas        = "cas" ident ":" type "=" region "," index "," expected "," new "," mode ";" ;
+fetch_add  = "fetch_add" ident ":" type "=" region "," index "," amount "," mode ";" ;
 mode       = "na" | "rlx" | "ra" | "sc" ;
 ```
 
@@ -295,8 +296,10 @@ read equals `e`, and binds the value read to `x` at the written type `T`. An
 update needs an atomic mode: `na` is refused for it by the checker. The modes
 are the four of the memory model: `na` the plain access, `rlx` the relaxed
 atomic, `ra` the release-acquire atomic and `sc` the sequentially consistent
-one. The head word `mem` is reserved; the words after it are unreserved, so the
-remaining updates (fetch-and-add), the confirming observation and the
+one. `mem fetch_add x : T = r, i, a, m;` evaluates `i` and `a`, atomically adds
+`a` to the value of one cell of `r` in mode `m`, writes the sum back and binds
+the value read to `x` at the written type `T`. The head word `mem` is reserved;
+the words after it are unreserved, so the confirming observation and the
 publication extend the same form without reserving more.
 
 Each form elaborates to one access instruction (`Befehl.zugriff`) at the end

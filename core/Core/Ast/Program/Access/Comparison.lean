@@ -101,5 +101,27 @@ theorem AccessReads.deterministic (left : AccessReads scope input a rest)
       cases (List.cons.inj modeRest).2
       exact ⟨rfl, rfl⟩
     | _ => cases (List.cons.inj eq).1
+  | holeUndAddiere name ordinary written valid region visible receiverOrdinary typeRead indexRead betragRead modeRead =>
+    cases right with
+    | holeUndAddiere otherName otherOrdinary otherWritten otherValid otherRegion otherVisible otherReceiver
+        otherType otherIndex otherBetrag otherMode =>
+      have nameEq : name.val = otherName.val := Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
+      cases Subtype.ext nameEq
+      cases (List.cons.inj (List.cons.inj (List.cons.inj eq).2).2).2
+      obtain ⟨rfl, rhsEq⟩ := typeRead.deterministic otherType
+      have regionName : region.binding.name.val = otherRegion.binding.name.val :=
+        Token.word.inj (List.cons.inj (List.cons.inj rhsEq).2).1
+      cases Local.nameVisible_unique region otherRegion visible otherVisible regionName
+      cases (List.cons.inj (List.cons.inj (List.cons.inj rhsEq).2).2).2
+      obtain ⟨sameIndex, indexRest⟩ := indexRead.deterministic otherIndex
+      cases sameIndex
+      cases (List.cons.inj indexRest).2
+      obtain ⟨sameBetrag, betragRest⟩ := betragRead.deterministic otherBetrag
+      cases sameBetrag
+      cases (List.cons.inj betragRest).2
+      obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
+      cases (List.cons.inj modeRest).2
+      exact ⟨rfl, rfl⟩
+    | _ => cases (List.cons.inj eq).1
 
 end Gabbro.Core.Ast
