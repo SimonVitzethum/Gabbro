@@ -93,7 +93,7 @@ theorem IriwScVerbotenAussage.erfuellbar :
     (Zustand.leer (F := Unit) (Ort := Bool) (Wert := Nat)).graph, ?_, ?_⟩
   · exact Zustand.leer_konsistent
   · intro a
-    exact (Zustand.leer_elim a).elim
+    exact (Zustand.leer_elim (F := Unit) (Ort := Bool) (Wert := Nat) a).elim
 
 /-- The ban is sharp: the same disagreeing-readers shape occurs in a consistent graph below
     `seq_cst`. Feeds: `ir_konsistent`, `ir_kein_sc`. Proof sketch: the release/acquire IRIW
