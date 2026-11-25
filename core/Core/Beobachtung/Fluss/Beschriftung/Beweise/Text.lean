@@ -1,7 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beschriftung.Text
-public import Core.Beobachtung.Fluss.Beschriftung.TextBeweise
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.TextBeweise
 
 @[expose] public section
 
