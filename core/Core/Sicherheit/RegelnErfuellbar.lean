@@ -176,7 +176,7 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let p := stmt tree
   have keine : p.klauseln.invariant = [] := stmt_keine_invarianten tree
   have tab : p.klauseln.invariant = [].map Pruefung.Praedikat.gilt := by
-    rw [keine]
+    simp only [keine, List.map_nil]
   have leer : ∀ q ∈ ([] : List Pruefung.Praedikat), q.haelt p.speicher.initial :=
     fun q hq => (List.not_mem_nil hq).elim
   have leerStart : ∀ q ∈ ([] : List Pruefung.Praedikat), q.haelt (fun _ => 0) :=
@@ -189,7 +189,8 @@ theorem sicherheit_aus_regeln_erfuellbar :
   have okCode : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
     List.all_eq_true.mpr (fun b _ => rfl)
   have ok : pruefeEinheit p [] = true := by
-    simp only [pruefeEinheit, okStart, okRestart, okCode]
+    simp only [pruefeEinheit, Bool.and_eq_true]
+    exact ⟨⟨okStart, okRestart⟩, okCode⟩
   let platform := Plattform.x86_64
   let E := p.sicherheitsEinheit platform
   let H := Umgebung.referenz platform.katalog 1 Laufkonstruktion.leer
