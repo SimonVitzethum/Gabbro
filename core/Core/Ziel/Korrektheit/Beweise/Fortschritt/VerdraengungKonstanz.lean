@@ -190,7 +190,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
       intro z hz k'' hk
       have hu1 : d < d + 1 + e := by omega
       have hle : a ≤ d + 1 + e := Nat.le_trans hd (Nat.le_of_lt hu1)
-      obtain ⟨z', hz'⟩ := matched.zustand (d + 1 + e)
+      obtain ⟨z', hz', _⟩ := matched.zustand (d + 1 + e)
       have hzplus : ρ.zeit.zustand (d + 1 + e + 1) = some z := by
         have hstep : d + 1 + e + 1 = d + 1 + (e + 1) := by omega
         rw [hstep]
