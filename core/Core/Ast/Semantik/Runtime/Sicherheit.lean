@@ -39,7 +39,7 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Pruefung.
     obtain ⟨g, hinner, rfl⟩ := Option.map_eq_some_iff.mp declared
     rw [List.getElem?_map] at hinner
     obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
-    rw [← tab] at declared
+    rw [← List.getElem?_map] at declared
     have hok := Pruefung.pruefeBefehlErhalt_richtig ps b q
       (List.mem_of_getElem? hsome) okB
     have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
