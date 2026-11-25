@@ -46,7 +46,7 @@ def rmwZeugeEinheitWert : RmwZeugeEinheit := Regeleinheit .x86_64 rmwZeugeRegelW
 /-- The frame of the empty start holds no temporary, so the instruction names the outside cell. -/
 theorem rmwZeuge_operand_aussen :
     (rmwZeugeForm.operand (Leerzustand.lokal eintritt)) =
-      ⟨.aussen, 0, 0, none, .tausche⟩ := by
+      ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner⟩ := by
   rfl
 
 /-- The plan of the real instruction at that frame: one rmw event reading `gelesen`, writing `0`. -/
@@ -92,7 +92,7 @@ theorem rmwZeugeKonfiguration :
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
   let s' : RmwZeugeZustand := { u with graph := graph }
   have rahmen : Zustandsrahmen Leerzustand u :=
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have liest : ∀ l ∈ plan.lesen, l.art.liest := by
     intro l mem
     change l ∈ [⟨.rmw, .aussen, .sc, gelesen, 0⟩] at mem
