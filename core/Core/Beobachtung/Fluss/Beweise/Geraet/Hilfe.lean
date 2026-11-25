@@ -157,14 +157,13 @@ theorem geraete_verlauf_leer {Ort : Type} (h : AussenVerlauf) :
   unfold niedrigerVerlauf
   induction h with
   | nil => rfl
-  | cons e _ ih =>
-    simp only [List.filter_cons]
-    have hp : (match e.2 with
-      | .frage q | .antwort q _ => oeffentlich ((Etiketten.leer (Ort := Ort)).frage q)) = true := by
+  | cons e tail ih =>
+    have hp : ((fun entry => match entry.2 with
+      | .frage q | .antwort q _ => oeffentlich ((Etiketten.leer (Ort := Ort)).frage q)) e) = true := by
       cases e.2 with
       | frage q => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
       | antwort q _ => simp only [geraete_frage_leer, geraete_oeffentlich_leer]
-    simp only [hp, if_true, ih]
+    rw [List.filter_cons_of_pos hp, ih]
 
 /-- Compared runs answer every question identically: empty labels expose the policy. -/
 theorem geraete_politik_antwort_gleich {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
@@ -191,7 +190,7 @@ theorem geraete_befugt_transport {binding : Binding k} {access : RegisterAccess}
     exact hgeraet
   · rw [← lokal]
     exact hphasen
-  · unfold AussengriffeEigen at heigen ⊢
+  · unfold Gabbro.Core.Annahme.AussengriffeEigen at heigen ⊢
     intro z hz
     exact buchung ▸ heigen z hz
 
