@@ -49,7 +49,7 @@ theorem KorrektheitAussagen.falsch : ¬ KorrektheitAussagen := by
   let π : Parser := { parse := fun _ => none }
   have hk := h Plattform.x86_64 B C π
   have hnt : PrueferNichtTrivialAussage C := hk.2.2.2.2.2.2.2.2.1
-  rcases hnt with ⟨_, _, ht⟩
+  rcases hnt.1 with ⟨_, _, ht⟩
   dsimp only [Pruefer.pruefe, C] at ht
   cases ht
 
