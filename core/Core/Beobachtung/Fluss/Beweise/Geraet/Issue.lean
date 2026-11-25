@@ -205,8 +205,9 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
       exact List.getElem_append_left hi2
     simp only [hfrage_eq, hnant_eq, htake]
     exact hfwd
-  · simp only [hfrage_eq, List.map_append, List.map_singleton, he, Zustand.stelleFrage,
-      hrange, List.range_succ, hnm]
+  · have heinst : e.questionInstance = s.fragen.length := by rw [he]; rfl
+    simp only [hfrage_eq, List.map_append, List.map_singleton, hrange, heinst,
+      List.range_succ, List.length_append, List.length_singleton]
   · intro hpre
     have hsbuch : ((setFrame s c { s.lokal c with pending := some (binding.question access) }).frage
         (s.stelleFrage t c (binding.question access))).buchung = s.buchung := rfl
