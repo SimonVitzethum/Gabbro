@@ -6,11 +6,10 @@
   SC fences) contributes a forbidden statement (no consistent graph shows the outcome) and an
   allowed statement (some consistent and complete graph shows it), each proved in its own file
   over a small finite event type after `Core/Ziel/Korrektheit/Beweise/Iriw.lean`. This root is
-  the single statement to pin: pinning adds `LitmusKatalogAussage` as one conjunct of
-  `KorrektheitAussagen` with one `PinTable` row (done at integration; the pin table stays
-  untouched on work branches). The root only grows by conjunction; weakening or removing a
-  conjunct is a change of the catalogue. A mismatch with the literature is a model finding: the
-  negation is proved and reported, never patched over.
+  itself the single pin root with one `PinTable` row: the guard covers every `…Aussage` reachable
+  from a root, so the group statements need no rows of their own. The root only grows by
+  conjunction; each extension re-measures its one row. A mismatch with the literature is a model
+  finding: the negation is proved and reported, never patched over.
 -/
 module
 
