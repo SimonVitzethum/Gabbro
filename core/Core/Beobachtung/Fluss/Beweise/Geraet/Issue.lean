@@ -35,7 +35,7 @@ theorem geraete_issue_pre {binding : Binding k} {access : RegisterAccess}
     outside history; every other ledger, the booking and the machine fields stay. -/
 theorem geraete_issue_tick {binding : Binding k} {access : RegisterAccess}
     {required : GeraetePhase} {target : Option GeraetePhase}
-    {t : Nat} {c : Kontext} {s : State} {w : PUnit} {plan : Plan}
+    {t : Nat} {c : Kontext} {s : State} {plan : Plan}
     {spur : SchrittSpur Nat UInt8} {s' : State} {u : State}
     (aus : FuehrtSchrittAus (d.unit locals).einrichtung t c s u plan spur s')
     (hplans : [plan] = [{ internal with aktion := .frage (binding.question access) }])

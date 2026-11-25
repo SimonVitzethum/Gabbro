@@ -121,8 +121,8 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                     exact Nat.le_trans ihepo (Nat.le_succ _)
               | antwort _ h =>
                 obtain ⟨offered, spurEq, append, stateEq⟩ := h
-                have hfragen : s'.fragen = s.fragen := by rw [stateEq]
-                have hep : s'.epoche = s.epoche := by rw [stateEq]
+                have hfragen : s'.fragen = s.fragen := by rw [stateEq]; rfl
+                have hep : s'.epoche = s.epoche := by rw [stateEq]; rfl
                 obtain ⟨ihfragen, ihepo⟩ := ih s hz
                 refine ⟨fun q hq => ?_, ?_⟩
                 · rw [hfragen] at hq

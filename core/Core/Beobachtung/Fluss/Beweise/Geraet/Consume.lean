@@ -32,7 +32,7 @@ def geraete_consume_rahmen (s : State) (c : Kontext) (binding : Binding k)
     consumption counter advances and the entry frame clears. -/
 theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
     {required : GeraetePhase} {target : Option GeraetePhase}
-    {t : Nat} {c : Kontext} {s : State} {w : PUnit} {plan : Plan}
+    {t : Nat} {c : Kontext} {s : State} {plan : Plan}
     {spur : SchrittSpur Nat UInt8} {s' : State} {u : State} {answer : AntwortEreignis}
     (aus : FuehrtSchrittAus (d.unit locals).einrichtung t c s u plan spur s')
     (hplans : [plan] = [{ internal with aktion := .verbrauche answer }])
