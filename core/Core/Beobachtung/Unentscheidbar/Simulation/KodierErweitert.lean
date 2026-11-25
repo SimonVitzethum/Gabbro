@@ -318,6 +318,9 @@ instance : Encodable Fadenform :=
 
 /-! ## Outside-question forms (MK-06) -/
 
+instance : Encodable UInt8 :=
+  Encodable.ofLeftInverse UInt8.toNat UInt8.ofNat (by intro b; exact UInt8.ofNat_toNat)
+
 def dienstCode : Dienst → Nat
   | .readSectors => 0
   | .memoryMap => 1
