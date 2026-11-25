@@ -6,7 +6,7 @@
              or exhibit one concrete RC11-consistent graph (allowed half); no fixture is evaluated
              on the compiler path.
 
-   Feeding facts: `Graph.sw_direkt`, `Graph.sc_stark`, `psc_von_klassisch`, `Graph.rb`,
+   Feeding facts: `Graph.sw_direkt`, `Graph.sc_stark`, `Graph.psc_von_klassisch`, `Graph.rb`,
    `Graph.hb_in_po`, `Graph.hb_irrefl`, `Graph.atomar`, `Konsistent.psc`, `Konsistent.ohneLB`,
    `transGen_von_trans`, `transGen_mono`, `transGen_kopf`, `azyklisch_von_rang`,
    and the closed-form case-split style of `Core/Speicher/Trennung.lean`.
@@ -24,24 +24,24 @@ open Gabbro.Core
 open Gabbro.Core.Speicher
 
 /-- INDEPENDENT READS OF INDEPENDENT WRITES ARE FORBIDDEN UNDER `seq_cst`. Feeds: the
-    classic `psc` steps (`psc_von_klassisch`: the two `rf` edges synchronise through `sw_direkt`
+    classic `psc` steps (`Graph.psc_von_klassisch`: the two `rf` edges synchronise through `sw_direkt`
     into `hb|loc`, the `po` and `rb` edges are in `scb`). Proof sketch: the six assumptions are
     six `psc` steps closing `wx → r1x → r1y → wy → r2y → r2x → wx`; a transitive path around
     that loop is a `psc` cycle, which `Konsistent.psc` excludes. -/
 theorem iriw_sc_verboten : IriwScVerbotenAussage := by
   intro E Ort Wert G hk hsc wx wy r1x r1y r2y r2x hf1 hp1 hrb1 hf2 hp2 hrb2
-  have s1 : G.psc wx r1x := psc_von_klassisch ⟨hsc wx, hsc r1x, Or.inr (Or.inr (Or.inl
-    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf1 (sc_stark (hsc wx)) (sc_stark (hsc r1x))),
+  have s1 : G.psc wx r1x := Graph.psc_von_klassisch ⟨hsc wx, hsc r1x, Or.inr (Or.inr (Or.inl
+    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf1 (Graph.sc_stark (hsc wx)) (Graph.sc_stark (hsc r1x))),
       hk.wf.rf_ort _ _ hf1⟩))⟩
-  have s2 : G.psc r1x r1y := psc_von_klassisch ⟨hsc r1x, hsc r1y, Or.inl hp1⟩
+  have s2 : G.psc r1x r1y := Graph.psc_von_klassisch ⟨hsc r1x, hsc r1y, Or.inl hp1⟩
   have s3 : G.psc r1y wy :=
-    psc_von_klassisch ⟨hsc r1y, hsc wy, Or.inr (Or.inr (Or.inr (Or.inr hrb1)))⟩
-  have s4 : G.psc wy r2y := psc_von_klassisch ⟨hsc wy, hsc r2y, Or.inr (Or.inr (Or.inl
-    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf2 (sc_stark (hsc wy)) (sc_stark (hsc r2y))),
+    Graph.psc_von_klassisch ⟨hsc r1y, hsc wy, Or.inr (Or.inr (Or.inr (Or.inr hrb1)))⟩
+  have s4 : G.psc wy r2y := Graph.psc_von_klassisch ⟨hsc wy, hsc r2y, Or.inr (Or.inr (Or.inl
+    ⟨G.hb_von_sw (Graph.sw_direkt hk.wf hf2 (Graph.sc_stark (hsc wy)) (Graph.sc_stark (hsc r2y))),
       hk.wf.rf_ort _ _ hf2⟩))⟩
-  have s5 : G.psc r2y r2x := psc_von_klassisch ⟨hsc r2y, hsc r2x, Or.inl hp2⟩
+  have s5 : G.psc r2y r2x := Graph.psc_von_klassisch ⟨hsc r2y, hsc r2x, Or.inl hp2⟩
   have s6 : G.psc r2x wx :=
-    psc_von_klassisch ⟨hsc r2x, hsc wx, Or.inr (Or.inr (Or.inr (Or.inr hrb2)))⟩
+    Graph.psc_von_klassisch ⟨hsc r2x, hsc wx, Or.inr (Or.inr (Or.inr (Or.inr hrb2)))⟩
   exact hk.psc wx (((((Relation.TransGen.single s1).tail s2).tail s3).tail s4).tail s5).tail s6
 
 /-- The eight events of the release/acquire IRIW outcome: the initial writes `ix`, `iy`, the two

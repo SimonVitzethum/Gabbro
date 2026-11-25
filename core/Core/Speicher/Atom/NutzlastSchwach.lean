@@ -131,7 +131,7 @@ theorem stGraph_kein_sw {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : 
     ¬ (stGraph mw mr).sw a b := by
   intro hsw
   obtain ⟨_, hma, _, hmb, x, hrs, hrf⟩ :=
-    sw_klassisch (stGraph_kein_zaun mw mr a) (stGraph_kein_zaun mw mr b) hsw
+    Graph.sw_klassisch (stGraph_kein_zaun mw mr a) (stGraph_kein_zaun mw mr b) hsw
   have hx := Graph.Rs.ohne_rmw (stGraph_kein_rmw mw mr) hrs
   have hrf' : stRf x b := hrf
   rcases hrf' with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
@@ -207,10 +207,10 @@ theorem stGraph_psc {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv
   rcases hp with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, _, _⟩
   · rcases hl with ⟨ha, hac⟩ | ⟨hza, _⟩
     · rcases hr with ⟨hb, hdb⟩ | ⟨hzb, _⟩
-      · subst hac
-        subst hdb
-        have ha' : (stLab mw mr a).modus = .sc := ha
+      · have ha' : (stLab mw mr a).modus = .sc := ha
         have hb' : (stLab mw mr b).modus = .sc := hb
+        subst hac
+        subst hdb
         rcases stGraph_scb h hscb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
         · exact absurd ha' (by intro hh; cases hh)
         · exact absurd hb' (by intro hh; cases hh)
