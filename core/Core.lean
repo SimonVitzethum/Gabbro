@@ -90,6 +90,7 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Consume
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Recovery
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Lockstep
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht

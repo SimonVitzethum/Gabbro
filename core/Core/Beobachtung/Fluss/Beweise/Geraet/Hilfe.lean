@@ -1,5 +1,6 @@
 module
 
+public import Core.Beobachtung.Fluss.Beweise.GeraetKopplung
 public import Core.Beobachtung.Fluss.Beweise.GeraetInvariante
 public import Core.Beobachtung.Nichtinterferenz
 public import Core.Beobachtung.Projektion
@@ -408,5 +409,17 @@ theorem geraete_antwort_inst_range {antworten : List AntwortEreignis} {qs : List
     geraete_forall₂_inst h h1 h2'
   simp only [List.getElem_map, List.getElem_range h2]
   exact hai.trans hqi
+
+/-- Coupled device states agree on every context's pending question: the public
+    local projection is full equality under empty labels. This recovers the
+    step-kind determinant (issue needs `pending = none`, consume and arrival
+    need `pending = some`) from the coupling. -/
+theorem geraete_kopplung_pending {ρ₁ ρ₂ : Lauf (d.unit locals)} {predictor : Praediktor}
+    {t u : Nat} (h : GeraeteKopplungAussage (d.unit locals) ρ₁ ρ₂ predictor t u)
+    {v w : State} (hv : ρ₁.zeit.zustand t = some v) (hw : ρ₂.zeit.zustand t = some w)
+    (c : Kontext) :
+    (v.lokal c).pending = (w.lokal c).pending := by
+  have hq := ((geraeteKopplung_kopplung h).2.1 v w hv hw).1
+  exact congrArg (fun f => f.pending) (congrFun (geraete_lokal_gleich hq) c)
 
 end Gabbro.Core.Beobachtung
