@@ -71,6 +71,7 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
     have hsrechte : s'.rechte = v.rechte := by rw [nEqState]
     have hsleihen : s'.leihen = v.leihen := by rw [nEqState]
     have hspersistenz : s'.persistenz = v.persistenz := by rw [nEqState]
+    clear rahmen auth sperren speicherfolge nEqState
     cases fuehrtAus with
     | verbrauche ready' =>
       refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
