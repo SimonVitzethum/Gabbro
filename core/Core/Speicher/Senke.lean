@@ -125,7 +125,7 @@ theorem sw_ohne (hs : G.Senke e) {a b : E} (h : G.sw a b) (ha : a ≠ e) (hb : b
   have hre : r ≠ e := by
     intro h0
     rcases hschwanz with ⟨hrb, _, _⟩ | ⟨_, _, hpo, _⟩
-    · exact hb (hrb.trans h0)
+    · exact hb (hrb.symm.trans h0)
     · exact hs.po _ (h0 ▸ hpo)
   refine ⟨⟨w, hwe⟩, ⟨x, hxe⟩, ⟨r, hre⟩, ?_, hs.rs_ohne hrs hwe hxe, hrf, hatom, hliest, ?_⟩
   · rcases hkopf with ⟨haw, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
