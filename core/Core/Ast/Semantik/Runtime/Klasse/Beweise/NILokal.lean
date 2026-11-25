@@ -326,53 +326,17 @@ theorem klassen_stummer_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
   generalize hsA : spur.aussen = aussen at fuehrtAus speicherfolge
   generalize hsS : spur.speicher = speicherlist at speicherfolge
   cases fuehrtAus
+  generalize hG : s'.graph = gEnd at speicherfolge s'Eq
   cases speicherfolge
   have spurEq : spur = ⟨[], []⟩ := by
     cases spur
     simp_all
   exact ⟨s'Eq, spurEq⟩
 
-/-- A silent form with no public output, speculation or constant-time event appends nothing to the
-    low trace. -/
-theorem klassen_stummer_schrittbeob {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
-    (kopf : ∀ (c : Kontext) (v : Zustand), E.system.kopf v c = some f →
-      E.fluss.spekulativ f (v.lokal c) = (fun pred => []) ∧ E.fluss.konstantzeit f = false)
-    (privatAus : ∀ (c : Kontext) (v : Zustand),
-      E.fluss.ausgaben ((F.nach c v 0).lokal c) = E.fluss.ausgaben (v.lokal c))
-    {ρ : Lauf E} {predictor : Praediktor} {t : Nat} {c : Kontext} {w : PUnit}
-    {spur : SchrittSpur Zelle Int} {vor nach : Zustand}
-    (spurGlied : ρ.zeit.spur t = some (.kontext c w, spur))
-    (zustand : ρ.zeit.zustand t = some vor) (nachEq : ρ.zeit.zustand (t + 1) = some nach)
-    (atHead : E.system.kopf vor c = some f) (nachEqF : nach = F.nach c vor 0)
-    (spurEq : spur = ⟨[], []⟩) : schrittBeob ρ predictor t = [] := by
-  simp only [schrittBeob, spurGlied, zustand, nachEq, nachEqF, spurEq]
-  have keinEnde : ∀ d, (neuBeendet vor (F.nach c vor 0) E.etiketten d).isSome = false := by
-    intro d
-    rw [neuBeendet]
-    simp only [Schrittform.nach]
-    cases h : vor.status d <;> rfl
-  have hCommit : commitBeob E.katalog.plattform vor (F.nach c vor 0) =
-      ([] : List (NiedrigesEreignis Zelle Int PUnit ι)) := by
-    rw [commitBeob]
-    simp only [Schrittform.nach]
-  have hAusgabe : ausgabeBeob E c (vor.lokal c) ((F.nach c vor 0).lokal c) = [] := by
-    rw [ausgabeBeob, privatAus c vor]
-    simp only [List.drop_length]
-  have hZeit : zeitBeob ρ c (vor.lokal c) ((F.nach c vor 0).lokal c) = [] := by
-    rw [zeitBeob]
-    simp only [Schrittform.nach]
-  have hSpur := (kopf c vor atHead).1 predictor
-  have hKonstant := (kopf c vor atHead).2
-  rw [kontextBeob, atHead, hSpur, hKonstant]
-  simp only [List.map_nil, List.nil_append, List.append_nil, hCommit, hAusgabe, hZeit,
-    Bool.false_eq_true, ite_false]
-  simp only [keinEnde, not_false_eq_true, exists_prop, ite_false]
-
 /-- **Run-level flow of a silent form, under the extra premises.** Besides the pinned premises
     (`Eingebettet`, `RegelFluss`, `Operandensicht`) this needs: the unit is question-free, its loader
-    succeeds, its head function respects public state equality, and the form records no speculative
-    or constant-time event. These are not consequences of the pinned premises for an arbitrary
-    `Klasseneinheit`. -/
+    succeeds, its head function respects public state equality, and its steps append nothing to the
+    low trace. These are not consequences of the pinned premises for an arbitrary `Klasseneinheit`. -/
 theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
     (emb : F.Eingebettet E f) (hk : F.klasse = .lokal ∨ F.klasse = .ruf)
     (fluss : Beobachtung.RegelFluss E f) (_sicht : F.Operandensicht E)
@@ -380,10 +344,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
     (geladen : ∀ (h : Katalog.Umgebung) (s : AussenStart), ∃ z, E.laden s (h.lade E.bild) = some z)
     (kopfSicht : ∀ (c : Kontext) (v w : Zustand), Beobachtung.QuellzustandGleich E v w →
       E.system.kopf v c = some f → E.system.kopf w c = some f)
-    (kopfStill : ∀ (c : Kontext) (v : Zustand), E.system.kopf v c = some f →
-      E.fluss.spekulativ f (v.lokal c) = (fun pred => []) ∧ E.fluss.konstantzeit f = false)
-    (privatAus : ∀ (c : Kontext) (v : Zustand),
-      E.fluss.ausgaben ((F.nach c v 0).lokal c) = E.fluss.ausgaben (v.lokal c)) :
+    (still : ∀ (ρ : Lauf E) (pred : Praediktor) (t : Nat), schrittBeob ρ pred t = []) :
     Beobachtung.RegelNIPflicht E f := by
   classical
   intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
@@ -393,7 +354,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
   obtain ⟨qgleich, epocheEq, geliefertEq, kerneEq, statusEq⟩ := st vor w₂ zustand zustand₂
   obtain ⟨lokGleich, endGleich, initialGleich, rechteGleich, leihenGleich, antwortGleich⟩ := qgleich
   have kopf₂ : E.system.kopf w₂ c = some f :=
-    kopfSicht c vor w₂ qgleich kopf
+    kopfSicht c vor w₂ ⟨lokGleich, endGleich, initialGleich, rechteGleich, leihenGleich, antwortGleich⟩ kopf
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
   generalize nachEq₁ : ρ₁.zeit.zustand (t + 1) = nach₁ at takt₁
@@ -444,14 +405,15 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                   cases hl
                 · refine ⟨[], F.nach c w₂ 0, ?_, speicher₂, rfl⟩
                   exact FuehrtAus.intern
-              have regel₂ideal : (E.system.regel f).ideal c w₂ w [Semantik.plan] (F.nach c w₂ 0) := by
+              have regel₂ : E.system.ImplSchritt c w₂ w [Semantik.plan] (F.nach c w₂ 0) := by
                 obtain ⟨k, o, tr⟩ := F
+                refine ⟨f, kopf₂, ?_⟩
                 rw [emb.regel]
+                change Schrittform.impl ⟨k, o, tr⟩ c w₂ w [Semantik.plan]
+                  ((⟨k, o, tr⟩ : Schrittform).nach c w₂ 0)
                 change Schrittform.ideal ⟨k, o, tr⟩ c w₂ w [Semantik.plan]
                   ((⟨k, o, tr⟩ : Schrittform).nach c w₂ 0)
                 rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
-              have regel₂ : E.system.ImplSchritt c w₂ w [Semantik.plan] (F.nach c w₂ 0) :=
-                ⟨f, kopf₂, regel₂ideal⟩
               have step₂ : ImplSchritt E.einrichtung E.system E.katalog ρ₂.hw t w₂
                   (.kontext c w, ⟨[], []⟩) (F.nach c w₂ 0) :=
                 .kontext crash₂ bereit₂ regel₂ aus₂
@@ -499,16 +461,9 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                                   obtain ⟨nach₂Eq, spurEq₂⟩ :=
                                     klassen_stummer_nach E f F emb hk impl₂'rule aus₂'
                                   have still₁ : schrittBeob ρ₁ predictor t = [] :=
-                                    klassen_stummer_schrittbeob E f F kopfStill privatAus
-                                      spurGlied zustand nachEq₁ kopf nach₁Eq spurEq₁
-                                  have spurGlied₂ : ρ₂.zeit.spur t = some (.kontext c w, sp₂) := by
-                                    rw [c_eq] at label₂
-                                    cases w₂'
-                                    cases w
-                                    exact label₂
+                                    still ρ₁ predictor t
                                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
-                                    klassen_stummer_schrittbeob E f F kopfStill privatAus
-                                      spurGlied₂ zustand₂ nachEq₂ kopf₂ nach₂Eq spurEq₂
+                                    still ρ₂ predictor t
                                   have e₁ : NiedrigeBeob E ρ₁ predictor (t + 1) =
                                       NiedrigeBeob E ρ₁ predictor t := by
                                     change NiedrigeBeob E ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
