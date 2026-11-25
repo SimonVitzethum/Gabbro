@@ -120,20 +120,20 @@ def NISichtbar.schreibform (m : Modus) : Schrittform :=
     different forms, while the flow and visibility premises for `true` are satisfied. -/
 def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
   let F := NISichtbar.schreibform m
-  {     katalog := (Plattform.x86_64).katalog
-    bild := bild
-    einrichtung := einrichtung Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher
+  { katalog := (Plattform.x86_64).katalog,
+    bild := bild,
+    einrichtung := einrichtung Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher,
     system := ⟨(fun _ => F.regel),
       (fun s _c => if s.verworfen eintritt = 0 then some true else some false),
-      (fun _ _ => False), (fun _ _ _ => False)⟩
+      (fun _ _ => False), (fun _ _ _ => False)⟩,
     startdaten := fun start =>
-      startdaten Fragment.leer.eingang Fragment.leer.eintritte (start.assignment 0) .x86_64 []
-    startmedium := startmedium
-    laden := laden Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher .x86_64
-    lokalerBezug := Eq
-    stotterLaenge := fun _ => 0
-    quelltabellen := Fragment.leer.tabellen
-    etiketten := { ort := NISichtbar.etikettOrt, bootByte := NISichtbar.etikettBoot }
+      startdaten Fragment.leer.eingang Fragment.leer.eintritte (start.assignment 0) .x86_64 [],
+    startmedium := startmedium,
+    laden := laden Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher .x86_64,
+    lokalerBezug := Eq,
+    stotterLaenge := fun _ => 0,
+    quelltabellen := Fragment.leer.tabellen,
+    etiketten := { ort := NISichtbar.etikettOrt, bootByte := NISichtbar.etikettBoot },
     fluss := { lokal := NISichtbar.lokalEtikett, kontrolle := NISichtbar.kontrollEtikett } }
 
 /-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
