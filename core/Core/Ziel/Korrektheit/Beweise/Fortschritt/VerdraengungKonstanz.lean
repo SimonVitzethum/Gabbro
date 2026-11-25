@@ -169,41 +169,43 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     · simp only [if_neg heq] at hk''
       have hkk'' : k'' = k := hsingleρ d s c k'' k hs hk'' hdis
       exact heq (hkk''.trans hkk.symm)
-  -- The return premise fires on the displacement and gives a first return.
+  -- The return premise fires on the displacement; walk the return back to the
+  -- vacated post-state. A return at the next tick contradicts the vacancy, and a
+  -- later return steps back through a vacated tick by no re-dispatch.
   obtain ⟨r, hr, kret, zret, hzret, hret⟩ :=
     ret c k d ⟨s, hs, hdis, live⟩ ⟨id, spur, hspur⟩
-  classical
-  have hex : ∃ u, d < u ∧ ∃ k''', ∃ z''', ρ.zeit.zustand u = some z''' ∧
-      (z'''.kerne k''').laeuft = some c :=
-    ⟨r, hr, kret, zret, hzret, hret⟩
-  have first := Nat.find_spec hex
-  have hle : d + 1 ≤ Nat.find hex := first.1
-  obtain ⟨kfst, zfst, hzfst, hfst⟩ := first.2
-  rcases Nat.eq_or_lt_of_le hle with h | h
-  · -- The return is immediate: against the vacated post-state.
-    have hfind : Nat.find hex = d + 1 := h.symm
-    rw [hfind] at hzfst
-    have hseq : zfst = spost := Option.some.inj (hzfst.symm.trans hsplus)
-    rw [hseq] at hfst
-    exact nowhere kfst hfst
-  · -- The return is later: the tick before is still vacated, against no re-dispatch.
-    have hprev : d < Nat.find hex - 1 := by omega
-    have hneg : ¬ (d < Nat.find hex - 1 ∧ ∃ k''', ∃ z''', ρ.zeit.zustand (Nat.find hex - 1) =
-        some z''' ∧ (z'''.kerne k''').laeuft = some c) := by
-      intro hcon
-      have hle : Nat.find hex ≤ Nat.find hex - 1 :=
-        Nat.find_min hex (Nat.find hex - 1) hcon
-      omega
-    have hle1 : a ≤ Nat.find hex - 1 := Nat.le_trans hd (Nat.le_of_lt hprev)
-    obtain ⟨zprev, hzprev, _⟩ := matched.zustand (Nat.find hex - 1)
-    have weg : ∀ k''', (zprev.kerne k''').laeuft ≠ some c := by
-      intro k''' hk'''
-      exact hneg ⟨hprev, k''', zprev, hzprev, hk'''⟩
-    have hsucc : Nat.find hex - 1 + 1 = Nat.find hex := by omega
-    have hzplus : ρ.zeit.zustand (Nat.find hex - 1 + 1) = some zfst := hsucc ▸ hzfst
-    have hcontra := einheitVon_kein_wiedereinsatz P t lauf valid matched
-      opened crashfrei (Nat.find hex - 1) hle1 zprev zfst hzprev hzplus weg kfst
-    exact hcontra hfst
+  have key : ∀ u, d < u → ∀ z, ρ.zeit.zustand u = some z →
+      ∀ k'', (z.kerne k'').laeuft = some c → False := by
+    intro u hu
+    obtain ⟨e, rfl⟩ : ∃ e, u = d + 1 + e := ⟨u - (d + 1), by omega⟩
+    induction e with
+    | zero =>
+      intro z hz k'' hk
+      simp only [Nat.add_zero] at hz
+      have hseq : z = spost := Option.some.inj (hz.symm.trans hsplus)
+      rw [hseq] at hk
+      exact nowhere k'' hk
+    | succ e ih =>
+      intro z hz k'' hk
+      have hu1 : d < d + 1 + e := by omega
+      have hle : a ≤ d + 1 + e := Nat.le_trans hd (Nat.le_of_lt hu1)
+      obtain ⟨z', hz'⟩ := matched.zustand (d + 1 + e)
+      have hzplus : ρ.zeit.zustand (d + 1 + e + 1) = some z := by
+        have hstep : d + 1 + e + 1 = d + 1 + (e + 1) := by omega
+        rw [hstep]
+        exact hz
+      have stepback : ∃ k''' z', ρ.zeit.zustand (d + 1 + e) = some z' ∧
+          (z'.kerne k''').laeuft = some c := by
+        by_contra hcon
+        push_neg at hcon
+        have weg : ∀ k''', (z'.kerne k''').laeuft ≠ some c := by
+          intro k''' hk'''
+          exact hcon k''' z' hz' hk'''
+        exact (einheitVon_kein_wiedereinsatz P t lauf valid matched
+          opened crashfrei (d + 1 + e) hle z' z hz' hzplus weg k'') hk
+      obtain ⟨k''', z'', hz'', hk'''⟩ := stepback
+      exact ih z'' hz'' k''' hk'''
+  exact key r hr zret hzret kret hret
 
 /-- On the open suffix the dispatch core never changes: context steps and answers
     preserve all cores, a crash is excluded, and an interrupt on the context's own
