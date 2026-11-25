@@ -162,6 +162,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Substrat
 public import Core.Beobachtung.Unentscheidbar.Simulation.Nummer
 public import Core.Beobachtung.Unentscheidbar.Simulation.SubstratBau
 public import Core.Beobachtung.Unentscheidbar.Simulation.Bruecke
+public import Core.Beobachtung.Unentscheidbar.Simulation.BrueckeRueck
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Grundlagen
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Null
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SuccSchritt
