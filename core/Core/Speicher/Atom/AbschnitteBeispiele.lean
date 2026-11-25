@@ -54,9 +54,10 @@ theorem rennGraph_wf : rennGraph.Wohlgeformt where
 theorem rennGraph_hb (a b : Bool) : ¬ rennGraph.hb a b := by
   intro h
   obtain ⟨c, hc⟩ := transGen_kopf h
-  rcases hc with hpo | ⟨_, ha, _⟩
+  rcases hc with hpo | hsw
   · exact hpo
-  · exact False.elim ha
+  · obtain ⟨w, x, r, _, _, hrf, _⟩ := hsw
+    exact False.elim hrf
 
 theorem rennGraph_konsistent : rennGraph.Konsistent where
   wf := rennGraph_wf
