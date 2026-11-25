@@ -65,6 +65,7 @@ def Wirkungsklasse.schreibend : Wirkungsklasse → Bool
   | .beende => false
   | .verbinde => false
   | .wechsle => false
+  | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => false
 
 /-- **The write footprint of an access instruction.** The instruction may write the cell `x` only when its class
     writes and `x` is a cell of the region it names. The index is a runtime value of the frame, so the footprint is
@@ -155,6 +156,14 @@ theorem Wirkungsklasse.plan_schreibt (k : Wirkungsklasse) (o : Operand) (v : Int
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | wechsle =>
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
+  | maskiere =>
+    rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
+  | prioritaet =>
+    rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
+  | sendeUnterbrechung =>
+    rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
+  | leiteLeitung =>
+    rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
 
 /-- **The footprint is sound against the step of an access instruction (`fussabdruck_treu` of the access forms).**
     Every cell a plan of the instruction writes, at every frame and for every value the memory model returned, is in the
@@ -202,6 +211,7 @@ def Befehl.schreibtMoeglich : Befehl → Zelle → Bool
   | .definiereTraeger .., _ | .optionIstBesetzt .., _ | .definiereEffektgruppe .., _
   | .waehleUmgebung .., _ => false
   | .textLiteral .., _ | .textConcat .., _ | .textIndex .., _ | .substring .., _ | .textLength .., _ => false
+  | .maskiere .., _ | .prioritaet .., _ | .sendeUnterbrechung .., _ | .leiteLeitung .., _ => false
 
 /-- **A writing class belongs to an access instruction**: every instruction of a class that writes the shared memory is
     an access instruction. -/
