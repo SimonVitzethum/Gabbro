@@ -30,7 +30,7 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
   rcases hA with ⟨hAein, hAmit, hAun, hAnr⟩
   rcases hB with ⟨hBein, hBaus, hBun, hBnr⟩
   rcases hAnr n r hpc hr with ⟨hAfwd, hAbwd⟩
-  have ha' : (Nat.Partrec.Code.eval cA n).bind Nat.Partrec.Code.eval cB = Part.some a := ha
+  have ha' : (Nat.Partrec.Code.eval cA n).bind (Nat.Partrec.Code.eval cB) = Part.some a := ha
   obtain ⟨b, hbA, hbB⟩ := (Part.bind_eq_some_iff.mp ha')
   obtain ⟨kA, rA, hrunA, hpcA, htempA, hpresA, hlokA, hrueckA, hstoppA⟩ :=
     hAfwd b hbA
