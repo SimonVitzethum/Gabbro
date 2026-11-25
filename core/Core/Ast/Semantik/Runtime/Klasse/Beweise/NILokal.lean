@@ -323,7 +323,7 @@ theorem klassen_stummer_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
   subst p
   subst u
   obtain ⟨_, _, _, _, fuehrtAus, speicherfolge, s'Eq⟩ := aus
-  generalize hsA : spur.aussen = aussen at fuehrtAus
+  generalize hsA : spur.aussen = aussen at fuehrtAus speicherfolge
   generalize hsS : spur.speicher = speicherlist at speicherfolge
   cases fuehrtAus
   cases speicherfolge
@@ -345,13 +345,14 @@ theorem klassen_stummer_schrittbeob {ι : Type} (E : Klasseneinheit ι) (f : ι)
     (zustand : ρ.zeit.zustand t = some vor) (nachEq : ρ.zeit.zustand (t + 1) = some nach)
     (atHead : E.system.kopf vor c = some f) (nachEqF : nach = F.nach c vor 0)
     (spurEq : spur = ⟨[], []⟩) : schrittBeob ρ predictor t = [] := by
-  rw [schrittBeob, spurGlied, zustand, nachEq, nachEqF, spurEq]
+  simp only [schrittBeob, spurGlied, zustand, nachEq, nachEqF, spurEq]
   have keinEnde : ∀ d, (neuBeendet vor (F.nach c vor 0) E.etiketten d).isSome = false := by
     intro d
     rw [neuBeendet]
     simp only [Schrittform.nach]
     cases h : vor.status d <;> rfl
-  have hCommit : commitBeob E.katalog.plattform vor (F.nach c vor 0) = [] := by
+  have hCommit : commitBeob E.katalog.plattform vor (F.nach c vor 0) =
+      ([] : List (NiedrigesEreignis Zelle Int PUnit ι)) := by
     rw [commitBeob]
     simp only [Schrittform.nach]
   have hAusgabe : ausgabeBeob E c (vor.lokal c) ((F.nach c vor 0).lokal c) = [] := by
@@ -433,7 +434,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                   rw [← statusEq]
                   exact stat₁
               have rahmen₂ : Zustandsrahmen w₂ (F.nach c w₂ 0) := by
-                refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+                refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
               have speicher₂ : Speicherfolge w₂.initial (.kontext c) w₂.graph _ [] w₂.graph :=
                 Speicherfolge.nil _
               have aus₂ : FuehrtSchrittAus E.einrichtung t c w₂ (F.nach c w₂ 0)
@@ -443,11 +444,14 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                   cases hl
                 · refine ⟨[], F.nach c w₂ 0, ?_, speicher₂, rfl⟩
                   exact FuehrtAus.intern
-              have regel₂ : E.system.ImplSchritt c w₂ w [Semantik.plan] (F.nach c w₂ 0) := by
-                refine ⟨f, kopf₂, ?_⟩
+              have regel₂ideal : (E.system.regel f).ideal c w₂ w [Semantik.plan] (F.nach c w₂ 0) := by
+                obtain ⟨k, o, tr⟩ := F
                 rw [emb.regel]
-                change F.ideal c w₂ w [Semantik.plan] (F.nach c w₂ 0)
+                change Schrittform.ideal ⟨k, o, tr⟩ c w₂ w [Semantik.plan]
+                  ((⟨k, o, tr⟩ : Schrittform).nach c w₂ 0)
                 rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
+              have regel₂ : E.system.ImplSchritt c w₂ w [Semantik.plan] (F.nach c w₂ 0) :=
+                ⟨f, kopf₂, regel₂ideal⟩
               have step₂ : ImplSchritt E.einrichtung E.system E.katalog ρ₂.hw t w₂
                   (.kontext c w, ⟨[], []⟩) (F.nach c w₂ 0) :=
                 .kontext crash₂ bereit₂ regel₂ aus₂
@@ -489,7 +493,7 @@ theorem klassenNI_stumm_unter {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
                                       rw [← kk, ← kerneEq]
                                       exact kern₁
                                     exact Option.some.inj (kern₂.symm.trans gleich)
-                                  rw [c_eq] at kopf₂'
+                                  rw [c_eq] at kopf₂' impl₂'rule aus₂'
                                   have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                                   subst ff₂
                                   obtain ⟨nach₂Eq, spurEq₂⟩ :=
