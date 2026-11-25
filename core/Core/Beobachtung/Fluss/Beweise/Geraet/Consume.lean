@@ -17,6 +17,17 @@ open Classical
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
 variable {d : Denotation k scope}
 
+/-- The frame installed by a device consume step: pending cleared, the register
+    result recorded and the phase advanced on a confirmed write. -/
+def geraete_consume_rahmen (s : State) (c : Kontext) (binding : Binding k)
+    (access : RegisterAccess) (answer : AntwortEreignis) (target : Option GeraetePhase) : Frame :=
+  { s.lokal c with
+    pending := none
+    last := some (access.result answer.reply)
+    phases := match access.result answer.reply, target with
+      | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
+      | _, _ => (s.lokal c).phases }
+
 /-- A consume tick consumes the first unconsumed answer: the ledgers stay, the
     consumption counter advances and the entry frame clears. -/
 theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
@@ -25,28 +36,18 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
     {spur : SchrittSpur Nat UInt8} {s' : State} {u : State} {answer : AntwortEreignis}
     (aus : FuehrtSchrittAus (d.unit locals).einrichtung t c s u plan spur s')
     (hplans : [plan] = [{ internal with aktion := .verbrauche answer }])
-    (hu : u = setFrame s c { s.lokal c with
-      pending := none
-      last := some (access.result answer.reply)
-      phases := match access.result answer.reply, target with
-        | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-        | _, _ => (s.lokal c).phases })
+    (hu : u = setFrame s c (geraete_consume_rahmen s c binding access answer target))
     (owned : Befugt binding required access s c)
     (pending : (s.lokal c).pending = some (binding.question access))
     (ready : s.naechsteAntwort c = some answer)
     (sameQuestion : answer.question = binding.question access) :
-      spur.aussen = [] ∧
+    spur.aussen = [] ∧
       s'.fragen = s.fragen ∧ s'.verlauf = s.verlauf ∧ s'.antworten = s.antworten ∧
       s'.verbraucht = Function.update s.verbraucht c (s.verbraucht c + 1) ∧
       s'.verworfen = s.verworfen ∧ s'.buchung = s.buchung ∧
       s'.epoche = s.epoche ∧ s'.geliefert = s.geliefert ∧
       s'.kerne = s.kerne ∧ s'.status = s.status ∧
-      s'.lokal = Function.update s.lokal c { s.lokal c with
-        pending := none
-        last := some (access.result answer.reply)
-        phases := match access.result answer.reply, target with
-          | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-          | _, _ => (s.lokal c).phases } ∧
+      s'.lokal = Function.update s.lokal c (geraete_consume_rahmen s c binding access answer target) ∧
       (s'.lokal c).pending = none ∧
       s'.initial = s.initial ∧ s'.rechte = s.rechte ∧ s'.leihen = s.leihen ∧
       s'.persistenz = s.persistenz := by
@@ -101,10 +102,9 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       · simp only [hsgeliefert, huvgeliefert, Zustand.verbrauche]
       · simp only [hskerne, huvkerne, Zustand.verbrauche]
       · simp only [hsstatus, huvstatus, Zustand.verbrauche]
-      · rw [e1, hu]
-        rfl
-      · rw [e1, hu]
-        simp only [setFrame, Function.update_self]
+      · simp only [hslokal, hu, Zustand.verbrauche, setFrame, geraete_consume_rahmen]
+      · simp only [hslokal, hu, Zustand.verbrauche, setFrame, geraete_consume_rahmen,
+          Function.update_self]
       · simp only [hsinitial, huvinitial, Zustand.verbrauche]
       · simp only [hsrechte, huvrechte, Zustand.verbrauche]
       · simp only [hsleihen, huvleihen, Zustand.verbrauche]
@@ -121,12 +121,7 @@ theorem geraete_consume_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praed
     {u : State} {plan : Plan} {answer : AntwortEreignis}
     (aus : FuehrtSchrittAus (d.unit locals).einrichtung t c s u plan spur s')
     (hplans : [plan] = [{ internal with aktion := .verbrauche answer }])
-    (hu : u = setFrame s c { s.lokal c with
-      pending := none
-      last := some (access.result answer.reply)
-      phases := match access.result answer.reply, target with
-        | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-        | _, _ => (s.lokal c).phases })
+    (hu : u = setFrame s c (geraete_consume_rahmen s c binding access answer target))
     (hkopf : (d.unit locals).system.kopf s c = some ())
     (hbuch : s.buchung = s'.buchung)
     (hstatus : s'.status = s.status) :
@@ -189,7 +184,7 @@ theorem geraete_consume_ausgeglichen {binding : Binding k} {access : RegisterAcc
       induction s.antworten with
       | nil => rfl
       | cons a as ih =>
-        have hac : a.context = entryContext.nummer := hactx a List.mem_cons_self
+        have hac : a.context = entryContext.nummer := hactx a (List.Mem.head _)
         simp only [List.filter_cons, hac, beq_self_eq_true, if_true, ih]
     have hidx : s.verworfen entryContext + s.verbraucht entryContext = s.antworten.length := by
       rw [hverw entryContext, Nat.zero_add, hverb']
@@ -210,24 +205,14 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
     (ready : s.naechsteAntwort c = some answer)
     (sameQuestion : answer.question = binding.question access) :
     GeraeteInvariantAussage binding
-      ((setFrame s c { s.lokal c with
-        pending := none
-        last := some (access.result answer.reply)
-        phases := match access.result answer.reply, target with
-          | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-          | _, _ => (s.lokal c).phases }).verbrauche c) := by
+      ((setFrame s c (geraete_consume_rahmen s c binding access answer target)).verbrauche c) := by
   have hA := geraete_issue_pre inv owned
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   have hentry : c = entryContext := geraete_issue_kontext (target := target) hA owned
-  have hbb := geraete_consume_ausgeglichen inv owned pending ready
+  have hbb := geraete_consume_ausgeglichen (target := target) inv owned pending ready
   obtain ⟨hnm, hverb, halle⟩ := hbb
-  set u := (setFrame s c { s.lokal c with
-    pending := none
-    last := some (access.result answer.reply)
-    phases := match access.result answer.reply, target with
-      | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-      | _, _ => (s.lokal c).phases }).verbrauche c with hu
+  set u := (setFrame s c (geraete_consume_rahmen s c binding access answer target)).verbrauche c with hu
   have hufragen : u.fragen = s.fragen := rfl
   have huantworten : u.antworten = s.antworten := rfl
   have huverlauf : u.verlauf = s.verlauf := rfl
@@ -238,12 +223,8 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
   · intro c' hc'
     have hne : c' ≠ c := by rw [hentry]; exact hc'
     refine ⟨?_, ?_, ?_⟩
-    · have h1 : (u.lokal c').pending = ((setFrame s c { s.lokal c with
-          pending := none
-          last := some (access.result answer.reply)
-          phases := match access.result answer.reply, target with
-            | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
-            | _, _ => (s.lokal c).phases }).lokal c').pending := rfl
+    · have h1 : (u.lokal c').pending =
+          ((setFrame s c (geraete_consume_rahmen s c binding access answer target)).lokal c').pending := rfl
       rw [h1, Function.update_of_ne hne]
       exact (hothers c' hc').1
     · have h2 : u.verbraucht c' = s.verbraucht c' := by
@@ -286,7 +267,7 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
       · intro q hq hcut
         rw [hufragen] at hq
         obtain ⟨a, ham, hzu⟩ := halle q hq hcut
-        exact ⟨a, huantworten ▸ ham, hzu⟩
+        exact ⟨a, huantworten.symm ▸ ham, hzu⟩
     · intro hne
       have hsome : (u.lokal entryContext).pending = none := by
         rw [← hentry]
@@ -305,12 +286,12 @@ theorem geraete_consume_schliesst_ankunft_aus {binding : Binding k} {access : Re
     (pending : (s.lokal c).pending = some (binding.question access))
     (ready : s.naechsteAntwort c = some answer) :
     ¬ ∃ a hw t, s.AntwortAngeboten (d.unit locals).katalog hw t a := by
-  have hbb := geraete_consume_ausgeglichen inv owned pending ready
+  have hbb := geraete_consume_ausgeglichen (target := target) inv owned pending ready
   obtain ⟨hnm, hverb, halle⟩ := hbb
   rintro ⟨a, hw, t, offered⟩
   obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
   obtain ⟨q, hqmem, hqcut, hzu⟩ := hfrage
   obtain ⟨a', hamem, hzu'⟩ := halle q hqmem hqcut
-  exact hfrisch a' hamem (hzu.2.2.1.trans hzu'.2.2.1.symm)
+  exact hfrisch a' hamem (hzu'.2.2.1.symm.trans hzu.2.2.1)
 
 end Gabbro.Core.Beobachtung
