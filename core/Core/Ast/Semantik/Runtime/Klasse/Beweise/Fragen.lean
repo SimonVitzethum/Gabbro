@@ -170,6 +170,27 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
           have buchung := zugriffNach_aussen_gleich (⟨.rmw mode, o, tr⟩ : Schrittform) c vor val
           exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
             (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+  | zaun mode =>
+      dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal, Schrittform.zugriffsschritt] at impl
+      rcases impl with ⟨_, planEq0, zwischenEq⟩ | ⟨_, val, _, planEq0, zwischenEq⟩
+      · have planAkt : plan.aktion = .intern := by
+          rw [(List.cons.inj planEq0).1]
+          rfl
+        rw [planAkt] at aktion
+        cases aktion with
+        | intern =>
+          have buchung := verweigert_aussen_gleich (⟨.zaun mode, o, tr⟩ : Schrittform) c vor
+          exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
+            (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      · have planAkt : plan.aktion = .intern := by
+          rw [(List.cons.inj planEq0).1]
+          rfl
+        rw [planAkt] at aktion
+        cases aktion with
+        | intern =>
+          have buchung := zugriffNach_aussen_gleich (⟨.zaun mode, o, tr⟩ : Schrittform) c vor val
+          exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
+            (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
   | sperre art =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal, Schrittform.zugriffsschritt] at impl
       rcases impl with ⟨_, planEq0, zwischenEq⟩ | ⟨_, val, _, planEq0, zwischenEq⟩

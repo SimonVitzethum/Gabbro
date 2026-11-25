@@ -266,7 +266,8 @@ abbrev ZugriffssummeTyp : Type :=
     (Nat × Nat × Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
     (Nat × Nat × Nat × Nat × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
     (Nat × Nat × Nat × Int × Ty .value × Gabbro.Core.Speicher.Modus) ⊕
-    (Nat × Nat × Nat × Gabbro.Core.Speicher.Modus)
+    (Nat × Nat × Nat × Gabbro.Core.Speicher.Modus) ⊕
+    Gabbro.Core.Speicher.Modus
 
 def zugriffZuSumme : Zugriffsform → ZugriffssummeTyp
   | .lade a b c t m => .inl (a, b, c, t, m)
@@ -276,6 +277,7 @@ def zugriffZuSumme : Zugriffsform → ZugriffssummeTyp
   | .holeUndAddiere a b c d t m => .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m)))))
   | .erwarte a b c i t m => .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m))))))
   | .veroeffentliche a b c m => .inr (.inr (.inr (.inr (.inr (.inr (a, b, c, m))))))
+  | .zaun m => .inr (.inr (.inr (.inr (.inr (.inr (.inr m))))))
 
 def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
   | .inl (a, b, c, t, m) => Option.some (.lade a b c t m)
@@ -285,6 +287,7 @@ def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
   | .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m))))) => Option.some (.holeUndAddiere a b c d t m)
   | .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m)))))) => Option.some (.erwarte a b c i t m)
   | .inr (.inr (.inr (.inr (.inr (.inr (a, b, c, m)))))) => Option.some (.veroeffentliche a b c m)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inr m)))))) => Option.some (.zaun m)
 
 instance : Encodable Zugriffsform :=
   Encodable.ofLeftInjection zugriffZuSumme zugriffVonSumme (by intro z; cases z <;> rfl)

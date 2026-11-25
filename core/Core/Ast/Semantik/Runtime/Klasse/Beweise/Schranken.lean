@@ -99,6 +99,17 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
         · simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         · intro d hd
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_of_ne hd]
+  | zaun m =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
+      · subst u
+        refine ⟨rfl, rfl, ?_⟩
+        intro d hd
+        simp only [Schrittform.verweigert, Function.update_of_ne hd]
+      · subst u
+        refine ⟨rfl, ?_, ?_⟩
+        · simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
+        · intro d hd
+          simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_of_ne hd]
   | sperre a =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
       · subst u
@@ -166,6 +177,14 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_self]
           exact stapel (s.lokal c) s.regionLive _ n bound vorTief
     | rmw m =>
+        rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
+        · subst u
+          simp only [Schrittform.verweigert, Rahmen.halt, Function.update_self]
+          exact vorTief
+        · subst u
+          simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_self]
+          exact stapel (s.lokal c) s.regionLive _ n bound vorTief
+    | zaun m =>
         rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
         · subst u
           simp only [Schrittform.verweigert, Rahmen.halt, Function.update_self]

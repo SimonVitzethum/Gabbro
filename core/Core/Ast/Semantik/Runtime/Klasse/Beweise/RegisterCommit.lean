@@ -60,6 +60,14 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
       · have hp : plan = Wirkungsklasse.plan (.rmw m) (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
         exact Or.inl rfl
+  | zaun m =>
+      rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
+      · have hp : plan = Semantik.plan := (List.cons.inj same).1
+        subst plan
+        exact Or.inl rfl
+      · have hp : plan = Wirkungsklasse.plan (.zaun m) (o (s.lokal c)) v := (List.cons.inj same).1
+        subst plan
+        exact Or.inl rfl
   | sperre a =>
       rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
@@ -111,6 +119,8 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
   | schreiben m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | rmw m =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
+  | zaun m =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
   | sperre a =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl

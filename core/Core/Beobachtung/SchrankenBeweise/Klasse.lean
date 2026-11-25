@@ -67,7 +67,7 @@ end Allgemein
     lock action, question) deepen no frame; a `ruf` step leaves every frame within the declared depth. -/
 def klassenStapelFuss (E : Semantik.Einheit) (vor nach : Semantik.Zustand) :
     Semantik.Wirkungsklasse → Prop
-  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .sperre .. | .frage =>
+  | .lokal | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage =>
     ∀ d, E.schranken.stapelTiefe (nach.lokal d) ≤ E.schranken.stapelTiefe (vor.lokal d)
   | .ruf => ∀ n, E.schranken.stapel = some n → ∀ d, E.schranken.stapelTiefe (nach.lokal d) ≤ n
 
@@ -87,7 +87,7 @@ theorem klassenSchranken (E : Semantik.Einheit) (b : Semantik.Befehl)
     | ruf =>
       intro d n bound
       exact stack n bound d
-    | lokal | lesen _ | schreiben _ | rmw _ | sperre _ | frage =>
+    | lokal | lesen _ | schreiben _ | rmw _ | zaun _ | sperre _ | frage =>
       intro d n bound
       exact le_trans (stack d) (stapelVor d n bound)
   · intro n bound
