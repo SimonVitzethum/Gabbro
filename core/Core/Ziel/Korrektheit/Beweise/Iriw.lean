@@ -42,7 +42,7 @@ theorem iriw_sc_verboten : IriwScVerbotenAussage := by
   have s5 : G.psc r2y r2x := Graph.psc_von_klassisch ⟨hsc r2y, hsc r2x, Or.inl hp2⟩
   have s6 : G.psc r2x wx :=
     Graph.psc_von_klassisch ⟨hsc r2x, hsc wx, Or.inr (Or.inr (Or.inr (Or.inr hrb2)))⟩
-  exact hk.psc wx (((((Relation.TransGen.single s1).tail s2).tail s3).tail s4).tail s5).tail s6)
+  exact hk.psc wx (.tail (.tail (.tail (.tail (.tail (.single s1) s2) s3) s4) s5) s6)
 
 /-- The eight events of the release/acquire IRIW outcome: the initial writes `ix`, `iy`, the two
     release writes `wx`, `wy`, and the acquire readers `r1x; r1y` and `r2y; r2x`. -/
