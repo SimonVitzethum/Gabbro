@@ -112,11 +112,7 @@ theorem wf (h : Einbettung H G g) (hw : G.Wohlgeformt) : H.Wohlgeformt where
 
 theorem rs (h : Einbettung H G g) {a b : F} (hr : H.Rs a b) : G.Rs (g a) (g b) := by
   induction hr with
-  | selbst hs hat =>
-    have hmg : (G.modus _).atomar := by
-      rw [← h.modus _]
-      exact hat
-    exact .selbst ((h.schreibt _).1 hs) hmg
+  | selbst hs hat => exact .selbst ((h.schreibt _).1 hs) (h.modus _ ▸ hat)
   | po h1 h2 h3 h4 h5 =>
     rw [h.ort, h.ort] at h4
     rw [h.modus] at h5
@@ -131,24 +127,14 @@ theorem sw (h : Einbettung H G g) {a b : F} (hs : H.sw a b) : G.sw (g a) (g b) :
   have hkopf' : G.FreigabeKopf (g a) (g w) := by
     unfold Graph.FreigabeKopf at hkopf ⊢
     rcases hkopf with ⟨rfl, hsa, hma⟩ | ⟨hza, hpo, hsw⟩
-    · refine Or.inl ⟨rfl, (h.schreibt _).1 hsa, ?_⟩
-      have hmg : (G.modus _).stark := by
-        rw [← h.modus _]
-        exact hma
-      exact hmg
+    · exact Or.inl ⟨rfl, (h.schreibt _).1 hsa, h.modus _ ▸ hma⟩
     · exact Or.inr ⟨(h.istSyncZaun _).1 hza, (h.po _ _).1 hpo, (h.schreibt _).1 hsw⟩
   have hschwanz' : G.ErwerbSchwanz (g r) (g b) := by
     unfold Graph.ErwerbSchwanz at hschwanz ⊢
     rcases hschwanz with ⟨rfl, hlb, hmb⟩ | ⟨hrl, hat, hpo, hzb⟩
-    · refine Or.inl ⟨rfl, (h.liest _).1 hlb, ?_⟩
-      have hmg : (G.modus _).stark := by
-        rw [← h.modus _]
-        exact hmb
-      exact hmg
-    · have hat' : (G.modus (g r)).atomar := by
-        rw [← h.modus r]
-        exact hat
-      exact Or.inr ⟨(h.liest _).1 hrl, hat', (h.po _ _).1 hpo, (h.istSyncZaun _).1 hzb⟩
+    · exact Or.inl ⟨rfl, (h.liest _).1 hlb, h.modus _ ▸ hmb⟩
+    · exact Or.inr ⟨(h.liest _).1 hrl, h.modus _ ▸ hat, (h.po _ _).1 hpo,
+        (h.istSyncZaun _).1 hzb⟩
   unfold Graph.sw
   exact ⟨g w, g x, g r, hkopf', h.rs hrs, (h.rf _ _).1 hrf, hatom', (h.liest r).1 hliest,
     hschwanz'⟩
@@ -185,7 +171,7 @@ theorem scb (h : Einbettung H G g) {a b : F} (hs : H.scb a b) : G.scb (g a) (g b
   · exact Or.inr (Or.inr (Or.inr (Or.inr (h.rb hs))))
 
 theorem psc (h : Einbettung H G g) {a b : F} (hp : H.psc a b) : G.psc (g a) (g b) := by
-  rcases hp with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, hzb, h⟩
+  rcases hp with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, hzb, hz⟩
   · refine Or.inl ⟨g c, g d, h.scb hscb, ?_, ?_⟩
     · rcases hl with hl | hr
       · obtain ⟨hsc, rfl⟩ := hl
@@ -196,15 +182,15 @@ theorem psc (h : Einbettung H G g) {a b : F} (hp : H.psc a b) : G.psc (g a) (g b
         · exact Or.inl rfl
         · exact Or.inr (h.hb hhb)
     · rcases hr with hl | hr
-      · obtain ⟨hsc, rfl⟩ := hl
-        exact Or.inl ⟨(h.sc b).1 hsc, rfl⟩
+      · obtain ⟨hsc, hcb⟩ := hl
+        exact Or.inl ⟨(h.sc b).1 hsc, congrArg g hcb⟩
       · obtain ⟨hzb, hcc⟩ := hr
         refine Or.inr ⟨(h.istSCZaun _).1 hzb, ?_⟩
-        rcases hcc with rfl | hhb
-        · exact Or.inl rfl
+        rcases hcc with hcb | hhb
+        · exact Or.inl (congrArg g hcb)
         · exact Or.inr (h.hb hhb)
   · refine Or.inr ⟨(h.istSCZaun _).1 hza, (h.istSCZaun _).1 hzb, ?_⟩
-    rcases h with hhb | ⟨c, d, h1, h2, h3⟩
+    rcases hz with hhb | ⟨c, d, h1, h2, h3⟩
     · exact Or.inl (h.hb hhb)
     · exact Or.inr ⟨g c, g d, h.hb h1, h.eco h2, h.hb h3⟩
 

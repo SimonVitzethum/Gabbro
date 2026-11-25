@@ -186,8 +186,8 @@ theorem psc_ohne (hs : G.Senke e) {a b : {x // x ≠ e}} (h : G.psc a.1 b.1) :
           exact hs.scb_ohne (h0 ▸ hscb)
     have hd : d ≠ e := by
       rcases hr with hl | hr
-      · obtain ⟨_, rfl⟩ := hl
-        exact b.2
+      · obtain ⟨_, hcb⟩ := hl
+        exact hcb.symm ▸ b.2
       · obtain ⟨_, hcc⟩ := hr
         rcases hcc with rfl | hhb
         · exact b.2
@@ -203,12 +203,12 @@ theorem psc_ohne (hs : G.Senke e) {a b : {x // x ≠ e}} (h : G.psc a.1 b.1) :
         · exact Or.inl rfl
         · exact Or.inr (hs.hb_ohne hhb hd).2
     · rcases hr with hl | hr
-      · obtain ⟨hsc, rfl⟩ := hl
-        exact Or.inl ⟨hsc, rfl⟩
+      · obtain ⟨hsc, hcb⟩ := hl
+        exact Or.inl ⟨hsc, Subtype.ext hcb.symm⟩
       · obtain ⟨hzb, hcc⟩ := hr
         refine Or.inr ⟨hzb, ?_⟩
-        rcases hcc with rfl | hhb
-        · exact Or.inl rfl
+        rcases hcc with hcb | hhb
+        · exact Or.inl (Subtype.ext hcb.symm)
         · exact Or.inr (hs.hb_ohne hhb b.2).2
   · refine Or.inr ⟨hza, hzb, ?_⟩
     rcases h with hhb | ⟨x, y, h1, h2, h3⟩
