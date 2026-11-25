@@ -224,19 +224,14 @@ theorem geraete_fragen_inst {fragen : List FrageEreignis}
     (hrange : List.map (fun q : FrageEreignis => q.questionInstance) fragen =
       List.range fragen.length)
     {j : Nat} (hj : j < fragen.length) : (fragen[j]'hj).questionInstance = j := by
-  have hlen : j < (List.map (fun q : FrageEreignis => q.questionInstance) fragen).length := by
-    simp only [List.length_map]
-    exact hj
-  have h1 : (List.map (fun q : FrageEreignis => q.questionInstance) fragen)[j]'hlen = j := by
-    rw [hrange]
-    have hlen2 : j < (List.range fragen.length).length := by
-      simp only [List.length_range]
-      exact hj
-    exact List.getElem_range hlen2
-  have h2 : (List.map (fun q : FrageEreignis => q.questionInstance) fragen)[j]'hlen =
-      (fragen[j]'hj).questionInstance :=
-    List.getElem_map (fun q : FrageEreignis => q.questionInstance)
-  exact h2.symm.trans h1
+  have h0 : ((List.range fragen.length)[j]?) = some j := List.getElem?_range hj
+  rw [← hrange] at h0
+  have h2 : ((fragen.map (fun q : FrageEreignis => q.questionInstance))[j]?) =
+      Option.map (fun q : FrageEreignis => q.questionInstance) (fragen[j]?) :=
+    List.getElem?_map
+  rw [h2, List.getElem?_eq_getElem hj] at h0
+  simp only [Option.map_some] at h0
+  exact Option.some.inj h0
 
 /-- Compared runs agree at every cut on whether a state is loaded. -/
 theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
@@ -261,15 +256,13 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
       rw [n1] at tick1
       have tick2 := ρ₂.zeit.takt t
       rw [n2] at tick2
-      generalize hN1 : ρ₁.zeit.zustand (t + 1) = post1 at tick1
-      generalize hN2 : ρ₂.zeit.zustand (t + 1) = post2 at tick2
       cases tick1 with
       | schritt _ step1 => cases step1
       | wartet _ eq1 _ =>
         cases tick2 with
         | schritt _ step2 => cases step2
         | wartet _ eq2 _ =>
-          exact Or.inl ⟨hN1.trans eq1, hN2.trans eq2⟩
+          exact Or.inl ⟨eq1, eq2⟩
     | inr hsome =>
       obtain ⟨v1, v2, s1, s2⟩ := hsome
       have tick1 := ρ₁.zeit.takt t
