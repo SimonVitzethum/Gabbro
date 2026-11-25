@@ -322,6 +322,6 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 10109246271746066486),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 7571697784290166693),
   (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 13211478858899147079),
-  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 8786197960430367534),
+  (`Gabbro.Core.Linken.LinkErfuellbarAussage, 8786197960430367534)]
 
 end Gabbro.Core.Waechter
