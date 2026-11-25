@@ -119,10 +119,10 @@ theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Ze
     (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
   congrFun (b.nach_initial c s) z
 
-/-- Preservation across the frame transfer for predicates whose observed cells the command
-    does not write. -/
 namespace Pruefung.Praedikat
 
+/-- Preservation across the frame transfer for predicates whose observed cells the command
+    does not write. -/
 theorem gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
     (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
   intro hq
