@@ -45,7 +45,7 @@ def execBoot (regions : List Strecke) (core : Option Nat) :
 
 def execSetup : Einrichtung PUnit Nat UInt8 PUnit ExecFrame PUnit PUnit :=
   ⟨fun _ => 0, fun _ => 0, fun _ => 0, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => execBoot [] (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => execBoot [] (some 0), fun _ _ => 0, id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def execProgram (k : Katalog) (code : List ExecInstruction) : ExecUnit :=

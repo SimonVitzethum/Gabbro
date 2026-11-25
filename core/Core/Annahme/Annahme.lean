@@ -84,7 +84,7 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := trivialesSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
@@ -173,7 +173,7 @@ def gebenDaten : Startdaten Unit Unit Unit Unit :=
 /-- The setup of the release witness: no authority questions, a true invariant. -/
 def gebenEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨gibtHalter, 0, fun _ => gebenDaten, fun _ _ => ()⟩,
+    ⟨0, 1⟩, ⟨gibtHalter, 0, fun _ => gebenDaten, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 /-- The release-witness system: the give-or-stutter rule, nothing finished, never blocked. -/
@@ -233,7 +233,7 @@ def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit wher
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := ⟨fun _ => ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩,
     fun _ _ => none, fun _ _ => False, wartefreiBlockiert⟩
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
@@ -312,7 +312,7 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := kreuzSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
@@ -394,7 +394,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := staleSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0

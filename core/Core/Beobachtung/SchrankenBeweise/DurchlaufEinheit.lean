@@ -118,7 +118,7 @@ theorem durchlaufProtokollMarken : ProtokollMarkenErhaltend E := by
               have hleer : E.schranken.durchlaufstand (nach.lokal c) = [] := by
                 rw [hA.genau.2]
                 simp only [Zustand.wiederanlauf, Zustand.start]
-                exact E.schranken.durchlaufstand_nachVerwerfenLeer _
+                exact E.schranken.durchlaufstand_nachVerwerfenLeer _ _
               rw [hleer] at hmem
               exact (List.not_mem_nil hmem).elim
 

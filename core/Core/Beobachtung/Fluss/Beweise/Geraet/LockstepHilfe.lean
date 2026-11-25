@@ -198,13 +198,6 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                   have hcut := geraete_schnitt_schranke lauf t s hz
                   have hinv := ih hz
                   rw [stateEq]
-                  have rein : ∀ c,
-                      (((d.unit locals).einrichtung.wiederanlauf.daten
-                        (nachAbsturz s.persistenz).dauerhaft).lokal c).pending = none := by
-                    intro c
-                    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit,
-                      setup, bootFor]
-                    by_cases hc : c = entryContext <;> simp only [hc, if_true, if_false]
-                  exact geraete_absturz_invariant_mit_neustart hinv hcut.1 rein
+                  exact geraete_absturz_invariant_mit_neustart (fun _ => rfl) hinv hcut.1
 
 end Gabbro.Core.Beobachtung

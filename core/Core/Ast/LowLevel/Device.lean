@@ -73,9 +73,12 @@ structure Frame where
   last : Option Result := none
 
 /-- The pending question is volatile context state: a restart drops it for every context before
-    recovery code steps, so no pre-crash question can be answered after the crash. -/
-instance fluechtigFrame : Fluechtig Frame where
-  verwerfen frame := { frame with pending := none }
+    recovery code steps, so no pre-crash question can be answered after the crash. The device
+    unit carries this clearing as its restart data; it is applied by the machine step. -/
+def verwerfen : Frame → Frame
+  | frame => { frame with pending := none }
+
+theorem verwerfen_pending_none (frame : Frame) : (verwerfen frame).pending = none := rfl
 
 abbrev State := Zustand PUnit Nat UInt8 PUnit Frame PUnit
 abbrev Plan := SchrittPlan PUnit Nat UInt8 PUnit
