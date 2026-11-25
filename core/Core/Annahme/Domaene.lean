@@ -5,14 +5,16 @@
 
   A unit declares domains; every context belongs to exactly one domain; memory, devices
   and questions of a domain are reachable from other domains only over declared channels.
-  The core statement `IsolationAussage` says: in every run of an accepted unit, no context
-  touches a cell, device or question of a foreign domain except over a declared channel;
-  `DomaenenNIAussage` connects this to the existing flow noninterference (NI between
-  domains up to channels).   The static checker line `pruefeDomaenen` decides the finite
-  declaration (domain count, channel table); domain membership itself is a total static
-  function of the context identity, fixed by the declaration. The plan, the static line
-  and the checker row (`DomaenenLokal`, `RegelIsolation`) live in `Core/Annahme/Lokal.lean`;
-  this file keeps the run-level statements, the witnesses and the collection root.
+  The core statement `IsolationAussage` says, over elaborated units (`einheitVon P t`,
+  the `NIAkzeptiertAussage` pattern): in every run of an accepted elaborated unit, no
+  context touches a cell, device or question of a foreign domain except over a declared
+  channel; `DomaenenNIAussage` connects this to the existing flow noninterference (NI
+  between domains up to channels). The static checker line `pruefeDomaenen` decides the
+  finite declaration (domain count, channel table); domain membership itself is a total
+  static function of the context identity, fixed by the declaration. The plan, the static
+  line and the checker row (`DomaenenLokal`, `RegelIsolation`) live in
+  `Core/Annahme/Lokal.lean`; this file keeps the run-level statements, the witnesses and
+  the collection root.
 
   Design decisions (designer input, 2026-11-25, MK-17b: `RegelIsolation` is a checker row
   in `Lokal`, head-gated since the rule table covers every form but only heads step):
@@ -36,6 +38,7 @@ module
 public import Core.Maschine.Start
 public import Core.Annahme.Annahme
 public import Core.Beobachtung.Satz
+public import Core.Ziel.Korrektheit.Pruefer
 
 @[expose] public section
 
@@ -43,6 +46,7 @@ namespace Gabbro.Core.Annahme
 
 open Gabbro.Core.Maschine
 open Gabbro.Core.Katalog
+open Gabbro.Core.Ziel.Korrektheit
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
@@ -72,12 +76,14 @@ def LaufIsolation [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingu
       ρ.zeit.spur t = some (w, spur) →
       ∀ (c : Kontext) (wahl : Wahl), w = .kontext c wahl → SpurRespektiert E plan c spur
 
-/-- **The core statement (MK-17)**: in every run of an accepted unit, no context touches
-    a cell, device or question of a foreign domain except over a declared channel. -/
-def IsolationAussage : Prop :=
-  ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) (plan : DomaenenPlan),
-    plan.wohlgeformt → Akzeptiert E → DomaenenKohaerenz E plan → LaufIsolation E plan
+/-- **The core statement (MK-17) over elaborated units** (the `NIAkzeptiertAussage`
+    pattern): in every run of an accepted elaborated unit, no context touches a cell,
+    device or question of a foreign domain except over a declared channel. The per-form
+    duty comes from the checker row in `Lokal`, through the rule-to-run bridge. -/
+def IsolationAussage (P : Katalog.Plattform) : Prop :=
+  ∀ (t : Gabbro.Core.Ast.Unit) (plan : DomaenenPlan),
+    plan.wohlgeformt → Akzeptiert (einheitVon P t) →
+    DomaenenKohaerenz (einheitVon P t) plan → LaufIsolation (einheitVon P t) plan
 
 /-- Cross-domain traffic is low-labelled: every question about a foreign-domain object
     carries a public label. -/
@@ -87,12 +93,14 @@ def KanalTragenNiedrig (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     plan.geraetDomaene q.objekt ≠ plan.kontextDomaene c →
     Beobachtung.oeffentlich (E.etiketten.frage q) = true
 
-/-- **NI between domains up to channels**: under low-labelled cross-domain traffic, the
-    existing flow noninterference covers the domains. -/
-def DomaenenNIAussage : Prop :=
-  ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) (plan : DomaenenPlan),
-    Akzeptiert E → KanalTragenNiedrig E plan → Beobachtung.Nichtinterferent E
+/-- **NI between domains up to channels, over elaborated units** (the
+    `NIAkzeptiertAussage` pattern): under low-labelled cross-domain traffic, the accepted
+    elaborated unit is noninterferent, by the pinned NI leg. The channel premise records
+    the design intent; the leg supplies the conclusion. -/
+def DomaenenNIAussage (P : Katalog.Plattform) : Prop :=
+  ∀ (t : Gabbro.Core.Ast.Unit) (plan : DomaenenPlan),
+    Akzeptiert (einheitVon P t) → KanalTragenNiedrig (einheitVon P t) plan →
+    Beobachtung.Nichtinterferent (einheitVon P t)
 
 /-- **Satisfiability**: a well-formed plan and an accepted unit meet the coherence
     premises and the run isolation jointly. -/
@@ -111,10 +119,12 @@ def IsolationNichtTrivialAussage : Prop :=
       FremderSchritt E plan c pl ∧ ¬ Akzeptiert E) ∧
   (∃ plan : DomaenenPlan, pruefeDomaenen plan = false)
 
-/-- **The collection root**: the core statement, its NI connection, and both companions.
-    The single pin root for MK-17; the list may only grow. -/
+/-- **The collection root**: the core statement and its NI connection over every
+    platform, with both companions. The single pin root for MK-17; the list may only grow. -/
 def DomaenenAussage : Prop :=
-  IsolationAussage ∧ DomaenenNIAussage ∧ IsolationErfuellbarAussage ∧ IsolationNichtTrivialAussage
+  (∀ P : Katalog.Plattform, IsolationAussage P) ∧
+  (∀ P : Katalog.Plattform, DomaenenNIAussage P) ∧
+  IsolationErfuellbarAussage ∧ IsolationNichtTrivialAussage
 
 /-- The single-domain plan: everything owned by domain `0`, no channels. -/
 def eineDomaene : DomaenenPlan where

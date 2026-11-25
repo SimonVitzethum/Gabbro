@@ -6,9 +6,9 @@
              conclusion under the added checker row.
 
              The per-form duty `RegelIsolation` lives with the checker row in `Lokal.lean`. It is not
-             a consequence of the other acceptance conjuncts: the companion module `Gegenbeispiel`
-             proved that the core statement without this row is false (since removed with the row
-             in place).
+             a consequence of the other acceptance conjuncts: without the row the core statement
+             is false (the refutation with the hosted unit and a channel-free plan, removed with
+             the row in place).
 -/
 module
 
@@ -57,5 +57,11 @@ theorem isolation_aus_regel [DecidableEq L]
     (_ : plan.wohlgeformt) (_ : Akzeptiert E) (_ : DomaenenKohaerenz E plan)
     (reihe : DomaenenLokal E) : LaufIsolation E plan :=
   regelIsolation_laufisolation E plan reihe
+
+/-- **The core statement over elaborated units**: acceptance carries the checker row, and the
+    bridge turns the row into run isolation for every well-formed coherent plan. -/
+theorem isolation_elaboriert (P : Katalog.Plattform) : IsolationAussage P := by
+  intro t plan hwohl hakk hkoh
+  exact regelIsolation_laufisolation _ plan (akzeptiert_domaenen hakk)
 
 end Gabbro.Core.Annahme

@@ -138,13 +138,15 @@ private theorem beob_aequiv {ρ₁ ρ₂ : Lauf einheit}
   · rw [gleich p t, List.take_length]
     exact reflexiv _
 
-/-- The whole NI comparison premise holds for an accepted program and two admitted runs.
-    They issue the same high question, get different successful answers, and have related low traces. -/
+/-- The whole NI comparison premise holds for two admitted runs. They issue the same high
+    question, get different successful answers, and have related low traces. The accepted
+    program is no longer part of the witness: the hosted unit that carried it is not
+    accepted under the MK-17 isolation row, and admitted runs do not need acceptance. -/
 theorem ni_erfuellbar :
     ∃ (E : Modell) (H₁ H₂ : Umgebung) (ρ₁ : Lauf E) (s₂ : AussenStart) (ρ₂ : Lauf E)
       (tq ta : Nat) (c : Kontext) (q : FrageEreignis) (a₁ a₂ : AntwortEreignis)
       (req resp₁ resp₂ : Spur),
-      Akzeptiert E ∧ Hardware E.katalog H₁ ∧ Hardware E.katalog H₂ ∧
+      Hardware E.katalog H₁ ∧ Hardware E.katalog H₂ ∧
       Laeufe E H₁ ρ₁ ∧ GleicheNiedrigeUmgebung E H₁ H₂ ∧ E.ZulStart H₂ s₂ ∧
       NiedrigGleich E ρ₁.start s₂ ∧ Laeufe E H₂ ρ₂ ∧ ρ₂.start = s₂ ∧ GleichePolitik E ρ₁ ρ₂ ∧
       ρ₁.zeit.spur tq = some (.kontext c (), req) ∧ ρ₂.zeit.spur tq = some (.kontext c (), req) ∧
@@ -174,7 +176,7 @@ theorem ni_erfuellbar :
       (beob_konstant p zb₀ (schritte_stumm zb₀ zb₁ zb₂ zb₃ eb₀ eb₁ eb₂ still₂ p) t).symm
   refine ⟨einheit, umgebung b₁, umgebung b₂, ρ₁, s, ρ₂, 1, 2, kontext, gestellt s,
     angekommen s b₁, angekommen s b₂, frageSpur s, antwortSpur s b₁, antwortSpur s b₂,
-    akzeptiert, erlaubt b₁, erlaubt b₂, lauf₁, umgebung_gleich _ _, gleicher_start zul b₂, ?_,
+    erlaubt b₁, erlaubt b₂, lauf₁, umgebung_gleich _ _, gleicher_start zul b₂, ?_,
     lauf₂, start₂, politik, ea₁, eb₁, rfl, ?_, Nat.lt_succ_self _, ea₂, eb₂, rfl, rfl,
     ⟨Nat.le_succ _, rfl, rfl, rfl⟩, ⟨Nat.le_succ _, rfl, rfl, rfl⟩, rfl, rfl, anders, trace⟩
   · rw [start₁]

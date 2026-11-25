@@ -229,15 +229,15 @@ theorem spurRespektiert_leer [DecidableEq L]
   refine ⟨fun _ _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
 
 /-- A unit that never reports a head meets the isolation row (the
-    `abschnittWartefrei_ohne_blockade` pattern). -/
+    `abschnittWartefrei_ohne_blockade` pattern; applied `noConfusion` keeps the
+    acceptance closure free of a local matcher). -/
 theorem domaenenLokal_ohne_kopf [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (nie : ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext),
       E.system.kopf s c = none) :
     DomaenenLokal E := by
   intro plan s c i hkopf
-  rw [nie s c] at hkopf
-  exact nomatch hkopf
+  exact False.elim (Option.some_ne_none i (hkopf.symm.trans (nie s c)))
 
 /-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
     flow, stack/memory bounds, wait-free lock sections and domain isolation at source
