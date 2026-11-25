@@ -294,7 +294,7 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64
       (fun b hb => fragA_rein b hb), schrankenLokal_leer (E := E) rfl rfl rfl,
     abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb),
-    fun _ s c i hkopf _ _ _ _ _ w _ spur himpl haus => by
+    ⟨eineTabelle_akzeptiert, fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => by
       have hpriv := fragA_rein i (List.mem_of_getElem? (kopf_code hkopf))
       obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus hpriv
       exact spurRespektiert_leer _ _ _⟩, ?_, ?_⟩
