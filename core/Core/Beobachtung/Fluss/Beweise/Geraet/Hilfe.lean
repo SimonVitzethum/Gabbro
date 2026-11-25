@@ -200,24 +200,24 @@ theorem geraete_angeboten_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (
     {s₁ s₂ : State} {t : Nat} {a : AntwortEreignis}
     (vergleich : Vergleich (d.unit locals) h₁ h₂ ρ₁ ρ₂)
     (offered : s₁.AntwortAngeboten (d.unit locals).katalog ρ₁.hw t a)
-    (fragen : s₁.fragen = s₂.fragen) (verlauf : s₁.verlauf = s₂.verlauf)
-    (antworten : s₁.antworten = s₂.antworten) (epoche : s₁.epoche = s₂.epoche) :
+    (hfragen : s₁.fragen = s₂.fragen) (hverlauf : s₁.verlauf = s₂.verlauf)
+    (hantworten : s₁.antworten = s₂.antworten) (hepoche : s₁.epoche = s₂.epoche) :
     s₂.AntwortAngeboten (d.unit locals).katalog ρ₂.hw t a := by
   obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
   refine ⟨hcut, ?_, henthaelt, ?_, ?_⟩
   · obtain ⟨hdel, hpol⟩ := herlaubt
+    rw [hcut] at hdel hpol ⊢
     refine ⟨?_, ?_⟩
     · have hdel2 := geraete_delivery_gleich vergleich t a.question.endpoint
-      rw [hdel2]
+      rw [← hdel2]
       exact hdel
-    · have hpol2 := geraete_politik_antwort_gleich vergleich t s₁.verlauf a.question
-      rw [verlauf] at hpol2
-      rw [← hpol2]
+    · have hpol2 := geraete_politik_antwort_gleich vergleich t s₂.verlauf a.question
+      rw [← hpol2, ← hverlauf]
       exact hpol
   · obtain ⟨q, hqmem, hqcut, hzu⟩ := hfrage
-    exact ⟨q, fragen ▸ hqmem, epoche ▸ hqcut, hzu⟩
+    exact ⟨q, hfragen ▸ hqmem, hepoche ▸ hqcut, hzu⟩
   · intro e he
-    exact hfrisch e (antworten.symm ▸ he)
+    exact hfrisch e (hantworten.symm ▸ he)
 
 /-- Question instances follow the ledger order. -/
 theorem geraete_fragen_inst {fragen : List FrageEreignis}
