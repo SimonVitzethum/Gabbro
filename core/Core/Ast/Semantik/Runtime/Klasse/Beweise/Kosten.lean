@@ -126,7 +126,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | ruf =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .ruf hber, ?_⟩
@@ -137,7 +138,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | lesen m =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort (.lesen m) hber, ?_⟩
@@ -311,7 +313,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | prioritaet =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .prioritaet hber, ?_⟩
@@ -322,7 +325,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | sendeUnterbrechung =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .sendeUnterbrechung hber, ?_⟩
@@ -333,7 +337,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | leiteLeitung =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .leiteLeitung hber, ?_⟩
@@ -344,7 +349,8 @@ theorem klassenKosten (k : Wirkungsklasse) :
         rcases hideal with ⟨hp, _⟩
         have heq : plan.aktion = .intern := by
           have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          rw [hplan]
+          subst hplan
+          rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
 
 /-- Joint satisfiability of the cost statement: the static rows declare cost one, and the
@@ -373,6 +379,6 @@ theorem klassenKosten_nichtTrivial :
     ⟨rfl, rfl⟩
   have bound := kostenLeg _ _ _ _ rfl hemb _ _ _ _ _ step
   have h10 : (1 : Nat) ≤ 0 := bound
-  exact (by decide : ¬ (1 ≤ 0 : Nat)) h10
+  exact (by decide : ¬ ((1 : Nat) ≤ 0)) h10
 
 end Gabbro.Core.Ast.Semantik
