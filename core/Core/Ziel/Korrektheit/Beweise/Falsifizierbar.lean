@@ -220,7 +220,7 @@ theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
   subst u
   subst plan
   subst spur
-  have z'z : z' = z := by rw [z'Eq]; rfl
+  have z'z : z' = z := z'Eq.trans rfl
   subst z'
   let syRef : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbaresSystem with regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
@@ -235,7 +235,8 @@ theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
       obtain ⟨i', idealSchritt, _⟩ := idealFolge
       cases idealSchritt with
       | kontext _ _ regelIdeal _ =>
-          simpa only [ERef, syRef] using regelIdeal
+          obtain ⟨i, _, idealI⟩ := regelIdeal
+          simpa only [ERef, syRef] using idealI
   | inr privat =>
       have ueberlauf : 0 < 0 := by
         simpa only [ERef] using privat.2.2.2.2
@@ -249,8 +250,9 @@ theorem simTrennt : SimTrenntAussage := by
   subst u
   subst plan
   subst spur
-  have z'z : z' = z := by rw [z'Eq]; rfl
+  have z'z : z' = z := z'Eq.trans rfl
   subst z'
+  let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext falsifizierbarerEintrag (), ⟨[], []⟩)
   let syTrenn : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbaresSystem with
       regel := fun _ => ⟨falsifizierbareImpl,
@@ -260,6 +262,9 @@ theorem simTrennt : SimTrenntAussage := by
       system := syTrenn
       lokalerBezug := fun l i => ∀ c, c ≠ falsifizierbarerEintrag → l c = i c
       stotterLaenge := fun _ => 0 }
+  have startZ : (start ETrenn s).2 = z := by
+    change (start falsifizierbareEinheit s).2 = z
+    exact zStart
   have initial : Zustandsbezug ETrenn z z := ⟨ProtokollBezug.refl z, fun _ _ => rfl⟩
   have final : Zustandsbezug ETrenn z z := initial
   have konform : falsifizierbarerHw.konform ETrenn.katalog falsifizierbareUmgebung := by
@@ -299,7 +304,7 @@ theorem simTrennt : SimTrenntAussage := by
   have konformLetztes := falsifizierbares_letztesAngebot_konform konform
   let ρT : Maschine.Lauf ETrenn := ⟨s, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => some z
-    spur := fun | 0 => some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) | _ + 1 => none
+    spur := fun | 0 => some label | _ + 1 => none
     takt := fun
       | 0 => .schritt rfl (.schritt privateStep)
       | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ETrenn t z) }⟩
@@ -315,12 +320,12 @@ theorem simTrennt : SimTrenntAussage := by
       | t + 1 => .wartet rfl rfl (fun h => Bool.false_ne_true h.2) },
     fun | 0 => some falsifizierbarerEintrag | _ + 1 => none⟩
   have valid₂ : Laeufe ETrenn η₂ := by
-    refine ⟨konkret.1, konformLetztes, zul, rfl, ?_, ?_⟩
+    refine ⟨konkret.1, konformLetztes, zul, startZ.symm, ?_, ?_⟩
     · constructor
       · intro t still frei
         cases t with
         | zero =>
-            change none = some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) at still
+            change none = some label at still
             cases still
         | succ t => exact falsifizierbares_letztesAngebot_ideal ETrenn t z
       · intro endlich
@@ -337,18 +342,18 @@ theorem simTrennt : SimTrenntAussage := by
       | succ _ => exact (Option.some_ne_none _ mark.symm).elim
   let η₁ : I.Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => z
-    spur := fun | 0 => some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) | _ + 1 => none
+    spur := fun | 0 => some label | _ + 1 => none
     takt := fun
       | 0 => .schritt rfl idealStepKeep
       | t + 1 => .wartet rfl rfl (fun h => Bool.false_ne_true h.2) },
     fun _ => none⟩
   have valid₁ : Laeufe ETrenn η₁ := by
-    refine ⟨konkret.1, konformLetztes, zul, rfl, ?_, ?_⟩
+    refine ⟨konkret.1, konformLetztes, zul, startZ.symm, ?_, ?_⟩
     · constructor
       · intro t still frei
         cases t with
         | zero =>
-            change none = some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) at still
+            change none = some label at still
             cases still
         | succ t => exact falsifizierbares_letztesAngebot_ideal ETrenn t z
       · intro endlich
@@ -361,13 +366,13 @@ theorem simTrennt : SimTrenntAussage := by
       exact ⟨z, rfl, initial⟩
     · intro t
       cases t with
-      | zero => exact .schritt rfl
+      | zero => exact .schritt label
       | succ _ => exact .pause
     · intro t
       cases t with
       | zero =>
           refine ⟨fun _ => Or.inr ?_, fun _ => rfl⟩
-          change some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) ≠ none
+          change some label ≠ none
           exact Option.some_ne_none _
       | succ _ => exact ⟨fun _ => Or.inl rfl, fun _ => rfl⟩
     · intro t d mark
@@ -376,7 +381,7 @@ theorem simTrennt : SimTrenntAussage := by
     intro t a b c w sp u p ha hb hspur hcrash hready himpl hex
     cases t with
     | zero =>
-        change some (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) = some (.kontext c w, sp) at hspur
+        change some label = some (.kontext c w, sp) at hspur
         have eq := Option.some.inj hspur
         cases eq
         obtain ⟨hp, _⟩ := himpl
@@ -399,10 +404,11 @@ theorem simTrennt : SimTrenntAussage := by
       exact (Option.some_ne_none _ h.symm).elim
     · intro h
       exact (Option.some_ne_none _ h.symm).elim
+  have mark₂ : η₂.belegt 0 = some falsifizierbarerEintrag := rfl
   have ueberlauf₂ : ETrenn.stotterLaenge () <
       zaehle (fun t => decide (η₂.belegt t = some falsifizierbarerEintrag)) 0 1 := by
     change 0 < zaehle (fun t => decide (η₂.belegt t = some falsifizierbarerEintrag)) 0 1
-    simpa only [zaehle, Nat.zero_add] using Nat.zero_lt_one
+    simpa only [zaehle, Nat.zero_add, decide_eq_true mark₂, ite_true] using Nat.zero_lt_one
   have notSim₂ : ¬ Sim ETrenn ρT η₂ := nicht_sim_bei_stotterueberlauf interval₂ ueberlauf₂
   exact ⟨ETrenn, ρT, η₁, η₂, valid₁, simη₁, valid₂, notSim₂⟩
 
@@ -414,58 +420,94 @@ theorem simRefutierbar : SimRefutierbarAussage := by
   subst u
   subst plan
   subst spur
-  have z'z : z' = z := by rw [z'Eq]; rfl
+  have z'z : z' = z := z'Eq.trans rfl
   subst z'
   let syRef : MaschinenSystem Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbaresSystem with regel := fun _ => ⟨falsifizierbareImpl, fun _ _ _ _ _ => False⟩ }
   let ERef : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
     { falsifizierbareEinheit with system := syRef, stotterLaenge := fun _ => 0 }
-  refine ⟨ERef, falsifizierbareUmgebung, ρ, ?_, ?_⟩
-  · change Maschine.Laeufe falsifizierbareEinheit falsifizierbareUmgebung ρ
-    exact konkret
-  · intro η validη simη
-    rcases simη with ⟨_, matched, bound, _⟩
-    have matchSpur := matched.spur 0
-    cases matchSpur with
-    | privat c w =>
-        have ηspur0 : η.zeit.spur 0 = none := by
-          rfl
-        have ηbelegt : η.belegt 0 ≠ none := by
-          intro leer
-          have alternatives := (matched.frei 0).mp leer
-          cases alternatives with
-          | inl ρleer =>
-              exact (Option.some_ne_none _ (ρspur0.symm.trans ρleer)).elim
-          | inr ηaktiv => exact ηaktiv ηspur0
-        cases hmark : η.belegt 0 with
-        | none => exact (ηbelegt hmark).elim
-        | some d =>
-            obtain ⟨w', f, ρspurPrivat, headF⟩ := matched.belegt 0 d hmark
-            have eq := Option.some.inj (ρspurPrivat.symm.trans ρspur0)
-            cases eq
-            have interval : Stotterintervall η falsifizierbarerEintrag f 0 1 := by
-              intro t lower upper
-              have ht : t = 0 := by omega
-              subst t
-              refine ⟨headF, ?_, ?_⟩
-              · intro w s h
-                exact (Option.some_ne_none _ (h.symm.trans ηspur0)).elim
-              · intro h
-                exact (Option.some_ne_none _ (h.symm.trans ηspur0)).elim
-            have ueberlauf : ERef.stotterLaenge f <
-                zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1 := by
-              change 0 < zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1
-              simpa only [zaehle, Nat.zero_add, decide_eq_true hmark, ite_true] using Nat.zero_lt_one
-            exact nicht_sim_bei_stotterueberlauf interval ueberlauf
-    | schritt event =>
-        have etakt := η.zeit.takt 0
-        have hηevent : η.zeit.spur 0 = some event := by
-          rfl
-        rw [hηevent] at etakt
-        cases etakt with
-        | schritt labelEq idealSchritt =>
-            cases idealSchritt with
-            | kontext _ _ regelIdeal _ =>
-                simpa only [ERef, syRef] using regelIdeal
+  let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext falsifizierbarerEintrag (), ⟨[], []⟩)
+  have konform : falsifizierbarerHw.konform ERef.katalog falsifizierbareUmgebung := by
+    rw [← ρhw]
+    exact konkret.2.1
+  have loaded : ERef.laden s (falsifizierbareUmgebung.lade ERef.bild) = some z := by
+    change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
+    rw [← ρstart]
+    exact (ρz0.symm.trans konkret.2.2.2).symm
+  have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
+    change falsifizierbarerHw.gelegenheit 0 0
+    exact congrArg some (Nat.mod_one 0)
+  have boot : s.bootCore = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ zul.2.1)
+  have dispatchZ : (z.kerne 0).laeuft = some falsifizierbarerEintrag := by
+    rw [← zStart]
+    change (if 0 = s.bootCore then some falsifizierbarerEintrag else none) = some falsifizierbarerEintrag
+    rw [boot, ite_eq_left rfl]
+  have liveZ : z.status falsifizierbarerEintrag = .laeuft := by
+    rw [← zStart]
+    change (if falsifizierbarerEintrag = falsifizierbarerEintrag then Status.laeuft else Status.ruht) =
+      (Status.laeuft : Status Unit Unit)
+    exact ite_eq_left rfl
+  have lastReady : KannSchreiten (letztesAngebot falsifizierbarerHw) 0 falsifizierbarerEintrag z :=
+    ⟨0, lastOpportunity, dispatchZ, liveZ⟩
+  have privateStepRef : ImplSchritt ERef.einrichtung ERef.system ERef.katalog
+      (letztesAngebot falsifizierbarerHw) 0 z label z :=
+    .kontext rfl lastReady ⟨(), rfl, rfl, rfl⟩ exec
+  let ρRef : Maschine.Lauf ERef := ⟨s, letztesAngebot falsifizierbarerHw, {
+    zustand := fun _ => some z
+    spur := fun | 0 => some label | _ + 1 => none
+    takt := fun
+      | 0 => .schritt rfl (.schritt privateStepRef)
+      | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ERef t z) }⟩
+  have ρRefSpur0 : ρRef.zeit.spur 0 = some label := rfl
+  have runRef : Maschine.Laeufe ERef falsifizierbareUmgebung ρRef :=
+    ⟨konkret.1, falsifizierbares_letztesAngebot_konform konform, zul, by
+      change some z = ERef.laden s (falsifizierbareUmgebung.lade ERef.bild)
+      exact loaded.symm⟩
+  refine ⟨ERef, falsifizierbareUmgebung, ρRef, runRef, ?_⟩
+  intro η validη simη
+  rcases simη with ⟨_, matched, bound, _⟩
+  have matchSpur := matched.spur 0
+  cases matchSpur with
+  | privat c w =>
+      have ηspur0 : η.zeit.spur 0 = none := by
+        rfl
+      have ηbelegt : η.belegt 0 ≠ none := by
+        intro leer
+        have alternatives := (matched.frei 0).mp leer
+        cases alternatives with
+        | inl ρleer =>
+            exact (Option.some_ne_none _ (ρRefSpur0.symm.trans ρleer)).elim
+        | inr ηaktiv => exact ηaktiv ηspur0
+      cases hmark : η.belegt 0 with
+      | none => exact (ηbelegt hmark).elim
+      | some d =>
+          obtain ⟨w', f, ρspurPrivat, headF⟩ := matched.belegt 0 d hmark
+          have eq := Option.some.inj (ρspurPrivat.symm.trans ρRefSpur0)
+          cases eq
+          have interval : Stotterintervall η falsifizierbarerEintrag f 0 1 := by
+            intro t lower upper
+            have ht : t = 0 := by omega
+            subst t
+            refine ⟨headF, ?_, ?_⟩
+            · intro w s h
+              exact (Option.some_ne_none _ (h.symm.trans ηspur0)).elim
+            · intro h
+              exact (Option.some_ne_none _ (h.symm.trans ηspur0)).elim
+          have ueberlauf : ERef.stotterLaenge f <
+              zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1 := by
+            change 0 < zaehle (fun t => decide (η.belegt t = some falsifizierbarerEintrag)) 0 1
+            simpa only [zaehle, Nat.zero_add, decide_eq_true hmark, ite_true] using Nat.zero_lt_one
+          exact nicht_sim_bei_stotterueberlauf interval ueberlauf
+  | schritt event =>
+      have etakt := η.zeit.takt 0
+      have hηevent : η.zeit.spur 0 = some event := by
+        rfl
+      rw [hηevent] at etakt
+      cases etakt with
+      | schritt labelEq idealSchritt =>
+          cases idealSchritt with
+          | kontext _ _ regelIdeal _ =>
+              obtain ⟨i, _, idealI⟩ := regelIdeal
+              simpa only [ERef, syRef] using idealI
 
 end Gabbro.Core.Ziel.Korrektheit
