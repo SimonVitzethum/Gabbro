@@ -63,17 +63,16 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
       (∀ a E, (R₀ P B).Bezeichnet a E → (R₀ P B).Akzeptiert E →
         (∀ H, (R₀ P B).Hardware ((R₀ P B).katalog E) H →
           (∀ s, (R₀ P B).ZulStart E H s →
-            ∃ ρ, (R₀ P B).Laeufe E H ρ ∧ (R₀ P B).start ρ = s)))
-      ∧ (∀ a E, (R₀ P B).Bezeichnet a E → (R₀ P B).Akzeptiert E →
-        (∀ H, (R₀ P B).Hardware ((R₀ P B).katalog E) H →
-          (∀ ρ, (R₀ P B).Laeufe E H ρ →
+            ∃ ρ, (R₀ P B).Laeufe E H ρ ∧ (R₀ P B).start ρ = s))
+          ∧ (∀ ρ, (R₀ P B).Laeufe E H ρ →
             ∃ ι, (R₀ P B).IdealLaeufe E ι ∧
               Ziel.Verfeinert (R₀ P B) E H ρ ι))) := by
   intro bildG formG _ schranken _
+  intro a E hbez hacc H hwH
   constructor
-  · intro a E hbez hacc H hwH s zul
+  · intro s zul
     exact lauf_ab_start E hwH zul
-  · intro a E hbez hacc H hwH ρ laufR
+  · intro ρ laufR
     obtain ⟨t, _, hElab, hZul⟩ := hbez
     change E = einheitVon P t at hElab
     rcases ρ with ⟨E', ρ'⟩
@@ -131,7 +130,7 @@ theorem zielAusTeilenMitLuecken
       exact Katalog.zulStart_erfuellbar hwH img
     · intro a E hbez hacc H s hwLauf hw zul fair
       obtain ⟨ρ, run, st, hwEq⟩ := fairer_lauf E zul fair
-      exact ⟨⟨E, ρ⟩, rfl, run, st, hwEq⟩
+      exact ⟨⟨E, ρ⟩, ⟨rfl, run⟩, st, hwEq⟩
     · intro E hacc
       exact idealLuecke E hacc
   · constructor
@@ -139,6 +138,7 @@ theorem zielAusTeilenMitLuecken
     · intro E H₁ H₂ ρ₁ s₂ hacc hw₁ hw₂ laufR gleiche zulStart niedrig
       rcases ρ₁ with ⟨E₁, ρ₁'⟩
       change E₁ = E ∧ Maschine.Laeufe E₁ H₁ ρ₁' at laufR
+      have e₁ : E₁ = E := laufR.1
       subst E₁
       have run₁ : Maschine.Laeufe E H₁ ρ₁' := laufR.2
       obtain ⟨ρ₂', run₂, stEq, polEq⟩ :=
@@ -153,6 +153,7 @@ theorem zielAusTeilenMitLuecken
         rcases ρ₂ with ⟨E₂, ρ₂''⟩
         change E₂ = E ∧ Maschine.Laeufe E₂ H₂ ρ₂'' at lauf₂
         change E₂ = E ∧ ∃ h : E₂ = E, Beobachtung.GleichePolitik E ρ₁' (h ▸ ρ₂'') at pol₂
+        have e₂ : E₂ = E := lauf₂.1
         subst E₂
         obtain ⟨_, h, pol⟩ := pol₂
         cases h
@@ -169,7 +170,7 @@ theorem zielAusTeilenAusScheduler
     BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
       NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
   intro bildG formG schranken ni
-  exact zielAusTeilenMitLuecken idealLuecke niLuecke P B bildG formG
+  exact zielAusTeilenMitLuecken hang idealLuecke niLuecke P B bildG formG
     (fortschritt_akzeptiert_aus_scheduler scheduler) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit
