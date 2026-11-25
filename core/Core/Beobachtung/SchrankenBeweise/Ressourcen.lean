@@ -31,15 +31,19 @@ theorem ressourcenRegelAussage_falsch :
     schranken := { Schrankendaten.leer with
       stapel := some 0,
       stapelTiefe := fun h => if h.isNone then 1 else 0 } }
-  have laufE : Laeufe E (umgebung []) ρ := lauf
+  have laufE : Laeufe E (umgebung []) ρ := by
+    change Laeufe einheit (umgebung []) ρ
+    exact lauf
   have takt := ρ.zeit.takt 0
   rw [cut0, spur0, cut1] at takt
-  have impf : ImplSchritt E.einrichtung E.system E.katalog ρ.hw 0
+  have impf : ImplSchritt einheit.einrichtung einheit.system einheit.katalog ρ.hw 0
       (startZustand start) (.kontext kontext (), ⟨[], []⟩) (binde (startZustand start)) := by
     cases takt with
     | schritt label step =>
+      cases label
       cases step with
       | schritt step => exact step
+    | wartet label eq hp => cases label
   have kopf : E.system.kopf (startZustand start) kontext = some () := rfl
   have stapelVor : StapelZustand E (startZustand start) := by
     intro c n bound
@@ -55,7 +59,7 @@ theorem ressourcenRegelAussage_falsch :
     (startZustand start) (binde (startZustand start)) cut0 kopf spur0 cut1 impf
     stapelVor speicherVor
   have post := grenzen.1 kontext 0 rfl
-  change (if (none : Option Handle).isNone then 1 else 0) ≤ 0 at post
+  change 1 ≤ 0 at post
   omega
 
 end Gabbro.Core.Beobachtung
