@@ -21,10 +21,11 @@ theorem geraete_issue_pre {binding : Binding k} {access : RegisterAccess}
     (inv : GeraeteInvariantAussage binding s)
     (owned : Befugt binding required access s c) :
     s.buchung.geraet = (startBuchung binding.object binding.handle).geraet := by
+  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   by_contra hB
-  have hnone := (inv.2 hB).1
-  have hobj := congrFun hnone binding.object
-  simp only at hobj
+  have hnone := (hpost hB).1
+  have hobj : s.buchung.geraet binding.object = none := congrFun hnone binding.object
+  rw [owned.1] at hobj
   cases hobj
 
 /-- A device issue tick appends the fresh question to the pending ledger and the
@@ -59,40 +60,40 @@ theorem geraete_issue_tick {binding : Binding k} {access : RegisterAccess}
   cases spur with
   | mk speicher aussen =>
     obtain ⟨rahmen, auth, sperren, v, fuehrtAus, speicherfolge, nEqState⟩ := aus
-    have hsfragen : s'.fragen = v.fragen := by rw [nEqState]; rfl
-    have hsverlauf : s'.verlauf = v.verlauf := by rw [nEqState]; rfl
-    have hsantworten : s'.antworten = v.antworten := by rw [nEqState]; rfl
-    have hsverbraucht : s'.verbraucht = v.verbraucht := by rw [nEqState]; rfl
-    have hsverworfen : s'.verworfen = v.verworfen := by rw [nEqState]; rfl
-    have hsbuchung : s'.buchung = v.buchung := by rw [nEqState]; rfl
-    have hsepoche : s'.epoche = v.epoche := by rw [nEqState]; rfl
-    have hsgeliefert : s'.geliefert = v.geliefert := by rw [nEqState]; rfl
-    have hskerne : s'.kerne = v.kerne := by rw [nEqState]; rfl
-    have hsstatus : s'.status = v.status := by rw [nEqState]; rfl
-    have hslokal : s'.lokal = v.lokal := by rw [nEqState]; rfl
-    have hsinitial : s'.initial = v.initial := by rw [nEqState]; rfl
-    have hsrechte : s'.rechte = v.rechte := by rw [nEqState]; rfl
-    have hsleihen : s'.leihen = v.leihen := by rw [nEqState]; rfl
-    have hspersistenz : s'.persistenz = v.persistenz := by rw [nEqState]; rfl
+    have hsfragen : s'.fragen = v.fragen := by rw [nEqState]
+    have hsverlauf : s'.verlauf = v.verlauf := by rw [nEqState]
+    have hsantworten : s'.antworten = v.antworten := by rw [nEqState]
+    have hsverbraucht : s'.verbraucht = v.verbraucht := by rw [nEqState]
+    have hsverworfen : s'.verworfen = v.verworfen := by rw [nEqState]
+    have hsbuchung : s'.buchung = v.buchung := by rw [nEqState]
+    have hsepoche : s'.epoche = v.epoche := by rw [nEqState]
+    have hsgeliefert : s'.geliefert = v.geliefert := by rw [nEqState]
+    have hskerne : s'.kerne = v.kerne := by rw [nEqState]
+    have hsstatus : s'.status = v.status := by rw [nEqState]
+    have hslokal : s'.lokal = v.lokal := by rw [nEqState]
+    have hsinitial : s'.initial = v.initial := by rw [nEqState]
+    have hsrechte : s'.rechte = v.rechte := by rw [nEqState]
+    have hsleihen : s'.leihen = v.leihen := by rw [nEqState]
+    have hspersistenz : s'.persistenz = v.persistenz := by rw [nEqState]
     cases fuehrtAus with
     | frage q =>
       refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl, rfl⟩
       · simp only [hsfragen, Zustand.frage, setFrame]
       · simp only [hsverlauf, Zustand.frage, setFrame]
-      · simp only [hsantworten, Zustand.frage]
-      · simp only [hsverbraucht, Zustand.verbrauche, Zustand.frage]
-      · simp only [hsverworfen, Zustand.frage]
+      · simp only [hsantworten, Zustand.frage, setFrame]
+      · simp only [hsverbraucht, Zustand.frage, setFrame]
+      · simp only [hsverworfen, Zustand.frage, setFrame]
       · simp only [hsbuchung, Zustand.frage, setFrame]
-      · simp only [hsepoche, Zustand.frage]
-      · simp only [hsgeliefert, Zustand.frage]
-      · simp only [hskerne, Zustand.frage]
-      · simp only [hsstatus, Zustand.frage]
+      · simp only [hsepoche, Zustand.frage, setFrame]
+      · simp only [hsgeliefert, Zustand.frage, setFrame]
+      · simp only [hskerne, Zustand.frage, setFrame]
+      · simp only [hsstatus, Zustand.frage, setFrame]
       · simp only [hslokal, Zustand.frage, setFrame]
       · simp only [hslokal, Zustand.frage, setFrame, Function.update_self]
-      · simp only [hsinitial, Zustand.frage]
-      · simp only [hsrechte, Zustand.frage]
-      · simp only [hsleihen, Zustand.frage]
-      · simp only [hspersistenz, Zustand.frage]
+      · simp only [hsinitial, Zustand.frage, setFrame]
+      · simp only [hsrechte, Zustand.frage, setFrame]
+      · simp only [hsleihen, Zustand.frage, setFrame]
+      · simp only [hspersistenz, Zustand.frage, setFrame]
 
 /-- A device issue tick publishes exactly the fresh low question event. -/
 theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praediktor}
