@@ -173,10 +173,11 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
       cases aus
       simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, List.filter_nil,
         List.map_nil, List.nil_append, List.append_nil] at folge
-      have leer : spur.speicher = [] := by
+      generalize ht : spur.speicher = trace at folge
+      have leerTrace : trace = [] := by
         cases folge
         rfl
-      exact spurNe leer
+      exact spurNe (ht.trans leerTrace)
   · exact spurNe (congrArg SchrittSpur.speicher leer)
 
 /-- The non-triviality is a statement about the family, not about a changed declaration of its
