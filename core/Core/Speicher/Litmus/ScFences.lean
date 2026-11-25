@@ -276,8 +276,10 @@ theorem f_vollstaendig (mp : Bool) : (fGraph mp).Vollstaendig := by
 theorem f_rb_b1_a2 : (fGraph false).rb b1 a2 :=
   ⟨iy, (by show fRf false iy b1; decide), (by show fMo false iy a2; decide), by decide⟩
 
-theorem f_rb_b2_a1 (mp : Bool) : (fGraph mp).rb b2 a1 :=
-  ⟨ix, (by show fRf mp ix b2; decide), (by show fMo mp ix a1; decide), by decide⟩
+theorem f_rb_b2_a1 (mp : Bool) : (fGraph mp).rb b2 a1 := by
+  cases mp
+  · exact ⟨ix, (by show fRf false ix b2; decide), (by show fMo false ix a1; decide), by decide⟩
+  · exact ⟨ix, (by show fRf true ix b2; decide), (by show fMo true ix a1; decide), by decide⟩
 
 /-- **Literature statement, FALSE in this model:** SB with an `sc` fence between each relaxed
     write and its read cannot have both reads miss the other thread's write. Feeds: its negation
@@ -314,18 +316,18 @@ def ScFencesSbErlaubtAussage : Prop :=
 
 theorem sc_fences_sb_erlaubt : ScFencesSbErlaubtAussage := by
   obtain ⟨hk, p₁, p₂, r₁, r₂⟩ := sb_ohne_sc_erlaubt .rlx (by decide)
-  have hf₁ : (sbGraph .rlx).rf iy b1 := by
-    show sbRf iy b1
+  have hf₁ : (sbGraph .rlx).rf SbEv.iy SbEv.b1 := by
+    show sbRf SbEv.iy SbEv.b1
     decide
-  have hf₂ : (sbGraph .rlx).rf ix b2 := by
-    show sbRf ix b2
+  have hf₂ : (sbGraph .rlx).rf SbEv.ix SbEv.b2 := by
+    show sbRf SbEv.ix SbEv.b2
     decide
   refine ⟨SbEv, Bool, Nat, sbGraph .rlx, hk, sb_vollstaendig .rlx,
-    a1, b1, a2, b2, ix, iy, ?_⟩
-  exact ⟨(by show (sbLab .rlx a1).modus = .rlx; decide),
-    (by show (sbLab .rlx b1).modus = .rlx; decide),
-    (by show (sbLab .rlx a2).modus = .rlx; decide),
-    (by show (sbLab .rlx b2).modus = .rlx; decide), p₁, p₂, hf₁, hf₂, r₁, r₂⟩
+    SbEv.a1, SbEv.b1, SbEv.a2, SbEv.b2, SbEv.ix, SbEv.iy, ?_⟩
+  exact ⟨(by show (sbLab .rlx SbEv.a1).modus = .rlx; decide),
+    (by show (sbLab .rlx SbEv.b1).modus = .rlx; decide),
+    (by show (sbLab .rlx SbEv.a2).modus = .rlx; decide),
+    (by show (sbLab .rlx SbEv.b2).modus = .rlx; decide), p₁, p₂, hf₁, hf₂, r₁, r₂⟩
 
 /-- **Literature statement, FALSE in this model:** message passing with an `sc` fence after the
     relaxed data write and before the relaxed flag write, and one between the flag read and the
