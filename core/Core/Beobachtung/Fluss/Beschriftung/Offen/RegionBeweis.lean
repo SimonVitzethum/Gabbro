@@ -247,10 +247,11 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                     simp only [zeitBeob, unit, Schrankendaten.leer, List.filter_nil, List.filterMap_nil]
                   have hspec : (k.plattform.spekulationshuelle).zugriffe ([] : List (Option Nat)) = [] := by
                     cases k.plattform.spekulationshuelle <;> rfl
+                  have hkopfB : Ast.LowLevel.head op s c = some i := by
+                    simpa only [unit, Ast.LowLevel.system] using kopfI
                   have hKontext : kontextBeob ρ predictor t c s (transfer.apply c s) ⟨[], []⟩ = [] := by
-                    unfold kontextBeob
-                    rw [hcommit, hausgabe, hzeit, kopfI]
-                    simp only [unit, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
+                    simp only [kontextBeob, unit, Ast.LowLevel.system, hcommit, hausgabe, hzeit,
+                      hkopfB, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
                       List.map_nil, List.nil_append, List.append_nil]
                   rw [schrittBeob, spurGlied, hS, hN]
                   simp only [List.filterMap_nil, List.flatMap_nil, hKontext, hKeinEnde, if_false,
