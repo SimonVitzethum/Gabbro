@@ -30,8 +30,8 @@ theorem geraete_laden_ledger_leer {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
     {locals : Gabbro.Core.Ast.Umgebung scope} {d : Denotation k scope}
     {start : AussenStart} {load : Ladung} {z : State}
     (geladen : ((d.unit locals).laden start load) = some z) :
-    z.fragen = [] ∧ z.verlauf = [] ∧ z.antworten = [] ∧ z.verbraucht = fun _ => 0 ∧
-      z.verworfen = fun _ => 0 := by
+    z.fragen = [] ∧ z.verlauf = [] ∧ z.antworten = [] ∧ z.verbraucht = (fun _ => 0) ∧
+      z.verworfen = (fun _ => 0) := by
   unfold Denotation.unit Gabbro.Core.Ast.LowLevel.Device.unit at geladen
   dsimp only at geladen
   split at geladen
