@@ -48,7 +48,7 @@ theorem frageSim_nichtTrivial : FrageSimNichtTrivialAussage := by
 /-- A successful atomic answer is valid at commit; an effect resting only on an earlier
     answer is refused on a changed outside. -/
 theorem gueltigBeiCommitPflicht : GueltigBeiCommitPflichtAussage :=
-  ⟨atomar_gueltig,
+  ⟨fun p s q a h1 h2 => atomar_gueltig h1 h2,
     fun p s₁ q t mem ninstabil => fruehere_antwort_ungueltig p s₁ q t mem ninstabil⟩
 
 /-- A hosted read is valid at commit. -/
