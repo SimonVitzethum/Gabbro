@@ -31,7 +31,8 @@ Hardware hat weiterhin zulässige Läufe (`gebundene_plattform_erfuellbar`, via
 
 /-- On a hardware-conformant environment, translating over a frame's view is the catalogue decode
     of that view. This is the binding point: use `(frame.mmuSicht)` wherever `translate` is called
-    with the acting frame. -/
+    with the acting frame. It is the single primitive that mentions the `translate` field;
+    every statement below calls `translate` only through `GebundeneUebersetzung`/`HardwareGebunden`. -/
 theorem translate_mmuSicht {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k h)
     (frame : MemFrame) (core space addr : Nat) (right : Speicherdienst) :
     h.translate frame.mmuSicht core space addr right =
@@ -45,11 +46,14 @@ private def fremdSicht : MmuSicht :=
 
 /-- A view is bound to a frame when it IS the frame's MMU view: installed tables plus cached
     translations of exactly that frame. This is the one new premise at every memory access of the
-    composed machine (`sicht = (s.lokal c).mmuSicht`). -/
+    composed machine (`sicht = (s.lokal c).mmuSicht`). The `sicht` binder stays free here by
+    design: this definition IS the binding relation. Every use below instantiates it at
+    `frame.mmuSicht` (bound form), so no Hardware/Lauf statement quantifies over a free view. -/
 def MmuGebunden (frame : MemFrame) (sicht : MmuSicht) : Prop :=
   sicht = frame.mmuSicht
 
-/-- A bound view reads its tables from the frame. -/
+/-- A bound view reads its tables from the frame. Projection of the binding relation; bound
+    uses instantiate the implicit view at the frame's own view. -/
 theorem MmuGebunden.tabellen {frame : MemFrame} {sicht : MmuSicht}
     (h : MmuGebunden frame sicht) (space page : Nat) :
     sicht.tables space page = frame.tabellenSicht space page := by
@@ -75,13 +79,14 @@ theorem gebundeneUebersetzung_eq {k : Katalog} {h : Katalog.Umgebung} (hw : Hard
     (`Hardware.mmu`); the binding fixes WHERE the view comes from: every translation of the
     composed machine runs over the MMU view of the acting memory state,
     `(s.lokal c).mmuSicht` — installed tables plus cached translations of exactly that frame.
-    The statement takes no free `MmuSicht`: the view is a parameter read off the state.
+    The statement takes no free `MmuSicht`: the view is a parameter read off the state, and every
+    clause goes through `GebundeneUebersetzung` (no direct `translate` call below the primitive).
     It lives here, above the catalogue, because `Katalog` cannot import `MemFrame`
     (`Mem.State` sits above `Maschine`, which sits above `Katalog`); moving the frame down
     would make the rows unit-specific instead of hardware-generic. -/
 def HardwareGebunden (k : Katalog) (h : Katalog.Umgebung) (s : MemState) : Prop :=
   ∀ (c : Kontext) (core space addr : Nat) (right : Speicherdienst),
-    h.translate (s.lokal c).mmuSicht core space addr right =
+    GebundeneUebersetzung h (s.lokal c) core space addr right =
       uebersetze h.ziel (s.lokal c).mmuSicht core space addr right
 
 /-- Every catalogue-conformant environment satisfies the bound hardware assumption on every
@@ -89,7 +94,8 @@ def HardwareGebunden (k : Katalog) (h : Katalog.Umgebung) (s : MemState) : Prop 
 theorem hardware_gebunden {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k h)
     (s : MemState) : HardwareGebunden k h s := by
   intro c core space addr right
-  rw [hw.mmu]
+  unfold GebundeneUebersetzung
+  exact translate_mmuSicht hw _ core space addr right
 
 /-- **Bound hardware exists for a nontrivial table.** The reference environment is
     catalogue-conformant, hence bound on the reachable mapped-and-cached state, and the bound
@@ -97,7 +103,7 @@ theorem hardware_gebunden {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k 
 theorem hardwareGebunden_erfuellbar :
     ∃ (h : Katalog.Umgebung) (s : MemState),
       Hardware Plattform.x86_64.katalog h ∧ HardwareGebunden Plattform.x86_64.katalog h s ∧
-        h.translate (s.lokal entryContext).mmuSicht 0 0 0 .read = .ok (4096, 0) := by
+        GebundeneUebersetzung h (s.lokal entryContext) 0 0 0 .read = .ok (4096, 0) := by
   let h : Katalog.Umgebung :=
     Umgebung.referenz Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
   have hw : Hardware Plattform.x86_64.katalog h :=
@@ -121,34 +127,39 @@ private theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
   cases heq
 
 /-- **The Hauptbefund is inadmissible under binding.** No bound pair diverges: a bound view that
-    serves a table entry forces the frame to hold that entry. -/
+    serves a table entry forces the frame to hold that entry. The statement takes no free view:
+    the binding is instantiated at `frame.mmuSicht`. -/
 theorem hauptbefund_gebunden_unmoeglich :
-    ¬ ∃ (frame : MemFrame) (sicht : MmuSicht),
-      MmuGebunden frame sicht ∧
-      sicht.tables 0 0 = some ⟨1, [.read], 0⟩ ∧
+    ¬ ∃ (frame : MemFrame),
+      MmuGebunden frame frame.mmuSicht ∧
+      (frame.mmuSicht).tables 0 0 = some ⟨1, [.read], 0⟩ ∧
       frame.tabellenSicht 0 0 = none := by
   intro h
-  obtain ⟨frame, sicht, hbound, htab, hnone⟩ := h
+  obtain ⟨frame, hbound, htab, hnone⟩ := h
   have heq := MmuGebunden.tabellen hbound 0 0
   rw [htab, hnone] at heq
   cases heq
 
 /-- **The bound hardware still translates.** A reachable run maps a page and translates over the
-    full bound view (`tabelle_nichtvakant`); bound runs exist. -/
+    full bound view (`tabelle_nichtvakant`); bound runs exist. The statement takes no free view:
+    the binding is instantiated at `frame.mmuSicht`. -/
 theorem gebundene_plattform_erfuellbar :
-    ∃ (frame : MemFrame) (sicht : MmuSicht),
-      MmuGebunden frame sicht ∧
-      uebersetze Plattform.x86_64.katalog.plattform.ziel sicht 0 0 0 .read = .ok (4096, 0) := by
+    ∃ (frame : MemFrame),
+      MmuGebunden frame frame.mmuSicht ∧
+      uebersetze Plattform.x86_64.katalog.plattform.ziel frame.mmuSicht 0 0 0 .read = .ok (4096, 0) := by
   obtain ⟨E, start, code, s, _, _, _, _, _, _, _, _, hok⟩ := tabelle_nichtvakant
-  exact ⟨s.lokal entryContext, (s.lokal entryContext).mmuSicht, rfl, hok⟩
+  exact ⟨s.lokal entryContext, rfl, hok⟩
 
 /-- **Bound hardware keeps admissible runs.** The reference environment and its fair run satisfy
-    `Hardware`/`FairLaeufe`, and the bound step on the reachable frame succeeds: the sharpening is
-    satisfiable (`Katalog.plattform_erfuellbar` still holds, now with a bound translation). -/
+    `Hardware`/`FairLaeufe`, and the bound assumption holds on the reachable memory state `s`:
+    the view is threaded off the state (`(s.lokal entryContext).mmuSicht`), and the bound step on
+    that acting frame succeeds. The sharpening is satisfiable (`Katalog.plattform_erfuellbar`
+    still holds, now with a bound translation). -/
 theorem gebundene_hardware_erfuellbar :
-    ∃ (h : Katalog.Umgebung) (run : HwLauf) (frame : MemFrame),
+    ∃ (h : Katalog.Umgebung) (run : HwLauf) (s : MemState),
       Hardware Plattform.x86_64.katalog h ∧ FairLaeufe Plattform.x86_64.katalog h run ∧
-      GebundeneUebersetzung h frame 0 0 0 .read = .ok (4096, 0) := by
+      HardwareGebunden Plattform.x86_64.katalog h s ∧
+      GebundeneUebersetzung h (s.lokal entryContext) 0 0 0 .read = .ok (4096, 0) := by
   let h : Katalog.Umgebung :=
     Umgebung.referenz Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
   let run : HwLauf :=
@@ -163,7 +174,7 @@ theorem gebundene_hardware_erfuellbar :
     gebundeneUebersetzung_eq hw (s.lokal entryContext) 0 0 0 .read
   have hziel : h.ziel = Plattform.x86_64.katalog.plattform.ziel := rfl
   rw [hziel] at hbound
-  refine ⟨h, run, s.lokal entryContext, hw, fair, ?_⟩
+  refine ⟨h, run, s, hw, fair, hardware_gebunden hw s, ?_⟩
   rw [hbound]
   exact hok
 
