@@ -15,8 +15,7 @@ theorem schrittMulNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
     (hx : r.temp links = some (natVal x))
     (hy : r.temp (links + 1) = some (natVal y))
     (h : blk[p]? = some (.binaer .mul links)) :
-    Schritt blk (some r) =
-      some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x * y))) } := by
+    Schritt blk (some r) = some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x * y))) } := by
   let A : Ganzzahl := ⟨(x : Int), (x : Int), Zahl.literal (x : Int)⟩
   let B : Ganzzahl := ⟨(y : Int), (y : Int), Zahl.literal (y : Int)⟩
   have ha : r.zahl links = some A := by
@@ -31,11 +30,7 @@ theorem schrittMulNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
   have hp : (Ganzzahl.pack ⟨_, _, Arith.auswerten .mul A.zahl B.zahl⟩ : Dynamisch) = natVal (x * y) := by
     dsimp only [A, B]
     exact packMulNat x y
-  rw [e, hpc]
-  change some { r with pc := p + 1, temp := Function.update r.temp links
-    (some (Ganzzahl.pack ⟨_, _, Arith.auswerten .mul A.zahl B.zahl⟩)) } =
-    some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x * y))) }
-  rw [hp]
+  rw [e, hpc, hp]
 
 /-- Exact machine addition on two natural-valued slots. -/
 theorem schrittAddNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
@@ -43,8 +38,7 @@ theorem schrittAddNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
     (hx : r.temp links = some (natVal x))
     (hy : r.temp (links + 1) = some (natVal y))
     (h : blk[p]? = some (.binaer .add links)) :
-    Schritt blk (some r) =
-      some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x + y))) } := by
+    Schritt blk (some r) = some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x + y))) } := by
   let A : Ganzzahl := ⟨(x : Int), (x : Int), Zahl.literal (x : Int)⟩
   let B : Ganzzahl := ⟨(y : Int), (y : Int), Zahl.literal (y : Int)⟩
   have ha : r.zahl links = some A := by
@@ -59,11 +53,7 @@ theorem schrittAddNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
   have hp : (Ganzzahl.pack ⟨_, _, Arith.auswerten .add A.zahl B.zahl⟩ : Dynamisch) = natVal (x + y) := by
     dsimp only [A, B]
     exact packAddNat x y
-  rw [e, hpc]
-  change some { r with pc := p + 1, temp := Function.update r.temp links
-    (some (Ganzzahl.pack ⟨_, _, Arith.auswerten .add A.zahl B.zahl⟩)) } =
-    some { r with pc := p + 1, temp := Function.update r.temp links (some (natVal (x + y))) }
-  rw [hp]
+  rw [e, hpc, hp]
 
 /-- Exact machine comparison on two natural-valued slots. -/
 theorem schrittVergleichNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
@@ -71,9 +61,7 @@ theorem schrittVergleichNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
     (hx : r.temp links = some (natVal x))
     (hy : r.temp (links + 1) = some (natVal y))
     (h : blk[p]? = some (.vergleichen .lt links)) :
-    Schritt blk (some r) =
-      some { r with pc := p + 1, temp := Function.update r.temp links
-        (some ⟨.bool, Compare.eval .lt (x : Int) (y : Int)⟩) } := by
+    Schritt blk (some r) = some { r with pc := p + 1, temp := Function.update r.temp links (some ⟨.bool, Compare.eval .lt (x : Int) (y : Int)⟩) } := by
   let A : Ganzzahl := ⟨(x : Int), (x : Int), Zahl.literal (x : Int)⟩
   let B : Ganzzahl := ⟨(y : Int), (y : Int), Zahl.literal (y : Int)⟩
   have ha : r.zahl links = some A := by
@@ -99,8 +87,7 @@ def pb3 (r : Rahmen) (a b frei : Nat) : Rahmen :=
 def pb4 (r : Rahmen) (a b frei : Nat) : Rahmen :=
   { pb3 r a b frei with pc := 12, temp := Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) }
 def pb5 (r : Rahmen) (a b frei : Nat) : Rahmen :=
-  { pb4 r a b frei with pc := 13, temp := Function.update (pb4 r a b frei).temp frei
-      (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) }
+  { pb4 r a b frei with pc := 13, temp := Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) }
 
 /-- The true (`a < b`) branch frames. -/
 def pb6w (r : Rahmen) (a b frei : Nat) : Rahmen := { pb5 r a b frei with pc := 30 }
