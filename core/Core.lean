@@ -10,6 +10,8 @@ public import Core.Text.Model
 public import Core.Text.Review.Befunde
 public import Core.Ast
 public import Core.Speicher
+public import Core.Speicher.Litmus.Iriw
+public import Core.Speicher.Litmus.ScFences
 public import Core.Speicher.Litmus.Wrc
 public import Core.Speicher.Litmus.Isa2
 public import Core.Speicher.Litmus.Mp
