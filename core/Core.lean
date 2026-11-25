@@ -215,6 +215,9 @@ public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ziel.Review.Slice.Surface
 public import Core.Ziel.Review.Slice.Goal
 public import Core.Ziel.Review.Slice.NonTrivial
+public import Core.Linken.Gegenbeispiel
+public import Core.Linken.GegenbeispielVerknuepft
+public import Core.Linken.Abgeschottet
 meta import Core.Waechter.Check
 
 #check_core
