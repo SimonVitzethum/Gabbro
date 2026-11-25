@@ -36,7 +36,7 @@ theorem Befehl.fortschritt (p : Fragment) (b : Befehl)
 theorem Befehl.vollzug (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     (b : Befehl) (t : Nat) (c : Kontext) (s : Zustand) :
     FuehrtSchrittAus e t c s (b.nach c s) Semantik.plan ⟨[], []⟩ (b.nach c s) :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ empty => (List.not_mem_nil empty).elim, [], _, .intern, .nil _, rfl⟩
 
 theorem Befehl.komponierbar (p : Fragment) (platform : Plattform) (b : Befehl)

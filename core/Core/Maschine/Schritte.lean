@@ -32,7 +32,7 @@ theorem sperr_schritt_erfuellbar (c d : Kontext) :
 /-- **The protocol actions of a step.** The first six are the lock, question and handler protocol. The four
     last ones are the thread lifecycle (MK-07):
     * `starte`: start the thread `faden naechsterFaden`, which rests, and advance the counter;
-    * `verbinde kind`: join the context `kind`, which has ended;
+    * `verbinde kind`: join the context `kind`, which has ended and which the acting context started;
     * `beende`: end the acting thread (the form records its outcome in its own status);
     * `wechsle kern kind`: run the running context `kind` on the core `kern`, which the acting context
       holds or which is idle (a core start). -/
@@ -108,6 +108,9 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   verworfen : s'.verworfen = s.verworfen
   /-- The thread counter is the machine's: a form never moves it (`FuehrtAus.starte` does). -/
   naechsterFaden : s'.naechsterFaden = s.naechsterFaden
+  /-- The creator map is the machine's: a form never moves it (`FuehrtAus.starte` sets it,
+      `FuehrtAus.verbinde` clears the joined thread). -/
+  erzeuger : s'.erzeuger = s.erzeuger
 
 variable (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
 
@@ -134,16 +137,21 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
   | rueckkehr {k ausgang} (aktiv : KehrtZurueck s c k) (ende : u.status c = .beendet ausgang) :
       FuehrtAus t c s u .rueckkehr [] [] (Zustandsrueckkehr u k)
   /-- **A thread start.** The machine, not the form, picks the new thread: it is the resting context with the
-      next number, which becomes running while the counter moves on. The form supplies the entry frame of
+      next number, which becomes running while the counter moves on. The machine records the acting context
+      as the creator of the new thread. The form supplies the entry frame of
       the new thread and what it hands over. -/
   | starte (ruht : s.status (.faden s.naechsterFaden) = .ruht) :
       FuehrtAus t c s u .starte [] []
         { u with status := Function.update u.status (.faden s.naechsterFaden) .laeuft,
-                 naechsterFaden := s.naechsterFaden + 1 }
-  /-- **A join.** It takes place only when the joined context has ended; until then the joiner does not
-      step. -/
-  | verbinde {kind ausgang} (fertig : s.status kind = .beendet ausgang) :
-      FuehrtAus t c s u (.verbinde kind) [] [] u
+                 naechsterFaden := s.naechsterFaden + 1,
+                 erzeuger := Function.update u.erzeuger (.faden s.naechsterFaden) (some c) }
+  /-- **A join.** It takes place only when the joined context has ended AND the joiner is its creator;
+      after the join the creator entry is cleared, so a second join has no step. Until the joined thread
+      has ended, or for a joiner that did not start it, the joiner does not step. -/
+  | verbinde {kind ausgang} (fertig : s.status kind = .beendet ausgang)
+      (erz : s.erzeuger kind = some c) :
+      FuehrtAus t c s u (.verbinde kind) [] []
+        { u with erzeuger := Function.update u.erzeuger kind none }
   /-- **A thread end.** The form sets the outcome in the status of the acting thread. -/
   | beende {ausgang} (ende : u.status c = .beendet ausgang) : FuehrtAus t c s u .beende [] [] u
   /-- **A switch and a core start.** The acting context holds the core or the core is idle; the context

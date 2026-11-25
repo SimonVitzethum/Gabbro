@@ -32,7 +32,7 @@ theorem FuehrtAus.verbrauch {t c aktion lock outside v}
     exact Zustand.verbrauche_verbrauch inner (same.trans ready)
   | rueckkehr _ _ => exact inner
   | starte _ => exact inner
-  | verbinde _ => exact inner
+  | verbinde _ _ => exact inner
   | beende _ => exact inner
   | wechsle _ _ _ _ => exact inner
 
