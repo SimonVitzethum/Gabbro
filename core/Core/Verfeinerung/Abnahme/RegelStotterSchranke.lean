@@ -114,6 +114,22 @@ theorem RegelStotterSchranke.nichtTrivial :
     .kontext normal0 ready0 ⟨(), rfl, rfl, rfl⟩ (execAt 0)
   have privateStep1 : ImplSchritt E.einrichtung E.system E.katalog hw2 1 z label z :=
     .kontext normal1 ready1 ⟨(), rfl, rfl, rfl⟩ (execAt 1)
+  have keinAb2 (t : Nat) : KeinSchritt (Lauffolge E hw2) (t + 2) (some z) := by
+    intro event next step
+    cases step with
+    | schritt step =>
+      cases step with
+      | kontext _ getreten _ _ =>
+        obtain ⟨_, angeboten, _, _⟩ := getreten
+        exact Option.some_ne_none _ angeboten.symm
+      | antwort _ arrives =>
+        have received := arrives.1.2.1.1
+        rw [arrives.1.1] at received
+        exact Bool.false_ne_true received
+      | interrupt _ enters =>
+        obtain ⟨_, _, _, _, angeboten, _⟩ := enters
+        exact Bool.false_ne_true angeboten
+      | absturz crash => exact Bool.false_ne_true crash.1.2
   let ρ' : Maschine.Lauf E := ⟨s, hw2, {
     zustand := fun _ => some z
     spur := fun
@@ -123,24 +139,16 @@ theorem RegelStotterSchranke.nichtTrivial :
     takt := fun
       | 0 => .schritt rfl (.schritt privateStep0)
       | 1 => .schritt rfl (.schritt privateStep1)
-      | t + 2 => .wartet rfl rfl (by
-        intro event next step
-        cases step with
-        | schritt step =>
-          cases step with
-          | kontext _ getreten _ _ =>
-            obtain ⟨_, angeboten, _, _⟩ := getreten
-            exact Option.some_ne_none _ angeboten.symm
-          | antwort _ arrives =>
-            have received := arrives.1.2.1.1
-            rw [arrives.1.1] at received
-            exact Bool.false_ne_true received
-          | interrupt _ enters =>
-            obtain ⟨_, _, _, _, angeboten, _⟩ := enters
-            exact Bool.false_ne_true angeboten
-          | absturz crash => exact Bool.false_ne_true crash.1.2) }⟩
+      | t + 2 => .wartet rfl rfl (keinAb2 t) }⟩
+  have still2 : ∀ t, 2 ≤ t → ∀ st, ρ'.zeit.zustand t = some st →
+      KeinSchritt (Lauffolge E ρ'.hw) t (some st) := by
+    intro t ht st hs ev next step
+    obtain ⟨m, rfl⟩ : ∃ m, t = m + 2 := ⟨t - 2, by omega⟩
+    have hss : st = z := (Option.some.inj hs).symm
+    subst hss
+    exact keinAb2 m ev next step
   have run' : Maschine.Laeufe E falsifizierbareUmgebung ρ' := by
-    refine ⟨hardware, hw2konform, admissible, ?_⟩
+    refine ⟨hardware, hw2konform, admissible, ?_, SchedulerFair_aus_stillstand_ab ρ' 2 still2⟩
     have init := konkret.2.2.2.1
     rw [ρstart, ρz0] at init
     change some z = E.laden s (falsifizierbareUmgebung.lade E.bild)

@@ -117,10 +117,17 @@ theorem simTrennt : SimTrenntAussage := by
     takt := fun
       | 0 => .schritt rfl (.schritt privateStep)
       | t + 1 => .wartet rfl rfl (falsifizierbares_letztesAngebot_konkret ETrenn t z) }⟩
+  have stillT : ∀ t, 1 ≤ t → ∀ s, ρT.zeit.zustand t = some s →
+      KeinSchritt (Lauffolge ETrenn ρT.hw) t (some s) := by
+    intro t ht s hs ev next step
+    obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega)
+    have hss : s = z := (Option.some.inj hs).symm
+    subst hss
+    exact falsifizierbares_letztesAngebot_konkret ETrenn m z ev next step
   have runT : Maschine.Laeufe ETrenn falsifizierbareUmgebung ρT :=
     ⟨konkret.1, konformLetztes, zul, by
       change some z = ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild)
-      exact loaded.symm⟩
+      exact loaded.symm, SchedulerFair_aus_stillstand_ab ρT 1 stillT⟩
   let η₂ : I.Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
     zustand := fun _ => z
     spur := fun _ => none

@@ -193,7 +193,26 @@ theorem falsifizierbar_konfiguration :
     zustand := fun _ => some z
     spur := fun _ => some label
     takt := fun t => .schritt rfl (step t) }⟩
-  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
+  have hnone : ∀ m, (z.kerne (m + 1)).laeuft = none := by
+    intro m
+    have hif : (if m + 1 = s.bootCore then some entry else none) = none := by
+      rw [boot, if_neg (Nat.succ_ne_zero m)]
+    exact hif
+  have fairR : SchedulerFair E₀ ρ := by
+    intro a c ready _opp n _hn
+    obtain ⟨s, hs, dispJ, _, _, _, _, _, _, _, _, _⟩ := ready (max n a) (Nat.le_max_right _ _)
+    have hseq : s = z := (Option.some.inj hs).symm
+    obtain ⟨j, hj⟩ := dispJ
+    rw [hseq] at hj
+    cases j with
+    | zero =>
+      have hcE : c = entry := (Option.some.inj (dispatch.symm.trans hj)).symm
+      subst hcE
+      exact ⟨max n a, Nat.le_max_left _ _, (), ⟨[], []⟩, rfl⟩
+    | succ m =>
+      rw [hnone m] at hj
+      cases hj
+  have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl, fairR⟩
   have ready : KannSchreiten hw 0 entry z := ⟨0, opportunity 0, dispatch, live⟩
   have normal : (hw.angebot 0).crash = false := rfl
   have implSchritt : (E₀.system.regel ()).impl entry z () [plan] z := by
