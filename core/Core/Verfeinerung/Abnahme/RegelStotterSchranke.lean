@@ -108,7 +108,7 @@ theorem RegelStotterSchranke.nichtTrivial :
       ⟨[], []⟩ z := by
     change FuehrtSchrittAus falsifizierbareEinrichtung t falsifizierbarerEintrag z z
       falsifizierbarerPlan ⟨[], []⟩ z
-    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
       fun _ h => (List.not_mem_nil h).elim, [], z, .intern, .nil _, rfl⟩
   have privateStep0 : ImplSchritt E.einrichtung E.system E.katalog hw2 0 z label z :=
     .kontext normal0 ready0 ⟨(), rfl, rfl, rfl⟩ (execAt 0)

@@ -82,6 +82,7 @@ theorem rmwZeugeKonfiguration :
     (anfang := Leerzustand.initial) (f := .kontext eintritt)
     (g := Leerzustand.graph) Speicher.Zustand.leer_konsistent
     Speicher.Zustand.leer_vollstaendig (a := .rmw) (x := .aussen) (m := .sc) (v := 0)
+    (fun _ => by simp only [ne_eq, reduceCtorEq, not_false_eq_true])
   let plan : RmwZeugePlan :=
     ⟨.intern, [⟨.rmw, .aussen, .sc, gelesen, 0⟩], [],
       (fun _ => false), (fun _ => .na), (fun _ => 0)⟩
@@ -92,7 +93,7 @@ theorem rmwZeugeKonfiguration :
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
   let s' : RmwZeugeZustand := { u with graph := graph }
   have rahmen : Zustandsrahmen Leerzustand u :=
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have liest : ∀ l ∈ plan.lesen, l.art.liest := by
     intro l mem
     change l ∈ [⟨.rmw, .aussen, .sc, gelesen, 0⟩] at mem

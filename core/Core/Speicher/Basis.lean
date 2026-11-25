@@ -15,8 +15,12 @@
   recovered by the prefix lemma (`Praefix.lean`): with `po ∪ rf` acyclic every consistent graph is
   produced event by event in program order, every prefix consistent.
 
-  Fences are not part of the fragment: the language has no fence form (the order of an access is
-  the mode of its location). They are added together with a fence form.
+  Fences are part of the fragment: `Art.zaun` is a fence event. A fence is not a memory
+  access -- it neither reads nor writes -- it only orders. A synchronising fence (at least
+  release/acquire strength) before an atomic write, or after an atomic read, synchronises with
+  the other side through `sw` (Relationen.lean); a `seq_cst` fence orders through `psc`. The
+  fence INSTRUCTION form (`Zugriffsform.zaun`) arrives with its effect class as a follow-up; the
+  model rule is already here.
 
   OUTSIDE EVENTS. Both machines of M4 -- the implementation machine and the ideal meaning `I` --
   record their runs as graph events: a context (thread, handler, core), a location, a mode and a
@@ -73,13 +77,15 @@ theorem atomar_ne_na {m : Modus} (h : m.atomar) : m ≠ na := by
 end Modus
 
 /-- **The kind of an event**: a read, a write, an update (a read-modify-write: one event that
-    reads and writes, RC11's `U`), or an outside event (a catalogue question or answer, a device
-    access, an interrupt: in program order, but neither a read nor a write of memory). -/
+    reads and writes, RC11's `U`), a fence (no access, only order, RC11's `F`), or an outside
+    event (a catalogue question or answer, a device access, an interrupt: in program order, but
+    neither a read nor a write of memory). -/
 inductive Art where
   | lesen
   | schreiben
   | rmw
   | aussen
+  | zaun
   deriving DecidableEq, Repr
 
 namespace Art
@@ -90,6 +96,7 @@ def liest : Art → Prop
   | schreiben => False
   | rmw => True
   | aussen => False
+  | zaun => False
 
 /-- The event writes. -/
 def schreibt : Art → Prop
@@ -97,11 +104,14 @@ def schreibt : Art → Prop
   | schreiben => True
   | rmw => True
   | aussen => False
+  | zaun => False
 
 end Art
 
 /-- **The label of an event**: kind, location, mode, the value read (meaningful for reads and
-    updates) and the value written (meaningful for writes and updates). -/
+    updates) and the value written (meaningful for writes and updates). For a fence
+    (`art = .zaun`) location and values are meaningless and unconstrained; no relation ever
+    constrains them. -/
 structure Etikett (Ort Wert : Type) where
   art : Art
   ort : Ort
