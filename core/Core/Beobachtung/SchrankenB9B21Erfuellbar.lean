@@ -42,7 +42,7 @@ private theorem hosted_pflichten (boot : AussenStart → Zustand)
     (initial : ∀ s, (LebendeZellen (boot s)).encard ≤ 1) : RessourcenPflichten (mitGrenzen boot) := by
   refine ⟨?_, ?_, ?_⟩
   · intro h ρ lauf s cut
-    have eq : boot ρ.start = s := Option.some.inj (lauf.2.2.2.symm.trans cut)
+    have eq : boot ρ.start = s := Option.some.inj (lauf.2.2.2.1.symm.trans cut)
     exact ⟨stapel_beschraenkt boot s, speicher_beschraenkt boot (eq ▸ initial ρ.start)⟩
   · intro f h ρ lauf t c w spur vor nach vorEq kopf label nachEq step stapel speicher
     refine ⟨stapel_beschraenkt boot nach, ?_⟩
@@ -97,7 +97,7 @@ theorem b9_b21_start_erfuellbar :
   obtain ⟨start, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨ρ, lauf, startEq⟩ := lauf_ab_start (mitGrenzen eineZelle) (erlaubt []) zul
   have pflichten := hosted_pflichten eineZelle (fun s => (eineZelle_encard s).le)
-  have cut : ρ.zeit.zustand 0 = some (eineZelle start) := lauf.2.2.2.trans (congrArg (fun s => some (eineZelle s)) startEq)
+  have cut : ρ.zeit.zustand 0 = some (eineZelle start) := lauf.2.2.2.1.trans (congrArg (fun s => some (eineZelle s)) startEq)
   refine ⟨_, _, ρ, _, pflichten, lauf, cut, pflichten.start lauf, rfl, rfl, ?_, eineZelle_encard start⟩
   change (if (start.outside.channels .hosted 0).isSome then 1 else 0) = 1
   rw [zul.2.2.2.2.2.2.2]

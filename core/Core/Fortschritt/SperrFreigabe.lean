@@ -200,7 +200,7 @@ theorem faire_umgebung_nicht_eindeutig {ρ : Maschine.Lauf E} {h : Umgebung}
       fun i c hc => ⟨(hassign i c hc).1, hwiden _ (hassign i c hc).2⟩,
       hgetrennt, hphys, hbytes, haussen⟩
   have hinit : ρ.zeit.zustand 0 = E.laden ρ.start (h'.lade E.bild) := hrun.2.2.2
-  have hrun' : Laeufe E h' ρ := ⟨hhard, hkonf, hzul, hinit⟩
+  have hrun' : Laeufe E h' ρ := ⟨hhard, hkonf, hzul, hinit, hrun.2.2.2.2⟩
   have hfair := hall h' hrun'
   obtain ⟨i, _, hi⟩ := hfair.kerne.2 h.kernzahl (Nat.lt_succ_self _) 0
   have hlt := (hrun.2.1.2 i).1 h.kernzahl hi

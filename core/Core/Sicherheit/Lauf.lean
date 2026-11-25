@@ -44,7 +44,7 @@ theorem sicherheit_aus_regeln (grenzen : GrenzenSicher E) :
       Speichersicher E H ρ ∧ InvariantenErhalten E H ρ ∧ Rennfrei E H ρ ∧ ToctouFrei E H ρ := by
   intro regeln H ρ lauf
   have geladen {s} (anfang : ρ.zeit.zustand 0 = some s) :=
-    grenzen.laden H ρ.start s lauf.1 lauf.2.2.1 (lauf.2.2.2.symm.trans anfang)
+    grenzen.laden H ρ.start s lauf.1 lauf.2.2.1 (lauf.2.2.2.1.symm.trans anfang)
   have schnitte (t : Nat) : ∀ s, ρ.zeit.zustand t = some s → SchnittSicher E t s := by
     induction t with
     | zero =>

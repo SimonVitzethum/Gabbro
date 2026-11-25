@@ -129,7 +129,7 @@ theorem ProtokollGutImLaufAussage.erfuellbar :
   obtain ⟨H, s, hw, zul, hwhw, fair, z, geladen, gut⟩ := trivial_start_bereit
   obtain ⟨ρ, run, startEq, _⟩ := fairer_lauf _ zul fair
   refine ⟨_, _, H, ρ, 0, z, run, ?_, gut⟩
-  rw [run.2.2.2, startEq]
+  rw [run.2.2.2.1, startEq]
   exact geladen
 
 /-- The cut premise is load-bearing: runs can have empty cuts. The trivial unit never loads, so
@@ -144,7 +144,7 @@ theorem ProtokollGutImLaufAussage.nichtTrivial :
     exact ⟨List.Mem.head _, (fun _ _ h => nomatch h), fun _ h => (List.not_mem_nil h).elim⟩
   obtain ⟨s, zul⟩ := zulStart_erfuellbar hwhw image
   obtain ⟨ρ, run, _⟩ := lauf_ab_start Annahme.trivialeEinheit hwhw zul
-  exact ⟨H, ρ, 0, run, by rw [run.2.2.2]; rfl⟩
+  exact ⟨H, ρ, 0, run, by rw [run.2.2.2.1]; rfl⟩
 
 /-- The premises of the ideal-run statement hold jointly: a fair ideal run of the empty unit
     satisfies the invariants at every cut. Feeds: `I.lauf_mit_hw`,

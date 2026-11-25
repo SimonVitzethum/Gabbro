@@ -120,7 +120,7 @@ theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
     (t : Nat) (s : Ast.LowLevel.State k) (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
   induction t generalizing s with
   | zero =>
-      rw [lauf.2.2.2] at hs
+      rw [lauf.2.2.2.1] at hs
       simp only [unit] at hs
       unfold Ast.LowLevel.loaded at hs
       split at hs

@@ -141,7 +141,7 @@ theorem RegelStotterSchranke.nichtTrivial :
           | absturz crash => exact Bool.false_ne_true crash.1.2) }⟩
   have run' : Maschine.Laeufe E falsifizierbareUmgebung ρ' := by
     refine ⟨hardware, hw2konform, admissible, ?_⟩
-    have init := konkret.2.2.2
+    have init := konkret.2.2.2.1
     rw [ρstart, ρz0] at init
     change some z = E.laden s (falsifizierbareUmgebung.lade E.bild)
     simpa only [E] using init

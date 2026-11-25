@@ -24,7 +24,7 @@ theorem schranken_erfuellbar (grenze : Nat) :
   refine ⟨E, h, ρ, run, rfl, ?_⟩
   constructor
   · intro bounded
-    exact (bounded.2.2.2 0 _ run.2.2.2).2.1 (.faden 0) grenze rfl
+    exact (bounded.2.2.2 0 _ run.2.2.2.1).2.1 (.faden 0) grenze rfl
   · intro bound
     exact ⟨(fun _ _ _ _ _ _ h => nomatch h), (fun _ _ h => nomatch h),
       (fun _ _ _ _ _ c m hmem => (List.not_mem_nil hmem).elim),

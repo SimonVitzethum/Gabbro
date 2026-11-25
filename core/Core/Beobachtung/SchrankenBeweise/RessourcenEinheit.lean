@@ -33,7 +33,7 @@ theorem ressourcenStart_unterLade
       E.laden a p = some s → StapelZustand E s ∧ SpeicherZustand E s) :
     ressourcenStartAussage E := by
   intro h ρ lauf s cut
-  exact lade ρ.start (h.lade E.bild) (lauf.2.2.2.symm.trans cut)
+  exact lade ρ.start (h.lade E.bild) (lauf.2.2.2.1.symm.trans cut)
 
 /-- The protocol duty under its narrow premise: the recovery entry's start data meets the stack
     bound and admits no live cell on the durable booking. Answers and interrupts leave rights,
@@ -70,7 +70,7 @@ theorem ressourcenStartAussage_falsch :
     zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
   obtain ⟨ρ, lauf, startEq⟩ := lauf_ab_start startGegenEinheit (erlaubt []) zul
   have cut : ρ.zeit.zustand 0 = some (startZustand start) := by
-    rw [lauf.2.2.2, startEq]
+    rw [lauf.2.2.2.1, startEq]
     rfl
   have bounds := all startGegenEinheit lauf (startZustand start) cut
   have post := bounds.1 kontext 0 rfl

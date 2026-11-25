@@ -30,7 +30,7 @@ theorem einheit_zustand_some {ι : Type} {E : Klasseneinheit ι}
   | zero =>
       obtain ⟨z, hz⟩ := geladen h ρ.start
       refine ⟨z, ?_⟩
-      rw [lauf.2.2.2, hz]
+      rw [lauf.2.2.2.1, hz]
   | succ t ih =>
       obtain ⟨z, hz⟩ := ih
       have tick := ρ.zeit.takt t

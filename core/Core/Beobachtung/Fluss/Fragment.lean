@@ -55,7 +55,7 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
   induction t with
   | zero =>
     refine ⟨(I.start (p.einheit plattform) ρ.start).2, ?_⟩
-    rw [lauf.2.2.2]
+    rw [lauf.2.2.2.1]
     exact fragment_geladen p plattform lauf.1 lauf.2.2.1
   | succ t ih =>
     obtain ⟨s, hs⟩ := ih
@@ -415,9 +415,9 @@ theorem fragment_start_ni (p : Fragment) (plattform : Plattform) :
   have lad₁ := fragment_geladen p plattform vergleich.links.1 vergleich.links.2.2.1
   have lad₂ := fragment_geladen p plattform vergleich.rechts.1 vergleich.rechts.2.2.1
   have z₁ : ρ₁.zeit.zustand 0 = some (I.start (p.einheit plattform) ρ₁.start).2 := by
-    rw [vergleich.links.2.2.2, lad₁]
+    rw [vergleich.links.2.2.2.1, lad₁]
   have z₂ : ρ₂.zeit.zustand 0 = some (I.start (p.einheit plattform) ρ₂.start).2 := by
-    rw [vergleich.rechts.2.2.2, lad₂]
+    rw [vergleich.rechts.2.2.2.1, lad₂]
   have q := quelle ρ₁.start ρ₂.start vergleich.start
   have assignEq : ρ₁.start.assignment = ρ₂.start.assignment :=
     congrArg (fun proj => proj.2.1) vergleich.start

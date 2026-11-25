@@ -29,7 +29,7 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
   induction t with
   | zero =>
     refine ⟨(I.start (memProgram k code) ρ.start).2, ?_⟩
-    rw [lauf.2.2.2]
+    rw [lauf.2.2.2.1]
     change (memProgram k code).laden ρ.start (h.lade image) = _
     exact mem_geladen k code lauf.1 lauf.2.2.1
   | succ t ih =>
@@ -207,7 +207,7 @@ private theorem mem_fragen_leer {h : Umgebung} {ρ : Lauf (memProgram k code)}
   | zero =>
     right
     refine ⟨(I.start (memProgram k code) ρ.start).2, ?_, ?_⟩
-    · rw [lauf.2.2.2]
+    · rw [lauf.2.2.2.1]
       change (memProgram k code).laden ρ.start (h.lade image) = _
       exact mem_geladen k code lauf.1 lauf.2.2.1
     · rfl

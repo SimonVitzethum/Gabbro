@@ -82,7 +82,7 @@ theorem simTrennt : SimTrenntAussage := by
   have loaded : ETrenn.laden s (falsifizierbareUmgebung.lade ETrenn.bild) = some z := by
     change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
     rw [← ρstart]
-    exact (ρz0.symm.trans konkret.2.2.2).symm
+    exact (ρz0.symm.trans konkret.2.2.2.1).symm
   have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
     change falsifizierbarerHw.gelegenheit 0 0
     exact congrArg some (Nat.mod_one 0)
@@ -241,7 +241,7 @@ theorem simRefutierbar : SimRefutierbarAussage := by
   have loaded : ERef.laden s (falsifizierbareUmgebung.lade ERef.bild) = some z := by
     change falsifizierbareEinheit.laden s (falsifizierbareUmgebung.lade falsifizierbaresBild) = some z
     rw [← ρstart]
-    exact (ρz0.symm.trans konkret.2.2.2).symm
+    exact (ρz0.symm.trans konkret.2.2.2.1).symm
   have lastOpportunity : (letztesAngebot falsifizierbarerHw).gelegenheit 0 0 := by
     change falsifizierbarerHw.gelegenheit 0 0
     exact congrArg some (Nat.mod_one 0)

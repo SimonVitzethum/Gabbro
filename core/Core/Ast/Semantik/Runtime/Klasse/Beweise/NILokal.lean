@@ -78,7 +78,7 @@ theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : 
   intro t
   induction t with
   | zero =>
-      rw [lauf.2.2.2]
+      rw [lauf.2.2.2.1]
       cases hlad : E.laden ρ.start (h.lade E.bild) with
       | none =>
           exact Or.inl rfl

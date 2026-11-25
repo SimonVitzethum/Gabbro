@@ -18,7 +18,7 @@ private theorem fragment_speicher_gut {p : Fragment} {plattform : Plattform}
   induction t with
   | zero =>
     refine ⟨(I.start (p.einheit plattform) ρ.start).2, ?_, ?_⟩
-    rw [lauf.2.2.2]
+    rw [lauf.2.2.2.1]
     exact fragment_geladen p plattform lauf.1 lauf.2.2.1
     change Speicher.Zustand.leer.graph.Konsistent ∧ Speicher.Zustand.leer.graph.Vollstaendig
     exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩

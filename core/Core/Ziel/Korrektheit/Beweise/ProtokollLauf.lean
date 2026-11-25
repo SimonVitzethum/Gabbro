@@ -68,7 +68,7 @@ theorem protokoll_gut_im_lauf_aus (h : ProtokollSchrittErhaeltAussage) : Protoko
       intro z atCut
       have loaded : (einheitVon P t).laden ρ.start (H.lade (einheitVon P t).bild) = some z := by
         rw [← atCut]
-        exact lauf.2.2.2.symm
+        exact lauf.2.2.2.1.symm
       exact protokoll_start_gut P t H ρ.start z loaded
   | succ n ih =>
       intro z atCut

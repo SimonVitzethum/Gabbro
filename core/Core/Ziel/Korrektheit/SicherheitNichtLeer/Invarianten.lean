@@ -50,7 +50,12 @@ theorem invarianten_nichtLeerInstanz :
       | absturz crash => exact Bool.false_ne_true crash.1.2
   obtain ⟨a, zul⟩ := zulStart_erfuellbar (erlaubt leer) bild_gueltig
   let ρ : Lauf E := ⟨a, hw, ⟨fun _ => some start, fun _ => none, fun t => .wartet rfl rfl (stuck t)⟩⟩
-  have run : Maschine.Laeufe E H ρ := ⟨erlaubt leer, conform, zul, rfl⟩
+  have run : Maschine.Laeufe E H ρ :=
+    ⟨erlaubt leer, conform, zul, rfl,
+      SchedulerFair_aus_stillstand_ab ρ 0 (fun t _ s hs ev next step => by
+        have hss : s = start := (Option.some.inj hs).symm
+        rw [hss] at step
+        exact stuck t ev next step)⟩
   refine ⟨E, H, ρ, run, fun safe => ?_⟩
   have cut : Maschine.Schnitt E ρ := ⟨0, Or.inl rfl⟩
   have amSchnitt := safe.1 cut start rfl

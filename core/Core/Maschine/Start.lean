@@ -188,6 +188,25 @@ theorem lauf_mit_hw {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   refine ⟨⟨s, hw, fairerZeit E hw (E.laden s (h.lade E.bild))⟩,
     ⟨hardware, konform, start, fairerZeit_start E hw _, fairer_zeit_fair E hw _ s⟩, rfl, rfl⟩
 
+/-- Scheduler fairness for a run that is stuck from some cut on: a context
+    whose rule stays available on a suffix with infinitely many opportunities
+    on its dispatch core would take a step there, against the stuck cut. -/
+theorem SchedulerFair_aus_stillstand_ab (ρ : Lauf E) (N : Nat)
+    (still : ∀ t, N ≤ t → ∀ s, ρ.zeit.zustand t = some s →
+      KeinSchritt (Lauffolge E ρ.hw) t (some s)) :
+    SchedulerFair E ρ := by
+  intro a c ready opp n hn
+  obtain ⟨t, ht, k, geleg, z, eq, disp⟩ := opp (max n N) (hn.trans (Nat.le_max_left n N))
+  have htN : N ≤ t := (Nat.le_max_right n N).trans ht
+  have hat : a ≤ t := (hn.trans (Nat.le_max_left n N)).trans ht
+  obtain ⟨s, hs, _, _, live, normal, w, plan, u, spur, s', regel, aus⟩ := ready t hat
+  have same : s = z := Option.some.inj (hs.symm.trans eq)
+  have dispS : (s.kerne k).laeuft = some c := by rw [same]; exact disp
+  have kann : KannSchreiten ρ.hw t c s := ⟨k, geleg, dispS, live⟩
+  have step : Lauffolge E ρ.hw t (some s) (.kontext c w, spur) (some s') :=
+    .schritt (.kontext normal kann regel aus)
+  exact (still t htN s hs _ _ step).elim
+
 /-- Shifted scheduler fairness for a fair tail: the same duties as `SchedulerFair`,
     read at shifted hardware ticks. Spliced runs inherit it through `voran`. -/
 def ShiftFair (hw : HwLauf) (ab : Nat) (s : AussenStart)
