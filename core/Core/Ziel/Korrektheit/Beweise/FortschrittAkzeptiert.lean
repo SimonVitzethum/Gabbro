@@ -410,7 +410,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     have hdispatch : ((z.kerne k').unterbrechen c' nmi).laeuft
                         = some c' := rfl
                     rw [hdispatch] at h
-                    have hc' : c = c' := Option.some.inj h
+                    have hc' : c' = c := Option.some.inj h
                     subst hc'
                     exact hkk
                   · simp only [if_neg heq] at h
