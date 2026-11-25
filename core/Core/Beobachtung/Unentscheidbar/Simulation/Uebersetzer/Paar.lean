@@ -59,7 +59,9 @@ theorem zweiEingaengeVor (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
   refine ⟨kB + kA, mitPc blkA.length rB, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [Function.iterate_add_apply, hprefixA, hKB]
   · simp only [mitPc, hpcB, List.length_append]
-  · change rA.temp mitA = some (natVal a)
+  · change rB.temp mitA = some (natVal a)
+    rw [hpresB mitA (by omega) hmitANeMitB]
+    change rA.temp mitA = some (natVal a)
     exact htempA
   · change rB.temp mitB = some (natVal b)
     exact htempB
