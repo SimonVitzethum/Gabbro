@@ -36,20 +36,20 @@ def Befehl.Schreibform (f : Befehl) (dst : Nat) (liest : List Komp) : Prop :=
   ∃ g : Rahmen → Option Dynamisch, (∀ r live, f.auswerten r live = r.schreibe dst (g r)) ∧
     ∀ r₁ r₂ : Rahmen, (∀ k ∈ liest, r₁.komp k = r₂.komp k) → g r₁ = g r₂
 
-theorem maskiere_laenge (l : Nat → Etikett) :
-    ∀ (i : Nat) (xs : List (Option Dynamisch)), (maskiere l i xs).length = xs.length
+theorem maskiereLokal_laenge (l : Nat → Etikett) :
+    ∀ (i : Nat) (xs : List (Option Dynamisch)), (maskiereLokal l i xs).length = xs.length
   | _, [] => rfl
   | i, _ :: xs => by
-    simp only [maskiere, List.length_cons, maskiere_laenge l (i + 1) xs]
+    simp only [maskiereLokal, List.length_cons, maskiereLokal_laenge l (i + 1) xs]
 
-theorem maskiere_gleich_mono {l₀ l₁ : Nat → Etikett}
+theorem maskiereLokal_gleich_mono {l₀ l₁ : Nat → Etikett}
     (h : ∀ i, oeffentlich (l₁ i) = true → oeffentlich (l₀ i) = true) :
     ∀ (i : Nat) (xs ys : List (Option Dynamisch)),
-      maskiere l₀ i xs = maskiere l₀ i ys → maskiere l₁ i xs = maskiere l₁ i ys
+      maskiereLokal l₀ i xs = maskiereLokal l₀ i ys → maskiereLokal l₁ i xs = maskiereLokal l₁ i ys
   | _, [], ys => by
     intro e
     have laenge : ys.length = 0 := by
-      rw [← maskiere_laenge l₀ _ ys, ← e]
+      rw [← maskiereLokal_laenge l₀ _ ys, ← e]
       rfl
     cases ys with
     | nil => rfl
@@ -59,24 +59,24 @@ theorem maskiere_gleich_mono {l₀ l₁ : Nat → Etikett}
     cases ys with
     | nil =>
       have laenge := congrArg List.length e
-      simp only [maskiere, maskiere_laenge, List.length_cons, List.length_nil] at laenge
+      simp only [maskiereLokal, maskiereLokal_laenge, List.length_cons, List.length_nil] at laenge
       cases laenge
     | cons y ys =>
-      simp only [maskiere, List.cons.injEq] at e ⊢
-      refine ⟨?_, maskiere_gleich_mono h (i + 1) xs ys e.2⟩
+      simp only [maskiereLokal, List.cons.injEq] at e ⊢
+      refine ⟨?_, maskiereLokal_gleich_mono h (i + 1) xs ys e.2⟩
       by_cases hp : oeffentlich (l₁ i) = true
       · have hq := h i hp
         simpa only [hp, hq, if_true] using e.1
       · simp only [if_neg hp]
 
-theorem maskiere_eintrag {l : Nat → Etikett} :
+theorem maskiereLokal_eintrag {l : Nat → Etikett} :
     ∀ (i : Nat) (xs ys : List (Option Dynamisch)) (j : Nat),
-      maskiere l i xs = maskiere l i ys → oeffentlich (l (i + j)) = true →
+      maskiereLokal l i xs = maskiereLokal l i ys → oeffentlich (l (i + j)) = true →
         xs[j]?.join = ys[j]?.join
   | _, [], ys, j => by
     intro e _
     have laenge : ys.length = 0 := by
-      rw [← maskiere_laenge l _ ys, ← e]
+      rw [← maskiereLokal_laenge l _ ys, ← e]
       rfl
     cases ys with
     | nil => rfl
@@ -86,10 +86,10 @@ theorem maskiere_eintrag {l : Nat → Etikett} :
     cases ys with
     | nil =>
       have laenge := congrArg List.length e
-      simp only [maskiere, maskiere_laenge, List.length_cons, List.length_nil] at laenge
+      simp only [maskiereLokal, maskiereLokal_laenge, List.length_cons, List.length_nil] at laenge
       cases laenge
     | cons y ys =>
-      simp only [maskiere, List.cons.injEq] at e
+      simp only [maskiereLokal, List.cons.injEq] at e
       cases j with
       | zero =>
         have hp0 : oeffentlich (l i) = true := hp
@@ -98,7 +98,7 @@ theorem maskiere_eintrag {l : Nat → Etikett} :
         have hp1 : oeffentlich (l (i + 1 + j)) = true := by
           rw [show i + 1 + j = i + (j + 1) by omega]
           exact hp
-        simpa only [List.getElem?_cons_succ] using maskiere_eintrag (i + 1) xs ys j e.2 hp1
+        simpa only [List.getElem?_cons_succ] using maskiereLokal_eintrag (i + 1) xs ys j e.2 hp1
 
 /-- Under the all-public declaration every temporary is public. -/
 theorem alleOeffentlich_temp (pc s : Nat) :

@@ -21,7 +21,7 @@ theorem sicht_zweig_einschieben (β : Beschriftung) (r : Rahmen) (offset : Nat)
       { r.sicht β with
         pc := r.pc + offset
         temp := fun s => if oeffentlich (β.temp (r.pc + offset) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + offset)) 0 (payload :: r.lokale) } := rfl
+        lokale := maskiereLokal (β.lokal (r.pc + offset)) 0 (payload :: r.lokale) } := rfl
 
 /-- A write of the same value keeps the public view when the labels at the successor are at
     least as secret as at the current position. -/
@@ -44,9 +44,9 @@ theorem sicht_schreibe_gleich (β : Beschriftung) (r₁ r₂ : Rahmen) (dst : Na
       · simp only [Function.update_of_ne hs]
         exact tempPub s (hT s hp)
     · simp only [if_neg hp]
-  have hLe : maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+  have hLe : maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   rw [sicht_schreibe, sicht_schreibe, h, pcEq, hTe, hLe]
 
 theorem waehleVarianteSicht : WaehleVarianteSichtAussage := by
@@ -102,8 +102,8 @@ theorem waehleVarianteSicht : WaehleVarianteSichtAussage := by
               · simp only [hp, if_true]
                 exact tempPub s (hT s hp)
               · simp only [if_neg hp]
-            have hLe : maskiere (β.lokal (r₁.pc + b.1)) 0 ((variantCase cases value).2 :: r₁.lokale) =
-                maskiere (β.lokal (r₁.pc + b.1)) 0 ((variantCase cases value).2 :: r₂.lokale) :=
+            have hLe : maskiereLokal (β.lokal (r₁.pc + b.1)) 0 ((variantCase cases value).2 :: r₁.lokale) =
+                maskiereLokal (β.lokal (r₁.pc + b.1)) 0 ((variantCase cases value).2 :: r₂.lokale) :=
               maskiere_einschieben (l₀ := β.lokal r₁.pc) (l₁ := β.lokal (r₁.pc + b.1))
                 (xs := r₁.lokale) (ys := r₂.lokale)
                 (v₁ := (variantCase cases value).2) (v₂ := (variantCase cases value).2)

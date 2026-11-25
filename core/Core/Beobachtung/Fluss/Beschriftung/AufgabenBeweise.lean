@@ -14,7 +14,7 @@ theorem sicht_zuweis (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0
           (r.lokale.set index ((r.temp src).bind (wertIn zieltyp))) } :=
   rfl
 
@@ -24,7 +24,7 @@ theorem sicht_binden (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 (r.temp src :: r.lokale) } :=
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 (r.temp src :: r.lokale) } :=
   rfl
 
 theorem sicht_bindeWert (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
@@ -33,7 +33,7 @@ theorem sicht_bindeWert (β : Beschriftung) (r : Rahmen) (live : Nat → Bool)
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0
           (((r.temp src).bind (wertIn zieltyp)) :: r.lokale)
         globale := if global then ((r.temp src).bind (wertIn zieltyp)) :: r.globale else r.globale } :=
   rfl
@@ -43,29 +43,29 @@ theorem sicht_blockEnde (β : Beschriftung) (r : Rahmen) (live : Nat → Bool) (
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 (r.lokale.drop count) } :=
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 (r.lokale.drop count) } :=
   rfl
 
 theorem maskiere_verschoben (l : Nat → Etikett) :
     ∀ (i : Nat) (xs : List (Option Dynamisch)),
-      maskiere l (i + 1) xs = maskiere (fun j => l (j + 1)) i xs := by
+      maskiereLokal l (i + 1) xs = maskiereLokal (fun j => l (j + 1)) i xs := by
   intro i xs
   induction xs generalizing i with
   | nil => rfl
   | cons x xs ih =>
-    change (if oeffentlich (l (i + 1)) = true then x else none) :: maskiere l (i + 1 + 1) xs =
+    change (if oeffentlich (l (i + 1)) = true then x else none) :: maskiereLokal l (i + 1 + 1) xs =
       (if oeffentlich (l (i + 1)) = true then x else none) ::
-        maskiere (fun j => l (j + 1)) (i + 1) xs
+        maskiereLokal (fun j => l (j + 1)) (i + 1) xs
     rw [ih]
 
-theorem maskiere_gleich_mono_von {l₀ l₁ : Nat → Etikett} :
+theorem maskiereLokal_gleich_mono_von {l₀ l₁ : Nat → Etikett} :
     ∀ (start : Nat),
       (∀ j, start ≤ j → oeffentlich (l₁ j) = true → oeffentlich (l₀ j) = true) →
       ∀ (xs ys : List (Option Dynamisch)),
-        maskiere l₀ start xs = maskiere l₀ start ys → maskiere l₁ start xs = maskiere l₁ start ys
+        maskiereLokal l₀ start xs = maskiereLokal l₀ start ys → maskiereLokal l₁ start xs = maskiereLokal l₁ start ys
   | _, _, [], ys, e => by
       have laenge : ys.length = 0 := by
-        rw [← maskiere_laenge l₀ _ ys, ← e]
+        rw [← maskiereLokal_laenge l₀ _ ys, ← e]
         rfl
       cases ys with
       | nil => rfl
@@ -74,11 +74,11 @@ theorem maskiere_gleich_mono_von {l₀ l₁ : Nat → Etikett} :
       cases ys with
       | nil =>
         have laenge := congrArg List.length e
-        simp only [maskiere, maskiere_laenge, List.length_cons, List.length_nil] at laenge
+        simp only [maskiereLokal, maskiereLokal_laenge, List.length_cons, List.length_nil] at laenge
         cases laenge
       | cons y ys =>
-        simp only [maskiere, List.cons.injEq] at e ⊢
-        refine ⟨?_, maskiere_gleich_mono_von (start + 1)
+        simp only [maskiereLokal, List.cons.injEq] at e ⊢
+        refine ⟨?_, maskiereLokal_gleich_mono_von (start + 1)
           (fun j hj hjpub => h j (by omega) hjpub) xs ys e.2⟩
         by_cases hp : oeffentlich (l₁ start) = true
         · have hq := h start le_rfl hp
@@ -89,11 +89,11 @@ theorem maskiere_set_hilf {l₀ l₁ : Nat → Etikett} :
     ∀ (i d : Nat) (xs ys : List (Option Dynamisch)) (v₁ v₂ : Option Dynamisch),
       (∀ j, j ≠ i + d → oeffentlich (l₁ j) = true → oeffentlich (l₀ j) = true) →
       (oeffentlich (l₁ (i + d)) = true → v₁ = v₂) →
-      maskiere l₀ i xs = maskiere l₀ i ys →
-      maskiere l₁ i (xs.set d v₁) = maskiere l₁ i (ys.set d v₂)
+      maskiereLokal l₀ i xs = maskiereLokal l₀ i ys →
+      maskiereLokal l₁ i (xs.set d v₁) = maskiereLokal l₁ i (ys.set d v₂)
   | _, _, [], ys, _, _, hL, hV, e => by
       have laenge : ys.length = 0 := by
-        rw [← maskiere_laenge l₀ _ ys, ← e]
+        rw [← maskiereLokal_laenge l₀ _ ys, ← e]
         rfl
       cases ys with
       | nil => rfl
@@ -102,21 +102,21 @@ theorem maskiere_set_hilf {l₀ l₁ : Nat → Etikett} :
       cases ys with
       | nil =>
         have laenge := congrArg List.length e
-        simp only [maskiere, maskiere_laenge, List.length_cons, List.length_nil] at laenge
+        simp only [maskiereLokal, maskiereLokal_laenge, List.length_cons, List.length_nil] at laenge
         cases laenge
       | cons y ys =>
         cases d with
         | zero =>
-          simp only [Nat.add_zero, List.set_cons_zero, maskiere, List.cons.injEq] at hL hV e ⊢
+          simp only [Nat.add_zero, List.set_cons_zero, maskiereLokal, List.cons.injEq] at hL hV e ⊢
           refine ⟨?_, ?_⟩
           · by_cases hp : oeffentlich (l₁ i) = true
             · simp only [hp, if_true]
               exact hV hp
             · simp only [if_neg hp]
-          · exact maskiere_gleich_mono_von (i + 1)
+          · exact maskiereLokal_gleich_mono_von (i + 1)
               (fun j hj hjpub => hL j (by omega) hjpub) xs ys e.2
         | succ d =>
-          simp only [List.set_cons_succ, maskiere, List.cons.injEq] at e ⊢
+          simp only [List.set_cons_succ, maskiereLokal, List.cons.injEq] at e ⊢
           refine ⟨?_, ?_⟩
           · by_cases hp : oeffentlich (l₁ i) = true
             · have hq := hL i (by omega) hp
@@ -133,8 +133,8 @@ theorem maskiere_set {l₀ l₁ : Nat → Etikett} {index : Nat}
     {xs ys : List (Option Dynamisch)} {v₁ v₂ : Option Dynamisch}
     (hL : ∀ j, j ≠ index → oeffentlich (l₁ j) = true → oeffentlich (l₀ j) = true)
     (hV : oeffentlich (l₁ index) = true → v₁ = v₂)
-    (lokEq : maskiere l₀ 0 xs = maskiere l₀ 0 ys) :
-    maskiere l₁ 0 (xs.set index v₁) = maskiere l₁ 0 (ys.set index v₂) :=
+    (lokEq : maskiereLokal l₀ 0 xs = maskiereLokal l₀ 0 ys) :
+    maskiereLokal l₁ 0 (xs.set index v₁) = maskiereLokal l₁ 0 (ys.set index v₂) :=
   maskiere_set_hilf 0 index xs ys v₁ v₂
     (by intro j hj; exact hL j (by simpa only [Nat.zero_add] using hj))
     (by intro hp; exact hV (by simpa only [Nat.zero_add] using hp))
@@ -144,29 +144,29 @@ theorem maskiere_einschieben {l₀ l₁ : Nat → Etikett}
     {xs ys : List (Option Dynamisch)} {v₁ v₂ : Option Dynamisch}
     (hL : ∀ i, oeffentlich (l₁ (i + 1)) = true → oeffentlich (l₀ i) = true)
     (hV : oeffentlich (l₁ 0) = true → v₁ = v₂)
-    (lokEq : maskiere l₀ 0 xs = maskiere l₀ 0 ys) :
-    maskiere l₁ 0 (v₁ :: xs) = maskiere l₁ 0 (v₂ :: ys) := by
-  have hSchwanz : maskiere l₁ 1 xs = maskiere l₁ 1 ys :=
+    (lokEq : maskiereLokal l₀ 0 xs = maskiereLokal l₀ 0 ys) :
+    maskiereLokal l₁ 0 (v₁ :: xs) = maskiereLokal l₁ 0 (v₂ :: ys) := by
+  have hSchwanz : maskiereLokal l₁ 1 xs = maskiereLokal l₁ 1 ys :=
     (maskiere_verschoben l₁ 0 xs).trans
-      ((maskiere_gleich_mono hL 0 xs ys lokEq).trans (maskiere_verschoben l₁ 0 ys).symm)
+      ((maskiereLokal_gleich_mono hL 0 xs ys lokEq).trans (maskiere_verschoben l₁ 0 ys).symm)
   by_cases hp : oeffentlich (l₁ 0) = true
-  · simp only [maskiere, hp, if_true, hV hp, hSchwanz]
-  · simp only [maskiere, if_neg hp, hSchwanz]
+  · simp only [maskiereLokal, hp, if_true, hV hp, hSchwanz]
+  · simp only [maskiereLokal, if_neg hp, hSchwanz]
 
 theorem maskiere_drop_gleich {l₀ l₁ : Nat → Etikett} :
     ∀ (count : Nat) (xs ys : List (Option Dynamisch)),
       (∀ i, oeffentlich (l₁ i) = true → oeffentlich (l₀ (count + i)) = true) →
-      maskiere l₀ 0 xs = maskiere l₀ 0 ys →
-      maskiere l₁ 0 (xs.drop count) = maskiere l₁ 0 (ys.drop count)
+      maskiereLokal l₀ 0 xs = maskiereLokal l₀ 0 ys →
+      maskiereLokal l₁ 0 (xs.drop count) = maskiereLokal l₁ 0 (ys.drop count)
   | 0, xs, ys, hL, e => by
       have hL' : ∀ i, oeffentlich (l₁ i) = true → oeffentlich (l₀ i) = true :=
         fun i hi => by simpa only [Nat.zero_add] using hL i hi
-      simpa only [Nat.zero_add, List.drop_zero] using (maskiere_gleich_mono hL' 0 xs ys e)
+      simpa only [Nat.zero_add, List.drop_zero] using (maskiereLokal_gleich_mono hL' 0 xs ys e)
   | count + 1, xs, ys, hL, e => by
       cases xs with
       | nil =>
         have laenge : ys.length = 0 := by
-          rw [← maskiere_laenge l₀ _ ys, ← e]
+          rw [← maskiereLokal_laenge l₀ _ ys, ← e]
           rfl
         cases ys with
         | nil => rfl
@@ -175,17 +175,17 @@ theorem maskiere_drop_gleich {l₀ l₁ : Nat → Etikett} :
         cases ys with
         | nil =>
           have laenge := congrArg List.length e
-          simp only [maskiere, maskiere_laenge, List.length_cons, List.length_nil] at laenge
+          simp only [maskiereLokal, maskiereLokal_laenge, List.length_cons, List.length_nil] at laenge
           cases laenge
         | cons y ys =>
-          simp only [maskiere, List.cons.injEq] at e
+          simp only [maskiereLokal, List.cons.injEq] at e
           have hL' : ∀ i, oeffentlich (l₁ i) = true →
               oeffentlich ((fun j => l₀ (j + 1)) (count + i)) = true := by
             intro i hi
             have hz : count + 1 + i = count + i + 1 := by omega
             have h := hL i hi
             rwa [hz] at h
-          have e' : maskiere (fun j => l₀ (j + 1)) 0 xs = maskiere (fun j => l₀ (j + 1)) 0 ys :=
+          have e' : maskiereLokal (fun j => l₀ (j + 1)) 0 xs = maskiereLokal (fun j => l₀ (j + 1)) 0 ys :=
             (maskiere_verschoben l₀ 0 xs).symm.trans
               (e.2.trans (maskiere_verschoben l₀ 0 ys))
           simpa only [List.drop_succ_cons] using
@@ -283,7 +283,7 @@ theorem sicht_installSchema (β : Beschriftung) (r : Rahmen) (schema : Dynamisch
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 (some schema :: r.lokale)
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 (some schema :: r.lokale)
         globale := some schema :: r.globale } := rfl
 
 /-- A static schema push keeps the public view when the tail does. -/
@@ -324,7 +324,7 @@ theorem sicht_rueckkehr_ohne (β : Beschriftung) (r : Rahmen) (result : Option D
       { r.sicht β with
         pc := r.pc + 1
         temp := fun s => if oeffentlich (β.temp (r.pc + 1) s) = true then r.temp s else none
-        lokale := maskiere (β.lokal (r.pc + 1)) 0 r.lokale
+        lokale := maskiereLokal (β.lokal (r.pc + 1)) 0 r.lokale
         rueckgabe := if oeffentlich β.ergebnis = true then result else none
         stopp := if result.isSome then none else some .fertig } := rfl
 
@@ -345,7 +345,7 @@ theorem sicht_rueckkehr_mit (β : Beschriftung) (r : Rahmen) (k : Fortsetzung)
       { r.sicht β with
         pc := k.pc
         temp := fun s => if oeffentlich (β.temp k.pc s) = true then k.temp s else none
-        lokale := maskiere (β.lokal k.pc) 0 (match k.eingang with
+        lokale := maskiereLokal (β.lokal k.pc) 0 (match k.eingang with
           | none => k.lokale
           | some target => result.bind (wertIn target) :: k.lokale)
         zaehler := k.zaehler
