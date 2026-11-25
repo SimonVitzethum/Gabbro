@@ -116,7 +116,8 @@ theorem verschiebbarPrecRumpf (base : Nat) (cgBlk : List Befehl) (aus frei : Nat
     · exact verschiebbarVonLift base
         (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
         (verschiebbarPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
-    · exact verschiebbarVonLift (base + 44)
+    · rw [paarBerechnungLaenge]
+      exact verschiebbarVonLift (base + 44)
         (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
         (verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
   · rw [show (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
