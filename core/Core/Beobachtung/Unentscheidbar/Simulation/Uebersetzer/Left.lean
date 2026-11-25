@@ -348,17 +348,27 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
   have g29 : (leftBlk ein aus frei)[53 + 1]? = some (.lesen aus 0) := by rfl
   have g30 : (leftBlk ein aus frei)[53 + 2]? = some (.blockEnde 1) := by rfl
   have hq : (frameL12e e ein aus frei n).temp (frei + 0) = some (natVal (Nat.sqrt n)) := by
-    simp only [frameL12e, frameL11, frameL10, frameL9, frameL8, frameL7, frameL6, frameL5, frameL4, frameL3, frameL2, frameL1]
+    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
+    show Function.update _ (frei + 4) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 4))]
+    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
+    show Function.update _ (frei + 5) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
+    show Function.update _ (frei + 6) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 6))]
+    show Function.update _ (frei + 5) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 5))]
+    show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
+    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
+    show Function.update _ (frei + 4) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 4))]
+    show Function.update _ (frei + 3) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 3))]
+    show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     exact hes
   have e0 := laufKopie _ _ 53 aus (frei + 0) _ hpc2 hq g28 g29 g30
