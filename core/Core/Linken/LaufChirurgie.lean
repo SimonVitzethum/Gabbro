@@ -42,8 +42,18 @@ theorem zustandImModul_nach_anderer (off : Nat) (c c' : Kontext) (b : Befehl)
     (s : Zustand) (hne : c' ≠ c) :
     zustandImModul off c (b.nach c' s) = b.nach c' (zustandImModul off c s) := by
   have hcc' : c ≠ c' := fun h => hne h.symm
-  simp only [zustandImModul, Befehl.nach, frameZurueck, Zustand.regionLive,
-    Function.update_of_ne hcc', Function.update_of_ne hne]
+  have hlok : (b.nach c' s).lokal c = s.lokal c :=
+    Befehl.nach_lokal_anderer b (c := c') (d := c) hcc' s
+  have hprojlok : (zustandImModul off c s).lokal c' = s.lokal c' := by
+    simp only [zustandImModul, Function.update_of_ne hne]
+  have hreg : (zustandImModul off c s).regionLive = s.regionLive := rfl
+  change { (b.nach c' s) with
+    lokal := Function.update (b.nach c' s).lokal c (frameZurueck off ((b.nach c' s).lokal c)) } =
+    { (zustandImModul off c s) with
+      lokal := Function.update (zustandImModul off c s).lokal c'
+        (b.auswerten ((zustandImModul off c s).lokal c') (zustandImModul off c s).regionLive) }
+  rw [hlok, hprojlok, hreg]
+  unfold zustandImModul Befehl.nach
   rw [Function.update_comm hne]
 
 /-- The acting frame's head and guard survive the projection and a frame-only step of another
