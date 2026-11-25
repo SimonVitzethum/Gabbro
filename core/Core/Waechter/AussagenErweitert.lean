@@ -18,13 +18,13 @@ private meta def modulName (env : Environment) (name : Name) : String :=
   | none => "unknown module"
 
 /-- True when `type` ends in `Prop` after stripping binders (shape only, no unfolding). -/
-private def endetInProp : Expr → Bool
+private meta def endetInProp : Expr → Bool
   | .forallE _ _ b _ => endetInProp b
   | e => e.isProp
 
 /-- True when `type` contains a function into `Prop` anywhere: a Prop-valued field itself, a function
     field returning `Prop`, or a container of predicates such as `List (Zustand → Prop)`. -/
-private def enthaeltPropFunktion : Expr → Bool
+private meta def enthaeltPropFunktion : Expr → Bool
   | .forallE _ d b _ => endetInProp b || enthaeltPropFunktion d || enthaeltPropFunktion b
   | .lam _ d b _ => enthaeltPropFunktion d || enthaeltPropFunktion b
   | .letE _ t v b _ => enthaeltPropFunktion t || enthaeltPropFunktion v || enthaeltPropFunktion b
@@ -77,7 +77,7 @@ public meta def strukturPropInfos (env : Environment) (index : DependencyIndex)
   return infos
 
 /-- A definition type that is `Prop` or a family into `Prop` (shape only, like the binder guard). -/
-private def istAussagenTyp : Expr → Bool
+private meta def istAussagenTyp : Expr → Bool
   | .forallE _ _ b _ => istAussagenTyp b
   | e => e.isProp
 
