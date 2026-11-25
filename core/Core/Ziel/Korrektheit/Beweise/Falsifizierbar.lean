@@ -233,10 +233,8 @@ theorem regelSimDiskriminiert : RegelSimDiskriminiertAussage := by
   cases folgerung with
   | inl idealFolge =>
       obtain ⟨i', idealSchritt, _⟩ := idealFolge
-      cases idealSchritt with
-      | kontext _ _ regelIdeal _ =>
-          obtain ⟨i, _, idealI⟩ := regelIdeal
-          simpa only [ERef, syRef] using idealI
+      rcases idealSchritt with ⟨j, headJ, idealJ⟩
+      simpa only [ERef, syRef] using idealJ
   | inr privat =>
       have ueberlauf : 0 < 0 := by
         simpa only [ERef] using privat.2.2.2.2
@@ -325,8 +323,8 @@ theorem simTrennt : SimTrenntAussage := by
       · intro t still frei
         cases t with
         | zero =>
-            change none = some label at still
-            cases still
+            change some falsifizierbarerEintrag = none at frei
+            cases frei
         | succ t => exact falsifizierbares_letztesAngebot_ideal ETrenn t z
       · intro endlich
         refine ⟨1, fun i after => ?_⟩
@@ -336,8 +334,8 @@ theorem simTrennt : SimTrenntAussage := by
     · intro t d mark
       cases t with
       | zero =>
-          have deq : d = falsifizierbarerEintrag := Option.some.inj mark
-          subst d
+          change some falsifizierbarerEintrag = some d at mark
+          cases Option.some.inj mark
           exact ⟨rfl, lastReady⟩
       | succ _ => exact (Option.some_ne_none _ mark.symm).elim
   let η₁ : I.Lauf ETrenn := ⟨s, falsifizierbareUmgebung, letztesAngebot falsifizierbarerHw, {
@@ -353,7 +351,7 @@ theorem simTrennt : SimTrenntAussage := by
       · intro t still frei
         cases t with
         | zero =>
-            change none = some label at still
+            change some label = none at still
             cases still
         | succ t => exact falsifizierbares_letztesAngebot_ideal ETrenn t z
       · intro endlich
@@ -381,10 +379,9 @@ theorem simTrennt : SimTrenntAussage := by
     intro t a b c w sp u p ha hb hspur hcrash hready himpl hex
     cases t with
     | zero =>
-        change some label = some (.kontext c w, sp) at hspur
-        have eq := Option.some.inj hspur
-        cases eq
-        obtain ⟨hp, _⟩ := himpl
+        rcases himpl with ⟨i, hi, implI⟩
+        change falsifizierbareImpl c a () [p] u at implI
+        obtain ⟨hp, _⟩ := implI
         cases (List.cons.inj hp).1
         exact falsifizierbarerPlan_autorisiert a c
     | succ t =>
@@ -483,7 +480,10 @@ theorem simRefutierbar : SimRefutierbarAussage := by
       | some d =>
           obtain ⟨w', f, ρspurPrivat, headF⟩ := matched.belegt 0 d hmark
           have eq := Option.some.inj (ρspurPrivat.symm.trans ρRefSpur0)
-          cases eq
+          have fst := congrArg Prod.fst eq
+          change SchrittWahl.kontext d w' = SchrittWahl.kontext falsifizierbarerEintrag () at fst
+          injection fst with hd hw'
+          subst d
           have interval : Stotterintervall η falsifizierbarerEintrag f 0 1 := by
             intro t lower upper
             have ht : t = 0 := by omega
@@ -505,9 +505,7 @@ theorem simRefutierbar : SimRefutierbarAussage := by
       rw [hηevent] at etakt
       cases etakt with
       | schritt labelEq idealSchritt =>
-          cases idealSchritt with
-          | kontext _ _ regelIdeal _ =>
-              obtain ⟨i, _, idealI⟩ := regelIdeal
-              simpa only [ERef, syRef] using idealI
+          rcases idealSchritt with ⟨i, headI, idealI⟩
+          simpa only [ERef, syRef] using idealI
 
 end Gabbro.Core.Ziel.Korrektheit
