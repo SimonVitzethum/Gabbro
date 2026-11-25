@@ -399,6 +399,7 @@ theorem geraete_antwort_inst_range {antworten : List AntwortEreignis} {qs : List
     simp only [List.length_map, List.length_range]
   apply List.ext_getElem hlenmap
   intro i h1 h2
+  simp only [List.length_map] at h1
   have h2' : i < qs.length := by
     simp only [List.length_range] at h2
     omega
