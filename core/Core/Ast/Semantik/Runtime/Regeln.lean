@@ -94,6 +94,23 @@ theorem Befehl.impl_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustan
     b.impl c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s :=
   b.ideal_privat h c s w plans u
 
+/-- **No instruction issues a question or takes a lock: every step of every instruction is an internal action.** A
+    frame-only step has the private plan; the step of an access instruction has the plan of its class or the private
+    plan of its refusal, and the classes `lesen`, `schreiben` and `rmw` plan the internal action. -/
+theorem Befehl.impl_aktion_intern (b : Befehl) {c : Kontext} {s : Zustand} {w : PUnit.{1}} {p : Plan}
+    {u : Zustand} (h : b.impl c s w [p] u) : p.aktion = .intern := by
+  by_cases hp : b.Privat
+  · have same := (List.cons.inj ((b.impl_privat hp c s w [p] u).1 h).1).1
+    subst same
+    rfl
+  · cases b with
+    | zugriff z =>
+      cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩ <;>
+        (have e := (List.cons.inj same).1
+         subst e
+         rfl)
+    | _ => exact absurd (by first | exact Or.inl rfl | exact Or.inr rfl) hp
+
 abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
 /-- The entry context: the boot context whose body starts at the first instruction. -/

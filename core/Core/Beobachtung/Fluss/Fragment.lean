@@ -76,8 +76,6 @@ theorem fragment_zustand_some {p : Fragment} {plattform : Plattform}
 
 -- (shared silence computation lives in `fragment_kontext_schritt_still` below)
 
-/-- A context step of a source form takes the internal plan, which records no memory access
-    and no outside action, and changes only the local frame. Such a step emits no low event. -/
 /-- The head a run steps at time `t` is frame-only, when the head of the stepping state is. -/
 theorem privat_am_kopf {p : Fragment} {plattform : Plattform} {ρ : Lauf (p.einheit plattform)} {t : Nat}
     {c : Kontext} {s0 : Ast.Semantik.Zustand} {f : Befehl}
@@ -91,6 +89,8 @@ theorem privat_am_kopf {p : Fragment} {plattform : Plattform} {ρ : Lauf (p.einh
   rw [kopf] at hb
   exact (Option.some.inj hb) ▸ privat
 
+/-- A context step of a frame-only form takes the internal plan, which records no memory access
+    and no outside action, and changes only the local frame. Such a step emits no low event. -/
 theorem fragment_kontext_schritt_still
     (p : Fragment) (plattform : Plattform)
     {ρ : Lauf (p.einheit plattform)} {predictor t c w spur}
@@ -310,7 +310,8 @@ theorem stummer_schritt_koppelt
                   have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
                     rw [nachEq₂, nachGlied₂]
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
-                    fragment_kontext_schritt_still p plattform (privat_am_kopf zustand₂ kopf₂ privat) label₂
+                    fragment_kontext_schritt_still p plattform
+                      (fun s b hs hk => privat_am_kopf zustand₂ kopf₂ privat s b hs (c_eq ▸ hk)) label₂
                   have e₁ : NiedrigeBeob (p.einheit plattform) ρ₁ predictor (t + 1) =
                       NiedrigeBeob (p.einheit plattform) ρ₁ predictor t := by
                     change NiedrigeBeob _ ρ₁ predictor t ++ schrittBeob ρ₁ predictor t = _
