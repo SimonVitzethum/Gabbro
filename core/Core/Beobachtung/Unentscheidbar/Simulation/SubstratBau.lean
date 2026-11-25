@@ -15,15 +15,23 @@ open Gabbro.Core.Ast.Semantik
     natural numbers throughout, so no `Primcodable` instance for commands is
     needed: only the encodings of the finitely many emitted programs appear. -/
 theorem komposition_berechenbar : Computable (fun c => kodiere (programm c)) := by
-  unfold kodiere programm
-  apply Nat.Partrec.Code.computable_recOn (c := fun c : Nat.Partrec.Code => c) Computable.id
-  · exact Computable.const (Encodable.encode (progZahl 0))
-  · exact Computable.const (Encodable.encode progSucc)
-  · exact Computable.const (Encodable.encode (progZahl 0))
-  · exact Computable.const (Encodable.encode (progZahl 0))
-  · exact (Computable.const (Encodable.encode (progZahl 0))).to₂
-  · exact (Computable.const (Encodable.encode (progZahl 0))).to₂
-  · exact (Computable.const (Encodable.encode (progZahl 0))).to₂
-  · exact (Computable.const (Encodable.encode (progZahl 0))).to₂
+  let e0 := Encodable.encode (progZahl 0)
+  let e1 := Encodable.encode progSucc
+  have hz : Computable (fun _ : Nat.Partrec.Code => e0) := Computable.const e0
+  have hs : Computable (fun _ : Nat.Partrec.Code => e1) := Computable.const e1
+  have hl : Computable (fun _ : Nat.Partrec.Code => e0) := Computable.const e0
+  have hr : Computable (fun _ : Nat.Partrec.Code => e0) := Computable.const e0
+  have hpr : Computable₂ (fun (_ : Nat.Partrec.Code)
+      (_ : Nat.Partrec.Code × Nat.Partrec.Code × Nat × Nat) => e0) := (Computable.const e0).to₂
+  have hco : Computable₂ (fun (_ : Nat.Partrec.Code)
+      (_ : Nat.Partrec.Code × Nat.Partrec.Code × Nat × Nat) => e0) := (Computable.const e0).to₂
+  have hpc : Computable₂ (fun (_ : Nat.Partrec.Code)
+      (_ : Nat.Partrec.Code × Nat.Partrec.Code × Nat × Nat) => e0) := (Computable.const e0).to₂
+  have hrf : Computable₂ (fun (_ : Nat.Partrec.Code)
+      (_ : Nat.Partrec.Code × Nat) => e0) := (Computable.const e0).to₂
+  have h := Nat.Partrec.Code.computable_recOn (c := fun c : Nat.Partrec.Code => c)
+    Computable.id (hz := hz) (hs := hs) (hl := hl) (hr := hr)
+    (hpr := hpr) (hco := hco) (hpc := hpc) (hrf := hrf)
+  simpa only [kodiere, programm, e0, e1] using h
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
