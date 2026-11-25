@@ -395,8 +395,8 @@ theorem regionNI : RegionNIAussage := by
                       exact kern₁
                     · rw [← statusEq]
                       exact stat₁
-                  have step₂ : ImplSchritt (unit op).katalog ρ₂.hw t v₂
-                      (.kontext c wahl, ⟨[], []⟩) (transfer₂.apply c v₂) := by
+                  have step₂ : ImplSchritt (unit op).einrichtung (unit op).system (unit op).katalog
+                      ρ₂.hw t v₂ (.kontext c wahl, ⟨[], []⟩) (transfer₂.apply c v₂) := by
                     refine .kontext crash₂ bereit₂ ?_ ?_
                     · refine ⟨op, kopf₂, ?_⟩
                       change op.impl c v₂ wahl [Ast.LowLevel.plan] (transfer₂.apply c v₂)
@@ -514,5 +514,8 @@ theorem regionNI : RegionNIAussage := by
                                       | antwort _ _ => cases label
                                       | interrupt _ _ => cases label
                                       | absturz _ => cases label
+              | antwort _ _ => cases label
+              | interrupt _ _ => cases label
+              | absturz _ => cases label
 
 end Gabbro.Core.Beobachtung
