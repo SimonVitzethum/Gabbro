@@ -39,11 +39,14 @@ private theorem qsg_initial {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
   unfold QuellzustandGleich at h
   have hx := h.2.2.1
   funext x
-  simpa only [unit, Etiketten.leer, sichtbar, oeffentlich, decide_true] using hx x
+  simpa only [unit, Etiketten.leer, sichtbar, oeffentlich, decide_true, if_true] using hx x
 
 /-- The question label of the empty label assignment is public. -/
 private theorem leer_frage {Ort : Type} (q : Frage) : (Etiketten.leer : Etiketten Ort).frage q = ∅ := by
-  simp only [Etiketten.frage, Etiketten.leer, List.map, Finset.foldl, Finset.empty_union]
+  unfold Etiketten.frage Etiketten.leer
+  induction q.zugriffe with
+  | nil => rfl
+  | cons t ts ih => simpa only [List.map_cons, List.foldl_cons, Finset.empty_union] using ih
 
 /-- A pending answer is public in the low-level unit. -/
 private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k}
@@ -51,21 +54,16 @@ private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
   unfold QuellzustandGleich at h
   have hx := h.2.2.2.2.2 c
   simpa only [unit, Flussdaten.leer, Etiketten.leer, AntwortSicht, leer_frage,
-    sichtbar, oeffentlich, decide_true] using hx
+    sichtbar, oeffentlich, decide_true, if_true] using hx
 
-/-- An occupied cut has a predecessor cut with a defined state. -/
-private theorem zustand_vor {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+/-- A failed state stays failed at the next cut. -/
+private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    {ρ : Lauf E} {t : Nat} {b : Zustand L Ort Wert Raum Lok Grund}
-    (h : ρ.zeit.zustand (t + 1) = some b) : ∃ a, ρ.zeit.zustand t = some a := by
+    {ρ : Lauf E} {t : Nat} (h : ρ.zeit.zustand t = none) : ρ.zeit.zustand (t + 1) = none := by
   have tak := ρ.zeit.takt t
+  rw [h] at tak
   cases tak with
-  | schritt _ step =>
-      cases step with
-      | schritt _ => exact ⟨_, rfl⟩
-  | wartet _ eq _ =>
-      refine ⟨b, ?_⟩
-      rw [← eq]
-      exact h
+  | wartet _ eq _ => exact eq
+  | schritt _ step => cases step
 
 end Gabbro.Core.Beobachtung
