@@ -82,9 +82,8 @@ theorem pb4Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
   rw [e]
   rfl
 
-set_option maxHeartbeats 400000 in
 theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
-    (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb4 r a b frei)) = some (pb5 r a b frei) := by
+    Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb4 r a b frei)) = some (pb5 r a b frei) := by
   have hx : (pb4 r a b frei).temp frei = some (natVal a) := by
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) frei = _
     rw [updateMiss _ _ _ _ (by omega : frei ≠ frei + 3)]
@@ -106,9 +105,8 @@ theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have e := schrittVergleichNat _ (pb4 r a b frei) 12 frei a b rfl hx hy g
   exact e
 
-set_option maxHeartbeats 400000 in
 theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a < b) :
-    (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6w r a b frei) := by
+    Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6w r a b frei) := by
   have hw : Compare.eval .lt (a : Int) (b : Int) = true := (vergleichLtNat a b).mpr hab
   have ht : (pb5 r a b frei).temp frei = some ⟨.bool, true⟩ := by
     show Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) frei = _
@@ -119,9 +117,8 @@ theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a 
   have e := schrittSpringeWennWahr _ (pb5 r a b frei) 13 frei true true 17 rfl ht rfl g
   exact e
 
-set_option maxHeartbeats 400000 in
 theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬ a < b) :
-    (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6f r a b frei) := by
+    Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6f r a b frei) := by
   have hw : Compare.eval .lt (a : Int) (b : Int) ≠ true := by
     intro h
     exact hab ((vergleichLtNat a b).mp h)
@@ -174,9 +171,8 @@ theorem pb8wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   rw [e]
   rfl
 
-set_option maxHeartbeats 400000 in
 theorem pb9wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
-    (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb8w r a b frei)) = some (pb9w r a b frei) := by
+    Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb8w r a b frei)) = some (pb9w r a b frei) := by
   have hx : (pb8w r a b frei).temp (frei + 4) = some (natVal b) := by
     show Function.update (pb7w r a b frei).temp (frei + 5) (some (natVal b)) (frei + 4) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (4 : Nat) ≠ 5))]
@@ -217,9 +213,8 @@ theorem pb10wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
   rw [e]
   rfl
 
-set_option maxHeartbeats 400000 in
 theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
-    (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb10w r a b frei)) = some (pb11w r a b frei) := by
+    Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb10w r a b frei)) = some (pb11w r a b frei) := by
   have hx : (pb10w r a b frei).temp (frei + 4) = some (natVal (b * b)) := by
     show Function.update (pb9w r a b frei).temp (frei + 5) (some (natVal a)) (frei + 4) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (4 : Nat) ≠ 5))]
