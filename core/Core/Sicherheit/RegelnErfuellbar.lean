@@ -10,20 +10,6 @@ namespace Gabbro.Core.Sicherheit
 
 open Maschine Katalog Ast Ast.Semantik
 
-module
-
-public import Core.Sicherheit.Lauf
-public import Core.Ast.Semantik.Runtime.Sicherheit
-public import Core.Ast.Pruefung.Praedikat
-public import Core.Ast.Semantik.Elaborierung
-import Core.Sicherheit.Laufkonstruktion
-
-@[expose] public section
-
-namespace Gabbro.Core.Sicherheit
-
-open Maschine Katalog Ast Ast.Semantik
-
 /-- The declared invariants of a checker-accepted table hold at a state whose memory content
     satisfies every declared predicate. -/
 private theorem invariantenAusPruefung {p : Fragment} (platform : Plattform)
