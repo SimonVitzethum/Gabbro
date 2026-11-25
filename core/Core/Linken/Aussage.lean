@@ -113,17 +113,20 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
 /-- Linking succeeds exactly when the declarative check holds, with the concatenated fragments. -/
 theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
     bauplanOk plan = true ∧ frag = verknuepfteFragmente plan := by
-  cases hb : bauplanOk plan with
-  | false => simp only [linke, hb, if_false] at h
-  | true =>
-    simp only [linke, hb, if_true] at h
-    exact ⟨rfl, h.symm⟩
+  unfold linke at h
+  by_cases hb : bauplanOk plan = true
+  · rw [if_pos hb] at h
+    exact ⟨hb, (Option.some_inj.mp h).symm⟩
+  · rw [if_neg hb] at h
+    exact nomatch h
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
   cases l with
   | nil => rfl
-  | cons _ _ => simp only [List.isEmpty] at h
+  | cons _ _ =>
+    have h2 : false = true := h
+    exact (Bool.false_ne_true h2).elim
 
 /-- An empty clause check means no written clauses. -/
 theorem leer_of_klauselnLeer {frag : Fragment} (h : klauselnLeer frag = true) :
@@ -223,7 +226,12 @@ theorem doppelBauplan : bauplanOk doppelPlan = false :=
 
 /-- Linking the duplicate-name plan fails. -/
 theorem doppelLinke : linke doppelPlan = none := by
-  simp only [linke, doppelBauplan, if_false]
+  have hneg : ¬ bauplanOk doppelPlan = true := by
+    intro ht
+    rw [doppelBauplan] at ht
+    exact Bool.false_ne_true ht
+  unfold linke
+  rw [if_neg hneg]
 
 /-- Both parts of the refused plan are accepted. -/
 theorem doppelTeile :
