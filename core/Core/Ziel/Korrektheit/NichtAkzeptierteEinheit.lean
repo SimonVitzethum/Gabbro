@@ -30,13 +30,12 @@ open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Katalog
 open Gabbro.Core.Maschine
-open Classical
 
 /-- The name of the witness constant. -/
-private def indexName : Identifier :=
+def indexName : Identifier :=
   keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
 
-private theorem indexName_ordinary : ordinaryLocal indexName :=
+theorem indexName_ordinary : ordinaryLocal indexName :=
   (directName_of_singleton (name := indexName) rfl).1
 
 /-- A source unit whose only declaration indexes an empty text at offset `0`. -/
@@ -44,8 +43,9 @@ def textIndexUnit : Ast.Unit :=
   let written : WrittenType := .integer false 8 none
   let value : Expr [] (.int 0 255) := Expr.textIndex (Expr.textLiteral []) (Expr.lit 0)
   ⟨[⟨indexName, .int 0 255, false, true⟩],
-    .step (.constant indexName indexName_ordinary written (by decide) value
-      (by dsimp [value]; simp) (by dsimp [value, written]; decide)) .done⟩
+    .step (.constant indexName indexName_ordinary written
+      (by norm_num [WrittenType.valid, WrittenType.storage]) value
+      (by dsimp [value]; decide) (by dsimp [value, written]; decide)) .done⟩
 
 /-- The elaborated code: two setup instructions, the guarded index, the binding, the entry and the end. -/
 theorem textIndexUnit_code :
