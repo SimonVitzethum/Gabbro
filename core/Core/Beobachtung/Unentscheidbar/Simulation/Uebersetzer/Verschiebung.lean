@@ -22,7 +22,7 @@ def Verschiebbar (b : Befehl) : Prop :=
   match b with
   | .literal _ _ | .binaer _ _ | .binden _ _ | .wahrheitswert _ _
   | .lesen _ _ | .negativ _ _ | .negieren _ | .verneinen _ | .teilen _
-  | .vergleichen _ _ | .springeWenn _ _ _ | .zuweisen _ _ _ _
+  | .vergleichen _ _ | .springeWenn _ _ _ | .zuweisen _ _ _
   | .springe _ | .blockEnde _ | .zurueckSprung _ | .ende => True
   | _ => False
 
@@ -33,16 +33,16 @@ theorem auswertenMitPc (p : Nat) (b : Befehl) (r : Rahmen)
     (hz : ∀ d, b = .zurueckSprung d → d ≤ r.pc) :
     b.auswerten (mitPc p r) = mitPc p (b.auswerten r) := by
   cases b with
-  | literal z v => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | binaer op l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | literal z v => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | binaer op l => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
   | binden n q => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
-  | wahrheitswert z v => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | lesen z i => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | negativ z m => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | negieren z => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | verneinen z => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | teilen l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
-  | vergleichen op l => simp only [Befehl.auswerten, Rahmen.schreibe, mitPc, Nat.add_assoc]
+  | wahrheitswert z v => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | lesen z i => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | negativ z m => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | negieren z => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | verneinen z => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | teilen l => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
+  | vergleichen op l => simp only [Befehl.auswerten, Rahmen.schreibe, Rahmen.zahl, mitPc, Nat.add_assoc]
   | zuweisen q i t => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | springe d => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
   | blockEnde c => simp only [Befehl.auswerten, mitPc, Nat.add_assoc]
