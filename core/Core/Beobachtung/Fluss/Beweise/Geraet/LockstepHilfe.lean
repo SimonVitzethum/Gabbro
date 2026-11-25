@@ -33,9 +33,14 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
         rw [atV] at z0
         cases z0
       | some z =>
-        obtain rfl := Option.some.inj (atV.symm.trans (z0.trans hload))
-        change Speicher.Zustand.leer.graph.Konsistent ∧ Speicher.Zustand.leer.graph.Vollstaendig
-        exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
+        have hv : v = z := Option.some.inj (atV.symm.trans (z0.trans hload))
+        subst v
+        dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit] at hload
+        split at hload
+        · obtain rfl := Option.some.inj hload
+          change Speicher.Zustand.leer.graph.Konsistent ∧ Speicher.Zustand.leer.graph.Vollstaendig
+          exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
+        · cases hload
   | succ t ih =>
       intro v atV
       cases tick : ρ.zeit.takt t with
@@ -45,9 +50,7 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
       | schritt label step =>
         rw [atV] at step
         cases nach : ρ.zeit.zustand (t + 1) with
-        | none =>
-          rw [nach] at step
-          cases step
+        | none => rw [nach] at step; cases step
         | some next =>
           rw [nach] at step
           obtain rfl := Option.some.inj atV
@@ -83,7 +86,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
         cases z0
       | some z =>
         have hinv := geraete_invariante_start (d := d) hload
-        obtain rfl := Option.some.inj (atV.symm.trans (z0.trans hload))
+        obtain rfl : v = z := Option.some.inj (atV.symm.trans (z0.trans hload))
         exact hinv
   | succ t ih =>
       intro v atV
@@ -104,8 +107,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
           cases tick with
           | schritt label _ => cases label
           | wartet _ eq _ =>
-            have hv : v = s := Option.some.inj (atV.symm.trans eq)
-            subst v
+            obtain rfl : v = s := Option.some.inj (atV.symm.trans eq)
             exact ih hz
         | some ev =>
           rw [hev] at tick
@@ -119,7 +121,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
             | wartet _ eq _ => cases eq
           | some s' =>
             intro atV
-            obtain rfl := Option.some.inj atV
+            obtain rfl : v = s' := Option.some.inj (atV.symm.trans hpost)
             rw [hpost] at tick
             cases tick with
             | wartet label _ _ => cases label
@@ -127,7 +129,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
               cases step with
               | schritt impl =>
                 cases impl with
-                | kontext _ _ regel aus =>
+                | kontext (c := c) _ _ regel aus =>
                   obtain ⟨_, plan', hplans, rule⟩ := geraete_kontext_regel ruleEq regel
                   cases rule with
                   | issue owned idle =>
@@ -135,18 +137,19 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                     obtain ⟨_, hfragen, _, hantworten, hverbraucht, hverworfen,
                       hbuchung, hepoche, _, _, _, hlokal, _, _, _, _, _, _, _, _, _⟩ := htick
                     have hinv := ih hz
-                    have hinv' := geraete_issue_erhaelt_invariante (target := target) hinv owned idle
+                    have hinv' := geraete_issue_erhaelt_invariante (target := target)
+                      (t := t) (c := c) (s := s) hinv owned idle
                     unfold GeraeteInvariantAussage at hinv' ⊢
                     rw [hlokal, hfragen, hantworten, hverbraucht, hverworfen, hbuchung, hepoche]
                     simpa only [Zustand.frage, setFrame] using hinv'
-                  | consume owned pending ready sameQuestion =>
-                    have htick := geraete_consume_tick (target := target) aus hplans rfl
-                      owned pending ready sameQuestion
+                  | consume (answer := answer) owned pending ready sameQuestion =>
+                    have htick := geraete_consume_tick (target := target) (answer := answer)
+                      aus hplans rfl owned pending ready sameQuestion
                     obtain ⟨_, hfragen, _, hantworten, hverbraucht, hverworfen,
                       hbuchung, hepoche, _, _, _, hlokal, _, _, _, _, _, _⟩ := htick
                     have hinv := ih hz
-                    have hinv' := geraete_consume_erhaelt_invariante (target := target) hinv
-                      owned pending ready sameQuestion
+                    have hinv' := geraete_consume_erhaelt_invariante (target := target)
+                      (c := c) (s := s) (answer := answer) hinv owned pending ready sameQuestion
                     unfold GeraeteInvariantAussage at hinv' ⊢
                     rw [hlokal, hfragen, hantworten, hverbraucht, hverworfen, hbuchung, hepoche]
                     simpa only [Zustand.verbrauche, setFrame, geraete_consume_rahmen] using hinv'
