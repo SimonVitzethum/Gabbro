@@ -478,6 +478,58 @@ def FadenKomponierbarAussage : Prop :=
       plan.aktion.Ausfuehrbar s u c →
       ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
 
+/-- **Composability of the refusal of a lifecycle step** (open, independent unit of `FadenKomponierbarAussage`). A
+    lifecycle instruction whose operands name nothing is refused (the private plan, the internal action) and the protocol
+    executes the refusal. Difficulty: leicht. Sketch: `FuehrtAus.intern`, `Speicherfolge.nil`, `Zustandsrahmen` from
+    `Schrittform.verweigert_nurFaden`. -/
+def FadenVerweigertKomponierbarAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (z : Fadenform) (t : Nat) (s : Zustand) (c : Kontext) (w : PUnit.{1})
+    (plan : Plan) (u : Zustand),
+    (p.einheit platform).system.kopf s c = some (Befehl.faden z) → (Befehl.faden z).ideal c s w [plan] u →
+      plan.aktion = .intern →
+      ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
+
+/-- **Composability of a start the machine accepts** (open, independent unit of `FadenKomponierbarAussage`): when the thread
+    with the next number rests, the protocol executes the start. Difficulty: leicht. Sketch: `FuehrtAus.starte`, the
+    state `{ v with graph := s.graph }`, `Speicherfolge.nil`, `Zustandsrahmen` from `Schrittform.faedenNach_nurFaden`. -/
+def StarteKomponierbarAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (z : Fadenform) (t : Nat) (s : Zustand) (c : Kontext) (w : PUnit.{1})
+    (plan : Plan) (u : Zustand),
+    (p.einheit platform).system.kopf s c = some (Befehl.faden z) → (Befehl.faden z).ideal c s w [plan] u →
+      plan.aktion = .starte → s.status (.faden s.naechsterFaden) = .ruht →
+      ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
+
+/-- **Composability of a join the machine accepts** (open, independent unit of `FadenKomponierbarAussage`): when the joined
+    context has ended, the protocol executes the join. Difficulty: leicht. Sketch: as for the start with `FuehrtAus.verbinde`. -/
+def VerbindeKomponierbarAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (z : Fadenform) (t : Nat) (s : Zustand) (c : Kontext) (w : PUnit.{1})
+    (plan : Plan) (u : Zustand) (kind : Kontext),
+    (p.einheit platform).system.kopf s c = some (Befehl.faden z) → (Befehl.faden z).ideal c s w [plan] u →
+      plan.aktion = .verbinde kind → (∃ ausgang, s.status kind = .beendet ausgang) →
+      ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
+
+/-- **Composability of a thread end** (open, independent unit of `FadenKomponierbarAussage`): the step of the end sets the
+    outcome of the acting thread, and the protocol executes it. Difficulty: leicht. Sketch: `FuehrtAus.beende` with the status
+    the form sets (`Schrittform.faedenNach`, the `beende` arm: `Function.update_self`). -/
+def BeendeKomponierbarAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (z : Fadenform) (t : Nat) (s : Zustand) (c : Kontext) (w : PUnit.{1})
+    (plan : Plan) (u : Zustand),
+    (p.einheit platform).system.kopf s c = some (Befehl.faden z) → (Befehl.faden z).ideal c s w [plan] u →
+      plan.aktion = .beende → (∃ ausgang, u.status c = .beendet ausgang) →
+      ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
+
+/-- **Composability of a switch or a core start the machine accepts** (open, independent unit of
+    `FadenKomponierbarAussage`): when the core is the acting context's or idle and the context switched to runs on no core,
+    the protocol executes the switch. Difficulty: leicht. Sketch: as for the start with `FuehrtAus.wechsle`. -/
+def WechsleKomponierbarAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (z : Fadenform) (t : Nat) (s : Zustand) (c : Kontext) (w : PUnit.{1})
+    (plan : Plan) (u : Zustand) (kern : Kern) (kind : Kontext),
+    (p.einheit platform).system.kopf s c = some (Befehl.faden z) → (Befehl.faden z).ideal c s w [plan] u →
+      plan.aktion = .wechsle kern kind →
+      (((s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none) ∧ s.status kind = .laeuft ∧
+        (∀ k, (s.kerne k).laeuft ≠ some kind) ∧ kind ≠ c) →
+      ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
+
 /-- **A join makes progress under hardware fairness** (open). In a fair ideal run, a context whose open instruction is a
     join of a context that ends does not hang: the join runs once the joined context has ended. Difficulty: mittel.
     Sketch: from the end cut on, `FuehrtAus.verbinde` is available at every cut (the status of an ended context is
@@ -499,6 +551,8 @@ def VerbindeFortschrittAussage : Prop :=
     flow), the stack effect is `klassenStapel`, the information flow of the family is `ZugriffNIAussage`, and the kernel
     statements are `FadenAussagen`. -/
 def FadenBefehlAussage : Prop :=
-  FadenKomponierbarAussage ∧ VerbindeFortschrittAussage
+  FadenKomponierbarAussage ∧ VerbindeFortschrittAussage ∧ FadenVerweigertKomponierbarAussage ∧
+    StarteKomponierbarAussage ∧ VerbindeKomponierbarAussage ∧ BeendeKomponierbarAussage ∧
+    WechsleKomponierbarAussage
 
 end Gabbro.Core.Ast.Semantik
