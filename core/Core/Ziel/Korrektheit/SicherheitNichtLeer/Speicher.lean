@@ -34,11 +34,13 @@ def g₃ : SpeicherGraph Gabbro.Core.Ast.Semantik.Zelle Int :=
 
 theorem erweiterung₁ : g₀.Schritt (.initial schreibOrt) schreibLabel g₁ :=
   Speicher.Zustand.senke_schritt
-    ⟨fun i hi _ => Nat.not_lt_zero i hi, fun _ _ _ _ h _ => h, fun h => False.elim h⟩
+    ⟨fun i hi _ => Nat.not_lt_zero i hi, fun _ _ _ _ h _ => h, fun h => False.elim h,
+      fun h => by change Art.schreiben = Art.rmw at h; cases h⟩
     Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
 
 theorem erweiterung₂ : g₁.Schritt (.kontext (.faden 0)) schreibLabel g₂ := by
-  refine Speicher.Zustand.senke_schritt ⟨?_, fun _ _ _ _ h _ => h, fun h => False.elim h⟩
+  refine Speicher.Zustand.senke_schritt ⟨?_, fun _ _ _ _ h _ => h, fun h => False.elim h,
+    fun h => by change Art.schreiben = Art.rmw at h; cases h⟩
     erweiterung₁.konsistent erweiterung₁.vollstaendig
   intro i hi eq
   have lt : i < 1 := hi
@@ -47,7 +49,8 @@ theorem erweiterung₂ : g₁.Schritt (.kontext (.faden 0)) schreibLabel g₂ :=
   cases eq
 
 theorem erweiterung₃ : g₂.Schritt (.kontext (.faden 1)) schreibLabel g₃ := by
-  refine Speicher.Zustand.senke_schritt ⟨?_, fun _ _ _ _ h _ => h, fun h => False.elim h⟩
+  refine Speicher.Zustand.senke_schritt ⟨?_, fun _ _ _ _ h _ => h, fun h => False.elim h,
+    fun h => by change Art.schreiben = Art.rmw at h; cases h⟩
     erweiterung₂.konsistent erweiterung₂.vollstaendig
   intro i hi eq
   have lt : i < 2 := hi
@@ -102,8 +105,8 @@ theorem ungeordnet : ∀ i j : Fin g₃.ev.length, ¬ g₃.graph.hb i j := by
   intro i j hb
   obtain ⟨k, po | sw⟩ := Speicher.transGen_kopf hb
   · exact keinPo i k po
-  · obtain ⟨_, _, _, _, x, _, rf⟩ := sw
-    exact keinRf x k rf
+  · obtain ⟨_, x, r, _, _, rf, _, _, _⟩ := sw
+    exact keinRf x r rf
 
 end ZweiSchreiber
 
