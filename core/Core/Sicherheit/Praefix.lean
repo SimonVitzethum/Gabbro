@@ -74,7 +74,7 @@ theorem voran1_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
     exact ⟨t', by omega, k, opp, z, eq, disp⟩
   obtain ⟨t', ht', w, spur, step⟩ := tailFair a c dle' oppd' n hn
   have spurEq : (voran tail s₀ e₀ h₀).spur (t' + 1) = tail.spur t' := rfl
-  rw [spurEq] at step
+  rw [← spurEq] at step
   exact ⟨t' + 1, Nat.le_trans ht' (Nat.le_succ _), w, spur, step⟩
 
 /-- A fair tail spliced after two prefix steps keeps scheduler fairness. -/
@@ -108,7 +108,7 @@ theorem voran2_fair {hw : Katalog.HwLauf} {s : Katalog.AussenStart}
     exact ⟨t', by omega, k, opp, z, eq, disp⟩
   obtain ⟨t', ht', w, spur, step⟩ := tailFair a c dle' oppd' n hn
   have spurEq : (voran (voran tail s₁ e₁ h₁) s₀ e₀ h₀).spur (t' + 2) = tail.spur t' := rfl
-  rw [spurEq] at step
+  rw [← spurEq] at step
   exact ⟨t' + 2, Nat.le_trans ht' (Nat.le_add_right _ _), w, spur, step⟩
 
 end Gabbro.Core.Sicherheit
