@@ -163,7 +163,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
     s'.graph.ev = s.graph.ev := by
   have planEq := quellSchrittPlanPrivat p f hgut leer impl
   have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
-  obtain ⟨_, _, _, sperren, aktion, folge, _⟩ := aus
+  obtain ⟨_, _, sperren, v, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
   have hlabels : sperren ++ plan.lesen ++
       schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
