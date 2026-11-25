@@ -197,6 +197,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
