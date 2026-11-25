@@ -65,6 +65,18 @@ def leereTabelle : DomaenenTabelle where
   geraete := []
   kanaele := []
 
+/-- The single-domain table passes the line. -/
+theorem eineTabelle_akzeptiert : pruefeDomaenenTab eineTabelle = true := rfl
+
+/-- The single-domain table is coherent. -/
+theorem eineTabelle_kohaerent : tabKohaerent eineTabelle :=
+  ⟨Nat.zero_lt_one, fun _ h => (List.not_mem_nil h).elim,
+    fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim,
+    fun _ h => (List.not_mem_nil h).elim⟩
+
+/-- The line refuses the empty-domain table. -/
+theorem leereTabelle_verweigert : pruefeDomaenenTab leereTabelle = false := rfl
+
 /-- Partial operations for which an unhandled use requires a generated guard. -/
 inductive PartielleOperation where
   | division

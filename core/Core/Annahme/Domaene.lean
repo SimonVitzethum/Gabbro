@@ -76,14 +76,15 @@ def LaufIsolation [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingu
       ρ.zeit.spur t = some (w, spur) →
       ∀ (c : Kontext) (wahl : Wahl), w = .kontext c wahl → SpurRespektiert E plan c spur
 
-/-- **The core statement (MK-17) over elaborated units** (the `NIAkzeptiertAussage`
+/-- **The core statement (MK-17d) over elaborated units** (the `NIAkzeptiertAussage`
     pattern): in every run of an accepted elaborated unit, no context touches a cell,
-    device or question of a foreign domain except over a declared channel. The per-form
-    duty comes from the checker row in `Lokal`, through the rule-to-run bridge. -/
+    device or question of a foreign domain except over a channel the unit's own table
+    declares. The per-form duty comes from the checker row in `Lokal`, through the
+    rule-to-run bridge. -/
 def IsolationAussage (P : Katalog.Plattform) : Prop :=
-  ∀ (t : Gabbro.Core.Ast.Unit) (plan : DomaenenPlan),
-    plan.wohlgeformt → Akzeptiert (einheitVon P t) →
-    DomaenenKohaerenz (einheitVon P t) plan → LaufIsolation (einheitVon P t) plan
+  ∀ (t : Gabbro.Core.Ast.Unit),
+    Akzeptiert (einheitVon P t) →
+    LaufIsolation (einheitVon P t) (tabellePlan (einheitVon P t).domaenen)
 
 /-- Cross-domain traffic is low-labelled: every question about a foreign-domain object
     carries a public label. -/
@@ -93,13 +94,14 @@ def KanalTragenNiedrig (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     plan.geraetDomaene q.objekt ≠ plan.kontextDomaene c →
     Beobachtung.oeffentlich (E.etiketten.frage q) = true
 
-/-- **NI between domains up to channels, over elaborated units** (the
-    `NIAkzeptiertAussage` pattern): under low-labelled cross-domain traffic, the accepted
-    elaborated unit is noninterferent, by the pinned NI leg. The channel premise records
-    the design intent; the leg supplies the conclusion. -/
+/-- **NI between domains up to the unit's own channels, over elaborated units** (the
+    `NIAkzeptiertAussage` pattern): under low-labelled cross-domain traffic over the
+    declared table, the accepted elaborated unit is noninterferent, by the pinned NI leg.
+    The channel premise records the design intent; the leg supplies the conclusion. -/
 def DomaenenNIAussage (P : Katalog.Plattform) : Prop :=
-  ∀ (t : Gabbro.Core.Ast.Unit) (plan : DomaenenPlan),
-    Akzeptiert (einheitVon P t) → KanalTragenNiedrig (einheitVon P t) plan →
+  ∀ (t : Gabbro.Core.Ast.Unit),
+    Akzeptiert (einheitVon P t) →
+    KanalTragenNiedrig (einheitVon P t) (tabellePlan (einheitVon P t).domaenen) →
     Beobachtung.Nichtinterferent (einheitVon P t)
 
 /-- **Satisfiability**: a well-formed plan and an accepted unit meet the coherence
@@ -161,7 +163,8 @@ theorem akzeptiert_trivial : Akzeptiert trivialeEinheit := by
       cases h.1
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · exact Gabbro.Core.Annahme.domaenenLokal_ohne_kopf _ fun _ _ => rfl
+  · exact Gabbro.Core.Annahme.domaenenLokal_ohne_kopf _
+      Gabbro.Core.Maschine.eineTabelle_akzeptiert fun _ _ => rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

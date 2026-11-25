@@ -93,7 +93,7 @@ private theorem memProgramAkzeptiertN (code : List MemInstruction) :
           exact h q hq hcut hans
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
     obtain ⟨_, _, planEq, _⟩ := himpl
     cases (List.cons.inj planEq).1
     obtain ⟨rfl, _⟩ := memGenauInternalN haus

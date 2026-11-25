@@ -29,7 +29,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro dplan s c i hkopf t c' sv u sv' w q spur himpl haus
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i hkopf t c' sv u sv' w q spur himpl haus => ?_⟩
     have memb : i ∈ p.code := kopf_mem hkopf
     obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus (rein i memb)
     exact spurRespektiert_leer _ _ _

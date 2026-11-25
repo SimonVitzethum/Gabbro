@@ -4,7 +4,7 @@
 
   `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`: the perfect checker over the
   syntax, `I` and the catalogue only. Acceptance is a FUNCTION OF THE UNIT ALONE: the clause
-  table and the guard uses are the canonical values determined by the unit
+  table and the guard uses are the canonical values determined by   the unit
   (`kanonischeKlauseln`, `kanonischeVerwendung` — M6 computes them from the AST); `Akzeptiert`
   takes no type-class instance arguments, so no free choice of tables can make it hold
   trivially. `akzeptiert_erfuellbar` proves the three conjuncts hold jointly for a concrete
@@ -13,7 +13,9 @@
   obligations: `stale_nicht_aussen_gueltig` (a system emitting a stale-handle question fails
   `AussenGueltig`) and `unbefugt_nicht_regel_lokal` (a step touching an unowned location fails
   `RegelLokal`), beside their satisfiability (`akzeptiert_erfuellbar`, `befugt_mit_griff`,
-  `befugt_erfuellbar` in `Lokal.lean`).
+  `befugt_erfuellbar` in `Lokal.lean`). Meaning change (MK-17d): the isolation row of
+  `Lokal` binds the duty to the unit's own declared table (`Einheit.domaenen`), so an
+  accepted unit may record the accesses and questions its table declares.
 -/
 module
 
@@ -123,7 +125,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
   · exact schrankenLokal_leer rfl rfl rfl
   · exact abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · exact domaenenLokal_ohne_kopf _ fun _ _ => rfl
+  · exact domaenenLokal_ohne_kopf _ eineTabelle_akzeptiert fun _ _ => rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

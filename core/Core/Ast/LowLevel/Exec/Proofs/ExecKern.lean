@@ -157,10 +157,10 @@ theorem execGenauInternal {t : Nat} {c : Kontext} {s u : ExecState}
       exact ⟨rfl, nextEq⟩
 
 /-- Every execution of an exec instruction records the empty cut, so every head form meets
-    the isolation duty under every domain plan. -/
+    the isolation duty under the unit's own (single-domain, entry-free) table. -/
 theorem execDomaenenLokal (k : Katalog) (code : List ExecInstruction) :
     DomaenenLokal (execProgram k code) := by
-  intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+  refine ⟨eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
   obtain ⟨_, _, planEq, _⟩ := himpl
   cases (List.cons.inj planEq).1
   obtain ⟨rfl, _⟩ := execGenauInternal haus

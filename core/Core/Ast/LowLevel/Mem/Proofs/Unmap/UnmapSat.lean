@@ -283,7 +283,7 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
           (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro dplan s c i _ t c' sv u sv' w qq spur himpl haus
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
     obtain ⟨_, _, planEq, _⟩ := himpl
     cases (List.cons.inj planEq).1
     obtain ⟨rfl, _⟩ := unmapMemGenauInternal haus

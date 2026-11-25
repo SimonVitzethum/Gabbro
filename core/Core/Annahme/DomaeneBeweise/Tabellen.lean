@@ -116,13 +116,8 @@ theorem tabGeraet_kohaerent (tab : DomaenenTabelle) (h : tabKohaerent tab)
     have hlt := hg e hmem
     exact hlt
 
-/-- Every table embeds as a function-based plan through the total lookups. -/
-def tabellePlan (tab : DomaenenTabelle) : DomaenenPlan where
-  domaenen := tab.domaenen
-  kontextDomaene := tabKontext tab
-  objektDomaene := tabObjekt tab
-  geraetDomaene := tabGeraet tab
-  kanaele := tab.kanaele
+/-- The embedding `tabellePlan` lives with the checker row in `Core/Annahme/Lokal.lean`
+    (MK-17d: the row is stated over it). -/
 
 /-- A coherent table passes both the old line (on the embedded plan) and the new
     line: the checker verdicts agree on coherent tables. -/
@@ -147,24 +142,16 @@ theorem tabellePlan_kohaerent (E : Einheit L Ort Wert Raum Lok Grund Bedingung W
     fun x => tabObjekt_kohaerent tab h (E.einrichtung.speicherObjekt x),
     fun o => tabGeraet_kohaerent tab h o⟩
 
-/-- The single-domain table passes the line. -/
-theorem eineTabelle_akzeptiert : pruefeDomaenenTab eineTabelle = true := rfl
-
-/-- The single-domain table is coherent. -/
-theorem eineTabelle_kohaerent : tabKohaerent eineTabelle :=
-  ⟨Nat.zero_lt_one, fun _ h => (List.not_mem_nil h).elim,
-    fun _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim,
-    fun _ h => (List.not_mem_nil h).elim⟩
+/-- The single-domain table passes the line and is coherent
+    (`Maschine.eineTabelle_akzeptiert`, `Maschine.eineTabelle_kohaerent`). -/
 
 /-- Satisfiability of the table checker: line and coherence hold jointly. -/
 theorem domaenenTabellen_erfuellbar :
     ∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = true ∧ tabKohaerent tab :=
   ⟨eineTabelle, eineTabelle_akzeptiert, eineTabelle_kohaerent⟩
 
-/-- The line refuses the empty-domain table. -/
-theorem leereTabelle_verweigert : pruefeDomaenenTab leereTabelle = false := rfl
-
-/-- Non-triviality of the table checker: it accepts and it refuses. -/
+/-- Non-triviality of the table checker: it accepts and it refuses
+    (`Maschine.leereTabelle_verweigert` for the refusal leg). -/
 theorem domaenenTabellen_nichtTrivial :
     (∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = false) ∧
       (∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = true) :=

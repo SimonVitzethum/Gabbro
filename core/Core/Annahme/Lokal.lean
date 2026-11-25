@@ -12,8 +12,10 @@
   `stale_griff_ungueltig`
   and the refusal theorems connect M10's outside provenance to validity at commit: a handle
   that records only an earlier answer's generation never establishes validity once the commit
-  snapshot moved on. The domain isolation row (`DomaenenLokal`, MK-17): every form that can
-  stand at a head meets the per-form duty `RegelIsolation` under every domain plan.
+  snapshot moved on. The domain isolation row (`DomaenenLokal`, MK-17d): the unit's
+  declared table (`Einheit.domaenen`) passes the table line, and every form that can
+  stand at a head meets the per-form duty `RegelIsolation` under the unit's own table
+  (`tabellePlan E.domaenen).
 -/
 module
 
@@ -180,6 +182,15 @@ theorem pruefeDomaenen_korrekt (plan : DomaenenPlan) :
 def DomaenenPlan.erlaubt (plan : DomaenenPlan) (von nach : Domaene) : Prop :=
   von = nach ∨ (von, nach) ∈ plan.kanaele
 
+/-- **The unit's own table as a function-based plan** (MK-17d): the checker row decides
+    the finite declaration, so every duty is stated over this embedding. -/
+def tabellePlan (tab : DomaenenTabelle) : DomaenenPlan where
+  domaenen := tab.domaenen
+  kontextDomaene := tabKontext tab
+  objektDomaene := tabObjekt tab
+  geraetDomaene := tabGeraet tab
+  kanaele := tab.kanaele
+
 /-- The cell lies in a foreign domain with no channel from the acting context. -/
 def FremdeZelle (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (plan : DomaenenPlan) (c : Kontext) (x : Ort) : Prop :=
@@ -212,14 +223,18 @@ def RegelIsolation [DecidableEq L]
     FuehrtSchrittAus E.einrichtung t c s u p spur s' →
     SpurRespektiert E plan c spur
 
-/-- **Isolation duty of a unit** (MK-17 checker row): every form that can stand at the head
-    of a context meets the per-form duty under every domain plan. The head gate is the
-    honest scope: the rule table covers every form of the type, but only heads ever step,
-    so only heads owe the duty. -/
+/-- **Isolation duty of a unit** (MK-17d checker row): the unit's declared table passes
+    the table line, and every form that can stand at the head of a context meets the
+    per-form duty under the unit's own table. The head gate is the honest scope: the rule
+    table covers every form of the type, but only heads ever step, so only heads owe the
+    duty. Binding the row to the declared table replaces the MK-17b universal plan
+    quantification, under which no accepted unit could record a question or a memory
+    access (see `DomaeneBeweise/Vakuum.lean` for the refuted formulation). -/
 def DomaenenLokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
     Prop :=
-  ∀ (plan : DomaenenPlan) (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (i : ι),
-    E.system.kopf s c = some i → RegelIsolation E plan i
+  pruefeDomaenenTab E.domaenen = true ∧
+    ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (i : ι),
+      E.system.kopf s c = some i → RegelIsolation E (tabellePlan E.domaenen) i
 
 /-- The empty recorded cut respects every domain plan: no memory access, no question. -/
 theorem spurRespektiert_leer [DecidableEq L]
@@ -228,23 +243,25 @@ theorem spurRespektiert_leer [DecidableEq L]
     SpurRespektiert E plan c ⟨[], []⟩ := by
   refine ⟨fun _ _ h => (List.not_mem_nil h).elim, fun _ h => (List.not_mem_nil h).elim⟩
 
-/-- A unit that never reports a head meets the isolation row (the
-    `abschnittWartefrei_ohne_blockade` pattern; applied `noConfusion` keeps the
-    acceptance closure free of a local matcher). -/
+/-- A unit that never reports a head meets the isolation row once its declared table
+    passes the line (the `abschnittWartefrei_ohne_blockade` pattern; applied `noConfusion`
+    keeps the acceptance closure free of a local matcher). -/
 theorem domaenenLokal_ohne_kopf [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (linie : pruefeDomaenenTab E.domaenen = true)
     (nie : ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext),
       E.system.kopf s c = none) :
     DomaenenLokal E := by
-  intro plan s c i hkopf
+  refine ⟨linie, fun s c i hkopf => ?_⟩
   exact False.elim (Option.some_ne_none i (hkopf.symm.trans (nie s c)))
 
 /-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
     flow, stack/memory bounds, wait-free lock sections and domain isolation at source
     initialisation and at each form. The bounds row is third from last, the section row
     second from last and the isolation row last, so units with open bounds are accepted
-    exactly as before. The isolation row (MK-17, meaning change) constrains the recorded
-    implementation steps: every form that can stand at a head respects every domain plan. -/
+    exactly as before. The isolation row (MK-17d, meaning change) constrains the recorded
+    implementation steps: the declared table passes the line, and every form that can
+    stand at a head respects the unit's own table. -/
 def Lokal [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) : Prop :=
   KatalogWohlgeformt E.katalog ∧ (∀ i, RegelLokal E i) ∧ AussenLokal E ∧
     Beobachtung.FlussLokal E ∧ SchrankenLokal E ∧ AbschnittWartefrei E ∧ DomaenenLokal E

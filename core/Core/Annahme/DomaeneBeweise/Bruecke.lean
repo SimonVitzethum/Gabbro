@@ -23,15 +23,15 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
-/-- **The rule-to-run bridge**: if the checker decides the isolation duty of every head form,
-    every recorded context cut of an admitted run respects the domains. The cut is inverted
+/-- **The rule-to-run bridge** (MK-17d): if the checker decides the isolation duty of
+    every head form under the unit's own table, every recorded context cut of an admitted
+    run respects that table. The cut is inverted
     once: `Takt.schritt` gives a `Lauffolge`, whose single constructor contains the machine
     `ImplSchritt`; its context constructor contains the rule of the form at the head, and the
     row supplies the duty for exactly that head form. -/
 theorem regelIsolation_laufisolation [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    (plan : DomaenenPlan)
-    (reihe : DomaenenLokal E) : LaufIsolation E plan := by
+    (reihe : DomaenenLokal E) : LaufIsolation E (tabellePlan E.domaenen) := by
   intro h ρ lauf t w spur hspur c wahl hwahl
   have recorded := ρ.zeit.takt t
   rw [hspur] at recorded
@@ -47,21 +47,19 @@ theorem regelIsolation_laufisolation [DecidableEq L]
       cases impl with
       | kontext _ _ regel aus =>
         obtain ⟨i, hkopf, hp⟩ := regel
-        exact reihe plan _ _ _ hkopf t c _ _ _ wahl _ spur hp aus
+        exact reihe.2 _ _ _ hkopf t c _ _ _ wahl _ spur hp aus
 
-/-- The isolation conclusion holds once the checker row is added to the premise bundle; the
-    other three premises are carried through unused, exactly as in `IsolationAussage`. -/
+/-- The isolation conclusion holds once the checker accepts the unit: acceptance carries
+    the row over the unit's own table, and the bridge turns it into run isolation. -/
 theorem isolation_aus_regel [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
-    (plan : DomaenenPlan)
-    (_ : plan.wohlgeformt) (_ : Akzeptiert E) (_ : DomaenenKohaerenz E plan)
-    (reihe : DomaenenLokal E) : LaufIsolation E plan :=
-  regelIsolation_laufisolation E plan reihe
+    (hakk : Akzeptiert E) : LaufIsolation E (tabellePlan E.domaenen) :=
+  regelIsolation_laufisolation E (akzeptiert_domaenen E hakk)
 
-/-- **The core statement over elaborated units**: acceptance carries the checker row, and the
-    bridge turns the row into run isolation for every well-formed coherent plan. -/
+/-- **The core statement over elaborated units**: acceptance carries the checker row over
+    the elaborated unit's own table, and the bridge turns the row into run isolation. -/
 theorem isolation_elaboriert (P : Katalog.Plattform) : IsolationAussage P := by
-  intro t plan hwohl hakk hkoh
-  exact regelIsolation_laufisolation _ plan (akzeptiert_domaenen hakk)
+  intro t hakk
+  exact isolation_aus_regel _ hakk
 
 end Gabbro.Core.Annahme

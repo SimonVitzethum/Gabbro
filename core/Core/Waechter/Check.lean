@@ -77,6 +77,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.FremdeFrage,
     `Gabbro.Core.Annahme.SpurRespektiert,
     `Gabbro.Core.Annahme.RegelIsolation,
+    `Gabbro.Core.Annahme.tabellePlan,
     `Gabbro.Core.Annahme.DomaenenLokal,
     `Gabbro.Core.Annahme.spurRespektiert_leer,
     `Gabbro.Core.Annahme.domaenenLokal_ohne_kopf,
