@@ -44,9 +44,13 @@ def textIndexUnit : Ast.Unit :=
   let value : Expr [] (.int 0 255) := Expr.textIndex (Expr.textLiteral []) (Expr.lit 0)
   ⟨[⟨indexName, .int 0 255, false, true⟩],
     .step (.constant indexName indexName_ordinary written
-      (by norm_num [WrittenType.valid, WrittenType.storage]) value
-      (by simp [Expr.static, value])
-      (by norm_num [Fits, WrittenType.type, WrittenType.storage])) .done⟩
+      (by
+        change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
+        exact ⟨by decide, by decide, by decide, by decide, by decide⟩) value
+      (by dsimp [value, Expr.static]; exact ⟨trivial, trivial⟩)
+      (by
+        change (0 : Int) ≤ 0 ∧ (255 : Int) ≤ 255
+        exact ⟨by decide, by decide⟩)) .done⟩
 
 /-- The elaborated code: two setup instructions, the guarded index, the binding, the entry and the end. -/
 theorem textIndexUnit_code :
