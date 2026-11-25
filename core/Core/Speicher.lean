@@ -16,6 +16,8 @@ public import Core.Speicher.Praefix
 public import Core.Speicher.Trennung
 public import Core.Speicher.Litmus.Sb
 public import Core.Speicher.Litmus.Katalog
+public import Core.Speicher.Litmus.ZweiPlusZweiW
+public import Core.Speicher.Litmus.Kohaerenz
 public import Core.Speicher.Erfuellbar
 public import Core.Speicher.Einbettung
 public import Core.Speicher.Graphmaschine
