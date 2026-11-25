@@ -229,7 +229,6 @@ theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.
 theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by
   exact Fragment.akzeptiert_ohne_bedarf modulDef.fragment _ modulDef_klauseln modulDef_rein
     (fun b present frame => modulDef_guard b present frame)
-    (fun b present frame => modulDef_guard b present frame)
 
 /-- Two modules with the same name: the link check refuses, although each part
     alone is accepted. The duplicate name is one of the refused incompatibilities. -/

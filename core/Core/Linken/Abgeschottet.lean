@@ -88,7 +88,7 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
       obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute b.klasse_privat
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer rfl rfl rfl
+  · exact schrankenLokal_leer (E := (verknuepfteFragmente plan).einheit plan.plattform) rfl rfl rfl
   · intro run conforms
     change (∀ pred ∈ (verknuepfteFragmente plan).klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (verknuepfteFragmente plan).klauseln.invariant, _) ∧
