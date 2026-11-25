@@ -397,7 +397,8 @@ theorem regionNI : RegionNIAussage := by
                       exact stat₁
                   have step₂ : ImplSchritt (unit op).einrichtung (unit op).system (unit op).katalog
                       ρ₂.hw t v₂ (.kontext c wahl, ⟨[], []⟩) (transfer₂.apply c v₂) := by
-                    refine .kontext crash₂ bereit₂ ?_ ?_
+                    refine .kontext (plan := Ast.LowLevel.plan) (u := transfer₂.apply c v₂)
+                      crash₂ bereit₂ ?_ ?_
                     · refine ⟨op, kopf₂, ?_⟩
                       change op.impl c v₂ wahl [Ast.LowLevel.plan] (transfer₂.apply c v₂)
                       simp only [Instruction.impl, eval₂]
