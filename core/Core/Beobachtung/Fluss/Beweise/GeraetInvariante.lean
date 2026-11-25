@@ -26,9 +26,9 @@ def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Pr
   (∀ c, c ≠ entryContext → (s.lokal c).pending = none ∧ s.verbraucht c = 0 ∧ s.verworfen c = 0) ∧
     (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
     (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
-    (∀ i (h₁ : i < s.antworten.length) (h₂ : i < s.fragen.length),
-      (s.antworten.get ⟨i, h₁⟩).zu (s.fragen.get ⟨i, h₂⟩)) ∧
-    (∀ i (h : i < s.fragen.length), (s.fragen.get ⟨i, h⟩).questionInstance = i) ∧
+    List.Forall₂ (fun a q => a.zu q) s.antworten (s.fragen.take s.antworten.length) ∧
+    List.map (fun q : FrageEreignis => q.questionInstance) s.fragen =
+      List.range s.fragen.length ∧
     (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
       s.epoche = 0 ∧ (∀ c, s.verworfen c = 0) ∧
       ((s.lokal entryContext).pending = none →
@@ -60,10 +60,8 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
       cases hq
     · intro a ha
       cases ha
-    · intro i h₁ _
-      exact absurd h₁ (Nat.not_lt_zero _)
-    · intro i h
-      exact absurd h (Nat.not_lt_zero _)
+    · exact List.Forall₂.nil
+    · rfl
     · intro _
       refine ⟨rfl, fun _ => rfl, ?_, ?_⟩
       · intro _
