@@ -194,6 +194,17 @@ theorem packAddSucc (s : Nat) : (Ganzzahl.pack ⟨_, _,
     Arith.auswerten .add (Zahl.literal (s : Int)) (Zahl.literal ((1 : Nat) : Int))⟩) = natVal (s + 1) := by
   rfl
 
+/-- A scratch slot at or above the base differs from any user slot below. -/
+theorem scratchNeAus {frei aus s : Nat} (hle : frei ≤ s) (haus : aus < frei) : s ≠ aus :=
+  Ne.symm (Nat.ne_of_lt (Nat.lt_of_lt_of_le haus hle))
+
+/-- Reading back an exact integer slot yields its bounds and value. -/
+theorem zahlOfNat (t : Rahmen) (s N : Nat) (h : t.temp s = some (natVal N)) :
+    t.zahl s = some ⟨((N : Nat) : Int), ((N : Nat) : Int), Zahl.literal ((N : Nat) : Int)⟩ := by
+  show ((t.temp s).bind alsGanzzahl) = _
+  rw [h]
+  rfl
+
 /-- Below the root, the successor square still fits into the input. -/
 theorem weiterUnter (s n : Nat) (h : s < Nat.sqrt n) : (s + 1) * (s + 1) ≤ n := by
   have hle : s + 1 ≤ Nat.sqrt n := by omega
