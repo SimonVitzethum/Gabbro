@@ -12,7 +12,6 @@ namespace Gabbro.Core.Beobachtung
 open Katalog Maschine
 open Gabbro.Core.Ast.LowLevel.Device
 open Gabbro.Core.Ast
-open Gabbro.Core.Ast.LowLevel (entryContext)
 
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
 variable {d : Denotation k scope}
