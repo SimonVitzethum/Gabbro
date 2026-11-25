@@ -9,14 +9,18 @@
   * the four safety legs: CONDITIONAL on `(fragment .unit t).Rein` — the proof
     (`sicherheitAkzeptiert`) goes through `fragment_rein`, i.e. it covers only
     frame-only fragments. A slice unit that uses `lade`/`speichere` (M1) is outside
-    that proof; its safety needs the open `ZugriffBefehlAussage` duties. GAP S.
+    that proof; its safety needs the access duties (`ZugriffBestimmtAussage` and
+    `ZugriffKomponierbarAussage`, proved individually as `zugriffBestimmt` and
+    `zugriffKomponierbar`, but not yet assembled under `ZugriffBefehlAussage` nor wired
+    into the fragment leg proofs). GAP S.
   * noninterference: CONDITIONAL on `Rein` for the same reason (`niAkzeptiert` goes
     through `fragment_nichtinterferent`, which needs `Rein`; the reading classes are
     excluded from the step-level flow rule, MK-13). GAP N.
   * bounds: HYPOTHESIS `SchrankenAkzeptiertAussage P` — the leg is open (M9). GAP B.
   * progress (no hang + class progress): HYPOTHESIS `FortschrittAkzeptiertAussage` —
-    the scheduler premise `SchedulerFortschrittVoraussetzung` is open, and the
-    composability leg needs `Rein` (else the open `ZugriffKomponierbarAussage`). GAP F.
+    the     scheduler premise `SchedulerFortschrittVoraussetzung` is open, and the
+    composability leg needs `Rein` (else `ZugriffKomponierbarAussage` — now proved as
+    `zugriffKomponierbar`, but not yet wired into `einheit_fortschrittsfelder`). GAP F.
   * the wait-free section row: PROVED from acceptance (`Akzeptiert` contains
     `AbschnittWartefrei`); vacuous in content while no lock instruction exists (M2).
   * the class duties and the memory/atomic kernel statements: PROVED,
