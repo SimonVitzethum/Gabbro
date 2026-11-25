@@ -133,7 +133,9 @@ theorem zugriffSpeicherBeob_gleich
     (h : es₁.map Prod.snd = es₂.map Prod.snd) :
     es₁.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) =
       es₂.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) := by
-  have h' := congrArg (List.filterMap (speicherBeob (Grund := Grund) (Form := Form) label)) h
+  have h' := congrArg
+    (List.filterMap (fun l => speicherBeob (Grund := Grund) (Form := Form) label
+      ((Maschine.SpeicherAkteur.aussen : Maschine.SpeicherAkteur Ort), l))) h
   simpa only [List.filterMap_map, Function.comp_apply, speicherBeob] using h'
 
 end Gabbro.Core.Beobachtung
