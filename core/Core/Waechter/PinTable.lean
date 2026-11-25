@@ -249,7 +249,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Fortschritt.LockFrei, 9172884381304774204),
   (`Gabbro.Core.Fortschritt.WaitFrei, 2654283987613506748),
   (`Gabbro.Core.Fortschritt.KlassenFortschritt, 2499149126081835724),
-  (`Gabbro.Core.Fortschritt.SperrFreigabeAussage, 7881478150563076487),
+  (`Gabbro.Core.Fortschritt.SperrFreigabeAussage, 9674122360040451057),
   (`Gabbro.Core.Fortschritt.SperrWarteFairAussage, 7126174201875074230),
   (`Gabbro.Core.Fortschritt.StarkeWarteLaufAussage, 1015580165785461740),
   (`Gabbro.Core.Ast.LowLevel.CpuCapsAbgelehntAussage, 15393606894895255199),

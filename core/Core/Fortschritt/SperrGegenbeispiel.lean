@@ -269,7 +269,7 @@ theorem spur_w_even {t : Nat} (h : t % 2 = 0) : spur_w t = none := by
   simp only [spur_w, if_pos h]
 
 theorem spur_w_odd {t : Nat} (h : t % 2 = 1) : spur_w t = some posLabel := by
-  have hn : ¬ t % 2 = 0 := by omega
+  have hn : ¬ t % 2 = 0 := fun h0 => (by decide : (0 : Nat) ≠ 1) (h0.symm.trans h)
   simp only [spur_w, if_neg hn]
 
 /-- The hardware never raises an interrupt. -/
@@ -298,14 +298,14 @@ theorem keinSchritt_w {t : Nat} (h : t % 2 = 0) :
         obtain rfl := Option.some.inj hdisp
         have hHA : stuckHalter = A := himpl.1
         have h20 : (2 : Nat) = 0 := Kontext.faden.inj hHA
-        exact absurd h20 (by decide)
+        exact absurd h20 (Nat.succ_ne_zero 1)
       | succ k =>
         cases k with
         | zero =>
           have hd : (sW0.kerne 1).laeuft = some A := rfl
           rw [hd] at hdisp
           have h1 : t % 2 = 1 := Option.some.inj hopp
-          omega
+          exact (by decide : (0 : Nat) ≠ 1) (h.symm.trans h1)
         | succ n =>
           have hd : (sW0.kerne (Nat.succ (Nat.succ n))).laeuft = none := rfl
           rw [hd] at hdisp
@@ -460,7 +460,7 @@ theorem ew_abschnitt_verletzt : ¬ AbschnittWartefrei E_wait := by
   have h5 : E_wait.schranken.halten () = some 5 := rfl
   have hne : E_wait.schranken.halten () ≠ none := by
     rw [h5]
-    decide
+    exact Option.some_ne_none 5
   have hown : (sW0.sperren ()).besitzer = some stuckHalter := rfl
   have hb : wBlockiert sW0 stuckHalter (.warten ()) := ⟨rfl, rfl⟩
   have hbl := hsec sW0 stuckHalter () hne hown (.warten ()) hb
