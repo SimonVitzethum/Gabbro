@@ -194,13 +194,11 @@ theorem verdraengung_ohne_meldung (hw : HwLauf) (leer : ∀ i, (hw.angebot i).in
             have hev := Option.some.inj (label.symm.trans hspur)
             have hfst := congrArg Prod.fst hev
             simp at hfst
-          | interrupt _ h =>
-            have hev := Option.some.inj (label.symm.trans hspur)
-            rw [Prod.mk.injEq] at hev
-            obtain ⟨rfl, rfl⟩ := hev
+          | @interrupt _ _ id_ev _ h =>
             obtain ⟨_, _, _, _, _, haus, _, _, _, _, _⟩ := h
             have hang := haus.2.2.1
-            rw [hρ, leer id.1] at hang
+            have hnil := leer id_ev.1
+            rw [hρ, hnil] at hang
             simp only [List.getElem?_nil, reduceCtorEq] at hang
           | absturz _ =>
             have hev := Option.some.inj (label.symm.trans hspur)
