@@ -69,16 +69,8 @@ theorem einheitVon_kein_wiedereinsatz (P : Katalog.Plattform) (t : Ast.Unit)
           rw [live] at dormant
           cases dormant
         have skerne : zplus.kerne =
-            (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne := by
-          have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
-          have hseq : zplus =
-              ({Maschine.Zustandseintritt zminus k' id_ev c' nmi with
-                graph := zplus.graph} : Ast.Semantik.Zustand) := hstate
-          have hkerne : ({Maschine.Zustandseintritt zminus k' id_ev c' nmi with
-              graph := zplus.graph} : Ast.Semantik.Zustand).kerne =
-              (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne := rfl
-          rw [hseq, hkerne]
-          exact h
+            (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne :=
+          congrArg _ hstate
         have einkern : ∀ k, (Maschine.Zustandseintritt zminus k' id_ev c' nmi).kerne k =
             if k = k' then (zminus.kerne k').unterbrechen c' nmi else zminus.kerne k := by
           intro k
@@ -293,19 +285,11 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
                 · subst heq
                   have hspur := label
                   exact (einheitVon_keine_verdraengung P t lauf valid matched
-                    opened crashfrei ret (a + d) hm k₀ z hz ihz hs'
+                    opened crashfrei ret (a + d) hm k₀ z hzn ihz hs'
                     hspur k₀ rfl irq c' nmi dormant hstate).elim
                 · have skerne : s'.kerne =
-                      (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
-                    have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
-                    have hkerne : ({Maschine.Zustandseintritt z k' id_ev c' nmi with
-                        graph := s'.graph} : Ast.Semantik.Zustand).kerne =
-                        (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := rfl
-                    have hseq : s' =
-                        ({Maschine.Zustandseintritt z k' id_ev c' nmi with
-                          graph := s'.graph} : Ast.Semantik.Zustand) := hstate
-                    rw [hseq, hkerne]
-                    exact h
+                      (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne :=
+                    congrArg _ hstate
                   have einkern : ∀ k, (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne k =
                       if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                     intro k
@@ -335,8 +319,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
           have ihz : (z.kerne k₀).laeuft = some c := ih z hzn
           cases hsuc : ρ.zeit.zustand ((a + d) + 1) with
           | none =>
-            rw [hsuc] at eq
-            have hcon := hs'.symm.trans eq
+            have hcon := hs'.symm.trans hsuc
             cases hcon
           | some s'' =>
             rw [hsuc] at eq
