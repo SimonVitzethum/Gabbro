@@ -52,7 +52,7 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
           rw [nach] at step
           obtain rfl := Option.some.inj atV
           cases step with
-          | schritt impl => exact impl_speicher_gut _ _ impl (ih rfl)
+          | schritt impl => exact impl_speicher_gut impl (ih rfl)
 
 /-- The register-machine invariant holds at every state of an admitted device run. -/
 theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
@@ -119,8 +119,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
             | wartet _ eq _ => cases eq
           | some s' =>
             intro atV
-            have hv : v = s' := Option.some.inj (atV.symm.trans hpost)
-            subst v
+            obtain rfl := Option.some.inj atV
             rw [hpost] at tick
             cases tick with
             | wartet label _ _ => cases label
@@ -154,7 +153,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                 | antwort _ h =>
                   obtain ⟨offered, _, _, stateEq⟩ := h
                   have hinv := ih hz
-                  have hinv' := geraete_ankunft_invariant (binding := binding) hinv offered
+                  have hinv' := geraete_ankunft_invariant (binding := d.binding) hinv offered
                   unfold GeraeteInvariantAussage at hinv' ⊢
                   rw [stateEq]
                   simpa only [Zustand.antwort] using hinv'
@@ -162,7 +161,7 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                   obtain ⟨kk, irq, cc, nmi, _, _, _, _, _, _, nextEq⟩ := h
                   have hinv := ih hz
                   rw [nextEq]
-                  exact geraete_interrupt_invariant (binding := binding) (s := s)
+                  exact geraete_interrupt_invariant (binding := d.binding) (s := s)
                     (kern := kk) (c := cc) (nmi := nmi) (graph := s'.graph) hinv
                 | absturz crash =>
                   obtain ⟨_, stateEq⟩ := AbsturzSchritt.genau crash
