@@ -69,6 +69,7 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
   have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
   have hakt : plan.aktion = .intern := by rw [planEq]; rfl
   obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
+  generalize haussen : spur.aussen = aussen at fuaus
   rw [hakt] at fuaus
   cases fuaus with
   | intern =>
@@ -149,7 +150,7 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
           refine ⟨fun c k h => ?_, fun c k₁ k₂ h₁ h₂ => ?_⟩
           · rw [kerneEq] at h
             have hlive := ihlive c k h
-            rw [← statusEq]
+            rw [statusEq]
             exact hlive
           · rw [kerneEq] at h₁ h₂
             exact ihsingle c k₁ k₂ h₁ h₂
@@ -159,7 +160,7 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
           refine ⟨fun c k h => ?_, fun c k₁ k₂ h₁ h₂ => ?_⟩
           · rw [kerneEq] at h
             have hlive := ihlive c k h
-            rw [← statusEq]
+            rw [statusEq]
             exact hlive
           · rw [kerneEq] at h₁ h₂
             exact ihsingle c k₁ k₂ h₁ h₂
@@ -180,12 +181,12 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
             · show Function.update _ _ _ _ = _
               rw [Function.update_of_ne heq, if_neg heq]
           have statusEq : ∀ d, (η.zeit.zustand (n + 1)).status d =
-              if d = c' then .laeuft else (η.zeit.zustand n).status d := by
+              (Function.update (η.zeit.zustand n).status c' .laeuft) d := by
             intro d
             have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.status d) hstate
             exact h
           have entered : (η.zeit.zustand (n + 1)).status c' = .laeuft := by
-            rw [statusEq, if_pos rfl]
+            rw [statusEq, Function.update_self]
           have fresh : ∀ k, (((η.zeit.zustand n).kerne k).laeuft = some c') → False := by
             intro k hk
             have hlive := ihlive c' k hk
@@ -204,7 +205,7 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
             · rw [if_neg heq] at h
               have hlive := ihlive c k h
               have hne' : ¬ c = c' := fun hcc => fresh k (hcc ▸ h)
-              rw [statusEq, if_neg hne']
+              rw [statusEq, Function.update_of_ne hne']
               exact hlive
           · rw [skerne, einkern] at h₁ h₂
             by_cases heq₁ : k₁ = k'
@@ -232,19 +233,10 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
                 exact ihsingle c k₁ k₂ h₁ h₂
         | absturz crash =>
           obtain ⟨_, heq⟩ := crash.genau
-          have wkern : (einheitVon P t).einrichtung.wiederanlauf.kern = 0 := rfl
-          have weintritt : (einheitVon P t).einrichtung.wiederanlauf.eintritt =
-              Ast.Semantik.eintritt := rfl
           have skernew : (η.zeit.zustand (n + 1)).kerne =
               (((η.zeit.zustand n).wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
                 (Maschine.nachAbsturz (η.zeit.zustand n).persistenz)).kerne) :=
             congrArg _ heq
-          rw [wkern, weintritt] at skernew
-          have statusnew : ∀ d, (η.zeit.zustand (n + 1)).status d =
-              if d = Ast.Semantik.eintritt then .laeuft else .ruht := by
-            intro d
-            have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.status d) heq
-            exact h
           refine ⟨fun c k h => ?_, fun c k₁ k₂ h₁ h₂ => ?_⟩
           · rw [skernew] at h
             have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
@@ -254,7 +246,11 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
               rw [if_pos rfl] at hif
               have hc : c = Ast.Semantik.eintritt := (Option.some.inj hif).symm
               subst hc
-              rw [statusnew, if_pos rfl]
+              have hst : (η.zeit.zustand (n + 1)).status Ast.Semantik.eintritt = .laeuft := by
+                have h := congrArg
+                  (fun (x : Ast.Semantik.Zustand) => x.status Ast.Semantik.eintritt) heq
+                exact h
+              exact hst
             · rw [if_neg hk] at hif
               cases hif
           · rw [skernew] at h₁ h₂
@@ -277,7 +273,8 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
         · rw [eq] at h₁ h₂ ⊢
           exact ihsingle c k₁ k₂ h₁ h₂
   obtain ⟨hlive, hsingle⟩ := key tick
-  exact ⟨fun c k h => hlive c k h, fun c k₁ k₂ h₁ h₂ => hsingle c k₁ k₂ h₁ h₂
+  exact ⟨fun tick c k h => hlive tick c k h,
+    fun tick c k₁ k₂ h₁ h₂ => hsingle tick c k₁ k₂ h₁ h₂⟩
 
 /-- On an open suffix the dispatch core never changes: context steps and
     answers preserve all cores, a crash would discharge the context, and an
@@ -289,7 +286,7 @@ theorem einheitVon_dispatch_konstant (P : Katalog.Plattform) (t : Ast.Unit)
     (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η)
     {a : Nat} {c : Maschine.Kontext} {f : Ast.Semantik.Befehl}
-    (offen : Maschine.I.BleibtOffen (einheitVon P t) η c f a) :
+    (offen : Maschine.I.BleibtOffen η c f a) :
     ∃ k, ∀ t', a ≤ t' → ((η.zeit.zustand t').kerne k).laeuft = some c := by
   obtain ⟨k, hk⟩ := offen.1 a (Nat.le_refl _)
   obtain ⟨ihlive, ihsingle⟩ := einheitVon_dispatch_eindeutig P t valid matched

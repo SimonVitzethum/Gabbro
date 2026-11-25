@@ -49,7 +49,7 @@ open Gabbro.Core.Maschine
     (`einheitVon_kein_sperre`); the system-wide duty is vacuous for the
     blocking class. -/
 theorem scheduler_fuer_einheitVon : SchedulerFortschrittVoraussetzung := by
-  intro P t _akzeptiert H ρ lauf fair η valid matched environment
+  intro P t _akzeptiert H ρ lauf _fair η valid matched environment
   obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder P t
   refine ⟨(fun t c => ∃ w spur, ρ.zeit.spur t = some (.kontext c w, spur)),
     fertig, regeln, komponierbar, eindeutig, ?_, ?_, ?_, ?_⟩
@@ -191,7 +191,7 @@ theorem kontextFairness_nichtTrivial :
     ∃ (E : Maschine.Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit)
       (ρ : Maschine.Lauf E) (η : Maschine.I.Lauf E) (c : Maschine.Kontext),
       Katalog.FairLaeufe E.katalog η.umgebung ρ.hw ∧
-      ∃ a f, Maschine.I.BleibtOffen E η c f a ∧ Maschine.I.Aktiviert E η c a ∧
+      ∃ a f, Maschine.I.BleibtOffen η c f a ∧ Maschine.I.Aktiviert η c a ∧
         (∀ t, a ≤ t → ∀ w spur, η.zeit.spur t ≠ some (.kontext c w, spur)) := by
   refine ⟨Fortschritt.E_w Fortschritt.dispatch2, Fortschritt.ρAB, Fortschritt.ηAB,
     Fortschritt.B, Fortschritt.fair2, 0, (), ?_, Or.inl ?_, ?_⟩
