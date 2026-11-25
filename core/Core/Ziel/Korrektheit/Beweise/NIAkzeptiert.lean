@@ -27,6 +27,7 @@ open Gabbro.Core.Beobachtung
     hypothesis and all family and protocol duties are discharged by `FragmentNIBeweise`. -/
 theorem niAkzeptiert (P : Katalog.Plattform) : NIAkzeptiertAussage P := by
   intro t h
-  exact fragment_nichtinterferent (Ast.Semantik.fragment Ast.Category.unit t) P h
+  exact fragment_nichtinterferent (Ast.Semantik.fragment Ast.Category.unit t) P
+    (Ast.Semantik.fragment_rein Ast.Category.unit t) h
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -18,16 +18,31 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
 
-/-- **`I.Bestimmt` for the forms of every context.** -/
-theorem system_bestimmt (code : List Befehl) : Ideal.IBestimmt (system code) :=
-  Ideal.bestimmt_aus_regeln (system code) Befehl.bestimmt
+/-- The head of a context is an instruction of the code. -/
+theorem kopf_mem {code : List Befehl} {s : Zustand} {c : Kontext} {b : Befehl}
+    (head : kopf code s c = some b) : b ∈ code := by
+  unfold kopf at head
+  repeat' split at head
+  all_goals first | exact List.mem_of_getElem? head | cases head
 
-/-- **`I.Fortschritt` for the forms of every context.** A context without a head is finished; a
+/-- **`I.Bestimmt` for the frame-only forms of every context.** An access instruction chooses the value it
+    reads (the memory model's choice, `Speicherwahl`), so the determinacy of a system with access
+    instructions is the one of `ZugriffBestimmtAussage` (up to the value read), not this one. -/
+theorem system_bestimmt (code : List Befehl) (privat : ∀ b ∈ code, b.Privat) :
+    Ideal.IBestimmt (system code) := by
+  intro c s w es es' s1 s2 ⟨i, hi, h1⟩ ⟨j, hj, h2⟩
+  rw [hi] at hj
+  cases hj
+  exact (i.bestimmt (privat i (kopf_mem hi))) c s w es es' s1 s2 h1 h2
+
+/-- **`I.Fortschritt` for the frame-only forms of every context.** A context without a head is finished; a
     context with one has its `I` step. -/
-theorem system_fortschritt (code : List Befehl) : Ideal.IFortschritt (system code) :=
+theorem system_fortschritt (code : List Befehl) (privat : ∀ b ∈ code, b.Privat) :
+    Ideal.IFortschritt (system code) :=
   Ideal.fortschritt_aus_regeln (system code) (fun _ _ finished => finished)
-    (fun b s c _ =>
-      Or.inl ⟨(), [plan], b.nach c s, (b.ideal_privat c s () [plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩)
+    (fun b s c head =>
+      Or.inl ⟨(), [plan], b.nach c s,
+        (b.ideal_privat (privat b (kopf_mem head)) c s () [plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩)
 
 /-- A fragment with two bodies: the entry context writes the literal `1` to the temporary `0`, the
     handler `0 0 0` writes the literal `2` to the same temporary of its own frame. -/

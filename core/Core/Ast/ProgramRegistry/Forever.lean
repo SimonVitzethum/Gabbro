@@ -59,7 +59,7 @@ theorem forever_ideal (scope : Scope) (result : Option (Ty .value)) :
   · exact forever_amOrt scope result
   · intro args
     constructor
-    · exact ((foreverForm scope result).befehl args).bestimmt
+    · exact (foreverForm scope result).bestimmt args
     · intro c s w plans u
       exact Iff.rfl
 

@@ -31,7 +31,8 @@ half of the registry. The syntax proof supplies the corresponding `Surface.Rule.
    given by `Befehl.ideal` and `Befehl.impl`. For an instruction of an access class
    (`lesen`, `schreiben`, `rmw`, `sperre`, `frage`), supply its class, the operand its frame
    names (`Befehl.operand`: cell, value, lock, question) and its frame transfer
-   (`Befehl.uebertrag`), and split every generic proof that uses `Befehl.klasse_privat`.
+   (`Befehl.uebertrag`); an access instruction is a form of `Zugriffsform` (`Runtime/Atom/Form`, MK-04), and every
+   generic proof over frame-only instructions takes `Befehl.Privat`.
    Use the shared machine protocol to commit memory, synchronization and outside events.
 3. Name the linearisation point, before and after relations, local state relation and bound
    on private steps. For one atomic local step the before and after relations are empty,

@@ -129,7 +129,7 @@ theorem mutableValue_ideal : MutableValueIdealAussage := by
   intro ctx
   refine ⟨mv_amOrt ctx, ?_⟩
   intro args
-  exact ⟨((mutableValueForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  exact ⟨(mutableValueForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem mutableValue_einheit : MutableValueEinheitAussage := by
   intro ctx platform args

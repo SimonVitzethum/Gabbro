@@ -11,7 +11,7 @@ public import Core.Speicher.Relationen
 public import Core.Speicher.Konsistent
 public import Core.Speicher.DRFSC
 public import Core.Speicher.SCOrdnung
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 public import Core.Speicher.Praefix
 public import Core.Speicher.Trennung
 public import Core.Speicher.Litmus.Sb

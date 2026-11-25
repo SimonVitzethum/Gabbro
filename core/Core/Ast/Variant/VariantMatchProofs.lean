@@ -100,7 +100,7 @@ theorem variantMatch_ideal : VariantMatchIdealAussage := by
   · exact vm_amOrt ctx
   · intro args
     constructor
-    · exact ((variantMatchForm ctx).befehl args).bestimmt
+    · exact (variantMatchForm ctx).bestimmt args
     · intro c s w plans u
       rfl
 

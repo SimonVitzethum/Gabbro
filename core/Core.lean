@@ -57,6 +57,7 @@ public import Core.Beobachtung.Fluss.InterruptBeweis
 public import Core.Beobachtung.Fluss.AbsturzBeweis
 public import Core.Beobachtung.Fluss.Beweise.PauseBeweis
 public import Core.Beobachtung.Fluss.Beweise.Geraet
+public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
@@ -149,6 +150,8 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
+public import Core.Ast.Semantik.Runtime.Atom.Aussagen
+public import Core.Ast.Semantik.Runtime.Atom.Beine
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
