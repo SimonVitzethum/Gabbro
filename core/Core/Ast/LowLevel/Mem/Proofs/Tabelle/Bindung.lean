@@ -143,12 +143,15 @@ theorem gebundene_plattform_erfuellbar :
   exact ⟨s.lokal entryContext, (s.lokal entryContext).mmuSicht, rfl, hok⟩
 
 /-- **Bound hardware keeps admissible runs.** The reference environment and its fair run satisfy
-    `Hardware`/`FairLaeufe`, and the bound step on the reachable frame succeeds: the sharpening is
-    satisfiable (`Katalog.plattform_erfuellbar` still holds, now with a bound translation). -/
+    `Hardware`/`FairLaeufe`, and the bound assumption holds on the reachable memory state `s`:
+    the view is threaded off the state (`(s.lokal entryContext).mmuSicht`), and the bound step on
+    that acting frame succeeds. The sharpening is satisfiable (`Katalog.plattform_erfuellbar`
+    still holds, now with a bound translation). -/
 theorem gebundene_hardware_erfuellbar :
-    ∃ (h : Katalog.Umgebung) (run : HwLauf) (frame : MemFrame),
+    ∃ (h : Katalog.Umgebung) (run : HwLauf) (s : MemState),
       Hardware Plattform.x86_64.katalog h ∧ FairLaeufe Plattform.x86_64.katalog h run ∧
-      GebundeneUebersetzung h frame 0 0 0 .read = .ok (4096, 0) := by
+      HardwareGebunden Plattform.x86_64.katalog h s ∧
+      GebundeneUebersetzung h (s.lokal entryContext) 0 0 0 .read = .ok (4096, 0) := by
   let h : Katalog.Umgebung :=
     Umgebung.referenz Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
   let run : HwLauf :=
@@ -163,7 +166,7 @@ theorem gebundene_hardware_erfuellbar :
     gebundeneUebersetzung_eq hw (s.lokal entryContext) 0 0 0 .read
   have hziel : h.ziel = Plattform.x86_64.katalog.plattform.ziel := rfl
   rw [hziel] at hbound
-  refine ⟨h, run, s.lokal entryContext, hw, fair, ?_⟩
+  refine ⟨h, run, s, hw, fair, hardware_gebunden hw s, ?_⟩
   rw [hbound]
   exact hok
 
