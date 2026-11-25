@@ -237,13 +237,13 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
             rw [hsucc'] at step
             cases step with
             | schritt trans =>
-              have seq : s' = s := Option.some.inj (hsucc'.symm.trans hsucc)
+              have seq : s = s' := Option.some.inj (hsucc.symm.trans hsucc')
               subst seq
               have hz : ρ.zeit.zustand n = some z := hzn
               obtain ⟨ihd, ihs⟩ := ih z hz
               cases trans with
               | @kontext _ u plan _ _ _ _ _ _ aus =>
-                obtain ⟨rahmen, _, _, _, aktion, _, seq⟩ := aus
+                obtain ⟨rahmen, _, _, v, aktion, _, seq⟩ := aus
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
                 have skerne : s.kerne = v.kerne := congrArg _ seq
                 have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
