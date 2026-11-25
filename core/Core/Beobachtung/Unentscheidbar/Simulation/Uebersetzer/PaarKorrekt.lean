@@ -48,10 +48,12 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     have hpcF : (pb12w r a b aus frei).pc = (paarBerechnung aSlot bSlot aus frei).length := by
       rw [paarBerechnungLaenge]
       rfl
+    have hpcEnd' : rEnd.pc = (paarBerechnung aSlot bSlot aus frei).length := by
+      rw [hpcEnd, paarBerechnungLaenge]
     have hkEq : k = 28 := by
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 28 rEnd (pb12w r a b aus frei) hk hpcF hF hlt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 28 rEnd (pb12w r a b aus frei) hk hpcEnd' hF hlt
       · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 28 k (pb12w r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb12w r a b aus frei := by
       subst k
@@ -65,10 +67,12 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     have hpcF : (pb14f r a b aus frei).pc = (paarBerechnung aSlot bSlot aus frei).length := by
       rw [paarBerechnungLaenge]
       rfl
+    have hpcEnd' : rEnd.pc = (paarBerechnung aSlot bSlot aus frei).length := by
+      rw [hpcEnd, paarBerechnungLaenge]
     have hkEq : k = 30 := by
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 30 rEnd (pb14f r a b aus frei) hk hpcF hF hlt
+      · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r k 30 rEnd (pb14f r a b aus frei) hk hpcEnd' hF hlt
       · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 30 k (pb14f r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb14f r a b aus frei := by
       subst k
