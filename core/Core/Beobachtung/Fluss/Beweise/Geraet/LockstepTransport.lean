@@ -351,7 +351,7 @@ theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
       unfold AntwortSicht
       simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁, hantworten₂,
         hverbraucht₁, hverbraucht₂, hverworfen₁, hverworfen₂, hantworten, hverbraucht,
-        hverworfen, Function.update_same]
+        hverworfen, Function.update_self]
   refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
   · rw [spurEq₁, spurEq₂]
   · exact ⟨by rw [hfragen₁, hfragen₂, hfragen], by rw [hverlauf₁, hverlauf₂, hverlauf],
