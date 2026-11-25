@@ -119,8 +119,10 @@ theorem FuehrtSchrittAus.sperren_erhalt {L Ort Wert Raum Lok Grund Bedingung : T
     (h : FuehrtSchrittAus e t c s u plan spur nach)
     (hne : ∀ (l : L) (b : SperrAktion), plan.aktion ≠ .sperre l b) (l : L) :
     (nach.sperren l).besitzer = (s.sperren l).besitzer := by
-  obtain ⟨rahmen, _, _, v, fuehrt, _, rfl⟩ := h
+  obtain ⟨rahmen, _, _, v, fuehrt, _, heq⟩ := h
   have hv : v.sperren = u.sperren := FuehrtAus.sperren_erhalt fuehrt hne
+  rw [heq]
+  show (v.sperren l).besitzer = (s.sperren l).besitzer
   rw [hv, rahmen.sperren]
 
 end Gabbro.Core.Ast.Semantik
