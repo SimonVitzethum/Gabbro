@@ -95,7 +95,10 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.Recovery
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Lockstep
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInvariant
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturz
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
+public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
@@ -183,6 +186,13 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Divergenz
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarFrame
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarSegmente
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarSegmenteF
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarLauf
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarKorrekt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.Hilfen
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.BlockPair
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -192,6 +202,7 @@ public import Core.Beobachtung.SchrankenBeweise.RessourcenEinheit
 public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
 public import Core.Beobachtung.SchrankenBeweise.Bindung
+public import Core.Beobachtung.SchrankenBeweise.BindungKosten
 public import Core.Beobachtung.SchrankenBeweise.BindungZeitDurchlauf
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
@@ -204,6 +215,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Einbettung
 public import Core.Ast.Semantik.Runtime.Klasse.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
@@ -211,6 +223,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NISichtbar
 public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Kosten
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
@@ -256,6 +269,7 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Zugriff
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragment
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
