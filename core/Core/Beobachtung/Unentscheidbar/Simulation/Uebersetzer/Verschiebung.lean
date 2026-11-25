@@ -67,7 +67,7 @@ def VerschiebbaresProgramm (blk : List Befehl) : Prop :=
 theorem getNachPrefix (pre mid : List Befehl) (j : Nat) (hj : j < mid.length) :
     (pre ++ mid)[pre.length + j]? = mid[j]? := by
   induction pre with
-  | nil => simp
+  | nil => simp only [List.nil_append, List.length_nil, Nat.zero_add]
   | cons x xs ih =>
     simp only [List.length_cons, List.cons_append, List.getElem?_cons_succ]
     rw [show List.length xs + 1 + j = (List.length xs + j) + 1 by omega]
