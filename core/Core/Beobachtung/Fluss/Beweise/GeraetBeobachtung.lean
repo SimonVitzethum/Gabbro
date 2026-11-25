@@ -25,8 +25,9 @@ theorem geraete_consume_still {k : Katalog} {binding : Binding k} {access : Regi
     {spur : SchrittSpur Nat UInt8} {s' : State}
     (aus : FuehrtSchrittAus (Gabbro.Core.Ast.LowLevel.Device.unit k binding
       (Rule.machine binding access required target)).einrichtung t c s
-      (setFrame s c { s.lokal c with pending := none,
-        last := some (access.result answer.reply),
+      (setFrame s c { s.lokal c with
+        pending := none
+        last := some (access.result answer.reply)
         phases := match access.result answer.reply, target with
           | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
           | _, _ => (s.lokal c).phases })
