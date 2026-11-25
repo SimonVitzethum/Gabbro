@@ -188,6 +188,69 @@ theorem lauf_mit_hw {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   refine ⟨⟨s, hw, fairerZeit E hw (E.laden s (h.lade E.bild))⟩,
     ⟨hardware, konform, start, fairerZeit_start E hw _, fairer_zeit_fair E hw _ s⟩, rfl, rfl⟩
 
+/-- Shifted scheduler fairness for a fair tail: the same duties as `SchedulerFair`,
+    read at shifted hardware ticks. Spliced runs inherit it through `voran`. -/
+def ShiftFair (hw : HwLauf) (ab : Nat) (s : AussenStart)
+    (tail : Zeitlauf (fun t => Lauffolge E hw (ab + t))) : Prop :=
+  ∀ (a : Nat) (c : Kontext),
+    (∀ t, a ≤ t → ∃ z, tail.zustand t = some z ∧
+      (∃ k, (z.kerne k).laeuft = some c) ∧ z.status c = .laeuft ∧
+      (hw.angebot (ab + t)).crash = false ∧
+      ∃ w plan u spur s', E.system.ImplSchritt c z w [plan] u ∧
+        FuehrtSchrittAus E.einrichtung (ab + t) c z u plan spur s') →
+    (∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ k, hw.gelegenheit (ab + t) k ∧
+      ∃ z, tail.zustand t = some z ∧ (z.kerne k).laeuft = some c) →
+    ∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ w spur, tail.spur t = some (.kontext c w, spur)
+
+noncomputable def fairerFolgeAb (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
+    (ab : Nat) :
+    Nat → Option (Zustand L Ort Wert Raum Lok Grund) ×
+      Option (SchrittWahl Wahl × SchrittSpur Ort Wert)
+  | 0 => init
+  | t + 1 => fairerSchritt E hw (ab + t) (fairerFolgeAb hw init ab t).1
+
+noncomputable def fairerZeitAb (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
+    (ab : Nat) : Zeitlauf (fun t => Lauffolge E hw (ab + t)) where
+  zustand := fun t => (fairerFolgeAb E hw init ab t).1
+  spur := fun t => (fairerFolgeAb E hw init ab (t + 1)).2
+  takt := fun t => fairerSchritt_takt E hw (ab + t) (fairerFolgeAb E hw init ab t).1
+
+theorem fairerZeitAb_start (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
+    (ab : Nat) : (fairerZeitAb E hw init ab).zustand 0 = init := rfl
+
+/-- The shifted fair schedule serves every continuously ready context infinitely often. -/
+theorem fairerZeitAb_fair (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
+    (ab : Nat) (s : AussenStart) : ShiftFair E hw ab s (fairerZeitAb E hw init ab) := by
+  intro a c bereit oppd n hn
+  obtain ⟨t, ht, k, gelegenheit, z, eq, dispatch⟩ := oppd (max n a) (Nat.le_max_right _ _)
+  have hstate : (fairerFolgeAb E hw init ab t).1 = some z := eq
+  obtain ⟨z', eq', _, live, normal, w, plan, u, spur, s', regel, aus⟩ :=
+    bereit t ((Nat.le_max_right n a).trans ht)
+  have same : z' = z := Option.some.inj (eq'.symm.trans hstate)
+  subst z'
+  have schritt : Lauffolge E hw (ab + t) (some z) (.kontext c w, spur) s' :=
+    .schritt (.kontext normal ⟨k, gelegenheit, dispatch, live⟩ regel aus)
+  have bevorzugt : BevorzugtSchritt hw (ab + t) (some z) (.kontext c w, spur) :=
+    ⟨c, w, spur, k, rfl, gelegenheit, z, rfl, dispatch⟩
+  have wahl : ∃ ev next, Lauffolge E hw (ab + t) (some z) ev next ∧
+      BevorzugtSchritt hw (ab + t) (some z) ev :=
+    ⟨_, _, schritt, bevorzugt⟩
+  have spurEq : (fairerZeitAb E hw init ab).spur t = some (Classical.choose wahl) := by
+    show (fairerSchritt E hw (ab + t) (fairerFolgeAb E hw init ab t).1).2 = _
+    rw [hstate]
+    unfold fairerSchritt
+    classical
+    rw [dif_pos wahl]
+  have spec := Classical.choose_spec (Classical.choose_spec wahl)
+  obtain ⟨c', w', spur', k', hev, geleg', z0, hseq, dispatch'⟩ := spec.2
+  have kk : k' = k := Option.some.inj (geleg'.symm.trans gelegenheit)
+  subst kk
+  have z0eq : z0 = z := Option.some.inj hseq.symm
+  subst z0
+  have gleich : c' = c := Option.some.inj (dispatch'.symm.trans dispatch)
+  subst gleich
+  exact ⟨t, (Nat.le_max_left n a).trans ht, w', spur', hev ▸ spurEq⟩
+
 /-- The fair-history lift with the exact start and hardware projection of the seventh conjunct. -/
 theorem fairer_lauf {h : Umgebung} {s : AussenStart} {hw : HwLauf}
     (start : E.ZulStart h s) (fair : FairLaeufe E.katalog h hw) :
