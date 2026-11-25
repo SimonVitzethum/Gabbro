@@ -68,21 +68,26 @@ structure Fadenoperand where
   ergebnis : Int
 
 /-- The operand of a step that names no thread (every other class). -/
-def Fadenoperand.keiner : Fadenoperand := ⟨true, 0, 0, Rahmen.start [], [], 0⟩
+def Fadenoperand.keiner : Fadenoperand :=
+  ⟨true, 0, 0, { pc := 0, temp := fun _slot => none, lokale := [], rueckgabe := none }, [], 0⟩
 
 /-- **The lifecycle operand of an instruction at a frame.** -/
 def Fadenform.operand (z : Fadenform) (r : Rahmen) : Fadenoperand :=
   match z with
-  | .starte _ eintritt _ uebergabe =>
+  | .starte ziel eintritt typ uebergabe =>
     { Fadenoperand.keiner with
       gueltig := uebergabe.all fun slot => (r.regionsgriff slot).isSome,
       anfang := r.kindRahmen eintritt,
       griffe := uebergabe.filterMap r.regionsgriff }
   | .beende quelle =>
     { Fadenoperand.keiner with gueltig := (r.ganz quelle).isSome, ergebnis := (r.ganz quelle).getD 0 }
-  | .verbinde _ kind _ =>
+  | .verbinde ziel kind typ =>
     { Fadenoperand.keiner with gueltig := (r.fadennr kind).isSome, kind := (r.fadennr kind).getD 0 }
-  | .wechsle kern kind | .kernStart kern kind =>
+  | .wechsle kern kind =>
+    { Fadenoperand.keiner with
+      gueltig := (r.fadennr kern).isSome && (r.fadennr kind).isSome,
+      kern := (r.fadennr kern).getD 0, kind := (r.fadennr kind).getD 0 }
+  | .kernStart kern kind =>
     { Fadenoperand.keiner with
       gueltig := (r.fadennr kern).isSome && (r.fadennr kind).isSome,
       kern := (r.fadennr kern).getD 0, kind := (r.fadennr kind).getD 0 }
@@ -92,10 +97,11 @@ def Fadenform.operand (z : Fadenform) (r : Rahmen) : Fadenoperand :=
     An ended thread has stopped: its frame no longer has a head. -/
 def Fadenform.uebertrag (z : Fadenform) (r : Rahmen) (v : Int) : Rahmen :=
   match z with
-  | .starte ziel _ typ _ => r.bindeGelesen ziel typ v
-  | .beende _ => { r with stopp := some .fertig }
-  | .verbinde ziel _ typ => r.bindeGelesen ziel typ v
-  | .wechsle .. | .kernStart .. => r.weiter
+  | .starte ziel eintritt typ uebergabe => r.bindeGelesen ziel typ v
+  | .beende quelle => { r with stopp := some .fertig }
+  | .verbinde ziel kind typ => r.bindeGelesen ziel typ v
+  | .wechsle kern kind => r.weiter
+  | .kernStart kern kind => r.weiter
 
 /-- The frame transfer of a lifecycle instruction keeps the stack and the loop counters and never moves the
     program counter back. -/
