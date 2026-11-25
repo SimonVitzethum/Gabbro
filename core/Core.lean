@@ -232,6 +232,7 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Zugriff
+public import Core.Ziel.Korrektheit.Beweise.ZugriffNIFragment
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle
