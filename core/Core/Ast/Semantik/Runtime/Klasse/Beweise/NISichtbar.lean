@@ -104,6 +104,13 @@ theorem NISichtbar.geheim_verborgen : oeffentlich NISichtbar.geheim = false := b
   rw [eq] at mem
   exact Finset.notMem_empty _ mem
 
+/-- All locations and control labels are secret in the countermodel. -/
+def NISichtbar.etikettOrt (_ : Zelle) : Beobachtung.Etikett := NISichtbar.geheim
+def NISichtbar.etikettBoot (_ : Nat) : Beobachtung.Etikett := NISichtbar.geheim
+def NISichtbar.lokalEtikett (_ : Kontext) : Beobachtung.LokaleEtiketten Rahmen :=
+  Beobachtung.LokaleEtiketten.ganz NISichtbar.geheim
+def NISichtbar.kontrollEtikett (_ : Bool) : Beobachtung.Etikett := NISichtbar.geheim
+
 /-- A writing form that names no particular cell. -/
 def NISichtbar.schreibform (m : Modus) : Schrittform :=
   ⟨.schreiben m, fun _ => Operand.keiner, fun r _ _ => r⟩
@@ -126,10 +133,8 @@ def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
     lokalerBezug := Eq
     stotterLaenge := fun _ => 0
     quelltabellen := Fragment.leer.tabellen
-    etiketten := { ort := (fun _ => NISichtbar.geheim),
-      bootByte := (fun _ => NISichtbar.geheim) }
-    fluss := { lokal := (fun _ => Beobachtung.LokaleEtiketten.ganz NISichtbar.geheim),
-      kontrolle := (fun _ => NISichtbar.geheim) } }
+    etiketten := { ort := NISichtbar.etikettOrt, bootByte := NISichtbar.etikettBoot }
+    fluss := { lokal := NISichtbar.lokalEtikett, kontrolle := NISichtbar.kontrollEtikett } }
 
 /-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
 def NISichtbar.start : AussenStart :=
