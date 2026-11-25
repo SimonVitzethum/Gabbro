@@ -381,47 +381,57 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               | antwort _ arrives =>
                 obtain ⟨_, _, _, hstate⟩ := arrives
                 have skerne : s.kerne = z.kerne := by
-                  simp only [hstate, Maschine.Zustand.antwort]
+                  have h1 : s.kerne = ((z.antwort _).kerne) := by rw [hstate]
+                  have h2 : ((z.antwort _).kerne) = z.kerne := rfl
+                  exact h1.trans h2
                 rw [skerne]
                 exact ih z hz
               | interrupt _ enters =>
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
-                    Function.update z.kerne k' ((z.kerne k').unterbrechen c' nmi) := by
-                  rw [hstate]
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne] at h
+                    (Maschine.Zustandseintritt z k' _ c' nmi).kerne :=
+                  congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+                have einkern : ∀ k, (Maschine.Zustandseintritt z k' _ c' nmi).kerne k =
+                    if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
+                  intro k
                   by_cases heq : k = k'
                   · subst heq
-                    rw [Function.update_self] at h
+                    show Function.update _ _ _ _ = _
+                    rw [Function.update_self]
+                  · show Function.update _ _ _ _ = _
+                    rw [Function.update_of_ne heq]
+                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                · rw [skerne, einkern] at h
+                  by_cases heq : k = k'
+                  · subst heq
+                    simp only [if_true] at h
                     have hdispatch : ((z.kerne k').unterbrechen c' nmi).laeuft
                         = some c' := rfl
                     rw [hdispatch] at h
                     have hc' : c = c' := Option.some.inj h
                     subst hc'
                     exact hkk
-                  · rw [Function.update_of_ne heq] at h
+                  · simp only [if_neg heq] at h
                     exact ihd k c h
-                · rw [skerne] at h
+                · rw [skerne, einkern] at h
                   by_cases heq : k = k'
                   · subst heq
-                    simp only [Function.update_self, Maschine.KernZustand.unterbrechen] at h
+                    simp only [if_true] at h
                     cases List.mem_cons.mp h with
                     | inl htop =>
                       obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
                       exact ihd k' c hc
                     | inr hrest =>
                       exact ihs k' w m hrest c hc
-                  · rw [Function.update_of_ne heq] at h
+                  · simp only [if_neg heq] at h
                     exact ihs k w m h c hc
               | absturz crash =>
                 obtain ⟨_, heq⟩ := crash.genau
                 have skernew : s.kerne =
                     (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                      (Maschine.nachAbsturz z.persistenz)).kerne := by
-                  rw [heq]
-                simp only [Maschine.Zustand.wiederanlauf, wkern, weintritt] at skernew
+                      (Maschine.nachAbsturz z.persistenz)).kerne := congrArg _ heq
+                rw [wkern, weintritt] at *
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skernew] at h
                   have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
@@ -432,8 +442,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                   · rw [if_neg hk] at hif
                     cases hif
                 · rw [skernew] at h
-                have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                    (Maschine.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
+                  have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
+                      (Maschine.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
                   rw [hempty] at h
                   exact (List.not_mem_nil h).elim
       | wartet label eq _ =>
