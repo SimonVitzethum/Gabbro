@@ -195,7 +195,7 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     rcases aus with ⟨rahmen, _, _, _, fuehrtAus, _, nEqState⟩
     have hIntern := fuehrtAus_intern_fragen fuehrtAus
     rw [nEqState]
-    rw [hIntern.2]
+    rw [hIntern.2.2]
     exact rahmen.fragen.trans leer
   | antwort _ h =>
     obtain ⟨_, _, _, nEqState⟩ := h
