@@ -276,7 +276,7 @@ def zugriffZuSumme : Zugriffsform → ZugriffssummeTyp
   | .vergleicheTausche a b c d e t m => .inr (.inr (.inr (.inl (a, b, c, d, e, t, m))))
   | .holeUndAddiere a b c d t m => .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m)))))
   | .erwarte a b c i t m => .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m))))))
-  | .veroeffentliche a b c m => .inr (.inr (.inr (.inr (.inr (.inr (a, b, c, m))))))
+  | .veroeffentliche a b c m => .inr (.inr (.inr (.inr (.inr (.inr (.inl (a, b, c, m)))))))
   | .zaun m => .inr (.inr (.inr (.inr (.inr (.inr (.inr m))))))
 
 def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
@@ -286,7 +286,7 @@ def zugriffVonSumme : ZugriffssummeTyp → Option Zugriffsform
   | .inr (.inr (.inr (.inl (a, b, c, d, e, t, m)))) => Option.some (.vergleicheTausche a b c d e t m)
   | .inr (.inr (.inr (.inr (.inl (a, b, c, d, t, m))))) => Option.some (.holeUndAddiere a b c d t m)
   | .inr (.inr (.inr (.inr (.inr (.inl (a, b, c, i, t, m)))))) => Option.some (.erwarte a b c i t m)
-  | .inr (.inr (.inr (.inr (.inr (.inr (a, b, c, m)))))) => Option.some (.veroeffentliche a b c m)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inl (a, b, c, m))))))) => Option.some (.veroeffentliche a b c m)
   | .inr (.inr (.inr (.inr (.inr (.inr (.inr m)))))) => Option.some (.zaun m)
 
 instance : Encodable Zugriffsform :=
