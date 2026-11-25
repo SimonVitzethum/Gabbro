@@ -197,7 +197,7 @@ theorem falsifizierbar_konfiguration :
     takt := fun t => .schritt rfl (step t) }⟩
   have konkret : Maschine.Laeufe E₀ h ρ := ⟨fair.hardware, fair.konform, admissible, rfl⟩
   have takt := ρ.zeit.takt 0
-  change Takt (Lauffolge E₀ hw) 0 (some z) (some label) (some z') at takt
+  change Takt (Lauffolge E₀ hw) (KeinSchritt (Lauffolge E₀ hw)) 0 (some z) (some label) (some z') at takt
   cases takt with
   | schritt eq lauf =>
       cases lauf with
