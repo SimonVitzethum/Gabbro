@@ -4,6 +4,7 @@ public import Core.Ast.Semantik.Kernregister
 public import Core.Katalog.Erfuellbar
 public import Core.Annahme.AussenLauf
 public import Core.Beobachtung.Fluss.Quellfragment
+public import Core.Verfeinerung.Formen.Familie
 
 @[expose] public section
 
