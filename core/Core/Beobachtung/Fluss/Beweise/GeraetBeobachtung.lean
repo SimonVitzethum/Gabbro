@@ -34,6 +34,7 @@ theorem geraete_consume_still {k : Katalog} {binding : Binding k} {access : Regi
       { internal with aktion := .verbrauche answer } spur s') :
     spur.aussen = [] := by
   obtain ⟨_, _, _, _, aktion, _, _⟩ := aus
+  generalize h : spur.aussen = o at aktion ⊢
   cases aktion
   rfl
 
