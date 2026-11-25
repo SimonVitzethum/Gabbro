@@ -53,17 +53,17 @@ theorem Schrittform.zugriffsschritt_bestimmt (F : Schrittform) {c : Kontext} {s 
         | sperre _ => cases hl
         | frage => cases hl
       · have hv0 : v = 0 := by
-          simpa only [Wirkungsklasse.Lesewert, hl, false_or] using hv
+          simpa only [Wirkungsklasse.Lesewert, hl, reduceCtorEq, false_or] using hv
         have hv0' : v' = 0 := by
-          simpa only [Wirkungsklasse.Lesewert, hl, false_or] using hv'
+          simpa only [Wirkungsklasse.Lesewert, hl, reduceCtorEq, false_or] using hv'
         exact hv0.trans hv0'.symm
     subst v'
     exact ⟨hp.trans hp'.symm, hu.trans hu'.symm⟩
   · rcases step with ⟨_, hp, hu⟩ | ⟨hgg, _, _, _, _⟩
     · rcases step' with ⟨_, hp', hu'⟩ | ⟨hgg', _, _, _, _⟩
       · exact ⟨hp.trans hp'.symm, hu.trans hu'.symm⟩
-      · exact (hgg' hg).elim
-    · exact (hgg hg).elim
+      · exact (hg hgg').elim
+    · exact (hg hgg).elim
 
 /-! ### The instruction -/
 
