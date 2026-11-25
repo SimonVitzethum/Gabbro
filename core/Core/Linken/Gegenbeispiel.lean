@@ -360,19 +360,18 @@ theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
   refine ⟨rfl, fun i => ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro core hc
-    have heq : core = k := by
-      cases hc
-      rfl
-    subst heq
+    cases hc
     exact (zul.2.2.2.1 0 k assigned).2
   · intro core hc
-    simp at hc
+    cases hc
   · intro signal mem
     exact (List.not_mem_nil mem).elim
   · intro e hd
-    simp at hd
+    cases hd
   · intro hmed
-    rcases hmed with hmed | hcrash <;> exact Bool.false_ne_true ‹_›
+    rcases hmed with hmed | hcrash
+    · cases hmed
+    · cases hcrash
 
 /-- The six prefix states of the witness run. -/
 def sLinked (s : AussenStart) : Zustand :=
@@ -455,6 +454,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
         have hb' : b' = b := by
           rw [system_kopf, headT] at head'
           cases head'
+          rfl
         subst hb'
         obtain ⟨same, after⟩ :=
           (b.ideal_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
@@ -631,8 +631,9 @@ theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage :=
     rcases hm with rfl | rfl
     · exact fragA_akzeptiert
     · exact fragB_akzeptiert
-  unfold LinkerAkzeptiertAussage at hlink
-  have hlinked := hlink planAB _ planAB_linke hparts
+  simp only [LinkerAkzeptiertAussage] at hlink
+  have hlinked : Akzeptiert ((verknuepfteFragmente planAB).einheit planAB.plattform) :=
+    hlink planAB _ planAB_linke hparts
   exact linked_nicht_akzeptiert hlinked
 
 end Gabbro.Core.Linken
