@@ -54,6 +54,13 @@ theorem Befehl.simulation (p : Fragment) (platform : Plattform) (b : Befehl) :
 theorem Befehl.privat_von_familie {b : Befehl} (h : b.familie ≠ .zugriff) : b.Privat :=
   b.privat_von_kein_zugriff fun form eq => h (by subst eq; rfl)
 
+/-- A frame-only instruction is not in the family of the access instructions. -/
+theorem Befehl.privat_ne_zugriff {b : Befehl} (h : b.Privat) : b.familie ≠ .zugriff := by
+  intro hf
+  cases b with
+  | zugriff z => exact absurd rfl (Befehl.privat_ne_zugriff_klasse _ h z)
+  | _ => cases hf
+
 /-- **Locality of every instruction, from its class.** -/
 theorem Befehl.regelLokal (p : Fragment) (platform : Plattform) (b : Befehl) :
     RegelLokal (p.einheit platform) b :=

@@ -117,6 +117,11 @@ theorem Befehl.regel_aktion_intern (b : Befehl) {R : Regel} (hR : R = b.regel) {
   subst hR
   exact b.impl_aktion_intern (w := w) h
 
+/-- A frame-only instruction is in no access family. -/
+theorem Befehl.privat_ne_zugriff_klasse (b : Befehl) (h : b.Privat) (z : Zugriffsform) : b ≠ .zugriff z := by
+  rintro rfl
+  rcases h with h | h <;> cases z <;> cases h
+
 abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
 /-- The entry context: the boot context whose body starts at the first instruction. -/

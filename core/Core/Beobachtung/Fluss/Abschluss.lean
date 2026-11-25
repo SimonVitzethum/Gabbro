@@ -16,7 +16,7 @@ public import Core.Beobachtung.Fluss.Absturz
 namespace Gabbro.Core.Beobachtung
 
 open Annahme Katalog
-open Ast.Semantik (Fragment)
+open Ast.Semantik (Fragment Befehl)
 
 structure FragmentNIBeweise : Prop where
   skalar : SkalarNIAussage
@@ -24,7 +24,6 @@ structure FragmentNIBeweise : Prop where
   aufrufSchleife : AufrufSchleifeNIAussage
   aggregat : AggregatNIAussage
   text : TextNIAussage
-  zugriff : ZugriffNIAussage
   variante : VarianteNIAussage
   antwort : AntwortNIAussage
   interrupt : InterruptNIAussage
@@ -35,7 +34,8 @@ structure FragmentNIBeweise : Prop where
     protocol proof packets are filled. The coupling start is proved; pause, interrupt
     and crash remain pinned for the prover. -/
 theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
-    (p : Fragment) (plattform : Plattform) (h : Akzeptiert (p.einheit plattform)) :
+    (p : Fragment) (plattform : Plattform) (rein : ∀ b ∈ p.code, b.Privat)
+    (h : Akzeptiert (p.einheit plattform)) :
     Nichtinterferent (p.einheit plattform) := by
   apply ni_akzeptierter_einheit (p.einheit plattform) h (fragment_start_ni p plattform)
   · intro f quelle
@@ -45,8 +45,10 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     | aufrufSchleife => exact beweise.aufrufSchleife p plattform f familie quelle
     | aggregat => exact beweise.aggregat p plattform f familie quelle
     | text => exact beweise.text p plattform f familie quelle
-    | zugriff => exact beweise.zugriff p plattform f familie quelle
     | variante => exact beweise.variante p plattform f familie quelle
+    | zugriff =>
+      intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor zustand kopf spurGlied kopplung
+      exact Befehl.privat_ne_zugriff (rein f (Ast.Semantik.kopf_mem (code := p.code) kopf)) familie
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with
     | kontext _ _ => exact False.elim protokoll
@@ -54,6 +56,6 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     | interrupt _ => exact beweise.interrupt p plattform v predictor t _ spur tick trivial kopplung
     | absturz => exact beweise.absturz p plattform v predictor t _ spur tick trivial kopplung
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t idle kopplung
-    exact beweise.pause p plattform v predictor t idle kopplung
+    exact beweise.pause p plattform rein v predictor t idle kopplung
 
 end Gabbro.Core.Beobachtung

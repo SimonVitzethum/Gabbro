@@ -396,10 +396,12 @@ theorem stummer_schritt_koppelt
                   cases crash₂
 
 /-- Pauses coincide under the coupling: lockstep through step kinds forces the right
-    run to idle along. Pinned for the prover; needs the same transfer machinery as
-    the interrupt case. -/
+    run to idle along. Stated for frame-only fragments: the argument has the left run take the very step the right
+    run takes, which a frame-only form always has; the step of an access instruction exists only when the memory
+    model accepts its read (`ZugriffKomponierbarAussage`), and the information flow of such a fragment is
+    `ZugriffNIAussage` (MK-13). -/
 def PauseNIAussage : Prop :=
-  ∀ (p : Fragment) (plattform : Plattform) {h₁ h₂ ρ₁ ρ₂},
+  ∀ (p : Fragment) (plattform : Plattform), (∀ b ∈ p.code, b.Privat) → ∀ {h₁ h₂ ρ₁ ρ₂},
     Vergleich (p.einheit plattform) h₁ h₂ ρ₁ ρ₂ → ∀ predictor t,
       ρ₁.zeit.spur t = none →
       Kopplung (p.einheit plattform) ρ₁ ρ₂ predictor t t →
