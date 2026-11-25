@@ -186,18 +186,18 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
       generalize hN : ρ.zeit.zustand (t + 1) = nOpt at tak
       cases tak with
       | wartet label _ _ => cases label
-      | schritt _ laufstep =>
+      | schritt label laufstep =>
           cases laufstep with
           | schritt impl =>
-          cases impl with
-          | kontext _ _ _ _ => contradiction
-          | antwort _ hantwort =>
-              obtain ⟨angebot, _, _, _⟩ := hantwort
-              obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
-              have leer := unit_fragen_leer_an op lauf t hv
-              rw [leer] at hqmem
-              cases hqmem
-          | interrupt _ _ => contradiction
-          | absturz _ => contradiction
+              cases impl with
+              | kontext _ _ _ _ => cases label
+              | antwort _ hantwort =>
+                  obtain ⟨angebot, _, _, _⟩ := hantwort
+                  obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
+                  have leer := unit_fragen_leer_an op lauf t hv
+                  rw [leer] at hqmem
+                  cases hqmem
+              | interrupt _ _ => cases label
+              | absturz _ => cases label
 
 end Gabbro.Core.Beobachtung
