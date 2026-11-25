@@ -15,7 +15,7 @@ open Gabbro.Core.Ast.LowLevel.Device
     time mark and no new end is recorded. -/
 theorem geraete_consume_still {k : Katalog} {binding : Binding k} {access : RegisterAccess}
     {required : GeraetePhase} {target : Option GeraetePhase} {c : Kontext}
-    {s u : State} {plan : Plan} {answer : AntwortEreignis}
+    {s : State} {answer : AntwortEreignis}
     (owned : Befugt binding required access s c)
     (pending : (s.lokal c).pending = some (binding.question access))
     (ready : s.naechsteAntwort c = some answer)
@@ -31,7 +31,7 @@ theorem geraete_consume_still {k : Katalog} {binding : Binding k} {access : Regi
         phases := match access.result answer.reply, target with
           | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
           | _, _ => (s.lokal c).phases })
-      { internal with aktion := .verbrauche answer } plan spur s') :
+      { internal with aktion := .verbrauche answer } spur s') :
     spur.aussen = [] := by
   obtain ⟨_, _, _, _, aktion, _, _⟩ := aus
   cases aktion
