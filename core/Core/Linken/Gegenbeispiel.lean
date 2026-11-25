@@ -11,6 +11,8 @@ namespace Gabbro.Core.Linken
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Annahme
+open Gabbro.Core.Maschine
+open Gabbro.Core.Katalog
 
 /-- A fragment from a plain instruction list: no clauses, empty scope, no entries, no memory. -/
 def codeFrag (code : List Befehl) : Fragment :=
@@ -112,15 +114,15 @@ theorem nach_temp1 {b : Befehl} {c : Kontext} {s : Zustand}
   rw [fragA_code] at hb
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
   rcases hb with rfl | rfl | rfl
-  · show temp1Sauber ((Befehl.auswerten _ _).temp _)
-    simp only [Befehl.auswerten, Rahmen.schreibe]
+  · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_same,
+      temp1Sauber]
     rw [Function.update_noteq (by decide : (0 : Nat) ≠ 1)]
     exact h
-  · show temp1Sauber ((Befehl.auswerten _ _).temp _)
-    simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_same]
+  · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_same,
+      temp1Sauber]
     exact Or.inr rfl
-  · show temp1Sauber ((Befehl.auswerten _ _).temp _)
-    simp only [Befehl.auswerten, Rahmen.schreibe]
+  · simp only [Befehl.nach, Befehl.auswerten, Rahmen.schreibe, Function.update_same,
+      temp1Sauber]
     rw [Function.update_noteq (by decide : (0 : Nat) ≠ 1)]
     exact h
 
@@ -142,9 +144,10 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
       omega
     rw [hnone] at hpc
     cases hpc
-  generalize hm : (s.lokal c).pc = pc at hpc hlen
-  interval_cases pc
-  · have h0 : fragA.code[0]? = some (Befehl.literal 0 10) := by rw [fragA_code]
+  match hmpc : (s.lokal c).pc with
+  | 0 =>
+    have h0 : fragA.code[0]? = some (Befehl.literal 0 10) := by rw [fragA_code]
+    rw [hmpc] at hpc
     rw [hpc] at h0
     cases h0
     intro d
@@ -155,7 +158,9 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
         simp only [Befehl.nach, Function.update_noteq heq]
       rw [hkeep]
       exact h d
-  · have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := by rw [fragA_code]
+  | 1 =>
+    have h1 : fragA.code[1]? = some (Befehl.literal 1 2) := by rw [fragA_code]
+    rw [hmpc] at hpc
     rw [hpc] at h1
     cases h1
     intro d
@@ -166,13 +171,20 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
         simp only [Befehl.nach, Function.update_noteq heq]
       rw [hkeep]
       exact h d
-  · have h2 : fragA.code[2]? = some (Befehl.teilen 0) := by rw [fragA_code]
+  | 2 =>
+    have h2 : fragA.code[2]? = some (Befehl.teilen 0) := by rw [fragA_code]
+    rw [hmpc] at hpc
     rw [hpc] at h2
     cases h2
     intro d
     by_cases heq : d = c
     · subst heq
       exact nach_temp1 (by simp [fragA_code]) (h c)
+    · have hkeep : ((Befehl.teilen 0).nach c s).lokal d = s.lokal d := by
+        simp only [Befehl.nach, Function.update_noteq heq]
+      rw [hkeep]
+      exact h d
+  | n + 3 => omega
 /-- Slot 1 is clean in every start frame of A. -/
 theorem start_temp1 (s : AussenStart) (c : Kontext) :
     temp1Sauber ((((fragA.einheit .x86_64).startdaten s).lokal c)) := by
