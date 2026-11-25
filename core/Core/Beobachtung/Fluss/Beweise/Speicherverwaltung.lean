@@ -50,7 +50,7 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
       generalize hn : ρ.zeit.zustand (t + 1) = nOpt at step
       cases step with
       | schritt impl =>
-        exact ⟨_, hn⟩
+        exact ⟨_, rfl⟩
 
 /-- The rule of a memory form determines one frame and the fixed private plan. -/
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
@@ -121,8 +121,10 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
               rw [kontextBeob]
               dsimp only
               rw [hCommit, hAusgabe, hZeit, kopf]
-              have hSpek : k.plattform.spekulationshuelle.zugriffe
+              have hSpek : (memProgram k code).katalog.plattform.spekulationshuelle.zugriffe
                   ((memProgram k code).fluss.spekulativ f (s.lokal c) predictor) = [] := by
+                change k.plattform.spekulationshuelle.zugriffe
+                  ((memProgram k code).fluss.spekulativ f (s.lokal c) predictor) = []
                 cases k.plattform <;> rfl
               have hKonstant : (memProgram k code).fluss.konstantzeit f = false := by rfl
               simp only [hSpek, hKonstant, Bool.false_eq_true, if_false, List.map_nil,
@@ -136,8 +138,12 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
               rw [hEnde d] at hd
               cases hd
             have spurEq : spur = ⟨[], []⟩ := by
-              cases spur
-              simp_all only
+              cases spur with
+              | mk sp au =>
+                dsimp at hSpur hAussen
+                subst sp
+                subst au
+                rfl
             rw [schrittBeob, tick, hS, hN]
             simp only [hSpur, hAussen, spurEq, List.filterMap_nil, List.flatMap_nil,
               hKontext, hKeinEnde, if_false, List.nil_append]
@@ -181,8 +187,6 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     rw [planEq] at aus
     unfold FuehrtSchrittAus at aus
     rcases aus with ⟨_, _, _, _, fuehrtAus, _, nEqState⟩
-    generalize hAussen : spur.2.aussen = aussen at fuehrtAus
-    change FuehrtAus memSetup t c s (frame.advance c s) .intern _ aussen _ at fuehrtAus
     cases fuehrtAus
     rw [nEqState]
     change s.fragen = []
@@ -296,6 +300,26 @@ private theorem mem_zustand_gleich {c : Kontext} {vor w₂ : MemState} {frame : 
   · change vor.status = w₂.status
     exact status
 
+private theorem memHead_congr {s₁ s₂ : MemState} {c : Kontext}
+    (st : s₁.status = s₂.status) (lok : s₁.lokal = s₂.lokal)
+    (rechte : s₁.rechte = s₂.rechte) (leihen : s₁.leihen = s₂.leihen) :
+    memHead k.plattform.ziel code s₁ c = memHead k.plattform.ziel code s₂ c := by
+  unfold memHead
+  rw [congrFun st c]
+  by_cases hc : c = Ast.LowLevel.entryContext
+  · rw [if_pos hc, if_pos hc]
+    cases hstatus : s₂.status c with
+    | laeuft =>
+      simp only [hstatus]
+      rw [congrFun lok c]
+      cases hidx : code[(s₂.lokal c).pc]? with
+      | none => rfl
+      | some op =>
+        simp only [hidx]
+        rw [MemInstruction.evaluate_congr op k.plattform.ziel c (congrFun lok c) rechte leihen]
+    | ruht | beendet _ => rfl
+  · rw [if_neg hc, if_neg hc]
+
 /-- Every context step of a memory program preserves the coupling of two admitted runs. -/
 theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
   intro k code f flu h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor zustand kopf spurGlied kopplung
@@ -352,8 +376,8 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
           have sysKopf : ∀ s d, (memProgram k code).system.kopf s d =
               memHead k.plattform.ziel code s d := fun _ _ => rfl
           have kopf₂ : (memProgram k code).system.kopf w₂ c = some f := by
-            have hHead : memHead k.plattform.ziel code w₂ c = memHead k.plattform.ziel code vor c := by
-              simp only [memHead, lokEqFun.symm, statusEq.symm]
+            have hHead : memHead k.plattform.ziel code w₂ c = memHead k.plattform.ziel code vor c :=
+              memHead_congr k code (c := c) statusEq.symm lokEqFun.symm rechteEq.symm leihenEq.symm
             rw [sysKopf, hHead, ← sysKopf]
             exact kopf
           have e₁ : NiedrigeBeob (memProgram k code) ρ₁ predictor (t + 1) =
@@ -425,10 +449,10 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
                   | some cR =>
                     rw [hkern] at kern₂
                     injection kern₂ with hcc
+                    have hcR : cR = c := Option.some.inj (hkern.symm.trans gleich)
+                    subst cR
                     cases hcc
                     obtain ⟨f₂, frame₂, kopf₂', eval₂, hNach₂⟩ := mem_kontext_aus k code stepCopy
-                    have hcR : cR = c := Option.some.inj (hkern.symm.trans gleich)
-                    rw [hcR] at kopf₂'
                     have hf₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
                     subst f₂
                     have evalEq := MemInstruction.evaluate_congr f k.plattform.ziel c
