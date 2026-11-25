@@ -239,8 +239,13 @@ theorem sLinked6_temp1 (s : AussenStart) :
       some ⟨.int ((0 : Nat) : Int) ((0 : Nat) : Int), Zahl.literal ((0 : Nat) : Int)⟩ := by
   rfl
 
-/-- The linked unit is not accepted: the witness run divides by zero. -/
-theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
+/-- On the unsealed witness run the whole performs a division by zero: a guard use that no
+    accepted part covers. The run, its cut and the failing operands are exhibited together so
+    the guard transfer can be refuted independently of the other acceptance conjuncts. -/
+theorem unsealed_guard_use :
+    ∃ (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ) (t : I.Schnitt E_linked ρ),
+      (kanonischeVerwendung E_linked).bedarf ρ t .division (5, 0) ∧
+        ¬ waechterBedarf .division (5, 0) := by
   obtain ⟨h, hwF, hardwareH, fairH⟩ :=
     katalog_nichtLeer E_linked.katalog (Plattform.katalog_wohlgeformt .x86_64)
   have imageH : E_linked.bild.gueltig E_linked.katalog.plattform.ziel :=
@@ -353,10 +358,38 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
   have need6 : (kanonischeVerwendung E_linked).bedarf ρ ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩
       .division (5, 0) :=
     ⟨eintritt, .teilen 0, head6, guard6⟩
-  intro ha
-  have hbad := ha.2.2.1 ρ hρ ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩ .division (5, 0) need6
+  refine ⟨ρ, hρ, ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩, need6, ?_⟩
+  intro hbad
   simp only [waechterBedarf] at hbad
   exact hbad rfl
+
+/-- The linked unit is not accepted: the witness run divides by zero. -/
+theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
+  obtain ⟨ρ, hρ, t, need, hbad⟩ := unsealed_guard_use
+  intro ha
+  exact hbad (ha.2.2.1 ρ hρ t .division (5, 0) need)
+
+/-- The guard-conjunct transfer fails without the seal: both parts of the witness are accepted,
+    yet the whole has a guard use at `(5, 0)` that no covering part run can discharge — any such
+    cover would force the pinned division guard through the accepting part. The control-flow
+    seal is therefore a necessary premise of the transfer. -/
+theorem unsealed_guard_transfer_refuted :
+    ¬ (∀ (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ) (t : I.Schnitt E_linked ρ)
+        (op : PartielleOperation) (args : Operanden op),
+        (kanonischeVerwendung E_linked).bedarf ρ t op args →
+        ∃ m, m ∈ planAB.module ∧
+        ∃ (ρm : I.Lauf (m.fragment.einheit planAB.plattform))
+          (hm : I.Laeufe (m.fragment.einheit planAB.plattform) ρm) (tm : I.Schnitt _ ρm),
+          (kanonischeVerwendung (m.fragment.einheit planAB.plattform)).bedarf ρm tm op args) := by
+  intro hcover
+  obtain ⟨ρ, hρ, t, need, hbad⟩ := unsealed_guard_use
+  obtain ⟨m, hm, ρm, hρm, tm, needm⟩ := hcover ρ hρ t .division (5, 0) need
+  have hmacc : Akzeptiert (m.fragment.einheit planAB.plattform) := by
+    simp only [planAB, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with rfl | rfl
+    · exact fragA_akzeptiert
+    · exact fragB_akzeptiert
+  exact hbad (hmacc.2.2.1 ρm hρm tm .division (5, 0) needm)
 
 /-- The sealed linker refuses the witness plan although both parts are accepted:
     unsealed linking is unsound (the linked fragment divides by zero), sealed
