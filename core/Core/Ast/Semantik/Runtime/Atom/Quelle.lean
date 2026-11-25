@@ -31,6 +31,7 @@ public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Verfeinerung.Formen.Familie
+public import Core.Waechter.Registry
 
 @[expose] public section
 
@@ -236,5 +237,24 @@ theorem Zugriffsquelle.aussage (joint : Prop) (parse : quelle.ParseAussage)
   ⟨parse, elaboriert, fun platform args s running active live atPc =>
     quelle.realisiert position platform args s running active live atPc, quelle.annahme,
     quelle.ideal position, quelle.einheitAussage, quelle.impl, quelle.erhaltung, erfuellbar⟩
+
+theorem Zugriffsquelle.elaboriert : quelle.ElaboriertAussage :=
+  fun _ _ => rfl
+
+/-- **The registry statements of source forms that elaborate to an access instruction**, mirroring
+    `Quellform.statements`: the surface grammar proof, the elaboration, the occurrence, the class
+    acceptance, determinacy, commutation, one linearisation point, the class preservation and the
+    joint satisfiability the production names. -/
+def Zugriffsquelle.statements {Context : Type} {cat : Context → Category} {args : Context → Type}
+    (forms : (scope : Context) → Zugriffsquelle (cat scope) (args scope))
+    (joint : Prop) (constructor : Lean.Name) : RegistryStatements constructor .surface where
+  realization := .surface (∀ scope, (forms scope).ParseAussage)
+    (∀ scope, (forms scope).ElaboriertAussage) (∀ scope, (forms scope).RealisiertAussage)
+  acceptanceRule := ∀ scope, (forms scope).AnnahmeAussage
+  idealRule := ∀ scope, (forms scope).IdealAussage
+  unitsAndCommutation := ∀ scope, (forms scope).EinheitAussage
+  implementationRule := ∀ scope, (forms scope).ImplAussage
+  preservation := ∀ scope, (forms scope).ErhaltungsAussage
+  jointlySatisfiable := joint
 
 end Gabbro.Core.Ast.Semantik

@@ -167,7 +167,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.bindDirect, `Gabbro.Core.Ast.Semantik.bindDirectEntry),
     (`Gabbro.Core.Ast.Stmt.whileBounded, `Gabbro.Core.Ast.Semantik.boundedWhileEntry),
     (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry),
-    (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry) ], #[
+    (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry),
+    (`Gabbro.Core.Ast.Stmt.access, `Gabbro.Core.Ast.Semantik.accessEntry) ], #[
     (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),

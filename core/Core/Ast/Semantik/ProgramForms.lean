@@ -2,6 +2,8 @@ module
 
 public import Core.Ast.Semantik.BatchForms
 public import Core.Ast.ProgramSurface
+public import Core.Ast.Semantik.Elaborierung
+public import Core.Ast.Semantik.Runtime.Atom.Quelle
 
 @[expose] public section
 
@@ -79,6 +81,22 @@ def foreverForm (scope : Scope) (result : Option (Ty .value)) : Quellform (.stat
 
 def foreverJoint : Prop :=
   ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => foreverForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a
+
+/-- The descriptor of an access statement: the elaboration evaluates the index (and the value) into
+    the temporaries `0` (and `1`), then ONE access instruction names the region by the position of its
+    owner local (`accessCode`); the instruction is at the end of the evaluated operands. -/
+def accessForm (scope : Scope) (result : Option (Ty .value)) :
+    Zugriffsquelle (.statement scope result) (AccessStatement scope) where
+  produktion := Surface.access scope result
+  form := fun a => match a.2 with
+    | .load _ _ written _ region _ _ _ mode => .lade 0 region.index 0 written.type mode.modus
+    | .store region _ _ _ _ mode => .speichere region.index 0 1 mode.modus
+  position := fun a => match a.2 with
+    | .load _ _ _ _ _ _ _ index _ => (expr 0 index).code.length
+    | .store _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
+
+def accessJoint : Prop :=
+  ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => accessForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a
 
 def constantForm (scope : Scope) : Quellform (.declaration scope) (Surface.ConstantArgs scope) where
   produktion := Surface.constant scope
