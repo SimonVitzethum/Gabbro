@@ -148,6 +148,9 @@ theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
         | exact False.elim (hne rfl)
         | (simp only [Graph.ort, fGraph, fLab, Art.schreibt, reduceCtorEq, if_false, if_true,
             Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases mp <;> cases a <;> simp only [Graph.istRmw, fGraph, fLab, reduceCtorEq, if_false, if_true] at h
 
 /-- No synchronises-with edge: a memory event is `.rlx` (not `stark`) and a barrier reads and
     writes nothing. -/
