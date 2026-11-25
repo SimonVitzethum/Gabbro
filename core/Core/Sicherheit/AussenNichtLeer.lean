@@ -66,8 +66,7 @@ theorem toctoufrei_nichtLeer :
       (tail.zustand 0) := second
   have h0' : Maschine.Lauffolge E.maschine (hardware sicht) 0 (some z) (.antwort arrival, spur₀)
       (some middle) := first
-  let zeit := voran2 tail (some middle) (.kontext c (), spur₁) h1'
-    (some z) (.antwort arrival, spur₀) h0'
+  let zeit := voran2 h1' (some z) (.antwort arrival, spur₀) h0'
   have boot : zeit.zustand 0 = some z := rfl
   have between : zeit.zustand 1 = some middle := rfl
   have lab : zeit.spur 1 = some (.kontext c (), spur₁) := rfl
