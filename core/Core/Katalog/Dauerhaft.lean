@@ -1,5 +1,6 @@
 module
 public import Core.Katalog.Seiten
+public import Core.Katalog.Ziel
 
 @[expose] public section
 
@@ -63,5 +64,48 @@ inductive persistenz (region : Strecke) :
 theorem absturz_immer (r : Strecke) (s : PersistZustand) :
     ∃ t, persistenz r s .crash t ∧ t.dauerhaft = s.dauerhaft :=
   ⟨_, .crash s, rfl⟩
+
+/-- The named persistence envelope of one target row: the atomic persistence granule in
+    bytes. The model persists one byte per durable step, which matches granule 1; a row
+    with a wider granule would need a coarser model step. -/
+structure Persistenzhuelle where
+  einheit : Nat
+  deriving DecidableEq, Repr
+
+/-- The approved persistence envelope per target row (MK-15, planned.persistence.envelope).
+    Every current row carries granule 1: single bytes persist atomically. -/
+def Plattform.persistenzhuelle : Plattform → Persistenzhuelle
+  | .x86_64 => ⟨1⟩
+  | .aarch64 => ⟨1⟩
+  | .riscv64 => ⟨1⟩
+
+theorem Plattform.persistenzhuelle_einheit (p : Plattform) : p.persistenzhuelle.einheit = 1 := by
+  cases p <;> rfl
+
+/-- A durable step persists exactly its byte: every other address keeps its durable value.
+    This is the model side of the envelope granule. -/
+theorem persistenz_dauerhaft_einByte {r : Strecke} {s : PersistZustand} {w : PersistSchreib}
+    {t : PersistZustand} (h : persistenz r s (.durable w) t) (a : Nat) (ne : a ≠ w.addr) :
+    t.dauerhaft a = s.dauerhaft a := by
+  cases h with
+  | durable _ _ => exact if_neg ne
+
+/-- A declared durable place (planned.persistence.table, planned.persistence.static):
+    the address range whose bytes the program declares persistent. -/
+structure DauerhaftObjekt where
+  bereich : Strecke
+  deriving DecidableEq, Repr
+
+/-- A named cut at which a crash invariant is declared (planned.persistence.cut):
+    the program point together with the range it covers. -/
+structure Persistenzschnitt where
+  name : Nat
+  bereich : Strecke
+  deriving DecidableEq, Repr
+
+/-- A crash invariant (planned.persistence.invariant): a predicate over the durable image,
+    stated over ghost durable state. The function parameter is always bound by a
+    holds-before/holds-after premise where it is used. -/
+abbrev AbsturzInvariante := (Nat → UInt8) → Prop
 
 end Gabbro.Core.Katalog
