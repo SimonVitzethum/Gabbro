@@ -211,6 +211,7 @@ public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Modell
+public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Speicher
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 public import Core.Ziel.Review.Slice.Fragment
