@@ -46,12 +46,12 @@ open Gabbro.Core Maschine
 def ZugriffSicherAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff → p.klauseln.invariant = [] →
     Annahme.Akzeptiert (p.einheit platform) →
-    ∀ (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform)),
+    ∀ (H : Katalog.Umgebung) (ρ : Gabbro.Core.Sicherheit.Lauf (p.sicherheitsEinheit platform)),
       Maschine.Laeufe (p.einheit platform) H ρ →
-      Sicherheit.Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
-        Sicherheit.InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
-        Sicherheit.Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
-        Sicherheit.ToctouFrei (p.sicherheitsEinheit platform) H ρ
+      Gabbro.Core.Sicherheit.Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
+        Gabbro.Core.Sicherheit.InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
+        Gabbro.Core.Sicherheit.Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
+        Gabbro.Core.Sicherheit.ToctouFrei (p.sicherheitsEinheit platform) H ρ
 
 /-- **The composed step of a fragment with an access instruction is determined** by the source choice and the
     resolution of the memory order. Difficulty: mittel. Sketch: two composed steps at one context have the same head
@@ -76,7 +76,7 @@ def ZugriffSchrittExistiertAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform) (z : Ast.Semantik.Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext),
     (p.einheit platform).system.kopf s c = some (Ast.Semantik.Befehl.zugriff z) → s.SpeicherGut →
       ∃ (w : PUnit.{1}) (plan : Ast.Semantik.Plan) (u : Ast.Semantik.Zustand)
-        (es : List (SpeicherAkteur Ast.Semantik.Zelle × Speicher.Etikett Ast.Semantik.Zelle Int))
+        (es : List (SpeicherAkteur Ast.Semantik.Zelle × Gabbro.Core.Speicher.Etikett Ast.Semantik.Zelle Int))
         (g : SpeicherGraph Ast.Semantik.Zelle Int),
         (Ast.Semantik.Befehl.zugriff z).ideal c s w [plan] u ∧
           Speicherfolge s.initial (.kontext c) s.graph
