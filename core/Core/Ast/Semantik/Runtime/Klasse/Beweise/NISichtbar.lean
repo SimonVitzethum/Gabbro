@@ -71,7 +71,7 @@ theorem Beobachtung.RegelFluss.schrittpaar_gleich
       cases hb : oeffentlich (E.fluss.kontrolle f) <;> simp_all
     have o₁ := (fl.1 c v₁ w₁ p₁ u₁ s₁).2 pubf
     have o₂ := (fl.1 c v₂ w₂ p₂ u₂ s₂).2 pubf
-    exact ⟨Beobachtung.QuellzustandGleich.trans o₁.1 o₂.1,
+    exact ⟨Beobachtung.QuellzustandGleich.trans (v := v₁) (u := u₁) (n := u₂) o₁.1 o₂.1,
       o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
 
 /-! ### The missing premise: the head of the second run is not determined -/
@@ -99,7 +99,7 @@ def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
   { E₀ with
     etiketten := { E₀.etiketten with ort := (fun _ => NISichtbar.geheim),
       bootByte := (fun _ => NISichtbar.geheim) }
-    fluss := { lokal := (fun _ => .ganz NISichtbar.geheim),
+    fluss := { lokal := (fun _ => Beobachtung.LokaleEtiketten.ganz NISichtbar.geheim),
       kontrolle := (fun _ => NISichtbar.geheim) }
     system := { E₀.system with
       kopf := fun s _c => if s.verworfen eintritt = 0 then some true else some false } }
@@ -135,7 +135,8 @@ theorem NISichtbar.premissen (m : Modus) :
       (.schreiben m : Wirkungsklasse).liest = false ∧
       (NISichtbar.schreibform m).Operandensicht (NISichtbar.einheit m) := by
   refine ⟨rfl, ?_, rfl, ?_⟩
-  · refine ⟨rfl, ?_, ?_⟩
+  · refine ⟨?_, ?_, ?_⟩
+    · simp only [NISichtbar.einheit, Regeleinheit]
     · rfl
     · simp only [NISichtbar.einheit, Regeleinheit, einrichtung]
   · intro c v₁ v₂ gleich
@@ -147,9 +148,11 @@ theorem NISichtbar.kopf_nicht_offenbar (m : Modus) :
       (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt := by
   intro h
   have h0 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 0) eintritt = some true := by
-    simp only [NISichtbar.einheit, NISichtbar.zustand, Regeleinheit, if_true]
+    change (if (NISichtbar.zustand m 0).verworfen eintritt = 0 then some true else some false) = some true
+    rfl
   have h1 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt = some false := by
-    simp only [NISichtbar.einheit, NISichtbar.zustand, Regeleinheit, if_false]
+    change (if (NISichtbar.zustand m 1).verworfen eintritt = 0 then some true else some false) = some false
+    rfl
   rw [h0, h1] at h
   cases h
 
