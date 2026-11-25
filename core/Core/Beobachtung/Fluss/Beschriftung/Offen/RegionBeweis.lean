@@ -312,7 +312,7 @@ theorem regionNI : RegionNIAussage := by
       have hlok := qsg_lokal op qv
       have hre := qsg_rechte op qv
       have hle := qsg_leihen op qv
-      have heval := evaluate_isSome_gleich op hlok hre hle
+      have heval := evaluate_isSome_gleich op (c := c) hlok hre hle
       have kopf₂ : (unit op).system.kopf v₂ c = some op := by
         have hk := kopf
         simp only [unit, Ast.LowLevel.system] at hk ⊢
