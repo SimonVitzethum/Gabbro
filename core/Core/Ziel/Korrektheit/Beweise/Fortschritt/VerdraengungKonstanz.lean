@@ -177,7 +177,6 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
       (z'''.kerne k''').laeuft = some c :=
     ⟨r, hr, kret, zret, hzret, hret⟩
   have first := Nat.find_spec hex
-  have min := Nat.find_min' hex
   have hle : d + 1 ≤ Nat.find hex := first.1
   obtain ⟨kfst, zfst, hzfst, hfst⟩ := first.2
   rcases Nat.eq_or_lt_of_le hle with h | h
@@ -192,7 +191,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     have hneg : ¬ (d < Nat.find hex - 1 ∧ ∃ k''', ∃ z''', ρ.zeit.zustand (Nat.find hex - 1) =
         some z''' ∧ (z'''.kerne k''').laeuft = some c) := by
       intro hcon
-      have hle := min _ hcon
+      have hle := Nat.find_min' hex _ hcon
       omega
     have hle1 : a ≤ Nat.find hex - 1 := Nat.le_trans hd (Nat.le_of_lt hprev)
     obtain ⟨zprev, hzprev, _⟩ := matched.zustand (Nat.find hex - 1)
