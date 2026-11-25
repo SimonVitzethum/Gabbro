@@ -8,10 +8,12 @@
              end in publicly equal states with equal plan and output views (`zugriffSchrittNI`); the
              head of an access instruction respects public source-state equality together with the
              machine status equality carried by the coupling (`zugriffKopfGleich`); and, because the
-             unit labels nothing, equal plan views already give equal public read labels
-             (`zugriffPlanSicht_lesen`). For the one label an access step records, the observable
-             memory events are determined by the pre-graph and the label alone
-             (`zugriffSpeicherfolge_etiketten_gleich`, `zugriffSpeicherBeob_gleich`).
+              unit labels nothing, equal plan views already give equal public read labels
+              (`zugriffPlanSicht_lesen`). For the one label an access step records, the memory event
+              list is determined by the pre-graph and the step actor (`zugriffSpeicherfolge_gleich`),
+              so equal graphs and the same stepping context give equal observed low memory events
+              (`zugriffSpeicherBeob_gleich`). The observation is actor-sensitive, which is why the
+              label-only statement (`zugriffSpeicherfolge_etiketten_gleich`) alone does not suffice.
 
              Missing step: the coupling `Kopplung` does not carry the memory graph. Two coupled states
              can differ in `HatQuelle` for a cell, so two `FuehrtSchrittAus` steps with equal plan
@@ -125,17 +127,54 @@ theorem zugriffSpeicherfolge_etiketten_gleich
           · exact neu found
         | erste mem₂ neu₂ hs₂' => rfl
 
-/-- Consequently equal pre-graphs give equal low memory events, whatever resolution the memory
-    model picks. This is the single-cut step the run-level coupling is missing. -/
+/-- With the same actor and the same pre-graph, one access label determines the whole memory event
+    list, not just its labels: the optional initial write is fixed by `HatQuelle g l.ort`, and the
+    recorded step pair is `(f, l)`. Reads-from resolution only changes the successor graph. -/
+theorem zugriffSpeicherfolge_gleich
+    {Ort Wert : Type} {anfang : Ort → Wert} {f₁ f₂ : Maschine.SpeicherAkteur Ort}
+    {g : Maschine.SpeicherGraph Ort Wert} {l : Speicher.Etikett Ort Wert}
+    {es₁ es₂ : List (Maschine.SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
+    {g₁ g₂ : Maschine.SpeicherGraph Ort Wert}
+    (fgl : f₁ = f₂)
+    (h₁ : Maschine.Speicherfolge anfang f₁ g [l] es₁ g₁)
+    (h₂ : Maschine.Speicherfolge anfang f₂ g [l] es₂ g₂) :
+    es₁ = es₂ := by
+  subst f₂
+  cases h₁ with
+  | cons vor₁ hs₁ nach₁ =>
+    cases nach₁
+    cases h₂ with
+    | cons vor₂ hs₂ nach₂ =>
+      cases nach₂
+      cases vor₁ with
+      | ohne hh₁ =>
+        cases vor₂ with
+        | ohne hh₂ => rfl
+        | erste mem neu hs =>
+          exfalso
+          rcases hh₁ with outside | found
+          · exact mem outside
+          · exact neu found
+      | erste mem neu hs =>
+        cases vor₂ with
+        | ohne hh₂ =>
+          exfalso
+          rcases hh₂ with outside | found
+          · exact mem outside
+          · exact neu found
+        | erste mem₂ neu₂ hs₂' => rfl
+
+/-- Equal memory-event lists give equal observed low memory events. `speicherBeob` is sensitive to
+    the actor as well as the label, so this uses the full equality supplied by
+    `zugriffSpeicherfolge_gleich`, not only the label equality. This is the single-cut step the
+    run-level coupling is missing: the coupling does not guarantee the two pre-graphs, nor the
+    stepping actor, are equal. -/
 theorem zugriffSpeicherBeob_gleich
     {Ort Wert Grund Form : Type} (label : Etiketten Ort)
     {es₁ es₂ : List (Maschine.SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
-    (h : es₁.map Prod.snd = es₂.map Prod.snd) :
+    (h : es₁ = es₂) :
     es₁.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) =
       es₂.filterMap (speicherBeob (Grund := Grund) (Form := Form) label) := by
-  have h' := congrArg
-    (List.filterMap (fun l => speicherBeob (Grund := Grund) (Form := Form) label
-      ((Maschine.SpeicherAkteur.aussen : Maschine.SpeicherAkteur Ort), l))) h
-  simpa only [List.filterMap_map, Function.comp_apply, speicherBeob] using h'
+  rw [h]
 
 end Gabbro.Core.Beobachtung
