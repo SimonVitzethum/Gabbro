@@ -2,6 +2,7 @@ module
 
 public import Core.Verfeinerung.Abnahme.Effekte
 public import Core.Verfeinerung.Formpflichten
+public import Core.Verfeinerung.Erfuellbar
 
 @[expose] public section
 
@@ -64,29 +65,127 @@ theorem LockFreeTakte.linearisiert {spur : Nat → Option (LockFreeTakt Id Arg E
   omega
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
-variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 
-/-- A lock-free form family proves the step obligations and extracts operation
-    instances and abstract updates from the actual ideal run. The operation
-    decoder and the abstract spec are supplied by the form's declaration. -/
-def LockFreeSimAussage (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
-    (operation : F → Prop) (sicht : EffektSicht Ort Wert Wahl (LockFreeTakt Id Arg Ergebnis))
-    (start : S) (spezifikation : S → Arg → Ergebnis → S → Prop) : Prop :=
-  (∀ f, operation f → RegelSimulation E f) ∧
-    ∀ (η : Lauf E), Laeufe E η →
-      LockFreeTakte (fun t => sicht.lesen (η.zeit.spur t)) ∧
-      LockFreeSequenziell (fun t => sicht.lesen (η.zeit.spur t)) start spezifikation
+/-- A lock-free family declares its operation decoder and its abstract object as data of the
+    unit wrapper. The decoder names invocations, commits and responses in the ideal run; the
+    abstraction function, its start value and its specification fix the abstract history.
+    Membership selects the rule duties the family owes. -/
+structure LockFreeEinheit (L Ort Wert Raum Lok Grund Bedingung Wahl F : Type) [DecidableEq L] where
+  einheit : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F
+  Id : Type
+  Arg : Type
+  Ergebnis : Type
+  S : Type
+  mitglied : F → Prop
+  sicht : EffektSicht Ort Wert Wahl (LockFreeTakt Id Arg Ergebnis)
+  abs : Maschine.Zustand L Ort Wert Raum Lok Grund → S
+  start : S
+  spezifikation : S → Arg → Ergebnis → S → Prop
 
-theorem LockFreeSimAussage.konkret {operation : F → Prop}
-    {sicht : EffektSicht Ort Wert Wahl (LockFreeTakt Id Arg Ergebnis)}
-    {start : S} {spezifikation : S → Arg → Ergebnis → S → Prop}
-    (pflicht : LockFreeSimAussage E operation sicht start spezifikation)
-    {ρ : Maschine.Lauf E} {η : Lauf E} (valid : Laeufe E η) (matched : Laufabgleich ρ η) :
-    LockFreeLinearisiert (fun t => sicht.lesen (ρ.zeit.spur t)) start spezifikation := by
-  have same : (fun t => sicht.lesen (ρ.zeit.spur t)) = (fun t => sicht.lesen (η.zeit.spur t)) :=
-    funext (matched.effekte sicht)
+/-- Abstraction faithfulness at every ideal tick. A commit point must satisfy the declared
+    specification between the abstraction before and after the tick; at every other tick,
+    including private work and pauses, the abstraction is preserved. -/
+def LockFreeAbsTreue (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (η : Lauf U.einheit) : Prop :=
+  U.abs (η.zeit.zustand 0) = U.start ∧
+    ∀ t, match (U.sicht.lesen (η.zeit.spur t)).bind LockFreeTakt.punkt with
+      | none => U.abs (η.zeit.zustand (t + 1)) = U.abs (η.zeit.zustand t)
+      | some (_, x, r) => U.spezifikation (U.abs (η.zeit.zustand t)) x r
+          (U.abs (η.zeit.zustand (t + 1)))
+
+/-- The declared abstraction correspondence is a sequential history of the ideal run. At a
+    silent tick the ideal state is unchanged (`Zeitlauf.wartet`), in line with the maximal-run
+    condition of `Laeufe`; the abstraction is carried by `abs` in both cases. -/
+theorem absTreue_gibt_sequenziell (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (η : Lauf U.einheit) (treue : LockFreeAbsTreue U η) :
+    LockFreeSequenziell (fun t => U.sicht.lesen (η.zeit.spur t)) U.start U.spezifikation := by
+  refine ⟨fun t => U.abs (η.zeit.zustand t), treue.1, ?_⟩
+  intro t
+  cases eintrag : (U.sicht.lesen (η.zeit.spur t)).bind LockFreeTakt.punkt with
+  | none =>
+      have duty := treue.2 t
+      rw [eintrag] at duty
+      simpa only using duty
+  | some _ =>
+      have duty := treue.2 t
+      rw [eintrag] at duty
+      simpa only using duty
+
+/-- A lock-free family discharges the simulation duties of its member rules and declares, on
+    every ideal run of its unit, a well-formed operation history together with a faithful
+    abstraction. Linearisability is derived in `konkret`, not declared here. -/
+def LockFreeFamilienAussage (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F) : Prop :=
+  (∀ f, U.mitglied f → RegelSimulation U.einheit f) ∧
+    ∀ (η : Lauf U.einheit), Laeufe U.einheit η →
+      LockFreeTakte (fun t => U.sicht.lesen (η.zeit.spur t)) ∧ LockFreeAbsTreue U η
+
+theorem LockFreeFamilienAussage.konkret
+    (U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (pflicht : LockFreeFamilienAussage U)
+    {ρ : Maschine.Lauf U.einheit} {η : Lauf U.einheit} (valid : Laeufe U.einheit η)
+    (matched : Laufabgleich ρ η) :
+    LockFreeLinearisiert (fun t => U.sicht.lesen (ρ.zeit.spur t)) U.start U.spezifikation := by
+  have same : (fun t => U.sicht.lesen (ρ.zeit.spur t)) =
+      (fun t => U.sicht.lesen (η.zeit.spur t)) :=
+    funext (matched.effekte U.sicht)
   rw [same]
-  obtain ⟨takte, sequenziell⟩ := pflicht.2 η valid
-  exact takte.linearisiert sequenziell
+  obtain ⟨takte, treue⟩ := pflicht.2 η valid
+  exact takte.linearisiert (absTreue_gibt_sequenziell U η treue)
+
+/-- The family duty is satisfiable: with no member rules, a decoder that emits nothing and a
+    constant abstraction, every unit admits the empty operation history and the trivial spec. -/
+theorem LockFreeFamilienAussage.erfuellbar
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) :
+    ∃ U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F,
+      LockFreeFamilienAussage U := by
+  let U : LockFreeEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F :=
+    ⟨E, PUnit, PUnit, PUnit, PUnit, fun _ => False,
+      ⟨fun _ => none, rfl, fun _ _ => rfl⟩, fun _ => PUnit.unit, PUnit.unit,
+      fun _ _ _ _ => True⟩
+  refine ⟨U, ?_⟩
+  constructor
+  · intro f nichtLeer
+    cases nichtLeer
+  · intro η lauf
+    constructor
+    · refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro id x y t u ht hu
+        change none = some (id, x) at ht
+        cases ht
+      · intro id x y r s t u ht hu
+        change none = some (id, x, r) at ht
+        cases ht
+      · intro id r s t u ht hu
+        change none = some (id, r) at ht
+        cases ht
+      · intro id x r t ht
+        change none = some (id, x, r) at ht
+        cases ht
+      · intro id r t ht
+        change none = some (id, r) at ht
+        cases ht
+    · dsimp only [LockFreeAbsTreue, U]
+      constructor
+      · rfl
+      · intro t
+        rfl
+
+/-- The family duty is refutable: declaring an abstract start that differs from the abstraction
+    of the unit's initial state breaks the faithfulness duty on every ideal run. The unit and run
+    come from `fortschritt_erfuellbar`. -/
+theorem LockFreeFamilienAussage.nichtTrivial :
+    ∃ U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit,
+      ¬ LockFreeFamilienAussage U := by
+  obtain ⟨E, _, _, _, η, _, _, valid, _⟩ := fortschritt_erfuellbar
+  let U : LockFreeEinheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
+    ⟨E, PUnit, PUnit, PUnit, Bool, fun _ => False,
+      ⟨fun _ => none, rfl, fun _ _ => rfl⟩, fun _ => false, true, fun _ _ _ _ => True⟩
+  refine ⟨U, ?_⟩
+  intro aussage
+  have validU : Laeufe U.einheit η := by simpa only [U] using valid
+  obtain ⟨_, treue⟩ := aussage.2 η validU
+  dsimp only [LockFreeAbsTreue, U] at treue
+  obtain ⟨initial, _⟩ := treue
+  cases initial
 
 end Gabbro.Core.Maschine.I
