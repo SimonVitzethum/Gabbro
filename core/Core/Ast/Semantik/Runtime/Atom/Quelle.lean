@@ -201,7 +201,7 @@ theorem Zugriffsquelle.annahme : quelle.AnnahmeAussage := by
     rw [none] at h
     cases h
   · intro c s w plan u step
-    exact (quelle.form args).ideal_aktion_intern step
+    exact (quelle.form args).ideal_aktion_intern (w := w) step
 
 theorem Zugriffsquelle.ideal (position : quelle.RegelAmOrt) : quelle.IdealAussage := by
   refine ⟨position, fun args => ⟨fun c s w plans u => (quelle.form args).ideal_iff c s w plans u, ?_⟩⟩
