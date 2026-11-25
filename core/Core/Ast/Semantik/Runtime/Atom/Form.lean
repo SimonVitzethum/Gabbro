@@ -99,4 +99,33 @@ def Zugriffsform.uebertrag (z : Zugriffsform) (r : Rahmen) (gelesen : Int) : Rah
   | .erwarte ziel _ _ erwartet typ _ => if gelesen = erwartet then r.bindeGelesen ziel typ gelesen else r
   | .veroeffentliche .. => r.weiter
 
+/-- Binding the value read changes only the program counter, the temporaries or the stop reason of the frame: the
+    stack and the loop counters stay, and the program counter never moves back. -/
+theorem Rahmen.bindeGelesen_lokal (r : Rahmen) (ziel : Nat) (typ : Ty .value) (gelesen : Int) :
+    (r.bindeGelesen ziel typ gelesen).fortsetzungen = r.fortsetzungen ∧
+      r.pc ≤ (r.bindeGelesen ziel typ gelesen).pc ∧
+      (r.bindeGelesen ziel typ gelesen).zaehler = r.zaehler := by
+  unfold Rahmen.bindeGelesen
+  split
+  · exact ⟨rfl, Nat.le_succ _, rfl⟩
+  · exact ⟨rfl, Nat.le_refl _, rfl⟩
+
+/-- **The frame transfer of an access instruction keeps the stack and the loop counters and never moves the program
+    counter back.** -/
+theorem Zugriffsform.uebertrag_lokal (z : Zugriffsform) (r : Rahmen) (gelesen : Int) :
+    (z.uebertrag r gelesen).fortsetzungen = r.fortsetzungen ∧ r.pc ≤ (z.uebertrag r gelesen).pc ∧
+      (z.uebertrag r gelesen).zaehler = r.zaehler := by
+  cases z with
+  | erwarte ziel region index erwartet typ modus =>
+    simp only [Zugriffsform.uebertrag]
+    split
+    · exact r.bindeGelesen_lokal _ _ _
+    · exact ⟨rfl, Nat.le_refl _, rfl⟩
+  | speichere _ _ _ _ => exact ⟨rfl, Nat.le_succ _, rfl⟩
+  | veroeffentliche _ _ _ _ => exact ⟨rfl, Nat.le_succ _, rfl⟩
+  | lade _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
+  | tausche _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
+  | vergleicheTausche _ _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
+  | holeUndAddiere _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
+
 end Gabbro.Core.Ast.Semantik
