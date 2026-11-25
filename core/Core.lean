@@ -156,6 +156,7 @@ public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
+public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 meta import Core.Waechter.Check
