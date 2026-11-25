@@ -231,8 +231,6 @@ theorem pruefeBefehlErhalt_richtig (ps : List Praedikat) (b : Befehl) (q : Praed
     (hmem : q ∈ ps) (ok : pruefeBefehlErhalt ps b = true) (z : Zelle)
     (hm : z ∈ q.beobachtet) : z ∉ b.schreibFussabdruck := by
   simp only [pruefeBefehlErhalt, List.all_eq_true] at ok
-  have hq := ok q hmem
-  simp only [List.all_eq_true] at hq
-  exact of_decide_eq_true (hq z hm)
+  exact of_decide_eq_true (ok q hmem z hm)
 
 end Gabbro.Core.Ast.Pruefung
