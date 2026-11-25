@@ -256,6 +256,7 @@ public import Core.Linken.Gegenbeispiel
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Linken.Abgeschottet
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
+public import Core.Linken.GuardTransfer
 meta import Core.Waechter.Check
 
 #check_core
