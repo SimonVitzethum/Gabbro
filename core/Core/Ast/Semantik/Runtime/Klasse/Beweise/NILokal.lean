@@ -216,8 +216,9 @@ theorem klassen_stummer_ideal {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
     {c : Kontext} {s : Zustand} {w : PUnit} {p : Plan} {u : Zustand}
     (step : (E.system.regel f).ideal c s w [p] u) :
     p = Semantik.plan ∧ u = F.nach c s 0 := by
+  obtain ⟨k, o, t⟩ := F
   rw [emb.regel] at step
-  change F.ideal c s w [p] u at step
+  change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u at step
   rcases hk with rfl | rfl <;> exact step
 
 /-- An implementation step of a silent form at a head is a source step with the private plan. -/
@@ -226,9 +227,10 @@ theorem klassen_stummer_formschritt {ι : Type} (E : Klasseneinheit ι) (f : ι)
     {c : Kontext} {s : Zustand} {w : PUnit} {p : Plan} {u : Zustand}
     (kopf : E.system.kopf s c = some f) (step : (E.system.regel f).impl c s w [p] u) :
     Beobachtung.FormSchritt E f c s w p u := by
+  obtain ⟨k, o, t⟩ := F
   refine ⟨kopf, ?_⟩
   rw [emb.regel] at step
-  change F.ideal c s w [p] u at step
+  change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u at step
   rcases hk with rfl | rfl <;> exact step
 
 /-- **State-level flow of a silent form**: two steps of the same embedded silent form from
@@ -241,15 +243,20 @@ theorem klassen_stummer_fluss_nach {ι : Type} (E : Klasseneinheit ι) (f : ι) 
     (kopf₁ : E.system.kopf v₁ c = some f) (kopf₂ : E.system.kopf v₂ c = some f)
     (gleich : Beobachtung.QuellzustandGleich E v₁ v₂) :
     Beobachtung.QuellzustandGleich E (F.nach c v₁ 0) (F.nach c v₂ 0) := by
-  have fs1 : Beobachtung.FormSchritt E f c v₁ () Semantik.plan (F.nach c v₁ 0) := by
+  obtain ⟨k, o, t⟩ := F
+  have fs1 : Beobachtung.FormSchritt E f c v₁ () Semantik.plan
+      ((⟨k, o, t⟩ : Schrittform).nach c v₁ 0) := by
     refine ⟨kopf₁, ?_⟩
     rw [emb.regel]
-    change F.ideal c v₁ () [Semantik.plan] (F.nach c v₁ 0)
+    change Schrittform.ideal ⟨k, o, t⟩ c v₁ () [Semantik.plan]
+      ((⟨k, o, t⟩ : Schrittform).nach c v₁ 0)
     rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
-  have fs2 : Beobachtung.FormSchritt E f c v₂ () Semantik.plan (F.nach c v₂ 0) := by
+  have fs2 : Beobachtung.FormSchritt E f c v₂ () Semantik.plan
+      ((⟨k, o, t⟩ : Schrittform).nach c v₂ 0) := by
     refine ⟨kopf₂, ?_⟩
     rw [emb.regel]
-    change F.ideal c v₂ () [Semantik.plan] (F.nach c v₂ 0)
+    change Schrittform.ideal ⟨k, o, t⟩ c v₂ () [Semantik.plan]
+      ((⟨k, o, t⟩ : Schrittform).nach c v₂ 0)
     rcases hk with rfl | rfl <;> exact ⟨rfl, rfl⟩
   by_cases hp : oeffentlich (E.fluss.kontrolle f) = true
   · exact (fluss.2 hp c v₁ () Semantik.plan (F.nach c v₁ 0)
