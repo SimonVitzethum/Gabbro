@@ -309,7 +309,7 @@ theorem geraete_speicher_still {anfang : Nat → UInt8} {f : SpeicherAkteur Nat}
     {es : List (SpeicherAkteur Nat × Speicher.Etikett Nat UInt8)}
     (folge : Speicherfolge anfang f g ls es g')
     (aussen : ∀ l ∈ ls, l.art = .aussen) :
-    es.filterMap (speicherBeob (d.unit locals).etiketten) = [] := by
+    es.filterMap (speicherBeob (Grund := PUnit) (Form := PUnit) (d.unit locals).etiketten) = [] := by
   induction folge with
   | nil _ => rfl
   | cons vor hs nach ih =>
@@ -317,7 +317,8 @@ theorem geraete_speicher_still {anfang : Nat → UInt8} {f : SpeicherAkteur Nat}
     | ohne _ =>
       simp only [List.nil_append]
       have hart : l.art = .aussen := aussen l List.mem_cons_self
-      have hnone : speicherBeob (d.unit locals).etiketten (f, l) = none := by
+      have hnone : speicherBeob (Grund := PUnit) (Form := PUnit)
+          (d.unit locals).etiketten (f, l) = none := by
         simp only [speicherBeob, hart]
       simp only [hnone, List.filterMap_cons_none, ih (fun l h => aussen l (List.mem_cons_of_mem _ h))]
     | erste mem _ _ =>
