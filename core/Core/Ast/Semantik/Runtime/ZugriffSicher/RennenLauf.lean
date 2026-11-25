@@ -146,6 +146,13 @@ theorem quellImplArrivalGleich (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
         exact Zugriffsform.uebertrag_arrival z (s.lokal c) v
       · simp only [Schrittform.zugriffNach, Schrittform.nach, Zustand.lokal, Function.update_of_ne hdc]
 
+/-- A `Speicherfolge` with no labels appends no event. -/
+theorem speicherfolgeLeer {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkteur Ort}
+    {g g' : SpeicherGraph Ort Wert} {es} (h : Speicherfolge anfang f g [] es g') :
+    es = [] ∧ g' = g := by
+  cases h with
+  | nil g => exact ⟨rfl, rfl⟩
+
 /-- A class-good step at a context with no arrival regions appends no memory event at all. -/
 theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befehl) (hgut : f.Klassengut)
     {t : Nat} {c : Kontext} {s u : Zustand} {w : PUnit} {plan : Plan}
@@ -158,10 +165,14 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
   have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
   obtain ⟨_, _, _, _, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
-  have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] [] s'.graph := by
-    simpa [planEq, hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] using folge
-  have evEq := folgeLeer.viele.ev
-  simpa using evEq
+  have hlabels : sperren ++ plan.lesen ++
+      schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
+      spur.aussen.map (aussenEtikett (p.einheit platform).einrichtung) = [] := by
+    simp [planEq, hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse]
+  have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] spur.speicher s'.graph := by
+    simpa [hlabels] using folge
+  obtain ⟨_, gEq⟩ := speicherfolgeLeer folgeLeer
+  rw [gEq]
 
 /-- Every event a `Speicherfolge` appends is a step of its actor or a lazily materialised
     initial write. -/
@@ -199,8 +210,7 @@ theorem speicherfolgeEinzel {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkte
     (h : Speicherfolge anfang f g [l] es g') :
     ∀ x ∈ es, (∃ ort, x.1 = SpeicherAkteur.initial ort) ∨ x = (f, l) := by
   cases h with
-  | nil g => intro x hx; cases hx
-  | @cons g g0 g1 g2 l ls init esTail vor hs nach =>
+  | cons g0 g1 g2 l ls init esTail vor hs nach =>
     cases nach
     intro x hx
     change x ∈ init ++ [(f, l)] at hx
@@ -246,7 +256,7 @@ theorem einAktBeiAussen {Ort Wert} {initial : Ort → Wert} {vor nach : Speicher
     · exact False.elim (nichtInitial ort hinit)
     · have artAus : pair.2.art = .aussen := by rw [heq, istAussen]
       rw [artAus] at memLab
-      simp only [Art.liest, Art.schreibt] at memLab
+      simp only [Speicher.Art.liest, Speicher.Art.schreibt] at memLab
       exact False.elim memLab
 
 /-- A class-good step keeps the one-actor property: either its context has no arrival regions
@@ -366,17 +376,21 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
               obtain ⟨f, head, impl⟩ := regel
               exact quellKontextSchnitt p platform klassenrein f head impl aus (ih vor vorher)
             | antwort _ h =>
-              obtain ⟨_, _, folge, ziel⟩ := h
-              refine ⟨(AntwortSchritt.viele h).erreichbar (ih vor vorher).1, ?_, ?_⟩
-              · apply einAktBeiAussen (istAussen := rfl)
-                · exact folge
-                · exact (ih vor vorher).2.1
+              have erreichbar := (AntwortSchritt.viele (p.einheit platform).einrichtung h).erreichbar (ih vor vorher).1
+              have aexists : ∃ a : AntwortEreignis, spur.aussen = [.antwort a] := by
+                simpa using h.2.1
+              obtain ⟨a, _⟩ := aexists
+              have folge := h.2.2.1
+              have ziel := h.2.2.2
+              refine ⟨erreichbar, ?_, ?_⟩
+              · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.antwort a)) rfl folge (ih vor vorher).2.1
               · intro d hd
                 rw [ziel]
                 exact (ih vor vorher).2.2 d hd
             | interrupt _ h =>
+              have erreichbar := (UnterbrechungsSchritt.viele (p.einheit platform).einrichtung h).erreichbar (ih vor vorher).1
               obtain ⟨k0, irq, _, _, _, _, _, _, _, folge, ziel⟩ := h
-              refine ⟨(UnterbrechungsSchritt.viele h).erreichbar (ih vor vorher).1, ?_, ?_⟩
+              refine ⟨erreichbar, ?_, ?_⟩
               · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.interrupt k0 irq .handler)) rfl folge (ih vor vorher).2.1
               · intro d hd
                 rw [ziel]
@@ -387,7 +401,8 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
               · change Gabbro.Core.Speicher.Zustand.Erreichbar Gabbro.Core.Speicher.Zustand.leer
                 exact Gabbro.Core.Speicher.Zustand.Erreichbar.start
               · intro x hx
-                simp only [Gabbro.Core.Speicher.Zustand.leer, List.not_mem_nil] at hx
+                change x ∈ ([] : List (Speicher.Ereignis (SpeicherAkteur Zelle) Zelle Int)) at hx
+                cases hx
               · intro d hd
                 simp [Zustand.wiederanlauf, Zustand.start, Fragment.sicherheitsEinheit,
                   Fragment.einheit, einrichtung, startdaten, hd]
