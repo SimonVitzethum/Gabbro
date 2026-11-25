@@ -128,4 +128,25 @@ theorem Zugriffsform.uebertrag_lokal (z : Zugriffsform) (r : Rahmen) (gelesen : 
   | vergleicheTausche _ _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
   | holeUndAddiere _ _ _ _ _ _ => exact r.bindeGelesen_lokal _ _ _
 
+/-- **The frame transfer of an access instruction keeps the arrival regions of the frame**: the grant of the acting
+    context never changes quietly. -/
+theorem Zugriffsform.uebertrag_arrival (z : Zugriffsform) (r : Rahmen) (gelesen : Int) :
+    (z.uebertrag r gelesen).arrivalRegions = r.arrivalRegions := by
+  have gebunden (ziel : Nat) (typ : Ty .value) :
+      (r.bindeGelesen ziel typ gelesen).arrivalRegions = r.arrivalRegions := by
+    unfold Rahmen.bindeGelesen
+    split <;> rfl
+  cases z with
+  | erwarte ziel region index erwartet typ modus =>
+    simp only [Zugriffsform.uebertrag]
+    split
+    · exact gebunden ziel typ
+    · rfl
+  | speichere _ _ _ _ => rfl
+  | veroeffentliche _ _ _ _ => rfl
+  | lade ziel _ _ typ _ => exact gebunden ziel typ
+  | tausche ziel _ _ _ typ _ => exact gebunden ziel typ
+  | vergleicheTausche ziel _ _ _ _ typ _ => exact gebunden ziel typ
+  | holeUndAddiere ziel _ _ _ typ _ => exact gebunden ziel typ
+
 end Gabbro.Core.Ast.Semantik
