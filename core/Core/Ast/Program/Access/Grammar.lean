@@ -1,12 +1,13 @@
 /-
-  File:      core/Core/Ast/Program/AccessGrammar.lean
+  File:      core/Core/Ast/Program/Access/Grammar.lean
   Subject:   THE PRODUCTIONS OF THE ACCESS STATEMENTS (MK-04b). An access statement is the head word `mem` and one access
              form. Surface syntax (SYNTAX.md, "Memory access statements"):
 
-                  statement += "mem" ( load | store | swap ) ;
+                  statement += "mem" ( load | store | swap | cas ) ;
                   load       = "load" ident ":" type "=" region "," index "," mode ";" ;
                   store      = "store" region "," index "," value "," mode ";" ;
                   swap       = "swap" ident ":" type "=" region "," index "," value "," mode ";" ;
+                  cas        = "cas" ident ":" type "=" region "," index "," expected "," new "," mode ";" ;
                   mode       = "na" | "rlx" | "ra" | "sc" ;
 
              `region` is the name of an owned-region local, `index` and `value` are integer expressions. The head
@@ -38,6 +39,9 @@ def printStoreWord : PrintedToken := printProgramWord 's' ['t', 'o', 'r', 'e'] (
 def printSwapWord : PrintedToken := printProgramWord 's' ['w', 'a', 'p'] (by decide) (by
   intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl <;> decide)
+def printCasWord : PrintedToken := printProgramWord 'c' ['a', 's'] (by decide) (by
+  intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl <;> decide)
 def printModeNa : PrintedToken := printProgramWord 'n' ['a'] (by decide) (by
   intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl <;> decide)
@@ -103,5 +107,17 @@ inductive AccessReads (scope : Scope) : List Token → AccessStatement scope →
       ModeReads modeInput mode (semicolon :: rest) →
       AccessReads scope (keyword "swap" :: .word name.val :: colon :: typeInput)
         ⟨_, .swap name ordinary written valid region visible receiverOrdinary index value mode⟩ rest
+  | vergleicheTausche (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name) :
+      TypeReads scope typeInput written (assignment :: .word region.binding.name.val :: comma :: indexInput) →
+      ExprReads scope 0 indexInput (index : Expr scope (.int lo hi)) (comma :: expectedInput) →
+      ExprReads scope 0 expectedInput (expected : Expr scope (.int eLo eHi)) (comma :: neuInput) →
+      ExprReads scope 0 neuInput (neu : Expr scope (.int nLo nHi)) (comma :: modeInput) →
+      ModeReads modeInput mode (semicolon :: rest) →
+      AccessReads scope (keyword "cas" :: .word name.val :: colon :: typeInput)
+        ⟨_, .vergleicheTausche name ordinary written valid region visible receiverOrdinary
+          index expected neu mode⟩ rest
 
 end Gabbro.Core.Ast

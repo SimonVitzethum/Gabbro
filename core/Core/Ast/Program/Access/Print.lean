@@ -1,11 +1,11 @@
 /-
-  File:      core/Core/Ast/Program/AccessPrint.lean
+  File:      core/Core/Ast/Program/Access/Print.lean
   Subject:   THE PRINTER OF THE ACCESS FORMS AND ITS ROUND TRIP (MK-04b): every access form prints to tokens
              that its production reads back (`Access.printReads`), after the head word `mem` that `Stmt.printPieces` adds.
 -/
 module
 
-public import Core.Ast.Program.AccessGrammar
+public import Core.Ast.Program.Access.Grammar
 public import Core.Ast.Program.WrittenTypes
 public import Core.Ast.Expression.PrintReads
 
@@ -28,6 +28,11 @@ def Access.printPieces : Access before after → List PrintedToken
     [printSwapWord, name.print, printColon] ++ written.printPieces ++
       [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
       [printComma] ++ value.printPieces ++ [printComma, mode.print, printSemicolon]
+  | .vergleicheTausche name _ written _ region _ _ index expected neu mode =>
+    [printCasWord, name.print, printColon] ++ written.printPieces ++
+      [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
+      [printComma] ++ expected.printPieces ++ [printComma] ++ neu.printPieces ++
+      [printComma, mode.print, printSemicolon]
 
 theorem ModeReads.print (mode : AccessMode) (more : List Token) :
     ModeReads (mode.print.value :: more) mode more := by
@@ -47,6 +52,7 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
   have hpLoad : printLoadWord.value = keyword "load" := rfl
   have hpStore : printStoreWord.value = keyword "store" := rfl
   have hpSwap : printSwapWord.value = keyword "swap" := rfl
+  have hpCas : printCasWord.value = keyword "cas" := rfl
   cases tree with
   | load name ordinary written valid region visible receiverOrdinary index mode =>
     have modeRead := ModeReads.print mode (semicolon :: rest)
@@ -83,5 +89,24 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
       List.cons_append, List.nil_append, List.append_assoc, hpSwap, hpName, hpColon, hpAssign, hpComma,
       hpSemi] using
       (AccessReads.swap name ordinary written valid region visible receiverOrdinary typeRead indexRead valueRead modeRead)
+  | vergleicheTausche name ordinary written valid region visible receiverOrdinary index expected neu mode =>
+    have modeRead := ModeReads.print mode (semicolon :: rest)
+    have neuRead := neu.printReads (minimum := 0)
+      (rest := comma :: mode.print.value :: semicolon :: rest) noOperatorAtComma
+    have expectedRead := expected.printReads (minimum := 0)
+      (rest := comma :: (neu.printTokens ++ comma :: mode.print.value :: semicolon :: rest)) noOperatorAtComma
+    have indexRead := index.printReads (minimum := 0)
+      (rest := comma :: (expected.printTokens ++ comma ::
+        (neu.printTokens ++ comma :: mode.print.value :: semicolon :: rest))) noOperatorAtComma
+    have typeRead := written.printReads valid
+      (rest := assignment :: .word region.binding.name.val :: comma ::
+        (index.printTokens ++ (comma :: (expected.printTokens ++ (comma ::
+          (neu.printTokens ++ comma :: mode.print.value :: semicolon :: rest))))))
+      (by intro more h; cases h)
+    simpa only [Access.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpCas, hpName, hpColon, hpAssign, hpComma,
+      hpSemi] using
+      (AccessReads.vergleicheTausche name ordinary written valid region visible receiverOrdinary
+        typeRead indexRead expectedRead neuRead modeRead)
 
 end Gabbro.Core.Ast

@@ -5,6 +5,7 @@
 -/
 module
 public import Core.Ast.Tree.Statement
+public import Core.Ast.Program.Access.Comparison
 public import Core.Ziel.Form
 public import Core.Ziel.Sicherheit
 public import Core.Text.Model

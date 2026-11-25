@@ -2,7 +2,7 @@ module
 
 public import Core.Ast.Variant.Grammar
 public import Core.Ast.LowLevel.Syntax
-public import Core.Ast.Program.AccessGrammar
+public import Core.Ast.Program.Access.Grammar
 
 @[expose] public section
 
