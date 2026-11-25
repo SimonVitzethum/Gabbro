@@ -73,7 +73,8 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
       · have hp : plan = Semantik.plan := (List.cons.inj same).1
         subst plan
         exact Or.inl rfl
-      · obtain ⟨q, hoq, hbefugt⟩ := befugt
+      · change ∃ q : Frage, (o (s.lokal c)).frage = some q ∧ s.fragenBefugt c q at befugt
+        obtain ⟨q, hoq, hbefugt⟩ := befugt
         have hp : plan = Wirkungsklasse.plan .frage (o (s.lokal c)) v := (List.cons.inj same).1
         subst plan
         exact Or.inr (Or.inr ⟨q, by simp only [Wirkungsklasse.plan, Operand.fragePlan, hoq], hbefugt⟩)
@@ -116,10 +117,12 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
   | frage =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, v, _, _, hu⟩ <;> rw [hu] <;> rfl
 
-private theorem fuehrtAus_buchung {L Ort Wert Raum Lok Grund Bedingung : Type}
-    {t c s u plan sperren spur v}
+private theorem fuehrtAus_buchung {L Ort Wert Raum Lok Grund Bedingung : Type} [DecidableEq L]
+    {t : Nat} {c : Kontext} {s u : Zustand L Ort Wert Raum Lok Grund}
+    {p : SchrittPlan L Ort Wert Bedingung} {sperren : List (Etikett Ort Wert)}
+    {ereignisse : List Ereignis} {v : Zustand L Ort Wert Raum Lok Grund}
     (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
-    (action : FuehrtAus e t c s u plan.aktion sperren spur v) :
+    (action : FuehrtAus e t c s u p.aktion sperren ereignisse v) :
     v.buchung.wirkungen = u.buchung.wirkungen := by
   cases action <;> rfl
 
@@ -134,8 +137,7 @@ private theorem klassen_spur {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
       RegisterErlaubt vor c.nummer q) ∧
     nach.buchung.wirkungen = vor.buchung.wirkungen := by
   rw [emb.regel] at step
-  obtain ⟨_, _, _, _, action, _, nach_eq⟩ := aus
-  obtain ⟨_, _, _, _, v, _, _⟩ := aus
+  obtain ⟨_, _, _, v, action, _, nach_eq⟩ := aus
   have wirkungen : nach.buchung.wirkungen = vor.buchung.wirkungen := by
     rw [nach_eq]
     change v.buchung.wirkungen = vor.buchung.wirkungen
@@ -151,7 +153,7 @@ private theorem klassen_spur {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
     step records is a question, and its guard carries the device authority. No new effect is emitted. -/
 theorem klassenRegisterbein (k : Wirkungsklasse) : KlassenRegisterbeinAussage k := by
   intro ι E f F _ emb _ t c _ vor zwischen nach plan spur _ regel aus
-  rcases klassen_spur E f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
+  rcases klassen_spur E.maschine f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
   constructor
   · intro e mem
     rcases spurform with leer | ⟨q, geformt, erlaubt⟩
@@ -180,7 +182,7 @@ theorem klassenRegisterbein (k : Wirkungsklasse) : KlassenRegisterbeinAussage k 
     outside record; the record of a class step is empty or holds one question. The ledger gains nothing. -/
 theorem klassenCommitbein (k : Wirkungsklasse) : KlassenCommitbeinAussage k := by
   intro ι E f F _ emb _ _ t c _ vor zwischen nach plan spur _ regel aus
-  rcases klassen_spur E f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
+  rcases klassen_spur E.maschine f F emb t c vor zwischen plan spur regel aus with ⟨ spurform, wirkungen ⟩
   constructor
   · intro e mem a commit
     rcases spurform with leer | ⟨q, geformt, _⟩
