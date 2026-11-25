@@ -238,4 +238,132 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
   · rw [hkerne₁, hkerne₂, hkerne]
   · rw [hstatus₁, hstatus₂, hstatus]
 
+/-- Transport a device consume step from the left run to the right at the same cut. -/
+theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.unit locals)}
+    (vergleich : Vergleich (d.unit locals) h₁ h₂ ρ₁ ρ₂) {predictor : Praediktor} {t : Nat}
+    {binding : Binding k} {access : RegisterAccess}
+    {required : GeraetePhase} {target : Option GeraetePhase} {c : Kontext} {w : PUnit}
+    {s₁ s₂ u₁ n₁ : State} {spur₁ : SchrittSpur Nat UInt8} {plan : Plan}
+    {answer : AntwortEreignis}
+    (hkopp : GeraeteKopplungAussage (d.unit locals) ρ₁ ρ₂ predictor t t)
+    (hz₁ : ρ₁.zeit.zustand t = some s₁) (hz₂ : ρ₂.zeit.zustand t = some s₂)
+    (quell : QuellzustandGleich (d.unit locals) s₁ s₂)
+    (regel₁ : (d.unit locals).system.ImplSchritt c s₁ w [plan] u₁)
+    (ruleEq : d.rule locals = Rule.machine binding access required target)
+    (aus₁ : FuehrtSchrittAus (d.unit locals).einrichtung t c s₁ u₁ plan spur₁ n₁)
+    (hplans : [plan] = [{ internal with aktion := .verbrauche answer }])
+    (hu : u₁ = setFrame s₁ c (geraete_consume_rahmen s₁ c binding access answer target))
+    (owned : Befugt binding required access s₁ c)
+    (pending : (s₁.lokal c).pending = some (binding.question access))
+    (ready : s₁.naechsteAntwort c = some answer)
+    (sameQuestion : answer.question = binding.question access) :
+    ∃ spur₂ u₂ n₂,
+      (d.unit locals).system.ImplSchritt c s₂ w [plan] u₂ ∧
+      FuehrtSchrittAus (d.unit locals).einrichtung t c s₂ u₂ plan spur₂ n₂ ∧
+      spur₂.aussen = spur₁.aussen ∧
+      GeraeteLedgerGleichAussage n₁ n₂ ∧ n₁.buchung = n₂.buchung ∧
+      n₁.epoche = n₂.epoche ∧ n₁.geliefert = n₂.geliefert ∧
+      n₁.kerne = n₂.kerne ∧ n₁.status = n₂.status ∧
+      QuellzustandGleich (d.unit locals) n₁ n₂ := by
+  have hplanF : plan = { internal with aktion := .verbrauche answer } := (List.cons.inj hplans).1
+  obtain ⟨kopf₁, plan', hplans', rule₁⟩ := geraete_kontext_regel ruleEq regel₁
+  have hbuch := geraeteKopplung_buchung hkopp hz₁ hz₂
+  have hlokal := geraete_lokal_gleich quell
+  obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
+    geraeteKopplung_ledger hkopp hz₁ hz₂
+  have hstate := (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
+  have hepoche := hstate.2.1
+  have hgeliefert := hstate.2.2.1
+  have hkerne := hstate.2.2.2.1
+  have hstatus := hstate.2.2.2.2
+  have owned₂ : Befugt binding required access s₂ c :=
+    geraete_befugt_transport owned hbuch hlokal
+  have pending₂ : (s₂.lokal c).pending = some (binding.question access) := by
+    rw [← geraete_kopplung_pending hkopp hz₁ hz₂ c]
+    exact pending
+  have ready₂ : s₂.naechsteAntwort c = some answer := by
+    rw [← geraete_antwort_gleich quell]
+    exact ready
+  have kopf₂ : (d.unit locals).system.kopf s₂ c = some () :=
+    geraeteKopfGleich locals d quell hstatus kopf₁
+  let u₂ : State := setFrame s₂ c (geraete_consume_rahmen s₂ c binding access answer target)
+  have impl₂Ideal : ((d.unit locals).system.regel ()).ideal c s₂ () [plan] u₂ := by
+    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+    rw [ruleEq]
+    dsimp only [Rule.machine]
+    refine ⟨{ internal with aktion := .verbrauche answer }, hplans, ?_⟩
+    exact Rule.consume owned₂ pending₂ ready₂ sameQuestion
+  have impl₂ : ((d.unit locals).system.regel ()).impl c s₂ w [plan] u₂ := by
+    dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+    rw [ruleEq]
+    dsimp only [Rule.machine]
+    refine ⟨{ internal with aktion := .verbrauche answer }, hplans, ?_⟩
+    exact Rule.consume owned₂ pending₂ ready₂ sameQuestion
+  have regel₂ : (d.unit locals).system.ImplSchritt c s₂ w [plan] u₂ := ⟨(), kopf₂, impl₂⟩
+  let spur₂ : SchrittSpur Nat UInt8 := ⟨[], []⟩
+  let n₂ : State := u₂.verbrauche c
+  have aus₂ : FuehrtSchrittAus (d.unit locals).einrichtung t c s₂ u₂ plan spur₂ n₂ := by
+    refine ⟨?_, ?_, ?_⟩
+    · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    · intro l hl
+      rw [hplanF] at hl
+      cases hl
+    · refine ⟨[], u₂.verbrauche c, ?_, ?_, rfl⟩
+      · rw [hplanF]
+        exact FuehrtAus.verbrauche ready₂
+      · rw [hplanF]
+        simp only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
+          List.nil_append, List.append_nil, List.map_nil]
+  obtain ⟨spurEq₁, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁, hbuchung₁,
+    hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, hpending₁, hinitial₁, hrechte₁,
+    hleihen₁, hpersistenz₁⟩ :=
+    geraete_consume_tick (target := target) aus₁ hplans hu owned pending ready sameQuestion
+  obtain ⟨spurEq₂, hfragen₂, hverlauf₂, hantworten₂, hverbraucht₂, hverworfen₂, hbuchung₂,
+    hepoche₂, hgeliefert₂, hkerne₂, hstatus₂, hlokal₂, hpending₂, hinitial₂, hrechte₂,
+    hleihen₂, hpersistenz₂⟩ :=
+    geraete_consume_tick (target := target) aus₂ hplans rfl owned₂ pending₂ ready₂ sameQuestion
+  have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
+    have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () [plan] u₁ := by
+      dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+      rw [ruleEq]
+      dsimp only [Rule.machine]
+      exact ⟨plan', hplans', rule₁⟩
+    have hform₁ : FormSchritt (d.unit locals) () c s₁ () plan u₁ := ⟨kopf₁, impl₁Ideal⟩
+    have hform₂ : FormSchritt (d.unit locals) () c s₂ () plan u₂ := ⟨kopf₂, impl₂Ideal⟩
+    have hq := (geraeteSchrittNI locals d c s₁ s₂ () plan plan u₁ u₂ quell hform₁ hform₂).1
+    have n1lokal : n₁.lokal = u₁.lokal := by rw [hlokal₁, hu]; rfl
+    have n2lokal : n₂.lokal = u₂.lokal := by rw [hlokal₂]; rfl
+    have n1status : n₁.status = u₁.status := by rw [hstatus₁, hu]; rfl
+    have n2status : n₂.status = u₂.status := by rw [hstatus₂]; rfl
+    have n1initial : n₁.initial = u₁.initial := by rw [hinitial₁, hu]; rfl
+    have n2initial : n₂.initial = u₂.initial := by rw [hinitial₂]; rfl
+    have n1rechte : n₁.rechte = u₁.rechte := by rw [hrechte₁, hu]; rfl
+    have n2rechte : n₂.rechte = u₂.rechte := by rw [hrechte₂]; rfl
+    have n1leihen : n₁.leihen = u₁.leihen := by rw [hleihen₁, hu]; rfl
+    have n2leihen : n₂.leihen = u₂.leihen := by rw [hleihen₂]; rfl
+    have n1antwort : n₁.naechsteAntwort = u₁.naechsteAntwort := by
+      funext c'
+      rw [hu]
+      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁, hverbraucht₁,
+        hverworfen₁, Zustand.verbrauche, setFrame]
+    have n2antwort : n₂.naechsteAntwort = u₂.naechsteAntwort := by
+      funext c'
+      simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂, hverbraucht₂,
+        hverworfen₂, Zustand.verbrauche]
+    unfold QuellzustandGleich at hq ⊢
+    unfold AntwortSicht at hq ⊢
+    simpa only [n1lokal, n2lokal, n1status, n2status, n1initial, n2initial, n1rechte,
+      n2rechte, n1leihen, n2leihen, n1antwort, n2antwort] using hq
+  refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
+  · rw [spurEq₁, spurEq₂]
+  · exact ⟨by rw [hfragen₁, hfragen₂, hfragen], by rw [hverlauf₁, hverlauf₂, hverlauf],
+      by rw [hantworten₁, hantworten₂, hantworten],
+      by rw [hverbraucht₁, hverbraucht₂, hverbraucht, Function.update_self],
+      by rw [hverworfen₁, hverworfen₂, hverworfen]⟩
+  · rw [hbuchung₁, hbuchung₂, hbuch]
+  · rw [hepoche₁, hepoche₂, hepoche]
+  · rw [hgeliefert₁, hgeliefert₂, hgeliefert]
+  · rw [hkerne₁, hkerne₂, hkerne]
+  · rw [hstatus₁, hstatus₂, hstatus]
+
 end Gabbro.Core.Beobachtung
