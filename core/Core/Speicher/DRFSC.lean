@@ -60,30 +60,55 @@ theorem syncZaun_sc (hn : G.NurSC) {a : E} (h : G.istSyncZaun a) : G.sc a :=
 theorem istSCZaun_von_sync (hn : G.NurSC) {a : E} (h : G.istSyncZaun a) : G.istSCZaun a :=
   ⟨h.1, syncZaun_sc hn h⟩
 
-/-- The head of a release sequence is a write. -/
-theorem Rs.schreibt_links {w x : E} (h : G.Rs w x) : G.schreibt w := by
-  induction h with
-  | selbst hs _ => exact hs
-  | po hs _ _ _ _ => exact hs
-  | rmw ih _ _ => exact ih
+/-- An update reads. -/
+theorem istRmw_liest {a : E} (h : G.istRmw a) : G.liest a := by
+  unfold istRmw at h
+  unfold liest
+  rw [h]
+  exact trivial
 
-/-- The head of a release sequence is atomic. -/
-theorem Rs.atomar_links {w x : E} (h : G.Rs w x) : (G.modus w).atomar := by
+/-- The tail of a release sequence is atomic (the head need not be: the `po` clause carries no
+    strength requirement). -/
+theorem Rs.atomar_rechts (hwf : G.Wohlgeformt) {w x : E} (h : G.Rs w x) :
+    (G.modus x).atomar := by
   induction h with
   | selbst _ ha => exact ha
   | po _ _ _ _ ha => exact ha
-  | rmw ih _ _ => exact ih
+  | rmw _ _ hu _ => exact hwf.rmw_atomar hu
 
-/-- The middle `rs ; rf` of a synchronisation is a same-location `hb` step. Under `NurSC` both
-    endpoints are `seq_cst`, so the classic shape applies even when the outer ends are fences. -/
+/-- A release sequence stays at its head and advances by `po` or by a synchronising update. -/
+theorem Rs.hbOderGleich (hk : G.Konsistent) (hn : G.NurSC) {w x : E} (h : G.Rs w x) :
+    w = x ∨ G.hb w x := by
+  induction h with
+  | selbst _ _ => exact Or.inl rfl
+  | po _ hpo _ _ _ => exact Or.inr (G.hb_von_po hpo)
+  | @rmw w₀ x₀ u hRs hrf hu ih =>
+    have hxstark : (G.modus x₀).stark := sc_stark (hn.sc_von_atomar (Rs.atomar_rechts hk.wf hRs))
+    have hustark : (G.modus u).stark := sc_stark (hn.sc_von_atomar (hk.wf.rmw_atomar hu))
+    have hsw : G.sw x₀ u := sw_von_klassisch
+      ⟨hk.wf.rf_schreibt _ _ hrf, hxstark, istRmw_liest hu, hustark, x₀,
+      .selbst (hk.wf.rf_schreibt _ _ hrf) (hk.wf.rmw_atomar hu), hrf⟩
+    rcases ih with rfl | hbwx
+    · exact Or.inr (G.hb_von_sw hsw)
+    · exact Or.inr (G.hb_trans hbwx (G.hb_von_sw hsw))
+
+/-- The middle `rs ; rf` of a synchronisation is a same-location `hb` step. The release head need
+    not be strong (a release fence supplies the strength), so the step starts at the release
+    sequence's strong tail; the location equality comes from `Rs.ort_gleich` and `rf_ort`. -/
 theorem sw_hb_mitte (hk : G.Konsistent) (hn : G.NurSC) {w x r : E}
     (hrs : G.Rs w x) (hrf : G.rf x r) (hratom : (G.modus r).atomar) :
     G.hb w r ∧ G.ort w = G.ort r := by
-  have hwstark : (G.modus w).stark := sc_stark (hn.sc_von_atomar (Rs.atomar_links hrs))
+  have hxstark : (G.modus x).stark := sc_stark (hn.sc_von_atomar (Rs.atomar_rechts hk.wf hrs))
   have hrstark : (G.modus r).stark := sc_stark (hn.sc_von_atomar hratom)
-  have hsw : G.sw w r := sw_von_klassisch
-    ⟨Rs.schreibt_links hrs, hwstark, hk.wf.rf_liest _ _ hrf, hrstark, x, hrs, hrf⟩
-  exact ⟨G.hb_von_sw hsw, sw_klassisch_ort hk.wf hrs hrf⟩
+  have hsw : G.sw x r := sw_von_klassisch
+    ⟨hk.wf.rf_schreibt _ _ hrf, hxstark, hk.wf.rf_liest _ _ hrf, hrstark, x,
+    .selbst (hk.wf.rf_schreibt _ _ hrf) (Rs.atomar_rechts hk.wf hrs), hrf⟩
+  have hbxr : G.hb x r := G.hb_von_sw hsw
+  have hbwr : G.hb w r := by
+    rcases Rs.hbOderGleich hk hn hrs with rfl | hbwx
+    · exact hbxr
+    · exact G.hb_trans hbwx hbxr
+  exact ⟨hbwr, sw_klassisch_ort hk.wf hrs hrf⟩
 
 /-- **Every synchronisation between `seq_cst` endpoints is a `psc` step**, with or without fences.
     A classic `sw` is `hb|loc`; one fence side goes through `pscBasis`; two fence sides through
@@ -91,22 +116,21 @@ theorem sw_hb_mitte (hk : G.Konsistent) (hn : G.NurSC) {w x r : E}
 theorem sw_psc (hk : G.Konsistent) (hn : G.NurSC) {a b : E} (h : G.sw a b) : G.psc a b := by
   obtain ⟨w, x, r, hkopf, hrs, hrf, hratom, _, hschwanz⟩ := h
   have hm := sw_hb_mitte hk hn hrs hrf hratom
-  have hscw : G.sc w := hn.sc_von_atomar (Rs.atomar_links hrs)
   have hscr : G.sc r := hn.sc_von_atomar hratom
   rcases hkopf with hkopf | hkopf
-  · rcases hschwanz with hschwanz | hschwanz
+  · obtain ⟨rfl, _, hma⟩ := hkopf
+    have hsca : G.sc a := hn.sc_von_stark hma
+    rcases hschwanz with hschwanz | hschwanz
     · obtain ⟨rfl, _, _⟩ := hschwanz
-      obtain ⟨rfl, _, _⟩ := hkopf
-      exact psc_von_klassisch ⟨hscw, hscr, Or.inr (Or.inr ⟨hm.1, hm.2⟩)⟩
+      exact psc_von_klassisch ⟨hsca, hscr, Or.inr (Or.inr (Or.inl ⟨hm.1, hm.2⟩))⟩
     · obtain ⟨_, _, hporb, hzfb⟩ := hschwanz
-      obtain ⟨rfl, _, _⟩ := hkopf
-      refine Or.inl ⟨w, r, Or.inr (Or.inr ⟨hm.1, hm.2⟩), ?_, ?_⟩
-      · exact Or.inl ⟨hscw, rfl⟩
+      refine Or.inl ⟨a, r, Or.inr (Or.inr (Or.inl ⟨hm.1, hm.2⟩)), ?_, ?_⟩
+      · exact Or.inl ⟨hsca, rfl⟩
       · exact Or.inr ⟨istSCZaun_von_sync hn hzfb, Or.inr (G.hb_von_po hporb)⟩
   · obtain ⟨hzfa, hpoaw, _⟩ := hkopf
     rcases hschwanz with hschwanz | hschwanz
     · obtain ⟨rfl, _, _⟩ := hschwanz
-      refine Or.inl ⟨w, r, Or.inr (Or.inr ⟨hm.1, hm.2⟩), ?_, ?_⟩
+      refine Or.inl ⟨w, r, Or.inr (Or.inr (Or.inl ⟨hm.1, hm.2⟩)), ?_, ?_⟩
       · exact Or.inr ⟨istSCZaun_von_sync hn hzfa, Or.inr (G.hb_von_po hpoaw)⟩
       · exact Or.inl ⟨hscr, rfl⟩
     · obtain ⟨_, _, hporb, hzfb⟩ := hschwanz
