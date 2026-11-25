@@ -83,7 +83,7 @@ theorem InvariantenSicherheitAussage.erfuellbar :
       pruefeEinheit (programmMitInvarianten u) u.invarianten = true := by
   refine ⟨.x86_64, ⟨⟨[], .done⟩,
     [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 0)]⟩, ?_⟩
-  decide
+  rfl
 
 /-- The checker refuses a unit whose plan breaks its invariant, and the model exhibits the
     violating state: safety with invariants is not trivially true. -/
@@ -94,7 +94,7 @@ theorem InvariantenSicherheitAussage.nichtTrivial :
         ¬ DeklariertHalten ((programmMitInvarianten u).sicherheitsEinheit .x86_64) s := by
   refine ⟨⟨⟨[], .done⟩,
     [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩, ?_, ?_⟩
-  · decide
+  · rfl
   · refine ⟨Leerzustand, fun h => ?_⟩
     have h0 : (((programmMitInvarianten
       ⟨⟨[], .done⟩, [Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5)]⟩).sicherheitsEinheit
