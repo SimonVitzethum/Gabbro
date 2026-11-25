@@ -159,6 +159,9 @@ theorem rsWf : rsGraph.Wohlgeformt where
         | exact False.elim hb'
         | exact False.elim (hne rfl)
         | (simp only [rsOrt, rsLab, Bool.false_eq_true, Bool.true_eq_false] at ho'; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> decide
 
 /-- The only `rb` edge is from the stale data read to the data write. -/
 theorem rsRb {r w : RelEv} (h : rsGraph.rb r w) : r = rd ∧ w = wd := by
