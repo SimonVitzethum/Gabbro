@@ -92,6 +92,17 @@ theorem Beobachtung.RegelFluss.schrittpaar_gleich
         (Beobachtung.QuellzustandGleich.trans (v := v₁) (u := v₂) (n := u₂) gleich o₂.1)
     exact ⟨hquel, o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
 
+/-! ### The step-level class duty follows from the flow rule alone -/
+
+/-- **The step-level class duty holds for every class.** Both sides take the same form by
+    hypothesis, so `RegelFluss.schrittpaar_gleich` applies directly: the countermodel's missing
+    head premise (`kopf_nicht_offenbar`) is not needed at the step level. The `liest` restriction
+    and the operand visibility stay as scope: for the reading classes the flow rule premise itself
+    is what cannot hold without the label binding of the read value (MK-13). -/
+theorem klassenSchrittNI (k : Wirkungsklasse) : KlassenSchrittNIAussage k := by
+  intro ι E f F _ _ _ fl _sicht c v₁ v₂ w p₁ p₂ u₁ u₂ gleich s₁ s₂
+  exact Beobachtung.RegelFluss.schrittpaar_gleich fl gleich s₁ s₂
+
 /-! ### The missing premise: the head of the second run is not determined -/
 
 /-- A secret compartment, as in the other flow countermodels. -/
