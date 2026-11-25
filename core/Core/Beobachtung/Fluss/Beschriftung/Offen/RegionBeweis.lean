@@ -109,11 +109,12 @@ private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel
   | ruht => simp only [hs] at hv; cases hv
   | beendet _ => simp only [hs] at hv; cases hv
   | laeuft =>
-      simp only [hs] at hv
-      split at hv with
-      | isTrue hcond =>
-          exact ⟨(Option.some.inj hv).symm, hcond.1, hcond.2.1, hcond.2.2, hs⟩
-      | isFalse _ => cases hv
+      by_cases hcond : c = Ast.LowLevel.entryContext ∧ (v.lokal c).pc = 0 ∧
+          (op.evaluate v c).isSome = true
+      · rw [if_pos hcond] at hv
+        exact ⟨(Option.some.inj hv).symm, hcond.1, hcond.2.1, hcond.2.2, rfl⟩
+      · rw [if_neg hcond] at hv
+        cases hv
 
 /-- The low-level unit never issues a question, so no state carries a pending one. -/
 private theorem unit_fragen_leer {k : Katalog} (op : Instruction k) {h : Umgebung}
@@ -123,12 +124,12 @@ private theorem unit_fragen_leer {k : Katalog} (op : Instruction k) {h : Umgebun
   induction t with
   | zero =>
       rw [lauf.2.2.2]
+      simp only [unit]
       unfold Ast.LowLevel.loaded
       split
-      · next hload =>
-          right
-          refine ⟨_, rfl, ?_⟩
-          rfl
+      · right
+        refine ⟨_, rfl, ?_⟩
+        rfl
       · left
         rfl
   | succ t ih =>
@@ -141,35 +142,37 @@ private theorem unit_fragen_leer {k : Katalog} (op : Instruction k) {h : Umgebun
           rw [hs] at tak
           cases tak with
           | wartet _ eq _ => right; exact ⟨s, eq, leer⟩
-          | schritt _ step =>
-              cases step with
-              | kontext _ _ regel aus =>
-                  obtain ⟨_, _, implI⟩ := regel
-                  obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer implI
-                  cases (List.cons.inj planEq).1
-                  simp only [unit] at aus
-                  obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
-                  right
-                  refine ⟨_, nextEq, ?_⟩
-                  rw [nextEq]
-                  rfl
-              | antwort _ hantwort =>
-                  obtain ⟨_, _, _, nextEq⟩ := hantwort
-                  right
-                  refine ⟨_, nextEq, ?_⟩
-                  rw [nextEq]
-                  rfl
-              | interrupt _ hinterrupt =>
-                  obtain ⟨_, _, _, _, _, _, _, _, _, _, nextEq⟩ := hinterrupt
-                  right
-                  refine ⟨_, nextEq, ?_⟩
-                  rw [nextEq]
-                  rfl
-              | absturz habsturz =>
-                  obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
-                  right
-                  refine ⟨_, nextEq, ?_⟩
-                  rw [nextEq, leer]
+          | schritt _ laufstep =>
+              cases laufstep with
+              | schritt impl =>
+                  cases impl with
+                  | kontext _ _ regel aus =>
+                      obtain ⟨_, _, implI⟩ := regel
+                      obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer implI
+                      cases (List.cons.inj planEq).1
+                      simp only [unit] at aus
+                      obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
+                      right
+                      refine ⟨_, nextEq, ?_⟩
+                      rw [nextEq]
+                      rfl
+                  | antwort _ hantwort =>
+                      obtain ⟨_, _, _, nextEq⟩ := hantwort
+                      right
+                      refine ⟨_, nextEq, ?_⟩
+                      rw [nextEq]
+                      rfl
+                  | interrupt _ hinterrupt =>
+                      obtain ⟨_, _, _, _, _, _, _, _, _, _, nextEq⟩ := hinterrupt
+                      right
+                      refine ⟨_, nextEq, ?_⟩
+                      rw [nextEq]
+                      rfl
+                  | absturz habsturz =>
+                      obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
+                      right
+                      refine ⟨_, nextEq, ?_⟩
+                      rw [nextEq, leer]
 
 private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
     {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ) (t : Nat)
@@ -191,14 +194,16 @@ private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgeb
   rw [heq] at tak
   cases tak with
   | wartet label _ _ => cases label
-  | schritt _ step =>
-      cases step with
-      | antwort _ hantwort =>
-          rename_i s0 _
-          obtain ⟨angebot, _, _, _⟩ := hantwort
-          obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
-          have leer := unit_fragen_leer_an op lauf t (s := s0) rfl
-          rw [leer] at hqmem
-          cases hqmem
+  | schritt _ laufstep =>
+      cases laufstep with
+      | schritt impl =>
+          cases impl with
+          | antwort _ hantwort =>
+              rename_i s0 _
+              obtain ⟨angebot, _, _, _⟩ := hantwort
+              obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
+              have leer := unit_fragen_leer_an op lauf t (s := s0) rfl
+              rw [leer] at hqmem
+              cases hqmem
 
 end Gabbro.Core.Beobachtung
