@@ -117,11 +117,12 @@ theorem laufHatZwischen (blk : List Befehl) (r : Rahmen) (k j : Nat) (rk : Rahme
     (hrk : (Schritt blk)^[k] (some r) = some rk) (hj : j ≤ k) :
     ∃ rj, (Schritt blk)^[j] (some r) = some rj := by
   obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le hj
-  have hk : k = t + j := by omega
-  subst k
-  rw [Function.iterate_add_apply] at hrk
+  have hrk' : (Schritt blk)^[t] ((Schritt blk)^[j] (some r)) = some rk := by
+    rw [← Function.iterate_add_apply]
+    rw [show t + j = k by omega]
+    exact hrk
   cases hstep : (Schritt blk)^[j] (some r) with
-  | none => rw [hstep, laufKein] at hrk; cases hrk
+  | none => rw [hstep, laufKein] at hrk'; cases hrk'
   | some rj => exact ⟨rj, hstep⟩
 
 /-- Before its first arrival at the program end, a successful run stays
@@ -139,18 +140,12 @@ theorem laufBleibtVorEnde (blk : List Befehl) (r : Rahmen) (k : Nat) (rk : Rahme
     simp only [Schritt, hget]
   have hjsucc : j + 1 ≤ k := Nat.succ_le_of_lt hj
   obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le hjsucc
-  subst ht
-  have hiter : (Schritt blk)^[(j + 1) + t] (some r) =
-      (Schritt blk)^[t] ((Schritt blk)^[1] ((Schritt blk)^[j] (some r))) := by
-    have e1 : (Schritt blk)^[j + 1] (some r) =
-        (Schritt blk)^[1] ((Schritt blk)^[j] (some r)) := by
-      rw [show j + 1 = 1 + j by omega, Function.iterate_add_apply]
-    have e2 : (Schritt blk)^[(j + 1) + t] (some r) =
-        (Schritt blk)^[t] ((Schritt blk)^[j + 1] (some r)) := by
-      rw [show (j + 1) + t = t + (j + 1) by omega, Function.iterate_add_apply]
-    rw [e2, e1]
+  have hrk' : (Schritt blk)^[t] ((Schritt blk)^[1] ((Schritt blk)^[j] (some r))) = some rk := by
+    rw [← Function.iterate_add_apply, ← Function.iterate_add_apply]
+    rw [show t + (1 + j) = k by omega]
+    exact hrk
   have h1 : (Schritt blk)^[1] (some rj) = none := by simpa using hnone
-  rw [hiter, hrj, h1, laufKein] at hrk
-  cases hrk
+  rw [hrj, h1, laufKein] at hrk'
+  cases hrk'
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
