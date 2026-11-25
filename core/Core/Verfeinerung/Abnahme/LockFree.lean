@@ -104,9 +104,11 @@ theorem absTreue_gibt_sequenziell (U : LockFreeEinheit L Ort Wert Raum Lok Grund
   cases eintrag : (U.sicht.lesen (η.zeit.spur t)).bind LockFreeTakt.punkt with
   | none =>
       have duty := treue.2 t
+      rw [eintrag] at duty
       simpa only using duty
   | some _ =>
       have duty := treue.2 t
+      rw [eintrag] at duty
       simpa only using duty
 
 /-- A lock-free family discharges the simulation duties of its member rules and declares, on
