@@ -151,9 +151,8 @@ theorem execGenauInternal {t : Nat} {c : Kontext} {s u : ExecState}
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-    obtain ⟨rfl, graph⟩ := unchanged memory
-    rw [graph] at next
-    rw [← rahmen.graph] at next
+    have hmem := unchanged memory
+    rw [hmem.1, hmem.2, ← rahmen.graph] at nextEq ⊢
     exact ⟨rfl, nextEq⟩
 
 /-- Every execution of an exec instruction records the empty cut, so every head form meets
