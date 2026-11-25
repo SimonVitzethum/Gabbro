@@ -81,29 +81,31 @@ theorem FuehrtAus_initial {L Ort Wert Raum Lok Grund Bedingung : Type} [Decidabl
 
 /-- A command step of the elaborated code carries every declared predicate to the cut state:
     frame-only heads go through the footprint rule the checker decides, every other head
-    through the machine framing. -/
-theorem kontextSchritt_erhaelt (p : Fragment) (ps : List Praedikat)
-    (ok : pruefeEinheit p ps = true)
-    {e : Maschine.Einrichtung Nat Zelle Int Nat Rahmen PUnit.{1} PUnit.{1}}
-    {c : Maschine.Kontext} {s u s' : Maschine.Zustand Nat Zelle Int Nat Rahmen PUnit.{1}}
+    through the machine framing. Stated over the elaborated unit so the head rule applies
+    without unfolding. -/
+theorem kontextSchritt_erhaelt (P : Katalog.Plattform) (u : UnitMitInvarianten)
+    (ok : pruefeEinheit (programmMitInvarianten u) u.invarianten = true)
+    {c : Maschine.Kontext} {s si s' : Maschine.Zustand Nat Zelle Int Nat Rahmen PUnit.{1}}
     {w : PUnit.{1}} {plan : Maschine.SchrittPlan Nat Zelle Int PUnit.{1}}
     {spur : Maschine.SchrittSpur Zelle Int} {t : Nat} {b : Befehl}
-    (hb : kopf p.code s c = some b)
-    (hideal : b.ideal c s w [plan] u)
-    (haus : Maschine.FuehrtSchrittAus e t c s u plan spur s')
-    (q : Praedikat) (hmem : q ∈ ps) (hq : q.gilt s) : q.gilt s' := by
-  have hcode : b ∈ p.code := kopf_mem hb
-  have hbef : pruefeBefehlErhalt ps b = true := pruefeEinheit_befehl p ps b hcode ok
-  obtain ⟨_, _, _, _, hfa, _, heq⟩ := haus
+    (hb : (elaborierenMitInvarianten P u).system.kopf s c = some b)
+    (hideal : ((elaborierenMitInvarianten P u).system.regel b).ideal c s w [plan] si)
+    (haus : Maschine.FuehrtSchrittAus (elaborierenMitInvarianten P u).einrichtung t c s si plan spur s')
+    (q : Praedikat) (hmem : q ∈ u.invarianten) (hq : q.gilt s) : q.gilt s' := by
+  have hcode : b ∈ (programmMitInvarianten u).code := kopf_mem hb
+  have hbef : pruefeBefehlErhalt u.invarianten b = true :=
+    pruefeEinheit_befehl _ _ b hcode ok
+  have hideal' : b.ideal c s w [plan] si := hideal
+  obtain ⟨rahmen, _, _, _, hfa, _, heq⟩ := haus
   rw [heq]
-  have hvu : _ := FuehrtAus_initial haus.1 hfa
+  have hvu : _ := FuehrtAus_initial rahmen hfa
   rcases Classical.em b.Privat with hpriv | hpriv
-  · have hu : u = b.nach c s := ((b.ideal_privat hpriv c s w [plan] u).mp hideal).2
+  · have hu : si = b.nach c s := ((b.ideal_privat hpriv c s w [plan] si).mp hideal').2
     have hfoot : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck :=
-      fun z hz => pruefeBefehlErhalt_richtig ps b q hmem hbef z hz
+      fun z hz => pruefeBefehlErhalt_richtig u.invarianten b q hmem hbef z hz
     have hnach : q.gilt (b.nach c s) := Praedikat.gilt_nach q b c s hfoot hq
     rw [← hu] at hnach
-    exact q.gilt_of_initial _ _ (haus.1.initial.trans hvu.symm) hnach
+    exact q.gilt_of_initial _ _ (rahmen.initial.trans hvu.symm) hnach
   · exact q.gilt_of_initial _ _ hvu.symm hq
 
 /-- An arriving answer keeps the memory plan, hence every declared predicate. -/
@@ -274,7 +276,7 @@ theorem elaboriert_absturzLauf (P : Katalog.Plattform) (u : UnitMitInvarianten) 
   have offer' : Maschine.AbsturzAngeboten P.katalog ρ.hw 0 := by
     rw [hwEq]
     exact offer
-  obtain ⟨hspur, hstep⟩ := Maschine.I.absturz_am_schnitt _ offer'
+  obtain ⟨hspur, hstep⟩ := Maschine.I.absturz_am_schnitt _ ρ offer'
   exact ⟨ρ, hρ, hspur, hstep⟩
 
 /-- COMPLETENESS for the decidable checker on its footprint-stable fragment: `KlauselnWahr`
@@ -352,9 +354,9 @@ theorem verletzteInvariante_verletzt (P : Katalog.Plattform) :
       ⟨Praedikat.vgl .eq (.zelle (.region 0 0)) (.konst 5), List.mem_cons.mpr (Or.inl rfl), rfl⟩
   have hq := hcut _ hmem
   rw [hρ.2.2.2.1] at hq
-  have hq2 : ((Maschine.I.start _ ρ.start).2).initial (.region 0 0) = 5 := hq
+  have hq2 : ((Maschine.I.start _ ρ.start).2).initial (Zelle.region 0 0) = 5 := hq
   have hzero : ((Maschine.I.start (elaborierenMitInvarianten P verletzteInvariante)
-      ρ.start).2).initial (.region 0 0) = 0 := rfl
+      ρ.start).2).initial (Zelle.region 0 0) = 0 := rfl
   rw [hzero] at hq2
   omega
 
