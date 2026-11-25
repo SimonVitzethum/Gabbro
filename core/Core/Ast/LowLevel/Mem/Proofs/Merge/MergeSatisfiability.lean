@@ -16,7 +16,7 @@ open Gabbro.Core.Aussen
 
 private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
-  refine ⟨⟨hwf, ?_, ⟨zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, ⟨zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_, ?_, ?_⟩, ?_, ?_⟩
   · intro i c s u w pl hstep
     dsimp [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hpl, hu⟩
@@ -42,6 +42,11 @@ private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := MemInstruction.genauInternal (k := k) haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

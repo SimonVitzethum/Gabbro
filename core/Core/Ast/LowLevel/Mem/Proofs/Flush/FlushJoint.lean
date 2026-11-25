@@ -46,23 +46,23 @@ private theorem memGenauInternalJ {t : Nat} {c : Kontext} {s u : MemState}
   cases trace with
   | mk events outside =>
       cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
       have unchanged : ∀ {recorded graph},
           Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
             recorded = [] ∧ graph = s.graph := by
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-      obtain ⟨rfl, graph⟩ := unchanged memory
-      rw [graph] at nextEq
-      rw [← rahmen.graph] at nextEq
+      have hmem := unchanged memory
+      rw [hmem.1]
+      rw [hmem.2, ← rahmen.graph] at nextEq
       exact ⟨rfl, nextEq⟩
 
 private theorem memProgramAkzeptiert (code : List MemInstruction) :
     Annahme.Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   let E := memProgram Plattform.x86_64.katalog code
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code, ?_, ?_⟩, ?_, ?_⟩
+    ⟨Aussen.zulassung_m2 _, ?_⟩, memProgramFlussLokal _ code, ?_, ?_, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hstep
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hP, hu⟩
@@ -92,6 +92,11 @@ private theorem memProgramAkzeptiert (code : List MemInstruction) :
           exact h q hq hcut hans
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := memGenauInternalJ haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro ρ lauf
     change (∀ p ∈ ([] : List (MemState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (MemState → Prop)), p (ρ.zeit.zustand t.val)) ∧

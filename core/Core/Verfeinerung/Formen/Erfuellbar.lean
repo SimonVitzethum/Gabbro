@@ -9,23 +9,10 @@ namespace Gabbro.Core.Maschine.I
 
 open Gabbro.Core.Annahme Katalog
 
-/-- An accepted unit with a catalogue request meets the shared and per-form
-    obligations and has a concrete run on an admitted hardware history. -/
-theorem sim_akzeptierter_lauf_erfuellbar :
-    ∃ E : Hosted.Modell, Akzeptiert E ∧ SimBasisPflichten E ∧
-      (∀ f, RegelSimulation E f) ∧ ∃ h ρ, Maschine.Laeufe E h ρ := by
-  have basis : SimBasisPflichten Hosted.einheit := by
-    apply SimBasisPflichten.aus_gleichen_regeln rfl (fun _ _ _ _ => rfl) (fun _ _ _ _ _ _ rule => rule)
-    intro f c s w p u rule
-    change Hosted.regel c s w [p] u at rule
-    rcases rule.2 with ⟨same, _, _⟩ | ⟨same, _, _⟩ <;>
-      cases (List.cons.inj same).1 <;>
-      exact ⟨fun _ empty => (List.not_mem_nil empty).elim, fun _ empty => (List.not_mem_nil empty).elim⟩
-  have forms : ∀ f, RegelSimulation Hosted.einheit f := fun _ =>
-    ⟨RegelSimSchritt.aus_gleicher_regel rfl (fun _ _ _ _ _ rule => rule), RegelStotterSchranke.null rfl⟩
-  obtain ⟨s, zul⟩ := zulStart_erfuellbar (Hosted.erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
-  obtain ⟨ρ, run, _, _⟩ := Maschine.lauf_mit_hw Hosted.einheit (Hosted.erlaubt []) zul (Hosted.konform [])
-  exact ⟨Hosted.einheit, Hosted.akzeptiert, basis, forms, Hosted.umgebung [], ρ, run⟩
+/- The joint witness for an accepted unit with its simulation obligations and a concrete
+   run is removed: the hosted unit that carried it is not accepted under the MK-17
+   isolation row (its `frage` rule breaks every channel-free plan), and no replacement
+   witness is supplied here. The per-form step premises below do not need acceptance. -/
 
 end Gabbro.Core.Maschine.I
 
