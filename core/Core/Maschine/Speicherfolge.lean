@@ -90,12 +90,12 @@ theorem Speicherfolge.viele {anfang : Ort → Wert} {f : SpeicherAkteur Ort} {g 
     consistent source remains available through the step relation. -/
 theorem speicherzug_existiert (anfang : Ort → Wert) (f : SpeicherAkteur Ort)
     {g : SpeicherGraph Ort Wert} (hk : g.graph.Konsistent) (hv : g.graph.Vollstaendig)
-    (a : Art) (x : Ort) (m : Modus) (v : Wert) :
+    (a : Art) (x : Ort) (m : Modus) (v : Wert) (hrmw : a = .rmw → m ≠ .na) :
     ∃ r es g', Speicherfolge anfang f g [⟨a, x, m, r, v⟩] es g' := by
   obtain ⟨init, g₀, hz⟩ := initialisierung_existiert anfang ⟨a, x, m, v, v⟩ hk hv
   have gut := hz.viele.gut hk hv
   obtain ⟨r, g₁, hs, _⟩ :=
-    Speicher.Zustand.schritt_existiert gut.1 gut.2 f a x m v (fun hr => hz.quelle hr)
+    Speicher.Zustand.schritt_existiert gut.1 gut.2 f a x m v (fun hr => hz.quelle hr) hrmw
   have hz' : Initialisierung anfang ⟨a, x, m, r, v⟩ g init g₀ := by
     cases hz with
     | ohne h => exact .ohne h
@@ -106,6 +106,6 @@ theorem speicherfolge_erfuellbar (anfang : Ort → Wert) (c : Kontext) (x : Ort)
     ∃ r es g', Speicherfolge anfang (.kontext c) Speicher.Zustand.leer
       [⟨.lesen, x, m, r, anfang x⟩] es g' :=
   speicherzug_existiert anfang _ Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
-    .lesen x m (anfang x)
+    .lesen x m (anfang x) (fun h => by cases h)
 
 end Gabbro.Core.Maschine

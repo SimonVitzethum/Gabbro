@@ -82,11 +82,11 @@ theorem rennfrei_aus_abschnitten {schloss : Ort → Option Ort} {real : E → Pr
     · exact Or.inl (G.hb_von_po h)
     · exact Or.inr (G.hb_von_po h)
   · left
-    have sw : G.sw b₁ a₂ :=
+    have sw : G.sw b₁ a₂ := sw_von_klassisch
       ⟨f₁.frei_schreibt, f₁.frei_stark, f₂.erwerb_liest, f₂.erwerb_stark, x, hrs, hrf⟩
     exact G.hb_trans (G.hb_trans (G.hb_von_po q₁) (G.hb_von_sw sw)) (G.hb_von_po p₂)
   · right
-    have sw : G.sw b₂ a₁ :=
+    have sw : G.sw b₂ a₁ := sw_von_klassisch
       ⟨f₂.frei_schreibt, f₂.frei_stark, f₁.erwerb_liest, f₁.erwerb_stark, x, hrs, hrf⟩
     exact G.hb_trans (G.hb_trans (G.hb_von_po q₂) (G.hb_von_sw sw)) (G.hb_von_po p₁)
 

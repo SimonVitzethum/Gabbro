@@ -274,6 +274,7 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lesen, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.schreiben, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.rmw, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.zaun, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.sperre, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.frage, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.starte, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
