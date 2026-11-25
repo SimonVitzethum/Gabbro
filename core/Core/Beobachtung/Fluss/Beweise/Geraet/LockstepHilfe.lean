@@ -51,7 +51,6 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
         | schritt _ step => cases step
         | wartet _ eq _ =>
           rw [eq] at atV
-          rw [hz] at atV
           cases atV
       | some s =>
         have tick := ρ.zeit.takt t
@@ -73,7 +72,8 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
             | schritt _ step => cases step
             | wartet _ eq _ => cases eq
           | some s' =>
-            obtain rfl := Option.some.inj atV
+            have hv : v = s' := Option.some.inj (atV.symm.trans hpost)
+            subst v
             rw [hpost] at tick
             cases tick with
             | wartet label _ _ => cases label
@@ -122,7 +122,6 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
         | schritt _ step => cases step
         | wartet _ eq _ =>
           rw [eq] at atV
-          rw [hz] at atV
           cases atV
       | some s =>
         rw [hz] at tick
@@ -136,17 +135,15 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
             exact ih hz
         | some ev =>
           rw [hev] at tick
-          revert atV
           cases hpost : ρ.zeit.zustand (t + 1) with
           | none =>
-            intro atV
             rw [hpost] at tick
             cases tick with
             | schritt _ step => cases step
             | wartet _ eq _ => cases eq
           | some s' =>
-            intro atV
-            obtain rfl := Option.some.inj atV
+            have hv : v = s' := Option.some.inj (atV.symm.trans hpost)
+            subst v
             rw [hpost] at tick
             cases tick with
             | wartet label _ _ => cases label
