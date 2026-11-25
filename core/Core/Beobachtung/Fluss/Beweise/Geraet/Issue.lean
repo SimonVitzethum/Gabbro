@@ -10,6 +10,7 @@ namespace Gabbro.Core.Beobachtung
 open Katalog Maschine
 open Gabbro.Core.Ast.LowLevel.Device
 open Gabbro.Core.Ast
+open Gabbro.Core.Ast.LowLevel (entryContext)
 open Classical
 
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
@@ -127,7 +128,7 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
         intro l hl
         cases List.mem_singleton.mp hl
         rfl
-      have hspeicher := geraete_speicher_still (d := d) speicherfolge hmem
+      have hspeicher := geraete_speicher_still (k := k) (scope := scope) (locals := locals) (d := d) speicherfolge hmem
       have haussenBeob : aussen.flatMap (aussenBeob (d.unit locals)) =
           [.frage c.nummer s.fragen.length (binding.question access)] := by
         have hleer : (d.unit locals).etiketten = .leer := geraete_etiketten_leer d
@@ -161,7 +162,7 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   have hentry : c = entryContext := geraete_issue_kontext hA owned
-  have hbal := hidle idle
+  have hbal := hidle (hentry ▸ idle)
   obtain ⟨hnm, hverb, halle⟩ := hbal
   set e := s.stelleFrage t c (binding.question access) with he
   have hfrage_eq : ((setFrame s c { s.lokal c with pending := some (binding.question access) }).frage e).fragen =
@@ -243,10 +244,10 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
           rw [hnant_eq] at ha
           have hainst : a.questionInstance ∈ List.map
               (fun a : AntwortEreignis => a.questionInstance) s.antworten :=
-            List.mem_map_of_mem _ ha
+            List.mem_map_of_mem ha
           have htakeq : s.fragen.take s.antworten.length = s.fragen := by
             rw [← hnm]
-            exact List.take_all_of_le (Nat.le_refl _)
+            exact List.take_length _
           have htakeq_map : List.map (fun q : FrageEreignis => q.questionInstance)
               (s.fragen.take s.antworten.length) =
               List.range (s.fragen.take s.antworten.length).length := by
@@ -271,11 +272,11 @@ theorem geraete_issue_schliesst_ankunft_aus {binding : Binding k} {access : Regi
   have hA := geraete_issue_pre inv owned
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
-  obtain ⟨hnm, hverb, halle⟩ := hidle idle
+  obtain ⟨hnm, hverb, halle⟩ := hidle (hentry ▸ idle)
   rintro ⟨a, hw, t, offered⟩
   obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
   obtain ⟨q, hqmem, hqcut, hzu⟩ := hfrage
   obtain ⟨a', hamem, hzu'⟩ := halle q hqmem hqcut
-  exact hfrisch a' hamem (hzu.2.2.1.trans hzu'.2.2.1.symm)
+  exact hfrisch a' hamem (hzu'.2.2.1.symm.trans hzu.2.2.1)
 
 end Gabbro.Core.Beobachtung
