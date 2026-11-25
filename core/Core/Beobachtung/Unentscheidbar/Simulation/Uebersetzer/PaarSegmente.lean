@@ -12,9 +12,12 @@ open Gabbro.Core.Ast.Semantik
 theorem pb1Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a : Nat)
     (hpc : r.pc = 0) (ha : r.temp aSlot = some (natVal a)) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[3] (some r) = some (pb1 r a frei) := by
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[0]? = some (.binden nameX aSlot) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[1]? = some (.lesen frei 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[2]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[0]? = some (.binden nameX aSlot) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[1]? = some (.lesen frei 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[2]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ r 0 frei aSlot (some (natVal a)) hpc ha g0 g1 g2
   rw [e]
   rfl
@@ -27,9 +30,12 @@ theorem pb2Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     show Function.update r.temp frei (some (natVal a)) bSlot = _
     rw [updateMiss _ _ _ _ hbf]
     exact hb
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[3]? = some (.binden nameX bSlot) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[4]? = some (.lesen (frei + 1) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[5]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[3]? = some (.binden nameX bSlot) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[4]? = some (.lesen (frei + 1) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[5]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb1 r a frei) 3 (frei + 1) bSlot (some (natVal b)) rfl ht g0 g1 g2
   rw [e]
   rfl
@@ -44,9 +50,12 @@ theorem pb3Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     show Function.update r.temp frei (some (natVal a)) aSlot = _
     rw [updateMiss _ _ _ _ haf]
     exact ha
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[6]? = some (.binden nameX aSlot) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[7]? = some (.lesen (frei + 2) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[8]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[6]? = some (.binden nameX aSlot) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[7]? = some (.lesen (frei + 2) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[8]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb2 r a b frei) 6 (frei + 2) aSlot (some (natVal a)) rfl ht g0 g1 g2
   rw [e]
   rfl
@@ -63,16 +72,21 @@ theorem pb4Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     show Function.update r.temp frei (some (natVal a)) bSlot = _
     rw [updateMiss _ _ _ _ hbf]
     exact hb
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[9]? = some (.binden nameX bSlot) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[10]? = some (.lesen (frei + 3) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[11]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[9]? = some (.binden nameX bSlot) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[10]? = some (.lesen (frei + 3) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[11]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb3 r a b frei) 9 (frei + 3) bSlot (some (natVal b)) rfl ht g0 g1 g2
   rw [e]
   rfl
 
 theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb4 r a b frei)) = some (pb5 r a b frei) := by
-  have hx : (pb4 r a b frei).temp frei = some (natVal a) := updateHit _ _ _
+  have hx : (pb4 r a b frei).temp frei = some (natVal a) := by
+    show Function.update (pb3 r a b frei).temp frei (some (natVal a)) frei = _
+    exact updateHit _ _ _
   have hy : (pb4 r a b frei).temp (frei + 1) = some (natVal b) := by
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) (frei + 1) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (1 : Nat) ≠ 3))]
@@ -80,7 +94,8 @@ theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (1 : Nat) ≠ 2))]
     show Function.update (pb1 r a frei).temp (frei + 1) (some (natVal b)) (frei + 1) = _
     exact updateHit _ _ _
-  have g : (paarBerechnung aSlot bSlot aus frei)[12]? = some (.vergleichen .lt frei) := by rfl
+  have g : (paarBerechnung aSlot bSlot aus frei)[12]? = some (.vergleichen .lt frei) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittVergleichNat _ (pb4 r a b frei) 12 frei a b rfl hx hy g
   rw [e]
   rfl
@@ -92,7 +107,8 @@ theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a 
     show Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) frei = _
     rw [updateHit]
     rw [hw]
-  have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by rfl
+  have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittSpringeWennWahr _ (pb5 r a b frei) 13 frei true true 17 rfl ht rfl g
   rw [e]
   rfl
@@ -108,7 +124,8 @@ theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬
     cases h : Compare.eval .lt (a : Int) (b : Int) with
     | true => exact (hw h).elim
     | false => rfl
-  have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by rfl
+  have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittSpringeWennFalsch _ (pb5 r a b frei) 13 frei true false 17 rfl ht hw g
   rw [e]
   rfl
@@ -121,9 +138,12 @@ theorem pb7wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 0))]
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) (frei + 3) = _
     exact updateHit _ _ _
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[30]? = some (.binden nameX (frei + 3)) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[31]? = some (.lesen (frei + 4) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[32]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[30]? = some (.binden nameX (frei + 3)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[31]? = some (.lesen (frei + 4) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[32]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb6w r a b frei) 30 (frei + 4) (frei + 3) (some (natVal b)) rfl ht g0 g1 g2
   rw [e]
   rfl
@@ -138,20 +158,26 @@ theorem pb8wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 0))]
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) (frei + 3) = _
     exact updateHit _ _ _
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[33]? = some (.binden nameX (frei + 3)) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[34]? = some (.lesen (frei + 5) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[35]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[33]? = some (.binden nameX (frei + 3)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[34]? = some (.lesen (frei + 5) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[35]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb7w r a b frei) 33 (frei + 5) (frei + 3) (some (natVal b)) rfl ht g0 g1 g2
   rw [e]
   rfl
 
 theorem pb9wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb8w r a b frei)) = some (pb9w r a b frei) := by
-  have hx : (pb8w r a b frei).temp (frei + 4) = some (natVal b) := updateHit _ _ _
+  have hx : (pb8w r a b frei).temp (frei + 4) = some (natVal b) := by
+    show Function.update (pb7w r a b frei).temp (frei + 4) (some (natVal b)) (frei + 4) = _
+    exact updateHit _ _ _
   have hy : (pb8w r a b frei).temp (frei + 5) = some (natVal b) := by
     show Function.update (pb7w r a b frei).temp (frei + 5) (some (natVal b)) (frei + 5) = _
     exact updateHit _ _ _
-  have g : (paarBerechnung aSlot bSlot aus frei)[36]? = some (.binaer .mul (frei + 4)) := by rfl
+  have g : (paarBerechnung aSlot bSlot aus frei)[36]? = some (.binaer .mul (frei + 4)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittMulNat _ (pb8w r a b frei) 36 (frei + 4) b b rfl hx hy g
   rw [e]
   rfl
@@ -171,9 +197,12 @@ theorem pb10wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (2 : Nat) ≠ 0))]
     show Function.update (pb3 r a b frei).temp (frei + 2) (some (natVal a)) (frei + 2) = _
     exact updateHit _ _ _
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[37]? = some (.binden nameX (frei + 2)) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[38]? = some (.lesen (frei + 5) 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[39]? = some (.blockEnde 1) := by rfl
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[37]? = some (.binden nameX (frei + 2)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[38]? = some (.lesen (frei + 5) 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[39]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb9w r a b frei) 37 (frei + 5) (frei + 2) (some (natVal a)) rfl ht g0 g1 g2
   rw [e]
   rfl
@@ -185,8 +214,11 @@ theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (4 : Nat) ≠ 5))]
     show Function.update (pb8w r a b frei).temp (frei + 4) (some (natVal (b * b))) (frei + 4) = _
     exact updateHit _ _ _
-  have hy : (pb10w r a b frei).temp (frei + 5) = some (natVal a) := updateHit _ _ _
-  have g : (paarBerechnung aSlot bSlot aus frei)[40]? = some (.binaer .add (frei + 4)) := by rfl
+  have hy : (pb10w r a b frei).temp (frei + 5) = some (natVal a) := by
+    show Function.update (pb9w r a b frei).temp (frei + 5) (some (natVal a)) (frei + 5) = _
+    exact updateHit _ _ _
+  have g : (paarBerechnung aSlot bSlot aus frei)[40]? = some (.binaer .add (frei + 4)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittAddNat _ (pb10w r a b frei) 40 (frei + 4) (b * b) a rfl hx hy g
   rw [e]
   rfl
@@ -194,10 +226,15 @@ theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
 theorem pb12wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     (haus4 : aus ≠ frei + 4) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[3] (some (pb11w r a b frei)) = some (pb12w r a b aus frei) := by
-  have ht : (pb11w r a b frei).temp (frei + 4) = some (natVal (b * b + a)) := updateHit _ _ _
-  have g0 : (paarBerechnung aSlot bSlot aus frei)[41]? = some (.binden nameX (frei + 4)) := by rfl
-  have g1 : (paarBerechnung aSlot bSlot aus frei)[42]? = some (.lesen aus 0) := by rfl
-  have g2 : (paarBerechnung aSlot bSlot aus frei)[43]? = some (.blockEnde 1) := by rfl
+  have ht : (pb11w r a b frei).temp (frei + 4) = some (natVal (b * b + a)) := by
+    show Function.update (pb10w r a b frei).temp (frei + 4) (some (natVal (b * b + a))) (frei + 4) = _
+    exact updateHit _ _ _
+  have g0 : (paarBerechnung aSlot bSlot aus frei)[41]? = some (.binden nameX (frei + 4)) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g1 : (paarBerechnung aSlot bSlot aus frei)[42]? = some (.lesen aus 0) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
+  have g2 : (paarBerechnung aSlot bSlot aus frei)[43]? = some (.blockEnde 1) := by
+    simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := laufKopie _ (pb11w r a b frei) 41 aus (frei + 4) (some (natVal (b * b + a))) rfl ht g0 g1 g2
   rw [e]
   rfl
