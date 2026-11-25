@@ -53,9 +53,9 @@ private theorem memGenauInternalJ {t : Nat} {c : Kontext} {s u : MemState}
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-      obtain ⟨rfl, graph⟩ := unchanged memory
-      rw [graph] at nextEq
-      rw [← rahmen.graph] at nextEq
+      have hmem := unchanged memory
+      rw [hmem.1]
+      rw [hmem.2, ← rahmen.graph] at nextEq
       exact ⟨rfl, nextEq⟩
 
 private theorem memProgramAkzeptiert (code : List MemInstruction) :

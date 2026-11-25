@@ -68,8 +68,9 @@ theorem Befehl.vollzug_genau (b : Befehl) {e t c s u w p spur s'}
       intro _ _ run
       cases run
       exact ⟨rfl, rfl⟩
-    obtain ⟨rfl, graph⟩ := unchanged memory
-    rw [graph] at next
+    have hmem := unchanged memory
+    rw [hmem.1]
+    rw [hmem.2] at next
     exact ⟨rfl, next⟩
 
 theorem Befehl.abgleich (p : Fragment) (platform : Plattform) (b : Befehl) :
