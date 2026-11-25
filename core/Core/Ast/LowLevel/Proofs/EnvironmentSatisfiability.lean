@@ -12,18 +12,18 @@ namespace Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Text Annahme Katalog Maschine
 
 theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
-    (clauses : p.klauseln = .leer)
+    (clauses : p.klauseln = .leer) (rein : ∀ b ∈ p.code, b.Privat)
     (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
     Akzeptiert (p.einheit platform) := by
   let E := p.einheit platform
-  refine ⟨⟨platform.katalog_wohlgeformt, fun b => b.lokal E rfl, ⟨Aussen.zulassung_m2 _, ?_⟩,
-    Beobachtung.fragment_fluss_lokal p platform, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨platform.katalog_wohlgeformt, fun b => Befehl.regelLokal p platform b, ⟨Aussen.zulassung_m2 _, ?_⟩,
+    Beobachtung.fragment_fluss_lokal p platform rein, ?_⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
     | kontext _ _ rule execute =>
-      obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+      obtain ⟨b, head, transfer⟩ := rule
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute (rein b (kopf_mem (code := p.code) head))
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
@@ -81,12 +81,18 @@ theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
     simp only [Katalog.enthaelt, Plattform.katalog, Plattform.zeilen, Plattform.endpunkte,
       FirmwareZeile.endpunkt, List.map_cons, List.mem_append, List.mem_cons, eq_self, or_true, true_or]
   have accepted : Akzeptiert E := by
-    apply Fragment.akzeptiert_ohne_bedarf _ _ rfl
-    intro b present frame
-    change b ∈ [.waehleUmgebung name .biosInterrupt .biosServices,
-      .definiere mainName [] none 0 3 false [] none, .blockEnde 0, .rueckVoid, .starte mainName, .ende] at present
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-    rcases present with same | same | same | same | same | same <;> cases same <;> rfl
+    refine Fragment.akzeptiert_ohne_bedarf _ _ rfl ?_ ?_
+    · intro b present
+      change b ∈ [.waehleUmgebung name .biosInterrupt .biosServices,
+        .definiere mainName [] none 0 3 false [] none, .blockEnde 0, .rueckVoid, .starte mainName, .ende] at present
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+      rcases present with same | same | same | same | same | same <;> cases same <;>
+        first | exact Or.inl rfl | exact Or.inr rfl
+    · intro b present frame
+      change b ∈ [.waehleUmgebung name .biosInterrupt .biosServices,
+        .definiere mainName [] none 0 3 false [] none, .blockEnde 0, .rueckVoid, .starte mainName, .ende] at present
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+      rcases present with same | same | same | same | same | same <;> cases same <;> rfl
   let text := Ast.print (category := .unit) args.unit
   let s := (I.start E start).2
   have reads : Ast.Parse (category := .unit) text args.unit := Ast.parse_print _

@@ -93,9 +93,14 @@ theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (fram
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl <;> rfl
 
+/-- Every instruction of the example is frame-only. -/
+theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
+  simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+
 /-- The example's linked unit is accepted. -/
 theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.plattform) := by
-  exact Fragment.akzeptiert_ohne_bedarf beispielFragment _ beispielKlauseln
+  exact Fragment.akzeptiert_ohne_bedarf beispielFragment _ beispielKlauseln beispielRein
     (fun b present frame => beispielGuard b present frame)
 
 /-- Two modules, one call: the satisfiability witness. -/
