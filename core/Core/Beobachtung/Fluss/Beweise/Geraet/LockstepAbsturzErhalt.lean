@@ -132,17 +132,15 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      change List.Forall₂ _ (NiedrigeBeob.praefix E ρ₁ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))])
-                        ((NiedrigeBeob.praefix E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
-                          ((NiedrigeBeob.praefix E ρ₁ predictor t).length + 1))
-                      have htake : (NiedrigeBeob.praefix E ρ₂ predictor t ++ [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
-                          ((NiedrigeBeob E ρ₁ predictor t).length + 1) =
+                      have htake : (NiedrigeBeob.praefix E ρ₂ predictor t ++
+                          [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))]).take
+                          ((NiedrigeBeob.praefix E ρ₁ predictor t).length + 1) =
                           (NiedrigeBeob.praefix E ρ₂ predictor t).take
                             ((NiedrigeBeob.praefix E ρ₁ predictor t).length) ++
                             [NiedrigesEreignis.katalog (Ereignis.persistenz (PersistEreignis.crash : PersistEreignis))] := by
                         rw [List.take_append]
-                        simp only [hlen, List.take_succ_eq_append_getElem, List.getElem?_eq_none,
-                          List.length_take, Nat.sub_self, List.take_zero, List.append_nil]
+                        simp only [hlen, List.length_take, Nat.sub_self,
+                          List.take_zero, List.append_nil]
                       rw [htake]
                       exact List.rel_append (geraeteKopplung_kopplung hkopp).1
                         (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
@@ -186,6 +184,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       · dsimp only [Zustand.wiederanlauf, Denotation.unit,
                           Gabbro.Core.Ast.LowLevel.Device.unit, setup]
                         rfl
+                    · rw [hbeob₁, hbeob₂, hlen]
+                      simp only [List.length_append, List.length_singleton]
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
@@ -194,8 +194,6 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       funext c
                       dsimp only [Zustand.wiederanlauf, Zustand.angekommen]
                       rw [hantworten, hverbraucht]
-                    · rw [hbeob₁, hbeob₂, hlen]
-                      simp only [List.length_append, List.length_singleton]
                   | kontext nc _ _ _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                   | antwort nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
                   | interrupt nc _ => exact (Bool.false_ne_true (nc.symm.trans crashOffer₂)).elim
