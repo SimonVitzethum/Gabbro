@@ -73,7 +73,7 @@ def DurchlaufPrefix (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
       UnterGrenze (E.schranken.durchlauf m.1) (Kontextkosten ρ c m.2 (t' - m.2))
 
 /-- All finite prefixes of the same concrete run meet the unit's declarations, on unfair runs
-as well. Bounds cannot be chosen after seeing the run. A failed load has no live resources. -/
+    as well. Bounds cannot be chosen after seeing the run. A failed load has no live resources. -/
 def ImSchranken (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
     (ρ : Lauf E) : Prop :=
   HalteSchranken E ρ ∧
