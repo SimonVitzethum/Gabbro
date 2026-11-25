@@ -485,8 +485,6 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
             simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
-          · rw [hstate]
-            simp only [Befehl.nach_regionLive, hEqR]
       · exfalso
         obtain ⟨b', head', _⟩ := regel
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
@@ -616,7 +614,14 @@ theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
     st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2.1 st4.2.2.2.2.2
     (by rfl) (readyAt _ _ rfl rfl)
     (fun c hne => hStPre _ c hne rfl) (by rfl)
-  obtain ⟨ev5, hspur5, hEqL6, hEqS6, hEqK6, hEqF6, hEqR6⟩ := st5
+  have hspur5 : ∃ ev, ρ.zeit.spur 5 = some ev := st5.1
+  obtain ⟨ev5, hspur5⟩ := hspur5
+  have hEqL6 : (ρ.zeit.zustand 6).lokal = (sLinked6 s).lokal := st5.2.1
+  have hEqS6 : (ρ.zeit.zustand 6).status = (sLinked6 s).status := st5.2.2.1
+  have hEqK6 : (ρ.zeit.zustand 6).kerne = (sLinked6 s).kerne := st5.2.2.2.1
+  have hEqF6 : (ρ.zeit.zustand 6).fragen = (sLinked6 s).fragen := st5.2.2.2.2.1
+  have hEqR6 : Zustand.regionLive (ρ.zeit.zustand 6) =
+      Zustand.regionLive (sLinked6 s) := st5.2.2.2.2.2
   have hHead6 : kopf (verknuepfteFragmente planAB).code (sLinked6 s) eintritt =
       some (Befehl.teilen 0) := by
     rfl
