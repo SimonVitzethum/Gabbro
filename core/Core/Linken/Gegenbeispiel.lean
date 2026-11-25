@@ -299,4 +299,363 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
     · intro run conforms t l h _ hne
       exact (hne rfl).elim
 
+/-- Part A alone is accepted: straight-line code with divisor 2. -/
+theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
+  let E := fragA.einheit .x86_64
+  have hklauseln : fragA.klauseln = .leer := codeFrag_klauseln _
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => b.lokal E rfl,
+    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64, ?_⟩, ?_, ?_⟩
+  · apply aussen_gueltig_aus_kontext
+    intro run t s c w spur next step
+    cases step with
+    | kontext _ _ rule execute =>
+      obtain ⟨b, _, transfer⟩ := rule
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
+        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+  · exact schrankenLokal_leer rfl rfl rfl
+  · intro run conforms
+    change (∀ pred ∈ fragA.klauseln.voraus, _) ∧
+      (∀ _ : I.Schnitt E run, ∀ pred ∈ fragA.klauseln.invariant, _) ∧
+      ∀ _ : I.Schnitt E run, _ → ∀ pred ∈ fragA.klauseln.sicher, _
+    rw [hklauseln]
+    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
+      fun _ _ _ h => (List.not_mem_nil h).elim⟩
+  · refine ⟨?_, ?_, ?_⟩
+    · intro run conforms t op args need
+      exact fragA_guard_hält run conforms t op args need
+    · intro run conforms t waiting
+      obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
+      obtain ⟨_, impossible, _⟩ := blocked c member
+      exact impossible
+    · intro run conforms t l h _ hne
+      exact (hne rfl).elim
+
+/-- The linked unit of the witness plan. -/
+def E_linked : Ast.Semantik.Einheit :=
+  (verknuepfteFragmente planAB).einheit .x86_64
+
+/-- The hardware offer for the witness run: core `k` always runs, nothing else happens. -/
+def hwAngebot (k : Nat) : Gelegenheit :=
+  ⟨some k, fun _ => false, [], fun _ => false, false, false, 0⟩
+
+/-- The hardware history for the witness run. -/
+def hwLinked (h : Umgebung) (k : Nat) : HwLauf :=
+  ⟨fun _ => hwAngebot k, h.politik⟩
+
+/-- A status away from the entry context stays at rest. -/
+theorem nach_status (b : Befehl) (c : Kontext) (s : Zustand) :
+    (b.nach c s).status = s.status :=
+  rfl
+
+/-- The boot status at the entry context. -/
+theorem boot_status_entry (s : AussenStart) :
+    ((I.start E_linked s).2).status eintritt = .laeuft :=
+  rfl
+
+/-- The boot status away from the entry context. -/
+theorem boot_status_other (s : AussenStart) (c : Kontext) (hne : c ≠ eintritt) :
+    ((I.start E_linked s).2).status c = .ruht := by
+  show (if c = eintritt then Status.laeuft else Status.ruht) = .ruht
+  rw [if_neg hne]
+
+/-- The boot dispatch runs the entry context on its assigned core. -/
+theorem boot_dispatch (s : AussenStart) (k : Nat) (assigned : s.assignment 0 = some k) :
+    (((I.start E_linked s).2).kerne k).laeuft = some eintritt := by
+  show (if some k = s.assignment 0 then some eintritt else none) = some eintritt
+  rw [assigned]
+  rfl
+
+/-- A head at rest is absent. -/
+theorem kopf_ruht {code : List Befehl} {s : Zustand} {c : Kontext}
+    (h : s.status c = .ruht) : kopf code s c = none := by
+  simp only [kopf, h]
+
+/-- No context steps at a resting head. -/
+theorem keinSchritt_ruht {c : Kontext} {s : Zustand} {w : PUnit.{1}} {plans : List Plan}
+    {u : Zustand} (h : s.status c = .ruht) (step : E_linked.system.ISchritt c s w plans u) :
+    False := by
+  obtain ⟨b, head, _⟩ := step
+  rw [kopf_ruht h] at head
+  cases head
+
+/-- The witness hardware is conformant. -/
+theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
+    (k : Nat) (assigned : s.assignment 0 = some k) :
+    (hwLinked h k).konform E_linked.katalog h := by
+  refine ⟨rfl, fun i => ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro core hc
+    have heq : core = k := by
+      cases hc
+      rfl
+    subst heq
+    exact (zul.2.2.2.1 0 k assigned).2
+  · intro core hc
+    exact Bool.false_ne_true hc
+  · intro signal mem
+    exact (List.not_mem_nil mem).elim
+  · intro e hd
+    exact Bool.false_ne_true hd
+  · intro hmed
+    rcases hmed with hmed | hcrash <;> exact Bool.false_ne_true ‹_›
+
+/-- The six prefix states of the witness run. -/
+def sLinked (s : AussenStart) : Zustand :=
+  (I.start E_linked s).2
+
+def sLinked1 (s : AussenStart) : Zustand :=
+  (Befehl.literal 0 10).nach eintritt (sLinked s)
+
+def sLinked2 (s : AussenStart) : Zustand :=
+  (Befehl.literal 1 2).nach eintritt (sLinked1 s)
+
+def sLinked3 (s : AussenStart) : Zustand :=
+  (Befehl.teilen 0).nach eintritt (sLinked2 s)
+
+def sLinked4 (s : AussenStart) : Zustand :=
+  (Befehl.literal 0 5).nach eintritt (sLinked3 s)
+
+def sLinked5 (s : AussenStart) : Zustand :=
+  (Befehl.literal 1 0).nach eintritt (sLinked4 s)
+
+def sLinked6 (s : AussenStart) : Zustand :=
+  (Befehl.zurueckSprung 3).nach eintritt (sLinked5 s)
+
+/-- Forcing one ideal step: from local, status and core agreement with a concrete
+    pre-state, the run takes the forced step and agrees with the concrete post-state. -/
+theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
+    (t : Nat) (k : Nat) (b : Befehl) (sPre : Zustand)
+    (hNoCrash : (ρ.hw.angebot t).crash = false)
+    (hCore : (ρ.hw.angebot t).core = some k)
+    (hNoInt : (ρ.hw.angebot t).interrupt = fun _ => false)
+    (hNoInts : ∀ i, (ρ.hw.angebot i).interrupts = [])
+    (hNoDel : (ρ.hw.angebot t).delivery = fun _ => false)
+    (hFrei : ρ.belegt t = none)
+    (hEqL : (ρ.zeit.zustand t).lokal = sPre.lokal)
+    (hEqS : (ρ.zeit.zustand t).status = sPre.status)
+    (hEqK : (ρ.zeit.zustand t).kerne = sPre.kerne)
+    (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
+    (hHead : kopf (verknuepfteFragmente planAB).code sPre eintritt = some b)
+    (hReady : KannSchreiten ρ.hw t eintritt sPre)
+    (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
+    (hFrPre : sPre.fragen = []) :
+    (∃ ev, ρ.zeit.spur t = some ev) ∧
+      (ρ.zeit.zustand (t + 1)).lokal = (b.nach eintritt sPre).lokal ∧
+      (ρ.zeit.zustand (t + 1)).status = (b.nach eintritt sPre).status ∧
+      (ρ.zeit.zustand (t + 1)).kerne = (b.nach eintritt sPre).kerne ∧
+      (ρ.zeit.zustand (t + 1)).fragen = [] := by
+  have hReadyT : KannSchreiten ρ.hw t eintritt (ρ.zeit.zustand t) := by
+    obtain ⟨kk, hg, hd, hs⟩ := hReady
+    refine ⟨kk, hg, ?_, ?_⟩
+    · rw [hEqK]
+      exact hd
+    · rw [hEqS]
+      exact hs
+  have headT : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand t) eintritt = some b := by
+    simp only [kopf, hEqS, hEqL]
+    exact hHead
+  have stepT : I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog ρ.hw t
+      (ρ.zeit.zustand t) (.kontext () (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
+    .kontext hNoCrash hReadyT
+      ⟨b, headT, (b.ideal_privat eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
+      (b.vollzug _ _ _ _ _)
+  have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
+    cases hsp : ρ.zeit.spur t with
+    | none =>
+      exfalso
+      exact ((hρ.2.2.2.2).1 t hsp hFrei _ _ stepT).elim
+    | some ev => exact ⟨ev, rfl⟩
+  obtain ⟨ev, hev⟩ := hsome
+  have htakt := ρ.zeit.takt t
+  rw [hev] at htakt
+  cases htakt with
+  | schritt label step =>
+    cases step with
+    | kontext _ bereit regel aus =>
+      rename_i u0 plan0 spur0 c0 w0 kab0
+      by_cases heq : c0 = eintritt
+      · subst heq
+        obtain ⟨b', head', ideal'⟩ := regel
+        have hb' : b' = b := by
+          rw [headT] at head'
+          cases head'
+          rfl
+        subst hb'
+        obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal'
+        cases same
+        cases after
+        have hakt : Semantik.plan.aktion = .intern := rfl
+        obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
+        rw [hakt] at fuehrt
+        generalize hau : spur0.2 = au at fuehrt
+        cases fuehrt with
+        | intern =>
+          refine ⟨ev, hev, ?_, ?_, ?_, ?_⟩
+          · rw [hstate]
+            simp only [Befehl.nach, hEqL]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqS]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqK]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqF, hFrPre]
+      · exfalso
+        obtain ⟨b', head', _⟩ := regel
+        have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
+          rw [hEqS]
+          exact hStPre c0 heq
+        rw [kopf_ruht hruht] at head'
+        cases head'
+    | antwort _ reply =>
+      exfalso
+      obtain ⟨offered, _, _, _⟩ := reply
+      obtain ⟨q, hmem, _, _⟩ := offered.2.2.2.1
+      rw [hEqF, hFrPre] at hmem
+      exact (List.not_mem_nil hmem).elim
+    | interrupt _ enters =>
+      exfalso
+      obtain ⟨kk, irq, cc, nmi, _, _, hoffer, _, _⟩ := enters
+      rw [hNoInts _] at hoffer
+      cases hoffer
+    | absturz crash =>
+      exfalso
+      have hcon := crash.1.2
+      rw [hNoCrash] at hcon
+      exact Bool.false_ne_true hcon
+  | wartet label _ _ =>
+    cases label
+
+/-- The divisor slot at the violation cut holds zero. -/
+theorem sLinked6_temp0 (s : AussenStart) :
+    ((sLinked6 s).lokal eintritt).temp 0 =
+      some ⟨.int ((5 : Nat) : Int) ((5 : Nat) : Int), Zahl.literal ((5 : Nat) : Int)⟩ := by
+  rfl
+
+theorem sLinked6_temp1 (s : AussenStart) :
+    ((sLinked6 s).lokal eintritt).temp 1 =
+      some ⟨.int ((0 : Nat) : Int) ((0 : Nat) : Int), Zahl.literal ((0 : Nat) : Int)⟩ := by
+  rfl
+
+/-- The linked unit is not accepted: the witness run divides by zero. -/
+theorem linked_nicht_akzeptiert : ¬ Akzeptiert E_linked := by
+  obtain ⟨h, hwF, hardwareH, fairH⟩ :=
+    katalog_nichtLeer E_linked.katalog (Plattform.katalog_wohlgeformt .x86_64)
+  have imageH : E_linked.bild.gueltig E_linked.katalog.plattform.ziel :=
+    Sicherheit.Laufkonstruktion.bild_gueltig
+  obtain ⟨s, zul⟩ := zulStart_erfuellbar hardwareH imageH
+  obtain ⟨k, assigned⟩ := zul.2.2.1 0 (Nat.zero_lt_succ _)
+  obtain ⟨zeit, init⟩ := Zeitlauf.existiert
+    (I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog (hwLinked h k))
+    (I.start E_linked s).2
+  have pauseOk : ∀ t z,
+      KeinSchritt (I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog (hwLinked h k)) t z →
+        ¬ AbsturzAngeboten E_linked.katalog (hwLinked h k) t :=
+    fun t z _ offer => Bool.false_ne_true offer.2
+  let ρ : I.Lauf E_linked :=
+    ⟨s, h, hwLinked h k, zeit.erlaubePausen pauseOk, fun _ => none⟩
+  have hρ : I.Laeufe E_linked ρ :=
+    ⟨hardwareH, konformHw h s zul k assigned, zul, init,
+      zeit.erlaubePausen_maximal pauseOk _ (fun _ => rfl), fun _ _ h => nomatch h⟩
+  have baseL : (ρ.zeit.zustand 0).lokal = (sLinked s).lokal := by
+    have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
+    rw [e]
+  have baseS : (ρ.zeit.zustand 0).status = (sLinked s).status := by
+    have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
+    rw [e]
+  have baseK : (ρ.zeit.zustand 0).kerne = (sLinked s).kerne := by
+    have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
+    rw [e]
+  have baseF : (ρ.zeit.zustand 0).fragen = (sLinked s).fragen := by
+    have e : ρ.zeit.zustand 0 = (I.start E_linked s).2 := init
+    rw [e]
+  have hwCrash : ∀ t, (ρ.hw.angebot t).crash = false := fun t => rfl
+  have hwCore : ∀ t, (ρ.hw.angebot t).core = some k := fun t => rfl
+  have hwInt : ∀ t, (ρ.hw.angebot t).interrupt = fun _ => false := fun t => rfl
+  have hwInts : ∀ i, (ρ.hw.angebot i).interrupts = [] := fun i => rfl
+  have hwDel : ∀ t, (ρ.hw.angebot t).delivery = fun _ => false := fun t => rfl
+  have hwFrei : ∀ t, ρ.belegt t = none := fun t => rfl
+  have hStPre : ∀ (sPre : Zustand) (c : Kontext), c ≠ eintritt →
+      sPre.status = ((I.start E_linked s).2).status → sPre.status c = .ruht := by
+    intro sPre c hne heq
+    rw [heq]
+    exact boot_status_other s c hne
+  have readyAt : ∀ (sPre : Zustand) (t : Nat),
+      sPre.kerne = ((I.start E_linked s).2).kerne →
+      sPre.status = ((I.start E_linked s).2).status →
+      KannSchreiten ρ.hw t eintritt sPre := by
+    intro sPre t hK hS
+    refine ⟨k, hwCore t, ?_, ?_⟩
+    · rw [hK]
+      exact boot_dispatch s k assigned
+    · rw [hS]
+      exact boot_status_entry s
+  have fragenPre : ∀ (sPre : Zustand),
+      sPre.fragen = ((I.start E_linked s).2).fragen → sPre.fragen = [] := by
+    intro sPre heq
+    rw [heq]
+  have st0 := forceStep ρ hρ 0 k (.literal 0 10) (sLinked s) (sLinked1 s)
+    (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
+    baseL baseS baseK baseF
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  have st1 := forceStep ρ hρ 1 k (.literal 1 2) (sLinked1 s) (sLinked2 s)
+    (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
+    st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  have st2 := forceStep ρ hρ 2 k (.teilen 0) (sLinked2 s) (sLinked3 s)
+    (hwCrash 2) (hwCore 2) (hwInt 2) hwInts (hwDel 2) (hwFrei 2)
+    st1.2.1 st1.2.2.1 st1.2.2.2.1 st1.2.2.2.2
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  have st3 := forceStep ρ hρ 3 k (.literal 0 5) (sLinked3 s) (sLinked4 s)
+    (hwCrash 3) (hwCore 3) (hwInt 3) hwInts (hwDel 3) (hwFrei 3)
+    st2.2.1 st2.2.2.1 st2.2.2.2.1 st2.2.2.2.2
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  have st4 := forceStep ρ hρ 4 k (.literal 1 0) (sLinked4 s) (sLinked5 s)
+    (hwCrash 4) (hwCore 4) (hwInt 4) hwInts (hwDel 4) (hwFrei 4)
+    st3.2.1 st3.2.2.1 st3.2.2.2.1 st3.2.2.2.2
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  have st5 := forceStep ρ hρ 5 k (.zurueckSprung 3) (sLinked5 s) (sLinked6 s)
+    (hwCrash 5) (hwCore 5) (hwInt 5) hwInts (hwDel 5) (hwFrei 5)
+    st4.2.1 st4.2.2.1 st4.2.2.2.1 st4.2.2.2.2
+    (by rfl) rfl (readyAt _ _ rfl rfl)
+    (fun c hne => hStPre _ c hne rfl) (by rfl)
+  obtain ⟨ev5, hspur5, hEqL6, hEqS6, hEqK6, hEqF6⟩ := st5
+  have hHead6 : kopf (verknuepfteFragmente planAB).code (sLinked6 s) eintritt =
+      some (Befehl.teilen 0) := by
+    rfl
+  have head6 : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand 6) eintritt =
+      some (Befehl.teilen 0) := by
+    simp only [kopf, hEqS6, hEqL6]
+    exact hHead6
+  have guard6 : (Befehl.teilen 0).guard ((ρ.zeit.zustand 6).lokal eintritt) =
+      some ⟨.division, (5, 0)⟩ := by
+    simp only [Befehl.guard, Rahmen.zahl, hEqL6, sLinked6_temp0, sLinked6_temp1,
+      alsGanzzahl, Option.bind_some, Option.pure_def]
+    rfl
+  have t6 : I.Schnitt E_linked ρ := ⟨6, Or.inr ⟨5, ev5, rfl, hspur5⟩⟩
+  have need6 : (kanonischeVerwendung E_linked).bedarf ρ t6 .division (5, 0) :=
+    ⟨eintritt, .teilen 0, head6, guard6⟩
+  intro ha
+  have hbad := ha.2.2.1 ρ hρ t6 .division (5, 0) need6
+  simp only [waechterBedarf] at hbad
+  exact hbad rfl
+
+/-- The current linker statement is false: both parts are accepted, the plan links,
+    but the linked unit divides by zero. -/
+theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage := by
+  intro hlink
+  have hparts : ∀ m ∈ planAB.module, Akzeptiert (m.fragment.einheit planAB.plattform) := by
+    intro m hm
+    simp only [planAB, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with rfl | rfl
+    · exact fragA_akzeptiert
+    · exact fragB_akzeptiert
+  have hlinked := hlink planAB _ planAB_linke hparts
+  exact linked_nicht_akzeptiert hlinked
+
 end Gabbro.Core.Linken
