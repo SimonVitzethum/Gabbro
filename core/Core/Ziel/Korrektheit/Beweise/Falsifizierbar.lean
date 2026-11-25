@@ -110,8 +110,8 @@ theorem falsifizierbares_letztesAngebot_konform {k h hw} (valid : HwLauf.konform
         fun _ h => (Bool.false_ne_true h).elim,
         fun h => (h.elim Bool.false_ne_true Bool.false_ne_true).elim⟩
 
-theorem falsifizierbares_letztesAngebot_ideal {L Ort Wert Raum Lok Grund Bedingung Wahl F ι : Type}
-    [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F ι)
+theorem falsifizierbares_letztesAngebot_ideal {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type}
+    [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
     {hw : HwLauf} (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund) :
     KeinSchritt (Schritt E.einrichtung E.system E.katalog (letztesAngebot hw)) (t + 1) s := by
   intro event next step
@@ -204,7 +204,7 @@ theorem falsifizierbar_konfiguration :
       | schritt impl =>
           cases impl with
           | kontext normal ready rule exec =>
-              have eq' : label = (.kontext falsifizierbarerEintrag (), ⟨[], []⟩ : SchrittSpur Unit Unit) := rfl
+              have eq' : label = (.kontext falsifizierbarerEintrag (), ⟨[], []⟩) := rfl
               rw [eq'] at eq
               cases Option.some.inj eq
               obtain ⟨hp, hu⟩ := rule
