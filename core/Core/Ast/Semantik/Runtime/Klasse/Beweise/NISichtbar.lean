@@ -120,7 +120,7 @@ def NISichtbar.schreibform (m : Modus) : Schrittform :=
     different forms, while the flow and visibility premises for `true` are satisfied. -/
 def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
   let F := NISichtbar.schreibform m
-  { katalog := .x86_64.katalog
+  {     katalog := (Plattform.x86_64).katalog
     bild := bild
     einrichtung := einrichtung Fragment.leer.eingang Fragment.leer.eintritte Fragment.leer.speicher
     system := ⟨(fun _ => F.regel),
