@@ -188,7 +188,8 @@ theorem geraete_consume_ausgeglichen {binding : Binding k} {access : RegisterAcc
         have hac : a.context = entryContext.nummer := hactx a (h.symm ▸ hmem)
         have hpos : ((fun e => e.context == entryContext.nummer) a) = true := by
           simp only [hac, beq_self_eq_true]
-        rw [List.filter_cons_of_pos hpos, ih]
+        rw [List.filter_cons_of_pos (p := fun e => e.context == entryContext.nummer)
+          (a := a) (l := as) hpos, ih]
     have hidx : s.verworfen entryContext + s.verbraucht entryContext = s.antworten.length := by
       rw [hverw entryContext, Nat.zero_add, hverb']
     have hnone : s.naechsteAntwort entryContext = none := by
