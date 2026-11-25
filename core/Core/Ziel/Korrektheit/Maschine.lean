@@ -113,10 +113,18 @@ def IdealAkzeptierteEinheitAussage : Prop :=
 
 theorem ideal_akzeptierte_einheit : IdealAkzeptierteEinheitAussage := by
   intro P t
-  exact ⟨Maschine.I.bestimmt_aus_regeln _ _ (fun b => Ast.Semantik.Befehl.bestimmt b),
+  have rein := Ast.Semantik.fragment_rein Ast.Category.unit t
+  exact ⟨Maschine.I.bestimmt_aus_kopfregeln _ _ (fun i s c hk =>
+      Ast.Semantik.Befehl.bestimmt i
+        (rein i (Ast.Semantik.kopf_mem (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk))),
     Maschine.I.fortschritt_aus_regeln _ _
       (Ast.Semantik.Fragment.fertig (Ast.Semantik.fragment Ast.Category.unit t) P)
-      (fun b => Ast.Semantik.Befehl.fortschritt (Ast.Semantik.fragment Ast.Category.unit t) b)
-      (fun b => Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P b)⟩
+      (fun b => Ast.Semantik.Befehl.regelFortschritt (Ast.Semantik.fragment Ast.Category.unit t) P b)
+      (fun i => by
+        by_cases h : i.Privat
+        · exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P i h
+        · intro t' s c w plans u hk _ _
+          exact absurd (rein i (Ast.Semantik.kopf_mem
+            (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h)⟩
 
 end Gabbro.Core.Ziel.Korrektheit
