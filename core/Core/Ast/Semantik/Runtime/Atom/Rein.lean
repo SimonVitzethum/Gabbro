@@ -108,7 +108,11 @@ private theorem functionCode_rein {result : Option WrittenType} {scope : Scope}
   | some m =>
     simp only [functionCode, Fragment.rein_anhaengen_iff, Fragment.rein_einzel_iff, expr_rein,
       bracedBlock_rein, true_and]
-    exact ⟨Or.inl rfl, Or.inl rfl⟩
+    repeat' first
+      | exact Or.inl rfl
+      | exact Or.inr rfl
+      | exact trivial
+      | refine ⟨?_, ?_⟩
 
 private theorem decl_rein {before after : Scope} (d : Decl before after) : (decl d).Rein := by
   cases d with
