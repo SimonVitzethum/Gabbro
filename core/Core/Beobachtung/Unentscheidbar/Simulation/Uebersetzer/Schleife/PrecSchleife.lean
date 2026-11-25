@@ -108,16 +108,21 @@ theorem precRumpfLaenge (cgBlk : List Befehl) (aus frei : Nat) :
 
 theorem verschiebbarPrecRumpf (base : Nat) (cgBlk : List Befehl) (aus frei : Nat)
     (hv : VerschiebbaresProgramm cgBlk) : VerschiebbarVon base (precRumpf cgBlk aus frei) := by
-  unfold precRumpf
+  change VerschiebbarVon base
+    ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+      paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) ++ cgBlk)
   apply verschiebbarVonAppend
   · apply verschiebbarVonAppend
     · exact verschiebbarVonLift base
         (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
-        (verschiebbarPaarBerechnung _ _ _ _)
+        (verschiebbarPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
     · exact verschiebbarVonLift (base + 44)
         (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
-        (verschiebbarPaarBerechnung _ _ _ _)
-  · exact verschiebbarVonLift (base + 44 + 44) cgBlk hv
+        (verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))
+  · rw [show (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+        paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)).length = 88 by
+      simp only [paarBerechnungLaenge, List.length_append]]
+    exact verschiebbarVonLift (base + 88) cgBlk hv
 
 /-- Increment the counter and jump back to the check. The backward jump
     distance is relative to the whole loop, not to this tail. -/
