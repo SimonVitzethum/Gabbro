@@ -65,13 +65,19 @@ theorem speicherfolge_zugriffsindex {anfang : Zelle → Int} {f : SpeicherAkteur
 
 /-- An internal protocol action records no lock events, no outside events and leaves the intermediate
     state unchanged. -/
-theorem fuehrtAus_intern_nil {t c s u sperren aussen v}
-    (h : FuehrtAus t c s u .intern sperren aussen v) : sperren = [] ∧ aussen = [] ∧ v = u := by
+theorem fuehrtAus_intern_nil {t : Nat} {s u : Zustand Nat Zelle Int Nat Rahmen PUnit PUnit PUnit}
+    {sperren : List (Etikett Zelle Int)} {aussen : List Katalog.Ereignis}
+    {v : Zustand Nat Zelle Int Nat Rahmen PUnit PUnit PUnit} (c : Kontext)
+    (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit PUnit)
+    (h : FuehrtAus e t c s u .intern sperren aussen v) :
+    sperren = [] ∧ aussen = [] ∧ v = u := by
   cases h
   exact ⟨rfl, rfl, rfl⟩
 
 /-- An empty label list records no event and leaves the graph unchanged. -/
-theorem speicherfolge_leer {anfang f g es g'} (h : Speicherfolge anfang f g [] es g') :
+theorem speicherfolge_leer {Ort Wert : Type} {anfang : Ort → Wert} {f : SpeicherAkteur Ort}
+    {g : SpeicherGraph Ort Wert} {es : List (SpeicherAkteur Ort × Etikett Ort Wert)}
+    {g' : SpeicherGraph Ort Wert} (h : Speicherfolge anfang f g [] es g') :
     es = [] ∧ g' = g := by
   cases h
   exact ⟨rfl, rfl⟩
@@ -87,9 +93,9 @@ theorem adresse_speicherzugriff {s : Zustand} {c : Kontext} {z : Zelle} {l : Eti
     ∃ a : Adresse, s.adresse c z = some a ∧ Speicherzugriff s c l a := by
   have hbef : s.befugt c z .lesen ∨ s.befugt c z .schreiben := by
     cases hla : l.art with
-    | lesen => exact Or.inl (hBles (by simp only [hla, Art.liest]))
-    | schreiben => exact Or.inr (hBschr (by simp only [hla, Art.schreibt]))
-    | rmw => exact Or.inl (hBles (by simp only [hla, Art.liest]))
+    | lesen => exact Or.inl (hBles (by simp only [hla, Speicher.Art.liest]))
+    | schreiben => exact Or.inr (hBschr (by simp only [hla, Speicher.Art.schreibt]))
+    | rmw => exact Or.inl (hBles (by simp only [hla, Speicher.Art.liest]))
     | aussen => exact False.elim (hneq hla)
   rcases hbef with hb | hb
   · obtain ⟨g, off, hg, hgo, hgu, hzug, humf, hhaelt⟩ := hb
@@ -170,6 +176,7 @@ theorem eineZugriffGebucht (vor nach : Zustand) (c : Kontext) (l : Etikett Zelle
       cases hspur
       refine ⟨rfl, ?_⟩
       refine ⟨c, l, ?_, hneq, rfl⟩
+      rw [hes]
       exact List.mem_cons_of_mem _ (List.mem_singleton.2 rfl)
     | succ i =>
       cases i with
@@ -243,7 +250,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       subst zwischen
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
@@ -253,7 +260,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hplan, Schrittform.plan, hFk]
         rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
@@ -283,7 +290,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       subst zwischen
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
@@ -293,7 +300,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hplan, Schrittform.plan, hFk]
         rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
@@ -324,7 +331,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       subst zwischen
       have hplanakt : plan.aktion = .intern := by rw [hplan]; rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       simp only [hplan, Semantik.plan, List.nil_append, schreibEreignisse] at folge
       exact verweigertBein vor nach hw t spur F c folge hnach haussen
@@ -334,7 +341,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
         rw [hplan, Schrittform.plan, hFk]
         rfl
       rw [hplanakt] at hfa
-      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil hfa
+      obtain ⟨hsperren, haussen, hvfa⟩ := fuehrtAus_intern_nil c E.maschine.einrichtung hfa
       rw [hsperren, haussen, hvfa] at folge hnach
       rw [hzwischen] at hnach
       simp only [hplan, Schrittform.plan, hFk, Wirkungsklasse.plan, List.nil_append,
