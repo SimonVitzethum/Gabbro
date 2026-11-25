@@ -400,6 +400,7 @@ theorem regionNI : RegionNIAussage := by
                     refine .kontext (plan := Ast.LowLevel.plan) (u := transfer₂.apply c v₂)
                       crash₂ bereit₂ ?_ ?_
                     · refine ⟨op, kopf₂, ?_⟩
+                      change op.impl c v₂ wahl [Ast.LowLevel.plan] (transfer₂.apply c v₂)
                       unfold Instruction.impl
                       rw [eval₂]
                       exact ⟨rfl, rfl⟩
@@ -433,15 +434,18 @@ theorem regionNI : RegionNIAussage := by
                                       cases impl with
                                       | kontext _ _ _ _ => cases label
                                        | interrupt _ hinterrupt =>
-                                           obtain ⟨k, irq, ch, nmi, hoff, hpending, hnimmt,
-                                             hstat, hspurAus, hmem, haws⟩ := hinterrupt
-                                           rw [auswahl₂none] at haws
-                                           cases haws
+                                          obtain ⟨k, irq, ch, nmi, hoff, hpending, hnimmt,
+                                            hstat, hspurAus, hmem, hnext⟩ := hinterrupt
+                                          have haws : (ρ₂.hw.angebot t).interruptAuswahl =
+                                              some (k, id, irq) := hpending.2.2.2.2
+                                          rw [auswahl₂none] at haws
+                                          cases haws
                                       | antwort _ _ => cases label
                                       | absturz _ => cases label
                           | absturz =>
                               have tak₂ := ρ₂.zeit.takt t
                               rw [hz₂, hspurWahl] at tak₂
+                              generalize hN₂ : ρ₂.zeit.zustand (t + 1) = n₂ at tak₂
                               cases tak₂ with
                               | wartet label _ _ => cases label
                               | schritt label laufstep =>
@@ -466,29 +470,18 @@ theorem regionNI : RegionNIAussage := by
                                   cases laufstep with
                                   | schritt impl =>
                                       cases impl with
-                                      | kontext _ bereit₂' regel₂ aus₂ =>
-                                          have c_eq : c₂ = c := by
-                                            obtain ⟨k₁, geleg₁, kern₁, _⟩ := bereit₁
-                                            obtain ⟨k₂, geleg₂, kern₂, _⟩ := bereit₂'
-                                            unfold HwLauf.gelegenheit at geleg₁ geleg₂
-                                            have core₁ : (ρ₁.hw.angebot t).core = some k₁ := geleg₁
-                                            have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
-                                            have kk : k₁ = k₂ :=
-                                              Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
-                                            have gleich : (v₂.kerne k₂).laeuft = some c := by
-                                              rw [← kk, ← kerneEq]
-                                              exact kern₁
-                                            exact Option.some.inj (kern₂.symm.trans gleich)
+                                      | kontext _ _ regel₂ aus₂ =>
                                           obtain ⟨j, kopf_j, implI₂⟩ := regel₂
+                                          obtain ⟨_, cR, _, _, _⟩ := kopf_heraus op kopf_j
+                                          have c_eq := cR.trans kt.2.1.symm
                                           rw [c_eq] at kopf_j
                                           have jop : j = op := (Option.some.inj (kopf₂.symm.trans kopf_j)).symm
                                           subst j
                                           obtain ⟨transfer₂', eval₂', planEq₂, hu₂⟩ :=
                                             Instruction.implTransfer (w := w₂) implI₂
-                                          rw [c_eq] at eval₂' hu₂ hspurWahl
+                                          rw [c_eq] at eval₂' hu₂
                                           cases (List.cons.inj planEq₂).1
                                           simp only [unit] at aus₂
-                                          rw [c_eq] at aus₂
                                           obtain ⟨traceEq₂, nextEq₂⟩ := Instruction.genauInternal aus₂
                                           have rightNext : ρ₂.zeit.zustand (t + 1) =
                                               some (transfer₂'.apply c v₂) := by
