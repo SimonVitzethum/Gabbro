@@ -57,6 +57,9 @@ theorem trivial_start_bereit :
         subst a
         exact Nat.pow_pos (Nat.zero_lt_succ _)
       · cases h
+    · intro a mem
+      obtain rfl := List.mem_singleton.mp mem
+      exact ⟨0, rfl⟩
   obtain ⟨s, zul⟩ := zulStart_erfuellbar hwhw image
   have geladen : E.laden s (H.lade E.bild) = some (I.start E s).2 :=
     Beobachtung.fragment_geladen p P hwhw zul
@@ -174,8 +177,12 @@ theorem IdealProtokollGutImLaufAussage.nichtTrivial :
     fun t z stuck offer => stuck _ _ (.absturz (absturz_schritt_erfuellbar _ _ offer z))
   refine ⟨E, ⟨s, H, hw, zeit.erlaubePausen pause, fun _ => none⟩, ?_⟩
   intro h
+  have h0 := h.2.2.2.1
+  rw [init] at h0
   have hst := congrArg
-    (fun z : Zustand Unit Unit Unit Unit Unit Unit => z.status (.faden 0)) h.2.2.2.1
+    (fun z : Zustand Unit Unit Unit Unit Unit Unit => z.status (.faden 0)) h0
+  rw [show bad.status (.faden 0) = Status.laeuft from rfl] at hst
+  rw [show (I.start E s).2.status (.faden 0) = Status.ruht from rfl] at hst
   cases hst
 
 /-- The determinacy premise holds jointly: the trivial system has no step, so its rule is
