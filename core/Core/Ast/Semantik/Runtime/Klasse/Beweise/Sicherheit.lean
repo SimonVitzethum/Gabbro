@@ -37,7 +37,7 @@ theorem klassenSicherheit (k : Wirkungsklasse) : KlassenSicherheitAussage k := b
   | ruf => exact klassenSpeicherbein_privat .ruf (Or.inr (Or.inl rfl))
   | frage => exact klassenSpeicherbein_privat .frage (Or.inr (Or.inr (Or.inl rfl)))
   | zaun m =>
-    exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr ⟨m, rfl⟩)))
+    exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr (Or.inl ⟨m, rfl⟩))))
   | maskiere =>
       exact klassenSpeicherbein_privat .maskiere
         (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
