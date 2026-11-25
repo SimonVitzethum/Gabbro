@@ -156,6 +156,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.RightAblauf
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Verschiebung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Kette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.KetteRand
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BlockKette
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
