@@ -167,7 +167,9 @@ private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umge
                       exact ihs
                   | absturz habsturz =>
                       obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
-                      rw [nextEq, ihs]
+                      rw [nextEq]
+                      unfold Zustand.wiederanlauf
+                      rw [ihs]
 
 private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgebung}
     {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
