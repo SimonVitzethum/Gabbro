@@ -146,7 +146,7 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         List.take_of_length_le (le_of_eq hlenP.symm)
                       rw [ht1]
                       simpa only [L₁, L₂, e] using
-                        List.rel_append (by simpa only [L₁, L₂, ht2, NiedrigeBeob] using
+                        List.rel_append (by simpa only [L₁, L₂, ht2, NiedrigeBeob, E] using
                           (geraeteKopplung_kopplung hkopp).1)
                           (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
                     · intro v w hv hw
