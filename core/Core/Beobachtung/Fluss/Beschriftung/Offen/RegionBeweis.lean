@@ -150,7 +150,7 @@ private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umge
                   cases impl with
                   | kontext _ _ regel aus =>
                       obtain ⟨_, _, implI⟩ := regel
-                      obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer implI
+                      obtain ⟨transfer, _, planEq, hu⟩ := Instruction.implTransfer (w := ()) implI
                       cases (List.cons.inj planEq).1
                       simp only [unit] at aus
                       obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
