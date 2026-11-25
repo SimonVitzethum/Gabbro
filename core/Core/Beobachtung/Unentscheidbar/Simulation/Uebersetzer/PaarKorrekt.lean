@@ -57,7 +57,7 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
       · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 28 k (pb12w r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb12w r a b aus frei := by
       subst k
-      exact Option.some.inj (hk.trans hF.symm)
+      exact Option.some.inj (hk.symm.trans hF)
     rw [hEq]
     refine ⟨?_, pb12wPres r a b aus frei, rfl, rfl, rfl⟩
     rw [natPairFormel, if_pos hab]
@@ -76,7 +76,7 @@ theorem paarRueck (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
       · exact laufStirbtNach (paarBerechnung aSlot bSlot aus frei) r 30 k (pb14f r a b aus frei) rEnd hF hpcF hk hgt
     have hEq : rEnd = pb14f r a b aus frei := by
       subst k
-      exact Option.some.inj (hk.trans hF.symm)
+      exact Option.some.inj (hk.symm.trans hF)
     rw [hEq]
     refine ⟨?_, pb14fPres r a b aus frei, rfl, rfl, rfl⟩
     rw [natPairFormel, if_neg hab]
