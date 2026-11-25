@@ -97,6 +97,7 @@ theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[12]? = some (.vergleichen .lt frei) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittVergleichNat _ (pb4 r a b frei) 12 frei a b rfl hx hy g
+  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb4 r a b frei)) = some (pb5 r a b frei)
   rw [e]
   rfl
 
@@ -110,6 +111,7 @@ theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a 
   have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittSpringeWennWahr _ (pb5 r a b frei) 13 frei true true 17 rfl ht rfl g
+  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6w r a b frei)
   rw [e]
   rfl
 
@@ -127,6 +129,7 @@ theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬
   have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittSpringeWennFalsch _ (pb5 r a b frei) 13 frei true false 17 rfl ht hw g
+  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6f r a b frei)
   rw [e]
   rfl
 
@@ -135,7 +138,7 @@ theorem pb7wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have ht : (pb6w r a b frei).temp (frei + 3) = some (natVal b) := by
     show (pb5 r a b frei).temp (frei + 3) = _
     show Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) (frei + 3) = _
-    rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 0))]
+    rw [updateMiss _ _ _ _ (by omega : frei + 3 ≠ frei)]
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) (frei + 3) = _
     exact updateHit _ _ _
   have g0 : (paarBerechnung aSlot bSlot aus frei)[30]? = some (.binden nameX (frei + 3)) := by
@@ -155,7 +158,7 @@ theorem pb8wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 4))]
     show (pb5 r a b frei).temp (frei + 3) = _
     show Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) (frei + 3) = _
-    rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 0))]
+    rw [updateMiss _ _ _ _ (by omega : frei + 3 ≠ frei)]
     show Function.update (pb3 r a b frei).temp (frei + 3) (some (natVal b)) (frei + 3) = _
     exact updateHit _ _ _
   have g0 : (paarBerechnung aSlot bSlot aus frei)[33]? = some (.binden nameX (frei + 3)) := by
@@ -179,6 +182,7 @@ theorem pb9wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[36]? = some (.binaer .mul (frei + 4)) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittMulNat _ (pb8w r a b frei) 36 (frei + 4) b b rfl hx hy g
+  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb8w r a b frei)) = some (pb9w r a b frei)
   rw [e]
   rfl
 
@@ -194,7 +198,7 @@ theorem pb10wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     rw [updateMiss _ _ _ _ h2a]
     show (pb5 r a b frei).temp (frei + 2) = _
     show Function.update (pb4 r a b frei).temp frei (some ⟨.bool, Compare.eval .lt (a : Int) (b : Int)⟩) (frei + 2) = _
-    rw [updateMiss _ _ _ _ (addNeLinks (by decide : (2 : Nat) ≠ 0))]
+    rw [updateMiss _ _ _ _ (by omega : frei + 2 ≠ frei)]
     show Function.update (pb3 r a b frei).temp (frei + 2) (some (natVal a)) (frei + 2) = _
     exact updateHit _ _ _
   have g0 : (paarBerechnung aSlot bSlot aus frei)[37]? = some (.binden nameX (frei + 2)) := by
@@ -220,6 +224,7 @@ theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[40]? = some (.binaer .add (frei + 4)) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil]
   have e := schrittAddNat _ (pb10w r a b frei) 40 (frei + 4) (b * b) a rfl hx hy g
+  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb10w r a b frei)) = some (pb11w r a b frei)
   rw [e]
   rfl
 
