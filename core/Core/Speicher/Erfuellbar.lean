@@ -393,11 +393,13 @@ theorem zf_psc_rang {a b : ZfEv} (h : zfGraph.psc a b) : zfRang a < zfRang b := 
       · exact zf_mo_rang hmo
       · exact False.elim (zf_rb_leer hrb)
     have ha : zfRang a ≤ zfRang c := by
-      rcases hl with ⟨_, rfl⟩ | ⟨_, rfl | hac⟩
+      rcases hl with ⟨_, rfl⟩ | ⟨_, rfl⟩ | ⟨_, hac⟩
+      · exact Nat.le_refl _
       · exact Nat.le_refl _
       · exact Nat.le_of_lt (zf_hb_rang hac)
     have hb : zfRang d ≤ zfRang b := by
-      rcases hr with ⟨_, rfl⟩ | ⟨_, rfl | hdb⟩
+      rcases hr with ⟨_, rfl⟩ | ⟨_, rfl⟩ | ⟨_, hdb⟩
+      · exact Nat.le_refl _
       · exact Nat.le_refl _
       · exact Nat.le_of_lt (zf_hb_rang hdb)
     exact Nat.lt_of_le_of_lt ha (Nat.lt_of_lt_of_le hcd hb)
