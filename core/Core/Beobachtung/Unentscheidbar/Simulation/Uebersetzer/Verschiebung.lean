@@ -78,22 +78,22 @@ theorem getNachPrefix (pre mid : List Befehl) (j : Nat) (hj : j < mid.length) :
 theorem schrittMitPcBei (pre mid post : List Befehl) (hv : VerschiebbaresProgramm mid)
     (r : Rahmen) (hlt : r.pc < mid.length) :
     Schritt (pre ++ mid ++ post) (some (mitPc pre.length r)) =
-      (mitPc pre.length) <$> Schritt mid (some r) := by
-  let p := pre.length
+      match Schritt mid (some r) with
+      | none => none
+      | some r' => some (mitPc pre.length r') := by
   obtain ⟨b, hb, hvb, hzd⟩ := hv r.pc hlt
-  have hgetConcat : (pre ++ mid ++ post)[p + r.pc]? = some b := by
-    change (pre ++ mid ++ post)[pre.length + r.pc]? = some b
+  have hgetConcat : (pre ++ mid ++ post)[pre.length + r.pc]? = some b := by
     rw [getAnhangLinks (pre ++ mid) post (pre.length + r.pc)]
     · exact (getNachPrefix pre mid r.pc hlt).trans hb
     · simp only [List.length_append]
       omega
-  have hzb : ∀ d, b = .zurueckSprung d → d ≤ (mitPc p r).pc := by
+  have hzb : ∀ d, b = .zurueckSprung d → d ≤ (mitPc pre.length r).pc := by
     intro d hd
     have hd0 : d ≤ r.pc := hzd d hd
     simp only [mitPc]
     omega
-  have e2 : b.auswerten (mitPc p r) = mitPc p (b.auswerten r) :=
-    auswertenMitPc p b r hvb hzb
+  have e2 : b.auswerten (mitPc pre.length r) = mitPc pre.length (b.auswerten r) :=
+    auswertenMitPc pre.length b r hvb hzb
   simp only [Schritt, mitPc, hgetConcat, hb, e2]
 
 /-- A whole relocation of a run that stays below the block length. -/
@@ -101,7 +101,9 @@ theorem laufMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgramm mid)
     (r : Rahmen) (k : Nat)
     (hbleib : ∀ j, j < k → ∃ rj, (Schritt mid)^[j] (some r) = some rj ∧ rj.pc < mid.length) :
     (Schritt (pre ++ mid ++ post))^[k] (some (mitPc pre.length r)) =
-      (mitPc pre.length) <$> (Schritt mid)^[k] (some r) := by
+      match (Schritt mid)^[k] (some r) with
+      | none => none
+      | some r' => some (mitPc pre.length r') := by
   induction k with
   | zero => rfl
   | succ k ih =>
@@ -123,7 +125,7 @@ theorem laufHatZwischen (blk : List Befehl) (r : Rahmen) (k j : Nat) (rk : Rahme
     exact hrk
   cases hstep : (Schritt blk)^[j] (some r) with
   | none => rw [hstep, laufKein] at hrk'; cases hrk'
-  | some rj => exact ⟨rj, hstep⟩
+  | some rj => exact ⟨rj, rfl⟩
 
 /-- Before its first arrival at the program end, a successful run stays
     strictly below the program length. -/
