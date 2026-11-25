@@ -110,7 +110,8 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
+  | .lokal | .ruf | .zaun .. | .sperre .. | .frage | .verbrauche | .starte | .beende | .verbinde
+  | .wechsle => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -209,6 +210,7 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   | zaun m => exact Schrittform.zugriffsschritt_total ⟨.zaun m, o, t⟩ c s
   | sperre a => exact Schrittform.zugriffsschritt_total ⟨.sperre a, o, t⟩ c s
   | frage => exact Schrittform.zugriffsschritt_total ⟨.frage, o, t⟩ c s
+  | verbrauche => exact ⟨[Semantik.plan], _, rfl, rfl⟩
   | starte => exact Schrittform.faedenschritt_total ⟨.starte, o, t⟩ c s
   | beende => exact Schrittform.faedenschritt_total ⟨.beende, o, t⟩ c s
   | verbinde => exact Schrittform.faedenschritt_total ⟨.verbinde, o, t⟩ c s
@@ -286,6 +288,7 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       · have hl' : l ∈ (o (s.lokal c)).fragePlan.lesen := hl
         rw [hlesen] at hl'
         exact (List.not_mem_nil hl').elim
+  | verbrauche => exact Befugt.privat (List.cons.inj step.1).1
   | starte =>
     rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -394,6 +397,7 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
   | ruf => cases hk
   | sperre a => cases hk
   | frage => cases hk
+  | verbrauche => cases hk
   | starte => cases hk
   | beende => cases hk
   | verbinde => cases hk

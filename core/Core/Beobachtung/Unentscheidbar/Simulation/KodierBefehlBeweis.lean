@@ -276,6 +276,11 @@ theorem inv_faden (f0 : _) :
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
 
+theorem inv_aussen (f0 : _) :
+    befehlVonCode (befehlZuCode (.aussen f0)) = some (.aussen f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
 theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = some b
   | .literal f0 f1 => inv_literal f0 f1
   | .binaer f0 f1 => inv_binaer f0 f1
@@ -329,6 +334,7 @@ theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = som
   | .bindeRegion f0 f1 => inv_bindeRegion f0 f1
   | .zugriff f0 => inv_zugriff f0
   | .faden f0 => inv_faden f0
+  | .aussen f0 => inv_aussen f0
 
 instance : Encodable Befehl :=
   Encodable.ofLeftInjection

@@ -71,6 +71,7 @@ def befehlZuCode : Befehl → Code
   | .bindeRegion f0 f1 => Code.pair (natZuCode 49) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
   | .zugriff f0 => Code.pair (natZuCode 50) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
   | .faden f0 => Code.pair (natZuCode 51) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .aussen f0 => Code.pair (natZuCode 52) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
 
 def befehlVonCodeA : Code → Option Befehl
   | Code.pair tag kids =>

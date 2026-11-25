@@ -14,6 +14,8 @@ public import Core.Verfeinerung.Formen.Familie
 
 namespace Gabbro.Core.Ast.Semantik
 
+open Gabbro.Core.Aussenfrage
+
 /-- Binding the value read never changes the continuation stack. -/
 theorem Rahmen.bindeGelesen_fortsetzungen (r : Rahmen) (ziel : Nat) (typ : Ty .value) (gelesen : Int) :
     (r.bindeGelesen ziel typ gelesen).fortsetzungen = r.fortsetzungen := by
@@ -49,6 +51,9 @@ theorem zugriffStapel (b : Befehl) (familie : b.familie = .zugriff) :
     change (form.uebertrag frame 0).fortsetzungen.length ≤ frame.fortsetzungen.length + form.klasse.Stapel
     rw [(form.uebertrag_lokal frame 0).1]
     exact Nat.le_add_right _ _
+  | aussen form =>
+    change frame.fortsetzungen.length ≤ frame.fortsetzungen.length + (Aussenfrageform.klasse form).Stapel
+    cases form <;> simp only [Aussenfrageform.klasse, Wirkungsklasse.Stapel, Nat.add_zero]
   | _ => cases familie
 
 end Gabbro.Core.Ast.Semantik
