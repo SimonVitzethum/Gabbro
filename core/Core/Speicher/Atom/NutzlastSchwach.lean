@@ -52,6 +52,18 @@ def stLab (mw mr : Modus) : StEv → Etikett Bool Nat
 @[reducible] def stEco (a b : StEv) : Prop :=
   (a = ix ∧ (b = wx ∨ b = rx)) ∨ (a = iy ∧ (b = wy ∨ b = ry)) ∨ (a = wy ∧ b = ry) ∨ (a = rx ∧ b = wx)
 
+/-- The location of an event, independent of the flag modes. -/
+def stOrt : StEv → Bool
+  | ix => false
+  | iy => true
+  | wx => false
+  | wy => true
+  | ry => true
+  | rx => false
+
+theorem stLab_ort (mw mr : Modus) (a : StEv) : (stLab mw mr a).ort = stOrt a := by
+  cases a <;> rfl
+
 def stRang : StEv → Nat
   | ix => 0
   | iy => 1
@@ -171,7 +183,9 @@ theorem stGraph_scb {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv
     cases a <;> cases c <;> cases d <;> decide
   · exfalso
     have h1' := stGraph_hb h h1
-    have h2' : (stLab mw mr a).ort = (stLab mw mr b).ort := h2
+    have h2' : stOrt a = stOrt b := by
+      rw [← stLab_ort mw mr a, ← stLab_ort mw mr b]
+      exact h2
     revert h1' h2'
     cases a <;> cases b <;> decide
   · rcases (hmo : stMo a b) with ⟨h1, h2⟩ | ⟨h1, h2⟩
@@ -188,8 +202,8 @@ theorem stGraph_psc {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) {a b : StEv
   have hb' : (stLab mw mr b).modus = .sc := hb
   rcases stGraph_scb h hs with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;>
     first
-      | exact absurd ha' (by decide)
-      | exact absurd hb' (by decide)
+      | exact absurd ha' (by intro hh; cases hh)
+      | exact absurd hb' (by intro hh; cases hh)
 
 theorem stGraph_konsistent {mw mr : Modus} (h : ¬ (mw.stark ∧ mr.stark)) :
     (stGraph mw mr).Konsistent where
