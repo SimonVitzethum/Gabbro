@@ -48,7 +48,7 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     | variante => exact beweise.variante p plattform f familie quelle
     | zugriff =>
       intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor zustand kopf spurGlied kopplung
-      exact Befehl.privat_ne_zugriff (rein f (Ast.Semantik.kopf_mem (code := p.code) kopf)) familie
+      exact (Befehl.privat_ne_zugriff (rein f (Ast.Semantik.kopf_mem (code := p.code) kopf)) familie).elim
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with
     | kontext _ _ => exact False.elim protokoll
