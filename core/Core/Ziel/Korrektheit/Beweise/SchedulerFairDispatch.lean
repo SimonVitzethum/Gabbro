@@ -33,7 +33,7 @@ open Gabbro.Core.Maschine
     protocol agrees on everything but the local frames, and the local relation
     of an elaborated unit is equality. -/
 theorem einheitVon_bezug_gleich (P : Katalog.Plattform) (t : Ast.Unit)
-    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    {ρ : Maschine.Lauf (einheitVon P t)}
     {η : Maschine.I.Lauf (einheitVon P t)}
     (matched : Maschine.I.Laufabgleich ρ η)
     (tick : Nat) (s : Ast.Semantik.Zustand)
@@ -79,7 +79,7 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
 
 /-- An answer arrival touches no core state: neither dispatch nor status moves. -/
 theorem einheitVon_antwort_erhaelt {a : Katalog.AntwortEreignis}
-    {s s' : Ast.Semantik.Zustand} {spur : Maschine.SchrittSpur Ast.Semantik.Zelle Int}
+    {s s' : Ast.Semantik.Zustand}
     (hstate : s' = {s.antwort a with graph := s'.graph}) :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
   have h1 : s'.kerne = ((s.antwort a).kerne) := by rw [hstate]
@@ -94,7 +94,7 @@ theorem einheitVon_antwort_erhaelt {a : Katalog.AntwortEreignis}
     preserve cores and status, an interrupt enters a resting context, and a
     crash resets to the single entry dispatch. -/
 theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
-    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    {ρ : Maschine.Lauf (einheitVon P t)}
     {η : Maschine.I.Lauf (einheitVon P t)}
     (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η) :
@@ -285,7 +285,7 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
     interrupt anywhere but on the context's own core leaves it alone, while an
     interrupt on its own core would displace it. -/
 theorem einheitVon_dispatch_konstant (P : Katalog.Plattform) (t : Ast.Unit)
-    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    {ρ : Maschine.Lauf (einheitVon P t)}
     {η : Maschine.I.Lauf (einheitVon P t)}
     (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η)
