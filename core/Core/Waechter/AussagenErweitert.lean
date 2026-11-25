@@ -33,6 +33,19 @@ private meta def enthaeltPropFunktion : Expr → Bool
   | .proj _ _ b => enthaeltPropFunktion b
   | _ => false
 
+/-- Every constant any Core proof (`theorem`) refers to. A Prop-valued field or an unnamed
+    proposition that a proof mentions carries statement content, even when no pin or goal closure
+    reaches it: the proof is what uses it as a statement. One pure pass, like the declaration audit. -/
+private meta def beweisVerwendung (env : Environment) : Std.HashSet Name := Id.run do
+  let mut used : Std.HashSet Name := {}
+  for name in coreDeclarations env do
+    match env.find? name with
+    | some cinfo@(.thmInfo _) =>
+      for dep in cinfo.getUsedConstantsAsSet.toArray do
+        used := used.insert dep
+    | _ => pure ()
+  return used
+
 /-- The `(field, type)` pairs of a structure, from its single constructor, without its parameters. -/
 private meta def strukturFeldTypen (env : Environment) (s : Name) :
     MetaM (Array (Name × Expr)) := do
@@ -47,6 +60,20 @@ private meta def strukturFeldTypen (env : Environment) (s : Name) :
       let decl ← xs[i]!.fvarId!.getDecl
       out := out.push (decl.userName, decl.type)
     return out
+
+/-- Scan one structure for Prop-valued fields, with its own heartbeat budget. `grund` names why
+    the structure is in scope. -/
+private meta def strukturScan (env : Environment) (erlaubt : Std.HashSet (Name × Name))
+    (s : Name) (grund : String) : MetaM (Array String) := do
+  try
+    Core.withCurrHeartbeats do
+      let mut found : Array String := #[]
+      for (f, t) in (← strukturFeldTypen env s) do
+        if enthaeltPropFunktion t && !erlaubt.contains (s, f) then
+          found := found.push
+            s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding{grund}"
+      return found
+  catch _ => return #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
 
 /-- Regel S: every structure in the closure of the pin roots whose fields are Prop-valued or functions
     into `Prop` is reported as information (name, module, reason), unless the field is allow-listed.
@@ -64,16 +91,24 @@ public meta def strukturPropInfos (env : Environment) (index : DependencyIndex)
   let mut infos := #[]
   for s in union.toArray.qsort Name.lt do
     unless Lean.isStructure env s do continue
-    let scanned ← try
-        Core.withCurrHeartbeats do
-          let mut found : Array String := #[]
-          for (f, t) in (← strukturFeldTypen env s) do
-            if enthaeltPropFunktion t && !erlaubt.contains (s, f) then
-              found := found.push
-                s!"Regel S: structure {s} in module {modulName env s} has the Prop-valued field {f} with no recorded model binding"
-          return found
-      catch _ => pure #[s!"Regel S: structure {s} in module {modulName env s} could not be scanned within the heartbeat budget"]
-    infos := infos ++ scanned
+    infos := infos ++ (← strukturScan env erlaubt s "")
+  return infos
+
+/-- Regel S, orphan clause: a structure outside every pin closure whose fields are Prop-valued still
+    carries statement content when a proof refers to it (measured examples: `UnitMitInvarianten`,
+    whose predicates no pin closure reaches, and the `EffektSicht` records). It is reported with the
+    same shape and reason, marked as outside the closures. -/
+public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name → Bool) :
+    MetaM (Array String) := do
+  let verwendung := beweisVerwendung env
+  let mut erlaubt : Std.HashSet (Name × Name) := {}
+  for entry in strukturPropErlaubt do
+    erlaubt := erlaubt.insert entry
+  let mut infos := #[]
+  for s in coreDeclarations env do
+    if abgedeckt s || !verwendung.contains s then continue
+    unless Lean.isStructure env s do continue
+    infos := infos ++ (← strukturScan env erlaubt s " (outside every pin closure, used by a proof)")
   return infos
 
 /-- A definition type that is `Prop` or a family into `Prop` (shape only, like the binder guard). -/
@@ -83,8 +118,9 @@ private meta def istAussagenTyp : Expr → Bool
 
 /-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
     not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
-    its name. The same holds for a statement-shaped definition outside the goal closure: one that is used
-    as a statement, recognised by its `…erfuellbar`, `…nichtTrivial` or `…beweis` companion. Everything is
+    its name. The same holds outside the goal closure for a definition that is used as a statement:
+    one with `…erfuellbar`, `…nichtTrivial` or `…beweis` companions, or one a proof refers to (measured
+    example: `PegelNISatz`, reached by no closure, whose proof still uses it as a statement). Everything is
     reported as information (name, module, reason); no existing statement is changed. -/
 public meta def namenloseAussageInfos (env : Environment) (index : DependencyIndex)
     (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String) := do
@@ -92,28 +128,39 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
   for root in zielRoots do
     for name in index.closure root do
       ziel := ziel.insert name
+  let verwendung := beweisVerwendung env
   let mut imZiel : Array Name := #[]
   for name in ziel.toArray.qsort Name.lt do
     if endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
     unless istAussagenTyp info.type do continue
     imZiel := imZiel.push name
-  let mut mitBegleitern : Array Name := #[]
+  let mut waisen : Array (Name × String) := #[]
   for name in coreDeclarations env do
     if ziel.contains name || endsWithAussage name then continue
     let some (.defnInfo info) := env.find? name | continue
     unless istAussagenTyp info.type do continue
-    unless env.contains (name ++ `erfuellbar) || env.contains (name ++ `nichtTrivial) ||
-      env.contains (name ++ `beweis) do continue
-    mitBegleitern := mitBegleitern.push name
+    let begleiter := env.contains (name ++ `erfuellbar) || env.contains (name ++ `nichtTrivial) ||
+      env.contains (name ++ `beweis)
+    let beweis := verwendung.contains name
+    if begleiter && beweis then
+      waisen := waisen.push (name, "has statement companions and is referenced by a proof")
+    else if begleiter then
+      waisen := waisen.push (name, "has statement companions")
+    else if beweis then
+      waisen := waisen.push (name, "is referenced by a proof")
+    else continue
   let mut infos := #[]
-  for name in (imZiel ++ mitBegleitern).qsort Name.lt do
-    let inZiel := ziel.contains name
-    let grund := if inZiel then "used in the goal closure"
-      else "used as a statement (has statement companions)"
+  for name in imZiel do
     unless pinned name do
       infos := infos.push
-        s!"Regel N: unnamed statement {name} in module {modulName env name} is {grund} but is not pinned"
+        s!"Regel N: unnamed statement {name} in module {modulName env name} is used in the goal closure but is not pinned"
+    let some (.defnInfo info) := env.find? name | continue
+    infos := infos ++ (← statementScan name info true)
+  for (name, grund) in waisen.qsort fun a b => a.1.lt b.1 do
+    unless pinned name do
+      infos := infos.push
+        s!"Regel N: unnamed statement {name} in module {modulName env name} is used as a statement outside the goal closure ({grund}) but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
     infos := infos ++ (← statementScan name info true)
   return infos

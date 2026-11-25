@@ -355,8 +355,9 @@ elab "#check_core" : command => do
     -- budget does not grow with the number of rules.
     let erweitertTask ← Meta.MetaM.asTask' do
       let struktur ← strukturPropInfos env index (pins.map (·.1))
+      let waisen ← strukturPropWaisenInfos env (coveredNames.contains ·)
       let namenlos ← namenloseAussageInfos env index zielRoots (coveredNames.contains ·)
-      return (struktur, namenlos)
+      return (struktur ++ waisen, namenlos)
     let (strukturInfos, namenlosInfos) ← withoutModifyingState erweitertTask.get
     unless strukturInfos.isEmpty do
       logInfo m!"statement structure findings ({strukturInfos.size}):\n{String.intercalate "\n" strukturInfos.toList}"
