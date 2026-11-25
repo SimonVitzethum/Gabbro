@@ -234,12 +234,14 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
   obtain ⟨k₀, hk₀η⟩ := opened.1
   have hk₀ : (sa.kerne k₀).laeuft = some c := hseq_a ▸ hk₀η
   refine ⟨k₀, fun t' ht' => ?_⟩
-  have key : ∀ m, a ≤ m → ∀ s, ρ.zeit.zustand m = some s →
+  have key : ∀ t', a ≤ t' → ∀ s, ρ.zeit.zustand t' = some s →
       (s.kerne k₀).laeuft = some c := by
-    intro m hm
-    refine Nat.le_induction (P := fun m => ∀ s, ρ.zeit.zustand m = some s →
-      (s.kerne k₀).laeuft = some c) ?base ?step hm
-    · intro s hs_a
+    intro t' ht'
+    obtain ⟨d, rfl⟩ : ∃ d, t' = a + d := ⟨t' - a, by omega⟩
+    induction d with
+    | zero =>
+      intro s hs_a
+      simp only [Nat.add_zero] at hs_a
       have hsa_eq : sa = s := Option.some.inj (hsa.symm.trans hs_a)
       obtain ⟨k₁, hk₁⟩ := opened.1
       have hk₁ρ : (sa.kerne k₁).laeuft = some c := hseq_a ▸ hk₁
@@ -247,10 +249,14 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
       subst hkk
       rw [← hsa_eq]
       exact hk₀
-    · intro m hm ih s' hs'
-      obtain ⟨z, hz, _⟩ := matched.zustand m
+    | succ d ih =>
+      intro s' hs'
+      have hsucc : a + (d + 1) = (a + d) + 1 := by omega
+      rw [hsucc] at hs'
+      have hm : a ≤ a + d := Nat.le_add_right a d
+      obtain ⟨z, hz, _⟩ := matched.zustand (a + d)
       have ihz : (z.kerne k₀).laeuft = some c := ih z hz
-      cases htakt : ρ.zeit.takt m with
+      cases htakt : ρ.zeit.takt (a + d) with
       | schritt label step =>
         cases step with
         | schritt trans =>
@@ -271,7 +277,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
             · subst heq
               have hspur := label
               exact (einheitVon_keine_verdraengung P t lauf valid matched
-                opened crashfrei ret m hm k₀ z hz ihz hs'
+                opened crashfrei ret (a + d) hm k₀ z hz ihz hs'
                 hspur k₀ rfl irq c' nmi dormant hstate).elim
             · have skerne : s'.kerne =
                   (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
@@ -299,7 +305,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
               exact ihz
           | absturz crash =>
             obtain ⟨offer, _, _⟩ := crash
-            have hc := crashfrei m hm
+            have hc := crashfrei (a + d) hm
             rw [offer.2] at hc
             cases hc
       | wartet label eq _ =>
