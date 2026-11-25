@@ -76,25 +76,25 @@ theorem klassenKosten (k : Wirkungsklasse) :
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
     | starte =>
-        rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+        rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
     | beende =>
-        rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+        rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
     | verbinde =>
-        rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+        rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
     | wechsle =>
-        rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+        rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
@@ -244,7 +244,7 @@ theorem klassenKosten (k : Wirkungsklasse) :
         subst hk'
         have hne : ∀ (l : Nat) (a : SperrAktion), plan.aktion ≠ .sperre l a := by
           intro l a hsp
-          rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+          rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
           · have hplan : plan = Semantik.plan := (List.cons.inj hp).1
             rw [hplan] at hsp
             cases hsp
@@ -261,7 +261,7 @@ theorem klassenKosten (k : Wirkungsklasse) :
         subst hk'
         have hne : ∀ (l : Nat) (a : SperrAktion), plan.aktion ≠ .sperre l a := by
           intro l a hsp
-          rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+          rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
           · have hplan : plan = Semantik.plan := (List.cons.inj hp).1
             rw [hplan] at hsp
             cases hsp
@@ -278,7 +278,7 @@ theorem klassenKosten (k : Wirkungsklasse) :
         subst hk'
         have hne : ∀ (l : Nat) (a : SperrAktion), plan.aktion ≠ .sperre l a := by
           intro l a hsp
-          rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+          rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
           · have hplan : plan = Semantik.plan := (List.cons.inj hp).1
             rw [hplan] at hsp
             cases hsp
@@ -295,7 +295,7 @@ theorem klassenKosten (k : Wirkungsklasse) :
         subst hk'
         have hne : ∀ (l : Nat) (a : SperrAktion), plan.aktion ≠ .sperre l a := by
           intro l a hsp
-          rcases hideal with ⟨_, hp, _⟩ | ⟨_, _, hp, _⟩
+          rcases hideal with ⟨_, hp, _⟩ | ⟨_, hp, _⟩
           · have hplan : plan = Semantik.plan := (List.cons.inj hp).1
             rw [hplan] at hsp
             cases hsp
