@@ -62,22 +62,29 @@ public meta def isStatement (type : Expr) : MetaM Bool :=
 /-- Scan one statement (`…Aussage` or an unnamed proposition used as one): unused data binders and
     free function parameters. `force` scans even deep values; every scan runs on its own heartbeat
     budget and reports instead of failing when the budget runs out. -/
-public meta def statementScan (name : Name) (info : DefinitionVal) (force : Bool) :
-    MetaM (Array String) := do
+public meta def statementScan (env : Environment) (name : Name) (info : DefinitionVal)
+    (force : Bool) : MetaM (Array String) := do
   try
     Core.withCurrHeartbeats do
       let mut found : Array String := #[]
       let depth := info.value.approxDepth.toNat
+      let modul := modulName env name
       if force || depth ≤ 60 then
         for n in (← unusedBinders (depth + 2) info.value) do
-          found := found.push s!"statement {name} has the unused data binder {n}"
+          found := found.push s!"statement {name} in module {modul} has the unused data binder {n}"
         for n in (← functionParameters info.type) do
           found := found.push
-            s!"statement {name} takes the free function parameter {n} that nothing binds to the model"
+            s!"statement {name} in module {modul} takes the free function parameter {n} that nothing binds to the model"
       return found
-  catch _ => return #[s!"statement {name} could not be scanned within the heartbeat budget"]
+  catch _ => return #[s!"statement {name} in module {modulName env name} could not be scanned within the heartbeat budget"]
 
 private meta def correctnessNamespace : Name := `Gabbro.Core.Ziel.Korrektheit
+
+/-- The Core module that declares `name`, for reports that list name, file and reason. -/
+public meta def modulName (env : Environment) (name : Name) : String :=
+  match env.getModuleIdxFor? name with
+  | some idx => (env.header.modules[idx.toNat]!.module).toString
+  | none => "unknown module"
 
 /-- Scan every statement (`…Aussage` returning a proposition, parameters included). Reports unused data binders
     and function parameters, and, for the correctness statements, a missing pin and the missing companions
@@ -93,7 +100,7 @@ public meta def binderFindings (env : Environment) (pinned : Name → Bool) (clo
     unless (← isStatement info.type) do continue
     let strict := correctnessNamespace.isPrefixOf name
     let mut here : Array String := #[]
-    here := here ++ (← statementScan name info strict)
+    here := here ++ (← statementScan env name info strict)
     unless pinned name do
       if strict then
         here := here.push s!"statement {name} is not pinned (parameterised statements are not covered by the pin check)"

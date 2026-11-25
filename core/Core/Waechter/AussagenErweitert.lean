@@ -12,11 +12,6 @@ namespace Gabbro.Core.Waechter
     Regel S first only measures, every candidate is reported as information. -/
 public meta def strukturPropErlaubt : Array (Name × Name) := #[]
 
-private meta def modulName (env : Environment) (name : Name) : String :=
-  match env.getModuleIdxFor? name with
-  | some idx => (env.header.modules[idx.toNat]!.module).toString
-  | none => "unknown module"
-
 /-- True when `type` ends in `Prop` after stripping binders (shape only, no unfolding). -/
 private meta def endetInProp : Expr → Bool
   | .forallE _ _ b _ => endetInProp b
@@ -168,13 +163,13 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
       infos := infos.push
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used in the goal closure but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
-    infos := infos ++ (← statementScan name info true)
+    infos := infos ++ (← statementScan env name info true)
   for (name, grund) in waisen.qsort fun a b => a.1.lt b.1 do
     unless pinned name do
       infos := infos.push
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used as a statement outside the goal closure ({grund}) but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
-    infos := infos ++ (← statementScan name info true)
+    infos := infos ++ (← statementScan env name info true)
   return infos
 
 end Gabbro.Core.Waechter
