@@ -39,14 +39,19 @@ private theorem qsg_initial {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
   unfold QuellzustandGleich at h
   have hx := h.2.2.1
   funext x
-  simpa only [unit, Etiketten.leer, sichtbar, oeffentlich] using hx x
+  simpa only [unit, Etiketten.leer, sichtbar, oeffentlich, decide_true] using hx x
+
+/-- The question label of the empty label assignment is public. -/
+private theorem leer_frage {Ort : Type} (q : Frage) : (Etiketten.leer : Etiketten Ort).frage q = ∅ := by
+  simp only [Etiketten.frage, Etiketten.leer, List.map, Finset.foldl, Finset.empty_union]
 
 /-- A pending answer is public in the low-level unit. -/
 private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k}
     (h : QuellzustandGleich (unit op) v u) (c : Kontext) : v.naechsteAntwort c = u.naechsteAntwort c := by
   unfold QuellzustandGleich at h
   have hx := h.2.2.2.2.2 c
-  simpa only [unit, Flussdaten.leer, Etiketten.leer, AntwortSicht, sichtbar, oeffentlich] using hx
+  simpa only [unit, Flussdaten.leer, Etiketten.leer, AntwortSicht, leer_frage,
+    sichtbar, oeffentlich, decide_true] using hx
 
 /-- An occupied cut has a predecessor cut with a defined state. -/
 private theorem zustand_vor {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
@@ -55,7 +60,9 @@ private theorem zustand_vor {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Typ
     (h : ρ.zeit.zustand (t + 1) = some b) : ∃ a, ρ.zeit.zustand t = some a := by
   have tak := ρ.zeit.takt t
   cases tak with
-  | schritt _ _ => rename_i s; exact ⟨s, rfl⟩
+  | schritt _ step =>
+      cases step with
+      | schritt _ => exact ⟨_, rfl⟩
   | wartet _ eq _ =>
       refine ⟨b, ?_⟩
       rw [← eq]
