@@ -11,14 +11,19 @@ open Gabbro.Core.Text
 namespace StatementComparison
 
 private theorem callNotReserved (call : DirectCall scope) (spelling : String)
-    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"])
+    (reserved : spelling ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"])
     (same : Token.word call.name.val :: first = keyword spelling :: second) : False :=
   call.ordinary.2 (List.mem_map.mpr ⟨spelling, reserved, (Token.word.inj (List.cons.inj same).1).symm⟩)
 
 private theorem foreverReserved :
-    "forever" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever"] :=
+    "forever" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"] :=
   List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
     (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))))))))
+
+private theorem memReserved :
+    "mem" ∈ ["let", "if", "return", "while", "for", "leave", "next", "match", "forever", "mem"] :=
+  List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+    (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))))
 
 local macro "deny_statement" equality:ident : tactic =>
   `(tactic|
@@ -88,6 +93,7 @@ theorem directCall (call : DirectCall scope)
   | ite _ _ _ => exact (callNotReserved call "if" (List.Mem.tail _ (List.Mem.head _)) eq).elim
   | whileBounded _ _ _ _ _ _ _ => exact (callNotReserved call "while" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))) eq).elim
   | forever _ _ _ => exact (callNotReserved call "forever" foreverReserved eq).elim
+  | access _ => exact (callNotReserved call "mem" memReserved eq).elim
   | variantMatch _ _ => exact (callNotReserved call "match" (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))))) eq).elim
   | tupleBind _ _ _ _ => exact (callNotReserved call "let" (List.Mem.head _) eq).elim
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
@@ -186,6 +192,31 @@ theorem forever (label : Option Identifier)
   | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
   | _ => deny_statement eq
 
+theorem access (accessRead : AccessReads scope input ⟨after, form⟩ rest)
+    (accessDet : ∀ {b suffix}, AccessReads scope input b suffix →
+      (⟨after, form⟩ : AccessStatement scope) = b ∧ rest = suffix)
+    (other : StmtReads result scope (keyword "mem" :: input) b suffix) :
+    (⟨after, .access form⟩ : Statement result scope) = b ∧ rest = suffix := by
+  generalize eq : (keyword "mem" :: input) = tokens at other
+  cases other with
+  | access otherRead =>
+    cases (List.cons.inj eq).2
+    obtain ⟨sameForm, sameRest⟩ := accessDet otherRead
+    cases sameForm
+    exact ⟨rfl, sameRest⟩
+  | assignVar _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at accessRead
+    cases accessRead
+  | assignField _ _ _ _ _ _ _ _ =>
+    rw [(List.cons.inj eq).2] at accessRead
+    cases accessRead
+  | directCall callRead =>
+    cases callRead
+    rename_i call _ _
+    exact (callNotReserved call "mem" memReserved eq.symm).elim
+  | letOption mutable _ _ _ _ _ _ => cases mutable <;> deny_statement eq
+  | _ => deny_statement eq
+
 theorem forRange (name : Identifier) (ordinary : ordinaryLocal name)
     (body : BracedBlock result (rangeBinding name low high :: scope))
     (lower : Expr scope (.int low lowHi)) (upper : Expr scope (.int highLo high))
@@ -280,6 +311,9 @@ theorem assignField (ref : Local scope (recordValueType name labels types)) (vis
   | forever _ otherLabel _ =>
     rw [← (List.cons.inj eq).2] at otherLabel
     exact otherLabel.not_dot.elim
+  | access otherAccess =>
+    rw [← (List.cons.inj eq).2] at otherAccess
+    cases otherAccess
   | variantMatch otherValue _ =>
     rw [← (List.cons.inj eq).2] at otherValue
     exact otherValue.not_dot.elim
