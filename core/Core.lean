@@ -149,6 +149,9 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Succ
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtSchritt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtKette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Sqrt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Left
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.RightSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.RightAblauf
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
