@@ -58,7 +58,19 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
 theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
     (lauf : Laeufe (d.unit locals) h ρ) (t : Nat) {v : State}
     (atV : ρ.zeit.zustand t = some v) : GeraeteInvariantAussage d.binding v := by
-  obtain ⟨binding, access, required, target, ruleEq⟩ := geraete_rule_form locals d
+  obtain ⟨binding, access, required, target, ruleEq, hbind⟩ :
+      ∃ binding access required target,
+        d.rule locals = Rule.machine binding access required target ∧ binding = d.binding := by
+    cases d with
+    | read dest b off => exact ⟨b, .read off, .ready, none, rfl, rfl⟩
+    | fallibleRead dest b off promise handler =>
+      exact ⟨b, .fallibleRead off promise, .ready, none, rfl, rfl⟩
+    | write b off value =>
+      exact ⟨b, .write off (value.wert locals).wert.toNat, .ready, none, rfl, rfl⟩
+    | transition decl =>
+      exact ⟨decl.binding, .write decl.row.offset decl.data, decl.changes.prior,
+        some decl.changes.after, rfl, rfl⟩
+  subst binding
   revert v atV
   induction t with
   | zero =>
