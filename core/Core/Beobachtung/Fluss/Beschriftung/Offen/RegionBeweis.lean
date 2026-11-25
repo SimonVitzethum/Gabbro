@@ -39,22 +39,29 @@ private theorem qsg_initial {k : Katalog} (op : Instruction k) {v u : Ast.LowLev
   unfold QuellzustandGleich at h
   have hx := h.2.2.1
   funext x
-  simpa only [unit, Etiketten.leer, sichtbar, oeffentlich, decide_true, if_true] using hx x
+  exact Option.some.inj (by
+    simpa only [unit, Etiketten.leer, sichtbar, oeffentlich, decide_true, if_true] using hx x)
 
-/-- The question label of the empty label assignment is public. -/
-private theorem leer_frage {Ort : Type} (q : Frage) : (Etiketten.leer : Etiketten Ort).frage q = ∅ := by
-  unfold Etiketten.frage Etiketten.leer
+/-- The question label is public whenever the object and endpoint labels are. -/
+private theorem frage_leer {Ort : Type} (e : Etiketten Ort)
+    (ho : ∀ o, e.objekt o = ∅) (hp : ∀ p, e.endpunkt p = ∅) (q : Frage) : e.frage q = ∅ := by
+  unfold Etiketten.frage
   induction q.zugriffe with
-  | nil => rfl
-  | cons t ts ih => simpa only [List.map_cons, List.foldl_cons, Finset.empty_union] using ih
+  | nil => simpa only [List.map_nil, List.foldl_nil] using hp q.endpoint
+  | cons t ts ih =>
+      simp only [List.map_cons, List.foldl_cons, ho, Finset.empty_union]
+      exact ih
 
 /-- A pending answer is public in the low-level unit. -/
 private theorem qsg_antwort {k : Katalog} (op : Instruction k) {v u : Ast.LowLevel.State k}
     (h : QuellzustandGleich (unit op) v u) (c : Kontext) : v.naechsteAntwort c = u.naechsteAntwort c := by
   unfold QuellzustandGleich at h
   have hx := h.2.2.2.2.2 c
-  simpa only [unit, Flussdaten.leer, Etiketten.leer, AntwortSicht, leer_frage,
-    sichtbar, oeffentlich, decide_true, if_true] using hx
+  have hf : ∀ q : Frage, (unit op).etiketten.frage q = ∅ := by
+    intro q
+    exact frage_leer (unit op).etiketten (fun _ => rfl) (fun _ => rfl) q
+  simpa only [unit, Flussdaten.leer, AntwortSicht, sichtbar, oeffentlich,
+    decide_true, if_true, hf] using hx
 
 /-- A failed state stays failed at the next cut. -/
 private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
