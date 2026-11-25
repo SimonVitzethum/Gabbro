@@ -397,11 +397,11 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                     if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                   intro k
                   by_cases heq : k = k'
-                  · subst heq
+                  · rw [heq]
                     show Function.update _ _ _ _ = _
-                    rw [Function.update_self]
+                    rw [Function.update_self, if_pos rfl]
                   · show Function.update _ _ _ _ = _
-                    rw [Function.update_of_ne heq]
+                    rw [Function.update_of_ne heq, if_neg heq]
                 refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
                 · rw [skerne, einkern] at h
                   by_cases heq : k = k'
