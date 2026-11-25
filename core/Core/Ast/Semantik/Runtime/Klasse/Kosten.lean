@@ -45,7 +45,8 @@ structure KlassenKostenzeile where
 def Wirkungsklasse.kostenZeile : Wirkungsklasse → KlassenKostenzeile
   | .sperre .. => ⟨1, some 1⟩
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .frage | .starte | .beende
-  | .verbinde | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung =>
+  | .verbinde | .wechsle | .verbrauche | .maskiere | .prioritaet | .sendeUnterbrechung
+  | .leiteLeitung =>
     ⟨1, none⟩
 
 /-- Every class row declares cost one: a step is one occupied tick. -/
@@ -61,7 +62,7 @@ theorem Wirkungsklasse.kostenZeile_halten_ohneSperrwort (k : Wirkungsklasse)
       change true = false at hne
       cases hne
   | lokal | ruf | lesen _ | schreiben _ | rmw _ | zaun _ | frage | starte | beende | verbinde
-  | wechsle | maskiere | prioritaet | sendeUnterbrechung | leiteLeitung => rfl
+  | wechsle | verbrauche | maskiere | prioritaet | sendeUnterbrechung | leiteLeitung => rfl
 
 /-- The lock class declares hold one: a holding step costs its context one tick. -/
 theorem Wirkungsklasse.kostenZeile_halten_sperre (a : SperrAktion) :

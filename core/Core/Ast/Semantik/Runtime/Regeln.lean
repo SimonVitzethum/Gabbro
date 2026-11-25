@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
 public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
@@ -43,7 +44,7 @@ def Befehl.Privat (b : Befehl) : Prop :=
 
 /-- **Every instruction that is no access, lifecycle or interrupt-control instruction is frame-only.** -/
 theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugriff form)
-    (h' : ∀ form, b ≠ .faden form) : b.Privat := by
+    (h' : ∀ form, b ≠ .faden form) (h'' : ∀ form, b ≠ .aussen form) : b.Privat := by
   cases b <;> first
     | exact Or.inl rfl
     | exact Or.inr (Or.inl rfl)
@@ -53,6 +54,7 @@ theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugrif
     | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))
     | exact absurd rfl (h _)
     | exact absurd rfl (h' _)
+    | exact absurd rfl (h'' _)
 
 /-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the
     memory returned. -/
@@ -132,16 +134,36 @@ theorem Befehl.impl_aktion_still (b : Befehl) {c : Kontext} {s : Zustand} {w : P
   · cases b with
     | zugriff z =>
       cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩ <;>
-      · have e := (List.cons.inj same).1
-        subst e
-        trivial
+        (have e := (List.cons.inj same).1
+         subst e
+         trivial)
     | faden z =>
       cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, same, _⟩ <;>
-      · have e := (List.cons.inj same).1
+        (have e := (List.cons.inj same).1
+         subst e
+         trivial)
+    | aussen form =>
+      cases form with
+      | frage ziel operation args =>
+        simp only [Befehl.impl, Befehl.form, Schrittform.impl, Schrittform.ideal,
+          AussenfrageformKlasse, Schrittform.zugriffsschritt, Schrittform.plan,
+          Wirkungsklasse.plan, Befehl.operand, Operand.fragePlan] at h
+        rcases h with ⟨_, same, _⟩ | ⟨_, _, _, same, _⟩
+        · have e := (List.cons.inj same).1
+          subst e
+          trivial
+        · have e := (List.cons.inj same).1
+          subst e
+          trivial
+      | verbrauche ziel =>
+        simp only [Befehl.impl, Befehl.form, Schrittform.impl, Schrittform.ideal,
+          AussenfrageformKlasse] at h
+        have e := (List.cons.inj h.1).1
         subst e
         trivial
     | maskiere _ _ | prioritaet _ | sendeUnterbrechung _ _ | leiteLeitung _ _ _ =>
-      exact absurd (Befehl.privat_von_kein_zugriff (fun _ eq => by cases eq) (fun _ eq => by cases eq)) hp
+      exact absurd (Befehl.privat_von_kein_zugriff (fun _ eq => by cases eq) (fun _ eq => by cases eq)
+        (fun _ eq => by cases eq)) hp
     | _ => exact absurd (by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)) hp
 
 /-- The same, for a rule that is the rule of the instruction. -/
@@ -182,16 +204,16 @@ theorem Befehl.nach_initial (b : Befehl) (c : Kontext) (s : Zustand) :
     (b.nach c s).initial = s.initial := rfl
 
 /-- The write footprint is sound against the frame transfer: outside it, memory content is
-    unchanged. Vacuous today (every footprint is empty); MK-04 proves the conditional from
-    the memory rules. -/
+    unchanged. The frame transfer touches only the acting frame, so this holds for every footprint; the footprint of
+    an access instruction is sound against the step it takes (`Befehl.plan_schreibt_fussabdruck`). -/
 theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Zelle)
-    (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
+    (_ : b.schreibtMoeglich z = false) : (b.nach c s).initial z = s.initial z :=
   congrFun (b.nach_initial c s) z
 
 /-- Preservation across the frame transfer for predicates whose observed cells the command
     does not write. -/
 theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
-    (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
+    (h : ∀ z ∈ q.beobachtet, b.schreibtMoeglich z = false) : q.gilt s → q.gilt (b.nach c s) := by
   intro hq
   exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
 

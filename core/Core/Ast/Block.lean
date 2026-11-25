@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Statement
+public import Core.Ast.Program.AccessPrint
 import Core.Ast.Aggregate.PatternPrint
 
 @[expose] public section
@@ -66,6 +67,7 @@ def Stmt.printPieces : Stmt result before after → List PrintedToken
   | .retOption _ value =>
     [returnName.print] ++ value.printPieces ++ [printSemicolon]
   | .forever label body => [printForever] ++ loopLabelPieces label ++ body.printPieces
+  | .access form => printMem :: form.printPieces
 
 def Block.printItems : Block result before after → List PrintedToken
   | .done => []
@@ -139,6 +141,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
   have hpOverflow : printOnExceeded.value = keyword "on_exceeded" := rfl
   have hpFor : printFor.value = keyword "for" := rfl
   have hpForever : printForever.value = keyword "forever" := rfl
+  have hpMem : printMem.value = keyword "mem" := rfl
   have hpIn : printIn.value = keyword "in" := rfl
   have hpOpenRange : printOpenRange.value = openRange := rfl
   have hpDot : printDot.value = dot := rfl
@@ -162,7 +165,7 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
         (arms.printPieces.map PrintedToken.value ++ closeBrace :: rest) arms rest)
     ?letValue ?assignVar ?ret ?ite ?retVoid ?letMutable ?directCall ?bindDirect
     ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion
-    ?forever ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard tree rest
+    ?forever ?access ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard tree rest
   case letValue =>
     intros
     rename_i before ty name ordinary expr rest
@@ -380,6 +383,11 @@ theorem Stmt.printReads (tree : Stmt result before after) (rest : List Token) :
     simpa only [Stmt.printTokens, Stmt.printPieces, List.map_append, List.map_cons, List.map_nil,
       List.cons_append, List.nil_append, List.append_assoc, hpForever, bodyInput] using
       (StmtReads.forever label labelRead (ih rest))
+  case access =>
+    intros
+    rename_i form rest
+    simpa only [Stmt.printTokens, Stmt.printPieces, List.map_cons, List.cons_append, hpMem] using
+      (StmtReads.access (result := result) (form.printReads rest))
   case armsDone =>
     intros
     exact .done

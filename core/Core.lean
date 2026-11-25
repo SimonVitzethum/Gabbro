@@ -49,6 +49,7 @@ public import Core.Aussen
 public import Core.Aussen.Frage.Form
 public import Core.Aussen.Frage.Aussagen
 public import Core.Aussen.Frage.Beweise
+public import Core.Aussen.Frage.Verbrauche
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
 public import Core.Annahme.DomaeneBeweise.Kanal
@@ -92,6 +93,8 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Consume
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Recovery
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Lockstep
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInvariant
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturz
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
@@ -190,6 +193,10 @@ public import Core.Beobachtung.SchrankenBeweise.Durchlauf
 public import Core.Beobachtung.SchrankenBeweise.DurchlaufEinheit
 public import Core.Beobachtung.SchrankenBeweise.Bindung
 public import Core.Beobachtung.SchrankenBeweise.BindungKosten
+public import Core.Beobachtung.SchrankenBeweise.BindungZeitDurchlauf
+public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
+public import Core.Beobachtung.SchrankenBeweise.BindungOffen
+public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
@@ -230,6 +237,9 @@ public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
+public import Core.Ast.Semantik.Runtime.Atom.Quelle
+public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 public import Core.Ast.Semantik.Runtime.Mehrkontext.Start
@@ -248,6 +258,7 @@ public import Core.Ziel.Korrektheit.Beweise.ImplBestimmt
 public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
+public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss
 public import Core.Ziel.Korrektheit.Alle

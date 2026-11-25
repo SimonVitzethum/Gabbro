@@ -3,20 +3,20 @@
   Subject:   THE COST AND HOLD DUTIES OF BOUND UNITS (M9, MK-12). `einheitMitSchranken` binds the
              declared cost and hold ceilings into the unit; the per-form and protocol cost/hold
              duties (`KHRegelPflicht`, `KHProtokollPflicht` of `SchrankenbindungOffenAussage`) close
-             in two halves. The OPEN half is vacuous: with no cost ceiling and no hold entries every
-             prefix meets its bound (`bindungKHRegel_offen`, `bindungKHProtokoll_offen`). The FINITE
-             half needs the declaration to cover the step: the class contributes exactly one tick
-             per step (`klassenKosten`, through `Wirkungsklasse.kostenZeile`), so the missing
-             premise is the slack of the declaration over the current counters
-             (`bindungKlassenKHRegel`, `bindungKostenProtokoll_unterSlack`). The slack is the exact
-             remainder: it is checker arithmetic over the declaration, not a language rule, and it
-             stays open. The remaining conjuncts of `SchrankenbindungOffenAussage` (time, per-pass,
-             checker row, resource duties, resource start) belong to the elaboration and loader
-             steps beside this one and are named in the report, not proved here.
+             in two halves. The OPEN half is vacuous and lives in `BindungOffen`: with no cost
+             ceiling and no hold entries every prefix meets its bound. This file carries the FINITE
+             half: the declaration must cover the step. The class contributes exactly one tick per
+             step (`klassenKosten`, through `Wirkungsklasse.kostenZeile`), so the missing premise
+             is the slack of the declaration over the current counters (`bindungKlassenKHRegel`,
+             `bindungKostenProtokoll_unterSlack`). The slack is the exact remainder: it is checker
+             arithmetic over the declaration, not a language rule. The remaining conjuncts of
+             `SchrankenbindungOffenAussage` (time, per-pass, checker row, resource duties, resource
+             start) belong to the elaboration and loader steps beside this one and are named in the
+             report, not proved here.
 -/
 module
 
-public import Core.Beobachtung.SchrankenBeweise.Bindung
+public import Core.Beobachtung.SchrankenBeweise.BindungOffen
 public import Core.Beobachtung.SchrankenB8Beweise
 public import Core.Ast.Semantik.Runtime.Klasse.Kosten
 
@@ -45,46 +45,6 @@ theorem kontextkosten_schritt_gleich {L Ort Wert Raum Lok Grund Bedingung Wahl F
     Kontextkosten ρ c a (k + 1) = Kontextkosten ρ c a k + 1 := by
   simp only [Kontextkosten, I.zaehle, eq, hit, eq_self_iff_true, decide_true, ite_true, if_true,
     Nat.add_zero, Nat.zero_add]
-
-/-- The declared hold lookups of a declaration with an empty hold list are open. -/
-theorem haltenVon_leer (d : Schrankendeklaration) (h : d.halten = []) (l : Nat) :
-    d.haltenVon l = none := by
-  simp only [Schrankendeklaration.haltenVon, h, List.find?_nil, Option.map_none]
-
-/-- With no cost ceiling and no hold entries the per-form cost/hold duty is vacuous: every
-    bound is open, so both prefixes hold at the new cut unconditionally. -/
-theorem bindungKHRegel_offen (P : Katalog.Plattform) (u : UnitMitSchranken) (f : Befehl)
-    (hkosten : u.deklaration.kosten = none) (hhalten : u.deklaration.halten = []) :
-    KHRegelPflicht (einheitMitSchranken P u) f := by
-  intro h ρ lauf t c w spur vor nach kostenP halteP vorEq kopf spurEq nachEq
-  refine ⟨?_, ?_⟩
-  · intro n eq
-    rw [einheitMitSchranken_kosten, hkosten] at eq
-    cases eq
-  · intro l c' a n bound own
-    have hl : (einheitMitSchranken P u).schranken.halten l = none := by
-      rw [einheitMitSchranken_halten]
-      exact haltenVon_leer u.deklaration hhalten l
-    rw [hl]
-    intro m eq
-    cases eq
-
-/-- The protocol cost/hold duty is vacuous under the same open declaration. -/
-theorem bindungKHProtokoll_offen (P : Katalog.Plattform) (u : UnitMitSchranken)
-    (hkosten : u.deklaration.kosten = none) (hhalten : u.deklaration.halten = []) :
-    KHProtokollPflicht (einheitMitSchranken P u) := by
-  intro h ρ lauf t w spur vor nach kostenP halteP vorEq spurEq wahl nachEq
-  refine ⟨?_, ?_⟩
-  · intro n eq
-    rw [einheitMitSchranken_kosten, hkosten] at eq
-    cases eq
-  · intro l c' a n bound own
-    have hl : (einheitMitSchranken P u).schranken.halten l = none := by
-      rw [einheitMitSchranken_halten]
-      exact haltenVon_leer u.deklaration hhalten l
-    rw [hl]
-    intro m eq
-    cases eq
 
 /-- The finite per-form cost/hold duty under the declaration slack: the step adds one tick
     (`klassenKosten`: one plan per class step, through `Wirkungsklasse.kostenZeile`), so the

@@ -24,6 +24,7 @@ public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Verfeinerung.Fortschritt
 public import Core.Verfeinerung.Simulation
 public import Core.Ast.Semantik.Pflichten
+public import Core.Ziel.Korrektheit.Zugriff
 
 @[expose] public section
 
@@ -53,25 +54,25 @@ def SchedulerFortschrittVoraussetzung : Prop :=
           ρ η nutzbar
 
 /-- The four form-side fields of `FortschrittsPflichten` hold for the elaborated unit without any acceptance
-    or run premise: a headless context is finished, every instruction has its ideal step, that step composes
-    through the shared protocol, and a ready context is neither finished nor blocked. -/
-theorem einheit_fortschrittsfelder (P : Katalog.Plattform) (t : Ast.Unit) :
+    or run premise, given the liveness of the memory model for its access heads: a headless context is finished,
+    every instruction has its ideal step, every head has a step that composes through the shared protocol (an access
+    head the step the memory model offers, `ZugriffSchrittExistiertAussage`), and a ready context is neither finished
+    nor blocked. -/
+theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) (P : Katalog.Plattform)
+    (t : Ast.Unit) :
     (∀ s c, (einheitVon P t).system.kopf s c = none → (einheitVon P t).system.fertig s c) ∧
     (∀ f : Ast.Semantik.Befehl, RegelFortschritt (einheitVon P t).system f) ∧
-    (∀ f : Ast.Semantik.Befehl,
-      Maschine.I.RegelKomponierbar (einheitVon P t).einrichtung (einheitVon P t).system f) ∧
+    (∀ i t' s c, (einheitVon P t).system.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', ((einheitVon P t).system.regel i).ideal c s w [plan] u ∧
+        FuehrtSchrittAus (einheitVon P t).einrichtung t' c s u plan spur s') ∧
     (∀ s c, Maschine.I.Bereit (E := einheitVon P t) s c →
       ¬ (einheitVon P t).system.fertig s c ∧ ∀ b, ¬ (einheitVon P t).system.blockiert s c b) := by
   refine ⟨?_, ?_, ?_, ?_⟩
   · exact Ast.Semantik.Fragment.fertig (Ast.Semantik.fragment Ast.Category.unit t) P
   · intro f
     exact Ast.Semantik.Befehl.regelFortschritt (Ast.Semantik.fragment Ast.Category.unit t) P f
-  · intro f
-    by_cases h : f.Privat
-    · exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P f h
-    · intro t' s c w plans u hk _ _
-      exact absurd (Ast.Semantik.fragment_rein Ast.Category.unit t f (Ast.Semantik.kopf_mem
-        (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h
+  · exact komponierbar_koepfe existiert (Ast.Semantik.fragment Ast.Category.unit t) P
+      (Ast.Semantik.fragment_klassenrein Ast.Category.unit t)
   · intro s c bereit
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
@@ -79,7 +80,7 @@ theorem einheit_fortschrittsfelder (P : Katalog.Plattform) (t : Ast.Unit) :
 /-- TODAY'S PROGRESS LEG FOR EVERY ACCEPTED ELABORATED UNIT: a matched ideal run with whole-run simulation and
     the composed per-cut alternatives exist. This is all of the pinned statement except the per-context
     no-hang leg; the scheduler duty `SchedulerFortschrittVoraussetzung` is what remains. -/
-theorem fortschritt_akzeptiert_ohne_haengen :
+theorem fortschritt_akzeptiert_ohne_haengen (existiert : ZugriffSchrittExistiertAussage) :
     ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
       ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
         Maschine.Laeufe (einheitVon P t) H ρ →
@@ -94,10 +95,10 @@ theorem fortschritt_akzeptiert_ohne_haengen :
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   obtain ⟨η, valid, sim⟩ := Maschine.I.sim_im_lauf pflicht lauf
   refine ⟨η, valid, sim, ?_⟩
-  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder P t
+  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder existiert P t
   refine ⟨?_, trivial⟩
   intro zeit kontext live dispatch
-  exact Maschine.I.fortschritt_im_lauf valid fertig regeln komponierbar zeit kontext live dispatch
+  exact Maschine.I.fortschritt_im_lauf_koepfen valid fertig regeln komponierbar zeit kontext live dispatch
 
 /-- The pinned statement follows once the scheduler duties are stated for the elaborated unit:
     `sim_ziel_fortschritt_im_lauf` consumes exactly `SchedulerFortschrittVoraussetzung`, and every other premise is

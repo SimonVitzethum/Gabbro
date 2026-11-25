@@ -183,7 +183,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.bindDirect, `Gabbro.Core.Ast.Semantik.bindDirectEntry),
     (`Gabbro.Core.Ast.Stmt.whileBounded, `Gabbro.Core.Ast.Semantik.boundedWhileEntry),
     (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry),
-    (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry) ], #[
+    (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry),
+    (`Gabbro.Core.Ast.Stmt.access, `Gabbro.Core.Ast.Semantik.accessEntry) ], #[
     (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
@@ -224,6 +225,7 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage),
+    (`Gabbro.Core.Ast.Semantik.Befehl.aussen, `Gabbro.Core.Aussenfrage.AussenFrageAussagen),
     (`Gabbro.Core.Ast.Semantik.Befehl.maskiere, `Gabbro.Core.Ast.Semantik.MaskeSimAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.prioritaet, `Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.SendeLiefertAussage),
@@ -305,6 +307,7 @@ private meta def openAuxiliaryEntries : Array (Name × Name) := #[
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.beende, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.verbinde, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.wechsle, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
+  (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.verbrauche, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
 ]
 
 private meta def flowEntries : Array RegistryPacket := #[

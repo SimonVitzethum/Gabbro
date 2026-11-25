@@ -7,10 +7,10 @@
              interrupt-control classes) step the private plan; the access arms (`lesen`,
              `schreiben`, `rmw`, `zaun`, `frage`) refuse with the private plan or plan their class
              shape; the lifecycle arms (`starte`, `beende`, `verbinde`, `wechsle`) refuse or plan
-             their protocol action; the lock arm (`sperre`) closes the hold leg vacuously through
-             the contradictory `beruehrtSperrwort` premise. `verbrauche` is not a constructor of
-             this tree yet (MK-06 follow-up) and is named in the report, not here: new constructors
-             go at the END of `Wirkungsklasse`, with one arm each. `klassenKosten_erfuellbar` (the
+             their protocol action; the consume class (`verbrauche`) steps the private plan like
+             the frame-only classes; the lock arm (`sperre`) closes the hold leg vacuously through
+             the contradictory `beruehrtSperrwort` premise. New constructors go at the END of
+             `Wirkungsklasse`, with one arm each. `klassenKosten_erfuellbar` (the
              static rows hold jointly) and `klassenKosten_nichtTrivial` (a declared cost of zero is
              violated by a real step) accompany the statement.
 -/
@@ -99,6 +99,10 @@ theorem klassenKosten (k : Wirkungsklasse) :
           exact Nat.le_refl 1
         · rw [hp, Wirkungsklasse.kostenZeile_kosten]
           exact Nat.le_refl 1
+    | verbrauche =>
+        rcases hideal with ⟨hp, _⟩
+        rw [hp, Wirkungsklasse.kostenZeile_kosten]
+        exact Nat.le_refl 1
     | maskiere =>
         rcases hideal with ⟨hp, _⟩
         rw [hp, Wirkungsklasse.kostenZeile_kosten]
@@ -304,6 +308,18 @@ theorem klassenKosten (k : Wirkungsklasse) :
             rw [hplan] at hsp
             cases hsp
         exact FuehrtSchrittAus.sperren_erhalt haus hne l
+    | verbrauche =>
+        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .verbrauche hber, ?_⟩
+        intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l
+        obtain ⟨k', o, tr⟩ := F
+        have hk' : k' = .verbrauche := hklasse
+        subst hk'
+        rcases hideal with ⟨hp, _⟩
+        have heq : plan.aktion = .intern := by
+          have hplan : plan = Semantik.plan := (List.cons.inj hp).1
+          subst hplan
+          rfl
+        exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
     | maskiere =>
         refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .maskiere hber, ?_⟩
         intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l

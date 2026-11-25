@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.ProgramForms
+public import Core.Ast.Semantik.Runtime.Atom.Quelle
 public import Core.Ast.LowLevel.Proofs.EnvironmentUnit
 public import Core.Ast.Aggregate.Arrays
 public import Core.Ast.Aggregate.Tuples
@@ -145,6 +146,8 @@ def stmtSchema (constructor : Name) : RegistrySchema constructor :=
     ⟨.surface, Quellform.statements optionReturnForm OptionReturnErfuellbarAmAussage constructor⟩
   else if constructor = ``Stmt.forever then
     ⟨.surface, Quellform.statements (fun (ctx : StatementContext) => foreverForm ctx.1 ctx.2) foreverJoint constructor⟩
+  else if constructor = ``Stmt.access then
+    ⟨.surface, Zugriffsquelle.statements (fun (ctx : StatementContext) => accessForm ctx.1 ctx.2) accessJoint constructor⟩
   else nichtSpezifiziert constructor
 
 def declSchema (constructor : Name) : RegistrySchema constructor :=
