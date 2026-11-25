@@ -18,7 +18,7 @@ open Gabbro.Core.Ast.LowLevel (entryContext)
     length link is only required while the initial booking still holds. -/
 def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Prop :=
   (∀ c, c ≠ entryContext → (s.lokal c).pending = none) ∧
-    (s.buchung.geraet = startBuchung binding.object binding.handle →
+    (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
       ((s.lokal entryContext).pending = none → s.fragen.length = s.antworten.length) ∧
       ((s.lokal entryContext).pending ≠ none →
         s.fragen.length = s.antworten.length ∨ s.fragen.length = s.antworten.length + 1))
@@ -38,18 +38,9 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   · obtain rfl := Option.some.inj geladen
     refine ⟨?_, ?_⟩
     · intro c hc
-      simp only [bootFor]
-      split
-      · exact absurd rfl hc
-      · rfl
+      simp only [bootFor, if_neg hc]
     · intro _
-      have hpend : (((Zustand.start (bootFor d.binding.object (start.assignment 0)).lokal
-          (bootFor d.binding.object (start.assignment 0)).status
-          (bootFor d.binding.object (start.assignment 0)).kerne
-          (bootFor d.binding.object (start.assignment 0)).rechte
-          (Gabbro.Core.Ast.LowLevel.Device.setup d.binding.object).initial
-          (PersistZustand.leer (Gabbro.Core.Ast.LowLevel.medium start))).lokal
-          entryContext).pending = none := by
+      have hpend : (z.lokal entryContext).pending = none := by
         simp only [bootFor, if_true]
       refine ⟨?_, ?_⟩
       · intro _
