@@ -24,10 +24,7 @@ theorem verschiebbarNichtEndeErhaeltRueckgabe (b : Befehl)
   intro r
   cases b <;> simp only [Verschiebbar] at hv
   all_goals
-    try contradiction
-    try rfl
-  · exfalso
-    exact hne rfl
+    first | contradiction | rfl
 
 /-- One step of a program whose every instruction preserves the return value
     preserves it. -/
@@ -60,6 +57,6 @@ theorem laufErhaeltRueckgabe (blk : List Befehl) (r : Rahmen) (k : Nat) (rk : Ra
     | none => simp only [hmid, laufKein] at hrk; cases hrk
     | some rm =>
       have hstep : Schritt blk (some rm) = some rk := by simpa only [hmid] using hrk
-      exact (ih rm hmid hall).trans (schrittErhaeltRueckgabe blk rm rk hstep hall)
+      exact (ih rm hmid).trans (schrittErhaeltRueckgabe blk rm rk hstep hall)
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation
