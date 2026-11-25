@@ -63,7 +63,7 @@ theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
   · intro fair' a c f opened enabled n hn
     cases enabled with
     | inl bereitAlle =>
-      have crashfrei := einheitVon_ohne_crash P t lauf matched opened
+      have crashfrei := einheitVon_ohne_crash P t lauf matched environment opened
       obtain ⟨kstar, hkonst⟩ :=
         einheitVon_dispatch_konstant_neu P t lauf valid matched opened crashfrei ret
       obtain ⟨sa, hsa, _⟩ := matched.zustand a
@@ -163,8 +163,10 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
     fun _ _ => Katalog.AussenSicht.leer
   let h := Katalog.Umgebung.referenz (einheitVon P t).katalog 2 sicht
   let hw := Katalog.Umgebung.referenzLauf (einheitVon P t).katalog 2 sicht
-  have hardware := Katalog.Umgebung.referenz_hardware _ _ _ wohlgeformt (by decide)
-  have fair := Katalog.Umgebung.referenz_fair _ _ _ wohlgeformt (by decide)
+  have hardware := Katalog.Umgebung.referenz_hardware (einheitVon P t).katalog 2 sicht
+    wohlgeformt (by decide)
+  have fair := Katalog.Umgebung.referenz_fair (einheitVon P t).katalog 2 sicht
+    wohlgeformt (by decide)
   obtain ⟨s, zul⟩ := Katalog.zulStart_erfuellbar hardware gueltig
   obtain ⟨ρ, run, sched, _, hwEq⟩ :=
     Maschine.fairer_lauf_mit_hw (einheitVon P t) hardware zul fair.konform
