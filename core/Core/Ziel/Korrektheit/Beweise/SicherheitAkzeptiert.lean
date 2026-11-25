@@ -54,7 +54,7 @@ theorem sicherheitAkzeptiert (P : Katalog.Plattform) (zugriff : Ast.Semantik.Zug
   · simpa [einheitVon, Ast.Semantik.elaborieren, sicherheitVon,
       Ast.Semantik.Fragment.sicherheitsEinheit, Ast.Semantik.Fragment.einheit,
       Ast.Semantik.Fragment.tabellen, Ast.Semantik.fragment] using
-      (zugriff (Ast.Semantik.fragment Ast.Category.unit t) P [] (Or.inr ⟨t, rfl⟩)
+      (zugriff (Ast.Semantik.fragment Ast.Category.unit t) P [] (Or.inl ⟨⟨t, []⟩, rfl⟩)
         ⟨Ast.Semantik.fragment_klassenrein Ast.Category.unit t, rein⟩
         (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _) H ρ lauf)
 
