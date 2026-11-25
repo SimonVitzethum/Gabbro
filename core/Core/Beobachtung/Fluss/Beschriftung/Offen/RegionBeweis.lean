@@ -332,7 +332,7 @@ theorem regionNI : RegionNIAussage := by
               | kontext keinAbsturz₁ bereit₁ regel₁ aus₁ =>
                   cases label
                   obtain ⟨i, kopf_i, implI₁⟩ := regel₁
-                  have ifop : i = op := Option.some.inj (kopf.symm.trans kopf_i)
+                  have ifop : i = op := (Option.some.inj (kopf.symm.trans kopf_i)).symm
                   subst i
                   obtain ⟨transfer₁, eval₁, planEq₁, hu₁⟩ := Instruction.implTransfer (w := wahl) implI₁
                   cases (List.cons.inj planEq₁).1
@@ -377,15 +377,19 @@ theorem regionNI : RegionNIAussage := by
                   have hv₂some : ∃ tr, op.evaluate v₂ c = some tr := by
                     cases he : op.evaluate v₂ c with
                     | none =>
-                        have hs : (op.evaluate v₂ c).isSome = false := by simp only [he]
-                        rw [← heval, kt.2.2.2] at hs
+                        have hs : (op.evaluate v₂ c).isSome = false := by
+                          rw [he]
+                          rfl
+                        rw [← heval, kt.2.2.2.1] at hs
                         cases hs
-                    | some tr => exact ⟨tr, he⟩
+                    | some tr => exact ⟨tr, rfl⟩
                   obtain ⟨transfer₂, eval₂⟩ := hv₂some
                   have bereit₂ : KannSchreiten ρ₂.hw t c v₂ := by
                     obtain ⟨k, geleg₁, kern₁, stat₁⟩ := bereit₁
                     refine ⟨k, ?_, ?_, ?_⟩
-                    · rw [← coreEq]
+                    · unfold HwLauf.gelegenheit
+                      unfold HwLauf.gelegenheit at geleg₁
+                      rw [← coreEq]
                       exact geleg₁
                     · rw [← kerneEq]
                       exact kern₁
