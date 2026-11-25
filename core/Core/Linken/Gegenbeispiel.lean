@@ -204,7 +204,8 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
         rename_i u0 plan0 spur0 c0 w0 kab0
         have hall := schritt_temp1 (fun d => ih d) regel
         obtain ⟨b, head, ideal⟩ := regel
-        obtain ⟨same, after⟩ := (b.ideal_privat _ _ _ _ _).1 ideal
+        obtain ⟨same, after⟩ :=
+          (b.ideal_privat c0 (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal
         cases same
         cases after
         have hakt : Semantik.plan.aktion = .intern := rfl
