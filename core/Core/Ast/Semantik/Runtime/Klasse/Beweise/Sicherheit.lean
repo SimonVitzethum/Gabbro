@@ -42,5 +42,9 @@ theorem klassenSicherheit (k : Wirkungsklasse) : KlassenSicherheitAussage k := b
       intro h
       change true = false at h
       cases h
+  | starte => exact klassenSpeicherbein_faden .starte (Or.inl rfl)
+  | beende => exact klassenSpeicherbein_faden .beende (Or.inr (Or.inl rfl))
+  | verbinde => exact klassenSpeicherbein_faden .verbinde (Or.inr (Or.inr (Or.inl rfl)))
+  | wechsle => exact klassenSpeicherbein_faden .wechsle (Or.inr (Or.inr (Or.inr rfl)))
 
 end Gabbro.Core.Ast.Semantik

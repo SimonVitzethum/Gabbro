@@ -110,7 +110,7 @@ def KlassenSchrankenAussage (k : Wirkungsklasse) : Prop :=
     and of `RegelAntwortSicher`, not of `RegelLokal`: the plan of a question names no memory cell. -/
 def Wirkungsklasse.gesichert : Wirkungsklasse → Bool
   | .lesen .. | .schreiben .. | .rmw .. => true
-  | .lokal | .ruf | .sperre .. | .frage => false
+  | .lokal | .ruf | .sperre .. | .frage | .starte | .beende | .verbinde | .wechsle => false
 
 /-- **The unit whose only form has the given rule**: the empty fragment's unit with its form replaced. Its
     one form is always at the head. -/
@@ -180,6 +180,14 @@ theorem Befugt.autorisiert {ι : Type} {E : Klasseneinheit ι} {s : Zustand} {c 
     (h : Befugt E s c p) : p.Autorisiert E.einrichtung s c :=
   ⟨fun l hl => BefugtOrt.zugriff (h.2 l hl).1, fun x hx _ => BefugtOrt.zugriff (h.1 x hx)⟩
 
+/-- The step of a lifecycle class exists in every state: with the operands, the planned step; without them, the
+    refusal. -/
+theorem Schrittform.faedenschritt_total (F : Schrittform) (c : Kontext) (s : Zustand) :
+    ∃ (plans : List Plan) (u : Zustand), F.faedenschritt c s plans u := by
+  by_cases g : F.klasse.befugt (F.operand (s.lokal c)) s c
+  · exact ⟨_, _, Or.inr ⟨g, rfl, rfl⟩⟩
+  · exact ⟨_, _, Or.inl ⟨g, rfl, rfl⟩⟩
+
 /-- The step of an access class exists in every state: with the authority, the planned step; without
     it, the refusal. -/
 theorem Schrittform.zugriffsschritt_total (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -200,6 +208,10 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   | rmw m => exact Schrittform.zugriffsschritt_total ⟨.rmw m, o, t⟩ c s
   | sperre a => exact Schrittform.zugriffsschritt_total ⟨.sperre a, o, t⟩ c s
   | frage => exact Schrittform.zugriffsschritt_total ⟨.frage, o, t⟩ c s
+  | starte => exact Schrittform.faedenschritt_total ⟨.starte, o, t⟩ c s
+  | beende => exact Schrittform.faedenschritt_total ⟨.beende, o, t⟩ c s
+  | verbinde => exact Schrittform.faedenschritt_total ⟨.verbinde, o, t⟩ c s
+  | wechsle => exact Schrittform.faedenschritt_total ⟨.wechsle, o, t⟩ c s
 
 /-- The plan of a question reads nothing and writes nothing. -/
 theorem Operand.fragePlan_leer (o : Operand) :
@@ -267,6 +279,30 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       · have hl' : l ∈ (o (s.lokal c)).fragePlan.lesen := hl
         rw [hlesen] at hl'
         exact (List.not_mem_nil hl').elim
+  | starte =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .starte (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | beende =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .beende (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | verbinde =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .verbinde (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
+  | wechsle =>
+    rcases step with ⟨_, same, _⟩ | ⟨_, same, _⟩
+    · exact Befugt.privat (List.cons.inj same).1
+    · have hp : p = Wirkungsklasse.plan .wechsle (o (s.lokal c)) 0 := (List.cons.inj same).1
+      subst hp
+      exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
 
 /-- **Simulation, once per class** (`KlassenSimAussage`): the one rule is its own implementation, so the
     simulation duty holds with zero stutter, and every recorded plan is authorised because the ideal step
@@ -316,7 +352,7 @@ theorem leerzustand_griff (c : Kontext) (slot offset : Nat) :
     that names the cell `0` of region `0` plans an access at the empty state, where no context holds a
     handle, so the planned access is covered by no authority. -/
 theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk : k.gesichert = true)
-    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche⟩)
+    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩)
     (t : Rahmen → (Nat → Bool) → Int → Rahmen) :
     ¬ RegelLokal (Regeleinheit platform (Schrittform.ungeschuetzt ⟨k, o, t⟩)) () := by
   intro h
@@ -350,12 +386,16 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
   | ruf => cases hk
   | sperre a => cases hk
   | frage => cases hk
+  | starte => cases hk
+  | beende => cases hk
+  | verbinde => cases hk
+  | wechsle => cases hk
 
 /-- **The duties are informative, for every class** (`KlassenNichtTrivialAussage`). -/
 theorem klassenNichtTrivial (k : Wirkungsklasse) : KlassenNichtTrivialAussage k := by
   refine ⟨⟨.x86_64, ⟨k, fun _ => Operand.keiner, fun r _ _ => r⟩, rfl, rfl, rfl, rfl⟩, ?_⟩
   intro hk
-  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche⟩, fun r _ _ => r⟩, rfl,
+  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner⟩, fun r _ _ => r⟩, rfl,
     ungeschuetzt_nicht_lokal .x86_64 k hk _ (fun _ => rfl) _⟩
 
 end Gabbro.Core.Ast.Semantik

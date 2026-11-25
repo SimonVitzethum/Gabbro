@@ -12,6 +12,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Sicherheit.KatalogSchritt
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 
 @[expose] public section
 
@@ -150,5 +151,62 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
           rfl
         · rw [zustand]
           rfl
+
+/-- A step with the empty trace and no new effect releases nothing and books no access, whatever it does to the
+    holdings of the ledger. -/
+private theorem faden_fertig {ι : Type}
+    (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι)
+    {hw : HwLauf} {t : Nat} {vor nach : Zustand} {spur : SchrittSpur Zelle Int}
+    (wirkungen : nach.buchung.wirkungen = vor.buchung.wirkungen) (rechte : nach.rechte = vor.rechte)
+    (form : spur = ⟨[], []⟩) :
+    Sicherheit.ZugriffGebucht vor nach spur ∧
+      ∃ neu, Sicherheit.NeueWirkungen vor nach spur neu ∧
+        Sicherheit.FreigabenGueltig vor nach hw t spur neu := by
+  subst form
+  refine ⟨?_, ?_⟩
+  · intro i actor l recorded
+    simp only [List.getElem?_nil] at recorded
+    cases recorded
+  · refine ⟨[], wirkungsloser_schritt_wirkungen ?_ wirkungen rechte⟩
+    intro crash
+    change Ereignis.persistenz .crash ∈ ([] : List Ereignis) at crash
+    cases crash
+
+/-- **The memory leg of the lifecycle classes** (`KlassenSpeicherbeinAussage`). A lifecycle step records no memory
+    access and no outside event (its plan has no read and no footprint, its protocol action is still), adds no
+    effect and leaves the rights alone, so nothing is booked and nothing is released. The hand-over of authority
+    moves the holdings of the ledger and nothing else. -/
+theorem klassenSpeicherbein_faden (k : Wirkungsklasse)
+    (hk : k = .starte ∨ k = .beende ∨ k = .verbinde ∨ k = .wechsle) : KlassenSpeicherbeinAussage k := by
+  intro _ ι E f F hkF emb hw t c w vor zwischen nach plan spur kopf impl aus
+  have lz : F.Lebenszyklus := by
+    rw [Schrittform.Lebenszyklus, hkF]
+    exact hk
+  have implIdeal : F.ideal c vor w [plan] zwischen := by
+    change (F.regel).impl c vor w [plan] zwischen
+    rw [← emb.regel]
+    exact impl
+  obtain ⟨hn, still, lesen, fuss⟩ := Schrittform.lebenszyklus_ideal lz implIdeal
+  obtain ⟨_, _, _, v, aktion, folge, zustand⟩ := aus
+  obtain ⟨hs, he, _, _, hr, _, _, _, _, _, _, _, _, _, _, _, hb⟩ := aktion.still_erhaelt still
+  rcases spur with ⟨events, outside⟩
+  have outsideNil : outside = [] := he
+  subst outsideNil
+  rw [hs, lesen, fuss] at folge
+  simp only [List.nil_append, schreibEreignisse, List.filter_nil, List.map_nil, List.append_nil] at folge
+  have leer : events = [] := by
+    generalize hg : nach.graph = graph at folge
+    cases folge
+    rfl
+  subst leer
+  refine faden_fertig E (hw := hw) (t := t) ?_ ?_ rfl
+  · rw [zustand]
+    change v.buchung.wirkungen = vor.buchung.wirkungen
+    rw [hb]
+    exact hn.wirkungen
+  · rw [zustand]
+    change v.rechte = vor.rechte
+    rw [hr]
+    exact hn.rechte
 
 end Gabbro.Core.Ast.Semantik

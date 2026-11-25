@@ -131,6 +131,10 @@ theorem kontextSchritt_sperren_e {t c s u} {plan : SchrittPlan L Ort Wert Beding
     rw [hplan] at haus
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)
+  | .starte | .verbinde _ | .beende | .wechsle _ _ =>
+    rw [hplan] at haus
+    cases haus
+    exact Or.inl (congrFun hrahmen.sperren m)
 
 /-- A context step keeps all three invariants. -/
 theorem fuehrtSchrittAus_erhaelt {t c} {s u s' : Zustand L Ort Wert Raum Lok Grund}

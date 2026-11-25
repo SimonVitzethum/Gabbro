@@ -54,4 +54,25 @@ def Buchung.leer : Buchung Ort where
   geraet := fun _device => none
   wirkungen := []
 
+/-- **The holdings after a hand-over** (MK-07): `von` hands over the handles `gs` to `an`. Every right `von` held
+    on one of them passes to `an` and `von` holds none of them any more; nobody else's holdings and no other
+    handle's holders change. Authority moves, it is never copied. -/
+def Buchung.uebergeben (b : Buchung Ort) (von an : Kontext) (gs : List Griff) :
+    Kontext → Griff → Speicherrecht → Prop :=
+  fun d g r =>
+    if g ∈ gs then
+      (if d = an then b.haelt von g r ∨ b.haelt an g r else if d = von then False else b.haelt d g r)
+    else b.haelt d g r
+
+/-- **The holdings after a join** (MK-07): the ended thread `kind` hands back everything it still held to the
+    joiner `an`; it holds nothing afterwards, and nobody else's holdings change. -/
+def Buchung.zurueckgegeben (b : Buchung Ort) (kind an : Kontext) : Kontext → Griff → Speicherrecht → Prop :=
+  fun d g r => if d = an then b.haelt an g r ∨ b.haelt kind g r else if d = kind then False else b.haelt d g r
+
+/-- **Exclusive authority has one holder**: no handle is held with the right to write or to release by two
+    contexts. A hand-over and a take-back keep it (`uebergeben_eindeutig`, `zurueckgegeben_eindeutig`). -/
+def Buchung.Eindeutig (b : Buchung Ort) : Prop :=
+  ∀ d d' g r, (r = Speicherrecht.schreiben ∨ r = Speicherrecht.freigeben) →
+    b.haelt d g r → b.haelt d' g r → d = d'
+
 end Gabbro.Core.Sicherheit

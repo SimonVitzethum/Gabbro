@@ -44,6 +44,10 @@ theorem zugriffStapel (b : Befehl) (familie : b.familie = .zugriff) :
     change (form.uebertrag frame 0).fortsetzungen.length ≤ frame.fortsetzungen.length + form.klasse.Stapel
     rw [form.uebertrag_fortsetzungen]
     exact Nat.le_add_right _ _
+  | faden form =>
+    change (form.uebertrag frame 0).fortsetzungen.length ≤ frame.fortsetzungen.length + form.klasse.Stapel
+    rw [(form.uebertrag_lokal frame 0).1]
+    exact Nat.le_add_right _ _
   | _ => cases familie
 
 end Gabbro.Core.Ast.Semantik

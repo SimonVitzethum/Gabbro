@@ -339,13 +339,15 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 2800278079303684383),
   (`Gabbro.Core.Ast.Semantik.AtomUpdateAussage, 2243360310584985032),
   (`Gabbro.Core.Katalog.FremdKanalAussage, 11803130512646602255),
-   (`Gabbro.Core.Annahme.DomaenenAussage, 9551499332330345386),
-   (`Gabbro.Core.Speicher.MpLitmusAussage, 13796261553310205886),
-   (`Gabbro.Core.Speicher.LbLitmusAussage, 8829005192830706516),
-   (`Gabbro.Core.Speicher.WrcLitmusAussage, 14128650416748295131),
-   (`Gabbro.Core.Speicher.Isa2LitmusAussage, 9404969472844494484),
-   (`Gabbro.Core.Annahme.DomaenenPrueferAussage, 13844777376618478780),
-   (`Gabbro.Core.Beobachtung.durchlaufKostenAussage, 5396160036186339239),
-   (`Gabbro.Core.Ziel.Review.Slice.DurchstichKleinAussage, 15967805062844775672)]
+  (`Gabbro.Core.Annahme.DomaenenAussage, 9551499332330345386),
+  (`Gabbro.Core.Speicher.MpLitmusAussage, 13796261553310205886),
+  (`Gabbro.Core.Speicher.LbLitmusAussage, 8829005192830706516),
+  (`Gabbro.Core.Speicher.WrcLitmusAussage, 14128650416748295131),
+  (`Gabbro.Core.Speicher.Isa2LitmusAussage, 9404969472844494484),
+  (`Gabbro.Core.Annahme.DomaenenPrueferAussage, 13844777376618478780),
+  (`Gabbro.Core.Beobachtung.durchlaufKostenAussage, 5396160036186339239),
+  (`Gabbro.Core.Ziel.Review.Slice.DurchstichKleinAussage, 15967805062844775672),
+  (`Gabbro.Core.Ast.Semantik.FadenAussagen, 12155043885627819190),
+  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 4882986903841564687)]
 
 end Gabbro.Core.Waechter
