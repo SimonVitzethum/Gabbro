@@ -71,6 +71,44 @@ theorem gebundeneUebersetzung_eq {k : Katalog} {h : Katalog.Umgebung} (hw : Hard
   unfold GebundeneUebersetzung
   exact translate_mmuSicht hw frame core space addr right
 
+/-- **Bound hardware assumption.** The catalogue row fixes HOW a view translates
+    (`Hardware.mmu`); the binding fixes WHERE the view comes from: every translation of the
+    composed machine runs over the MMU view of the acting memory state,
+    `(s.lokal c).mmuSicht` — installed tables plus cached translations of exactly that frame.
+    The statement takes no free `MmuSicht`: the view is a parameter read off the state.
+    It lives here, above the catalogue, because `Katalog` cannot import `MemFrame`
+    (`Mem.State` sits above `Maschine`, which sits above `Katalog`); moving the frame down
+    would make the rows unit-specific instead of hardware-generic. -/
+def HardwareGebunden (k : Katalog) (h : Katalog.Umgebung) (s : MemState) : Prop :=
+  ∀ (c : Kontext) (core space addr : Nat) (right : Speicherdienst),
+    h.translate (s.lokal c).mmuSicht core space addr right =
+      uebersetze h.ziel (s.lokal c).mmuSicht core space addr right
+
+/-- Every catalogue-conformant environment satisfies the bound hardware assumption on every
+    memory state: the bound view decodes exactly as the row demands. -/
+theorem hardware_gebunden {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k h)
+    (s : MemState) : HardwareGebunden k h s := by
+  intro c core space addr right
+  rw [hw.mmu]
+
+/-- **Bound hardware exists for a nontrivial table.** The reference environment is
+    catalogue-conformant, hence bound on the reachable mapped-and-cached state, and the bound
+    translation over the acting frame succeeds. -/
+theorem hardwareGebunden_erfuellbar :
+    ∃ (h : Katalog.Umgebung) (s : MemState),
+      Hardware Plattform.x86_64.katalog h ∧ HardwareGebunden Plattform.x86_64.katalog h s ∧
+        h.translate (s.lokal entryContext).mmuSicht 0 0 0 .read = .ok (4096, 0) := by
+  let h : Katalog.Umgebung :=
+    Umgebung.referenz Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
+  have hw : Hardware Plattform.x86_64.katalog h :=
+    Umgebung.referenz_hardware _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide)
+  obtain ⟨E, start, code, s, _, _, _, _, _, _, _, _, hok⟩ := tabelle_nichtvakant
+  have bound := hardware_gebunden hw s entryContext 0 0 0 .read
+  have hziel : h.ziel = Plattform.x86_64.katalog.plattform.ziel := rfl
+  refine ⟨h, s, hw, hardware_gebunden hw s, ?_⟩
+  rw [bound, hziel]
+  exact hok
+
 /-- The old foreign view is not bound to the empty frame. -/
 private theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
   intro h
