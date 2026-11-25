@@ -75,6 +75,7 @@ theorem rmwZeugeKonfiguration :
       rmwZeugeRegelWert.impl eintritt Leerzustand () [plan] u ∧
       FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' ∧
       spur.speicher ≠ [] ∧
+      spur.aussen = [] ∧
       ¬ rmwZeugeRegelWert.ideal eintritt Leerzustand () [plan] u := by
   obtain ⟨gelesen, es, graph, folge⟩ := speicherzug_existiert
     (anfang := Leerzustand.initial) (f := .kontext eintritt)
@@ -124,12 +125,12 @@ theorem rmwZeugeKonfiguration :
       cases lesenLeer
     · exact rmwZeuge_keinRecht befugt
   exact ⟨gelesen, plan, spur, u, s', rmwZeuge_plan gelesen, rfl, impl, aus,
-    spurGefuellt, idealVerweigert⟩
+    spurGefuellt, rfl, idealVerweigert⟩
 
 /-- The family statement refuses that error: the false rmw rule cannot satisfy its simulation leg. -/
 theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert () := by
   intro sim
-  obtain ⟨gelesen, plan, spur, u, s', planEq, uEq, impl, exec, spurNe, idealNe⟩ :=
+  obtain ⟨gelesen, plan, spur, u, s', planEq, uEq, impl, exec, spurNe, aussenLeer, idealNe⟩ :=
     rmwZeugeKonfiguration
   subst plan
   subst u
@@ -157,7 +158,7 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
       (step : System.ISchritt rmwZeugeEinheitWert.system eintritt Leerzustand () [p] v) :
       p = Gabbro.Core.Ast.Semantik.plan := by
     rcases step with ⟨i, _, idealRegel⟩
-    subst i
+    cases i
     change rmwZeugeForm.zugriffsschritt eintritt Leerzustand [p] v at idealRegel
     rcases idealRegel with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
     · exact (List.cons.inj privat).1
@@ -166,7 +167,7 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
   · cases idealSchritt with
     | kontext _ _ rule ausIdeal =>
       have planPrivat := planBeiIdeal _ _ rule
-      rw [planPrivat] at ausIdeal
+      rw [planPrivat, aussenLeer] at ausIdeal
       rcases ausIdeal with ⟨_, _, _, _, aus, folge, _⟩
       cases aus
       simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, List.filter_nil,
