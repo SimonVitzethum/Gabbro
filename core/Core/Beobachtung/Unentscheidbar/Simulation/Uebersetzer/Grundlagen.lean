@@ -145,4 +145,28 @@ theorem laufVerlaengertKein (blk : List Befehl) (r : Rahmen) (j t : Nat)
   rw [show j + t = t + j by omega, Function.iterate_add_apply, h]
   exact laufKein blk t
 
+/-- A run that has reached the end stays dead: no later step count reaches
+    a state again. Past the end the run dies, so a later arrival contradicts
+    determinism. Applied twice, this rules out any second arrival time. -/
+theorem laufStirbtNach (blk : List Befehl) (r₀ : Rahmen) (k kRef : Nat)
+    (r' rRef : Rahmen) (hk : (Schritt blk)^[k] (some r₀) = some r')
+    (hpc : r'.pc = blk.length) (hkRef : (Schritt blk)^[kRef] (some r₀) = some rRef)
+    (hlt : k < kRef) : False := by
+  have hnone : Schritt blk (some r') = none := schrittAmEnde blk r' hpc
+  have h1 : (Schritt blk)^[1] (some r') = none := hnone
+  have hle : k + 1 ≤ kRef := Nat.succ_le_of_lt hlt
+  obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hle
+  have eKt : (Schritt blk)^[(k + 1) + t] (some r₀) =
+      (Schritt blk)^[t] ((Schritt blk)^[1] ((Schritt blk)^[k] (some r₀))) := by
+    have e1 : (Schritt blk)^[k + 1] (some r₀) =
+        (Schritt blk)^[1] ((Schritt blk)^[k] (some r₀)) := by
+      rw [show (k + 1 : Nat) = 1 + k from Nat.add_comm k 1, Function.iterate_add_apply]
+    have e2 : (Schritt blk)^[(k + 1) + t] (some r₀) =
+        (Schritt blk)^[t] ((Schritt blk)^[k + 1] (some r₀)) := by
+      rw [show ((k + 1) + t : Nat) = t + (k + 1) from Nat.add_comm (k + 1) t,
+        Function.iterate_add_apply]
+    rw [e2, e1]
+  rw [eKt, hk, h1, laufKein] at hkRef
+  cases hkRef
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer

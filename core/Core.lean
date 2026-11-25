@@ -76,6 +76,7 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetFluss
 public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
+public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
@@ -149,6 +150,9 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Succ
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtSchritt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.SqrtKette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Sqrt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Left
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.RightSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.RightAblauf
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -228,6 +232,7 @@ public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
+public import Core.Ziel.Korrektheit.SicherheitAusTeilen
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Modell
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Speicher
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Invarianten
