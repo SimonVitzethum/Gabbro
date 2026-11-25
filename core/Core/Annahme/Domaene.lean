@@ -182,7 +182,7 @@ theorem eineDomaene_kohaerent : DomaenenKohaerenz trivialeEinheit eineDomaene :=
 
 /-- The trivial unit is accepted (the witness of `akzeptiert_erfuellbar`). -/
 theorem akzeptiert_trivial : Akzeptiert trivialeEinheit := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_⟩,
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -199,6 +199,7 @@ theorem akzeptiert_trivial : Akzeptiert trivialeEinheit := by
     · intro _ _ _ _ _ _ _ _ _ _ _ h
       cases h.1
   · exact schrankenLokal_leer rfl rfl rfl
+  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
