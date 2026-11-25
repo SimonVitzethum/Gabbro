@@ -399,23 +399,28 @@ theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {
     intro hcontra
     nomatch hcontra
 
-/-- MISSING CHECKER DISCHARGE (B13 remainder), pinned for Hy4: an accepted unit hands every
-    held lock off within the declared hold bound plus the release step, on crash-free fair
-    runs. `SperrGegenbeispiel.halte_gibt_nicht_ab` proves `HalteSchranken` plus hardware
-    fairness do NOT imply this — the proof discharges through the holder row
-    `SperrHalterHalten` (holders stay live, dispatched and geben-offering until hand-off).
-    Difficulty: schwer. Sketch: at every cut where `h` holds `l`, the row keeps `h`
-    eligible; `FairLaeufe` supplies core opportunities on hardware only (no scheduler); the
-    holder's own steps while holding are bounded by `HalteSchranken`, so the offered `geben`
-    step lands within `H + 1` own steps. Hard part: `E_h` is `I`-identical to the good
-    witness `E_1`, so the argument must exhibit precisely which premise excludes the stuck
-    twin — if it does not go through as stated, return with a restatement proposal
-    (`I`-`Laufabgleich` premise) instead of forcing it. -/
+/-- RELEASE, RESTATED (MK-05, Option A): the release stays a voluntary step of the holder.
+    The proved legs live in `Core.Fortschritt.SperrFreigabe` (`besitzwechsel_ist_gibt`,
+    `sperr_freigabe_bedingt`, `faire_umgebung_nicht_eindeutig`).
+    The checker carries the holder's eligibility (`SperrHalterBereit`, from `Akzeptiert`
+    through `SperrHalterHalten`: live, dispatched, `geben`-offering until hand-off) and the
+    wait-free section (`AbschnittWartefrei`: while holding, no wait on a not-yet-enabled
+    condition); the run carries the hold bound (`HalteSchranken`) and hardware fairness
+    (`FairLaeufe`, hardware only — no scheduler). The proved legs are
+    `besitzwechsel_ist_gibt` (a crash-free ownership break is the holder's release) and
+    `sperr_freigabe_bedingt` (the holder's own steps while holding release within
+    `H + 1`). What they do NOT supply is the scheduling: that the holder is actually
+    stepped. That progress premise — an `I`-`Laufabgleich` with starvation freedom, which
+    fires the continuously offered `geben` step — is the missing step, out of scope for
+    MK-05. `SperrGegenbeispiel.halte_gibt_nicht_ab` (the holder that never runs) stays the
+    negative leg: bounds plus fairness alone do not imply release. -/
 def SperrFreigabeAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
     (l : L) (h : Kontext) (H b : Nat) (s : Zustand L Ort Wert Raum Lok Grund),
-    Akzeptiert E → HalteSchranken E ρ → E.schranken.halten l = some H →
+    (∀ t s', b ≤ t → ρ.zeit.zustand t = some s' → (s'.sperren l).besitzer = some h →
+      SperrHalterBereit E s' l h) →
+    HalteSchranken E ρ → E.schranken.halten l = some H → AbschnittWartefrei E →
     (∀ h', Laeufe E h' ρ → FairLaeufe E.katalog h' ρ.hw) →
     ρ.zeit.zustand b = some s → (s.sperren l).besitzer = some h →
     (∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
@@ -427,8 +432,11 @@ def SperrFreigabeAussage : Prop :=
 /-- THE TARGET SENTENCE of M8 Teil 2b, pinned for Hy4: every accepted unit with held bounds
     gives a waiter queued at `i` the lock within `(i + 1) * (H + 1)` owner steps under fair
     hardware — no run premises besides acceptance, hardware fairness and the bounds.
-    Difficulty: mittel. Proof sketch: `SperrFreigabeAussage` discharges the `hgibt` premise of
-    `sperr_warte_schranke_bis` (fuel `i`); the scoped persistence and monotonicity are
+    Difficulty: mittel. Proof sketch: `sperr_freigabe_bedingt` discharges the `hgibt` premise of
+    `sperr_warte_schranke_bis` (fuel `i`) once the holder's own steps are supplied — that
+    scheduling step (holder-ready plus wait-free section plus hardware fairness through an
+    `I`-`Laufabgleich` with starvation freedom) is the missing premise named at
+    `SperrFreigabeAussage`; the scoped persistence and monotonicity are
     already machine theorems (`bleibt_bis_besitz`, `mono_bis_besitz`, `nodup_bleibt`). -/
 def SperrWarteFairAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
