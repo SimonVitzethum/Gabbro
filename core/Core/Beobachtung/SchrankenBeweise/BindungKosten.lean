@@ -127,18 +127,17 @@ theorem bindungKlassenKHRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f 
       · obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
         have hak : a + k = t := by omega
         by_cases hcc : c' = c
-        · subst hcc
-          have hinc := kontextkosten_schritt_gleich (E := einheitMitSchranken P u) hak spurEq
+        · have hinc := kontextkosten_schritt_gleich (E := einheitMitSchranken P u) hak spurEq
+          rw [hcc] at own
           have hslack := halteSlack (h := h) t c halteP l a k hak own
           rw [Wirkungsklasse.kostenZeile_kosten] at hslack
-          rw [hinc]
+          rw [hcc, hinc]
           exact hslack
         · have fremd : ∀ (d : Kontext) (w' : PUnit) (s : SchrittSpur Zelle Int),
               ρ.zeit.spur t = some (.kontext d w', s) → d ≠ c' := by
             intro d w' s hcontra
             have hd : d = c := by
-              have h2 : (.kontext c w, spur) = (.kontext d w', s) :=
-                Option.some.inj (spurEq.symm.trans hcontra)
+              have h2 := Option.some.inj (spurEq.symm.trans hcontra)
               obtain ⟨hc, _⟩ := Prod.mk.inj h2
               cases hc
               rfl
