@@ -4,7 +4,8 @@
               tables instead of functions, with a checker that is correct AND complete
               with no extra premise.
 
-  Design. `DomaenenTabelle` declares the domain count, the finite assignment tables
+  Design. `Maschine.DomaenenTabelle` (in `Core/Maschine/Quelltabellen.lean`) declares
+  the domain count, the finite assignment tables
   for contexts, memory objects and device objects, and the declared channels. The
   tables are pure data (no `Prop` fields). Lookup is total with default domain `0`.
   Coherence (`tabKohaerent`: every table entry lands inside the declared domains) is
@@ -32,45 +33,9 @@ open Gabbro.Core.Katalog
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
-/-- **The finite domain declaration**: the domain count, the finite assignment tables
-    for contexts, memory objects and device objects, and the declared channels.
-    Pure data; lookup below is total with default domain `0`. -/
-structure DomaenenTabelle where
-  domaenen : Nat
-  kontexte : List (Kontext × Domaene)
-  objekte : List (Nat × Domaene)
-  geraete : List (Objekt × Domaene)
-  kanaele : List (Domaene × Domaene)
-
-/-- Total lookup of a context's domain: the table entry, or `0` when unlisted. -/
-def tabKontext (tab : DomaenenTabelle) (c : Kontext) : Domaene :=
-  ((tab.kontexte.find? (fun e => decide (e.1 = c))).map (fun e => e.2)).getD 0
-
-/-- Total lookup of a memory object's domain: the table entry, or `0` when unlisted. -/
-def tabObjekt (tab : DomaenenTabelle) (n : Nat) : Domaene :=
-  ((tab.objekte.find? (fun e => decide (e.1 = n))).map (fun e => e.2)).getD 0
-
-/-- Total lookup of a device object's domain: the table entry, or `0` when unlisted. -/
-def tabGeraet (tab : DomaenenTabelle) (o : Objekt) : Domaene :=
-  ((tab.geraete.find? (fun e => decide (e.1 = o))).map (fun e => e.2)).getD 0
-
-/-- **The static checker line for tables**: a positive domain count, every table entry
-    inside the declared domains, every channel between declared domains. -/
-def pruefeDomaenenTab (tab : DomaenenTabelle) : Bool :=
-  decide (0 < tab.domaenen) &&
-    tab.kontexte.all (fun e => decide (e.2 < tab.domaenen)) &&
-    tab.objekte.all (fun e => decide (e.2 < tab.domaenen)) &&
-    tab.geraete.all (fun e => decide (e.2 < tab.domaenen)) &&
-    tab.kanaele.all (fun k => decide (k.1 < tab.domaenen) && decide (k.2 < tab.domaenen))
-
-/-- **Table coherence**: the exact finite condition the checker decides — a positive
-    domain count with every table entry and every channel endpoint in scope. -/
-def tabKohaerent (tab : DomaenenTabelle) : Prop :=
-  0 < tab.domaenen ∧
-    (∀ e ∈ tab.kontexte, e.2 < tab.domaenen) ∧
-    (∀ e ∈ tab.objekte, e.2 < tab.domaenen) ∧
-    (∀ e ∈ tab.geraete, e.2 < tab.domaenen) ∧
-    (∀ k ∈ tab.kanaele, k.1 < tab.domaenen ∧ k.2 < tab.domaenen)
+/-- The table data lives in `Core/Maschine/Quelltabellen.lean` (MK-17d): the unit carries
+    its table in `Einheit.domaenen`, so the checker row can decide exactly the unit's own
+    declaration. This file keeps the checker analysis over `Maschine.DomaenenTabelle`. -/
 
 /-- CORRECTNESS of the table checker: every accepted table is coherent. No
     `Akzeptiert`, no well-formedness premise. -/
@@ -184,14 +149,6 @@ theorem tabellePlan_kohaerent (E : Einheit L Ort Wert Raum Lok Grund Bedingung W
     fun x => tabObjekt_kohaerent tab h (E.einrichtung.speicherObjekt x),
     fun o => tabGeraet_kohaerent tab h o⟩
 
-/-- The single-domain table: everything unlisted, hence owned by domain `0`. -/
-def eineTabelle : DomaenenTabelle where
-  domaenen := 1
-  kontexte := []
-  objekte := []
-  geraete := []
-  kanaele := []
-
 /-- The single-domain table passes the line. -/
 theorem eineTabelle_akzeptiert : pruefeDomaenenTab eineTabelle = true := rfl
 
@@ -205,14 +162,6 @@ theorem eineTabelle_kohaerent : tabKohaerent eineTabelle :=
 theorem domaenenTabellen_erfuellbar :
     ∃ tab : DomaenenTabelle, pruefeDomaenenTab tab = true ∧ tabKohaerent tab :=
   ⟨eineTabelle, eineTabelle_akzeptiert, eineTabelle_kohaerent⟩
-
-/-- The empty-domain table: no domain to assign to. -/
-def leereTabelle : DomaenenTabelle where
-  domaenen := 0
-  kontexte := []
-  objekte := []
-  geraete := []
-  kanaele := []
 
 /-- The line refuses the empty-domain table. -/
 theorem leereTabelle_verweigert : pruefeDomaenenTab leereTabelle = false := rfl
