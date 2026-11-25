@@ -79,7 +79,8 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
   let E := (verknuepfteFragmente plan).einheit plan.plattform
   refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => Befehl.regelLokal _ _ b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _
-      (fun b _ => b.klasse_privat), ?_⟩, ?_, ?_⟩
+      (fun b _ => b.klasse_privat), schrankenLokal_leer (E := E) rfl rfl rfl,
+    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb)⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
@@ -88,7 +89,6 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
       obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute b.klasse_privat
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer (E := (verknuepfteFragmente plan).einheit plan.plattform) rfl rfl rfl
   · intro run conforms
     change (∀ pred ∈ (verknuepfteFragmente plan).klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (verknuepfteFragmente plan).klauseln.invariant, _) ∧

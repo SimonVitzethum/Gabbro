@@ -292,7 +292,8 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
   have hklauseln : fragA.klauseln = .leer := codeFrag_klauseln _
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => Befehl.regelLokal fragA .x86_64 b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64
-      (fun b hb => fragA_rein b hb), ?_⟩, ?_, ?_⟩
+      (fun b hb => fragA_rein b hb), schrankenLokal_leer (E := E) rfl rfl rfl,
+    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb)⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
@@ -302,7 +303,6 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
         (fragA_rein b (List.mem_of_getElem? (kopf_code head)))
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-  · exact schrankenLokal_leer (E := E) rfl rfl rfl
   · intro run conforms
     change (∀ pred ∈ fragA.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ fragA.klauseln.invariant, _) ∧
