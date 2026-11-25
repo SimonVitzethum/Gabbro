@@ -212,13 +212,18 @@ def pruefeDurchlauf (grenze : Option Nat) (bedarf : Nat) : Bool :=
   | none => true
   | some n => decide (bedarf ≤ n)
 
-/-- SOUNDNESS of the checker's per-pass line: acceptance gives the bound. -/
+/-- SOUNDNESS of the checker's per-pass line: acceptance gives the bound. Proved by case
+    analysis, without a decision bridge over the open need: `decide_eq_false` turns the
+    negative case into `false = true` (closed, kernel-free), as the Decision guard requires. -/
 theorem pruefeDurchlauf_korrekt (grenze : Option Nat) (bedarf : Nat) :
     pruefeDurchlauf grenze bedarf = true → UnterGrenze grenze bedarf := by
   intro h n eq
   subst eq
   simp only [pruefeDurchlauf] at h
-  exact of_decide_eq_true h
+  by_cases hle : bedarf ≤ n
+  · exact hle
+  · have falsch : decide (bedarf ≤ n) = false := decide_eq_false hle
+    exact False.elim (Bool.false_ne_true (falsch ▸ h))
 
 /-- **Per-pass cost bounds, in one pinned statement** (MK-12a, D-1): with the per-pass
     obligations, every admitted run holds the per-pass cost prefix at every prefix; and
