@@ -28,16 +28,17 @@ theorem leereUnit_zugelassen (P : Katalog.Plattform) :
     Ast.Semantik.zugelassen P Ast.Category.unit leereUnit := by
   constructor
   · exact ⟨List.nodup_nil, fun e mem => (List.not_mem_nil mem).elim⟩
-  · change (Ast.Semantik.programm leereUnit).code.all (Befehl.platformAllowed P) = true
-    simp only [Ast.Semantik.programm, Ast.Semantik.unitBody, Fragment.leer, Fragment.anhaengen,
-      Fragment.einzel, List.all_cons, List.all_nil, Befehl.platformAllowed, Bool.true_and]
+  · change (Ast.Semantik.programm leereUnit).code.all (Ast.Semantik.Befehl.platformAllowed P) = true
+    simp only [Ast.Semantik.programm, Ast.Semantik.unitBody, Ast.Semantik.Fragment.leer,
+      Ast.Semantik.Fragment.anhaengen, Ast.Semantik.Fragment.einzel, List.append_nil,
+      List.all_cons, List.all_nil, Ast.Semantik.Befehl.platformAllowed, Bool.true_and]
 
 /-- The printed text of the empty unit denotes its elaboration on every platform. Feeds:
     `Ast.parse_print`, `leereUnit_zugelassen`. -/
 theorem leereUnit_bezeichnet (P : Katalog.Plattform) :
     Ast.Semantik.Bezeichnet P Ast.Category.unit (Ast.print (category := Ast.Category.unit) leereUnit)
       (Ast.Semantik.elaborieren (category := Ast.Category.unit) P leereUnit) := by
-  refine ⟨leereUnit, Ast.parse_print leereUnit, ?_⟩
+  refine ⟨leereUnit, Ast.parse_print (category := Ast.Category.unit) leereUnit, ?_⟩
   exact ⟨rfl, leereUnit_zugelassen P⟩
 
 /-- The premises of round-trip hold jointly: the proved statement itself. -/
@@ -46,8 +47,9 @@ theorem ParseDruckAussage.erfuellbar : ParseDruckAussage :=
 
 /-- Round-trip is non-empty: the empty unit parses from what is printed. Feeds: `Ast.parse_print`. -/
 theorem ParseDruckAussage.nichtTrivial :
-    ∃ t : Ast.Unit, Ast.Parse (category := Ast.Category.unit) (Ast.print t) t :=
-  ⟨leereUnit, Ast.parse_print leereUnit⟩
+    ∃ t : Ast.Unit, Ast.Parse (category := Ast.Category.unit)
+      (Ast.print (category := Ast.Category.unit) t) t :=
+  ⟨leereUnit, Ast.parse_print (category := Ast.Category.unit) leereUnit⟩
 
 /-- The premises of unambiguity hold jointly: the proved statement itself. -/
 theorem ParseEindeutigAussage.erfuellbar : ParseEindeutigAussage :=
@@ -57,7 +59,8 @@ theorem ParseEindeutigAussage.erfuellbar : ParseEindeutigAussage :=
     `Ast.parse_print`. -/
 theorem ParseEindeutigAussage.nichtTrivial :
     ∃ (c : Ast.Category) (text : Text.RawText) (t : c.Tree), Ast.Parse text t :=
-  ⟨Ast.Category.unit, Ast.print (category := Ast.Category.unit) leereUnit, leereUnit, Ast.parse_print leereUnit⟩
+  ⟨Ast.Category.unit, Ast.print (category := Ast.Category.unit) leereUnit, leereUnit,
+    Ast.parse_print (category := Ast.Category.unit) leereUnit⟩
 
 /-- The premises of elaboration correctness hold jointly: the proved statement itself. -/
 theorem ElabKorrektAussage.erfuellbar (P : Katalog.Plattform) : ElabKorrektAussage P :=
