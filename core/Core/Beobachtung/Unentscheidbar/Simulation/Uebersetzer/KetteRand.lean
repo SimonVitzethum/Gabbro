@@ -74,7 +74,7 @@ theorem rueckMitPc (pre mid : List Befehl) (hv : VerschiebbaresProgramm mid)
     cases ht
   | some rB =>
     have hEq : rEnd = mitPc pre.length rB := Option.some.inj (by simpa only using ht)
-    refine ⟨rB, hst, ?_, hEq⟩
+    refine ⟨rB, rfl, ?_, hEq⟩
     have hp : (mitPc pre.length rB).pc = rEnd.pc := by rw [← hEq]
     simp only [mitPc] at hp
     omega
@@ -121,7 +121,7 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
       obtain ⟨r1, hrun1⟩ := laufHatZwischen (blkA ++ blkB) r k j1 r' hk hj1k
       have hlt1 : r1.pc < blkA.length := hkle j1 hj1Find r1 hrun1
       have hrunJs : (Schritt (blkA ++ blkB))^[Nat.succ j1] (some r) = some rJ := by
-        rw [← hFind]
+        rw [show Nat.succ j1 = Nat.find hQ by omega]
         exact hrunJ
       have hopt : ∃ b, blkA[r1.pc]? = some b := by
         cases hopt' : blkA[r1.pc]? with
@@ -134,10 +134,9 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
             rw [hgetC]
           have hstep : (Schritt (blkA ++ blkB))^[Nat.succ j1] (some r) = none := by
             rw [Function.iterate_succ_apply', hrun1, hnone]
-            rfl
           rw [hstep] at hrunJs
           cases hrunJs
-        | some b => exact ⟨b, hopt'⟩
+        | some b => exact ⟨b, rfl⟩
       rcases hopt with ⟨b, hb⟩
       have hleB : (b.auswerten r1).pc ≤ blkA.length := hlocal r1 b hlt1 hb
       have hgetC : (blkA ++ blkB)[r1.pc]? = some b := by
@@ -150,7 +149,7 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
       have hJ : (Schritt (blkA ++ blkB))^[Nat.succ j1] (some r) = some (b.auswerten r1) := by
         rw [Function.iterate_succ_apply', hrun1, hstep]
       rw [hJ] at hrunJs
-      have hEqR : rJ = b.auswerten r1 := Option.some.inj hrunJs
+      have hEqR : rJ = b.auswerten r1 := Option.some.inj hrunJs.symm
       rw [hEqR] at hgtJ
       omega
   have hP : ∀ s, s < Nat.find hQ → ∃ rs, (Schritt blkA)^[s] (some r) = some rs ∧
