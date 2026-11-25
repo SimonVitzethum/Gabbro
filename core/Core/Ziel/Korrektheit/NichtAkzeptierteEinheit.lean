@@ -50,11 +50,11 @@ def textIndexUnit : Ast.Unit :=
     .step (.constant indexName indexName_ordinary written
       (by
         change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
-        exact ⟨by decide, by decide, by decide, by decide, by decide⟩) value
+        omega) value
       (by dsimp [value, Expr.static]; exact ⟨trivial, trivial⟩)
       (by
         change (0 : Int) ≤ 0 ∧ (255 : Int) ≤ 255
-        exact ⟨by decide, by decide⟩)) .done⟩
+        omega)) .done⟩
 
 /-- The code the witness unit elaborates to. -/
 abbrev textIndexCode : List Befehl := (fragment Ast.Category.unit textIndexUnit).code
