@@ -267,15 +267,19 @@ def zfRang : ZfEv → Nat
   | zrx => 4
 
 theorem zf_po_trans {a b c : ZfEv} (h1 : zfPo a b) (h2 : zfPo b c) : zfPo a c := by
+  revert h1 h2
   cases a <;> cases b <;> cases c <;> decide
 
 theorem zf_po_rang {a b : ZfEv} (h : zfPo a b) : zfRang a < zfRang b := by
+  revert h
   cases a <;> cases b <;> decide
 
 theorem zf_rf_rang {a b : ZfEv} (h : zfRf a b) : zfRang a < zfRang b := by
+  revert h
   cases a <;> cases b <;> decide
 
 theorem zf_mo_rang {a b : ZfEv} (h : zfMo a b) : zfRang a < zfRang b := by
+  revert h
   cases a <;> cases b <;> decide
 
 theorem zf_wf : zfGraph.Wohlgeformt where
