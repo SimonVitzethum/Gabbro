@@ -224,7 +224,9 @@ theorem prueferKlauselnKorrekt_fuerDecidierbar :
 /-- Every platform selects the persistence row. Crash runs exist everywhere. -/
 theorem plattform_enthaelt_persistence (P : Katalog.Plattform) :
     P.katalog.enthaelt .persistence := by
-  cases P <;> decide
+  cases P <;>
+    change .persistence ∈ (Katalog.ZielZeilen ++ .persistence :: _ : List Katalog.Zeile)
+  all_goals exact List.mem_append.mpr (Or.inr (List.Mem.head _))
 
 /-- The elaborated image is the fixed loader image on the selected target, hence valid. -/
 theorem elaboriert_bild_gueltig (P : Katalog.Plattform) (u : UnitMitInvarianten) :
@@ -330,7 +332,9 @@ theorem echteInvariante_akzeptiert (P : Katalog.Plattform) :
 theorem prueferKlauselnDecidierbar_erfuellbar :
     ∃ (P : Katalog.Plattform) (u : UnitMitInvarianten),
       u.invarianten ≠ [] ∧ prueferKlauselnDecidierbar.pruefeKlauseln P u = true := by
-  refine ⟨.x86_64, echteInvariante, by decide, echteInvariante_akzeptiert _⟩
+  refine ⟨.x86_64, echteInvariante, ?_, echteInvariante_akzeptiert _⟩
+  intro h
+  cases h
 
 /-- A violated invariant: the region cell starts at `0`, not `5`. -/
 def verletzteInvariante : UnitMitInvarianten :=
