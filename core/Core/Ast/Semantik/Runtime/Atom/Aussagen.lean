@@ -14,7 +14,7 @@
              Each has a satisfiability lemma and a non-triviality lemma that exhibits an instruction, a graph or a
              program the model represents and that violates the statement; only the checker's refusal excludes it
              (`atomarSim_erfuellbar` / `_nichtTrivial`, `payloadSichtbar_erfuellbar` / `_nichtTrivial`,
-             `abschnitte_erfuellbar` / `rennfreiAusLokal_nichtTrivial`).
+             `rennfreiAusLokal_erfuellbar` / `rennfreiAusLokal_nichtTrivial`).
              Open duties of the access instructions, pinned under `ZugriffBefehlAussage` for the registry entry of
              `Befehl.zugriff`: determinacy up to the value read (`ZugriffBestimmtAussage`, replacing
              `Ideal.RegelBestimmt`, which an instruction that CHOOSES a value cannot satisfy) and composability of the

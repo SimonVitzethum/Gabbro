@@ -1,7 +1,7 @@
 /-
   File:      core/Core/Speicher/Atom/AbschnitteBeispiele.lean
   Subject:   THE LOCK-SECTION STATEMENT IS SATISFIABLE AND NOT TRIVIAL (MK-04).
-             * `abschnitte_erfuellbar`: two threads each take the lock word (an acquire read), write the plain `x` and
+             * `rennfreiAusLokal_erfuellbar`: two threads each take the lock word (an acquire read), write the plain `x` and
                release the lock word (a release write); the second acquire reads the first release. Every premise of
                `Abschnitte` holds, the two plain writes conflict, and `rennfrei_aus_abschnitten` orders them.
              * `rennfreiAusLokal_nichtTrivial`: WITHOUT the lock, two threads write the plain `x` and nothing orders
@@ -201,7 +201,7 @@ end Atom
 
 /-- **The premises of the lock-section statement hold jointly, and the conclusion bites**: two conflicting plain
     writes, each in a window of the lock, are ordered by happens-before. -/
-theorem abschnitte_erfuellbar :
+theorem rennfreiAusLokal_erfuellbar :
     ∃ (G : Graph Atom.AbEv Bool Nat) (schloss : Bool → Option Bool),
       G.Abschnitte schloss (fun _ => True) ∧
         G.Konflikt Atom.AbEv.w1 Atom.AbEv.w2 ∧ G.na Atom.AbEv.w1 ∧
