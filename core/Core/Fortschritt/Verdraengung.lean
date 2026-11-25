@@ -162,7 +162,9 @@ theorem fairV : FairLaeufe Plattform.x86_64.katalog HV hwV where
     intro c hc cut
     have hc0 : c = 0 := by omega
     subst hc0
-    exact ⟨cut, Nat.le_refl cut, rfl⟩
+    cases cut with
+    | zero => exact ⟨0, Nat.le_refl 0, rfl⟩
+    | succ cut => exact ⟨cut + 1, Nat.le_succ _, rfl⟩
   auslieferung := by
     intro e selected cut
     obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (n := max cut 1) (by omega)
@@ -201,7 +203,7 @@ noncomputable def memV1 : ∃ es g',
     Speicherfolge (fun _ => ()) .aussen zV0.graph [⟨.aussen, (), .na, rV, ()⟩] es g' :=
   Classical.choose_spec memV
 
-noncomputable def esV : List (SpeicherAkteur Unit × Etikett Unit Unit) :=
+noncomputable def esV : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
   Classical.choose memV1
 
 noncomputable def memV2 : ∃ g',
@@ -222,19 +224,19 @@ theorem labV : Maschine.aussenEtikett wEinrichtungV (.interrupt 0 irqV .handler)
     ⟨.aussen, (), .na, (), ()⟩ := rfl
 
 /-- The post-preemption state: the handler runs on core zero. -/
-def zV1 : Zustand Unit Unit Unit Unit Bool Unit :=
+noncomputable def zV1 : Zustand Unit Unit Unit Unit Bool Unit :=
   { Maschine.Zustandseintritt zV0 0 (0, 0) Hv false with graph := gV' }
 
 /-- The run states: initial, post-preemption, then handler toggles. -/
-def ZV : Nat → Zustand Unit Unit Unit Unit Bool Unit
+noncomputable def ZV : Nat → Zustand Unit Unit Unit Unit Bool Unit
   | 0 => zV0
   | 1 => zV1
   | t + 2 => toggleUpdate Hv (ZV (t + 1))
 
 /-- The run trace: the interrupt, then handler steps. -/
-def spurV : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
-  | 0 => some (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩)
-  | _ + 1 => some (.kontext Hv (), ⟨[], []⟩)
+noncomputable def spurV : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
+  | 0 => some (SchrittWahl.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩)
+  | _ + 1 => some (SchrittWahl.kontext Hv (), ⟨[], []⟩)
 
 theorem ZV_kerne_succ : ∀ t, (ZV (t + 1)).kerne = zV1.kerne := by
   intro t

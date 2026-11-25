@@ -21,7 +21,7 @@ open Gabbro.Core.Maschine
 open Gabbro.Core.Katalog
 
 /-- The interrupt step at tick zero displaces the worker. -/
-def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
+noncomputable def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
     ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
@@ -29,21 +29,21 @@ def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     zV0_ruht_Hv, rfl, by rw [rV_eq] at hmemV; rw [← labV]; exact hmemV, rfl⟩
 
 /-- Handler steps from tick one on. -/
-def stepV (t : Nat) : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
+noncomputable def stepV (t : Nat) : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
     (ZV (t + 1)) (.kontext Hv (), ⟨[], []⟩) (toggleUpdate Hv (ZV (t + 1))) :=
   .kontext rfl ⟨0, rfl, by rw [ZV_kerne_succ]; exact zV1_dispatch,
     by rw [ZV_status_succ]; exact zV1_live_Hv⟩
     ⟨(), rfl, rfl, rfl⟩ (hvAusfuehr (t + 1) (ZV (t + 1)))
 
 /-- The implementation steps, tick by tick. -/
-def taktV (t : Nat) : Takt (Lauffolge E_v hwV) (KeinSchritt (Lauffolge E_v hwV))
+noncomputable def taktV (t : Nat) : Takt (Lauffolge E_v hwV) (KeinSchritt (Lauffolge E_v hwV))
     t (some (ZV t)) (spurV t) (some (ZV (t + 1))) := by
   cases t with
   | zero => exact .schritt rfl (.schritt stepV0)
   | succ t => exact .schritt rfl (.schritt (stepV t))
 
 /-- The ideal interrupt step at tick zero. -/
-def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
+noncomputable def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨[.interrupt 0 irqV .handler], esV⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
     ⟨by decide, by decide, pendingV0, by decide, angebotV_auswahl⟩,
@@ -51,14 +51,14 @@ def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV
     zV0_ruht_Hv, rfl, by rw [rV_eq] at hmemV; rw [← labV]; exact hmemV, rfl⟩
 
 /-- Ideal handler steps from tick one on. -/
-def istepV (t : Nat) : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
+noncomputable def istepV (t : Nat) : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV (t + 1)
     (ZV (t + 1)) (.kontext Hv (), ⟨[], []⟩) (toggleUpdate Hv (ZV (t + 1))) :=
   .kontext rfl ⟨0, rfl, by rw [ZV_kerne_succ]; exact zV1_dispatch,
     by rw [ZV_status_succ]; exact zV1_live_Hv⟩
     ⟨(), rfl, rfl, rfl⟩ (hvAusfuehr (t + 1) (ZV (t + 1)))
 
 /-- The ideal steps, tick by tick. -/
-def itaktV (t : Nat) : Takt
+noncomputable def itaktV (t : Nat) : Takt
     (Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV)
     (fun t _ => ¬ AbsturzAngeboten E_v.katalog hwV t)
     t (ZV t) (spurV t) (ZV (t + 1)) := by
@@ -77,7 +77,7 @@ noncomputable def ρV : Maschine.Lauf E_v :=
   ⟨sV, hwV, ⟨fun t => some (ZV t), spurV, taktV⟩⟩
 
 /-- The ideal mirror run. -/
-def ηV : Maschine.I.Lauf E_v :=
+noncomputable def ηV : Maschine.I.Lauf E_v :=
   ⟨sV, HV, hwV, ⟨ZV, spurV, itaktV⟩, fun _ => none⟩
 
 theorem spurV_zero : spurV 0 =
