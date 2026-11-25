@@ -40,13 +40,12 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
     · intro c hc
       simp only [bootFor, Zustand.start, if_neg hc]
     · intro _
-      have hpend : (z.lokal entryContext).pending = none := by
-        simp only [bootFor, Zustand.start, if_true]
       refine ⟨?_, ?_⟩
       · intro _
         simp only [hfragen, hantworten]
       · intro hne
-        exact absurd hpend hne
+        simp only [bootFor, Zustand.start, if_true] at hne
+        exact absurd rfl hne
   · cases geladen
 
 end Gabbro.Core.Beobachtung
