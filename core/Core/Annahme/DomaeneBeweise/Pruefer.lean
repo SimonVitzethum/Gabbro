@@ -83,7 +83,8 @@ theorem prueferGegenbeispiel_nichtKohaerent :
     ¬ DomaenenKohaerenz trivialeEinheit prueferGegenbeispielPlan := by
   intro h
   have hbad : (7 : Nat) < 1 := h.1 (.faden 0)
-  exact (by decide) hbad
+  have hnein : ¬ (7 : Nat) < 1 := by decide
+  exact hnein hbad
 
 /-! ### Counterexample: coherent plan, refused line -/
 
