@@ -339,21 +339,26 @@ theorem kopf_ruht {s : Zustand} {c : Kontext}
     (h : s.status c = .ruht) : kopf (verknuepfteFragmente planAB).code s c = none := by
   simp only [kopf, h]
 
+/-- The system head is the code head. -/
+theorem system_kopf (s : Zustand) (c : Kontext) :
+    E_linked.system.kopf s c = kopf (verknuepfteFragmente planAB).code s c :=
+  rfl
+
 /-- No context steps at a resting head. -/
 theorem keinSchritt_ruht {c : Kontext} {s : Zustand} {w : PUnit.{1}} {plans : List Plan}
     {u : Zustand} (h : s.status c = .ruht) (step : E_linked.system.ISchritt c s w plans u) :
     False := by
   obtain ⟨b, head, _⟩ := step
-  have head' : kopf (verknuepfteFragmente planAB).code s c = some b := head
-  rw [kopf_ruht h] at head'
-  cases head'
+  rw [system_kopf, kopf_ruht h] at head
+  cases head
 
 /-- The witness hardware is conformant. -/
 theorem konformHw (h : Umgebung) (s : AussenStart) (zul : E_linked.ZulStart h s)
     (k : Nat) (assigned : s.assignment 0 = some k) :
     (hwLinked h k).konform E_linked.katalog h := by
+  unfold HwLauf.konform
   refine ⟨rfl, fun i => ?_⟩
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro core hc
     have heq : core = k := by
       cases hc
@@ -448,11 +453,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       · subst heq
         obtain ⟨b', head', ideal'⟩ := regel
         have hb' : b' = b := by
-          have head0 : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand t) eintritt =
-              some b' := head'
-          rw [headT] at head0
-          cases head0
-          rfl
+          rw [system_kopf, headT] at head'
+          cases head'
         subst hb'
         obtain ⟨same, after⟩ :=
           (b.ideal_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
@@ -478,10 +480,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
           rw [hEqS]
           exact hStPre c0 heq
-        have head0 : kopf (verknuepfteFragmente planAB).code (ρ.zeit.zustand t) c0 =
-            some b' := head'
-        rw [kopf_ruht hruht] at head0
-        cases head0
+        rw [system_kopf, kopf_ruht hruht] at head'
+        cases head'
     | antwort _ reply =>
       exfalso
       obtain ⟨offered, _, _, _⟩ := reply
@@ -631,10 +631,8 @@ theorem linkerAkzeptiert_ohne_abschottung_falsch : ¬ LinkerAkzeptiertAussage :=
     rcases hm with rfl | rfl
     · exact fragA_akzeptiert
     · exact fragB_akzeptiert
-  have hlink' : ∀ (plan : Bauplan) (frag : Fragment), linke plan = some frag →
-      (∀ m ∈ plan.module, Akzeptiert (m.fragment.einheit plan.plattform)) →
-      Akzeptiert (frag.einheit plan.plattform) := hlink
-  have hlinked := hlink' planAB _ planAB_linke hparts
+  unfold LinkerAkzeptiertAussage at hlink
+  have hlinked := hlink planAB _ planAB_linke hparts
   exact linked_nicht_akzeptiert hlinked
 
 end Gabbro.Core.Linken
