@@ -14,10 +14,11 @@ def Fragment.sicherheitsEinheit (p : Fragment) (platform : Plattform) :
   ⟨p.einheit platform, p.klauseln.invariant.map (fun gilt => ⟨none, gilt⟩)⟩
 
 theorem Befehl.sicher (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    (keine : p.klauseln.invariant = []) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
   intro H ρ t c w vor zwischen nach stepPlan spur head impl execute
-  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute h
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
   have wirkungen :
       NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
@@ -42,16 +43,18 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform)
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
 /-- The local value transfer leaves the question ledger and its authority unchanged. -/
-theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl) :
+theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
   intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
-  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute
+  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute h
   exact befugt
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
-    (keine : p.klauseln.invariant = []) (b : Befehl) :
+    (keine : p.klauseln.invariant = []) (b : Befehl)
+    (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
     RegelPflichten (p.sicherheitsEinheit platform) b :=
-  ⟨b.sicher p platform keine, b.antwortSicher p platform⟩
+  ⟨b.sicher p platform keine h, b.antwortSicher p platform h⟩
 
 theorem expr_keine_invarianten (slot : Nat) (tree : Expr scope type) :
     (expr slot tree).klauseln.invariant = [] := by

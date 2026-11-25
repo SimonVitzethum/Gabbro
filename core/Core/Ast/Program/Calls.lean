@@ -102,10 +102,11 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   have headReturn : E.system.kopf s₅ eintritt = some ret := atHead rfl local₅ rfl rfl rfl
   have headBind : E.system.kopf s₆ eintritt = some bind := atHead rfl local₆ rfl rfl rfl
   have extend {s : Zustand} {b : Befehl} (reach : E.system.IErreichbar s₀ s)
-      (head : E.system.kopf s eintritt = some b) :
+      (head : E.system.kopf s eintritt = some b)
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) :
       E.system.IErreichbar s₀ (b.nach eintritt s) :=
     .schritt eintritt () [plan] reach
-      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
   have r₁ : E.system.IErreichbar s₀ s₁ := extend .start headTarget
   have r₂ : E.system.IErreichbar s₀ s₂ := extend r₁ headMain
   have r₃ : E.system.IErreichbar s₀ s₃ := extend r₂ headLaunch
@@ -115,10 +116,11 @@ theorem callForms_erfuellbar (platform : Plattform) (start : AussenStart) :
   have runs {b : Befehl} {s : Zustand} (reach : E.system.IErreichbar s₀ s)
       (head : E.system.kopf s eintritt = some b) (live : ((b.nach eintritt s).lokal eintritt).stopp = none)
       (pushes : ((b.nach eintritt s).lokal eintritt).fortsetzungen.length =
-        (s.lokal eintritt).fortsetzungen.length + 1) : LaufenderRuf platform start b :=
+        (s.lokal eintritt).fortsetzungen.length + 1)
+      (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr rfl | exact Quellform.privat _ _) : LaufenderRuf platform start b :=
     ⟨unit, Ast.print (category := .unit) unit, s, Ast.parse_print _, reach, head,
-      ⟨b, head, (b.ideal_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
-      ⟨b, head, (b.impl_privat eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩, live, pushes⟩
+      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
+      ⟨b, head, (b.impl_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩, live, pushes⟩
   have boundFrame : (bind.nach eintritt s₆).lokal eintritt = bind.auswerten f₆ := nextFrame local₆ rfl
   have discardLive : (s₄.lokal eintritt).stopp = none := by rw [local₄]; rfl
   have discardPushes : (s₄.lokal eintritt).fortsetzungen.length =
