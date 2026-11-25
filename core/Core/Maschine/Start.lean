@@ -103,7 +103,7 @@ private def BevorzugtSchritt (hw : HwLauf) (t : Nat) (s : Option (Zustand L Ort 
 
 /-- One fair tick: a preferred dispatched-context step if one exists, another possible step
     otherwise, and a pause only when no step exists at all. -/
-noncomputable private def fairerSchritt (hw : HwLauf) (t : Nat)
+private noncomputable def fairerSchritt (hw : HwLauf) (t : Nat)
     (s : Option (Zustand L Ort Wert Raum Lok Grund)) :
     Option (Zustand L Ort Wert Raum Lok Grund) ×
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert) := by
@@ -133,13 +133,13 @@ private theorem fairerSchritt_takt (hw : HwLauf) (t : Nat)
     refine .wartet rfl rfl (fun ev next step => h2 ⟨ev, next, step⟩)
 
 /-- The fair schedule from an initial state: preferred dispatched-context steps everywhere. -/
-noncomputable private def fairerFolge (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund)) :
+private noncomputable def fairerFolge (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund)) :
     Nat → Option (Zustand L Ort Wert Raum Lok Grund) ×
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert)
   | 0 => (init, none)
   | t + 1 => fairerSchritt E hw t (fairerFolge hw init t).1
 
-noncomputable private def fairerZeit (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund)) :
+private noncomputable def fairerZeit (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund)) :
     Zeitlauf (Lauffolge E hw) where
   zustand := fun t => (fairerFolge E hw init t).1
   spur := fun t => (fairerFolge E hw init (t + 1)).2
