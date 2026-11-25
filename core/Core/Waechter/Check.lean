@@ -367,9 +367,11 @@ elab "#check_core" : command => do
     let erweitertTask ← Meta.MetaM.asTask' do
       let struktur ← strukturPropInfos env index (pins.map (·.1))
       let waisen ← strukturPropWaisenInfos env (coveredNames.contains ·)
-      let namenlos ← namenloseAussageInfos env index zielRoots (coveredNames.contains ·)
-      return (struktur ++ waisen, namenlos)
-    let (strukturInfos, namenlosInfos) ← withoutModifyingState erweitertTask.get
+      let (namenlosFehler, namenlosInfos) ← namenloseAussageFehlerUndInfos env index zielRoots
+        (coveredNames.contains ·)
+      return (struktur ++ waisen, namenlosFehler, namenlosInfos)
+    let (strukturInfos, namenlosFehler, namenlosInfos) ← withoutModifyingState erweitertTask.get
+    errors := errors ++ namenlosFehler
     unless strukturInfos.isEmpty do
       logInfo m!"statement structure findings ({strukturInfos.size}):\n{String.intercalate "\n" strukturInfos.toList}"
     unless namenlosInfos.isEmpty do
