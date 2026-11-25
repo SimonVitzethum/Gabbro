@@ -18,12 +18,12 @@ theorem sicht_halt_gleich {β : Beschriftung} {r₁ r₂ : Rahmen} (grund : Absc
   rw [sicht_halt, sicht_halt, h]
 
 /-- Masking with every label public is the identity. -/
-theorem maskiere_allesOeffentlich {l : Nat → Etikett}
+theorem maskiereLokal_allesOeffentlich {l : Nat → Etikett}
     (h : ∀ i, oeffentlich (l i) = true) : ∀ (i : Nat) (xs : List (Option Dynamisch)),
-      maskiere l i xs = xs
+      maskiereLokal l i xs = xs
   | _, [] => rfl
   | i, _ :: xs => by
-      simp only [maskiere, h i, if_true, maskiere_allesOeffentlich (l := l) h (i + 1) xs]
+      simp only [maskiereLokal, h i, if_true, maskiereLokal_allesOeffentlich (l := l) h (i + 1) xs]
 
 /-- `rufArgumente` reads only the temporary slots, so equal temporaries give equal arguments. -/
 theorem rufArgumente_gleich (r₁ r₂ : Rahmen)
@@ -87,9 +87,9 @@ theorem rueckVoidSicht : RueckVoidSichtAussage := by
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
   have hLe :
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-        maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+        maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   change (r₁.rueckkehr none).sicht β = (r₂.rueckkehr none).sicht β
   unfold Rahmen.rueckkehr
   rw [← hFort]
@@ -142,9 +142,9 @@ theorem zurueckSicht : ZurueckSichtAussage := by
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
   have hLe :
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-        maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+        maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   change (r₁.rueckkehr ((r₁.temp quelle).bind (wertIn zieltyp))).sicht β =
     (r₂.rueckkehr ((r₂.temp quelle).bind (wertIn zieltyp))).sicht β
   unfold Rahmen.rueckkehr
@@ -196,9 +196,9 @@ theorem pruefeMassSicht : PruefeMassSichtAussage := by
       exact tempPub s (hT s hp)
     · simp only [if_neg hp]
   have hLe :
-      maskiere (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
-        maskiere (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
-    maskiere_gleich_mono hL 0 _ _ lokEq
+      maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₁.lokale =
+        maskiereLokal (β.lokal (r₁.pc + 1)) 0 r₂.lokale :=
+    maskiereLokal_gleich_mono hL 0 _ _ lokEq
   change (r₁.setzeMass quelle).sicht β = (r₂.setzeMass quelle).sicht β
   unfold Rahmen.setzeMass
   simp only [← hpc', ← hZahl, ← hFun, ← hFunktab, ← hFort, ← hStopp, ← hGlob, ← hZa,
@@ -242,8 +242,8 @@ theorem rufeSicht : RufeSichtAussage := by
   have hpc' : r₁.pc = r₂.pc := pcEq.symm
   have hTemp : r₁.temp = r₂.temp := funext (fun s => tempPub s (hT s))
   have hLok : r₁.lokale = r₂.lokale := by
-    rw [← maskiere_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₁.lokale,
-        ← maskiere_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₂.lokale]
+    rw [← maskiereLokal_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₁.lokale,
+        ← maskiereLokal_allesOeffentlich (l := β.lokal r₁.pc) hL 0 r₂.lokale]
     exact lokEq
   have hFun : r₁.funktionen = r₂.funktionen := by
     simpa only [Rahmen.sicht] using congrArg (fun r : Rahmen => (r.sicht β).funktionen) h
