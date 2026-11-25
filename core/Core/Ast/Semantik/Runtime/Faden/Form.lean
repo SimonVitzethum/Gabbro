@@ -109,4 +109,19 @@ theorem Fadenform.uebertrag_lokal (z : Fadenform) (r : Rahmen) (v : Int) :
   | wechsle kern kind => exact ⟨rfl, Nat.le_succ _, rfl⟩
   | kernStart kern kind => exact ⟨rfl, Nat.le_succ _, rfl⟩
 
+/-- **The frame transfer of a lifecycle instruction keeps the arrival regions of the frame**: the grant of the acting
+    context never changes quietly (a start gives authority through the ledger, not through the frame's list). -/
+theorem Fadenform.uebertrag_arrival (z : Fadenform) (r : Rahmen) (v : Int) :
+    (z.uebertrag r v).arrivalRegions = r.arrivalRegions := by
+  have gebunden (ziel : Nat) (typ : Ty .value) :
+      (r.bindeGelesen ziel typ v).arrivalRegions = r.arrivalRegions := by
+    unfold Rahmen.bindeGelesen
+    split <;> rfl
+  cases z with
+  | starte ziel eintritt typ uebergabe => exact gebunden ziel typ
+  | beende quelle => rfl
+  | verbinde ziel kind typ => exact gebunden ziel typ
+  | wechsle kern kind => rfl
+  | kernStart kern kind => rfl
+
 end Gabbro.Core.Ast.Semantik
