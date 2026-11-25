@@ -165,6 +165,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BlockKette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Paar
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Divergenz
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
