@@ -132,8 +132,7 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
       QuellzustandGleich (d.unit locals) n₁ n₂ := by
   have hplanF : plan = { internal with aktion := .frage (binding.question access) } :=
     (List.cons.inj hplans).1
-  obtain ⟨i₁, kopf₁, impl₁⟩ := regel₁
-  cases i₁
+  obtain ⟨kopf₁, plan', hplans', rule₁⟩ := geraete_kontext_regel ruleEq regel₁
   have hbuch := geraeteKopplung_buchung hkopp hz₁ hz₂
   have hlokal := geraete_lokal_gleich quell
   obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
@@ -193,12 +192,13 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
     dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
     rw [ruleEq]
     dsimp only [Rule.machine]
-    exact impl₁
+    exact ⟨plan', hplans', rule₁⟩
   have impl₂Ideal : ((d.unit locals).system.regel ()).ideal c s₂ () [plan] u₂ := by
     dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
     rw [ruleEq]
     dsimp only [Rule.machine]
-    exact impl₂
+    refine ⟨{ internal with aktion := .frage (binding.question access) }, hplans, ?_⟩
+    exact Rule.issue owned₂ idle₂
   have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
     have hform₁ : FormSchritt (d.unit locals) () c s₁ () plan u₁ := ⟨kopf₁, impl₁Ideal⟩
     have hform₂ : FormSchritt (d.unit locals) () c s₂ () plan u₂ := ⟨kopf₂, impl₂Ideal⟩
@@ -221,8 +221,9 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
     have n2antwort : n₂.naechsteAntwort = u₂.naechsteAntwort := by
       funext c'
       simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂, hverbraucht₂,
-        hverworfen₂, Zustand.frage]
+        hverworfen₂, Zustand.frage, u₂, setFrame]
     unfold QuellzustandGleich at hq ⊢
+    unfold AntwortSicht at hq ⊢
     simpa only [n1lokal, n2lokal, n1status, n2status, n1initial, n2initial, n1rechte,
       n2rechte, n1leihen, n2leihen, n1antwort, n2antwort] using hq
   refine ⟨spur₂, u₂, n₂, regel₂, aus₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hquell⟩
