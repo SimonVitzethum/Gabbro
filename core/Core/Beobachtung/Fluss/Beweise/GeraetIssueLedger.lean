@@ -26,7 +26,6 @@ theorem geraete_issue_ledger {k : Katalog} {binding : Binding k} {access : Regis
       v.epoche = s.epoche ∧ v.verworfen = s.verworfen ∧ v.geliefert = s.geliefert ∧
       v.kerne = s.kerne ∧ v.status = s.status ∧ e.questionInstance = s.fragen.length ∧
       e.context = c.nummer ∧ e.cut = t ∧ e.question = binding.question access := by
-  simp only [Zustand.stelleFrage, setFrame, Zustand.frage]
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Core.Beobachtung
