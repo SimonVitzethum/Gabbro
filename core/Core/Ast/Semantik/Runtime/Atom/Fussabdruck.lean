@@ -176,4 +176,44 @@ theorem Zugriffsform.schreibend_schreibt_region (z : Zugriffsform) (h : z.klasse
   subst hr
   simp only [Zelle.imRegion, beq_self_eq_true, Bool.and_self]
 
+/-- **The write footprint of an instruction (MK-19): the shared cells it may write.** Every instruction but an access
+    instruction is frame-only or a lifecycle instruction and writes none; an access instruction writes the cells of the
+    region it names (`Zugriffsform.schreibtMoeglich`). The checker refuses the preservation of a declared invariant for
+    an observed cell in the footprint (`pruefeBefehlErhalt`). A new instruction must be listed: there is no wildcard. -/
+def Befehl.schreibtMoeglich : Befehl → Zelle → Bool
+  | .zugriff form, x => form.schreibtMoeglich x
+  | .faden _, _ => false
+  | .rufe .., _ | .starte .., _ => false
+  | .literal .., _ | .binaer .., _ | .wahrheitswert .., _ | .lesen .., _ | .negativ .., _ => false
+  | .negieren .., _ | .verneinen .., _ | .teilen .., _ | .vergleichen .., _ => false
+  | .binden .., _ | .springeWenn .., _ | .zuweisen .., _ | .zurueck .., _ | .springe .., _ => false
+  | .blockEnde .., _ | .bindeWert .., _ | .ende, _ | .bindeRegion .., _ => false
+  | .definiere .., _ | .rueckVoid, _ | .pruefeMass .., _ | .setzePasszahl .., _ => false
+  | .whileTest .., _ | .forAnfang .., _ | .forTest .., _ | .forNaechster .., _ | .zurueckSprung .., _ => false
+  | .baueArray .., _ | .liesArray .., _ | .baueTupel .., _ | .liesTupelfeld .., _ | .bindeTupel .., _ => false
+  | .definiereRecord .., _ | .baueRecord .., _ | .liesRecordFeld .., _ | .setzeRecordFeld .., _ => false
+  | .definiereVariante .., _ | .baueVariante .., _ | .waehleVariante .., _ => false
+  | .definiereTraeger .., _ | .optionIstBesetzt .., _ | .definiereEffektgruppe .., _
+  | .waehleUmgebung .., _ => false
+  | .textLiteral .., _ | .textConcat .., _ | .textIndex .., _ | .substring .., _ | .textLength .., _ => false
+
+/-- **A writing class belongs to an access instruction**: every instruction of a class that writes the shared memory is
+    an access instruction. -/
+theorem Befehl.schreibend_zugriff (b : Befehl) (h : b.klasse.schreibend = true) : ∃ z, b = .zugriff z := by
+  cases b with
+  | zugriff z => exact ⟨z, rfl⟩
+  | faden z =>
+    cases z <;> cases h
+  | _ => cases h
+
+/-- **The footprint of an instruction is sound against its step.** Every cell a plan of the instruction writes, for every
+    frame and every value the memory model returned, is in its footprint: a frame-only instruction and a lifecycle
+    instruction write none, an access instruction writes inside the region it names. -/
+theorem Befehl.plan_schreibt_fussabdruck (b : Befehl) (r : Rahmen) (v : Int) (x : Zelle)
+    (h : (b.klasse.plan (b.operand r) v).schreibtZelle x) : b.schreibtMoeglich x = true := by
+  obtain ⟨writes, _⟩ := b.klasse.plan_schreibt _ _ _ h
+  obtain ⟨z, same⟩ := b.schreibend_zugriff writes
+  subst same
+  exact z.plan_schreibt r v x h
+
 end Gabbro.Core.Ast.Semantik
