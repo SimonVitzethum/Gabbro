@@ -136,6 +136,15 @@ def AbschnittWartefrei [DecidableEq L]
       | .sperre l' => (s.sperren l').besitzer = none ∧ (s.sperren l').schlange[0]? = some c
       | _ => False
 
+/-- A unit that never reports a context blocked meets the section row. -/
+theorem abschnittWartefrei_ohne_blockade [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (nie : ∀ (s : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) (b : Blockade L Bedingung),
+      ¬ E.system.blockiert s c b) :
+    AbschnittWartefrei E := by
+  intro s c l _ _ b hb
+  exact False.elim (nie s c b hb)
+
 /-- **`Lokal E`: the local rules** — catalogue, authority, outside validity, labelled
     flow, stack/memory bounds and wait-free lock sections at source initialisation and at
     each form. The bounds row is last but one, the section row last, so units with open
