@@ -436,8 +436,7 @@ theorem regionNI : RegionNIAussage := by
                                        | interrupt _ hinterrupt =>
                                           obtain ⟨k, irq, ch, nmi, hoff, hpending, hnimmt,
                                             hstat, hspurAus, hmem, hnext⟩ := hinterrupt
-                                          have haws : (ρ₂.hw.angebot t).interruptAuswahl =
-                                              some (k, id, irq) := hpending.2.2.2.2
+                                          have haws := hpending.2.2.2.2
                                           rw [auswahl₂none] at haws
                                           cases haws
                                       | antwort _ _ => cases label
@@ -496,7 +495,7 @@ theorem regionNI : RegionNIAussage := by
                                             (transfer₂'.apply c v₂) qv formSchritt₁ formSchritt₂).1
                                           have still₂ : schrittBeob ρ₂ predictor t = [] :=
                                             unit_kontext_still op (ρ := ρ₂) (predictor := predictor)
-                                              (t := t) (c := c) (wahl := w₂) (spur := spur₂) hspurWahl
+                                              (t := t) (c := c₂) (wahl := w₂) (spur := spur₂) hspurWahl
                                           have e₁ : NiedrigeBeob (unit op) ρ₁ predictor (t + 1) =
                                               NiedrigeBeob (unit op) ρ₁ predictor t := by
                                             change NiedrigeBeob (unit op) ρ₁ predictor t ++
