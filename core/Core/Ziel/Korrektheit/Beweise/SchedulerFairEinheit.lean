@@ -180,8 +180,9 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
       have h : a = 0 := List.mem_singleton.mp mem
       subst a
       exact ⟨0, rfl⟩
-  obtain ⟨h, _, _, ρ, _, fair, run, _, _⟩ :=
+  obtain ⟨h, _, _, ρ, _, fair, run, _, hwEq⟩ :=
     Maschine.lauf_erfuellbar (einheitVon P t) wohlgeformt gueltig
+  rw [← hwEq] at fair
   exact ⟨h, ρ, run, fair⟩
 
 /-- Without context fairness a context hangs, on a fair hardware history: one
