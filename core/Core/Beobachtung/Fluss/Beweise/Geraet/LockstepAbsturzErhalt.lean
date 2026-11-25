@@ -64,10 +64,11 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
         | schritt impl =>
           cases impl with
           | absturz crash₁ =>
+            rename_i spur₁
             obtain ⟨spurEq₁, n₁Eq⟩ := AbsturzSchritt.genau crash₁
             have hpair : ((SchrittWahl.absturz : SchrittWahl PUnit), spur) =
-                (SchrittWahl.absturz, spur✝) := Option.some.inj lab
-            have hspurEq : spur = spur✝ := congrArg Prod.snd hpair
+                (SchrittWahl.absturz, spur₁) := Option.some.inj lab
+            have hspurEq : spur = spur₁ := congrArg Prod.snd hpair
             rw [hspurEq, spurEq₁] at hlabel
             have offer₁ : AbsturzAngeboten E.katalog ρ₁.hw t := crash₁.1
             have crashOffer₂ : (ρ₂.hw.angebot t).crash = true := by
