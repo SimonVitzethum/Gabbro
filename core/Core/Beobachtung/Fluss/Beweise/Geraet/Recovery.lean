@@ -89,82 +89,64 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
           obtain rfl := Option.some.inj atV
           cases tick with
           | schritt _ step =>
-            cases ev with
-            | mk wahl sp =>
-              cases wahl with
-              | kontext c w =>
-                cases step with
-                | schritt impl =>
-                  cases impl with
-                  | kontext _ _ regel aus =>
-                    obtain ⟨kopfEq, plan', hplans, rule⟩ := geraete_kontext_regel ruleEq regel
-                    cases rule with
-                    | issue owned idle =>
-                      have htick := geraete_issue_tick (target := target) aus hplans rfl owned idle
-                      obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -, -, -, -, -⟩ := htick
-                      obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                      refine ⟨?_, ?_⟩
-                      · intro q hq
-                        rw [hfragen, List.mem_append] at hq
-                        cases hq with
-                        | inl hmem => exact Nat.lt_succ_of_lt (ihfragen q hmem)
-                        | inr hsingle =>
-                          rw [List.mem_singleton.mp hsingle]
-                          exact Nat.lt_succ_self t
-                      · rw [hepoche]
-                        exact Nat.le_trans ihepo (Nat.le_succ _)
-                    | consume owned pending ready sameQuestion =>
-                      have htick := geraete_consume_tick (target := target) aus hplans rfl
-                        owned pending ready sameQuestion
-                      obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -⟩ := htick
-                      obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                      refine ⟨fun q hq => ?_, ?_⟩
-                      · rw [hfragen] at hq
-                        exact Nat.lt_succ_of_lt (ihfragen q hq)
-                      · rw [hepoche]
-                        exact Nat.le_trans ihepo (Nat.le_succ _)
-              | antwort a =>
-                cases step with
-                | schritt impl =>
-                  cases impl with
-                  | antwort _ h =>
-                    obtain ⟨offered, spurEq, append, stateEq⟩ := h
-                    have hfragen : s'.fragen = s.fragen := by
-                      simp only [stateEq]
-                    have hep : s'.epoche = s.epoche := by
-                      simp only [stateEq]
-                    obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                    refine ⟨fun q hq => ?_, ?_⟩
-                    · rw [hfragen] at hq
-                      exact Nat.lt_succ_of_lt (ihfragen q hq)
-                    · rw [hep]
-                      exact Nat.le_trans ihepo (Nat.le_succ _)
-              | interrupt id =>
-                cases step with
-                | schritt impl =>
-                  cases impl with
-                  | interrupt _ h =>
-                    obtain ⟨kk, irq, cc, nmi, offer, pend, nimmt, ruht, aussen, append, nextEq⟩ := h
-                    have hfragen : s'.fragen = s.fragen := by rw [nextEq]
-                    have hep : s'.epoche = s.epoche := by rw [nextEq]
-                    obtain ⟨ihfragen, ihepo⟩ := ih s hz
-                    refine ⟨fun q hq => ?_, ?_⟩
-                    · rw [hfragen] at hq
-                      exact Nat.lt_succ_of_lt (ihfragen q hq)
-                    · rw [hep]
-                      exact Nat.le_trans ihepo (Nat.le_succ _)
-              | absturz =>
-                cases step with
-                | schritt h =>
-                  cases h with
-                  | absturz crash =>
-                    have hfragen : s'.fragen = s.fragen := by rw [crash.genau.2]
-                    have hep : s'.epoche = t + 1 := by rw [crash.genau.2]
-                    obtain ⟨ihfragen, _⟩ := ih s hz
-                    refine ⟨fun q hq => ?_, ?_⟩
-                    · rw [hfragen] at hq
-                      exact Nat.lt_succ_of_lt (ihfragen q hq)
-                    · rw [hep]
+            cases step with
+            | schritt impl =>
+              cases impl with
+              | kontext _ _ regel aus =>
+                obtain ⟨kopfEq, plan', hplans, rule⟩ := geraete_kontext_regel ruleEq regel
+                cases rule with
+                | issue owned idle =>
+                  have htick := geraete_issue_tick (target := target) aus hplans rfl owned idle
+                  obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -, -, -, -, -⟩ := htick
+                  obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                  refine ⟨?_, ?_⟩
+                  · intro q hq
+                    rw [hfragen, List.mem_append] at hq
+                    cases hq with
+                    | inl hmem => exact Nat.lt_succ_of_lt (ihfragen q hmem)
+                    | inr hsingle =>
+                      rw [List.mem_singleton.mp hsingle]
+                      exact Nat.lt_succ_self t
+                  · rw [hepoche]
+                    exact Nat.le_trans ihepo (Nat.le_succ _)
+                | consume owned pending ready sameQuestion =>
+                  have htick := geraete_consume_tick (target := target) aus hplans rfl
+                    owned pending ready sameQuestion
+                  obtain ⟨-, hfragen, -, -, -, -, -, hepoche, -, -, -, -, -, -, -, -, -⟩ := htick
+                  obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                  refine ⟨fun q hq => ?_, ?_⟩
+                  · rw [hfragen] at hq
+                    exact Nat.lt_succ_of_lt (ihfragen q hq)
+                  · rw [hepoche]
+                    exact Nat.le_trans ihepo (Nat.le_succ _)
+              | antwort _ h =>
+                obtain ⟨offered, spurEq, append, stateEq⟩ := h
+                have hfragen : s'.fragen = s.fragen := by rw [stateEq]
+                have hep : s'.epoche = s.epoche := by rw [stateEq]
+                obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                refine ⟨fun q hq => ?_, ?_⟩
+                · rw [hfragen] at hq
+                  exact Nat.lt_succ_of_lt (ihfragen q hq)
+                · rw [hep]
+                  exact Nat.le_trans ihepo (Nat.le_succ _)
+              | interrupt _ h =>
+                obtain ⟨kk, irq, cc, nmi, offer, pend, nimmt, ruht, aussen, append, nextEq⟩ := h
+                have hfragen : s'.fragen = s.fragen := by rw [nextEq]; rfl
+                have hep : s'.epoche = s.epoche := by rw [nextEq]; rfl
+                obtain ⟨ihfragen, ihepo⟩ := ih s hz
+                refine ⟨fun q hq => ?_, ?_⟩
+                · rw [hfragen] at hq
+                  exact Nat.lt_succ_of_lt (ihfragen q hq)
+                · rw [hep]
+                  exact Nat.le_trans ihepo (Nat.le_succ _)
+              | absturz crash =>
+                have hfragen : s'.fragen = s.fragen := by rw [crash.genau.2]; rfl
+                have hep : s'.epoche = t + 1 := by rw [crash.genau.2]; rfl
+                obtain ⟨ihfragen, _⟩ := ih s hz
+                refine ⟨fun q hq => ?_, ?_⟩
+                · rw [hfragen] at hq
+                  exact Nat.lt_succ_of_lt (ihfragen q hq)
+                · rw [hep]
           | wartet label _ _ =>
             cases label
 
