@@ -34,7 +34,7 @@ theorem bindungKHOffen (P : Katalog.Plattform) (u : UnitMitSchranken) (f : Befeh
   intro h ρ lauf t c w spur vor nach kostenP halteP vorEq kopf spurEq nachEq
   constructor
   · intro n eq
-    rw [hkosten] at eq
+    rw [einheitMitSchranken_kosten, hkosten] at eq
     cases eq
   · intro l c' a n bound own
     have hl : (einheitMitSchranken P u).schranken.halten l = none := by
@@ -51,7 +51,7 @@ theorem bindungKHProtokollOffen (P : Katalog.Plattform) (u : UnitMitSchranken)
   intro h ρ lauf t w spur vor nach kostenP halteP vorEq spurEq wahl nachEq
   constructor
   · intro n eq
-    rw [hkosten] at eq
+    rw [einheitMitSchranken_kosten, hkosten] at eq
     cases eq
   · intro l c' a n bound own
     have hl : (einheitMitSchranken P u).schranken.halten l = none := by
