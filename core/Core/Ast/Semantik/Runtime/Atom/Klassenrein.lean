@@ -31,6 +31,10 @@ def Fragment.KlassenRein (p : Fragment) : Prop := ∀ b ∈ p.code, b.Klassengut
     two classes. -/
 def Fragment.MitZugriff (p : Fragment) : Prop := p.KlassenRein ∧ ¬ p.Rein
 
+/-- A frame-only fragment has only instructions of the two classes. -/
+theorem Fragment.rein_klassenrein {p : Fragment} (h : p.Rein) : p.KlassenRein :=
+  fun b mem => Or.inl (h b mem)
+
 theorem Fragment.klassenrein_leer : Fragment.leer.KlassenRein := fun _ hb => absurd hb List.not_mem_nil
 
 theorem Fragment.klassenrein_einzel_iff (b : Befehl) : (Fragment.einzel b).KlassenRein ↔ b.Klassengut := by
@@ -61,10 +65,6 @@ theorem accessCode_klassenrein (form : Access before after) : (accessCode form).
       | exact Or.inr ⟨_, rfl⟩
       | exact ⟨Or.inr ⟨_, rfl⟩, Or.inl (Or.inl rfl)⟩
 
-
-/-- A frame-only fragment has only instructions of the two classes. -/
-theorem Fragment.rein_klassenrein {p : Fragment} (h : p.Rein) : p.KlassenRein :=
-  fun b mem => Or.inl (h b mem)
 
 /-- A fragment of the two classes is frame-only or has an access instruction. -/
 theorem Fragment.klassenrein_rein_oder {p : Fragment} (h : p.KlassenRein) : p.Rein ∨ p.MitZugriff := by
@@ -111,7 +111,7 @@ theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).Klassen
     (fun _ _ t => (block t).KlassenRein)
     (fun _ t => (bracedBlock t).KlassenRein)
     (fun _ _ _ _ t => (variantArms t).body.KlassenRein)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   all_goals
     intros
     simp_all only [stmt, accessCode_klassenrein, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
@@ -178,7 +178,7 @@ private theorem unitBody_klassenrein {before after : Scope} (body : UnitBody bef
 
 theorem programm_klassenrein (tree : Ast.Unit) : (programm tree).KlassenRein := by
   simp only [programm, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, unitBody_klassenrein, true_and]
-  exact ⟨Or.inr rfl, Or.inl rfl⟩
+  exact ⟨Or.inl (Or.inr rfl), Or.inl (Or.inl rfl)⟩
 
 /-- **Every elaborated fragment of every category is frame-only.** -/
 theorem fragment_klassenrein (category : Category) (tree : category.Tree) : (fragment category tree).KlassenRein := by
