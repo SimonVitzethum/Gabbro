@@ -31,7 +31,6 @@ theorem paarBerechnungLaenge (aSlot bSlot aus frei : Nat) :
   simp only [paarBerechnung, kopie, List.length_append, List.length_cons,
     List.length_nil]
 
-set_option maxHeartbeats 400000 in
 /-- The pairing computation stays inside itself: its conditional lands on the
     second branch and its unconditional jump lands exactly on the block end. -/
 theorem bleibtImBlockPaarBerechnung (aSlot bSlot aus frei : Nat) :
