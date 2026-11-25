@@ -85,6 +85,7 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
 public import Core.Beobachtung.Speicherverwaltung
+public import Core.Beobachtung.Fluss.Beweise.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.SchrankenB8
