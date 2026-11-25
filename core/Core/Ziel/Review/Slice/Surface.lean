@@ -84,8 +84,9 @@ theorem zugriff_nicht_aus_quelle (t : Ast.Unit) (z : Zugriffsform)
 theorem sperre_ohne_befehl (b : Befehl) (a : Maschine.SperrAktion) :
     b.klasse ≠ .sperre a := by
   cases b <;> simp only [Befehl.klasse, ne_eq, reduceCtorEq, not_false_eq_true]
-  rename_i form
-  cases form <;> simp only [Befehl.klasse, Zugriffsform.klasse, ne_eq, reduceCtorEq,
-    not_false_eq_true]
+  all_goals
+    rename_i form
+    cases form <;> simp only [Zugriffsform.klasse, Fadenform.klasse, reduceCtorEq,
+      not_false_eq_true]
 
 end Gabbro.Core.Ziel.Review.Slice
