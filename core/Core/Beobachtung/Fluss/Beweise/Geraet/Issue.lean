@@ -129,7 +129,8 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
         cases List.mem_singleton.mp hl
         rfl
       have hspeicher := geraete_speicher_still (k := k) (scope := scope) (locals := locals) (d := d) speicherfolge hmem
-      have haussenBeob : aussen.flatMap (aussenBeob (d.unit locals)) =
+      have haussenBeob : ([.frage (s.stelleFrage t c (binding.question access))].flatMap
+          (aussenBeob (d.unit locals))) =
           [.frage c.nummer s.fragen.length (binding.question access)] := by
         have hleer : (d.unit locals).etiketten = .leer := geraete_etiketten_leer d
         have hfrage := geraete_issue_beob (E := d.unit locals) hleer
@@ -161,7 +162,7 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
   have hA := geraete_issue_pre inv owned
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
-  have hentry : c = entryContext := geraete_issue_kontext hA owned
+  have hentry : c = entryContext := geraete_issue_kontext (target := target) hA owned
   have hbal := hidle (hentry ▸ idle)
   obtain ⟨hnm, hverb, halle⟩ := hbal
   set e := s.stelleFrage t c (binding.question access) with he
@@ -264,12 +265,13 @@ theorem geraete_issue_erhaelt_invariante {binding : Binding k} {access : Registe
 /-- An issue-enabled state admits no arrival: the balanced ledger answers every
     question, so no offered answer is both matching and fresh. -/
 theorem geraete_issue_schliesst_ankunft_aus {binding : Binding k} {access : RegisterAccess}
-    {required : GeraetePhase} {c : Kontext} {s : State}
+    {required : GeraetePhase} {target : Option GeraetePhase} {c : Kontext} {s : State}
     (inv : GeraeteInvariantAussage binding s)
     (owned : Befugt binding required access s c)
     (idle : (s.lokal c).pending = none) :
     ¬ ∃ a hw t, s.AntwortAngeboten (d.unit locals).katalog hw t a := by
   have hA := geraete_issue_pre inv owned
+  have hentry : c = entryContext := geraete_issue_kontext (target := target) hA owned
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hA
   obtain ⟨hnm, hverb, halle⟩ := hidle (hentry ▸ idle)
