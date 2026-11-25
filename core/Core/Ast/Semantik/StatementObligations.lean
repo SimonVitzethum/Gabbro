@@ -37,7 +37,7 @@ theorem assignVar_ideal (ctx : StatementContext) : (assignVarForm ctx).IdealAuss
       (expr 0 args.value).code.length]? = some (.zuweisen 0 args.ref.index args.ref.binding.type)
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((assignVarForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(assignVarForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem assignVar_einheit (ctx : StatementContext) : (assignVarForm ctx).EinheitAussage := by
@@ -110,7 +110,7 @@ theorem returnValue_ideal (ctx : ReturnContext) : (returnValueForm ctx).IdealAus
       (expr 0 args.value).code.length]? = some (.zurueck 0 ctx.2)
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((returnValueForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(returnValueForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem returnValue_einheit (ctx : ReturnContext) : (returnValueForm ctx).EinheitAussage := by
@@ -206,7 +206,7 @@ theorem ifElse_ideal (ctx : StatementContext) : (ifElseForm ctx).IdealAussage :=
       (bracedBlock args.no).code
       (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
       (Befehl.springe ((bracedBlock args.no).code.length + 1))
-  · exact ⟨((ifElseForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(ifElseForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem ifElse_einheit (ctx : StatementContext) : (ifElseForm ctx).EinheitAussage := by
@@ -318,7 +318,7 @@ theorem braced_ideal (ctx : StatementContext) : (bracedForm ctx).IdealAussage :=
       (block args.2).code.length]? = some (.blockEnde (args.1.length - ctx.1.length))
     rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
     rfl
-  · exact ⟨((bracedForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(bracedForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem braced_einheit (ctx : StatementContext) : (bracedForm ctx).EinheitAussage := by
@@ -407,7 +407,7 @@ theorem thenJump_ideal (ctx : StatementContext) : (thenJumpForm ctx).IdealAussag
       (bracedBlock args.no).code
       (Befehl.springeWenn 0 false ((bracedBlock args.yes).code.length + 2))
       (Befehl.springe ((bracedBlock args.no).code.length + 1))
-  · exact ⟨((thenJumpForm ctx).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+  · exact ⟨(thenJumpForm ctx).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 -- Mirror the unit field of Quellform.eintrag via Befehl.kommutation.
 theorem thenJump_einheit (ctx : StatementContext) : (thenJumpForm ctx).EinheitAussage := by

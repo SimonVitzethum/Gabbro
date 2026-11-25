@@ -68,11 +68,16 @@ private theorem regionUnit_joint (init : RegionInitializer) (value : Wert init.t
       Option.toList, List.append_nil, platformType, Bool.true_and, Bool.and_true]
     exact allowed
   have accepted : Annahme.Akzeptiert E := by
-    refine Fragment.akzeptiert_ohne_bedarf p .x86_64 rfl ?_
-    intro b occurs frame
-    rw [instructions] at occurs
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at occurs
-    rcases occurs with same | same | same | same | same | same <;> cases same <;> rfl
+    refine Fragment.akzeptiert_ohne_bedarf p .x86_64 rfl ?_ ?_
+    · intro b occurs
+      rw [instructions] at occurs
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at occurs
+      rcases occurs with same | same | same | same | same | same <;> cases same <;>
+        first | exact Or.inl rfl | exact Or.inr rfl
+    · intro b occurs frame
+      rw [instructions] at occurs
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at occurs
+      rcases occurs with same | same | same | same | same | same <;> cases same <;> rfl
   let initial := (I.start E start).2
   let defined := definition.nach eintritt initial
   let s := (Befehl.starte mainName).nach eintritt defined

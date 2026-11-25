@@ -101,9 +101,14 @@ theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (fram
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl <;> rfl
 
+/-- Every instruction of the example is frame-only. -/
+theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
+  simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+
 /-- The example's linked unit is accepted. -/
 theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.plattform) := by
-  exact Fragment.akzeptiert_ohne_bedarf beispielFragment _ beispielKlauseln
+  exact Fragment.akzeptiert_ohne_bedarf beispielFragment _ beispielKlauseln beispielRein
     (fun b present frame => beispielGuard b present frame)
 
 /-- Two modules, one call: the satisfiability witness. -/
@@ -213,9 +218,16 @@ theorem modulDef_guard (b : Befehl) (present : b ∈ modulDef.fragment.code) (fr
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl <;> rfl
 
+/-- The defining module uses only frame-only instructions. -/
+theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.Privat := by
+  have hc : modulDef.fragment.code =
+      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid] := rfl
+  simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+
 /-- The defining module alone is accepted. -/
 theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by
-  exact Fragment.akzeptiert_ohne_bedarf modulDef.fragment _ modulDef_klauseln
+  exact Fragment.akzeptiert_ohne_bedarf modulDef.fragment _ modulDef_klauseln modulDef_rein
     (fun b present frame => modulDef_guard b present frame)
 
 /-- Two modules with the same name: the link check refuses, although each part

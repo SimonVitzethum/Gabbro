@@ -245,7 +245,7 @@ theorem tableIdeal : TableIdealAussage := by
   intro scope
   refine ⟨table_amOrt scope, ?_⟩
   intro item
-  refine ⟨((tableForm scope).befehl item).bestimmt, ?_⟩
+  refine ⟨(tableForm scope).bestimmt item, ?_⟩
   intro c s w plans u
   rfl
 

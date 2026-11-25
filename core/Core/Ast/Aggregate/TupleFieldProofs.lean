@@ -251,7 +251,7 @@ theorem TupleFieldIdeal : TupleFieldIdealAussage := by
       some (.liesTupelfeld 0 args.types args.index))
     simp only [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self, List.getElem?_cons_zero]
   · intro args
-    exact ⟨((tupleFieldForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩
+    exact ⟨(tupleFieldForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩
 
 theorem TupleFieldEinheit : TupleFieldEinheitAussage := by
   intro scope platform args

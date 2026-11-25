@@ -183,19 +183,19 @@ theorem register_fallible_resume :
 
 private theorem register_trace (binding : Binding k) (access : RegisterAccess) {stepPlan : Plan}
     (step : Rule binding access required target c s stepPlan middle)
-    (execute : FuehrtSchrittAus setup t c s middle stepPlan trace next) :
+    (execute : FuehrtSchrittAus (setup binding.object) t c s middle stepPlan trace next) :
     next.buchung = s.buchung ∧ next.rechte = s.rechte ∧ next.sperren = s.sperren ∧
       (RennenImGraph s.graph → RennenImGraph next.graph) ∧
       (trace = ⟨[], []⟩ ∨
         ∃ event : FrageEreignis,
-          trace = ⟨[(.kontext c, aussenEtikett setup (.frage event))], [.frage event]⟩) := by
+          trace = ⟨[(.kontext c, aussenEtikett (setup binding.object) (.frage event))], [.frage event]⟩) := by
   rcases trace with ⟨accesses, events⟩
   obtain ⟨_, _, _, _, action, memory, after⟩ := execute
   cases step with
   | issue _ _ =>
     cases action
     let event := s.stelleFrage t c (binding.question access)
-    change Speicherfolge s.initial (.kontext c) s.graph [aussenEtikett setup (.frage event)]
+    change Speicherfolge s.initial (.kontext c) s.graph [aussenEtikett (setup binding.object) (.frage event)]
       accesses next.graph at memory
     obtain ⟨rfl, race⟩ := aussen_label_speicher rfl memory
     refine ⟨?_, ?_, ?_, race, Or.inr ⟨event, rfl⟩⟩ <;> rw [after] <;> rfl
@@ -221,7 +221,7 @@ theorem register_regelSicher : RegisterRegelSicherAussage := by
       cases List.mem_singleton.mp crash
   obtain ⟨effects, releases⟩ := wirkungsloser_schritt (hw := run.hw) (t := t) noCrash book rights
   refine ⟨⟨?_, [], effects, releases⟩, ?_, fun _ => kein_sperrwechsel locks, race,
-    register_safety k binding access _ _ setup run.hw t c vor middle plan trace next step execute,
+    register_safety k binding access _ _ (setup binding.object) run.hw t c vor middle plan trace next step execute,
     ?_⟩
   · intro i actor label recorded ordinary
     rcases traceShape with rfl | ⟨event, rfl⟩

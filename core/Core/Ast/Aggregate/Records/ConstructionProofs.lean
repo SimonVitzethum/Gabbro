@@ -150,7 +150,7 @@ public theorem recordValue_realisiert : RecordValueRealisiertAussage := by
 public theorem recordValue_ideal : RecordValueIdealAussage := by
   intro scope
   exact ⟨recordValue_amOrt scope,
-    fun args => ⟨((recordValueForm scope).befehl args).bestimmt, fun _ _ _ _ _ => Iff.rfl⟩⟩
+    fun args => ⟨(recordValueForm scope).bestimmt args, fun _ _ _ _ _ => Iff.rfl⟩⟩
 
 public theorem recordValue_slots : RecordValueSlotsAussage := by
   intro scope args frame actual temps

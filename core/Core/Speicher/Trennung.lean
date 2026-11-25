@@ -8,7 +8,7 @@
 -/
 module
 
-public import Core.Speicher.Litmus
+public import Core.Speicher.Litmus.Grund
 
 @[expose] public section
 
