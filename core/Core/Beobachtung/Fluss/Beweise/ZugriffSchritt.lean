@@ -9,14 +9,16 @@
              head of an access instruction respects public source-state equality together with the
              machine status equality carried by the coupling (`zugriffKopfGleich`); and, because the
              unit labels nothing, equal plan views already give equal public read labels
-             (`zugriffPlanSicht_lesen`).
+             (`zugriffPlanSicht_lesen`). For the one label an access step records, the observable
+             memory events are determined by the pre-graph and the label alone
+             (`zugriffSpeicherfolge_etiketten_gleich`, `zugriffSpeicherBeob_gleich`).
 
              Missing step: the coupling `Kopplung` does not carry the memory graph. Two coupled states
-             can differ in `HatQuelle` for a cell and in the reads-from resolution, so two
-             `FuehrtSchrittAus` steps with equal plan views can append different public memory events
-             (a lazily materialised initial write on one side only). Closing this needs the graph-level
-             coupling of MK-13: an inductive graph relation on the coupled states for public cells,
-             maintained step by step, plus the one-label `Speicherfolge` determinism it enables.
+             can differ in `HatQuelle` for a cell, so two `FuehrtSchrittAus` steps with equal plan
+             views can append different public memory events (a lazily materialised initial write on
+             one side only). Closing this needs the graph-level coupling of MK-13: an inductive graph
+             relation on the coupled states for public cells, maintained step by step; the
+             one-label determinism above then finishes the single cut.
 -/
 module
 
@@ -87,5 +89,52 @@ theorem zugriffPlanSicht_lesen (p : Fragment) (plattform : Plattform)
   have hfst := congrArg Prod.fst h
   simpa only [PlanSicht, Fragment.einheit, Einheit.etiketten, Etiketten.leer,
     oeffentlich, decide_true, List.filter_true] using hfst
+
+/-- The one label of an access step fixes the observed memory events once the pre-graph is fixed.
+    `Speicherfolge` prepends a lazily materialised initial write exactly when the pre-graph has no
+    source for the cell; the actor and the reads-from resolution are irrelevant to the label. -/
+theorem zugriffSpeicherfolge_etiketten_gleich
+    {Ort Wert : Type} {anfang : Ort → Wert} {f₁ f₂ : Maschine.SpeicherAkteur Ort}
+    {g : Maschine.SpeicherGraph Ort Wert} {l : Speicher.Etikett Ort Wert}
+    {es₁ es₂ : List (Maschine.SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
+    {g₁ g₂ : Maschine.SpeicherGraph Ort Wert}
+    (h₁ : Maschine.Speicherfolge anfang f₁ g [l] es₁ g₁)
+    (h₂ : Maschine.Speicherfolge anfang f₂ g [l] es₂ g₂) :
+    es₁.map Prod.snd = es₂.map Prod.snd := by
+  cases h₁ with
+  | nil => simp
+  | cons vor₁ hs₁ nach₁ =>
+    cases nach₁
+    cases h₂ with
+    | nil => simp
+    | cons vor₂ hs₂ nach₂ =>
+      cases nach₂
+      cases vor₁ with
+      | ohne hh₁ =>
+        cases vor₂ with
+        | ohne hh₂ => rfl
+        | erste mem neu hs =>
+          exfalso
+          rcases hh₁ with outside | found
+          · exact mem outside
+          · exact neu found
+      | erste mem neu hs =>
+        cases vor₂ with
+        | ohne hh₂ =>
+          exfalso
+          rcases hh₂ with outside | found
+          · exact mem outside
+          · exact neu found
+        | erste mem₂ neu₂ hs₂' => rfl
+
+/-- Consequently equal pre-graphs give equal low memory events, whatever resolution the memory
+    model picks. This is the single-cut step the run-level coupling is missing. -/
+theorem zugriffSpeicherBeob_gleich
+    {Ort Wert Grund Form : Type} (label : Etiketten Ort)
+    {es₁ es₂ : List (Maschine.SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
+    (h : es₁.map Prod.snd = es₂.map Prod.snd) :
+    es₁.filterMap (speicherBeob label) = es₂.filterMap (speicherBeob label) := by
+  have h' := congrArg (List.filterMap (speicherBeob label)) h
+  simpa only [List.filterMap_map, Function.comp_apply, speicherBeob] using h'
 
 end Gabbro.Core.Beobachtung
