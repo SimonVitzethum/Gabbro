@@ -51,9 +51,10 @@ public import Core.Aussen.Frage.Aussagen
 public import Core.Aussen.Frage.Beweise
 public import Core.Annahme
 public import Core.Annahme.DomaeneBeweise.Bruecke
-public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
+public import Core.Annahme.DomaeneBeweise.Kanal
 public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Annahme.DomaeneBeweise.Pruefer
+public import Core.Annahme.DomaeneBeweise.Tabellen
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar

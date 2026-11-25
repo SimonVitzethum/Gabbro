@@ -360,6 +360,17 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.LeiteWirktAussage, 15409793448109244359),
   (`Gabbro.Core.Ast.Semantik.UnterbrechungAussagen, 16692194069064079216),
   (`Gabbro.Core.Beobachtung.SchrankenbindungAussage, 1351789225119163043),
-  (`Gabbro.Core.Beobachtung.SchrankenbindungOffenAussage, 7665698189149313601)]
+  (`Gabbro.Core.Beobachtung.SchrankenbindungOffenAussage, 7665698189149313601),
+  (`Gabbro.Core.Annahme.DomaenenTabellenAussage, 15588532784491517986),
+  (`Gabbro.Core.Speicher.IriwLitmusAussage, 10738661728212650954),
+  (`Gabbro.Core.Speicher.Isa2LitmusAussage, 8482162200641809395),
+  (`Gabbro.Core.Speicher.KohaerenzLitmusAussage, 7123152323810584155),
+  (`Gabbro.Core.Speicher.LbLitmusAussage, 15239238555619082483),
+  (`Gabbro.Core.Speicher.MpLitmusAussage, 18304245357373722937),
+  (`Gabbro.Core.Speicher.RmwLitmusAussage, 1088895815533806406),
+  (`Gabbro.Core.Speicher.RsLitmusAussage, 17763330376480677578),
+  (`Gabbro.Core.Speicher.ScFencesLitmusAussage, 18180688835626432796),
+  (`Gabbro.Core.Speicher.WrcLitmusAussage, 15706039629379633836),
+  (`Gabbro.Core.Speicher.ZweiPlusZweiWLitmusAussage, 5470574054871293577)]
 
 end Gabbro.Core.Waechter
