@@ -222,7 +222,7 @@ theorem selPrefixRun (ein aus frei n : Nat) (e : Rahmen)
   have p11 : (Schritt (leftBlk ein aus frei))^[27] (some e) =
       some (frameL11 e ein aus frei n) := by
     have hpc : (frameL10 e ein aus frei n).pc = 51 := rfl
-    have ha10 : (frameL10 e ein aus frei n).zahl (frei + 3) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) := by
+    have ha10 : (frameL10 e ein aus frei n).zahl (frei + 3) = some ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩ := by
       show (((frameL10 e ein aus frei n).temp (frei + 3)).bind alsGanzzahl) = _
       rw [show (frameL10 e ein aus frei n).temp (frei + 3) = some (Ganzzahl.pack ⟨_, _, Arith.auswerten .sub (Zahl.literal (n : Int)) (Arith.auswerten .mul (Zahl.literal ((Nat.sqrt n : Nat) : Int)) (Zahl.literal ((Nat.sqrt n : Nat) : Int)))⟩) from by
         show Function.update _ (frei + 4) _ (frei + 3) = _
