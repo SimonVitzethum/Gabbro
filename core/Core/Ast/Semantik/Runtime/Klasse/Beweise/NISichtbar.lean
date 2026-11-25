@@ -67,9 +67,12 @@ theorem Beobachtung.RegelFluss.schrittpaar_gleich
       AusgabeSicht E c v₁ u₁ = AusgabeSicht E c v₂ u₂ := by
   by_cases pub : oeffentlich (E.fluss.kontrolle f) = true
   · exact fl.2 pub c v₁ w₁ p₁ u₁ v₂ w₂ p₂ u₂ gleich s₁ s₂
-  · have o₁ := (fl.1 c v₁ w₁ p₁ u₁ s₁).2 pub
-    have o₂ := (fl.1 c v₂ w₂ p₂ u₂ s₂).2 pub
-    exact ⟨o₁.1.trans o₂.1, o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
+  · have pubf : oeffentlich (E.fluss.kontrolle f) = false := by
+      cases hb : oeffentlich (E.fluss.kontrolle f) <;> simp_all
+    have o₁ := (fl.1 c v₁ w₁ p₁ u₁ s₁).2 pubf
+    have o₂ := (fl.1 c v₂ w₂ p₂ u₂ s₂).2 pubf
+    exact ⟨Beobachtung.QuellzustandGleich.trans o₁.1 o₂.1,
+      o₁.2.1.trans o₂.2.1.symm, o₁.2.2.trans o₂.2.2.symm⟩
 
 /-! ### The missing premise: the head of the second run is not determined -/
 
@@ -87,32 +90,31 @@ theorem NISichtbar.geheim_verborgen : oeffentlich NISichtbar.geheim = false := b
 def NISichtbar.schreibform (m : Modus) : Schrittform :=
   ⟨.schreiben m, fun _ => Operand.keiner, fun r _ _ => r⟩
 
-/-- A unit embedding the writing form at `true`. Its head function reads the persistence medium,
-    which is NOT part of the public state comparison: two publicly equal states carry different
-    forms, while the flow and visibility premises for `true` are satisfied. -/
+/-- A unit embedding the writing form at `true`. Its head function reads the discarded-answer
+    counter, which is NOT part of the public state comparison: two publicly equal states carry
+    different forms, while the flow and visibility premises for `true` are satisfied. -/
 def NISichtbar.einheit (m : Modus) : Klasseneinheit Bool :=
   let F := NISichtbar.schreibform m
   let E₀ := Regeleinheit .x86_64 F.regel
   { E₀ with
-    etiketten := { E₀.etiketten with ort := fun _ => NISichtbar.geheim,
-      bootByte := fun _ => NISichtbar.geheim }
-    fluss := { lokal := fun _ => .ganz NISichtbar.geheim,
-      kontrolle := fun _ => NISichtbar.geheim }
+    etiketten := { E₀.etiketten with ort := (fun _ => NISichtbar.geheim),
+      bootByte := (fun _ => NISichtbar.geheim) }
+    fluss := { lokal := (fun _ => .ganz NISichtbar.geheim),
+      kontrolle := (fun _ => NISichtbar.geheim) }
     system := { E₀.system with
-      kopf := fun s _c => if s.persistenz.dauerhaft 0 = 0 then some true else some false } }
+      kopf := fun s _c => if s.verworfen eintritt = 0 then some true else some false } }
 
 /-- A start whose bytes are absent; it only supplies a machine state to place frames in. -/
 def NISichtbar.start : AussenStart :=
   ⟨0, fun _ => some 0, [], fun _ => none,
     ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩⟩
 
-/-- The state of the unit with the persistence medium's first byte set to `b`. -/
-def NISichtbar.zustand (m : Modus) (b : UInt8) : Zustand :=
+/-- The state of the unit with the hidden discarded-answer counter set to `b`. -/
+def NISichtbar.zustand (m : Modus) (b : Nat) : Zustand :=
   let v := (I.start (NISichtbar.einheit m) NISichtbar.start).2
-  { v with persistenz := { v.persistenz with dauerhaft :=
-      fun n => if n = 0 then b else v.persistenz.dauerhaft n } }
+  { v with verworfen := fun _ => b }
 
-/-- Changing the hidden medium preserves the public state. -/
+/-- Changing the hidden counter preserves the public state. -/
 theorem NISichtbar.quellzustand_gleich (m : Modus) :
     Beobachtung.QuellzustandGleich (NISichtbar.einheit m)
       (NISichtbar.zustand m 0) (NISichtbar.zustand m 1) := by
@@ -132,9 +134,12 @@ theorem NISichtbar.premissen (m : Modus) :
       (NISichtbar.schreibform m).Eingebettet (NISichtbar.einheit m) true ∧
       (.schreiben m : Wirkungsklasse).liest = false ∧
       (NISichtbar.schreibform m).Operandensicht (NISichtbar.einheit m) := by
-  refine ⟨rfl, ⟨rfl, rfl, rfl⟩, rfl, ?_⟩
-  intro c v₁ v₂ gleich
-  rfl
+  refine ⟨rfl, ?_, rfl, ?_⟩
+  · refine ⟨rfl, ?_, ?_⟩
+    · rfl
+    · simp only [NISichtbar.einheit, Regeleinheit, einrichtung]
+  · intro c v₁ v₂ gleich
+    rfl
 
 /-- Yet the two publicly equal states carry different forms at the head. -/
 theorem NISichtbar.kopf_nicht_offenbar (m : Modus) :
@@ -142,9 +147,9 @@ theorem NISichtbar.kopf_nicht_offenbar (m : Modus) :
       (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt := by
   intro h
   have h0 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 0) eintritt = some true := by
-    rfl
+    simp only [NISichtbar.einheit, NISichtbar.zustand, Regeleinheit, if_true]
   have h1 : (NISichtbar.einheit m).system.kopf (NISichtbar.zustand m 1) eintritt = some false := by
-    rfl
+    simp only [NISichtbar.einheit, NISichtbar.zustand, Regeleinheit, if_false]
   rw [h0, h1] at h
   cases h
 
