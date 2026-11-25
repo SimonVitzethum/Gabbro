@@ -4,10 +4,12 @@
              (`starte`, `verbinde`, `beende`, `wechsle`) record no lock event and no outside event. They leave the
              questions, the answers, the locks, the graph, the authority state and the ledger of the state the form
              produced alone; they move only three things, each in its own action:
-             * `starte` makes the resting thread with the next number run and moves the counter on
-               (`FuehrtAus.starte_genau`);
+             * `starte` makes the resting thread with the next number run, moves the counter on and records the
+               acting context as its creator (`FuehrtAus.starte_genau`);
              * `wechsle` makes a core run another context (`FuehrtAus.wechsle_genau`);
-             * `verbinde` and `beende` move nothing (the form sets the status of the ending thread).
+             * `verbinde` moves nothing but the creator entry of the joined thread, which it clears: only the
+               creator joins, and only once (`FuehrtAus.verbinde_genau`);
+             * `beende` moves nothing (the form sets the status of the ending thread).
              A start picks the next number, so no number is used twice (`starte_zaehler_waechst`); a switch to a
              context that already runs on a core is not an action (`wechsle_genau`), so no context runs on two
              cores (`wechsle_erhaelt_einkern`).
@@ -36,15 +38,16 @@ def Aktion.Still : Aktion L Bedingung → Prop
   | .rueckkehr => False
 
 /-- **What the machine needs for a still action to run**, in the state `s` before the step and the state `u` the form
-    produced: a start needs the thread with the next number to rest, a join needs the joined context to have ended,
-    an end needs the form to have set the outcome of the acting thread, a switch needs a core the acting context holds
-    or that is idle and a running context that runs on no core and is not the acting one. The internal action always
+    produced: a start needs the thread with the next number to rest, a join needs the joined context to have ended
+    AND the joiner to be its creator (a second join finds the creator entry cleared), an end needs the form to have
+    set the outcome of the acting thread, a switch needs a core the acting context holds or that is idle and a
+    running context that runs on no core and is not the acting one. The internal action always
     runs; the other actions of the protocol are not lifecycle actions. -/
 def Aktion.Ausfuehrbar (s u : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
     Aktion L Bedingung → Prop
   | .intern => True
   | .starte => s.status (.faden s.naechsterFaden) = .ruht
-  | .verbinde kind => ∃ ausgang, s.status kind = .beendet ausgang
+  | .verbinde kind => (∃ ausgang, s.status kind = .beendet ausgang) ∧ s.erzeuger kind = some c
   | .beende => ∃ ausgang, u.status c = .beendet ausgang
   | .wechsle kern kind =>
     ((s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none) ∧ s.status kind = .laeuft ∧
@@ -76,24 +79,28 @@ theorem FuehrtAus.still_erhaelt {a : Aktion L Bedingung} {sperren : List (Speich
   | verbrauche _ => exact False.elim ha
   | rueckkehr _ _ => exact False.elim ha
   | starte _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  | verbinde _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | verbinde _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | beende _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | wechsle _ _ _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
-/-- **A start, exactly**: the thread with the next number runs, the counter is one higher, no other status changes. -/
+/-- **A start, exactly**: the thread with the next number runs, the counter is one higher, the acting context
+    is recorded as its creator, no other status and no other creator entry changes. -/
 theorem FuehrtAus.starte_genau {sperren ereignisse}
     (h : FuehrtAus e t c s u .starte sperren ereignisse v) :
     s.status (.faden s.naechsterFaden) = .ruht ∧ v.status (.faden s.naechsterFaden) = .laeuft ∧
       v.naechsterFaden = s.naechsterFaden + 1 ∧
-      ∀ d, d ≠ .faden s.naechsterFaden → v.status d = u.status d := by
+      v.erzeuger (.faden s.naechsterFaden) = some c ∧
+      (∀ d, d ≠ .faden s.naechsterFaden → v.status d = u.status d) ∧
+      ∀ d, d ≠ .faden s.naechsterFaden → v.erzeuger d = u.erzeuger d := by
   cases h with
   | starte ruht =>
-    refine ⟨ruht, Function.update_self _ _ _, rfl, fun d hd => Function.update_of_ne hd _ _⟩
+    refine ⟨ruht, Function.update_self _ _ _, rfl, Function.update_self _ _ _, fun d hd =>
+      Function.update_of_ne hd _ _, fun d hd => Function.update_of_ne hd _ _⟩
 
 /-- **A start moves the counter on**: the number of a later start is higher, so no number is used twice. -/
 theorem FuehrtAus.starte_zaehler_waechst {sperren ereignisse}
     (h : FuehrtAus e t c s u .starte sperren ereignisse v) : s.naechsterFaden < v.naechsterFaden := by
-  obtain ⟨_, _, hz, _⟩ := h.starte_genau
+  obtain ⟨_, _, hz, _, _, _⟩ := h.starte_genau
   omega
 
 /-- **A switch, exactly**: the core runs the context switched to; the acting context held the core or the core
@@ -112,7 +119,7 @@ theorem FuehrtAus.wechsle_genau {kern kind sperren ereignisse}
 theorem FuehrtAus.verbinde_nur_beendet {kind sperren ereignisse}
     (h : FuehrtAus e t c s u (.verbinde kind) sperren ereignisse v) : ∃ ausgang, s.status kind = .beendet ausgang := by
   cases h with
-  | verbinde fertig => exact ⟨_, fertig⟩
+  | verbinde fertig _ => exact ⟨_, fertig⟩
 
 /-- **An end sets the outcome of the acting thread.** -/
 theorem FuehrtAus.beende_status {sperren ereignisse}
@@ -145,5 +152,15 @@ theorem FuehrtAus.wechsle_erhaelt_einkern {kern kind sperren ereignisse}
     exact (nirgends k hk'').elim
   · exact eins k k' d (by rw [← rahmen, ← andere k h1]; exact hk)
       (by rw [← rahmen, ← andere k' h2]; exact hk')
+
+/-- **A join, exactly**: the joiner is the recorded creator of the joined context, and after the join the
+    creator entry of the joined context is cleared while no other creator entry changes. -/
+theorem FuehrtAus.verbinde_genau {kind sperren ereignisse}
+    (h : FuehrtAus e t c s u (.verbinde kind) sperren ereignisse v) :
+    s.erzeuger kind = some c ∧ v.erzeuger kind = none ∧
+      ∀ d, d ≠ kind → v.erzeuger d = u.erzeuger d := by
+  cases h with
+  | verbinde _ erz =>
+    refine ⟨erz, Function.update_self _ _ _, fun d hd => Function.update_of_ne hd _ _⟩
 
 end Gabbro.Core.Maschine

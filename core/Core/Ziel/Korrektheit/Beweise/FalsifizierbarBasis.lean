@@ -177,7 +177,7 @@ theorem falsifizierbar_konfiguration :
   let label : SchrittWahl Unit × SchrittSpur Unit Unit := (.kontext entry (), ⟨[], []⟩)
   have execute (t : Nat) (c : Kontext) (x : Zustand Unit Unit Unit Unit Unit Unit) :
       FuehrtSchrittAus e t c x x plan label.2 x := by
-    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
       fun _ hn => (List.not_mem_nil hn).elim, [], x, .intern, .nil _, rfl⟩
   let zustand (t : Nat) : Zustand Unit Unit Unit Unit Unit Unit := z
   have dispatch : (z.kerne 0).laeuft = some entry := by

@@ -54,7 +54,7 @@ theorem frageStelltKontext [DecidableEq L]
   | verbrauche _ => exact (List.not_mem_nil hmem).elim
   | rueckkehr _ _ => exact (List.not_mem_nil hmem).elim
   | starte _ => exact (List.not_mem_nil hmem).elim
-  | verbinde _ => exact (List.not_mem_nil hmem).elim
+  | verbinde _ _ => exact (List.not_mem_nil hmem).elim
   | beende _ => exact (List.not_mem_nil hmem).elim
   | wechsle _ _ _ _ => exact (List.not_mem_nil hmem).elim
 

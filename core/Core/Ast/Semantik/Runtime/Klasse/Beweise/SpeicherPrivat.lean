@@ -84,16 +84,17 @@ private theorem privat_fertig {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int 
       cases crash
 
 /-- **The memory leg of the private classes** (`KlassenSpeicherbeinAussage`). The statement is fixed
-     in `Klasse/Sicherheit` and pinned through `KlassenAussagen`; the proof only unfolds the class rule
-     and reads the trace of `FuehrtSchrittAus`. -/
+      in `Klasse/Sicherheit` and pinned through `KlassenAussagen`; the proof only unfolds the class rule
+      and reads the trace of `FuehrtSchrittAus`. -/
 theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
-    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage) : KlassenSpeicherbeinAussage k := by
+    (hk : k = .lokal ∨ k = .ruf ∨ k = .frage ∨ ∃ m, k = .zaun m) :
+    KlassenSpeicherbeinAussage k := by
   intro _ ι E f F hkF emb hw t c w vor zwischen nach plan spur kopf impl aus
   have implIdeal : F.ideal c vor w [plan] zwischen := by
     change (F.regel).impl c vor w [plan] zwischen
     rw [← emb.regel]
     exact impl
-  rcases hk with rfl | rfl | rfl
+  rcases hk with rfl | rfl | rfl | ⟨m, rfl⟩
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .lokal at hkF
     subst kF
@@ -151,6 +152,24 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
           rfl
         · rw [zustand]
           rfl
+  · obtain ⟨kF, o, ue⟩ := F
+    change kF = .zaun m at hkF
+    subst kF
+    simp only [Schrittform.ideal, Schrittform.zugriffsschritt] at implIdeal
+    rcases implIdeal with ⟨_, same, after⟩ | ⟨_, v, _, same, after⟩
+    · subst zwischen
+      have planEq : plan = Semantik.plan := (List.cons.inj same).1
+      obtain ⟨form, buchung, rechte⟩ :=
+        intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
+    · subst zwischen
+      have planEq : plan = Semantik.plan := by
+        have hpe := (List.cons.inj same).1
+        rw [hpe]
+        rfl
+      obtain ⟨form, buchung, rechte⟩ :=
+        intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
 
 /-- A step with the empty trace and no new effect releases nothing and books no access, whatever it does to the
     holdings of the ledger. -/

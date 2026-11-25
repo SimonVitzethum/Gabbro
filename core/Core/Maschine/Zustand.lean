@@ -57,6 +57,10 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
       `faden naechsterFaden` and advances the counter, so no number is ever used twice. A start state has
       only the entry thread `faden 0`, hence `1`. -/
   naechsterFaden : Nat := 1
+  /-- **The creator of every context** (MK-07): a start records the acting context as the creator of the
+      new thread. A join requires the creator and clears the entry, so only the creator joins and only
+      once; a second join has no step. The entry thread and never-started threads have no creator. -/
+  erzeuger : Kontext → Option Kontext := fun _kontext => none
 
 namespace Zustand
 

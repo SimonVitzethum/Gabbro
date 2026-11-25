@@ -31,6 +31,7 @@ theorem Zugriffsform.uebertrag_fortsetzungen (z : Zugriffsform) (r : Rahmen) (ge
     · rfl
   | speichere _ _ _ _ => rfl
   | veroeffentliche _ _ _ _ => rfl
+  | zaun _ => rfl
   | lade _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
   | tausche _ _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _
   | vergleicheTausche _ _ _ _ _ _ _ => exact r.bindeGelesen_fortsetzungen _ _ _

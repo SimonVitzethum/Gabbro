@@ -430,7 +430,7 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
       [aussenEtikett staleEinheit.einrichtung (.frage ev)] spur.speicher s'.graph :=
     .cons (.ohne (Or.inl rfl)) hstep (.nil _)
   have hrahmen : Zustandsrahmen s s :=
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have hlesen : ∀ l ∈ plan.lesen, l.art.liest := fun _ h => absurd h List.not_mem_nil
   have hfrage : FuehrtAus staleEinheit.einrichtung 0 c s s plan.aktion [] [.frage ev] (s.frage ev) :=
     FuehrtAus.frage staleFrage

@@ -7,8 +7,12 @@
                after a hand-over the new thread holds what the starter held on the handed-over handles and the starter
                holds none of it; nothing else changes; exclusive authority keeps one holder. PROVED
                (`fadenAutoritaet`), at the ledger and at the class step.
-             * `VerbindeErgebnisAussage`: a join delivers the outcome of the ended thread to the joiner's frame and takes
-               back what the ended thread held. PROVED (`verbindeErgebnis`).
+              * `VerbindeErgebnisAussage`: a join delivers the outcome of the ended thread to the joiner's frame and takes
+                back what the ended thread held. PROVED (`verbindeErgebnis`).
+              * `VerbindeNurErzeugerAussage`: a machine join runs only through the creator of the joined thread.
+                PROVED (`verbindeNurErzeuger`).
+              * `VerbindeEinmalAussage`: a join clears the creator entry, so no second join of the same thread
+                runs. PROVED (`verbindeEinmal`).
              * `WechsleAussage`: a switch or a core start makes the core run the context switched to, which ran on no
                core, so no context runs on two cores. PROVED (`wechsle`).
              * `KindStartetBeiAnkunftAussage`: a resting thread never steps, and a started thread begins at the entry
@@ -32,6 +36,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 public import Core.Ast.Semantik.Runtime.Faden.Autoritaet
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
+public import Core.Ast.Semantik.Runtime.Faden.Erzeuger
 public import Core.Speicher.Atom.NutzlastSchwach
 public import Core.Verfeinerung.Fortschritt
 
@@ -61,7 +66,7 @@ def StarteBestimmtAussage : Prop :=
 /-- **A start is exact and determinate** (the proof of `StarteBestimmtAussage`). -/
 theorem starteBestimmt : StarteBestimmtAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung _ e t c s u v v' sperren sperren' ereignisse ereignisse' h
-  obtain ⟨ruht, laeuft, zaehler, andere⟩ := h.starte_genau
+  obtain ⟨ruht, laeuft, zaehler, _, andere, _⟩ := h.starte_genau
   exact ⟨ruht, laeuft, zaehler, andere, fun h' => (h.bestimmt h').2.2⟩
 
 /-- The empty unit's start state: the entry thread runs, every other thread rests, the next number is `1`. -/
@@ -249,7 +254,7 @@ theorem verbindeErgebnis_nichtTrivial :
     { Leerzustand with status := fun _ => .laeuft }, Kontext.faden 1, rfl, ?_⟩
   intro u v sperren ereignisse h
   cases h with
-  | verbinde fertig => cases fertig
+  | verbinde fertig _ => cases fertig
 
 /-! ### A switch and a core start -/
 
@@ -459,11 +464,13 @@ theorem fadenBestimmt_nichtTrivial :
 /-- **The kernel statements of the thread lifecycle**, pinned together. -/
 def FadenAussagen : Prop :=
   StarteBestimmtAussage ∧ FadenAutoritaetAussage ∧ VerbindeErgebnisAussage ∧ WechsleAussage ∧
-    KindStartetBeiAnkunftAussage ∧ FadenHbAussage ∧ FadenBestimmtAussage
+    KindStartetBeiAnkunftAussage ∧ FadenHbAussage ∧ FadenBestimmtAussage ∧ VerbindeNurErzeugerAussage ∧
+    VerbindeEinmalAussage
 
 /-- The kernel statements hold. -/
 theorem fadenAussagen : FadenAussagen :=
-  ⟨starteBestimmt, fadenAutoritaet, verbindeErgebnis, wechselKern, kindStartetBeiAnkunft, fadenHb, fadenBestimmt⟩
+  ⟨starteBestimmt, fadenAutoritaet, verbindeErgebnis, wechselKern, kindStartetBeiAnkunft, fadenHb,
+    fadenBestimmt, verbindeNurErzeuger, verbindeEinmal⟩
 
 
 end Gabbro.Core.Ast.Semantik
