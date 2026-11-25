@@ -6,8 +6,8 @@
              a publication and an atomic update write ONE cell of a region, and which cell is a RUNTIME value
              (the index slot of the frame). The footprint is therefore a static over-approximation, a predicate on
              cells and not a list: the instruction may write every cell of the region it names
-             (`Zugriffsform.schreibtMoeglich`), and nothing else; a load and the confirming observation write
-             nothing.
+              (`Zugriffsform.schreibtMoeglich`), and nothing else; a load, the confirming observation and
+              a fence write nothing.
              The footprint is sound against the step the instruction takes (`Zugriffsform.plan_schreibt`): every
              cell a plan of the instruction writes (`Plan.schreibtZelle`: a footprint cell written by the plan, or
              the cell of an update label) is in the footprint, for every frame and every value read. The class of
@@ -39,7 +39,8 @@ def Zelle.imRegion (region : Nat) : Zelle → Bool
 def Plan.schreibtZelle (p : Plan) (x : Zelle) : Prop :=
   (x ∈ p.fuss ∧ p.schreibt x = true) ∨ ∃ l ∈ p.lesen, l.art = Art.rmw ∧ l.ort = x
 
-/-- The region number an access instruction names. -/
+/-- The region number an access instruction names. A fence names no region; its class never
+    writes, so the footprint is empty whatever value stands here. -/
 def Zugriffsform.region : Zugriffsform → Nat
   | .lade (region := r) .. => r
   | .speichere (region := r) .. => r
@@ -48,11 +49,13 @@ def Zugriffsform.region : Zugriffsform → Nat
   | .holeUndAddiere (region := r) .. => r
   | .erwarte (region := r) .. => r
   | .veroeffentliche (region := r) .. => r
+  | .zaun .. => 0
 
 /-- Does the class write a cell of the shared memory? A store and an update do. -/
 def Wirkungsklasse.schreibend : Wirkungsklasse → Bool
   | .schreiben _ => true
   | .rmw _ => true
+  | .zaun _ => false
   | .lokal => false
   | .ruf => false
   | .lesen _ => false
@@ -101,6 +104,7 @@ theorem Zugriffsform.operand_ort (z : Zugriffsform) (r : Rahmen) :
   | holeUndAddiere ziel region index betrag typ modus => exact r.zugriffOperand_ort region index _ _
   | erwarte ziel region index erwartet typ modus => exact r.zugriffOperand_ort region index _ _
   | veroeffentliche region index quelle modus => exact r.zugriffOperand_ort region index _ _
+  | zaun _ => rfl
 
 /-- The plan of a question names no footprint and records no label. -/
 theorem Operand.fragePlan_ohne_schreiben (o : Operand) : o.fragePlan.fuss = [] ∧ o.fragePlan.lesen = [] := by
@@ -131,6 +135,8 @@ theorem Wirkungsklasse.plan_schreibt (k : Wirkungsklasse) (o : Operand) (v : Int
     · have same : l = ⟨o.aenderung.art v, o.ort, m, v, o.aenderung.schreibt v o.wert⟩ := List.mem_singleton.mp mem
       subst same
       exact ⟨rfl, hort.symm⟩
+  | zaun _ =>
+    rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | sperre a =>
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | frage =>
