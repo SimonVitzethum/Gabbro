@@ -38,13 +38,16 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   · obtain rfl := Option.some.inj geladen
     refine ⟨?_, ?_⟩
     · intro c hc
-      simp only [bootFor, Zustand.start, if_neg hc]
+      dsimp only [bootFor, Zustand.start] at ⊢
+      rw [if_neg hc]
+      rfl
     · intro _
       refine ⟨?_, ?_⟩
       · intro _
         simp only [hfragen, hantworten]
       · intro hne
-        simp only [bootFor, Zustand.start, if_true] at hne
+        dsimp only [bootFor, Zustand.start] at hne
+        rw [if_pos rfl] at hne
         exact absurd rfl hne
   · cases geladen
 
