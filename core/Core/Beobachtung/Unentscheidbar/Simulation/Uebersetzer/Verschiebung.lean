@@ -117,7 +117,8 @@ theorem laufHatZwischen (blk : List Befehl) (r : Rahmen) (k j : Nat) (rk : Rahme
     (hrk : (Schritt blk)^[k] (some r) = some rk) (hj : j ≤ k) :
     ∃ rj, (Schritt blk)^[j] (some r) = some rj := by
   obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le hj
-  subst ht
+  have hk : k = t + j := by omega
+  subst k
   rw [Function.iterate_add_apply] at hrk
   cases hstep : (Schritt blk)^[j] (some r) with
   | none => rw [hstep, laufKein] at hrk; cases hrk
