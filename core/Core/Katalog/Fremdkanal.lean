@@ -125,6 +125,9 @@ theorem FremdKanalAussage_nichtTrivial :
   refine ⟨⟨0, none⟩, fun _ => 0, fun b => if b = 0 then 1 else 0, 0, ?_, ?_⟩
   · intro r hr
     cases hr
-  · decide
+  · show (1 : UInt8) ≠ 0
+    intro h
+    have t : (1 : Nat) = 0 := congrArg UInt8.toNat h
+    exact absurd t (by decide)
 
 end Gabbro.Core.Katalog
