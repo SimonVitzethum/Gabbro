@@ -103,7 +103,7 @@ theorem Zugriffsform.operand_ort (z : Zugriffsform) (r : Rahmen) :
   | veroeffentliche region index quelle modus => exact r.zugriffOperand_ort region index _ _
 
 /-- The plan of a question names no footprint and records no label. -/
-theorem Operand.fragePlan_leer (o : Operand) : o.fragePlan.fuss = [] ∧ o.fragePlan.lesen = [] := by
+theorem Operand.fragePlan_ohne_schreiben (o : Operand) : o.fragePlan.fuss = [] ∧ o.fragePlan.lesen = [] := by
   unfold Operand.fragePlan
   split <;> exact ⟨rfl, rfl⟩
 
@@ -135,10 +135,10 @@ theorem Wirkungsklasse.plan_schreibt (k : Wirkungsklasse) (o : Operand) (v : Int
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩ <;> exact absurd mem (List.not_mem_nil)
   | frage =>
     rcases h with ⟨mem, _⟩ | ⟨l, mem, _⟩
-    · have e : (Wirkungsklasse.frage.plan o v).fuss = [] := (Operand.fragePlan_leer o).1
+    · have e : (Wirkungsklasse.frage.plan o v).fuss = [] := (Operand.fragePlan_ohne_schreiben o).1
       rw [e] at mem
       exact absurd mem List.not_mem_nil
-    · have e : (Wirkungsklasse.frage.plan o v).lesen = [] := (Operand.fragePlan_leer o).2
+    · have e : (Wirkungsklasse.frage.plan o v).lesen = [] := (Operand.fragePlan_ohne_schreiben o).2
       rw [e] at mem
       exact absurd mem List.not_mem_nil
   | starte =>
