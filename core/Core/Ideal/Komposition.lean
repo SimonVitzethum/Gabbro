@@ -96,6 +96,33 @@ theorem fortschritt_aus_regeln (fertig : ∀ s c, Sy.kopf s c = none → Sy.fert
           ⟨⟨w, plans, u, rule⟩, fun kern dispatch slot => ready ⟨kern, slot, dispatch, running⟩⟩)))
     · exact Or.inr (Or.inr (Or.inl blocked))
 
+/-- **`I.Fortschritt` from a composable step at every head.** The step of an instruction that CHOOSES a value it
+    reads (an access, MK-04) is not any ideal step: only a step whose read the memory model accepts runs through the
+    protocol, so `RegelKomponierbar` (which quantifies over every ideal step) cannot hold for it. This variant asks
+    instead that every head has SOME ideal step that composes with the protocol (the choice of the value is the
+    memory model's), and takes the instruction's own progress (`RegelFortschritt`) for the other alternatives. -/
+theorem fortschritt_aus_koepfen (fertig : ∀ s c, Sy.kopf s c = none → Sy.fertig s c)
+    (regeln : ∀ i, RegelFortschritt Sy i)
+    (komponierbar : ∀ i t s c, Sy.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', (Sy.regel i).ideal c s w [plan] u ∧ FuehrtSchrittAus e t c s u plan spur s') :
+    Fortschritt e Sy := by
+  have forms : IFortschritt Sy := Gabbro.Core.Ideal.fortschritt_aus_regeln Sy fertig regeln
+  intro k h hw t s c konform memory running _
+  cases offer : (hw.angebot t).crash with
+  | true =>
+    have selected := (konform.2 t).2.2.2.2 (Or.inr offer)
+    exact Or.inl ⟨_, _, .absturz (absturz_schritt_erfuellbar _ _ ⟨selected, offer⟩ s)⟩
+  | false =>
+    rcases forms s c with done | ⟨w, plans, u, rule⟩ | blocked
+    · exact Or.inr (Or.inl done)
+    · by_cases ready : KannSchreiten hw t c s
+      · obtain ⟨i, head, _⟩ := rule
+        obtain ⟨w', plan, u', spur, s', form, run⟩ := komponierbar i t s c head memory
+        exact Or.inr (Or.inr (Or.inr (Or.inl ⟨w', spur, s', .kontext offer ready ⟨i, head, form⟩ run⟩)))
+      · exact Or.inr (Or.inr (Or.inr (Or.inr
+          ⟨⟨w, plans, u, rule⟩, fun kern dispatch slot => ready ⟨kern, slot, dispatch, running⟩⟩)))
+    · exact Or.inr (Or.inr (Or.inl blocked))
+
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι}
 
 theorem speicher_gut_im_lauf {ρ : Lauf E} (valid : Laeufe E ρ) (t : Nat) :
