@@ -25,9 +25,15 @@ private theorem geraete_absturz_beob_tick {ρ : Lauf (d.unit locals)} {predictor
   have habschluss : ¬ ∃ c, (neuBeendet s n (d.unit locals).etiketten c).isSome = true := by
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
-      cases hst : n.status c with
-      | beendet e => exact (hneu c ⟨e, hst⟩).elim
-      | ruht | laeuft => simp only [neuBeendet, hst]
+      cases hs : s.status c with
+      | beendet _ =>
+        cases hn : n.status c with
+        | beendet e => exact (hneu c ⟨e, hn⟩).elim
+        | ruht | laeuft => simp only [neuBeendet, hs, hn]
+      | ruht | laeuft =>
+        cases hn : n.status c with
+        | beendet e => exact (hneu c ⟨e, hn⟩).elim
+        | ruht | laeuft => simp only [neuBeendet, hs, hn]
     rw [hnone] at hc
     cases hc
   rw [schrittBeob, hlabel, atS, atN]
@@ -47,7 +53,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
   cases tick₁ with
   | wartet lab _ _ =>
     exfalso
-    exact Option.some.ne_none (lab.symm.trans hlabel)
+    have hcontra : none = some (.absturz, spur) := lab.symm.trans hlabel
+    cases hcontra
   | schritt lab step =>
     cases hz₁ : ρ₁.zeit.zustand t with
     | none => rw [hz₁] at step; cases step
@@ -65,8 +72,10 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
             have crashOffer₂ : (ρ₂.hw.angebot t).crash = true := by
               rw [← geraete_angebot_gleich vergleich t]
               exact offer₁.2
-            obtain ⟨s₂, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
+            obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
               (by intro h; rw [hz₁] at h; cases h.1)
+            have hvEq : v₁ = s₁ := Option.some.inj (hz₁.symm.trans hv₁)
+            subst v₁
             have tick₂ := ρ₂.zeit.takt t
             rw [hz₂] at tick₂
             cases tick₂ with
@@ -184,5 +193,8 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   rw [hantworten, hverbraucht]
                 · rw [hbeob₁, hbeob₂, hlen]
                   simp only [List.length_append, List.length_singleton]
+          | kontext _ _ _ _ => cases lab
+          | antwort _ _ => cases lab
+          | interrupt _ _ => cases lab
 
 end Gabbro.Core.Beobachtung
