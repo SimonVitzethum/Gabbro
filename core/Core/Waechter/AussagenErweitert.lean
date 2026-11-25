@@ -123,15 +123,19 @@ public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name �
     infos := infos ++ (← strukturScan env erlaubt s " (outside every pin closure, used by a proof)")
   return infos
 
-/-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
-    not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
+/-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that
+    does not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
     its name. The same holds outside the goal closure for a definition that is used as a statement:
     one with `…erfuellbar`, `…nichtTrivial` or `…beweis` companions, or one a proof refers to (at task
     time `PegelNISatz` was such a case: reached by no closure, its proof still used it as a statement;
-    since renamed to the pinned `PegelNIAussage`). Everything is
-    reported as information (name, module, reason); no existing statement is changed. -/
-public meta def namenloseAussageInfos (env : Environment) (index : DependencyIndex)
-    (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String) := do
+    since renamed to the pinned `PegelNIAussage`).
+
+    The verdict is split: the pin-coverage finding about the goal closure is an ERROR — a new
+    unnamed statement there turns the Core check red (non-vacuity is probed by adding such a definition
+    temporarily and observing the error) — while the binder scan and all findings outside the goal closure
+    stay information; no existing statement is changed. -/
+public meta def namenloseAussageFehlerUndInfos (env : Environment) (index : DependencyIndex)
+    (zielRoots : Array Name) (pinned : Name → Bool) : MetaM (Array String × Array String) := do
   let mut ziel : Std.HashSet Name := {}
   for root in zielRoots do
     for name in index.closure root do
@@ -158,10 +162,11 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
     else if beweis then
       waisen := waisen.push (name, "is referenced by a proof")
     else continue
+  let mut fehler := #[]
   let mut infos := #[]
   for name in imZiel do
     unless pinned name do
-      infos := infos.push
+      fehler := fehler.push
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used in the goal closure but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
     infos := infos ++ (← statementScan env name info true)
@@ -171,6 +176,6 @@ public meta def namenloseAussageInfos (env : Environment) (index : DependencyInd
         s!"Regel N: unnamed statement {name} in module {modulName env name} is used as a statement outside the goal closure ({grund}) but is not pinned"
     let some (.defnInfo info) := env.find? name | continue
     infos := infos ++ (← statementScan env name info true)
-  return infos
+  return (fehler, infos)
 
 end Gabbro.Core.Waechter
