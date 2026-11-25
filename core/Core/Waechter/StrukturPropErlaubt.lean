@@ -94,6 +94,7 @@ public meta def strukturPropErlaubt : Array (Name × Name) := #[
   -- Zustandsrahmen: Befehl.vollzug (Ast/Semantik/Pflichten.lean:39) belegt alle Felder mit rfl im Framebeweis.
   (`Gabbro.Core.Maschine.Zustandsrahmen, `antworten),
   (`Gabbro.Core.Maschine.Zustandsrahmen, `epoche),
+  (`Gabbro.Core.Maschine.Zustandsrahmen, `erzeuger),
   (`Gabbro.Core.Maschine.Zustandsrahmen, `fragen),
   (`Gabbro.Core.Maschine.Zustandsrahmen, `geliefert),
   (`Gabbro.Core.Maschine.Zustandsrahmen, `graph),

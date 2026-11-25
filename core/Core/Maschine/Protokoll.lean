@@ -48,7 +48,7 @@ theorem FuehrtAus.bestimmt [DecidableEq L] {t c s u aktion lock lock' outside ou
       cases rueckkehr_kern left right
       exact ⟨rfl, rfl, rfl⟩
   | starte _ => cases b; exact ⟨rfl, rfl, rfl⟩
-  | verbinde _ => cases b; exact ⟨rfl, rfl, rfl⟩
+  | verbinde _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
   | beende _ => cases b; exact ⟨rfl, rfl, rfl⟩
   | wechsle _ _ _ _ => cases b; exact ⟨rfl, rfl, rfl⟩
 

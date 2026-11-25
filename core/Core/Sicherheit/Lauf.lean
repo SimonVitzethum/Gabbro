@@ -95,7 +95,7 @@ private theorem aktion_sperrwechsel
     · subst l
       exact ⟨ops, rfl⟩
     · exact (wechselt (congrArg SperrZustand.besitzer (Function.update_of_ne gleich _ _)).symm).elim
-  | intern | warte _ | frage _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ | beende _
+  | intern | warte _ | frage _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ _ | beende _
     | wechsle _ _ _ _ =>
     exact (wechselt (congrArg SperrZustand.besitzer (congrFun rahmen.sperren l)).symm).elim
 
