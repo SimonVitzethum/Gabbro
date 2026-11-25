@@ -143,6 +143,7 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Alle
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
+public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarZeuge
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
