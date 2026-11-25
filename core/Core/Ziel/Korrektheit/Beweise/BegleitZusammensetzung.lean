@@ -122,7 +122,7 @@ theorem BildGueltigAussage.nichtTrivial :
     ∃ (P : Plattform) (b : Bild), ¬ b.gueltig P.ziel := by
   refine ⟨Plattform.x86_64, ⟨Bildformat.elf, fun _ => none, [0]⟩, ?_⟩
   intro h
-  obtain ⟨byte, present⟩ := h.2.2 0 (by simp)
+  obtain ⟨byte, present⟩ := h.2.2 0 (List.mem_singleton.mpr rfl)
   cases present
 
 /-- The premises of form coverage hold jointly: the one-form registry evidence above is covered. -/
@@ -245,9 +245,9 @@ theorem LinkerAkzeptiertAussage.nichtTrivial :
       ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
   let plan : Bauplan := ⟨[Linken.modulDef], [], Plattform.x86_64, "keinEinstieg"⟩
   refine ⟨plan, ?_, ?_⟩
-  · have hbad : Linken.bauplanOk plan = false := by decide
-    rw [Linken.linke, hbad]
-    rfl
+  · simp [Linken.linke, Linken.bauplanOk, Linken.modulNamenEindeutig, Linken.modulNamen,
+      Linken.exporteEindeutig, Linken.alleExporte, Linken.einstiegVorhanden,
+      Linken.importeGedeckt, Linken.abhaengigkeitenOk, plan, Linken.modulDef]
   · intro m present
     simp only [plan, List.mem_singleton] at present
     subst m
