@@ -270,7 +270,7 @@ theorem sqrtSchleife (ein frei n : Nat) (r : Rahmen) (rest : List Befehl)
       some r' := by
     rw [e, hrun2, hrunVon]
   have hk : 2 + kVon = 2 + 23 * Nat.sqrt n + 19 := by
-    rw [hkVon, Nat.sub_zero]
+    rw [hkVon, Nat.sub_zero, Nat.add_assoc]
   have hpres : ∀ t, t < frei → r'.temp t = r.temp t := fun t ht =>
     (hpresVon t ht).trans (hpres1 t ht)
   have hlok : r'.lokale = r.lokale := hlokVon.trans rfl
