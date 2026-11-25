@@ -20,6 +20,7 @@
 module
 
 public import Core.Speicher.Trennung
+public import Core.Speicher.Einbettung
 
 @[expose] public section
 
@@ -106,6 +107,7 @@ def rsGraph : Graph RelEv Bool Nat := ⟨rsLab, rsPo, rsRf, rsMo⟩
 
 abbrev rsSchreibt (a : RelEv) : Prop := (rsLab a).art.schreibt
 abbrev rsLiest (a : RelEv) : Prop := (rsLab a).art.liest
+abbrev rsIstRmw (a : RelEv) : Prop := (rsLab a).art = .rmw
 abbrev rsOrt (a : RelEv) : Bool := (rsLab a).ort
 
 theorem rsWf : rsGraph.Wohlgeformt where
@@ -269,7 +271,8 @@ theorem rsKonsistent : rsGraph.Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    cases a <;> simp only [Graph.sc, Graph.modus, rsGraph, rsLab, reduceCtorEq] at hc
+    have hsc : rsGraph.sc a := hc.1
+    cases a <;> simp only [Graph.sc, Graph.modus, rsGraph, rsLab, reduceCtorEq] at hsc
   ohneLB := by
     refine azyklisch_von_rang rsRang ?_
     intro a b h
@@ -281,9 +284,10 @@ theorem rsKonsistent : rsGraph.Konsistent where
       show rsRf a b → rsRang a < rsRang b
       cases a <;> cases b <;> decide
   liest_vorher := by
-    intro w u hrf _
-    revert hrf
-    show rsRf w u → rsMo w u
+    intro w u hrf hu
+    have hu' : rsIstRmw u := hu
+    revert hrf hu'
+    show rsRf w u → rsIstRmw u → rsMo w u
     cases w <;> cases u <;> decide
 
 /-- Every read has a source, including the stale data read. -/
