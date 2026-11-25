@@ -281,6 +281,11 @@ theorem pruefeEinheit_befehl (p : Fragment) (ps : List Pruefung.Praedikat) (b : 
   simp only [List.all_eq_true] at hcode
   exact hcode b hmem
 
+/-- A fragment with an empty clause table denotes the empty predicate list. -/
+theorem tabLeer (p : Fragment) (h : p.klauseln.invariant = []) :
+    p.klauseln.invariant = [].map Pruefung.Praedikat.gilt := by
+  simp only [h, List.map_nil]
+
 /-- Plain units elaborate with the empty predicate list: the clause table is empty. -/
 theorem fragment_unit_invarianten (tree : Ast.Unit) :
     (fragment .unit tree).klauseln.invariant = [].map Pruefung.Praedikat.gilt := rfl

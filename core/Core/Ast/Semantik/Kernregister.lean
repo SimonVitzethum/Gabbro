@@ -75,7 +75,7 @@ def programKernProofs (constructor : Name) (registered : constructor ∈ program
   unitsAndCommutation := fun _ _ b _ => ⟨rfl, b.kommutation⟩
   implementationRule := fun b _ c s w plans u => b.impl_privat c s w plans u
   preservation := fun p platform b _ inv => ⟨b.abgleich p platform, b.fortschritt p,
-    b.komponierbar p platform, Befehl.sicherheitsPflichten p platform inv b⟩
+    b.komponierbar p platform, Befehl.sicherheitsPflichten p platform [] (tabLeer _ inv) (fun b _ => rfl) b⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered
 
 theorem programKern_sicherheit (constructor : Name)

@@ -80,7 +80,7 @@ theorem variantMatch_erhaltung : VariantMatchErhaltungAussage := by
     simp only [Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
       expr_keine_invarianten, vm_arms_inv, List.nil_append]
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform inv⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 theorem variantMatch_regelSicher : VariantMatchRegelSicherAussage := by
   intro ctx platform args

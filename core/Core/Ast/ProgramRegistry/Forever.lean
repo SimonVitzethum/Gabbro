@@ -86,7 +86,7 @@ theorem forever_erhaltung (scope : Scope) (result : Option (Ty .value)) :
     ((foreverForm scope result).befehl args).fortschritt ((foreverForm scope result).fragment args),
     ((foreverForm scope result).befehl args).komponierbar ((foreverForm scope result).fragment args) platform,
     ((foreverForm scope result).befehl args).sicherheitsPflichten ((foreverForm scope result).fragment args)
-      platform inv⟩
+      platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 -- Mirror boundedWhile_erfuellbar at the actual instruction and its reachable pre-state: an empty
 -- body runs its closing block instruction once and then stands at the back-jump.

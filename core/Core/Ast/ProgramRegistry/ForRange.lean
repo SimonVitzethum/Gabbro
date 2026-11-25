@@ -97,7 +97,7 @@ theorem forRange_erhaltung (scope : Scope) (result : Option (Ty .value)) : (forR
   exact ⟨((forRangeForm scope result).befehl args).abgleich ((forRangeForm scope result).fragment args) platform,
     ((forRangeForm scope result).befehl args).fortschritt ((forRangeForm scope result).fragment args),
     ((forRangeForm scope result).befehl args).komponierbar ((forRangeForm scope result).fragment args) platform,
-    ((forRangeForm scope result).befehl args).sicherheitsPflichten ((forRangeForm scope result).fragment args) platform inv⟩
+    ((forRangeForm scope result).befehl args).sicherheitsPflichten ((forRangeForm scope result).fragment args) platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem forRange_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
@@ -106,7 +106,7 @@ theorem forRange_sicher (scope : Scope) (result : Option (Ty .value)) platform a
   have inv : ((forRangeForm scope result).fragment a).klauseln.invariant = [] := by
     change (stmt ((forRangeForm scope result).produktion.tree a).2).klauseln.invariant = []
     exact stmt_keine_invarianten _
-  exact ((forRangeForm scope result).befehl a).sicher ((forRangeForm scope result).fragment a) platform inv
+  exact ((forRangeForm scope result).befehl a).sicher ((forRangeForm scope result).fragment a) platform [] (tabLeer _ inv) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem forRange_erfuellbar : forRangeJoint := by

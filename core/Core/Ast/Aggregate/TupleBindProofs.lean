@@ -207,7 +207,7 @@ theorem tupleBind_erhaltung : TupleBindErhaltungAussage := by
 theorem tupleBind_regelSicher : TupleBindRegelSicherAussage := by
   intro ctx platform args
   exact ((tupleBindForm ctx).befehl args).sicher ((tupleBindForm ctx).fragment args)
-    platform (tupleBind_keineInvarianten ctx args)
+    platform [] (tabLeer _ (tupleBind_keineInvarianten ctx args)) (fun b _ => rfl)
 
 private theorem tupleLocals_length : (types : List (Ty .value)) → (value : Wert (tupleType types)) →
     (names : List (Option Identifier)) → names.length = types.length →
