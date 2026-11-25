@@ -316,12 +316,12 @@ theorem selThenRun (ein aus frei n : Nat) (e : Rahmen)
   rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
   simpa only [frameL13t] using e0
 
-theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
+theorem selLink12e (ein aus frei n : Nat) (e : Rahmen)
     (hepc : e.pc = 25) (hes : e.temp (frei + 0) = some (natVal (Nat.sqrt n)))
     (heq : e.temp ein = some (natVal n)) (hein : ein < frei)
     (h : ¬ (n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n)) :
-    (Schritt (leftBlk ein aus frei))^[32] (some e) =
-      some (frameL14e e ein aus frei n) := by
+    (Schritt (leftBlk ein aus frei))^[28] (some e) =
+      some (frameL12e e ein aus frei n) := by
   have hpre := selLink11 ein aus frei n e hepc hes heq hein
   have hpc : (frameL11 e ein aus frei n).pc = 52 := rfl
   have htemp : (frameL11 e ein aus frei n).temp (frei + 3) =
@@ -339,11 +339,17 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
   have hjump : (Schritt (leftBlk ein aus frei))^[1] (some (frameL11 e ein aus frei n)) =
       some (frameL12e e ein aus frei n) :=
     schrittSpringeWennFalsch _ _ _ _ _ _ _ hpc htemp hbool g27
-  have h28 : (Schritt (leftBlk ein aus frei))^[28] (some e) =
-      some (frameL12e e ein aus frei n) := by
-    rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
-    exact hjump
-  have hpc2 : (frameL12e e ein aus frei n).pc = 53 := rfl
+  rw [show (28 : Nat) = 1 + 27 from rfl, Function.iterate_add_apply, hpre]
+  exact hjump
+
+theorem selLink13e (ein aus frei n : Nat) (e : Rahmen)
+    (hepc : e.pc = 25) (hes : e.temp (frei + 0) = some (natVal (Nat.sqrt n)))
+    (heq : e.temp ein = some (natVal n)) (hein : ein < frei)
+    (h : ¬ (n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n)) :
+    (Schritt (leftBlk ein aus frei))^[31] (some e) =
+      some (frameL13e e ein aus frei n) := by
+  have h1212 := selLink12e ein aus frei n e hepc hes heq hein h
+  have hpc : (frameL12e e ein aus frei n).pc = 53 := rfl
   have g28 : (leftBlk ein aus frei)[53]? = some (.binden nameX (frei + 0)) := by rfl
   have g29 : (leftBlk ein aus frei)[53 + 1]? = some (.lesen aus 0) := by rfl
   have g30 : (leftBlk ein aus frei)[53 + 2]? = some (.blockEnde 1) := by rfl
@@ -371,17 +377,23 @@ theorem selElseRun (ein aus frei n : Nat) (e : Rahmen)
     show Function.update _ (frei + 1) _ (frei + 0) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (0 : Nat) ≠ 1))]
     exact hes
-  have e0 := laufKopie _ _ 53 aus (frei + 0) _ hpc2 hq g28 g29 g30
-  have h31 : (Schritt (leftBlk ein aus frei))^[31] (some e) =
-      some (frameL13e e ein aus frei n) := by
-    rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h28]
-    simpa only [frameL13e] using e0
-  have hpc3 : (frameL13e e ein aus frei n).pc = 56 := rfl
+  have e0 := laufKopie _ _ 53 aus (frei + 0) _ hpc hq g28 g29 g30
+  rw [show (31 : Nat) = 3 + 28 from rfl, Function.iterate_add_apply, h1212]
+  simpa only [frameL13e] using e0
+
+theorem selLink14e (ein aus frei n : Nat) (e : Rahmen)
+    (hepc : e.pc = 25) (hes : e.temp (frei + 0) = some (natVal (Nat.sqrt n)))
+    (heq : e.temp ein = some (natVal n)) (hein : ein < frei)
+    (h : ¬ (n - Nat.sqrt n * Nat.sqrt n < Nat.sqrt n)) :
+    (Schritt (leftBlk ein aus frei))^[32] (some e) =
+      some (frameL14e e ein aus frei n) := by
+  have h1313 := selLink13e ein aus frei n e hepc hes heq hein h
+  have hpc : (frameL13e e ein aus frei n).pc = 56 := rfl
   have g31 : (leftBlk ein aus frei)[56]? = some (.springe 4) := by rfl
   have e1 : (Schritt (leftBlk ein aus frei))^[1] (some (frameL13e e ein aus frei n)) =
       some (frameL14e e ein aus frei n) :=
-    schrittSpringe _ _ _ _ hpc3 g31
-  rw [show (32 : Nat) = 1 + 31 from rfl, Function.iterate_add_apply, h31]
+    schrittSpringe _ _ _ _ hpc g31
+  rw [show (32 : Nat) = 1 + 31 from rfl, Function.iterate_add_apply, h1313]
   exact e1
 
 /-- Preservation through the shared selection prefix. -/
@@ -478,7 +490,7 @@ theorem leftArrivalElse (ein aus frei n : Nat) (r : Rahmen)
   have heqE : rE.temp ein = some (natVal n) := by
     rw [hpresL _ hein]
     exact hr
-  have hrunE := selElseRun ein aus frei n rE hpcL hsqrtL heqE hein hcond
+  have hrunE := selLink14e ein aus frei n rE hpcL hsqrtL heqE hein hcond
   have hausE : (frameL14e rE ein aus frei n).temp aus =
       some (natVal ((Nat.unpair n).1)) := by
     have hget : (frameL14e rE ein aus frei n).temp aus = some (natVal (Nat.sqrt n)) :=
