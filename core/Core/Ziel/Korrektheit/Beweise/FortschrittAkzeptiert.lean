@@ -390,8 +390,9 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
                 have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
                 have skerne : s.kerne =
-                    (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne :=
-                  congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+                    (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne := by
+                  have h := congrArg (fun (x : Ast.Semantik.Zustand) => x.kerne) hstate
+                  exact h
                 have einkern : ∀ k, (Maschine.Zustandseintritt z k' id_ev c' nmi).kerne k =
                     if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
                   intro k
