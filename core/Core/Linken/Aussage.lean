@@ -5,6 +5,7 @@ public import Core.Ast.Semantik.Elaborierung
 public import Core.Ast.Aggregate.Types.Model
 public import Core.Annahme.Annahme
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
+public import Core.Ziel.Korrektheit.Zusammensetzung
 
 @[expose] public section
 
@@ -108,5 +109,132 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
   · refine ⟨[], none, ?_⟩
     rw [beispielCode]
     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)
+
+/-- Linking succeeds exactly when the declarative check holds, with the concatenated fragments. -/
+theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
+    bauplanOk plan = true ∧ frag = verknuepfteFragmente plan := by
+  cases hb : bauplanOk plan with
+  | false => simp [linke, hb] at h
+  | true => simp [linke, hb] at h
+    exact ⟨hb, h.symm⟩
+
+/-- An empty list is the only list with `isEmpty`. -/
+theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
+  cases l with
+  | nil => rfl
+  | cons _ _ => simp [List.isEmpty] at h
+
+/-- An empty clause check means no written clauses. -/
+theorem leer_of_klauselnLeer {frag : Fragment} (h : klauselnLeer frag = true) :
+    frag.klauseln = .leer := by
+  obtain ⟨code, klauseln, eingang, eintritte, speicher⟩ := frag
+  simp only [klauselnLeer] at h
+  rw [Bool.and_eq_true] at h
+  obtain ⟨hxy, hi⟩ := h
+  rw [Bool.and_eq_true] at hxy
+  obtain ⟨hv, hs⟩ := hxy
+  have e1 := isEmpty_eq_nil hv
+  have e2 := isEmpty_eq_nil hs
+  have e3 := isEmpty_eq_nil hi
+  obtain ⟨voraus, sicher, invariant⟩ := klauseln
+  subst e1; subst e2; subst e3
+  rfl
+
+/-- Concatenation preserves empty clauses. -/
+theorem verknuepfte_klauseln_leer_aux (ms : List Modul)
+    (h : ∀ m ∈ ms, klauselnLeer m.fragment = true) (acc : Fragment)
+    (ha : acc.klauseln = .leer) :
+    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).klauseln = .leer := by
+  induction ms generalizing acc with
+  | nil => simpa using ha
+  | cons m rest ih =>
+    have hm : klauselnLeer m.fragment = true := h m List.mem_cons_self
+    have hrest : ∀ x ∈ rest, klauselnLeer x.fragment = true :=
+      fun x hx => h x (List.mem_cons_of_mem _ hx)
+    have step : (acc.anhaengen m.fragment).klauseln = .leer := by
+      have e := leer_of_klauselnLeer hm
+      show acc.klauseln.anhaengen _ = _
+      rw [ha, e]
+      rfl
+    exact ih hrest _ step
+
+/-- A compatible plan links to a clause-free fragment. -/
+theorem verknuepfte_klauseln_leer {plan : Bauplan} (h : annahmenKompatibel plan = true) :
+    (verknuepfteFragmente plan).klauseln = .leer := by
+  have hall : ∀ m ∈ plan.module, klauselnLeer m.fragment = true := by
+    simp only [annahmenKompatibel, List.all_eq_true] at h
+    exact h
+  unfold verknuepfteFragmente
+  exact verknuepfte_klauseln_leer_aux _ hall _ rfl
+
+/-- The linked code is the concatenation of the modules' code. -/
+theorem verknuepfte_code_aux (ms : List Modul) (acc : Fragment) :
+    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).code =
+      acc.code ++ ms.flatMap (fun m => m.fragment.code) := by
+  induction ms generalizing acc with
+  | nil => simp
+  | cons m rest ih =>
+    simp only [List.foldl_cons, List.flatMap_cons]
+    rw [ih]
+    show (acc.anhaengen m.fragment).code ++ _ = _
+    show acc.code ++ m.fragment.code ++ _ = _
+    rw [List.append_assoc]
+
+/-- The linked code is the concatenation of the modules' code. -/
+theorem verknuepfte_code (plan : Bauplan) :
+    (verknuepfteFragmente plan).code =
+      plan.module.flatMap (fun m => m.fragment.code) := by
+  unfold verknuepfteFragmente
+  have h := verknuepfte_code_aux plan.module Fragment.leer
+  simpa using h
+
+/-- The defining module alone is accepted: guard-free with empty clauses. -/
+theorem modulDef_klauseln : modulDef.fragment.klauseln = .leer :=
+  rfl
+
+/-- The defining module uses no guarded instruction. -/
+theorem modulDef_guard (b : Befehl) (present : b ∈ modulDef.fragment.code) (frame : Rahmen) :
+    b.guard frame = none := by
+  have hc : modulDef.fragment.code =
+      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid] := rfl
+  simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl <;> rfl
+
+/-- The defining module alone is accepted. -/
+theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by
+  exact Fragment.akzeptiert_ohne_bedarf modulDef.fragment _ modulDef_klauseln
+    (fun b present frame => modulDef_guard b present frame)
+
+/-- Two modules with the same name: the link check refuses, although each part
+    alone is accepted. The duplicate name is one of the refused incompatibilities. -/
+def doppelPlan : Bauplan :=
+  { module := [{ name := "a", fragment := modulDef.fragment, exporte := ["main"], importe := [] },
+               { name := "a", fragment := modulDef.fragment, exporte := [], importe := ["main"] }]
+    abhaengigkeiten := []
+    plattform := .x86_64
+    einstieg := "a" }
+
+/-- The duplicate name fails the link check. -/
+theorem doppelBauplan : bauplanOk doppelPlan = false :=
+  rfl
+
+/-- Linking the duplicate-name plan fails. -/
+theorem doppelLinke : linke doppelPlan = none := by
+  simp [linke, doppelBauplan]
+
+/-- Both parts of the refused plan are accepted. -/
+theorem doppelTeile :
+    ∀ m ∈ doppelPlan.module, Akzeptiert (m.fragment.einheit doppelPlan.plattform) := by
+  intro m hm
+  simp only [doppelPlan, List.mem_cons, List.not_mem_nil, or_false] at hm
+  rcases hm with rfl | rfl <;> exact modulDef_akzeptiert
+
+/-- The linker is not trivial: it links a two-module plan, and it refuses a plan
+    whose parts are each accepted (a refuse-everything linker would fail the first
+    conjunct, an accept-everything linker the second). -/
+theorem linker_nichtTrivial : Gabbro.Core.Ziel.Korrektheit.LinkerNichtTrivialAussage := by
+  refine ⟨⟨beispielPlan, beispielFragment, beispielLinke, ?_⟩,
+    ⟨doppelPlan, doppelLinke, doppelTeile⟩⟩
+  rw [beispielZwei]
 
 end Gabbro.Core.Linken
