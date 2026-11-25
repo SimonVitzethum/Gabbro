@@ -68,20 +68,31 @@ theorem geraete_laden_gleich {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   have hcore : s₁.assignment 0 = s₂.assignment 0 := by
     simp only [hassign]
   have hmed : Gabbro.Core.Ast.LowLevel.medium s₁ = Gabbro.Core.Ast.LowLevel.medium s₂ := rfl
+  have hbild_eq : (d.unit locals).bild = Gabbro.Core.Ast.LowLevel.image := rfl
+  have hstarts_img : (h₁.lade Gabbro.Core.Ast.LowLevel.image).starts =
+      (h₂.lade Gabbro.Core.Ast.LowLevel.image).starts := hbild_eq ▸ hstarts
+  have hbytes_img : (h₁.lade Gabbro.Core.Ast.LowLevel.image).bytes =
+      (h₂.lade Gabbro.Core.Ast.LowLevel.image).bytes := hbild_eq ▸ hbytes
+  have hstarts0_img : (h₁.lade Gabbro.Core.Ast.LowLevel.image).starts 0 =
+      (h₂.lade Gabbro.Core.Ast.LowLevel.image).starts 0 := by
+    simp only [hstarts_img]
+  have hbytes0_img : (h₁.lade Gabbro.Core.Ast.LowLevel.image).bytes 0 =
+      (h₂.lade Gabbro.Core.Ast.LowLevel.image).bytes 0 := by
+    simp only [hbytes_img]
   simp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit] at ⊢
-  by_cases hcond : (h₁.lade (d.unit locals).bild).starts 0 = some 0 ∧
-      (h₁.lade (d.unit locals).bild).bytes 0 = some 0
-  · have hcond₂ : (h₂.lade (d.unit locals).bild).starts 0 = some 0 ∧
-        (h₂.lade (d.unit locals).bild).bytes 0 = some 0 := by
+  by_cases hcond : (h₁.lade Gabbro.Core.Ast.LowLevel.image).starts 0 = some 0 ∧
+      (h₁.lade Gabbro.Core.Ast.LowLevel.image).bytes 0 = some 0
+  · have hcond₂ : (h₂.lade Gabbro.Core.Ast.LowLevel.image).starts 0 = some 0 ∧
+        (h₂.lade Gabbro.Core.Ast.LowLevel.image).bytes 0 = some 0 := by
       obtain ⟨hs, hb⟩ := hcond
-      exact ⟨hstarts0 ▸ hs, hbytes0 ▸ hb⟩
+      exact ⟨hstarts0_img ▸ hs, hbytes0_img ▸ hb⟩
     rw [if_pos hcond, if_pos hcond₂, hcore, hmed]
-  · have hcond₂ : ¬ ((h₂.lade (d.unit locals).bild).starts 0 = some 0 ∧
-        (h₂.lade (d.unit locals).bild).bytes 0 = some 0) := by
+  · have hcond₂ : ¬ ((h₂.lade Gabbro.Core.Ast.LowLevel.image).starts 0 = some 0 ∧
+        (h₂.lade Gabbro.Core.Ast.LowLevel.image).bytes 0 = some 0) := by
       intro hcon
       apply hcond
       obtain ⟨hs, hb⟩ := hcon
-      exact ⟨hstarts0.trans hs, hbytes0.trans hb⟩
+      exact ⟨hstarts0_img.trans hs, hbytes0_img.trans hb⟩
     rw [if_neg hcond, if_neg hcond₂]
 
 /-- The strengthened coupling holds at cut zero for every compared device run:
