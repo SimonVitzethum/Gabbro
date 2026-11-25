@@ -126,7 +126,7 @@ theorem fairerSchritt_takt (hw : HwLauf) (t : Nat)
   · next h1 =>
     split
     · next h2 =>
-      exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h2)).1
+      exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h2))
     · next h2 =>
       refine .wartet rfl rfl (fun ev next step => h2 ⟨ev, next, step⟩)
 
