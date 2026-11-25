@@ -290,14 +290,16 @@ theorem fragA_guard_hält (ρ : I.Lauf (fragA.einheit .x86_64))
 theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
   let E := fragA.einheit .x86_64
   have hklauseln : fragA.klauseln = .leer := codeFrag_klauseln _
+  have hdom : DomaenenLokal E := by
+    refine ⟨eineTabelle_akzeptiert,
+      fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => ?_⟩
+    have hpriv := fragA_rein i (List.mem_of_getElem? (kopf_code hkopf))
+    obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus hpriv
+    exact spurRespektiert_leer _ _ _
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => Befehl.regelLokal fragA .x86_64 b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64
       (fun b hb => fragA_rein b hb), schrankenLokal_leer (E := E) rfl rfl rfl,
-    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb),
-    ⟨eineTabelle_akzeptiert, fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => by
-      have hpriv := fragA_rein i (List.mem_of_getElem? (kopf_code hkopf))
-      obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus hpriv
-      exact spurRespektiert_leer _ _ _⟩, ?_, ?_⟩
+    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb), hdom⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
