@@ -50,6 +50,18 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       (s'.lokal c).pending = none ∧
       s'.initial = s.initial ∧ s'.rechte = s.rechte ∧ s'.leihen = s.leihen ∧
       s'.persistenz = s.persistenz := by
+  have hframe : (setFrame s c { s.lokal c with
+      pending := none
+      last := some (access.result answer.reply)
+      phases := match access.result answer.reply, target with
+        | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
+        | _, _ => (s.lokal c).phases }).lokal =
+      Function.update s.lokal c { s.lokal c with
+        pending := none
+        last := some (access.result answer.reply)
+        phases := match access.result answer.reply, target with
+          | .written, some phase => Function.update (s.lokal c).phases binding.object (some phase)
+          | _, _ => (s.lokal c).phases } := rfl
   subst hu
   have hplan : plan = { internal with aktion := .verbrauche answer } :=
     (List.cons.inj hplans).1
@@ -85,7 +97,7 @@ theorem geraete_consume_tick {binding : Binding k} {access : RegisterAccess}
       · simp only [hsgeliefert, Zustand.verbrauche, setFrame]
       · simp only [hskerne, Zustand.verbrauche, setFrame]
       · simp only [hsstatus, Zustand.verbrauche, setFrame]
-      · simp only [hslokal, Zustand.verbrauche, setFrame]
+      · simp only [hslokal, Zustand.verbrauche, hframe]
       · simp only [hslokal, Zustand.verbrauche, setFrame, Function.update_self]
       · simp only [hsinitial, Zustand.verbrauche, setFrame]
       · simp only [hsrechte, Zustand.verbrauche, setFrame]
