@@ -327,7 +327,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Linken.LinkErfuellbarAussage, 12414101374247882868),
   (`Gabbro.Core.Beobachtung.GeraeteProtokollNIAussage, 6446518085524461339),
   (`Gabbro.Core.Beobachtung.geraeteNI_nichtTrivialAussage, 10067400572883965062),
-  (`Gabbro.Core.Speicher.LitmusKatalogAussage, 10357040818008029102),
+  (`Gabbro.Core.Speicher.LitmusKatalogAussage, 14473022603756576633),
   (`Gabbro.Core.Ast.Semantik.AtomAussagen, 17286116490395492007),
   (`Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage, 16783645637979157752),
   (`Gabbro.Core.Beobachtung.ZugriffNIAussage, 8376405574917633912),
@@ -345,6 +345,14 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Maschine.I.FlushFamilienAussage, 5738096403899585922),
   (`Gabbro.Core.Maschine.I.LockFreeFamilienAussage, 16890382388105400655),
   (`Gabbro.Core.Ast.LowLevel.Device.RegisterIssueErfuellbarAussage, 11628676760312913929),
-  (`Gabbro.Core.Aussenfrage.AussenFrageAussagen, 0)]
+  (`Gabbro.Core.Aussenfrage.AussenFrageAussagen, 16871627961827395252),
+  (`Gabbro.Core.Aussenfrage.FrageSimErfuellbarAussage, 0),
+  (`Gabbro.Core.Aussenfrage.FrageSimNichtTrivialAussage, 0),
+  (`Gabbro.Core.Aussenfrage.GleitAntwortErfuellbarAussage, 0),
+  (`Gabbro.Core.Aussenfrage.GleitAntwortNichtTrivialAussage, 0),
+  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitErfuellbarAussage, 0),
+  (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 0),
+  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 0),
+  (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 0)]
 
 end Gabbro.Core.Waechter
