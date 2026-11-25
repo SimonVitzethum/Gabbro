@@ -53,11 +53,13 @@ theorem bindungLadeSchranken (P : Katalog.Plattform) (u : UnitMitSchranken) :
       have nichtsLebt : LebendeZellen s0 = ∅ := by
         apply Set.eq_empty_iff_forall_notMem.mpr
         intro z mem
-        change s0.rechte.lebt z.1 = true ∧ z.2 < (Buchung.leer.umfang z.1).length at mem
-        simp only [Buchung.leer] at mem
+        change s0.rechte.lebt z.1 = true ∧ z.2 < (s0.buchung.umfang z.1).length at mem
+        have hleer : s0.buchung.umfang z.1 = [] := rfl
+        rw [hleer] at mem
+        simp only [List.length_nil] at mem
         exact Nat.not_lt_zero _ mem.2
       rw [nichtsLebt, Set.encard_empty]
-      exact Nat.zero_le n
+      exact zero_le
   · rw [if_neg ok] at geladen
     cases geladen
 
