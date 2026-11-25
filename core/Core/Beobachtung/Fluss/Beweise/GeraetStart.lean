@@ -75,14 +75,14 @@ theorem geraete_laden_gleich {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
         (h₂.lade (d.unit locals).bild).bytes 0 = some 0 := by
       obtain ⟨hs, hb⟩ := hcond
       exact ⟨hstarts0 ▸ hs, hbytes0 ▸ hb⟩
-    simp only [hcond, hcond₂, hcore, hmed]
+    rw [if_pos hcond, if_pos hcond₂, hcore, hmed]
   · have hcond₂ : ¬ ((h₂.lade (d.unit locals).bild).starts 0 = some 0 ∧
         (h₂.lade (d.unit locals).bild).bytes 0 = some 0) := by
       intro hcon
       apply hcond
       obtain ⟨hs, hb⟩ := hcon
-      exact ⟨hstarts0.symm.trans hs, hbytes0.symm.trans hb⟩
-    simp only [hcond, hcond₂]
+      exact ⟨hstarts0.trans hs, hbytes0.trans hb⟩
+    rw [if_neg hcond, if_neg hcond₂]
 
 /-- The strengthened coupling holds at cut zero for every compared device run:
     both runs load the same state, so the low prefixes, the public states, the
