@@ -8,7 +8,8 @@
              the duties of the access classes instead. What the classes carry is proved (`KlassenAussagen`,
              `ZugriffBefehlAussage`, `AtomAussagen`); what is left is pinned HERE, as four independent statements
              under ONE root, `ZugriffZielAussage`:
-             * `ZugriffSicherAussage`: the four safety legs of a run of an accepted fragment with an access;
+             * `Ast.Semantik.ZugriffSicherAussage` (in `UnitInvarianten`, where `InvariantenSicherheitAussage` needs it): the four
+               safety legs of a run of the fragment of a source unit with an access;
              * `ZugriffIdealBestimmtAussage`: the composed `I` step of such a fragment is determined by the source choice
                and the resolution of the memory order (`I.Bestimmt`);
              * `ZugriffSchrittExistiertAussage`: the memory model offers a read to every access head (the liveness
@@ -21,37 +22,17 @@ module
 
 public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Ast.Semantik.Runtime.Atom.Quelle
-public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Sicherheit.RegelnErfuellbar
+public import Core.Ast.Semantik.Runtime.UnitInvarianten
+public import Core.Beobachtung.Satz
+public import Core.Annahme.Annahme
+public import Core.Ideal.Komposition
 
 @[expose] public section
 
 namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core Maschine
-
-/-- **The four safety legs for a fragment with an access instruction.** For a fragment whose code is frame-only or
-    access, with an access instruction, no declared invariant and an accepted unit, every run is memory safe, keeps the
-    declared invariants, is race free and is TOCTOU free. Difficulty: schwer. Sketch: three independent units.
-    (1) The class-determined legs (`klassenSicherheit`: booking, register, commit, questions) hold for every step of
-    an access (`Befehl.eingebettet`), so `Speichersicher` and `ToctouFrei` follow by the induction of
-    `sicherheit_aus_regeln` once its per-step race leg is replaced by a run invariant: `RegelSicher.rennen` quantifies
-    over EVERY pre-state, so for a plain store it fails for a state with an unordered conflicting write; the induction
-    carries `RennenImGraph` along the run (`SchnittSicher`), and that is the place for the replacement. (2) The race
-    leg: every reachable graph of an accepted unit satisfies the lock-window discipline
-    (`Speicher.Graph.Abschnitte`), then `rennfreiAusLokal` closes it; the discipline needs the checker's lock rule on
-    every plain access and the hand-over of a lock to record the acquire of the new owner (finding MK-05, in
-    `Sicherheit/Atom/RennfreiAusLokal`). (3) `InvariantenErhalten` for an empty clause table is `Befehl.sicher`'s
-    invariant leg, the same for every instruction. -/
-def ZugriffSicherAussage : Prop :=
-  ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff → p.klauseln.invariant = [] →
-    Annahme.Akzeptiert (p.einheit platform) →
-    ∀ (H : Katalog.Umgebung) (ρ : Gabbro.Core.Sicherheit.Lauf (p.sicherheitsEinheit platform)),
-      Maschine.Laeufe (p.einheit platform) H ρ →
-      Gabbro.Core.Sicherheit.Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
-        Gabbro.Core.Sicherheit.InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
-        Gabbro.Core.Sicherheit.Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
-        Gabbro.Core.Sicherheit.ToctouFrei (p.sicherheitsEinheit platform) H ρ
 
 /-- **The composed step of a fragment with an access instruction is determined** by the source choice and the
     resolution of the memory order. Difficulty: mittel. Sketch: two composed steps at one context have the same head
@@ -95,7 +76,7 @@ def ZugriffNIFragmentAussage : Prop :=
 
 /-- **The root of the goal legs for a fragment with an access instruction.** -/
 def ZugriffZielAussage : Prop :=
-  ZugriffSicherAussage ∧ ZugriffIdealBestimmtAussage ∧ ZugriffSchrittExistiertAussage ∧ ZugriffNIFragmentAussage
+  Ast.Semantik.ZugriffSicherAussage ∧ ZugriffIdealBestimmtAussage ∧ ZugriffSchrittExistiertAussage ∧ ZugriffNIFragmentAussage
 
 /-- **The statements are about a nonempty set of fragments**: the unit of one load is a fragment with an access
     instruction (frame-only code is excluded, so no frame-only theorem applies to it). -/
@@ -103,14 +84,14 @@ theorem mitZugriff_erfuellbar : ∃ p : Ast.Semantik.Fragment, p.MitZugriff :=
   ⟨_, Ast.Semantik.Fragment.einzel_zugriff_mitZugriff
     (.lade 0 0 0 (Ast.Ty.int 0 0) Gabbro.Core.Speicher.Modus.na)⟩
 
-/-- **`I.Fortschritt` for a fragment of the two classes, from the liveness of the memory model.** A frame-only head
-    steps by its template (`Befehl.vollzug`); an access head steps by the step the memory model offers
-    (`ZugriffSchrittExistiertAussage`), which composes with the protocol (`zugriffKomponierbar`). -/
-theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
+/-- **Every head of a fragment of the two classes has a step that composes with the protocol**, from the liveness of the
+    memory model. A frame-only head steps by its template (`Befehl.vollzug`); an access head steps by the step the memory
+    model offers (`ZugriffSchrittExistiertAussage`), which composes with the protocol (`zugriffKomponierbar`). -/
+theorem komponierbar_koepfe (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
     (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
-    Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system := by
-  refine Maschine.I.fortschritt_aus_koepfen _ _ (Ast.Semantik.Fragment.fertig p platform)
-    (fun b => b.regelFortschritt p platform) ?_
+    ∀ i t s c, (p.einheit platform).system.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', ((p.einheit platform).system.regel i).ideal c s w [plan] u ∧
+        FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s' := by
   intro i t s c head memory
   rcases klassenrein i (Ast.Semantik.kopf_mem (code := p.code) head) with privat | ⟨z, same⟩
   · exact ⟨(), Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s,
@@ -119,5 +100,12 @@ theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p 
     obtain ⟨w, plan, u, es, g, step, folge⟩ := existiert p platform z s c head memory
     obtain ⟨spur, s', run⟩ := Ast.Semantik.zugriffKomponierbar p platform z t s c w plan u es g head step folge
     exact ⟨w, plan, u, spur, s', step, run⟩
+
+/-- **`I.Fortschritt` for a fragment of the two classes, from the liveness of the memory model.** -/
+theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
+    (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
+    Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system :=
+  Maschine.I.fortschritt_aus_koepfen _ _ (Ast.Semantik.Fragment.fertig p platform)
+    (fun b => b.regelFortschritt p platform) (komponierbar_koepfe existiert p platform klassenrein)
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -102,10 +102,10 @@ theorem ziel_klein (P : Katalog.Plattform) : DurchstichKleinAussage P := by
     exact verfeinerung_akzeptiert P t hacc H ρ lauf
   · intro H ρ lauf k
     exact zielFX_akzeptiert P t hacc H ρ lauf k
-  · intro _ H ρ lauf
-    exact sicherheitAkzeptiert P t hacc H ρ lauf
-  · intro _
-    exact niAkzeptiert P t hacc
+  · intro rein H ρ lauf
+    exact sicherheitAkzeptiert_rein P t rein H ρ lauf
+  · intro rein
+    exact niAkzeptiert_rein P t rein hacc
   · intro schranken H ρ lauf
     exact schranken t hacc H ρ lauf
   · intro fortschritt H ρ lauf fair

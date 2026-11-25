@@ -161,6 +161,20 @@ theorem fortschritt_im_lauf {ρ : Lauf E} (valid : Laeufe E ρ)
   fortschritt_aus_regeln _ _ fertig regeln komponierbar _ _ _ _ _ _ valid.2.1 (speicher_gut_im_lauf valid t)
     running dispatch
 
+/-- **The composed progress alternatives at every hardware cut**, from a composable step at every head
+    (`fortschritt_aus_koepfen`): the variant of `fortschritt_im_lauf` for a system with access instructions. -/
+theorem fortschritt_im_lauf_koepfen {ρ : Lauf E} (valid : Laeufe E ρ)
+    (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
+    (regeln : ∀ i, RegelFortschritt E.system i)
+    (komponierbar : ∀ i t s c, E.system.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', (E.system.regel i).ideal c s w [plan] u ∧
+        FuehrtSchrittAus E.einrichtung t c s u plan spur s')
+    (t : Nat) (c : Kontext) (running : (ρ.zeit.zustand t).status c = .laeuft)
+    (dispatch : ∃ kern, ((ρ.zeit.zustand t).kerne kern).laeuft = some c) :
+    FortschrittAm E.einrichtung E.system E.katalog ρ.hw t (ρ.zeit.zustand t) c :=
+  fortschritt_aus_koepfen _ _ fertig regeln komponierbar _ _ _ _ _ _ valid.2.1 (speicher_gut_im_lauf valid t)
+    running dispatch
+
 /-- The recovery entry has the same progress alternatives as any other dispatched context. -/
 theorem fortschritt_nach_absturz {ρ : Lauf E} (valid : Laeufe E ρ)
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)

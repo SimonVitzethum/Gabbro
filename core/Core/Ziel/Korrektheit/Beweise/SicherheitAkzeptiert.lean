@@ -19,6 +19,7 @@ module
 
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Sicherheit.RegelnErfuellbar
+public import Core.Ziel.Korrektheit.Zugriff
 
 @[expose] public section
 
@@ -26,16 +27,35 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 
-/-- EVERY RUN OF AN ACCEPTED ELABORATED UNIT IS SAFE (the pinned `SicherheitAkzeptiertAussage`). A plain unit
-    declares no invariant, so its safety unit is the fragment's safety unit and `fragment_sicher` applies
-    directly. -/
-theorem sicherheitAkzeptiert (P : Katalog.Plattform) : SicherheitAkzeptiertAussage P := by
-  intro t h H ρ lauf
+/-- EVERY RUN OF A UNIT WITH A FRAME-ONLY FRAGMENT IS SAFE. A plain unit declares no invariant, so its safety unit is the
+    fragment's safety unit and `fragment_sicher` applies directly. -/
+theorem sicherheitAkzeptiert_rein (P : Katalog.Plattform) (t : Ast.Unit)
+    (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein) :
+    ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
+      Maschine.Laeufe (einheitVon P t) H ρ →
+      Gabbro.Core.Sicherheit.Speichersicher (sicherheitVon (einheitVon P t)) H ρ ∧
+      Gabbro.Core.Sicherheit.InvariantenErhalten (sicherheitVon (einheitVon P t)) H ρ ∧
+      Gabbro.Core.Sicherheit.Rennfrei (sicherheitVon (einheitVon P t)) H ρ ∧
+      Gabbro.Core.Sicherheit.ToctouFrei (sicherheitVon (einheitVon P t)) H ρ := by
+  intro H ρ lauf
   simpa [einheitVon, Ast.Semantik.elaborieren, sicherheitVon,
     Ast.Semantik.Fragment.sicherheitsEinheit, Ast.Semantik.Fragment.einheit,
     Ast.Semantik.Fragment.tabellen, Ast.Semantik.fragment] using
     (Gabbro.Core.Sicherheit.fragment_sicher (Ast.Semantik.fragment Ast.Category.unit t) P []
-      (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _)
-      (Ast.Semantik.fragment_rein Ast.Category.unit t) H ρ lauf)
+      (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _) rein H ρ lauf)
+
+/-- EVERY RUN OF AN ACCEPTED ELABORATED UNIT IS SAFE (the pinned `SicherheitAkzeptiertAussage`). A frame-only fragment by
+    `sicherheitAkzeptiert_rein`; a fragment with an access instruction by the pinned `ZugriffSicherAussage`. -/
+theorem sicherheitAkzeptiert (P : Katalog.Plattform) (zugriff : Ast.Semantik.ZugriffSicherAussage) :
+    SicherheitAkzeptiertAussage P := by
+  intro t h H ρ lauf
+  by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
+  · exact sicherheitAkzeptiert_rein P t rein H ρ lauf
+  · simpa [einheitVon, Ast.Semantik.elaborieren, sicherheitVon,
+      Ast.Semantik.Fragment.sicherheitsEinheit, Ast.Semantik.Fragment.einheit,
+      Ast.Semantik.Fragment.tabellen, Ast.Semantik.fragment] using
+      (zugriff (Ast.Semantik.fragment Ast.Category.unit t) P [] (Or.inr ⟨t, rfl⟩)
+        ⟨Ast.Semantik.fragment_klassenrein Ast.Category.unit t, rein⟩
+        (Ast.Semantik.fragment_unit_invarianten t) (Ast.Semantik.pruefeEinheit_leer _) H ρ lauf)
 
 end Gabbro.Core.Ziel.Korrektheit
