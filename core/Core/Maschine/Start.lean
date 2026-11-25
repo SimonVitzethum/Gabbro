@@ -103,7 +103,7 @@ def BevorzugtSchritt (hw : HwLauf) (t : Nat) (s : Option (Zustand L Ort Wert Rau
 
 /-- One fair tick: a preferred dispatched-context step if one exists, another possible step
     otherwise, and a pause only when no step exists at all. -/
-private noncomputable def fairerSchritt (hw : HwLauf) (t : Nat)
+noncomputable def fairerSchritt (hw : HwLauf) (t : Nat)
     (s : Option (Zustand L Ort Wert Raum Lok Grund)) :
     Option (Zustand L Ort Wert Raum Lok Grund) ×
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert) := by
