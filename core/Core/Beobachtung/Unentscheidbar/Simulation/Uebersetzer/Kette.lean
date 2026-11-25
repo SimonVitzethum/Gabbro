@@ -47,7 +47,7 @@ theorem ketteVorwaerts (blkA blkB : List Befehl) (cA cB : Nat.Partrec.Code)
   have hshift := laufMitPc blkA blkB [] hvB rA0 kB hbleibB
   have hmitPcA : mitPc blkA.length rA0 = rA := by
     simp only [mitPc, rA0]
-    rw [hpcA]
+    rw [show blkA.length + 0 = rA.pc by rw [hpcA]; omega]
   have hKB : (Schritt (blkA ++ blkB))^[kB] (some rA) = some (mitPc blkA.length rB) := by
     simpa only [List.append_nil, hmitPcA, hrunB] using hshift
   refine ⟨kB + kA, mitPc blkA.length rB, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
