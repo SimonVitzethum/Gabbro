@@ -33,6 +33,20 @@ private meta def enthaeltPropFunktion : Expr → Bool
   | .proj _ _ b => enthaeltPropFunktion b
   | _ => false
 
+/-- A definition type that is `Prop` or a family into `Prop` (shape only, like the binder guard). -/
+private meta def istAussagenTypSyn : Expr → Bool
+  | .forallE _ _ b _ => istAussagenTypSyn b
+  | e => e.isProp
+
+/-- Proposition test with bounded cost: the syntactic shape first (no heartbeat cost), then the
+    elaborator test only for small non-arrow types, so a single pathological type cannot exhaust the
+    guard's heartbeat budget. Statement types are small; large types fall back to the shape test. -/
+private meta def istPropTyp (type : Expr) : MetaM Bool := do
+  if istAussagenTypSyn type then return true
+  if type.approxDepth.toNat > 200 then return false
+  try isProp type
+  catch _ => return false
+
 /-- Every constant any Core proof (`theorem`) refers to. A Prop-valued field or an unnamed
     proposition that a proof mentions carries statement content, even when no pin or goal closure
     reaches it: the proof is what uses it as a statement. One pure pass, like the declaration audit. -/
@@ -111,20 +125,6 @@ public meta def strukturPropWaisenInfos (env : Environment) (abgedeckt : Name �
     unless Lean.isStructure env s do continue
     infos := infos ++ (← strukturScan env erlaubt s " (outside every pin closure, used by a proof)")
   return infos
-
-/-- A definition type that is `Prop` or a family into `Prop` (shape only, like the binder guard). -/
-private meta def istAussagenTypSyn : Expr → Bool
-  | .forallE _ _ b _ => istAussagenTypSyn b
-  | e => e.isProp
-
-/-- Proposition test with bounded cost: the syntactic shape first (no heartbeat cost), then the
-    elaborator test only for small non-arrow types, so a single pathological type cannot exhaust the
-    guard's heartbeat budget. Statement types are small; large types fall back to the shape test. -/
-private meta def istPropTyp (type : Expr) : MetaM Bool := do
-  if istAussagenTypSyn type then return true
-  if type.approxDepth.toNat > 200 then return false
-  try isProp type
-  catch _ => return false
 
 /-- Regel N: every `def … : Prop` or Prop-valued family in the closure of the goal statements that does
     not end in `Aussage` is treated like a statement — pin coverage and the binder scan — independent of
