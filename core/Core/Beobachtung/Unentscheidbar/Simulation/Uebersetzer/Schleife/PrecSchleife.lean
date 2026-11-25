@@ -47,10 +47,9 @@ theorem verschiebbarVonAppend (base : Nat) (A B : List Befehl)
       omega
     obtain ⟨b, hb, hvb, hzd⟩ := hB (j - A.length) hjB
     refine ⟨b, ?_, hvb, ?_⟩
-    · rw [getNachPrefix A B (j - A.length) hjB]
-      have heq : A.length + (j - A.length) = j := by omega
-      rw [heq]
-      exact hb
+    · have heq : A.length + (j - A.length) = j := by omega
+      rw [← heq]
+      exact (getNachPrefix A B (j - A.length) hjB).trans hb
     · intro d hd
       have hd' := hzd d hd
       omega
@@ -82,9 +81,10 @@ theorem precCheckLaenge (frei : Nat) : (precCheck frei).length = 7 := by
 theorem verschiebbarPrecCheck (base : Nat) (frei : Nat) :
     VerschiebbarVon base (precCheck frei) := by
   apply verschiebbarVonLift
-  unfold VerschiebbaresProgramm precCheck
+  unfold VerschiebbaresProgramm
   intro j hj
   rw [precCheckLaenge] at hj
+  unfold precCheck
   interval_cases j <;>
     simp only [kopie, List.append_assoc, List.nil_append, List.append_nil,
       List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ,
@@ -113,9 +113,7 @@ theorem verschiebbarPrecRumpf (base : Nat) (cgBlk : List Befehl) (aus frei : Nat
   · apply verschiebbarVonAppend
     · exact verschiebbarVonLift base _ (verschiebbarPaarBerechnung _ _ _ _)
     · exact verschiebbarVonLift (base + 44) _ (verschiebbarPaarBerechnung _ _ _ _)
-  · have hbase : base + 88 = base + 44 + 44 := by omega
-    rw [hbase]
-    exact verschiebbarVonLift (base + 88) _ hv
+  · exact verschiebbarVonLift (base + 44 + 44) _ hv
 
 /-- Increment the counter and jump back to the check. The backward jump
     distance is relative to the whole loop, not to this tail. -/
@@ -143,7 +141,9 @@ theorem verschiebbarPrecEnde (base : Nat) (cgBlk : List Befehl) (frei : Nat)
     · intro d hd; cases hd
   · refine ⟨_, rfl, ?_, ?_⟩
     · simp only [Verschiebbar]
-    · intro d hd; omega
+    · intro d hd
+      cases hd
+      omega
 
 /-- The primitive-recursion loop. Slots relative to `frei`: `a` at 0, `k` at 1,
     `y` at 2, the increment scratch at 3, `q = pair y i` at 4, `p = pair a q` at 5,
@@ -179,11 +179,11 @@ theorem verschiebbarPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
         · refine ⟨_, rfl, ?_, ?_⟩
           · simp only [Verschiebbar]
           · intro d hd; cases hd
-    · have hlen : (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)]).length = 8 := by
+    · have hlen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]).length = 8 := by
         simp only [precCheckLaenge, List.length_cons, List.length_nil]
       rw [hlen]
       exact verschiebbarPrecRumpf 8 cgBlk aus frei hv
-  · have hlen : (precCheck frei ++ [.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
+  · have hlen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)] ++
         precRumpf cgBlk aus frei).length = cgBlk.length + 96 := by
       simp only [precCheckLaenge, precRumpfLaenge, List.length_append,
         List.length_cons, List.length_nil]
