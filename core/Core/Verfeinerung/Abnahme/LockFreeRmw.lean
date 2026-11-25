@@ -86,18 +86,18 @@ theorem rmwZeugeKonfiguration :
   let spur : SchrittSpur Zelle Int := ⟨es, []⟩
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
   let s' : RmwZeugeZustand := { u with graph := graph }
-  have rahmen : Zustandsrahmen Leerzustand u := by
-    rfl
+  have rahmen : Zustandsrahmen Leerzustand u :=
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have liest : ∀ l ∈ plan.lesen, l.art.liest := by
     intro l mem
     change l ∈ [⟨.rmw, .aussen, .sc, gelesen, 0⟩] at mem
     rcases List.mem_singleton.mp mem with rfl
-    rfl
+    simp only [Art.liest]
   have spurGefuellt : spur.speicher ≠ [] := by
     cases folge with
     | cons _ _ _ =>
       intro leer
-      have letzte := (List.append_eq_nil.mp leer).2
+      have letzte := (List.append_eq_nil_iff.mp leer).2
       cases letzte
   have aus : FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' := by
     refine ⟨rahmen, liest, [], u, .intern, ?_, rfl⟩
@@ -106,12 +106,14 @@ theorem rmwZeugeKonfiguration :
       List.filter_nil, List.map_nil, List.nil_append, List.append_nil] using folge
   have impl : rmwZeugeRegelWert.impl eintritt Leerzustand () [plan] u := by
     refine ⟨gelesen, ?_, rfl⟩
-    exact rmwZeuge_plan gelesen
+    change [plan] = [rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen]
+    rw [rmwZeuge_plan]
   have idealVerweigert : ¬ rmwZeugeRegelWert.ideal eintritt Leerzustand () [plan] u := by
     intro step
     change rmwZeugeForm.zugriffsschritt eintritt Leerzustand [plan] u at step
     rcases step with ⟨_, planPrivat, _⟩ | ⟨befugt, _, _, _⟩
-    · have planGleich : plan = Semantik.plan := (List.cons.inj planPrivat).1
+    · have planGleich : plan = Gabbro.Core.Ast.Semantik.plan :=
+        (List.cons.inj planPrivat).1
       have lesenLeer : plan.lesen = [] := by
         rw [planGleich]
         rfl
@@ -128,40 +130,45 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
     rmwZeugeKonfiguration
   subst plan
   subst u
-  have hw : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 1
+  let hw : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 1
     (fun _ _ => ⟨(fun _ => ⟨0, false, false, [], fun _ => 0⟩),
       (fun _ _ => none), (fun _ _ => none)⟩)
   have crash : (hw.angebot 0).crash = false := by
     simp only [hw, Umgebung.referenzLauf]
   have ready : KannSchreiten hw 0 eintritt Leerzustand := by
     refine ⟨0, ?_, ?_, ?_⟩
-    · exact congrArg some (Nat.mod_one _)
+    · change some (0 % 1) = some 0
+      exact congrArg some (Nat.mod_one _)
     · change (Leerzustand.kerne 0).laeuft = some eintritt
       rfl
     · change Leerzustand.status eintritt = .laeuft
-      simp only [Leerzustand, startdaten, Zustand.start, ite_eq_left rfl]
+      simp only [Leerzustand, startdaten, Zustand.start, ite_self, ite_true]
   have bezug : Zustandsbezug rmwZeugeEinheitWert Leerzustand Leerzustand :=
     ⟨ProtokollBezug.refl _, rfl⟩
   have simuliert := sim.schritt (hw := hw) (t := 0) (c := eintritt) (w := ())
-    (s := Leerzustand) (u := u) (s' := s') (i := Leerzustand)
+    (s := Leerzustand) (u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0)
+    (s' := s') (i := Leerzustand)
     (plan := rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen) (spur := spur)
     bezug crash ready rfl impl exec
   rcases simuliert with ⟨i', idealSchritt, _⟩ | ⟨leer, _, _, _, _⟩
   · cases idealSchritt with
     | kontext _ _ rule ausIdeal =>
-      have planPrivat : rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen = Semantik.plan := by
-        change rmwZeugeForm.zugriffsschritt eintritt Leerzustand
-          [rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen] _ at rule
-        rcases rule with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
+      have planPrivat : _ = Gabbro.Core.Ast.Semantik.plan := by
+        rcases rule with ⟨i, _, idealRegel⟩
+        subst i
+        change rmwZeugeForm.zugriffsschritt eintritt Leerzustand _ _ at idealRegel
+        rcases idealRegel with ⟨_, privat, _⟩ | ⟨befugt, _, _, _⟩
         · exact (List.cons.inj privat).1
         · exact (rmwZeuge_keinRecht befugt).elim
       rw [planPrivat] at ausIdeal
-      rcases ausIdeal with ⟨_, _, sperren, vIdeal, aus, folge, _⟩
+      rcases ausIdeal with ⟨_, _, _, _, aus, folge, _⟩
       cases aus
-      simp only [Semantik.plan, schreibEreignisse, List.filter_nil, List.map_nil,
-        List.nil_append, List.append_nil] at folge
-      cases folge
-      exact spurNe rfl
+      simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, List.filter_nil,
+        List.map_nil, List.nil_append, List.append_nil] at folge
+      have leer : spur.speicher = [] := by
+        cases folge
+        rfl
+      exact spurNe leer
   · exact spurNe (congrArg SchrittSpur.speicher leer)
 
 /-- The non-triviality is a statement about the family, not about a changed declaration of its
