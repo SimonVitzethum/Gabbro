@@ -291,7 +291,11 @@ theorem pruefeEinheit_leer (p : Fragment) : pruefeEinheit p [] = true := by
   have h2 : Pruefung.pruefeNeustart [] = true := rfl
   have h3 : p.code.all (Pruefung.pruefeBefehlErhalt []) = true :=
     List.all_eq_true.mpr (fun b _ => rfl)
-  simp only [pruefeEinheit, h1, h2, h3]
+  calc pruefeEinheit p []
+      _ = Pruefung.pruefeStart p.speicher.initial [] && Pruefung.pruefeNeustart [] &&
+          p.code.all (Pruefung.pruefeBefehlErhalt []) := rfl
+    _ = true && true && true := by rw [h1, h2, h3]
+    _ = true := rfl
 
 abbrev Einheit := Maschine.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
