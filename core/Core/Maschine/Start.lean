@@ -202,18 +202,34 @@ def ShiftFair (hw : HwLauf) (ab : Nat) (s : AussenStart)
       ∃ z, tail.zustand t = some z ∧ (z.kerne k).laeuft = some c) →
     ∀ n, a ≤ n → ∃ t, n ≤ t ∧ ∃ w spur, tail.spur t = some (.kontext c w, spur)
 
+theorem fairerSchritt_taktAb (hw : HwLauf) (ab t : Nat)
+    (s : Option (Zustand L Ort Wert Raum Lok Grund)) :
+    Takt (fun t => Lauffolge E hw (ab + t)) (KeinSchritt (fun t => Lauffolge E hw (ab + t))) t s
+      (fairerSchritt E hw (ab + t) s).2 (fairerSchritt E hw (ab + t) s).1 := by
+  unfold fairerSchritt
+  classical
+  split
+  · next h1 =>
+    exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h1)).1
+  · next h1 =>
+    split
+    · next h2 =>
+      exact .schritt rfl (Classical.choose_spec (Classical.choose_spec h2))
+    · next h2 =>
+      refine .wartet rfl rfl (fun ev next step => h2 ⟨ev, next, step⟩)
+
 noncomputable def fairerFolgeAb (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
     (ab : Nat) :
     Nat → Option (Zustand L Ort Wert Raum Lok Grund) ×
       Option (SchrittWahl Wahl × SchrittSpur Ort Wert)
-  | 0 => init
+  | 0 => (init, none)
   | t + 1 => fairerSchritt E hw (ab + t) (fairerFolgeAb hw init ab t).1
 
 noncomputable def fairerZeitAb (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
     (ab : Nat) : Zeitlauf (fun t => Lauffolge E hw (ab + t)) where
   zustand := fun t => (fairerFolgeAb E hw init ab t).1
   spur := fun t => (fairerFolgeAb E hw init ab (t + 1)).2
-  takt := fun t => fairerSchritt_takt E hw (ab + t) (fairerFolgeAb E hw init ab t).1
+  takt := fun t => fairerSchritt_taktAb E hw ab t (fairerFolgeAb E hw init ab t).1
 
 theorem fairerZeitAb_start (hw : HwLauf) (init : Option (Zustand L Ort Wert Raum Lok Grund))
     (ab : Nat) : (fairerZeitAb E hw init ab).zustand 0 = init := rfl
