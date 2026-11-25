@@ -115,7 +115,7 @@ theorem Befehl.impl_aktion_intern (b : Befehl) {c : Kontext} {s : Zustand} {w : 
 theorem Befehl.regel_aktion_intern (b : Befehl) {R : Regel} (hR : R = b.regel) {c : Kontext} {s : Zustand}
     {w : PUnit.{1}} {p : Plan} {u : Zustand} (h : R.impl c s w [p] u) : p.aktion = .intern := by
   subst hR
-  exact b.impl_aktion_intern h
+  exact b.impl_aktion_intern (w := w) h
 
 abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
