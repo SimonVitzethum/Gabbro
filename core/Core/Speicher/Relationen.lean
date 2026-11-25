@@ -235,7 +235,7 @@ theorem psc_von_klassisch {a b : E} (h : G.sc a ∧ G.sc b ∧ G.scb a b) : G.ps
 theorem psc_pfad_sc {a b : E} (h : Relation.TransGen G.psc a b) : G.sc a ∧ G.sc b := by
   obtain ⟨_, h1⟩ := transGen_kopf h
   obtain ⟨_, h2⟩ := transGen_ende h
-  exact ⟨h1.1, h2.2.1⟩
+  exact ⟨psc_sc_links h1, psc_sc_rechts h2⟩
 
 end Graph
 
