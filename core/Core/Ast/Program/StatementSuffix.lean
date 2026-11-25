@@ -43,6 +43,21 @@ theorem OptionInitializerReads.consumes
     exact (((List.suffix_cons _ _).trans body.consumes).trans (List.suffix_cons _ _)).trans
       (List.suffix_cons _ _)
 
+theorem AccessReads.consumes (read : AccessReads scope input tree rest) : rest <:+ input := by
+  cases read with
+  | load name ordinary written valid region visible receiverOrdinary typeRead indexRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    have h3 : rest <:+ _ :=
+      (((h2.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        typeRead.consumes
+    exact ((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | store region visible receiverOrdinary indexRead valueRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans valueRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    exact ((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+
 local macro "statement_suffix" recursor:ident read:term : tactic =>
   `(tactic|
     refine $recursor
@@ -51,7 +66,7 @@ local macro "statement_suffix" recursor:ident read:term : tactic =>
       (motive_3 := fun _ input _ rest _ => rest <:+ input)
       (motive_4 := fun _ _ input _ _ _ rest _ => rest <:+ input)
       ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ $read <;>
+      ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ $read <;>
     (intros
      repeat first
      | assumption
@@ -68,6 +83,7 @@ local macro "statement_suffix" recursor:ident read:term : tactic =>
      | apply List.IsSuffix.trans ?_ (OptionInitializerReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (LowLevel.RegionReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (LoopLabelReads.consumes (by assumption))
+     | apply List.IsSuffix.trans ?_ (AccessReads.consumes (by assumption))
      | apply List.IsSuffix.trans ?_ (List.suffix_append (optionLetHead _ _) _)
      | apply List.IsSuffix.trans ?_ (List.suffix_cons _ _)))
 

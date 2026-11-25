@@ -32,6 +32,7 @@ public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
+public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Annahme.Annahme
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Start
@@ -161,17 +162,20 @@ theorem zielAusTeilenMitLuecken
         cases h
         exact rest ρ₂'' lauf₂.2 st₂ pol
 
-/-- The goal follows with the progress leg closed by the two run premises, with the three gaps supplied. -/
+/-- The goal follows with the progress leg closed by the two run premises, with the three gaps
+    supplied. Needs the liveness of the memory model for access heads
+    (`ZugriffSchrittExistiertAussage`). -/
 theorem zielAusTeilenMitFortschritt
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
     (niLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Beobachtung.Nichtinterferent E)
+    (existiert : ZugriffSchrittExistiertAussage)
     (P : Katalog.Plattform) (B : FormBeleg) :
     BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
       NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
   intro bildG formG schranken ni
   exact zielAusTeilenMitLuecken hang idealLuecke niLuecke P B bildG formG
-    fortschritt_akzeptiert schranken ni
+    (fortschritt_akzeptiert existiert) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit

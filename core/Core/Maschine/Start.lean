@@ -27,6 +27,11 @@ structure Einheit (L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type) where
   lokalerBezug : (Kontext → Lok) → (Kontext → Lok) → Prop
   stotterLaenge : ι → Nat
   quelltabellen : Quelltabellen (Zustand L Ort Wert Raum Lok Grund)
+  /-- The unit's declared domain table (MK-17d): the finite assignment of contexts, memory
+      objects and device objects to domains with the declared channels. The checker row
+      decides exactly this table; elaboration stores the source declaration here
+      (the default is the single-domain table with no entries). -/
+  domaenen : DomaenenTabelle := eineTabelle
   schranken : Beobachtung.Schrankendaten L Lok := .leer
   etiketten : Beobachtung.Etiketten Ort := .leer
   fluss : Beobachtung.Flussdaten ι Lok Ort Wert := .leer

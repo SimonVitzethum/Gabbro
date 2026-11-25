@@ -117,6 +117,12 @@ private theorem optionCode_keine_invarianten (slot : Nat) (value : OptionInitial
     simp only [optionCode, optionOperand, Fragment.leer, Fragment.anhaengen, Fragment.einzel,
       Quellklauseln.anhaengen, Quellklauseln.leer, expr_keine_invarianten, List.nil_append]
 
+theorem accessCode_keine_invarianten (form : Access before after) :
+    (accessCode form).klauseln.invariant = [] := by
+  cases form <;>
+    simp only [accessCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
+      expr_keine_invarianten, List.nil_append, List.append_nil]
+
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
   refine @Stmt.rec result
@@ -124,12 +130,12 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (fun _ _ t => (block t).klauseln.invariant = [])
     (fun _ t => (bracedBlock t).klauseln.invariant = [])
     (fun _ _ _ _ t => (variantArms t).body.klauseln.invariant = [])
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   all_goals
     intros
     simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
       ↓reduceIte, Fragment.leer, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
-      Quellklauseln.leer, expr_keine_invarianten, argsCode_keine_invarianten,
+      Quellklauseln.leer, expr_keine_invarianten, accessCode_keine_invarianten, argsCode_keine_invarianten,
       optionCode_keine_invarianten, List.nil_append]
 
 theorem bracedBlock_keine_invarianten (tree : BracedBlock result scope) :

@@ -19,6 +19,7 @@ public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Verfeinerung.Fortschritt
 public import Core.Verfeinerung.Simulation
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
+public import Core.Ziel.Korrektheit.Zugriff
 
 @[expose] public section
 
@@ -30,8 +31,9 @@ open Gabbro.Core.Ideal (RegelFortschritt)
 
 /-- TODAY'S PROGRESS LEG FOR EVERY ACCEPTED ELABORATED UNIT: a matched ideal run with whole-run simulation and
     the composed per-cut alternatives exist. This is all of the pinned statement except the per-context
-    no-hang leg; the scheduler duties are what remains. -/
-theorem fortschritt_akzeptiert_ohne_haengen :
+    no-hang leg; the scheduler duties are what remains. Needs the liveness of the memory model for
+    access heads (`ZugriffSchrittExistiertAussage`). -/
+theorem fortschritt_akzeptiert_ohne_haengen (existiert : ZugriffSchrittExistiertAussage) :
     ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
       ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
         Maschine.Laeufe (einheitVon P t) H ρ →
@@ -46,9 +48,9 @@ theorem fortschritt_akzeptiert_ohne_haengen :
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   obtain ⟨η, valid, sim⟩ := Maschine.I.sim_im_lauf pflicht lauf
   refine ⟨η, valid, sim, ?_⟩
-  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder P t
+  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder existiert P t
   refine ⟨?_, trivial⟩
   intro zeit kontext live dispatch
-  exact Maschine.I.fortschritt_im_lauf valid fertig regeln komponierbar zeit kontext live dispatch
+  exact Maschine.I.fortschritt_im_lauf_koepfen valid fertig regeln komponierbar zeit kontext live dispatch
 
 end Gabbro.Core.Ziel.Korrektheit

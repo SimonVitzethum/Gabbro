@@ -20,6 +20,7 @@ module
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.VerdraengungKonstanz
 public import Core.Fortschritt.Verzoegerung
 public import Core.Fortschritt.Verhungern
+public import Core.Ziel.Korrektheit.Zugriff
 
 @[expose] public section
 
@@ -33,7 +34,8 @@ open Gabbro.Core.Fortschritt
     run's own context steps as the selection. Offering follows from the step's physical
     opportunity, choice is immediate, and an open, enabled context is served infinitely often
     by scheduler fairness on its constant dispatch core. -/
-theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
+theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussage)
+    (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
     (sf : Maschine.SchedulerFair (einheitVon P t) ρ)
@@ -43,7 +45,7 @@ theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
     ∃ nutzbar, Maschine.I.FortschrittsPflichten
       (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl)
       ρ η nutzbar := by
-  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder P t
+  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder existiert P t
   refine ⟨(fun t c => ∃ w spur, ρ.zeit.spur t = some (.kontext c w, spur)),
     fertig, regeln, komponierbar, eindeutig, ?_, ?_, ?_, ?_⟩
   · intro t' c slot
@@ -112,7 +114,8 @@ theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
     for the elaborated unit follow from scheduler fairness and preemption return, so
     `sim_ziel_fortschritt_im_lauf` consumes them directly. The statement is otherwise
     unchanged. -/
-theorem fortschritt_akzeptiert : FortschrittAkzeptiertAussage := by
+theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
+    FortschrittAkzeptiertAussage := by
   intro P t akzeptiert H ρ lauf fair sf ret
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
     (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
@@ -122,7 +125,7 @@ theorem fortschritt_akzeptiert : FortschrittAkzeptiertAussage := by
       (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
       pflicht lauf
       (fun η valid matched environment fairness =>
-        einheitVon_scheduler_pflichten P t lauf sf ret valid matched environment)
+        einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment)
   exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
 
 /-- Both run premises hold jointly for an accepted elaborated unit: the catalogue is
