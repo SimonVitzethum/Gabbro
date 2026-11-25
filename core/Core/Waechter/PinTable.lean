@@ -7,6 +7,7 @@ namespace Gabbro.Core.Waechter
 
 /-- The measured hash of every pinned definition, checked by `#check_core`. -/
 public meta def pinTable : Array (Name × UInt64) :=
+#[(`Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, 6879651580802295960),
   (`Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, 319339108057321305),
   (`Gabbro.Core.Ast.Semantik.OwnedRegionTypeRegistryAussage, 18253113606125349972),
   (`Gabbro.Core.Ast.Semantik.PointerTypeRegistryAussage, 13755835794060346916),
@@ -353,10 +354,10 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 3929521243651914860),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 17464773647101239365),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 15792455024006385417),
-  (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 10899808157418456208),
-  (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 17686821990326708161),
-  (`Gabbro.Core.Aussenfrage.VerbrauchePrivatAussage, 10831881537504407892),
-  (`Gabbro.Core.Aussenfrage.VerbraucheFehlerGrundAussage, 15839307104568870586)]
+  (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 0),
+  (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 0),
+  (`Gabbro.Core.Aussenfrage.VerbrauchePrivatAussage, 0),
+  (`Gabbro.Core.Aussenfrage.VerbraucheFehlerGrundAussage, 0),
   (`Gabbro.Core.Ast.Semantik.MaskeSimAussage, 3231974317913293110),
   (`Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage, 9260166058713430687),
   (`Gabbro.Core.Ast.Semantik.SendeLiefertAussage, 4328701168167657756),
