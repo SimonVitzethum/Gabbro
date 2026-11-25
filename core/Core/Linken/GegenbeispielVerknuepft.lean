@@ -3,6 +3,7 @@ module
 public import Core.Linken.Gegenbeispiel
 public import Core.Annahme.Annahme
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
+public import Core.Ast.Semantik.Runtime.Mehrkontext.Kopf
 
 @[expose] public section
 
