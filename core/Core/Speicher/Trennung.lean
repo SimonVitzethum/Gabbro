@@ -194,7 +194,7 @@ theorem sb_ohne_sc_erlaubt (m : Modus) (hm : m ≠ .sc) :
     exact absurd hu (sb_kein_rmw m u)
   · intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    have hs := psc_sc_links hc
+    have hs := Graph.psc_sc_links hc
     cases a <;> exact hm hs
   · refine azyklisch_von_rang sbRang ?_
     intro a b

@@ -121,7 +121,9 @@ theorem scSchritt_einbetten (hk : G.Konsistent) (hn : G.NurSC) (hz : G.OhneZaun)
     · exact Or.inl (hk.hb_richtung (G.eco_von_rf hrf) (hr a b hkf (Or.inl ha)))
     · exact Or.inl (hk.hb_richtung (G.eco_von_rf hrf) (hr a b hkf (Or.inr hb)))
     · exact Or.inr (.single
-        (sw_psc hk hn hz (Graph.sw_direkt wf hrf (sc_stark ha) (sc_stark hb))))
+        (sw_psc hk hn hz (sw_von_klassisch ⟨wf.rf_schreibt _ _ hrf, sc_stark ha,
+        wf.rf_liest _ _ hrf, sc_stark hb, a,
+        .selbst (wf.rf_schreibt _ _ hrf) (Modus.stark_atomar (sc_stark ha)), hrf⟩)))
   · have hne : a ≠ b := by
       intro e
       subst e
