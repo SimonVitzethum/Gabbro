@@ -115,6 +115,7 @@ theorem quellSchrittPlanPrivat (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
         exact False.elim ((zugriffBefugtBrauchtAnkunft z hf leer) bef)
 
 
+
 /-- A class-good step leaves every context's arrival regions unchanged. -/
 theorem quellImplArrivalGleich (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
     {c : Kontext} {s : Zustand} {w : PUnit} {plan : Plan} {u : Zustand}
@@ -128,7 +129,6 @@ theorem quellImplArrivalGleich (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
     by_cases hdc : d = c
     · subst d
       simp only [Befehl.nach, Zustand.lokal, Function.update_self]
-      rw [Befehl.uebertrag_privat f hpriv]
       exact ankunftUnveraendert f (s.lokal c) s.regionLive
     · simp only [Befehl.nach, Zustand.lokal, Function.update_of_ne hdc]
   · have step := (Zugriffsform.ideal_iff z c s w [plan] u).1 impl
@@ -147,22 +147,24 @@ theorem quellImplArrivalGleich (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
 
 /-- A class-good step at a context with no arrival regions appends no memory event at all. -/
 theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befehl) (hgut : f.Klassengut)
-    {t c : Nat} {s u : Zustand} {w : PUnit} {plan : Plan} {spur : SchrittSpur Zelle Int} {s' : Zustand}
+    {t : Nat} {c : Kontext} {s u : Zustand} {w : PUnit} {plan : Plan}
+    {spur : SchrittSpur Zelle Int} {s' : Zustand}
     (leer : (s.lokal c).arrivalRegions = [])
     (impl : ((system p.code).regel f).impl c s w [plan] u)
     (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s') :
     s'.graph.ev = s.graph.ev := by
   have planEq := quellSchrittPlanPrivat p f hgut leer impl
-  rw [planEq] at aus
+  have still : plan.aktion.Still := Befehl.impl_aktion_still f impl
   obtain ⟨_, _, _, _, aktion, folge, _⟩ := aus
-  cases aktion
+  have hstill := FuehrtAus.still_erhaelt aktion still
   have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] [] s'.graph := by
-    simpa using folge
+    rw [planEq] at folge
+    simpa [hstill.1, hstill.2.1] using folge
   have evEq := folgeLeer.viele.ev
   simpa using evEq
 
 /-- Every event a `Speicherfolge` appends is a step of its actor or a lazily materialised
-    initial write; the initial writes are prepared by `Initialisierung`. -/
+    initial write. -/
 theorem initialisierungAkteen {Ort Wert} {anfang : Ort → Wert} {l : Speicher.Etikett Ort Wert}
     {g g' : SpeicherGraph Ort Wert} {init} (h : Initialisierung anfang l g init g') :
     ∀ x ∈ init, ∃ ort, x.1 = SpeicherAkteur.initial ort := by
@@ -191,92 +193,219 @@ theorem speicherfolgeAkteen {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkte
         rfl
       · exact ih x hxRest
 
-/-- An old executed access stays an executed access under an append. -/
-theorem ausgefuehrterAlt {F Ort Wert} {Z Z' : Speicher.Zustand F Ort Wert}
-    (h : Gabbro.Core.Speicher.Erweitert Z Z') (i : Fin Z.ev.length)
-    (zugriff : AusgefuehrterZugriff Z' (h.alt i)) :
-    AusgefuehrterZugriff Z i := by
-  have evEq := h.getElem i.2 (h.alt i).2
-  simpa only [AusgefuehrterZugriff, Speicher.Graph.liest, Speicher.Graph.schreibt,
-    Speicher.Zustand.graph, evEq] using zugriff
+/-- A single outside label appends only its own event and an optional initial write. -/
+theorem speicherfolgeEinzel {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkteur Ort}
+    {g g' : SpeicherGraph Ort Wert} {l : Speicher.Etikett Ort Wert} {es}
+    (h : Speicherfolge anfang f g [l] es g') :
+    ∀ x ∈ es, (∃ ort, x.1 = SpeicherAkteur.initial ort) ∨ x = (f, l) := by
+  cases h with
+  | nil g => intro x hx; cases hx
+  | @cons g g0 g1 g2 l' ls init esTail vor hs nach ih =>
+    cases ls with
+    | nil =>
+      cases nach
+      intro x hx
+      change x ∈ init ++ [(f, l')] at hx
+      rw [List.mem_append, List.mem_singleton] at hx
+      rcases hx with hx | rfl
+      · exact Or.inl (initialisierungAkteen vor x hx)
+      · exact Or.inr rfl
 
-/-- Every event appended by a class-good step that is an executed access is recorded at the
-    acting context. An initial write is not an access. -/
-theorem quellSchrittNeueAkzesse (p : Fragment) (platform : Plattform) (f : Befehl) (hgut : f.Klassengut)
-    {t c : Nat} {s u : Zustand} {w : PUnit} {plan : Plan} {spur : SchrittSpur Zelle Int} {s' : Zustand}
-    (_ : ((system p.code).regel f).impl c s w [plan] u)
-    (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s') :
-    ∀ i (hi : i < s'.graph.ev.length), s.graph.ev.length ≤ i →
-      AusgefuehrterZugriff s'.graph ⟨i, hi⟩ → (s'.graph.ev[i]'hi).kontext = .kontext c := by
-  obtain ⟨_, _, _, _, _, folge, _⟩ := aus
-  have evEq := folge.viele.ev
-  intro i hi spaeter zugriff
-  let j := i - s.graph.ev.length
-  have jlt : j < spur.speicher.length := by
-    have hsum : s.graph.ev.length + spur.speicher.length = s'.graph.ev.length := by
-      rw [evEq, List.length_append, List.length_map]
-    omega
-  have getEq : s'.graph.ev[i]'hi = ⟨(spur.speicher[j]).1, (spur.speicher[j]).2⟩ := by
-    rw [evEq]
-    have hji : i = s.graph.ev.length + j := by omega
-    rw [hji]
-    exact List.getElem_append_right (by omega) (by omega)
-  have akt := speicherfolgeAkteen folge (spur.speicher[j]) (List.getElem_mem _)
-  rcases akt with hf | ⟨ort, hinit⟩
-  · rw [getEq]
-    exact hf
-  · exfalso
-    rw [getEq] at zugriff
-    simp only [AusgefuehrterZugriff, Speicher.Ereignis.kontext, hinit] at zugriff
+/-- **One actor in the event list**: every memory access recorded in the graph was appended by
+    the entry context. This is the list form of the premise of `rennenAusEinemKontext`. -/
+def EinAkt {Ort Wert : Type} (g : SpeicherGraph Ort Wert) (c : Kontext) : Prop :=
+  ∀ x ∈ g.ev, (x.lab.art.liest ∨ x.lab.art.schreibt) →
+    (∀ ort, x.kontext ≠ SpeicherAkteur.initial ort) → x.kontext = .kontext c
 
-/-- A catalogue event changes no executed access: its label is outside the memory, and an
-    initial write it may materialise is not an access. The one-actor property is preserved. -/
-theorem einenKontextBeiAussen {Ort Wert} {vor nach : SpeicherGraph Ort Wert}
+theorem einAktIndex {Ort Wert : Type} {g : SpeicherGraph Ort Wert} {c : Kontext}
+    (h : EinAkt g c) :
+    ∀ i (hi : i < g.ev.length), AusgefuehrterZugriff g ⟨i, hi⟩ →
+      (g.ev[i]'hi).kontext = .kontext c := by
+  intro i hi zg
+  exact h (g.ev[i]'hi) (List.getElem_mem _) zg.1 (by
+    intro ort eq
+    rw [eq] at zg
+    exact zg.2)
+
+theorem einAktRennen {g : SpeicherGraph Zelle Int} (h : Gabbro.Core.Speicher.Zustand.Erreichbar g)
+    (ein : EinAkt g eintritt) : RennenImGraph g :=
+  rennenAusEinemKontext h (einAktIndex ein)
+
+/-- A catalogue event adds no executed access, so it keeps the one-actor property. -/
+theorem einAktBeiAussen {Ort Wert} {vor nach : SpeicherGraph Ort Wert}
     {label : Speicher.Etikett Ort Wert} {spur : SpeicherSpur Ort Wert}
     (istAussen : label.art = .aussen)
-    (folge : Speicherfolge vor.initial (.aussen : SpeicherAkteur Ort) vor.graph [label] spur nach)
-    {c : SpeicherAkteur Ort}
-    (vorAlle : ∀ i (hi : i < vor.graph.ev.length), AusgefuehrterZugriff vor.graph ⟨i, hi⟩ →
-      (vor.graph.ev[i]'hi).kontext = c) :
-    ∀ i (hi : i < nach.graph.ev.length), AusgefuehrterZugriff nach.graph ⟨i, hi⟩ →
-      (nach.graph.ev[i]'hi).kontext = c := by
-  intro i hi zugriff
-  have erweitert := folge.viele.erweitert
-  have alt (k : Fin nach.graph.ev.length) (zk : AusgefuehrterZugriff nach.graph k) :
-      k.val < vor.graph.ev.length := by
-    by_contra! spaeter
-    have length : nach.graph.ev.length = vor.graph.ev.length + 1 := by
-      have evEq := folge.viele.ev
-      have es : spur.length = 1 := by
-        rcases folge with _ | ⟨_, _, rest⟩
-        · simp at evEq
-        · cases rest
-          simp
-      rw [evEq, List.length_append, List.length_map, es]
-    have bound := Nat.lt_of_lt_of_le k.isLt length.le
-    have idx : k.val = vor.graph.ev.length := Nat.le_antisymm (Nat.lt_succ_iff.mp bound) spaeter
-    have boundNeu : vor.graph.ev.length < nach.graph.ev.length := Nat.lt_of_le_of_lt spaeter k.isLt
-    have same : k = ⟨vor.graph.ev.length, boundNeu⟩ := Fin.ext idx
-    have lab : nach.graph.lab k = label := by
-      rw [same]
-      have evEq := folge.viele.ev
-      rw [evEq]
-      rw [List.getElem_append_right (Nat.le_refl _) boundNeu]
-      have esHead : (spur[0]'by omega) = ((.aussen : SpeicherAkteur Ort), label) := by
-        rcases folge with _ | ⟨_, _, rest⟩
-        · simp at evEq
-        · cases rest
-          rfl
-      rw [esHead]
-      rfl
-    have real := zugriff.1
-    simp only [Speicher.Graph.liest, Speicher.Graph.schreibt, lab, istAussen] at real
-    exact real.elim id id
-  have hiAlt := alt ⟨i, hi⟩ zugriff
-  have evEq := erweitert.getElem hi hi
-  have zalt : AusgefuehrterZugriff vor.graph ⟨i, hiAlt⟩ :=
-    ausgefuehrterAlt erweitert ⟨i, hiAlt⟩ (by simpa [Fin.ext_iff] using zugriff)
-  rw [evEq]
-  exact vorAlle i hiAlt zalt
+    (folge : Speicherfolge vor.initial (.aussen : SpeicherAkteur Ort) vor.graph [label] spur nach.graph)
+    (vorEin : EinAkt vor.graph eintritt) : EinAkt nach.graph eintritt := by
+  have evEq := folge.viele.ev
+  intro x hx memLab nichtInitial
+  rw [evEq] at hx
+  rcases List.mem_append.mp hx with hxAlt | hxNeu
+  · exact vorEin x hxAlt memLab nichtInitial
+  · rcases List.mem_map.mp hxNeu with ⟨pair, hpair, rfl⟩
+    rcases speicherfolgeEinzel folge pair hpair with ⟨ort, hinit⟩ | heq
+    · exact False.elim (nichtInitial ort hinit)
+    · have artAus : pair.2.art = .aussen := by rw [heq, istAussen]
+      rw [artAus] at memLab
+      exact memLab.elim id id
+
+/-- A class-good step keeps the one-actor property: either its context has no arrival regions
+    and the graph is unchanged, or it is the entry context and every new access is booked there. -/
+theorem einAktBeiKontext (p : Fragment) (platform : Plattform) (f : Befehl) (hgut : f.Klassengut)
+    {t : Nat} {c : Kontext} {s u : Zustand} {w : PUnit} {plan : Plan}
+    {spur : SchrittSpur Zelle Int} {s' : Zustand}
+    (impl : ((system p.code).regel f).impl c s w [plan] u)
+    (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s')
+    (vorEin : EinAkt s.graph eintritt)
+    (vorAnk : ∀ d, d ≠ eintritt → (s.lokal d).arrivalRegions = []) :
+    EinAkt s'.graph eintritt := by
+  by_cases leer : (s.lokal c).arrivalRegions = []
+  · have graphEq := quellSchrittGraphGleich p platform f hgut leer impl aus
+    intro x hx memLab nichtInitial
+    rw [graphEq] at hx
+    exact vorEin x hx memLab nichtInitial
+  · have hcein : c = eintritt := by
+      by_contra hne
+      exact leer (vorAnk c hne)
+    subst c
+    obtain ⟨_, _, _, _, _, folge, _⟩ := aus
+    have evEq := folge.viele.ev
+    intro x hx memLab nichtInitial
+    rw [evEq] at hx
+    rcases List.mem_append.mp hx with hxAlt | hxNeu
+    · exact vorEin x hxAlt memLab nichtInitial
+    · rcases List.mem_map.mp hxNeu with ⟨pair, hpair, rfl⟩
+      rcases speicherfolgeAkteen folge pair hpair with hf | ⟨ort, hinit⟩
+      · rw [hf]
+        rfl
+      · exact False.elim (nichtInitial ort hinit)
+
+/-- The arrival regions of a non-entry context stay empty across a class-good step. -/
+theorem einAktAnkunft (p : Fragment) (platform : Plattform) (f : Befehl) (hgut : f.Klassengut)
+    {t : Nat} {c : Kontext} {s u : Zustand} {w : PUnit} {plan : Plan}
+    {spur : SchrittSpur Zelle Int} {s' : Zustand}
+    (impl : ((system p.code).regel f).impl c s w [plan] u)
+    (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s')
+    (vorAnk : ∀ d, d ≠ eintritt → (s.lokal d).arrivalRegions = []) :
+    ∀ d, d ≠ eintritt → (s'.lokal d).arrivalRegions = [] := by
+  obtain ⟨_, _, _, _, aktion, _, zustand⟩ := aus
+  have still : plan.aktion.Still := Befehl.impl_aktion_still f impl
+  have hstill := FuehrtAus.still_erhaelt aktion still
+  intro d hd
+  rw [zustand, hstill.2.2.1]
+  have hu := quellImplArrivalGleich p f hgut impl d
+  rw [hu]
+  exact vorAnk d hd
+
+/-- The run invariant of a source unit: reachable graph, one actor, and no arrival regions
+    outside the entry context. -/
+def QuellSchnitt (p : Fragment) (platform : Plattform) (s : Zustand) : Prop :=
+  Gabbro.Core.Speicher.Zustand.Erreichbar s.graph ∧ EinAkt s.graph eintritt ∧
+    ∀ c, c ≠ eintritt → (s.lokal c).arrivalRegions = []
+
+/-- The loader of a source unit starts at the empty graph and grants arrival regions only to
+    the entry context. -/
+theorem quellStartSchnitt (p : Fragment) (platform : Plattform) (H : Umgebung) (start : AussenStart)
+    {s : Zustand}
+    (h : (p.einheit platform).laden start (H.lade (p.einheit platform).bild) = some s) :
+    QuellSchnitt p platform s := by
+  simp only [Fragment.einheit, Ast.Semantik.laden] at h
+  split at h
+  · cases h
+    refine ⟨?_, ?_, ?_⟩
+    · change Gabbro.Core.Speicher.Zustand.Erreichbar Gabbro.Core.Speicher.Zustand.leer
+      exact Gabbro.Core.Speicher.Zustand.Erreichbar.start
+    · intro x hx
+      simp only [Gabbro.Core.Speicher.Zustand.leer, List.not_mem_nil] at hx
+    · intro c hc
+      simp only [Zustand.start, startdaten, if_neg hc]
+  · cases h
+
+/-- A context step of a class-good fragment preserves the run invariant. -/
+theorem quellKontextSchnitt (p : Fragment) (platform : Plattform) (klassenrein : p.KlassenRein)
+    {t : Nat} {c : Kontext} {vor u : Zustand} {plan : Plan} {w : PUnit}
+    {spur : SchrittSpur Zelle Int} {nach : Zustand}
+    (f : Befehl) (head : (system p.code).kopf vor c = some f)
+    (impl : ((system p.code).regel f).impl c vor w [plan] u)
+    (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c vor u plan spur nach)
+    (vorher : QuellSchnitt p platform vor) :
+    QuellSchnitt p platform nach := by
+  have hgut := klassenrein f (kopf_mem head)
+  refine ⟨(FuehrtSchrittAus.viele aus).erreichbar vorher.1, ?_, ?_⟩
+  · exact einAktBeiKontext p platform f hgut impl aus vorher.2.1 vorher.2.2
+  · exact einAktAnkunft p platform f hgut impl aus vorher.2.2
+
+/-- **The race invariant of every cut of a run of a source unit.** -/
+theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.KlassenRein)
+    (H : Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform))
+    (lauf : Laeufe (p.einheit platform) H ρ) :
+    ∀ t s, ρ.zeit.zustand t = some s → RennenImGraph s.graph := by
+  have schnitte (t : Nat) : ∀ s, ρ.zeit.zustand t = some s → QuellSchnitt p platform s := by
+    induction t with
+    | zero =>
+      intro s anfang
+      exact quellStartSchnitt p platform H ρ.start
+        (lauf.2.2.2.symm.trans anfang)
+    | succ t ih =>
+      intro s nachher
+      cases ρ.zeit.takt t with
+      | wartet _label gleich _pause =>
+        exact ih s (gleich.symm.trans nachher)
+      | schritt _label step =>
+        rw [nachher] at step
+        cases vorher : ρ.zeit.zustand t with
+        | none =>
+          rw [vorher] at step
+          cases step
+        | some vor =>
+          rw [vorher] at step
+          cases step with
+          | schritt h =>
+            cases h with
+            | kontext _ _ regel aus =>
+              obtain ⟨f, head, impl⟩ := regel
+              exact quellKontextSchnitt p platform klassenrein f head impl aus (ih vor vorher)
+            | @antwort s0 s0' spur0 a0 _ h =>
+              obtain ⟨_, _, folge, ziel⟩ := h
+              refine ⟨(AntwortSchritt.viele h).erreichbar (ih vor vorher).1, ?_, ?_⟩
+              · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.antwort a0)) rfl folge (ih vor vorher).2.1
+              · intro d hd
+                rw [ziel]
+                exact (ih vor vorher).2.2 d hd
+            | interrupt _ h =>
+              obtain ⟨k0, irq, _, _, _, _, _, _, _, folge, ziel⟩ := h
+              refine ⟨(UnterbrechungsSchritt.viele h).erreichbar (ih vor vorher).1, ?_, ?_⟩
+              · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.interrupt k0 irq .handler)) rfl folge (ih vor vorher).2.1
+              · intro d hd
+                rw [ziel]
+                exact (ih vor vorher).2.2 d hd
+            | absturz h =>
+              obtain ⟨_, _, pers, crash, rfl⟩ := h
+              refine ⟨?_, ?_, ?_⟩
+              · change Gabbro.Core.Speicher.Zustand.Erreichbar Gabbro.Core.Speicher.Zustand.leer
+                exact Gabbro.Core.Speicher.Zustand.Erreichbar.start
+              · intro x hx
+                simp only [Gabbro.Core.Speicher.Zustand.leer, List.not_mem_nil] at hx
+              · intro d hd
+                simp only [Zustand.wiederanlauf, Zustand.start, startdaten, if_neg hd]
+  intro t s anfang
+  exact einAktRennen (schnitte t s anfang).1 (schnitte t s anfang).2.1
+
+/-- **The pinned safety statement of a source unit with an access instruction.** The checker
+    verdict supplies the loader, restart and per-command premises; the class legs, the invariant
+    leg and the one-context run race close the four safety legs. -/
+theorem zugriffSicherBeweis : ZugriffSicherAussage := by
+  intro p platform ps quell zugriff tab ok H ρ lauf
+  let E := p.sicherheitsEinheit platform
+  have grenzen : GrenzenSicher E := fragmentGrenzen platform tab
+    (pruefeEinheit_start p ps ok) (pruefeEinheit_neustart p ps ok)
+  have okAll : ∀ b ∈ p.code, pruefeBefehlErhalt ps b = true := by
+    intro b hmem
+    exact pruefeEinheit_befehl p ps b hmem ok
+  have regeln : ∀ f, RegelPflichtenOhneRennen E f :=
+    fragmentRegelPflichtenOhneRennen p platform ps zugriff.1 tab okAll
+  have rennen : ∀ t s, ρ.zeit.zustand t = some s → RennenImGraph s.graph :=
+    quellLaufRennen p platform zugriff.1 H ρ lauf
+  exact sicherheit_aus_regeln_ohne_rennen grenzen regeln H ρ rennen lauf
 
 end Gabbro.Core.Ast.Semantik
