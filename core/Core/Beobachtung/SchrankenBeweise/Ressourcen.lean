@@ -49,8 +49,11 @@ theorem ressourcenRegelAussage_falsch :
   let ρ' := laufGegen ρ
   have lauf' : Laeufe gegenEinheit (umgebung []) ρ' :=
     ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2⟩
+  have cut0' : ρ'.zeit.zustand 0 = some (startZustand start) := cut0
+  have spur0' : ρ'.zeit.spur 0 = some (.kontext kontext (), ⟨[], []⟩) := spur0
+  have cut1' : ρ'.zeit.zustand 1 = some (binde (startZustand start)) := cut1
   have takt := ρ'.zeit.takt 0
-  rw [cut0, spur0, cut1] at takt
+  rw [cut0', spur0', cut1'] at takt
   have impf : ImplSchritt gegenEinheit.einrichtung gegenEinheit.system gegenEinheit.katalog ρ'.hw 0
       (startZustand start) (.kontext kontext (), ⟨[], []⟩) (binde (startZustand start)) := by
     cases takt with
@@ -71,7 +74,7 @@ theorem ressourcenRegelAussage_falsch :
     change none = some n at bound
     cases bound
   have grenzen := all gegenEinheit () lauf' 0 kontext () ⟨[], []⟩
-    (startZustand start) (binde (startZustand start)) cut0 kopf spur0 cut1 impf
+    (startZustand start) (binde (startZustand start)) cut0' kopf spur0' cut1' impf
     stapelVor speicherVor
   have post := grenzen.1 kontext 0 rfl
   change 1 ≤ 0 at post
