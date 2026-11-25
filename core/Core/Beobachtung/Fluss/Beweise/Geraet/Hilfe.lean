@@ -394,7 +394,10 @@ theorem geraete_antwort_inst_range {antworten : List AntwortEreignis} {qs : List
     List.map (fun a : AntwortEreignis => a.questionInstance) antworten =
       List.range antworten.length := by
   have hlen : antworten.length = qs.length := List.Forall₂.length_eq h
-  apply List.ext_getElem hlen
+  have hlenmap : (List.map (fun a : AntwortEreignis => a.questionInstance) antworten).length =
+      (List.range antworten.length).length := by
+    simp only [List.length_map, List.length_range]
+  apply List.ext_getElem hlenmap
   intro i h1 h2
   have h2' : i < qs.length := by
     simp only [List.length_range] at h2
