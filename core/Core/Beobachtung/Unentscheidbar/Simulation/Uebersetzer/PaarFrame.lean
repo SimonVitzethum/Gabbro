@@ -77,6 +77,24 @@ theorem schrittVergleichNat (blk : List Befehl) (r : Rahmen) (p links x y : Nat)
   dsimp only [A, B]
   rfl
 
+/-- One iteration is definitionally one machine step. -/
+theorem schrittAlsIterate (blk : List Befehl) (r : Rahmen) :
+    (Schritt blk)^[1] (some r) = Schritt blk (some r) := rfl
+
+/-- Concatenate two iterated runs. -/
+theorem kettenSchritt (blk : List Befehl) (r₀ r₁ r₂ : Rahmen) (m n : Nat)
+    (h₁ : (Schritt blk)^[m] (some r₀) = some r₁)
+    (h₂ : (Schritt blk)^[n] (some r₁) = some r₂) :
+    (Schritt blk)^[m + n] (some r₀) = some r₂ := by
+  rw [Function.iterate_add_apply, h₁, h₂]
+
+/-- Append one plain machine step to an iterated run. -/
+theorem kettenEinSchritt (blk : List Befehl) (r₀ r₁ r₂ : Rahmen) (m : Nat)
+    (h₁ : (Schritt blk)^[m] (some r₀) = some r₁)
+    (h₂ : Schritt blk (some r₁) = some r₂) :
+    (Schritt blk)^[m + 1] (some r₀) = some r₂ := by
+  rw [Function.iterate_add_apply, h₁, schrittAlsIterate, h₂]
+
 /-- The shared prefix of the pairing computation, as explicit frames. -/
 def pb1 (r : Rahmen) (a frei : Nat) : Rahmen :=
   { r with pc := 3, temp := Function.update r.temp frei (some (natVal a)) }
