@@ -25,7 +25,7 @@ theorem schrittMitPcTotal (pre mid : List Befehl) (hv : VerschiebbaresProgramm m
       | none => none
       | some r' => some (mitPc pre.length r') := by
   by_cases hlt : r.pc < mid.length
-  · simpa only [List.append_nil] using schrittMitPcBei pre mid [] hv r hlt
+  · convert schrittMitPcBei pre mid [] hv r hlt using 1 <;> simp only [List.append_nil]
   · have hpcGe : mid.length ≤ r.pc := Nat.le_of_not_gt hlt
     have hnoneMid : Schritt mid (some r) = none := by
       have hget : mid[r.pc]? = none := getLenKein mid r.pc hpcGe
@@ -55,15 +55,8 @@ theorem laufMitPcTotal (pre mid : List Befehl) (hv : VerschiebbaresProgramm mid)
   | succ t ih =>
     rw [Function.iterate_succ_apply', Function.iterate_succ_apply', ih]
     cases h : (Schritt mid)^[t] (some r) with
-    | none =>
-      rw [show (Schritt mid)^[Nat.succ t] (some r) = none by
-        rw [Function.iterate_succ_apply', h]
-        rfl]
-      rfl
-    | some rj =>
-      rw [show (Schritt mid)^[Nat.succ t] (some r) = Schritt mid (some rj) by
-        rw [Function.iterate_succ_apply', h]]
-      exact schrittMitPcTotal pre mid hv rj
+    | none => rfl
+    | some rj => exact schrittMitPcTotal pre mid hv rj
 
 /-- A composite run reaching the overall end from a shifted entry determines a
     standalone run of the middle block reaching its end. -/
@@ -75,13 +68,14 @@ theorem rueckMitPc (pre mid : List Befehl) (hv : VerschiebbaresProgramm mid)
       rEnd = mitPc pre.length rB := by
   have ht := laufMitPcTotal pre mid hv r0 t
   rw [hcomp] at ht
-  cases hstand : (Schritt mid)^[t] (some r0) with
+  generalize hst : (Schritt mid)^[t] (some r0) = x at ht ⊢
+  cases x with
   | none =>
-    simp only [hstand] at ht
+    simp only at ht
     cases ht
   | some rB =>
-    have hEq : rEnd = mitPc pre.length rB := Option.some.inj (by simpa only [hstand] using ht)
-    refine ⟨rB, hstand, ?_, hEq⟩
+    have hEq : rEnd = mitPc pre.length rB := Option.some.inj (by simpa only using ht)
+    refine ⟨rB, hst, ?_, hEq⟩
     have hp : (mitPc pre.length rB).pc = rEnd.pc := by rw [← hEq]
     simp only [mitPc] at hp
     omega
@@ -99,29 +93,36 @@ theorem randAusEndePrefix (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA
     (hk : (Schritt (blkA ++ blkB))^[k] (some r) = some r')
     (hpcEnd : r'.pc = (blkA ++ blkB).length) :
     ∃ j rA, j ≤ k ∧ (Schritt blkA)^[j] (some r) = some rA ∧ rA.pc = blkA.length := by
+  classical
   let Q : Nat → Prop := fun s =>
     ∃ rs, s ≤ k ∧ (Schritt (blkA ++ blkB))^[s] (some r) = some rs ∧ blkA.length ≤ rs.pc
   have hQ : ∃ s, Q s := by
     refine ⟨k, r', le_rfl, hk, ?_⟩
     rw [hpcEnd, List.length_append]
     omega
-  let j0 := Nat.find hQ
-  have hspec := Nat.find_spec hQ
-  rcases hspec with ⟨rJ, hj0k, hrunJ, hgeJ⟩
+  set j0 := Nat.find hQ with hj0def
+  rcases Nat.find_spec hQ with ⟨rJ, hj0k0, hrunJ0, hgeJ⟩
+  have hj0k : j0 ≤ k := by rw [hj0def]; exact hj0k0
+  have hrunJ : (Schritt (blkA ++ blkB))^[j0] (some r) = some rJ := by
+    rw [hj0def]; exact hrunJ0
   have hkle : ∀ s, s < j0 → ∀ rs,
       (Schritt (blkA ++ blkB))^[s] (some r) = some rs → rs.pc < blkA.length := by
     intro s hs rs hrs
-    have hnotQ : ¬ Q s := Nat.find_min hQ hs
+    have hs' : s < Nat.find hQ := by rwa [hj0def] at hs
+    have hnotQ : ¬ Q s := Nat.find_min hQ hs'
     by_contra hge
     exact hnotQ ⟨rs, by omega, hrs, Nat.le_of_not_gt hge⟩
   have hEqJ : rJ.pc = blkA.length := by
     by_contra hne
-    have hgtJ : blkA.length < rJ.pc := Nat.lt_of_le_of_ne hgeJ hne
-    cases hj0 with
-    | zero =>
-      rw [hrunJ, hrpc] at hgtJ
+    have hgtJ : blkA.length < rJ.pc := Nat.lt_of_le_of_ne hgeJ (fun h => hne h.symm)
+    by_cases hj0z : j0 = 0
+    · subst j0
+      have hrJ : rJ = r := by
+        exact Option.some.inj (by simpa only [Function.iterate_zero_apply] using hrunJ.symm)
+      rw [hrJ, hrpc] at hgtJ
       omega
-    | succ j1 =>
+    · obtain ⟨j1, hj1⟩ := Nat.exists_eq_succ_of_ne_zero hj0z
+      subst j0
       have hj1k : j1 ≤ k := by omega
       obtain ⟨r1, hrun1⟩ := laufHatZwischen (blkA ++ blkB) r k j1 r' hk hj1k
       have hlt1 : r1.pc < blkA.length := hkle j1 (Nat.lt_succ_self j1) r1 hrun1
