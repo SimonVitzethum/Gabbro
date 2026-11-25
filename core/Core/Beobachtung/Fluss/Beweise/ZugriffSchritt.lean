@@ -71,15 +71,17 @@ theorem zugriffKopfGleich (p : Fragment) (plattform : Plattform) {f : Befehl}
     exact gleich.1 d ⟨0, Nat.zero_lt_one⟩ rfl
   have sysKopf : ∀ s d, (p.einheit plattform).system.kopf s d = Ast.Semantik.kopf p.code s d :=
     fun s d => rfl
-  rw [sysKopf, Ast.Semantik.kopf, ← lokEqFun, ← congrFun statusEq c]
-  rw [← sysKopf]
+  have h : Ast.Semantik.kopf p.code w c = Ast.Semantik.kopf p.code v c := by
+    rw [Ast.Semantik.kopf, Ast.Semantik.kopf]
+    rw [← lokEqFun, ← congrFun statusEq]
+  rw [sysKopf, h, ← sysKopf]
   exact kopf
 
 /-- The unit labels nothing, so a public plan view records every read label. Equal plan views of
     two access steps therefore give equal read labels, including the value read. The remaining gap
     to equal observations is the graph-dependent initial write of `Speicherfolge`, not the plan. -/
 theorem zugriffPlanSicht_lesen (p : Fragment) (plattform : Plattform)
-    {p₁ p₂ : Plan}
+    {p₁ p₂ : Ast.Semantik.Plan}
     (h : PlanSicht (p.einheit plattform) p₁ = PlanSicht (p.einheit plattform) p₂) :
     p₁.lesen = p₂.lesen := by
   have hfst := congrArg Prod.fst h
