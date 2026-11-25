@@ -163,7 +163,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
     s'.graph.ev = s.graph.ev := by
   have planEq := quellSchrittPlanPrivat p f hgut leer impl
   have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
-  obtain ⟨_, _, _, _, aktion, folge, _⟩ := aus
+  obtain ⟨_, _, _, sperren, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
   have hlabels : sperren ++ plan.lesen ++
       schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
@@ -210,7 +210,7 @@ theorem speicherfolgeEinzel {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkte
     (h : Speicherfolge anfang f g [l] es g') :
     ∀ x ∈ es, (∃ ort, x.1 = SpeicherAkteur.initial ort) ∨ x = (f, l) := by
   cases h with
-  | cons g0 g1 g2 l ls init esTail vor hs nach =>
+  | @cons g g0 g1 g2 l ls init esTail vor hs nach =>
     cases nach
     intro x hx
     change x ∈ init ++ [(f, l)] at hx
@@ -257,7 +257,7 @@ theorem einAktBeiAussen {Ort Wert} {initial : Ort → Wert} {vor nach : Speicher
     · have artAus : pair.2.art = .aussen := by rw [heq, istAussen]
       rw [artAus] at memLab
       simp only [Speicher.Art.liest, Speicher.Art.schreibt] at memLab
-      exact False.elim memLab
+      rcases memLab with memLab | memLab <;> cases memLab
 
 /-- A class-good step keeps the one-actor property: either its context has no arrival regions
     and the graph is unchanged, or it is the entry context and every new access is booked there. -/
@@ -305,6 +305,15 @@ theorem einAktAnkunft (p : Fragment) (platform : Plattform) (f : Befehl) (hgut :
   have hu := quellImplArrivalGleich p f hgut impl d
   rw [hu]
   exact vorAnk d hd
+
+/-- An answer keeps the one-actor property of a source-unit run. -/
+theorem einAktAntwort (p : Fragment) (platform : Plattform)
+    {k : Katalog.Katalog} {run : HwLauf} {t : Nat} {a : AntwortEreignis}
+    {s : Zustand} {spur : SchrittSpur Zelle Int} {s' : Zustand}
+    (h : AntwortSchritt (p.einheit platform).einrichtung k run t a s spur s')
+    (ein : EinAkt s.graph eintritt) : EinAkt s'.graph eintritt := by
+  obtain ⟨_, _, folge, _⟩ := h
+  exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.antwort a)) rfl folge ein
 
 /-- The run invariant of a source unit: reachable graph, one actor, and no arrival regions
     outside the entry context. -/
@@ -377,16 +386,11 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
               exact quellKontextSchnitt p platform klassenrein f head impl aus (ih vor vorher)
             | antwort _ h =>
               have erreichbar := (AntwortSchritt.viele (p.einheit platform).einrichtung h).erreichbar (ih vor vorher).1
-              have aexists : ∃ a : AntwortEreignis, spur.aussen = [.antwort a] := by
-                simpa using h.2.1
-              obtain ⟨a, _⟩ := aexists
-              have folge := h.2.2.1
               have ziel := h.2.2.2
-              refine ⟨erreichbar, ?_, ?_⟩
-              · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.antwort a)) rfl folge (ih vor vorher).2.1
-              · intro d hd
-                rw [ziel]
-                exact (ih vor vorher).2.2 d hd
+              refine ⟨erreichbar, einAktAntwort p platform h (ih vor vorher).2.1, ?_⟩
+              intro d hd
+              rw [ziel]
+              exact (ih vor vorher).2.2 d hd
             | interrupt _ h =>
               have erreichbar := (UnterbrechungsSchritt.viele (p.einheit platform).einrichtung h).erreichbar (ih vor vorher).1
               obtain ⟨k0, irq, _, _, _, _, _, _, _, folge, ziel⟩ := h
