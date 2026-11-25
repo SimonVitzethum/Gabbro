@@ -68,8 +68,21 @@ theorem geraete_laden_gleich {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   have hcore : s₁.assignment 0 = s₂.assignment 0 := by
     simp only [hassign]
   have hmed : Gabbro.Core.Ast.LowLevel.medium s₁ = Gabbro.Core.Ast.LowLevel.medium s₂ := rfl
-  simp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit, hstarts0, hbytes0, hcore,
-    hmed]
+  simp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit] at ⊢
+  by_cases hcond : (h₁.lade (d.unit locals).bild).starts 0 = some 0 ∧
+      (h₁.lade (d.unit locals).bild).bytes 0 = some 0
+  · have hcond₂ : (h₂.lade (d.unit locals).bild).starts 0 = some 0 ∧
+        (h₂.lade (d.unit locals).bild).bytes 0 = some 0 := by
+      obtain ⟨hs, hb⟩ := hcond
+      exact ⟨hstarts0 ▸ hs, hbytes0 ▸ hb⟩
+    simp only [hcond, hcond₂, hcore, hmed]
+  · have hcond₂ : ¬ ((h₂.lade (d.unit locals).bild).starts 0 = some 0 ∧
+        (h₂.lade (d.unit locals).bild).bytes 0 = some 0) := by
+      intro hcon
+      apply hcond
+      obtain ⟨hs, hb⟩ := hcon
+      exact ⟨hstarts0.symm.trans hs, hbytes0.symm.trans hb⟩
+    simp only [hcond, hcond₂]
 
 /-- The strengthened coupling holds at cut zero for every compared device run:
     both runs load the same state, so the low prefixes, the public states, the
@@ -91,8 +104,14 @@ theorem geraete_start_kopplungAussage {k : Katalog} {scope : Gabbro.Core.Ast.Sco
     · have hpre : NiedrigeBeob (d.unit locals) ρ₁ predictor 0 =
           NiedrigeBeob (d.unit locals) ρ₂ predictor 0 := by
         simp only [NiedrigeBeob, NiedrigeBeob.praefix, zustandEq]
+      have hrefl : ∀ L : List (NiedrigesEreignis Nat UInt8 PUnit PUnit),
+          List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) L L := by
+        intro L
+        induction L with
+        | nil => exact List.Forall₂.nil
+        | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich x) ih
       simp only [hpre, List.take_length]
-      exact List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil
+      exact hrefl _
     · intro v w hv hw
       have vw : v = w := Option.some.inj (hv.symm.trans (zustandEq.trans hw))
       subst vw
