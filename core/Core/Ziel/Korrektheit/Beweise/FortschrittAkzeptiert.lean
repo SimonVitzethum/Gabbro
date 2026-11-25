@@ -224,11 +224,15 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
       cases htakt : ρ.zeit.takt n with
       | schritt label step =>
         cases hzn : ρ.zeit.zustand n with
-        | none => rw [hzn] at step; cases step
+        | none =>
+          rw [hzn] at step
+          cases step
         | some z =>
           rw [hzn] at step
           cases hsucc' : ρ.zeit.zustand (n + 1) with
-          | none => rw [hsucc'] at step; cases step
+          | none =>
+            rw [hsucc'] at step
+            cases step
           | some s' =>
             rw [hsucc'] at step
             cases step with
@@ -237,182 +241,200 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               subst seq
               have hz : ρ.zeit.zustand n = some z := hzn
               obtain ⟨ihd, ihs⟩ := ih z hz
-            cases trans with
-            | kontext _ _ _ aus =>
-              obtain ⟨rahmen, _, _, _, aktion, _, seq⟩ := aus
-              have ukerne : u.kerne = z.kerne := rahmen.kerne
-              have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
-                fun k => congrArg _ (congrArg _ ukerne)
-              have skerne : s.kerne = v.kerne := congrArg _ seq
-              have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
-                fun k => congrArg _ (congrArg _ seq)
-              have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
-                fun k => congrArg _ (congrArg _ ukerne)
-              cases aktion with
-              | intern =>
-                have vuk : v.kerne = u.kerne := rfl
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, vuk, ukerne] at h
-                  exact ihd k c h
-                · rw [sstack, vuk] at h
-                  rw [ustack] at h
-                  exact ihs k w m h c hc
-              | warte =>
-                have vuk : v.kerne = u.kerne := rfl
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, vuk, ukerne] at h
-                  exact ihd k c h
-                · rw [sstack, vuk] at h
-                  rw [ustack] at h
-                  exact ihs k w m h c hc
-              | sperre =>
-                have vuk : v.kerne = u.kerne := rfl
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, vuk, ukerne] at h
-                  exact ihd k c h
-                · rw [sstack, vuk] at h
-                  rw [ustack] at h
-                  exact ihs k w m h c hc
-              | frage =>
-                have vuk : v.kerne = u.kerne := rfl
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, vuk, ukerne] at h
-                  exact ihd k c h
-                · rw [sstack, vuk] at h
-                  rw [ustack] at h
-                  exact ihs k w m h c hc
-              | verbrauche =>
-                have vuk : v.kerne = u.kerne := rfl
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne, vuk, ukerne] at h
-                  exact ihd k c h
-                · rw [sstack, vuk] at h
-                  rw [ustack] at h
-                  exact ihs k w m h c hc
-              | rueckkehr k' =>
-                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-                · rw [skerne] at h
+              cases trans with
+              | kontext _ _ _ aus =>
+                obtain ⟨rahmen, _, _, _, aktion, _, seq⟩ := aus
+                have ukerne : u.kerne = z.kerne := rahmen.kerne
+                have skerne : s.kerne = v.kerne := congrArg _ seq
+                have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel :=
+                  fun k => congrArg _ (congrArg _ seq)
+                have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel :=
+                  fun k => congrArg _ (congrArg _ ukerne)
+                cases hakt : plan.aktion with
+                | intern =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | intern =>
+                    have vuk : v.kerne = u.kerne := rfl
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne, vuk, ukerne] at h
+                      exact ihd k c h
+                    · rw [sstack, vuk] at h
+                      rw [ustack] at h
+                      exact ihs k w m h c hc
+                | warte =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | warte =>
+                    have vuk : v.kerne = u.kerne := rfl
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne, vuk, ukerne] at h
+                      exact ihd k c h
+                    · rw [sstack, vuk] at h
+                      rw [ustack] at h
+                      exact ihs k w m h c hc
+                | sperre =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | sperre =>
+                    have vuk : v.kerne = u.kerne := rfl
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne, vuk, ukerne] at h
+                      exact ihd k c h
+                    · rw [sstack, vuk] at h
+                      rw [ustack] at h
+                      exact ihs k w m h c hc
+                | frage =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | frage =>
+                    have vuk : v.kerne = u.kerne := rfl
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne, vuk, ukerne] at h
+                      exact ihd k c h
+                    · rw [sstack, vuk] at h
+                      rw [ustack] at h
+                      exact ihs k w m h c hc
+                | verbrauche =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | verbrauche =>
+                    have vuk : v.kerne = u.kerne := rfl
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne, vuk, ukerne] at h
+                      exact ihd k c h
+                    · rw [sstack, vuk] at h
+                      rw [ustack] at h
+                      exact ihs k w m h c hc
+                | rueckkehr =>
+                  rw [hakt] at aktion
+                  cases aktion with
+                  | rueckkehr k' =>
+                    refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                    · rw [skerne] at h
+                      by_cases heq : k = k'
+                      · subst heq
+                        have hv : v.kerne k' = (u.kerne k').zurueck := by
+                          show Function.update _ _ _ _ = _
+                          rw [Function.update_self]
+                        cases hst : (u.kerne k').stapel with
+                        | nil =>
+                          have hnone : ((u.kerne k').zurueck).laeuft = none := by
+                            rw [hst]
+                            rfl
+                          rw [hv, hnone] at h
+                          cases h
+                        | cons top rest =>
+                          obtain ⟨w, n⟩ := top
+                          have hpop : (v.kerne k').laeuft = w := by
+                            rw [hv, hst]
+                            rfl
+                          rw [hpop] at h
+                          have hmem : (w, n) ∈ (u.kerne k').stapel := by
+                            rw [hst]
+                            exact List.mem_cons_self
+                          rw [ustack] at hmem
+                          exact ihs k' w n hmem c h
+                      · have hsame : v.kerne k = u.kerne k := by
+                          show Function.update _ _ _ _ = _
+                          rw [Function.update_of_ne heq]
+                        rw [hsame, ukerne] at h
+                        exact ihd k c h
+                    · rw [sstack] at h
+                      by_cases heq : k = k'
+                      · subst heq
+                        have hv : v.kerne k' = (u.kerne k').zurueck := by
+                          show Function.update _ _ _ _ = _
+                          rw [Function.update_self]
+                        cases hst : (u.kerne k').stapel with
+                        | nil =>
+                          have hnil : ((u.kerne k').zurueck).stapel = [] := by
+                            rw [hst]
+                            rfl
+                          rw [hv, hnil] at h
+                          exact (List.not_mem_nil h).elim
+                        | cons top rest =>
+                          have hcons : ((u.kerne k').zurueck).stapel = rest := by
+                            rw [hst]
+                            rfl
+                          rw [hv, hcons] at h
+                          have hmem : (w, m) ∈ (u.kerne k').stapel := by
+                            rw [hst]
+                            exact List.mem_cons_of_mem _ h
+                          rw [ustack] at hmem
+                          exact ihs k' w m hmem c hc
+                      · have hsame : (v.kerne k).stapel = (u.kerne k).stapel := by
+                          show (Function.update _ _ _ _).stapel = _
+                          rw [Function.update_of_ne heq]
+                        rw [hsame, ustack] at h
+                        exact ihs k w m h c hc
+              | antwort _ arrives =>
+                obtain ⟨_, _, _, hstate⟩ := arrives
+                have skerne : s.kerne = z.kerne := by
+                  have h1 : s.kerne = ((z.antwort _).kerne) := congrArg _ hstate
+                  have h2 : ((z.antwort _).kerne) = z.kerne := rfl
+                  exact h1.trans h2
+                rw [skerne]
+                exact ih z hz
+              | interrupt _ enters =>
+                obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
+                have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
+                have skerne : s.kerne =
+                    (Maschine.Zustandseintritt z k' id c' nmi).kerne := congrArg _ hstate
+                have einkern : ∀ k, (Maschine.Zustandseintritt z k' id c' nmi).kerne k =
+                    if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
+                  intro k
                   by_cases heq : k = k'
                   · subst heq
-                    have hv : v.kerne k' = (u.kerne k').zurueck := by
-                      show Function.update _ _ _ _ = _
-                      rw [Function.update_self]
-                    cases hst : (u.kerne k').stapel with
-                    | nil =>
-                      have hnone : ((u.kerne k').zurueck).laeuft = none := by
-                        rw [hst]
-                        rfl
-                      rw [hv, hnone] at h
-                      cases h
-                    | cons top rest =>
-                      obtain ⟨w, n⟩ := top
-                      have hpop : (v.kerne k').laeuft = w := by
-                        rw [hv, hst]
-                        rfl
-                      rw [hpop] at h
-                      have hmem : (w, n) ∈ (u.kerne k').stapel := by
-                        rw [hst]
-                        exact List.mem_cons_self
-                      rw [ustack] at hmem
-                      exact ihs k' w n hmem c h
-                  · have hsame : v.kerne k = u.kerne k := by
-                      show Function.update _ _ _ _ = _
-                      rw [Function.update_of_ne heq]
-                    rw [hsame, ukerne] at h
+                    show Function.update _ _ _ _ = _
+                    rw [Function.update_self]
+                  · show Function.update _ _ _ _ = _
+                    rw [Function.update_of_ne heq]
+                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                · rw [skerne, einkern] at h
+                  by_cases heq : k = k'
+                  · subst heq
+                    simp only [if_true] at h
+                    have hdispatch : ((z.kerne k').unterbrechen c' nmi).laeuft
+                        = some c' := rfl
+                    rw [hdispatch] at h
+                    have hc' : c = c' := Option.some.inj h
+                    subst hc'
+                    exact hkk
+                  · simp only [if_neg heq] at h
                     exact ihd k c h
-                · rw [sstack] at h
+                · rw [skerne, einkern] at h
                   by_cases heq : k = k'
                   · subst heq
-                    have hv : v.kerne k' = (u.kerne k').zurueck := by
-                      show Function.update _ _ _ _ = _
-                      rw [Function.update_self]
-                    cases hst : (u.kerne k').stapel with
-                    | nil =>
-                      have hnil : ((u.kerne k').zurueck).stapel = [] := by
-                        rw [hst]
-                        rfl
-                      rw [hv, hnil] at h
-                      exact (List.not_mem_nil h).elim
-                    | cons top rest =>
-                      have hcons : ((u.kerne k').zurueck).stapel = rest := by
-                        rw [hst]
-                        rfl
-                      rw [hv, hcons] at h
-                      have hmem : (w, m) ∈ (u.kerne k').stapel := by
-                        rw [hst]
-                        exact List.mem_cons_of_mem _ h
-                      rw [ustack] at hmem
-                      exact ihs k' w m hmem c hc
-                  · have hsame : (v.kerne k).stapel = (u.kerne k).stapel := by
-                      show (Function.update _ _ _ _).stapel = _
-                      rw [Function.update_of_ne heq]
-                    rw [hsame, ustack] at h
+                    simp only [if_true] at h
+                    cases List.mem_cons.mp h with
+                    | inl htop =>
+                      obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
+                      exact ihd k' c hc
+                    | inr hrest =>
+                      exact ihs k' w m hrest c hc
+                  · simp only [if_neg heq] at h
                     exact ihs k w m h c hc
-            | antwort _ arrives =>
-              obtain ⟨_, _, _, hstate⟩ := arrives
-              have skerne : s.kerne = z.kerne := by
-                have h1 : s.kerne = ((z.antwort _).kerne) := congrArg _ hstate
-                have h2 : ((z.antwort _).kerne) = z.kerne := rfl
-                exact h1.trans h2
-              rw [skerne]
-              exact ih z hz
-            | interrupt _ enters =>
-              obtain ⟨k', irq, c', nmi, hoffer, _, _, _, _, _, hstate⟩ := enters
-              have hkk : k' < H.kernzahl := (konform.2 n).2.1 k' hoffer
-              have skerne : s.kerne =
-                  (Maschine.Zustandseintritt z k' id c' nmi).kerne := congrArg _ hstate
-              have einkern : ∀ k, (Maschine.Zustandseintritt z k' id c' nmi).kerne k =
-                  if k = k' then (z.kerne k').unterbrechen c' nmi else z.kerne k := by
-                intro k
-                by_cases heq : k = k'
-                · subst heq
-                  show Function.update _ _ _ _ = _
-                  rw [Function.update_self]
-                · show Function.update _ _ _ _ = _
-                  rw [Function.update_of_ne heq]
-              refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-              · rw [skerne, einkern] at h
-                by_cases heq : k = k'
-                · subst heq
-                  simp only [if_true] at h
-                  have hdispatch : ((z.kerne k').unterbrechen c' nmi).laeuft = some c' :=
-                    rfl
-                  rw [hdispatch] at h
-                  have : c = c' := Option.some.inj h
-                  subst this
-                  exact hkk
-                · simp only [if_neg heq] at h
-                  exact ihd k c h
-              · rw [skerne, einkern] at h
-                by_cases heq : k = k'
-                · subst heq
-                  simp only [if_true] at h
-                  cases List.mem_cons.mp h with
-                  | inl htop =>
-                    obtain ⟨rfl, rfl⟩ := Prod.mk.inj htop
-                    exact ihd k' c (by rfl ▸ hc)
-                  | inr hrest =>
-                    exact ihs k' w m hrest c hc
-                · simp only [if_neg heq] at h
-                  exact ihs k w m h c hc
-            | absturz crash =>
-              obtain ⟨_, heq⟩ := crash.genau
-              have skernew : s.kerne =
-                  (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                    (Katalog.nachAbsturz z.persistenz)).kerne := congrArg _ heq
-              rw [wkern, weintritt] at *
-              refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
-              · rw [skernew] at h
-                have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
-                    some c := h
-                split at hif with hk
-                · exact hk ▸ hw.kerne
-                · cases hif
-              · rw [skernew] at h
-                have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
-                    (Katalog.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
-                rw [hempty] at h
-                exact (List.not_mem_nil h).elim
+              | absturz crash =>
+                obtain ⟨_, heq⟩ := crash.genau
+                have skernew : s.kerne =
+                    (z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
+                      (Katalog.nachAbsturz z.persistenz)).kerne := congrArg _ heq
+                rw [wkern, weintritt] at *
+                refine ⟨fun k c h => ?_, fun k w m h c hc => ?_⟩
+                · rw [skernew] at h
+                  have hif : (if k = 0 then some Ast.Semantik.eintritt else none) =
+                      some c := h
+                  by_cases hk : k = 0
+                  · subst hk
+                    exact hw.kerne
+                  · rw [if_neg hk] at hif
+                    cases hif
+                · rw [skernew] at h
+                  have hempty : ((z.wiederanlauf (einheitVon P t).einrichtung.wiederanlauf n
+                      (Katalog.nachAbsturz z.persistenz)).kerne k).stapel = [] := rfl
+                  rw [hempty] at h
+                  exact (List.not_mem_nil h).elim
       | wartet label eq _ =>
         rw [eq] at hsucc
         exact ih s hsucc
