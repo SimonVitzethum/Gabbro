@@ -77,4 +77,128 @@ private theorem zustand_nach {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Ty
   | wartet _ eq _ => exact eq
   | schritt _ step => cases step
 
+private theorem held_gleich {k : Katalog} {v u : Ast.LowLevel.State k} {c : Kontext} {slot : Nat}
+    (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
+    heldRegion v c slot = heldRegion u c slot := by
+  unfold heldRegion
+  rw [hl, hre, hle]
+
+/-- Instruction evaluation reads only the public frame, rights and loans. -/
+private theorem evaluate_gleich {k : Katalog} (op : Instruction k)
+    {v u : Ast.LowLevel.State k} {c : Kontext}
+    (hl : v.lokal = u.lokal) (hre : v.rechte = u.rechte) (hle : v.leihen = u.leihen) :
+    op.evaluate v c = op.evaluate u c := by
+  cases op with
+  | denoteAddress _ _ _ => rfl
+  | selectEnvironment _ _ _ _ => rfl
+  | projectAddress slot =>
+      unfold Instruction.evaluate
+      rw [held_gleich hl hre hle]
+  | borrowView slot shape =>
+      unfold Instruction.evaluate
+      rw [held_gleich hl hre hle]
+
+/-- Inverting the low-level head: only the instruction itself runs at the entry, once. -/
+private theorem kopf_heraus {k : Katalog} (op : Instruction k) {v : Ast.LowLevel.State k}
+    {c : Kontext} {f : Instruction k} (hv : (unit op).system.kopf v c = some f) :
+    f = op ∧ c = Ast.LowLevel.entryContext ∧ (v.lokal c).pc = 0 ∧
+      (op.evaluate v c).isSome = true ∧ v.status c = .laeuft := by
+  simp only [unit, Ast.LowLevel.system] at hv
+  unfold Ast.LowLevel.head at hv
+  cases hs : v.status c with
+  | ruht => simp only [hs] at hv; cases hv
+  | beendet _ => simp only [hs] at hv; cases hv
+  | laeuft =>
+      simp only [hs] at hv
+      split at hv with
+      | isTrue hcond =>
+          exact ⟨(Option.some.inj hv).symm, hcond.1, hcond.2.1, hcond.2.2, hs⟩
+      | isFalse _ => cases hv
+
+/-- The low-level unit never issues a question, so no state carries a pending one. -/
+private theorem unit_fragen_leer {k : Katalog} (op : Instruction k) {h : Umgebung}
+    {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ) :
+    ∀ t, ρ.zeit.zustand t = none ∨ ∃ s : Ast.LowLevel.State k, ρ.zeit.zustand t = some s ∧ s.fragen = [] := by
+  intro t
+  induction t with
+  | zero =>
+      rw [lauf.2.2.2]
+      unfold Ast.LowLevel.loaded
+      split
+      · next hload =>
+          right
+          refine ⟨_, rfl, ?_⟩
+          rfl
+      · left
+        rfl
+  | succ t ih =>
+      cases ih with
+      | inl hn =>
+          left
+          exact zustand_nach hn
+      | inr ⟨s, hs, leer⟩ =>
+          have tak := ρ.zeit.takt t
+          rw [hs] at tak
+          cases tak with
+          | wartet _ eq _ => right; exact ⟨s, eq, leer⟩
+          | schritt _ step =>
+              cases step with
+              | kontext _ _ regel aus =>
+                  obtain ⟨_, _, implI⟩ := regel
+                  obtain ⟨transfer, _, planEq, _⟩ := Instruction.implTransfer implI
+                  cases (List.cons.inj planEq).1
+                  simp only [unit] at aus
+                  obtain ⟨_, nextEq⟩ := Instruction.genauInternal aus
+                  right
+                  refine ⟨_, nextEq, ?_⟩
+                  rw [nextEq]
+                  rfl
+              | antwort _ hantwort =>
+                  obtain ⟨_, _, _, nextEq⟩ := hantwort
+                  right
+                  refine ⟨_, nextEq, ?_⟩
+                  rw [nextEq]
+                  rfl
+              | interrupt _ hinterrupt =>
+                  obtain ⟨_, _, _, _, _, _, _, _, _, _, nextEq⟩ := hinterrupt
+                  right
+                  refine ⟨_, nextEq, ?_⟩
+                  rw [nextEq]
+                  rfl
+              | absturz habsturz =>
+                  obtain ⟨_, nextEq⟩ := AbsturzSchritt.genau habsturz
+                  right
+                  refine ⟨_, nextEq, ?_⟩
+                  rw [nextEq, leer]
+
+private theorem unit_fragen_leer_an {k : Katalog} (op : Instruction k) {h : Umgebung}
+    {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ) (t : Nat)
+    {s : Ast.LowLevel.State k} (hs : ρ.zeit.zustand t = some s) : s.fragen = [] := by
+  have alle := unit_fragen_leer op lauf t
+  cases alle with
+  | inl hn => cases (hs.symm.trans hn)
+  | inr ⟨s', eq, leer⟩ =>
+      have ss : s = s' := Option.some.inj (hs.symm.trans eq)
+      cases ss
+      exact leer
+
+private theorem unit_keine_antwort {k : Katalog} (op : Instruction k) {h : Umgebung}
+    {ρ : Lauf (unit op)} (lauf : Laeufe (unit op) h ρ)
+    (t : Nat) (a : AntwortEreignis) (spur : SchrittSpur Nat UInt8) :
+    ρ.zeit.spur t ≠ some (.antwort a, spur) := by
+  intro heq
+  have tak := ρ.zeit.takt t
+  rw [heq] at tak
+  cases tak with
+  | wartet label _ _ => cases label
+  | schritt _ step =>
+      cases step with
+      | antwort _ hantwort =>
+          rename_i s0 _
+          obtain ⟨angebot, _, _, _⟩ := hantwort
+          obtain ⟨q, hqmem, _, _⟩ := angebot.2.2.2.1
+          have leer := unit_fragen_leer_an op lauf t (s := s0) rfl
+          rw [leer] at hqmem
+          cases hqmem
+
 end Gabbro.Core.Beobachtung
