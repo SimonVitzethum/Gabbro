@@ -85,6 +85,8 @@ def hwV : HwLauf :=
 
 def HV : Umgebung := Katalog.Umgebung.referenz Plattform.x86_64.katalog 1 sichtV
 
+theorem HV1 : HV.kernzahl = 1 := rfl
+
 /-- The x86-64 target supports the raised line. -/
 theorem hsupV : HV.ziel.unterstuetzt irqV := by decide
 
@@ -153,14 +155,17 @@ theorem fairV : FairLaeufe Plattform.x86_64.katalog HV hwV where
       | succ t =>
         have hk0 : k = 0 := Option.some.inj h
         subst hk0
+        rw [HV1]
         exact Nat.zero_lt_succ 0
-    · have hk0 : k = 0 := by omega
+    · have hk0 : k = 0 := by rw [HV1] at hk; omega
       subst hk0
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (n := max cut 1) (by omega)
-      exact ⟨max cut 1, Nat.le_max_left cut 1, by rw [hj]⟩
+      refine ⟨max cut 1, Nat.le_max_left cut 1, ?_⟩
+      rw [hj]
+      rfl
   interrupts := by
     intro c hc cut
-    have hc0 : c = 0 := by omega
+    have hc0 : c = 0 := by rw [HV1] at hc; omega
     subst hc0
     cases cut with
     | zero => exact ⟨0, Nat.le_refl 0, rfl⟩
@@ -235,7 +240,7 @@ noncomputable def ZV : Nat → Zustand Unit Unit Unit Unit Bool Unit
 
 /-- The run trace: the interrupt, then handler steps. -/
 noncomputable def spurV : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
-  | 0 => some (SchrittWahl.interrupt (0, 0), ⟨[Ereignis.interrupt 0 irqV Eintritt.handler], esV⟩)
+  | 0 => some (SchrittWahl.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩)
   | _ + 1 => some (SchrittWahl.kontext Hv (), ⟨[], []⟩)
 
 theorem ZV_kerne_succ : ∀ t, (ZV (t + 1)).kerne = zV1.kerne := by
