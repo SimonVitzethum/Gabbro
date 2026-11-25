@@ -53,6 +53,15 @@ def Aenderung.art : Aenderung → Int → Art
   | .addiere, _gelesen => .rmw
   | .vergleiche erwartet, gelesen => if gelesen = erwartet then .rmw else .lesen
 
+/-- An update never records an outside event. -/
+theorem Aenderung.art_ne_aussen (a : Aenderung) (gelesen : Int) : a.art gelesen ≠ .aussen := by
+  cases a with
+  | tausche => intro h; cases h
+  | addiere => intro h; cases h
+  | vergleiche erwartet =>
+    unfold Aenderung.art
+    split <;> intro h <;> cases h
+
 /-- **The instructions that access shared memory.** The cell is the `index`-th cell of the region with the
     number `region`; `index`, `quelle`, `betrag`, `erwartet` (as a slot) and `neu` name temporaries of the frame;
     `ziel` is the temporary that receives the value read, at the type `typ`. -/
