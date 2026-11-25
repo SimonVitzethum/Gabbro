@@ -66,7 +66,7 @@ theorem rennGraph_konsistent : rennGraph.Konsistent where
   liest_vorher := fun _ _ h => False.elim h
   psc := fun a h => by
     obtain ⟨_, hk⟩ := transGen_kopf h
-    have na : Modus.na = Modus.sc := hk.1
+    have na : Modus.na = Modus.sc := Graph.psc_sc_links hk
     cases na
   ohneLB := fun a h => by
     obtain ⟨_, hk⟩ := transGen_kopf h
@@ -136,7 +136,7 @@ def abSchloss : Bool → Option Bool
 
 /-- The first release hands over to the second acquire. -/
 theorem abUebergabe : abGraph.Uebergabe b1 a2 :=
-  ⟨b1, .selbst trivial, ⟨rfl, rfl⟩⟩
+  ⟨b1, .selbst trivial (Modus.stark_atomar trivial), ⟨rfl, rfl⟩⟩
 
 theorem abAbschnitte : abGraph.Abschnitte abSchloss (fun _ => True) where
   geschuetzt := by
