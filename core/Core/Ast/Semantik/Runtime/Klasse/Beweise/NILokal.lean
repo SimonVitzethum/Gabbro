@@ -80,10 +80,8 @@ theorem klassen_antwort_fragen_leer {ι : Type} (E : Klasseneinheit ι) (frei : 
       rw [lauf.2.2.2]
       cases hlad : E.laden ρ.start (h.lade E.bild) with
       | none =>
-          rw [hlad]
           exact Or.inl rfl
       | some z =>
-          rw [hlad]
           exact Or.inr ⟨z, rfl, frei.2 h ρ.start z hlad⟩
   | succ t ih =>
       cases ih with
