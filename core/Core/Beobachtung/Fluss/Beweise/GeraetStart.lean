@@ -134,6 +134,6 @@ theorem geraete_start_kopplungAussage {k : Katalog} {scope : Gabbro.Core.Ast.Sco
   · intro v w hv hw
     have vw : v = w := Option.some.inj (hv.symm.trans (zustandEq.trans hw))
     subst vw
-    exact GeraeteLedgerGleichAussage.refl _
+    exact ⟨GeraeteLedgerGleichAussage.refl _, rfl⟩
 
 end Gabbro.Core.Beobachtung
