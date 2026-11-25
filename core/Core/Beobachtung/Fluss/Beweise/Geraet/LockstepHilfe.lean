@@ -79,7 +79,7 @@ theorem geraete_lauf_speicher_gut {h : Umgebung} {ρ : Lauf (d.unit locals)}
             | wartet label _ _ => cases label
             | schritt _ step =>
               cases step with
-              | schritt impl => exact impl_speicher_gut impl (ih hz)
+              | schritt impl => exact impl_speicher_gut (d.unit locals).einrichtung (d.unit locals).system impl (ih hz)
 
 /-- The register-machine invariant holds at every state of an admitted device run. -/
 theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
@@ -167,8 +167,13 @@ theorem geraete_lauf_invariante {h : Umgebung} {ρ : Lauf (d.unit locals)}
                   | consume owned pending ready sameQuestion =>
                     have htick := geraete_consume_tick (target := target)
                       aus hplans rfl owned pending ready sameQuestion
-                    obtain ⟨_, hfragen, _, hantworten, hverbraucht, hverworfen,
-                      hbuchung, hepoche, _, _, _, hlokal, _, _, _, _, _, _⟩ := htick
+                    have hfragen := htick.2.1
+                    have hantworten := htick.2.2.2.1
+                    have hverbraucht := htick.2.2.2.2.1
+                    have hverworfen := htick.2.2.2.2.2.1
+                    have hbuchung := htick.2.2.2.2.2.2.1
+                    have hepoche := htick.2.2.2.2.2.2.2.1
+                    have hlokal := htick.2.2.2.2.2.2.2.2.2.2.2.1
                     have hinv := ih hz
                     have hinv' := geraete_consume_erhaelt_invariante (target := target)
                       hinv owned pending ready sameQuestion
