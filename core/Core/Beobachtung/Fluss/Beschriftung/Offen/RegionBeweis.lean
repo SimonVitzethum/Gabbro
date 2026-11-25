@@ -252,6 +252,7 @@ private theorem unit_kontext_still {k : Katalog} (op : Instruction k) {ρ : Lauf
                     simpa only [unit] using hcommit
                   have hKontext : kontextBeob ρ predictor t c s (transfer.apply c s) ⟨[], []⟩ = [] := by
                     unfold kontextBeob
+                    dsimp only
                     rw [hcommitE, hausgabe, hzeit, kopfI]
                     simp only [unit, Flussdaten.leer, Bool.false_eq_true, if_false, hspec,
                       List.map_nil, List.nil_append, List.append_nil]
