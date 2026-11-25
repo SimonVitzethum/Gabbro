@@ -117,6 +117,7 @@ public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
 public import Core.Beobachtung.SchrankenBeweise.Klasse
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
