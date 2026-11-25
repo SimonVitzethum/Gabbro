@@ -348,8 +348,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs k w n hmem c h
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).laeuft =
                           (u.kerne k).laeuft := by
-                        show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).laeuft = _
-                        rw [Function.update_of_ne heq]
+                          show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).laeuft = _
+                          rw [Function.update_of_ne heq]
                         rw [hsame, ukerne] at h
                         exact ihd k c h
                     · rw [sstack] at h
@@ -379,7 +379,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                           exact ihs k w m hmem c hc
                       · have hsame : ((Maschine.Zustandsrueckkehr u kr).kerne k).stapel =
                           (u.kerne k).stapel := by
-                          unfold Maschine.Zustandsrueckkehr
+                          show ((Function.update u.kerne kr ((u.kerne kr).zurueck)) k).stapel = _
                           rw [Function.update_of_ne heq]
                         rw [hsame, ustack] at h
                         exact ihs k w m h c hc
