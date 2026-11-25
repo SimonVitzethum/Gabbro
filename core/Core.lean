@@ -84,7 +84,12 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.RegionBeweisHelpers
+public import Core.Beobachtung.Fluss.Beschriftung.Offen.RegionBeweis
+public import Core.Beobachtung.Fluss.Beschriftung.Pegel
+public import Core.Beobachtung.Fluss.Beschriftung.PegelSatz
 public import Core.Beobachtung.Speicherverwaltung
+public import Core.Beobachtung.Fluss.Beweise.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
 public import Core.Beobachtung.Fluss.Beweise.Geraet
 public import Core.Beobachtung.SchrankenB8
@@ -162,6 +167,8 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
 public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
+public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
+public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
