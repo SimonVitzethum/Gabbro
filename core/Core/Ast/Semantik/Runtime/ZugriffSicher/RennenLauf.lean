@@ -159,7 +159,7 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
   obtain ⟨_, _, _, _, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
   have folgeLeer : Speicherfolge s.initial (.kontext c) s.graph [] [] s'.graph := by
-    simpa [planEq, hstill.1, hstill.2.1] using folge
+    simpa [planEq, hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] using folge
   have evEq := folgeLeer.viele.ev
   simpa using evEq
 
@@ -198,7 +198,16 @@ theorem speicherfolgeEinzel {Ort Wert} {anfang : Ort → Wert} {f : SpeicherAkte
     {g g' : SpeicherGraph Ort Wert} {l : Speicher.Etikett Ort Wert} {es}
     (h : Speicherfolge anfang f g [l] es g') :
     ∀ x ∈ es, (∃ ort, x.1 = SpeicherAkteur.initial ort) ∨ x = (f, l) := by
-  cases h <;> simp_all
+  cases h with
+  | nil g => intro x hx; cases hx
+  | @cons g g0 g1 g2 l ls init esTail vor hs nach =>
+    cases nach
+    intro x hx
+    change x ∈ init ++ [(f, l)] at hx
+    rw [List.mem_append, List.mem_singleton] at hx
+    rcases hx with hx | rfl
+    · exact Or.inl (initialisierungAkteen vor x hx)
+    · exact Or.inr rfl
 
 /-- **One actor in the event list**: every memory access recorded in the graph was appended by
     the entry context. This is the list form of the premise of `rennenAusEinemKontext`. -/
@@ -237,6 +246,7 @@ theorem einAktBeiAussen {Ort Wert} {initial : Ort → Wert} {vor nach : Speicher
     · exact False.elim (nichtInitial ort hinit)
     · have artAus : pair.2.art = .aussen := by rw [heq, istAussen]
       rw [artAus] at memLab
+      simp only [Art.liest, Art.schreibt] at memLab
       exact False.elim memLab
 
 /-- A class-good step keeps the one-actor property: either its context has no arrival regions
@@ -266,8 +276,7 @@ theorem einAktBeiKontext (p : Fragment) (platform : Plattform) (f : Befehl) (hgu
     · exact vorEin x hxAlt memLab nichtInitial
     · rcases List.mem_map.mp hxNeu with ⟨pair, hpair, rfl⟩
       rcases speicherfolgeAkteen folge pair hpair with hf | ⟨ort, hinit⟩
-      · rw [hf]
-        rfl
+      · simpa [hf]
       · exact False.elim (nichtInitial ort hinit)
 
 /-- The arrival regions of a non-entry context stay empty across a class-good step. -/
@@ -306,7 +315,8 @@ theorem quellStartSchnitt (p : Fragment) (platform : Plattform) (H : Katalog.Umg
     · change Gabbro.Core.Speicher.Zustand.Erreichbar Gabbro.Core.Speicher.Zustand.leer
       exact Gabbro.Core.Speicher.Zustand.Erreichbar.start
     · intro x hx
-      simp only [Gabbro.Core.Speicher.Zustand.leer, List.not_mem_nil] at hx
+      change x ∈ ([] : List (Speicher.Ereignis (SpeicherAkteur Zelle) Zelle Int)) at hx
+      cases hx
     · intro c hc
       simp only [Zustand.start, startdaten, if_neg hc]
   · cases h
@@ -355,10 +365,12 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
             | kontext _ _ regel aus =>
               obtain ⟨f, head, impl⟩ := regel
               exact quellKontextSchnitt p platform klassenrein f head impl aus (ih vor vorher)
-            | @antwort s0 s0' spur0 a0 _ h =>
+            | antwort _ h =>
               obtain ⟨_, _, folge, ziel⟩ := h
               refine ⟨(AntwortSchritt.viele h).erreichbar (ih vor vorher).1, ?_, ?_⟩
-              · exact einAktBeiAussen (label := aussenEtikett (p.einheit platform).einrichtung (.antwort a0)) rfl folge (ih vor vorher).2.1
+              · apply einAktBeiAussen (istAussen := rfl)
+                · exact folge
+                · exact (ih vor vorher).2.1
               · intro d hd
                 rw [ziel]
                 exact (ih vor vorher).2.2 d hd
@@ -377,7 +389,8 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
               · intro x hx
                 simp only [Gabbro.Core.Speicher.Zustand.leer, List.not_mem_nil] at hx
               · intro d hd
-                simp only [Zustand.wiederanlauf, Zustand.start, startdaten, if_neg hd]
+                simp [Zustand.wiederanlauf, Zustand.start, Fragment.sicherheitsEinheit,
+                  Fragment.einheit, einrichtung, startdaten, hd]
   intro t s anfang
   exact einAktRennen (schnitte t s anfang).1 (schnitte t s anfang).2.1
 
