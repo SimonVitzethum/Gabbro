@@ -168,8 +168,8 @@ theorem NIAkzeptiertAussage.erfuellbar :
 def NIAkzeptiertAussage.nichtTrivial := Beobachtung.ni_erfuellbar
 
 /-- The five legs of the goal hold jointly as soon as the two open ones are supplied: image validity, form
-    coverage and noninterference are proved here; `FortschrittAkzeptiertAussage` and
-    `SchrankenAkzeptiertAussage` are the legs still open (`SchedulerFortschrittVoraussetzung`, M9). -/
+    coverage, progress and noninterference are proved here; `SchrankenAkzeptiertAussage` is the leg still
+    open (M9). The progress leg is closed by `fortschritt_akzeptiert` from the two run premises. -/
 theorem ZielAusTeilenAussage.erfuellbar
     (fortschritt : FortschrittAkzeptiertAussage)
     (schranken : SchrankenAkzeptiertAussage Plattform.x86_64) :
