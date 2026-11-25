@@ -112,11 +112,13 @@ theorem pruefeBefehlErhalt_richtig (u : UnitMitInvarianten) (invs : List PruefIn
     DeklariertHalten ((programmMitInvarianten u).sicherheitsEinheit platform) s := by
   intro i d get w
   rw [sicherheitsEinheit_invarianten, abbild, List.getElem?_map] at get
-  obtain ⟨a, hsome, rfl⟩ := Option.map_eq_some_iff.mp get
+  obtain ⟨a, hsome, heq⟩ := Option.map_eq_some_iff.mp get
   rw [List.getElem?_map] at hsome
-  obtain ⟨inv, hsome, rfl⟩ := Option.map_eq_some_iff.mp hsome
-  have hmem : inv ∈ invs := List.mem_of_getElem? hsome
+  obtain ⟨inv, hsome2, heq2⟩ := Option.map_eq_some_iff.mp hsome
+  have hmem : inv ∈ invs := List.mem_of_getElem? hsome2
   have htrivial : inv.trivial = true := List.all_eq_true.mp ok inv hmem
+  subst d
+  subst a
   exact pruefInvariante_hält inv htrivial s
 
 /-- The refusal witness: an invariant the checker rejects (flag `false`). -/
