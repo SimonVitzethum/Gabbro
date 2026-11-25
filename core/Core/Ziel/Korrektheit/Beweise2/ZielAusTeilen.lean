@@ -63,7 +63,7 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
       (∀ a E, (R₀ P B).Bezeichnet a E → (R₀ P B).Akzeptiert E →
         (∀ H, (R₀ P B).Hardware ((R₀ P B).katalog E) H →
           (∀ s, (R₀ P B).ZulStart E H s →
-            ∃ ρ, (R₀ P B).Laeufe E H ρ ∧ (R₀ P B).start ρ = s))
+            ∃ ρ, (R₀ P B).Laeufe E H ρ ∧ (R₀ P B).start ρ = s)
           ∧ (∀ ρ, (R₀ P B).Laeufe E H ρ →
             ∃ ι, (R₀ P B).IdealLaeufe E ι ∧
               Ziel.Verfeinert (R₀ P B) E H ρ ι))) := by
@@ -114,7 +114,7 @@ theorem zielAusTeilenMitLuecken
     · intro a
       exact text_wohlgeformt P a
     · intro a E E' hE hE'
-      exact bezeichnet_funktional P a E E' hE hE'
+      exact bezeichnet_funktional P Ast.Category.unit a E E' hE hE'
     · intro f
       exact formG f
     · intro E hE
@@ -141,7 +141,7 @@ theorem zielAusTeilenMitLuecken
       have e₁ : E₁ = E := laufR.1
       subst E₁
       have run₁ : Maschine.Laeufe E H₁ ρ₁' := laufR.2
-      obtain ⟨ρ₂', run₂, stEq, polEq⟩ :=
+      obtain ⟨⟨ρ₂', run₂, stEq, polEq⟩, rest⟩ :=
         (niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig
       constructor
       · refine ⟨⟨E, ρ₂'⟩, ?_, ?_, ?_⟩
@@ -157,8 +157,7 @@ theorem zielAusTeilenMitLuecken
         subst E₂
         obtain ⟨_, h, pol⟩ := pol₂
         cases h
-        exact ((niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig).2
-          ρ₂'' lauf₂.2 st₂ pol
+        exact rest ρ₂'' lauf₂.2 st₂ pol
 
 /-- The goal follows from the scheduler premise in place of the progress leg, with the three gaps supplied. -/
 theorem zielAusTeilenAusScheduler
