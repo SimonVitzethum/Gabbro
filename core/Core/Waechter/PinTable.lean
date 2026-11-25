@@ -354,9 +354,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Aussenfrage.GueltigBeiCommitNichtTrivialAussage, 3929521243651914860),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtErfuellbarAussage, 17464773647101239365),
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 15792455024006385417),
-  (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 0),
-  (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 0),
-  (`Gabbro.Core.Aussenfrage.VerbrauchePrivatAussage, 0),
-  (`Gabbro.Core.Aussenfrage.VerbraucheFehlerGrundAussage, 0)]
+  (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 10899808157418456208),
+  (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 17686821990326708161),
+  (`Gabbro.Core.Aussenfrage.VerbrauchePrivatAussage, 10831881537504407892),
+  (`Gabbro.Core.Aussenfrage.VerbraucheFehlerGrundAussage, 15839307104568870586)]
 
 end Gabbro.Core.Waechter
