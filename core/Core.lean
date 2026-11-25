@@ -183,6 +183,13 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Divergenz
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarFrame
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarSegmente
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarSegmenteF
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarLauf
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarKorrekt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.Hilfen
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.BlockPair
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
