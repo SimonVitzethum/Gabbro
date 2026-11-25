@@ -38,7 +38,7 @@ def RsVerbotenAussage : Prop :=
 theorem rs_verboten_kat : RsVerbotenAussage := by
   rintro ⟨E, Ort, Wert, G, hk, wd, wf, u, r, rd, p1, hf, hrf1, hu, hrf2, hr, p2, hrb⟩
   have hwf : G.schreibt wf := hk.wf.rf_schreibt wf u hrf1
-  have hrs1 : G.Rs wf wf := Graph.Rs.self hwf
+  have hrs1 : G.Rs wf wf := Graph.Rs.selbst hwf
   have hrs : G.Rs wf u := Graph.Rs.rmw hrs1 hrf1 hu
   have hl : G.liest r := hk.wf.rf_liest u r hrf2
   have hsw : G.sw wf r := ⟨hwf, hf, hl, hr, u, hrs, hrf2⟩
@@ -128,6 +128,7 @@ theorem rsWf : rsGraph.Wohlgeformt where
   rf_eindeutig := by
     intro a b c h1 h2
     revert h1 h2
+    show rsRf a c → rsRf b c → a = b
     cases a <;> cases b <;> cases c <;> decide
   mo_schreibt := by
     rintro _ _ (⟨rfl, rfl⟩ | ⟨rfl, (rfl | rfl | rfl)⟩ | ⟨rfl, (rfl | rfl)⟩ | ⟨rfl, rfl⟩) <;>
@@ -257,6 +258,7 @@ theorem rsKonsistent : rsGraph.Konsistent where
   atomar := by
     intro w u w' hrf _ hmo
     revert hrf hmo
+    show rsRf w u → rsMo w w' → ¬ rsMo w' u
     cases w <;> cases u <;> cases w' <;> decide
   psc := by
     intro a h
@@ -267,12 +269,15 @@ theorem rsKonsistent : rsGraph.Konsistent where
     intro a b h
     rcases h with hp | hrf
     · revert hp
+      show rsPo a b → rsRang a < rsRang b
       cases a <;> cases b <;> decide
     · revert hrf
+      show rsRf a b → rsRang a < rsRang b
       cases a <;> cases b <;> decide
   liest_vorher := by
     intro w u hrf _
     revert hrf
+    show rsRf w u → rsMo w u
     cases w <;> cases u <;> decide
 
 /-- Every read has a source, including the stale data read. -/

@@ -18,6 +18,7 @@
 module
 
 public import Core.Speicher.Trennung
+public import Core.Speicher.Einbettung
 
 @[expose] public section
 
@@ -76,6 +77,12 @@ def rmLab : RmwLitEv → Etikett Bool Nat
 
 def rmGraph : Graph RmwLitEv Bool Nat := ⟨rmLab, rmPo, rmRf, rmMo⟩
 
+/-- Every `rf` edge raises the rank, for `ohneLB`. -/
+def rmRang : RmwLitEv → Nat
+  | w => 0
+  | fa => 1
+  | cas => 2
+
 theorem rmWf : rmGraph.Wohlgeformt where
   po_trans := by
     intro _ _ _ h
@@ -94,6 +101,7 @@ theorem rmWf : rmGraph.Wohlgeformt where
   rf_eindeutig := by
     intro a b c h1 h2
     revert h1 h2
+    show rmRf a c → rmRf b c → a = b
     cases a <;> cases b <;> cases c <;> decide
   mo_schreibt := by
     rintro _ _ (⟨rfl, (rfl | rfl)⟩ | ⟨rfl, rfl⟩) <;> exact ⟨trivial, trivial⟩
@@ -143,21 +151,24 @@ theorem rmKonsistent : rmGraph.Konsistent where
   atomar := by
     intro w u w' hrf _ hmo
     revert hrf hmo
+    show rmRf w u → rmMo w w' → ¬ rmMo w' u
     cases w <;> cases u <;> cases w' <;> decide
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
     exact False.elim (rmPscFalsch a c hc)
   ohneLB := by
-    refine azyklisch_von_rang (fun e : RmwLitEv => match e with | w => 0 | fa => 1 | cas => 2) ?_
+    refine azyklisch_von_rang rmRang ?_
     intro a b h
     rcases h with hpo | hrf
     · exact False.elim hpo
     · revert hrf
+      show rmRf a b → rmRang a < rmRang b
       cases a <;> cases b <;> decide
   liest_vorher := by
     intro w u hrf _
     revert hrf
+    show rmRf w u → rmMo w u
     cases w <;> cases u <;> decide
 
 /-- Both updates have a source: the graph is complete. -/
