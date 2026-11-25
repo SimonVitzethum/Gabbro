@@ -263,13 +263,6 @@ theorem sicherheit_aus_regeln_erfuellbar :
       spur := fun _ => none
       takt := fun t => .wartet rfl rfl (keinAb6 t) }
   have ende : rest.zustand 0 = some z₆ := rfl
-  have still6 : ∀ t, 6 ≤ t → ∀ s, ρ.zeit.zustand t = some s →
-      KeinSchritt (Lauffolge E.maschine hw) t (some s) := by
-    intro t ht s hs ev next step
-    obtain ⟨m, rfl⟩ : ∃ m, t = m + 6 := ⟨t - 6, by omega⟩
-    have hss : s = z₆ := (Option.some.inj hs).symm
-    subst hss
-    exact keinAb6 m ev next step
   have s₀ := arithmetik_schritt p platform hw 0 z₀ (.literal 0 1) rfl ⟨0, rfl, rfl, rfl⟩ rfl
   have s₁ := arithmetik_schritt p platform hw 1 z₁ (.literal 1 2) rfl ⟨0, rfl, rfl, rfl⟩ rfl
   have s₂ := arithmetik_schritt p platform hw 2 z₂ (.literal 2 3) rfl ⟨0, rfl, rfl, rfl⟩ rfl
@@ -284,6 +277,13 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let abEins := voran (schritt := fun t => schritt (t + 1)) abZwei (some z₁) _ s₁
   let zeit := voran (schritt := schritt) abEins (some z₀) _ s₀
   let ρ : Lauf E := ⟨start, hw, zeit⟩
+  have still6 : ∀ t, 6 ≤ t → ∀ s, ρ.zeit.zustand t = some s →
+      KeinSchritt (Lauffolge E.maschine hw) t (some s) := by
+    intro t ht s hs ev next step
+    obtain ⟨m, rfl⟩ : ∃ m, t = m + 6 := ⟨t - 6, by omega⟩
+    have hss : s = z₆ := (Option.some.inj hs).symm
+    subst hss
+    exact keinAb6 m ev next step
   have rein : ∀ b ∈ p.code, b.Privat := stmt_rein tree
   exact ⟨E, H, ρ, arithmetik_grenzen platform tab leer leerStart,
     fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).2,
