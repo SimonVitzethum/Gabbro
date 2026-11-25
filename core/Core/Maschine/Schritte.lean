@@ -109,8 +109,13 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   /-- The thread counter is the machine's: a form never moves it (`FuehrtAus.starte` does). -/
   naechsterFaden : s'.naechsterFaden = s.naechsterFaden
   /-- The creator map is the machine's: a form never moves it (`FuehrtAus.starte` sets it,
-      `FuehrtAus.verbinde` clears the joined thread). -/
+       `FuehrtAus.verbinde` clears the joined thread). -/
   erzeuger : s'.erzeuger = s.erzeuger
+  /-- The software-interrupt queue is the machine's: a form never moves it (`FuehrtAus.sende`
+      appends the raised vector). -/
+  software : s'.software = s.software
+  /-- The routing table is the machine's: a form never moves it (`FuehrtAus.leite` maps the line). -/
+  leitung : s'.leitung = s.leitung
 
 variable (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
 

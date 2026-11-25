@@ -99,7 +99,7 @@ def schreibLabel : Etikett Gabbro.Core.Ast.Semantik.Zelle Int := ⟨.schreiben, 
 
 theorem rahmen (z : Zustand) (b : Buchung Gabbro.Core.Ast.Semantik.Zelle) :
     Zustandsrahmen z { z with buchung := b } :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem ausfuehren {z : Zustand} {form : Formular} {qt : Quelltabellen Zustand}
     {sicht t c vor u spur plan nach}

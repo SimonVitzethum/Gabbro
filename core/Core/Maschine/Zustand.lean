@@ -61,6 +61,12 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
       new thread. A join requires the creator and clears the entry, so only the creator joins and only
       once; a second join has no step. The entry thread and never-started threads have no creator. -/
   erzeuger : Kontext → Option Kontext := fun _kontext => none
+  /-- **Pending software-raised interrupts** (MK-20): `sendeUnterbrechung` appends the raised vector for
+      its target core. Hardware delivery consumes hardware offers; the software queue records the send
+      (its consumption by delivery is future work). -/
+  software : List (Nat × Unterbrechung) := []
+  /-- **The routing table** (MK-20): `leiteLeitung` maps a line to its target core and priority. -/
+  leitung : Nat → Nat × Nat := fun _ => (0, 0)
 
 namespace Zustand
 

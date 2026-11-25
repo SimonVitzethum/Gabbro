@@ -266,7 +266,7 @@ private theorem gegen_konkreter_lauf (s : AussenStart) (zul : einheit.ZulStart (
     · change einheit.system.ImplSchritt kontext z0 () [bindePlan] z1
       exact form_binden zul
     · refine ⟨?_, ?_, [], ?_, ?_, ?_, ?_⟩
-      · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
       · intro l mem
         exact (List.not_mem_nil mem).elim
       · exact z1
