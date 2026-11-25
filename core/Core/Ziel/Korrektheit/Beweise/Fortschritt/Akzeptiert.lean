@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ziel/Korrektheit/Beweise/FortschrittAkzeptiert.lean
+  File:      core/Core/Ziel/Korrektheit/Beweise/Fortschritt/Akzeptiert.lean
   Subject:   THE PROGRESS PROMISE FOR EVERY ACCEPTED ELABORATED UNIT — the legs that hold
              without any scheduler premise.
 

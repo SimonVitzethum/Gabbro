@@ -12,7 +12,7 @@ module
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
-public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 public import Core.Verfeinerung.Erfuellbar
 public import Core.Fortschritt.Verhungern

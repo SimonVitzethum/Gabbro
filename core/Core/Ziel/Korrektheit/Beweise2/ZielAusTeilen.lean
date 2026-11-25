@@ -30,7 +30,7 @@ public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
-public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
 public import Core.Annahme.Annahme
 public import Core.Katalog.Erfuellbar
