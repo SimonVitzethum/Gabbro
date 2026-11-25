@@ -73,47 +73,61 @@ def fLab (mp : Bool) : FenceEv → Etikett Bool Nat
 
 def fGraph (mp : Bool) : Graph FenceEv Bool Nat := ⟨fLab mp, fPo, fRf mp, fMo mp⟩
 
+theorem f_po_trans (a b c : FenceEv) : (fPo a b ∧ fPo b c) → fPo a c := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem f_mo_trans (mp : Bool) (a b c : FenceEv) :
+    (fMo mp a b ∧ fMo mp b c) → fMo mp a c := by
+  cases mp <;> cases a <;> cases b <;> cases c <;> decide
+
+theorem f_rf_eindeutig (mp : Bool) (w w' r : FenceEv) :
+    (fRf mp w r ∧ fRf mp w' r) → w = w' := by
+  cases mp <;> cases w <;> cases w' <;> cases r <;> decide
+
 theorem f_wf (mp : Bool) : (fGraph mp).Wohlgeformt where
   po_trans := by
-    intro a b c
-    show fPo a b → fPo b c → fPo a c
-    cases a <;> cases b <;> cases c <;> decide
+    intro a b c hab hbc
+    exact f_po_trans a b c ⟨hab, hbc⟩
   po_irrefl := by
     intro a
     show ¬ fPo a a
     cases a <;> decide
   rf_schreibt := by
     intro w r h
-    revert h
-    cases mp <;> cases w <;> cases r <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
   rf_liest := by
     intro w r h
-    revert h
-    cases mp <;> cases w <;> cases r <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> trivial
   rf_ort := by
     intro w r h
-    revert h
-    cases mp <;> cases w <;> cases r <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
   rf_wert := by
     intro w r h
-    revert h
-    cases mp <;> cases w <;> cases r <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
   rf_eindeutig := by
     intro w w' r h1 h2
-    revert h1 h2
-    cases mp <;> cases w <;> cases w' <;> cases r <;> decide
+    exact f_rf_eindeutig mp w w' r ⟨h1, h2⟩
   mo_schreibt := by
     intro a b h
-    revert h
-    cases mp <;> cases a <;> cases b <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> exact ⟨trivial, trivial⟩
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> exact ⟨trivial, trivial⟩
   mo_ort := by
     intro a b h
-    revert h
-    cases mp <;> cases a <;> cases b <;> decide
+    cases mp
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
+    · rcases h with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
   mo_trans := by
-    intro a b c
-    show fMo mp a b → fMo mp b c → fMo mp a c
-    cases mp <;> cases a <;> cases b <;> cases c <;> decide
+    intro a b c hab hbc
+    exact f_mo_trans mp a b c ⟨hab, hbc⟩
   mo_irrefl := by
     intro a
     show ¬ fMo mp a a
@@ -147,15 +161,21 @@ theorem f_hb_in_po {mp : Bool} {a b : FenceEv} (h : (fGraph mp).hb a b) : fPo a 
 theorem fEco_trans (a b c : FenceEv) : (fEco a b ∧ fEco b c) → fEco a c := by
   cases a <;> cases b <;> cases c <;> decide
 
+theorem f_rb_eco (mp : Bool) (w a b : FenceEv) :
+    (fRf mp w a ∧ fMo mp w b ∧ a ≠ b) → fEco a b := by
+  cases mp <;> cases w <;> cases a <;> cases b <;> decide
+
+theorem f_koh (a b : FenceEv) : (fPo a b ∧ fEco b a) → False := by
+  cases a <;> cases b <;> decide
+
 theorem f_eco_schritt {mp : Bool} {a b : FenceEv} (h : (fGraph mp).ecoSchritt a b) : fEco a b := by
   rcases h with hrf | hmo | hrb
   · revert hrf
     cases mp <;> cases a <;> cases b <;> decide
   · revert hmo
     cases mp <;> cases a <;> cases b <;> decide
-  · obtain ⟨w, h1, h2, hne⟩ := hrb
-    revert h1 h2 hne
-    cases mp <;> cases w <;> cases a <;> cases b <;> decide
+  · rcases hrb with ⟨w, h1, h2, hne⟩
+    exact f_rb_eco mp w a b ⟨h1, h2, hne⟩
 
 theorem f_eco {mp : Bool} {a b : FenceEv} (h : (fGraph mp).eco a b) : fEco a b :=
   transGen_von_trans (fun x y z hxy hyz => fEco_trans x y z ⟨hxy, hyz⟩)
@@ -210,10 +230,7 @@ theorem f_konsistent (mp : Bool) : (fGraph mp).Konsistent where
     exact (by cases a <;> decide : ¬ fPo a a) (f_hb_in_po h)
   kohaerent := by
     intro a b h he
-    have hp := f_hb_in_po h
-    have he' := f_eco he
-    revert hp he'
-    cases mp <;> cases a <;> cases b <;> decide
+    exact f_koh a b ⟨f_hb_in_po h, f_eco he⟩
   atomar := by
     intro w u w' hrf hu hmo
     cases mp <;> cases u <;> simp only [fGraph, fLab, Graph.istRmw, reduceCtorEq] at hu
