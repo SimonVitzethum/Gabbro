@@ -4,7 +4,9 @@
               only `seq_cst` atomics and no race in which both premises bite -- a plain carrier with
               conflicting accesses and a `seq_cst` carrier (`drf_sc_erfuellbar`). The graph is
              message passing: thread 1 writes the plain `x := 1`, then the `seq_cst` flag
-             `y := 1`; thread 2 reads the flag `1`, then reads `x = 1`.
+             `y := 1`; thread 2 reads the flag `1`, then reads `x = 1`. A second witness
+             (`drf_sc_zaun_erfuellbar`) places a real `seq_cst` fence in program order between a
+             plain write and its plain read and satisfies the premises with that fence present.
 -/
 module
 
@@ -228,6 +230,209 @@ theorem drf_sc_erfuellbar :
     ∃ G : Graph MpEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.Rennfrei ∧ (∃ a, G.sc a) ∧
     ∃ a b, G.Konflikt a b ∧ G.na a ∧ G.na b :=
   ⟨mpGraph, mp_konsistent, mp_nur_sc, mp_rennfrei, ⟨wy, rfl⟩,
+    wx, rx, ⟨by decide, rfl, Or.inl trivial⟩, rfl, rfl⟩
+
+/-- The events of the fenced witness: the initial writes, a plain write/read pair with a real
+    `seq_cst` fence in between, and a `seq_cst` write. -/
+inductive ZfEv where
+  | ix | iy | wx | fz | rx
+  deriving DecidableEq, Repr
+
+open ZfEv
+
+/-- Location `false` is the plain `x`, `true` the `seq_cst` carrier `y`. The fence is an
+    `Art.zaun` event of mode `sc`; it neither reads nor writes. -/
+def zfLab : ZfEv → Etikett Bool Nat
+  | ix => ⟨.schreiben, false, .na, 0, 0⟩
+  | iy => ⟨.schreiben, true, .sc, 0, 0⟩
+  | wx => ⟨.schreiben, false, .na, 0, 1⟩
+  | fz => ⟨.zaun, false, .sc, 0, 0⟩
+  | rx => ⟨.lesen, false, .na, 1, 0⟩
+
+@[reducible] def zfPo (a b : ZfEv) : Prop :=
+  (a = ix ∧ b ≠ ix) ∨ (a = iy ∧ (b = wx ∨ b = fz ∨ b = rx)) ∨
+  (a = wx ∧ (b = fz ∨ b = rx)) ∨ (a = fz ∧ b = rx)
+
+@[reducible] def zfRf (a b : ZfEv) : Prop := a = wx ∧ b = rx
+
+@[reducible] def zfMo (a b : ZfEv) : Prop := a = ix ∧ b = wx
+
+def zfGraph : Graph ZfEv Bool Nat := ⟨zfLab, zfPo, zfRf, zfMo⟩
+
+def zfRang : ZfEv → Nat
+  | ix => 0
+  | iy => 1
+  | wx => 2
+  | fz => 3
+  | rx => 4
+
+theorem zf_po_trans {a b c : ZfEv} (h1 : zfPo a b) (h2 : zfPo b c) : zfPo a c := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem zf_po_rang {a b : ZfEv} (h : zfPo a b) : zfRang a < zfRang b := by
+  cases a <;> cases b <;> decide
+
+theorem zf_rf_rang {a b : ZfEv} (h : zfRf a b) : zfRang a < zfRang b := by
+  cases a <;> cases b <;> decide
+
+theorem zf_mo_rang {a b : ZfEv} (h : zfMo a b) : zfRang a < zfRang b := by
+  cases a <;> cases b <;> decide
+
+theorem zf_wf : zfGraph.Wohlgeformt where
+  po_trans := by
+    intro a b c
+    show zfPo a b → zfPo b c → zfPo a c
+    cases a <;> cases b <;> cases c <;> decide
+  po_irrefl := by
+    intro a
+    show ¬ zfPo a a
+    cases a <;> decide
+  rf_schreibt := by
+    rintro w r ⟨rfl, rfl⟩
+    exact trivial
+  rf_liest := by
+    rintro w r ⟨rfl, rfl⟩
+    exact trivial
+  rf_ort := by
+    rintro w r ⟨rfl, rfl⟩
+    rfl
+  rf_wert := by
+    rintro w r ⟨rfl, rfl⟩
+    rfl
+  rf_eindeutig := by
+    rintro w w' r ⟨rfl, rfl⟩ ⟨h, _⟩
+    exact h.symm
+  mo_schreibt := by
+    rintro a b ⟨rfl, rfl⟩
+    exact ⟨trivial, trivial⟩
+  mo_ort := by
+    rintro a b ⟨rfl, rfl⟩
+    rfl
+  mo_trans := by
+    intro a b c
+    show zfMo a b → zfMo b c → zfMo a c
+    cases a <;> cases b <;> cases c <;> decide
+  mo_irrefl := by
+    intro a
+    show ¬ zfMo a a
+    cases a <;> decide
+  mo_total := by
+    intro a b ha hb ho hne
+    show zfMo a b ∨ zfMo b a
+    cases a <;> cases b <;>
+      first
+        | decide
+        | exact False.elim ha
+        | exact False.elim hb
+        | exact absurd rfl hne
+        | (simp only [Graph.ort, zfGraph, zfLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, zfGraph, zfLab, reduceCtorEq] at h
+
+theorem zf_kein_rmw (u : ZfEv) : ¬ zfGraph.istRmw u := by
+  intro hu
+  cases u <;> simp only [Graph.istRmw, zfGraph, zfLab, reduceCtorEq] at hu
+
+/-- The single `rf` edge goes from a plain write to a plain read, so there is no synchronisation. -/
+theorem zf_kein_sw (a b : ZfEv) : ¬ zfGraph.sw a b := by
+  intro h
+  obtain ⟨w, x, r, hkopf, hrs, hrf, hrat, hlies, hschwanz⟩ := h
+  revert hrf hrat
+  show zfRf x r → (zfGraph.modus r).atomar → False
+  cases x <;> cases r <;> decide
+
+theorem zf_hb_in_po {a b : ZfEv} (h : zfGraph.hb a b) : zfPo a b := by
+  refine transGen_von_trans zf_po_trans (transGen_mono (fun x y hs => ?_) h)
+  rcases hs with hp | hsw
+  · exact hp
+  · exact False.elim (zf_kein_sw x y hsw)
+
+theorem zf_hb_rang {a b : ZfEv} (h : zfGraph.hb a b) : zfRang a < zfRang b := by
+  refine transGen_von_trans (fun x y z hxy hyz => lt_trans hxy hyz)
+    (transGen_mono (fun x y hs => ?_) h)
+  rcases hs with hp | hsw
+  · exact zf_po_rang hp
+  · exact False.elim (zf_kein_sw x y hsw)
+
+theorem zf_rb_leer {r w : ZfEv} (h : zfGraph.rb r w) : False := by
+  obtain ⟨w', h1, h2, -⟩ := h
+  revert h1 h2
+  show zfRf w' r → zfMo w' w → False
+  cases w' <;> cases r <;> cases w <;> decide
+
+theorem zf_eco_rang {a b : ZfEv} (h : zfGraph.eco a b) : zfRang a < zfRang b := by
+  refine transGen_von_trans (fun x y z hxy hyz => lt_trans hxy hyz)
+    (transGen_mono (fun x y hs => ?_) h)
+  rcases hs with hrf | hmo | hrb
+  · exact zf_rf_rang hrf
+  · exact zf_mo_rang hmo
+  · exact False.elim (zf_rb_leer hrb)
+
+theorem zf_zaun {a : ZfEv} (h : zfGraph.istSCZaun a) : a = fz := by
+  cases a <;>
+    simp only [Graph.istSCZaun, Graph.istZaun, Graph.modus, zfGraph, zfLab, reduceCtorEq] at h ⊢ <;>
+    contradiction
+
+theorem zf_psc_rang {a b : ZfEv} (h : zfGraph.psc a b) : zfRang a < zfRang b := by
+  rcases h with ⟨c, d, hscb, hl, hr⟩ | ⟨hza, hzb, hord⟩
+  · have hcd : zfRang c < zfRang d := by
+      rcases hscb with hp | hcross | hhb | hmo | hrb
+      · exact zf_po_rang hp
+      · obtain ⟨u, v, hpu, -, huv, hpv, -⟩ := hcross
+        exact lt_trans (zf_po_rang hpu) (lt_trans (zf_hb_rang huv) (zf_po_rang hpv))
+      · exact zf_hb_rang hhb
+      · exact zf_mo_rang hmo
+      · exact False.elim (zf_rb_leer hrb)
+    have ha : zfRang a ≤ zfRang c := by
+      rcases hl with ⟨_, rfl⟩ | ⟨_, rfl | hac⟩
+      · exact le_rfl
+      · exact le_of_lt (zf_hb_rang hac)
+    have hb : zfRang d ≤ zfRang b := by
+      rcases hr with ⟨_, rfl⟩ | ⟨_, rfl | hdb⟩
+      · exact le_rfl
+      · exact le_of_lt (zf_hb_rang hdb)
+    exact lt_of_le_of_lt ha (lt_of_lt_of_le hcd hb)
+  · subst a
+    subst b
+    rcases hord with hhb | ⟨c, d, hac, heco, hdb⟩
+    · exact False.elim (Nat.lt_irrefl _ (zf_hb_rang hhb))
+    · have hcycl : zfRang fz < zfRang fz :=
+        lt_trans (zf_hb_rang hac) (lt_trans (zf_eco_rang heco) (zf_hb_rang hdb))
+      exact False.elim (Nat.lt_irrefl _ hcycl)
+
+theorem zf_konsistent : zfGraph.Konsistent where
+  wf := zf_wf
+  hb_irrefl := fun a h => Nat.lt_irrefl _ (zf_hb_rang h)
+  kohaerent := fun a b hab he => Nat.lt_asymm (zf_hb_rang hab) (zf_eco_rang he)
+  atomar := fun _ u _ _ hu _ => absurd hu (zf_kein_rmw u)
+  liest_vorher := fun _ u _ hu => absurd hu (zf_kein_rmw u)
+  psc := azyklisch_von_rang zfRang (fun a b h => zf_psc_rang h)
+  ohneLB := azyklisch_von_rang zfRang (fun a b h => h.elim zf_po_rang zf_rf_rang)
+
+theorem zf_nur_sc : zfGraph.NurSC := by
+  intro a
+  show (zfLab a).modus = .na ∨ (zfLab a).modus = .sc
+  cases a <;> decide
+
+theorem zf_rennfrei : zfGraph.Rennfrei := by
+  rintro a b ⟨hne, ho, hw⟩ hna
+  cases a <;> cases b <;>
+    first
+      | exact absurd rfl hne
+      | exact Or.inl (zfGraph.hb_von_po (show zfPo _ _ by decide))
+      | exact Or.inr (zfGraph.hb_von_po (show zfPo _ _ by decide))
+      | (simp only [Graph.ort, zfGraph, zfLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+      | (simp only [Graph.na, Graph.modus, zfGraph, zfLab, reduceCtorEq, or_self] at hna; done)
+      | (simp only [Graph.schreibt, zfGraph, zfLab, Art.schreibt, or_self] at hw; done)
+
+/-- **Satisfiability of the premises of `drf_sc` with a fence**: a consistent graph with only
+    `seq_cst` atomics and no race, containing a real `seq_cst` fence in program order, a
+    `seq_cst` write, and a conflicting pair of plain accesses. -/
+theorem drf_sc_zaun_erfuellbar :
+    ∃ G : Graph ZfEv Bool Nat, G.Konsistent ∧ G.NurSC ∧ G.Rennfrei ∧ (∃ a, G.istSCZaun a) ∧
+      (∃ a, G.sc a) ∧ ∃ a b, G.Konflikt a b ∧ G.na a ∧ G.na b :=
+  ⟨zfGraph, zf_konsistent, zf_nur_sc, zf_rennfrei, ⟨fz, rfl, rfl⟩, ⟨iy, rfl⟩,
     wx, rx, ⟨by decide, rfl, Or.inl trivial⟩, rfl, rfl⟩
 
 end Gabbro.Core.Speicher
