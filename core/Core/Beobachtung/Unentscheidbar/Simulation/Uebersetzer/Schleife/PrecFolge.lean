@@ -31,12 +31,16 @@ theorem precFolgeVonSchritt (cg : Nat.Partrec.Code) (a j m v : Nat) :
   | zero =>
     simp only [precFolgeVon, Nat.add_zero, Part.bind_some, Part.bind_some_right]
   | succ m ih =>
-    simp only [precFolgeVon]
+    change (precFolgeVon cg a j (m + 1) v).bind
+        (fun u => Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair (j + (m + 1)) u))) = _
     rw [ih]
     rw [Part.bind_assoc]
     congr 1
     funext v'
-    simp only [precFolgeVon]
+    change (precFolgeVon cg a (j + 1) m v').bind
+        (fun u => Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair (j + (m + 1)) u))) =
+      (precFolgeVon cg a (j + 1) m v').bind
+        (fun u => Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair ((j + 1) + m) u)))
     congr 1
     funext u
     rw [show j + (m + 1) = (j + 1) + m by omega]
@@ -54,6 +58,12 @@ theorem evalPrecAlsFolge (cf cg : Nat.Partrec.Code) (a k : Nat) :
     rw [Nat.Partrec.Code.eval_prec_succ, ih]
     rw [Part.bind_eq_bind]
     rw [Part.bind_assoc]
+    change ((Nat.Partrec.Code.eval cf a).bind fun x =>
+        (precFolgeVon cg a 0 k x).bind fun ih =>
+          Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair k ih))) =
+      (Nat.Partrec.Code.eval cf a).bind fun v =>
+        (precFolgeVon cg a 0 k v).bind
+          (fun u => Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair (0 + k) u)))
     rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
