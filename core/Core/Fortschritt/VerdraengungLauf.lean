@@ -152,7 +152,7 @@ theorem sfV : Maschine.SchedulerFair E_v ρV := by
   by_cases hcA : c = A
   · subst hcA
     obtain ⟨s, hs, dispJ, _, _, _, _, _, _, _, _, _⟩ :=
-      ready (max a 1) (Nat.le_max_right _ _)
+      ready (max a 1) (Nat.le_max_left _ _)
     have hseq : s = ZV (max a 1) := (Option.some.inj hs).symm
     obtain ⟨k, hk⟩ := dispJ
     rw [hseq] at hk
@@ -161,9 +161,9 @@ theorem sfV : Maschine.SchedulerFair E_v ρV := by
   · by_cases hcH : c = Hv
     · subst hcH
       obtain ⟨m, hm⟩ := Nat.exists_eq_succ_of_ne_zero (n := max n 1) (by omega)
-      exact ⟨max n 1, Nat.le_max_left n 1, (), ⟨[], []⟩, by rw [hm]⟩
+      exact ⟨max n 1, Nat.le_max_left n 1, (), ⟨[], []⟩, by rw [hm]; rfl⟩
     · obtain ⟨s, hs, dispJ, _, _, _, _, _, _, _, _, _⟩ :=
-        ready (max a 1) (Nat.le_max_right _ _)
+        ready (max a 1) (Nat.le_max_left _ _)
       have hseq : s = ZV (max a 1) := (Option.some.inj hs).symm
       obtain ⟨k, hk⟩ := dispJ
       rw [hseq] at hk
