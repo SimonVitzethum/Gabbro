@@ -254,8 +254,7 @@ theorem optionTestErhaltung : OptionTestErhaltungAussage := by
 
 theorem optionTestRegelSicher : OptionTestRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((optionTestForm scope).fragment args) platform
-    (optionTest_keine_invarianten scope args) ((optionTestForm scope).befehl args)
+  exact Befehl.sicher ((optionTestForm scope).fragment args) platform [] (tabLeer _ (optionTest_keine_invarianten scope args)) (fun b _ => rfl) ((optionTestForm scope).befehl args)
 
 theorem optionTestErfuellbarAm : OptionTestErfuellbarAmAussage := by
   intro platform start

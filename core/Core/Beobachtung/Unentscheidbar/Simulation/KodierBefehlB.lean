@@ -292,6 +292,13 @@ def befehlVonCodeB : Code → Option Befehl
           let f0' : Zugriffsform ← Encodable.decode f0n
           Option.some (.zugriff f0')
       | _ => Option.none
+    | some 51 =>
+      match kids with
+      | Code.pair f0 (Code.zero) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Fadenform ← Encodable.decode f0n
+          Option.some (.faden f0')
+      | _ => Option.none
     | _ => Option.none
   | _ => Option.none
 

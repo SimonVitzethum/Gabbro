@@ -181,7 +181,8 @@ def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
 
 /-- The release-witness state: the holder owns the lock, the waiter is queued. -/
 def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
@@ -232,7 +233,8 @@ def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit wher
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
-  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => []⟩
+  schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
+    fun _ => none, fun _ => []⟩
 
 /-- The section-witness state: the holder owns `false`, queues at the head of `true`. -/
 def wartefreiZustand : Zustand Bool Unit Unit Unit Unit Unit :=
@@ -417,7 +419,7 @@ theorem stale_nicht_aussen_gueltig : ¬ AussenGueltig staleEinheit := by
       [aussenEtikett staleEinheit.einrichtung (.frage ev)] spur.speicher s'.graph :=
     .cons (.ohne (Or.inl rfl)) hstep (.nil _)
   have hrahmen : Zustandsrahmen s s :=
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have hlesen : ∀ l ∈ plan.lesen, l.art.liest := fun _ h => absurd h List.not_mem_nil
   have hfrage : FuehrtAus staleEinheit.einrichtung 0 c s s plan.aktion [] [.frage ev] (s.frage ev) :=
     FuehrtAus.frage staleFrage

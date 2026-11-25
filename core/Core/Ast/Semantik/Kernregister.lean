@@ -81,7 +81,8 @@ def programKernProofs (constructor : Name) (registered : constructor ∈ program
   preservation := fun p platform b tag inv => ⟨b.abgleich p platform,
     b.fortschritt p (Befehl.privat_von_programConstructor tag),
     b.komponierbar p platform (Befehl.privat_von_programConstructor tag),
-    Befehl.sicherheitsPflichten p platform inv b (Befehl.privat_von_programConstructor tag)⟩
+    Befehl.sicherheitsPflichten p platform [] (tabLeer _ inv) (fun b _ => rfl) b
+      (Befehl.privat_von_programConstructor tag)⟩
   jointlySatisfiable := programKern_erfuellbar constructor registered
 
 theorem programKern_sicherheit (constructor : Name)
