@@ -80,6 +80,8 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Consume
+public import Core.Beobachtung.Fluss.Beweise.Geraet.Recovery
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
