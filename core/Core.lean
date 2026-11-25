@@ -38,6 +38,8 @@ public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Review.Befunde
 public import Core.Aussen
 public import Core.Annahme
+public import Core.Annahme.DomaeneBeweise.Bruecke
+public import Core.Annahme.DomaeneBeweise.Gegenbeispiel
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
