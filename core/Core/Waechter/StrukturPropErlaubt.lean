@@ -264,6 +264,10 @@ public meta def strukturPropErlaubt : Array (Name × Name) := #[
   (`Gabbro.Core.Beobachtung.RessourcenPflichten, `protokoll),
   (`Gabbro.Core.Beobachtung.RessourcenPflichten, `regel),
   (`Gabbro.Core.Beobachtung.RessourcenPflichten, `start),
+  -- DurchlaufPflichten: pflichten_leer (Beobachtung/SchrankenBeweise/Durchlauf.lean:261) belegt alle Felder vakuos.
+  (`Gabbro.Core.Beobachtung.DurchlaufPflichten, `protokoll),
+  (`Gabbro.Core.Beobachtung.DurchlaufPflichten, `regel),
+  (`Gabbro.Core.Beobachtung.DurchlaufPflichten, `start),
   -- Zufallsquelle: muenzQuelle (Beobachtung/Wahrscheinlichkeit/Quelle.lean:51) belegt pos mit 0 < 2.
   (`Gabbro.Core.Beobachtung.Zufallsquelle, `pos),
   -- ArrayIndexArgs: ArrayIndexProofs.lean:175 belegt beide Felder mit 0 ≤ 0 und oberer Schranke.
