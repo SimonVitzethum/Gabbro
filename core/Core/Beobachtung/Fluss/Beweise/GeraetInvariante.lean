@@ -27,8 +27,8 @@ def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Pr
     (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
     (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
     (∀ i (h₁ : i < s.antworten.length) (h₂ : i < s.fragen.length),
-      (s.antworten.get i h₁).zu (s.fragen.get i h₂)) ∧
-    (∀ i (h : i < s.fragen.length), (s.fragen.get i h).questionInstance = i) ∧
+      (s.antworten.get ⟨i, h₁⟩).zu (s.fragen.get ⟨i, h₂⟩)) ∧
+    (∀ i (h : i < s.fragen.length), (s.fragen.get ⟨i, h⟩).questionInstance = i) ∧
     (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
       s.epoche = 0 ∧ (∀ c, s.verworfen c = 0) ∧
       ((s.lokal entryContext).pending = none →
