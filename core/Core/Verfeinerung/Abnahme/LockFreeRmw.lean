@@ -25,8 +25,9 @@ open Gabbro.Core.Ast.Semantik
 
 /-- The unit, state and plan types of the witness. -/
 abbrev RmwZeugeEinheit := Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Unit
-abbrev RmwZeugeZustand := Zustand Nat Zelle Int Nat Rahmen PUnit PUnit
+abbrev RmwZeugeZustand := Zustand Nat Zelle Int Nat Rahmen PUnit
 abbrev RmwZeugePlan := SchrittPlan Nat Zelle Int PUnit
+abbrev RmwZeugeRegel := Regel RmwZeugeZustand RmwZeugePlan PUnit
 
 /-- A real atomic update instruction of MK-04: `tausche` of region 0, cell 0. -/
 def rmwZeugeBefehl : Befehl := .zugriff (.tausche 0 0 0 0 (Ast.Ty.int 0 0) .sc)
@@ -36,7 +37,7 @@ def rmwZeugeForm : Schrittform := rmwZeugeBefehl.form
 
 /-- The false implementation: the rule fires the rmw and binds `0`, whatever the memory returned.
     Its ideal side is the guarded instruction rule, which refuses an access without authority. -/
-def rmwZeugeRegel : Regel := Schrittform.verloren rmwZeugeForm
+def rmwZeugeRegel : RmwZeugeRegel := Schrittform.verloren rmwZeugeForm
 
 /-- The unit whose only form is that false rmw instruction. -/
 def rmwZeugeEinheitWert : RmwZeugeEinheit := Regeleinheit .x86_64 rmwZeugeRegel
@@ -53,8 +54,7 @@ theorem rmwZeuge_keinRecht :
         Leerzustand eintritt := by
   rw [rmwZeuge_operand_aussen]
   simp only [Wirkungsklasse.befugt, Zustand.befugt, Zustand.griff]
-  intro first _
-  obtain ⟨_, _, griff, _⟩ := first
+  rintro ⟨⟨_, _, griff, _⟩, _⟩
   cases griff
 
 /-- The model represents the error: a concrete rmw step with a non-empty memory trace, whose
@@ -69,9 +69,10 @@ theorem rmwZeugeKonfiguration :
       FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' ∧
       spur.speicher ≠ [] ∧
       ¬ rmwZeugeRegel.ideal eintritt Leerzustand () [plan] u := by
-  obtain ⟨gelesen, es, graph, folge⟩ := speicherzug_existiert Leerzustand.initial
-    (.kontext eintritt) Leerzustand.graph Speicher.Zustand.leer_konsistent
-    Speicher.Zustand.leer_vollstaendig .rmw .aussen .sc 0
+  obtain ⟨gelesen, es, graph, folge⟩ := speicherzug_existiert
+    (anfang := Leerzustand.initial) (f := .kontext eintritt)
+    (g := Leerzustand.graph) Speicher.Zustand.leer_konsistent
+    Speicher.Zustand.leer_vollstaendig (a := .rmw) (x := .aussen) (m := .sc) (v := 0)
   let plan := rmwZeugeForm.plan (Leerzustand.lokal eintritt) gelesen
   let spur : SchrittSpur Zelle Int := ⟨es, []⟩
   let u := Schrittform.zugriffNach rmwZeugeForm eintritt Leerzustand 0
