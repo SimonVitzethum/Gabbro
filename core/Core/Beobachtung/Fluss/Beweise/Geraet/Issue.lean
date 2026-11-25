@@ -127,7 +127,7 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
         intro l hl
         cases List.mem_singleton.mp hl
         rfl
-      have hspeicher := geraete_speicher_still speicherfolge hmem
+      have hspeicher := geraete_speicher_still (d := d) speicherfolge hmem
       have haussenBeob : aussen.flatMap (aussenBeob (d.unit locals)) =
           [.frage c.nummer s.fragen.length (binding.question access)] := by
         have hleer : (d.unit locals).etiketten = .leer := geraete_etiketten_leer d
