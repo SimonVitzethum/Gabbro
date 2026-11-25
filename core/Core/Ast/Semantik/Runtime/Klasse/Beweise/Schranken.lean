@@ -11,6 +11,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 
 @[expose] public section
 
@@ -47,7 +48,8 @@ theorem FuehrtSchrittAus.erhaeltBuchung {L Ort Wert Raum Lok Grund Bedingung : T
     All three outcomes of a class rule (the frame transfer, the booked access and the refusal) replace
     only the acting frame; the ledger's extents and the rights are machine-owned. -/
 theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schrittform)
-    (c : Kontext) (s u : Zustand) (w : PUnit) (p : Plan) (step : F.ideal c s w [p] u) :
+    (c : Kontext) (s u : Zustand) (w : PUnit) (p : Plan) (step : F.ideal c s w [p] u)
+    (hlz : ¬ F.Lebenszyklus) :
     u.rechte = s.rechte ∧ u.buchung.umfang = s.buchung.umfang ∧
       (∀ d, d ≠ c → u.lokal d = s.lokal d) := by
   obtain ⟨k, o, t⟩ := F
@@ -127,6 +129,17 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
         · simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         · intro d hd
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_of_ne hd]
+  | zaun m =>
+      rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
+      · subst u
+        refine ⟨rfl, rfl, ?_⟩
+        intro d hd
+        simp only [Schrittform.verweigert, Function.update_of_ne hd]
+      · subst u
+        refine ⟨rfl, ?_, ?_⟩
+        · simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
+        · intro d hd
+          simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_of_ne hd]
   | sperre a =>
       rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
       · subst u
@@ -149,6 +162,17 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
         · simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
         · intro d hd
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_of_ne hd]
+  | starte => exact (hlz (Or.inl rfl)).elim
+  | beende => exact (hlz (Or.inr (Or.inl rfl))).elim
+  | verbinde => exact (hlz (Or.inr (Or.inr (Or.inl rfl)))).elim
+  | wechsle => exact (hlz (Or.inr (Or.inr (Or.inr rfl)))).elim
+
+/-- **A lifecycle step keeps the authority state and the booking extents.** -/
+theorem Schrittform.lebenszyklus_erhaelt {F : Schrittform} (lz : F.Lebenszyklus) {c : Kontext} {s u : Zustand}
+    {w : PUnit} {p : Plan} (step : F.ideal c s w [p] u) :
+    u.rechte = s.rechte ∧ u.buchung.umfang = s.buchung.umfang := by
+  obtain ⟨hn, _, _, _⟩ := Schrittform.lebenszyklus_ideal lz step
+  exact ⟨hn.rechte, hn.umfang⟩
 
 /-- **The form step preserves the stack bound**: the acting frame is the class transfer, which respects
     the declared bound, and a refusal halts the frame without changing its continuation stack. -/
@@ -158,7 +182,14 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
     (c : Kontext) (s u : Zustand) (w : PUnit) (p : Plan) (step : F.ideal c s w [p] u) :
     ∀ d n, E.schranken.stapel = some n →
       E.schranken.stapelTiefe (s.lokal d) ≤ n → E.schranken.stapelTiefe (u.lokal d) ≤ n := by
-  have andererseits := (Schrittform.ideal_erhaelt E F c s u w p step).2.2
+  by_cases lz : F.Lebenszyklus
+  · intro d n bound vorTief
+    rcases Schrittform.lebenszyklus_zustand lz step with hu | hu
+    · subst u
+      exact Schrittform.verweigert_stapel E F tiefe c s d n vorTief
+    · subst u
+      exact Schrittform.faedenNach_stapel E F stapel tiefe c s d n bound vorTief
+  have andererseits := (Schrittform.ideal_erhaelt E F c s u w p step lz).2.2
   intro d n bound vorTief
   by_cases hd : d = c
   · subst d
@@ -225,6 +256,14 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
         · subst u
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_self]
           exact stapel (s.lokal c) s.regionLive _ n bound vorTief
+    | zaun m =>
+        rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
+        · subst u
+          simp only [Schrittform.verweigert, Rahmen.halt, Function.update_self]
+          exact vorTief
+        · subst u
+          simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_self]
+          exact stapel (s.lokal c) s.regionLive _ n bound vorTief
     | sperre a =>
         rcases step with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
         · subst u
@@ -241,6 +280,10 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
         · subst u
           simp only [Schrittform.zugriffNach, Schrittform.nach, Function.update_self]
           exact stapel (s.lokal c) s.regionLive _ n bound vorTief
+    | starte => exact (lz (Or.inl rfl)).elim
+    | beende => exact (lz (Or.inr (Or.inl rfl))).elim
+    | verbinde => exact (lz (Or.inr (Or.inr (Or.inl rfl)))).elim
+    | wechsle => exact (lz (Or.inr (Or.inr (Or.inr rfl)))).elim
   · rw [andererseits d hd]
     exact vorTief
 
@@ -263,7 +306,11 @@ theorem klassenSchrankenSpeicher {ι : Type} (E : Klasseneinheit ι) (F : Schrit
     {u : Zustand} {t : Nat} (regel : F.ideal c vor w [p] u)
     (aus : FuehrtSchrittAus E.einrichtung t c vor u p spur nach)
     (vorZustand : SpeicherZustand E vor) : SpeicherZustand E nach := by
-  obtain ⟨rechteForm, umfangForm, _⟩ := Schrittform.ideal_erhaelt E F c vor u w p regel
+  obtain ⟨rechteForm, umfangForm⟩ : u.rechte = vor.rechte ∧ u.buchung.umfang = vor.buchung.umfang := by
+    by_cases lz : F.Lebenszyklus
+    · exact Schrittform.lebenszyklus_erhaelt lz regel
+    · obtain ⟨hr, hu, _⟩ := Schrittform.ideal_erhaelt E F c vor u w p regel lz
+      exact ⟨hr, hu⟩
   obtain ⟨rechteAus, umfangAus, _⟩ := FuehrtSchrittAus.erhaeltBuchung aus
   have live : LebendeZellen nach = LebendeZellen vor := by
     unfold LebendeZellen

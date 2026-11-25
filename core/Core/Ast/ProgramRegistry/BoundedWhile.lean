@@ -92,7 +92,7 @@ theorem boundedWhile_erhaltung (scope : Scope) (result : Option (Ty .value)) : (
   exact ⟨((boundedWhileForm scope result).befehl args).abgleich ((boundedWhileForm scope result).fragment args) platform,
     ((boundedWhileForm scope result).befehl args).fortschritt ((boundedWhileForm scope result).fragment args),
     ((boundedWhileForm scope result).befehl args).komponierbar ((boundedWhileForm scope result).fragment args) platform,
-    ((boundedWhileForm scope result).befehl args).sicherheitsPflichten ((boundedWhileForm scope result).fragment args) platform inv⟩
+    ((boundedWhileForm scope result).befehl args).sicherheitsPflichten ((boundedWhileForm scope result).fragment args) platform [] (tabLeer _ inv) (fun b _ => rfl)⟩
 
 -- Mirror Befehl.sicher to discharge the six SchrittSicherheit fields at every concrete cut.
 theorem boundedWhile_sicher (scope : Scope) (result : Option (Ty .value)) platform a :
@@ -101,7 +101,7 @@ theorem boundedWhile_sicher (scope : Scope) (result : Option (Ty .value)) platfo
   have inv : ((boundedWhileForm scope result).fragment a).klauseln.invariant = [] := by
     change (stmt ((boundedWhileForm scope result).produktion.tree a).2).klauseln.invariant = []
     exact stmt_keine_invarianten _
-  exact ((boundedWhileForm scope result).befehl a).sicher ((boundedWhileForm scope result).fragment a) platform inv
+  exact ((boundedWhileForm scope result).befehl a).sicher ((boundedWhileForm scope result).fragment a) platform [] (tabLeer _ inv) (fun b _ => rfl)
 
 -- Mirror binary_erfuellbar at the actual instruction and reachable pre-state.
 theorem boundedWhile_erfuellbar : boundedWhileJoint := by

@@ -28,7 +28,7 @@ def Befehl.programConstructor : Befehl → Option Name
 /-- A program-level instruction is frame-only: only the access instructions are not, and they have no program constructor. -/
 theorem Befehl.privat_von_programConstructor {b : Befehl} {n : Name}
     (h : b.programConstructor = some n) : b.Privat :=
-  b.privat_von_kein_zugriff fun form eq => by subst eq; cases h
+  b.privat_von_kein_zugriff (fun form eq => by subst eq; cases h) (fun form eq => by subst eq; cases h)
 
 def programConstructors : List Name :=
   [``Befehl.bindeWert,

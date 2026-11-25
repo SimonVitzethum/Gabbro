@@ -12,6 +12,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Faden
 
 @[expose] public section
 
@@ -74,9 +75,26 @@ private theorem zugriffNach_aussen_gleich (F : Schrittform) (c : Kontext) (s : Z
   obtain ⟨k, _, _⟩ := F
   cases k <;> exact ⟨rfl, rfl⟩
 
+/-- **The authority of pending questions, for a lifecycle form.** A lifecycle step asks no question and answers
+    none; it changes the frames, the status of the acting thread and the holdings of the ledger, and neither the
+    questions, nor the answers, nor the epoch, nor the outside part of the ledger. -/
+private theorem fragenbein_faden {ι : Type}
+    (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι) (f : ι) (F : Schrittform)
+    (lz : F.Lebenszyklus) (emb : F.Eingebettet E.maschine f) : Sicherheit.RegelAntwortSicher E f := by
+  intro t c w vor zwischen nach plan spur kopf impl aus offen
+  rw [emb.regel] at impl
+  have impl' : F.ideal c vor w [plan] zwischen := impl
+  obtain ⟨hn, still, _, _⟩ := Schrittform.lebenszyklus_ideal lz impl'
+  obtain ⟨_, _, _, v, aktion, _, zustand⟩ := aus
+  obtain ⟨_, _, _, _, _, _, hf, ha, _, _, _, _, _, _, he, _, hb⟩ := aktion.still_erhaelt still
+  exact offen_befugt_nach_erhalten (hf.trans hn.fragen) (ha.trans hn.antworten) (he.trans hn.epoche)
+    (by rw [hb]; exact hn.aussengriff) (by rw [hb]; exact hn.geraet) zustand offen
+
 /-- **The authority of pending questions, once per class** (`KlassenFragenbeinAussage`). -/
 theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := by
   intro ι E f F _ emb
+  by_cases lz : F.Lebenszyklus
+  · exact fragenbein_faden E f F lz emb
   intro t c w vor zwischen nach plan spur kopf impl aus offen
   rw [emb.regel] at impl
   obtain ⟨rahmen, _, _, v, aktion, _, zustand⟩ := aus
@@ -219,6 +237,27 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
           have buchung := zugriffNach_aussen_gleich (⟨.rmw mode, o, tr⟩ : Schrittform) c vor val
           exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
             (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+  | zaun mode =>
+      dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal, Schrittform.zugriffsschritt] at impl
+      rcases impl with ⟨_, planEq0, zwischenEq⟩ | ⟨_, val, _, planEq0, zwischenEq⟩
+      · have planAkt : plan.aktion = .intern := by
+          rw [(List.cons.inj planEq0).1]
+          rfl
+        rw [planAkt] at aktion
+        cases aktion with
+        | intern =>
+          have buchung := verweigert_aussen_gleich (⟨.zaun mode, o, tr⟩ : Schrittform) c vor
+          exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
+            (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      · have planAkt : plan.aktion = .intern := by
+          rw [(List.cons.inj planEq0).1]
+          rfl
+        rw [planAkt] at aktion
+        cases aktion with
+        | intern =>
+          have buchung := zugriffNach_aussen_gleich (⟨.zaun mode, o, tr⟩ : Schrittform) c vor val
+          exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
+            (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
   | sperre art =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal, Schrittform.zugriffsschritt] at impl
       rcases impl with ⟨_, planEq0, zwischenEq⟩ | ⟨_, val, _, planEq0, zwischenEq⟩
@@ -322,5 +361,9 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
             · intro reg
               rcases befugtQ.2 reg with ⟨owner, nummer, geraetEq⟩
               exact ⟨owner, nummer, by rwa [bGer]⟩
+  | starte => exact (lz (Or.inl rfl)).elim
+  | beende => exact (lz (Or.inr (Or.inl rfl))).elim
+  | verbinde => exact (lz (Or.inr (Or.inr (Or.inl rfl)))).elim
+  | wechsle => exact (lz (Or.inr (Or.inr (Or.inr rfl)))).elim
 
 end Gabbro.Core.Ast.Semantik

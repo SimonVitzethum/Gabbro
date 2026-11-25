@@ -71,7 +71,8 @@ theorem regionUnit_realized : RegionUnitRealizedAussage := by
 theorem regionUnit_sicherheit : regionUnitForm.SicherheitsAussage := by
   rintro platform ⟨args, init⟩
   exact (regionUnitForm.befehl (args, init)).sicherheitsPflichten
-    (regionUnitForm.fragment (args, init)) platform (programm_keine_invarianten (args.unit init))
+    (regionUnitForm.fragment (args, init)) platform [] (fragment_unit_invarianten _)
+    (fun b _ => rfl)
 
 /-- A successful bind uses the live slot named by the receiver, and returns
     exactly the target-indexed value determined by that checked extent. -/

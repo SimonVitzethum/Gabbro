@@ -41,7 +41,7 @@ def KorrektheitAussagen : Prop :=
       ParseDruckAussage ∧ ParseEindeutigAussage ∧ ElabKorrektAussage P ∧ BezeichnetFunktionalAussage P ∧
       TextWohlgeformtAussage P ∧ RealisiertAlleFormenAussage ∧
       GraphmaschineAequivalentAussage ∧ KohaerenzKatalogAussage ∧ RmwNichtDoppeltAussage ∧
-      IriwScVerbotenAussage ∧ IriwRaErlaubtAussage ∧
+      RmwAtomarAussage ∧ IriwScVerbotenAussage ∧ IriwRaErlaubtAussage ∧
       ProtokollSchrittErhaeltAussage ∧ ProtokollStartGutAussage ∧ ProtokollGutImLaufAussage ∧
       IdealProtokollGutImLaufAussage ∧ ImplBestimmtAussage ∧ IdealAkzeptierteEinheitAussage ∧
       VerfeinerungAkzeptiertAussage ∧ ZielFXAkzeptiertAussage ∧ FortschrittAkzeptiertAussage ∧

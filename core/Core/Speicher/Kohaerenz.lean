@@ -53,8 +53,8 @@ theorem hb_mo (hk : G.Konsistent) {x w : E} (hx : G.schreibt x) (hw : G.schreibt
     release/acquire (a release sequence of length zero). -/
 theorem sw_direkt (hw : G.Wohlgeformt) {w r : E} (hrf : G.rf w r) (hmw : (G.modus w).stark)
     (hmr : (G.modus r).stark) : G.sw w r :=
-  ⟨hw.rf_schreibt _ _ hrf, hmw, hw.rf_liest _ _ hrf, hmr, w, .selbst (hw.rf_schreibt _ _ hrf),
-    hrf⟩
+  sw_von_klassisch ⟨hw.rf_schreibt _ _ hrf, hmw, hw.rf_liest _ _ hrf, hmr, w,
+    .selbst (hw.rf_schreibt _ _ hrf) (Modus.stark_atomar hmw), hrf⟩
 
 end Graph
 

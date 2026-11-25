@@ -148,7 +148,7 @@ theorem recordDecl_erhaltung : RecordDeclErhaltungAussage := by
   let p := (recordDeclForm scope).fragment args
   let b := (recordDeclForm scope).befehl args
   exact ⟨b.abgleich p platform, b.fortschritt p, b.komponierbar p platform,
-    b.sicherheitsPflichten p platform (by rfl)⟩
+    b.sicherheitsPflichten p platform [] (tabLeer _ (by rfl)) (fun b _ => rfl)⟩
 
 theorem recordDecl_regelSicher : RecordDeclRegelSicherAussage := by
   intro scope platform args

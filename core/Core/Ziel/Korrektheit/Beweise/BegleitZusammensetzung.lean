@@ -99,9 +99,9 @@ theorem modulDef_akzeptiert :
     Linken.modulDef_rein ?_
   intro b present frame
   change b ∈ ([Ast.Semantik.Befehl.definiere Ast.Semantik.mainName [] none 0 2 false [] none,
-    Ast.Semantik.Befehl.rueckVoid] : List Ast.Semantik.Befehl) at present
+    Ast.Semantik.Befehl.rueckVoid, Ast.Semantik.Befehl.ende] : List Ast.Semantik.Befehl) at present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl <;> rfl
 
 theorem modulCall_akzeptiert :
     Annahme.Akzeptiert (Linken.modulCall.fragment.einheit Plattform.x86_64) := by
@@ -233,12 +233,14 @@ theorem ZielInhaltAussage.nichtTrivial :
     ∃ (E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit), ¬ Annahme.Akzeptiert E :=
   ⟨Annahme.staleEinheit, Annahme.stale_nicht_akzeptiert⟩
 
-/-- The premise of linker acceptance holds jointly: the two-module example plan links and both of its modules
-    are accepted on their own. -/
+/-- The premise of linker acceptance holds jointly: the two-module example plan links, is sealed,
+    and both of its modules are accepted on their own. -/
 theorem LinkerAkzeptiertAussage.erfuellbar :
     ∃ (plan : Bauplan) (frag : Ast.Semantik.Fragment), linke plan = some frag ∧
+      kontrollflussAbgeschottet plan = true ∧
       ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
-  refine ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke, ?_⟩
+  refine ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke,
+    Linken.beispielAbgeschottet, ?_⟩
   intro m present
   simp only [Linken.beispielPlan, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl

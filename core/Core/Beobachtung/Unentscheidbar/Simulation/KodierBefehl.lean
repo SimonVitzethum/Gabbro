@@ -70,10 +70,11 @@ def befehlZuCode : Befehl → Code
   | .waehleUmgebung f0 f1 f2 => Code.pair (natZuCode 48) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
   | .bindeRegion f0 f1 => Code.pair (natZuCode 49) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
   | .zugriff f0 => Code.pair (natZuCode 50) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
-  | .maskiere f0 f1 => Code.pair (natZuCode 51) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
-  | .prioritaet f0 => Code.pair (natZuCode 52) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
-  | .sendeUnterbrechung f0 f1 => Code.pair (natZuCode 53) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
-  | .leiteLeitung f0 f1 f2 => Code.pair (natZuCode 54) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
+  | .faden f0 => Code.pair (natZuCode 51) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .maskiere f0 f1 => Code.pair (natZuCode 52) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .prioritaet f0 => Code.pair (natZuCode 53) (Code.pair (natZuCode (Encodable.encode f0)) (Code.zero))
+  | .sendeUnterbrechung f0 f1 => Code.pair (natZuCode 54) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.zero)))
+  | .leiteLeitung f0 f1 f2 => Code.pair (natZuCode 55) (Code.pair (natZuCode (Encodable.encode f0)) (Code.pair (natZuCode (Encodable.encode f1)) (Code.pair (natZuCode (Encodable.encode f2)) (Code.zero))))
 
 def befehlVonCodeA : Code → Option Befehl
   | Code.pair tag kids =>

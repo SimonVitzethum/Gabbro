@@ -175,6 +175,8 @@ def Befehl.FlussRegel (β : Beschriftung) (pc : Nat) : Befehl → Prop
   -- An access instruction has no label rule yet: the label rule of a memory event is MK-13, and a form the
   -- model has no rule for is refused (AGENTS.md §2), so the labelled flow rule is never accepted for it.
   | .zugriff _ => False
+  -- A lifecycle instruction has no label rule either (thread creation is labelled in MK-13), so it is refused.
+  | .faden _ => False
 
 theorem Befehl.sichtErhaltend_oeffentlich {pc : Nat} (f : Befehl) :
     f.SichtErhaltendBei Beschriftung.alleOeffentlich pc := by
@@ -286,6 +288,7 @@ theorem Befehl.sichtErhaltend {β : Beschriftung} {pc : Nat} (f : Befehl)
   | leiteLeitung leitung kern prioritaet =>
     exact leiteLeitungSicht β pc leitung kern prioritaet regel.1 regel.2
   | zugriff form => exact False.elim regel
+  | faden form => exact False.elim regel
 
 /-- Per instruction family: the rule is sound for every declaration. -/
 def FamilienSicht (familie : LokalFamilie) : Prop :=

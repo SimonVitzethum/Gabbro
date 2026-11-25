@@ -106,8 +106,7 @@ theorem textLiteralErhaltung : TextLiteralErhaltungAussage := by
 
 theorem textLiteralRegelSicher : TextLiteralRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((textLiteralForm scope).fragment args) platform
-    (textLiteral_keine_invarianten scope args) ((textLiteralForm scope).befehl args)
+  exact Befehl.sicher ((textLiteralForm scope).fragment args) platform [] (tabLeer _ (textLiteral_keine_invarianten scope args)) (fun b _ => rfl) ((textLiteralForm scope).befehl args)
 
 theorem textLiteralKernOrt : TextLiteralKernOrtAussage := by
   intro scope

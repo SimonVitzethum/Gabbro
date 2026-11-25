@@ -35,19 +35,21 @@ theorem klassenSicherheit (k : Wirkungsklasse) : KlassenSicherheitAussage k := b
   cases k with
   | lokal => exact klassenSpeicherbein_privat .lokal (Or.inl rfl)
   | ruf => exact klassenSpeicherbein_privat .ruf (Or.inr (Or.inl rfl))
-  | frage =>
-      exact klassenSpeicherbein_privat .frage
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))))
+  | frage => exact klassenSpeicherbein_privat .frage (Or.inr (Or.inr (Or.inl rfl)))
+  | zaun m =>
+    exact klassenSpeicherbein_privat (.zaun m) (Or.inr (Or.inr (Or.inr ⟨m, rfl⟩)))
   | maskiere =>
-      exact klassenSpeicherbein_privat .maskiere (Or.inr (Or.inr (Or.inl rfl)))
+      exact klassenSpeicherbein_privat .maskiere
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
   | prioritaet =>
-      exact klassenSpeicherbein_privat .prioritaet (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+      exact klassenSpeicherbein_privat .prioritaet
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))
   | sendeUnterbrechung =>
       exact klassenSpeicherbein_privat .sendeUnterbrechung
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))
   | leiteLeitung =>
       exact klassenSpeicherbein_privat .leiteLeitung
-        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))
+        (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl)))))))
   | lesen m => exact klassenSpeicherbein_zugriff (.lesen m) m (Or.inl rfl)
   | schreiben m => exact klassenSpeicherbein_zugriff (.schreiben m) m (Or.inr (Or.inl rfl))
   | rmw m => exact klassenSpeicherbein_zugriff (.rmw m) m (Or.inr (Or.inr rfl))
@@ -55,5 +57,9 @@ theorem klassenSicherheit (k : Wirkungsklasse) : KlassenSicherheitAussage k := b
       intro h
       change true = false at h
       cases h
+  | starte => exact klassenSpeicherbein_faden .starte (Or.inl rfl)
+  | beende => exact klassenSpeicherbein_faden .beende (Or.inr (Or.inl rfl))
+  | verbinde => exact klassenSpeicherbein_faden .verbinde (Or.inr (Or.inr (Or.inl rfl)))
+  | wechsle => exact klassenSpeicherbein_faden .wechsle (Or.inr (Or.inr (Or.inr rfl)))
 
 end Gabbro.Core.Ast.Semantik

@@ -8419,7 +8419,7 @@ the guard of a memory class violates locality.
 | `Wirkungsklasse.plan`, `Wirkungsklasse.Erlaubt`, `Operand` | `Klasse/Schritt.lean` | The plan of a class step from its operand: one read label, one written cell, one update label, one lock action or one question; the shape each class allows. |
 | `Schrittform.ideal`, `Schrittform.impl`, `Schrittform.regel`, `Befehl.form`, `Befehl.plan` | `Klasse/Schritt.lean`, `Runtime/Regeln.lean` | The one linearisation point of a class form; the instruction's rule is its form's rule. The read value is the one free choice, the memory model accepts or rejects it. |
 | `Schrittform.buchungNach`, `Zustand.zugriffsereignis`, `Zustand.adresse` | `Klasse/Schritt.lean`, `Klasse/Zugriff.lean` | The class books the concrete address of every access at the event number the machine gives it (one lazily materialised initial write precedes the first access to a cell). |
-| `Befehl.klasse_privat`, `Befehl.ideal_privat`, `Befehl.impl_privat`, `Befehl.plan_privat` | `Runtime/Regeln.lean` | Every instruction of the current set is frame-only; its step is the private plan and its transfer. The first instruction of an access class makes `klasse_privat` false and forces every generic proof that uses it to split on the class. |
+| `Befehl.Privat`, `Befehl.ideal_privat`, `Befehl.impl_privat`, `Befehl.plan_privat` | `Runtime/Regeln.lean` | An instruction of the frame-only classes `lokal` and `ruf` (`Befehl.Privat`) has the private plan and its frame transfer as its step; since MK-04 `Befehl.klasse_privat` is gone and every generic proof splits on the class. |
 | `klassenSim` | `Klasse/Pflichten.lean` | Simulation for every class, with the authority of every recorded plan; a form of any class in a unit that gives it one linearisation point. |
 | `klassenLokal` | `Klasse/Pflichten.lean` | Every ideal step of every class covers its footprint by authority (read right for a load, write right for a store, both for an update). |
 | `klassenFortschritt` | `Klasse/Pflichten.lean` | The class rule is total: an access without authority is refused, it does not wait. |
@@ -8427,3 +8427,57 @@ the guard of a memory class violates locality.
 | `KlassenAussagen` | `Klasse/Pflichten.lean`, `Klasse/Sicherheit.lean` | The pinned statement of all six duties for every class. Information flow is the step-level `KlassenSchrittNIAussage` (not for the reading classes); the earlier run-level `KlassenNIAussage` was not derivable from its premises and is gone. Bounds are `KlassenSchrankenAussage`; the four class-determined safety legs are `KlassenSicherheitAussage` (booking not for the lock class). |
 | `klassenAussagen` | `Klasse/Beweise/Gesamt.lean` | All conjunctions of `KlassenAussagen` assembled for every class from `klassenSim`, `klassenSchrittNI`, `klassenSchranken`, `klassenSicherheit`, `klassenFortschritt`, `klassenLokal` and `klassenNichtTrivial`. |
 | `klassenSchrittNI_nichtTrivial` | `Klasse/Beweise/NISichtbar.lean` | The step-level flow duty is informative: a non-reading form whose transfer leaks a secret frame counter into the public projection, with the checker's flow rule missing, breaks the conclusion of `KlassenSchrittNIAussage` while keeping its other premises. |
+
+## 221. Memory and atomic instructions: one access form per instruction, the kernel statements proved (MK-04, 2026-11-25)
+
+`Befehl.zugriff (form : Zugriffsform)` is the one new instruction constructor; its seven forms are `lade`, `speichere`,
+`tausche`, `vergleicheTausche`, `holeUndAddiere`, `erwarte` (the confirming acquire observation of `A awaits { p, q }`) and
+`veroeffentliche` (the release publication of `A = e publishes { p, q }`). The access mode is a field of the instruction, not a
+constant of the carrier: the model must be able to hold the instruction with a mode that is too weak, so that the checker's
+refusal of it is a refusal of something real. The classes are `lesen m`, `schreiben m` and `rmw m`; a failed compare-and-swap
+records a read, not an update (`Aenderung.art`). There is no fence instruction: the memory model W is fence-free and a form the model
+has no rule for is refused. Every generic proof over instructions now splits on the class: the frame-only part takes `Befehl.Privat`,
+elaborated source fragments are frame-only (`fragment_rein`), the access instructions owe their class duties
+(`KlassenAussagen`) and the statements below.
+
+| Statement or theorem | File | What it says |
+|---|---|---|
+| `Zugriffsform`, `Aenderung`, `Zugriffsform.uebertrag`, `Zugriffsform.operand`, `Zugriffsform.klasse` | `Runtime/Atom/Form.lean`, `Klasse/Schritt.lean`, `Klasse/Klasse.lean` | The access forms, the value an update writes, the frame transfer (binds the value the read returned), the operand the frame supplies, the class of each form. |
+| `Fragment.Rein`, `fragment_rein` | `Runtime/Atom/Rein.lean` | Every instruction of every elaborated source fragment is frame-only. |
+| `PayloadSichtbarAussage`, `payloadSichtbar`, `payloadSichtbar_erfuellbar`, `payloadSichtbar_nichtTrivial` | `Speicher/Atom/Nutzlast.lean`, `Speicher/Atom/NutzlastSchwach.lean` | In every consistent graph a release/acquire flag makes the payload visible: the observer reads the payload write or a later one. The same shape with a weaker mode on either side has a consistent graph in which the observer reads an older write. |
+| `Graph.Abschnitte`, `Graph.rennfrei_aus_abschnitten`, `rennfreiAusLokal_erfuellbar`, `rennfreiAusLokal_nichtTrivial` | `Speicher/Atom/Abschnitte.lean`, `Speicher/Atom/AbschnitteBeispiele.lean` | Lock windows that hand over to each other order the plain accesses; two threads without the lock have a consistent graph with an unordered plain conflict. |
+| `RennfreiAusLokalAussage`, `rennfreiAusLokal` | `Sicherheit/Atom/RennfreiAusLokal.lean` | The race leg of one RC11 prefix follows from the lock discipline. Finding: the machine records a lock hand-off as ONE update of the releasing context, so the new owner has no acquire event; MK-05 must fix this before the machine delivers the discipline. |
+| `AtomarSimAussage`, `atomarSim`, `atomarSim_erfuellbar`, `atomarSim_nichtTrivial` | `Runtime/Atom/Aussagen.lean` | The implementation read is the ideal read under the same choice and the frame binds the value of the recorded label; an update implemented so that it loses the value is a rule the model holds and it is not faithful. |
+| `ZugriffBestimmtAussage`, `ZugriffKomponierbarAussage`, `ZugriffBefehlAussage`, `ZugriffNIAussage` | `Runtime/Atom/Aussagen.lean`, `Beobachtung/Fluss/Fragment.lean` | The open duties of the access instructions: determinacy up to the value read, composability of the steps the memory model accepts, information flow. |
+| `AtomAussagen`, `atomAussagen` | `Runtime/Atom/Aussagen.lean` | The three kernel statements pinned together. |
+| `speicherbein_nichtTrivial`, `rennenbein_nichtTrivial`, `invariantenbein_nichtTrivial`, `commitbein_nichtTrivial` | `Runtime/Atom/Beine.lean` | Each safety leg has a run of the machine that violates it. |
+
+
+## 222. Threads: start, join, switch, core start, as instructions with effect classes (MK-07, 2026-11-25)
+
+The machine got exact thread creation (owner decision D-3): `Zustand.naechsterFaden` (the next free thread number, framed: a form
+never moves it) and four protocol actions `Aktion.starte`, `.verbinde kind`, `.beende`, `.wechsle kern kind`
+(`FuehrtAus`, `Maschine/Schritte.lean`). A start makes the RESTING thread with the next number run and advances the counter, so no
+number is used twice; a join runs only for a context that has ended; a switch (and a core start, the switch to an idle core) runs
+a running context that runs on no core, so no context runs on two cores. `Befehl.faden (form : Fadenform)` is the one new
+instruction constructor (`starte`, `beende`, `verbinde`, `wechsle`, `kernStart`); its classes are `starte`, `beende`, `verbinde`
+and `wechsle`. A lifecycle step has a private plan with a lifecycle protocol action (no memory event, no footprint) and changes only
+frames, the status of the acting thread and the holdings of the ledger. Authority MOVES: a start hands the named handles to the new
+thread (`Buchung.uebergeben`), a join takes back what the ended thread held (`Buchung.zurueckgegeben`). The happens-before of start
+and join is the one of a publication and an observation of a flag cell in program order (`veroeffentliche`, `erwarte`); a start
+without them is an instruction of the model, the checker's refusal of it excludes the race. The bytes of a core start are the
+generated startup sequence of the target binding (K4/O17); the model fixes its effect, the target row carries the bytes, and that the
+hardware behaves like the row is a named assumption. Meaning change of a pinned definition (D-3): `Aktion`, `Zustand`,
+`Zustandsrahmen`, `FuehrtAus` (and with them `I.Schritt`, `ImplSchritt`); no statement of `gabbro_ziel` changes its meaning.
+
+| Statement or theorem | File | What it says |
+|---|---|---|
+| `Aktion.starte`, `.verbinde`, `.beende`, `.wechsle`, `FuehrtAus.starte`, `.verbinde`, `.beende`, `.wechsle`, `Zustand.naechsterFaden` | `Maschine/Schritte.lean`, `Maschine/Zustand.lean` | The exact thread creation of the machine; the counter is in `Zustandsrahmen`. |
+| `FuehrtAus.still_erhaelt`, `starte_genau`, `wechsle_genau`, `wechsle_erhaelt_einkern`, `Aktion.Ausfuehrbar` | `Runtime/Faden/Erhalt.lean` | What the lifecycle actions do and do not touch; the one-core invariant. |
+| `Fadenform`, `Fadenoperand`, `Fadenform.uebertrag`, `Rahmen.kindRahmen` | `Runtime/Faden/Form.lean` | The lifecycle instructions and their frame transfer; a temporary that names nothing is refused. |
+| `Wirkungsklasse.starte/beende/verbinde/wechsle`, `Schrittform.faedenNach`, `faedenschritt` | `Klasse/Klasse.lean`, `Klasse/Schritt.lean` | The classes and their step: refusal or the planned step with the new state. |
+| `Buchung.uebergeben`, `zurueckgegeben`, `uebergeben_eindeutig`, `zurueckgegeben_eindeutig` | `Maschine/Buchung.lean`, `Runtime/Faden/Autoritaet.lean` | Authority moves, never copied; exclusive authority keeps one holder. |
+| `Schrittform.lebenszyklus_ideal`, `faedenNach_nurFaden`, `faedenNach_stapel` | `Klasse/Beweise/Faden.lean` | The step of a lifecycle form in facts; the class duties follow. |
+| `klassenAussagen` (for the four classes) | `Klasse/Beweise/*` | `KlassenAussagen` holds for the new classes: arms in the safety, bounds, locality and totality proofs. |
+| `StarteBestimmtAussage`, `FadenAutoritaetAussage`, `VerbindeErgebnisAussage`, `WechsleAussage`, `KindStartetBeiAnkunftAussage`, `FadenHbAussage`, `FadenBestimmtAussage`, `FadenAussagen`, `fadenAussagen` | `Runtime/Faden/Aussagen.lean` | The kernel statements, proved, each with `_erfuellbar` and `_nichtTrivial`. |
+| `FadenKomponierbarAussage` (and one unit per action: `FadenVerweigertKomponierbarAussage`, `StarteKomponierbarAussage`, `VerbindeKomponierbarAussage`, `BeendeKomponierbarAussage`, `WechsleKomponierbarAussage`), `VerbindeFortschrittAussage`, `FadenBefehlAussage` | `Runtime/Faden/Offen.lean` | The open duties of the lifecycle instructions (registry packet of `Befehl.faden`). |

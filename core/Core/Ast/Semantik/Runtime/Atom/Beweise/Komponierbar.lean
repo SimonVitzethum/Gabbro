@@ -37,9 +37,9 @@ theorem zugriffsschritt_rahmen (F : Schrittform) (c : Kontext) (s u : Zustand) {
     (h : F.zugriffsschritt c s [p] u) : Zustandsrahmen s u := by
   rcases h with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
   · subst u
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · subst u
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Every label a class step puts into its read list is a reading label: a load records `.lesen`, an
     update records `.rmw` or the failed compare-and-swap's `.lesen`, a store, lock, question and private
@@ -61,6 +61,10 @@ theorem zugriffsschritt_liest (F : Schrittform) (c : Kontext) (s u : Zustand) {p
       simp only [Wirkungsklasse.plan, Semantik.plan] at hl
       cases hl
     | ruf =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      cases hl
+    | zaun m =>
       intro l hl
       simp only [Wirkungsklasse.plan, Semantik.plan] at hl
       cases hl
@@ -87,6 +91,22 @@ theorem zugriffsschritt_liest (F : Schrittform) (c : Kontext) (s u : Zustand) {p
       have hleer := Operand.fragePlan_leer (o (s.lokal c))
       simp only [Wirkungsklasse.plan] at hl
       rw [hleer.1] at hl
+      cases hl
+    | starte =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
+      cases hl
+    | beende =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
+      cases hl
+    | verbinde =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
+      cases hl
+    | wechsle =>
+      intro l hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
       cases hl
     | maskiere =>
       intro l hl
@@ -119,7 +139,14 @@ theorem zugriffKomponierbar : ZugriffKomponierbarAussage := by
       Schrittform.ideal] using hstep
   have hrahmen : Zustandsrahmen s u := zugriffsschritt_rahmen F c s u hschritt
   have hliest : ∀ l ∈ plan.lesen, l.art.liest := zugriffsschritt_liest F c s u hschritt
-  have hakt : plan.aktion = .intern := Befehl.impl_aktion_intern (Befehl.zugriff z) hstep
+  have hakt : plan.aktion = .intern := by
+    rcases hschritt with ⟨_, hp, _⟩ | ⟨_, v, _, hp, _⟩
+    · have e : plan = Semantik.plan := (List.cons.inj hp).1
+      subst e
+      rfl
+    · have e : plan = F.plan (s.lokal c) v := (List.cons.inj hp).1
+      subst e
+      cases z <;> rfl
   refine ⟨⟨es, []⟩, { u with graph := g }, ?_⟩
   unfold FuehrtSchrittAus
   refine ⟨hrahmen, hliest, [], u, ?_, ?_, ?_⟩

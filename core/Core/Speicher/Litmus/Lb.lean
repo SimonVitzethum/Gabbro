@@ -121,6 +121,9 @@ theorem lb_wf (m : Modus) : (lbGraph m).Wohlgeformt where
         | exact False.elim hb
         | exact absurd rfl hne
         | (simp only [Graph.ort, lbGraph, lbLab, Bool.false_eq_true, Bool.true_eq_false] at ho; done)
+  rmw_nicht_na := by
+    intro a h
+    cases a <;> simp only [Graph.istRmw, lbGraph, lbLab, reduceCtorEq] at h
 
 theorem lb_kein_rmw (m : Modus) (u : LbEv) : ¬ (lbGraph m).istRmw u := by
   intro hu
@@ -129,7 +132,7 @@ theorem lb_kein_rmw (m : Modus) (u : LbEv) : ¬ (lbGraph m).istRmw u := by
 /-- With `.rlx` no event is strong, so there is no `sw` edge. -/
 theorem lb_kein_sw (a b : LbEv) : ¬ (lbGraph .rlx).sw a b := by
   intro h
-  rcases h with ⟨_, hs, _, _, _⟩
+  have hs : ((lbGraph .rlx).modus a).stark := Graph.sw_stark_links h
   cases a <;> exact hs
 
 /-- Without `sw`, happens-before is program order. -/
@@ -188,7 +191,7 @@ theorem lb_konsistent : (lbGraph .rlx).Konsistent where
   psc := by
     intro a h
     obtain ⟨c, hc⟩ := transGen_kopf h
-    exact (lb_kein_sc a) hc.1
+    exact (lb_kein_sc a) (Graph.psc_sc_links hc)
   ohneLB := by
     refine azyklisch_von_rang lbRang ?_
     intro a b

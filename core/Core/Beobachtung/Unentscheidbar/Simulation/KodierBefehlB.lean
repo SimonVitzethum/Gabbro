@@ -294,6 +294,13 @@ def befehlVonCodeB : Code → Option Befehl
       | _ => Option.none
     | some 51 =>
       match kids with
+      | Code.pair f0 (Code.zero) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Fadenform ← Encodable.decode f0n
+          Option.some (.faden f0')
+      | _ => Option.none
+    | some 52 =>
+      match kids with
       | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
@@ -301,14 +308,14 @@ def befehlVonCodeB : Code → Option Befehl
           let f1' : Bool ← Encodable.decode f1n
           Option.some (.maskiere f0' f1')
       | _ => Option.none
-    | some 52 =>
+    | some 53 =>
       match kids with
       | Code.pair f0 (Code.zero) => do
           let f0n : ℕ ← codeZuNat f0
           let f0' : ℕ ← Encodable.decode f0n
           Option.some (.prioritaet f0')
       | _ => Option.none
-    | some 53 =>
+    | some 54 =>
       match kids with
       | Code.pair f0 (Code.pair f1 (Code.zero)) => do
           let f0n : ℕ ← codeZuNat f0
@@ -317,7 +324,7 @@ def befehlVonCodeB : Code → Option Befehl
           let f1' : ℕ ← Encodable.decode f1n
           Option.some (.sendeUnterbrechung f0' f1')
       | _ => Option.none
-    | some 54 =>
+    | some 55 =>
       match kids with
       | Code.pair f0 (Code.pair f1 (Code.pair f2 (Code.zero))) => do
           let f0n : ℕ ← codeZuNat f0

@@ -271,6 +271,11 @@ theorem inv_zugriff (f0 : _) :
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
 
+theorem inv_faden (f0 : _) :
+    befehlVonCode (befehlZuCode (.faden f0)) = some (.faden f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
 theorem inv_maskiere (f0 : _) (f1 : _) :
     befehlVonCode (befehlZuCode (.maskiere f0 f1)) = some (.maskiere f0 f1) := by
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
@@ -291,8 +296,6 @@ theorem inv_leiteLeitung (f0 : _) (f1 : _) (f2 : _) :
     befehlVonCode (befehlZuCode (.leiteLeitung f0 f1 f2)) = some (.leiteLeitung f0 f1 f2) := by
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
-
-theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = some b
   | .literal f0 f1 => inv_literal f0 f1
   | .binaer f0 f1 => inv_binaer f0 f1
   | .binden f0 f1 => inv_binden f0 f1
@@ -344,6 +347,7 @@ theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = som
   | .waehleUmgebung f0 f1 f2 => inv_waehleUmgebung f0 f1 f2
   | .bindeRegion f0 f1 => inv_bindeRegion f0 f1
   | .zugriff f0 => inv_zugriff f0
+  | .faden f0 => inv_faden f0
   | .maskiere f0 f1 => inv_maskiere f0 f1
   | .prioritaet f0 => inv_prioritaet f0
   | .sendeUnterbrechung f0 f1 => inv_sendeUnterbrechung f0 f1

@@ -208,8 +208,8 @@ theorem carrierIndexOptionSignature : CarrierIndexOptionSignatureAussage := by
 
 theorem carrierIndexOptionRegelSicher : CarrierIndexOptionRegelSicherAussage := by
   intro scope platform args
-  exact Befehl.sicher ((carrierTypeForm scope indexOptionTypeUse).fragment args) platform
-    (carrier_keine_invarianten scope indexOptionTypeUse args)
+  exact Befehl.sicher ((carrierTypeForm scope indexOptionTypeUse).fragment args) platform []
+    (tabLeer _ (carrier_keine_invarianten scope indexOptionTypeUse args)) (fun b _ => rfl)
     ((carrierTypeForm scope indexOptionTypeUse).befehl args)
 
 theorem carrierIndexOptionErfuellbarAm : CarrierIndexOptionErfuellbarAmAussage := by

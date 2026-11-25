@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Ast.Semantik.Runtime.Atom.Form
+public import Core.Ast.Semantik.Runtime.Faden.Form
 import Init.Data.Vector.OfFn
 
 @[expose] public section
@@ -71,6 +72,7 @@ inductive Befehl where
   | waehleUmgebung (name : Identifier) (abi : Katalog.DienstAbi) (row : Katalog.FirmwareZeile)
   | bindeRegion (receiver : Nat) (init : RegionInitializer)
   | zugriff (form : Zugriffsform)
+  | faden (form : Fadenform)
   | maskiere (vektor : Nat) (aus : Bool)
   | prioritaet (grenze : Nat)
   | sendeUnterbrechung (vektor kern : Nat)
@@ -270,6 +272,7 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
       environment := (name, abi, row) :: frame.environment }
   | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
   | .zugriff form, frame => form.uebertrag frame 0
+  | .faden form, frame => form.uebertrag frame 0
   | .maskiere .., frame => { frame with pc := frame.pc + 1 }
   | .prioritaet .., frame => { frame with pc := frame.pc + 1 }
   | .sendeUnterbrechung .., frame => { frame with pc := frame.pc + 1 }
@@ -296,5 +299,10 @@ def Befehl.guard : Befehl → Rahmen → Option Bedarf
     let last ← frame.zahl (base + 2)
     pure ⟨.teilfolge, (first.zahl.wert, last.zahl.wert, text.bytes.size)⟩
   | _, _ => none
+
+/-- The write footprint of a command: the shared cells it may write. Every command of the
+    current set is frame-only, so every footprint is empty; MK-04 fills this for memory
+    commands. The checker refuses preservation for observed cells in the footprint. -/
+def Befehl.schreibFussabdruck : Befehl → List Zelle := fun _ => []
 
 end Gabbro.Core.Ast.Semantik
