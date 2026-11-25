@@ -103,9 +103,7 @@ theorem pb5Lauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[12]? = some (.vergleichen .lt frei) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil, Nat.add_zero]
   have e := schrittVergleichNat _ (pb4 r a b frei) 12 frei a b rfl hx hy g
-  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb4 r a b frei)) = some (pb5 r a b frei)
-  rw [e]
-  rfl
+  exact e
 
 theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a < b) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6w r a b frei) := by
@@ -117,9 +115,7 @@ theorem pb6wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : a 
   have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil, Nat.add_zero]
   have e := schrittSpringeWennWahr _ (pb5 r a b frei) 13 frei true true 17 rfl ht rfl g
-  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6w r a b frei)
-  rw [e]
-  rfl
+  exact e
 
 theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬ a < b) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[1] (some (pb5 r a b frei)) = some (pb6f r a b frei) := by
@@ -135,9 +131,7 @@ theorem pb6fLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) (hab : ¬
   have g : (paarBerechnung aSlot bSlot aus frei)[13]? = some (.springeWenn frei true 17) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil, Nat.add_zero]
   have e := schrittSpringeWennFalsch _ (pb5 r a b frei) 13 frei true false 17 rfl ht (by decide : false ≠ true) g
-  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb5 r a b frei)) = some (pb6f r a b frei)
-  rw [e]
-  rfl
+  exact e
 
 theorem pb7wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
     (Schritt (paarBerechnung aSlot bSlot aus frei))^[3] (some (pb6w r a b frei)) = some (pb7w r a b frei) := by
@@ -190,9 +184,7 @@ theorem pb9wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[36]? = some (.binaer .mul (frei + 4)) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil, Nat.add_zero]
   have e := schrittMulNat _ (pb8w r a b frei) 36 (frei + 4) b b rfl hx hy g
-  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb8w r a b frei)) = some (pb9w r a b frei)
-  rw [e]
-  rfl
+  exact e
 
 theorem pb10wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     (h2a : frei + 2 ≠ frei + 4) (h2a5 : frei + 2 ≠ frei + 5) :
@@ -234,9 +226,7 @@ theorem pb11wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat) :
   have g : (paarBerechnung aSlot bSlot aus frei)[40]? = some (.binaer .add (frei + 4)) := by
     simp only [paarBerechnung, kopie, List.append_assoc, List.nil_append, List.append_nil, List.cons_append, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil, List.length_cons, List.length_nil, Nat.add_zero]
   have e := schrittAddNat _ (pb10w r a b frei) 40 (frei + 4) (b * b) a rfl hx hy g
-  change Schritt (paarBerechnung aSlot bSlot aus frei) (some (pb10w r a b frei)) = some (pb11w r a b frei)
-  rw [e]
-  rfl
+  exact e
 
 theorem pb12wLauf (aSlot bSlot aus frei : Nat) (r : Rahmen) (a b : Nat)
     (haus4 : aus ≠ frei + 4) :
