@@ -4,7 +4,8 @@
              declares as expressions of the decidable predicate language, the checker's footprint
              rule, and the safety of checker-accepted elaborated units with invariants.
 
-  `UnitMitInvarianten` and `programmMitInvarianten` live in `Elaborierung` (below the checker);
+   `UnitMitInvarianten`, `programmMitInvarianten` and `elaborierenMitInvarianten` live in
+   `Elaborierung` (below the checker);
   the clause table of an elaborated unit is exactly the denotations of its declared predicates
   (`programmMitInvarianten_klauseln`, `rfl`), so `programm_keine_invarianten` is gone: plain
   units elaborate with the empty list and safety is proved for tables of predicate denotations
@@ -42,8 +43,8 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Sicherheit Katalog
 
-def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
-  (programmMitInvarianten u).einheit platform
+/-- `elaborierenMitInvarianten` (in `Elaborierung`, below the checker) is the elaborated unit
+    of the fragment carrying the invariant denotations. -/
 
 theorem sicherheitsEinheit_invarianten (u : UnitMitInvarianten) (platform : Plattform) :
     ((programmMitInvarianten u).sicherheitsEinheit platform).invarianten =

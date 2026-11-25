@@ -23,7 +23,6 @@
 module
 
 public import Core.Ast.Semantik.Elaborierung
-public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Annahme.Annahme
 public import Core.Beobachtung.Unentscheidbar.Rice
 

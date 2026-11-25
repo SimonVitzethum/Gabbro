@@ -368,6 +368,11 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
 def elaborieren (platform : Plattform) {category : Category} (tree : category.Tree) : Einheit :=
   (fragment category tree).einheit platform
 
+/-- A source unit with the invariants it declares denotes the elaborated unit of the fragment
+    carrying the invariant denotations (`programmMitInvarianten`). -/
+def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
+  (programmMitInvarianten u).einheit platform
+
 /-- Platform selection binds the hardware catalogue without changing the source system or its guards. -/
 theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category}
     (tree : category.Tree) :
