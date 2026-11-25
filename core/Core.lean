@@ -177,6 +177,7 @@ public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 public import Core.Linken.Gegenbeispiel
+public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Linken.Abgeschottet
 meta import Core.Waechter.Check
 
