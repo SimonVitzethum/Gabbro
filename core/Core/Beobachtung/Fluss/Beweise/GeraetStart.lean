@@ -67,7 +67,9 @@ theorem geraete_laden_gleich {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
     simp only [hbytes]
   have hcore : s₁.assignment 0 = s₂.assignment 0 := by
     simp only [hassign]
-  simp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit, hstarts0, hbytes0, hcore]
+  have hmed : Gabbro.Core.Ast.LowLevel.medium s₁ = Gabbro.Core.Ast.LowLevel.medium s₂ := rfl
+  simp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit, hstarts0, hbytes0, hcore,
+    hmed]
 
 /-- The strengthened coupling holds at cut zero for every compared device run:
     both runs load the same state, so the low prefixes, the public states, the
@@ -90,7 +92,7 @@ theorem geraete_start_kopplungAussage {k : Katalog} {scope : Gabbro.Core.Ast.Sco
           NiedrigeBeob (d.unit locals) ρ₂ predictor 0 := by
         simp only [NiedrigeBeob, NiedrigeBeob.praefix, zustandEq]
       simp only [hpre, List.take_length]
-      exact .cons (.gleich _) .nil
+      exact List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil
     · intro v w hv hw
       have vw : v = w := Option.some.inj (hv.symm.trans (zustandEq.trans hw))
       subst vw
