@@ -171,10 +171,31 @@ theorem abAbschnitte : abGraph.Abschnitte abSchloss (fun _ => True) where
   innerhalb := by
     intro l c d i j f hai hib haj hjb _ _
     obtain ⟨_, hw⟩ := abFenster_eindeutig f
-    rcases hw with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;>
-      (revert hai hib haj hjb
-       show abPo _ i → abPo i _ → abPo _ j → abPo j _ → i = j ∨ abPo i j ∨ abPo j i
-       cases i <;> cases j <;> decide)
+    rcases hw with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · have h1 : abPo a1 i := hai
+      have h2 : abPo i b1 := hib
+      have h3 : abPo a1 j := haj
+      have h4 : abPo j b1 := hjb
+      clear hai hib haj hjb
+      revert h1 h2 h3 h4
+      cases i <;> cases j <;> first
+        | (intro _ _ _ _; exact Or.inl rfl)
+        | (intro x _ _ _; exact absurd x (by decide))
+        | (intro _ x _ _; exact absurd x (by decide))
+        | (intro _ _ x _; exact absurd x (by decide))
+        | (intro _ _ _ x; exact absurd x (by decide))
+    · have h1 : abPo a2 i := hai
+      have h2 : abPo i b2 := hib
+      have h3 : abPo a2 j := haj
+      have h4 : abPo j b2 := hjb
+      clear hai hib haj hjb
+      revert h1 h2 h3 h4
+      cases i <;> cases j <;> first
+        | (intro _ _ _ _; exact Or.inl rfl)
+        | (intro x _ _ _; exact absurd x (by decide))
+        | (intro _ x _ _; exact absurd x (by decide))
+        | (intro _ _ x _; exact absurd x (by decide))
+        | (intro _ _ _ x; exact absurd x (by decide))
 
 end Atom
 

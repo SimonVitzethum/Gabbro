@@ -16,6 +16,7 @@
 module
 
 public import Core.Speicher.Erfuellbar
+public import Core.Speicher.Kohaerenz
 
 @[expose] public section
 
