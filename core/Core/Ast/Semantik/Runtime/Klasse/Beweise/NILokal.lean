@@ -221,9 +221,9 @@ theorem klassen_stummer_ideal {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : 
   change Schrittform.ideal ⟨k, o, t⟩ c s w [p] u at step
   rcases hk with rfl | rfl
   · simp only [Schrittform.ideal] at step
-    exact step
+    exact ⟨(List.cons.inj step.1).1, step.2⟩
   · simp only [Schrittform.ideal] at step
-    exact step
+    exact ⟨(List.cons.inj step.1).1, step.2⟩
 
 /-- An implementation step of a silent form at a head is a source step with the private plan. -/
 theorem klassen_stummer_formschritt {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : Schrittform)
