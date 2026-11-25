@@ -14,7 +14,7 @@ public import Core.Annahme.HostedLauf
 
 namespace Gabbro.Core.Beobachtung
 
-open Katalog Maschine Annahme Gabbro.Core.Ast
+open Katalog Maschine Annahme
 open Annahme.Hosted
 
 /-- The bare statement fails. On the hosted unit with a finite stack ceiling that reads a granted
