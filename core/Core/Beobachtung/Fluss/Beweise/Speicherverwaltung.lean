@@ -44,9 +44,7 @@ private theorem mem_zustand_some {h : Umgebung} {ρ : Lauf (memProgram k code)}
       generalize hn : ρ.zeit.zustand (t + 1) = nOpt at step
       cases step with
       | schritt impl =>
-        cases nOpt with
-        | none => cases impl
-        | some n => exact ⟨n, hn⟩
+        exact ⟨_, hn⟩
 
 /-- The rule of a memory form determines one frame and the fixed private plan. -/
 private theorem mem_regel_aus {c : Kontext} {s u : MemState} {w : PUnit} {p : Ast.LowLevel.Plan}
@@ -91,8 +89,10 @@ private theorem mem_kontext_still {ρ : Lauf (memProgram k code)} {predictor t c
             rw [planEq] at aus
             unfold FuehrtSchrittAus at aus
             rcases aus with ⟨_, _, sperren, v, fuehrtAus, speicherfolge, nEqState⟩
-            change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren spur.aussen v at fuehrtAus
+            generalize hAussen : spur.aussen = aussen at fuehrtAus
+            change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren aussen v at fuehrtAus
             cases fuehrtAus
+            rw [hAussen] at speicherfolge
             have hSpur : spur.speicher = [] := by
               have folge := speicherfolge
               simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
@@ -156,8 +156,10 @@ private theorem mem_kontext_aus {hw : HwLauf} {t : Nat} {s n : MemState}
     rw [planEq] at aus
     unfold FuehrtSchrittAus at aus
     rcases aus with ⟨_, _, sperren, v, fuehrtAus, speicherfolge, nEqState⟩
-    change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren spur.aussen v at fuehrtAus
+    generalize hAussen : spur.aussen = aussen at fuehrtAus
+    change FuehrtAus memSetup t c s (frame.advance c s) .intern sperren aussen v at fuehrtAus
     cases fuehrtAus
+    rw [hAussen] at speicherfolge
     have hGraph : n.graph = s.graph := by
       have folge := speicherfolge
       simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil,
@@ -228,12 +230,9 @@ private theorem mem_fragen_leer {h : Umgebung} {ρ : Lauf (memProgram k code)}
         generalize hn : ρ.zeit.zustand (t + 1) = nOpt at step
         cases step with
         | schritt impl =>
-          cases nOpt with
-          | none => cases impl
-          | some n =>
-            right
-            refine ⟨n, hn, ?_⟩
-            exact mem_schritt_fragen k code impl fragenLeer
+          right
+          refine ⟨_, hn, ?_⟩
+          exact mem_schritt_fragen k code impl fragenLeer
       | wartet _ eq _ =>
         right
         exact ⟨z, eq, fragenLeer⟩
@@ -317,7 +316,7 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
         have kopfFrame := mem_kontext_aus k code impl₁
         cases impl₁ with
         | kontext keinAbsturz₁ bereit₁ regel₁ aus₁ =>
-          obtain ⟨f₁, frame₁, kopf₁, eval₁, _, hNach₁⟩ := kopfFrame
+          obtain ⟨f₁, frame₁, kopf₁, eval₁, hNach₁⟩ := kopfFrame
           have hf : f = f₁ := Option.some.inj (kopf.symm.trans kopf₁)
           subst f₁
           obtain ⟨k₁, geleg₁, kern₁, stat₁⟩ := bereit₁
@@ -396,7 +395,8 @@ theorem speicherverwaltungNI : SpeicherverwaltungsNIAussage := by
               | schritt impl₂ =>
                 have stepCopy := impl₂
                 cases impl₂ with
-                | kontext (c := cR) _ bereit₂' regel₂' aus₂' =>
+                | kontext _ bereit₂' regel₂' aus₂' =>
+                  rename_i uR planR spurR cR wR
                   obtain ⟨k₂, geleg₂, kern₂, stat₂⟩ := bereit₂'
                   have core₂ : (ρ₂.hw.angebot t).core = some k₂ := geleg₂
                   have kk : k₁ = k₂ := Option.some.inj (core₁.symm.trans (coreEq.trans core₂))
