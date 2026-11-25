@@ -243,7 +243,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
               cases trans with
               | @kontext _ u plan spur _ _ _ _ _ aus =>
                 obtain ⟨rahmen, _, _, v, aktion, _, seq⟩ := aus
-                obtain ⟨_, _⟩ := spur
+                generalize haussen : spur.aussen = aussen at aktion
                 have ukerne : u.kerne = z.kerne := rahmen.kerne
                 have skerne : s.kerne = v.kerne := by rw [seq]
                 have sstack : ∀ k, (s.kerne k).stapel = (v.kerne k).stapel := by
