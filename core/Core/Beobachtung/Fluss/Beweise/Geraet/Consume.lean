@@ -186,7 +186,9 @@ theorem geraete_consume_ausgeglichen {binding : Binding k} {access : RegisterAcc
       | cons a as ih =>
         have hmem : a ∈ a :: as := List.mem_cons.mpr (Or.inl rfl)
         have hac : a.context = entryContext.nummer := hactx a (h.symm ▸ hmem)
-        simp only [List.filter_cons, hac, beq_self_eq_true, if_true, ih]
+        have hpos : ((fun e => e.context == entryContext.nummer) a) = true := by
+          simp only [hac, beq_self_eq_true]
+        rw [List.filter_cons_of_pos hpos, ih]
     have hidx : s.verworfen entryContext + s.verbraucht entryContext = s.antworten.length := by
       rw [hverw entryContext, Nat.zero_add, hverb']
     have hnone : s.naechsteAntwort entryContext = none := by
@@ -274,7 +276,8 @@ theorem geraete_consume_erhaelt_invariante {binding : Binding k} {access : Regis
     · intro hne
       have hsome : (u.lokal entryContext).pending = none := by
         rw [← hentry]
-        simp only [hu, Zustand.verbrauche, setFrame, Function.update_self]
+        simp only [hu, Zustand.verbrauche, setFrame, geraete_consume_rahmen,
+          Function.update_self]
       exact absurd hsome hne
   · intro hbne
     exact absurd hA hbne
