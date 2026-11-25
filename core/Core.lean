@@ -84,8 +84,8 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.VarianteText
 public import Core.Beobachtung.Fluss.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Offen.Region
-public import Core.Beobachtung.Pegel.Pegel
-public import Core.Beobachtung.Pegel.PegelSatz
+public import Core.Beobachtung.Fluss.Beschriftung.Pegel
+public import Core.Beobachtung.Fluss.Beschriftung.PegelSatz
 public import Core.Beobachtung.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Beweise.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet

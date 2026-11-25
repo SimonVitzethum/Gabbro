@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Pegel.Pegel
+public import Core.Beobachtung.Fluss.Beschriftung.Pegel
 public import Core.Beobachtung.Fluss.Beschriftung.Erfuellbar
 public import Core.Beobachtung.Fluss.Beschriftung.Leck
 
