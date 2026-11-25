@@ -59,7 +59,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
       cases tick with
       | schritt _ step => cases step
       | wartet _ eq _ =>
-        rw [eq, hz] at atV
+        rw [eq] at atV
         cases atV
     | some s =>
       rw [hz] at tick
@@ -72,7 +72,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
           have heq : v = s := Option.some.inj (atV.symm.trans eq)
           subst heq
           obtain ⟨ihfragen, ihepo⟩ := ih s hz
-          exact ⟨fun q hq => Nat.lt_succ_of_lt (ihfragen q hq), Nat.le_succ ihepo⟩
+          exact ⟨fun q hq => Nat.lt_succ_of_lt (ihfragen q hq), Nat.le_trans ihepo (Nat.le_succ _)⟩
       | some ev =>
         rw [hev] at tick
         revert atV
@@ -112,7 +112,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                           rw [List.mem_singleton.mp hsingle]
                           exact Nat.lt_succ_self t
                       · rw [hepoche]
-                        exact Nat.le_succ ihepo
+                        exact Nat.le_trans ihepo (Nat.le_succ _)
                     | consume owned pending ready sameQuestion =>
                       have htick := geraete_consume_tick (target := target) aus hplans rfl
                         owned pending ready sameQuestion
@@ -122,7 +122,7 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                       · rw [hfragen] at hq
                         exact Nat.lt_succ_of_lt (ihfragen q hq)
                       · rw [hepoche]
-                        exact Nat.le_succ ihepo
+                        exact Nat.le_trans ihepo (Nat.le_succ _)
               | antwort a =>
                 cases step with
                 | schritt impl =>
@@ -138,35 +138,33 @@ theorem geraete_schnitt_schranke {h : Umgebung} {ρ : Lauf (d.unit locals)}
                     · rw [hfragen] at hq
                       exact Nat.lt_succ_of_lt (ihfragen q hq)
                     · rw [hep]
-                      exact Nat.le_succ ihepo
+                      exact Nat.le_trans ihepo (Nat.le_succ _)
               | interrupt id =>
                 cases step with
                 | schritt impl =>
                   cases impl with
                   | interrupt _ h =>
                     obtain ⟨kk, irq, cc, nmi, offer, pend, nimmt, ruht, aussen, append, nextEq⟩ := h
-                    have hfragen : s'.fragen = s.fragen := by
-                      simp only [nextEq]
-                    have hep : s'.epoche = s.epoche := by
-                      simp only [nextEq]
+                    have hfragen : s'.fragen = s.fragen := by rw [nextEq]
+                    have hep : s'.epoche = s.epoche := by rw [nextEq]
                     obtain ⟨ihfragen, ihepo⟩ := ih s hz
                     refine ⟨fun q hq => ?_, ?_⟩
                     · rw [hfragen] at hq
                       exact Nat.lt_succ_of_lt (ihfragen q hq)
                     · rw [hep]
-                      exact Nat.le_succ ihepo
+                      exact Nat.le_trans ihepo (Nat.le_succ _)
               | absturz =>
                 cases step with
                 | schritt h =>
-                  have hfragen : s'.fragen = s.fragen := by
-                    simp only [h.genau.2]
-                  have hep : s'.epoche = t + 1 := by
-                    simp only [h.genau.2]
-                  obtain ⟨ihfragen, _⟩ := ih s hz
-                  refine ⟨fun q hq => ?_, ?_⟩
-                  · rw [hfragen] at hq
-                    exact Nat.lt_succ_of_lt (ihfragen q hq)
-                  · rw [hep]
+                  cases h with
+                  | absturz crash =>
+                    have hfragen : s'.fragen = s.fragen := by rw [crash.genau.2]
+                    have hep : s'.epoche = t + 1 := by rw [crash.genau.2]
+                    obtain ⟨ihfragen, _⟩ := ih s hz
+                    refine ⟨fun q hq => ?_, ?_⟩
+                    · rw [hfragen] at hq
+                      exact Nat.lt_succ_of_lt (ihfragen q hq)
+                    · rw [hep]
           | wartet label _ _ =>
             cases label
 
