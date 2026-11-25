@@ -72,9 +72,22 @@ theorem fragB_guard (b : Befehl) (present : b ∈ fragB.code) (frame : Rahmen) :
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl <;> rfl
 
+/-- Every instruction of B is frame-only. -/
+theorem fragB_rein (b : Befehl) (present : b ∈ fragB.code) : b.Privat := by
+  rw [fragB_code] at present
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
+
 /-- Part B alone is accepted: guard-free with empty clauses. -/
 theorem fragB_akzeptiert : Akzeptiert (fragB.einheit .x86_64) :=
-  Fragment.akzeptiert_ohne_bedarf fragB _ (codeFrag_klauseln _) (fun b present frame => fragB_guard b present frame)
+  Fragment.akzeptiert_ohne_bedarf fragB _ (codeFrag_klauseln _) (fun b present => fragB_rein b present)
+    (fun b present frame => fragB_guard b present frame)
+
+/-- Every instruction of A is frame-only. -/
+theorem fragA_rein (b : Befehl) (present : b ∈ fragA.code) : b.Privat := by
+  rw [fragA_code] at present
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr rfl
 
 /-- The exact value `literal 1 2` writes to its slot. -/
 def zweiWert : Dynamisch :=
@@ -130,7 +143,9 @@ theorem schritt_temp1 {c : Kontext} {s u : Zustand} {w : PUnit.{1}}
     (step : (fragA.einheit .x86_64).system.ISchritt c s w plans u) :
     ∀ d, temp1Sauber (u.lokal d) := by
   obtain ⟨b, head, ideal⟩ := step
-  obtain ⟨same, after⟩ := (b.ideal_privat c s w plans u).1 ideal
+  have hpc0 : fragA.code[(s.lokal c).pc]? = some b := kopf_code head
+  have hmem0 : b ∈ fragA.code := List.mem_of_getElem? hpc0
+  obtain ⟨same, after⟩ := (b.ideal_privat (fragA_rein b hmem0) c s w plans u).1 ideal
   subst after
   have hpc : fragA.code[(s.lokal c).pc]? = some b := kopf_code head
   have hlen : (s.lokal c).pc < 3 := by
@@ -274,14 +289,16 @@ theorem fragA_guard_hält (ρ : I.Lauf (fragA.einheit .x86_64))
 theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
   let E := fragA.einheit .x86_64
   have hklauseln : fragA.klauseln = .leer := codeFrag_klauseln _
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => b.lokal E rfl,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => Befehl.regelLokal fragA .x86_64 b,
+    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64
+      (fun b hb => fragA_rein b hb), ?_⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
     | kontext _ _ rule execute =>
-      obtain ⟨b, _, transfer⟩ := rule
+      obtain ⟨b, head, transfer⟩ := rule
       obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+        (fragA_rein b (List.mem_of_getElem? (kopf_code head)))
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl

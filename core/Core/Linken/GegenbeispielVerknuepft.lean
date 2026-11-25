@@ -154,7 +154,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
   have stepT : I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog ρ.hw t
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
+      ⟨b, headT, (b.ideal_privat b.klasse_privat eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
       (b.vollzug _ _ _ _)
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
@@ -180,7 +180,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           rfl
         subst b'
         obtain ⟨same, after⟩ :=
-          (b.ideal_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
+          (b.ideal_privat b.klasse_privat eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
         have hakt : Semantik.plan.aktion = .intern := rfl

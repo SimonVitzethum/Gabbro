@@ -77,14 +77,15 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
   have hklauseln : (verknuepfteFragmente plan).klauseln = .leer :=
     verknuepfte_klauseln_leer hcompat
   let E := (verknuepfteFragmente plan).einheit plan.plattform
-  refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => b.lokal E rfl,
-    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => Befehl.regelLokal _ _ b,
+    ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _
+      (fun b _ => b.klasse_privat), ?_⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, _, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute b.klasse_privat
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
