@@ -162,6 +162,19 @@ theorem einheitVon_bereit_vollzug (P : Katalog.Plattform) (t : Ast.Unit)
       (i.nach c s)).mpr ⟨rfl, rfl⟩
   · exact Ast.Semantik.Befehl.vollzug _ i tick c s
 
+/-- Every implementation step of an elaborated unit carries the private plan:
+    the rule at the head is frame-only, so its step forces `[Semantik.plan]`. -/
+theorem einheitVon_plan_privat (P : Katalog.Plattform) (t : Ast.Unit)
+    {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
+    {plan : Ast.Semantik.Plan}
+    (h : (einheitVon P t).system.ImplSchritt c s w [plan] u) :
+    plan = Ast.Semantik.plan := by
+  obtain ⟨b, kopfB, implB⟩ := h
+  have hpriv : b.Privat :=
+    Ast.Semantik.fragment_rein Ast.Category.unit t b (Ast.Semantik.kopf_mem kopfB)
+  have hstep := (Ast.Semantik.Befehl.impl_privat b hpriv c s w [plan] u).1 implB
+  exact (List.cons.inj hstep.1).1
+
 /-- Every context the elaborated unit dispatches runs on a valid core, as does every
     saved preemption: only the entry context starts dispatched (on its assigned core),
     deliveries name valid cores, crashes reset to core zero. -/
@@ -262,14 +275,8 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
                 have ustack : ∀ k, (u.kerne k).stapel = (z.kerne k).stapel := by
                   intro k
                   rw [ukerne]
-                have hplanEq : plan = Ast.Semantik.plan := by
-                  obtain ⟨b, kopfB, implB⟩ := regel
-                  have hpriv : b.Privat :=
-                    Ast.Semantik.fragment_rein Ast.Category.unit t b
-                      (Ast.Semantik.kopf_mem kopfB)
-                  change (b.regel).impl _ _ _ [plan] _ at implB
-                  exact (List.cons.inj
-                    ((Ast.Semantik.Befehl.impl_privat b hpriv _ _ _ [plan] _).1 implB).1).1
+                have hplanEq : plan = Ast.Semantik.plan :=
+                  einheitVon_plan_privat P t regel
                 have hakt_intern : plan.aktion = .intern := by rw [hplanEq]; rfl
                 cases hakt : plan.aktion with
                 | intern =>
