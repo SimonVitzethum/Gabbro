@@ -393,7 +393,6 @@ def zul_w : Katalog.ZulStart Plattform.x86_64.katalog h2 wBild s_w :=
 noncomputable def ρ_w : Maschine.Lauf E_wait :=
   ⟨s_w, hw2, ⟨fun _ => some sW0, spur_w, takt_w⟩⟩
 
-/-- The waiting run is admissible. -/
 /-- The waiting run is scheduler-fair: only the waiter has an implementation
     step, so every suffix-ready context is `A`, served on every odd tick. -/
 theorem fairW : SchedulerFair E_wait ρ_w := by

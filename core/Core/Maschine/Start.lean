@@ -199,7 +199,7 @@ theorem SchedulerFair_aus_stillstand_ab (ρ : Lauf E) (N : Nat)
   obtain ⟨t, ht, k, geleg, z, eq, disp⟩ := opp (max n N) (hn.trans (Nat.le_max_left n N))
   have htN : N ≤ t := (Nat.le_max_right n N).trans ht
   have hat : a ≤ t := (hn.trans (Nat.le_max_left n N)).trans ht
-  obtain ⟨s, hs, _, _, live, normal, w, plan, u, spur, s', regel, aus⟩ := ready t hat
+  obtain ⟨s, hs, _, live, normal, w, plan, u, spur, s', regel, aus⟩ := ready t hat
   have same : s = z := Option.some.inj (hs.symm.trans eq)
   have dispS : (s.kerne k).laeuft = some c := by rw [same]; exact disp
   have kann : KannSchreiten ρ.hw t c s := ⟨k, geleg, dispS, live⟩
