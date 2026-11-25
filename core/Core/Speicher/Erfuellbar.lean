@@ -116,8 +116,6 @@ theorem mp_kein_zaun (a : MpEv) : ¬ mpGraph.istZaun a := by
   intro hu
   cases a <;> simp only [Graph.istZaun, mpGraph, mpLab, reduceCtorEq] at hu
 
-theorem mp_ohne_zaun : mpGraph.OhneZaun := fun a hu => mp_kein_zaun a hu
-
 theorem mp_hb {a b : MpEv} (h : mpGraph.hb a b) : mpHb a b := by
   have htr : ∀ x y z, mpHb x y → mpHb y z → mpHb x z := by
     intro x y z
