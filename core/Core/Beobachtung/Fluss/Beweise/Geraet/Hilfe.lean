@@ -287,12 +287,12 @@ theorem geraete_zustand_gemeinsam {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
           | schritt _ step2 =>
             cases step2 with
             | schritt _ => exact Or.inr ⟨_, _, rfl, rfl⟩
-          | wartet _ eq2 _ => exact Or.inr ⟨_, _, rfl, hN2.trans eq2⟩
+          | wartet _ eq2 _ => exact Or.inr ⟨_, _, rfl, eq2⟩
       | wartet _ eq1 _ =>
         cases tick2 with
         | schritt _ step2 =>
           cases step2 with
-          | schritt _ => exact Or.inr ⟨_, _, hN1.trans eq1, rfl⟩
-        | wartet _ eq2 _ => exact Or.inr ⟨_, _, hN1.trans eq1, hN2.trans eq2⟩
+          | schritt _ => exact Or.inr ⟨_, _, eq1, rfl⟩
+        | wartet _ eq2 _ => exact Or.inr ⟨_, _, eq1, eq2⟩
 
 end Gabbro.Core.Beobachtung
