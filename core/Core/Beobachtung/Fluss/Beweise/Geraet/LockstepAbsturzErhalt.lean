@@ -141,13 +141,14 @@ theorem geraete_absturz_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       have hlenApp : (L₂ ++ [e]).length = (L₁ ++ [e]).length := by
                         simp only [List.length_append, List.length_singleton, hlenP]
                       have ht1 : (L₂ ++ [e]).take ((L₁ ++ [e]).length) = L₂ ++ [e] :=
-                        List.take_of_length_le (le_of_eq hlenApp.symm)
+                        List.take_of_length_le (le_of_eq hlenApp)
                       have ht2 : L₂.take L₁.length = L₂ :=
                         List.take_of_length_le (le_of_eq hlenP.symm)
-                      rw [ht1, ht2]
-                      exact List.rel_append (by simpa only [L₁, L₂] using
+                      rw [ht1]
+                      simpa only [L₁, L₂, e] using
+                        List.rel_append (by simpa only [L₁, L₂, ht2] using
                           (geraeteKopplung_kopplung hkopp).1)
-                        (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
+                          (List.Forall₂.cons (EreignisAequiv.gleich _) List.Forall₂.nil)
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
