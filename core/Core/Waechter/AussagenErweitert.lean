@@ -2,15 +2,11 @@ module
 public meta import Lean
 public meta import Core.Waechter.Dependencies
 public meta import Core.Waechter.Binder
+public meta import Core.Waechter.StrukturPropErlaubt
 
 open Lean Meta
 
 namespace Gabbro.Core.Waechter
-
-/-- Regel S, allow-list of `(structure, field)` pairs whose Prop-valued field the review has tied to a
-    model definition. An entry needs a comment naming the binding definition. The list starts empty:
-    Regel S first only measures, every candidate is reported as information. -/
-public meta def strukturPropErlaubt : Array (Name × Name) := #[]
 
 /-- True when `type` ends in `Prop` after stripping binders (shape only, no unfolding). -/
 private meta def endetInProp : Expr → Bool
