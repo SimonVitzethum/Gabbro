@@ -46,9 +46,10 @@ structure Operand where
   wert : Int
   sperre : Nat
   frage : Option Frage
+  aenderung : Aenderung
 
 /-- The operand of a step that names nothing (the frame-only classes). -/
-def Operand.keiner : Operand := ⟨.aussen, 0, 0, none⟩
+def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche⟩
 
 /-- The plan of a step that asks the question the operand names; an operand without a question has the
     private plan (the step is refused). -/
@@ -70,7 +71,8 @@ def Wirkungsklasse.plan : Wirkungsklasse → Operand → Int → Plan
   | .schreiben m, o, _v =>
     ⟨.intern, [], [o.ort], fun x => decide (x = o.ort), fun _ort => m, fun _ort => o.wert⟩
   | .rmw m, o, v =>
-    ⟨.intern, [⟨.rmw, o.ort, m, v, o.wert⟩], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
+    ⟨.intern, [⟨o.aenderung.art v, o.ort, m, v, o.aenderung.schreibt v o.wert⟩], [], fun _ort => false,
+      fun _ort => .na, fun _ort => 0⟩
   | .sperre a, o, _v =>
     ⟨.sperre o.sperre a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
   | .frage, o, _v => o.fragePlan
@@ -88,7 +90,8 @@ def Wirkungsklasse.Erlaubt : Wirkungsklasse → Plan → Prop
     p.aktion = .intern ∧ p.lesen = [] ∧
       ∃ z : Zelle, p.fuss = [z] ∧ p.schreibt z = true ∧ p.modus z = m
   | .rmw m, p =>
-    p.aktion = .intern ∧ p.fuss = [] ∧ ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩]
+    p.aktion = .intern ∧ p.fuss = [] ∧
+      ∃ (z : Zelle) (v w : Int), p.lesen = [⟨.rmw, z, m, v, w⟩] ∨ p.lesen = [⟨.lesen, z, m, v, v⟩]
   | .sperre a, p => (∃ l : Nat, p.aktion = .sperre l a) ∧ p.lesen = [] ∧ p.fuss = []
   | .frage, p => (∃ q : Frage, p.aktion = .frage q) ∧ p.lesen = [] ∧ p.fuss = []
 
@@ -180,13 +183,40 @@ def Schrittform.impl (F : Schrittform) (c : Kontext) (s : Zustand) (w : PUnit.{1
 /-- The rule of a form: its implementation step and its `I` step. -/
 def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
 
-/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
-def Befehl.operand (_ : Befehl) (_ : Rahmen) : Operand := Operand.keiner
+/-- The operand of an access instruction whose operands the frame supplies: the cell, the value and the change.
+    A missing operand (a slot that holds no integer) names the location of the outside events, to which no
+    context holds a handle: the access is refused, nothing is read or written. -/
+def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) (a : Aenderung) : Operand :=
+  match wert with
+  | some w => ⟨r.zelle region index, w, 0, none, a⟩
+  | none => ⟨.aussen, 0, 0, none, a⟩
 
-/-- The frame transfer of an instruction, given the value the memory returned: for every instruction
-    of the current set, its evaluation at the instruction boundary. -/
-def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (_ : Int) : Rahmen :=
-  b.auswerten r live
+/-- **The operand of an access instruction at a frame**, read from the frame it steps. -/
+def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
+  match z with
+  | .lade _ region index _ _ => r.zugriffOperand region index (some 0) .tausche
+  | .erwarte _ region index _ _ _ => r.zugriffOperand region index (some 0) .tausche
+  | .speichere region index quelle _ => r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .veroeffentliche region index quelle _ => r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .tausche _ region index quelle _ _ => r.zugriffOperand region index (r.ganz quelle) .tausche
+  | .holeUndAddiere _ region index betrag _ _ => r.zugriffOperand region index (r.ganz betrag) .addiere
+  | .vergleicheTausche _ region index erwartet neu _ _ =>
+    match r.ganz erwartet with
+    | some e => r.zugriffOperand region index (r.ganz neu) (.vergleiche e)
+    | none => r.zugriffOperand region index none .tausche
+
+/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
+def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
+  match b with
+  | .zugriff form => form.operand r
+  | _ => Operand.keiner
+
+/-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
+    ignores that value; every other instruction ignores it and evaluates at the instruction boundary. -/
+def Befehl.uebertrag (b : Befehl) (r : Rahmen) (live : Nat → Bool) (gelesen : Int) : Rahmen :=
+  match b with
+  | .zugriff form => form.uebertrag r gelesen
+  | _ => b.auswerten r live
 
 /-- **The step form of an instruction**: its class, operand and transfer. -/
 def Befehl.form (b : Befehl) : Schrittform := ⟨b.klasse, b.operand, b.uebertrag⟩

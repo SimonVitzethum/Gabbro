@@ -31,17 +31,41 @@ def Befehl.regel (b : Befehl) : Regel := ⟨b.impl, b.ideal⟩
 def Befehl.plan (b : Befehl) (r : Rahmen) (v : Int) : Plan :=
   b.form.plan r v
 
-/-- **Every instruction of the current set is frame-only**: it has the class `lokal` or `ruf`. This is the
-    one place where the generic proofs over all instructions use that no instruction yet has an access
-    class. The first instruction of an access class (MK-04, MK-05, MK-06) makes it false, and every generic
-    proof that uses it must then split on the class: the model refuses the instruction until that is done. -/
-theorem Befehl.klasse_privat (b : Befehl) : b.klasse = .lokal ∨ b.klasse = .ruf := by
-  cases b <;> first | exact Or.inl rfl | exact Or.inr rfl
+/-- **A frame-only instruction**: it has the class `lokal` or `ruf`. Since MK-04 an instruction can have an
+    access class, so a generic proof over all instructions splits on the class: the frame-only part is stated
+    for the instructions that satisfy this predicate, the access part is the duty of its class
+    (`Klasse/Pflichten`) or a pinned statement of the access instructions (`Atom/Aussagen`). -/
+def Befehl.Privat (b : Befehl) : Prop := b.klasse = .lokal ∨ b.klasse = .ruf
+
+/-- **Every instruction that is no access instruction is frame-only.** -/
+theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugriff form) : b.Privat := by
+  cases b <;> first
+    | exact Or.inl rfl
+    | exact Or.inr rfl
+    | exact absurd rfl (h _)
+
+/-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the
+    memory returned. -/
+theorem Befehl.uebertrag_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (live : Nat → Bool) (v : Int) :
+    b.uebertrag r live v = b.auswerten r live := by
+  cases b with
+  | zugriff form => rcases h with h | h <;> cases form <;> cases h
+  | _ => rfl
+
+/-- **The state after the step of a frame-only form**: the transfer of the form is the evaluation of the
+    instruction (`Befehl.nach`). -/
+theorem Befehl.nach_form (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand) (v : Int) :
+    b.form.nach c s v = b.nach c s := by
+  unfold Schrittform.nach Befehl.nach
+  show { s with lokal := Function.update s.lokal c (b.uebertrag (s.lokal c) s.regionLive v) } =
+    { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) s.regionLive) }
+  rw [b.uebertrag_privat h]
 
 /-- The plan of a frame-only instruction is the private plan, at every frame and for every value. -/
-theorem Befehl.plan_privat (b : Befehl) (r : Rahmen) (v : Int) : b.plan r v = Semantik.plan := by
+theorem Befehl.plan_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (v : Int) :
+    b.plan r v = Semantik.plan := by
   show b.klasse.plan (b.operand r) v = Semantik.plan
-  rcases b.klasse_privat with h | h <;> simp only [h, Wirkungsklasse.plan]
+  rcases h with h | h <;> simp only [h, Wirkungsklasse.plan]
 
 /-- The ideal step of a form of a frame-only class: its private plan and its frame transfer. -/
 theorem Schrittform.ideal_privat (F : Schrittform) (h : F.klasse = .lokal ∨ F.klasse = .ruf)
@@ -58,16 +82,17 @@ theorem Schrittform.ideal_privat (F : Schrittform) (h : F.klasse = .lokal ∨ F.
 
 /-- **The ideal step of a frame-only instruction**: the private plan and the frame transfer `Befehl.nach`.
     This is the unfolded step every proof over a generic instruction of the current set uses. -/
-theorem Befehl.ideal_privat (b : Befehl) (c : Kontext) (s : Zustand) (w : PUnit.{1})
+theorem Befehl.ideal_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand) (w : PUnit.{1})
     (plans : List Plan) (u : Zustand) :
-    b.ideal c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s :=
-  b.form.ideal_privat b.klasse_privat c s w plans u
+    b.ideal c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s := by
+  rw [← b.nach_form h c s 0]
+  exact b.form.ideal_privat h c s w plans u
 
 /-- The implementation step of a frame-only instruction is its ideal step. -/
-theorem Befehl.impl_privat (b : Befehl) (c : Kontext) (s : Zustand) (w : PUnit.{1})
+theorem Befehl.impl_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand) (w : PUnit.{1})
     (plans : List Plan) (u : Zustand) :
     b.impl c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s :=
-  b.ideal_privat c s w plans u
+  b.ideal_privat h c s w plans u
 
 abbrev LokalSystem := MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl
 
