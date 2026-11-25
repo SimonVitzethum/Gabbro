@@ -203,7 +203,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
       have hle := min _ hcon
       omega
     have hle1 : a ≤ Nat.find hex - 1 := Nat.le_trans hd (Nat.le_of_lt hprev)
-    obtain ⟨zprev, hzprev⟩ := matched.zustand (Nat.find hex - 1)
+    obtain ⟨zprev, hzprev, _⟩ := matched.zustand (Nat.find hex - 1)
     have weg : ∀ k''', (zprev.kerne k''').laeuft ≠ some c := by
       intro k''' hk'''
       exact hneg ⟨hprev, k''', zprev, hzprev, hk'''⟩
@@ -228,7 +228,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
     ∃ k, ∀ t' (ht' : a ≤ t') (s : Ast.Semantik.Zustand),
       ρ.zeit.zustand t' = some s → (s.kerne k).laeuft = some c := by
   obtain ⟨hliveρ, hsingleρ⟩ := einheitVon_dispatch_eindeutig_rho P t lauf valid matched
-  obtain ⟨sa, hsa⟩ := matched.zustand a
+  obtain ⟨sa, hsa, _⟩ := matched.zustand a
   have hseq_a : sa = η.zeit.zustand a :=
     einheitVon_zustand_gleich P t matched a sa hsa
   obtain ⟨k₀, hk₀η⟩ := opened.1
@@ -248,7 +248,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
       rw [← hsa_eq]
       exact hk₀
     · intro m hm ih s' hs'
-      obtain ⟨z, hz⟩ := matched.zustand m
+      obtain ⟨z, hz, _⟩ := matched.zustand m
       have ihz : (z.kerne k₀).laeuft = some c := ih z hz
       cases htakt : ρ.zeit.takt m with
       | schritt label step =>
