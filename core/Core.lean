@@ -188,6 +188,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarKorrekt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.Hilfen
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.BlockPair
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Relokation.VerschiebbarBlk
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
