@@ -45,8 +45,7 @@ theorem access_am_ort (scope : Scope) (result : Option (Ty .value)) :
       some (Befehl.zugriff (.lade 0 region.index 0 written.type mode.modus)))
     simp only [Fragment.anhaengen, Fragment.einzel]
     have hlt : (expr 0 index).code.length <
-      (((expr 0 index).code ++ [Befehl.zugriff (.lade 0 region.index 0 written.type mode.modus)]) ++
-        [Befehl.bindeWert 0 written.type false]).length := by
+      ((expr 0 index).code ++ [Befehl.zugriff (.lade 0 region.index 0 written.type mode.modus)]).length := by
       simp only [List.length_append, List.length_cons, List.length_nil]
       omega
     rw [List.getElem?_append_left hlt]
@@ -57,8 +56,7 @@ theorem access_am_ort (scope : Scope) (result : Option (Ty .value)) :
       omega
   | store region visible receiverOrdinary index value mode =>
     change ((((expr 0 index).anhaengen (expr 1 value)).anhaengen
-      (.einzel (Befehl.zugriff (.speichere region.index 0 1 mode.modus)))).code
-      [(expr 0 index).code.length + (expr 1 value).code.length]? =
+      (.einzel (Befehl.zugriff (.speichere region.index 0 1 mode.modus)))).code[(expr 0 index).code.length + (expr 1 value).code.length]? =
       some (Befehl.zugriff (.speichere region.index 0 1 mode.modus)))
     simp only [Fragment.anhaengen, Fragment.einzel]
     rw [List.getElem?_append_right]
