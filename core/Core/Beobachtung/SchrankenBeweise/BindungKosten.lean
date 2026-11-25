@@ -109,7 +109,7 @@ theorem bindungKlassenKHRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f 
   intro h ρ lauf t c w spur vor nach kostenP halteP vorEq kopf spurEq nachEq
   refine ⟨?_, ?_⟩
   · have hocc := laufkosten_schritt_besetzt spurEq
-    have hcost := kostenSlack t kostenP
+    have hcost := kostenSlack (h := h) t kostenP
     rw [Wirkungsklasse.kostenZeile_kosten] at hcost
     rw [hocc]
     exact hcost
@@ -128,7 +128,7 @@ theorem bindungKlassenKHRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f 
         by_cases hcc : c' = c
         · subst hcc
           have hinc := kontextkosten_schritt_gleich (E := einheitMitSchranken P u) hak spurEq
-          have hslack := halteSlack t c halteP l a k hak own
+          have hslack := halteSlack (h := h) t c halteP l a k hak own
           rw [Wirkungsklasse.kostenZeile_kosten] at hslack
           rw [hinc]
           exact hslack
@@ -143,7 +143,7 @@ theorem bindungKlassenKHRegel (P : Katalog.Plattform) (u : UnitMitSchranken) (f 
               rfl
             rw [hd]
             exact Ne.symm hcc
-          exact halteFremd _ _ _ _ _ _ _ _ _ inferInstance _ ρ c' t fremd halteP l a (k + 1)
+          exact halteFremd _ _ _ _ _ _ _ _ _ _ ρ c' t fremd halteP l a (k + 1)
             bound own
 
 /-- The finite protocol cost/hold duty under the cost slack: a protocol tick adds one run tick
@@ -157,7 +157,7 @@ theorem bindungKostenProtokoll_unterSlack (P : Katalog.Plattform) (u : UnitMitSc
   intro h ρ lauf t w spur vor nach kostenP halteP vorEq spurEq wahl nachEq
   refine ⟨?_, ?_⟩
   · have hocc := laufkosten_schritt_besetzt spurEq
-    have hcost := kostenSlack t kostenP
+    have hcost := kostenSlack (h := h) t kostenP
     rw [hocc]
     exact hcost
   · intro l c' a n bound own
@@ -170,6 +170,6 @@ theorem bindungKostenProtokoll_unterSlack (P : Katalog.Plattform) (u : UnitMitSc
       | interrupt _ => cases hcontra
       | absturz => cases hcontra
       | kontext _ _ => exact wahl.elim
-    exact halteFremd _ _ _ _ _ _ _ _ _ inferInstance _ ρ c' t fremd halteP l a n bound own
+    exact halteFremd _ _ _ _ _ _ _ _ _ _ ρ c' t fremd halteP l a n bound own
 
 end Gabbro.Core.Beobachtung
