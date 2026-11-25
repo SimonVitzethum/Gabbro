@@ -18,6 +18,7 @@ open Maschine Katalog
 open Gabbro.Core.Speicher (Etikett Modus)
 open Gabbro.Core.Sicherheit (Speicherzugriff)
 
+open Classical in
 /-- **The access of a one-label `Speicherfolge` sits at `zugriffsereignis`.** Unfolding
     `Speicherfolge.cons` once for the single label `l` appends one lazily materialised initial write
     (`Initialisierung`, split on `HatQuelle g l.ort`) immediately before the access `(f, l)`:
@@ -28,7 +29,6 @@ open Gabbro.Core.Sicherheit (Speicherzugriff)
     at index `init.length` of `es`, i.e. at absolute event index `g.ev.length + init.length`; this equals
     `g.ev.length + (if HatQuelle g l.ort then 0 else 1)`, the value of `Zustand.zugriffsereignis` at
     the pre-state graph `g` for `z = l.ort`. -/
-open Classical in
 theorem speicherfolge_zugriffsindex {anfang : Zelle → Int} {f : SpeicherAkteur Zelle}
     {g g' : SpeicherGraph Zelle Int} {l : Etikett Zelle Int}
     {es : List (SpeicherAkteur Zelle × Etikett Zelle Int)}
