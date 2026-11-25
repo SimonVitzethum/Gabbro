@@ -144,6 +144,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.RegisterCommit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Speicherplan.Einrichtung
@@ -168,6 +169,8 @@ public import Core.Ziel.Review.Befunde
 public import Core.Ziel.Korrektheit.Beweise.Rmw
 public import Core.Ziel.Korrektheit.Beweise.BegleitSpeicher
 public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
+public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
+public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
