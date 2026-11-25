@@ -21,7 +21,7 @@
   * MK-19/3 (Designer): surface syntax for unit-level invariant declarations with
     `UnitReads`/`printPieces`/`Category` round-trip (`reads_print`, `unique`), so the parser
     denotes `UnitMitInvarianten` instead of `Ast.Unit`.
-  * MK-19/4 (Designer + Prover): memory commands (MK-04) populate `Befehl.schreibFussabdruck`
+  * MK-19/4 (Designer + Prover): memory commands (MK-04) populate `Befehl.schreibtMoeglich` (`Atom/Fussabdruck`)
     and prove the conditional `fussabdruck_treu`; the stability certificate
     `Praedikat.haelt_stabil` already carries the rule.
   * MK-19/5 (Prover): the four falsifications at `Ast.Semantik.Einheit` for

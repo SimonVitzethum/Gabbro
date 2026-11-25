@@ -9,7 +9,7 @@
   denotation is preserved by every command step and the checker's footprint rule
   (`pruefeBefehlErhalt` in `Core/Ast/Semantik/Runtime/UnitInvarianten.lean`) decides preservation
   by disjointness of observed cells and write footprint. Memory commands (MK-04) populate
-  `Befehl.schreibFussabdruck`; the stability lemma `haelt_stabil` already carries the rule.
+  `Befehl.schreibtMoeglich` (the cells an access may write, `Atom/Fussabdruck`); the stability lemma `haelt_stabil` already carries the rule.
 
   Evaluation `werteAus` is a plain `Bool` function and `werteAus_richtig` ties it to `haelt`;
   `pruefeStart`/`pruefeNeustart` decide the loader and crash-recovery premises of the safety
