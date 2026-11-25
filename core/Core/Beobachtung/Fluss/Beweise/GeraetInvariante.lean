@@ -19,11 +19,16 @@ open Gabbro.Core.Ast.LowLevel (entryContext)
     Pre-crash the epoch is zero, nothing is discarded and consumption counts
     the arrived answers (all arrived when idle, all but the last when a fresh
     answer waits). All questions and answers belong to the entry context, and
-    recent questions are answered exactly when no fresh question waits. -/
+    recent questions are answered exactly when no fresh question waits.
+    Questions are issued in order with fresh instances, and answers match the
+    questions in order. -/
 def GeraeteInvariantAussage {k : Katalog} (binding : Binding k) (s : State) : Prop :=
   (∀ c, c ≠ entryContext → (s.lokal c).pending = none ∧ s.verbraucht c = 0 ∧ s.verworfen c = 0) ∧
     (∀ q ∈ s.fragen, q.context = entryContext.nummer) ∧
     (∀ a ∈ s.antworten, a.context = entryContext.nummer) ∧
+    (∀ i (h₁ : i < s.antworten.length) (h₂ : i < s.fragen.length),
+      (s.antworten.get i h₁).zu (s.fragen.get i h₂)) ∧
+    (∀ i (h : i < s.fragen.length), (s.fragen.get i h).questionInstance = i) ∧
     (s.buchung.geraet = (startBuchung binding.object binding.handle).geraet →
       s.epoche = 0 ∧ (∀ c, s.verworfen c = 0) ∧
       ((s.lokal entryContext).pending = none →
@@ -46,7 +51,7 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
   dsimp only at geladen
   split at geladen
   · obtain rfl := Option.some.inj geladen
-    refine ⟨?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro c hc
       dsimp only [bootFor, Zustand.start] at ⊢
       rw [if_neg hc]
@@ -55,6 +60,10 @@ theorem geraete_invariante_start {k : Katalog} {scope : Gabbro.Core.Ast.Scope}
       cases hq
     · intro a ha
       cases ha
+    · intro i h₁ _
+      exact absurd h₁ (Nat.not_lt_zero _)
+    · intro i h
+      exact absurd h (Nat.not_lt_zero _)
     · intro _
       refine ⟨rfl, fun _ => rfl, ?_, ?_⟩
       · intro _
