@@ -323,7 +323,7 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
-  | | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
   | .maskiere vektor aus =>
     { Operand.keiner with unterbrechung := ⟨vektor, aus, 0, 0, 0, 0⟩ }
   | .prioritaet grenze =>
