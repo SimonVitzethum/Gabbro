@@ -23,7 +23,7 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat
   intro H ρ t c w vor zwischen nach plan spur head impl execute
   obtain ⟨hspur, _, hstatus, _, _, _, _, hinitial, hgraph, hbuchung,
     hrechte, _, _, _, _, hsperren⟩ :=
-    b.vollzug_genau_privat h (w := w) impl execute h
+    b.vollzug_genau_privat h (w := w) impl execute
   subst hspur
   obtain ⟨_, hnach⟩ := (b.impl_privat h c vor w [plan] zwischen).1 impl
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
