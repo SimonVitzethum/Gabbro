@@ -67,9 +67,11 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
       | none => rw [hn₁] at step; cases step
       | some n₁ =>
         rw [hn₁] at step
-        have hstepTyp : ImplSchritt (d.unit locals).einrichtung (d.unit locals).system
-            (d.unit locals).katalog ρ₁.hw t s₁ (.antwort a, spur) n₁ := by
-          simpa [hlabel] using step
+        cases step with
+        | schritt impl =>
+          have hstepTyp : ImplSchritt (d.unit locals).einrichtung (d.unit locals).system
+              (d.unit locals).katalog ρ₁.hw t s₁ (.antwort a, spur) n₁ := by
+            simpa [hlabel] using impl
         obtain ⟨hkein₁, h1⟩ := geraete_impl_antwort hstepTyp
         have h1typ : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog
             ρ₁.hw t a s₁ spur n₁ := h1
@@ -92,7 +94,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
         cases tick₂ with
         | wartet lab₂ _ hkein => exact (hkein (.antwort a, spur₂) _ st₂).elim
         | schritt lab₂ step₂ =>
-          rw [hz₂] at hn₂
           cases hn₂ : ρ₂.zeit.zustand (t + 1) with
           | none =>
             rw [hz₂] at step₂
