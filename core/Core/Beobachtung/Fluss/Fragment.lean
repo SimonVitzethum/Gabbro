@@ -193,7 +193,7 @@ theorem stummer_schritt_koppelt
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
-  have nachA : True := trivial
+  generalize nachEq₁ : ρ₁.zeit.zustand (t + 1) = nach₁ at takt₁
   cases takt₁ with
   | wartet label _ _ => cases label
   | schritt label step =>
@@ -211,6 +211,7 @@ theorem stummer_schritt_koppelt
           f.vollzug_genau_privat privat (w := w) impl₁rule aus₁
         have transfer₁ := (f.impl_privat privat c vor w _ _).1 impl₁rule
         obtain ⟨_, hnach₁⟩ := transfer₁
+        subst hnach₁
         -- same-index offers
         have crashEq : (ρ₁.hw.angebot t).crash = (ρ₂.hw.angebot t).crash :=
           congrArg (fun p => (p.1 t).2.2.2.2.2.1) vergleich.politik
@@ -256,8 +257,7 @@ theorem stummer_schritt_koppelt
         -- right tick: pause is impossible, kinds other than context are ruled out
         have takt₂ := ρ₂.zeit.takt t
         rw [zustand₂] at takt₂
-        obtain ⟨nach₂, nachEq₂⟩ : ∃ x, ρ₂.zeit.zustand (t + 1) = x := ⟨_, rfl⟩
-        rw [nachEq₂] at takt₂
+        generalize nachEq₂ : ρ₂.zeit.zustand (t + 1) = nach₂ at takt₂
         cases takt₂ with
         | wartet _ _ hp =>
           exact (hp _ _ (Lauffolge.schritt step₂)).elim
@@ -283,14 +283,15 @@ theorem stummer_schritt_koppelt
                       rw [← kk, ← kerneEq]
                       exact kern₁
                     exact Option.some.inj (kern₂.symm.trans gleich)
-                  rw [c_eq] at kopf₂' impl₂'rule aus₂'
-                  have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-                  subst ff₂
-                  obtain ⟨hspur₂, hlokal₂, hstatus₂, _, hantworten₂, hverbraucht₂, _, hinitial₂, _,
-                  hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
-                  f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
-                  have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
-                  obtain ⟨_, hnach₂⟩ := htrans₂
+                    rw [c_eq] at kopf₂' impl₂'rule aus₂'
+                    have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+                    subst ff₂
+                    obtain ⟨hspur₂, hlokal₂, hstatus₂, _, hantworten₂, hverbraucht₂, _, hinitial₂, _,
+                    hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
+                    f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
+                    have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
+                    obtain ⟨_, hnach₂⟩ := htrans₂
+                    subst hnach₂
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
                     fragment_kontext_schritt_still p plattform
                       (fun s b hs hk => privat_am_kopf zustand₂ kopf₂ privat s b hs (c_eq ▸ hk)) label₂
@@ -313,62 +314,62 @@ theorem stummer_schritt_koppelt
                       Function.update w₂.lokal c
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
-                  -- kerne: same per-core update on equal pre-state kernes
-                  have kerneGleich : nachA = nachA := by rfl
-                    have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
-                      rw [lokEqFun]
-                    obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
-                    obtain ⟨_, _, _, v₂, aktion₂, _, stateEq₂⟩ := aus₂'
-                    subst hspur₁
-                    subst hspur₂
-                    rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
-                      ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      cases aktion₁
-                      cases aktion₂
-                      rfl
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      funext k
-                      have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                      have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                        rw [kerneEq]
-                      rw [hc]
-                      by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      funext k
-                      have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                      have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                        rw [kerneEq]
-                      rw [hc]
-                      by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      cases aktion₁
-                      cases aktion₂
-                      rfl
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      cases aktion₁
-                      cases aktion₂
-                      rfl
-                  refine ⟨?_, ?_, ?_⟩
+                    -- kerne: same per-core update on equal pre-state kernes
+                    have kerneGleich : nach₁.kerne = nach₂.kerne := by
+                      have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
+                        rw [lokEqFun]
+                      obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
+                      obtain ⟨_, _, _, v₂, aktion₂, _, stateEq₂⟩ := aus₂'
+                      subst hspur₁
+                      subst hspur₂
+                      rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
+                        ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        funext k
+                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
+                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
+                          rw [kerneEq]
+                        rw [hc]
+                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        funext k
+                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
+                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
+                          rw [kerneEq]
+                        rw [hc]
+                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                    refine ⟨?_, ?_, ?_⟩
                   · -- prefix: both sides append nothing
                     rw [e₁, e₂]
                     exact cov
