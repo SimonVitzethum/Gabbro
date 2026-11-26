@@ -148,14 +148,14 @@ theorem pauseNI : PauseNIAussage := by
               List.append_nil]
             exact Speicherfolge.nil _
           have aus₁ : FuehrtSchrittAus E.einrichtung t c₂ v₁ (f₂.nach c₂ v₁)
-              (f₂.plan (v₁.lokal c₂) 0) ⟨[], []⟩ (f₂.nach c₂ v₁) :=
-            ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
+              (f₂.plan (v₁.lokal c₂) 0) ⟨[], []⟩ (f₂.maschinennach c₂ v₁ (f₂.nach c₂ v₁)) :=
+            f₂.vollzug E.einrichtung t c₂ v₁ (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂))
           have regel₁ : E.system.ImplSchritt c₂ v₁ w₂ [_] (f₂.nach c₂ v₁) :=
             ⟨f₂, kopf₁, (f₂.impl_privat (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂)) c₂ v₁ w₂ [_] (f₂.nach c₂ v₁)).2 ⟨rfl, rfl⟩⟩
           have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
-              (.kontext c₂ w₂, ⟨[], []⟩) (f₂.nach c₂ v₁) :=
+              (.kontext c₂ w₂, ⟨[], []⟩) (f₂.maschinennach c₂ v₁ (f₂.nach c₂ v₁)) :=
             .kontext crash₁ bereit₁ regel₁ aus₁
-          exact (keinSchritt₁ (.kontext c₂ w₂, ⟨[], []⟩) (some (f₂.nach c₂ v₁))
+          exact (keinSchritt₁ (.kontext c₂ w₂, ⟨[], []⟩) (some (f₂.maschinennach c₂ v₁ (f₂.nach c₂ v₁)))
             (by rw [zustand₁]; exact Lauffolge.schritt step₁)).elim
       | antwort a =>
         exact (antwortNI p plattform h₂ ρ₂ vergleich.rechts t a spur' label').elim
