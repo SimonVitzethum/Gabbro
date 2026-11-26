@@ -4,8 +4,8 @@
              private-plan discipline of implementation steps, the implementation/ideal state
              agreement on matched runs, and crash-freedom of open suffixes.
 
-  Every instruction step of an elaborated unit is frame-only (the private plan with the
-  `intern` action), so context steps and answer arrivals preserve all cores and the status;
+  Elaborated instruction steps use the internal protocol action, so context steps and
+  answer arrivals preserve all cores, status, and the question history;
   only an interrupt entry or a crash moves dispatch. An open suffix (`BleibtOffen`) hence
   carries no crash offer: a crash would discharge the context. These are properties of the
   elaborated machine, proved once for every elaborated unit; `VerdraengungKonstanz.lean`
@@ -18,6 +18,7 @@ public import Core.Verfeinerung.Fortschritt
 public import Core.Verfeinerung.Simulation
 public import Core.Ast.Semantik.Pflichten
 public import Core.Ziel.Korrektheit.Zugriff
+import Core.Beobachtung.Fluss.Fragment
 
 @[expose] public section
 
@@ -133,15 +134,15 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
 
 /-- Every implementation step of an elaborated unit plans the internal action — the private plan for a
     frame-only head, the class plan for an access head (`Zugriffsform.ideal_aktion_intern` over the
-    ideal the implementation step carries) — so the post-state agrees with the pre-state on cores
-    and status. -/
-theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
+    ideal the implementation step carries) — so the post-state agrees with the pre-state on cores, status,
+    and the question history. -/
+private theorem einheitVon_kontext_intern_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
     {plan : Ast.Semantik.Plan} {spur : Maschine.SchrittSpur Ast.Semantik.Zelle Int}
     {s' : Ast.Semantik.Zustand} {tick : Nat}
     (regel : (einheitVon P t).system.ImplSchritt c s w [plan] u)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
-    s'.kerne = s.kerne ∧ s'.status = s.status := by
+    s'.kerne = s.kerne ∧ s'.status = s.status ∧ s'.fragen = s.fragen := by
   obtain ⟨b, kopfB, implB⟩ := regel
   rcases (Ast.Semantik.fragment_quellklassenrein Ast.Category.unit t) b
       (Ast.Semantik.kopf_mem kopfB) with hlr | ⟨z, same⟩
@@ -159,7 +160,7 @@ theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     | intern =>
       have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
       have statusEq : s'.status = s.status := by rw [seq, ueq]; rfl
-      exact ⟨kerneEq, statusEq⟩
+      exact ⟨kerneEq, statusEq, by rw [seq]; exact rahmen.fragen⟩
   · subst same
     have idealB : (Ast.Semantik.Befehl.zugriff z).ideal c s w [plan] u := implB
     have hschritt : (Ast.Semantik.Befehl.zugriff z).form.zugriffsschritt c s [plan] u :=
@@ -174,7 +175,7 @@ theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     | intern =>
       have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
       have statusEq : s'.status = s.status := by rw [seq]; exact hstatus
-      exact ⟨kerneEq, statusEq⟩
+      exact ⟨kerneEq, statusEq, by rw [seq]; exact rahmen.fragen⟩
 
 /-- An answer arrival touches no core state: neither dispatch nor status moves. -/
 theorem einheitVon_antwort_erhaelt {a : Katalog.AntwortEreignis}
@@ -238,5 +239,116 @@ theorem einheitVon_ohne_crash (P : Katalog.Plattform) (t : Ast.Unit)
     have hspurη := (Maschine.I.absturz_am_schnitt (einheitVon P t) η offerη).1
     have herl : Maschine.I.Erledigt η c t' := Or.inr (Or.inl hspurη)
     exact ((opened.2 t' ht').2.2 herl).elim
+
+/-- Elaborated context steps preserve dispatch and status. -/
+theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
+    {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
+    {plan : Ast.Semantik.Plan} {spur : Maschine.SchrittSpur Ast.Semantik.Zelle Int}
+    {s' : Ast.Semantik.Zustand} {tick : Nat}
+    (regel : (einheitVon P t).system.ImplSchritt c s w [plan] u)
+    (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
+    s'.kerne = s.kerne ∧ s'.status = s.status := by
+  obtain ⟨kerne, status, _⟩ := einheitVon_kontext_intern_erhaelt P t regel aus
+  exact ⟨kerne, status⟩
+
+/-- An elaborated unit starts without questions, and its internal actions never issue one.
+    Consequently there are no outstanding questions at any cut of any admitted run. -/
+theorem einheitVon_keine_fragen (P : Katalog.Plattform) (t : Ast.Unit)
+    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
+    (tick : Nat) {s : Ast.Semantik.Zustand} (cut : ρ.zeit.zustand tick = some s) :
+    s.fragen = [] := by
+  induction tick generalizing s with
+  | zero =>
+    have loaded := Beobachtung.fragment_geladen (Ast.Semantik.fragment Ast.Category.unit t) P
+      lauf.1 lauf.2.2.1
+    rw [lauf.2.2.2, loaded] at cut
+    cases cut
+    rfl
+  | succ tick ih =>
+    obtain ⟨before, hb⟩ := Beobachtung.fragment_zustand_some
+      (p := Ast.Semantik.fragment Ast.Category.unit t) (plattform := P) lauf tick
+    have empty := ih hb
+    have ht := ρ.zeit.takt tick
+    rw [hb, cut] at ht
+    cases ht with
+    | wartet _ eq _ =>
+      cases eq
+      exact empty
+    | schritt _ step =>
+      cases step with
+      | schritt trans =>
+        cases trans with
+        | kontext _ _ regel aus =>
+          exact (einheitVon_kontext_intern_erhaelt P t regel aus).2.2.trans empty
+        | antwort _ arrives =>
+          obtain ⟨_, _, _, rfl⟩ := arrives
+          exact empty
+        | interrupt _ enters =>
+          obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := enters
+          exact empty
+        | absturz crash =>
+          rw [crash.genau.2]
+          exact empty
+
+/-- At a crash-free core opportunity an enabled dispatched context must step.
+    A selected interrupt reserves a different tick, there is no question to answer,
+    and the unique offered core dispatches just this context. -/
+theorem einheitVon_schreitet_bei_gelegenheit (P : Katalog.Plattform) (t : Ast.Unit)
+    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
+    {tick : Nat} {s : Ast.Semantik.Zustand} {c : Maschine.Kontext}
+    (cut : ρ.zeit.zustand tick = some s) (noCrash : (ρ.hw.angebot tick).crash = false)
+    (ready : KannSchreiten ρ.hw tick c s)
+    {w : PUnit} {plan : Ast.Semantik.Plan} {u s' : Ast.Semantik.Zustand}
+    {spur : SchrittSpur Ast.Semantik.Zelle Int}
+    (regel : (einheitVon P t).system.ImplSchritt c s w [plan] u)
+    (aus : FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
+    ∃ w spur, ρ.zeit.spur tick = some (.kontext c w, spur) := by
+  have ht := ρ.zeit.takt tick
+  rw [cut] at ht
+  cases ht with
+  | wartet _ _ noStep =>
+    exact (noStep _ (some s') (.schritt (.kontext noCrash ready regel aus))).elim
+  | schritt label step =>
+    cases step with
+    | schritt trans =>
+      cases trans with
+      | kontext _ otherReady _ _ =>
+        obtain ⟨k, hk, dispatched, _⟩ := ready
+        obtain ⟨other, ho, otherDispatched, _⟩ := otherReady
+        have same : k = other := Option.some.inj (hk.symm.trans ho)
+        rw [← same, dispatched] at otherDispatched
+        cases otherDispatched
+        exact ⟨_, _, label⟩
+      | antwort _ arrives =>
+        obtain ⟨_, present, _⟩ := arrives.1.2.2.2.1
+        rw [einheitVon_keine_fragen P t lauf tick cut] at present
+        exact (List.not_mem_nil present).elim
+      | interrupt _ enters =>
+        obtain ⟨_, _, _, _, _, pending, _, _, _, _, _⟩ := enters
+        obtain ⟨k, hk, _, _⟩ := ready
+        have reserved := (lauf.2.1.2 tick).interrupt_reserviert pending.2.2.2.2
+        exact (Option.noConfusion (reserved.2.1.symm.trans hk))
+      | absturz crash =>
+        have hc := crash.1.2
+        rw [noCrash] at hc
+        cases hc
+
+/-- Scheduler fairness follows from the transitions of every admitted elaborated run.
+    The opportunity premise supplies a cut; the readiness premise supplies its executable step. -/
+theorem einheitVon_schedulerFair (P : Katalog.Plattform) (t : Ast.Unit)
+    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    (lauf : Maschine.Laeufe (einheitVon P t) H ρ) :
+    Maschine.SchedulerFair (einheitVon P t) ρ := by
+  intro a c ready opportunities n hn
+  obtain ⟨tick, htick, k, hk, before, hb, dispatched⟩ := opportunities n hn
+  obtain ⟨s, cut, _, live, noCrash, _, _, _, _, _, regel, aus⟩ :=
+    ready tick (hn.trans htick)
+  have same := Option.some.inj (hb.symm.trans cut)
+  subst before
+  obtain ⟨w, spur, label⟩ :=
+    einheitVon_schreitet_bei_gelegenheit P t lauf cut noCrash ⟨k, hk, dispatched, live⟩ regel aus
+  exact ⟨tick, htick, w, spur, label⟩
 
 end Gabbro.Core.Ziel.Korrektheit
