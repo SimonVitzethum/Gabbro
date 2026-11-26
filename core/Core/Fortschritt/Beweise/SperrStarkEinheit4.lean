@@ -83,7 +83,7 @@ def e4RegelIdeal (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : 
   (es = [stutterPlan] ∧ u = s)
 
 def e4System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-  ⟨fun _ => ⟨e4RegelIdeal, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+  ⟨fun _ => ⟨e4Regel, e4RegelIdeal⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
 /-- The implementation loader returns a free lock with tickets for A and B: no holder is seeded,
     and the holder of the run arises only by an admitted take. All vectors are masked and an NMI
@@ -177,6 +177,7 @@ theorem e4_impl_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
 theorem e4_regel_lokal (i : Unit) : RegelLokal E_4 i := by
   intro c s u w plan h
   cases i
+  change e4RegelIdeal c s w [plan] u at h
   have hrule : e4RegelIdeal c s w [plan] u := h
   rcases hrule with ⟨_, _, hpeq, _⟩ | ⟨hpeq, _⟩
   all_goals
