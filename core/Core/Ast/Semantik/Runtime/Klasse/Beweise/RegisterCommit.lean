@@ -168,8 +168,10 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
       rw [step.2]
       rfl
   | verbrauche =>
-      rw [step.2]
-      rfl
+      have hbuchung : (Schrittform.verbraucheNach ⟨.verbrauche, o, tr⟩ c s).buchung =
+          s.buchung :=
+        Schrittform.verbraucheNach_buchung _ _ _
+      rw [step.2, hbuchung]
   | maskiere =>
       rw [step.2]
       rfl
