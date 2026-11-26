@@ -16,6 +16,7 @@
 module
 
 public import Core.Maschine.Start
+public import Core.Annahme.Lokal
 import Init.Omega
 
 @[expose] public section
