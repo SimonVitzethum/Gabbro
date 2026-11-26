@@ -222,19 +222,19 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     rw [hpresC s (by omega) (by omega)]
     change rp.temp s = r.temp s
     rw [hpresP s (by omega) (by omega)]
-  · rw [hlokE]
+  · rw [hlokE, hlokN]
     simp only [mitPc]
     change rc.lokale = r.lokale
     rw [hlokC]
     change rp.lokale = r.lokale
     exact hlokP
-  · rw [hrueckE]
+  · rw [hrueckE, hrueckN]
     simp only [mitPc]
     change rc.rueckgabe = r.rueckgabe
     rw [hrueckC]
     change rp.rueckgabe = r.rueckgabe
     exact hrueckP
-  · rw [hstoppE]
+  · rw [hstoppE, hstoppN]
     simp only [mitPc]
     change rc.stopp = r.stopp
     rw [hstoppC]
