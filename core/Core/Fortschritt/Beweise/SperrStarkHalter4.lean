@@ -34,7 +34,6 @@ def vorCrash4 (s : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
 
 /-- After a restart: the entry context is outside the dispatched set and the lock is empty. -/
 def nachCrash4 (s : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
-  (∀ c, statisch4 c → ∀ k, (s.kerne k).laeuft ≠ some c) ∧
   (s.sperren ()).besitzer = none ∧ (s.sperren ()).schlange = []
 
 def inv4 (s : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
@@ -64,6 +63,7 @@ theorem e4_kontext_inv {t : Nat} {c : Kontext} {s u v s' : Zustand Unit Unit Uni
     {w : Unit} {spur : SchrittSpur Unit Unit} (hinv : inv4 s) (hreg : e4Regel c s w [plan] u)
     (hF : FuehrtAus E_4.einrichtung t c s u plan.aktion sperren spur.aussen v)
     (hziel : s' = {v with graph := s'.graph}) : inv4 s' := by
+  generalize hev : spur.aussen = evs at hF
   rcases hreg with hreg | hreg | hreg
   · rcases hreg with ⟨hs, hreg⟩
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
@@ -128,20 +128,8 @@ theorem e4_absturz_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
     (h : AbsturzSchritt E_4.einrichtung.persistenzRegion E_4.einrichtung.wiederanlauf k run t
       s spur s') (hinv : inv4 s) : inv4 s' := by
   have hclear := absturz_leert_schlange (l := ()) h
-  refine ⟨⟨?_, ?_⟩, Or.inr ⟨?_, hclear.2, hclear.1⟩⟩
-  · rw [hclear.2]
-    trivial
-  · rw [hclear.1]
-    intro c hc
-    cases hc
-  · intro c hc k'
-    obtain ⟨_, rfl⟩ := h.genau
-    rcases hc with rfl | rfl | rfl
-    all_goals
-      by_cases hk' : k' = 0
-      · subst k'
-        simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4]
-      · simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, Function.update_of_ne hk']
+  exact ⟨⟨by rw [hclear.2]; trivial, by rw [hclear.1]; intro c hc; cases hc⟩,
+    Or.inr ⟨hclear.2, hclear.1⟩⟩
 
 /-- One ideal step preserves the invariant. -/
 theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
@@ -153,7 +141,7 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
   | @kontext _ u plan spur c w _ _ hreg haus =>
     obtain ⟨_, _, _, v, hF, _, hziel⟩ := haus
     obtain ⟨_, _, hreg4⟩ := hreg
-    exact e4_kontext_inv hinv hreg4 hF hziel
+    exact e4_kontext_inv (w := w) hinv hreg4 hF hziel
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
     exact e4_antwort_inv hinv heq
@@ -172,35 +160,14 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
         change (s.kerne k).nmiAktiv = false at can
         rw [hnmi] at can
         cases can
-    · rw [hstate]
-      refine ⟨⟨?_, ?_⟩, Or.inr ⟨?_, ?_, ?_⟩⟩
-      · simpa only [Zustandseintritt] using hinv.1.1
-      · simpa only [Zustandseintritt, List.mem_append] using hinv.1.2
-      · intro d hd k'
-        rcases hd with rfl | rfl | rfl
-        · by_cases hk' : k' = k
-          · subst k'
-            dsimp only [Zustandseintritt, KernZustand.unterbrechen]
-            rw [Function.update_self]
-            cases c <;> simp only [Option.some.injEq, reduceCtorEq]
-          · rw [Zustandseintritt, Function.update_of_ne hk']
-            exact hnach.1 A statisch4_A k'
-        · by_cases hk' : k' = k
-          · subst k'
-            dsimp only [Zustandseintritt, KernZustand.unterbrechen]
-            rw [Function.update_self]
-            cases c <;> simp only [Option.some.injEq, reduceCtorEq]
-          · rw [Zustandseintritt, Function.update_of_ne hk']
-            exact hnach.1 B statisch4_B k'
-        · by_cases hk' : k' = k
-          · subst k'
-            dsimp only [Zustandseintritt, KernZustand.unterbrechen]
-            rw [Function.update_self]
-            cases c <;> simp only [Option.some.injEq, reduceCtorEq]
-          · rw [Zustandseintritt, Function.update_of_ne hk']
-            exact hnach.1 C4 statisch4_C k'
-      · simpa only [Zustandseintritt] using hnach.2.1
-      · simpa only [Zustandseintritt] using hnach.2.2
+    · have hsperren : s'.sperren = (Zustandseintritt s k id c nmi).sperren := by
+        rw [hstate]
+        rfl
+      refine ⟨?_, Or.inr ?_⟩
+      · rw [hsperren]
+        simpa only [Zustandseintritt] using hinv.1
+      · rw [hsperren]
+        simpa only [Zustandseintritt] using hnach
   | absturz h =>
     exact e4_absturz_inv h hinv
 
@@ -251,7 +218,7 @@ theorem e4_halter : SperrHalterHalten E_4 := by
     · exact e4_ideal_geben hg
     · intro next hnext wechsel
       simp [E_4, wEinrichtungGesperrt4]
-  · rw [hnach.2.1] at hown
+  · rw [hnach.1] at hown
     cases hown
 
 theorem waechter_E_4 : WaechterHalten E_4 :=
