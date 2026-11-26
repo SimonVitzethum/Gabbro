@@ -193,7 +193,8 @@ theorem stummer_schritt_koppelt
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
-  generalize nachEq₁ : ρ₁.zeit.zustand (t + 1) = nach₁ at takt₁
+  obtain ⟨nach₁, nachEq₁⟩ : ∃ x, ρ₁.zeit.zustand (t + 1) = x := ⟨_, rfl⟩
+  rw [nachEq₁] at takt₁
   cases takt₁ with
   | wartet label _ _ => cases label
   | schritt label step =>
@@ -256,7 +257,8 @@ theorem stummer_schritt_koppelt
         -- right tick: pause is impossible, kinds other than context are ruled out
         have takt₂ := ρ₂.zeit.takt t
         rw [zustand₂] at takt₂
-        generalize nachEq₂ : ρ₂.zeit.zustand (t + 1) = nach₂ at takt₂
+        obtain ⟨nach₂, nachEq₂⟩ : ∃ x, ρ₂.zeit.zustand (t + 1) = x := ⟨_, rfl⟩
+        rw [nachEq₂] at takt₂
         cases takt₂ with
         | wartet _ _ hp =>
           exact (hp _ _ (Lauffolge.schritt step₂)).elim
