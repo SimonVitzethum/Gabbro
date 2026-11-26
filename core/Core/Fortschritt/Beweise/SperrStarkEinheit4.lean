@@ -77,13 +77,17 @@ def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
 def e4System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e4Regel, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
-/-- The implementation loader returns the same free canonical state the ideal machine starts at:
-    no holder is seeded. -/
+/-- The implementation loader returns a free lock with tickets for A and B: no holder is seeded,
+    and the holder of the run arises only by an admitted take. All vectors are masked and an NMI
+    is active, so no interrupt can preempt a dispatched holder. -/
 def s4_0 : Zustand Unit Unit Unit Unit Bool Unit :=
-  { Zustand.start (fun _ => false) (fun _ => .laeuft)
+  { Zustand.start (L := Unit) (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch4 j, .nutzer, (), fun _ => true, 0, true, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0)) with
     sperren := fun _ => ⟨none, [A, B]⟩ }
+
+/-- The ideal run starts from the canonical start with the same masked dispatch and an empty lock. -/
+noncomputable def s4_ideal0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_4 s0).2
 
 def E_4 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   { E_1 with
@@ -92,7 +96,23 @@ def E_4 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     startdaten := fun _ => wDatenGesperrt4 dispatch4
     laden := fun _ _ => some s4_0 }
 
-theorem start_E_4 : (I.start E_4 s0).2 = s4_0 := rfl
+theorem start_E_4 : (I.start E_4 s0).2 = s4_ideal0 := rfl
+
+theorem s4_ideal0_lock : (s4_ideal0.sperren ()).besitzer = none := rfl
+
+theorem s4_ideal0_schlange : (s4_ideal0.sperren ()).schlange = [] := rfl
+
+theorem s4_ideal0_kerne0 : (s4_ideal0.kerne 0).laeuft = some A := rfl
+theorem s4_ideal0_kerne1 : (s4_ideal0.kerne 1).laeuft = some B := rfl
+theorem s4_ideal0_kerne2 : (s4_ideal0.kerne 2).laeuft = some C4 := rfl
+
+theorem s4_ideal0_live : ∀ c, s4_ideal0.status c = .laeuft := fun _ => rfl
+
+theorem s4_ideal0_nmi (k : Kern) : (s4_ideal0.kerne k).nmiAktiv = true := by
+  cases k <;> rfl
+
+theorem s4_ideal0_maske (k : Kern) : (s4_ideal0.kerne k).maske = fun _ => true := by
+  cases k <;> rfl
 
 theorem e4halten : E_4.schranken.halten () = some 5 := rfl
 

@@ -40,22 +40,19 @@ def nachCrash4 (s : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
 def inv4 (s : Zustand Unit Unit Unit Unit Bool Unit) : Prop :=
   lockStatisch4 s ∧ (vorCrash4 s ∨ nachCrash4 s)
 
-theorem inv4_start : inv4 s4_0 := by
+theorem inv4_start : inv4 s4_ideal0 := by
   refine ⟨?_, Or.inl ?_⟩
   · refine ⟨?_, ?_⟩
-    · rw [s4_0_lock]
+    · rw [s4_ideal0_lock]
       trivial
     · intro c hc
-      rw [s4_0_schlange] at hc
-      simp only [List.mem_cons, List.mem_singleton] at hc
-      rcases hc with rfl | rfl
-      · exact statisch4_A
-      · exact statisch4_B
-  · exact ⟨fun k => ⟨s4_0_nmi k, s4_0_maske k⟩, fun c hc => ?_⟩
+      rw [s4_ideal0_schlange] at hc
+      cases hc
+  · exact ⟨fun k => ⟨s4_ideal0_nmi k, s4_ideal0_maske k⟩, fun c hc => ?_⟩
     rcases hc with rfl | rfl | rfl
-    · exact ⟨s4_0_live A, ⟨0, s4_0_kerne0⟩⟩
-    · exact ⟨s4_0_live B, ⟨1, s4_0_kerne1⟩⟩
-    · exact ⟨s4_0_live C, ⟨2, s4_0_kerne2⟩⟩
+    · exact ⟨s4_ideal0_live A, ⟨0, s4_ideal0_kerne0⟩⟩
+    · exact ⟨s4_ideal0_live B, ⟨1, s4_ideal0_kerne1⟩⟩
+    · exact ⟨s4_ideal0_live C4, ⟨2, s4_ideal0_kerne2⟩⟩
 
 /-- A context step keeps the invariant. The rule fixes the plan, so the machine protocol part
     only updates the lock; dispatch, liveness and the interrupt masks are unchanged. -/
