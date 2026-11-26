@@ -24,8 +24,10 @@ variable {d : Denotation k scope}
     previous one by casing the left tick `ρ₁.zeit.spur t`: a context step uses
     the supplied unit, an answer, interrupt, crash or pause uses the matching
     proved `Erhalt` theorem. -/
-theorem geraete_kopplung_alle_aus
-    (kontext : GeraeteKontextErhaltAussage) : GeraeteKopplungAlleAussage := by
+theorem geraete_kopplung_alle_aus {k : Katalog} {scope : Scope} {locals : Umgebung scope}
+    {d : Denotation k scope}
+    (kontext : GeraeteKontextErhaltAussage (d := d) (locals := locals)) :
+    GeraeteKopplungAlleAussage (d := d) (locals := locals) := by
   intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t
   induction t with
   | zero =>
