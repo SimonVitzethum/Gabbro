@@ -18,7 +18,8 @@ variable {Ort Wert Grund Form : Type}
 
 /-- A low memory event that writes cell `x`. -/
 def SchreibBeob (x : Ort) : NiedrigesEreignis Ort Wert Grund Form → Prop
-  | .speicher _ art ort _ _ _ => art.schreibt ∧ ort = x
+  | .speicher _ .schreiben ort _ _ _ => ort = x
+  | .speicher _ .rmw ort _ _ _ => ort = x
   | _ => False
 
 /-- The crash boundary that resets the materialised memory graph. -/
@@ -52,25 +53,29 @@ theorem SchreibSeitAbsturz_append (x : Ort)
       SchreibSeitAbsturz x b ∨ (¬ HatAbsturz b ∧ SchreibSeitAbsturz x a) := by
   induction a with
   | nil =>
-    simp only [List.nil_append, SchreibSeitAbsturz, false_and, or_false]
+    simp only [List.nil_append, SchreibSeitAbsturz, and_false, or_false]
   | cons e es ih =>
-    rw [List.cons_append, hatAbsturz_append]
-    cases hbe : AbsturzBeob e <;>
-      cases hHa : HatAbsturz es <;> cases hHb : HatAbsturz b <;>
-        simp only [SchreibSeitAbsturz, hbe, hHa, hHb, if_true, if_false,
-          Bool.true_or, Bool.false_or, Bool.or_true, Bool.or_false,
-          Bool.false_eq_true, Bool.true_eq_false, true_and, false_and, or_false,
-          true_or] at ih ⊢
-    all_goals
-      rw [ih]
-      tauto
+    rw [List.cons_append]
+    cases hbe : AbsturzBeob e
+    · simpa only [SchreibSeitAbsturz, hbe, if_true] using ih
+    · simp only [SchreibSeitAbsturz, hbe, if_false]
+      have happ : HatAbsturz (es ++ b) = (HatAbsturz es || HatAbsturz b) := hatAbsturz_append es b
+      cases hEs : HatAbsturz es <;> cases hBs : HatAbsturz b <;>
+        simp only [happ, hEs, hBs, Bool.true_or, Bool.false_or, Bool.or_true, Bool.or_false,
+          Bool.false_eq_true, Bool.true_eq_false, not_false_eq_true, not_true_eq_false,
+          false_and, true_and, or_false, true_or] at ih ⊢
+      all_goals
+        rw [ih]
+        tauto
 
 theorem SchreibSeitAbsturz_ohne_absturz (x : Ort)
     {l : List (NiedrigesEreignis Ort Wert Grund Form)} (h : ¬ HatAbsturz l) :
     SchreibSeitAbsturz x l ↔ ∃ e ∈ l, SchreibBeob x e := by
   induction l with
-  | nil => simp only [HatAbsturz, Bool.false_eq_true, not_false_eq_true,
-      SchreibSeitAbsturz, List.not_mem_nil, false_exists]
+  | nil =>
+    constructor
+    · intro hh; cases hh
+    · rintro ⟨e, he, hs⟩; cases he
   | cons e es ih =>
     have hbe : ¬ AbsturzBeob e := by
       intro hb
@@ -78,9 +83,22 @@ theorem SchreibSeitAbsturz_ohne_absturz (x : Ort)
     have hes : ¬ HatAbsturz es := by
       intro hs
       exact h (by simp only [HatAbsturz, hs, Bool.or_true])
-    rw [List.mem_cons]
-    simp only [SchreibSeitAbsturz, hbe, if_false, hes, if_false, ih hes,
-      forall_exists_index, or_and_right]
+    constructor
+    · intro hh
+      have hodd : SchreibBeob x e ∨ SchreibSeitAbsturz x es := by
+        simpa only [SchreibSeitAbsturz, hbe, if_false, hes, if_false] using hh
+      rcases hodd with hhead | htail
+      · refine ⟨e, ?_, hhead⟩
+        simp only [List.mem_cons, eq_self_iff_true, true_or]
+      · obtain ⟨e', he', hs'⟩ := (ih hes).1 htail
+        refine ⟨e', ?_, hs'⟩
+        simp only [List.mem_cons, he', or_true]
+    · rintro ⟨e', he', hs'⟩
+      simp only [List.mem_cons] at he'
+      rcases he' with rfl | he'
+      · simpa only [SchreibSeitAbsturz, hbe, if_false, hes, if_false, hs', or_true]
+      · have htail : SchreibSeitAbsturz x es := (ih hes).2 ⟨e', he', hs'⟩
+        simpa only [SchreibSeitAbsturz, hbe, if_false, hes, if_false, htail, or_true]
 
 theorem SchreibSeitAbsturz_nach_absturz (x : Ort)
     {e : NiedrigesEreignis Ort Wert Grund Form}
@@ -93,49 +111,67 @@ theorem hatQuelle_nach_viele {Ort Wert : Type}
     {es : List (SpeicherAkteur Ort × Speicher.Etikett Ort Wert)}
     (hv : g.Viele es g') (x : Ort) :
     HatQuelle g' x ↔ HatQuelle g x ∨ ∃ e ∈ es, e.2.art.schreibt ∧ e.2.ort = x := by
-  rw [HatQuelle, HatQuelle, hv.ev, hatQuelle_iff_mem, hatQuelle_iff_mem, List.mem_map]
+  rw [HatQuelle, HatQuelle, hv.ev, hatQuelle_iff_mem, hatQuelle_iff_mem]
   constructor
   · rintro ⟨e, he, hs, ho⟩
     rw [List.mem_append] at he
     rcases he with he | he
     · exact Or.inl ⟨e, he, hs, ho⟩
-    · rcases he with ⟨p, hp, rfl⟩
+    · rw [List.mem_map] at he
+      rcases he with ⟨p, hp, rfl⟩
       exact Or.inr ⟨p, hp, by simpa using hs, by simpa using ho⟩
   · rintro (⟨e, he, hs, ho⟩ | ⟨p, hp, hs, ho⟩)
     · exact ⟨e, by rw [List.mem_append]; exact Or.inl he, hs, ho⟩
-    · exact ⟨⟨p.1, p.2⟩, by rw [List.mem_append]; exact Or.inr ⟨p, hp, rfl⟩, hs, ho⟩
+    · refine ⟨⟨p.1, p.2⟩, ?_, hs, ho⟩
+      rw [List.mem_append]
+      exact Or.inr (by rw [List.mem_map]; exact ⟨p, hp, rfl⟩)
 
 theorem SchreibBeob_filterMap_speicherBeob
-    {label : Etiketten Ort} {x : Ort} (hpub : oeffentlich (label.ort x) = true)
+    {label : Etiketten Ort} (hpub : ∀ y : Ort, oeffentlich (label.ort y) = true)
     {es : List (SpeicherAkteur Ort × Speicher.Etikett Ort Wert)} :
     (∃ ev ∈ es.filterMap (speicherBeob (Grund := Grund) (Form := Form) label), SchreibBeob x ev) ↔
       ∃ e ∈ es, e.2.art.schreibt ∧ e.2.ort = x := by
   constructor
   · rintro ⟨ev, hev, hs⟩
     rw [List.mem_filterMap] at hev
-    rcases hev with ⟨e, he, heq⟩
-    rcases e with ⟨akteur, lab⟩
+    rcases hev with ⟨⟨akteur, lab⟩, he, heq⟩
     cases ev with
     | speicher a art ort m gel schr =>
-      rcases hs with ⟨hsArt, hsOrt⟩
-      subst hsOrt
-      cases hArt : lab.art <;>
-        simp only [speicherBeob, hArt, sichtbar, hpub] at heq
-      · cases hsArt
-      · cases heq
-        exact ⟨(akteur, lab), he, trivial, rfl⟩
-      · cases heq
-        exact ⟨(akteur, lab), he, trivial, rfl⟩
-      · cases heq
-      · cases heq
+      cases art <;> simp only [SchreibBeob] at hs
+      · cases hs
+      · cases hArt : lab.art <;>
+          simp only [speicherBeob, hArt, sichtbar, hpub, if_true] at heq
+        · cases (Option.some.inj heq)
+        · cases (Option.some.inj heq)
+          exact ⟨(akteur, lab), he, trivial, hs⟩
+        · cases (Option.some.inj heq)
+        · cases heq
+        · cases heq
+      · cases hArt : lab.art <;>
+          simp only [speicherBeob, hArt, sichtbar, hpub, if_true] at heq
+        · cases (Option.some.inj heq)
+        · cases (Option.some.inj heq)
+        · cases (Option.some.inj heq)
+          exact ⟨(akteur, lab), he, trivial, hs⟩
+        · cases heq
+        · cases heq
+      · cases hs
+      · cases hs
     | _ => cases hs
-  · rintro ⟨e, he, hs, ho⟩
-    rcases e with ⟨akteur, lab⟩
-    cases hArt : lab.art <;> simp only [Art.schreibt] at hs
-    all_goals
-      subst ho
-      simp only [speicherBeob, hArt, sichtbar, hpub]
-      rw [List.mem_filterMap]
-      refine ⟨(akteur, lab), he, rfl⟩
+  · rintro ⟨⟨akteur, lab⟩, he, hs, ho⟩
+    cases hArt : lab.art <;> simp only [Speicher.Art.schreibt] at hs
+    · cases hs
+    · subst ho
+      refine ⟨.speicher akteur .schreiben lab.ort lab.modus none (some lab.geschrieben), ?_, ?_⟩
+      · rw [List.mem_filterMap]
+        exact ⟨(akteur, lab), he, by simp only [speicherBeob, hArt, sichtbar, hpub, if_true]⟩
+      · simp only [SchreibBeob]
+    · subst ho
+      refine ⟨.speicher akteur .rmw lab.ort lab.modus (some lab.gelesen) (some lab.geschrieben), ?_, ?_⟩
+      · rw [List.mem_filterMap]
+        exact ⟨(akteur, lab), he, by simp only [speicherBeob, hArt, sichtbar, hpub, if_true]⟩
+      · simp only [SchreibBeob]
+    · cases hs
+    · cases hs
 
 end Gabbro.Core.Beobachtung
