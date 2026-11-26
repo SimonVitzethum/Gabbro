@@ -392,7 +392,7 @@ def endlosBaum : Ast.Unit :=
 
 /-- A main with one bounded loop of at most zero passes over a finite ceiling
     that is too tight: five ticks against a ceiling of three. -/
-private def engerBaum : Ast.Unit :=
+def engerBaum : Ast.Unit :=
   ⟨_, UnitBody.step
     (Decl.function mainName mainName_direct [] none
       (by intro t mem; cases mem) none
@@ -404,7 +404,7 @@ private def engerBaum : Ast.Unit :=
       List.nodup_nil (by intro h; cases h) none)
     UnitBody.done⟩
 
-private def engeDeklaration : Schrankendeklaration :=
+def engeDeklaration : Schrankendeklaration :=
   ⟨some 3, none, none, [], [], []⟩
 
 /-- Sharpness: an endless loop has no estimator value, and a bounded loop over
