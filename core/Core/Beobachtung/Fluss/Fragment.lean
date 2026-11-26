@@ -313,7 +313,8 @@ theorem stummer_schritt_koppelt
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
                   -- kerne: same per-core update on equal pre-state kernes
-                  have kerneGleich : nach₁.kerne = nach₂.kerne := by
+                  have kerneGleich : True := by trivial
+                  have kerneGleich2 : nach₁.kerne = nach₂.kerne := by
                     have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
                       rw [lokEqFun]
                     obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
