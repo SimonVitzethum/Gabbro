@@ -17,7 +17,7 @@
   The hash pin of `KorrektheitAussagen` covers the dependency closure of all of them, so a statement cannot change
   unnoticed, and one pin root keeps the cost of the pin check constant (each root walks the closure of the whole
   model). The list may only grow; removing or weakening a conjunct is a change of the correctness package.
-  Meaning change: from "every checker and every parser" to "there is a checker and there is a parser".
+  The concrete combined checker also satisfies the soundness, fragment completeness and non-triviality obligations.
 -/
 module
 
@@ -56,8 +56,8 @@ def KorrektheitAussagen : Prop :=
       ZielAusTeilenAussage P B ∧ SicherheitAkzeptiertAussage P ∧ SicherheitNichtLeerInstanzAussage P B ∧
       SicherheitAusTeilenAussage P B ∧ ZielInhaltAussage P ∧ LinkerAkzeptiertAussage ∧
       LinkerNichtTrivialAussage)
-        ∧ (PrueferLokalKorrektAussage prueferKombiniert ∧ PrueferLokalVollstaendigAussage prueferKombiniert ∧
-          PrueferKorrektAussage prueferKombiniert ∧ PrueferVollstaendigAussage prueferKombiniert ∧
-          PrueferNichtTrivialAussage prueferKombiniert)
+    ∧ (PrueferLokalKorrektAussage prueferKombiniert ∧ PrueferLokalVollstaendigAussage prueferKombiniert ∧
+      PrueferKorrektAussage prueferKombiniert ∧ PrueferVollstaendigAussage prueferKombiniert ∧
+      PrueferNichtTrivialAussage prueferKombiniert)
 
 end Gabbro.Core.Ziel.Korrektheit

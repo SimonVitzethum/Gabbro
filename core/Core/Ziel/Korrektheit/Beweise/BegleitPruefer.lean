@@ -35,8 +35,7 @@ theorem prueferKombiniert_fragmentWaechter (P : Katalog.Plattform) (t : Ast.Unit
       WaechterAnalyse.waechterFragmentCode
         (Ast.Semantik.fragment Ast.Category.unit t).code := rfl
 
-/-- The checker that accepts every unit and whose fragment is total. It is the degenerate case in
-    which soundness is vacuous and completeness fails. -/
+/-- The degenerate checker used to show that non-triviality requires a refusal. -/
 def prueferNimmtAlles : Pruefer where
   pruefeLokal := fun _ _ => true
   pruefeKlauseln := fun _ _ => true
@@ -142,15 +141,6 @@ theorem PrueferVollstaendigAussage.nichtTrivial :
 
 /-! ### Non-triviality of the checker itself -/
 
-/-- Partial companion: a checker accepts the empty unit, so the first half of
-    `PrueferNichtTrivialAussage` is realisable. The second half needs a well-formed source unit
-    whose elaboration is not accepted; no such unit exists in the current catalogue of forms, so
-    that half is reported as an open witness rather than claimed. -/
-theorem PrueferNichtTrivialAussage.erfuellbar :
-    ∃ C : Pruefer, ∃ P t, C.pruefe P t = true := by
-  refine ⟨prueferNimmtAlles, Katalog.Plattform.x86_64, ⟨[], Ast.UnitBody.done⟩, ?_⟩
-  rfl
-
 theorem PrueferNichtTrivialAussage.nichtTrivial :
     ∃ C : Pruefer, ¬ PrueferNichtTrivialAussage C := by
   refine ⟨prueferNimmtAlles, ?_⟩
@@ -212,10 +202,13 @@ theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombi
         rw [hPW, Bool.and_false]
       simpa only [Pruefer.pruefe] using hfalse
 
-/-- The local completeness premises hold jointly on the accepted empty unit. -/
-theorem prueferKombiniert_lokal_erfuellbar (P : Katalog.Plattform) :
-    ∃ t, prueferKombiniert.fragmentLokal P t = true ∧ Annahme.Lokal (einheitVon P t) :=
-  ⟨trivialUnit, rfl, (trivialUnit_akzeptiert P).1⟩
+theorem PrueferNichtTrivialAussage.erfuellbar : ∃ C : Pruefer, PrueferNichtTrivialAussage C :=
+  ⟨prueferKombiniert, prueferKombiniert_nichtTrivial⟩
+
+/-- The combined completeness premises hold jointly, on every platform. -/
+theorem prueferKombiniert_erfuellbar (P : Katalog.Plattform) :
+    ∃ t, prueferKombiniert.fragment P t = true ∧ Annahme.Akzeptiert (einheitVon P t) :=
+  ⟨trivialUnit, rfl, trivialUnit_akzeptiert P⟩
 
 /-! ### The undecidable remainder -/
 

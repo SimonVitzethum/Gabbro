@@ -2,8 +2,7 @@
   File:      core/Core/Ziel/Korrektheit/Pruefer.lean
   Subject:   CHECKER CORRECTNESS (PERFECT-MODEL §3.2 and §7), stated as pinned propositions.
 
-  `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E` is the perfect checker; as a whole it is
-  undecidable (`Beobachtung/Unentscheidbar`, `RiceAussage`). The deployed checker decides a fragment of it and is
+  `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E` is model acceptance. The deployed checker decides a fragment and is
   tied to it by two statements: soundness (`pruefe = true → Akzeptiert`) and completeness on a named decidable
   fragment (`Fragment → Akzeptiert → pruefe = true`). Soundness alone holds for a checker that refuses everything,
   so completeness and the non-triviality statements below are part of the same package. Meaning change (MK-17):
@@ -87,8 +86,7 @@ def prueferWaechterDecidierbar : Pruefer where
 /-- SOUNDNESS of the local component: acceptance by the checker gives `Lokal` (types, ownership, lock ranks,
 units, provenance of outside answers, guards or `else` paths, waits, stack and length bounds, row selection,
 labelled flow). Feeds: `Annahme.Lokal` and its conjuncts (`RegelLokal`, `AussenLokal`, `FlussLokal`,
-`SchrankenLokal`), per-instruction `Befehl.lokal`. Proof sketch: a syntactic pass over the tree whose every case
-is the generic per-instruction lemma. Open: the pass itself (Designer for the pass, Prover for the lemma). -/
+`SchrankenLokal`), per-instruction `Befehl.lokal`. The frame-only case is decided over the elaborated code by `lokalPruefeCode`. -/
 def PrueferLokalKorrektAussage (C : Pruefer) : Prop :=
   ∀ P t, C.pruefeLokal P t = true → Annahme.Lokal (einheitVon P t)
 
@@ -183,11 +181,8 @@ def PrueferNichtTrivialAussage (C : Pruefer) : Prop :=
     (∃ P t, C.pruefe P t = true)
   ∧ (∃ P t, C.fragment P t = true ∧ C.pruefe P t = false ∧ ¬ Annahme.Akzeptiert (einheitVon P t))
 
-/-- The checked remainder: outside its fragment no checker is complete. This is the undecidability of
-`Akzeptiert` as a whole, stated through the existing Rice transfer: every extensional, non-trivial property of
-simulated programs — functional correctness among them — is undecidable (`RiceAussage`), so everything outside
-the fragment is the user's program logic (GabbroProve) and not a checker defect. Feeds:
-`Beobachtung.Unentscheidbar.RiceAussage`, `substrat_rice`, `HalteUnentscheidbarAussage`. -/
+/-- Rice transfer for extensional properties on the simulation image. Applying it to a particular
+    acceptance predicate requires proving its extensionality and non-triviality there. -/
 def PrueferRestUnentscheidbarAussage : Prop :=
   Beobachtung.Unentscheidbar.RiceAussage
 

@@ -19,7 +19,8 @@ def lokalPruefeBefehl (b : Befehl) : Bool :=
 /-- The executable class test agrees with the model's frame-only predicate. -/
 theorem lokalPruefeBefehl_iff (b : Befehl) : lokalPruefeBefehl b = true ↔ b.Privat := by
   unfold lokalPruefeBefehl Befehl.Privat
-  cases b.klasse <;> simp
+  cases b.klasse <;> simp only [reduceCtorEq, eq_self, true_or, or_true, false_or, or_false,
+    Bool.false_eq_true]
 
 /-- Decide whether the instruction list is in the frame-only fragment. -/
 def lokalPruefeCode (code : List Befehl) : Bool :=
