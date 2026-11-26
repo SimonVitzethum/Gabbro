@@ -36,11 +36,31 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       (by omega) (by omega)
   have hbleib1 := laufBleibtVorEnde (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
     r k1 r1 hrun1 (by rw [hpc1, paarBerechnungLaenge])
-  have hprefix1 : (Schritt (precRumpf cgBlk aus frei))^[k1] (some r) = some r1 := by
-    rw [precRumpf, ← List.append_assoc]
+  have hbleib1' : ∀ j, j < k1 → ∃ rj,
+      (Schritt (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+        paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)))^[j] (some r) = some rj ∧
+      rj.pc < (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+        paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)).length := by
+    intro j hj
+    obtain ⟨rj, hrj, hlt⟩ := hbleib1 j hj
+    refine ⟨rj, ?_, ?_⟩
+    · have hsub : ∀ t, t < j → ∃ rt,
+          (Schritt (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)))^[t] (some r) = some rt ∧
+          rt.pc < (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)).length := fun t ht => hbleib1 t (by omega)
+      exact (laufAnhang (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
+        (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) r j hsub).trans hrj
+    · simp only [List.length_append]
+      omega
+  have hprefix1a : (Schritt (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+      paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)))^[k1] (some r) = some r1 := by
     exact (laufAnhang (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
-      (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk)
-      r k1 hbleib1).trans hrun1
+      (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) r k1
+      (fun j hj => hbleib1 j hj)).trans hrun1
+  have hprefix1 : (Schritt (precRumpf cgBlk aus frei))^[k1] (some r) = some r1 := by
+    rw [precRumpf]
+    exact (laufAnhang (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
+      paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) cgBlk r k1 hbleib1').trans
+        hprefix1a
   let r1_0 : Rahmen := { r1 with pc := 0 }
   have hr1_0pc : r1_0.pc = 0 := rfl
   have hr1_0a : r1_0.temp (frei + 0) = some (natVal a) := by
@@ -49,6 +69,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     exact ha
   have hr1_0q : r1_0.temp (frei + 4) = some (natVal (Nat.pair y i)) := hr1q
   have hmitPc1 : mitPc (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)).length r1_0 = r1 := by
+    rw [paarBerechnungLaenge]
     show { r1 with pc := 44 + 0 } = r1
     rw [show (44 : Nat) + 0 = r1.pc by rw [hpc1, paarBerechnungLaenge]]
   obtain ⟨k2, r2, hrun2, hpc2, hr2p, hpres2, hlok2, hrueck2, hstopp2⟩ :=
@@ -59,12 +80,11 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hvPaar2 := verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
   have hprefix2 : (Schritt (precRumpf cgBlk aus frei))^[k2] (some r1) =
       some (mitPc 44 r2) := by
+    rw [precRumpf]
     have hshift := laufMitPc (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
       (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) cgBlk hvPaar2
       r1_0 k2 hbleib2
-    rw [List.length_append] at hshift
-    simp only [paarBerechnungLaenge] at hshift
-    simpa only [precRumpf, hmitPc1, hrun2] using hshift
+    simpa only [hmitPc1, hrun2] using hshift
   let r2_0 : Rahmen := { r2 with pc := 0 }
   have hr2_0pc : r2_0.pc = 0 := rfl
   have hr2_0p : r2_0.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) := hr2p
@@ -78,7 +98,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hprefix3 : (Schritt (precRumpf cgBlk aus frei))^[k3] (some (mitPc 44 r2)) =
       some (mitPc 88 r3) := by
     rw [← hmitPc2]
-    rw [precRumpf, ← List.append_assoc]
+    rw [precRumpf]
     have hshift := laufMitPc ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
       paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))) cgBlk [] hvCg r2_0 k3 hbleib3
     simp only [List.append_nil] at hshift
