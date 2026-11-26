@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ziel/Korrektheit/Beweise/FormBelegBasis.lean
+  File:      core/Core/Ziel/Korrektheit/Beweise2/FormBelegBasis.lean
   Subject:   A TYPED form certificate for one cohesive family of already implemented and accepted
              scalar arithmetic expression constructors (`Expr.lit`, `Expr.binary`).
 
@@ -167,11 +167,11 @@ theorem basisBeleg_gedeckt : FormenGedecktAussage Plattform.x86_64 basisBeleg :=
   intro f
   refine ⟨Ast.print (category := Ast.Category.unit) (basisUnit f),
     einheitVon Plattform.x86_64 (basisUnit f), ?_, ?_, ?_, ?_⟩
-  · simp [basisBeleg]
+  · rfl
   · exact ⟨basisUnit f, Ast.parse_print (category := Ast.Category.unit) (basisUnit f),
       ⟨rfl, basisUnit_zugelassen f Plattform.x86_64⟩⟩
   · exact basisUnit_akzeptiert f Plattform.x86_64
-  · simp [basisBeleg]
+  · exact ⟨rfl, rfl⟩
 
 /-- The family is genuinely backed by the existing registry: each form maps to a constructor of
     the root-imported `Expr` family whose complete typed `RegistryEntry` is already registered. -/
