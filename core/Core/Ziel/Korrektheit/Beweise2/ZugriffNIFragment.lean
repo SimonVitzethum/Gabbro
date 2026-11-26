@@ -150,22 +150,16 @@ theorem pause_klassenrein (existiert : ZugriffSchrittExistiertAussage)
               exact kern₂
             · rw [statusEq]
               exact stat₂
-          have rahmen₁ : Zustandsrahmen v₁ (f₂.nach c₂ v₁) :=
-            ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-          have auth₁ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := by
-            intro l hl
-            cases hl
-          have speicher₁ : Speicherfolge v₁.initial (.kontext c₂) v₁.graph _ [] v₁.graph :=
-            Speicherfolge.nil _
           have stepData : ∃ (plan : Ast.Semantik.Plan) (u : Ast.Semantik.Zustand)
               (spur : SchrittSpur Ast.Semantik.Zelle Int) (s' : Ast.Semantik.Zustand),
               E.system.ImplSchritt c₂ v₁ w₂ [plan] u ∧
                 FuehrtSchrittAus E.einrichtung t c₂ v₁ u plan spur s' := by
             by_cases hpriv : f₂.Privat
-            · refine ⟨Ast.Semantik.plan, f₂.nach c₂ v₁, ⟨[], []⟩, f₂.nach c₂ v₁, ?_, ?_⟩
+            · refine ⟨f₂.plan (v₁.lokal c₂) 0, f₂.nach c₂ v₁, ⟨[], []⟩,
+                f₂.maschinennach c₂ v₁ (f₂.nach c₂ v₁), ?_, ?_⟩
               · exact ⟨f₂, by rw [kopf₁_gleich]; exact kopf₂,
-                  (f₂.impl_privat hpriv c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁)).2 ⟨rfl, rfl⟩⟩
-              · exact ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
+                  (f₂.impl_privat hpriv c₂ v₁ w₂ _ _).2 ⟨rfl, rfl⟩⟩
+              · exact f₂.vollzug _ t c₂ v₁ hpriv
             · rcases klassenrein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂) with hpriv' | ⟨z, hz⟩
               · exact (hpriv hpriv').elim
               · subst f₂

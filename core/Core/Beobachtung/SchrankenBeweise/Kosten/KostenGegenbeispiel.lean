@@ -62,19 +62,21 @@ private theorem kk_mass_auswertung (frame : Rahmen) (name : Identifier)
 private theorem kk_schritt (P : Plattform) (u : UnitMitSchranken) (hw : HwLauf) (t : Nat)
     (s : Zustand) (b : Befehl)
     (normal : (hw.angebot t).crash = false) (bereit : KannSchreiten hw t eintritt s)
-    (kopf : (einheitMitSchranken P u).system.kopf s eintritt = some b) (privat : b.Privat) :
+    (kopf : (einheitMitSchranken P u).system.kopf s eintritt = some b) (lr : b.klasse = .lokal ∨ b.klasse = .ruf) :
     Lauffolge (einheitMitSchranken P u) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
-      (some (b.nach eintritt s)) :=
-  .schritt (.kontext normal bereit
-    ⟨b, kopf, (b.impl_privat privat eintritt s () [Semantik.plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
-    (b.vollzug _ t eintritt s))
+      (some (b.nach eintritt s)) := by
+  have privat : b.Privat := lr.elim Or.inl (fun h => Or.inr (Or.inl h))
+  have run := b.vollzug (einheitMitSchranken P u).einrichtung t eintritt s privat
+  rw [b.maschinennach_lokal_ruf lr] at run
+  exact .schritt (.kontext normal bereit
+    ⟨b, kopf, (b.impl_privat privat eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩ run)
 
 /-- The plain clause table of the counterexample unit is empty. -/
 private theorem kk_klauseln : (programm kkBaum).klauseln = .leer := by
   rfl
 
-/-- Every instruction of the counterexample code is frame-only. -/
-private theorem kk_rein : (programm kkBaum).Rein := by
+/-- The counterexample code uses only local operations and calls. -/
+private theorem kk_lokal_ruf : ∀ b ∈ (programm kkBaum).code, b.klasse = .lokal ∨ b.klasse = .ruf := by
   intro b hb
   cases b <;>
     simp only [programm, unitBody, decl, functionCode, bracedBlock, block, functionInstruction,
@@ -84,8 +86,11 @@ private theorem kk_rein : (programm kkBaum).Rein := by
       List.filterMap_cons, List.filterMap_nil, List.map_cons, List.map_nil,
       List.mem_append, List.mem_singleton, List.mem_nil_iff, List.mem_cons, List.not_mem_nil,
       Nat.sub_self, Nat.add_zero, or_false, false_or, or_true, true_or, reduceCtorEq,
-      Befehl.Privat, Befehl.klasse] at hb ⊢
+      Befehl.klasse] at hb ⊢
   all_goals contradiction
+
+private theorem kk_rein : (programm kkBaum).Rein :=
+  fun b mem => (kk_lokal_ruf b mem).elim Or.inl (fun h => Or.inr (Or.inl h))
 
 /-- No instruction of the counterexample code has a guard. -/
 private theorem kk_guard : ∀ b ∈ (programm kkBaum).code, ∀ frame, b.guard frame = none := by
@@ -112,8 +117,8 @@ private theorem kk_akzeptiert : Akzeptiert (einheitMitSchranken Plattform.x86_64
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, head, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
-        (kk_rein b (kopf_mem (code := p.code) head))
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (kk_lokal_ruf b (kopf_mem (code := p.code) head))
+        (w := w) transfer execute
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [], (List.append_nil _).symm,
         fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
@@ -121,7 +126,7 @@ private theorem kk_akzeptiert : Akzeptiert (einheitMitSchranken Plattform.x86_64
   · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert,
       fun s c i hkopf t c' sv u sv' w q spur himpl haus => ?_⟩
     have memb : i ∈ p.code := kopf_mem hkopf
-    obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus (kk_rein i memb)
+    obtain ⟨rfl, _⟩ := i.vollzug_genau (kk_lokal_ruf i memb) (w := w) himpl haus
     exact spurRespektiert_leer _ _ _
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧
@@ -203,20 +208,21 @@ private theorem kk_lauf :
   have kopf3 : E.system.kopf z₃ eintritt = some b2 := by rfl
   have kopf4 : E.system.kopf z₄ eintritt = some b3 := by rfl
   have kopf5 : E.system.kopf z₅ eintritt = some b4 := by rfl
-  have priv (b : Befehl) (mem : b ∈ p.code) : b.Privat := kk_rein b (by simpa only [p] using mem)
+  have lr (b : Befehl) (mem : b ∈ p.code) : b.klasse = .lokal ∨ b.klasse = .ruf :=
+    kk_lokal_ruf b (by simpa only [p] using mem)
   let spur : SchrittSpur Zelle Int := ⟨[], []⟩
   have s0 : Lauffolge E hw 0 (some z₀) (.kontext eintritt (), spur) (some z₁) :=
-    kk_schritt platform kkUnit hw 0 z₀ b0 rfl ⟨0, rfl, rfl, rfl⟩ kopf0 (priv b0 (List.mem_of_getElem? e0))
+    kk_schritt platform kkUnit hw 0 z₀ b0 rfl ⟨0, rfl, rfl, rfl⟩ kopf0 (lr b0 (List.mem_of_getElem? e0))
   have s1 : Lauffolge E hw 1 (some z₁) (.kontext eintritt (), spur) (some z₂) :=
-    kk_schritt platform kkUnit hw 1 z₁ b5 rfl ⟨0, rfl, rfl, rfl⟩ kopf1 (priv b5 (List.mem_of_getElem? e5))
+    kk_schritt platform kkUnit hw 1 z₁ b5 rfl ⟨0, rfl, rfl, rfl⟩ kopf1 (lr b5 (List.mem_of_getElem? e5))
   have s2 : Lauffolge E hw 2 (some z₂) (.kontext eintritt (), spur) (some z₃) :=
-    kk_schritt platform kkUnit hw 2 z₂ b1 rfl ⟨0, rfl, rfl, rfl⟩ kopf2 (priv b1 (List.mem_of_getElem? e1))
+    kk_schritt platform kkUnit hw 2 z₂ b1 rfl ⟨0, rfl, rfl, rfl⟩ kopf2 (lr b1 (List.mem_of_getElem? e1))
   have s3 : Lauffolge E hw 3 (some z₃) (.kontext eintritt (), spur) (some z₄) :=
-    kk_schritt platform kkUnit hw 3 z₃ b2 rfl ⟨0, rfl, rfl, rfl⟩ kopf3 (priv b2 (List.mem_of_getElem? e2))
+    kk_schritt platform kkUnit hw 3 z₃ b2 rfl ⟨0, rfl, rfl, rfl⟩ kopf3 (lr b2 (List.mem_of_getElem? e2))
   have s4 : Lauffolge E hw 4 (some z₄) (.kontext eintritt (), spur) (some z₅) :=
-    kk_schritt platform kkUnit hw 4 z₄ b3 rfl ⟨0, rfl, rfl, rfl⟩ kopf4 (priv b3 (List.mem_of_getElem? e3))
+    kk_schritt platform kkUnit hw 4 z₄ b3 rfl ⟨0, rfl, rfl, rfl⟩ kopf4 (lr b3 (List.mem_of_getElem? e3))
   have s5 : Lauffolge E hw 5 (some z₅) (.kontext eintritt (), spur) (some z₆) :=
-    kk_schritt platform kkUnit hw 5 z₅ b4 rfl ⟨0, rfl, rfl, rfl⟩ kopf5 (priv b4 (List.mem_of_getElem? e4))
+    kk_schritt platform kkUnit hw 5 z₅ b4 rfl ⟨0, rfl, rfl, rfl⟩ kopf5 (lr b4 (List.mem_of_getElem? e4))
   obtain ⟨rest, ende⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw (t + 6)) (some z₆)
   let ab5 := voran (schritt := fun t => Lauffolge E hw (t + 5)) rest (some z₅)
     (.kontext eintritt (), spur) (ende.symm ▸ s5)

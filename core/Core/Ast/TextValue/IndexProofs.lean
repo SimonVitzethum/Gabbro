@@ -281,7 +281,7 @@ theorem textIndexRegelSicher : TextIndexRegelSicherAussage := by
 
 theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
   intro scope platform args form t c s choice stepPlan u spur next head impl execute
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan
@@ -296,7 +296,7 @@ theorem textIndexRegelAntwortSicher : TextIndexRegelAntwortSicherAussage := by
 
 theorem textIndexKostenUndSpur : TextIndexKostenUndSpurAussage := by
   intro scope platform args form t c s choice stepPlan u spur next head impl execute
-  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (w := choice) impl execute
+  obtain ⟨rfl, rfl⟩ := ((textIndexForm scope).befehl args).vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   have same : [stepPlan] = [plan] := impl.1
   have eqPlan : stepPlan = plan := (List.cons.inj same).1
   subst stepPlan

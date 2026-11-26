@@ -189,6 +189,7 @@ theorem speicherGraphInvariant : SpeicherGraphInvariantAussage := by
                     | verbinde => exact Or.inl rfl
                     | beende => exact Or.inl rfl
                     | wechsle => exact Or.inl rfl
+                    | maskiere | prioritaet | sende | leite => exact Or.inl rfl
                   rcases haussen with hleer | ⟨_q, hfrag⟩
                   · rw [hleer]
                     intro e he

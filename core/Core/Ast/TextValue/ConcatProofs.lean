@@ -196,7 +196,7 @@ theorem textConcatRegelAntwortSicher : TextConcatRegelAntwortSicherAussage := by
   let b := form.befehl args
   have hplan : stepPlan = plan := (List.cons.inj rule.1).1
   subst stepPlan
-  obtain ⟨rfl, _⟩ := b.vollzug_genau (w := choice) rule execute
+  obtain ⟨rfl, _⟩ := b.vollzug_genau (h := Or.inl rfl) (w := choice) rule execute
   constructor
   · intro answer same
     cases same
@@ -209,7 +209,7 @@ theorem textConcatKostenUndSpur : TextConcatKostenUndSpurAussage := by
   intro t c s choice stepPlan u spur next head rule execute
   let form := textConcatForm scope
   let b := form.befehl args
-  obtain ⟨rfl, _⟩ := b.vollzug_genau (w := choice) rule execute
+  obtain ⟨rfl, _⟩ := b.vollzug_genau (h := Or.inl rfl) (w := choice) rule execute
   refine ⟨rfl, rfl, ?_⟩
   change 0 + [stepPlan].length = 1
   rfl

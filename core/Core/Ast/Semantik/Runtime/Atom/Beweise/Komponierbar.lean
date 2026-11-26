@@ -37,9 +37,9 @@ theorem zugriffsschritt_rahmen (F : Schrittform) (c : Kontext) (s u : Zustand) {
     (h : F.zugriffsschritt c s [p] u) : Zustandsrahmen s u := by
   rcases h with ⟨_, _, hu⟩ | ⟨_, _, _, _, hu⟩
   · subst u
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · subst u
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Every label a class step puts into its read list is a reading label: a load records `.lesen`, an
     update records `.rmw` or the failed compare-and-swap's `.lesen`, a store, lock, question and private
@@ -114,19 +114,19 @@ theorem zugriffsschritt_liest (F : Schrittform) (c : Kontext) (s u : Zustand) {p
       cases hl
     | maskiere =>
       intro l hl
-      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
       cases hl
     | prioritaet =>
       intro l hl
-      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
       cases hl
     | sendeUnterbrechung =>
       intro l hl
-      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
       cases hl
     | leiteLeitung =>
       intro l hl
-      simp only [Wirkungsklasse.plan, Semantik.plan] at hl
+      simp only [Wirkungsklasse.plan, planMit] at hl
       cases hl
 
 /-- **Composability of the accepted steps of an access instruction** (`ZugriffKomponierbarAussage`).

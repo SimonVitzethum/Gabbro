@@ -22,9 +22,11 @@ namespace Gabbro.Core.Ast.Semantik
 /-- **A fragment is frame-only**: every instruction of its code is frame-only. -/
 def Fragment.Rein (p : Fragment) : Prop := ∀ b ∈ p.code, b.Privat
 
-theorem Fragment.rein_leer : Fragment.leer.Rein := fun _ hb => absurd hb List.not_mem_nil
+def Fragment.alle (p : Fragment) (P : Befehl → Prop) : Prop := ∀ b ∈ p.code, P b
 
-theorem Fragment.rein_einzel_iff (b : Befehl) : (Fragment.einzel b).Rein ↔ b.Privat := by
+theorem Fragment.alle_leer (P : Befehl → Prop) : Fragment.leer.alle P := fun _ hb => absurd hb List.not_mem_nil
+
+theorem Fragment.alle_einzel_iff (P : Befehl → Prop) (b : Befehl) : (Fragment.einzel b).alle P ↔ P b := by
   constructor
   · intro h
     exact h b (List.mem_singleton_self b)
@@ -32,30 +34,43 @@ theorem Fragment.rein_einzel_iff (b : Befehl) : (Fragment.einzel b).Rein ↔ b.P
     rw [List.mem_singleton.mp hx]
     exact h
 
-theorem Fragment.rein_anhaengen_iff (a b : Fragment) : (a.anhaengen b).Rein ↔ a.Rein ∧ b.Rein := by
+theorem Fragment.alle_anhaengen_iff (P : Befehl → Prop) (a b : Fragment) :
+    (a.anhaengen b).alle P ↔ a.alle P ∧ b.alle P := by
   constructor
   · intro h
     exact ⟨fun x hx => h x (List.mem_append.mpr (Or.inl hx)), fun x hx => h x (List.mem_append.mpr (Or.inr hx))⟩
   · intro h x hx
     exact (List.mem_append.mp hx).elim (h.1 x) (h.2 x)
 
-theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein := by
+theorem Fragment.rein_leer : Fragment.leer.Rein := Fragment.alle_leer _
+
+theorem Fragment.rein_einzel_iff (b : Befehl) : (Fragment.einzel b).Rein ↔ b.Privat :=
+  Fragment.alle_einzel_iff _ b
+
+theorem Fragment.rein_anhaengen_iff (a b : Fragment) : (a.anhaengen b).Rein ↔ a.Rein ∧ b.Rein :=
+  Fragment.alle_anhaengen_iff _ a b
+
+theorem expr_lokal_ruf (slot : Nat) (tree : Expr scope type) :
+    (expr slot tree).alle (fun b => b.klasse = .lokal ∨ b.klasse = .ruf) := by
   refine @Expr.rec scope
-    (fun _ t => ∀ i, (expr i t).Rein)
-    (fun _ t => ∀ i, (itemCode i t).Rein)
-    (fun _ _ t => ∀ i, (labeledCode i t).Rein)
-    (fun _ t => ∀ i, (caseCode i t).Rein)
+    (fun _ t => ∀ i, (expr i t).alle (fun b => b.klasse = .lokal ∨ b.klasse = .ruf))
+    (fun _ t => ∀ i, (itemCode i t).alle (fun b => b.klasse = .lokal ∨ b.klasse = .ruf))
+    (fun _ _ t => ∀ i, (labeledCode i t).alle (fun b => b.klasse = .lokal ∨ b.klasse = .ruf))
+    (fun _ t => ∀ i, (caseCode i t).alle (fun b => b.klasse = .lokal ∨ b.klasse = .ruf))
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ type tree slot
   all_goals
     intros
-    simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.rein_leer, Fragment.rein_einzel_iff,
-      Fragment.rein_anhaengen_iff, true_and, and_true]
+    simp_all only [expr, itemCode, labeledCode, caseCode, Fragment.alle_leer, Fragment.alle_einzel_iff,
+      Fragment.alle_anhaengen_iff, true_and, and_true]
   all_goals
     repeat' first
       | exact Or.inl rfl
-      | exact Or.inr (Or.inl rfl)
+      | exact Or.inr rfl
       | refine ⟨?_, ?_⟩
+
+theorem expr_rein (slot : Nat) (tree : Expr scope type) : (expr slot tree).Rein :=
+  fun b mem => (expr_lokal_ruf slot tree b mem).elim Or.inl (fun h => Or.inr (Or.inl h))
 
 /-- A binding statement is frame-only. -/
 theorem stmt_letValue_rein (name : Identifier) (ordinary : name.val ≠ "mut".toList) (value : Expr scope type) :

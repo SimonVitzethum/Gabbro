@@ -167,7 +167,7 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
   let n₂ : State := { u₂.frage e₂ with graph := g₂ }
   have aus₂ : FuehrtSchrittAus (d.unit locals).einrichtung t c s₂ u₂ plan spur₂ n₂ := by
     refine ⟨?_, ?_, ?_⟩
-    · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    · constructor <;> rfl
     · intro l hl
       rw [hplanF] at hl
       cases hl
@@ -305,7 +305,7 @@ theorem geraete_consume_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.
   let n₂ : State := u₂.verbrauche c
   have aus₂ : FuehrtSchrittAus (d.unit locals).einrichtung t c s₂ u₂ plan spur₂ n₂ := by
     refine ⟨?_, ?_, ?_⟩
-    · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    · constructor <;> rfl
     · intro l hl
       rw [hplanF] at hl
       cases hl

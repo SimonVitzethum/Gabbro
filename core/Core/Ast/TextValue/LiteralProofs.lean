@@ -118,7 +118,7 @@ theorem textLiteralRegelAntwortSicher : TextLiteralRegelAntwortSicherAussage := 
   let form := textLiteralForm scope
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
-  have hspur := b.vollzug_genau (w := choice) impl execute
+  have hspur := b.vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   have hplan : stepPlan = plan := (List.cons.inj impl.1).1
   constructor
   · intro answer eq
@@ -136,7 +136,7 @@ theorem textLiteralKostenUndSpur : TextLiteralKostenUndSpurAussage := by
   let form := textLiteralForm scope
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
-  have hspur := b.vollzug_genau (w := choice) impl execute
+  have hspur := b.vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   rw [hspur.1]
   constructor
   · rfl

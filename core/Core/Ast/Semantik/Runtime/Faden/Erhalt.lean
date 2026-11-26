@@ -24,12 +24,17 @@ namespace Gabbro.Core.Maschine
 
 variable {L Ort Wert Raum Lok Grund Bedingung : Type}
 
-/-- **A still action**: the internal action or a lifecycle action. It records no lock event and no outside event. -/
+/-- **A still action**: the internal action, a lifecycle action or an interrupt-control action.
+    It records no lock event and no outside event. -/
 def Aktion.Still : Aktion L Bedingung → Prop
   | .starte => True
   | .verbinde _ => True
   | .beende => True
   | .wechsle _ _ => True
+  | .maskiere _ _ => True
+  | .prioritaet _ => True
+  | .sende _ _ => True
+  | .leite _ _ _ => True
   | .intern => True
   | .warte _ => False
   | .sperre _ _ => False
@@ -52,6 +57,10 @@ def Aktion.Ausfuehrbar (s u : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
   | .wechsle kern kind =>
     ((s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none) ∧ s.status kind = .laeuft ∧
       (∀ k, (s.kerne k).laeuft ≠ some kind) ∧ kind ≠ c
+  | .maskiere _ _ => True
+  | .prioritaet _ => True
+  | .sende _ _ => True
+  | .leite _ _ _ => True
   | .warte _ => False
   | .sperre _ _ => False
   | .frage _ => False
@@ -82,6 +91,10 @@ theorem FuehrtAus.still_erhaelt {a : Aktion L Bedingung} {sperren : List (Speich
   | verbinde _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | beende _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | wechsle _ _ _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | maskiere _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | prioritaet _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | sende _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | leite _ _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- **A start, exactly**: the thread with the next number runs, the counter is one higher, the acting context
     is recorded as its creator, no other status and no other creator entry changes. -/
@@ -162,5 +175,49 @@ theorem FuehrtAus.verbinde_genau {kind sperren ereignisse}
   cases h with
   | verbinde _ erz =>
     refine ⟨erz, Function.update_self _ _ _, fun d hd => Function.update_of_ne hd _ _⟩
+
+/-- **A mask step, exactly** (MK-20): on a core running the acting context the mask bit is set;
+    the other vectors of that core keep their bits. -/
+theorem FuehrtAus.maskiere_genau {vektor aus sperren ereignisse}
+    (h : FuehrtAus e t c s u (.maskiere vektor aus) sperren ereignisse v) {k : Kern}
+    (lauf : (s.kerne k).laeuft = some c) :
+    (v.kerne k).maske vektor = aus ∧
+      ∀ vektor', vektor' ≠ vektor → (v.kerne k).maske vektor' = (u.kerne k).maske vektor' := by
+  cases h
+  show ((dite ((s.kerne k).laeuft = some c)
+      (fun _ => { u.kerne k with maske := Function.update (u.kerne k).maske vektor aus })
+      (fun _ => u.kerne k)).maske vektor = aus) ∧
+    (∀ vektor', vektor' ≠ vektor →
+      (dite ((s.kerne k).laeuft = some c)
+        (fun _ => { u.kerne k with maske := Function.update (u.kerne k).maske vektor aus })
+        (fun _ => u.kerne k)).maske vektor' = (u.kerne k).maske vektor')
+  rw [dif_pos lauf]
+  exact ⟨Function.update_self _ _ _, fun _ hne => Function.update_of_ne hne _ _⟩
+
+/-- **A threshold step, exactly** (MK-20): on a core running the acting context the threshold is set. -/
+theorem FuehrtAus.prioritaet_genau {grenze sperren ereignisse}
+    (h : FuehrtAus e t c s u (.prioritaet grenze) sperren ereignisse v) {k : Kern}
+    (lauf : (s.kerne k).laeuft = some c) :
+    (v.kerne k).untergrenze = grenze := by
+  cases h
+  show (dite ((s.kerne k).laeuft = some c)
+    (fun _ => { u.kerne k with untergrenze := grenze })
+    (fun _ => u.kerne k)).untergrenze = grenze
+  rw [dif_pos lauf]
+
+/-- **A send step, exactly** (MK-20): the raised vector for the target core is appended to the
+    software queue. -/
+theorem FuehrtAus.sende_genau {vektor kern sperren ereignisse}
+    (h : FuehrtAus e t c s u (.sende vektor kern) sperren ereignisse v) :
+    v.software = u.software ++ [(kern, .maskierbar vektor 0)] := by
+  cases h
+  rfl
+
+/-- **A route step, exactly** (MK-20): the line maps to its target core and priority. -/
+theorem FuehrtAus.leite_genau {leitung kern prioritaet sperren ereignisse}
+    (h : FuehrtAus e t c s u (.leite leitung kern prioritaet) sperren ereignisse v) :
+    v.leitung leitung = (kern, prioritaet) := by
+  cases h
+  exact Function.update_self _ _ _
 
 end Gabbro.Core.Maschine

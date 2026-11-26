@@ -42,6 +42,8 @@ structure Zustand.NurFaden (a b : Zustand) : Prop where
   verworfen : a.verworfen = b.verworfen
   naechsterFaden : a.naechsterFaden = b.naechsterFaden
   erzeuger : a.erzeuger = b.erzeuger
+  software : a.software = b.software
+  leitung : a.leitung = b.leitung
   umfang : a.buchung.umfang = b.buchung.umfang
   adresse : a.buchung.adresse = b.buchung.adresse
   schreibt : a.buchung.schreibt = b.buchung.schreibt
@@ -55,7 +57,7 @@ theorem Zustand.NurFaden.refl (s : Zustand) : s.NurFaden s := by
 /-- A lifecycle step keeps the framed fields the protocol keeps: it is a `Zustandsrahmen`. -/
 theorem Zustand.NurFaden.rahmen {a b : Zustand} (h : a.NurFaden b) : Zustandsrahmen b a :=
   ⟨h.graph, h.kerne, h.sperren, h.fragen, h.antworten, h.verbraucht, h.verlauf, h.geliefert, h.initial,
-    h.persistenz, h.epoche, h.verworfen, h.naechsterFaden, h.erzeuger⟩
+    h.persistenz, h.epoche, h.verworfen, h.naechsterFaden, h.erzeuger, h.software, h.leitung⟩
 
 /-- The refusal of an access changes only the acting frame. -/
 theorem Schrittform.verweigert_nurFaden (F : Schrittform) (c : Kontext) (s : Zustand) :

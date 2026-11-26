@@ -78,6 +78,10 @@ theorem FuehrtAus_initial {L Ort Wert Raum Lok Grund Bedingung : Type} [Decidabl
   | verbinde _ _ => exact rahmen.initial
   | beende _ => exact rahmen.initial
   | wechsle _ _ _ _ => exact rahmen.initial
+  | maskiere _ _ => exact rahmen.initial
+  | prioritaet _ => exact rahmen.initial
+  | sende _ _ => exact rahmen.initial
+  | leite _ _ _ => exact rahmen.initial
 
 /-- A command step of the elaborated code carries every declared predicate to the cut state:
     frame-only heads go through the footprint rule the checker decides, every other head

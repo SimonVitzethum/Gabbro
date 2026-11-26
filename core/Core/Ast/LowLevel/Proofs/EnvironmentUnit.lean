@@ -115,7 +115,8 @@ theorem environmentUnit_annahme : environmentUnitForm.AnnahmeAussage := by
   · rintro s c ⟨op, operands⟩ head guard
     exact ⟨c, environmentUnitForm.befehl args, head, guard⟩
   · intro t c s w stepPlan u spur next step execute ev
-    obtain ⟨rfl, _⟩ := (environmentUnitForm.befehl args).vollzug_genau (w := w) step execute
+    obtain ⟨rfl, _⟩ := (environmentUnitForm.befehl args).vollzug_genau_privat
+      (environmentUnitForm.privat args) (w := w) step execute
     exact List.not_mem_nil
 
 theorem environmentUnit_ideal : environmentUnitForm.IdealAussage := by

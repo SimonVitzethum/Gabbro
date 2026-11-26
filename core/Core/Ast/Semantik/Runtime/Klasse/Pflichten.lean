@@ -207,10 +207,11 @@ theorem Schrittform.ideal_total (F : Schrittform) (c : Kontext) (s : Zustand) (w
   cases k with
   | lokal => exact ⟨[Semantik.plan], _, rfl, rfl⟩
   | ruf => exact ⟨[Semantik.plan], _, rfl, rfl⟩
-  | maskiere => exact ⟨[Semantik.plan], _, rfl, rfl⟩
-  | prioritaet => exact ⟨[Semantik.plan], _, rfl, rfl⟩
-  | sendeUnterbrechung => exact ⟨[Semantik.plan], _, rfl, rfl⟩
-  | leiteLeitung => exact ⟨[Semantik.plan], _, rfl, rfl⟩
+  | maskiere => exact ⟨[Schrittform.plan ⟨.maskiere, o, t⟩ (s.lokal c) 0], _, rfl, rfl⟩
+  | prioritaet => exact ⟨[Schrittform.plan ⟨.prioritaet, o, t⟩ (s.lokal c) 0], _, rfl, rfl⟩
+  | sendeUnterbrechung =>
+    exact ⟨[Schrittform.plan ⟨.sendeUnterbrechung, o, t⟩ (s.lokal c) 0], _, rfl, rfl⟩
+  | leiteLeitung => exact ⟨[Schrittform.plan ⟨.leiteLeitung, o, t⟩ (s.lokal c) 0], _, rfl, rfl⟩
   | lesen m => exact Schrittform.zugriffsschritt_total ⟨.lesen m, o, t⟩ c s
   | schreiben m => exact Schrittform.zugriffsschritt_total ⟨.schreiben m, o, t⟩ c s
   | rmw m => exact Schrittform.zugriffsschritt_total ⟨.rmw m, o, t⟩ c s
@@ -235,6 +236,15 @@ theorem Befugt.privat {ι : Type} {E : Klasseneinheit ι} {s : Zustand} {c : Kon
   subst h
   exact ⟨fun _ hx => (List.not_mem_nil hx).elim, fun _ hl => (List.not_mem_nil hl).elim⟩
 
+/-- A plan with no footprint needs no authority: reads and writes are vacuous. -/
+theorem Befugt.leer {ι : Type} {E : Klasseneinheit ι} {s : Zustand} {c : Kontext} {p : Plan}
+    (hlesen : p.lesen = []) (hfuss : p.fuss = []) : Befugt E s c p := by
+  refine ⟨fun x hx => ?_, fun l hl => ?_⟩
+  · rw [hfuss] at hx
+    exact (List.not_mem_nil hx).elim
+  · rw [hlesen] at hl
+    exact (List.not_mem_nil hl).elim
+
 /-- **Every ideal step of every class covers its footprint by authority.** -/
 theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F : Schrittform}
     (emb : F.Eingebettet E f) (c : Kontext) (s : Zustand) (w : PUnit.{1}) (p : Plan) (u : Zustand)
@@ -243,10 +253,23 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
   cases k with
   | lokal => exact Befugt.privat (List.cons.inj step.1).1
   | ruf => exact Befugt.privat (List.cons.inj step.1).1
-  | maskiere => exact Befugt.privat (List.cons.inj step.1).1
-  | prioritaet => exact Befugt.privat (List.cons.inj step.1).1
-  | sendeUnterbrechung => exact Befugt.privat (List.cons.inj step.1).1
-  | leiteLeitung => exact Befugt.privat (List.cons.inj step.1).1
+  | maskiere =>
+    have hp : p = Schrittform.plan ⟨.maskiere, o, t⟩ (s.lokal c) 0 := (List.cons.inj step.1).1
+    subst hp
+    exact Befugt.leer rfl rfl
+  | prioritaet =>
+    have hp : p = Schrittform.plan ⟨.prioritaet, o, t⟩ (s.lokal c) 0 := (List.cons.inj step.1).1
+    subst hp
+    exact Befugt.leer rfl rfl
+  | sendeUnterbrechung =>
+    have hp : p = Schrittform.plan ⟨.sendeUnterbrechung, o, t⟩ (s.lokal c) 0 :=
+      (List.cons.inj step.1).1
+    subst hp
+    exact Befugt.leer rfl rfl
+  | leiteLeitung =>
+    have hp : p = Schrittform.plan ⟨.leiteLeitung, o, t⟩ (s.lokal c) 0 := (List.cons.inj step.1).1
+    subst hp
+    exact Befugt.leer rfl rfl
   | lesen m =>
     rcases step with ⟨_, same, _⟩ | ⟨g, v, _, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1
@@ -373,7 +396,8 @@ theorem leerzustand_griff (c : Kontext) (slot offset : Nat) :
     that names the cell `0` of region `0` plans an access at the empty state, where no context holds a
     handle, so the planned access is covered by no authority. -/
 theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk : k.gesichert = true)
-    (o : Rahmen → Operand) (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner, 0⟩)
+    (o : Rahmen → Operand)
+    (ho : ∀ r, o r = ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner, 0, Unterbrechungsoperand.keiner⟩)
     (t : Rahmen → (Nat → Bool) → Int → Rahmen) :
     ¬ RegelLokal (Regeleinheit platform (Schrittform.ungeschuetzt ⟨k, o, t⟩)) () := by
   intro h
@@ -422,7 +446,8 @@ theorem ungeschuetzt_nicht_lokal (platform : Plattform) (k : Wirkungsklasse) (hk
 theorem klassenNichtTrivial (k : Wirkungsklasse) : KlassenNichtTrivialAussage k := by
   refine ⟨⟨.x86_64, ⟨k, fun _ => Operand.keiner, fun r _ _ => r⟩, rfl, rfl, rfl, rfl⟩, ?_⟩
   intro hk
-  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner, 0⟩, fun r _ _ => r⟩, rfl,
+  exact ⟨.x86_64, ⟨k, fun _ => ⟨.region 0 0, 0, 0, none, .tausche, Fadenoperand.keiner, 0,
+    Unterbrechungsoperand.keiner⟩, fun r _ _ => r⟩, rfl,
     ungeschuetzt_nicht_lokal .x86_64 k hk _ (fun _ => rfl) _⟩
 
 end Gabbro.Core.Ast.Semantik

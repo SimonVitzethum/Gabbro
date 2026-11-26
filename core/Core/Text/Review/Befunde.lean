@@ -94,13 +94,13 @@ theorem textKostenUndSpur_allQuellformen {category : Gabbro.Core.Ast.Category} {
     TextInstructionCost (form.fragment args) platform (form.befehl args) := by
   intro t c s choice stepPlan u spur next head step execute
   have transfer := ((form.befehl args).impl_privat (form.privat args) c s choice [stepPlan] u).1 step
-  have planEq : stepPlan = plan := by
-    have h : [stepPlan] = [plan] := transfer.1
+  have planEq : stepPlan = (form.befehl args).plan (s.lokal c) 0 := by
+    have h : [stepPlan] = [(form.befehl args).plan (s.lokal c) 0] := transfer.1
     exact (List.cons.inj h).1
   subst stepPlan
   have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
-  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute (form.privat args)
+  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau_privat (form.privat args) (w := choice) step execute
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   rfl
@@ -112,18 +112,22 @@ theorem antwortSicher_allQuellformen {category : Gabbro.Core.Ast.Category} {Argu
       (form.fragment args) platform (form.befehl args) := by
   intro t c s choice stepPlan u spur next head step execute
   have transfer := ((form.befehl args).impl_privat (form.privat args) c s choice [stepPlan] u).1 step
-  have planEq : stepPlan = plan := by
-    have h : [stepPlan] = [plan] := transfer.1
+  have planEq : stepPlan = (form.befehl args).plan (s.lokal c) 0 := by
+    have h : [stepPlan] = [(form.befehl args).plan (s.lokal c) 0] := transfer.1
     exact (List.cons.inj h).1
   subst stepPlan
   have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
-  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute (form.privat args)
+  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau_privat (form.privat args) (w := choice) step execute
   subst spur
   constructor
   · intro answer h
-    simp only [plan] at h
-    cases h
+    rcases (form.befehl args).plan_privat_aktion (form.privat args) (s.lokal c) with h1|⟨v1,a1,h1⟩|⟨g1,h1⟩|⟨v2,k2,h1⟩|⟨l3,k3,p3,h1⟩
+    · rw [h1] at h; cases h
+    · rw [h1] at h; cases h
+    · rw [h1] at h; cases h
+    · rw [h1] at h; cases h
+    · rw [h1] at h; cases h
   · intro answer h
     exact List.not_mem_nil h
 

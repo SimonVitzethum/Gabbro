@@ -131,7 +131,8 @@ theorem kontextSchritt_sperren_e {t c s u} {plan : SchrittPlan L Ort Wert Beding
     rw [hplan] at haus
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)
-  | .starte | .verbinde _ | .beende | .wechsle _ _ =>
+  | .starte | .verbinde _ | .beende | .wechsle _ _ | .maskiere _ _ | .prioritaet _
+  | .sende _ _ | .leite _ _ _ =>
     rw [hplan] at haus
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)

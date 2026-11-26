@@ -29,13 +29,20 @@ theorem sperr_schritt_erfuellbar (c d : Kontext) :
       SperrSchritt .geben c ⟨some c, [d]⟩ ⟨some d, []⟩ :=
   ⟨.ticket (fun h => nomatch h) List.not_mem_nil, .nehmen (.frei c [d]), .geben (.besitzer c [d])⟩
 
-/-- **The protocol actions of a step.** The first six are the lock, question and handler protocol. The four
-    last ones are the thread lifecycle (MK-07):
+/-- **The protocol actions of a step.** The first six are the lock, question and handler protocol. The
+    next four are the thread lifecycle (MK-07):
     * `starte`: start the thread `faden naechsterFaden`, which rests, and advance the counter;
     * `verbinde kind`: join the context `kind`, which has ended and which the acting context started;
     * `beende`: end the acting thread (the form records its outcome in its own status);
     * `wechsle kern kind`: run the running context `kind` on the core `kern`, which the acting context
-      holds or which is idle (a core start). -/
+      holds or which is idle (a core start).
+    The last four are the interrupt-control actions (MK-20): a form step of the matching class plans
+    exactly one of them, and the machine applies the named per-core effect, pending send or routing:
+    * `maskiere vektor aus`: set the mask bit of `vektor` to `aus` on every core running the acting
+      context (vacuous when it runs nowhere);
+    * `prioritaet grenze`: set the priority threshold to `grenze` on the same cores;
+    * `sende vektor kern`: append the raised vector for the target core to the software queue;
+    * `leite leitung kern prioritaet`: map the line to its target core and priority. -/
 inductive Aktion (L Bedingung : Type) where
   | intern
   | warte (b : Bedingung)
@@ -47,6 +54,10 @@ inductive Aktion (L Bedingung : Type) where
   | verbinde (kind : Kontext)
   | beende
   | wechsle (kern : Kern) (kind : Kontext)
+  | maskiere (vektor : Nat) (aus : Bool)
+  | prioritaet (grenze : Nat)
+  | sende (vektor kern : Nat)
+  | leite (leitung kern prioritaet : Nat)
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where
@@ -109,8 +120,13 @@ structure Zustandsrahmen (s s' : Zustand L Ort Wert Raum Lok Grund) : Prop where
   /-- The thread counter is the machine's: a form never moves it (`FuehrtAus.starte` does). -/
   naechsterFaden : s'.naechsterFaden = s.naechsterFaden
   /-- The creator map is the machine's: a form never moves it (`FuehrtAus.starte` sets it,
-      `FuehrtAus.verbinde` clears the joined thread). -/
+       `FuehrtAus.verbinde` clears the joined thread). -/
   erzeuger : s'.erzeuger = s.erzeuger
+  /-- The software-interrupt queue is the machine's: a form never moves it (`FuehrtAus.sende`
+      appends the raised vector). -/
+  software : s'.software = s.software
+  /-- The routing table is the machine's: a form never moves it (`FuehrtAus.leite` maps the line). -/
+  leitung : s'.leitung = s.leitung
 
 variable (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
 
@@ -155,12 +171,37 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
   /-- **A thread end.** The form sets the outcome in the status of the acting thread. -/
   | beende {ausgang} (ende : u.status c = .beendet ausgang) : FuehrtAus t c s u .beende [] [] u
   /-- **A switch and a core start.** The acting context holds the core or the core is idle; the context
-      switched to runs, rests on no core and is no other than the acting one. The core then runs it. -/
+       switched to runs, rests on no core and is no other than the acting one. The core then runs it. -/
   | wechsle {kern kind} (frei : (s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none)
       (laeuft : s.status kind = .laeuft) (nirgends : ∀ k, (s.kerne k).laeuft ≠ some kind)
       (anders : kind ≠ c) :
       FuehrtAus t c s u (.wechsle kern kind) [] []
         { u with kerne := Function.update u.kerne kern { u.kerne kern with laeuft := some kind } }
+  /-- **Mask or unmask a vector where the acting context runs** (MK-20). The machine sets the mask bit
+      of `vektor` to `aus` on every core running the acting context; where it runs nowhere the state
+      is unchanged. The form supplies the frame and the private plan carrying this action. -/
+  | maskiere (vektor : Nat) (aus : Bool) :
+      FuehrtAus t c s u (.maskiere vektor aus) [] []
+        { u with kerne := fun k =>
+          if _ : (s.kerne k).laeuft = some c then
+            { u.kerne k with maske := Function.update (u.kerne k).maske vektor aus }
+          else u.kerne k }
+  /-- **Set the priority threshold where the acting context runs** (MK-20). -/
+  | prioritaet (grenze : Nat) :
+      FuehrtAus t c s u (.prioritaet grenze) [] []
+        { u with kerne := fun k =>
+          if _ : (s.kerne k).laeuft = some c then
+            { u.kerne k with untergrenze := grenze }
+          else u.kerne k }
+  /-- **Raise a vector on the target core** (MK-20). The machine appends the raised vector for `kern`
+      to the software queue; hardware delivery consumes hardware offers, the queue records the send. -/
+  | sende (vektor kern : Nat) :
+      FuehrtAus t c s u (.sende vektor kern) [] []
+        { u with software := u.software ++ [(kern, .maskierbar vektor 0)] }
+  /-- **Route a line to its target core and priority** (MK-20). -/
+  | leite (leitung kern prioritaet : Nat) :
+      FuehrtAus t c s u (.leite leitung kern prioritaet) [] []
+        { u with leitung := Function.update u.leitung leitung (kern, prioritaet) }
 
 /-- Physical opportunity, dispatch and a live context are required for a context step. -/
 def KannSchreiten (run : HwLauf) (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=

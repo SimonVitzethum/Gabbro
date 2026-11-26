@@ -320,54 +320,15 @@ theorem klassenKosten (k : Wirkungsklasse) :
           subst hplan
           rfl
         exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
-    | maskiere =>
-        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .maskiere hber, ?_⟩
+    | maskiere | prioritaet | sendeUnterbrechung | leiteLeitung =>
+        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort _ hber, ?_⟩
         intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l
-        obtain ⟨k', o, tr⟩ := F
-        have hk' : k' = .maskiere := hklasse
-        subst hk'
-        rcases hideal with ⟨hp, _⟩
-        have heq : plan.aktion = .intern := by
-          have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          subst hplan
-          rfl
-        exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
-    | prioritaet =>
-        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .prioritaet hber, ?_⟩
-        intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l
-        obtain ⟨k', o, tr⟩ := F
-        have hk' : k' = .prioritaet := hklasse
-        subst hk'
-        rcases hideal with ⟨hp, _⟩
-        have heq : plan.aktion = .intern := by
-          have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          subst hplan
-          rfl
-        exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
-    | sendeUnterbrechung =>
-        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .sendeUnterbrechung hber, ?_⟩
-        intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l
-        obtain ⟨k', o, tr⟩ := F
-        have hk' : k' = .sendeUnterbrechung := hklasse
-        subst hk'
-        rcases hideal with ⟨hp, _⟩
-        have heq : plan.aktion = .intern := by
-          have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          subst hplan
-          rfl
-        exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
-    | leiteLeitung =>
-        refine ⟨Wirkungsklasse.kostenZeile_halten_ohneSperrwort .leiteLeitung hber, ?_⟩
-        intro ι E f F hklasse hemb t c s u w plan spur nach hideal haus l
-        obtain ⟨k', o, tr⟩ := F
-        have hk' : k' = .leiteLeitung := hklasse
-        subst hk'
-        rcases hideal with ⟨hp, _⟩
-        have heq : plan.aktion = .intern := by
-          have hplan : plan = Semantik.plan := (List.cons.inj hp).1
-          subst hplan
-          rfl
-        exact FuehrtSchrittAus.sperren_erhalt haus (fun l a hsp => by rw [heq] at hsp; cases hsp) l
+        obtain ⟨k, o, tr⟩ := F
+        change k = _ at hklasse
+        subst k
+        obtain ⟨hp, _⟩ := hideal
+        have hplan := (List.cons.inj hp).1
+        exact FuehrtSchrittAus.sperren_erhalt haus (fun _ _ hsp => by rw [hplan] at hsp; cases hsp) l
 
 /-- Joint satisfiability of the cost statement: the static rows declare cost one, and the
     `lokal` class meets them. -/

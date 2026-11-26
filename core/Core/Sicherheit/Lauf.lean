@@ -96,7 +96,7 @@ private theorem aktion_sperrwechsel
       exact ⟨ops, rfl⟩
     · exact (wechselt (congrArg SperrZustand.besitzer (Function.update_of_ne gleich _ _)).symm).elim
   | intern | warte _ | frage _ | verbrauche _ | rueckkehr _ _ | starte _ | verbinde _ _ | beende _
-    | wechsle _ _ _ _ =>
+    | wechsle _ _ _ _ | maskiere _ _ | prioritaet _ | sende _ _ | leite _ _ _ =>
     exact (wechselt (congrArg SperrZustand.besitzer (congrFun rahmen.sperren l)).symm).elim
 
 /-- Only a lock action can hand off or otherwise change an owner. The form needs to

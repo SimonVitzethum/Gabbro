@@ -77,7 +77,7 @@ def schreibPlan : Plan := { ruhigerPlan with fuss := [()], schreibt := fun _ => 
 def schreibLabel : Etikett Unit Unit := ⟨.schreiben, (), .na, (), ()⟩
 
 theorem rahmen (z : Zustand) (b : Buchung Unit) : Zustandsrahmen z { z with buchung := b } :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem ausfuehren {z : Zustand} {form : Formular} {inv sicht t c vor u spur plan nach}
     (bereit : KannSchreiten (hardware sicht) t c vor)

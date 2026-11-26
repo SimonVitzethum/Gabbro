@@ -159,7 +159,7 @@ theorem textLength_regelAntwortSicher : TextLengthRegelAntwortSicherAussage := b
   intro t c s choice stepPlan u spur next head impl execute
   let form := textLengthForm scope
   let b := form.befehl args
-  obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
+  obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (h := Or.inl rfl) (w := choice) impl execute
   subst spur
   obtain ⟨same, _⟩ := impl
   cases (List.cons.inj same).1
@@ -177,7 +177,7 @@ theorem textLength_kostenUndSpur : TextLengthKostenUndSpurAussage := by
   intro t c s choice stepPlan u spur next head impl execute
   let form := textLengthForm scope
   let b := form.befehl args
-  obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (w := choice) impl execute
+  obtain ⟨spurEq, _⟩ := Befehl.vollzug_genau b (h := Or.inl rfl) (w := choice) impl execute
   cases spurEq
   refine ⟨rfl, rfl, ?_⟩
   simp only [Fragment.einheit, Nat.zero_add, List.length_cons, List.length_nil]

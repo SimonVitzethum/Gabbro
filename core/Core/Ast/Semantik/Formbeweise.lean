@@ -15,7 +15,7 @@ theorem Quellform.annahme (form : Quellform category Arguments) : form.AnnahmeAu
   · rintro s c ⟨op, operands⟩ head guard
     exact ⟨c, form.befehl args, head, guard⟩
   · intro t c s w stepPlan u spur next step execute ev
-    obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau (w := w) step execute
+    obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau_privat (form.privat args) (w := w) step execute
     exact List.not_mem_nil
 
 theorem Quellform.erhaltung (form : Quellform category Arguments)

@@ -57,6 +57,10 @@ theorem frageStelltKontext [DecidableEq L]
   | verbinde _ _ => exact (List.not_mem_nil hmem).elim
   | beende _ => exact (List.not_mem_nil hmem).elim
   | wechsle _ _ _ _ => exact (List.not_mem_nil hmem).elim
+  | maskiere _ _ => exact (List.not_mem_nil hmem).elim
+  | prioritaet _ => exact (List.not_mem_nil hmem).elim
+  | sende _ _ => exact (List.not_mem_nil hmem).elim
+  | leite _ _ _ => exact (List.not_mem_nil hmem).elim
 
 /-- The hosted form meets the authority obligation: both plans have empty footprints,
     so every read and write leg is vacuous. -/
