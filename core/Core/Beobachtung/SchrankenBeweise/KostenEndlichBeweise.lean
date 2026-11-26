@@ -152,13 +152,13 @@ theorem kostenSchrittKorrespondenz_ausEinrichtung
     (installs : ∀ (P : Plattform) (u : UnitMitSchranken) {h : Umgebung}
       {ρ : Lauf (einheitMitSchranken P u)}, Laeufe (einheitMitSchranken P u) h ρ →
       ∀ t s c b, ρ.zeit.zustand t = some s → (kostenGrenzen u.baum).ZustandGut s →
-        (s.lokal c).Aktiv → (programm u.baum).code[(s.lokal c).pc]? = some b →
+        (einheitMitSchranken P u).system.kopf s c = some b →
         KostenEinrichtung u.baum b (s.lokal c)) : KostenSchrittKorrespondenzAussage := by
   intro P u _ _ _ _ _ h ρ run
   have good (t : Nat) (s : Zustand) (cut : ρ.zeit.zustand t = some s) :=
     KostenGrenzen.lauf (g := kostenGrenzen u.baum) (programm u.baum) P
       (schrankenAusDeklaration u.deklaration) run
-      (fun t s c b cut ok active lookup => (installs P u run t s c b cut ok active lookup).gueltig) t cut
+      (fun t s c b cut ok head => (installs P u run t s c b cut ok head).gueltig) t cut
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro _ _ _ _ _ _ _ _ head
     exact kostenKopf_mem P u head

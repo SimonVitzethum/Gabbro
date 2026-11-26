@@ -78,7 +78,7 @@ private theorem ideal_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lo
      · exact faeden_gut ok install)
 
 private theorem kopf_position {code : List Befehl} (head : kopf code s c = some b) :
-    (s.lokal c).Aktiv ∧ code[(s.lokal c).pc]? = some b := by
+    code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
   cases hstatus : s.status c <;> rw [hstatus] at head
   case ruht => cases head
@@ -89,7 +89,7 @@ private theorem kopf_position {code : List Befehl} (head : kopf code s c = some 
     case none =>
       cases hstop : (s.lokal c).stopp <;> rw [hstop] at head
       case some => cases head
-      case none => exact ⟨⟨hstop, hreturn⟩, head⟩
+      case none => exact head
 
 
 /-- At every observed cut, all active and saved frames obey the cost limits if the
@@ -98,7 +98,7 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
     {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Katalog.Umgebung}
     (run : Laeufe { p.einheit P with schranken := bounds } h ρ)
     (installs : ∀ t s c b, ρ.zeit.zustand t = some s → g.ZustandGut s →
-      (s.lokal c).Aktiv → p.code[(s.lokal c).pc]? = some b → g.Einrichtung b (s.lokal c))
+      kopf p.code s c = some b → g.Einrichtung b (s.lokal c))
     (t : Nat) (cut : ρ.zeit.zustand t = some s) : g.ZustandGut s := by
   induction t generalizing s with
   | zero =>
@@ -130,9 +130,9 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
           cases step with
           | kontext _ _ rule effect =>
             obtain ⟨b, head, instruction⟩ := rule
-            obtain ⟨active, lookup⟩ := kopf_position head
-            have good := ideal_gut (w := PUnit.unit) ok (installs t _ _ _ before ok active lookup) instruction
-            obtain ⟨_, _, _, _, protocol, _, rfl⟩ := effect
+            have good := ideal_gut (w := PUnit.unit) ok (installs t _ _ _ before ok head) instruction
+            obtain ⟨_, _, _, _, protocol, _, after⟩ := effect
+            rw [after]
             cases protocol <;> exact good
           | antwort _ answer =>
             obtain ⟨_, _, _, after⟩ := answer
@@ -169,7 +169,8 @@ theorem kostenSchreiborte_lauf (p : Fragment) (P : Plattform)
     (run : Laeufe { p.einheit P with schranken := bounds } h ρ) (t : Nat)
     (cut : ρ.zeit.zustand t = some s) : (kostenSchreiborte p.code).ZustandGut s := by
   apply KostenGrenzen.lauf p P bounds run _ t cut
-  intro _ before c b _ _ _ head
+  intro _ before c b _ _ current
+  have head := kopf_position current
   cases b <;> simp only [KostenGrenzen.Einrichtung]
   all_goals try trivial
   case setzePasszahl src distance =>
