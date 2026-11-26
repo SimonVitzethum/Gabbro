@@ -51,24 +51,16 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
 
-/-- No lock-taking step exists for elaborated units: a frame-only head forces the private plan,
-    an access head the internal action (`Zugriffsform.ideal_aktion_intern`), so no step plans a lock. -/
+/-- Elaborated units plan only still actions, so no step plans a lock. -/
 theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit} {plan : Ast.Semantik.Plan}
     {l : Nat} {a : Maschine.SperrAktion}
     (h : (einheitVon P t).system.ISchritt c s w [plan] u)
     (hsperre : plan.aktion = Aktion.sperre l a) : False := by
-  obtain ⟨i, kopf, ideal⟩ := h
-  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) i
-      (Ast.Semantik.kopf_mem kopf) with hpriv | ⟨z, same⟩
-  · have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w [plan] u).mp ideal
-    have hplan : plan = Ast.Semantik.plan := (List.cons.inj same.1).1
-    subst hplan
-    cases hsperre
-  · subst same
-    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern (w := w) z ideal
-    rw [hakt] at hsperre
-    cases hsperre
+  obtain ⟨i, _, ideal⟩ := h
+  have still := i.impl_aktion_still ideal
+  rw [hsperre] at still
+  exact still
 
 /-- Every ready context of an elaborated unit offers a complete protocol step. A frame-only head
     steps by its template (`Befehl.vollzug`); an access head by the step the memory model offers
@@ -86,10 +78,8 @@ theorem einheitVon_bereit_vollzug (existiert : ZugriffSchrittExistiertAussage)
       (Ast.Semantik.kopf_mem kopf) with hpriv | ⟨z, same⟩
   · have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
     obtain ⟨rfl, rfl⟩ := same
-    refine ⟨w, Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s, ⟨i, kopf, ?_⟩, ?_⟩
-    · exact (Ast.Semantik.Befehl.impl_privat i hpriv c s w [Ast.Semantik.plan]
-        (i.nach c s)).mpr ⟨rfl, rfl⟩
-    · exact Ast.Semantik.Befehl.vollzug _ i tick c s
+    refine ⟨w, i.plan (s.lokal c) 0, i.nach c s, ⟨[], []⟩,
+      i.maschinennach c s (i.nach c s), ⟨i, kopf, ideal⟩, i.vollzug _ tick c s hpriv⟩
   · subst same
     obtain ⟨w', plan, u', es, g, step, folge⟩ :=
       existiert (Ast.Semantik.fragment Ast.Category.unit t) P z s c kopf memory
@@ -109,11 +99,13 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
   obtain ⟨b, kopfB, ideal⟩ := regel
-  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) b
-      (Ast.Semantik.kopf_mem kopfB) with hpriv | ⟨z, same⟩
-  · have hideal :=
+  rcases (Ast.Semantik.fragment_quellklassenrein Ast.Category.unit t) b
+      (Ast.Semantik.kopf_mem kopfB) with hlr | ⟨z, same⟩
+  · have hpriv : b.Privat := hlr.elim Or.inl (fun h => Or.inr (Or.inl h))
+    have hideal :=
       (Ast.Semantik.Befehl.ideal_privat b hpriv c s w [plan] u).mp ideal
-    have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
+    have planEq : plan = Ast.Semantik.plan :=
+      (List.cons.inj hideal.1).1.trans (b.plan_lokal_ruf hlr _ _)
     have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
     have hakt : plan.aktion = .intern := by rw [planEq]; rfl
     obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
@@ -151,11 +143,13 @@ theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
   obtain ⟨b, kopfB, implB⟩ := regel
-  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) b
-      (Ast.Semantik.kopf_mem kopfB) with hpriv | ⟨z, same⟩
-  · have hideal :=
+  rcases (Ast.Semantik.fragment_quellklassenrein Ast.Category.unit t) b
+      (Ast.Semantik.kopf_mem kopfB) with hlr | ⟨z, same⟩
+  · have hpriv : b.Privat := hlr.elim Or.inl (fun h => Or.inr (Or.inl h))
+    have hideal :=
       (Ast.Semantik.Befehl.impl_privat b hpriv c s w [plan] u).1 implB
-    have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
+    have planEq : plan = Ast.Semantik.plan :=
+      (List.cons.inj hideal.1).1.trans (b.plan_lokal_ruf hlr _ _)
     have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
     have hakt : plan.aktion = .intern := by rw [planEq]; rfl
     obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus

@@ -53,18 +53,24 @@ theorem Fragment.klassenrein_anhaengen_iff (a b : Fragment) :
   · intro h x hx
     exact (List.mem_append.mp hx).elim (h.1 x) (h.2 x)
 
+/-- Elaboration emits local operations, calls and accesses. Interrupt control has no source form. -/
+def Fragment.QuellklassenRein (p : Fragment) : Prop :=
+  p.alle (fun b => (b.klasse = .lokal ∨ b.klasse = .ruf) ∨ ∃ z, b = .zugriff z)
+
+theorem Fragment.QuellklassenRein.klassenrein {p : Fragment} (h : p.QuellklassenRein) :
+    p.KlassenRein := by
+  intro b mem
+  rcases h b mem with (lokal | ruf) | zugriff
+  · exact Or.inl (Or.inl lokal)
+  · exact Or.inl (Or.inr (Or.inl ruf))
+  · exact Or.inr zugriff
+
+private theorem expr_quellklassenrein (slot : Nat) (tree : Expr scope type) :
+    (expr slot tree).QuellklassenRein :=
+  fun b mem => Or.inl (expr_lokal_ruf slot tree b mem)
+
 theorem expr_klassenrein (slot : Nat) (tree : Expr scope type) : (expr slot tree).KlassenRein :=
-  Fragment.rein_klassenrein (expr_rein slot tree)
-
-/-- **The code of an access form is frame-only or access.** -/
-theorem accessCode_klassenrein (form : Access before after) : (accessCode form).KlassenRein := by
-  cases form <;>
-    simp only [accessCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff,
-      expr_klassenrein, true_and] <;>
-    first
-      | exact Or.inr ⟨_, rfl⟩
-      | exact ⟨Or.inr ⟨_, rfl⟩, Or.inl (Or.inl rfl)⟩
-
+  (expr_quellklassenrein slot tree).klassenrein
 
 /-- A fragment of the two classes is frame-only or has an access instruction. -/
 theorem Fragment.klassenrein_rein_oder {p : Fragment} (h : p.KlassenRein) : p.Rein ∨ p.MitZugriff := by
@@ -87,106 +93,142 @@ theorem Fragment.einzel_zugriff_mitZugriff (z : Zugriffsform) : (Fragment.einzel
   · intro h
     exact Befehl.zugriff_nicht_privat z ((Fragment.rein_einzel_iff _).mp h)
 
-private theorem argsCode_klassenrein (slot : Nat) (args : List (TypedExpr scope)) : (argsCode slot args).KlassenRein := by
-  induction args generalizing slot with
-  | nil => exact Fragment.klassenrein_leer
-  | cons value rest ih =>
-    simp only [argsCode, Fragment.klassenrein_anhaengen_iff]
-    exact ⟨expr_klassenrein _ _, ih _⟩
+private theorem Fragment.quellklassenrein_leer : Fragment.leer.QuellklassenRein := Fragment.alle_leer _
 
-private theorem optionCode_klassenrein (slot : Nat) (value : OptionInitializer scope count) :
-    (optionCode slot value).KlassenRein := by
-  simp only [optionCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff]
+private theorem Fragment.quellklassenrein_einzel_iff (b : Befehl) :
+    (Fragment.einzel b).QuellklassenRein ↔
+      (b.klasse = .lokal ∨ b.klasse = .ruf) ∨ ∃ z, b = .zugriff z :=
+  Fragment.alle_einzel_iff _ b
+
+private theorem Fragment.quellklassenrein_anhaengen_iff (a b : Fragment) :
+    (a.anhaengen b).QuellklassenRein ↔ a.QuellklassenRein ∧ b.QuellklassenRein :=
+  Fragment.alle_anhaengen_iff _ a b
+
+/-- **The code of an access form is frame-only or access.** -/
+private theorem accessCode_quellklassenrein (form : Access before after) : (accessCode form).QuellklassenRein := by
+  cases form <;>
+    simp only [accessCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff,
+      expr_quellklassenrein, true_and] <;>
+    first
+      | exact Or.inr ⟨_, rfl⟩
+      | exact ⟨Or.inr ⟨_, rfl⟩, Or.inl (Or.inl rfl)⟩
+
+
+private theorem argsCode_quellklassenrein (slot : Nat) (args : List (TypedExpr scope)) : (argsCode slot args).QuellklassenRein := by
+  induction args generalizing slot with
+  | nil => exact Fragment.quellklassenrein_leer
+  | cons value rest ih =>
+    simp only [argsCode, Fragment.quellklassenrein_anhaengen_iff]
+    exact ⟨expr_quellklassenrein _ _, ih _⟩
+
+private theorem optionCode_quellklassenrein (slot : Nat) (value : OptionInitializer scope count) :
+    (optionCode slot value).QuellklassenRein := by
+  simp only [optionCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff]
   refine ⟨?_, ?_⟩
   · cases value with
-    | absent => exact Fragment.klassenrein_leer
-    | present value _ => exact expr_klassenrein _ _
+    | absent => exact Fragment.quellklassenrein_leer
+    | present value _ => exact expr_quellklassenrein _ _
   · first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr (Or.inl rfl))
+      | exact Or.inl (Or.inr rfl)
 
-theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).KlassenRein := by
+private theorem stmt_quellklassenrein (tree : Stmt result before after) : (stmt tree).QuellklassenRein := by
   refine @Stmt.rec result
-    (fun _ _ t => (stmt t).KlassenRein)
-    (fun _ _ t => (block t).KlassenRein)
-    (fun _ t => (bracedBlock t).KlassenRein)
-    (fun _ _ _ _ t => (variantArms t).body.KlassenRein)
+    (fun _ _ t => (stmt t).QuellklassenRein)
+    (fun _ _ t => (block t).QuellklassenRein)
+    (fun _ t => (bracedBlock t).QuellklassenRein)
+    (fun _ _ _ _ t => (variantArms t).body.QuellklassenRein)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after tree
   all_goals
     intros
-    simp_all only [stmt, accessCode_klassenrein, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
-      ↓reduceIte, Fragment.klassenrein_leer, Fragment.klassenrein_einzel_iff, Fragment.klassenrein_anhaengen_iff, expr_klassenrein,
-      argsCode_klassenrein, optionCode_klassenrein, true_and, and_true]
+    simp_all only [stmt, accessCode_quellklassenrein, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
+      ↓reduceIte, Fragment.quellklassenrein_leer, Fragment.quellklassenrein_einzel_iff, Fragment.quellklassenrein_anhaengen_iff, expr_quellklassenrein,
+      argsCode_quellklassenrein, optionCode_quellklassenrein, true_and, and_true]
   all_goals
     repeat' first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr (Or.inl rfl))
+      | exact Or.inl (Or.inr rfl)
       | refine ⟨?_, ?_⟩
 
-theorem bracedBlock_klassenrein (tree : BracedBlock result scope) : (bracedBlock tree).KlassenRein := by
-  have both := stmt_klassenrein (Stmt.ite .trueLit tree tree)
-  simp only [stmt, expr, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff] at both
+private theorem bracedBlock_quellklassenrein (tree : BracedBlock result scope) : (bracedBlock tree).QuellklassenRein := by
+  have both := stmt_quellklassenrein (Stmt.ite .trueLit tree tree)
+  simp only [stmt, expr, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff] at both
   exact both.1.1.2
 
-private theorem functionCode_klassenrein {result : Option WrittenType} {scope : Scope}
+private theorem functionCode_quellklassenrein {result : Option WrittenType} {scope : Scope}
     (measure : Option (Measure scope)) (body : BracedBlock (writtenResult result) scope) :
-    (functionCode result measure body).KlassenRein := by
+    (functionCode result measure body).QuellklassenRein := by
   cases measure with
   | none =>
-    simp only [functionCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, Fragment.klassenrein_leer,
-      bracedBlock_klassenrein, true_and]
+    simp only [functionCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, Fragment.quellklassenrein_leer,
+      bracedBlock_quellklassenrein, true_and]
     exact Or.inl (Or.inl rfl)
   | some m =>
-    simp only [functionCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, expr_klassenrein,
-      bracedBlock_klassenrein, true_and]
+    simp only [functionCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, expr_quellklassenrein,
+      bracedBlock_quellklassenrein, true_and]
     repeat' first
       | exact Or.inl (Or.inl rfl)
-      | exact Or.inl (Or.inr (Or.inl rfl))
+      | exact Or.inl (Or.inr rfl)
       | exact trivial
       | refine ⟨?_, ?_⟩
 
-private theorem decl_klassenrein {before after : Scope} (d : Decl before after) : (decl d).KlassenRein := by
+private theorem decl_quellklassenrein {before after : Scope} (d : Decl before after) : (decl d).QuellklassenRein := by
   cases d with
   | constant name ordinary written valid value staticValue fits =>
-    simp only [decl, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, expr_klassenrein, true_and]
+    simp only [decl, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, expr_quellklassenrein, true_and]
     exact Or.inl (Or.inl rfl)
   | function name ordinary parameters result valid decreases body distinct returns effects =>
-    simp only [decl, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, functionCode_klassenrein, and_true]
+    simp only [decl, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, functionCode_quellklassenrein, and_true]
     exact Or.inl (Or.inl rfl)
   | record exported name fields valid distinct =>
-    simp only [decl, Fragment.klassenrein_einzel_iff]
+    simp only [decl, Fragment.quellklassenrein_einzel_iff]
     exact Or.inl (Or.inl rfl)
   | tagged exported name first tail valid distinct =>
-    simp only [decl, Fragment.klassenrein_einzel_iff]
+    simp only [decl, Fragment.quellklassenrein_einzel_iff]
     exact Or.inl (Or.inl rfl)
   | table item =>
-    simp only [decl, Fragment.klassenrein_einzel_iff]
+    simp only [decl, Fragment.quellklassenrein_einzel_iff]
     exact Or.inl (Or.inl rfl)
   | effectGroup item =>
-    simp only [decl, Fragment.klassenrein_einzel_iff]
+    simp only [decl, Fragment.quellklassenrein_einzel_iff]
     exact Or.inl (Or.inl rfl)
   | environment name abi row =>
-    simp only [decl, Fragment.klassenrein_einzel_iff]
+    simp only [decl, Fragment.quellklassenrein_einzel_iff]
     exact Or.inl (Or.inl rfl)
 
-private theorem unitBody_klassenrein {before after : Scope} (body : UnitBody before after) : (unitBody body).KlassenRein := by
+private theorem unitBody_quellklassenrein {before after : Scope} (body : UnitBody before after) : (unitBody body).QuellklassenRein := by
   induction body with
-  | done => exact Fragment.klassenrein_leer
+  | done => exact Fragment.quellklassenrein_leer
   | step first rest ih =>
-    simp only [unitBody, Fragment.klassenrein_anhaengen_iff]
-    exact ⟨decl_klassenrein first, ih⟩
+    simp only [unitBody, Fragment.quellklassenrein_anhaengen_iff]
+    exact ⟨decl_quellklassenrein first, ih⟩
 
-theorem programm_klassenrein (tree : Ast.Unit) : (programm tree).KlassenRein := by
-  simp only [programm, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, unitBody_klassenrein, true_and]
-  exact ⟨Or.inl (Or.inr (Or.inl rfl)), Or.inl (Or.inl rfl)⟩
+private theorem programm_quellklassenrein (tree : Ast.Unit) : (programm tree).QuellklassenRein := by
+  simp only [programm, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, unitBody_quellklassenrein, true_and]
+  exact ⟨Or.inl (Or.inr rfl), Or.inl (Or.inl rfl)⟩
 
-/-- **Every elaborated fragment of every category is frame-only.** -/
-theorem fragment_klassenrein (category : Category) (tree : category.Tree) : (fragment category tree).KlassenRein := by
+/-- Every elaborated category emits local operations, calls and accesses. -/
+theorem fragment_quellklassenrein (category : Category) (tree : category.Tree) : (fragment category tree).QuellklassenRein := by
   cases category with
-  | expression scope => exact expr_klassenrein _ _
-  | statement scope result => exact stmt_klassenrein _
-  | block scope result => exact bracedBlock_klassenrein _
-  | unit => exact programm_klassenrein tree
-  | declaration scope => exact decl_klassenrein _
+  | expression scope => exact expr_quellklassenrein _ _
+  | statement scope result => exact stmt_quellklassenrein _
+  | block scope result => exact bracedBlock_quellklassenrein _
+  | unit => exact programm_quellklassenrein tree
+  | declaration scope => exact decl_quellklassenrein _
+
+theorem accessCode_klassenrein (form : Access before after) : (accessCode form).KlassenRein :=
+  (accessCode_quellklassenrein form).klassenrein
+
+theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).KlassenRein :=
+  (stmt_quellklassenrein tree).klassenrein
+
+theorem bracedBlock_klassenrein (tree : BracedBlock result scope) : (bracedBlock tree).KlassenRein :=
+  (bracedBlock_quellklassenrein tree).klassenrein
+
+theorem programm_klassenrein (tree : Ast.Unit) : (programm tree).KlassenRein :=
+  (programm_quellklassenrein tree).klassenrein
+
+theorem fragment_klassenrein (category : Category) (tree : category.Tree) : (fragment category tree).KlassenRein :=
+  (fragment_quellklassenrein category tree).klassenrein
 
 end Gabbro.Core.Ast.Semantik
