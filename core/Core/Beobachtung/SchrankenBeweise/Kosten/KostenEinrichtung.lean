@@ -55,7 +55,7 @@ private theorem schritt_eindeutig (left : Rahmen.Schritt code start a)
   cases Option.some.inj (lookup.symm.trans lookup')
   rfl
 
-private theorem lauf_erhaeltEnde (walk : Rahmen.Lauf code start a)
+private theorem lauf_erhaeltEnde {code : List Befehl} (walk : Rahmen.Lauf code start a)
     (other : Rahmen.Lauf code start b) (otherEnd : code[b.pc]? = none) :
     Rahmen.Lauf code a b := by
   induction walk with
@@ -69,7 +69,7 @@ private theorem lauf_erhaeltEnde (walk : Rahmen.Lauf code start a)
     · rw [schritt_eindeutig step first]
       exact rest
 
-private theorem lauf_ende_eindeutig (walk : Rahmen.Lauf code start a)
+private theorem lauf_ende_eindeutig {code : List Befehl} (walk : Rahmen.Lauf code start a)
     (atEnd : code[a.pc]? = none) (other : Rahmen.Lauf code start b)
     (otherEnd : code[b.pc]? = none) : a = b := by
   rcases lauf_ersterSchritt (lauf_erhaeltEnde walk other otherEnd) with same | ⟨_, step, _⟩
@@ -95,7 +95,7 @@ theorem pruefeMass_kostenEinrichtung_amEnde {u : Ast.Unit} {name : Identifier}
   have layout : (programm u).code = prefixCode ++ (.pruefeMass 0 :: post) := by
     simpa only [prefixCode, measurePrologue, Fragment.anhaengen, Fragment.einzel,
       List.append_assoc, List.singleton_append] using code
-  have guarded := (layout ▸ checked).prefix
+  have guarded : entry.WaechterHalten prefixCode := (layout ▸ checked).prefix
   obtain ⟨out, trace, operand⟩ :=
     expr_ergebnis_typ_am 0 m.expression env entry typed active pre [] entryPC
       (by simpa only [List.append_nil, prefixCode] using guarded)

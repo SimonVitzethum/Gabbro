@@ -83,8 +83,8 @@ private theorem braced_ohneMass (tree : BracedBlock result before) :
          intro slot same
          cases same)
 
-private theorem OhneMass.not_at {code : List Befehl} (free : OhneMass code)
-    (atPC : code[pc]? = some (.pruefeMass slot)) :
+private theorem OhneMass.not_at {code : List Befehl} {pc slot : Nat} (free : OhneMass code)
+    (atPC : code[pc]? = some (Befehl.pruefeMass slot)) :
     False :=
   free slot (List.mem_iff_getElem?.mpr ⟨pc, atPC⟩)
 
@@ -170,7 +170,7 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
           split
           · rename_i same
             have equal : fn.val = name.val := by simpa only [beq_iff_eq] using same
-            exact False.elim (separated.1 (equal.symm ▸ List.mem_map_of_mem Subtype.val mem))
+            exact False.elim (separated.1 (equal.symm ▸ List.mem_map_of_mem mem))
           · exact found separated.2
         | _ => exact found unique
       · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
