@@ -57,6 +57,7 @@ private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.l
   all_goals try exact nach_gut ok install 0
   · apply update_rahmen (update_rahmen ok (transfer _)) child
   · split
+    · exact update_rahmen ok (transfer _)
     · exact update_rahmen ok (ok c)
     · exact ok
     · exact ok
