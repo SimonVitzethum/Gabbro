@@ -431,11 +431,21 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       change rC.temp aus = some (natVal v0)
       exact hrCaus
     obtain ⟨vFinal, hFolge, hEndTemp⟩ :=
-      precSchleifeRueckStark cgBlk cf cg a aus frei freiCg 0 v0 k rP0 rS (k - jP)
+      precSchleifeRueckStark cgBlk cf cg a aus frei freiCg 0 v0 kk rP0 rS (k - jP)
         rfl hrP0a (by simpa only [Nat.zero_add] using hrP0k) hrP0c hrP0v
-        haus hfreiCg20 hcg hcgv hbl hrunS hpcS
+        haus hfreiCg20 hcg hcgV hcgBl hrunS hpcS
+    have haUn : a = (Nat.unpair n).1 := by
+      have hh : Part.some ((Nat.unpair n).1) = Part.some a := by
+        change Part.some ((Nat.unpair n).1) = Part.some a at haeval
+        exact haeval
+      exact (Part.some_injective hh).symm
+    have hkUn : kk = (Nat.unpair n).2 := by
+      have hh : Part.some ((Nat.unpair n).2) = Part.some kk := by
+        change Part.some ((Nat.unpair n).2) = Part.some kk at hkeval
+        exact hkeval
+      exact (Part.some_injective hh).symm
     have hn : Nat.pair a kk = n := by
-      dsimp only [a, kk]
+      rw [haUn, hkUn]
       exact Nat.pair_unpair n
     have hEvalPair : Nat.Partrec.Code.eval (.prec cf cg) n = Part.some vFinal := by
       rw [← hn, evalPrecAlsFolge, hcfEval0, Part.bind_some]
