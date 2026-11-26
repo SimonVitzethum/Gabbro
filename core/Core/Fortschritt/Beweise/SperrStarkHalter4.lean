@@ -89,45 +89,48 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
-      cases hF
-      rw [hziel]
-      rcases hcrash with hvor | hnach
-      · refine ⟨?_, Or.inl ?_⟩
-        · cases hss
-          simp only [Function.update_self, toggleUpdate, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
-          constructor
-          · simpa only [toggleUpdate] using hlock_u.1
-          · intro d hd
-            rcases hd with hd | rfl
-            · simpa only [toggleUpdate] using hlock_u.2 d hd
-            · exact hs
-        · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
-      · exact (hnach.1 c hs k hlk).elim
+      cases hF with
+      | sperre hnextF _ =>
+        rw [hziel]
+        rcases hcrash with hvor | hnach
+        · refine ⟨?_, Or.inl ?_⟩
+          · cases hnextF
+            simp only [Function.update_self, toggleUpdate, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
+            constructor
+            · simpa only [toggleUpdate] using hlock_u.1
+            · intro d hd
+              rcases hd with hd | rfl
+              · simpa only [toggleUpdate] using hlock_u.2 d hd
+              · exact hs
+          · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
+        · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
       have hlock_u := hlock
-      cases hF
-      rw [hziel]
-      rcases hcrash with hvor | hnach
-      · refine ⟨?_, Or.inl ?_⟩
-        · cases hss with
-          | nehmen hn => obtain ⟨r, _, hnext⟩ := nimmt_inv hn
-          rw [← hnext]
-          simp only [Function.update_self]
-          exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
-        · exact vorCrash4_von (s := s) rfl rfl hvor
-      · exact (hnach.1 c hs k hlk).elim
+      cases hF with
+      | sperre hnextF _ =>
+        rw [hziel]
+        rcases hcrash with hvor | hnach
+        · refine ⟨?_, Or.inl ?_⟩
+          · cases hnextF with
+            | nehmen hn => obtain ⟨r, _, hnext⟩ := nimmt_inv hn
+            rw [← hnext]
+            simp only [Function.update_self]
+            exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
+          · exact vorCrash4_von (s := s) rfl rfl hvor
+        · exact (hnach.1 c hs k hlk).elim
   · rcases hreg with ⟨_, hss, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
     have hlock_u := hlock
-    cases hF
-    rw [hziel]
-    rcases hcrash with hvor | hnach
-    · refine ⟨?_, Or.inl ?_⟩
-      · cases hss with
-        | geben hg => obtain ⟨q, _, hnext⟩ := gibt_abgeben hg
-        rw [← hnext]
+    cases hF with
+    | sperre hnextF _ =>
+      rw [hziel]
+      rcases hcrash with hvor | hnach
+      · refine ⟨?_, Or.inl ?_⟩
+        · cases hnextF with
+          | geben hg => obtain ⟨q, _, hnext⟩ := gibt_abgeben hg
+          rw [← hnext]
         cases q with
         | nil =>
           exact ⟨by simp only [SperrZustand.abgeben],
