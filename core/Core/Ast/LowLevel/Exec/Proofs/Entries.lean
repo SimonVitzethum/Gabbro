@@ -4,7 +4,7 @@ public import Core.Ast.LowLevel.Exec.Registry
 public import Core.Ast.LowLevel.Exec.Proofs.ExecKern
 public import Core.Ast.LowLevel.Exec.Proofs.ExecStateDecl
 public import Core.Ast.LowLevel.Exec.Proofs.ExecJump
-public import Core.Ast.LowLevel.Exec.Proofs.ExecJumpLong
+public import Core.Ast.LowLevel.Exec.Proofs.Handoff
 public import Core.Ast.LowLevel.Exec.Proofs.ExecWait
 public import Core.Ast.LowLevel.Exec.Proofs.ExecStop
 public import Core.Ast.LowLevel.Exec.Proofs.ExecEntry
