@@ -41,7 +41,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   have hlenL : 0 < L.length := by dsimp only [L]; rw [leftBlkLaenge]; omega
   have hlenR : 0 < R.length := by dsimp only [R]; rw [rightBlkLaenge]; omega
   have hlenLR : 0 < LR.length := by dsimp only [LR]; rw [List.length_append, leftBlkLaenge, rightBlkLaenge]; omega
-  have hlenK : 0 < K.length := by dsimp only [K]; rw [kopieLaenge]
+  have hlenK : 0 < K.length := by dsimp only [K]; rw [kopieLaenge]; omega
   have hlenS : 0 < S.length := by dsimp only [S]; rw [rfindSchleifeLaenge]; omega
   have hlenP : 0 < P.length := by dsimp only [P]; rw [List.length_append]; omega
   have hP : BleibtImBlock P := by dsimp only [P]; exact bleibtImBlockAppend LR K hLRok hvK hKok
@@ -73,13 +73,12 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     have hmEval : Nat.Partrec.Code.eval .right n = Part.some m := by rfl
     obtain ⟨kLR, rLR, hrunLR, hpcLR, hrLRa, hrLRm, hpresLR, hlokLR, hrueckLR, hstoppLR⟩ :=
       zweiEingaengeVor L R .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
-        (blockLeft ein (frei + 0) freiL hein (by omega) (by omega)) hvR
-        (blockRight ein (frei + 1) freiL haus (by omega) (by omega))
+        (blockLeft ein (frei + 0) freiL (by omega) (by omega) (by omega)) hvR
+        (blockRight ein (frei + 1) freiL (by omega) (by omega) (by omega))
         (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
         n r hpc hr a m haEval hmEval
     let rLR0 : Rahmen := { rLR with pc := 0 }
-    let rK : Rahmen := { rLR0 with pc := 3,
-      temp := Function.update rLR0.temp (frei + 2) (some (natVal m)) }
+    let rK : Rahmen := { rLR0 with pc := 3, temp := Function.update rLR0.temp (frei + 2) (some (natVal m)) }
     have hKrun : (Schritt K)^[3] (some rLR0) = some rK := by
       exact laufKopie K rLR0 0 (frei + 2) (frei + 1) (some (natVal m)) rfl hrLRm hK0 hK1 hK2
     have hpcK : rK.pc = K.length := by dsimp only [rK]; rw [kopieLaenge]
@@ -181,8 +180,8 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       randAusEndePrefix LR (K ++ S) hLRok hlenLR hlenKS r k rEnd hpc hrun3 hpcEnd3
     obtain ⟨a, m, haEval, hmEval, hrLRa, hrLRm, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
       zweiEingaengeRueck L R .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
-        (blockLeft ein (frei + 0) freiL hein (by omega) (by omega)) hLok hlenL hvR
-        (blockRight ein (frei + 1) freiL haus (by omega) (by omega)) hlenR
+        (blockLeft ein (frei + 0) freiL (by omega) (by omega) (by omega)) hLok hlenL hvR
+        (blockRight ein (frei + 1) freiL (by omega) (by omega) (by omega)) hlenR
         (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
         n r hpc hr jLR rLR hrunLR hpcLR
     have htail : (Schritt (LR ++ K ++ S))^[k - jLR] (some rLR) = some rEnd := by
@@ -202,8 +201,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       exact hpcEnd
     obtain ⟨jK, rB, rMid, hjK, hrunB, hpcB, hrBMid, hrunMid, hpcMid⟩ :=
       randAusEndeMitPc LR K S hvK hKok hlenK hlenS rLR0 rfl (k - jLR) rEnd htail' hpcEnd'
-    let rKRef : Rahmen := { rLR0 with pc := 3,
-      temp := Function.update rLR0.temp (frei + 2) (some (natVal m)) }
+    let rKRef : Rahmen := { rLR0 with pc := 3, temp := Function.update rLR0.temp (frei + 2) (some (natVal m)) }
     have hKref : (Schritt K)^[3] (some rLR0) = some rKRef := by
       exact laufKopie K rLR0 0 (frei + 2) (frei + 1) (some (natVal m)) rfl hrLRm hK0 hK1 hK2
     have hpcKref : rKRef.pc = K.length := by dsimp only [rKRef]; rw [kopieLaenge]
