@@ -338,12 +338,22 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                               dsimp only [Rule.machine]
                               exact ⟨_, hplansA',
                                 Rule.consume owned₂A pending₂A ready₂A sameQuestion₂A⟩⟩).1
+                          have n1lokal : n₁.lokal = uL.lokal := by rw [hlokal₁]; rfl
+                          have n2lokal : n₂.lokal = uR.lokal := by rw [hlokal₂]; rfl
+                          have n1status : n₁.status = uL.status := by rw [hstatus₁]; rfl
+                          have n2status : n₂.status = uR.status := by rw [hstatus₂]; rfl
+                          have n1initial : n₁.initial = uL.initial := by rw [hinitial₁]; rfl
+                          have n2initial : n₂.initial = uR.initial := by rw [hinitial₂]; rfl
+                          have n1rechte : n₁.rechte = uL.rechte := by rw [hrechte₁]; rfl
+                          have n2rechte : n₂.rechte = uR.rechte := by rw [hrechte₂]; rfl
+                          have n1leihen : n₁.leihen = uL.leihen := by rw [hleihen₁]; rfl
+                          have n2leihen : n₂.leihen = uR.leihen := by rw [hleihen₂]; rfl
                           refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-                          · simpa only [hlokal₁, hlokal₂, uL, uR] using hq.1
-                          · simpa only [hstatus₁, hstatus₂, uL, uR] using hq.2.1
-                          · simpa only [hinitial₁, hinitial₂, uL, uR] using hq.2.2.1
-                          · simpa only [hrechte₁, hrechte₂, uL, uR] using hq.2.2.2.1
-                          · simpa only [hleihen₁, hleihen₂, uL, uR] using hq.2.2.2.2.1
+                          · simpa only [n1lokal, n2lokal] using hq.1
+                          · simpa only [n1status, n2status] using hq.2.1
+                          · simpa only [n1initial, n2initial] using hq.2.2.1
+                          · simpa only [n1rechte, n2rechte] using hq.2.2.2.1
+                          · simpa only [n1leihen, n2leihen] using hq.2.2.2.2.1
                           · intro c'
                             unfold AntwortSicht
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁,
