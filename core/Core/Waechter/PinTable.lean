@@ -406,6 +406,6 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.KostenSchaetzerKorrektAussage, 3339739989405394381),
   (`Gabbro.Core.Beobachtung.GebundenKHEndlichAussage, 6653705306554181077),
   (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 1802496749607513414),
-  (`Gabbro.Core.Beobachtung.KostenSchrittKorrespondenzAussage, 0)]
+  (`Gabbro.Core.Beobachtung.KostenSchrittKorrespondenzAussage, 10391204927409258480)]
 
 end Gabbro.Core.Waechter
