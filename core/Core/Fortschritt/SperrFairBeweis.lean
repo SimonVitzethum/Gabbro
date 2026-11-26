@@ -29,7 +29,7 @@ open Gabbro.Core.Beobachtung
     fairness premise together with the new admissibility premise; see the file header for
     the missing substantive scheduling step. -/
 theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
-  intro L Ort Wert Raum Lok Grund Bedingung Wahl inst E ρ hU l h H b s
+  intro L Ort Wert Raum Lok Grund Bedingung Wahl F inst E ρ hU l h H b s
     bereit hhalte hhalten hsec hfair hlauf hsched hret hzs hown hcrash
   exfalso
   exact faire_umgebung_nicht_eindeutig hlauf hfair
@@ -37,7 +37,7 @@ theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
 /-- The strengthened waiting-bound sentence holds, by the same inherited premise. The
     intended chain through `sperr_warte_schranke_bis` (fuel `i`) is recorded as open above. -/
 theorem sperr_warte_fair_aus_freigabe : SperrWarteFairAussage := by
-  intro L Ort Wert Raum Lok Grund Bedingung Wahl inst E ρ hU l c i H a
+  intro L Ort Wert Raum Lok Grund Bedingung Wahl F inst E ρ hU l c i H a
     akz hhalte hhalten hfair hlauf hsched hret hqueue hnodup hcrash
   exfalso
   exact faire_umgebung_nicht_eindeutig hlauf hfair
