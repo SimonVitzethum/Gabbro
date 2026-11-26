@@ -25,9 +25,11 @@
               (`EndlichAkzeptiertAussage`, pinned) is the perfect checker with the
               new line, so everything accepted before stays accepted with the same
               guarantees (`endlichAkzeptiert_verstaerkt`). The invocation bound
-              itself (`KostenSchaetzerKorrektAussage`) and the finite KH duties
-              (`GebundenKHEndlichAussage`) are the pinned core statements of
-              `KostenEndlich`, proved by Hy4 from the sketches there.
+              itself (`KostenSchaetzerKorrektAussage`, with its step correspondence
+              `KostenSchrittKorrespondenzAussage`) are the pinned open statements of
+              `KostenEndlich` for Hy4 from the sketches there; the finite KH duties
+              (`GebundenKHEndlichAussage`) are proved in `KostenEndlichBeweise` from
+              the correctness statement.
 -/
 module
 

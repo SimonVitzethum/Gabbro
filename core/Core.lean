@@ -115,9 +115,13 @@ public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeob
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeobMehr
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeobSchritt
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeobSchrittAnalyse
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphInvariante
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphKopplungBeweis
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragmentBeweis
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
@@ -229,6 +233,8 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeStark
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindSchleifeLage
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindExit
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -293,6 +299,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Erzeuger
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public import Core.Ast.Semantik.Runtime.Faden.Offen
 public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
+public import Core.Ast.Semantik.Runtime.Faden.Beweise.VerbindeFortschritt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
