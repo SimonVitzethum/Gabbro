@@ -56,7 +56,9 @@ theorem aussenBeob_filter_nil [DecidableEq Ort]
     (aussenBeob E event).filter (SchreibBeobBool (Wert := Wert) (Grund := Grund) (Form := Form) x) = [] := by
   cases event <;> simp only [aussenBeob, sichtbar, Option.toList, List.filter_append,
     List.filter_cons, List.filter_nil, SchreibBeobBool, Bool.false_eq_true, if_false,
-    List.nil_append]
+    List.nil_append] <;> split <;>
+    simp only [SchreibBeobBool, Bool.false_eq_true, if_false, List.filter_nil,
+      List.nil_append, List.append_nil, List.filter_cons]
 
 /-- No protocol or output event produces a low memory write observation. -/
 theorem kontextBeob_filter_nil [DecidableEq Ort]
