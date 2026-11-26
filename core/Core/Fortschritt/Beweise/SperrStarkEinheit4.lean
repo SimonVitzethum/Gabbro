@@ -86,15 +86,15 @@ def s4_0 : Zustand Unit Unit Unit Unit Bool Unit :=
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0)) with
     sperren := fun _ => ⟨none, [A, B]⟩ }
 
-/-- The ideal run starts from the canonical start with the same masked dispatch and an empty lock. -/
-noncomputable def s4_ideal0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_4 s0).2
-
 def E_4 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   { E_1 with
     einrichtung := wEinrichtungGesperrt4
     system := e4System
     startdaten := fun _ => wDatenGesperrt4 dispatch4
     laden := fun _ _ => some s4_0 }
+
+/-- The ideal run starts from the canonical start with the same masked dispatch and an empty lock. -/
+noncomputable def s4_ideal0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_4 s0).2
 
 theorem start_E_4 : (I.start E_4 s0).2 = s4_ideal0 := rfl
 
