@@ -188,10 +188,10 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
   have stepT : I.Schritt textIndexEinheit.einrichtung textIndexEinheit.system
       textIndexEinheit.katalog ρ.hw t
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩)
-      (b.nach eintritt (ρ.zeit.zustand t)) :=
+      (b.maschinennach eintritt (ρ.zeit.zustand t) (b.nach eintritt (ρ.zeit.zustand t))) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug _ _ _ _)
+      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
+      (b.vollzug textIndexEinheit.einrichtung _ _ _ hPriv)
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
