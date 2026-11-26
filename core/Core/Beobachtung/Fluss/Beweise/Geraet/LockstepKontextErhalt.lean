@@ -163,7 +163,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         exact Option.some.inj (gelegA.symm.trans geleg₂)
                       subst kernA
                       have laufA' := laufA
-                      rw [hkerne] at laufA'
+                      rw [← hkerne] at laufA'
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | issue owned₂A idle₂A =>
@@ -298,7 +298,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         exact Option.some.inj (gelegA.symm.trans geleg₂)
                       subst kernA
                       have laufA' := laufA
-                      rw [hkerne] at laufA'
+                      rw [← hkerne] at laufA'
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | @consume owned₂A answer₂A pending₂A ready₂A sameQuestion₂A =>
