@@ -412,7 +412,7 @@ theorem stummer_schritt_koppelt
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         exact kerneEq
-                    · have s1 : a.status = vor.status := by rw [hstatus₁]; rfl
+                    · have s1 : a.status = vor.status := by rw [(Option.some.inj ha).symm, hstatus₁]; rfl
                       have s2 : b.status = w₂.status := by rw [(Option.some.inj hb).symm, hstatus₂]; rfl
                       simp only [s1, s2, statusEq]
                   · -- length: both sides append nothing
