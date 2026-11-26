@@ -35,7 +35,14 @@ private theorem pruefeMass_einrichtung {u : Ast.Unit} {name : Identifier}
     information about the current frame's call history. -/
 theorem kostenKopf_pruefeMass_herkunft (P : Katalog.Plattform) (u : UnitMitSchranken)
     {s : Zustand} {c : Kontext} {slot : Nat}
-    (head : (einheitMitSchranken P u).system.kopf s c = some (.pruefeMass slot)) :=
+    (head : (einheitMitSchranken P u).system.kopf s c = some (.pruefeMass slot)) :
+    ∃ (name : Identifier) (kern : FunktionsKern) (m : Measure kern.koerper.1)
+      (pre post : List Befehl),
+      name ∈ alleFunktionen u.baum.2 ∧
+      (((alleFunktionen u.baum.2).map Subtype.val).Nodup → findeKern u.baum.2 name = some kern) ∧
+      kern.mass = some m ∧
+      (programm u.baum).code = pre ++ (measurePrologue (some m)).code ++ post ∧
+      (s.lokal c).pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 :=
   programm_pruefeMass_herkunft (u := u.baum) (kopf_position head)
 
 private theorem lauf_ersterSchritt (walk : Rahmen.Lauf code start finish) :
