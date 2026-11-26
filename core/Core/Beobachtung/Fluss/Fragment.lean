@@ -314,61 +314,6 @@ theorem stummer_schritt_koppelt
                       Function.update w₂.lokal c
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
-                  -- kerne: same per-core update on equal pre-state kernes
-                  have kerneGleich : nach₁.kerne = nach₂.kerne := by
-                    have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
-                      rw [lokEqFun]
-                    obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
-                    obtain ⟨_, _, _, v₂, aktion₂, _, stateEq₂⟩ := aus₂'
-                    subst hspur₁
-                    subst hspur₂
-                    rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
-                      ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      rfl
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      funext k
-                      have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                      have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                        rw [kerneEq]
-                      rw [hc]
-                      by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      funext k
-                      have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                      have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                        rw [kerneEq]
-                      rw [hc]
-                      by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      rfl
-                    · rw [hL] at aktion₁
-                      have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
-                      rw [hR] at aktion₂
-                      cases aktion₁
-                      cases aktion₂
-                      rw [stateEq₁, stateEq₂]
-                      rfl
                   refine ⟨?_, ?_, ?_⟩
                   · -- prefix: both sides append nothing
                     rw [e₁, e₂]
