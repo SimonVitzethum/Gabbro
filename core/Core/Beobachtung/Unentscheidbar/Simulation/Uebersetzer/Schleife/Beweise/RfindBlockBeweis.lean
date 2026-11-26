@@ -126,9 +126,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         (fun y hy1 hy2 => by
           obtain ⟨vv, hvv, hvne⟩ := hvor y (by omega) hy2
           intro hzy
-          apply hvne
-          rw [hvv] at hzy
-          exact hvne (Part.some_injective hzy))
+          exact hvv.symm.trans hzy)
     have hbleibE := laufBleibtVorEnde S rEntry kE rE hrunE hpcE
     have hrunEfull : (Schritt (P ++ S))^[kE] (some (mitPc LR.length rK)) = some (mitPc P.length rE) := by
       have hs := laufMitPc P S [] hvS rEntry kE hbleibE
@@ -227,8 +225,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       change LR.length + rKRef.pc = P.length
       rw [hpcKref]
       dsimp only [P, K, LR]
-      rw [kopieLaenge]
-      simp only [List.length_append]
+      simp only [kopieLaenge, List.length_append]
     let rEntry : Rahmen := { rB with pc := 0 }
     have hmitP : mitPc P.length rEntry = rB := by
       show { rB with pc := P.length + 0 } = rB
