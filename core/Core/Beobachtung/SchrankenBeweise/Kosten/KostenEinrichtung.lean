@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
+public import Core.Beobachtung.SchrankenBeweise.Kosten.MassHerkunft
 import Core.Ast.Semantik.Auswertung
 
 @[expose] public section
