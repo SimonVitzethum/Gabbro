@@ -319,7 +319,7 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
   have programCode : (programm tree).code =
       [defineSchema, defineMain, evalTrue, build, bindLocal, evalFalse, updateField, .blockEnde 1,
         .rueckVoid, startMain, .ende] := by
-    simp only [tree, schema, main, body, bind, update, programm, unitBody, decl, functionCode, bracedBlock,
+    simp only [tree, schema, main, body, bind, update, programm, unitBody, decl, functionCode, measurePrologue, bracedBlock,
       block, stmt, RecordExample.value, Surface.RecordValueArgs.expression, expr, labeledCode,
       Fragment.anhaengen, Fragment.einzel, Fragment.leer, List.nil_append, List.cons_append, List.append_nil]
     rfl

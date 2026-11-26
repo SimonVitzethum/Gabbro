@@ -24,17 +24,15 @@
                 the bounds across transitions, including saved continuation frames.
 
               * `KostenSchaetzerKorrektAussage`: every invocation window and every entry
-                segment of an accepted unit costs at most the estimator. The estimator
-                omits the measure prologue. `Kosten.KostenGegenbeispiel` proves that
-                an accepted entry segment costs six ticks with an estimate of five.
+                segment of an accepted unit costs at most the estimator. The whole-run
+                bound remains a proof obligation.
 
               * `GebundenKHEndlichAussage`: the cost and hold duties of every accepted
                 unit with a finite bound, stated window-relative: every cut of every
                 invocation window and every cut of every entry segment meets the
                 declared ceilings. Proved in `KostenEndlichBeweise` from the correctness
                 statement with the checker's `E ≤ K` (case split on the declaration;
-                the open leg is vacuous as in `bindungKHOffen`). The counterexample
-                also refutes this statement directly with the accepted ceiling of five.
+                the open leg is vacuous as in `bindungKHOffen`).
 
               The window predicates are inlined as `…Aussage` definitions covered by the
               root pin. The satisfiability witnesses below are run-free (checker outcomes
@@ -118,8 +116,7 @@ def KostenSchrittKorrespondenzAussage : Prop :=
         lo ≤ (n : Int) ∧ (n : Int) ≤ hi
 
 /-- Correctness requires the estimate to cover every invocation window and entry
-    segment in the acting context's own ticks. The current estimator is refuted
-    by `kostenSchaetzerKorrektAussage_falsch`. -/
+    segment in the acting context's own ticks. The bound remains open. -/
 def KostenSchaetzerKorrektAussage : Prop :=
   ∀ (P : Katalog.Plattform) (u : UnitMitSchranken) (tab : KostenTabelle)
     (z : Wirkungsklasse → KlassenKostenzeile) (E : Nat),

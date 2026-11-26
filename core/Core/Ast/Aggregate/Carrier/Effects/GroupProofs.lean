@@ -492,7 +492,7 @@ theorem effectGroup_useErfuellbar : EffectGroupUseErfuellbarAussage := by
       false, [], some [eff]⟩
     refine ⟨sig, ?_, ?_⟩
     · simpa [after, sig, b, functionForm, functionInstruction, Befehl.auswerten,
-        a, scope, clause, body, functionCode, bracedBlock, Fragment.anhaengen, Fragment.einzel,
+        a, scope, clause, body, functionCode, measurePrologue, bracedBlock, Fragment.anhaengen, Fragment.einzel,
         Fragment.leer, block, writtenResult, declaredEffects]
     · simpa [sig, group, eff]
 end Gabbro.Core.Ast.Semantik

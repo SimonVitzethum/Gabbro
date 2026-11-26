@@ -153,11 +153,11 @@ private theorem functionCode_keine_invarianten {result : Option WrittenType} {sc
     (functionCode result measure body).klauseln.invariant = [] := by
   cases measure with
   | none =>
-      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+      simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
         Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
         bracedBlock_keine_invarianten]
   | some m =>
-      simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
+      simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Fragment.leer,
         Quellklauseln.anhaengen, Quellklauseln.leer, List.nil_append,
         expr_keine_invarianten, bracedBlock_keine_invarianten]
 

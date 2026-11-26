@@ -82,10 +82,10 @@ theorem function_erhaltung (scope : Scope) : (functionForm scope).ErhaltungsAuss
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have inv : ((functionForm scope).fragment args).klauseln.invariant = [] := by
@@ -121,10 +121,10 @@ theorem function_sicher (scope : Scope) platform a :
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body
   have inv : ((functionForm scope).fragment a).klauseln.invariant = [] := by

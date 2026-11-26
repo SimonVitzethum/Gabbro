@@ -134,11 +134,11 @@ private theorem functionCode_klassenrein {result : Option WrittenType} {scope : 
     (functionCode result measure body).KlassenRein := by
   cases measure with
   | none =>
-    simp only [functionCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, Fragment.klassenrein_leer,
+    simp only [functionCode, measurePrologue, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, Fragment.klassenrein_leer,
       bracedBlock_klassenrein, true_and]
     exact Or.inl (Or.inl rfl)
   | some m =>
-    simp only [functionCode, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, expr_klassenrein,
+    simp only [functionCode, measurePrologue, Fragment.klassenrein_anhaengen_iff, Fragment.klassenrein_einzel_iff, expr_klassenrein,
       bracedBlock_klassenrein, true_and]
     repeat' first
       | exact Or.inl (Or.inl rfl)
