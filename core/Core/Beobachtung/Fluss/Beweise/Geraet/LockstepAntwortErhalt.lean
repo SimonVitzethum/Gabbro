@@ -146,6 +146,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     exact geraete_antwort_beob_tick (predictor := predictor)
                       (by simpa using lab₂) hz₂ hn₂ h2
                   have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
+                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
                     let L₁ := NiedrigeBeob (d.unit locals) ρ₁ predictor t
                     let L₂ := NiedrigeBeob (d.unit locals) ρ₂ predictor t
@@ -210,7 +211,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     rw [hn1naechste, hn2naechste]
                     simp only [Zustand.naechsteAntwort, Zustand.angekommen, Zustand.antwort,
                       hantworten, hverbraucht, hverworfen, aeq]
-                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · intro v w hv hw
                     subst v
                     subst w
