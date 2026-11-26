@@ -98,7 +98,7 @@ private theorem endlich_finite (u : UnitMitSchranken) (tab : KostenTabelle)
     cases handes.2
   | some e =>
     simp only [hE] at handes
-    exact ⟨e, rfl, of_decide_eq_true handes.2⟩
+    exact ⟨e, rfl, decide_eq_true_eq.mp handes.2⟩
 
 /-- The declared hold lookup of a bound unit is open when the declaration lists no hold. -/
 private theorem halten_none (P : Katalog.Plattform) (u : UnitMitSchranken) (l : Nat)
