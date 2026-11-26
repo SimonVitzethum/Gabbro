@@ -10,7 +10,10 @@
   `π` would claim that EVERY checker is correct and non-trivial and EVERY parser agrees with the
   reference relation; a constantly refusing checker refutes that reading (recorded in
   `Core/Ziel/Review/Befunde.lean` as `KorrektheitAussagen.nichtTrivial`). All remaining conjuncts stay
-  universally quantified over `P` and `B`.
+  universally quantified over `P` and `B`. The guard statements
+  (`PrueferWaechterKorrektAussage`, `PrueferWaechterVollstaendigAussage` and the
+  fragment statement `WaechterFragmentVollstaendigAussage`) speak about the deployed
+  computable guard checker directly, not through the existential package.
   The hash pin of `KorrektheitAussagen` covers the dependency closure of all of them, so a statement cannot change
   unnoticed, and one pin root keeps the cost of the pin check constant (each root walks the closure of the whole
   model). The list may only grow; removing or weakening a conjunct is a change of the correctness package.
@@ -21,6 +24,7 @@ module
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Speicher
+public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 
 @[expose] public section
 
@@ -33,9 +37,10 @@ def KorrektheitAussagen : Prop :=
     (∃ C : Pruefer,
       PrueferLokalKorrektAussage C ∧ PrueferLokalVollstaendigAussage C ∧
       PrueferKlauselnKorrektAussage C ∧ PrueferKlauselnVollstaendigAussage C ∧
-      PrueferWaechterKorrektAussage C ∧ PrueferWaechterVollstaendigAussage C ∧
       PrueferKorrektAussage C ∧ PrueferVollstaendigAussage C ∧ PrueferNichtTrivialAussage C ∧
       PrueferDecktFormenAussage C B)
+    ∧ PrueferWaechterKorrektAussage ∧ PrueferWaechterVollstaendigAussage
+    ∧ WaechterAnalyse.WaechterFragmentVollstaendigAussage
     ∧ (∃ π : Parser, ParserKorrektAussage π)
     ∧ (PrueferRestUnentscheidbarAussage ∧
       ParseDruckAussage ∧ ParseEindeutigAussage ∧ ElabKorrektAussage P ∧ BezeichnetFunktionalAussage P ∧
