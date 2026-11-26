@@ -283,15 +283,15 @@ theorem stummer_schritt_koppelt
                       rw [← kk, ← kerneEq]
                       exact kern₁
                     exact Option.some.inj (kern₂.symm.trans gleich)
-                    rw [c_eq] at kopf₂' impl₂'rule aus₂'
-                    have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-                    subst ff₂
-                    obtain ⟨hspur₂, hlokal₂, hstatus₂, _, hantworten₂, hverbraucht₂, _, hinitial₂, _,
-                    hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
-                    f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
-                    have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
-                    obtain ⟨_, hnach₂⟩ := htrans₂
-                    subst hnach₂
+                  rw [c_eq] at kopf₂' impl₂'rule aus₂'
+                  have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+                  subst ff₂
+                  obtain ⟨hspur₂, hlokal₂, hstatus₂, _, hantworten₂, hverbraucht₂, _, hinitial₂, _,
+                  hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
+                  f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
+                  have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
+                  obtain ⟨_, hnach₂⟩ := htrans₂
+                  subst hnach₂
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
                     fragment_kontext_schritt_still p plattform
                       (fun s b hs hk => privat_am_kopf zustand₂ kopf₂ privat s b hs (c_eq ▸ hk)) label₂
