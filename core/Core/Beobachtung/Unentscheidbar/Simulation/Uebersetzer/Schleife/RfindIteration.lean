@@ -144,15 +144,15 @@ theorem rfindNulltestPosLauf (cfBlk : List Befehl) (aus frei v : Nat) (r : Rahme
     dsimp only [r1]
     rw [updateMiss _ _ _ _ (by omega)]
     exact h6
-  let r2 : Rahmen := { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, true⟩) }
+  let r2 : Rahmen := { r1 with pc := (45 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, true⟩) }
   have e2 : Schritt blk (some r1) = some r2 := by
-    change Schritt blk (some r1) = some { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, true⟩) }
+    change Schritt blk (some r1) = some { r1 with pc := (45 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, true⟩) }
     have h := schrittVergleichNat blk r1 (45 + cfBlk.length) (frei + 5) 0 v hpc1 h15 h16
       (rfindBeiNull1 cfBlk aus frei)
     rw [show Compare.eval .lt ((0 : Nat) : Int) ((v : Nat) : Int) = true by
       exact (vergleichLtNat 0 v).2 hv] at h
     exact h
-  have hpc2 : r2.pc = 46 + cfBlk.length := by dsimp only [r2, r1]; rw [hpc]; omega
+  have hpc2 : r2.pc = 46 + cfBlk.length := by dsimp only [r2]; omega
   have h25 : r2.temp (frei + 5) = some ⟨.bool, true⟩ := by dsimp only [r2]; rw [updateHit]
   let r3 : Rahmen := { r2 with pc := r2.pc + 1 }
   have e3 : Schritt blk (some r2) = some r3 := by
@@ -194,15 +194,15 @@ theorem rfindNulltestNullLauf (cfBlk : List Befehl) (aus frei : Nat) (r : Rahmen
     dsimp only [r1]
     rw [updateMiss _ _ _ _ (by omega)]
     exact h6
-  let r2 : Rahmen := { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, false⟩) }
+  let r2 : Rahmen := { r1 with pc := (45 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, false⟩) }
   have e2 : Schritt blk (some r1) = some r2 := by
-    change Schritt blk (some r1) = some { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, false⟩) }
+    change Schritt blk (some r1) = some { r1 with pc := (45 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 5) (some ⟨.bool, false⟩) }
     have h := schrittVergleichNat blk r1 (45 + cfBlk.length) (frei + 5) 0 0 hpc1 h15 h16
       (rfindBeiNull1 cfBlk aus frei)
     rw [show Compare.eval .lt ((0 : Nat) : Int) ((0 : Nat) : Int) = false by
-      exact (vergleichLtNat 0 0).2 (by omega)] at h
+      simp only [Compare.eval, Nat.cast_lt, decide_false]] at h
     exact h
-  have hpc2 : r2.pc = 46 + cfBlk.length := by dsimp only [r2, r1]; rw [hpc]; omega
+  have hpc2 : r2.pc = 46 + cfBlk.length := by dsimp only [r2]; omega
   have h25 : r2.temp (frei + 5) = some ⟨.bool, false⟩ := by dsimp only [r2]; rw [updateHit]
   let r3 : Rahmen := { r2 with pc := r2.pc + 4 }
   have e3 : Schritt blk (some r2) = some r3 := by
@@ -241,12 +241,12 @@ theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     rw [updateMiss _ _ _ _ (by omega)]
     exact h2
   have h13 : r1.temp (frei + 3) = some (natVal 1) := by dsimp only [r1]; rw [updateHit]
-  let r2 : Rahmen := { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 2) (some (natVal (y + 1))) }
+  let r2 : Rahmen := { r1 with pc := (48 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 2) (some (natVal (y + 1))) }
   have e2 : Schritt blk (some r1) = some r2 := by
-    change Schritt blk (some r1) = some { r1 with pc := r1.pc + 1, temp := Function.update r1.temp (frei + 2) (some (natVal (y + 1))) }
+    change Schritt blk (some r1) = some { r1 with pc := (48 + cfBlk.length) + 1, temp := Function.update r1.temp (frei + 2) (some (natVal (y + 1))) }
     exact schrittAddNat blk r1 (48 + cfBlk.length) (frei + 2) y 1 hpc1 h12 h13
       (rfindBeiRueck1 cfBlk aus frei)
-  have hpc2 : r2.pc = 49 + cfBlk.length := by dsimp only [r2, r1]; rw [hpc]; omega
+  have hpc2 : r2.pc = 49 + cfBlk.length := by dsimp only [r2]; omega
   let r3 : Rahmen := { r2 with pc := r2.pc - (49 + cfBlk.length) }
   have e3 : Schritt blk (some r2) = some r3 := by
     change Schritt blk (some r2) = some { r2 with pc := r2.pc - (49 + cfBlk.length) }
@@ -260,10 +260,10 @@ theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
   refine ⟨r3, hrun3, ?_, ?_, rfl, rfl, rfl⟩
-  · dsimp only [r3, r2]
+  · dsimp only [r3]
     rw [hpc2]
     omega
-  · dsimp only [r3, r2]
+  · dsimp only [r3]
     rw [updateHit]
 
 /-- The copy segment writes the candidate into the output slot and stops at the loop end. -/
@@ -273,11 +273,12 @@ theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     ∃ rE : Rahmen,
       (Schritt (rfindSchleife cfBlk aus frei))^[3] (some r) = some rE ∧
       rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y) := by
-  refine ⟨{ r with pc := (50 + cfBlk.length) + 3, temp := Function.update r.temp aus (some (natVal y)) }, ?_, ?_, ?_⟩
-  · exact laufKopie (rfindSchleife cfBlk aus frei) r (50 + cfBlk.length) aus (frei + 2)
-      (some (natVal y)) hpc h2 (rfindBeiKopie0 cfBlk aus frei)
-      (rfindBeiKopie1 cfBlk aus frei) (rfindBeiKopie2 cfBlk aus frei)
+  have h := laufKopie (rfindSchleife cfBlk aus frei) r (50 + cfBlk.length) aus (frei + 2)
+    (some (natVal y)) hpc h2 (rfindBeiKopie0 cfBlk aus frei)
+    (rfindBeiKopie1 cfBlk aus frei) (rfindBeiKopie2 cfBlk aus frei)
+  refine ⟨_, h, ?_, ?_⟩
   · rw [rfindSchleifeLaenge]
+    omega
   · rw [updateHit]
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
