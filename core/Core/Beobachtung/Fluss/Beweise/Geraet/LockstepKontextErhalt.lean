@@ -339,11 +339,11 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                               exact ⟨_, hplansA',
                                 Rule.consume owned₂A pending₂A ready₂A sameQuestion₂A⟩⟩).1
                           refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-                          · simpa only [hlokal₁, hlokal₂] using hq.1
-                          · simpa only [hstatus₁, hstatus₂] using hq.2.1
-                          · simpa only [hinitial₁, hinitial₂] using hq.2.2.1
-                          · simpa only [hrechte₁, hrechte₂] using hq.2.2.2.1
-                          · simpa only [hleihen₁, hleihen₂] using hq.2.2.2.2.1
+                          · simpa only [hlokal₁, hlokal₂, uL, uR] using hq.1
+                          · simpa only [hstatus₁, hstatus₂, uL, uR] using hq.2.1
+                          · simpa only [hinitial₁, hinitial₂, uL, uR] using hq.2.2.1
+                          · simpa only [hrechte₁, hrechte₂, uL, uR] using hq.2.2.2.1
+                          · simpa only [hleihen₁, hleihen₂, uL, uR] using hq.2.2.2.2.1
                           · intro c'
                             unfold AntwortSicht
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁,
