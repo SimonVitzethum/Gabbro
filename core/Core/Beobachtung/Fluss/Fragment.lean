@@ -118,28 +118,15 @@ theorem fragment_kontext_schritt_still
           unfold System.ImplSchritt at regel
           rcases regel with ⟨b, kopfB, implB⟩
           change Befehl.impl b c s0 w _ _ at implB
-          rcases (b.impl_privat (privat s0 b hS kopfB) c s0 w _ _).1 implB with ⟨planEq, frameEq⟩
-          injection planEq with hplan
-          subst hplan
-          subst frameEq
-          unfold FuehrtSchrittAus at aus
-          rcases aus with ⟨_, _, sperren, v, fuehrtAus, speicherfolge, nEqState⟩
-          change FuehrtAus (p.einheit plattform).einrichtung t c s0 (b.nach c s0) .intern
-            sperren aussen v at fuehrtAus
-          cases fuehrtAus
-          simp only [List.nil_append, List.append_nil, List.map_nil, List.filter_nil] at speicherfolge
-          generalize hGraph : n0.graph = gEnd at speicherfolge
-          cases speicherfolge
-          have nEqFrame : n0 = b.nach c s0 := by
-            rw [nEqState, hGraph]
-            rfl
+          obtain ⟨hspur, _, hstatus, _, _, _, _, _, hgraph, hbuchung, _, _, _, _, _, _⟩ :=
+            b.vollzug_genau_privat (privat s0 b hS kopfB) (w := w) implB aus
+          cases hspur
+          obtain ⟨_, hnach⟩ := (b.impl_privat (privat s0 b hS kopfB) c s0 w _ _).1 implB
           have nBuchung : n0.buchung = s0.buchung := by
-            rw [nEqFrame]
-            rfl
+            rw [hbuchung, hnach]; rfl
           have hStatus : ∀ d, n0.status d = s0.status d := by
             intro d
-            rw [nEqFrame]
-            rfl
+            rw [hstatus, hnach]; rfl
           have hCommit : commitBeob (Form := Befehl) (p.einheit plattform).katalog.plattform s0 n0 = [] := by
             rw [commitBeob, nBuchung, List.drop_length, List.filterMap_nil]
           have hAusgabe : ausgabeBeob (p.einheit plattform) c (s0.lokal c) (n0.lokal c) = [] := by
@@ -219,13 +206,12 @@ theorem stummer_schritt_koppelt
         obtain ⟨f₁, kopf₁, impl₁rule⟩ := regel₁
         have ff : f = f₁ := Option.some.inj (kopf.symm.trans kopf₁)
         subst ff
-        obtain ⟨_, nachGlied₁⟩ := Befehl.vollzug_genau (w := w) f impl₁rule aus₁ privat
-        have zustandNach₁ : ρ₁.zeit.zustand (t + 1) = some (f.nach c vor) := by
-          rw [nachEq₁, nachGlied₁]
+        obtain ⟨hspur₁, hlokal₁, hstatus₁, _, hantworten₁, hverbraucht₁, _, hinitial₁, _,
+          hbuchung₁, hrechte₁, hgeliefert₁, hleihen₁, hepoche₁, hverworfen₁, _⟩ :=
+          f.vollzug_genau_privat privat (w := w) impl₁rule aus₁
         have transfer₁ := (f.impl_privat privat c vor w _ _).1 impl₁rule
-        have planEq₁ : _ := (List.cons.inj transfer₁.1).1
-        obtain ⟨_, auth₁, _, _, _, _, _⟩ := aus₁
-        have auth₂ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := planEq₁ ▸ auth₁
+        obtain ⟨_, hnach₁⟩ := transfer₁
+        subst hnach₁
         -- same-index offers
         have crashEq : (ρ₁.hw.angebot t).crash = (ρ₂.hw.angebot t).crash :=
           congrArg (fun p => (p.1 t).2.2.2.2.2.1) vergleich.politik
@@ -246,20 +232,15 @@ theorem stummer_schritt_koppelt
             rw [← kerneEq]; exact kern₁
           · show w₂.status c = .laeuft
             rw [← statusEq]; exact stat₁
-        have rahmen₂ : Zustandsrahmen w₂ (f.nach c w₂) :=
-          ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-        -- empty labels extend the graph by nothing; the kernel unfolds the
-        -- internal plan, the write-event filter and the empty appends definitionally
-        have speicher₂ : Speicherfolge w₂.initial (.kontext c) w₂.graph _ [] w₂.graph :=
-          Speicherfolge.nil _
         have aus₂ : FuehrtSchrittAus (p.einheit plattform).einrichtung t c w₂ (f.nach c w₂)
-            Ast.Semantik.plan ⟨[], []⟩ (f.nach c w₂) :=
-          ⟨rahmen₂, auth₂, [], _, .intern, speicher₂, rfl⟩
-        have regel₂ : (p.einheit plattform).system.ImplSchritt c w₂ w [Ast.Semantik.plan] (f.nach c w₂) :=
-          ⟨f, kopf₂, (f.impl_privat privat c w₂ w [Ast.Semantik.plan] (f.nach c w₂)).2 ⟨rfl, rfl⟩⟩
+            (f.plan (w₂.lokal c) 0) ⟨[], []⟩ (f.maschinennach c w₂ (f.nach c w₂)) :=
+          f.vollzug _ t c w₂ privat
+        have regel₂ : (p.einheit plattform).system.ImplSchritt c w₂ w [f.plan (w₂.lokal c) 0]
+            (f.nach c w₂) :=
+          ⟨f, kopf₂, (f.impl_privat privat c w₂ w [f.plan (w₂.lokal c) 0] (f.nach c w₂)).2 ⟨rfl, rfl⟩⟩
         have step₂ : ImplSchritt (p.einheit plattform).einrichtung (p.einheit plattform).system
             (p.einheit plattform).katalog ρ₂.hw t w₂
-            (.kontext c w, ⟨[], []⟩) (f.nach c w₂) :=
+            (.kontext c w, ⟨[], []⟩) (f.maschinennach c w₂ (f.nach c w₂)) :=
           .kontext crash₂ bereit₂ regel₂ aus₂
         -- no interrupt offer on either side: a core opportunity is present
         have auswahl₁none : (ρ₁.hw.angebot t).interruptAuswahl = none := by
@@ -302,13 +283,15 @@ theorem stummer_schritt_koppelt
                       rw [← kk, ← kerneEq]
                       exact kern₁
                     exact Option.some.inj (kern₂.symm.trans gleich)
-                  rw [c_eq] at kopf₂'
-                  have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
-                  subst ff₂
-                  obtain ⟨_, nachGlied₂⟩ := Befehl.vollzug_genau (w := w₂') f impl₂'rule aus₂' privat
-                  rw [c_eq] at nachGlied₂
-                  have zustandNach₂ : ρ₂.zeit.zustand (t + 1) = some (f.nach c w₂) := by
-                    rw [nachEq₂, nachGlied₂]
+                    rw [c_eq] at kopf₂' impl₂'rule aus₂'
+                    have ff₂ : f = f₂ := Option.some.inj (kopf₂.symm.trans kopf₂')
+                    subst ff₂
+                    obtain ⟨hspur₂, hlokal₂, hstatus₂, _, hantworten₂, hverbraucht₂, _, hinitial₂, _,
+                    hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
+                    f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
+                    have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
+                    obtain ⟨_, hnach₂⟩ := htrans₂
+                    subst hnach₂
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
                     fragment_kontext_schritt_still p plattform
                       (fun s b hs hk => privat_am_kopf zustand₂ kopf₂ privat s b hs (c_eq ▸ hk)) label₂
@@ -331,46 +314,118 @@ theorem stummer_schritt_koppelt
                       Function.update w₂.lokal c
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
-                  refine ⟨?_, ?_, ?_⟩
+                    -- kerne: same per-core update on equal pre-state kernes
+                    have kerneGleich : nach₁.kerne = nach₂.kerne := by
+                      have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
+                        rw [lokEqFun]
+                      obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
+                      obtain ⟨_, _, _, v₂, aktion₂, _, stateEq₂⟩ := aus₂'
+                      subst hspur₁
+                      subst hspur₂
+                      rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
+                        ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        funext k
+                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
+                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
+                          rw [kerneEq]
+                        rw [hc]
+                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        funext k
+                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
+                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
+                          rw [kerneEq]
+                        rw [hc]
+                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                      · rw [hL] at aktion₁
+                        have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
+                        rw [hR] at aktion₂
+                        cases aktion₁
+                        cases aktion₂
+                        rw [stateEq₁, stateEq₂]
+                        rfl
+                    refine ⟨?_, ?_, ?_⟩
                   · -- prefix: both sides append nothing
                     rw [e₁, e₂]
                     exact cov
                   · -- state: publicly equal post-states, preserved machine fields
                     intro a b ha hb
-                    rw [zustandNach₁] at ha
-                    rw [zustandNach₂] at hb
+                    rw [nachEq₁] at ha
+                    rw [nachEq₂] at hb
                     obtain rfl := Option.some.inj ha
                     obtain rfl := Option.some.inj hb
+                    have lokPost' : nach₁.lokal = nach₂.lokal := by
+                      rw [hlokal₁, hlokal₂]
+                      exact lokPost
                     refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
                     · intro d p hp
-                      exact congrFun lokPost d
+                      exact congrFun lokPost' d
                     · intro d
-                      have s1 : (f.nach c vor).status = vor.status := rfl
-                      have s2 : (f.nach c w₂).status = w₂.status := rfl
+                      have s1 : nach₁.status d = vor.status d := by rw [hstatus₁]; rfl
+                      have s2 : nach₂.status d = w₂.status d := by rw [hstatus₂]; rfl
                       simp only [s1, s2, statusEq]
                     · intro x
-                      have i1 : (f.nach c vor).initial = vor.initial := rfl
-                      have i2 : (f.nach c w₂).initial = w₂.initial := rfl
+                      have i1 : nach₁.initial = vor.initial := by rw [hinitial₁]; rfl
+                      have i2 : nach₂.initial = w₂.initial := by rw [hinitial₂]; rfl
                       simp only [i1, i2]
                       exact initialGleich x
-                    · have r1 : (f.nach c vor).rechte = vor.rechte := rfl
-                      have r2 : (f.nach c w₂).rechte = w₂.rechte := rfl
+                    · have r1 : nach₁.rechte = vor.rechte := by rw [hrechte₁]; rfl
+                      have r2 : nach₂.rechte = w₂.rechte := by rw [hrechte₂]; rfl
                       simp only [r1, r2]
                       exact rechteGleich
-                    · have l1 : (f.nach c vor).leihen = vor.leihen := rfl
-                      have l2 : (f.nach c w₂).leihen = w₂.leihen := rfl
+                    · have l1 : nach₁.leihen = vor.leihen := by rw [hleihen₁]; rfl
+                      have l2 : nach₂.leihen = w₂.leihen := by rw [hleihen₂]; rfl
                       simp only [l1, l2]
                       exact leihenGleich
                     · intro d
                       simp only [AntwortSicht]
-                      have q1 : (f.nach c vor).naechsteAntwort d = vor.naechsteAntwort d := rfl
-                      have q2 : (f.nach c w₂).naechsteAntwort d = w₂.naechsteAntwort d := rfl
+                      have q1 : nach₁.naechsteAntwort d = vor.naechsteAntwort d := by
+                        have e1 : nach₁.antworten = vor.antworten := by rw [hantworten₁]; rfl
+                        have e2 : nach₁.verworfen = vor.verworfen := by rw [hverworfen₁]; rfl
+                        have e3 : nach₁.verbraucht = vor.verbraucht := by rw [hverbraucht₁]; rfl
+                        simp only [Zustand.naechsteAntwort, Zustand.angekommen, e1, e2, e3]
+                      have q2 : nach₂.naechsteAntwort d = w₂.naechsteAntwort d := by
+                        have e1 : nach₂.antworten = w₂.antworten := by rw [hantworten₂]; rfl
+                        have e2 : nach₂.verworfen = w₂.verworfen := by rw [hverworfen₂]; rfl
+                        have e3 : nach₂.verbraucht = w₂.verbraucht := by rw [hverbraucht₂]; rfl
+                        simp only [Zustand.naechsteAntwort, Zustand.angekommen, e1, e2, e3]
                       rw [q1, q2]
                       exact antwortGleich d
-                    · simp only [Befehl.nach, epocheEq]
-                    · simp only [Befehl.nach, geliefertEq]
-                    · simp only [Befehl.nach, kerneEq]
-                    · simp only [Befehl.nach, statusEq]
+                    · have e1 : nach₁.epoche = vor.epoche := by rw [hepoche₁]; rfl
+                      have e2 : nach₂.epoche = w₂.epoche := by rw [hepoche₂]; rfl
+                      simp only [e1, e2, epocheEq]
+                    · have g1 : nach₁.geliefert = vor.geliefert := by rw [hgeliefert₁]; rfl
+                      have g2 : nach₂.geliefert = w₂.geliefert := by rw [hgeliefert₂]; rfl
+                      simp only [g1, g2, geliefertEq]
+                    · exact kerneGleich
+                    · have s1 : nach₁.status = vor.status := by rw [hstatus₁]; rfl
+                      have s2 : nach₂.status = w₂.status := by rw [hstatus₂]; rfl
+                      simp only [s1, s2, statusEq]
                   · -- length: both sides append nothing
                     rw [e₁, e₂]
                     exact len

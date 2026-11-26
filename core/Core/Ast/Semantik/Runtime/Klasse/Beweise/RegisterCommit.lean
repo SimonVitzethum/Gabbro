@@ -42,19 +42,23 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
       subst plan
       exact Or.inl trivial
   | maskiere =>
-      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      have hp : plan = Schrittform.plan ⟨.maskiere, o, tr⟩ (s.lokal c) 0 :=
+        (List.cons.inj step.1).1
       subst plan
       exact Or.inl trivial
   | prioritaet =>
-      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      have hp : plan = Schrittform.plan ⟨.prioritaet, o, tr⟩ (s.lokal c) 0 :=
+        (List.cons.inj step.1).1
       subst plan
       exact Or.inl trivial
   | sendeUnterbrechung =>
-      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      have hp : plan = Schrittform.plan ⟨.sendeUnterbrechung, o, tr⟩ (s.lokal c) 0 :=
+        (List.cons.inj step.1).1
       subst plan
       exact Or.inl trivial
   | leiteLeitung =>
-      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      have hp : plan = Schrittform.plan ⟨.leiteLeitung, o, tr⟩ (s.lokal c) 0 :=
+        (List.cons.inj step.1).1
       subst plan
       exact Or.inl trivial
   | lesen m =>

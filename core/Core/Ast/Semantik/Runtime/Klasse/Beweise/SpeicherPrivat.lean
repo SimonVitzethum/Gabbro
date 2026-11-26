@@ -47,8 +47,38 @@ private theorem intern_spur {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int Na
   · rw [zustand]
     exact rechteZw
 
+/-- A still step of a form has the empty trace: its protocol action records no lock and no outside
+    event, so the memory labels are empty whatever the plan names, and the ledger and the rights it
+    leaves are those of the pre-state. -/
+private theorem still_spur {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι)
+    {t : Nat} {c : Kontext} {vor zwischen nach : Zustand} {plan : Plan} {spur : SchrittSpur Zelle Int}
+    (aus : FuehrtSchrittAus E.maschine.einrichtung t c vor zwischen plan spur nach)
+    (buchungZw : zwischen.buchung = vor.buchung) (rechteZw : zwischen.rechte = vor.rechte)
+    (hlesen : plan.lesen = []) (hfuss : plan.fuss = []) (hakt : plan.aktion.Still) :
+    spur = ⟨[], []⟩ ∧ nach.buchung = vor.buchung ∧ nach.rechte = vor.rechte := by
+  obtain ⟨_, _, _, v, aktion, folge, zustand⟩ := aus
+  obtain ⟨hs, he, _, _, hr, _, _, _, _, _, _, _, _, _, _, _, hb⟩ := aktion.still_erhaelt hakt
+  rcases spur with ⟨events, outside⟩
+  have outsideNil : outside = [] := he
+  subst outsideNil
+  rw [hs, hlesen, hfuss] at folge
+  simp only [List.nil_append, schreibEreignisse, List.filter_nil, List.map_nil, List.append_nil,
+    List.map_nil] at folge
+  have leer : events = [] := by
+    generalize hg : nach.graph = graph at folge
+    cases folge
+    rfl
+  subst events
+  refine ⟨rfl, ?_, ?_⟩
+  · rw [zustand]
+    show v.buchung = vor.buchung
+    exact hb.trans buchungZw
+  · rw [zustand]
+    show v.rechte = vor.rechte
+    exact hr.trans rechteZw
+
 /-- Finish the memory leg for the two trace shapes a private step can have: no events, or the one
-     outside event of a question (whose memory label is `.aussen`, hence no booking obligation). -/
+    outside event of a question (whose memory label is `.aussen`, hence no booking obligation). -/
 private theorem privat_fertig {ι : Type} (E : Sicherheit.Einheit Nat Zelle Int Nat Rahmen PUnit PUnit PUnit ι)
     {hw : HwLauf} {t : Nat} {c : Kontext} {vor nach : Zustand} {spur : SchrittSpur Zelle Int}
     (buchung : nach.buchung = vor.buchung) (rechte : nach.rechte = vor.rechte)
@@ -188,9 +218,13 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
     simp only [Schrittform.ideal] at implIdeal
     obtain ⟨same, after⟩ := implIdeal
     subst zwischen
-    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    have hplan : plan = Schrittform.plan ⟨.maskiere, o, ue⟩ (vor.lokal c) 0 :=
+      (List.cons.inj same).1
+    have hlesen : plan.lesen = [] := by rw [hplan]; rfl
+    have hfuss : plan.fuss = [] := by rw [hplan]; rfl
+    have hakt : plan.aktion.Still := by rw [hplan]; trivial
     obtain ⟨form, buchung, rechte⟩ :=
-      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      still_spur E (t := t) (c := c) (vor := vor) aus rfl rfl hlesen hfuss hakt
     exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .prioritaet at hkF
@@ -198,9 +232,13 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
     simp only [Schrittform.ideal] at implIdeal
     obtain ⟨same, after⟩ := implIdeal
     subst zwischen
-    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    have hplan : plan = Schrittform.plan ⟨.prioritaet, o, ue⟩ (vor.lokal c) 0 :=
+      (List.cons.inj same).1
+    have hlesen : plan.lesen = [] := by rw [hplan]; rfl
+    have hfuss : plan.fuss = [] := by rw [hplan]; rfl
+    have hakt : plan.aktion.Still := by rw [hplan]; trivial
     obtain ⟨form, buchung, rechte⟩ :=
-      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      still_spur E (t := t) (c := c) (vor := vor) aus rfl rfl hlesen hfuss hakt
     exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .sendeUnterbrechung at hkF
@@ -208,9 +246,13 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
     simp only [Schrittform.ideal] at implIdeal
     obtain ⟨same, after⟩ := implIdeal
     subst zwischen
-    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    have hplan : plan = Schrittform.plan ⟨.sendeUnterbrechung, o, ue⟩ (vor.lokal c) 0 :=
+      (List.cons.inj same).1
+    have hlesen : plan.lesen = [] := by rw [hplan]; rfl
+    have hfuss : plan.fuss = [] := by rw [hplan]; rfl
+    have hakt : plan.aktion.Still := by rw [hplan]; trivial
     obtain ⟨form, buchung, rechte⟩ :=
-      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      still_spur E (t := t) (c := c) (vor := vor) aus rfl rfl hlesen hfuss hakt
     exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .leiteLeitung at hkF
@@ -218,9 +260,13 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
     simp only [Schrittform.ideal] at implIdeal
     obtain ⟨same, after⟩ := implIdeal
     subst zwischen
-    have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    have hplan : plan = Schrittform.plan ⟨.leiteLeitung, o, ue⟩ (vor.lokal c) 0 :=
+      (List.cons.inj same).1
+    have hlesen : plan.lesen = [] := by rw [hplan]; rfl
+    have hfuss : plan.fuss = [] := by rw [hplan]; rfl
+    have hakt : plan.aktion.Still := by rw [hplan]; trivial
     obtain ⟨form, buchung, rechte⟩ :=
-      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      still_spur E (t := t) (c := c) (vor := vor) aus rfl rfl hlesen hfuss hakt
     exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
 
 /-- A step with the empty trace and no new effect releases nothing and books no access, whatever it does to the

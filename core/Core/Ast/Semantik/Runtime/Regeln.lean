@@ -74,18 +74,92 @@ theorem Befehl.nach_form (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand)
     { s with lokal := Function.update s.lokal c (b.auswerten (s.lokal c) s.regionLive) }
   rw [b.uebertrag_privat h]
 
-/-- The plan of a frame-only instruction is the private plan, at every frame and for every value. -/
-theorem Befehl.plan_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (v : Int) :
-    b.plan r v = Semantik.plan := by
-  show b.klasse.plan (b.operand r) v = Semantik.plan
-  rcases h with h | h | h | h | h | h <;> simp only [h, Wirkungsklasse.plan]
+/-- The plan of a frame-only instruction records no memory event and has no footprint. -/
+theorem Befehl.plan_privat_leer (b : Befehl) (h : b.Privat) (r : Rahmen) :
+    (b.plan r 0).lesen = [] ∧ (b.plan r 0).fuss = [] := by
+  rcases h with h | h | h | h | h | h <;>
+    simp only [Befehl.plan, Befehl.form, Schrittform.plan, h, Wirkungsklasse.plan, planMit,
+      Semantik.plan] <;>
+    trivial
 
-/-- The ideal step of a form of a frame-only class: its private plan and its frame transfer. -/
+/-- The protocol action of a frame-only instruction: the internal action or one interrupt-control action. -/
+theorem Befehl.plan_privat_aktion (b : Befehl) (h : b.Privat) (r : Rahmen) :
+    (b.plan r 0).aktion = .intern ∨
+    (∃ vektor aus, (b.plan r 0).aktion = .maskiere vektor aus) ∨
+    (∃ grenze, (b.plan r 0).aktion = .prioritaet grenze) ∨
+    (∃ vektor kern, (b.plan r 0).aktion = .sende vektor kern) ∨
+    (∃ ltg krn prio, (b.plan r 0).aktion = .leite ltg krn prio) := by
+  rcases h with h | h | h | h | h | h
+  · have e : (b.plan r 0).aktion = .intern := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inl e
+  · have e : (b.plan r 0).aktion = .intern := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inl e
+  · have e : (b.plan r 0).aktion =
+        .maskiere (b.operand r).unterbrechung.vektor (b.operand r).unterbrechung.aus := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inr (Or.inl ⟨_, _, e⟩)
+  · have e : (b.plan r 0).aktion = .prioritaet (b.operand r).unterbrechung.grenze := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inr (Or.inr (Or.inl ⟨_, e⟩))
+  · have e : (b.plan r 0).aktion =
+        .sende (b.operand r).unterbrechung.vektor (b.operand r).unterbrechung.kern := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inr (Or.inr (Or.inr (Or.inl ⟨_, _, e⟩)))
+  · have e : (b.plan r 0).aktion =
+        .leite (b.operand r).unterbrechung.leitung (b.operand r).unterbrechung.kern
+          (b.operand r).unterbrechung.prioritaet := by
+      unfold Befehl.plan Befehl.form Schrittform.plan
+      rw [h]
+      rfl
+    exact Or.inr (Or.inr (Or.inr (Or.inr ⟨_, _, _, e⟩)))
+
+/-- A frame-only plan is still and empty: its action, reads and footprint. -/
+theorem Befehl.privat_still_leer (b : Befehl) (h : b.Privat) (r : Rahmen) :
+    (b.plan r 0).aktion.Still ∧ (b.plan r 0).lesen = [] ∧ (b.plan r 0).fuss = [] := by
+  obtain ⟨hlesen, hfuss⟩ := b.plan_privat_leer h r
+  refine ⟨?_, hlesen, hfuss⟩
+  rcases b.plan_privat_aktion h r with h0 | ⟨_, _, h0⟩ | ⟨_, h0⟩ | ⟨_, _, h0⟩ | ⟨_, _, _, h0⟩ <;>
+    rw [h0] <;> trivial
+
+/-- The machine post-state of a frame-only step: the form state, plus the machine effect of the plan's
+    protocol action (mask, threshold, send, route). Non-still actions are vacuous; only still plans
+    reach this function. -/
+def Befehl.maschinennach (b : Befehl) (c : Kontext) (s u : Zustand) : Zustand :=
+  match (b.plan (s.lokal c) 0).aktion with
+  | .intern => u
+  | .maskiere vektor aus =>
+    { u with kerne := fun k =>
+      if _ : (s.kerne k).laeuft = some c then
+        { u.kerne k with maske := Function.update (u.kerne k).maske vektor aus }
+      else u.kerne k }
+  | .prioritaet grenze =>
+    { u with kerne := fun k =>
+      if _ : (s.kerne k).laeuft = some c then { u.kerne k with untergrenze := grenze }
+      else u.kerne k }
+  | .sende vektor kern => { u with software := u.software ++ [(kern, .maskierbar vektor 0)] }
+  | .leite leitung kern prio =>
+    { u with leitung := Function.update u.leitung leitung (kern, prio) }
+  | .warte _ | .sperre _ _ | .frage _ | .verbrauche _ | .rueckkehr | .starte | .verbinde _ |
+    .beende | .wechsle _ _ => u
+
+/-- The ideal step of a form of a frame-only class: the plan of its class and its frame transfer. -/
 theorem Schrittform.ideal_privat (F : Schrittform)
     (h : F.klasse = .lokal ∨ F.klasse = .ruf ∨ F.klasse = .maskiere ∨ F.klasse = .prioritaet ∨
       F.klasse = .sendeUnterbrechung ∨ F.klasse = .leiteLeitung)
     (c : Kontext) (s : Zustand) (w : PUnit.{1}) (plans : List Plan) (u : Zustand) :
-    F.ideal c s w plans u ↔ plans = [Semantik.plan] ∧ u = F.nach c s 0 := by
+    F.ideal c s w plans u ↔ plans = [F.plan (s.lokal c) 0] ∧ u = F.nach c s 0 := by
   obtain ⟨k, o, t⟩ := F
   rcases h with h | h | h | h | h | h
   · change k = .lokal at h
@@ -107,30 +181,43 @@ theorem Schrittform.ideal_privat (F : Schrittform)
     subst h
     exact Iff.rfl
 
-/-- **The ideal step of a frame-only instruction**: the private plan and the frame transfer `Befehl.nach`.
-    This is the unfolded step every proof over a generic instruction of the current set uses. -/
+/-- **The ideal step of a frame-only instruction**: the plan of its class and the frame transfer
+    `Befehl.nach`. This is the unfolded step every proof over a generic instruction of the current set uses. -/
 theorem Befehl.ideal_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand) (w : PUnit.{1})
     (plans : List Plan) (u : Zustand) :
-    b.ideal c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s := by
+    b.ideal c s w plans u ↔ plans = [b.plan (s.lokal c) 0] ∧ u = b.nach c s := by
   rw [← b.nach_form h c s 0]
   exact b.form.ideal_privat h c s w plans u
 
 /-- The implementation step of a frame-only instruction is its ideal step. -/
 theorem Befehl.impl_privat (b : Befehl) (h : b.Privat) (c : Kontext) (s : Zustand) (w : PUnit.{1})
     (plans : List Plan) (u : Zustand) :
-    b.impl c s w plans u ↔ plans = [Semantik.plan] ∧ u = b.nach c s :=
+    b.impl c s w plans u ↔ plans = [b.plan (s.lokal c) 0] ∧ u = b.nach c s :=
   b.ideal_privat h c s w plans u
 
 /-- **No instruction issues a question or takes a lock: every step of every instruction is a still action** (the
-    internal action or a lifecycle action, MK-07). A frame-only step has the private plan; the step of an access
-    instruction has the plan of its class or the private plan of its refusal, and the classes `lesen`, `schreiben` and
-    `rmw` plan the internal action; the step of a lifecycle instruction plans the action of its class. -/
+    internal action, a lifecycle action (MK-07) or an interrupt-control action (MK-20)). A frame-only step
+    has the plan of its class; the step of an access instruction has the plan of its class or the private
+    plan of its refusal, and the classes `lesen`, `schreiben` and `rmw` plan the internal action; the step
+    of a lifecycle instruction plans the action of its class. -/
 theorem Befehl.impl_aktion_still (b : Befehl) {c : Kontext} {s : Zustand} {w : PUnit.{1}} {p : Plan}
     {u : Zustand} (h : b.impl c s w [p] u) : p.aktion.Still := by
   by_cases hp : b.Privat
-  · have same := (List.cons.inj ((b.impl_privat hp c s w [p] u).1 h).1).1
-    subst same
-    trivial
+  · have hplan : p = b.plan (s.lokal c) 0 :=
+      (List.cons.inj ((b.impl_privat hp c s w [p] u).1 h).1).1
+    subst hplan
+    rcases b.plan_privat_aktion hp (s.lokal c) with h0 | ⟨_, _, h0⟩ | ⟨_, h0⟩ | ⟨_, _, h0⟩ |
+      ⟨_, _, _, h0⟩
+    · rw [h0]
+      trivial
+    · rw [h0]
+      trivial
+    · rw [h0]
+      trivial
+    · rw [h0]
+      trivial
+    · rw [h0]
+      trivial
   · cases b with
     | zugriff z =>
       cases z <;> rcases h with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩ <;>

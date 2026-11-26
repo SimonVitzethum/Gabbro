@@ -31,7 +31,8 @@ theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) (priv : b.Privat) :
       I.Zustandsbezug E z z ∧ (hw.angebot 0).crash = false ∧ KannSchreiten hw 0 eintritt z ∧
       E.system.kopf z eintritt = some b ∧
       (E.system.regel b).impl eintritt z () [plan] (b.nach eintritt z) ∧
-      FuehrtSchrittAus E.einrichtung 0 eintritt z (b.nach eintritt z) plan ⟨[], []⟩ (b.nach eintritt z) := by
+      FuehrtSchrittAus E.einrichtung 0 eintritt z (b.nach eintritt z) plan ⟨[], []⟩
+        (b.maschinennach eintritt z (b.nach eintritt z)) := by
   let E := (Fragment.einzel b).einheit .x86_64
   have image : E.bild.gueltig E.katalog.plattform.ziel := Sicherheit.Laufkonstruktion.bild_gueltig
   have hardware := Hosted.erlaubt []
@@ -46,6 +47,6 @@ theorem sim_formvoraussetzungen_erfuellbar (b : Befehl) (priv : b.Privat) :
   exact ⟨Hosted.umgebung [], s, Hosted.hardware [], hardware, zul, Hosted.konform [],
     ⟨I.ProtokollBezug.refl _, rfl⟩, rfl, ready, rfl,
     (b.impl_privat priv eintritt (I.start E s).2 () [plan] (b.nach eintritt (I.start E s).2)).2 ⟨rfl, rfl⟩,
-    b.vollzug _ _ _ _⟩
+    b.vollzug _ _ _ _ priv⟩
 
 end Gabbro.Core.Ast.Semantik

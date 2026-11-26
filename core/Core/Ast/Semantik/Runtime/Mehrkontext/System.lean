@@ -41,8 +41,9 @@ theorem system_fortschritt (code : List Befehl) (privat : ∀ b ∈ code, b.Priv
     Ideal.IFortschritt (system code) :=
   Ideal.fortschritt_aus_regeln (system code) (fun _ _ finished => finished)
     (fun b s c head =>
-      Or.inl ⟨(), [plan], b.nach c s,
-        (b.ideal_privat (privat b (kopf_mem head)) c s () [plan] (b.nach c s)).2 ⟨rfl, rfl⟩⟩)
+      Or.inl ⟨(), [b.plan (s.lokal c) 0], b.nach c s,
+        (b.ideal_privat (privat b (kopf_mem head)) c s () [b.plan (s.lokal c) 0]
+          (b.nach c s)).2 ⟨rfl, rfl⟩⟩)
 
 /-- A fragment with two bodies: the entry context writes the literal `1` to the temporary `0`, the
     handler `0 0 0` writes the literal `2` to the same temporary of its own frame. -/

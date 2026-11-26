@@ -139,53 +139,53 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
           (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
   | maskiere =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
-      have planAkt : plan.aktion = .intern := by
+      have hstill : plan.aktion.Still := by
         rw [(List.cons.inj impl.1).1]
-        rfl
+        trivial
       have zwischenEq : zwischen = (⟨.maskiere, o, tr⟩ : Schrittform).nach c vor 0 := impl.2
-      rw [planAkt] at aktion
-      cases aktion with
-      | intern =>
-        have buchung := nach_aussen_gleich (⟨.maskiere, o, tr⟩ : Schrittform) c vor 0
-        exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
-          (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      obtain ⟨_, _, _, _, _, _, hf, ha, _, _, _, _, _, _, he, _, hb⟩ :=
+        aktion.still_erhaelt hstill
+      have buchung := nach_aussen_gleich (⟨.maskiere, o, tr⟩ : Schrittform) c vor 0
+      exact offen_befugt_nach_erhalten (hf.trans rahmen.fragen) (ha.trans rahmen.antworten)
+        (he.trans rahmen.epoche) (by rw [hb, zwischenEq]; exact buchung.1)
+        (by rw [hb, zwischenEq]; exact buchung.2) zustand offen
   | prioritaet =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
-      have planAkt : plan.aktion = .intern := by
+      have hstill : plan.aktion.Still := by
         rw [(List.cons.inj impl.1).1]
-        rfl
+        trivial
       have zwischenEq : zwischen = (⟨.prioritaet, o, tr⟩ : Schrittform).nach c vor 0 := impl.2
-      rw [planAkt] at aktion
-      cases aktion with
-      | intern =>
-        have buchung := nach_aussen_gleich (⟨.prioritaet, o, tr⟩ : Schrittform) c vor 0
-        exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
-          (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      obtain ⟨_, _, _, _, _, _, hf, ha, _, _, _, _, _, _, he, _, hb⟩ :=
+        aktion.still_erhaelt hstill
+      have buchung := nach_aussen_gleich (⟨.prioritaet, o, tr⟩ : Schrittform) c vor 0
+      exact offen_befugt_nach_erhalten (hf.trans rahmen.fragen) (ha.trans rahmen.antworten)
+        (he.trans rahmen.epoche) (by rw [hb, zwischenEq]; exact buchung.1)
+        (by rw [hb, zwischenEq]; exact buchung.2) zustand offen
   | sendeUnterbrechung =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
-      have planAkt : plan.aktion = .intern := by
+      have hstill : plan.aktion.Still := by
         rw [(List.cons.inj impl.1).1]
-        rfl
+        trivial
       have zwischenEq : zwischen = (⟨.sendeUnterbrechung, o, tr⟩ : Schrittform).nach c vor 0 :=
         impl.2
-      rw [planAkt] at aktion
-      cases aktion with
-      | intern =>
-        have buchung := nach_aussen_gleich (⟨.sendeUnterbrechung, o, tr⟩ : Schrittform) c vor 0
-        exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
-          (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      obtain ⟨_, _, _, _, _, _, hf, ha, _, _, _, _, _, _, he, _, hb⟩ :=
+        aktion.still_erhaelt hstill
+      have buchung := nach_aussen_gleich (⟨.sendeUnterbrechung, o, tr⟩ : Schrittform) c vor 0
+      exact offen_befugt_nach_erhalten (hf.trans rahmen.fragen) (ha.trans rahmen.antworten)
+        (he.trans rahmen.epoche) (by rw [hb, zwischenEq]; exact buchung.1)
+        (by rw [hb, zwischenEq]; exact buchung.2) zustand offen
   | leiteLeitung =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal] at impl
-      have planAkt : plan.aktion = .intern := by
+      have hstill : plan.aktion.Still := by
         rw [(List.cons.inj impl.1).1]
-        rfl
+        trivial
       have zwischenEq : zwischen = (⟨.leiteLeitung, o, tr⟩ : Schrittform).nach c vor 0 := impl.2
-      rw [planAkt] at aktion
-      cases aktion with
-      | intern =>
-        have buchung := nach_aussen_gleich (⟨.leiteLeitung, o, tr⟩ : Schrittform) c vor 0
-        exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
-          (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
+      obtain ⟨_, _, _, _, _, _, hf, ha, _, _, _, _, _, _, he, _, hb⟩ :=
+        aktion.still_erhaelt hstill
+      have buchung := nach_aussen_gleich (⟨.leiteLeitung, o, tr⟩ : Schrittform) c vor 0
+      exact offen_befugt_nach_erhalten (hf.trans rahmen.fragen) (ha.trans rahmen.antworten)
+        (he.trans rahmen.epoche) (by rw [hb, zwischenEq]; exact buchung.1)
+        (by rw [hb, zwischenEq]; exact buchung.2) zustand offen
   | lesen mode =>
       dsimp [Schrittform.regel, Schrittform.impl, Schrittform.ideal, Schrittform.zugriffsschritt] at impl
       rcases impl with ⟨_, planEq0, zwischenEq⟩ | ⟨_, val, _, planEq0, zwischenEq⟩
