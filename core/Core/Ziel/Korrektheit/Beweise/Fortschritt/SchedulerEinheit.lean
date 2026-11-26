@@ -146,22 +146,37 @@ theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAu
   intro P t _ H ρ lauf _ sf ret η valid matched environment
   exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
 
-/-- The pinned progress statement, closed under the two run premises plus memory liveness: the
-    selection duties follow from scheduler fairness and preemption return for every fragment
-    (`einheitVon_scheduler_pflichten`); `sim_ziel_fortschritt_im_lauf` consumes them directly.
-    The statement is unchanged. -/
-theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
-    FortschrittAkzeptiertAussage := by
-  intro P t _ H ρ lauf fair sf ret
+/-- Construct one ideal run on every hardware history. On a fair history the two execution
+    duties give per-context and per-cut progress for that same ideal run. -/
+theorem einheitVon_sim_ziel_fortschritt (existiert : ZugriffSchrittExistiertAussage)
+    (P : Katalog.Plattform) (t : Ast.Unit)
+    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
+    (scheduler : Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      Maschine.SchedulerFair (einheitVon P t) ρ ∧
+      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ) :
+    ∃ η : Maschine.I.Lauf (einheitVon P t),
+      Maschine.I.Laeufe (einheitVon P t) η ∧
+      Maschine.I.Sim (einheitVon P t) ρ η ∧
+      Maschine.I.Antwortabgleich ρ η ∧
+      (∀ k, Maschine.ZielFX (einheitVon P t) H ρ k) ∧
+      (Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+        (∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c) ∧
+        Maschine.I.FortschrittDerKlasse .blockierend η) := by
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
     (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
-  obtain ⟨η, valid, sim, _, rest⟩ :=
-    Maschine.I.sim_ziel_fortschritt_im_lauf
-      (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
-      pflicht lauf
-      (fun η valid matched environment fairness =>
-        einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment)
+  apply Maschine.I.sim_ziel_fortschritt_im_lauf pflicht lauf
+  intro η valid matched environment fair
+  obtain ⟨sf, ret⟩ := scheduler fair
+  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+
+/-- The pinned progress statement follows from the shared ideal run and the two run premises. -/
+theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
+    FortschrittAkzeptiertAussage := by
+  intro P t _ H ρ lauf fair sf ret
+  obtain ⟨η, valid, sim, _, _, rest⟩ :=
+    einheitVon_sim_ziel_fortschritt existiert P t lauf (fun _ => ⟨sf, ret⟩)
   exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
 
 /-- Both run premises hold jointly for an accepted elaborated unit: the catalogue is

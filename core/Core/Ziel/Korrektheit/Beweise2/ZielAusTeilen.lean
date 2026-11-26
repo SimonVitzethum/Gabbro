@@ -1,27 +1,9 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise2/ZielAusTeilen.lean
-  Subject:   THE COMPOSITION of the goal theorem `GabbroZielForm (R₀ P B)` from its proved legs and its open
-             legs (`ZielAusTeilenAussage`, `Core/Ziel/Korrektheit/Zusammensetzung.lean`). No pinned statement
-             and no theorem of the model is changed.
+  Subject:   Composition of the goal theorem GabbroZielForm (R₀ P B) from its proof obligations.
 
-  Four legs are hypotheses of `ZielAusTeilenAussage`: image validity, form coverage, progress and bounds;
-  noninterference is a fifth. The front-end, catalogue, start, refinement, guarantee, guard and class legs
-  are discharged by existing theorems. Three steps are not among the delivered building blocks and are named
-  exactly as premises of `zielAusTeilenMitLuecken`:
-
-  1. `idealLuecke`: `I` is determinate and progresses for EVERY accepted elaborated unit, not only for units
-     of the shape `einheitVon P t` (`ideal_akzeptierte_einheit`). This is the eighth conjunct of `NichtLeer`;
-     `R₀` quantifies over all accepted units of `Ast.Semantik.Einheit`.
-  2. `niSpuren`: low-trace equivalence for every admitted comparison of every accepted unit.
-     `zielNI_iff_vergleich` proves the comparison-run existence required by the fixed NI leg.
-  3. `hang`: the no-hang leg of `Verfeinert` holds for EVERY ideal run matching the implementation run
-     (`FortschrittAkzeptiertAussage` supplies it only for the ideal run its own witness returns; `Sim` does
-     not determine that witness uniquely).
-
-  `zielAusTeilenVerfeinerung` delivers the middle part. The first seven conjuncts of `NichtLeer`
-  are discharged inline. `zielAusTeilenMitFortschritt` closes the progress leg by
-  `fortschritt_akzeptiert`, proved from the two owner-approved run premises
-  (`Maschine.SchedulerFair`, `Maschine.VerdraengungKehrtZurueck`).
+  The scheduler obligations are properties of each admitted implementation run on a fair
+  hardware history. The same ideal run carries simulation, answer accounting and progress.
 -/
 module
 
@@ -31,7 +13,6 @@ public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise2.ZielNI
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
-public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
 public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Annahme.Annahme
@@ -48,22 +29,20 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-variable (hang :
-  ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
+variable {P : Katalog.Plattform} (scheduler :
+  ∀ (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ →
       Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
-      ∀ η : Maschine.I.Lauf (einheitVon P t),
-        Maschine.I.Laeufe (einheitVon P t) η → Maschine.I.Sim (einheitVon P t) ρ η →
-        ∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c)
+      Maschine.SchedulerFair (einheitVon P t) ρ ∧
+      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
 
-include hang
+include scheduler
 
-/-- The middle part of `GabbroZielForm (R₀ P B)`: from every admissible start a run, and one ideal run that
-refines every implementation run. Only the no-hang premise is extra; all other legs are existing theorems. -/
-theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
-    BildGueltigAussage P → FormenGedecktAussage P B → FortschrittAkzeptiertAussage →
-      SchrankenAkzeptiertAussage P → NIAkzeptiertAussage P →
+/-- Every admissible start has a run, and every implementation run has one ideal run
+    carrying all legs of `Verfeinert`. -/
+theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExistiertAussage)
+    (schranken : SchrankenAkzeptiertAussage P) :
       (∀ a E, (R₀ P B).Bezeichnet a E → (R₀ P B).Akzeptiert E →
         (∀ H, (R₀ P B).Hardware ((R₀ P B).katalog E) H →
           (∀ s, (R₀ P B).ZulStart E H s →
@@ -71,7 +50,6 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
           ∧ (∀ ρ, (R₀ P B).Laeufe E H ρ →
             ∃ ι, (R₀ P B).IdealLaeufe E ι ∧
               Ziel.Verfeinert (R₀ P B) E H ρ ι))) := by
-  intro bildG formG _ schranken _
   intro a E hbez hacc H hwH
   constructor
   · intro s zul
@@ -86,7 +64,8 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
     have e't : E' = einheitVon P t := laufR.1.trans hElab
     subst E'
     subst E
-    obtain ⟨η, valid, sim⟩ := verfeinerung_akzeptiert P t hacc H ρ' run
+    obtain ⟨η, valid, sim, _, zielFX, progress⟩ :=
+      einheitVon_sim_ziel_fortschritt existiert P t run (scheduler t hacc H ρ' run)
     refine ⟨⟨einheitVon P t, η⟩, ?_, ?_⟩
     · exact ⟨rfl, valid⟩
     · unfold Ziel.Verfeinert
@@ -94,25 +73,25 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
       refine ⟨?_, ?_, ?_, ?_⟩
       · exact ⟨rfl, ⟨rfl, sim⟩⟩
       · intro k
-        exact ⟨rfl, zielFX_akzeptiert P t hacc H ρ' run k⟩
+        exact ⟨rfl, zielFX k⟩
       · intro fair
         refine ⟨?_, ?_⟩
         · intro c hc
           obtain ⟨_, hEq, hAng⟩ := hc
           cases hEq
-          exact hang P t hacc H ρ' run fair η valid sim c hAng
+          exact (progress fair).1 c hAng
         · refine ⟨rfl, ?_⟩
           change DeadlockFrei η
           exact deadlockfrei_aus_waechter valid hacc.2.2
       · exact ⟨rfl, schranken t hacc H ρ' run⟩
 
-/-- The goal over `R₀` follows once the three named gaps are supplied. -/
+/-- The goal over `R₀` follows from the listed proof obligations. -/
 theorem zielAusTeilenMitLuecken
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
-    (niSpuren : VergleichSpurenAussage) (P : Katalog.Plattform) (B : FormBeleg) :
-    ZielAusTeilenAussage P B := by
-  intro bildG formG fortschritt schranken ni
+    (niSpuren : VergleichSpurenAussage) (existiert : ZugriffSchrittExistiertAussage)
+    (B : FormBeleg) (bildG : BildGueltigAussage P) (formG : FormenGedecktAussage P B)
+    (schranken : SchrankenAkzeptiertAussage P) : Ziel.GabbroZielForm (R₀ P B) := by
   unfold Ziel.GabbroZielForm
   constructor
   · unfold Ziel.NichtLeer
@@ -140,23 +119,7 @@ theorem zielAusTeilenMitLuecken
     · intro E hacc
       exact idealLuecke E hacc
   · constructor
-    · exact zielAusTeilenVerfeinerung hang P B bildG formG fortschritt schranken ni
+    · exact zielAusTeilenVerfeinerung scheduler B existiert schranken
     · exact (zielNI_iff_vergleich P B).2 niSpuren
-
-/-- The goal follows with the progress leg closed by the two run premises, with the three gaps
-    supplied. Needs the liveness of the memory model for access heads
-    (`ZugriffSchrittExistiertAussage`); the scheduler selection duties are discharged for every
-    fragment from scheduler fairness and preemption return. -/
-theorem zielAusTeilenMitFortschritt
-    (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
-      Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
-    (niSpuren : VergleichSpurenAussage)
-    (existiert : ZugriffSchrittExistiertAussage)
-    (P : Katalog.Plattform) (B : FormBeleg) :
-    BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
-      NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
-  intro bildG formG schranken ni
-  exact zielAusTeilenMitLuecken hang idealLuecke niSpuren P B bildG formG
-    (fortschritt_akzeptiert existiert) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit
