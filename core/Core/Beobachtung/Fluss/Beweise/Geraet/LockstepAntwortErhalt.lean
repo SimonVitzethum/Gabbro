@@ -201,8 +201,11 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
                       List.take_of_length_le (le_of_eq happLen)
                     rw [ht]
-                    have ht2 : L₂.take L₁.length = L₂ :=
-                      List.take_of_length_le (le_of_eq hlenP.symm)
+                    have ht2 : (NiedrigeBeob.praefix (d.unit locals) ρ₂ predictor t).take
+                        (NiedrigeBeob.praefix (d.unit locals) ρ₁ predictor t).length =
+                        NiedrigeBeob.praefix (d.unit locals) ρ₂ predictor t := by
+                      change L₂.take L₁.length = L₂
+                      exact List.take_of_length_le (le_of_eq hlenP.symm)
                     have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
                       induction A with
                       | nil => exact List.Forall₂.nil
