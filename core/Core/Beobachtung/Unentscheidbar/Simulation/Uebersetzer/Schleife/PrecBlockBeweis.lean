@@ -178,7 +178,6 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       simpa only [List.append_nil] using hs
     have hbleibLR := laufBleibtVorEnde (L ++ R) r kLR rLR hrunLR hpcLR
     have hrunLR_G : (Schritt (P ++ S))^[kLR] (some r) = some rLR := by
-      rw [hprecBlk]
       simpa only [P, List.append_assoc] using
         ((laufAnhang (L ++ R) (cfBlk ++ I ++ S) r kLR hbleibLR).trans hrunLR)
     have hpCcomp : rCcomp.pc = ((L ++ R) ++ cfBlk).length := by
