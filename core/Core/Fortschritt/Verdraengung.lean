@@ -56,7 +56,7 @@ def zV0 : Zustand Unit Unit Unit Unit Bool Unit :=
 def E_v : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtungV, toggleSystem,
     fun _ => wDatenV, fun _ => 0,
-    fun _ _ => some zV0, Eq, fun _ => 1, .leer, .leer, .leer, .leer⟩
+    fun _ _ => some zV0, Eq, fun _ => 1, .leer, eineTabelle, .leer, .leer, .leer⟩
 
 theorem zV0_dispatch0 : (zV0.kerne 0).laeuft = some A := rfl
 
