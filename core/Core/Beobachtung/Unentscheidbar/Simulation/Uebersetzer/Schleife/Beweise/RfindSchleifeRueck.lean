@@ -163,14 +163,18 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           rw [hpcP]
           rw [rfindPaar, paarBerechnungLaenge]
           omega
-        obtain ⟨v, hv⟩ := (hcfNr (Nat.pair a y) rp0 rfl h4).2 0 rp0
-          (by rw [Function.iterate_zero_apply]) hp0pc
-        exact (hdef ⟨v, hv⟩).elim
-      · obtain ⟨jB, rB, rMid, hjB, hrunB, hpcB, hrBMid, hrunMid, hpcMid⟩ :=
+        obtain ⟨v, hvEval, hv6, hvpres, hvlok, hvruck, hvstopp⟩ :=
+          (hcfNr (Nat.pair a y) rp0 rfl h4).2 0 rp0
+            (by rw [Function.iterate_zero_apply]) hp0pc
+        exact (hdef ⟨v, hvEval⟩).elim
+      · have hlenRest' : 0 < (rfindRest cfBlk aus frei).length := by
+          rw [rfindRest, rfindNullTestLaenge, rfindRueckLaenge, kopieLaenge, List.length_append]
+          omega
+        obtain ⟨jB, rB, rMid, hjB, hrunB, hpcB, hrBMid, hrunMid, hpcMid⟩ :=
           randAusEndeMitPc (rfindPaar frei) cfBlk (rfindRest cfBlk aus frei) hv hbl
-            (by omega) hlenRest rp0 rfl (schr - kp) rEnd htail' hpcEnd'
-        obtain ⟨v, hv⟩ := (hcfNr (Nat.pair a y) rp0 rfl h4).2 jB rMid hrunMid
-          (by rw [hpcMid])
-        exact (hdef ⟨v, hv⟩).elim
+            (by omega) hlenRest' rp0 rfl (schr - kp) rEnd htail' hpcEnd'
+        obtain ⟨v, hvEval, hv6, hvpres, hvlok, hvruck, hvstopp⟩ :=
+          (hcfNr (Nat.pair a y) rp0 rfl h4).2 jB rMid hrunMid (by rw [hpcMid])
+        exact (hdef ⟨v, hvEval⟩).elim
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
