@@ -270,6 +270,7 @@ public import Core.Linken.DeckungsZustand
 public import Core.Linken.DeckungsSchluss
 public import Core.Linken.LaufChirurgie
 public import Core.Linken.Offen
+public import Core.Linken.OffenSchluss
 public import Core.Linken.Relativ
 public import Core.Linken.RelativSchritt
 public import Core.Linken.RelativBefehl
