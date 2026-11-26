@@ -282,6 +282,7 @@ public import Core.Ast.Semantik.Runtime.Faden.Erzeuger
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
 public import Core.Ast.Semantik.Runtime.Faden.Offen
 public import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
+public import Core.Ast.Semantik.Runtime.Faden.Beweise.VerbindeFortschritt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Update
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Bestimmt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
