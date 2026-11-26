@@ -53,7 +53,7 @@ def wDaten (Dispatch : Kern → Option Kontext) : Startdaten Unit Unit Bool Unit
 def wEinrichtung (Dispatch : Kern → Option Kontext) :
     Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten Dispatch, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten Dispatch, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 def wBild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 

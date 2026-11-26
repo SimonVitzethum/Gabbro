@@ -242,10 +242,12 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherbein
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sperrwortbein
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Aussagen
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Beweise
+public import Core.Ast.Semantik.Runtime.Unterbrechung.BeweiseFair
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Atom.Beine
@@ -282,6 +284,8 @@ public import Core.Ziel.Korrektheit.Beweise.ProtokollSchritt
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Zugriff
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffIdealBestimmt
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragment
 public import Core.Ziel.Korrektheit.Beweise.ProtokollLauf
 public import Core.Ziel.Korrektheit.Beweise.ProtokollAbschluss

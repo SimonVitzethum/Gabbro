@@ -42,7 +42,7 @@ def memBoot (regions : List Strecke) (core : Option Nat) :
 
 def memSetup : Einrichtung PUnit Nat UInt8 PUnit MemFrame PUnit PUnit :=
   ⟨fun _ => 0, fun _ => 0, fun _ => 0, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => memBoot [] (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => memBoot [] (some 0), fun _ _ => 0, id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def memProgram (k : Katalog) (code : List MemInstruction) : MemUnit :=
