@@ -33,7 +33,7 @@ def falsifizierbareDaten (kern : Nat) : Startdaten Unit Unit Unit Unit :=
 def falsifizierbareEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
     fun _ _ => True, ⟨0, 1⟩,
-    ⟨falsifizierbarerEintrag, 0, fun _ => falsifizierbareDaten 0, fun _ _ => ()⟩,
+    ⟨falsifizierbarerEintrag, 0, fun _ => falsifizierbareDaten 0, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def falsifizierbarerPlan : SchrittPlan Unit Unit Unit Unit :=
@@ -57,7 +57,7 @@ def falsifizierbareEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Uni
       let d := falsifizierbareDaten s.bootCore
       some (Zustand.start d.lokal d.status d.kerne d.rechte
         falsifizierbareEinrichtung.initial (.leer (fun _ => 0)))),
-    Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+    Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
 
 def falsifizierbareSicht (t : Nat) : AussenVerlauf → AussenSicht := fun _ =>
   ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩

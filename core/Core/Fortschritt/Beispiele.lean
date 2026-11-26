@@ -53,7 +53,7 @@ def wDaten (Dispatch : Kern → Option Kontext) : Startdaten Unit Unit Bool Unit
 def wEinrichtung (Dispatch : Kern → Option Kontext) :
     Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten Dispatch, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten Dispatch, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 def wBild : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩
 
@@ -73,7 +73,7 @@ def E_w (Dispatch : Kern → Option Kontext) : Einheit Unit Unit Unit Unit Bool 
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨Dispatch j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))),
-    Eq, fun _ => 1, .leer, .leer, .leer, .leer⟩
+    Eq, fun _ => 1, .leer, eineTabelle, .leer, .leer, .leer⟩
 
 def sicht0 : Nat → AussenVerlauf → AussenSicht :=
   fun _ _ => ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩

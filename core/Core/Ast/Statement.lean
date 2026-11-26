@@ -1,5 +1,6 @@
 module
 
+public import Core.Ast.Tree.Statement
 public import Core.Ast.Program.StatementPrefixes
 public import Core.Ast.Program.StatementSuffix
 import Core.Ast.Program.StatementComparison
@@ -48,7 +49,7 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
       ∀ {other suffix}, VariantArmsRead result scope allowed input (labels := labels) (payloads := payloads)
         other suffix → tree = other ∧ rest = suffix)
     ?letBinding ?assignVar ?ret ?ite ?retVoid ?letMutable ?directCall ?bindDirect
-    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion ?forever
+    ?whileBounded ?forRange ?tupleBind ?assignField ?letMutableValue ?variantMatch ?letOption ?retOption ?letRegion ?forever ?access
     ?done ?step ?braced ?armsDone ?armsNullary ?armsPayload ?armsWildcard left
   case letBinding =>
     intros
@@ -192,6 +193,10 @@ theorem StmtReads.deterministic (left : StmtReads result scope input a rest)
     intros
     rename_i label labelRead bodyRead bodyDet _ _ other
     exact StatementComparison.forever label labelRead bodyRead bodyDet other
+  case access =>
+    intros
+    rename_i accessRead _ _ other
+    exact StatementComparison.access accessRead (fun otherRead => accessRead.deterministic otherRead) other
   case armsDone =>
     intros
     rename_i other
@@ -243,7 +248,7 @@ theorem BlockItems.deterministic (left : BlockItems result scope input a rest)
       ∀ {b rest'}, BlockItems result before input b rest' → tree = b ∧ rest = rest')
     (motive_3 := fun _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ _ _ => True)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ left) right
   all_goals try (intros; trivial)
   · intros

@@ -25,7 +25,7 @@ def daten : Startdaten Unit Unit Unit Unit :=
 
 def einrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => ()⟩,
+    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def start : Zustand :=
@@ -36,7 +36,7 @@ def einheit (z : Zustand) (form : Formular) (invarianten : List (Invariante Unit
   ⟨⟨katalog, bild, einrichtung,
       ⟨fun _ => ⟨fun c s _ plans u => form c s plans u, fun _ _ _ _ _ => False⟩, fun _ _ => some (),
         fun _ _ => False, fun _ _ _ => False⟩,
-      fun _ => daten, fun _ _ => 0, fun _ _ => some z, Eq, (fun _ => 0), .leer, .leer, .leer, .leer⟩, invarianten⟩
+      fun _ => daten, fun _ _ => 0, fun _ _ => some z, Eq, (fun _ => 0), .leer, eineTabelle, .leer, .leer, .leer⟩, invarianten⟩
 
 def umgebung (sicht : Sicht) := Umgebung.referenz katalog 2 sicht
 def hardware (sicht : Sicht) := Umgebung.referenzLauf katalog 2 sicht

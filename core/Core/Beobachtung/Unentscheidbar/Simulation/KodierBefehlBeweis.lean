@@ -276,6 +276,11 @@ theorem inv_faden (f0 : _) :
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
     codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
 
+theorem inv_aussen (f0 : _) :
+    befehlVonCode (befehlZuCode (.aussen f0)) = some (.aussen f0) := by
+  simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
+    codeZuNat, codeZuNat_natZuCode, Encodable.encodek, intRueck, Option.bind_some]
+
 theorem inv_maskiere (f0 : _) (f1 : _) :
     befehlVonCode (befehlZuCode (.maskiere f0 f1)) = some (.maskiere f0 f1) := by
   simp_all [befehlVonCode, befehlVonCodeA, befehlVonCodeB, befehlZuCode, natZuCode,
@@ -350,6 +355,7 @@ theorem befehlCode_ofCode : ∀ b : Befehl, befehlVonCode (befehlZuCode b) = som
   | .bindeRegion f0 f1 => inv_bindeRegion f0 f1
   | .zugriff f0 => inv_zugriff f0
   | .faden f0 => inv_faden f0
+  | .aussen f0 => inv_aussen f0
   | .maskiere f0 f1 => inv_maskiere f0 f1
   | .prioritaet f0 => inv_prioritaet f0
   | .sendeUnterbrechung f0 f1 => inv_sendeUnterbrechung f0 f1

@@ -44,7 +44,7 @@ def startDaten (s : AussenStart) : Startdaten Unit Unit (Option Handle) Unit :=
 
 def einrichtung : Einrichtung Unit Unit Unit Unit (Option Handle) Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨kontext, 0, fun _ => daten none, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨kontext, 0, fun _ => daten none, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 def startZustand (s : AussenStart) : Zustand :=
   let d := startDaten s
@@ -59,6 +59,20 @@ theorem hoch_verborgen : oeffentlich hoch = false := by
   rw [eq] at mem
   exact Finset.notMem_empty _ mem
 
+/-- The hosted unit's declared table (MK-17d): contexts and memory objects live in
+    domain `0`, the hosted device object in domain `1`, with the channel from `0` to
+    `1` declared. The unit's question about the hosted object therefore travels over a
+    declared channel. -/
+def hostedTabelle : DomaenenTabelle where
+  domaenen := 2
+  kontexte := []
+  objekte := []
+  geraete := [(⟨.hosted, 0⟩, 1)]
+  kanaele := [(0, 1)]
+
+/-- The hosted table passes the line. -/
+theorem hostedTabelle_akzeptiert : pruefeDomaenenTab hostedTabelle = true := rfl
+
 def einheit : Modell where
   katalog := Plattform.x86_64.katalog
   bild := Sicherheit.Laufkonstruktion.bild
@@ -70,6 +84,7 @@ def einheit : Modell where
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
+  domaenen := hostedTabelle
   etiketten := { endpunkt := fun _ => hoch, objekt := fun _ => hoch, ende := fun _ => hoch }
   fluss := { lokal := fun _ => .ganz hoch, kontrolle := fun _ => hoch }
 
@@ -84,7 +99,7 @@ private theorem quellzustand_gleich (v u : Zustand) (initial : v.initial = u.ini
     exact (verdeckt _).trans (verdeckt _).symm
   · rw [initial]
 
-private theorem fluss_lokal : FlussLokal einheit := by
+theorem fluss_lokal : FlussLokal einheit := by
   refine ⟨fun s₁ s₂ _ => quellzustand_gleich (I.start einheit s₁).2 (I.start einheit s₂).2
       rfl rfl rfl (fun _ => rfl),
     fun _ => ⟨?_, fun low => (Bool.false_ne_true (hoch_verborgen.symm.trans low)).elim⟩⟩
@@ -117,13 +132,13 @@ theorem eigene_frage (s : Zustand) : AussengriffeEigen (binde s) kontext frage :
   cases List.mem_singleton.mp mem
   exact Or.inr ⟨rfl, rfl, rfl⟩
 
-private theorem binden_offen {s : Zustand} {g} (offen : OffeneGriffeEigen s) :
+theorem binden_offen {s : Zustand} {g} (offen : OffeneGriffeEigen s) :
     OffeneGriffeEigen { binde s with graph := g } := by
   intro ev mem epoche unbeantwortet
   obtain ⟨c, id, eig⟩ := offen ev mem epoche unbeantwortet
   exact ⟨c, id, fun z h => Or.inl (eig z h)⟩
 
-private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s c frage)
+theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s c frage)
     (offen : OffeneGriffeEigen s) :
     OffeneGriffeEigen { (warte s).frage (s.stelleFrage t c frage) with graph := g } := by
   intro ev mem epoche unbeantwortet
@@ -133,45 +148,9 @@ private theorem fragen_offen {s : Zustand} {t c g} (rechte : AussengriffeEigen s
   · exact offen ev bisher epoche unbeantwortet
   · exact ⟨c, rfl, rechte⟩
 
-theorem akzeptiert : Akzeptiert einheit := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt _, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, fluss_lokal, ?_, ?_⟩, ?_, ?_⟩
-  · intro i c s u w plan h
-    change regel c s w [plan] u at h
-    rcases h.2 with ⟨eq, _, _⟩ | ⟨eq, _, _⟩ <;>
-      cases (List.cons.inj eq).1 <;>
-      exact ⟨fun _ mem => (List.not_mem_nil mem).elim, fun _ mem => (List.not_mem_nil mem).elim⟩
-  · apply aussen_gueltig_aus_kontext
-    intro _ _ s c w spur s' h
-    rcases spur with ⟨memory, events⟩
-    cases h with
-    | kontext _ _ form aus =>
-      obtain ⟨i, _, h⟩ := form
-      obtain ⟨_, _, _, _, aktion, _, ziel⟩ := aus
-      change regel c s w [_] _ at h
-      change FuehrtAus einrichtung _ c s _ _ _ events _ at aktion
-      rcases h.2 with ⟨eq, _, rfl⟩ | ⟨eq, rechte, rfl⟩
-      · cases (List.cons.inj eq).1
-        cases aktion
-        rw [ziel]
-        exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-          (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, binden_offen⟩
-      · cases (List.cons.inj eq).1
-        cases aktion
-        rw [ziel]
-        refine ⟨⟨?_, [], (List.append_nil _).symm,
-          fun _ mem => (List.not_mem_nil mem).elim⟩, fragen_offen rechte⟩
-        intro ev mem
-        cases Ereignis.frage.inj (List.mem_singleton.mp mem)
-        exact ⟨ausgewaehlt, rechte⟩
-  · exact schrankenLokal_leer rfl rfl rfl
-  · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · intro ρ _
-    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
-      fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨fun _ _ _ _ _ need => False.elim need, fun _ _ _ h => ?_,
-      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
-    obtain ⟨_, ⟨c, mem⟩, blockiert⟩ := h
-    obtain ⟨_, nein, _⟩ := blockiert c mem
-    exact nein
+/- Acceptance of the hosted unit is proved in `DomaeneBeweise/Kanal.lean`: its declared
+   table (`hostedTabelle`) carries the channel its question uses, so the bound isolation
+   row holds for it. The admitted runs with the owned request are carried by
+   `HostedLauf.konkreter_lauf`. -/
 
 end Gabbro.Core.Annahme.Hosted

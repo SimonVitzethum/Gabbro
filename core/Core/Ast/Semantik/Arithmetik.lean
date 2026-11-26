@@ -1,6 +1,7 @@
 module
 
-public import Core.Ast.Tree
+public import Core.Ast.Tree.Root
+public import Core.Ast.Tree.Statement
 
 @[expose] public section
 

@@ -4,6 +4,7 @@ public import Core.Ast.Semantik.ProgramForms
 public import Core.Ast.Semantik.ProgramObligations
 public import Core.Ast.Semantik.Formen
 public import Core.Ast.ProgramRegistry.BoundedWhile
+public import Core.Ast.ProgramRegistry.Access
 public import Core.Ast.ProgramRegistry.ForRange
 public import Core.Ast.ProgramRegistry.Forever
 public import Core.Ast.ProgramRegistry.Constant

@@ -342,7 +342,7 @@ theorem FlushFamilienAussage_erfuellbar :
       ⟨fun _ => false, fun _ => 0⟩⟩
   let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
     ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
   let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
     { s with lokal := Function.update s.lokal c (!s.lokal c) }
@@ -355,7 +355,7 @@ theorem FlushFamilienAussage_erfuellbar :
       (fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
-      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+      Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
     ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let h := Umgebung.referenz k 1 sicht
@@ -419,7 +419,7 @@ theorem FlushFamilienAussage_nichtTrivial :
       ⟨fun _ => false, fun _ => 0⟩⟩
   let e : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
     ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => True, ⟨0, 1⟩, ⟨entry, 0, fun _ => daten 0, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   let plan : SchrittPlan Unit Unit Unit Unit := ⟨.intern, [], [], fun _ => false, fun _ => .na, fun _ => ()⟩
   let update (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) :=
     { s with lokal := Function.update s.lokal c (!s.lokal c) }
@@ -432,7 +432,7 @@ theorem FlushFamilienAussage_nichtTrivial :
       (fun s _ =>
         let d := daten s.bootCore
         some (Zustand.start d.lokal d.status d.kerne d.rechte e.initial (.leer (fun _ => 0)))),
-      Eq, (fun _ => 1), .leer, .leer, .leer, .leer⟩
+      Eq, (fun _ => 1), .leer, eineTabelle, .leer, .leer, .leer⟩
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ =>
     ⟨fun _ => ⟨0, false, false, [], fun _ => 0⟩, fun _ _ => none, fun _ _ => none⟩
   let h := Umgebung.referenz k 1 sicht
