@@ -116,4 +116,39 @@ theorem rfindEvalWeiter (cf : Nat.Partrec.Code) (a m y : Nat)
     omega
   simpa only [Nat.Partrec.Code.eval, Nat.unpaired, Nat.unpair_pair, p] using hgoal
 
+/-- The first zero with a defined nonzero prefix is the minimisation result. -/
+theorem rfindEvalAusVor (cf : Nat.Partrec.Code) (a m y : Nat)
+    (hmy : m ≤ y)
+    (hzero : Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some 0)
+    (hvor : ∀ z, m ≤ z → z < y → ∃ v,
+      Nat.Partrec.Code.eval cf (Nat.pair a z) = Part.some v ∧ v ≠ 0) :
+    Nat.Partrec.Code.eval (.rfind' cf) (Nat.pair a m) = Part.some y := by
+  let p : Nat → Part Bool := fun n =>
+    (fun v : Nat => decide (v = 0)) <$> Nat.Partrec.Code.eval cf (Nat.pair a (n + m))
+  have hmemZ : true ∈ p (y - m) := by
+    have hz : 0 ∈ Nat.Partrec.Code.eval cf (Nat.pair a y) := by
+      rw [hzero]
+      simp only [Part.mem_some_iff]
+    have hyadd : (y - m) + m = y := by omega
+    have hz' : 0 ∈ Nat.Partrec.Code.eval cf (Nat.pair a ((y - m) + m)) := by
+      simpa only [hyadd] using hz
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hz', by simp⟩
+  have hmemF : ∀ {j}, j < y - m → false ∈ p j := by
+    intro j hj
+    have hjm : m ≤ j + m := by omega
+    have hjlt : j + m < y := by omega
+    obtain ⟨v, hv, hvne⟩ := hvor (j + m) hjm hjlt
+    have hv' : v ∈ Nat.Partrec.Code.eval cf (Nat.pair a (j + m)) := by
+      rw [hv]
+      simp only [Part.mem_some_iff]
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', by simp [hvne]⟩
+  have hR : Nat.rfind p = Part.some (y - m) :=
+    Part.eq_some_iff.2 (Nat.mem_rfind.2 ⟨hmemZ, hmemF⟩)
+  have hgoal : (Nat.rfind p).map (fun n => n + m) = Part.some y := by
+    rw [hR]
+    simp only [Part.map_some]
+    congr 1
+    omega
+  simpa only [Nat.Partrec.Code.eval, Nat.unpaired, Nat.unpair_pair, p] using hgoal
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
