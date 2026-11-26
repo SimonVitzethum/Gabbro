@@ -161,11 +161,11 @@ private theorem functionCode_quellklassenrein {result : Option WrittenType} {sco
     (functionCode result measure body).QuellklassenRein := by
   cases measure with
   | none =>
-    simp only [functionCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, Fragment.quellklassenrein_leer,
+    simp only [functionCode, measurePrologue, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, Fragment.quellklassenrein_leer,
       bracedBlock_quellklassenrein, true_and]
     exact Or.inl (Or.inl rfl)
   | some m =>
-    simp only [functionCode, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, expr_quellklassenrein,
+    simp only [functionCode, measurePrologue, Fragment.quellklassenrein_anhaengen_iff, Fragment.quellklassenrein_einzel_iff, expr_quellklassenrein,
       bracedBlock_quellklassenrein, true_and]
     repeat' first
       | exact Or.inl (Or.inl rfl)

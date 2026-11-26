@@ -166,11 +166,11 @@ private theorem carrierIndex_keine_invarianten (scope : Scope)
     intro s res measure body
     cases measure with
     | none =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel,
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel,
           Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         exact bracedInv body
     | some m =>
-        simp only [functionCode, Fragment.anhaengen, Fragment.einzel,
+        simp only [functionCode, measurePrologue, Fragment.anhaengen, Fragment.einzel,
           Quellklauseln.anhaengen, Quellklauseln.leer, List.append_nil, List.nil_append]
         rw [expr_keine_invarianten]
         exact bracedInv body

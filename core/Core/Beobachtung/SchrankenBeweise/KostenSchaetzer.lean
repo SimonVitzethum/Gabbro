@@ -5,16 +5,16 @@
               ceiling and no hold entry, because every class row costs one tick and a
               finite ceiling is reached by a run. This file makes finite cost ceilings
               usable: the bound applies per invocation (from entry to exit of one
-              function invocation), not per whole run, and a decidable estimator over
-              the source structure bounds every invocation.
+              function invocation). The estimator computes a candidate bound
+              from the source structure.
 
               The estimator (`schaetzeEinheit`) sums the class costs
               (`Wirkungsklasse.kostenZeile`) over the elaborated instructions of each
               source form, multiplies loop bodies by their static trip bound
               (`whileBounded` upper endpoint, `forRange` static span), resolves calls
               through the declared per-function table (`KostenTabelle`) or
-              structurally, and treats recursion only
-              with `decreases` (the measure span bounds the re-entry depth); anything
+              structurally, and uses the declared measure span in the recursive
+              estimate; anything
               else (`forever`, unknown callees, recursion without `decreases`,
               exhausted fuel) is refused with `none`. The checker line
               (`pruefeSchrankenEndlich`) keeps the open case of the slack line as a
@@ -25,8 +25,10 @@
               (`EndlichAkzeptiertAussage`, pinned) is the perfect checker with the
               new line, so everything accepted before stays accepted with the same
               guarantees (`endlichAkzeptiert_verstaerkt`).
-              `Kosten.KostenGegenbeispiel` refutes the estimator bound for an
-              accepted unit with a measure prologue and an empty cost table.
+              The estimator charges the elaborated measure prologue at function
+              entry and on calls within the estimated cycle. Bounding all
+              activations of a branching or mutually recursive cycle remains
+              part of the run-level proof obligation.
 -/
 module
 
@@ -170,11 +172,17 @@ def aufrufeArme : VariantArms result scope allowWildcard labels payloads →
 
 end
 
-/-- One function of a unit, with exactly what the estimator needs: the
-    `decreases` interval (when declared) and the body with its own scope. -/
+/-- The function body and its optional measure, indexed by the same scope. -/
 structure FunktionsKern where
-  massIntervall : Option (Int × Int)
   koerper : Σ scope : Scope, Σ result : Option (Ty .value), BracedBlock result scope
+  mass : Option (Measure koerper.1)
+
+def FunktionsKern.massIntervall (kern : FunktionsKern) : Option (Int × Int) :=
+  kern.mass.map (fun m => (m.lo, m.hi))
+
+def FunktionsKern.prologKosten (z : Wirkungsklasse → KlassenKostenzeile)
+    (kern : FunktionsKern) : Nat :=
+  fragmentKosten z (measurePrologue kern.mass)
 
 /-- The `decreases` span of a measure: values stay inside the interval, so a
     strictly decreasing chain can make at most this many decreases. -/
@@ -186,7 +194,7 @@ def findeKern : UnitBody before after → Identifier → Option FunktionsKern
   | .done, _ => none
   | .step (.function name _ _ _ _ decreases body _ _ _) next, want =>
     if name.val == want.val then
-      some ⟨decreases.map (fun m => (m.lo, m.hi)), ⟨_, _, body⟩⟩
+      some ⟨⟨_, _, body⟩, decreases⟩
     else findeKern next want
   | .step _ next, want => findeKern next want
 
@@ -226,24 +234,32 @@ def selbstRekursiv (u : Ast.Unit) (name : Identifier) : Bool :=
     (fun x => x.val == name.val)
 
 /-- The cycle set of a function: every function reachable from it that can
-    reach it back. Calls inside the set cost only their call mechanics; the
-    `decreases` span bounds the number of cycle activations. -/
+    reach it back. -/
 def zyklusMenge (u : Ast.Unit) (name : Identifier) : List Identifier :=
   let fuel := funktionsAnzahl u.2 + 1
   (erreichbar u fuel [name]).filter
     (fun m => (erreichbar u fuel [m]).any (fun x => x.val == name.val))
 
-/-- The whole cost of one call: the site cost plus one invocation of the
-    callee. A declared entry is trusted after its own verification; otherwise
-    the body is estimated structurally. A self-recursive callee needs
-    `decreases`, and its body is estimated with the cycle short-circuited,
-    multiplied by the span. -/
+/-- The estimate for a call within a cycle. The target starts its own
+    prologue even if the measure check rejects the re-entry. -/
+def zyklusAufrufKosten (z : Wirkungsklasse → KlassenKostenzeile)
+    (u : Ast.Unit) (name : Identifier) (site : Nat) : Option Nat :=
+  (findeKern u.2 name).map (fun kern => site + kern.prologKosten z + 1)
+
+/-- The estimate of one call, including its site cost. A declared entry is
+    a bound for the whole invocation and must be verified separately. The
+    elaborated prologue provides a lower bound on the estimate for a known
+    callee. In the structural branch the initial prologue is charged once.
+    The cycle body estimate charges a separate prologue at each cycle edge
+    and is scaled by the declared span plus one. -/
 def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabelle)
     (u : Ast.Unit) : Nat → Identifier → Nat → Option Nat
   | 0, _, _ => none
   | fuel + 1, name, site =>
     match tab.lookup name with
-    | some K => some (site + K)
+    | some K =>
+      let prolog := ((findeKern u.2 name).map (FunktionsKern.prologKosten z)).getD 0
+      some (site + max K prolog)
     | none =>
       match findeKern u.2 name with
       | none => none
@@ -254,15 +270,15 @@ def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabell
           | some span =>
             let zyk := zyklusMenge u name
             let oracle : Identifier → Nat → Option Nat :=
-              fun m s => if zyk.any (fun x => x.val == m.val) then some (s + 1)
+              fun m s => if zyk.any (fun x => x.val == m.val) then zyklusAufrufKosten z u m s
                 else aufrufKosten z tab u fuel m s
             match schaetzeBracedBlock z oracle kern.koerper.2.2 with
             | none => none
-            | some b => some (site + (span + 1) * b + 1)
+            | some b => some (site + kern.prologKosten z + (span + 1) * b + 1)
         else
           match schaetzeBracedBlock z (aufrufKosten z tab u fuel) kern.koerper.2.2 with
           | none => none
-          | some b => some (site + b + 1)
+          | some b => some (site + kern.prologKosten z + b + 1)
 
 /-- The top-level declaration cost: a function binds one instruction; every
     other declaration costs its elaborated fragment, which runs once at load. -/
@@ -286,8 +302,7 @@ def schaetzeEintritt (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTa
   some (decls + (z .ruf).kosten + main + (z .lokal).kosten)
 
 /-- The worst invocation bound over all declared functions, each with an empty
-    site cost. Together with the entry estimate every invocation window of the
-    unit is covered, including handlers no caller reaches. -/
+    site cost. This also estimates handlers that no caller reaches. -/
 def schaetzeAlleFunktionen (z : Wirkungsklasse → KlassenKostenzeile)
     (tab : KostenTabelle) (u : Ast.Unit) : Option Nat :=
   (alleFunktionen u.2).foldl (fun acc name => do

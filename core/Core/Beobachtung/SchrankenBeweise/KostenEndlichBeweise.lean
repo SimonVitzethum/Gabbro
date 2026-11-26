@@ -10,8 +10,7 @@
   and the window and segment costs from estimator correctness. The context-cost monotonicity
   used for a window prefix is proved from `I.zaehle`'s split equation, not assumed.
 
-  Estimator correctness remains a premise. The measured-entry example in
-  `Kosten.KostenGegenbeispiel` refutes it for the current estimator.
+  Estimator correctness remains a premise.
   The old prefix-from-zero shape over
   arbitrary `Lauf` is gone by design: `Zeitlauf.existiert` admits every initial state,
   and every platform catalogue carries `.persistence`, so a run that restarts the entry

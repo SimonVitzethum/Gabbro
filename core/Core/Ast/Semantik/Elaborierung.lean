@@ -213,12 +213,14 @@ def variantArms : VariantArms result scope allowed labels payloads → MatchCode
 
 end
 
+/-- Code executed at function entry to evaluate and check its declared measure. -/
+def measurePrologue : Option (Measure scope) → Fragment
+  | none => Fragment.leer
+  | some m => (expr 0 m.expression).anhaengen (.einzel (.pruefeMass 0))
+
 def functionCode (result : Option WrittenType) (measure : Option (Measure scope))
     (body : BracedBlock (writtenResult result) scope) : Fragment :=
-  let prologue := match measure with
-    | none => Fragment.leer
-    | some m => (expr 0 m.expression).anhaengen (.einzel (.pruefeMass 0))
-  (prologue.anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
+  ((measurePrologue measure).anhaengen (bracedBlock body)).anhaengen (.einzel .rueckVoid)
 
 def functionInstruction (before : Scope) (name : Identifier) (parameters : List (Parameter before))
     (result : Option WrittenType) (hasMeasure : Bool) (body : Fragment)
