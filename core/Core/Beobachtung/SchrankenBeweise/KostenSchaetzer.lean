@@ -177,7 +177,7 @@ end
     `decreases` span (when declared) and the body with its own scope. -/
 structure FunktionsKern where
   spanne : Option Nat
-  koerper : Σ _ : Scope, Σ _ : Option (Ty .value), BracedBlock _ _
+  koerper : Σ scope : Scope, Σ result : Option (Ty .value), BracedBlock result scope
 
 /-- The `decreases` span of a measure: values stay inside the interval, so a
     strictly decreasing chain of re-entries is at most this long. -/
@@ -381,7 +381,7 @@ theorem schrankenEndlich_erfuellbar :
   · exact bindungKHProtokollOffen _ _ rfl rfl
 
 /-- A main that loops forever: the estimator has no bound for it. -/
-private def endlosBaum : Ast.Unit :=
+def endlosBaum : Ast.Unit :=
   ⟨_, UnitBody.step
     (Decl.function mainName mainName_direct [] none
       (by intro t mem; cases mem) none
