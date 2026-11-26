@@ -146,34 +146,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     exact geraete_antwort_beob_tick (predictor := predictor)
                       (by simpa using lab₂) hz₂ hn₂ h2
                   have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
-                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
-                  · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                    let L₁ := NiedrigeBeob.praefix (d.unit locals) ρ₁ predictor t
-                    let L₂ := NiedrigeBeob.praefix (d.unit locals) ρ₂ predictor t
-                    let A := aussenBeob (d.unit locals) (.antwort a)
-                    have hlenP : L₁.length = L₂.length := by
-                      simpa only [L₁, L₂, NiedrigeBeob] using hlen
-                    have happLen : (L₂ ++ A).length = (L₁ ++ A).length := by
-                      simp only [List.length_append, hlenP]
-                    have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
-                      List.take_of_length_le (le_of_eq happLen)
-                    rw [ht]
-                    have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
-                      induction A with
-                      | nil => exact List.Forall₂.nil
-                      | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
-                    exact List.rel_append (by simpa only [L₁, L₂, NiedrigeBeob] using
-                      (geraeteKopplung_kopplung hkopp).1) reflA
-                  have hn1lokal : n₁.lokal = s₁.lokal := by rw [stateEq₁]; rfl
-                  have hn2lokal : n₂.lokal = s₂.lokal := by rw [stateEq₂]; rfl
-                  have hn1status : n₁.status = s₁.status := by rw [stateEq₁]; rfl
-                  have hn2status : n₂.status = s₂.status := by rw [stateEq₂]; rfl
-                  have hn1initial : n₁.initial = s₁.initial := by rw [stateEq₁]; rfl
-                  have hn2initial : n₂.initial = s₂.initial := by rw [stateEq₂]; rfl
-                  have hn1rechte : n₁.rechte = s₁.rechte := by rw [stateEq₁]; rfl
-                  have hn2rechte : n₂.rechte = s₂.rechte := by rw [stateEq₂]; rfl
-                  have hn1leihen : n₁.leihen = s₁.leihen := by rw [stateEq₁]; rfl
-                  have hn2leihen : n₂.leihen = s₂.leihen := by rw [stateEq₂]; rfl
                   have hn1epoche : n₁.epoche = s₁.epoche := by rw [stateEq₁]; rfl
                   have hn2epoche : n₂.epoche = s₂.epoche := by rw [stateEq₂]; rfl
                   have hn1geliefert : n₁.geliefert = s₁.geliefert := by rw [stateEq₁]; rfl
@@ -217,6 +189,34 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     rw [hn1naechste, hn2naechste]
                     simp only [Zustand.naechsteAntwort, Zustand.angekommen, Zustand.antwort,
                       hantworten, hverbraucht, hverworfen, aeq]
+                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+                  · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
+                    let L₁ := NiedrigeBeob.praefix (d.unit locals) ρ₁ predictor t
+                    let L₂ := NiedrigeBeob.praefix (d.unit locals) ρ₂ predictor t
+                    let A := aussenBeob (d.unit locals) (.antwort a)
+                    have hlenP : L₁.length = L₂.length := by
+                      simpa only [L₁, L₂, NiedrigeBeob] using hlen
+                    have happLen : (L₂ ++ A).length = (L₁ ++ A).length := by
+                      simp only [List.length_append, hlenP]
+                    have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
+                      List.take_of_length_le (le_of_eq happLen)
+                    rw [ht]
+                    have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
+                      induction A with
+                      | nil => exact List.Forall₂.nil
+                      | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
+                    exact List.rel_append (by simpa only [L₁, L₂, NiedrigeBeob] using
+                      (geraeteKopplung_kopplung hkopp).1) reflA
+                  have hn1lokal : n₁.lokal = s₁.lokal := by rw [stateEq₁]; rfl
+                  have hn2lokal : n₂.lokal = s₂.lokal := by rw [stateEq₂]; rfl
+                  have hn1status : n₁.status = s₁.status := by rw [stateEq₁]; rfl
+                  have hn2status : n₂.status = s₂.status := by rw [stateEq₂]; rfl
+                  have hn1initial : n₁.initial = s₁.initial := by rw [stateEq₁]; rfl
+                  have hn2initial : n₂.initial = s₂.initial := by rw [stateEq₂]; rfl
+                  have hn1rechte : n₁.rechte = s₁.rechte := by rw [stateEq₁]; rfl
+                  have hn2rechte : n₂.rechte = s₂.rechte := by rw [stateEq₂]; rfl
+                  have hn1leihen : n₁.leihen = s₁.leihen := by rw [stateEq₁]; rfl
+                  have hn2leihen : n₂.leihen = s₂.leihen := by rw [stateEq₂]; rfl
                   · intro v w hv hw
                     have hvEq : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                     have hwEq : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
