@@ -48,8 +48,14 @@ private theorem update_satisfies {values : Nat → Option α} {P : Nat → α �
     exact new a (by simpa only [Function.update_self] using read)
   · exact old i a (by simpa only [Function.update_of_ne same] using read)
 
-theorem KostenGrenzen.start (g : KostenGrenzen) (scope : Scope) : g.RahmenGut (Rahmen.start scope) :=
-  ⟨⟨fun _ _ h => nomatch h, fun _ _ h => nomatch h, fun _ h => nomatch h⟩,
+theorem KostenGrenzen.start (g : KostenGrenzen) (scope : Scope) : g.RahmenGut (Rahmen.start scope) := by
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · intro _ _ h; cases h
+  · intro _ _ h; cases h
+  · intro _ h; cases h
+  · intro _ h; cases h
+
+variable {g : KostenGrenzen} {r : Rahmen} {b : Befehl},
     fun _ h => nomatch h⟩
 
 private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
@@ -68,6 +74,16 @@ private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
       · exact saved k tail
     | split
 
+private theorem KostenGrenzen.eintrittArgumente {entry : Rahmen} {types : List (Ty .value)}
+    (ok : g.RahmenGut r) (prepared : r.eintrittArgumente types = some entry) :
+    g.RahmenGut entry := by
+  unfold Rahmen.eintrittArgumente at prepared
+  split at prepared
+  · cases prepared; exact ok
+  · split at prepared
+    · cases prepared; exact ok
+    · cases prepared
+
 private theorem KostenGrenzen.rueckkehr (ok : g.RahmenGut r) (value : Option Dynamisch) :
     g.RahmenGut (r.rueckkehr value) := by
   unfold Rahmen.rueckkehr
@@ -81,7 +97,7 @@ private theorem KostenGrenzen.pass (ok : g.RahmenGut r) (test : Bool) (exit : Na
     (handler : Option Identifier) : g.RahmenGut (r.pass test exit handler) := by
   unfold Rahmen.pass
   split
-  · exact ⟨⟨update_satisfies ok.1.1 (fun _ h => nomatch h), ok.1.2⟩, ok.2⟩
+  · exact ⟨⟨update_satisfies ok.1.1 (fun _ h => by cases h), ok.1.2⟩, ok.2⟩
   · split
     · rename_i n current
       refine ⟨⟨update_satisfies ok.1.1 ?_, ok.1.2⟩, ok.2⟩
@@ -118,8 +134,7 @@ theorem KostenGrenzen.auswerten (ok : g.RahmenGut r) (install : g.Einrichtung b 
   case starte =>
     repeat' first
     | exact ok
-    | (apply KostenGrenzen.ruf; unfold Rahmen.eintrittArgumente at *; solve
-        | split at * <;> split at * <;> simp_all only [Option.some.injEq, Option.none_ne_some])
+    | exact KostenGrenzen.ruf (KostenGrenzen.eintrittArgumente ok (by assumption)) _ _ _
     | split
   case pruefeMass =>
     simp only [Einrichtung] at install
@@ -130,8 +145,10 @@ theorem KostenGrenzen.auswerten (ok : g.RahmenGut r) (install : g.Einrichtung b 
     | (refine ⟨⟨ok.1.1, ok.1.2.1, ?_⟩, ok.2⟩
        intro n installed
        cases installed
-       exact (by rw [show r.funktion = some _ from by assumption]; exact install _ _ (by assumption)
-         (by assumption) (Int.le_of_not_gt (by assumption))))
+       have named : ∃ name, r.funktion = some name := ⟨_, by assumption⟩
+       obtain ⟨name, eq⟩ := named
+       rw [eq]
+       exact install name _ eq (by assumption) (Int.le_of_not_gt (by assumption)))
     | split
   case setzePasszahl =>
     simp only [Einrichtung] at install
