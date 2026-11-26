@@ -89,12 +89,13 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
+      rw [hueq] at hlock_u
       cases hF
       rw [hziel]
       rcases hcrash with hvor | hnach
       · refine ⟨?_, Or.inl ?_⟩
         · cases hss
-          simp only [Function.update_self, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
+          simp only [Function.update_self, toggleUpdate, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
           constructor
           · exact hlock_u.1
           · intro d hd
@@ -106,13 +107,14 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
+      rw [hueq] at hlock_u
       cases hF
       rw [hziel]
       rcases hcrash with hvor | hnach
       · refine ⟨?_, Or.inl ?_⟩
-        · rw [hueq] at hss
-          obtain ⟨r, _, hnext⟩ := nimmt_inv hss
+        · obtain ⟨r, _, hnext⟩ := nimmt_inv hss
           rw [← hnext]
+          simp only [Function.update_self]
           exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
         · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
       · exact (hnach.1 c hs k hlk).elim
@@ -124,8 +126,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     rw [hziel]
     rcases hcrash with hvor | hnach
     · refine ⟨?_, Or.inl ?_⟩
-      · rw [hueq] at hss
-        obtain ⟨q, _, hnext⟩ := gibt_abgeben hss
+      · obtain ⟨q, _, hnext⟩ := gibt_abgeben hss
         rw [← hnext]
         cases q with
         | nil =>
