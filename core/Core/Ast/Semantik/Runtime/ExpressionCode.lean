@@ -53,10 +53,6 @@ def Fragment.anhaengen (a b : Fragment) : Fragment :=
 def Fragment.rumpf (gilt : Kontext → Bool) (body : Fragment) : Fragment :=
   { body with eintritte := fun c => if gilt c then some 0 else body.eintritte c }
 
-/-- A test instruction carrying the source type's loop bound at its own PC. -/
-def Fragment.schleifentest (b : Befehl) (grenze : SchleifenGrenze) : Fragment :=
-  { Fragment.einzel b with schleifen := [(0, grenze)] }
-
 mutual
 
 /-- An expression writes its result to the requested temporary. Its right

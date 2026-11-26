@@ -37,7 +37,8 @@ private def kkBaum : Ast.Unit :=
       List.nodup_nil (by intro h; cases h) none)
     UnitBody.done⟩
 
-private def kkUnit : UnitMitSchranken := ⟨kkBaum, Schrankendeklaration.leer⟩
+private def kkUnit : UnitMitSchranken :=
+  ⟨kkBaum, { Schrankendeklaration.leer with kosten := some 5 }⟩
 
 /-- Function lookup returns the declared interval. -/
 private theorem kk_intervall :
@@ -141,7 +142,7 @@ private theorem kk_akzeptiert : Akzeptiert (einheitMitSchranken Plattform.x86_64
     · intro run conforms t l h _ hne
       exact (hne rfl).elim
 
-/-- The counterexample unit is accepted by the endliche line with an empty declaration. -/
+/-- The finite checker line accepts the declared ceiling of five. -/
 private theorem kk_akk :
     EndlichAkzeptiertAussage Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile :=
   ⟨kk_akzeptiert, rfl⟩
@@ -262,10 +263,11 @@ theorem kostenKorrespondenzMass_nichtTrivial :
     exact ⟨kkUnit, h, ρ, s, kern, kk_akk, kk_schaetze, lauf, hcut, hfunk, hmass, hfinde,
       Option.some.inj hs, le_rfl, le_rfl⟩
 
-/-- The measure prologue makes the admitted entry prefix cost more than the estimate. -/
-theorem kostenSchaetzerKorrektAussage_falsch : ¬ KostenSchaetzerKorrektAussage := by
-  intro all
-  obtain ⟨h, ρ, lauf, ticks, _⟩ := kk_lauf
+private theorem kk_segment
+    (ρ : Lauf (einheitMitSchranken Plattform.x86_64 kkUnit))
+    (ticks : ∀ t, t < 6 → ρ.zeit.spur t = some (.kontext eintritt (), ⟨[], []⟩)) :
+    EintrittSegmentAussage Plattform.x86_64 kkUnit ρ 0 6 ∧
+      Kontextkosten ρ eintritt 0 6 = 6 := by
   have seg : EintrittSegmentAussage Plattform.x86_64 kkUnit ρ 0 6 := by
     refine ⟨by omega, ?_, Or.inl rfl⟩
     intro t _ ht spur contrad
@@ -276,9 +278,27 @@ theorem kostenSchaetzerKorrektAussage_falsch : ¬ KostenSchaetzerKorrektAussage 
     | zero => rfl
     | succ n ih =>
       rw [kontextkosten_schritt_gleich (Nat.zero_add n) (ticks n (by omega)), ih (by omega)]
+  exact ⟨seg, cost 6 (by omega)⟩
+
+/-- The measure prologue makes the admitted entry prefix cost more than the estimate. -/
+theorem kostenSchaetzerKorrektAussage_falsch : ¬ KostenSchaetzerKorrektAussage := by
+  intro all
+  obtain ⟨h, ρ, lauf, ticks, _⟩ := kk_lauf
+  obtain ⟨seg, cost⟩ := kk_segment ρ ticks
   have hle := (all Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile 5
     kk_akk kk_schaetze lauf).2 0 6 seg
-  rw [Nat.sub_zero, cost 6 (by omega)] at hle
+  rw [Nat.sub_zero, cost] at hle
+  omega
+
+/-- The same admitted prefix exceeds the accepted finite cost ceiling. -/
+theorem gebundenKHEndlichAussage_falsch : ¬ GebundenKHEndlichAussage := by
+  intro all
+  obtain ⟨h, ρ, lauf, ticks, _⟩ := kk_lauf
+  obtain ⟨seg, cost⟩ := kk_segment ρ ticks
+  have bound := ((all Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile
+    kk_akk lauf).2 0 6 seg 6 (by omega) (by omega)).1
+  have hle := bound 5 rfl
+  rw [Nat.sub_zero, cost] at hle
   omega
 
 end Gabbro.Core.Beobachtung
