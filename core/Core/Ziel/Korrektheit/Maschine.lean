@@ -142,6 +142,7 @@ theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) : IdealAkzeptie
   by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
   · exact ideal_akzeptierte_einheit_rein P t rein
   · have klassenrein := Ast.Semantik.fragment_klassenrein Ast.Category.unit t
-    exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩, fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
+    exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩,
+      fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
 
 end Gabbro.Core.Ziel.Korrektheit
