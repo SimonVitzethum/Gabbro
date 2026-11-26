@@ -210,7 +210,7 @@ theorem stummer_schritt_koppelt
           hbuchung₁, hrechte₁, hgeliefert₁, hleihen₁, hepoche₁, hverworfen₁, _⟩ :=
           f.vollzug_genau_privat privat (w := w) impl₁rule aus₁
         have transfer₁ := (f.impl_privat privat c vor w _ _).1 impl₁rule
-        obtain ⟨_, hnach₁⟩ := transfer₁
+        obtain ⟨hplan₁, hnach₁⟩ := transfer₁
         subst hnach₁
         -- same-index offers
         have crashEq : (ρ₁.hw.angebot t).crash = (ρ₂.hw.angebot t).crash :=
@@ -290,7 +290,7 @@ theorem stummer_schritt_koppelt
                   hbuchung₂, hrechte₂, hgeliefert₂, hleihen₂, hepoche₂, hverworfen₂, _⟩ :=
                   f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
                   have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
-                  obtain ⟨_, hnach₂⟩ := htrans₂
+                  obtain ⟨hplan₂, hnach₂⟩ := htrans₂
                   subst hnach₂
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
                     fragment_kontext_schritt_still p plattform
@@ -373,16 +373,16 @@ theorem stummer_schritt_koppelt
                       subst hspur₂
                       rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
                         ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
-                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
+                      · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
-                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
+                        rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
-                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
+                      · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
-                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
+                        rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
@@ -392,9 +392,9 @@ theorem stummer_schritt_koppelt
                           rw [kerneEq]
                         rw [hc]
                         by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
+                      · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
-                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
+                        rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
@@ -404,16 +404,16 @@ theorem stummer_schritt_koppelt
                           rw [kerneEq]
                         rw [hc]
                         by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
+                      · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
-                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
+                        rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
-                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
+                      · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
-                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
+                        rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
