@@ -39,7 +39,8 @@ def LaufenderRuf (platform : Plattform) (start : AussenStart) (b : Befehl) : Pro
     let E := elaborieren platform (category := .unit) unit
     let next := b.nach eintritt s
     E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-      E.system.ISchritt eintritt s () [plan] next ∧ E.system.ImplSchritt eintritt s () [plan] next ∧
+      E.system.ISchritt eintritt s () [b.plan (s.lokal eintritt) 0] next ∧
+      E.system.ImplSchritt eintritt s () [b.plan (s.lokal eintritt) 0] next ∧
       (next.lokal eintritt).stopp = none ∧
       (next.lokal eintritt).fortsetzungen.length = (s.lokal eintritt).fortsetzungen.length + 1
 
