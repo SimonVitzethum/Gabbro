@@ -77,24 +77,16 @@ theorem substring_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
         by_cases hok : 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧
             last.zahl.wert ≤ (text.bytes.size : Int)
         case pos =>
-          have hdpos : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
-              some ⟨Ty.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ := by
-            simp only [Befehl.auswerten, htext, hfirst, hlast, if_pos hok, Rahmen.halt, Id.run]
-            show (Function.update frame.temp dst
-              (some ⟨Ty.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ :
-                Option Dynamisch)) dst = _
-            simp only [Function.update_self]
-          rw [hdpos] at hd
+          simp only [if_pos hok] at hd
+          change (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ :
+              Option Dynamisch) = some d at hd
           cases hd
           cases hdt
           exact substring_wertSat code dst capacity hmem text
             first.zahl.wert.toNat last.zahl.wert.toNat L H hlook
         case neg =>
-          have hdneg : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
-              frame.temp dst := by
-            simp only [Befehl.auswerten, htext, hfirst, hlast, if_neg hok, Rahmen.halt, Id.run]
-            rfl
-          rw [hdneg] at hd
+          simp only [if_neg hok] at hd
+          change frame.temp dst = some d at hd
           rw [hdt] at hd
           exact h.2.1 dst _ _ hlook _ hd cap t rfl
 
@@ -192,7 +184,8 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
     rw [hnone] at hg
     cases hg
   | some d =>
-    cases hwd : wertAls (.array (.int lo hi) count) d with
+    cases hwd : (wertAls (.array (.int lo hi) count) d :
+        Option (Vector (Wert (.int lo hi)) count)) with
     | none =>
       have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
           basis).bind alsGanzzahl = none := by
