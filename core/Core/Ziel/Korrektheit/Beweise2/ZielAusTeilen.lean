@@ -19,8 +19,9 @@
      not determine that witness uniquely).
 
   `zielAusTeilenOhneIdealUndNI` delivers the middle part and the first seven conjuncts are discharged inline;
-  it needs no extra premise beyond `hang`. `zielAusTeilenAusScheduler` discharges the progress leg from
-  `SchedulerFortschrittVoraussetzung`, naming that premise as the content of `FortschrittAkzeptiertAussage`.
+  it needs no extra premise beyond `hang`. `zielAusTeilenMitFortschritt` closes the progress leg by
+  `fortschritt_akzeptiert`, proved from the two owner-approved run premises
+  (`Maschine.SchedulerFair`, `Maschine.VerdraengungKehrtZurueck`).
 -/
 module
 
@@ -29,7 +30,9 @@ public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
-public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
+public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Annahme.Annahme
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Start
@@ -159,17 +162,23 @@ theorem zielAusTeilenMitLuecken
         cases h
         exact rest ρ₂'' lauf₂.2 st₂ pol
 
-/-- The goal follows from the scheduler premise in place of the progress leg, with the three gaps supplied. -/
-theorem zielAusTeilenAusScheduler
+/-- The goal follows with the progress leg closed by the two run premises, with the three gaps
+    supplied. Needs the liveness of the memory model for access heads
+    (`ZugriffSchrittExistiertAussage`) and the scheduler premise for fragments with access
+    instructions (`SchedulerFortschrittVoraussetzung`; frame-only fragments are discharged
+    from scheduler fairness and preemption return). -/
+theorem zielAusTeilenMitFortschritt
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
     (niLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
-      Beobachtung.Nichtinterferent E) (scheduler : SchedulerFortschrittVoraussetzung)
+      Beobachtung.Nichtinterferent E)
+    (existiert : ZugriffSchrittExistiertAussage)
+    (scheduler : SchedulerFortschrittVoraussetzung)
     (P : Katalog.Plattform) (B : FormBeleg) :
     BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
       NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
   intro bildG formG schranken ni
   exact zielAusTeilenMitLuecken hang idealLuecke niLuecke P B bildG formG
-    (fortschritt_akzeptiert_aus_scheduler scheduler) schranken ni
+    (fortschritt_akzeptiert existiert scheduler) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit

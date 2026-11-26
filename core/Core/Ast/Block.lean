@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Statement
-public import Core.Ast.Program.AccessPrint
+public import Core.Ast.Program.Access.Print
 import Core.Ast.Aggregate.PatternPrint
 
 @[expose] public section

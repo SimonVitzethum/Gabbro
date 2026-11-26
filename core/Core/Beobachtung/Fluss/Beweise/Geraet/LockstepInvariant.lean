@@ -21,7 +21,7 @@ variable {k : Katalog}
     ledger, the questions are numbered by their position and the earlier answers match the
     earlier questions. A fresh offered answer that matches a recorded question therefore
     matches exactly the last question, and the matched prefix extends by one. -/
-private theorem geraete_antwort_erklaert_letzte_frage
+theorem geraete_antwort_erklaert_letzte_frage
     {antworten : List AntwortEreignis} {fragen : List FrageEreignis}
     (hlen : fragen.length = antworten.length + 1)
     (hrange : fragen.map (fun q : FrageEreignis => q.questionInstance) = List.range fragen.length)
