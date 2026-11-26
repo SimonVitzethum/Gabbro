@@ -24,6 +24,7 @@ public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Katalog.Erfuellbar
 public import Core.Linken.Modul
+public import Core.Linken.Offen
 
 @[expose] public section
 
@@ -107,20 +108,21 @@ def ZielInhaltAussage (P : Katalog.Plattform) : Prop :=
   ∧ (∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, ¬ Beobachtung.Nichtinterferent E)
 
 /-- LINKER CORRECTNESS over the real linker (`Core/Linken`): a plan that links, whose
-    control flow is sealed and all of whose modules are accepted on the plan's platform,
+    control flow is sealed and all of whose modules are openly accepted on the plan's platform,
     links to an accepted unit, so every theorem about accepted units applies to the linked
-    program. The seal (`kontrollflussAbgeschottet`) is listed although `linke` already
-    implies it: it is the premise that carries the content. Without it the statement is
-    false (MK-22: fall-through and jumps carry temporary state across module boundaries
-    into a guard instruction). Finding: `Linken.LinkAkzeptanzAussage` is `Iff.rfl` —
-    acceptance of a plan is DEFINED as acceptance of its linked unit, which says nothing
-    about the parts; this statement is the one that says something. Open
-    (Designer: the compatibility check; Prover: this statement — the guard transfer from
-    sealed parts to the whole is the missing step). -/
+    program. Open acceptance quantifies over runs starting at an entry state, which covers module
+    entries through calls and starts with foreign arguments — no run from a canonical start. The
+    seal (`kontrollflussAbgeschottet`) is listed although `linke` already implies it: it is the
+    premise that carries the content. Without it the statement is false (MK-22: fall-through and
+    jumps carry temporary state across module boundaries into a guard instruction). Finding:
+    `Linken.LinkAkzeptanzAussage` is `Iff.rfl` — acceptance of a plan is DEFINED as acceptance of
+    its linked unit, which says nothing about the parts; this statement is the one that says
+    something. Open (Designer: the compatibility check; Prover: the open run surgery
+    `Linken.OffeneLaufChirurgieAussage`, which projects whole runs onto entry-starting part runs). -/
 def LinkerAkzeptiertAussage : Prop :=
   ∀ (plan : Linken.Bauplan) (frag : Ast.Semantik.Fragment), Linken.linke plan = some frag →
     Linken.kontrollflussAbgeschottet plan = true →
-    (∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform)) →
+    (∀ m ∈ plan.module, Linken.OffenAkzeptiertAussage m plan.plattform) →
     Annahme.Akzeptiert (frag.einheit plan.plattform)
 
 /-- THE LINKER IS NOT TRIVIAL IN EITHER DIRECTION: it links some plan of at least two modules, and it refuses some

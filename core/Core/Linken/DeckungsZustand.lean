@@ -12,15 +12,93 @@ open Gabbro.Core.Annahme
 open Gabbro.Core.Maschine
 open Gabbro.Core.Katalog
 
-/-- The acting frame of a context after its position is moved back by the length of the
-    preceding code. Only the program counter changes; all temporaries, locals, continuations and
-    function table stay as they were. This is the frame-level content of entry relocation. -/
-def frameZurueck (off : Nat) (r : Rahmen) : Rahmen := { r with pc := r.pc - off }
+/-- Relocating a counter map back by the concatenation offset: key `k` of the module is key
+    `k + off` of the whole. Keys below the offset have no module key. This covers the loop
+    counters (`zaehler`) and the loop bounds (`obergrenzen`), which are keyed by code position. -/
+def karteZurueck {α : Type} (off : Nat) (m : Nat → Option α) : Nat → Option α :=
+  fun k => m (k + off)
 
-/-- A state seen by a module: only the acting context's position is shifted back by the
-    concatenation offset. Guard operands are read from the frame, so they survive the shift. -/
+/-- A stored continuation relocated back: its resume position shifts, its stored counter maps
+    relocate like the frame's. Temporaries, locals, function, measure and entry stay. -/
+def fortsetzungZurueck (off : Nat) (k : Fortsetzung) : Fortsetzung :=
+  { k with pc := k.pc - off, zaehler := karteZurueck off k.zaehler,
+           obergrenzen := karteZurueck off k.obergrenzen }
+
+/-- A function entry relocated back: its code address shifts by the offset. -/
+def funktionZurueck (off : Nat) (f : Funktion) : Funktion :=
+  { f with adresse := f.adresse - off }
+
+/-- The acting frame relocated back by the concatenation offset: the position shifts, the counter
+    maps relocate by key, the whole function table shifts by address, and every stored continuation
+    relocates. Temporaries, locals, returns, stops, globals, the current function, the measure and
+    the platform stay: guard operands are read from the temporaries, so they survive relocation.
+    This is the frame-level content of entry relocation. -/
+def frameZurueck (off : Nat) (r : Rahmen) : Rahmen :=
+  { r with pc := r.pc - off, zaehler := karteZurueck off r.zaehler,
+           obergrenzen := karteZurueck off r.obergrenzen,
+           funktionen := r.funktionen.map (funktionZurueck off),
+           fortsetzungen := r.fortsetzungen.map (fortsetzungZurueck off) }
+
+/-- A state seen by a module: the acting context's frame is relocated back by the concatenation
+    offset. Guard operands are read from the temporaries, so they survive the relocation. -/
 def zustandImModul (off : Nat) (c : Kontext) (s : Zustand) : Zustand :=
   { s with lokal := Function.update s.lokal c (frameZurueck off (s.lokal c)) }
+
+/-- The relocated frame at the acting context. -/
+theorem zustandImModul_frame (off : Nat) (c : Kontext) (s : Zustand) :
+    (zustandImModul off c s).lokal c = frameZurueck off (s.lokal c) := by
+  simp only [zustandImModul, Function.update_self]
+
+/-- Relocation keeps the temporaries. -/
+theorem frameZurueck_temp (off : Nat) (r : Rahmen) : (frameZurueck off r).temp = r.temp :=
+  rfl
+
+/-- Relocation keeps the locals. -/
+theorem frameZurueck_lokale (off : Nat) (r : Rahmen) : (frameZurueck off r).lokale = r.lokale :=
+  rfl
+
+/-- Relocation keeps the return value. -/
+theorem frameZurueck_rueckgabe (off : Nat) (r : Rahmen) :
+    (frameZurueck off r).rueckgabe = r.rueckgabe :=
+  rfl
+
+/-- Relocation keeps the stop reason. -/
+theorem frameZurueck_stopp (off : Nat) (r : Rahmen) : (frameZurueck off r).stopp = r.stopp :=
+  rfl
+
+/-- Relocation shifts the program counter. -/
+theorem frameZurueck_pc (off : Nat) (r : Rahmen) : (frameZurueck off r).pc = r.pc - off :=
+  rfl
+
+/-- Relocation shifts a counter key. -/
+theorem frameZurueck_zaehler (off : Nat) (r : Rahmen) (k : Nat) :
+    (frameZurueck off r).zaehler k = r.zaehler (k + off) :=
+  rfl
+
+/-- Relocation shifts a bound key. -/
+theorem frameZurueck_obergrenzen (off : Nat) (r : Rahmen) (k : Nat) :
+    (frameZurueck off r).obergrenzen k = r.obergrenzen (k + off) :=
+  rfl
+
+/-- Moving the acting position back changes the position field of that frame. -/
+theorem zustandImModul_lokal_pc (off : Nat) (c : Kontext) (s : Zustand) :
+    ((zustandImModul off c s).lokal c).pc = (s.lokal c).pc - off := by
+  simp only [zustandImModul_frame, frameZurueck_pc]
+
+/-- Relocation keeps the acting frame's temporaries. -/
+theorem zustandImModul_lokal_temp (off : Nat) (c : Kontext) (s : Zustand) :
+    ((zustandImModul off c s).lokal c).temp = (s.lokal c).temp := by
+  simp only [zustandImModul_frame, frameZurueck_temp]
+
+/-- Relocation keeps the acting frame's return value. -/
+theorem zustandImModul_lokal_rueckgabe (off : Nat) (c : Kontext) (s : Zustand) :
+    ((zustandImModul off c s).lokal c).rueckgabe = (s.lokal c).rueckgabe := by
+  simp only [zustandImModul_frame, frameZurueck_rueckgabe]
+
+/-- Relocation keeps the acting frame's stop reason. -/
+theorem zustandImModul_lokal_stopp (off : Nat) (c : Kontext) (s : Zustand) :
+    ((zustandImModul off c s).lokal c).stopp = (s.lokal c).stopp := by
+  simp only [zustandImModul_frame, frameZurueck_stopp]
 
 /-- The guard use a unit records at a state, without a run: a context poised at an instruction
     whose guard reports the operation and operands. This is the state-level content of
@@ -51,11 +129,6 @@ theorem kopf_anhaengen_vorne (a b : Fragment) (s : Zustand) (c : Kontext)
   change (a.code ++ b.code)[(s.lokal c).pc]? = a.code[(s.lokal c).pc]?
   exact List.getElem?_append_left h
 
-/-- Moving the acting position back changes only the position field of that frame. -/
-theorem zustandImModul_lokal (off : Nat) (c : Kontext) (s : Zustand) :
-    (zustandImModul off c s).lokal c = { (s.lokal c) with pc := (s.lokal c).pc - off } := by
-  simp only [zustandImModul, frameZurueck, Function.update_self]
-
 /-- A head past the first fragment is a head of the second fragment at the relocated position.
     The projected state has the acting frame's position shifted back by the first fragment's
     length; status, temporaries and continuations are unchanged. -/
@@ -65,12 +138,12 @@ theorem kopf_anhaengen_hinten (a b : Fragment) (s : Zustand) (c : Kontext)
     kopf b.code (zustandImModul a.code.length c s) c = some cmd := by
   have hstatus : (zustandImModul a.code.length c s).status c = s.status c := rfl
   have hrueck : ((zustandImModul a.code.length c s).lokal c).rueckgabe =
-      (s.lokal c).rueckgabe := by rw [zustandImModul_lokal]
+      (s.lokal c).rueckgabe := zustandImModul_lokal_rueckgabe _ _ _
   have hstopp : ((zustandImModul a.code.length c s).lokal c).stopp =
-      (s.lokal c).stopp := by rw [zustandImModul_lokal]
+      (s.lokal c).stopp := zustandImModul_lokal_stopp _ _ _
   have hcode : b.code[((zustandImModul a.code.length c s).lokal c).pc]? =
       (a.anhaengen b).code[(s.lokal c).pc]? := by
-    rw [zustandImModul_lokal]
+    rw [zustandImModul_lokal_pc]
     change b.code[(s.lokal c).pc - a.code.length]? = (a.code ++ b.code)[(s.lokal c).pc]?
     rw [List.getElem?_append_right h]
   unfold kopf at head ⊢
@@ -82,13 +155,17 @@ theorem Befehl.guard_setzePc (b : Befehl) (r : Rahmen) (pc : Nat) :
     b.guard { r with pc := pc } = b.guard r := by
   cases b <;> simp only [Befehl.guard, Rahmen.zahl]
 
-/-- Shifting the acting position back leaves the guard operands of every instruction unchanged. -/
+/-- Guards read only the temporaries, which relocation keeps. -/
+theorem frameZurueck_guard (off : Nat) (r : Rahmen) (b : Befehl) :
+    b.guard (frameZurueck off r) = b.guard r := by
+  cases b <;> simp only [Befehl.guard, Rahmen.zahl, frameZurueck_temp]
+
+/-- Shifting the acting frame back leaves the guard operands of every instruction unchanged. -/
 theorem guard_zustandImModul (off : Nat) (c : Kontext) (s : Zustand)
     (b : Befehl) (op : PartielleOperation) (args : Operanden op)
     (g : b.guard (s.lokal c) = some ⟨op, args⟩) :
     b.guard ((zustandImModul off c s).lokal c) = some ⟨op, args⟩ := by
-  rw [zustandImModul_lokal]
-  rw [Befehl.guard_setzePc]
+  rw [zustandImModul_frame, frameZurueck_guard]
   exact g
 
 /-- A guard use of a concatenation belongs either to the first fragment at the same state, or to
