@@ -177,6 +177,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           hbuchung₂, hepoche₂, hgeliefert₂, hkerne₂, hstatus₂, hlokal₂, _, hinitial₂,
                           hrechte₂, hleihen₂, _, _, _, _, _⟩ :=
                           geraete_issue_tick (target := target) aus₂a hplansA' rfl owned₂A idle₂A
+                         let uR := setFrame s₂ c { s₂.lokal c with pending := some (d.binding.question access) }
                         have hbeob₁ : schrittBeob ρ₁ predictor t =
                             [.frage c.nummer s₁.fragen.length (d.binding.question access)] :=
                           geraete_issue_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
@@ -188,32 +189,32 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             hbuchung₂.symm hstatus₂
                           simpa only [hfragen] using h
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
+                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL uR quell
                             ⟨kopf₁, by
                               dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                               rw [ruleEq]
                               dsimp only [Rule.machine]
-                              exact ⟨plan', hplans', Rule.issue owned₁ idle₁⟩⟩
+                              exact ⟨_, hplans', Rule.issue owned₁ idle₁⟩⟩
                             ⟨kopf₂, by
                               dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                               rw [ruleEq]
                               dsimp only [Rule.machine]
-                              exact ⟨plan'A, hplansA', Rule.issue owned₂A idle₂A⟩⟩).1
+                              exact ⟨_, hplansA', Rule.issue owned₂A idle₂A⟩⟩).1
                           have n1lokal : n₁.lokal = uL.lokal := by rw [hlokal₁]; rfl
-                          have n2lokal : n₂.lokal = u₂t.lokal := by rw [hlokal₂]; rfl
+                          have n2lokal : n₂.lokal = uR.lokal := by rw [hlokal₂]; rfl
                           have n1status : n₁.status = uL.status := by rw [hstatus₁]; rfl
-                          have n2status : n₂.status = u₂t.status := by rw [hstatus₂]; rfl
+                          have n2status : n₂.status = uR.status := by rw [hstatus₂]; rfl
                           have n1initial : n₁.initial = uL.initial := by rw [hinitial₁]; rfl
-                          have n2initial : n₂.initial = u₂t.initial := by rw [hinitial₂]; rfl
+                          have n2initial : n₂.initial = uR.initial := by rw [hinitial₂]; rfl
                           have n1rechte : n₁.rechte = uL.rechte := by rw [hrechte₁]; rfl
-                          have n2rechte : n₂.rechte = u₂t.rechte := by rw [hrechte₂]; rfl
+                          have n2rechte : n₂.rechte = uR.rechte := by rw [hrechte₂]; rfl
                           have n1leihen : n₁.leihen = uL.leihen := by rw [hleihen₁]; rfl
-                          have n2leihen : n₂.leihen = u₂t.leihen := by rw [hleihen₂]; rfl
+                          have n2leihen : n₂.leihen = uR.leihen := by rw [hleihen₂]; rfl
                           have n1antwort : n₁.naechsteAntwort = uL.naechsteAntwort := by
                             funext c'
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁,
                               hverbraucht₁, hverworfen₁, Zustand.frage, setFrame]
-                          have n2antwort : n₂.naechsteAntwort = u₂t.naechsteAntwort := by
+                          have n2antwort : n₂.naechsteAntwort = uR.naechsteAntwort := by
                             funext c'
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂,
                               hverbraucht₂, hverworfen₂, Zustand.frage, setFrame]
@@ -313,6 +314,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           hrechte₂, hleihen₂, _⟩ :=
                           geraete_consume_tick (target := target) aus₂a hplansA' rfl owned₂A
                             pending₂A ready₂A sameQuestion₂A
+                         let uR := setFrame s₂ c (geraete_consume_rahmen s₂ c d.binding access answer₂A target)
                         have hbeob₁ : schrittBeob ρ₁ predictor t = [] :=
                           geraete_consume_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
                             hplans' rfl kopf₁ hbuchung₁.symm hstatus₁
@@ -321,18 +323,18 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             (by simpa using lab₂) hz₂ hn₂ aus₂a hplansA' rfl kopf₂
                             hbuchung₂.symm hstatus₂
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
+                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL uR quell
                             ⟨kopf₁, by
                               dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                               rw [ruleEq]
                               dsimp only [Rule.machine]
-                              exact ⟨plan', hplans',
+                              exact ⟨_, hplans',
                                 Rule.consume owned₁ pending₁ ready₁ sameQuestion₁⟩⟩
                             ⟨kopf₂, by
                               dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                               rw [ruleEq]
                               dsimp only [Rule.machine]
-                              exact ⟨plan'A, hplansA',
+                              exact ⟨_, hplansA',
                                 Rule.consume owned₂A pending₂A ready₂A sameQuestion₂A⟩⟩).1
                           refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
                           · simpa only [hlokal₁, hlokal₂] using hq.1
