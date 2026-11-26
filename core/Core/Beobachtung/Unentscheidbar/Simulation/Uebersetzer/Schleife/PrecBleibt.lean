@@ -68,6 +68,7 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
             (by rw [precCheckLaenge]; exact hlt7)]
         simpa only [precSchleife, List.append_assoc] using hget
       have hle := bleibtImBlockPrecCheck frei r b hlt7 hgetCheck
+      rw [precCheckLaenge] at hle
       omega
     · have hrpc7 : r.pc = 7 := by omega
       have hget7 : (precSchleife cgBlk aus frei)[7]? =
@@ -76,8 +77,7 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
       rw [hrpc7, hget7] at hget
       injection hget with hb
       subst b
-      change (if (r.temp (frei + 6)).bind alsBoolean = some false then
-          r.pc + (cgBlk.length + 92) else r.pc + 1) ≤ cgBlk.length + 99
+      simp only [Befehl.auswerten]
       rw [hrpc7]
       by_cases hcond : (r.temp (frei + 6)).bind alsBoolean = some false <;>
         simp only [hcond, if_true, if_false] <;> omega
@@ -113,11 +113,10 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
         dsimp only [R]
         rw [← verschiebbarVonNull]
         exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
-      obtain ⟨_, hvb, hzd⟩ := hvR r0.pc hltMid
+      obtain ⟨_, hgetR0, hvb, hzd⟩ := hvR r0.pc hltMid
       have hshift := auswertenMitPc 8 b r0 hvb hzd
       rw [hmr] at hshift
       have hle := bleibtImBlockPrecRumpf cgBlk aus frei hcg hvCg r0 b hltMid hgetR
-      dsimp only [R] at hle
       rw [precRumpfLaenge] at hle
       rw [hshift]
       simp only [mitPc]
