@@ -50,11 +50,11 @@ def programKernStatements (constructor : Name) : RegistryStatements constructor 
   acceptanceRule := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
     Annahme.RegelLokal (p.einheit platform) b
   idealRule := ∀ b : Befehl, b.programConstructor = some constructor →
-    Ideal.RegelBestimmt b.regel ∧ ∀ c s w plans u, b.ideal c s w plans u ↔ plans = [plan] ∧ u = b.nach c s
+    Ideal.RegelBestimmt b.regel ∧ ∀ c s w plans u, b.ideal c s w plans u ↔ plans = [b.plan (s.lokal c) 0] ∧ u = b.nach c s
   unitsAndCommutation := ∀ (p : Fragment) (platform : Plattform) (b : Befehl), b.programConstructor = some constructor →
     (p.einheit platform).stotterLaenge b = 0 ∧ ∀ other, Kommutation b.vor b.danach other
   implementationRule := ∀ b : Befehl, b.programConstructor = some constructor →
-    ∀ c s w plans u, b.impl c s w plans u ↔ plans = [plan] ∧ u = b.nach c s
+    ∀ c s w plans u, b.impl c s w plans u ↔ plans = [b.plan (s.lokal c) 0] ∧ u = b.nach c s
   preservation := ∀ (p : Fragment) platform b, b.programConstructor = some constructor →
     p.klauseln.invariant = [] →
     I.RegelAbgleich (p.einheit platform) b ∧ Ideal.RegelFortschritt (p.einheit platform).system b ∧
