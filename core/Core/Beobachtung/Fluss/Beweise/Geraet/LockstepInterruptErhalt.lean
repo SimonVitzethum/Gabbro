@@ -38,13 +38,21 @@ private theorem geraete_interrupt_beob_tick {ρ : Lauf (d.unit locals)} {predict
   have hende : ¬ ∃ c', (neuBeendet s n (d.unit locals).etiketten c').isSome = true := by
     rintro ⟨c', hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c' = none := by
-      rw [next]
-      dsimp only [Zustandseintritt]
+      rw [neuBeendet]
       by_cases hcc : c' = c
       · subst c'
-        rw [Function.update_self, ruht]
-        rfl
-      · rw [Function.update_noteq hcc]
+        have statusN : n.status c = .laeuft := by
+          rw [next]
+          simp only [Zustandseintritt, Function.update_self]
+        rw [statusN, ruht]
+      · have statusN : n.status c' = s.status c' := by
+          rw [next]
+          simp only [Zustandseintritt, Function.update]
+          split
+          · rename_i hcd
+            exact (hcc hcd).elim
+          · rfl
+        rw [statusN]
         cases hs : s.status c' <;> rfl
     rw [hnone] at hc
     cases hc
@@ -120,7 +128,7 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                   exact pending₁.2.2.2.2
                 cases impl₂ with
                 | kontext _ bereit₂ _ _ =>
-                    exact (geraete_interrupt_schliesst_kontext_aus gueltig wahl₂ bereit₂).elim
+                    exact (geraete_interrupt_schliesst_kontext_aus (E := E) gueltig wahl₂ bereit₂).elim
                 | antwort _ hAnt =>
                     have hdel : (ρ₂.hw.angebot t).delivery hAnt.1.question.endpoint = true := by
                       rw [← hAnt.1.1]
