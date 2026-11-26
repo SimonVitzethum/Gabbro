@@ -20,12 +20,17 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
   have hvsPaar : VerschiebbaresProgramm (rfindPaar frei) := by
     rw [rfindPaar]
     exact verschiebbarPaarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)
+  have hlenPaar : (rfindPaar frei).length = 44 := by
+    rw [rfindPaar, paarBerechnungLaenge]
   apply verschiebbarVonAppend
-  · exact verschiebbarVonLift 0 (rfindPaar frei) hvsPaar
   · apply verschiebbarVonAppend
-    · exact verschiebbarVonLift 44 cfBlk hvBlk
-    · rw [rfindRest]
-      apply verschiebbarVonAppend
+    · exact verschiebbarVonLift 0 (rfindPaar frei) hvsPaar
+    · rw [show 0 + (rfindPaar frei).length = 44 by rw [hlenPaar]]
+      exact verschiebbarVonLift 44 cfBlk hvBlk
+  · rw [show 0 + (rfindPaar frei ++ cfBlk).length = 44 + cfBlk.length by
+      rw [List.length_append, hlenPaar]]
+    rw [rfindRest]
+    apply verschiebbarVonAppend
       · apply verschiebbarVonAppend
         · unfold VerschiebbarVon
           intro j hj
@@ -59,7 +64,7 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
 theorem bleibtImBlockKopie (ziel quelle : Nat) : BleibtImBlock (kopie ziel quelle) := by
   unfold BleibtImBlock
   intro r b hlt hget
-  rw [kopieLaenge] at hlt
+  rw [kopieLaenge] at hlt ⊢
   interval_cases r.pc <;>
     simp only [kopie, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil] at hget <;>
     injection hget with hb <;> subst b <;>
