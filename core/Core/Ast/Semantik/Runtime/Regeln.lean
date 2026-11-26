@@ -62,11 +62,11 @@ theorem Befehl.plan_privat_unabhaengig (b : Befehl) (h : b.Privat) (r₁ r₂ : 
     b.plan r₁ v = b.plan r₂ v := by
   cases b with
   | zugriff form =>
-    cases form <;> simp [Befehl.klasse, Befehl.Privat, Zugriffsform.klasse] at h
+    cases form <;> simp only [Befehl.klasse, Befehl.Privat, Zugriffsform.klasse, reduceCtorEq, or_false, or_true, false_or, true_or] at h
   | faden form =>
-    cases form <;> simp [Befehl.klasse, Befehl.Privat, Fadenform.klasse] at h
+    cases form <;> simp only [Befehl.klasse, Befehl.Privat, Fadenform.klasse, reduceCtorEq, or_false, or_true, false_or, true_or] at h
   | aussen form =>
-    cases form <;> simp [Befehl.klasse, Befehl.Privat, AussenfrageformKlasse] at h
+    cases form <;> simp only [Befehl.klasse, Befehl.Privat, AussenfrageformKlasse, reduceCtorEq, or_false, or_true, false_or, true_or] at h
   | _ => rfl
 
 /-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the

@@ -51,7 +51,7 @@ def textIndexUnit : Ast.Unit :=
       (by
         change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
         omega) value
-      (by dsimp [value, Expr.static]; exact ⟨trivial, trivial⟩)
+      (by dsimp only [value, Expr.static]; exact ⟨trivial, trivial⟩)
       (by
         change (0 : Int) ≤ 0 ∧ (255 : Int) ≤ 255
         omega)) .done⟩
@@ -239,19 +239,19 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
           · rw [hstate, txt_regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
         · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
       · exfalso

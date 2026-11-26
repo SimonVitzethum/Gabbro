@@ -209,7 +209,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           cases fuehrt with
           | maskiere _ _ =>
           have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .prioritaet g1 := hL
@@ -218,7 +218,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           cases fuehrt with
           | prioritaet _ =>
           have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .sende v2 k2 := hL
@@ -227,7 +227,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           cases fuehrt with
           | sende _ _ =>
           have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .leite l3 k3 p3 := hL
@@ -236,7 +236,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           cases fuehrt with
           | leite _ _ _ =>
           have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
-            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
           rw [hI] at hL
           cases hL
       · exfalso
