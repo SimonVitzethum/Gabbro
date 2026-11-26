@@ -235,8 +235,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hkS' : (Schritt (P ++ S))^[k - jP] (some (mitPc P.length rP0)) = some rEnd := by
       rw [hmitP]
       exact hkS
-    have hpcEndPS : rEnd.pc = P.length + S.length := by
-      rw [hpcEnd, List.length_append]
+    have hpcEndPS : rEnd.pc = P.length + S.length :=
+      hpcEnd.trans (List.length_append P S)
     obtain ⟨rS, hrunS, hpcS, hEqEnd⟩ :=
       rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEndPS
     let Q := (L ++ R) ++ cfBlk
@@ -248,24 +248,28 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rw [hpcP]
       dsimp only [P]
       rw [List.length_append]
-    have hpcP_Q' : rP.pc = (Q ++ I).length := by
-      rw [hpcP_Q, List.length_append]
+    have hpcP_Q' : rP.pc = (Q ++ I).length :=
+      hpcP_Q.trans (List.length_append Q I).symm
     obtain ⟨jI, rQ, hjIk, hrunIcomp, hrunQ, hpcQ⟩ :=
       randAusEndePrefix Q I hLRc hlenQ hlenI r jP rP hpc hrunP hpcP_Q'
     have hlenL : 0 < L.length := by
       dsimp only [L]
       rw [leftBlkLaenge]
+      omega
     have hlenR : 0 < R.length := by
       dsimp only [R]
       rw [rightBlkLaenge]
+      omega
     have hpcQ_LR : rQ.pc = (L ++ R).length + cfBlk.length := by
       rw [hpcQ]
       dsimp only [Q]
       rw [List.length_append]
-    have hpcQ_LR' : rQ.pc = (L ++ R ++ cfBlk).length := by
-      rw [hpcQ_LR, List.length_append]
+    have hpcQ_LR' : rQ.pc = (L ++ R ++ cfBlk).length :=
+      hpcQ_LR.trans (List.length_append (L ++ R) cfBlk).symm
+    have hrunQ' : (Schritt (L ++ R ++ cfBlk))^[jI] (some r) = some rQ := by
+      simpa only [Q] using hrunQ
     obtain ⟨jC, rLR, hjCk, hrunCcomp, hrunLR, hpcLR⟩ :=
-      randAusEndePrefix L R hL hlenL hlenR r jI rQ hpc hrunQ hpcQ_LR'
+      randAusEndePrefix L R hL hlenL hlenR r jI rQ hpc hrunQ' hpcQ_LR'
     obtain ⟨a, kk, haeval, hkeval, hrLRa0, hrLRk0, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
       zweiEingaengeRueck L R .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
         (by dsimp only [L]; exact blockLeft ein (frei + 0) freiL (by omega) (by omega) (by omega))
