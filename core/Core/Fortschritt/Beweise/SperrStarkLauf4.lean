@@ -42,13 +42,21 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
   have aus1 : FuehrtSchrittAus E_4.einrichtung 0 A s0 (toggleUpdate A s0) ticketPlan
       ⟨[], []⟩ s1 :=
     e4_sperrAus rfl rfl rfl (e4_toggle_frame s0 A) h1 (.nil _)
-  have h2 : SperrSchritt .ticket B (s1.sperren ()) ⟨none, [A, B]⟩ := .ticket (fun h => nomatch h) (by decide)
+  have h2 : SperrSchritt .ticket B (s1.sperren ()) ⟨none, [A, B]⟩ := by
+    refine .ticket (fun h => nomatch h) ?_
+    intro h
+    cases List.mem_singleton.mp h
   let s2 := { toggleUpdate B s1 with
     sperren := Function.update s1.sperren () ⟨none, [A, B]⟩ }
   have aus2 : FuehrtSchrittAus E_4.einrichtung 1 B s1 (toggleUpdate B s1) ticketPlan
       ⟨[], []⟩ s2 :=
     e4_sperrAus rfl rfl rfl (e4_toggle_frame s1 B) h2 (.nil _)
-  have h3 : SperrSchritt .ticket C4 (s2.sperren ()) ⟨none, [A, B, C4]⟩ := .ticket (fun h => nomatch h) (by decide)
+  have h3 : SperrSchritt .ticket C4 (s2.sperren ()) ⟨none, [A, B, C4]⟩ := by
+    refine .ticket (fun h => nomatch h) ?_
+    intro h
+    rcases List.mem_cons.mp h with h | h
+    · cases h
+    · cases List.mem_singleton.mp h
   let s3 := { toggleUpdate C4 s2 with
     sperren := Function.update s2.sperren () ⟨none, [A, B, C4]⟩ }
   have aus3 : FuehrtSchrittAus E_4.einrichtung 2 C4 s2 (toggleUpdate C4 s2) ticketPlan
@@ -157,18 +165,17 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
       intro own
       change some A = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨6, by decide, by decide, .besitzer A [B, C4],
-        by change some B ≠ some A; decide⟩
+      exact ⟨6, by omega, by omega, .besitzer A [B, C4], by intro h; cases h⟩
     | 7 =>
       intro own
       change some B = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨7, by decide, by decide, .besitzer B [C4], by change some C4 ≠ some B; decide⟩
+      exact ⟨7, by omega, by omega, .besitzer B [C4], by intro h; cases h⟩
     | 8 =>
       intro own
       change some C4 = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨8, by decide, by decide, .besitzer C4 [], by change none ≠ some C4; decide⟩
+      exact ⟨8, by omega, by omega, .besitzer C4 [], by intro h; cases h⟩
     | _ + 9 =>
       intro own
       cases own
@@ -190,10 +197,12 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     exact hchange ho'
   refine ⟨E_4, umgebung4, ρ, C4, 5, 4, akzeptiert_E_4,
     ⟨fair4.hardware, fair4.konform, hstart, rfl⟩, fair4, halteschranke, e4halten,
-    ⟨s4, rfl, ⟨A, rfl, by decide⟩, rfl⟩, ?_, ?_, ?_⟩
+    ⟨s4, rfl, ⟨A, rfl, by intro h; cases h⟩, rfl⟩, ?_, ?_, ?_⟩
   · intro s hs
     rw [← state 4 s hs]
-    exact (by decide : [B, C4].Nodup)
+    refine List.nodup_cons.mpr ⟨?_, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩⟩
+    intro h
+    cases List.mem_singleton.mp h
   · intro k _ hk
     have impossible : (spur k).1 ≠ .absturz := by
       match k with
