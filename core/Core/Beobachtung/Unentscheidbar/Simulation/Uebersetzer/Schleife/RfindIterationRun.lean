@@ -39,7 +39,8 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
-    exact (laufAnhang (rfindPaar frei) (cfBlk ++ rfindRest cfBlk aus frei) r kp hbleibP).trans hrunP
+    have h := (laufAnhang (rfindPaar frei) (cfBlk ++ rfindRest cfBlk aus frei) r kp hbleibP).trans hrunP
+    simpa only [List.append_assoc] using h
   let r0 : Rahmen := { rp with pc := 0 }
   have hmit0 : mitPc 44 r0 = rp := by
     change { rp with pc := 44 + 0 } = rp
@@ -154,7 +155,8 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
-    exact (laufAnhang (rfindPaar frei) (cfBlk ++ rfindRest cfBlk aus frei) r kp hbleibP).trans hrunP
+    have h := (laufAnhang (rfindPaar frei) (cfBlk ++ rfindRest cfBlk aus frei) r kp hbleibP).trans hrunP
+    simpa only [List.append_assoc] using h
   let r0 : Rahmen := { rp with pc := 0 }
   have hmit0 : mitPc 44 r0 = rp := by
     change { rp with pc := 44 + 0 } = rp
