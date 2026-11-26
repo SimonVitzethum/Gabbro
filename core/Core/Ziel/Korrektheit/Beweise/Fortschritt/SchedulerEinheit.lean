@@ -1,11 +1,11 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise/Fortschritt/SchedulerEinheit.lean
-  Subject:   THE SCHEDULER LEG FOR ELABORATED UNITS — the two run premises deliver the
-             selection duties for every unit, and the pinned progress statement.
+  Subject:   THE SCHEDULER LEG FOR ELABORATED UNITS — the return premise and runtime
+             scheduling deliver the selection duties and the pinned progress statement.
 
   On an open suffix no live context is ever displaced (`einheitVon_keine_verdraengung`,
   via the return premise), so the dispatch core is constant (`einheitVon_dispatch_konstant_neu`).
-  Scheduler fairness on that constant core serves the context infinitely often
+  Scheduler fairness follows from the elaborated transitions and serves the context infinitely often
   (`einheitVon_scheduler_pflichten`): the recorded run itself selects (`nutzbar` = the run's
   own context steps, so `wahl` is immediate and `angebot` follows from the step's
   opportunity), and an open, enabled context is offered again past every cut. Lock
@@ -14,7 +14,7 @@
   The duties are built for every fragment, frame-only or with accesses: the head-based
   composability field of `FortschrittsPflichten` is supplied by `einheit_fortschrittsfelder`
   (`komponierbar_koepfe`), which holds for an access head because the step the memory model
-  offers composes. The two owner-approved run premises plus memory liveness close the pinned
+  offers composes. The return premise plus memory liveness close the pinned
   `FortschrittAkzeptiertAussage` (`fortschritt_akzeptiert`); its statement is unchanged.
   The scheduler selection premise itself is proved here (`schedulerFortschrittVoraussetzung`),
   so no free scheduler parameter remains. A fair run without preemption satisfies both run
@@ -35,7 +35,7 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-/-- The selection duties hold for every elaborated unit under the two run premises: take the run's
+/-- The selection duties hold for every elaborated unit under the return premise: take the run's
     own context steps as the selection. Offering follows from the step's physical opportunity,
     choice is immediate, and an open, enabled context is served infinitely often by scheduler
     fairness on its constant dispatch core. The four form-side fields come from
@@ -45,7 +45,6 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
     (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
-    (sf : Maschine.SchedulerFair (einheitVon P t) ρ)
     (ret : Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
     {η : Maschine.I.Lauf (einheitVon P t)} (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η) (environment : η.umgebung = H) :
@@ -110,7 +109,7 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
         have hd : (s.kerne kstar).laeuft = some c :=
           hkonst t'' (Nat.le_trans hm ht'') s hs
         exact ⟨t'', ht'', kstar, hgeleg, s, hs, hd⟩
-      obtain ⟨t', ht', w, spur, hstep⟩ := sf a c suffixReady opportunities n hn
+      obtain ⟨t', ht', w, spur, hstep⟩ := einheitVon_schedulerFair P t lauf a c suffixReady opportunities n hn
       exact ⟨t', ht', ⟨w, spur, hstep⟩, bereitAlle t' (Nat.le_trans hn ht')⟩
     | inr lockOft =>
       obtain ⟨_, _, _, w, plan, u, _, ischritt, hakt⟩ := lockOft a (Nat.le_refl _)
@@ -122,8 +121,7 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
     preemption of every accepted elaborated unit, the matched ideal run admits a selection
     predicate `nutzbar` for which the four dispatch and selection duties hold: `angebot`, `wahl`,
     `individuell` and `systemweit` (the system-wide duty is vacuous for `blockierend`). The two run
-    premises are the same as those of `FortschrittAkzeptiertAussage`; without them a fair run may
-    starve a live context, so they are load-bearing. The four form-side fields, including
+    premises are the same as those of `FortschrittAkzeptiertAussage`; dispatch return is the remaining run obligation. The four form-side fields, including
     composability at an access head, come from `einheit_fortschrittsfelder`. -/
 def SchedulerFortschrittVoraussetzungAussage : Prop :=
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
@@ -140,11 +138,11 @@ def SchedulerFortschrittVoraussetzungAussage : Prop :=
           ρ η nutzbar
 
 /-- The selection premise holds for every elaborated unit, frame-only or with accesses: the run's
-    own context steps are the selection and the two run premises discharge `individuell`. -/
+    own context steps are the selection and runtime scheduler fairness and the return premise discharge `individuell`. -/
 theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAussage) :
     SchedulerFortschrittVoraussetzungAussage := by
-  intro P t _ H ρ lauf _ sf ret η valid matched environment
-  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+  intro P t _ H ρ lauf _ _ ret η valid matched environment
+  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
 
 /-- Construct one ideal run on every hardware history. On a fair history the two execution
     duties give per-context and per-cut progress for that same ideal run. -/
@@ -168,8 +166,8 @@ theorem einheitVon_sim_ziel_fortschritt (existiert : ZugriffSchrittExistiertAuss
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   apply Maschine.I.sim_ziel_fortschritt_im_lauf pflicht lauf
   intro η valid matched environment fair
-  obtain ⟨sf, ret⟩ := scheduler fair
-  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+  have ret := (scheduler fair).2
+  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
 
 /-- The pinned progress statement follows from the shared ideal run and the two run premises. -/
 theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
@@ -180,9 +178,9 @@ theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
   exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
 
 /-- Both run premises hold jointly for an accepted elaborated unit: the catalogue is
-    well-formed by acceptance, the entry image is valid on every platform, and the fair
-    schedule over a history without raised interrupts constructs the run — scheduler-fair
-    by construction and preemption-free by the silent history. -/
+    well-formed by acceptance, the entry image is valid on every platform, and the schedule
+    over a history without raised interrupts constructs the run — scheduler-fair
+    by the actual transitions and preemption-free by the silent history. -/
 theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
     (akzeptiert : Annahme.Akzeptiert (einheitVon P t)) :
     ∃ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
@@ -222,9 +220,9 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
   have fair := Katalog.Umgebung.referenz_fair (einheitVon P t).katalog 2 sicht
     wohlgeformt (by decide)
   obtain ⟨s, zul⟩ := Katalog.zulStart_erfuellbar hardware gueltig
-  obtain ⟨ρ, run, sched, _, hwEq⟩ :=
-    Maschine.fairer_lauf_mit_hw (einheitVon P t) hardware zul fair.konform
-  refine ⟨h, ρ, run, ?_, sched, ?_⟩
+  obtain ⟨ρ, run, _, hwEq⟩ :=
+    Maschine.fairer_lauf (einheitVon P t) zul fair
+  refine ⟨h, ρ, run, ?_, einheitVon_schedulerFair P t run, ?_⟩
   · rw [← hwEq] at fair
     exact fair
   · exact Maschine.verdraengung_ohne_meldung (einheitVon P t) hw (fun i => rfl) ρ hwEq
