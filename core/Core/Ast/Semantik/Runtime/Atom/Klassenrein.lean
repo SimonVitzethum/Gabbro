@@ -121,6 +121,7 @@ theorem stmt_klassenrein (tree : Stmt result before after) : (stmt tree).Klassen
     repeat' first
       | exact Or.inl (Or.inl rfl)
       | exact Or.inl (Or.inr (Or.inl rfl))
+      | exact (Fragment.klassenrein_einzel_iff _).2 (Or.inl (Or.inl rfl))
       | refine ⟨?_, ?_⟩
 
 theorem bracedBlock_klassenrein (tree : BracedBlock result scope) : (bracedBlock tree).KlassenRein := by

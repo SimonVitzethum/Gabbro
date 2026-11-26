@@ -12,8 +12,8 @@
               (`Wirkungsklasse.kostenZeile`) over the elaborated instructions of each
               source form, multiplies loop bodies by their static trip bound
               (`whileBounded` upper endpoint, `forRange` static span), resolves calls
-              through the declared per-function table (`KostenTabelle`, verified
-              without self-justification) or structurally, and treats recursion only
+              through the declared per-function table (`KostenTabelle`) or
+              structurally, and treats recursion only
               with `decreases` (the measure span bounds the re-entry depth); anything
               else (`forever`, unknown callees, recursion without `decreases`,
               exhausted fuel) is refused with `none`. The checker line
@@ -24,12 +24,9 @@
               per-invocation estimator covers them. Acceptance
               (`EndlichAkzeptiertAussage`, pinned) is the perfect checker with the
               new line, so everything accepted before stays accepted with the same
-              guarantees (`endlichAkzeptiert_verstaerkt`). The invocation bound
-              itself (`KostenSchaetzerKorrektAussage`, with its step correspondence
-              `KostenSchrittKorrespondenzAussage`) are the pinned open statements of
-              `KostenEndlich` for Hy4 from the sketches there; the finite KH duties
-              (`GebundenKHEndlichAussage`) are proved in `KostenEndlichBeweise` from
-              the correctness statement.
+              guarantees (`endlichAkzeptiert_verstaerkt`).
+              `Kosten.KostenGegenbeispiel` refutes the estimator bound for an
+              accepted unit with a measure prologue and an empty cost table.
 -/
 module
 
@@ -47,10 +44,8 @@ open Katalog Maschine Annahme
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 
-/-- The declared per-function cost table: each entry bounds one invocation of the
-    named function, from its entry to its exit. Entries are verified without
-    self-justification (the estimator checks each entry with the entry itself
-    removed), so no circular justification is possible. -/
+/-- Declared per-function bounds from entry to exit. The estimator uses these
+    values directly. Their verification is a separate obligation. -/
 abbrev KostenTabelle := List (Identifier × Nat)
 
 /-- Lookup of a declared function bound by name. -/
@@ -64,14 +59,14 @@ def fragmentKosten (z : Wirkungsklasse → KlassenKostenzeile) (p : Fragment) : 
 
 /-- The static trip bound of a `whileBounded` loop: the upper endpoint of the
     static bound expression, which the bound value never exceeds. -/
-def boundSchranke {scope : Scope} {lo hi : Int} (_ : Expr scope (.int lo hi)) : Nat :=
-  hi.toNat
+def boundSchranke {scope : Scope} {lo hi : Int} (bound : Expr scope (.int lo hi)) : Nat :=
+  (SchleifenGrenze.whileBounded bound).paesse
 
 /-- The static trip bound of a `forRange` loop: the static span between the
     lowest possible start and the highest possible end, clamped at zero. -/
 def forSchranke {scope : Scope} {low lowHi highLo high : Int}
-    (_ : Expr scope (.int low lowHi)) (_ : Expr scope (.int highLo high)) : Nat :=
-  (high - low).toNat
+    (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high)) : Nat :=
+  (SchleifenGrenze.forRange lo hi).paesse
 
 mutual
 
@@ -176,22 +171,22 @@ def aufrufeArme : VariantArms result scope allowWildcard labels payloads →
 end
 
 /-- One function of a unit, with exactly what the estimator needs: the
-    `decreases` span (when declared) and the body with its own scope. -/
+    `decreases` interval (when declared) and the body with its own scope. -/
 structure FunktionsKern where
-  spanne : Option Nat
+  massIntervall : Option (Int × Int)
   koerper : Σ scope : Scope, Σ result : Option (Ty .value), BracedBlock result scope
 
 /-- The `decreases` span of a measure: values stay inside the interval, so a
-    strictly decreasing chain of re-entries is at most this long. -/
-def massSpanne {scope : Scope} (m : Measure scope) : Nat :=
-  (m.hi - m.lo).toNat
+    strictly decreasing chain can make at most this many decreases. -/
+def massSpanne (intervall : Int × Int) : Nat :=
+  (intervall.2 - intervall.1).toNat
 
 /-- Function lookup by name over the unit body. -/
 def findeKern : UnitBody before after → Identifier → Option FunktionsKern
   | .done, _ => none
   | .step (.function name _ _ _ _ decreases body _ _ _) next, want =>
     if name.val == want.val then
-      some ⟨decreases.map massSpanne, ⟨_, _, body⟩⟩
+      some ⟨decreases.map (fun m => (m.lo, m.hi)), ⟨_, _, body⟩⟩
     else findeKern next want
   | .step _ next, want => findeKern next want
 
@@ -254,7 +249,7 @@ def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabell
       | none => none
       | some kern =>
         if selbstRekursiv u name then
-          match kern.spanne with
+          match kern.massIntervall.map massSpanne with
           | none => none
           | some span =>
             let zyk := zyklusMenge u name

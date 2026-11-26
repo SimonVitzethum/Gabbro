@@ -15,40 +15,26 @@
               Three statements carry the finite bound, pinned for Hy4 under one
               collective root:
 
-              * `KostenSchrittKorrespondenzAussage`: the source-to-machine link. Every
-                context step of an admitted run executes the Befehl at its head, and
-                that Befehl is one the estimator charged (`f ∈ (programm u.baum).code`,
-                whose class rows the estimator sums in `fragmentKosten`); loop counters
-                (`zaehler`/`obergrenzen`) stay below the estimator value; installed
-                measures stay inside their static `decreases` span. Proof sketch:
-                heads come from the elaborated fragment (`Fragment.einheit` rules are
-                exactly the code); the counter bounds follow the loop-entry commands
-                (`setzePasszahl`, `forAnfang`) with the static trip bounds
-                (`boundSchranke`, `forSchranke`) below the estimator value (every class
-                row costs one tick, `klassenKosten`); the measure bound follows the
-                runtime descent check (`Rahmen.setzeMass`: a new measure is installed
-                only strictly below the previous same-function mass, else the frame
-                halts) with the `decreases` clause (`KlauselnWahr` over `I`, carried by
-                acceptance). Difficulty: schwer.
+              * `KostenSchrittKorrespondenzAussage`: every execution head belongs to
+                the elaborated code. Loop counters and saved upper endpoints stay
+                within the source bounds at their test addresses. Installed measures
+                stay inside their declared `decreases` intervals. The local proofs in
+                `KostenEndlichBeweise` use the interval proofs on the typed operands.
+                The run invariant must track the origin of those operands and preserve
+                the bounds across transitions, including saved continuation frames.
 
               * `KostenSchaetzerKorrektAussage`: every invocation window and every entry
-                segment of an accepted unit costs at most the estimator. Proof sketch:
-                induction over the window from its start cut, using the correspondence:
-                each step costs its context exactly one tick
-                (`kontextkosten_schritt_gleich`); straight-line code is counted once;
-                `whileBounded`/`forRange` bodies run at most their static trip bound by
-                (ii); recursive re-entries descend strictly by (iv), so the `spanne`
-                bounds the cycle activations; calls cost their verified table entry or
-                their structural estimate. Protocol ticks are foreign to every context,
-                so they add nothing to the window. Difficulty: mittel (given the
-                correspondence).
+                segment of an accepted unit costs at most the estimator. The estimator
+                omits the measure prologue. `Kosten.KostenGegenbeispiel` proves that
+                an accepted entry segment costs six ticks with an estimate of five.
 
               * `GebundenKHEndlichAussage`: the cost and hold duties of every accepted
                 unit with a finite bound, stated window-relative: every cut of every
                 invocation window and every cut of every entry segment meets the
                 declared ceilings. Proved in `KostenEndlichBeweise` from the correctness
                 statement with the checker's `E ≤ K` (case split on the declaration;
-                the open leg is vacuous as in `bindungKHOffen`).
+                the open leg is vacuous as in `bindungKHOffen`). The counterexample
+                also refutes this statement directly with the accepted ceiling of five.
 
               The window predicates are inlined as `…Aussage` definitions covered by the
               root pin. The satisfiability witnesses below are run-free (checker outcomes
@@ -98,12 +84,10 @@ def EintrittSegmentAussage (P : Katalog.Plattform) (u : UnitMitSchranken)
     (a = 0 ∨ ∃ spurv : SchrittSpur Zelle Int,
       a > 0 ∧ ρ.zeit.spur (a - 1) = some (.absturz, spurv))
 
-/-- **The source-to-machine correspondence** (`KostenSchrittKorrespondenzAussage`):
-    for every accepted unit whose estimator is defined, every context step of every
-    admitted run executes the Befehl at its head, and that Befehl is one the
-    estimator charged; loop counters stay below the estimator value; installed
-    measures stay inside their static `decreases` span. Open for Hy4; the sketch is
-    in the file header. Difficulty: schwer. -/
+/-- In every admitted run of an accepted unit with a defined estimate, execution
+    heads belong to the elaborated code, loop counters and range endpoints stay
+    within the test site's static bounds, and installed measures stay inside
+    their static `decreases` intervals. -/
 def KostenSchrittKorrespondenzAussage : Prop :=
   ∀ (P : Katalog.Plattform) (u : UnitMitSchranken) (tab : KostenTabelle)
     (z : Wirkungsklasse → KlassenKostenzeile) (E : Nat),
@@ -119,22 +103,23 @@ def KostenSchrittKorrespondenzAussage : Prop :=
         f ∈ (programm u.baum).code) ∧
       (∀ t s (c : Kontext) (pc n : Nat),
         ρ.zeit.zustand t = some s →
-        (s.lokal c).zaehler pc = some n → n ≤ E) ∧
+        (s.lokal c).zaehler pc = some n →
+        ∃ grenze, (pc, grenze) ∈ (programm u.baum).schleifen ∧ n ≤ grenze.paesse) ∧
       (∀ t s (c : Kontext) (pc : Nat) (b : Ganzzahl),
         ρ.zeit.zustand t = some s →
-        (s.lokal c).obergrenzen pc = some b → b.zahl.wert.toNat ≤ E) ∧
-      ∀ t s (c : Kontext) (name : Identifier) (n span : Nat)
+        (s.lokal c).obergrenzen pc = some b →
+        ∃ grenze hi, (pc, grenze) ∈ (programm u.baum).schleifen ∧
+          grenze.oben = some hi ∧ b.zahl.wert ≤ hi) ∧
+      ∀ t s (c : Kontext) (name : Identifier) (n : Nat) (lo hi : Int)
         (kern : FunktionsKern),
         ρ.zeit.zustand t = some s →
         (s.lokal c).funktion = some name → (s.lokal c).mass = some n →
-        findeKern u.baum.2 name = some kern → kern.spanne = some span →
-        n ≤ span
+        findeKern u.baum.2 name = some kern → kern.massIntervall = some (lo, hi) →
+        lo ≤ (n : Int) ∧ (n : Int) ≤ hi
 
-/-- **Correctness of the structural estimator** (`KostenSchaetzerKorrektAussage`):
-    for every accepted unit whose estimator is defined, each invocation window of
-    every admitted run costs at most the estimator in the acting context's own
-    ticks, and so does every entry segment. Open for Hy4; the sketch is in the file
-    header. Difficulty: mittel (given the correspondence). -/
+/-- Correctness requires the estimate to cover every invocation window and entry
+    segment in the acting context's own ticks. The current estimator is refuted
+    by `kostenSchaetzerKorrektAussage_falsch`. -/
 def KostenSchaetzerKorrektAussage : Prop :=
   ∀ (P : Katalog.Plattform) (u : UnitMitSchranken) (tab : KostenTabelle)
     (z : Wirkungsklasse → KlassenKostenzeile) (E : Nat),
