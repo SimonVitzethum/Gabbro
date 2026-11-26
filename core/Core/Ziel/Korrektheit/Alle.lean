@@ -24,6 +24,7 @@ module
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Speicher
+public import Core.Ziel.Korrektheit.PrueferLokal
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 
 @[expose] public section
@@ -55,5 +56,8 @@ def KorrektheitAussagen : Prop :=
       ZielAusTeilenAussage P B ∧ SicherheitAkzeptiertAussage P ∧ SicherheitNichtLeerInstanzAussage P B ∧
       SicherheitAusTeilenAussage P B ∧ ZielInhaltAussage P ∧ LinkerAkzeptiertAussage ∧
       LinkerNichtTrivialAussage)
+        ∧ (PrueferLokalKorrektAussage prueferKombiniert ∧ PrueferLokalVollstaendigAussage prueferKombiniert ∧
+          PrueferKorrektAussage prueferKombiniert ∧ PrueferVollstaendigAussage prueferKombiniert ∧
+          PrueferNichtTrivialAussage prueferKombiniert)
 
 end Gabbro.Core.Ziel.Korrektheit

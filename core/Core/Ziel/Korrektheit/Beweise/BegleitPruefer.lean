@@ -5,18 +5,12 @@
               the statement, with the decision premises realised) and an `X.nichtTrivial`
               (a non-accepted object or a degenerate checker violates the statement). No pinned
               statement is changed. The soundness companions use `staleEinheit`; the completeness
-              companions use `akzeptiert_erfuellbar`. The local component is decided by the
-              classical stand-in `prueferLokalEntscheidet` (the local workstream replaces it with
-              the decidable local checker); the guard component is the deployed computable
-              checker `prueferWaechterDecidierbar`, whose soundness and completeness are proved
-              in `PrueferWaechterBeweise.lean`; the clause statements use the decidable checker
-              of `PrueferKlauseln.lean` with its real proofs. The whole-checker witness
-              `prueferKombiniert` composes the three.
+              companions use the frame-only source fragment and the existing clause and guard proofs.
 -/
 module
 
 public import Core.Ziel.Korrektheit.Pruefer
-public import Core.Ziel.Korrektheit.PrueferKlauseln
+public import Core.Ziel.Korrektheit.PrueferLokal
 public import Core.Ziel.Korrektheit.PrueferWaechterBeweise
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
@@ -28,27 +22,6 @@ public import Core.Beobachtung.Unentscheidbar.Modell
 namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
-open Classical
-
-/-- The classical stand-in for the local component: the local workstream replaces
-    it with the decidable local checker. -/
-noncomputable def prueferLokalEntscheidet : Pruefer where
-  pruefeLokal := fun P t => if Annahme.Lokal (einheitVon P t) then true else false
-  pruefeKlauseln := fun _ _ => true
-  pruefeWaechter := fun _ _ => true
-  fragmentLokal := fun _ _ => true
-  fragmentKlauseln := fun _ _ => true
-  fragmentWaechter := fun _ _ => true
-
-/-- The combined whole checker: classical local verdicts, the decidable clause
-    checker and the computable guard checker. -/
-noncomputable def prueferKombiniert : Pruefer where
-  pruefeLokal := prueferLokalEntscheidet.pruefeLokal
-  pruefeKlauseln := prueferKlauselnDecidierbar.pruefeKlauseln
-  pruefeWaechter := prueferWaechterDecidierbar.pruefeWaechter
-  fragmentLokal := fun _ _ => true
-  fragmentKlauseln := prueferKlauselnDecidierbar.fragmentKlauseln
-  fragmentWaechter := prueferWaechterDecidierbar.fragmentWaechter
 
 /-- The guard verdict of the combined checker unfolds to the static analysis. -/
 theorem prueferKombiniert_pruefeWaechter (P : Katalog.Plattform) (t : Ast.Unit) :
@@ -91,12 +64,7 @@ theorem lokalNichtTrivial :
 
 theorem PrueferLokalKorrektAussage.erfuellbar :
     ∃ C : Pruefer, PrueferLokalKorrektAussage C := by
-  refine ⟨prueferLokalEntscheidet, ?_⟩
-  intro P t accepted
-  change (if Annahme.Lokal (einheitVon P t) then true else false) = true at accepted
-  split at accepted
-  · assumption
-  · cases accepted
+  exact ⟨prueferKombiniert, prueferKombiniert_lokalKorrekt⟩
 
 theorem PrueferLokalKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit, ¬ Annahme.Lokal E :=
@@ -116,18 +84,16 @@ theorem PrueferKlauselnKorrektAussage.nichtTrivial :
       = true := rfl
   exact verletzteInvariante_verletzt _ (h _ _ hacc)
 
-theorem PrueferKorrektAussage.erfuellbar : ∃ C : Pruefer, PrueferKorrektAussage C := by
-  refine ⟨prueferKombiniert, ?_⟩
+theorem prueferKombiniert_korrekt : PrueferKorrektAussage prueferKombiniert := by
   apply pruefer_korrekt_aus_teilen
-  · intro P t accepted
-    change (if Annahme.Lokal (einheitVon P t) then true else false) = true at accepted
-    split at accepted
-    · assumption
-    · cases accepted
+  · exact prueferKombiniert_lokalKorrekt
   · intro P u accepted
     exact prueferKlauselnKorrekt_fuerDecidierbar P u accepted
   · intro P t accepted
     exact prueferWaechterKorrekt P t accepted
+
+theorem PrueferKorrektAussage.erfuellbar : ∃ C : Pruefer, PrueferKorrektAussage C :=
+  ⟨prueferKombiniert, prueferKombiniert_korrekt⟩
 
 theorem PrueferKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -138,13 +104,7 @@ theorem PrueferKorrektAussage.nichtTrivial :
 
 theorem PrueferLokalVollstaendigAussage.erfuellbar :
     ∃ C : Pruefer, PrueferLokalVollstaendigAussage C := by
-  refine ⟨prueferLokalEntscheidet, ?_⟩
-  intro P t _ hLocal
-  change (if Annahme.Lokal (einheitVon P t) then true else false) = true
-  split
-  · rfl
-  · rename_i notLocal
-    exact (notLocal hLocal).elim
+  exact ⟨prueferKombiniert, prueferKombiniert_lokalVollstaendig⟩
 
 theorem PrueferLokalVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -160,21 +120,20 @@ theorem PrueferKlauselnVollstaendigAussage.nichtTrivial :
       Annahme.Akzeptiert E :=
   Annahme.akzeptiert_erfuellbar
 
-theorem PrueferVollstaendigAussage.erfuellbar
+theorem prueferKombiniert_vollstaendig
     (h : WaechterAnalyse.WaechterFragmentVollstaendigAussage) :
-    ∃ C : Pruefer, PrueferVollstaendigAussage C := by
-  refine ⟨prueferKombiniert, ?_⟩
+    PrueferVollstaendigAussage prueferKombiniert := by
   apply pruefer_vollstaendig_aus_teilen
-  · intro P t _ hLocal
-    change (if Annahme.Lokal (einheitVon P t) then true else false) = true
-    split
-    · rfl
-    · rename_i notLocal
-      exact (notLocal hLocal).elim
+  · exact prueferKombiniert_lokalVollstaendig
   · intro P u hfrag clauses
     exact prueferKlauselnVollstaendig_fuerDecidierbar P u hfrag clauses
   · intro P t hfrag hwahr
     exact prueferWaechterVollstaendig h P t hfrag hwahr
+
+theorem PrueferVollstaendigAussage.erfuellbar
+    (h : WaechterAnalyse.WaechterFragmentVollstaendigAussage) :
+    ∃ C : Pruefer, PrueferVollstaendigAussage C :=
+  ⟨prueferKombiniert, prueferKombiniert_vollstaendig h⟩
 
 theorem PrueferVollstaendigAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,
@@ -205,15 +164,7 @@ theorem PrueferNichtTrivialAussage.nichtTrivial :
 theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombiniert := by
   constructor
   · refine ⟨Katalog.Plattform.x86_64, trivialUnit, ?_⟩
-    have hA := trivialUnit_akzeptiert Katalog.Plattform.x86_64
-    have hL : prueferKombiniert.pruefeLokal
-        Katalog.Plattform.x86_64 trivialUnit = true := by
-      show (if Annahme.Lokal (einheitVon Katalog.Plattform.x86_64 trivialUnit)
-        then true else false) = true
-      split
-      · rfl
-      · rename_i h
-        exact (h hA.1).elim
+    have hL : prueferKombiniert.pruefeLokal Katalog.Plattform.x86_64 trivialUnit = true := rfl
     have hK : prueferKombiniert.pruefeKlauseln
         Katalog.Plattform.x86_64 ⟨trivialUnit, []⟩ = true :=
       Ast.Semantik.pruefeEinheit_leer _
@@ -229,7 +180,10 @@ theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombi
     simp only [Pruefer.pruefe, hL, hK, hW]
     rfl
   · have hFL : prueferKombiniert.fragmentLokal
-        Katalog.Plattform.x86_64 textIndexUnit = true := rfl
+        Katalog.Plattform.x86_64 textIndexUnit = true := by
+      show lokalPruefeCode textIndexCode = true
+      rw [textIndexUnit_code]
+      rfl
     have hFK : prueferKombiniert.fragmentKlauseln
         Katalog.Plattform.x86_64 ⟨textIndexUnit, []⟩ = true := by
       show (Ast.Semantik.programmMitInvarianten ⟨textIndexUnit, []⟩).code.all
@@ -257,6 +211,11 @@ theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombi
           false := by
         rw [hPW, Bool.and_false]
       simpa only [Pruefer.pruefe] using hfalse
+
+/-- The local completeness premises hold jointly on the accepted empty unit. -/
+theorem prueferKombiniert_lokal_erfuellbar (P : Katalog.Plattform) :
+    ∃ t, prueferKombiniert.fragmentLokal P t = true ∧ Annahme.Lokal (einheitVon P t) :=
+  ⟨trivialUnit, rfl, (trivialUnit_akzeptiert P).1⟩
 
 /-! ### The undecidable remainder -/
 

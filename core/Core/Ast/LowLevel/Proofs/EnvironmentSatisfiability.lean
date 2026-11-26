@@ -12,13 +12,11 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Gabbro.Core.Text Annahme Katalog Maschine
 
-theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
-    (clauses : p.klauseln = .leer) (rein : ∀ b ∈ p.code, b.Privat)
-    (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
-    Akzeptiert (p.einheit platform) := by
-  let E := p.einheit platform
-  refine ⟨⟨platform.katalog_wohlgeformt, fun b => Befehl.regelLokal p platform b, ⟨Aussen.zulassung_m2 _, ?_⟩,
-    Beobachtung.fragment_fluss_lokal p platform rein, ?_, ?_, ?_⟩, ?_, ?_⟩
+/-- Frame-only code satisfies locality independently of its clauses and guards. -/
+theorem Fragment.lokal_rahmen (p : Fragment) (platform : Plattform)
+    (rein : ∀ b ∈ p.code, b.Privat) : Lokal (p.einheit platform) := by
+  refine ⟨platform.katalog_wohlgeformt, fun b => Befehl.regelLokal p platform b, ⟨Aussen.zulassung_m2 _, ?_⟩,
+    Beobachtung.fragment_fluss_lokal p platform rein, ?_, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with
@@ -33,6 +31,13 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     have memb : i ∈ p.code := kopf_mem hkopf
     obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus (rein i memb)
     exact spurRespektiert_leer _ _ _
+
+theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
+    (clauses : p.klauseln = .leer) (rein : ∀ b ∈ p.code, b.Privat)
+    (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
+    Akzeptiert (p.einheit platform) := by
+  let E := p.einheit platform
+  refine ⟨p.lokal_rahmen platform rein, ?_, ?_⟩
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ p.klauseln.invariant, _) ∧
