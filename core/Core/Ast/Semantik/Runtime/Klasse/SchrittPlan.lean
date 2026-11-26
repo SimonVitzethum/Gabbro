@@ -43,7 +43,7 @@ def Unterbrechungsoperand.keiner : Unterbrechungsoperand := ⟨0, false, 0, 0, 0
 
 /-- **What a step names, read from its frame**: the cell of an access, the value it writes, the lock of a
     lock action, the question it asks, the answer slot named by a consume step, and the immediates
-    of an interrupt-control step. A class reads the fields it needs and ignores the others.
+    of an interrupt-control step. A class reads the fields it needs and ignores the others. -/
 structure Operand where
   ort : Zelle
   wert : Int
