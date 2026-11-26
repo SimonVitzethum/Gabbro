@@ -19,18 +19,16 @@ theorem rfindDivergenzAussageFalsch :
   intro hDiv
   let cfBlk : List Befehl := [.springe 200]
   let rBasis : Rahmen := Rahmen.start []
-  let r : Rahmen := { rBasis with temp := fun s =>
-      if s = 10 then some (natVal 0)
-      else if s = 11 then some (natVal 0)
-      else if s = 12 then some (natVal 0)
-      else none }
+  let r : Rahmen := { rBasis with temp :=
+    Function.update (Function.update (Function.update rBasis.temp 10 (some (natVal 0)))
+      11 (some (natVal 0))) 12 (some (natVal 0)) }
   have hpc : r.pc = 0 := rfl
   have ha : r.temp (10 + 0) = some (natVal 0) := by
-    simp only [r, Nat.add_zero, if_pos rfl]
+    simp only [r, Nat.add_zero, Function.update_self, Function.update_of_ne]
   have hm1 : r.temp (10 + 1) = some (natVal 0) := by
-    simp only [r, if_neg (by omega : 11 ≠ 10), if_pos rfl]
+    simp only [r, Function.update_self, Function.update_of_ne]
   have hm2 : r.temp (10 + 2) = some (natVal 0) := by
-    simp only [r, if_neg (by omega : 12 ≠ 10), if_neg (by omega : 12 ≠ 11), if_pos rfl]
+    simp only [r, Function.update_self]
   have hEquiv := hDiv 0 r hpc ha hm1 hm2
   have hL : ((∀ y, 0 ≤ y → ∃ v, Nat.Partrec.Code.eval (Nat.Partrec.Code.const 1)
         (Nat.pair 0 y) = Part.some v) ∧
