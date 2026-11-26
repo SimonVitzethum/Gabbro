@@ -181,6 +181,7 @@ theorem rfindNulltestNullLauf (cfBlk : List Befehl) (aus frei : Nat) (r : Rahmen
     ∃ r3 : Rahmen,
       (Schritt (rfindSchleife cfBlk aus frei))^[3] (some r) = some r3 ∧
       r3.pc = 50 + cfBlk.length ∧ r3.temp (frei + 5) = some ⟨.bool, false⟩ ∧
+      (∀ s, s ≠ frei + 5 → r3.temp s = r.temp s) ∧
       r3.lokale = r.lokale ∧ r3.rueckgabe = r.rueckgabe ∧ r3.stopp = r.stopp := by
   let blk := rfindSchleife cfBlk aus frei
   let r1 : Rahmen := { r with pc := r.pc + 1, temp := Function.update r.temp (frei + 5) (some (natVal 0)) }
