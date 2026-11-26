@@ -77,14 +77,11 @@ def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
 def e4System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨fun _ => ⟨e4Regel, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
-/-- The implementation loader returns a free lock with tickets for A and B: no holder is seeded,
-    and the holder of the run arises only by an admitted take. All vectors are masked and an NMI
-    is active, so no interrupt can preempt a dispatched holder. -/
+/-- Both machines start with the same masked dispatch and an empty lock. -/
 def s4_0 : Zustand Unit Unit Unit Unit Bool Unit :=
-  { Zustand.start (L := Unit) (fun _ => false) (fun _ => .laeuft)
-      (fun j => ⟨dispatch4 j, .nutzer, (), fun _ => true, 0, true, []⟩)
-      ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0)) with
-    sperren := fun _ => ⟨none, [A, B]⟩ }
+  Zustand.start (L := Unit) (fun _ => false) (fun _ => .laeuft)
+    (fun j => ⟨dispatch4 j, .nutzer, (), fun _ => true, 0, true, []⟩)
+    ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))
 
 def E_4 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   { E_1 with
@@ -94,7 +91,7 @@ def E_4 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     laden := fun _ _ => some s4_0 }
 
 /-- The ideal run starts from the canonical start with the same masked dispatch and an empty lock. -/
-noncomputable def s4_ideal0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_4 s0).2
+noncomputable def s4_ideal0 : Zustand Unit Unit Unit Unit Bool Unit := s4_0
 
 theorem start_E_4 : (I.start E_4 s0).2 = s4_ideal0 := rfl
 
@@ -118,22 +115,6 @@ theorem e4halten : E_4.schranken.halten () = some 5 := rfl
 
 theorem e4_sec : AbschnittWartefrei E_4 :=
   abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-
-theorem s4_0_lock : (s4_0.sperren ()).besitzer = none := rfl
-
-theorem s4_0_schlange : (s4_0.sperren ()).schlange = [A, B] := rfl
-
-theorem s4_0_kerne0 : (s4_0.kerne 0).laeuft = some A := rfl
-theorem s4_0_kerne1 : (s4_0.kerne 1).laeuft = some B := rfl
-theorem s4_0_kerne2 : (s4_0.kerne 2).laeuft = some C4 := rfl
-
-theorem s4_0_live : ∀ c, s4_0.status c = .laeuft := fun _ => rfl
-
-theorem s4_0_nmi (k : Kern) : (s4_0.kerne k).nmiAktiv = true := by
-  cases k <;> rfl
-
-theorem s4_0_maske (k : Kern) : (s4_0.kerne k).maske = fun _ => true := by
-  cases k <;> rfl
 
 theorem s4_0_graph_gut : s4_0.graph.graph.Konsistent ∧ s4_0.graph.graph.Vollstaendig :=
   ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩

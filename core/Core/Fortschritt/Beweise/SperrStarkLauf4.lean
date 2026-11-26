@@ -1,11 +1,6 @@
 /-
-  File:      Core/Fortschritt/Beweise/SperrStarkLauf4.lean
-  Subject:   THE NON-VACUOUS HAND-OVER RUN AND SATISFIABILITY (M8 2b).
-
-  The unit `E_4` starts with a FREE lock and tickets `[A, B]`. The run takes the lock with
-  `A` at tick 0 (a genuine admitted `nehmen` from the free start), stutters, then hands
-  `A → B → free`. At `a = 1` the waiter `B` is at position one behind the real holder `A`;
-  the release premise is discharged by the give steps at ticks 2 and 3.
+  Strong-waiting satisfiability from an empty lock. Three scheduled contexts draw
+  tickets, the head takes, and two hand-offs precede the final release.
 -/
 module
 
@@ -20,373 +15,194 @@ open Gabbro.Core.Katalog
 open Gabbro.Core.Annahme
 open Gabbro.Core.Beobachtung
 
-theorem schreiben_folge_gut4 {g : SpeicherGraph Unit Unit} (hk : g.graph.Konsistent)
-    (hv : g.graph.Vollstaendig) (c : Kontext) (x : Unit) :
-    ∃ es g', Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext c) g
-      [⟨.schreiben, x, .ra, (), ()⟩] es g' ∧ g'.graph.Konsistent ∧ g'.graph.Vollstaendig := by
-  have hmem : (Speicher.Art.schreiben ≠ Speicher.Art.aussen) := by decide
-  let lab : Speicher.Etikett Unit Unit := ⟨.schreiben, x, .ra, (), ()⟩
-  by_cases hq : HatQuelle g x
-  · obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen hk hv
-      (SpeicherAkteur.kontext c) lab (fun h => h.elim)
-    have hf : Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext c) g [lab]
-        [(SpeicherAkteur.kontext c, lab)] g' :=
-      .cons (.ohne (Or.inr hq)) hs (.nil _)
-    exact ⟨_, _, hf, (hf.viele.gut hk hv).1, (hf.viele.gut hk hv).2⟩
-  · obtain ⟨gmid, hs_init⟩ := Speicher.Zustand.schritt_ohne_lesen hk hv
-      (SpeicherAkteur.initial x) lab (fun h => h.elim)
-    have hz : Initialisierung (fun _ => ()) lab g
-        [((SpeicherAkteur.initial x), lab)] gmid := .erste hmem hq hs_init
-    have gut := hz.viele.gut hk hv
-    obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2
-      (SpeicherAkteur.kontext c) lab (fun h => h.elim)
-    have hf : Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext c) g [lab]
-        ((SpeicherAkteur.initial x, lab) :: (SpeicherAkteur.kontext c, lab) :: []) g' :=
-      .cons hz hs (.nil _)
-    exact ⟨_, _, hf, (hf.viele.gut hk hv).1, (hf.viele.gut hk hv).2⟩
+def hw4 : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 3 sicht0
 
-theorem rmw_folge_gut4 {g : SpeicherGraph Unit Unit} (hk : g.graph.Konsistent)
-    (hv : g.graph.Vollstaendig) (c : Kontext) (x : Unit) :
-    ∃ es g', Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext c) g
-      [⟨.rmw, x, .ra, (), ()⟩] es g' ∧ g'.graph.Konsistent ∧ g'.graph.Vollstaendig := by
-  obtain ⟨r, es, g', folge⟩ := speicherzug_existiert (fun _ => ())
-    (SpeicherAkteur.kontext c) hk hv .rmw x .ra () (fun _ => by decide)
-  cases r
-  exact ⟨es, g', folge, (folge.viele.gut hk hv).1, (folge.viele.gut hk hv).2⟩
+def h4 : Umgebung := Umgebung.referenz Plattform.x86_64.katalog 3 sicht0
 
-noncomputable def g4_wit :=
-  rmw_folge_gut4 s4_0_graph_gut.1 s4_0_graph_gut.2 A (E_4.einrichtung.sperrOrt ())
+theorem fair4 : FairLaeufe E_4.katalog h4 hw4 :=
+  Umgebung.referenz_fair _ _ _ Plattform.x86_64.katalog_wohlgeformt (by decide)
 
-noncomputable def g4_es : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
-  Classical.choose g4_wit
+theorem hw4_crash (t : Nat) : (hw4.angebot t).crash = false := rfl
 
-noncomputable def g4_g : SpeicherGraph Unit Unit := Classical.choose (Classical.choose_spec g4_wit)
+theorem hw4_opp (t : Nat) : hw4.gelegenheit t (t % 3) := rfl
 
-theorem g4_mem : Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext A) s4_0.graph
-    [⟨.rmw, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] g4_es g4_g :=
-  (Classical.choose_spec (Classical.choose_spec g4_wit)).1
-
-theorem g4_gut : g4_g.graph.Konsistent ∧ g4_g.graph.Vollstaendig :=
-  (Classical.choose_spec (Classical.choose_spec g4_wit)).2
-
-/-- The state after the admitted take: `A` owns the lock, `B` waits at position one. -/
-noncomputable def s4_1 : Zustand Unit Unit Unit Unit Bool Unit :=
-  { s4_0 with sperren := Function.update s4_0.sperren () ⟨some A, [B]⟩, graph := g4_g }
-
-noncomputable def g5_wit :=
-  schreiben_folge_gut4 g4_gut.1 g4_gut.2 B (E_4.einrichtung.sperrOrt ())
-
-noncomputable def g5_es : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
-  Classical.choose g5_wit
-
-noncomputable def g5_g : SpeicherGraph Unit Unit := Classical.choose (Classical.choose_spec g5_wit)
-
-theorem g5_mem : Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext B) s4_1.graph
-    [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] g5_es g5_g :=
-  (Classical.choose_spec (Classical.choose_spec g5_wit)).1
-
-noncomputable def s4_2 : Zustand Unit Unit Unit Unit Bool Unit :=
-  { s4_1 with sperren := Function.update s4_1.sperren () ⟨some B, []⟩, graph := g5_g }
-
-noncomputable def g6_wit := schreiben_folge_gut4
-  ((g5_mem.viele.gut g4_gut.1 g4_gut.2).1) ((g5_mem.viele.gut g4_gut.1 g4_gut.2).2) B
-  (E_4.einrichtung.sperrOrt ())
-
-noncomputable def g6_es : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
-  Classical.choose g6_wit
-
-noncomputable def g6_g : SpeicherGraph Unit Unit := Classical.choose (Classical.choose_spec g6_wit)
-
-theorem g6_mem : Speicherfolge (fun _ => ()) (SpeicherAkteur.kontext B) s4_2.graph
-    [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] g6_es g6_g :=
-  (Classical.choose_spec (Classical.choose_spec g6_wit)).1
-
-noncomputable def s4_3 : Zustand Unit Unit Unit Unit Bool Unit :=
-  { s4_2 with sperren := Function.update s4_2.sperren () ⟨none, []⟩, graph := g6_g }
-
-theorem s4_0_nimmt : (s4_0.sperren ()).Nimmt A ⟨some A, [B]⟩ := by
-  change (SperrZustand.mk none [A, B]).Nimmt A ⟨some A, [B]⟩
-  exact SperrZustand.Nimmt.frei A [B]
-
-theorem s4_1_gibt : (s4_1.sperren ()).Gibt A ⟨some B, []⟩ := by
-  change (SperrZustand.mk (some A) [B]).Gibt A ⟨some B, []⟩
-  exact SperrZustand.Gibt.besitzer A [B]
-
-theorem s4_2_gibt : (s4_2.sperren ()).Gibt B ⟨none, []⟩ := by
-  change (SperrZustand.mk (some B) []).Gibt B ⟨none, []⟩
-  exact SperrZustand.Gibt.besitzer B []
-
-theorem e4StotterAusfuehr (t : Nat) (c : Kontext)
-    (s : Zustand Unit Unit Unit Unit Bool Unit) :
-    FuehrtSchrittAus E_4.einrichtung t c s s stutterPlan ⟨[], []⟩ s := by
-  refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, [], s, .intern, .nil _, rfl⟩
-
-theorem ausfuehr_nehmen0 : FuehrtSchrittAus E_4.einrichtung 0 A s4_0 s4_0 nehmenPlan
-    ⟨g4_es, []⟩ s4_1 := by
-  have hF : FuehrtAus E_4.einrichtung 0 A s4_0 s4_0 (.sperre () .nehmen)
-      [⟨.rmw, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_1 :=
-    .sperre (e := E_4.einrichtung) (t := 0) (c := A) (s := s4_0) (u := s4_0) (SperrSchritt.nehmen s4_0_nimmt) (fun _ => trivial)
-  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, _, hF, g4_mem, rfl⟩
-
-theorem ausfuehr_geben1 : FuehrtSchrittAus E_4.einrichtung 2 A s4_1 s4_1 wGebenPlan
-    ⟨g5_es, []⟩ s4_2 := by
-  have hF : FuehrtAus E_4.einrichtung 2 A s4_1 s4_1 (.sperre () .geben)
-      [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_2 :=
-    .sperre (e := E_4.einrichtung) (t := 2) (c := A) (s := s4_1) (u := s4_1) (SperrSchritt.geben s4_1_gibt) (fun _ => trivial)
-  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, _, hF, g5_mem, rfl⟩
-
-theorem ausfuehr_geben2 : FuehrtSchrittAus E_4.einrichtung 3 B s4_2 s4_2 wGebenPlan
-    ⟨g6_es, []⟩ s4_3 := by
-  have hF : FuehrtAus E_4.einrichtung 3 B s4_2 s4_2 (.sperre () .geben)
-      [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_3 :=
-    .sperre (e := E_4.einrichtung) (t := 3) (c := B) (s := s4_2) (u := s4_2) (SperrSchritt.geben s4_2_gibt) (fun _ => trivial)
-  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, _, hF, g6_mem, rfl⟩
-
-noncomputable def z4 (t : Nat) : Zustand Unit Unit Unit Unit Bool Unit :=
-  if t = 0 then s4_0 else if t = 1 ∨ t = 2 then s4_1 else
-  if t = 3 then s4_2 else s4_3
-
-theorem z4_ge4 (t : Nat) : z4 (t + 4) = s4_3 := by
-  unfold z4
-  rw [if_neg (by omega : ¬ t + 4 = 0)]
-  rw [if_neg (by omega : ¬ (t + 4 = 1 ∨ t + 4 = 2))]
-  rw [if_neg (by omega : ¬ t + 4 = 3)]
-
-theorem z4_kerne (t : Nat) : (z4 t).kerne = s4_0.kerne := by
-  unfold z4
-  split_ifs <;> rfl
-
-theorem z4_status (t : Nat) : (z4 t).status = s4_0.status := by
-  unfold z4
-  split_ifs <;> rfl
-
-theorem z4_besitzer (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
-    (hzs : z4 t = s) :
-    (s.sperren ()).besitzer =
-      if t = 0 then none else if t = 1 ∨ t = 2 then some A else
-      if t = 3 then some B else none := by
-  rw [← hzs]
-  unfold z4
-  by_cases h0 : t = 0
-  · subst t
-    rw [if_pos rfl]
-    rfl
-  · by_cases h12 : t = 1 ∨ t = 2
-    · rw [if_neg h0, if_pos h12]
-      rfl
-    · by_cases h3 : t = 3
-      · subst t
-        rw [if_neg (by decide : ¬ ((3 : Nat) = 0)), if_neg (by decide : ¬ ((3 : Nat) = 1 ∨ 3 = 2)),
-          if_pos rfl]
-        rfl
-      · rw [if_neg h0, if_neg h12, if_neg h3]
-        rfl
-
-noncomputable def spur4 : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
-  | 0 => some (.kontext A (), ⟨g4_es, []⟩)
-  | 1 => spurw 1
-  | 2 => some (.kontext A (), ⟨g5_es, []⟩)
-  | 3 => some (.kontext B (), ⟨g6_es, []⟩)
-  | t + 4 => spurw (t + 4)
-
-theorem spur4_spurw (t : Nat) : spur4 (t + 4) = spurw (t + 4) := by
-  rfl
-
-def takt4 : ∀ t, Takt (Lauffolge E_4 hw2) (KeinSchritt (Lauffolge E_4 hw2))
-    t (some (z4 t)) (spur4 t) (some (z4 (t + 1)))
-  | 0 =>
-    .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 0)
-      ⟨0, hw2_opp0 rfl, s4_0_kerne0, s4_0_live A⟩
-      (e4_impl_nehmen statisch4_A s4_0_nimmt) ausfuehr_nehmen0))
-  | 1 =>
-    .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 1)
-      ⟨1, hw2_opp1 (by decide : (1 : Nat) % 2 = 1), s4_0_kerne1, s4_0_live B⟩
-      ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩ (e4StotterAusfuehr 1 B s4_1)))
-  | 2 =>
-    .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 2)
-      ⟨0, hw2_opp0 (by decide : (2 : Nat) % 2 = 0), s4_0_kerne0, s4_0_live A⟩
-      (e4_impl_geben s4_1_gibt) ausfuehr_geben1))
-  | 3 =>
-    .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 3)
-      ⟨1, hw2_opp1 (by decide : (3 : Nat) % 2 = 1), s4_0_kerne1, s4_0_live B⟩
-      (e4_impl_geben s4_2_gibt) ausfuehr_geben2))
-  | t + 4 => by
-      rw [spur4_spurw, z4_ge4]
-      rw [show z4 (t + 5) = s4_3 by simpa [Nat.add_assoc] using z4_ge4 (t + 1)]
-      by_cases hpar : (t + 4) % 2 = 0
-      · have hpar' : (t + 2 + 2) % 2 = 0 := by omega
-        have hsp : spurw (t + 4) = some ticketA := by
-          rw [show t + 4 = (t + 2) + 2 by omega]
-          exact spurw_ge2 (t + 2) hpar'
-        rw [hsp]
-        exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash (t + 4))
-          ⟨0, hw2_opp0 hpar, s4_0_kerne0, s4_0_live A⟩
-          ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩ (e4StotterAusfuehr (t + 4) A s4_3)))
-      · have h1 : (t + 4) % 2 = 1 := by
-          rcases Nat.mod_two_eq_zero_or_one (t + 4) with h0 | h1
-          · exact (hpar h0).elim
-          · exact h1
-        have h1' : (t + 2 + 2) % 2 = 1 := by omega
-        have hsp : spurw (t + 4) = some ticketB := by
-          rw [show t + 4 = (t + 2) + 2 by omega]
-          exact spurw_ge2' (t + 2) h1'
-        rw [hsp]
-        exact .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash (t + 4))
-          ⟨1, hw2_opp1 h1, s4_0_kerne1, s4_0_live B⟩
-          ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩ (e4StotterAusfuehr (t + 4) B s4_3)))
-
-noncomputable def ρ_4 : Maschine.Lauf E_4 :=
-  ⟨s2_start, hw2, ⟨fun t => some (z4 t), spur4, takt4⟩⟩
-
-theorem ρ_4_zustand (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
-    (hzs : ρ_4.zeit.zustand t = some s) : z4 t = s := by
-  have hzt : ρ_4.zeit.zustand t = some (z4 t) := rfl
-  exact Option.some.inj (hzt.symm.trans hzs)
-
-theorem e4_lauf : Laeufe E_4 h2 ρ_4 :=
-  ⟨fair2.hardware, fair2.konform, zul_2, rfl⟩
-
-theorem spur4_kein_absturz (t : Nat) : spur4 t ≠ some (.absturz, absturzSpur) := by
-  intro hcon
-  cases t with
-  | zero =>
-    rw [show spur4 0 = some (.kontext A (), ⟨g4_es, []⟩) by rfl] at hcon
-    have hfst := congrArg Prod.fst (Option.some.inj hcon)
-    cases hfst
-  | succ t =>
-    cases t with
-    | zero =>
-      rw [show spur4 1 = spurw 1 by rfl, spurw1] at hcon
-      simp only [ticketB] at hcon
-      have hfst := congrArg Prod.fst (Option.some.inj hcon)
-      cases hfst
-    | succ t =>
-      cases t with
-      | zero =>
-        rw [show spur4 2 = some (.kontext A (), ⟨g5_es, []⟩) by rfl] at hcon
-        have hfst := congrArg Prod.fst (Option.some.inj hcon)
-        cases hfst
-      | succ t =>
-        cases t with
-        | zero =>
-          rw [show spur4 3 = some (.kontext B (), ⟨g6_es, []⟩) by rfl] at hcon
-          have hfst := congrArg Prod.fst (Option.some.inj hcon)
-          cases hfst
-        | succ t =>
-          rw [spur4_spurw] at hcon
-          exact spurw_kein_absturz _ hcon
-
-theorem z4_nodup : (s4_1.sperren ()).schlange.Nodup := by
-  change [B].Nodup
-  decide
-
-theorem e4_halte : HalteSchranken E_4 ρ_4 := by
-  intro l c a n hcont
-  cases l
-  intro H' hH
-  have hH5 : H' = 5 := Option.some.inj (hH.symm.trans e4halten)
-  subst hH5
-  by_cases hn0 : n = 0
-  · subst n
-    have hkk : Kontextkosten ρ_4 c a 0 = 0 := rfl
-    omega
-  · have hlt : a < a + n := by omega
-    obtain ⟨s, hzs, hown⟩ := hcont a (Nat.le_refl _) hlt
-    have hz := ρ_4_zustand a s hzs
-    have hownA := z4_besitzer a s hz
-    by_cases ha0 : a = 0
-    · subst a
-      rw [if_pos rfl] at hownA
-      cases hownA
-    · by_cases ha12 : a = 1 ∨ a = 2
-      · rw [if_neg ha0, if_pos ha12] at hownA
-        have hcA : c = A := Option.some.inj (hown.symm.trans hownA)
-        subst hcA
-        have hn2 : n ≤ 2 := by
-          by_contra hcontra
-          have hn3 : 3 ≤ n := by omega
-          have hlt2 : a + 2 < a + n := by omega
-          obtain ⟨s', hzs', hown'⟩ := hcont (a + 2) (by omega) hlt2
-          have hz' := ρ_4_zustand (a + 2) s' hzs'
-          have hb' := z4_besitzer (a + 2) s' hz'
-          rcases ha12 with ha | ha <;> subst a
-          · simp at hb'
-            rw [hb'] at hown'
-            cases hown'
-          · simp at hb'
-            rw [hb'] at hown'
-            cases hown'
-        have hcost : Kontextkosten ρ_4 A a n ≤ n := zaehle_le _ _ _
-        omega
-      · by_cases ha3 : a = 3
-        · subst ha3
-          rw [if_neg (by decide : ¬ ((3 : Nat) = 0)), if_neg (by decide : ¬ ((3 : Nat) = 1 ∨ 3 = 2)),
-            if_pos rfl] at hownA
-          have hcB : c = B := Option.some.inj (hown.symm.trans hownA)
-          subst hcB
-          have hn1 : n ≤ 1 := by
-            by_contra hcontra
-            have hn2 : 2 ≤ n := by omega
-            have hlt1 : 4 < 3 + n := by omega
-            obtain ⟨s', hzs', hown'⟩ := hcont 4 (by omega) hlt1
-            have hz' := ρ_4_zustand 4 s' hzs'
-            have hb' := z4_besitzer 4 s' hz'
-            simp at hb'
-            rw [hb'] at hown'
-            cases hown'
-          have hcost : Kontextkosten ρ_4 B 3 n ≤ n := zaehle_le _ _ _
-          omega
-        · rw [if_neg ha0, if_neg ha12, if_neg ha3] at hownA
-          rw [hownA] at hown
-          cases hown
+theorem e4_implStutter (t : Nat) (c : Kontext)
+    (s : Zustand Unit Unit Unit Unit Bool Unit) (hr : KannSchreiten hw4 t c s) :
+    ImplSchritt E_4.einrichtung E_4.system E_4.katalog hw4 t s
+      (.kontext c (), ⟨[], []⟩) s :=
+  .kontext (hw4_crash t) hr ⟨(), rfl, Or.inr (Or.inr ⟨rfl, rfl⟩)⟩
+    ⟨e4_frame s, fun _ h => (List.not_mem_nil h).elim, [], s, .intern, .nil _, rfl⟩
 
 theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
-  refine ⟨E_4, h2, ρ_4, B, 5, 1, ?_, e4_lauf, fair2, e4_halte, e4halten, ?_, ?_, ?_, ?_⟩
-  · exact akzeptiert_E_4
-  · refine ⟨s4_1, ?_, ?_, ?_⟩
-    · rfl
-    · exact ⟨A, by rfl, w_AB_ne⟩
-    · rfl
-  · intro s hzs
-    have hz := ρ_4_zustand 1 s hzs
-    rw [← hz]
-    exact z4_nodup
-  · intro k _
-    exact spur4_kein_absturz k
-  · intro h' b s hb hzs hown
-    have hz := ρ_4_zustand b s hzs
-    have hbown := z4_besitzer b s hz
-    by_cases hb1 : b = 1
-    · subst hb1
-      rw [if_neg (by decide : ¬ ((1 : Nat) = 0)), if_pos (Or.inl rfl)] at hbown
-      have hh : h' = A := Option.some.inj (hown.symm.trans hbown)
-      subst hh
-      refine ⟨2, by decide, ?_, ?_⟩
-      · exact ⟨s4_1, s4_2, rfl, rfl, s4_1_gibt⟩
-      · exact Nat.le_trans (zaehle_le _ _ _) (by omega)
-    · by_cases hb2 : b = 2
-      · subst hb2
-        rw [if_neg (by decide : ¬ ((2 : Nat) = 0)), if_pos (Or.inr (Or.inl rfl))] at hbown
-        have hh : h' = A := Option.some.inj (hown.symm.trans hbown)
-        subst hh
-        refine ⟨2, le_rfl, ?_, ?_⟩
-        · exact ⟨s4_1, s4_2, rfl, rfl, s4_1_gibt⟩
-        · exact Nat.le_trans (zaehle_le _ _ _) (by omega)
-      · by_cases hb3 : b = 3
-        · subst hb3
-          rw [if_neg (by decide : ¬ ((3 : Nat) = 0)),
-            if_neg (by decide : ¬ ((3 : Nat) = 1 ∨ 3 = 2)), if_pos rfl] at hbown
-          have hh : h' = B := Option.some.inj (hown.symm.trans hbown)
-          subst hh
-          refine ⟨3, le_rfl, ?_, ?_⟩
-          · exact ⟨s4_2, s4_3, rfl, rfl, s4_2_gibt⟩
-          · exact Nat.le_trans (zaehle_le _ _ _) (by omega)
-        · rw [if_neg (by omega : ¬ b = 0), if_neg (fun h => h.elim hb1 hb2), if_neg hb3] at hbown
-          rw [hbown] at hown
-          cases hown
+  obtain ⟨start, hstart⟩ := zulStart_erfuellbar fair4.hardware wBild_gueltig
+  let s0 := s4_0
+  have h1 : SperrSchritt .ticket A (s0.sperren ()) ⟨none, [A]⟩ := .ticket (fun h => nomatch h) List.not_mem_nil
+  let s1 := { toggleUpdate A s0 with
+    sperren := Function.update s0.sperren () ⟨none, [A]⟩ }
+  have aus1 : FuehrtSchrittAus E_4.einrichtung 0 A s0 (toggleUpdate A s0) ticketPlan
+      ⟨[], []⟩ s1 :=
+    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h1 (.nil _)
+  have h2 : SperrSchritt .ticket B (s1.sperren ()) ⟨none, [A, B]⟩ := .ticket (fun h => nomatch h) (by decide)
+  let s2 := { toggleUpdate B s1 with
+    sperren := Function.update s1.sperren () ⟨none, [A, B]⟩ }
+  have aus2 : FuehrtSchrittAus E_4.einrichtung 1 B s1 (toggleUpdate B s1) ticketPlan
+      ⟨[], []⟩ s2 :=
+    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h2 (.nil _)
+  have h3 : SperrSchritt .ticket C4 (s2.sperren ()) ⟨none, [A, B, C4]⟩ := .ticket (fun h => nomatch h) (by decide)
+  let s3 := { toggleUpdate C4 s2 with
+    sperren := Function.update s2.sperren () ⟨none, [A, B, C4]⟩ }
+  have aus3 : FuehrtSchrittAus E_4.einrichtung 2 C4 s2 (toggleUpdate C4 s2) ticketPlan
+      ⟨[], []⟩ s3 :=
+    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h3 (.nil _)
+  have h4 : SperrSchritt .nehmen A (s3.sperren ()) ⟨some A, [B, C4]⟩ := .nehmen (.frei A [B, C4])
+  obtain ⟨es4, g4, mem4⟩ := e4_sperrSpeicher s4_0_graph_gut.1 s4_0_graph_gut.2 A .rmw
+  have good4 := mem4.viele.gut s4_0_graph_gut.1 s4_0_graph_gut.2
+  let s4 := { s3 with
+    sperren := Function.update s3.sperren () ⟨some A, [B, C4]⟩, graph := g4 }
+  have aus4 : FuehrtSchrittAus E_4.einrichtung 3 A s3 (s3) nehmenPlan
+      ⟨es4, []⟩ s4 :=
+    e4_sperrAus rfl rfl rfl (e4_frame s3) h4 mem4
+  have h7 : SperrSchritt .geben A (s4.sperren ()) ⟨some B, [C4]⟩ := .geben (.besitzer A [B, C4])
+  obtain ⟨es7, g7, mem7⟩ := e4_sperrSpeicher good4.1 good4.2 A .rmw
+  have good7 := mem7.viele.gut good4.1 good4.2
+  let s7 := { s4 with
+    sperren := Function.update s4.sperren () ⟨some B, [C4]⟩, graph := g7 }
+  have aus7 : FuehrtSchrittAus E_4.einrichtung 6 A s4 (s4) wGebenPlan
+      ⟨es7, []⟩ s7 :=
+    e4_sperrAus rfl rfl rfl (e4_frame s4) h7 mem7
+  have h8 : SperrSchritt .geben B (s7.sperren ()) ⟨some C4, []⟩ := .geben (.besitzer B [C4])
+  obtain ⟨es8, g8, mem8⟩ := e4_sperrSpeicher good7.1 good7.2 B .rmw
+  have good8 := mem8.viele.gut good7.1 good7.2
+  let s8 := { s7 with
+    sperren := Function.update s7.sperren () ⟨some C4, []⟩, graph := g8 }
+  have aus8 : FuehrtSchrittAus E_4.einrichtung 7 B s7 (s7) wGebenPlan
+      ⟨es8, []⟩ s8 :=
+    e4_sperrAus rfl rfl rfl (e4_frame s7) h8 mem8
+  have h9 : SperrSchritt .geben C4 (s8.sperren ()) .frei := .geben (.besitzer C4 [])
+  obtain ⟨es9, g9, mem9⟩ := e4_sperrSpeicher good8.1 good8.2 C4 .schreiben
+  let s9 := { s8 with
+    sperren := Function.update s8.sperren () .frei, graph := g9 }
+  have aus9 : FuehrtSchrittAus E_4.einrichtung 8 C4 s8 (s8) wGebenPlan
+      ⟨es9, []⟩ s9 :=
+    e4_sperrAus rfl rfl rfl (e4_frame s8) h9 mem9
+  let z : Nat → Zustand Unit Unit Unit Unit Bool Unit
+    | 0 => s0
+    | 1 => s1
+    | 2 => s2
+    | 3 => s3
+    | 4 => s4
+    | 5 => s4
+    | 6 => s4
+    | 7 => s7
+    | 8 => s8
+    | _ + 9 => s9
+  let tail (t : Nat) := if t % 3 = 0 then A else if t % 3 = 1 then B else C4
+  let spur : Nat → SchrittWahl Unit × SchrittSpur Unit Unit
+    | 0 => (.kontext A (), ⟨[], []⟩)
+    | 1 => (.kontext B (), ⟨[], []⟩)
+    | 2 => (.kontext C4 (), ⟨[], []⟩)
+    | 3 => (.kontext A (), ⟨es4, []⟩)
+    | 4 => (.kontext B (), ⟨[], []⟩)
+    | 5 => (.kontext C4 (), ⟨[], []⟩)
+    | 6 => (.kontext A (), ⟨es7, []⟩)
+    | 7 => (.kontext B (), ⟨es8, []⟩)
+    | 8 => (.kontext C4 (), ⟨es9, []⟩)
+    | t + 9 => (.kontext (tail (t + 9)) (), ⟨[], []⟩)
+  have tailReady (t : Nat) : KannSchreiten hw4 t (tail t) s9 := by
+    refine ⟨t % 3, hw4_opp t, ?_, rfl⟩
+    have hr : t % 3 < 3 := Nat.mod_lt _ (by decide)
+    have hc : t % 3 = 0 ∨ t % 3 = 1 ∨ t % 3 = 2 := by omega
+    rcases hc with h | h | h <;> simp only [tail, h, Nat.reduceEq, ↓reduceIte] <;> rfl
+  have step (t : Nat) : ImplSchritt E_4.einrichtung E_4.system E_4.katalog hw4
+      t (z t) (spur t) (z (t + 1)) := by
+    match t with
+    | 0 =>
+      exact .kontext (c := A) (hw4_crash 0) ⟨0, hw4_opp 0, rfl, rfl⟩
+        (e4_impl_ticket statisch4_A h1) aus1
+    | 1 =>
+      exact .kontext (c := B) (hw4_crash 1) ⟨1, hw4_opp 1, rfl, rfl⟩
+        (e4_impl_ticket statisch4_B h2) aus2
+    | 2 =>
+      exact .kontext (c := C4) (hw4_crash 2) ⟨2, hw4_opp 2, rfl, rfl⟩
+        (e4_impl_ticket statisch4_C h3) aus3
+    | 3 =>
+      exact .kontext (c := A) (hw4_crash 3) ⟨0, hw4_opp 3, rfl, rfl⟩
+        (e4_impl_nehmen statisch4_A h4) aus4
+    | 4 =>
+      exact e4_implStutter 4 B s4 ⟨1, hw4_opp 4, rfl, rfl⟩
+    | 5 =>
+      exact e4_implStutter 5 C4 s4 ⟨2, hw4_opp 5, rfl, rfl⟩
+    | 6 =>
+      exact .kontext (c := A) (hw4_crash 6) ⟨0, hw4_opp 6, rfl, rfl⟩
+        (e4_impl_geben (.besitzer A [B, C4])) aus7
+    | 7 =>
+      exact .kontext (c := B) (hw4_crash 7) ⟨1, hw4_opp 7, rfl, rfl⟩
+        (e4_impl_geben (.besitzer B [C4])) aus8
+    | 8 =>
+      exact .kontext (c := C4) (hw4_crash 8) ⟨2, hw4_opp 8, rfl, rfl⟩
+        (e4_impl_geben (.besitzer C4 [])) aus9
+    | t + 9 => exact e4_implStutter (t + 9) (tail (t + 9)) s9 (tailReady _)
+  let ρ : Maschine.Lauf E_4 := ⟨start, hw4, ⟨fun t => some (z t), fun t => some (spur t),
+    fun t => .schritt rfl (.schritt (step t))⟩⟩
+  have release (b : Nat) (c : Kontext) (own : ((z b).sperren ()).besitzer = some c) :
+      ∃ r, b ≤ r ∧ r + 1 ≤ b + 3 ∧
+        ((z r).sperren ()).Gibt c ((z (r + 1)).sperren ()) ∧
+        ((z (r + 1)).sperren ()).besitzer ≠ some c := by
+    match b with
+    | 0 => cases own
+    | 1 => cases own
+    | 2 => cases own
+    | 3 => cases own
+    | 4 =>
+      change some A = some c at own
+      obtain rfl := Option.some.inj own
+      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
+    | 5 =>
+      change some A = some c at own
+      obtain rfl := Option.some.inj own
+      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
+    | 6 =>
+      change some A = some c at own
+      obtain rfl := Option.some.inj own
+      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
+    | 7 =>
+      change some B = some c at own
+      obtain rfl := Option.some.inj own
+      exact ⟨7, by decide, by decide, .besitzer B [C4], by decide⟩
+    | 8 =>
+      change some C4 = some c at own
+      obtain rfl := Option.some.inj own
+      exact ⟨8, by decide, by decide, .besitzer C4 [], by decide⟩
+    | b + 9 => cases own
+  have state (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
+      (eq : ρ.zeit.zustand t = some s) : z t = s := Option.some.inj eq
+  have halteschranke : HalteSchranken E_4 ρ := by
+    intro l c b n live
+    cases l
+    change Kontextkosten ρ c b n ≤ 5
+    have cost : Kontextkosten ρ c b n ≤ n := zaehle_le _ _ _
+    by_contra! over
+    obtain ⟨s, hs, ho⟩ := live b (Nat.le_refl _) (by omega)
+    rw [← state b s hs] at ho
+    obtain ⟨r, hr, hbound, _, hchange⟩ := release b c ho
+    obtain ⟨s', hs', ho'⟩ := live (r + 1) (by omega) (by omega)
+    rw [← state (r + 1) s' hs'] at ho'
+    exact hchange ho'
+  refine ⟨E_4, h4, ρ, C4, 5, 4, akzeptiert_E_4,
+    ⟨fair4.hardware, fair4.konform, hstart, rfl⟩, fair4, halteschranke, e4halten,
+    ⟨s4, rfl, ⟨A, rfl, by decide⟩, rfl⟩, ?_, ?_, ?_⟩
+  · intro s hs
+    rw [← state 4 s hs]
+    exact (by decide : [B, C4].Nodup)
+  · intro k _ hk
+    have impossible : (spur k).1 ≠ .absturz := by
+      match k with
+      | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | _ + 9 => intro hh; cases hh
+    exact impossible (congrArg Prod.fst (Option.some.inj hk))
+  · intro c b s _ hs ho
+    rw [← state b s hs] at ho
+    obtain ⟨r, hr, hb, hg, _⟩ := release b c ho
+    exact ⟨r, hr, ⟨z r, z (r + 1), rfl, rfl, hg⟩,
+      Nat.le_trans (zaehle_le _ _ _) (by omega)⟩
 
 end Gabbro.Core.Fortschritt
