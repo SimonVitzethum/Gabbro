@@ -9,6 +9,8 @@ module
 
 public import Core.Fortschritt.SperrE2
 public import Core.Fortschritt.SperrAnnahmeE1
+public import Core.Fortschritt.SperrFairBeweis
+public import Core.Fortschritt.WarteBundle
 
 @[expose] public section
 
@@ -173,7 +175,7 @@ theorem e1_hagree_w : ∀ (h : Kontext) (t : Nat) (s : Zustand Unit Unit Unit Un
   obtain ⟨i, _, himpl⟩ := hisch
   cases i with
   | unit =>
-    have himpl' : e1Regel c s w [plan] u := himpl
+    have himpl' : e1Regel h s w [plan] u := himpl
     rcases himpl' with ⟨next, _, hpeq, _⟩ | ⟨hpeq, _⟩
     · obtain rfl := (List.cons.inj hpeq).1
       have htp : ticketPlan.aktion = .sperre () .ticket := rfl
