@@ -34,7 +34,7 @@ public import Core.Ideal.Absturz
 public import Core.Fortschritt.Klasse
 public import Core.Fortschritt.Saetze
 public import Core.Fortschritt.Verzoegerung
-public import Core.Fortschritt.SperrHilfen
+public import Core.Fortschritt.Beweise.SperrHilfen
 public import Core.Fortschritt.SperrSchranke
 public import Core.Fortschritt.Beispiele
 public import Core.Fortschritt.Verhungern
@@ -51,6 +51,8 @@ public import Core.Fortschritt.SperrFairBeweis
 public import Core.Fortschritt.SperrE2
 public import Core.Fortschritt.SperrAnnahmeE1
 public import Core.Fortschritt.SperrErfuellbar
+public import Core.Fortschritt.Beweise.SperrStarkEinheit
+public import Core.Fortschritt.Beweise.SperrStarkLauf
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde

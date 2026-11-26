@@ -1,5 +1,5 @@
 /-
-  File:      Core/Fortschritt/SperrHilfen.lean
+  File:      Core/Fortschritt/Beweise/SperrHilfen.lean
   Subject:   SMALL LOCKS AND COUNTING LEMMAS FOR THE WAITING BOUND (PERFECT-MODEL §3.7, step M8):
              taking from the head, queue positions, ticket hand-off as releases, owner-step
              budgets and M9 holds bound on the owners own steps.
