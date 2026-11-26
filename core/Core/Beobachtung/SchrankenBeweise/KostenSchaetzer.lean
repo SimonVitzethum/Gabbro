@@ -18,12 +18,14 @@
               else (`forever`, unknown callees, recursion without `decreases`,
               exhausted fuel) is refused with `none`. The checker line
               (`pruefeSchrankenEndlich`) keeps the open case of the slack line as a
-              special case and accepts a finite cost ceiling exactly when the
-              estimator is defined and below it; finite hold entries stay refused.
-              Acceptance (`EndlichAkzeptiertAussage`, pinned) is the perfect checker
-              with the new line, so everything accepted before stays accepted with
-              the same guarantees (`endlichAkzeptiert_verstaerkt`). The invocation
-              bound itself (`KostenSchaetzerKorrektAussage`) and the finite KH duties
+              special case and accepts a finite ceiling exactly when no hold entry
+              is declared and the estimator is defined and below it. Finite hold
+              entries stay refused: ownership can span invocations, so no
+              per-invocation estimator covers them. Acceptance
+              (`EndlichAkzeptiertAussage`, pinned) is the perfect checker with the
+              new line, so everything accepted before stays accepted with the same
+              guarantees (`endlichAkzeptiert_verstaerkt`). The invocation bound
+              itself (`KostenSchaetzerKorrektAussage`) and the finite KH duties
               (`GebundenKHEndlichAussage`) are the pinned core statements of
               `KostenEndlich`, proved by Hy4 from the sketches there.
 -/
@@ -47,35 +49,11 @@ open Gabbro.Core.Ast.Semantik
     named function, from its entry to its exit. Entries are verified without
     self-justification (the estimator checks each entry with the entry itself
     removed), so no circular justification is possible. -/
-def KostenTabelle := List (Identifier × Nat)
+abbrev KostenTabelle := List (Identifier × Nat)
 
 /-- Lookup of a declared function bound by name. -/
 def KostenTabelle.lookup (tab : KostenTabelle) (name : Identifier) : Option Nat :=
   (tab.find? (fun p => p.1.val == name.val)).map Prod.snd
-
-/-- A found entry is the one stored under the name. -/
-theorem KostenTabelle.lookup_gefunden (tab : KostenTabelle) (name : Identifier) (K : Nat)
-    (h : tab.lookup name = some K) :
-    ∃ p ∈ tab, p.1.val == name.val ∧ p.2 = K := by
-  simp only [KostenTabelle.lookup, Option.map_eq_some'] at h
-  obtain ⟨p, hmem, heq⟩ := List.find?_some h
-  exact ⟨p, (List.mem_of_find?_eq_some hmem), heq.1, heq.2⟩
-
-/-- Removing an entry hides exactly that name. -/
-theorem KostenTabelle.entfernt_verbirgt (tab : KostenTabelle) (name : Identifier) :
-    (tab.filter (fun p => !(p.1.val == name.val))).lookup name = none := by
-  simp only [KostenTabelle.lookup]
-  cases h : List.find? (fun p => p.1.val == name.val)
-      (tab.filter (fun p => !(p.1.val == name.val))) with
-  | none => rfl
-  | some p =>
-    have hmem := List.mem_of_find?_eq_some h
-    simp only [List.mem_filter] at hmem
-    obtain ⟨_, hbeh⟩ := hmem
-    simp only [Bool.not_eq_true] at hbeh
-    have hfind := List.find?_some h
-    simp only [hbeh] at hfind
-    exact hfind.1
 
 /-- The cost of an elaborated fragment under the class rows: every instruction
     costs its class row. With the reviewed rows each step costs one tick. -/
@@ -93,16 +71,15 @@ def forSchranke {scope : Scope} {low lowHi highLo high : Int}
     (_ : Expr scope (.int low lowHi)) (_ : Expr scope (.int highLo high)) : Nat :=
   (high - low).toNat
 
+mutual
+
 /-- The structural core of the estimator: the cost bound of one invocation of a
     statement, with calls resolved by the oracle. The oracle takes the callee
     name and the call-site cost (arguments and the call instruction) and returns
     the whole call cost. Loops multiply the body estimator by the static trip
     bound; `forever` has no bound and is refused. -/
-mutual
-
 def schaetzeStmt (z : Wirkungsklasse → KlassenKostenzeile)
-    (oracle : Identifier → Nat → Option Nat)
-    {result : Option (Ty .value)} {before after : Scope} :
+    (oracle : Identifier → Nat → Option Nat) :
     Stmt result before after → Option Nat
   | .whileBounded condition bound _ _ _ body => do
     let b ← schaetzeBracedBlock z oracle body
@@ -129,14 +106,13 @@ def schaetzeStmt (z : Wirkungsklasse → KlassenKostenzeile)
     some (fragmentKosten z (expr 0 value) + kl + a)
   | .directCall call =>
     oracle call.name (fragmentKosten z (callCode call none))
-  | .bindDirect _ _ _ call =>
+  | .bindDirect _ _ _ _ call =>
     oracle call.name (fragmentKosten z (callCode call none))
   | .forever _ _ => none
   | s => some (fragmentKosten z (stmt s))
 
 def schaetzeBlock (z : Wirkungsklasse → KlassenKostenzeile)
-    (oracle : Identifier → Nat → Option Nat)
-    {result : Option (Ty .value)} {before after : Scope} :
+    (oracle : Identifier → Nat → Option Nat) :
     Block result before after → Option Nat
   | .done => some 0
   | .step first rest => do
@@ -145,24 +121,21 @@ def schaetzeBlock (z : Wirkungsklasse → KlassenKostenzeile)
     some (a + b)
 
 def schaetzeBracedBlock (z : Wirkungsklasse → KlassenKostenzeile)
-    (oracle : Identifier → Nat → Option Nat)
-    {result : Option (Ty .value)} {before : Scope} :
+    (oracle : Identifier → Nat → Option Nat) :
     BracedBlock result before → Option Nat
   | .braces body => do
     let b ← schaetzeBlock z oracle body
     some (b + (z .lokal).kosten)
 
 def schaetzeArme (z : Wirkungsklasse → KlassenKostenzeile)
-    (oracle : Identifier → Nat → Option Nat)
-    {result : Option (Ty .value)} {scope : Scope} {allowWildcard : Bool}
-    {labels : List Identifier} {payloads : List (Option (Ty .value))} :
+    (oracle : Identifier → Nat → Option Nat) :
     VariantArms result scope allowWildcard labels payloads → Option Nat
   | .done => some 0
   | .nullary _ _ body rest => do
     let a ← schaetzeBracedBlock z oracle body
     let b ← schaetzeArme z oracle rest
     some (a + b)
-  | .payload _ _ body rest => do
+  | .payload _ _ _ body rest => do
     let a ← schaetzeBracedBlock z oracle body
     let b ← schaetzeArme z oracle rest
     some (a + b)
@@ -170,14 +143,13 @@ def schaetzeArme (z : Wirkungsklasse → KlassenKostenzeile)
 
 end
 
-/-- The syntactic direct callees of a statement: every `directCall` and
-    `bindDirect` target occurring in it. -/
 mutual
 
-def aufrufeStmt {result : Option (Ty .value)} {before after : Scope} :
-    Stmt result before after → List Identifier
+/-- The syntactic direct callees of a statement: every `directCall` and
+    `bindDirect` target occurring in it. -/
+def aufrufeStmt : Stmt result before after → List Identifier
   | .directCall call => [call.name]
-  | .bindDirect _ _ _ call => [call.name]
+  | .bindDirect _ _ _ _ call => [call.name]
   | .whileBounded _ _ _ _ _ body => aufrufeBracedBlock body
   | .forRange _ _ _ _ _ _ body => aufrufeBracedBlock body
   | .ite _ yes no => aufrufeBracedBlock yes ++ aufrufeBracedBlock no
@@ -185,21 +157,18 @@ def aufrufeStmt {result : Option (Ty .value)} {before after : Scope} :
   | .forever _ body => aufrufeBracedBlock body
   | _ => []
 
-def aufrufeBlock {result : Option (Ty .value)} {before after : Scope} :
-    Block result before after → List Identifier
+def aufrufeBlock : Block result before after → List Identifier
   | .done => []
   | .step first rest => aufrufeStmt first ++ aufrufeBlock rest
 
-def aufrufeBracedBlock {result : Option (Ty .value)} {before : Scope} :
-    BracedBlock result before → List Identifier
+def aufrufeBracedBlock : BracedBlock result before → List Identifier
   | .braces body => aufrufeBlock body
 
-def aufrufeArme {result : Option (Ty .value)} {scope : Scope} {allowWildcard : Bool}
-    {labels : List Identifier} {payloads : List (Option (Ty .value))} :
-    VariantArms result scope allowWildcard labels payloads → List Identifier
+def aufrufeArme : VariantArms result scope allowWildcard labels payloads →
+    List Identifier
   | .done => []
   | .nullary _ _ body rest => aufrufeBracedBlock body ++ aufrufeArme rest
-  | .payload _ _ body rest => aufrufeBracedBlock body ++ aufrufeArme rest
+  | .payload _ _ _ body rest => aufrufeBracedBlock body ++ aufrufeArme rest
   | .wildcard body _ _ => aufrufeBracedBlock body
 
 end
@@ -218,7 +187,7 @@ def massSpanne {scope : Scope} (m : Measure scope) : Nat :=
 /-- Function lookup by name over the unit body. -/
 def findeKern : UnitBody before after → Identifier → Option FunktionsKern
   | .done, _ => none
-  | .step (.function name _ _ _ decreases body _ _ _) next, want =>
+  | .step (.function name _ _ _ _ decreases body _ _ _) next, want =>
     if name.val == want.val then
       some ⟨decreases.map massSpanne, ⟨_, _, body⟩⟩
     else findeKern next want
@@ -230,17 +199,17 @@ def calleesVon (u : Ast.Unit) (name : Identifier) : List Identifier :=
   | none => []
   | some kern => aufrufeBracedBlock kern.koerper.2.2
 
-/-- The names of all functions declared by a unit. -/
+/-- The names of all functions declared by a unit body. -/
 def alleFunktionen : UnitBody before after → List Identifier
   | .done => []
-  | .step (.function name _ _ _ _ _ _ _ _) next => name :: alleFunktionen next
+  | .step (.function name _ _ _ _ _ _ _ _ _) next => name :: alleFunktionen next
   | .step _ next => alleFunktionen next
 
-/-- The number of function declarations of a unit: the fuel bound for the
+/-- The number of function declarations of a unit body: the fuel bound for the
     call-graph closure. -/
 def funktionsAnzahl : UnitBody before after → Nat
   | .done => 0
-  | .step (.function _ _ _ _ _ _ _ _ _) next => funktionsAnzahl next + 1
+  | .step (.function _ _ _ _ _ _ _ _ _ _) next => funktionsAnzahl next + 1
   | .step _ next => funktionsAnzahl next
 
 /-- The fuel-bounded transitive callee closure of a seed set. -/
@@ -249,7 +218,7 @@ def erreichbar (u : Ast.Unit) : Nat → List Identifier → List Identifier
   | fuel + 1, seen =>
     let neu := (seen.flatMap (calleesVon u)).filter
       (fun m => !(seen.any (fun x => x.val == m.val)))
-    match h : neu with
+    match neu with
     | [] => seen
     | _ :: _ => erreichbar u fuel (seen ++ neu)
 
@@ -266,15 +235,6 @@ def zyklusMenge (u : Ast.Unit) (name : Identifier) : List Identifier :=
   let fuel := funktionsAnzahl u.2 + 1
   (erreichbar u fuel [name]).filter
     (fun m => (erreichbar u fuel [m]).any (fun x => x.val == name.val))
-
-/-- The call-cost oracle with the cycle members short-circuited: a call into
-    the cycle costs only its site, covered by the span multiplier outside. -/
-def zyklusOracle (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabelle)
-    (u : Ast.Unit) (fuel : Nat) (zyklus : List Identifier) :
-    Identifier → Nat → Option Nat :=
-  fun m site =>
-    if zyklus.any (fun x => x.val == m.val) then some (site + 1)
-    else aufrufKosten z tab u fuel m site
 
 /-- The whole cost of one call: the site cost plus one invocation of the
     callee. A declared entry is trusted after its own verification; otherwise
@@ -295,8 +255,11 @@ def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabell
           match kern.spanne with
           | none => none
           | some span =>
-            match schaetzeBracedBlock z
-                (zyklusOracle z tab u fuel (zyklusMenge u name)) kern.koerper.2.2 with
+            let zyk := zyklusMenge u name
+            let oracle : Identifier → Nat → Option Nat :=
+              fun m s => if zyk.any (fun x => x.val == m.val) then some (s + 1)
+                else aufrufKosten z tab u fuel m s
+            match schaetzeBracedBlock z oracle kern.koerper.2.2 with
             | none => none
             | some b => some (site + (span + 1) * b + 1)
         else
@@ -308,7 +271,7 @@ def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabell
     other declaration costs its elaborated fragment, which runs once at load. -/
 def schaetzeDekl (z : Wirkungsklasse → KlassenKostenzeile) :
     Decl before after → Nat
-  | .function _ _ _ _ _ _ _ _ _ => (z .lokal).kosten
+  | .function _ _ _ _ _ _ _ _ _ _ => (z .lokal).kosten
   | d => fragmentKosten z (decl d)
 
 /-- The summed top-level cost of a unit body. -/
