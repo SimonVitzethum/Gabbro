@@ -49,9 +49,9 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au
-        cases hF with
-        | sperre _ _ =>
+        generalize hau : spur.aussen = au at hF
+        cases hF
+        case sperre _ _ =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
             rw [hziel]
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
@@ -64,9 +64,9 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au
-        cases hF with
-        | intern =>
+        generalize hau : spur.aussen = au at hF
+        cases hF
+        case intern =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
             rw [hziel]
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
@@ -129,40 +129,6 @@ theorem e1_klauseln : KlauselnWahr E_1 := by
   exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
     fun _ _ _ h => (List.not_mem_nil h).elim⟩
 
-/-- A context step preserves the free lock: tickets keep the owner, the stutter keeps
-    the state. -/
-theorem e1_kontext_erhaelt {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
-    {u : Zustand Unit Unit Unit Unit Bool Unit} {s' : Zustand Unit Unit Unit Unit Bool Unit}
-    {plan : SchrittPlan Unit Unit Unit Unit} {spur : SchrittSpur Unit Unit}
-    {c : Kontext} {w : Unit}
-    (hpre : (s.sperren ()).besitzer = none)
-    (hreg : e1Regel c s w [plan] u)
-    (haus : FuehrtSchrittAus E_1.einrichtung t c s u plan spur s') :
-    (s'.sperren ()).besitzer = none := by
-  rcases hreg with ⟨next, _hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
-  · subst hueq
-    have hplan : plan = ticketPlan := (List.cons.inj hpeq).1
-    subst hplan
-    obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
-    have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
-    rw [hakt] at hF
-    inversion hF with
-    | sperre hF' _ =>
-      cases hF' with
-      | ticket _ _ =>
-        rw [heq]
-        simpa only [Function.update_self] using hpre
-  · subst hueq
-    have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
-    subst hplan
-    obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
-    have hakt : stutterPlan.aktion = .intern := rfl
-    rw [hakt] at hF
-    inversion hF with
-    | intern =>
-      rw [heq]
-      exact hpre
-
 /-- One ideal step preserves the free lock: takes are impossible, answers and interrupts
     preserve the lock state, crashes wipe it. -/
 theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
@@ -172,10 +138,35 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
     (s'.sperren ()).besitzer = none := by
   cases step with
-  | kontext _ _ hreg haus =>
+  | @kontext _ u plan spur c w _ _ hreg haus =>
     obtain ⟨i, _, hreg⟩ := hreg
     cases i with
-    | unit => exact e1_kontext_erhaelt hpre hreg haus
+    | unit =>
+      rcases hreg with ⟨next, _hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
+      · subst hueq
+        have hplan : plan = ticketPlan := (List.cons.inj hpeq).1
+        subst hplan
+        obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
+        have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
+        rw [hakt] at hF
+        generalize hau : spur.aussen = au at hF
+        cases hF
+        case sperre hF' _ =>
+          cases hF' with
+          | ticket _ _ =>
+            rw [heq]
+            simpa only [Function.update_self] using hpre
+      · subst hueq
+        have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
+        subst hplan
+        obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
+        have hakt : stutterPlan.aktion = .intern := rfl
+        rw [hakt] at hF
+        generalize hau : spur.aussen = au at hF
+        cases hF
+        case intern =>
+          rw [heq]
+          exact hpre
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
     rw [heq]
