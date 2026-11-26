@@ -47,6 +47,7 @@ public import Core.Fortschritt.SperrErhalt
 public import Core.Fortschritt.SperrGegenbeispiel
 public import Core.Fortschritt.SperrFair
 public import Core.Fortschritt.SperrFreigabe
+public import Core.Fortschritt.SperrFairBeweis
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
