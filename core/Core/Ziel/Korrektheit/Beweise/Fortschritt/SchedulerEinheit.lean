@@ -42,9 +42,9 @@ open Gabbro.Core.Fortschritt
     by scheduler fairness on its constant dispatch core. `Rein` is needed for the
     `RegelKomponierbar` field (the template step composes); memory liveness for the ready step
     of an access head is unused in this branch but required by `einheitVon_bereit_vollzug`. -/
-theorem einheitVon_scheduler_pflichten (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein)
+theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
+    (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein)
     (existiert : ZugriffSchrittExistiertAussage)
-    (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
     (sf : Maschine.SchedulerFair (einheitVon P t) ρ)
@@ -54,7 +54,7 @@ theorem einheitVon_scheduler_pflichten (rein : (Ast.Semantik.fragment Ast.Catego
     ∃ nutzbar, Maschine.I.FortschrittsPflichten
       (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl)
       ρ η nutzbar := by
-  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder_rein rein P t
+  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder_rein P t rein
   refine ⟨(fun t c => ∃ w spur, ρ.zeit.spur t = some (.kontext c w, spur)),
     fertig, regeln, komponierbar, eindeutig, ?_, ?_, ?_, ?_⟩
   · intro t' c slot
@@ -158,7 +158,7 @@ theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage)
         (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
         pflicht lauf
         (fun η valid matched environment fairness =>
-          einheitVon_scheduler_pflichten rein existiert P t lauf sf ret valid matched environment)
+          einheitVon_scheduler_pflichten P t rein existiert lauf sf ret valid matched environment)
     exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
   · obtain ⟨η, valid, sim, _, rest⟩ :=
       Maschine.I.sim_ziel_fortschritt_im_lauf

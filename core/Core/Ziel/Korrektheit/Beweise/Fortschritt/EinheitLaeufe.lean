@@ -56,8 +56,8 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
     (`Befehl.komponierbar`) and `RegelKomponierbar` holds for every instruction. For fragments with
     access instructions `RegelKomponierbar` is false (only the memory-accepted step composes), and
     the koepfen shape (`einheit_fortschrittsfelder`) is used instead. -/
-theorem einheit_fortschrittsfelder_rein (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein)
-    (P : Katalog.Plattform) (t : Ast.Unit) :
+theorem einheit_fortschrittsfelder_rein (P : Katalog.Plattform) (t : Ast.Unit)
+    (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein) :
     (∀ s c, (einheitVon P t).system.kopf s c = none → (einheitVon P t).system.fertig s c) ∧
     (∀ f : Ast.Semantik.Befehl, RegelFortschritt (einheitVon P t).system f) ∧
     (∀ f : Ast.Semantik.Befehl,
