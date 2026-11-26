@@ -200,9 +200,9 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
       obtain ⟨_, au⟩ := spur
       cases hF
       case sperre _ _ =>
+        generalize hg : s'.graph = g at hziel
         have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-          rw [hziel]
-          rfl
+          simp only [hziel, toggleUpdate]
         refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
           ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
           fun hoffen q hmem hepo hant => ?_⟩
